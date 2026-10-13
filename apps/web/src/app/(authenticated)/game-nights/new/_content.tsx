@@ -18,12 +18,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   GameNightCreateWizard,
   type GameNightCreateWizardLabels,
-  type GameCandidateOption,
 } from '@/components/features/game-night-create';
 import { HubPageContainer } from '@/components/layout/PageContainer';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useCreateGameNight } from '@/hooks/queries/useGameNights';
-import { useLibrary } from '@/hooks/queries/useLibrary';
 import { useToast } from '@/hooks/useToast';
 import { useTranslation } from '@/hooks/useTranslation';
 import { useGameNightConflictCheck } from '@/lib/game-nights/hooks/useGameNightConflictCheck';
@@ -38,6 +36,8 @@ import {
 import { initialWizardState, wizardReducer } from '@/lib/game-nights/wizard-reducer';
 import type { WizardStep } from '@/lib/game-nights/wizard-types';
 import { buildSubmitPayload } from '@/lib/game-nights/wizard-validators';
+
+import { useGameNightCandidates } from './_lib/useGameNightCandidates';
 
 const _TOTAL_STEPS = 4 as const;
 const SUBMIT_RETRY_DELAYS_MS: readonly number[] = [1000, 2000, 4000];
@@ -121,6 +121,8 @@ function buildWizardLabels(
       libraryEmpty: t('gameNightCreate.step4.libraryEmpty'),
       selectGame: name => t('gameNightCreate.step4.selectGame', { name }),
       deselectGame: name => t('gameNightCreate.step4.deselectGame', { name }),
+      searchLabel: t('gameNightCreate.step4.searchLabel'),
+      searchEmpty: query => t('gameNightCreate.step4.searchEmpty', { query }),
     },
     preview: {
       title: t('gameNightCreate.preview.title'),
@@ -221,19 +223,13 @@ export function NewGameNightContent(): ReactElement {
     lastDispatchedIsoRef.current = state.date.iso;
   }, [conflictCheck.data, state.date.iso]);
 
-  // ─── Step 4 library
-  const libraryQuery = useLibrary({ pageSize: 50 }, state.step === 4);
-  const libraryGames = useMemo<readonly GameCandidateOption[]>(() => {
-    const items = libraryQuery.data?.items ?? [];
-    return items.map(entry => ({
-      id: entry.gameId,
-      title: entry.gameTitle,
-      imageUrl: entry.gameImageUrl,
-      minPlayers: entry.minPlayers ?? null,
-      maxPlayers: entry.maxPlayers ?? null,
-      playingTimeMinutes: entry.playingTimeMinutes ?? null,
-    }));
-  }, [libraryQuery.data]);
+  // ─── Step 4 library: searched on the server, chosen games kept by id (#4187)
+  const [gameSearch, setGameSearch] = useState('');
+  const { games: libraryGames } = useGameNightCandidates({
+    search: gameSearch,
+    selectedIds: state.games.selected,
+    enabled: state.step === 4,
+  });
 
   // ─── Submit with retry [1s, 2s, 4s]
   const createMutation = useCreateGameNight();
@@ -356,6 +352,8 @@ export function NewGameNightContent(): ReactElement {
         isSearchingPlayers={playerSearch.isFetching}
         regulars={regularsQuery.data ?? []}
         libraryGames={libraryGames}
+        gameSearch={gameSearch}
+        onGameSearchChange={setGameSearch}
         onSubmit={() => {
           void handleSubmit();
         }}

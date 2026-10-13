@@ -29,24 +29,38 @@ import type { TierDefinition, TierLimits } from '@/lib/api/schemas/tier.schemas'
 
 // ── Limit key labels ─────────────────────────────────────────────────────────
 
-type LimitKey = keyof Omit<TierLimits, 'sessionSaveEnabled'>;
+type LimitKey = keyof Omit<TierLimits, 'sessionSaveEnabled' | 'raptorRebuildEnabled'>;
 
 const LIMIT_LABELS: Record<LimitKey, string> = {
-  maxPrivateGames: 'Max Giochi',
+  maxPrivateGames: 'Giochi privati',
+  maxLibraryGames: 'Giochi in libreria',
   maxPdfUploadsPerMonth: 'Max PDF/mese',
   maxPdfSizeBytes: 'Max PDF size (bytes)',
-  maxAgents: 'Max Agent',
   maxAgentQueriesPerDay: 'Query/giorno',
   maxSessionQueries: 'Query sessione',
   maxSessionPlayers: 'Max giocatori',
   maxPhotosPerSession: 'Foto sessione',
   maxCatalogProposalsPerWeek: 'Proposte/sett',
+  maxGamebookTranslationsPerMonth: 'Traduzioni librogame/mese',
 };
 
 const LIMIT_KEYS = Object.keys(LIMIT_LABELS) as LimitKey[];
 
+/**
+ * The lowest value the backend accepts, where it is not 0. A library that holds no game and a
+ * session with no player are refused: the dialog must not offer them, nor start from them.
+ */
+const LIMIT_MIN: Partial<Record<LimitKey, number>> = {
+  maxLibraryGames: 1,
+  maxSessionPlayers: 1,
+};
+
+function minOf(key: LimitKey): number {
+  return LIMIT_MIN[key] ?? 0;
+}
+
 function getLimitValue(tier: TierDefinition, key: LimitKey): number {
-  return (tier.limits[key] as number) ?? 0;
+  return (tier.limits[key] as number | undefined) ?? minOf(key);
 }
 
 function formatLimit(value: number): string {
@@ -62,6 +76,7 @@ interface TierFormState {
   llmModelTier: string;
   isDefault: boolean;
   sessionSaveEnabled: boolean;
+  raptorRebuildEnabled: boolean;
   limits: Record<LimitKey, number>;
 }
 
@@ -73,7 +88,8 @@ function buildFormState(tier?: TierDefinition): TierFormState {
       llmModelTier: 'standard',
       isDefault: false,
       sessionSaveEnabled: true,
-      limits: Object.fromEntries(LIMIT_KEYS.map(k => [k, 0])) as Record<LimitKey, number>,
+      raptorRebuildEnabled: false,
+      limits: Object.fromEntries(LIMIT_KEYS.map(k => [k, minOf(k)])) as Record<LimitKey, number>,
     };
   }
   return {
@@ -82,6 +98,7 @@ function buildFormState(tier?: TierDefinition): TierFormState {
     llmModelTier: tier.llmModelTier,
     isDefault: tier.isDefault,
     sessionSaveEnabled: tier.limits.sessionSaveEnabled,
+    raptorRebuildEnabled: tier.limits.raptorRebuildEnabled ?? false,
     limits: Object.fromEntries(LIMIT_KEYS.map(k => [k, getLimitValue(tier, k)])) as Record<
       LimitKey,
       number
@@ -110,9 +127,13 @@ function TierDialog({ open, onOpenChange, tier, onSaved }: TierDialogProps) {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      // Every limit of the plan goes back, the ones this dialog edits and the ones it only
+      // carries: the backend rebuilds the limits from this object, and a key left out comes
+      // back as its default (#4212).
       const limits: TierLimits = {
-        ...Object.fromEntries(LIMIT_KEYS.map(k => [k, form.limits[k] ?? 0])),
+        ...Object.fromEntries(LIMIT_KEYS.map(k => [k, form.limits[k] ?? minOf(k)])),
         sessionSaveEnabled: form.sessionSaveEnabled,
+        raptorRebuildEnabled: form.raptorRebuildEnabled,
       } as TierLimits;
 
       if (isEdit) {
@@ -209,9 +230,9 @@ function TierDialog({ open, onOpenChange, tier, onSaved }: TierDialogProps) {
                   </label>
                   <input
                     type="number"
-                    min={0}
+                    min={minOf(key)}
                     className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-sm"
-                    value={form.limits[key] ?? 0}
+                    value={form.limits[key] ?? minOf(key)}
                     onChange={e => setLimit(key, Number(e.target.value))}
                     data-testid={`field-limit-${key}`}
                   />
@@ -230,6 +251,17 @@ function TierDialog({ open, onOpenChange, tier, onSaved }: TierDialogProps) {
                 data-testid="field-sessionSaveEnabled"
               />
               <span className="text-sm">Session Save abilitato</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={form.raptorRebuildEnabled}
+                onChange={e =>
+                  setForm(prev => ({ ...prev, raptorRebuildEnabled: e.target.checked }))
+                }
+                data-testid="field-raptorRebuildEnabled"
+              />
+              <span className="text-sm">Ricostruzione RAPTOR abilitata</span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
@@ -291,7 +323,10 @@ export default function AdminTiersPage() {
   const tiers = tiersQuery.data ?? [];
 
   return (
-    <div className="space-y-6">
+    // #4255: `text-foreground` here because the admin shell scopes a dark theme to its container
+    // without setting the text colour: text with no colour class of its own inherits the dark
+    // text of the light theme. The title and every cell of the table were dark on dark.
+    <div className="space-y-6 text-foreground">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -317,7 +352,7 @@ export default function AdminTiersPage() {
           Errore nel caricamento dei tier.
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-md border">
+        <div className="overflow-x-auto rounded-md border border-border">
           <table className="w-full text-sm" data-testid="tiers-table">
             <thead>
               <tr className="border-b bg-muted/50">

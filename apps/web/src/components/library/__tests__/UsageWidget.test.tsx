@@ -28,8 +28,6 @@ const mockUsage = {
   agentQueriesTodayMax: 20,
   sessionQueries: 4,
   sessionQueriesMax: 10,
-  agents: 1,
-  agentsMax: 1,
   photosThisSession: 2,
   photosThisSessionMax: 5,
   sessionSaveEnabled: false,
@@ -82,8 +80,9 @@ describe('UsageWidget', () => {
 
     expect(screen.getByTestId('quota-PDF questo mese')).toBeInTheDocument();
     expect(screen.getByTestId('quota-Query oggi')).toBeInTheDocument();
-    expect(screen.getByTestId('quota-Agent')).toBeInTheDocument();
     expect(screen.getByTestId('quota-Query sessione')).toBeInTheDocument();
+    // Issue #4138: no per-user agent limit any more (one system agent, ADR-094).
+    expect(screen.queryByTestId('quota-Agent')).not.toBeInTheDocument();
   });
 
   it('shows session save status', async () => {

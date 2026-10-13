@@ -99,7 +99,7 @@ public sealed class PgVectorStoreAdapterLanguageProjectionTests : IAsyncLifetime
     public async Task SearchAsync_ProjectsTheStoredLanguage_PerChunk()
     {
         var results = await _adapter!.SearchAsync(
-            _gameId, QueryVector(), topK: 10, minScore: 0.0, documentIds: null,
+            _gameId, QueryVector(), topK: 10, minScore: 0.0, pdfDocumentIds: null,
             cancellationToken: TestCancellationToken);
 
         LanguageByText(results).Should().Equal(ExpectedLanguages);
@@ -109,7 +109,7 @@ public sealed class PgVectorStoreAdapterLanguageProjectionTests : IAsyncLifetime
     public async Task SearchWithScoresAsync_ProjectsTheStoredLanguage_PerChunk()
     {
         var results = await _adapter!.SearchWithScoresAsync(
-            _gameId, QueryVector(), topK: 10, minScore: 0.0, documentIds: null,
+            _gameId, QueryVector(), topK: 10, minScore: 0.0, pdfDocumentIds: null,
             cancellationToken: TestCancellationToken);
 
         LanguageByText(results.Select(r => r.Embedding)).Should().Equal(ExpectedLanguages);
@@ -119,7 +119,7 @@ public sealed class PgVectorStoreAdapterLanguageProjectionTests : IAsyncLifetime
     public async Task SearchByMultipleGameIdsAsync_ProjectsTheStoredLanguage_PerChunk()
     {
         var results = await _adapter!.SearchByMultipleGameIdsAsync(
-            new[] { _gameId }, QueryVector(), topK: 10, minScore: 0.0, documentIds: null,
+            new[] { _gameId }, QueryVector(), topK: 10, minScore: 0.0, pdfDocumentIds: null,
             cancellationToken: TestCancellationToken);
 
         LanguageByText(results).Should().Equal(ExpectedLanguages);

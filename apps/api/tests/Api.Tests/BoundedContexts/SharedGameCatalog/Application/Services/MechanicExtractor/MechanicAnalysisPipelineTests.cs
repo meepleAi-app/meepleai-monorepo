@@ -214,6 +214,14 @@ public sealed class MechanicAnalysisPipelineTests
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<RequestSource>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()),
             Times.Once);
+
+        // #4164: il registro costi distingue l'analisi lanciata da un admin dalle domande degli
+        // utenti. Prima passava RequestSource.Manual.
+        llm.Verify(
+            s => s.GenerateCompletionWithModelFallbackAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                RequestSource.AdminOperation, It.IsAny<int?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     // ---- fakes / builders -------------------------------------------------

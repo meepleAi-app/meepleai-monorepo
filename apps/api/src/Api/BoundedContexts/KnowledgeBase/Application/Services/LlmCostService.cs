@@ -58,11 +58,15 @@ internal sealed class LlmCostService : ILlmCostService
                         PromptTokens = result.Usage.PromptTokens,
                         CompletionTokens = result.Usage.CompletionTokens,
                         InputCost = result.Cost.InputCost,
-                        OutputCost = result.Cost.OutputCost
+                        OutputCost = result.Cost.OutputCost,
+                        PricingStatus = result.Cost.PricingStatus,
+                        ProfileVersionId = result.ProfileVersionId
                     },
                     endpoint: "completion",
-                    success: true,
-                    errorMessage: null,
+                    // #4168: un risultato fallito arriva qui solo se ha prodotto token fatturati
+                    // (uno stream interrotto dopo il primo token): la riga porta il costo e l'errore.
+                    success: result.Success,
+                    errorMessage: result.Success ? null : result.ErrorMessage,
                     latencyMs: (int)latencyMs,
                     ipAddress: null,
                     userAgent: null,
@@ -73,22 +77,7 @@ internal sealed class LlmCostService : ILlmCostService
             // 2. Update model usage stats in DB
             await UpdateModelUsageStatsAsync(result, ct).ConfigureAwait(false);
 
-            // 3. Record user budget usage
-            if (userContext.UserId != null)
-            {
-                using var budgetScope = _scopeFactory.CreateScope();
-                var budgetService = budgetScope.ServiceProvider.GetService<IUserBudgetService>();
-                if (budgetService != null)
-                {
-                    var requestCost = result.Cost.TotalCost;
-                    var requestTokens = result.Usage.PromptTokens + result.Usage.CompletionTokens;
-                    await budgetService
-                        .RecordUsageAsync(userContext.UserId.Value, requestCost, requestTokens, ct)
-                        .ConfigureAwait(false);
-                }
-            }
-
-            // 4. Publish token usage ledger event
+            // 3. Publish token usage ledger event
             var totalCost = result.Cost.InputCost + result.Cost.OutputCost;
             if (totalCost > 0 && userContext.UserId != null)
             {
@@ -105,7 +94,7 @@ internal sealed class LlmCostService : ILlmCostService
                     ct).ConfigureAwait(false);
             }
 
-            // 5. File logger
+            // 4. File logger
             _openRouterFileLogger?.LogRequest(
                 requestId: Guid.NewGuid().ToString(),
                 model: result.Cost.ModelId,
@@ -120,7 +109,7 @@ internal sealed class LlmCostService : ILlmCostService
                 isFreeModel: result.Cost.TotalCost == 0,
                 sessionId: null);
 
-            // 6. Usage aggregation service
+            // 5. Usage aggregation service
             if (_openRouterUsageService != null && result.Cost.TotalCost > 0)
                 _ = _openRouterUsageService.RecordRequestCostAsync(result.Cost.TotalCost, ct);
         }

@@ -28,4 +28,15 @@ internal sealed record SuggestPlayerMoveCommand : IRequest<PlayerModeSuggestionR
     /// Optional chat thread ID for conversation context.
     /// </summary>
     public Guid? ChatThreadId { get; init; }
+
+    /// <summary>
+    /// Who asks. Required (#4294): the suggestion is built from the KB of the game and its
+    /// answer carries the passages, so it goes through the RAG gate.
+    /// </summary>
+    public required Guid UserId { get; init; }
+
+    /// <summary>
+    /// The role of the caller, as the session reports it.
+    /// </summary>
+    public required string UserRole { get; init; }
 }

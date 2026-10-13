@@ -46,7 +46,9 @@ internal class GetMyChatHistoryQueryHandler : IQueryHandler<GetMyChatHistoryQuer
             .ConfigureAwait(false);
 
         // Apply pagination
+        // #4276: il thread dell'assistente in partita vive nella pagina della sessione, non fra le chat.
         var paginatedThreads = threads
+            .Where(thread => thread.LiveSessionId is null)
             .Skip(request.Skip)
             .Take(request.Take)
             .ToList();

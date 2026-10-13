@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 import { HubPageContainer } from '@/components/layout/PageContainer';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
-import { useLibrary } from '@/hooks/queries/useLibrary';
+import { useSharedGamesByIds } from '@/hooks/queries/useSharedGames';
 import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -88,19 +88,21 @@ export default function ToolkitHistoryPage(): JSX.Element {
     queryFn: () => api.sessions.getHistory({ limit: HISTORY_BATCH_LIMIT }),
   });
 
-  // Full library page so every game a session references resolves to a real
-  // title — falls back to `unknownLabel` for sessions on games no longer in
-  // the user's library (e.g. removed private games).
-  const { data: libraryData } = useLibrary({ pageSize: HISTORY_BATCH_LIMIT });
-
   const unknownLabel = t('pages.toolkitHistory.table.unknownGame');
 
+  const sessions = historyQuery.data?.sessions ?? [];
+
+  // Every game a session references, read by id from the catalog (#4187). It used to come
+  // from one library page asked at 500 entries, while the server returns at most 100: past
+  // that, sessions showed `unknownLabel`. A game the catalog does not know (a private game,
+  // a deleted one) still falls back to it.
+  const sessionGameIds = [...new Set(sessions.map(dto => dto.gameId))];
+  const { gamesById } = useSharedGamesByIds(sessionGameIds, sessionGameIds.length > 0);
   const gameNameMap = new Map<string, string>();
-  for (const entry of libraryData?.items ?? []) {
-    gameNameMap.set(entry.gameId, entry.gameTitle);
+  for (const [id, game] of Object.entries(gamesById)) {
+    gameNameMap.set(id, game.title);
   }
 
-  const sessions = historyQuery.data?.sessions ?? [];
   const allRows = sessions.map(dto => toHistoryRow(dto, gameNameMap, unknownLabel));
 
   // Client-side pipeline: filter → sort → paginate. `now` is fresh per

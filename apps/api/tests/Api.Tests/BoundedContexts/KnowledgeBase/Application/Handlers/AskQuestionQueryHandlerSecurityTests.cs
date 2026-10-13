@@ -38,7 +38,6 @@ public class AskQuestionQueryHandlerSecurityTests
     private readonly Mock<IChatThreadRepository> _mockThreadRepository;
     private readonly Mock<IPdfDocumentRepository> _mockPdfDocumentRepository;
     private readonly Mock<ILlmService> _mockLlmService;
-    private readonly Mock<IPromptTemplateService> _mockPromptTemplateService;
     private readonly Mock<IRagValidationPipelineService> _mockValidationPipeline;
     private readonly Mock<ILogger<AskQuestionQueryHandler>> _mockLogger;
     private readonly Mock<IKeywordSearchService> _mockKeywordSearchService;
@@ -132,14 +131,13 @@ public class AskQuestionQueryHandlerSecurityTests
         _mockThreadRepository = new Mock<IChatThreadRepository>();
         _mockPdfDocumentRepository = new Mock<IPdfDocumentRepository>();
         _mockLlmService = new Mock<ILlmService>();
-        _mockPromptTemplateService = new Mock<IPromptTemplateService>();
         _mockValidationPipeline = new Mock<IRagValidationPipelineService>();
         _mockLogger = new Mock<ILogger<AskQuestionQueryHandler>>();
 
         // P1-5: Mock semantic cache (always returns null — cache miss) and embedding service
         _mockResponseCache = new Mock<ISemanticResponseCache>();
         _mockResponseCache
-            .Setup(c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .Setup(c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((CachedRagResponse?)null);
         _mockAskEmbeddingService = new Mock<IEmbeddingService>();
         _mockAskEmbeddingService
@@ -150,20 +148,18 @@ public class AskQuestionQueryHandlerSecurityTests
                 Embeddings = new List<float[]> { new float[768] }
             });
 
-        // ISSUE-977: Setup validation pipeline mock to return a valid result (all 5 layers)
+        // ISSUE-977: Setup validation pipeline mock to return a valid result (standard mode, #4179)
         _mockValidationPipeline
-            .Setup(v => v.ValidateWithMultiModelAsync(
+            .Setup(v => v.ValidateResponseAsync(
                 It.IsAny<Api.Models.QaResponse>(),
-                It.IsAny<string>()!,
-                It.IsAny<string>()!,
-                It.IsAny<string>()!,
-                It.IsAny<string>()!,
+                It.IsAny<string>(),
+                It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new RagValidationResult
             {
                 IsValid = true,
-                LayersPassed = 4,
-                TotalLayers = 4,
+                LayersPassed = 3,
+                TotalLayers = 3,
                 ConfidenceValidation = new ConfidenceValidationResult
                 {
                     IsValid = true,
@@ -171,32 +167,6 @@ public class AskQuestionQueryHandlerSecurityTests
                     Severity = ValidationSeverity.Pass,
                     ActualConfidence = 0.8,
                     RequiredThreshold = 0.7
-                },
-                MultiModelConsensus = new MultiModelConsensusResult
-                {
-                    HasConsensus = true,
-                    SimilarityScore = 0.95,
-                    RequiredThreshold = 0.90,
-                    Gpt4Response = new ModelResponse
-                    {
-                        ModelId = "gpt-4",
-                        ResponseText = "Test response",
-                        IsSuccess = true,
-                        DurationMs = 100,
-                        Usage = new LlmUsage(50, 25, 75)
-                    },
-                    ClaudeResponse = new ModelResponse
-                    {
-                        ModelId = "claude-3",
-                        ResponseText = "Test response",
-                        IsSuccess = true,
-                        DurationMs = 100,
-                        Usage = new LlmUsage(50, 25, 75)
-                    },
-                    ConsensusResponse = "Test response",
-                    Message = "Consensus achieved",
-                    TotalDurationMs = 200,
-                    Severity = ConsensusSeverity.High
                 },
                 CitationValidation = new CitationValidationResult
                 {
@@ -215,26 +185,23 @@ public class AskQuestionQueryHandlerSecurityTests
                     Message = "No hallucinations detected",
                     Severity = HallucinationSeverity.None
                 },
-                ValidationAccuracyMetrics = "Validation accuracy tracking enabled (baseline threshold: 80%)",
-                Message = "All validations passed (multi-model mode)",
+                Message = "All validations passed (standard mode)",
                 Severity = RagValidationSeverity.Pass,
                 DurationMs = 250
             });
 
-        var routingOptionsMonitor = new Mock<Microsoft.Extensions.Options.IOptionsMonitor<Api.Configuration.LlmQueryComplexityRoutingOptions>>();
-        routingOptionsMonitor.Setup(m => m.CurrentValue).Returns(new Api.Configuration.LlmQueryComplexityRoutingOptions());
-
         _handler = new AskQuestionQueryHandler(
-            _searchHandler,
-            CreatePassthroughReranker(),
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Retrieval(
+                _searchHandler, CreatePassthroughReranker()),
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.ProfileReader(),
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.UncertainLanguageDetection(),
             _mockQualityService.Object,
             _mockChatContextService.Object,
             _mockThreadRepository.Object,
             _mockPdfDocumentRepository.Object,
             _mockLlmService.Object,
-            _mockPromptTemplateService.Object,
             _mockValidationPipeline.Object,
-            CreatePermissiveRagAccessServiceMock(),
+            new Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPreconditions(CreatePermissiveRagAccessServiceMock()),
             Mock.Of<IRagQualityTracker>(),
             new QueryComplexityAnalyzer(),
             _mockResponseCache.Object,
@@ -244,7 +211,6 @@ public class AskQuestionQueryHandlerSecurityTests
             CreateNoOpTranslationServiceMock(),
             // D7: use the real classifier (pure, stateless, no dependencies).
             new IntentClassifierService(),
-            routingOptionsMonitor.Object,
             Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
             Mock.Of<Api.Services.IFeatureFlagService>(),
             _mockLogger.Object);
@@ -284,7 +250,8 @@ public class AskQuestionQueryHandlerSecurityTests
         var query = new AskQuestionQuery(
             GameId: gameId,
             Question: "Test question",
-            ThreadId: threadId);
+            ThreadId: threadId,
+            UserId: userId);
 
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
@@ -337,7 +304,8 @@ public class AskQuestionQueryHandlerSecurityTests
         var query = new AskQuestionQuery(
             GameId: gameId2,
             Question: "Test question",
-            ThreadId: threadId);
+            ThreadId: threadId,
+            UserId: userId);
 
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
@@ -362,6 +330,100 @@ public class AskQuestionQueryHandlerSecurityTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once,
             "Warning should be logged when GameId mismatch is detected");
+    }
+
+    /// <summary>
+    /// Issue #4242. Same game, someone else's thread: the history stays out of the prompt.
+    /// Before, only the game of the thread was checked.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithThreadOfAnotherUser_IgnoresChatHistory()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var threadId = Guid.NewGuid();
+        var owner = Guid.NewGuid();
+
+        var thread = new ChatThread(threadId, owner, gameId);
+        thread.AddUserMessage("Someone else's question");
+        thread.AddAssistantMessage("Someone else's answer");
+
+        SetupDefaultMocks(gameId);
+        SetupSearchWithOneResult(gameId);
+
+        _mockThreadRepository
+            .Setup(r => r.GetByIdAsync(threadId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(thread);
+
+        _mockChatContextService
+            .Setup(s => s.ShouldIncludeChatHistory(thread))
+            .Returns(true);
+
+        _mockChatContextService
+            .Setup(s => s.BuildChatHistoryContext(thread))
+            .Returns("Someone else's history");
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "Test question",
+            ThreadId: threadId,
+            UserId: Guid.NewGuid());
+
+        // Act
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+        _mockChatContextService.Verify(s => s.BuildChatHistoryContext(It.IsAny<ChatThread>()), Times.Never,
+            "the history of a thread the asker does not own must not be built");
+        _mockChatContextService.Verify(s => s.EnrichPromptWithHistory(It.IsAny<string>(), It.IsAny<string>()), Times.Never,
+            "the prompt must not be enriched with someone else's history");
+    }
+
+    /// <summary>
+    /// Issue #4242. A question with no identity cannot claim a thread: no history.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithNoIdentity_IgnoresChatHistory()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var threadId = Guid.NewGuid();
+        var owner = Guid.NewGuid();
+
+        var thread = new ChatThread(threadId, owner, gameId);
+        thread.AddUserMessage("Someone else's question");
+        thread.AddAssistantMessage("Someone else's answer");
+
+        SetupDefaultMocks(gameId);
+        SetupSearchWithOneResult(gameId);
+
+        _mockThreadRepository
+            .Setup(r => r.GetByIdAsync(threadId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(thread);
+
+        _mockChatContextService
+            .Setup(s => s.ShouldIncludeChatHistory(thread))
+            .Returns(true);
+
+        _mockChatContextService
+            .Setup(s => s.BuildChatHistoryContext(thread))
+            .Returns("Someone else's history");
+
+        var query = new AskQuestionQuery(
+            GameId: gameId,
+            Question: "Test question",
+            ThreadId: threadId);
+
+        // Act
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+        _mockChatContextService.Verify(s => s.BuildChatHistoryContext(It.IsAny<ChatThread>()), Times.Never,
+            "the history of a thread the asker does not own must not be built");
+        _mockChatContextService.Verify(s => s.EnrichPromptWithHistory(It.IsAny<string>(), It.IsAny<string>()), Times.Never,
+            "the prompt must not be enriched with someone else's history");
     }
 
     [Fact]
@@ -395,7 +457,8 @@ public class AskQuestionQueryHandlerSecurityTests
         var query = new AskQuestionQuery(
             GameId: gameId,
             Question: "Test question",
-            ThreadId: threadId);
+            ThreadId: threadId,
+            UserId: userId);
 
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
@@ -468,7 +531,8 @@ public class AskQuestionQueryHandlerSecurityTests
         var query = new AskQuestionQuery(
             GameId: gameId,
             Question: "Test question",
-            ThreadId: threadId);
+            ThreadId: threadId,
+            UserId: userId);
 
         // Act
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
@@ -512,7 +576,7 @@ public class AskQuestionQueryHandlerSecurityTests
 
         // Setup LlmService
         _mockLlmService
-            .Setup(s => s.GenerateCompletionAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess(
                 response: "Test answer",
                 usage: new LlmUsage(10, 10, 20),
@@ -523,11 +587,6 @@ public class AskQuestionQueryHandlerSecurityTests
                     ModelId = "test-model",
                     Provider = "test"
                 }));
-
-        // Setup PromptTemplateService
-        _mockPromptTemplateService
-            .Setup(s => s.GetActivePromptAsync("rag-system-prompt", It.IsAny<CancellationToken>()))
-            .ReturnsAsync("Test system prompt");
     }
 
     /// <summary>

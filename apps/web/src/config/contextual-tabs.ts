@@ -18,14 +18,8 @@ export const CONTEXTUAL_TABS: Record<string, ContextualTab[]> = {
     { label: 'Completate', href: '/sessions?tab=completed' },
     { label: 'Pianificate', href: '/sessions?tab=planned' },
   ],
-  '/chat': [
-    { label: 'Thread', href: '/chat' },
-    { label: 'Agenti', href: '/agents' },
-  ],
-  '/agents': [
-    { label: 'Thread', href: '/chat' },
-    { label: 'Agenti', href: '/agents' },
-  ],
+  // Issue #4138: the Thread/Agenti pair is gone with the /agents section. A
+  // single remaining tab is not a tab bar, so /chat has no contextual tabs.
   '/dashboard': [
     { label: 'Overview', href: '/dashboard' },
     { label: 'Attivita recente', href: '/dashboard?tab=activity' },

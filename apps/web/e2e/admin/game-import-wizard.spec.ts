@@ -176,7 +176,7 @@ test.describe('Game Import Wizard E2E', () => {
         .filter({ hasText: /duplicate|already exists/i });
 
       // Se il modal appare (test condizionale basato su DB state)
-      const isModalVisible = await duplicateModal.isVisible().catch(() => false);
+      const isModalVisible = await duplicateModal.isVisible();
 
       if (isModalVisible) {
         // Assert: Warning message visible
@@ -219,7 +219,7 @@ test.describe('Game Import Wizard E2E', () => {
       const duplicateModal = page
         .getByRole('dialog')
         .filter({ hasText: /duplicate|already exists/i });
-      const isModalVisible = await duplicateModal.isVisible().catch(() => false);
+      const isModalVisible = await duplicateModal.isVisible();
 
       if (isModalVisible) {
         // Assert: Force create option available (checkbox or button)
@@ -323,7 +323,7 @@ test.describe('Game Import Wizard E2E', () => {
       // Step 4: Conflict resolution
       // Assert: Conflict section visible (if conflicts exist)
       const conflictSection = page.getByText(/conflict|different values/i).first();
-      const hasConflicts = await conflictSection.isVisible().catch(() => false);
+      const hasConflicts = await conflictSection.isVisible();
 
       if (hasConflicts) {
         // Example: minPlayers conflict (BGG: 2 vs PDF: 3)
@@ -487,7 +487,7 @@ test.describe('Game Import Wizard E2E', () => {
       const duplicateModal = page
         .getByRole('dialog')
         .filter({ hasText: /duplicate|already exists/i });
-      const isModalVisible = await duplicateModal.isVisible().catch(() => false);
+      const isModalVisible = await duplicateModal.isVisible();
 
       if (isModalVisible) {
         await expect(duplicateModal).toHaveScreenshot('wizard-duplicate-modal.png');
@@ -495,7 +495,7 @@ test.describe('Game Import Wizard E2E', () => {
 
       // Conflict resolution UI (conditional - only if conflicts exist)
       const conflictSection = page.getByText(/conflict|different values/i).first();
-      const hasConflicts = await conflictSection.isVisible().catch(() => false);
+      const hasConflicts = await conflictSection.isVisible();
 
       if (hasConflicts) {
         await expect(page).toHaveScreenshot('wizard-step-4-conflicts.png');

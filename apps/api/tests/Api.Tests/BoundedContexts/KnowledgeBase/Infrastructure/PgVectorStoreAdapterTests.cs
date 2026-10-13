@@ -232,7 +232,7 @@ public sealed class PgVectorStoreAdapterTests
         nullIds.Should().BeNull();
         emptyIds.Should().BeEmpty();
         validIds.Should().HaveCount(2);
-        validIds.ToArray().Should().BeOfType<Guid[]>("adapter converts to array for ANY(@documentIds)");
+        validIds.ToArray().Should().BeOfType<Guid[]>("adapter converts to array for ANY(@pdfDocumentIds)");
     }
 
     [Fact]

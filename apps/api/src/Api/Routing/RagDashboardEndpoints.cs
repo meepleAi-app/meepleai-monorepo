@@ -314,7 +314,14 @@ internal static class RagDashboardEndpoints
                 "Admin {AdminId} running live RAG test for game {GameId}: '{Query}'",
                 session!.Principal!.EffectiveActor.Id, gameId, LogSanitizer.Sanitize(request.Query));
 
-            var streamQuery = new StreamQaQuery(GameId: gameId.Value.ToString(), Query: request.Query);
+            // Issue #4137: this used to omit the identity, which skipped the handler's
+            // RAG access check. The route is admin-gated and rule 1 grants admins, so the
+            // outcome is unchanged - but now it holds by construction.
+            var streamQuery = new StreamQaQuery(
+                GameId: gameId.Value.ToString(),
+                Query: request.Query,
+                UserId: session!.Principal!.Subject.Id,
+                UserRole: session.Principal!.EffectiveActor.Role);
 
             try
             {

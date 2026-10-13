@@ -29,11 +29,6 @@ export interface NavigationLinks {
   discoverAdd: string;
   discoverProposals: string;
 
-  // ── Agents ────────────────────────────────────────────────────────────────
-  agents: string;
-  agentSlots: string;
-  agentDetail: (agentId: string) => string;
-
   // ── Chat ──────────────────────────────────────────────────────────────────
   chat: string;
   chatNew: string;
@@ -101,11 +96,6 @@ export function getNavigationLinks(): NavigationLinks {
     discoverGame: (gameId: string) => `/discover/${gameId}`,
     discoverAdd: '/discover/add',
     discoverProposals: '/discover?tab=proposals',
-
-    // ── Agents ──────────────────────────────────────────────────────────────
-    agents: '/agents',
-    agentSlots: '/agents?tab=slots',
-    agentDetail: (agentId: string) => `/agents/${agentId}`,
 
     // ── Chat ────────────────────────────────────────────────────────────────
     chat: '/chat',

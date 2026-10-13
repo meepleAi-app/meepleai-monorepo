@@ -30,6 +30,9 @@ public sealed class RequestSourceTests
         values.Should().Contain(RequestSource.ABTesting);
         values.Should().Contain(RequestSource.RagClassification);
         values.Should().Contain(RequestSource.Translation);
+        values.Should().Contain(RequestSource.ChunkTranslation);
+        values.Should().Contain(RequestSource.Evaluation);
+        values.Should().Contain(RequestSource.SessionAssistant);
     }
 
     [Theory]
@@ -42,6 +45,9 @@ public sealed class RequestSourceTests
     [InlineData(RequestSource.ABTesting, "ABTesting")]
     [InlineData(RequestSource.RagClassification, "RagClassification")]
     [InlineData(RequestSource.Translation, "Translation")]
+    [InlineData(RequestSource.ChunkTranslation, "ChunkTranslation")]
+    [InlineData(RequestSource.Evaluation, "Evaluation")]
+    [InlineData(RequestSource.SessionAssistant, "SessionAssistant")]
     public void RequestSource_ToStringMatchesExpected(RequestSource source, string expected)
     {
         source.ToString().Should().Be(expected);
@@ -57,6 +63,9 @@ public sealed class RequestSourceTests
     [InlineData("ABTesting", RequestSource.ABTesting)]
     [InlineData("RagClassification", RequestSource.RagClassification)]
     [InlineData("Translation", RequestSource.Translation)]
+    [InlineData("ChunkTranslation", RequestSource.ChunkTranslation)]
+    [InlineData("Evaluation", RequestSource.Evaluation)]
+    [InlineData("SessionAssistant", RequestSource.SessionAssistant)]
     public void RequestSource_ParsesFromString(string name, RequestSource expected)
     {
         var parsed = Enum.Parse<RequestSource>(name);
@@ -64,10 +73,14 @@ public sealed class RequestSourceTests
     }
 
     [Fact]
-    public void RequestSource_HasExactly9Values()
+    public void RequestSource_HasExactly12Values()
     {
-        // Regression guard: adding/removing values requires updating monitoring logic
+        // Regression guard: a new value must be a conscious choice. The name is persisted as a string
+        // (llm_cost_logs/llm_request_logs.request_source), so append, never rename. Checked on #4165:
+        // no code, dashboard or infra config enumerates the values today. #4166: each value also needs
+        // a budget class (LlmBudgetClassification), which LlmBudgetClassificationTests checks.
+        // ADR-097: SessionAssistant is the in-game assistant (spec 2026-10-11 §3.2).
         var count = Enum.GetValues<RequestSource>().Length;
-        count.Should().Be(9);
+        count.Should().Be(12);
     }
 }

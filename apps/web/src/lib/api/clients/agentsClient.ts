@@ -7,44 +7,32 @@
 
 import { z } from 'zod';
 
-import { logger } from '@/lib/logger';
-
 import {
   AgentDtoSchema,
   AgentResponseDtoSchema,
   GetAllAgentsResponseSchema,
   ConfigureAgentResponseSchema,
   ChessAgentResponseSchema,
-  SetupGuideResponseSchema,
   AgentDocumentsDtoSchema,
   UpdateAgentDocumentsResponseSchema,
   PlayerModeSuggestionResponseSchema,
   typologySchema, // Issue #4126
   type AgentDto,
   type AgentResponseDto,
-  type SSEEvent, // Issue #4126
   type InvokeAgentRequest,
   type CreateAgentRequest,
   type ConfigureAgentRequest,
   type ConfigureAgentResponse,
   type ChessAgentResponse,
-  type SetupGuideResponse,
   type AgentDocumentsDto,
   type UpdateAgentDocumentsResponse,
   type PlayerModeSuggestionRequest,
   type PlayerModeSuggestionResponse,
   type Typology, // Added for AGT-012
 } from '../schemas';
-import { QuickCreateResultSchema, type QuickCreateResult } from '../schemas/ownership.schemas';
 import { AgentCostEstimateSchema, type AgentCostEstimate } from '../schemas/rag-setup.schemas';
 
 import type { HttpClient } from '../core/httpClient';
-import type {
-  BackendModelDto,
-  GetModelsResponse,
-  BackendAgentConfigurationDto,
-  UpdateAgentConfigurationRequest,
-} from '../schemas/agent-config.schemas';
 
 export interface CreateAgentsClientParams {
   httpClient: HttpClient;
@@ -93,20 +81,6 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      */
     async getAvailable(type?: string): Promise<AgentDto[]> {
       return this.getAll(true, type);
-    },
-
-    /**
-     * Get user-owned agents for a specific game.
-     * Issue #4914: returns custom agents created by the current user for the given game.
-     * @param gameId Game UUID
-     */
-    async getUserAgentsForGame(gameId: string): Promise<AgentDto[]> {
-      const response = await httpClient.get<{
-        success: boolean;
-        agents: AgentDto[];
-        count: number;
-      }>(`/api/v1/games/${gameId}/agents`, GetAllAgentsResponseSchema);
-      return response?.agents ?? [];
     },
 
     /**
@@ -260,6 +234,11 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * POST /api/v1/agents/chess
      *
      * Issue #1977: Added ChessAgentResponseSchema validation
+     *
+     * @todo BACKEND MISSING: no route is mounted for POST /api/v1/agents/chess.
+     *   Verified mechanically against the backend (Issue #4139):
+     *     grep -rhoE 'Map(Post|Get|Put|Delete)\("/agents[^"]*"' apps/api/src/Api --include=*.cs
+     *   No consumer in the frontend either.
      */
     async invokeChess(request: {
       question: string;
@@ -272,27 +251,6 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       );
       if (!response) {
         throw new Error('Failed to invoke chess agent: no response from server');
-      }
-      return response;
-    },
-
-    /**
-     * Generate setup guide (convenience wrapper)
-     * POST /api/v1/agents/setup
-     *
-     * Issue #1977: Added SetupGuideResponseSchema validation
-     */
-    async generateSetupGuide(request: {
-      gameId: string;
-      chatId: string | null;
-    }): Promise<SetupGuideResponse> {
-      const response = await httpClient.post(
-        '/api/v1/agents/setup',
-        request,
-        SetupGuideResponseSchema
-      );
-      if (!response) {
-        throw new Error('Failed to generate setup guide: no response from server');
       }
       return response;
     },
@@ -324,6 +282,13 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      * Implements GetAgentDocumentsQuery from backend
      * Issue #2399: Knowledge Base Document Selection
      * @param id Agent ID (GUID format)
+     *
+     * @todo BACKEND MISSING: no route is mounted for GET or PUT
+     *   /api/v1/agents/{id}/documents. Unlike the other unrouted entries here it
+     *   HAS consumers - `KnowledgeBaseTab` and `useAgentDocuments` - so those
+     *   surfaces list nothing and cannot say why. Found mechanically while fixing
+     *   Issue #4139; the fix belongs with the per-agent -> per-game KB listing
+     *   tracked in #4138, because with one system agent the right key is the game.
      */
     async getDocuments(id: string): Promise<AgentDocumentsDto | null> {
       return httpClient.get(
@@ -392,110 +357,6 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       return response;
     },
 
-    // ========== User-Owned Agent CRUD (Issue #4683, #4915) ==========
-
-    /**
-     * Create a user-owned agent with tier-aware configuration
-     * Issue #4683: User Agent CRUD Endpoints
-     * @param request Agent creation params (gameId, agentType, name, etc.)
-     * Resolved by #654 (2026-05-04) — route registered in AgentsEndpoints.cs.
-     */
-    async createUserAgent(request: {
-      gameId: string;
-      agentType: string;
-      name?: string;
-      strategyName?: string;
-      strategyParameters?: Record<string, unknown>;
-      documentIds?: string[];
-    }): Promise<AgentDto> {
-      const response = await httpClient.post<AgentDto>(
-        '/api/v1/agents/user',
-        request,
-        AgentDtoSchema
-      );
-
-      if (!response) {
-        throw new Error('Failed to create user agent: no response from server');
-      }
-
-      return response;
-    },
-
-    // ========== Agent Slots & Creation Flow (Issue #4771, #4772) ==========
-
-    /**
-     * Get user's agent slot allocation and usage
-     * Issue #4771: Agent Slots Endpoint + Quota System
-     * Issue #417: Backend route registered in AiEndpoints.cs (GET /api/v1/user/agent-slots)
-     */
-    async getSlots(): Promise<{
-      total: number;
-      used: number;
-      available: number;
-      slots: Array<{
-        slotIndex: number;
-        agentId: string | null;
-        agentName: string | null;
-        gameId: string | null;
-        status: 'active' | 'available' | 'locked';
-      }>;
-    }> {
-      const response = await httpClient.get<{
-        total: number;
-        used: number;
-        available: number;
-        slots: Array<{
-          slotIndex: number;
-          agentId: string | null;
-          agentName: string | null;
-          gameId: string | null;
-          status: 'active' | 'available' | 'locked';
-        }>;
-      }>('/api/v1/user/agent-slots');
-
-      if (!response) {
-        throw new Error('Failed to get agent slots: no response from server');
-      }
-
-      return response;
-    },
-
-    /**
-     * Orchestrated agent creation with auto-setup
-     * Issue #4772: Agent Creation Orchestration Flow
-     * Resolved by #655 (2026-05-04) — route registered in AgentsEndpoints.cs.
-     */
-    async createWithSetup(request: {
-      gameId: string;
-      addToCollection: boolean;
-      agentType: string;
-      agentName?: string;
-      strategyName?: string;
-      strategyParameters?: Record<string, unknown>;
-      /** Pre-selected KB document IDs (from SearchAgentSheet wizard) */
-      documentIds?: string[];
-    }): Promise<{
-      agentId: string;
-      agentName: string;
-      threadId: string;
-      slotUsed: number;
-      gameAddedToCollection: boolean;
-    }> {
-      const response = await httpClient.post<{
-        agentId: string;
-        agentName: string;
-        threadId: string;
-        slotUsed: number;
-        gameAddedToCollection: boolean;
-      }>('/api/v1/agents/create-with-setup', request);
-
-      if (!response) {
-        throw new Error('Failed to create agent: no response from server');
-      }
-
-      return response;
-    },
-
     // ========== Admin Agent Testing (Issue #4962) ==========
 
     /**
@@ -524,153 +385,12 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       return response;
     },
 
-    /**
-     * Update a user-owned agent (name, strategy)
-     * PUT /api/v1/agents/{id}/user
-     * Issue #4683: User Agent CRUD Endpoints
-     * Resolved by #656 (2026-05-04) — route registered in AgentsEndpoints.cs.
-     */
-    async updateUserAgent(
-      agentId: string,
-      request: {
-        name?: string;
-        strategyName?: string;
-        strategyParameters?: Record<string, unknown>;
-      }
-    ): Promise<AgentDto> {
-      const response = await httpClient.put<AgentDto>(
-        `/api/v1/agents/${encodeURIComponent(agentId)}/user`,
-        request,
-        AgentDtoSchema
-      );
-
-      if (!response) {
-        throw new Error('Failed to update user agent: no response from server');
-      }
-
-      return response;
-    },
-
     // ========== Agent Chat SSE (Issue #4126) ==========
 
-    /**
-     * Chat with agent using SSE streaming
-     * Returns async generator for streaming responses
-     * Issue #4126: API Integration
-     *
-     * @param agentId - Agent UUID
-     * @param message - User message (max 2000 chars)
-     * @param options.chatThreadId - Optional thread ID for multi-turn conversations.
-     *   Pass the threadId from createWithSetup or a previous Complete event to maintain context.
-     * @param options.signal - Optional AbortSignal for cancellation
-     */
-    async *chat(
-      agentId: string,
-      message: string,
-      options?: { chatThreadId?: string; signal?: AbortSignal }
-    ): AsyncGenerator<SSEEvent, void, unknown> {
-      const { chatThreadId, signal } = options ?? {};
-      const response = await fetch(`/api/v1/agents/${encodeURIComponent(agentId)}/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message,
-          ...(chatThreadId && { chatThreadId }),
-        }),
-        signal,
-      });
-
-      if (!response.ok) {
-        throw new Error(`Chat failed: ${response.statusText}`);
-      }
-
-      if (!response.body) {
-        throw new Error('No response body');
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      try {
-        while (true) {
-          // Check if aborted before reading
-          if (signal?.aborted) {
-            break;
-          }
-
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6);
-              try {
-                const event = JSON.parse(data);
-                yield event as SSEEvent;
-              } catch (e) {
-                logger.error('Failed to parse SSE event:', e);
-              }
-            }
-          }
-        }
-      } catch (e) {
-        // Clean exit on abort
-        if (signal?.aborted) {
-          return;
-        }
-        throw e;
-      } finally {
-        reader.releaseLock();
-      }
-    },
-
-    // ========== Model & Agent Configuration ==========
-
-    /** Get available AI models, optionally filtered by tier */
-    async getModels(tier?: string): Promise<BackendModelDto[]> {
-      const params = tier ? `?tier=${encodeURIComponent(tier)}` : '';
-      const response = await httpClient.get<GetModelsResponse>(`/api/v1/models${params}`);
-      return response?.models ?? [];
-    },
-
-    /**
-     * Get current LLM configuration for an agent
-     * Resolved by #657 (2026-05-04) — route registered in AgentsEndpoints.cs.
-     */
-    async getAgentConfiguration(agentId: string): Promise<BackendAgentConfigurationDto> {
-      const response = await httpClient.get<BackendAgentConfigurationDto>(
-        `/api/v1/agents/${agentId}/configuration`
-      );
-      if (!response) {
-        throw new Error('Failed to get agent configuration: no response from server');
-      }
-      return response;
-    },
-
-    /**
-     * Patch LLM configuration for an agent (partial update)
-     * Resolved by #658 (2026-05-04) — route registered in AgentsEndpoints.cs.
-     */
-    async updateAgentConfiguration(
-      agentId: string,
-      config: UpdateAgentConfigurationRequest
-    ): Promise<BackendAgentConfigurationDto> {
-      const response = await httpClient.patch<BackendAgentConfigurationDto>(
-        `/api/v1/agents/${agentId}/configuration`,
-        config
-      );
-      if (!response) {
-        throw new Error('Failed to update agent configuration: no response from server');
-      }
-      return response;
-    },
+    // Issue #4139: the `chat()` generator that stood here posted to
+    // POST /api/v1/agents/{agentId}/chat, a route the backend never mounted, and
+    // had no consumer left once `useAgentChatStream` moved to /agents/qa/stream.
+    // Removed rather than marked: there is nothing to keep it for.
 
     // ========== RAG Setup (Admin) ==========
 
@@ -685,35 +405,6 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
         request,
         AgentCostEstimateSchema
       );
-    },
-
-    // ========== Quick Create Tutor (Ownership RAG Access) ==========
-
-    /**
-     * Quick-create a tutor agent for a game after ownership declaration.
-     * Uses pre-existing KB cards to instantly set up a chat-ready agent.
-     * POST /api/v1/agents/quick-create (QuickCreateAgentCommand).
-     * @param gameId - Game UUID
-     * @param sharedGameId - Optional shared game UUID for catalog-linked games
-     * @remarks The response `chatThreadId` is a backend placeholder (chat-thread
-     * BC integration deferred) — do NOT navigate to it. Use `agentId` instead.
-     */
-    async quickCreateTutor(gameId: string, sharedGameId?: string): Promise<QuickCreateResult> {
-      const body: { gameId: string; sharedGameId?: string } = { gameId };
-      if (sharedGameId) {
-        body.sharedGameId = sharedGameId;
-      }
-      const response = await httpClient.post<QuickCreateResult>(
-        '/api/v1/agents/quick-create',
-        body,
-        QuickCreateResultSchema
-      );
-
-      if (!response) {
-        throw new Error('Failed to quick-create tutor: no response from server');
-      }
-
-      return response;
     },
   };
 }

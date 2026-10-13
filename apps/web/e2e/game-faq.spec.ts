@@ -57,14 +57,14 @@ test.describe.skip('Game FAQ Flow - Issue #2193', () => {
 
     // Click on first available game (if any exist)
     const gameCard = page.locator('[data-testid="game-card"]').first();
-    const hasGames = await gameCard.isVisible().catch(() => false);
+    const hasGames = await gameCard.isVisible();
 
     if (hasGames) {
       await gameCard.click();
 
       // Wait for game detail page FAQs section (if feature implemented)
       const faqSection = page.getByRole('heading', { name: /FAQ|Domande Frequenti/i });
-      const hasFaqSection = await faqSection.isVisible({ timeout: 3000 }).catch(() => false);
+      const hasFaqSection = await faqSection.isVisible({ timeout: 3000 });
 
       if (hasFaqSection) {
         // Verify FAQs are displayed (backend determines count)
@@ -84,7 +84,7 @@ test.describe.skip('Game FAQ Flow - Issue #2193', () => {
     await page.waitForLoadState('networkidle');
 
     const gameCard = page.locator('[data-testid="game-card"]').first();
-    const hasGames = await gameCard.isVisible().catch(() => false);
+    const hasGames = await gameCard.isVisible();
 
     if (hasGames) {
       await gameCard.click();
@@ -94,7 +94,7 @@ test.describe.skip('Game FAQ Flow - Issue #2193', () => {
         .getByRole('button', { name: /Aggiungi FAQ|Nuova Domanda|Add FAQ/i })
         .or(page.locator('[data-testid="add-faq-button"]'));
 
-      const canAddFaq = await addButton.isVisible({ timeout: 3000 }).catch(() => false);
+      const canAddFaq = await addButton.isVisible({ timeout: 3000 });
 
       if (canAddFaq) {
         await addButton.click();
@@ -128,14 +128,14 @@ test.describe.skip('Game FAQ Flow - Issue #2193', () => {
     await page.waitForLoadState('networkidle');
 
     const gameCard = page.locator('[data-testid="game-card"]').first();
-    const hasGames = await gameCard.isVisible().catch(() => false);
+    const hasGames = await gameCard.isVisible();
 
     if (hasGames) {
       await gameCard.click();
 
       // Wait for FAQs to load (if feature available)
       const faqItem = page.locator('[data-testid="faq-item"], .faq-item').first();
-      const hasFaqs = await faqItem.isVisible({ timeout: 3000 }).catch(() => false);
+      const hasFaqs = await faqItem.isVisible({ timeout: 3000 });
 
       if (hasFaqs) {
         // Click edit button on first FAQ
@@ -143,7 +143,7 @@ test.describe.skip('Game FAQ Flow - Issue #2193', () => {
           .getByRole('button', { name: /Edit|Modifica/i })
           .or(page.locator('[data-testid="edit-faq-button"]').first());
 
-        const canEdit = await editButton.isVisible().catch(() => false);
+        const canEdit = await editButton.isVisible();
 
         if (canEdit) {
           await editButton.click();
@@ -181,17 +181,14 @@ test.describe.skip('Game FAQ Flow - Issue #2193', () => {
     await page.waitForLoadState('networkidle');
 
     const gameCard = page.locator('[data-testid="game-card"]').first();
-    const hasGames = await gameCard.isVisible().catch(() => false);
+    const hasGames = await gameCard.isVisible();
 
     if (hasGames) {
       await gameCard.click();
 
       // Wait for FAQs to load
       const faqItems = page.locator('[data-testid="faq-item"], .faq-item');
-      const hasFaqs = await faqItems
-        .first()
-        .isVisible({ timeout: 3000 })
-        .catch(() => false);
+      const hasFaqs = await faqItems.first().isVisible({ timeout: 3000 });
 
       if (hasFaqs) {
         // Count initial FAQs
@@ -203,7 +200,7 @@ test.describe.skip('Game FAQ Flow - Issue #2193', () => {
           .getByRole('button', { name: /Delete|Elimina/i })
           .or(page.locator('[data-testid="delete-faq-button"]').first());
 
-        const canDelete = await deleteButton.isVisible().catch(() => false);
+        const canDelete = await deleteButton.isVisible();
 
         if (canDelete) {
           await deleteButton.click();
@@ -221,17 +218,14 @@ test.describe.skip('Game FAQ Flow - Issue #2193', () => {
     await page.waitForLoadState('networkidle');
 
     const gameCard = page.locator('[data-testid="game-card"]').first();
-    const hasGames = await gameCard.isVisible().catch(() => false);
+    const hasGames = await gameCard.isVisible();
 
     if (hasGames) {
       await gameCard.click();
 
       // Wait for FAQs to load
       const faqItems = page.locator('[data-testid="faq-item"], .faq-item');
-      const hasFaqs = await faqItems
-        .first()
-        .isVisible({ timeout: 3000 })
-        .catch(() => false);
+      const hasFaqs = await faqItems.first().isVisible({ timeout: 3000 });
 
       if (hasFaqs) {
         const firstFaq = faqItems.first();
@@ -245,7 +239,7 @@ test.describe.skip('Game FAQ Flow - Issue #2193', () => {
           .getByRole('button', { name: /Upvote|Vota|👍/i })
           .or(firstFaq.locator('[data-testid="upvote-button"]'));
 
-        const canUpvote = await upvoteButton.isVisible().catch(() => false);
+        const canUpvote = await upvoteButton.isVisible();
 
         if (canUpvote) {
           await upvoteButton.click();
@@ -265,21 +259,18 @@ test.describe.skip('Game FAQ Flow - Issue #2193', () => {
     await page.waitForLoadState('networkidle');
 
     const gameCard = page.locator('[data-testid="game-card"]').first();
-    const hasGames = await gameCard.isVisible().catch(() => false);
+    const hasGames = await gameCard.isVisible();
 
     if (hasGames) {
       await gameCard.click();
 
       // Check for FAQ section
       const faqSection = page.getByRole('heading', { name: /FAQ|Domande Frequenti/i });
-      const hasFaqSection = await faqSection.isVisible({ timeout: 3000 }).catch(() => false);
+      const hasFaqSection = await faqSection.isVisible({ timeout: 3000 });
 
       if (hasFaqSection) {
         const faqItems = page.locator('[data-testid="faq-item"], .faq-item');
-        const hasFaqs = await faqItems
-          .first()
-          .isVisible({ timeout: 3000 })
-          .catch(() => false);
+        const hasFaqs = await faqItems.first().isVisible({ timeout: 3000 });
 
         if (!hasFaqs) {
           // Verify empty state message (generic)

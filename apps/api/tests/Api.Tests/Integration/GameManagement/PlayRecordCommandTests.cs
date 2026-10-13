@@ -56,15 +56,7 @@ public sealed class PlayRecordCommandTests : IAsyncLifetime
 
         var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
-        services.AddScoped<IPlayRecordRepository, PlayRecordRepository>();
-        services.AddScoped<PlayRecordPermissionChecker>();
-        // #2349: IGameCoreDataProvider is required by CreatePlayRecordCommandHandler.
-        // Register the real SharedGameRepository (only needs DbContext + IDomainEventCollector,
-        // both provided by CreateBase) and the real GameCoreDataProvider.
-        // IPrivateGameRepository is already mocked in IntegrationServiceCollectionBuilder.CreateBase.
-        services.AddScoped<ISharedGameRepository, SharedGameRepository>();
-        services.AddScoped<IGameCoreDataProvider, GameCoreDataProvider>();
-        services.AddSingleton<TimeProvider>(_timeProvider);
+        services.AddPlayRecordHandlerDependencies(_timeProvider);
 
         _serviceProvider = services.BuildServiceProvider();
         _dbContext = ServiceProvider.GetRequiredService<MeepleAiDbContext>();

@@ -1,8 +1,11 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Services;
 using Microsoft.Extensions.Configuration;
@@ -27,6 +30,9 @@ public class StreamSetupGuideQueryHandlerTests
     private readonly Mock<IEmbeddingRepository> _embeddingRepositoryMock;
     private readonly Mock<ILlmService> _llmServiceMock;
     private readonly Mock<IPromptTemplateService> _promptTemplateServiceMock;
+    // #4206: il cancello RAG. Di default concede, così i test esistenti restano sul loro soggetto.
+    private readonly Mock<IRagAccessService> _ragAccessMock;
+    private static readonly Guid TestUserId = Guid.NewGuid();
     private readonly IConfiguration _configuration;
     private readonly Mock<ILogger<StreamSetupGuideQueryHandler>> _loggerMock;
     private readonly FakeTimeProvider _fakeTimeProvider;
@@ -49,6 +55,10 @@ public class StreamSetupGuideQueryHandlerTests
             .ReturnsAsync(new List<Embedding>());
         _llmServiceMock = new Mock<ILlmService>();
         _promptTemplateServiceMock = new Mock<IPromptTemplateService>();
+        _ragAccessMock = new Mock<IRagAccessService>();
+        _ragAccessMock
+            .Setup(s => s.CanAccessRagAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<UserRole>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
         _loggerMock = new Mock<ILogger<StreamSetupGuideQueryHandler>>();
         _fakeTimeProvider = new FakeTimeProvider();
         _fakeTimeProvider.SetUtcNow(new DateTimeOffset(2024, 1, 1, 12, 0, 0, TimeSpan.Zero));
@@ -61,6 +71,7 @@ public class StreamSetupGuideQueryHandlerTests
             _embeddingRepositoryMock.Object,
             _llmServiceMock.Object,
             _promptTemplateServiceMock.Object,
+            _ragAccessMock.Object,
             _configuration,
             _loggerMock.Object,
             _fakeTimeProvider
@@ -102,7 +113,7 @@ public class StreamSetupGuideQueryHandlerTests
         // steps. The RAG/LLM path for a valid gameId is covered by the
         // Handle_VectorSearchReturnsResults_* tests above.
         var gameId = "game123";
-        var query = new StreamSetupGuideQuery(gameId);
+        var query = new StreamSetupGuideQuery(gameId, TestUserId, "User");
 
         SetupSuccessfulLlmGeneration();
 
@@ -148,7 +159,7 @@ public class StreamSetupGuideQueryHandlerTests
         // ADR-083 Fase 1 (#2504): when pgvector returns setup chunks, the handler
         // must call the LLM with that retrieved context (not fall back to default steps).
         var gameId = Guid.NewGuid().ToString();
-        var query = new StreamSetupGuideQuery(gameId);
+        var query = new StreamSetupGuideQuery(gameId, TestUserId, "User");
 
         SetupEmbeddingMock();
         SetupVectorSearchMock(gameId, "Place the board in the center and shuffle the deck.");
@@ -183,7 +194,7 @@ public class StreamSetupGuideQueryHandlerTests
         // ADR-083 Fase 1 (#2504): the player count must reach the LLM prompt so the
         // guide adapts to 4 players. Only reachable once the RAG context exists.
         var gameId = Guid.NewGuid().ToString();
-        var query = new StreamSetupGuideQuery(gameId, PlayerCount: 4);
+        var query = new StreamSetupGuideQuery(gameId, TestUserId, "User", PlayerCount: 4);
 
         SetupEmbeddingMock();
         SetupVectorSearchMock(gameId, "Setup varies by the number of players.");
@@ -210,7 +221,7 @@ public class StreamSetupGuideQueryHandlerTests
         // Arrange — After legacy vector removal, SearchSetupContextAsync always returns false,
         // so the LLM is never called. Default steps are returned instead of LLM-parsed steps.
         var gameId = "game123";
-        var query = new StreamSetupGuideQuery(gameId);
+        var query = new StreamSetupGuideQuery(gameId, TestUserId, "User");
 
         SetupEmbeddingMock();
         SetupLlmMock("STEP 1: Place the Board\nPut the game board in the center.", totalTokens: 100);
@@ -247,7 +258,7 @@ public class StreamSetupGuideQueryHandlerTests
         // Arrange — After legacy vector removal, SearchSetupContextAsync always returns false,
         // so the LLM is never called. Default steps are returned (all non-optional).
         var gameId = "game123";
-        var query = new StreamSetupGuideQuery(gameId);
+        var query = new StreamSetupGuideQuery(gameId, TestUserId, "User");
 
         SetupEmbeddingMock();
         SetupLlmMock("STEP 1: Required\nThis is required.\n\nSTEP 2: [OPTIONAL] Advanced\nOptional step.");
@@ -275,7 +286,7 @@ public class StreamSetupGuideQueryHandlerTests
     {
         // Arrange
         var gameId = "game123";
-        var query = new StreamSetupGuideQuery(gameId);
+        var query = new StreamSetupGuideQuery(gameId, TestUserId, "User");
 
         _embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
@@ -318,7 +329,7 @@ public class StreamSetupGuideQueryHandlerTests
     {
         // Arrange — legacy vector path; handler always gets no vector results
         var gameId = "game123";
-        var query = new StreamSetupGuideQuery(gameId);
+        var query = new StreamSetupGuideQuery(gameId, TestUserId, "User");
 
         SetupEmbeddingMock();
 
@@ -345,7 +356,7 @@ public class StreamSetupGuideQueryHandlerTests
     {
         // Arrange
         var gameId = "game123";
-        var query = new StreamSetupGuideQuery(gameId);
+        var query = new StreamSetupGuideQuery(gameId, TestUserId, "User");
 
         SetupEmbeddingMock();
 
@@ -370,7 +381,7 @@ public class StreamSetupGuideQueryHandlerTests
     {
         // Arrange
         var gameId = "game123";
-        var query = new StreamSetupGuideQuery(gameId);
+        var query = new StreamSetupGuideQuery(gameId, TestUserId, "User");
 
         SetupEmbeddingMock();
         SetupLlmMock(""); // Empty response
@@ -392,7 +403,7 @@ public class StreamSetupGuideQueryHandlerTests
     {
         // Arrange — legacy vector path; embedding failure triggers graceful degradation
         var gameId = "game123";
-        var query = new StreamSetupGuideQuery(gameId);
+        var query = new StreamSetupGuideQuery(gameId, TestUserId, "User");
 
         _embeddingServiceMock
             .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
@@ -416,7 +427,7 @@ public class StreamSetupGuideQueryHandlerTests
     public async Task Handle_EmptyGameId_ReturnsError()
     {
         // Arrange
-        var query = new StreamSetupGuideQuery("");
+        var query = new StreamSetupGuideQuery("", TestUserId, "User");
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -437,7 +448,7 @@ public class StreamSetupGuideQueryHandlerTests
     public async Task Handle_WhitespaceGameId_ReturnsError()
     {
         // Arrange
-        var query = new StreamSetupGuideQuery("   ");
+        var query = new StreamSetupGuideQuery("   ", TestUserId, "User");
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -455,7 +466,7 @@ public class StreamSetupGuideQueryHandlerTests
     public async Task Handle_NullGameId_ReturnsError()
     {
         // Arrange
-        var query = new StreamSetupGuideQuery(null!);
+        var query = new StreamSetupGuideQuery(null!, TestUserId, "User");
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -473,7 +484,7 @@ public class StreamSetupGuideQueryHandlerTests
     {
         // Arrange
         var gameId = "game123";
-        var query = new StreamSetupGuideQuery(gameId);
+        var query = new StreamSetupGuideQuery(gameId, TestUserId, "User");
 
         SetupSuccessfulLlmGeneration();
 
@@ -512,7 +523,7 @@ public class StreamSetupGuideQueryHandlerTests
         // Arrange — After legacy vector removal, SearchSetupContextAsync always returns false,
         // so the LLM is never called and default steps are returned regardless of prompt config.
         var gameId = "game123";
-        var query = new StreamSetupGuideQuery(gameId);
+        var query = new StreamSetupGuideQuery(gameId, TestUserId, "User");
 
         var customPrompt = "Custom setup guide system prompt from database";
         _promptTemplateServiceMock
@@ -529,6 +540,7 @@ public class StreamSetupGuideQueryHandlerTests
             _embeddingRepositoryMock.Object,
             _llmServiceMock.Object,
             _promptTemplateServiceMock.Object,
+            _ragAccessMock.Object,
             configWithPromptDb,
             _loggerMock.Object,
             _fakeTimeProvider
@@ -557,7 +569,7 @@ public class StreamSetupGuideQueryHandlerTests
         // Arrange — After legacy vector removal, SearchSetupContextAsync always returns false,
         // so the LLM is never called and default steps are returned.
         var gameId = "game123";
-        var query = new StreamSetupGuideQuery(gameId);
+        var query = new StreamSetupGuideQuery(gameId, TestUserId, "User");
 
         SetupEmbeddingMock();
         SetupLlmMock("STEP 1: Test\nTest instruction");
@@ -591,7 +603,7 @@ public class StreamSetupGuideQueryHandlerTests
         // Arrange — After legacy vector removal, SearchSetupContextAsync always returns false,
         // so the LLM is never called and default steps are returned regardless of prompt template failures.
         var gameId = "game123";
-        var query = new StreamSetupGuideQuery(gameId);
+        var query = new StreamSetupGuideQuery(gameId, TestUserId, "User");
 
         _promptTemplateServiceMock
             .Setup(x => x.GetActivePromptAsync("setup-guide-system-prompt", It.IsAny<CancellationToken>()))
@@ -607,6 +619,7 @@ public class StreamSetupGuideQueryHandlerTests
             _embeddingRepositoryMock.Object,
             _llmServiceMock.Object,
             _promptTemplateServiceMock.Object,
+            _ragAccessMock.Object,
             configWithPromptDb,
             _loggerMock.Object,
             _fakeTimeProvider
@@ -633,7 +646,7 @@ public class StreamSetupGuideQueryHandlerTests
     {
         // Arrange
         var gameId = "game123";
-        var query = new StreamSetupGuideQuery(gameId);
+        var query = new StreamSetupGuideQuery(gameId, TestUserId, "User");
 
         var llmResponse = "STEP 1: Quick Setup\nJust one step.";
         SetupEmbeddingMock();
@@ -660,7 +673,7 @@ public class StreamSetupGuideQueryHandlerTests
         // so the LLM is never called. Default steps (5) are returned.
         // 5 steps * 2 min/step = 10 minutes.
         var gameId = "game123";
-        var query = new StreamSetupGuideQuery(gameId);
+        var query = new StreamSetupGuideQuery(gameId, TestUserId, "User");
 
         SetupEmbeddingMock();
         SetupLlmMock("STEP 1: First\nInstruction 1");
@@ -705,6 +718,66 @@ Give each player their starting items.";
 
         SetupEmbeddingMock();
         SetupLlmMock(llmResponse);
+    }
+
+    // ─── #4206: la guida legge la KB del gioco, quindi passa dal cancello RAG ───────────────────
+
+    [Fact]
+    public async Task Handle_UserWithoutOwnership_IsDenied_BeforeAnySearchOrLlm()
+    {
+        var gameId = Guid.NewGuid();
+        var deny = new Mock<IRagAccessService>();
+        deny.Setup(s => s.CanAccessRagAsync(TestUserId, gameId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        var handler = new StreamSetupGuideQueryHandler(
+            _embeddingServiceMock.Object,
+            _embeddingRepositoryMock.Object,
+            _llmServiceMock.Object,
+            _promptTemplateServiceMock.Object,
+            deny.Object,
+            _configuration,
+            _loggerMock.Object,
+            _fakeTimeProvider);
+        SetupEmbeddingMock();
+        SetupVectorSearchMock(gameId.ToString(), "Place the board in the middle of the table.");
+        SetupLlmMock("STEP 1: Board\nPlace the board.");
+
+        var events = new List<RagStreamingEvent>();
+        var act = async () =>
+        {
+            await foreach (var evt in handler.Handle(
+                new StreamSetupGuideQuery(gameId.ToString(), TestUserId, "User"), TestContext.Current.CancellationToken))
+            {
+                events.Add(evt);
+            }
+        };
+
+        (await act.Should().ThrowAsync<RagOwnershipRequiredException>()).Which.GameId.Should().Be(gameId);
+        events.Should().BeEmpty("il diniego arriva prima di qualunque evento, compreso lo stato iniziale");
+        _embeddingServiceMock.VerifyNoOtherCalls();
+        _embeddingRepositoryMock.VerifyNoOtherCalls();
+        _llmServiceMock.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Handle_UserWithAccess_GetsTheGuide_AndTheGateSeesTheirRole()
+    {
+        var gameId = Guid.NewGuid();
+        SetupEmbeddingMock();
+        SetupVectorSearchMock(gameId.ToString(), "Place the board in the middle of the table.");
+        SetupLlmMock("STEP 1: Board\nPlace the board.");
+
+        var events = new List<RagStreamingEvent>();
+        await foreach (var evt in _handler.Handle(
+            new StreamSetupGuideQuery(gameId.ToString(), TestUserId, "Admin"), TestContext.Current.CancellationToken))
+        {
+            events.Add(evt);
+        }
+
+        events.Should().Contain(e => e.Type == StreamingEventType.Complete);
+        _ragAccessMock.Verify(
+            s => s.CanAccessRagAsync(TestUserId, gameId, UserRole.Admin, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     private void SetupEmbeddingMock()

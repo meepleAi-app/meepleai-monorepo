@@ -13,9 +13,31 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 internal sealed class ChatThread : AggregateRoot<Guid>
 {
     public Guid UserId { get; private set; }
+
+    /// <summary>
+    /// Il gioco del thread: un gioco del catalogo condiviso oppure, se <see cref="GameIsPrivate"/>, un
+    /// gioco privato. Chi legge il thread vede un gioco solo; la distinzione serve a chi lo salva,
+    /// perché in tabella i due stanno in colonne diverse (#4244).
+    /// </summary>
     public Guid? GameId { get; private set; }
+
+    /// <summary>Issue #4244: <see cref="GameId"/> è l'id di un gioco privato.</summary>
+    public bool GameIsPrivate { get; private set; }
+
+    /// <summary>Il gioco del catalogo condiviso, o null se il thread è su un gioco privato.</summary>
+    public Guid? SharedGameId => GameIsPrivate ? null : GameId;
+
+    /// <summary>Il gioco privato, o null se il thread è su un gioco del catalogo.</summary>
+    public Guid? PrivateGameId => GameIsPrivate ? GameId : null;
     public Guid? AgentId { get; private set; } // Issue #2030 - Track which agent was used
     public string? AgentType { get; private set; } // Issue #4362 - tutor/arbitro/decisore/auto
+
+    /// <summary>
+    /// Spec 2026-10-11 §6.2: la sessione live a cui appartiene il thread dell'assistente in partita. Quel
+    /// thread nasce senza <see cref="GameId"/>, perché la chiave esterna del gioco punta al catalogo
+    /// condiviso e una sessione può essere su un gioco privato.
+    /// </summary>
+    public Guid? LiveSessionId { get; private set; }
     public string? Title { get; private set; }
     public ThreadStatus Status { get; private set; }
     public DateTime CreatedAt { get; private set; }
@@ -67,15 +89,21 @@ internal sealed class ChatThread : AggregateRoot<Guid>
         Guid? gameId = null,
         string? title = null,
         Guid? agentId = null,
-        string? agentType = null) : base(id) // Issue #4362 - Added agentType parameter
+        string? agentType = null, // Issue #4362 - Added agentType parameter
+        Guid? liveSessionId = null, // #4276
+        bool gameIsPrivate = false) : base(id) // #4244
     {
         if (userId == Guid.Empty)
             throw new ArgumentException("UserId cannot be empty", nameof(userId));
+        if (gameIsPrivate && gameId is null)
+            throw new ArgumentException("A thread on a private game needs the game", nameof(gameIsPrivate));
 
         UserId = userId;
         GameId = gameId;
+        GameIsPrivate = gameIsPrivate; // #4244
         AgentId = agentId; // Issue #2030
         AgentType = agentType?.Trim(); // Issue #4362
+        LiveSessionId = liveSessionId; // #4276
         Title = title?.Trim();
         Status = ThreadStatus.Active;
         CreatedAt = DateTime.UtcNow;
@@ -113,10 +141,15 @@ internal sealed class ChatThread : AggregateRoot<Guid>
     /// <summary>
     /// Adds an assistant message to the thread.
     /// </summary>
-    public void AddAssistantMessage(string content)
+    public void AddAssistantMessage(string content, Guid? profileVersionId = null, string? language = null)
     {
         var sequenceNumber = _messages.Count;
         var message = new ChatMessage(content, ChatMessage.AssistantRole, sequenceNumber);
+        if (profileVersionId.HasValue || language != null)
+        {
+            message.SetAnswerProvenance(profileVersionId, language);
+        }
+
         AddMessage(message);
     }
 

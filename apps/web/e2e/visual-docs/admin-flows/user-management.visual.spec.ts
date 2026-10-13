@@ -101,22 +101,38 @@ test.describe('User Management - Visual Documentation (Admin)', () => {
       title: 'User Management',
       description: 'View and manage all users',
       annotations: [
-        { selector: 'input[type="search"], [data-testid="user-search"]', label: 'Search', color: ANNOTATION_COLORS.primary },
+        {
+          selector: 'input[type="search"], [data-testid="user-search"]',
+          label: 'Search',
+          color: ANNOTATION_COLORS.primary,
+        },
       ],
       nextAction: 'Search or browse users',
     });
 
     // Step 2: User table
     const userTable = page.locator('table, [data-testid="user-table"], .user-list').first();
-    if (await userTable.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await userTable.isVisible({ timeout: 3000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'User List',
         description: 'All users with role, tier, and status',
         annotations: [
-          { selector: 'th, [data-testid="column-email"]', label: 'Email', color: ANNOTATION_COLORS.info },
-          { selector: 'th, [data-testid="column-tier"]', label: 'Tier', color: ANNOTATION_COLORS.info },
-          { selector: 'th, [data-testid="column-status"]', label: 'Status', color: ANNOTATION_COLORS.info },
+          {
+            selector: 'th, [data-testid="column-email"]',
+            label: 'Email',
+            color: ANNOTATION_COLORS.info,
+          },
+          {
+            selector: 'th, [data-testid="column-tier"]',
+            label: 'Tier',
+            color: ANNOTATION_COLORS.info,
+          },
+          {
+            selector: 'th, [data-testid="column-status"]',
+            label: 'Status',
+            color: ANNOTATION_COLORS.info,
+          },
         ],
         previousAction: 'View list',
         nextAction: 'Select user',
@@ -125,13 +141,17 @@ test.describe('User Management - Visual Documentation (Admin)', () => {
 
     // Step 3: User row with actions
     const userRow = page.locator('tr, [data-testid="user-row"]').nth(1);
-    if (await userRow.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await userRow.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 3,
         title: 'User Row',
         description: 'Individual user with quick actions',
         annotations: [
-          { selector: 'button:has-text("Edit"), [data-testid="edit-user"]', label: 'Edit', color: ANNOTATION_COLORS.primary },
+          {
+            selector: 'button:has-text("Edit"), [data-testid="edit-user"]',
+            label: 'Edit',
+            color: ANNOTATION_COLORS.primary,
+          },
         ],
         previousAction: 'View users',
         nextAction: 'Edit user',
@@ -161,28 +181,46 @@ test.describe('User Management - Visual Documentation (Admin)', () => {
       title: 'User Details',
       description: 'View user details to change tier',
       annotations: [
-        { selector: 'text=/Free|Normal|Premium/i, [data-testid="current-tier"]', label: 'Current Tier', color: ANNOTATION_COLORS.info },
+        {
+          selector: 'text=/Free|Normal|Premium/i, [data-testid="current-tier"]',
+          label: 'Current Tier',
+          color: ANNOTATION_COLORS.info,
+        },
       ],
       nextAction: 'Change tier',
     });
 
     // Step 2: Tier change button/selector
-    const changeTierBtn = page.locator('button:has-text("Change Tier"), [data-testid="change-tier"]').first();
-    if (await changeTierBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    const changeTierBtn = page
+      .locator('button:has-text("Change Tier"), [data-testid="change-tier"]')
+      .first();
+    if (await changeTierBtn.isVisible({ timeout: 3000 })) {
       await changeTierBtn.click();
       await waitForStableState(page);
 
       // Step 3: Tier selection
       const tierSelect = page.locator('[role="dialog"], .tier-selector, select').first();
-      if (await tierSelect.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await tierSelect.isVisible({ timeout: 2000 })) {
         await helper.capture(page, {
           step: 2,
           title: 'Select Tier',
           description: 'Choose new tier for user (Free, Normal, Premium)',
           annotations: [
-            { selector: 'text=Premium, [data-tier="premium"]', label: 'Premium', color: ANNOTATION_COLORS.success },
-            { selector: 'text=Normal, [data-tier="normal"]', label: 'Normal', color: ANNOTATION_COLORS.info },
-            { selector: 'text=Free, [data-tier="free"]', label: 'Free', color: ANNOTATION_COLORS.neutral },
+            {
+              selector: 'text=Premium, [data-tier="premium"]',
+              label: 'Premium',
+              color: ANNOTATION_COLORS.success,
+            },
+            {
+              selector: 'text=Normal, [data-tier="normal"]',
+              label: 'Normal',
+              color: ANNOTATION_COLORS.info,
+            },
+            {
+              selector: 'text=Free, [data-tier="free"]',
+              label: 'Free',
+              color: ANNOTATION_COLORS.neutral,
+            },
           ],
           previousAction: 'Open selector',
           nextAction: 'Select tier',
@@ -213,26 +251,40 @@ test.describe('User Management - Visual Documentation (Admin)', () => {
       title: 'User Role Management',
       description: 'View user to change role',
       annotations: [
-        { selector: 'text=/User|Editor|Admin/i, [data-testid="current-role"]', label: 'Current Role', color: ANNOTATION_COLORS.info },
+        {
+          selector: 'text=/User|Editor|Admin/i, [data-testid="current-role"]',
+          label: 'Current Role',
+          color: ANNOTATION_COLORS.info,
+        },
       ],
       nextAction: 'Change role',
     });
 
     // Step 2: Role change
-    const changeRoleBtn = page.locator('button:has-text("Change Role"), [data-testid="change-role"]').first();
-    if (await changeRoleBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    const changeRoleBtn = page
+      .locator('button:has-text("Change Role"), [data-testid="change-role"]')
+      .first();
+    if (await changeRoleBtn.isVisible({ timeout: 3000 })) {
       await changeRoleBtn.click();
       await waitForStableState(page);
 
       const roleSelect = page.locator('[role="dialog"], .role-selector').first();
-      if (await roleSelect.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await roleSelect.isVisible({ timeout: 2000 })) {
         await helper.capture(page, {
           step: 2,
           title: 'Select Role',
           description: 'Choose new role (User, Editor, Admin)',
           annotations: [
-            { selector: 'text=Editor, [data-role="editor"]', label: 'Editor', color: ANNOTATION_COLORS.warning },
-            { selector: 'text=Admin, [data-role="admin"]', label: 'Admin', color: ANNOTATION_COLORS.error },
+            {
+              selector: 'text=Editor, [data-role="editor"]',
+              label: 'Editor',
+              color: ANNOTATION_COLORS.warning,
+            },
+            {
+              selector: 'text=Admin, [data-role="admin"]',
+              label: 'Admin',
+              color: ANNOTATION_COLORS.error,
+            },
           ],
           previousAction: 'Open selector',
           nextAction: 'Assign role',
@@ -263,26 +315,40 @@ test.describe('User Management - Visual Documentation (Admin)', () => {
       title: 'User to Suspend',
       description: 'Active user account',
       annotations: [
-        { selector: 'button:has-text("Suspend"), [data-testid="suspend-user"]', label: 'Suspend', color: ANNOTATION_COLORS.error },
+        {
+          selector: 'button:has-text("Suspend"), [data-testid="suspend-user"]',
+          label: 'Suspend',
+          color: ANNOTATION_COLORS.error,
+        },
       ],
       nextAction: 'Suspend user',
     });
 
     // Step 2: Suspend dialog
-    const suspendBtn = page.locator('button:has-text("Suspend"), [data-testid="suspend-user"]').first();
-    if (await suspendBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    const suspendBtn = page
+      .locator('button:has-text("Suspend"), [data-testid="suspend-user"]')
+      .first();
+    if (await suspendBtn.isVisible({ timeout: 3000 })) {
       await suspendBtn.click();
       await waitForStableState(page);
 
       const suspendDialog = page.locator('[role="dialog"], [role="alertdialog"]').first();
-      if (await suspendDialog.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await suspendDialog.isVisible({ timeout: 2000 })) {
         await helper.capture(page, {
           step: 2,
           title: 'Suspend Reason',
           description: 'Provide reason for suspending user',
           annotations: [
-            { selector: 'textarea, [data-testid="suspend-reason"]', label: 'Reason', color: ANNOTATION_COLORS.warning },
-            { selector: 'button:has-text("Confirm"), button:has-text("Suspend")', label: 'Confirm', color: ANNOTATION_COLORS.error },
+            {
+              selector: 'textarea, [data-testid="suspend-reason"]',
+              label: 'Reason',
+              color: ANNOTATION_COLORS.warning,
+            },
+            {
+              selector: 'button:has-text("Confirm"), button:has-text("Suspend")',
+              label: 'Confirm',
+              color: ANNOTATION_COLORS.error,
+            },
           ],
           previousAction: 'Open suspend dialog',
           nextAction: 'Enter reason and suspend',
@@ -321,21 +387,35 @@ test.describe('User Management - Visual Documentation (Admin)', () => {
       title: 'Suspended User',
       description: 'View suspended user details',
       annotations: [
-        { selector: 'text=/suspended/i, [data-status="suspended"]', label: 'Suspended', color: ANNOTATION_COLORS.error },
-        { selector: 'button:has-text("Unsuspend"), [data-testid="unsuspend"]', label: 'Unsuspend', color: ANNOTATION_COLORS.success },
+        {
+          selector: 'text=/suspended/i, [data-status="suspended"]',
+          label: 'Suspended',
+          color: ANNOTATION_COLORS.error,
+        },
+        {
+          selector: 'button:has-text("Unsuspend"), [data-testid="unsuspend"]',
+          label: 'Unsuspend',
+          color: ANNOTATION_COLORS.success,
+        },
       ],
       nextAction: 'Unsuspend user',
     });
 
     // Step 2: Unsuspend
-    const unsuspendBtn = page.locator('button:has-text("Unsuspend"), [data-testid="unsuspend"]').first();
-    if (await unsuspendBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    const unsuspendBtn = page
+      .locator('button:has-text("Unsuspend"), [data-testid="unsuspend"]')
+      .first();
+    if (await unsuspendBtn.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Restore Access',
         description: 'Unsuspend user to restore account access',
         annotations: [
-          { selector: 'button:has-text("Unsuspend")', label: 'Unsuspend', color: ANNOTATION_COLORS.success },
+          {
+            selector: 'button:has-text("Unsuspend")',
+            label: 'Unsuspend',
+            color: ANNOTATION_COLORS.success,
+          },
         ],
         previousAction: 'View suspended',
         nextAction: 'Click unsuspend',

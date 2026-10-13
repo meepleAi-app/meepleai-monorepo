@@ -21,18 +21,3 @@ export const OwnershipResultSchema = z.object({
 });
 
 export type OwnershipResult = z.infer<typeof OwnershipResultSchema>;
-
-// ========== Quick Create Tutor ==========
-
-/**
- * Result of quick-creating a tutor agent
- * POST /api/v1/agents/quick-create
- */
-export const QuickCreateResultSchema = z.object({
-  agentId: z.string().uuid(),
-  chatThreadId: z.string().uuid(),
-  agentName: z.string(),
-  kbCardCount: z.number().int().nonnegative(),
-});
-
-export type QuickCreateResult = z.infer<typeof QuickCreateResultSchema>;

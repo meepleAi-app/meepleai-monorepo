@@ -38,8 +38,11 @@ describe('UNIFIED_NAV_ITEMS', () => {
     expect(ids).toContain('library');
     expect(ids).toContain('chat');
     expect(ids).toContain('profile');
-    expect(ids).toContain('agents');
     expect(ids).toContain('sessions');
+    // Issue #4138: 'agents' is gone — the /agents section was retired with the
+    // user-facing agent concept. Asserted as an absence so the entry cannot
+    // come back without this test going red.
+    expect(ids).not.toContain('agents');
   });
 
   it('library item has no children (Hub is the single landing)', () => {
@@ -62,10 +65,8 @@ describe('UNIFIED_NAV_ITEMS', () => {
     expect(profile?.hideFromMainNav).toBe(true);
   });
 
-  it('agents and sessions have group strumenti', () => {
-    const agents = UNIFIED_NAV_ITEMS.find(item => item.id === 'agents');
+  it('sessions has group strumenti', () => {
     const sessions = UNIFIED_NAV_ITEMS.find(item => item.id === 'sessions');
-    expect(agents?.group).toBe('strumenti');
     expect(sessions?.group).toBe('strumenti');
   });
 });
@@ -92,8 +93,8 @@ describe('filterNavItemsByRole', () => {
     expect(ids).not.toContain('welcome');
     expect(ids).toContain('library');
     expect(ids).toContain('profile');
-    expect(ids).toContain('agents');
     expect(ids).toContain('sessions');
+    expect(ids).not.toContain('agents');
   });
 
   it('returns only non-restricted items while auth is loading', () => {

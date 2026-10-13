@@ -138,33 +138,6 @@ test.describe('RBAC Authorization Tests - E2E-004', () => {
 
       await expectForbiddenOrRedirect(page, '/editor');
     });
-
-    test('Admin can access /upload', async ({ page }) => {
-      const authHelper = new AuthHelper(page);
-      await authHelper.setupMockAuth('Admin');
-      await page.goto('/upload');
-
-      await expect(page).toHaveURL('/upload');
-      await page.waitForLoadState('networkidle');
-      await expectPageLoaded(page);
-    });
-
-    test('Editor can access /upload', async ({ page }) => {
-      const authHelper = new AuthHelper(page);
-      await authHelper.setupMockAuth('Editor');
-      await page.goto('/upload');
-
-      await expect(page).toHaveURL('/upload');
-      await page.waitForLoadState('networkidle');
-      await expectPageLoaded(page);
-    });
-
-    test('User is forbidden from /upload', async ({ page }) => {
-      await setupMockAuthWithForbidden(page, 'User', ['/upload/**']);
-      await page.goto('/upload');
-
-      await expectForbiddenOrRedirect(page, '/upload');
-    });
   });
 
   test.describe('Public Routes (All Roles)', () => {
@@ -220,10 +193,7 @@ test.describe('RBAC Authorization Tests - E2E-004', () => {
 
         const currentUrl = page.url();
         const isLoginRedirect = currentUrl.includes('/login');
-        const hasLoadingSpinner = await page
-          .locator('text=/verifica autorizzazioni/i')
-          .isVisible()
-          .catch(() => false);
+        const hasLoadingSpinner = await page.locator('text=/verifica autorizzazioni/i').isVisible();
 
         expect(isLoginRedirect || hasLoadingSpinner).toBe(true);
       }
@@ -248,10 +218,7 @@ test.describe('RBAC Authorization Tests - E2E-004', () => {
 
         const currentUrl = page.url();
         const isLoginRedirect = currentUrl.includes('/login');
-        const hasLoadingSpinner = await page
-          .locator('text=/verifica autorizzazioni/i')
-          .isVisible()
-          .catch(() => false);
+        const hasLoadingSpinner = await page.locator('text=/verifica autorizzazioni/i').isVisible();
 
         expect(isLoginRedirect || hasLoadingSpinner).toBe(true);
       }

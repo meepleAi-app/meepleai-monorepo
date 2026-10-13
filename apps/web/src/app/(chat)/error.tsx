@@ -55,9 +55,9 @@ export default function ChatError({ error, reset }: ErrorProps) {
             variant="outline"
             className="border-[rgba(45,42,38,0.12)] font-quicksand font-semibold text-[#6B665C] hover:bg-[rgba(45,42,38,0.04)] hover:text-[#2D2A26]"
           >
-            <Link href="/agents">
+            <Link href="/chat">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Agenti
+              Chat
             </Link>
           </Button>
         </div>

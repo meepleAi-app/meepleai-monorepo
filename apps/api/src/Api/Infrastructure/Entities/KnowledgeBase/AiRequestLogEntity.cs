@@ -24,6 +24,16 @@ public class AiRequestLogEntity
     public string? UserAgent { get; set; }
     public string? Model { get; set; }
     public string? FinishReason { get; set; }
+
+    /// <summary>
+    /// #4168 (ADR-095 D2): la versione del profilo dell'agente che ha prodotto la risposta, e la
+    /// lingua della risposta. Null per le richieste che non passano dalla pipeline e per le righe
+    /// scritte prima di #4168.
+    /// </summary>
+    public Guid? ProfileVersionId { get; set; }
+
+    /// <inheritdoc cref="ProfileVersionId"/>
+    public string? Language { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     // AI-11: Quality Scoring fields

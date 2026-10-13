@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.MechanicExtractor;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Tests.Constants;
@@ -46,8 +47,8 @@ public sealed class GetMechanicAnalysisStatusSectionSignalIntegrationTests : IAs
         await _fixture.DropIsolatedDatabaseAsync(_databaseName);
     }
 
-    [Fact(DisplayName = "Status query counts DISTINCT sections-with-claims out of 6 total")]
-    public async Task Handle_ReportsDistinctSectionsWithClaims_OutOfSixTotal()
+    [Fact(DisplayName = "Status query counts DISTINCT sections-with-claims out of the total")]
+    public async Task Handle_ReportsDistinctSectionsWithClaims_OutOfTheTotal()
     {
         var analysisId = await SeedAnalysisAsync();
         // Claims across 3 DISTINCT sections (Summary=0, Mechanics=1, Resources=3); Mechanics twice
@@ -63,11 +64,11 @@ public sealed class GetMechanicAnalysisStatusSectionSignalIntegrationTests : IAs
 
         dto.Should().NotBeNull();
         dto!.ClaimsCount.Should().Be(4);
-        dto.SectionsWithClaims.Should().Be(3); // sections 0,1,3 — Victory/Phases/Faq dropped
-        dto.TotalSections.Should().Be(6);
+        dto.SectionsWithClaims.Should().Be(3); // sections 0,1,3 — the others produced no claims
+        dto.TotalSections.Should().Be(AllSections);
     }
 
-    [Fact(DisplayName = "Status query reports 0/6 when no section produced claims")]
+    [Fact(DisplayName = "Status query reports zero sections when none produced claims")]
     public async Task Handle_ReportsZeroSectionsWithClaims_WhenNoClaims()
     {
         var analysisId = await SeedAnalysisAsync();
@@ -78,10 +79,18 @@ public sealed class GetMechanicAnalysisStatusSectionSignalIntegrationTests : IAs
 
         dto.Should().NotBeNull();
         dto!.SectionsWithClaims.Should().Be(0);
-        dto.TotalSections.Should().Be(6);
+        dto.TotalSections.Should().Be(AllSections);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// The denominator of "sections with claims / sections": every section an analysis can
+    /// have. #4298: both tests carried a literal 6 and went red when MechanicSection grew —
+    /// the number of sections is the enum's to say, and a hand-written copy of it only
+    /// tells how many there were on the day the test was written.
+    /// </summary>
+    private static readonly int AllSections = Enum.GetValues<MechanicSection>().Length;
 
     private void AddClaim(Guid analysisId, int section, int order) =>
         _dbContext.MechanicClaims.Add(new MechanicClaimEntity

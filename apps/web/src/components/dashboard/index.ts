@@ -23,7 +23,6 @@ export { SessionRow } from './session-row';
 // Issue #5094 — Dashboard Redesign
 export { DashboardSessionHero } from './session-hero';
 export { RecentGamesSection } from './recent-games-section';
-export { AgentsDashboardSection } from './agents-section';
 export { RecentChatsDashboardSection } from './recent-chats-section';
 // Issue #448 — Contextual Dashboard
 export { GameNightHero } from './game-night-hero';

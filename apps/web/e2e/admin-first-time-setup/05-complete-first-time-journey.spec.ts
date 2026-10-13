@@ -116,7 +116,7 @@ test.describe('Complete First-Time Journey', () => {
 
     // Select game (Pandemic)
     const gameSelect = page.locator('select[name="gameSelect"], select[name="game"]');
-    const gameSelectVisible = await gameSelect.isVisible({ timeout: 5000 }).catch(() => false);
+    const gameSelectVisible = await gameSelect.isVisible({ timeout: 5000 });
 
     if (gameSelectVisible) {
       await gameSelect.selectOption({ label: 'Pandemic' });
@@ -124,7 +124,7 @@ test.describe('Complete First-Time Journey', () => {
     } else {
       // Alternative: click game card
       const gameCard = page.locator('[data-game="pandemic"], button:has-text("Pandemic")');
-      if (await gameCard.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await gameCard.isVisible({ timeout: 5000 })) {
         await gameCard.click();
         console.log('    ✓ Selected game: Pandemic (card click)');
       } else {
@@ -165,7 +165,7 @@ test.describe('Complete First-Time Journey', () => {
 
     // Proceed to next step
     const nextButton1 = page.locator('button:has-text("Next")');
-    if (await nextButton1.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await nextButton1.isVisible({ timeout: 3000 })) {
       await nextButton1.click();
       console.log('    ✓ Proceeded to Step 2');
     }
@@ -176,7 +176,7 @@ test.describe('Complete First-Time Journey', () => {
     await page.waitForTimeout(2000); // Wait for step transition
 
     const gameIdSelect = page.locator('select[name="gameId"]');
-    const gameIdSelectVisible = await gameIdSelect.isVisible({ timeout: 5000 }).catch(() => false);
+    const gameIdSelectVisible = await gameIdSelect.isVisible({ timeout: 5000 });
 
     if (gameIdSelectVisible) {
       await gameIdSelect.selectOption({ label: 'Pandemic' });
@@ -187,7 +187,7 @@ test.describe('Complete First-Time Journey', () => {
 
     // Proceed to Step 3
     const nextButton2 = page.locator('button:has-text("Next")');
-    if (await nextButton2.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await nextButton2.isVisible({ timeout: 3000 })) {
       await nextButton2.click();
       console.log('    ✓ Proceeded to Step 3');
     }
@@ -201,10 +201,7 @@ test.describe('Complete First-Time Journey', () => {
     const processingIndicator = page.locator(
       'text=/Processing|Elaborazione|Loading/i, [data-testid="processing"]'
     );
-    const isProcessing = await processingIndicator
-      .first()
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
+    const isProcessing = await processingIndicator.first().isVisible({ timeout: 5000 });
 
     if (isProcessing) {
       console.log('    🔄 PDF processing started...');
@@ -222,10 +219,7 @@ test.describe('Complete First-Time Journey', () => {
 
     // Wait for chat creation
     const chatCreatedIndicator = page.locator('text=/Chat creata|Chat created|Ready/i');
-    const chatCreated = await chatCreatedIndicator
-      .first()
-      .isVisible({ timeout: 30000 })
-      .catch(() => false);
+    const chatCreated = await chatCreatedIndicator.first().isVisible({ timeout: 30000 });
 
     if (chatCreated) {
       console.log('    ✅ Chat thread created');
@@ -248,7 +242,7 @@ test.describe('Complete First-Time Journey', () => {
 
     // Proceed to Step 4
     const goToQAButton = page.locator('button:has-text("Q&A"), button:has-text("Next")');
-    if (await goToQAButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await goToQAButton.isVisible({ timeout: 5000 })) {
       await goToQAButton.click();
       console.log('    ✓ Proceeded to Step 4');
     }
@@ -262,7 +256,7 @@ test.describe('Complete First-Time Journey', () => {
     const questionInput = page.locator(
       'textarea[placeholder*="question"], input[placeholder*="question"]'
     );
-    const inputVisible = await questionInput.isVisible({ timeout: 5000 }).catch(() => false);
+    const inputVisible = await questionInput.isVisible({ timeout: 5000 });
 
     if (inputVisible) {
       await questionInput.fill('How many players can play Pandemic?');
@@ -270,7 +264,7 @@ test.describe('Complete First-Time Journey', () => {
 
       // Click send
       const sendButton = page.locator('button:has-text("Send"), button[type="submit"]');
-      if (await sendButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await sendButton.isVisible({ timeout: 3000 })) {
         const messagePromise = page.waitForResponse(
           res => res.url().includes('/api/v1/chat/messages'),
           { timeout: 20000 }
@@ -293,7 +287,7 @@ test.describe('Complete First-Time Journey', () => {
 
     // Complete wizard
     const completeButton = page.locator('button:has-text("Complete"), button:has-text("Finish")');
-    if (await completeButton.isVisible({ timeout: 5000 }).catch(() => false)) {
+    if (await completeButton.isVisible({ timeout: 5000 })) {
       await completeButton.click();
       console.log('    ✅ Wizard completed');
     }

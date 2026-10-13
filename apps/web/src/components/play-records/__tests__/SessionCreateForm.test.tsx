@@ -66,24 +66,21 @@ vi.mock('@/hooks/queries/useCurrentUser', () => ({
   useCurrentUser: () => ({ data: undefined }),
 }));
 
-// GameCombobox — simple stub
-vi.mock('@/components/play-records/GameCombobox', () => ({
-  GameCombobox: ({
-    onSelect,
+// GamePicker — simple stub (the real one is exercised in SessionCreateForm.game.test.tsx)
+vi.mock('@/components/features/game-picker', () => ({
+  GamePicker: ({
+    onChange,
     placeholder,
   }: {
-    value?: string;
-    onSelect: (id: string, name: string) => void;
-    onNotFound?: () => void;
-    disabled?: boolean;
+    onChange: (option: { id: string; title: string } | null) => void;
     placeholder?: string;
   }) => (
     <div>
       <input
-        data-testid="game-combobox"
+        data-testid="play-record-game-stub"
         placeholder={placeholder ?? 'Search game'}
         onChange={() => {}}
-        onClick={() => onSelect('game-1', 'Catan')}
+        onClick={() => onChange({ id: 'game-1', title: 'Catan' })}
       />
     </div>
   ),
@@ -186,8 +183,8 @@ describe('SessionCreateForm — wizard 3-step', () => {
       mockCurrentStep = 0;
       render(<SessionCreateForm {...defaultProps} />, { wrapper: createWrapper() });
 
-      // GameCombobox should be present for catalog search
-      expect(screen.getByTestId('game-combobox')).toBeInTheDocument();
+      // The game picker should be present for the library/catalog search
+      expect(screen.getByTestId('play-record-game-stub')).toBeInTheDocument();
     });
 
     it('shows freeform text input when catalog toggle is set to freeform', async () => {
@@ -218,7 +215,7 @@ describe('SessionCreateForm — wizard 3-step', () => {
 
       // There should be a freeform game name input visible by default or after switching
       // At minimum, the combobox placeholder is present
-      expect(screen.getByTestId('game-combobox')).toBeInTheDocument();
+      expect(screen.getByTestId('play-record-game-stub')).toBeInTheDocument();
     });
   });
 

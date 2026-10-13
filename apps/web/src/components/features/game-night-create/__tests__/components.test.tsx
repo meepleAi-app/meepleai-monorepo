@@ -308,6 +308,67 @@ describe('GameCandidatesPicker', () => {
   });
 });
 
+describe('GameCandidatesPicker — ricerca nella libreria (#4187)', () => {
+  const searchLabels = {
+    ...gameLabels,
+    searchLabel: 'Cerca nella tua libreria',
+    searchEmpty: (query: string) => `Nessun gioco per «${query}»`,
+  };
+
+  it('mostra il campo di ricerca e inoltra quello che si scrive', async () => {
+    const user = userEvent.setup();
+    const onSearchChange = vi.fn();
+    render(
+      <GameCandidatesPicker
+        games={[]}
+        selected={[]}
+        decideAtGroup={false}
+        onToggleGame={vi.fn()}
+        onToggleDecideAtGroup={vi.fn()}
+        labels={searchLabels}
+        search=""
+        onSearchChange={onSearchChange}
+      />
+    );
+
+    await user.type(screen.getByRole('searchbox', { name: 'Cerca nella tua libreria' }), 'W');
+    expect(onSearchChange).toHaveBeenCalledWith('W');
+  });
+
+  it('con una ricerca senza risultati non dice che la libreria è vuota', () => {
+    render(
+      <GameCandidatesPicker
+        games={[]}
+        selected={[]}
+        decideAtGroup={false}
+        onToggleGame={vi.fn()}
+        onToggleDecideAtGroup={vi.fn()}
+        labels={searchLabels}
+        search="Zzz"
+        onSearchChange={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Nessun gioco per «Zzz»')).toBeInTheDocument();
+    expect(screen.queryByText(gameLabels.libraryEmpty)).not.toBeInTheDocument();
+  });
+
+  it('senza onSearchChange non mostra il campo (comportamento di prima)', () => {
+    render(
+      <GameCandidatesPicker
+        games={[]}
+        selected={[]}
+        decideAtGroup={false}
+        onToggleGame={vi.fn()}
+        onToggleDecideAtGroup={vi.fn()}
+        labels={gameLabels}
+      />
+    );
+
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
+  });
+});
+
 describe('RSVPCardLivePreview', () => {
   it('renders the title fallback when title is empty', () => {
     render(

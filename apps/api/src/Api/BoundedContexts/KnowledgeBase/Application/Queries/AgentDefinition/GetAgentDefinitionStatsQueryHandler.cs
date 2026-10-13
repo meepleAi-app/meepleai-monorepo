@@ -34,17 +34,9 @@ internal sealed class GetAgentDefinitionStatsQueryHandler
         var activeDefinitions = definitions.Count(d => d.IsActive);
         var inactiveDefinitions = totalDefinitions - activeDefinitions;
 
-        // Group by type
-        var distributionByType = definitions
-            .GroupBy(d => d.Type.Value, StringComparer.Ordinal)
-            .Select(g => new TypeDistribution
-            {
-                Type = g.Key,
-                Count = g.Count(),
-                ActiveCount = g.Count(d => d.IsActive)
-            })
-            .OrderByDescending(d => d.Count)
-            .ToList();
+        // Issue #4138: a distribution-by-type stood here. With one system agent and no
+        // type field there is no axis to distribute over - it would be a single bucket.
+        // No frontend read it (`grep -rn distributionByType apps/web/src` → nothing).
 
         // Recent definitions (last 10)
         var recentDefinitions = definitions
@@ -54,7 +46,6 @@ internal sealed class GetAgentDefinitionStatsQueryHandler
             {
                 Id = d.Id,
                 Name = d.Name,
-                Type = d.Type.Value,
                 IsActive = d.IsActive,
                 CreatedAt = d.CreatedAt
             })
@@ -69,7 +60,6 @@ internal sealed class GetAgentDefinitionStatsQueryHandler
             TotalDefinitions = totalDefinitions,
             ActiveDefinitions = activeDefinitions,
             InactiveDefinitions = inactiveDefinitions,
-            DistributionByType = distributionByType,
             RecentDefinitions = recentDefinitions,
             OldestCreatedAt = oldestCreatedAt,
             NewestCreatedAt = newestCreatedAt

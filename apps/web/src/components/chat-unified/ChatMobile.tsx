@@ -180,12 +180,17 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [agentId, setAgentId] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const qaAbortRef = useRef<AbortController | null>(null);
 
   // SSE Streaming
-  const { state: streamState, sendMessage: sendViaSSE } = useAgentChatStream({
+  // Issue #4139: `sendMessage` is no longer destructured from this hook. Its only
+  // caller here was the branch that posted to /api/v1/agents/{agentId}/chat, a
+  // route the backend never mounted; this surface's working path streams through
+  // `qaStream` in chatClient instead. `state` is still read for rendering, so the
+  // two implementations are duplicate streaming to consolidate - not a change to
+  // make inside a fix whose subject is the dead URL.
+  const { state: streamState } = useAgentChatStream({
     onComplete: (answer, metadata) => {
       const assistantMessage: LocalMessage = {
         id: `assistant-${Date.now()}`,
@@ -242,7 +247,6 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
         }
 
         setThread(threadData);
-        setAgentId(threadData.agentId ?? null);
 
         const mapped: LocalMessage[] = (threadData.messages ?? []).map(
           (m: ChatThreadMessageDto) => ({
@@ -306,7 +310,7 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
     [messages, thread?.gameId]
   );
 
-  // Send message — SSE streaming when agentId or gameId available, REST fallback otherwise
+  // Send message — SSE streaming when a game context is available, REST fallback otherwise
   const handleSend = useCallback(
     (content?: string) => {
       const text = (content || inputValue).trim();
@@ -323,11 +327,10 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
       };
       setMessages(prev => [...prev, userMessage]);
 
-      // SSE path: agent-specific streaming
-      if (agentId) {
-        sendViaSSE(agentId, text, threadId);
-        return;
-      }
+      // Issue #4139: an `if (agentId)` branch stood here, BEFORE the game path, and
+      // sent to /api/v1/agents/{agentId}/chat — a route the backend never mounted. So
+      // a thread carrying both an agentId and a gameId took the dead path and never
+      // reached the working one. The game path is now the only SSE path.
 
       // QA stream path: game context available → use RAG QA streaming
       if (thread?.gameId) {
@@ -513,7 +516,7 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
         }
       })();
     },
-    [inputValue, streamState.isStreaming, isSending, agentId, thread?.gameId, threadId, sendViaSSE]
+    [inputValue, streamState.isStreaming, isSending, thread?.gameId, threadId]
   );
 
   // Key handler

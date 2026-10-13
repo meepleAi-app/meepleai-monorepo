@@ -28,7 +28,6 @@ public sealed class GetConsumingAgentsByDocumentIdQueryHandlerTests
         var agent = AgentDefinition.Create(
             name: name,
             description: "test",
-            type: AgentType.Custom("HybridSearch", "Hybrid search"),
             config: AgentDefinitionConfig.Create("gpt-4o-mini", 1024, 0.5f));
         if (gameId.HasValue) agent.SetGameId(gameId);
         return agent;
@@ -39,7 +38,6 @@ public sealed class GetConsumingAgentsByDocumentIdQueryHandlerTests
         return AgentDefinition.CreateSystem(
             name: name,
             description: "system",
-            type: AgentType.Custom("HybridSearch", "Hybrid search"),
             config: AgentDefinitionConfig.Create("gpt-4o-mini", 1024, 0.5f),
             typologySlug: typologySlug);
     }

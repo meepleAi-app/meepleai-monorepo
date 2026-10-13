@@ -15,7 +15,6 @@
 import {
   Bell,
   BookOpen,
-  Bot,
   Brain,
   Calendar,
   Clock,
@@ -60,7 +59,6 @@ export interface NavItem {
  * | notifications | Notifiche | 4        | authOnly    | hideFromMainNav          |
  * | game-nights   | Serate    | 5        | authOnly    |                          |
  * | profile       | Profilo   | 6        | authOnly    |                          |
- * | agents        | Agenti    | 7        | authOnly    |                          |
  * | sessions      | Sessioni  | 8        | authOnly    |                          |
  */
 /** Unified navigation items — single source of truth */
@@ -150,19 +148,6 @@ export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = [
     activePattern: /^\/profile/,
     visibility: { authOnly: true },
     hideFromMainNav: true,
-  },
-  {
-    id: 'agents',
-    href: '/agents',
-    icon: Bot,
-    iconName: 'bot',
-    label: 'Agenti',
-    ariaLabel: 'Navigate to agents list',
-    priority: 7,
-    testId: 'nav-agents',
-    activePattern: /^\/agents/,
-    visibility: { authOnly: true },
-    group: 'strumenti',
   },
   {
     id: 'sessions',
@@ -263,8 +248,11 @@ export const UNIFIED_NAV_ITEMS: UnifiedNavItem[] = [
     href: '/editor',
     icon: PenTool,
     iconName: 'pen-tool',
-    label: 'Editor Agenti',
-    ariaLabel: 'Editor di agenti AI',
+    // Issue #4138: l'etichetta diceva 'Editor Agenti' ma /editor e' l'editor
+    // dei RuleSpec; la sotto-sezione delle proposte di tipologia e' uscita con
+    // le tipologie, quindi il nome ora nominava una cosa inesistente.
+    label: 'Editor Regole',
+    ariaLabel: 'Editor delle regole di gioco',
     priority: 15,
     testId: 'nav-editor',
     activePattern: /^\/editor/,

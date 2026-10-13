@@ -36,7 +36,6 @@ internal class GetBulkCollectionAssociatedDataQueryHandler
         if (query.EntityType != EntityType.Game)
         {
             return new BulkAssociatedDataDto(
-                TotalCustomAgents: 0,
                 TotalPrivatePdfs: 0,
                 TotalChatSessions: 0,
                 TotalGameSessions: 0,
@@ -56,7 +55,6 @@ internal class GetBulkCollectionAssociatedDataQueryHandler
             .ConfigureAwait(false);
 
         // Aggregate counts
-        var totalCustomAgents = entries.Count(e => !string.IsNullOrEmpty(e.CustomAgentConfigJson));
         var totalPrivatePdfs = entries.Count(e => e.PrivatePdfId.HasValue);
         var totalGameSessions = entries.Sum(e => e.Sessions?.Count ?? 0);
         var totalChecklistItems = entries.Sum(e => e.Checklist?.Count ?? 0);
@@ -72,7 +70,6 @@ internal class GetBulkCollectionAssociatedDataQueryHandler
             : 0;
 
         return new BulkAssociatedDataDto(
-            TotalCustomAgents: totalCustomAgents,
             TotalPrivatePdfs: totalPrivatePdfs,
             TotalChatSessions: totalChatSessions,
             TotalGameSessions: totalGameSessions,

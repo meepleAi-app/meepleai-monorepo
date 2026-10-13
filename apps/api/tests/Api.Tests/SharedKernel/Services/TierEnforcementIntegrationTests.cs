@@ -110,26 +110,6 @@ public sealed class TierEnforcementIntegrationTests : IDisposable
     }
 
     [Fact]
-    public async Task FreeUser_AtAgentLimit_CanPerformReturnsFalse()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        await SeedUser(userId, role: "user", tier: "free");
-        await SeedTierDefinition("free", TierLimits.FreeTier);
-
-        // For CreateAgent, the counter-based check is supplemented by DB count
-        // Free tier MaxAgents = 1, simulate Redis counter = 1
-        _mockDb.Setup(d => d.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
-            .ReturnsAsync((RedisValue)TierLimits.FreeTier.MaxAgents.ToString());
-
-        // Act
-        var canCreate = await _sut.CanPerformAsync(userId, TierAction.CreateAgent);
-
-        // Assert
-        canCreate.Should().BeFalse("free user has reached the agent creation limit");
-    }
-
-    [Fact]
     public async Task FreeUser_SessionSaveDisabled_CanPerformReturnsFalse()
     {
         // Arrange
@@ -182,25 +162,6 @@ public sealed class TierEnforcementIntegrationTests : IDisposable
         canSave.Should().BeTrue("premium tier includes session save");
     }
 
-    [Fact]
-    public async Task PremiumUser_BelowAgentLimit_CanPerformReturnsTrue()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        await SeedUser(userId, role: "user", tier: "premium");
-        await SeedTierDefinition("premium", TierLimits.PremiumTier);
-
-        // Redis counter below limit
-        _mockDb.Setup(d => d.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
-            .ReturnsAsync((RedisValue)"5");
-
-        // Act
-        var canCreate = await _sut.CanPerformAsync(userId, TierAction.CreateAgent);
-
-        // Assert
-        canCreate.Should().BeTrue("premium user is below the agent creation limit");
-    }
-
     #endregion
 
     #region Admin Bypasses All Limits
@@ -217,20 +178,6 @@ public sealed class TierEnforcementIntegrationTests : IDisposable
 
         // Assert
         canUpload.Should().BeTrue("admin users bypass all tier limits");
-    }
-
-    [Fact]
-    public async Task AdminUser_AlwaysBypassesAgentLimit()
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        await SeedUser(userId, role: "admin", tier: "free");
-
-        // Act
-        var canCreate = await _sut.CanPerformAsync(userId, TierAction.CreateAgent);
-
-        // Assert
-        canCreate.Should().BeTrue("admin users bypass all tier limits");
     }
 
     [Fact]
@@ -286,7 +233,6 @@ public sealed class TierEnforcementIntegrationTests : IDisposable
 
         // Assert
         snapshot.PdfThisMonthMax.Should().Be(TierLimits.FreeTier.MaxPdfUploadsPerMonth);
-        snapshot.AgentsMax.Should().Be(TierLimits.FreeTier.MaxAgents);
         snapshot.SessionSaveEnabled.Should().BeFalse();
         snapshot.AgentQueriesTodayMax.Should().Be(TierLimits.FreeTier.MaxAgentQueriesPerDay);
     }

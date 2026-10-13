@@ -97,7 +97,7 @@ internal class LanguageDetectionService : ILanguageDetectionService
         try
         {
             // Language detection uses lightweight heuristics based on keywords, stop words, and accents.
-            var detectedLanguage = await Task.Run(() => DetectLanguageCore(text)).ConfigureAwait(false);
+            var detectedLanguage = await Task.Run(() => DetectCore(text).Language).ConfigureAwait(false);
 
             _logger.LogInformation("Detected language: {Language} (text length: {Length})",
                 detectedLanguage, text.Length);
@@ -132,7 +132,29 @@ internal class LanguageDetectionService : ILanguageDetectionService
         return SupportedLanguages.Contains(languageCode.ToLowerInvariant(), StringComparer.Ordinal);
     }
 
-    private static string DetectLanguageCore(string text)
+    /// <inheritdoc/>
+    public LanguageDetection Detect(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return new LanguageDetection("en", IsConfident: false);
+        }
+
+        try
+        {
+            return DetectCore(text);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            // Come DetectLanguageAsync: il rilevamento è un aiuto, non deve far fallire una risposta.
+            _logger.LogError(ex, "Error during language detection, defaulting to 'en'");
+            return new LanguageDetection("en", IsConfident: false);
+        }
+    }
+
+    private static LanguageDetection DetectCore(string text)
     {
         var lowercase = text.ToLowerInvariant();
         var tokens = WordRegex
@@ -144,7 +166,7 @@ internal class LanguageDetectionService : ILanguageDetectionService
         if (tokens.Length < 3)
         {
             // Not enough signal to make a confident choice
-            return "en";
+            return new LanguageDetection("en", IsConfident: false);
         }
 
         var scores = new Dictionary<string, double>(StringComparer.Ordinal);
@@ -180,7 +202,7 @@ internal class LanguageDetectionService : ILanguageDetectionService
         // If no language has meaningful score, default to English.
         if (best.Value <= 0.5)
         {
-            return "en";
+            return new LanguageDetection("en", IsConfident: false);
         }
 
         // Avoid oscillation when scores are similar by preferring English unless another language is clearly dominant.
@@ -188,11 +210,10 @@ internal class LanguageDetectionService : ILanguageDetectionService
             scores.TryGetValue("en", out var englishScore) &&
             best.Value - englishScore < 1.0)
         {
-            return englishScore >= best.Value ? "en" : best.Key;
+            return new LanguageDetection(englishScore >= best.Value ? "en" : best.Key, IsConfident: false);
         }
 
-
-        return best.Key;
+        return new LanguageDetection(best.Key, IsConfident: true);
     }
 
     private static LanguageProfile CreateProfile(string code, string[] keywords, string[] stopWords, char[] accentCharacters)

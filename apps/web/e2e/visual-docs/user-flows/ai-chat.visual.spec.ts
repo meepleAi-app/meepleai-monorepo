@@ -53,11 +53,10 @@ const MOCK_MESSAGES = [
   {
     id: 'msg-2',
     role: 'assistant',
-    content: 'In Ticket to Ride, you score points by completing routes between cities. The longer the route, the more points you earn. A 6-train route scores 15 points.',
+    content:
+      'In Ticket to Ride, you score points by completing routes between cities. The longer the route, the more points you earn. A 6-train route scores 15 points.',
     createdAt: '2026-01-19T10:05:30Z',
-    citations: [
-      { page: 5, text: 'Route scoring table', source: 'rulebook.pdf' },
-    ],
+    citations: [{ page: 5, text: 'Route scoring table', source: 'rulebook.pdf' }],
   },
 ];
 
@@ -124,14 +123,22 @@ test.describe('AI Chat Flow - Visual Documentation', () => {
       title: 'Chat Interface',
       description: 'AI chat interface for asking game-related questions',
       annotations: [
-        { selector: '[data-testid="chat-input"], textarea, input[type="text"]', label: 'Message Input', color: ANNOTATION_COLORS.primary },
+        {
+          selector: '[data-testid="chat-input"], textarea, input[type="text"]',
+          label: 'Message Input',
+          color: ANNOTATION_COLORS.primary,
+        },
       ],
       nextAction: 'Type a question',
     });
 
     // Step 2: Message input area
-    const chatInput = page.locator('[data-testid="chat-input"], textarea, input[placeholder*="message"], input[placeholder*="Ask"]').first();
-    if (await chatInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+    const chatInput = page
+      .locator(
+        '[data-testid="chat-input"], textarea, input[placeholder*="message"], input[placeholder*="Ask"]'
+      )
+      .first();
+    if (await chatInput.isVisible({ timeout: 3000 })) {
       await chatInput.fill('How do I score points in Ticket to Ride?');
       await waitForStableState(page);
 
@@ -140,8 +147,17 @@ test.describe('AI Chat Flow - Visual Documentation', () => {
         title: 'Question Entered',
         description: 'User types a question about game rules',
         annotations: [
-          { selector: '[data-testid="chat-input"], textarea', label: 'Question', color: ANNOTATION_COLORS.success },
-          { selector: 'button[type="submit"], button:has-text("Send"), [data-testid="send-message"]', label: 'Send', color: ANNOTATION_COLORS.primary },
+          {
+            selector: '[data-testid="chat-input"], textarea',
+            label: 'Question',
+            color: ANNOTATION_COLORS.success,
+          },
+          {
+            selector:
+              'button[type="submit"], button:has-text("Send"), [data-testid="send-message"]',
+            label: 'Send',
+            color: ANNOTATION_COLORS.primary,
+          },
         ],
         previousAction: 'Type question',
         nextAction: 'Send message',
@@ -166,9 +182,7 @@ test.describe('AI Chat Flow - Visual Documentation', () => {
             id: 'new-msg',
             role: 'assistant',
             content: 'In Ticket to Ride, routes score based on their length...',
-            citations: [
-              { page: 5, text: 'Route scoring', source: 'rulebook.pdf' },
-            ],
+            citations: [{ page: 5, text: 'Route scoring', source: 'rulebook.pdf' }],
           }),
         });
       } else {
@@ -189,14 +203,22 @@ test.describe('AI Chat Flow - Visual Documentation', () => {
 
     // Step 2: Message bubbles
     const messageArea = page.locator('[data-testid="messages"], .messages, .chat-messages').first();
-    if (await messageArea.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await messageArea.isVisible({ timeout: 3000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Chat Messages',
         description: 'Conversation history with user questions and AI responses',
         annotations: [
-          { selector: '[data-testid="user-message"], .user-message', label: 'Your Question', color: ANNOTATION_COLORS.info },
-          { selector: '[data-testid="assistant-message"], .assistant-message', label: 'AI Response', color: ANNOTATION_COLORS.success },
+          {
+            selector: '[data-testid="user-message"], .user-message',
+            label: 'Your Question',
+            color: ANNOTATION_COLORS.info,
+          },
+          {
+            selector: '[data-testid="assistant-message"], .assistant-message',
+            label: 'AI Response',
+            color: ANNOTATION_COLORS.success,
+          },
         ],
         previousAction: 'Load thread',
         nextAction: 'View citations',
@@ -205,13 +227,17 @@ test.describe('AI Chat Flow - Visual Documentation', () => {
 
     // Step 3: Citations/sources
     const citationCard = page.locator('[data-testid="citation"], .citation, .source-card').first();
-    if (await citationCard.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await citationCard.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 3,
         title: 'Source Citations',
         description: 'AI responses include citations from rulebook PDFs',
         annotations: [
-          { selector: '[data-testid="citation"], .citation', label: 'Citation', color: ANNOTATION_COLORS.primary },
+          {
+            selector: '[data-testid="citation"], .citation',
+            label: 'Citation',
+            color: ANNOTATION_COLORS.primary,
+          },
         ],
         previousAction: 'View response',
         nextAction: 'Click citation',
@@ -229,26 +255,34 @@ test.describe('AI Chat Flow - Visual Documentation', () => {
 
     // Step 2: Thread list sidebar
     const threadList = page.locator('[data-testid="thread-list"], .thread-list, aside').first();
-    if (await threadList.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await threadList.isVisible({ timeout: 3000 })) {
       await helper.capture(page, {
         step: 1,
         title: 'Chat History',
         description: 'List of previous chat conversations',
         annotations: [
-          { selector: '[data-testid="thread-list"], .thread-list', label: 'Thread List', color: ANNOTATION_COLORS.info },
+          {
+            selector: '[data-testid="thread-list"], .thread-list',
+            label: 'Thread List',
+            color: ANNOTATION_COLORS.info,
+          },
         ],
         nextAction: 'Select a thread',
       });
 
       // Step 3: Thread item
       const threadItem = page.locator('[data-testid="thread-item"], .thread-item').first();
-      if (await threadItem.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await threadItem.isVisible({ timeout: 2000 })) {
         await helper.capture(page, {
           step: 2,
           title: 'Thread Item',
           description: 'Individual conversation thread with title and date',
           annotations: [
-            { selector: '[data-testid="thread-item"], .thread-item', label: 'Chat Thread', color: ANNOTATION_COLORS.primary },
+            {
+              selector: '[data-testid="thread-item"], .thread-item',
+              label: 'Chat Thread',
+              color: ANNOTATION_COLORS.primary,
+            },
           ],
           previousAction: 'View history',
           nextAction: 'Open thread',
@@ -285,14 +319,22 @@ test.describe('AI Chat Flow - Visual Documentation', () => {
     });
 
     // Step 2: Export button/menu
-    const exportButton = page.locator('button:has-text("Export"), [data-testid="export-chat"], button[aria-label*="export"]').first();
-    if (await exportButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    const exportButton = page
+      .locator(
+        'button:has-text("Export"), [data-testid="export-chat"], button[aria-label*="export"]'
+      )
+      .first();
+    if (await exportButton.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Export Option',
         description: 'Export conversation as Markdown or PDF',
         annotations: [
-          { selector: 'button:has-text("Export"), [data-testid="export-chat"]', label: 'Export', color: ANNOTATION_COLORS.primary },
+          {
+            selector: 'button:has-text("Export"), [data-testid="export-chat"]',
+            label: 'Export',
+            color: ANNOTATION_COLORS.primary,
+          },
         ],
         previousAction: 'View thread',
         nextAction: 'Click export',
@@ -309,14 +351,20 @@ test.describe('AI Chat Flow - Visual Documentation', () => {
     await waitForStableState(page);
 
     // Step 2: New chat button
-    const newChatButton = page.locator('button:has-text("New Chat"), button:has-text("New"), [data-testid="new-chat"]').first();
-    if (await newChatButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+    const newChatButton = page
+      .locator('button:has-text("New Chat"), button:has-text("New"), [data-testid="new-chat"]')
+      .first();
+    if (await newChatButton.isVisible({ timeout: 3000 })) {
       await helper.capture(page, {
         step: 1,
         title: 'Start New Chat',
         description: 'Begin a new conversation with AI assistant',
         annotations: [
-          { selector: 'button:has-text("New Chat"), [data-testid="new-chat"]', label: 'New Chat', color: ANNOTATION_COLORS.success },
+          {
+            selector: 'button:has-text("New Chat"), [data-testid="new-chat"]',
+            label: 'New Chat',
+            color: ANNOTATION_COLORS.success,
+          },
         ],
         nextAction: 'Click new chat',
       });
@@ -325,14 +373,20 @@ test.describe('AI Chat Flow - Visual Documentation', () => {
       await waitForStableState(page);
 
       // Step 3: Game selection (if modal appears)
-      const gameSelector = page.locator('[data-testid="game-selector"], .game-selector, [role="dialog"]').first();
-      if (await gameSelector.isVisible({ timeout: 2000 }).catch(() => false)) {
+      const gameSelector = page
+        .locator('[data-testid="game-selector"], .game-selector, [role="dialog"]')
+        .first();
+      if (await gameSelector.isVisible({ timeout: 2000 })) {
         await helper.capture(page, {
           step: 2,
           title: 'Select Game',
           description: 'Choose a game to chat about',
           annotations: [
-            { selector: '[data-testid="game-selector"], .game-selector', label: 'Game Selection', color: ANNOTATION_COLORS.primary },
+            {
+              selector: '[data-testid="game-selector"], .game-selector',
+              label: 'Game Selection',
+              color: ANNOTATION_COLORS.primary,
+            },
           ],
           previousAction: 'Click new chat',
           nextAction: 'Select game',

@@ -13,7 +13,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, Plus, Trophy, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { GameCombobox } from '@/components/play-records/GameCombobox';
+import { GamePicker } from '@/components/features/game-picker';
 import { GradientButton } from '@/components/ui/buttons/GradientButton';
 import { playRecordsApi } from '@/lib/api/play-records.api';
 import type { PlayRecordVisibility } from '@/lib/api/schemas/play-records.schemas';
@@ -266,13 +266,18 @@ export function NewPlayRecordSheet({
               </div>
 
               <div>
-                <GameCombobox
-                  value={gameId}
-                  onSelect={(id, name) => {
-                    setGameId(id);
-                    setGameName(name);
+                {/* #4250: the chosen game is shown from this state (id + name), not looked
+                    up among the results of the current search. */}
+                <GamePicker
+                  source="both"
+                  value={gameId ? { id: gameId, title: gameName } : null}
+                  onChange={option => {
+                    setGameId(option?.id);
+                    setGameName(option?.title ?? '');
                   }}
                   placeholder="Cerca nella libreria…"
+                  showLibraryWhenEmpty
+                  testId="play-record-game"
                 />
               </div>
 

@@ -33,7 +33,8 @@ internal static class KnowledgeBaseMappers
             EmbeddingModel = "nomic-embed-text", // Default model
             EmbeddingDimensions = 768, // Default dimensions
             Metadata = domain.Metadata, // Map metadata field
-            SharedGameId = domain.SharedGameId // Issue #5185: cross-BC reference
+            SharedGameId = domain.SharedGameId, // Issue #5185: cross-BC reference
+            PrivateGameId = domain.PrivateGameId // Issue #4244
         };
     }
 
@@ -55,7 +56,8 @@ internal static class KnowledgeBaseMappers
             indexedAt: entity.IndexedAt ?? DateTime.UtcNow,
             sharedGameId: entity.SharedGameId, // Issue #5185
             metadata: entity.Metadata,
-            totalCharacters: entity.TotalCharacters);
+            totalCharacters: entity.TotalCharacters,
+            privateGameId: entity.PrivateGameId); // Issue #4244
     }
 
     /// <summary>

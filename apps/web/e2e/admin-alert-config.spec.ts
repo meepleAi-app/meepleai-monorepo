@@ -218,8 +218,7 @@ test.describe('Alert Configuration Management', () => {
     // (Validation might be client-side or server-side)
     const errorVisible = await page
       .locator('text=/invalid|error|failed/i')
-      .isVisible({ timeout: 2000 })
-      .catch(() => false);
+      .isVisible({ timeout: 2000 });
 
     // If no error shown, at least ensure we didn't navigate away
     if (!errorVisible) {
@@ -309,8 +308,7 @@ test.describe('Alert Configuration Management', () => {
     const isRedirected = page.url().includes('/login') || page.url().includes('/unauthorized');
     const hasAccessDenied = await page
       .locator('text=/unauthorized|access denied|forbidden/i')
-      .isVisible({ timeout: 2000 })
-      .catch(() => false);
+      .isVisible({ timeout: 2000 });
 
     expect(isRedirected || hasAccessDenied).toBe(true);
   });

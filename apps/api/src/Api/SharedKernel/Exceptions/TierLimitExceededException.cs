@@ -7,7 +7,7 @@ namespace Api.SharedKernel.Exceptions;
 /// </summary>
 public class TierLimitExceededException : Exception
 {
-    /// <summary>The type of limit that was exceeded (e.g., "UploadPdf", "CreateAgent").</summary>
+    /// <summary>The type of limit that was exceeded (e.g., "UploadPdf", "AgentQuery").</summary>
     public string LimitType { get; }
 
     /// <summary>The user's current usage count.</summary>

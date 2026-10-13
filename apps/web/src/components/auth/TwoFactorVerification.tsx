@@ -76,6 +76,16 @@ export function TwoFactorVerification({
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // #4134: una verifica riuscita porta via dalla pagina, e `onVerify` si risolve a componente
+  // smontato. Vedi la stessa guardia in app/(auth)/login/_content.tsx.
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
   // Track auto-submitted code to prevent duplicate submissions
   const autoSubmittedCodeRef = useRef<string | null>(null);
 
@@ -116,7 +126,9 @@ export function TwoFactorVerification({
       try {
         await onVerify(data);
       } finally {
-        setIsSubmitting(false);
+        if (isMountedRef.current) {
+          setIsSubmitting(false);
+        }
       }
     },
     [onVerify, onErrorDismiss]

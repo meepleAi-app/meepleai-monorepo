@@ -97,6 +97,28 @@ internal static class AiModelAdminEndpoints
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status409Conflict);
 
+        // PATCH /api/v1/admin/ai-models/{id}/pricing - #4169: solo il prezzo
+        aiModelsGroup.MapPatch("/{id:guid}/pricing", HandleUpdatePricing)
+            .WithName("UpdateAiModelPricing")
+            .WithSummary("Update the price of an AI model")
+            .WithDescription("Updates input and output price (USD per million tokens) and nothing else. The LLM gateway uses it for cost, budget cap and degrade within a minute. Recorded as verified today by an admin, so the seed does not overwrite it with an older price list.")
+            .Produces<AiModelDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound);
+
+        // POST /api/v1/admin/ai-models/{id}/set-primary - #4169: predefinito del provider
+        aiModelsGroup.MapPost("/{id:guid}/set-primary", HandleSetPrimary)
+            .WithName("SetPrimaryAiModel")
+            .WithSummary("Make an AI model the default of its provider")
+            .WithDescription("The provider selector uses the default model when the provider enters the fallback without a model already chosen. The other models of the same provider stop being default. The model must be active.")
+            .Produces<AiModelDto>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict);
+
         // Issue #2596: Tier routing endpoints
         MapTierRoutingEndpoints(group);
 
@@ -282,6 +304,48 @@ internal static class AiModelAdminEndpoints
         return Results.Ok(result);
     }
 
+    private static async Task<IResult> HandleUpdatePricing(
+        Guid id,
+        [FromBody] UpdatePricingRequest request,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation(
+            "Admin {AdminId} updating the price of AI model {ModelId}",
+            session!.Principal!.Subject.Id,
+            id
+        );
+
+        var command = new UpdateAiModelPricingCommand(id, request.InputPricePerMillion, request.OutputPricePerMillion);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleSetPrimary(
+        Guid id,
+        HttpContext context,
+        IMediator mediator,
+        ILogger<Program> logger,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = context.RequireAdminSession();
+        if (!authorized) return error!;
+
+        logger.LogInformation(
+            "Admin {AdminId} setting AI model {ModelId} as default of its provider",
+            session!.Principal!.Subject.Id,
+            id
+        );
+
+        var result = await mediator.Send(new SetPrimaryAiModelCommand(id), ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
     // Issue #2596: Tier routing handlers
     private static async Task<IResult> HandleGetTierRouting(
         HttpContext context,
@@ -339,6 +403,11 @@ internal sealed record UpdateAiModelRequest(
     bool IsPrimary,
     ModelSettings Settings
 );
+
+/// <summary>
+/// #4169: request body for PATCH /admin/ai-models/{id}/pricing (USD per million tokens).
+/// </summary>
+internal sealed record UpdatePricingRequest(decimal InputPricePerMillion, decimal OutputPricePerMillion);
 
 /// <summary>
 /// Request DTO for updating model priority

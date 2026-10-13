@@ -56,10 +56,12 @@ public class UserLibraryEntryEntity
     public bool IsFavorite { get; set; }
 
     /// <summary>
-    /// Custom AI agent configuration (stored as JSONB).
-    /// Null means use system default configuration.
+    /// Name of the retired per-game agent configuration column (JSONB), now an EF shadow
+    /// property: in the model, absent from this class, read by nobody.
+    /// Issue #4138 (expand): the configuration reached no answer and is retired; the column
+    /// stays until a later delivery drops it, so a rollback of the code finds it intact.
     /// </summary>
-    public string? CustomAgentConfigJson { get; set; }
+    internal const string RetiredCustomAgentConfigJson = "CustomAgentConfigJson";
 
     /// <summary>
     /// Custom PDF rulebook URL (overrides SharedGame's PDF).

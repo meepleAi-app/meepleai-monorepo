@@ -26,8 +26,13 @@ describe('Agent Builder Components', () => {
       const descriptionInput = screen.getByLabelText(/description/i) as HTMLInputElement;
       expect(descriptionInput.value).toBe(defaultAgentForm.description);
 
-      expect(screen.getByLabelText(/agent type/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/model/i)).toBeInTheDocument();
+
+      // Issue #4138: an "Agent Type" Select stood here. AgentDefinition has no type, and the
+      // two backend validators that demanded one are gone. Asserted as an absence so the
+      // control cannot quietly come back - the positive assertion above would have passed
+      // whatever else the step rendered.
+      expect(screen.queryByLabelText(/agent type/i)).not.toBeInTheDocument();
     });
 
     it('calls onChange when name is updated', async () => {
@@ -123,15 +128,15 @@ describe('Agent Builder Components', () => {
       const agent: AgentForm = {
         ...defaultAgentForm,
         name: 'Test Agent',
-        type: 'RAG',
         model: 'gpt-4',
       };
 
       render(<ReviewStep agent={agent} onSubmit={vi.fn()} />);
 
       expect(screen.getByText('Test Agent')).toBeInTheDocument();
-      expect(screen.getByText('RAG')).toBeInTheDocument();
       expect(screen.getByText(/gpt-4/i)).toBeInTheDocument();
+      // Issue #4138: the type badge is gone with the field.
+      expect(screen.queryByText('RAG')).not.toBeInTheDocument();
     });
 
     it('shows Create Agent button when not submitting', () => {
@@ -172,7 +177,7 @@ describe('Agent Builder Components', () => {
       render(<AgentPreviewPanel agent={agent} />);
 
       expect(screen.getByText('Chess Tutor')).toBeInTheDocument();
-      expect(screen.getByText('RAG')).toBeInTheDocument();
+      expect(screen.queryByText('RAG')).not.toBeInTheDocument();
     });
 
     it('shows JSON view when JSON tab selected', async () => {

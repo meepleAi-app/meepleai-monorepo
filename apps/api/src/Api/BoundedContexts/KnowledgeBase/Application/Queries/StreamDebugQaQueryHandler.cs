@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.MultiAgentRouter;
@@ -330,6 +331,14 @@ internal class StreamDebugQaQueryHandler : IStreamingQueryHandler<StreamDebugQaQ
         {
             cancellationToken.ThrowIfCancellationRequested();
 
+            // #4166: il gateway non ha fatto partire la chiamata
+            if (chunk.ErrorCode is not null)
+            {
+                yield return CreateEvent(StreamingEventType.Error,
+                    new StreamingError(chunk.ErrorMessage ?? "La chiamata AI non è partita.", chunk.ErrorCode));
+                yield break;
+            }
+
             if (chunk.IsFinal && chunk.Usage != null && chunk.Cost != null)
             {
                 llmUsage = chunk.Usage;
@@ -421,13 +430,6 @@ internal class StreamDebugQaQueryHandler : IStreamingQueryHandler<StreamDebugQaQ
             events.Add(CreateEvent(StreamingEventType.DebugValidationLayer,
                 new DebugValidationLayerData(4, "Hallucination", validationResult.HallucinationDetection.IsValid,
                     validationStopwatch.Elapsed.TotalMilliseconds)));
-
-            if (validationResult.MultiModelConsensus != null)
-            {
-                events.Add(CreateEvent(StreamingEventType.DebugValidationLayer,
-                    new DebugValidationLayerData(2, "MultiModel", validationResult.MultiModelConsensus.HasConsensus,
-                        validationStopwatch.Elapsed.TotalMilliseconds)));
-            }
         }
 #pragma warning disable CA1031 // Validation is optional debug info
         catch (Exception ex)
@@ -500,7 +502,7 @@ internal class StreamDebugQaQueryHandler : IStreamingQueryHandler<StreamDebugQaQ
         {
             // documentIds are VectorDocument.Ids (from GameDocumentDto returned by GetGameDocumentsQuery).
             // Resolve to PdfDocument.Ids via the VectorDocument aggregate before querying the PDF repo.
-            var vectorDocs = await _vectorDocumentRepository.GetByGameIdAsync(gameId, ct).ConfigureAwait(false);
+            var vectorDocs = await _vectorDocumentRepository.FindVectorDocumentsOfGameAfterAccessCheckAsync(gameId, ct).ConfigureAwait(false);
             var pdfIds = vectorDocs
                 .Where(vd => documentIds.Contains(vd.Id))
                 .Select(vd => vd.PdfDocumentId)
@@ -509,7 +511,7 @@ internal class StreamDebugQaQueryHandler : IStreamingQueryHandler<StreamDebugQaQ
         }
         else
         {
-            documents = await _pdfDocumentRepository.FindByGameIdAsync(gameId, ct).ConfigureAwait(false);
+            documents = await _pdfDocumentRepository.FindPdfsOfGameAfterAccessCheckAsync(gameId, ct).ConfigureAwait(false);
         }
 
         if (documents is null or { Count: 0 }) return (true, 0, 0);

@@ -11,14 +11,14 @@ function pip(
   return { entityType, count, label, icon, isEmpty: count === 0 };
 }
 
+// Issue #4138: no agent pip for a game — there is one system agent (ADR-094),
+// the same for every game, so a per-game count of agents measured nothing.
 export function buildGameConnectionPips(counts: {
-  agentCount: number;
   kbCount: number;
   chatCount: number;
   sessionCount: number;
 }): ConnectionPip[] {
   return [
-    pip('agent', counts.agentCount, 'Agent', Bot),
     pip('kb', counts.kbCount, 'KB', FileText),
     pip('chat', counts.chatCount, 'Chat', MessageCircle),
     pip('session', counts.sessionCount, 'Sessioni', Dices),

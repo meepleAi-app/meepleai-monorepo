@@ -56,12 +56,6 @@ const PAGES_TO_AUDIT: PageConfig[] = [
     description: 'Chat interface with Timeline component (UI-04)',
   },
   {
-    name: 'Upload',
-    url: '/upload',
-    requiresAuth: true,
-    description: 'PDF upload wizard',
-  },
-  {
     name: 'Editor',
     url: '/editor',
     requiresAuth: true,
@@ -84,12 +78,6 @@ const PAGES_TO_AUDIT: PageConfig[] = [
     url: '/logs',
     requiresAuth: true,
     description: 'AI logs viewer',
-  },
-  {
-    name: 'Setup',
-    url: '/setup',
-    requiresAuth: true,
-    description: 'Setup wizard (AI-03)',
   },
   {
     name: 'Chess',

@@ -141,7 +141,6 @@ public class ChatWithSessionAgentFallbackTests
             copyrightTierResolver: Mock.Of<ICopyrightTierResolver>(),
             agentMemoryContextBuilder: Mock.Of<IAgentMemoryContextBuilder>(),
             llmService: Mock.Of<ILlmService>(),
-            userBudgetService: Mock.Of<IUserBudgetService>(),
             circuitBreakerRegistry: registry,
             scopeFactory: Mock.Of<IServiceScopeFactory>(),
             logger: NullLogger<ChatWithSessionAgentCommandHandler>.Instance,

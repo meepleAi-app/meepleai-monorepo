@@ -7,7 +7,6 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Mappers;
 using Api.Infrastructure.Entities;
-using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 
@@ -49,15 +48,18 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         SearchQuery query,
         CancellationToken cancellationToken)
     {
-        // RAG access enforcement
-        if (query.UserId.HasValue)
+        ArgumentNullException.ThrowIfNull(query);
+        var access = query.Access
+            ?? throw new ArgumentException("SearchQuery.Access is required", nameof(query));
+
+        // RAG access enforcement. #4294: the sender states who is asking; only one that has
+        // already passed the gate (SearchAccess.AlreadyChecked) is not checked again here.
+        if (access.UserId is { } userId)
         {
-            var userRole = Enum.TryParse<UserRole>(query.UserRole, ignoreCase: true, out var parsedRole)
+            var userRole = Enum.TryParse<UserRole>(access.UserRole, ignoreCase: true, out var parsedRole)
                 ? parsedRole : UserRole.User;
-            var canAccess = await _ragAccessService.CanAccessRagAsync(
-                query.UserId.Value, query.GameId, userRole, cancellationToken).ConfigureAwait(false);
-            if (!canAccess)
-                throw new ForbiddenException("Accesso RAG non autorizzato");
+            await _ragAccessService.EnsureRagAccessAsync(
+                userId, query.GameId, userRole, cancellationToken).ConfigureAwait(false);
         }
 
         _logger.LogInformation(
@@ -97,17 +99,21 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
             queryVector = new Vector(queryEmbedding.ToFloatArray());
         }
 
+        // #4243: an empty filter means no filter, for BOTH arms. The vector arm already read it that
+        // way and the keyword arm did not (it kept nothing), so the two disagreed on an empty list.
+        var pdfDocumentIds = query.PdfDocumentIds is { Count: > 0 } ? query.PdfDocumentIds : null;
+
         // Execute search based on mode
         _logger.LogDebug("[SearchQueryHandler] Step 2: Executing {SearchMode} search...", query.SearchMode);
         var sw2 = System.Diagnostics.Stopwatch.StartNew();
         var searchResults = query.SearchMode.ToLowerInvariant() switch
         {
             "vector" => await PerformVectorSearchAsync(
-                query.GameId, queryVector, query.TopK, query.MinScore, query.DocumentIds, cancellationToken).ConfigureAwait(false),
+                query.GameId, queryVector, query.TopK, query.MinScore, pdfDocumentIds, cancellationToken).ConfigureAwait(false),
 
             // Phase D (D6): forward QueryRoleHint to the hybrid search re-ranker.
             "hybrid" => await PerformHybridSearchAsync(
-                query.GameId, queryVector, query.Query, query.TopK, query.MinScore, query.DocumentIds, query.QueryRoleHint, cancellationToken).ConfigureAwait(false),
+                query.GameId, queryVector, query.Query, query.TopK, query.MinScore, pdfDocumentIds, query.QueryRoleHint, cancellationToken).ConfigureAwait(false),
 
             _ => throw new ArgumentException($"Invalid search mode: {query.SearchMode}", nameof(query))
         } ?? new List<Domain.Entities.SearchResult>();

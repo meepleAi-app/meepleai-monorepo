@@ -224,7 +224,8 @@ internal class DeepSeekLlmClient : ILlmClient
             InputCost = costCalculation.InputCost,
             OutputCost = costCalculation.OutputCost,
             ModelId = model,
-            Provider = ProviderName
+            Provider = ProviderName,
+            PricingStatus = costCalculation.PricingStatus
         };
 
         var metadata = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -251,7 +252,71 @@ internal class DeepSeekLlmClient : ILlmClient
 
         _logger.LogInformation("Successfully generated DeepSeek completion (cost: ${Cost:F6})", cost.TotalCost);
 
-        return LlmCompletionResult.CreateSuccess(assistantMessage, usage, cost, metadata);
+        return LlmCompletionResult.CreateSuccess(assistantMessage, usage, cost, metadata) with
+        {
+            ToolCalls = OpenAiToolPayload.ReadToolCalls(chatResponse.Choices[0].Message),
+        };
+    }
+
+    /// <inheritdoc/>
+    public async Task<LlmCompletionResult> ChatAsync(
+        string model,
+        IReadOnlyList<LlmChatMessage> messages,
+        IReadOnlyList<LlmToolDefinition> tools,
+        double temperature,
+        int maxTokens,
+        CancellationToken ct = default)
+    {
+        if (messages.Count == 0)
+        {
+            return LlmCompletionResult.CreateFailure("No messages provided");
+        }
+
+        string apiKey;
+        try
+        {
+            apiKey = await ResolveApiKeyAsync(ct).ConfigureAwait(false);
+        }
+        catch (ProviderCredentialNotConfiguredException ex)
+        {
+            _logger.LogError(ex, "DeepSeek provider is not configured (no DB row and no env var)");
+            return LlmCompletionResult.CreateFailure("DeepSeek provider is not configured (missing API key)");
+        }
+
+        try
+        {
+            using var httpRequest = OpenAiToolPayload.CreateRequest(model, messages, tools, temperature, maxTokens, disableThinking: true);
+            ApplyAuthorization(httpRequest, apiKey);
+
+            _logger.LogInformation("Generating DeepSeek tool chat using {Model} ({ToolCount} tools, max_tokens={MaxTokens})",
+                model, tools.Count, maxTokens);
+
+            using var response = await _httpClient.SendAsync(httpRequest, ct).ConfigureAwait(false);
+            return await HandleCompletionResponseAsync(response, model, ct).ConfigureAwait(false);
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "DeepSeek tool chat timed out");
+            return LlmCompletionResult.CreateFailure("Request timed out");
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP request failed during DeepSeek tool chat");
+            return LlmCompletionResult.CreateFailure($"HTTP error: {ex.Message}");
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to deserialize DeepSeek tool chat response");
+            return LlmCompletionResult.CreateFailure("Invalid response format");
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // SERVICE BOUNDARY: wraps unexpected DeepSeek errors into a failed LlmCompletionResult
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error during DeepSeek tool chat");
+            return LlmCompletionResult.CreateFailure($"Error: {ex.Message}");
+        }
+#pragma warning restore CA1031
     }
 
     /// <inheritdoc/>
@@ -718,7 +783,8 @@ internal class DeepSeekLlmClient : ILlmClient
                             InputCost = cost.InputCost,
                             OutputCost = cost.OutputCost,
                             ModelId = chunk.Model,
-                            Provider = ProviderName
+                            Provider = ProviderName,
+                            PricingStatus = cost.PricingStatus
                         };
 
                         _logger.LogInformation(

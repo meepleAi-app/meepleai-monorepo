@@ -52,6 +52,12 @@ vi.mock('@/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));
 
+// #4190: la pagina aggiorna AuthProvider dopo il login automatico. Il percorso con il vero
+// AuthProvider è in _content.auth-provider.test.tsx.
+vi.mock('@/components/auth/AuthProvider', () => ({
+  useAuth: () => ({ refreshUser: vi.fn().mockResolvedValue(undefined) }),
+}));
+
 vi.mock('@/lib/api', () => ({
   api: {
     auth: {

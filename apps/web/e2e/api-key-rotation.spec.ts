@@ -245,7 +245,7 @@ test.describe('API Key Rotation Flow - Issue #2193', () => {
 
     // Confirm rotation in dialog
     const confirmDialog = page.locator('[role="dialog"], [role="alertdialog"]');
-    if (await confirmDialog.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await confirmDialog.isVisible({ timeout: 2000 })) {
       const confirmButton = confirmDialog.getByRole('button', { name: /Confirm|Conferma|Rotate/i });
       await confirmButton.click();
     }
@@ -278,7 +278,7 @@ test.describe('API Key Rotation Flow - Issue #2193', () => {
 
     // Handle confirmation
     const confirmButton = page.getByRole('button', { name: /Confirm|Conferma|Rotate/i });
-    if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await confirmButton.isVisible({ timeout: 2000 })) {
       await confirmButton.click();
     }
 
@@ -292,7 +292,7 @@ test.describe('API Key Rotation Flow - Issue #2193', () => {
       .getByRole('button', { name: /Copy|Copia/i })
       .or(page.locator('[data-testid="copy-key-button"]'));
 
-    if (await copyButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await copyButton.isVisible({ timeout: 2000 })) {
       await expect(copyButton).toBeEnabled();
     }
   });
@@ -316,7 +316,7 @@ test.describe('API Key Rotation Flow - Issue #2193', () => {
       .locator('input[name="preserveScopes"]')
       .or(page.getByLabel(/preserve|mantieni|scopes/i));
 
-    if (await preserveScopesCheckbox.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await preserveScopesCheckbox.isVisible({ timeout: 2000 })) {
       await expect(preserveScopesCheckbox).toBeChecked();
     }
 
@@ -348,7 +348,7 @@ test.describe('API Key Rotation Flow - Issue #2193', () => {
 
     // Confirm
     const confirmButton = page.getByRole('button', { name: /Confirm|Conferma|Rotate/i });
-    if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await confirmButton.isVisible({ timeout: 2000 })) {
       await confirmButton.click();
     }
 
@@ -365,10 +365,7 @@ test.describe('API Key Rotation Flow - Issue #2193', () => {
       exact: false,
     });
 
-    const oldKeyStillVisible = await page
-      .getByText('mpl_prod_abc')
-      .isVisible()
-      .catch(() => false);
+    const oldKeyStillVisible = await page.getByText('mpl_prod_abc').isVisible();
 
     if (oldKeyStillVisible) {
       // If old key is still visible, it should be marked as inactive
@@ -394,7 +391,7 @@ test.describe('API Key Rotation Flow - Issue #2193', () => {
       .locator('input[name="newExpiresAt"], input[type="date"], input[type="datetime-local"]')
       .or(page.locator('[data-testid="new-expiration-input"]'));
 
-    if (await expirationInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await expirationInput.isVisible({ timeout: 2000 })) {
       // Set new expiration to 1 year from now
       const newDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
       await expirationInput.fill(newDate.toISOString().split('T')[0]);
@@ -436,7 +433,7 @@ test.describe('API Key Rotation Flow - Issue #2193', () => {
 
     // Confirm
     const confirmButton = page.getByRole('button', { name: /Confirm|Conferma|Rotate/i });
-    if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await confirmButton.isVisible({ timeout: 2000 })) {
       await confirmButton.click();
     }
 
@@ -518,8 +515,7 @@ test.describe('API Key Rotation Flow - Issue #2193', () => {
     // Should either redirect or show access denied
     const accessDenied = await page
       .locator('text=403|forbidden|denied|accesso negato|unauthorized', { exact: false })
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
+      .isVisible({ timeout: 5000 });
 
     const redirected = page.url().includes('/login') || page.url().includes('/unauthorized');
 
@@ -527,11 +523,11 @@ test.describe('API Key Rotation Flow - Issue #2193', () => {
     if (!accessDenied && !redirected) {
       // Try to access rotation - should fail
       const rotateButton = page.getByRole('button', { name: /Rotate|Ruota/i }).first();
-      if (await rotateButton.isVisible().catch(() => false)) {
+      if (await rotateButton.isVisible()) {
         await rotateButton.click();
         // Should show error or be disabled
         const confirmButton = page.getByRole('button', { name: /Confirm|Conferma/i });
-        if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await confirmButton.isVisible({ timeout: 2000 })) {
           await confirmButton.click();
           await expect(
             page.locator('text=forbidden|denied|error|errore', { exact: false })

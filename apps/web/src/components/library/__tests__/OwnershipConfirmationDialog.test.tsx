@@ -1,17 +1,19 @@
 /**
  * OwnershipConfirmationDialog Component Tests
  *
- * Tests: KB available variant, KB unavailable variant, quick-create flow, customize, loading
+ * Issue #4138: three of the five tests that lived here covered the quick-create
+ * flow — `quick-create calls API and navigates to the created agent page`,
+ * `Personalizza navigates to agent creation wizard`, and `shows loading state
+ * during quick-create`. They are gone with the feature: declaring ownership no
+ * longer creates a per-game agent. The two that survive (KB chips, the
+ * "not available" variant) are kept, and the remaining cases are new.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { OwnershipConfirmationDialog } from '../OwnershipConfirmationDialog';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// ============================================================================
-// Mock Setup
-// ============================================================================
+import { OwnershipConfirmationDialog } from '../OwnershipConfirmationDialog';
 
 const mockPush = vi.fn();
 
@@ -26,29 +28,8 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-const mockQuickCreateTutor = vi.fn();
-
-vi.mock('@/lib/api', () => ({
-  api: {
-    agents: {
-      quickCreateTutor: (...args: unknown[]) => mockQuickCreateTutor(...args),
-    },
-  },
-}));
-
-const mockToastError = vi.fn();
-
-vi.mock('@/components/layout/Toast', () => ({
-  toast: {
-    error: (...args: unknown[]) => mockToastError(...args),
-    success: vi.fn(),
-  },
-}));
-
-// ============================================================================
-// Helpers
-// ============================================================================
-
+// Kept from the original fixtures: the full OwnershipResult shape, rather than
+// a partial behind a cast.
 const withKbResult = {
   gameState: 'Owned',
   ownershipDeclaredAt: '2026-03-14T10:00:00Z',
@@ -72,19 +53,9 @@ const defaultProps = {
   onOpenChange: vi.fn(),
 };
 
-// ============================================================================
-// Tests
-// ============================================================================
-
 describe('OwnershipConfirmationDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockQuickCreateTutor.mockResolvedValue({
-      agentId: 'agent-1',
-      chatThreadId: 'thread-1',
-      agentName: 'Catan Tutor',
-      kbCardCount: 3,
-    });
   });
 
   it('shows KB card chips when kbCardCount > 0', () => {
@@ -92,77 +63,54 @@ describe('OwnershipConfirmationDialog', () => {
 
     expect(screen.getByTestId('kb-card-chips')).toBeInTheDocument();
     expect(screen.getByText(/3 schede KB/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Crea Tutor veloce/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Personalizza/i })).toBeInTheDocument();
   });
 
-  it('shows "not available" message when kbCardCount is 0', () => {
-    render(<OwnershipConfirmationDialog {...defaultProps} ownershipResult={noKbResult} />);
-
-    expect(screen.getByText(/Tutor non ancora disponibile/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Chiudi/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Crea Tutor veloce/i })).not.toBeInTheDocument();
-  });
-
-  it('quick-create calls API and navigates to the created agent page', async () => {
-    // BUG B (#2727): the BE returns a placeholder chatThreadId (Guid.NewGuid,
-    // never persisted), so redirecting to /chat/{chatThreadId} lands on a dead
-    // thread. Redirect to the created agent's detail page instead.
-    const user = userEvent.setup();
+  it('uses the singular label for a single KB card', () => {
     render(
       <OwnershipConfirmationDialog
         {...defaultProps}
-        sharedGameId="shared-1"
-        ownershipResult={withKbResult}
+        ownershipResult={{ ...withKbResult, kbCardCount: 1 }}
       />
     );
 
-    const quickCreateBtn = screen.getByRole('button', { name: /Crea Tutor veloce/i });
-    await user.click(quickCreateBtn);
-
-    await waitFor(() => {
-      expect(mockQuickCreateTutor).toHaveBeenCalledWith('game-1', 'shared-1');
-      expect(mockPush).toHaveBeenCalledWith('/agents/agent-1');
-    });
-    expect(mockPush).not.toHaveBeenCalledWith('/chat/thread-1');
+    expect(screen.getByText(/1 scheda KB/)).toBeInTheDocument();
   });
 
-  it('Personalizza navigates to agent creation wizard', async () => {
+  it('shows the "not available" message when kbCardCount is 0', () => {
+    render(<OwnershipConfirmationDialog {...defaultProps} ownershipResult={noKbResult} />);
+
+    expect(screen.queryByTestId('kb-card-chips')).not.toBeInTheDocument();
+    expect(screen.getByText(/non puoi ancora fare domande/i)).toBeInTheDocument();
+  });
+
+  // The destination is asserted, not hoped for: `/library/{id}?tab=aiChat` is
+  // the canonical per-game chat, and `aiChat` is a member of GameTabId. #4118
+  // is a family of redirects that point at tab ids which do not exist and
+  // silently open Info — so the exact query string is the thing worth pinning.
+  it('sends the user to the per-game AI chat tab', async () => {
     const user = userEvent.setup();
     render(<OwnershipConfirmationDialog {...defaultProps} ownershipResult={withKbResult} />);
 
-    const customizeBtn = screen.getByRole('button', { name: /Personalizza/i });
-    await user.click(customizeBtn);
+    await user.click(screen.getByTestId('ownership-ask-question'));
 
-    expect(mockPush).toHaveBeenCalledWith('/chat/agents/create?gameId=game-1&step=2');
+    expect(mockPush).toHaveBeenCalledWith('/library/game-1?tab=aiChat');
   });
 
-  it('shows loading state during quick-create', async () => {
-    const user = userEvent.setup();
-    // Create a promise we can control
-    let resolvePromise: (v: unknown) => void;
-    mockQuickCreateTutor.mockReturnValueOnce(
-      new Promise(resolve => {
-        resolvePromise = resolve;
-      })
-    );
+  // Without an indexed KB there is nothing to ask about, so the CTA must not be
+  // offered — otherwise the user lands on a chat that cannot answer.
+  it('offers no question CTA when nothing is indexed', () => {
+    render(<OwnershipConfirmationDialog {...defaultProps} ownershipResult={noKbResult} />);
 
+    expect(screen.queryByTestId('ownership-ask-question')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Chiudi/i })).toBeInTheDocument();
+  });
+
+  // Vocabulary is part of the decision: no user-facing surface offers to create
+  // or configure an agent any more.
+  it('never offers to create or customise an agent', () => {
     render(<OwnershipConfirmationDialog {...defaultProps} ownershipResult={withKbResult} />);
 
-    const quickCreateBtn = screen.getByRole('button', { name: /Crea Tutor veloce/i });
-    await user.click(quickCreateBtn);
-
-    // Should show loading text
-    await waitFor(() => {
-      expect(screen.getByText(/Creazione.../i)).toBeInTheDocument();
-    });
-
-    // Resolve to clean up
-    resolvePromise!({
-      agentId: 'agent-1',
-      chatThreadId: 'thread-1',
-      agentName: 'Catan Tutor',
-      kbCardCount: 3,
-    });
+    expect(screen.queryByText(/Crea Tutor/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Personalizza/i)).not.toBeInTheDocument();
   });
 });

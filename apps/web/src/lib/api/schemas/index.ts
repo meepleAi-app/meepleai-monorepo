@@ -57,9 +57,6 @@ export * from './admin-share-requests.schemas';
 // Game Contributors schemas (Issue #2746)
 export * from './game-contributors.schemas';
 
-// Agent Configuration schemas (Issue #2518)
-export * from './agent-config.schemas';
-
 // Agent Typologies schemas (Issue #AGT-012)
 export * from './agent-typologies.schemas';
 

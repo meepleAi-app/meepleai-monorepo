@@ -68,6 +68,12 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
 
         /// <summary>Il repository carica l'entità tracked e la muta, senza <c>Update()</c> su detached.</summary>
         TrackedMutation,
+
+        /// <summary>
+        /// Nessun codice scrive più l'entità: è ritirata e resta mappata solo finché la consegna
+        /// contract non toglie la tabella. Un write-path nuovo deve scegliere una delle tecniche sopra.
+        /// </summary>
+        NoWritePath,
     }
 
     /// <summary>
@@ -78,7 +84,7 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
         new Dictionary<string, (WritePathTechnique, string)>(StringComparer.Ordinal)
         {
             ["AlertChannelEntity"] = (WritePathTechnique.OriginalValue, "AlertChannelRepository:78 — il pattern di riferimento"),
-            ["AppBudgetEntity"] = (WritePathTechnique.OriginalValue, "AppBudgetRepository:66 (#2690)"),
+            ["AppBudgetEntity"] = (WritePathTechnique.NoWritePath, "#4169 — AppBudget ritirato: nessun write-path, la tabella esce con la consegna contract"),
             ["GameNightEventEntity"] = (WritePathTechnique.OriginalValue, "GameNightEventRepository"),
             ["GameToolkitEntity"] = (WritePathTechnique.OriginalValue, "GameToolkitRepository (#3670 — qui il difetto è stato trovato)"),
             ["LiveGameSessionEntity"] = (WritePathTechnique.OriginalValue, "LiveSessionRepository (ADR-060)"),
@@ -102,6 +108,8 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
             ["UserLibraryEntryEntity"] = (WritePathTechnique.TokenRoundTrip, "UserLibraryRepository:600 — Xmin = domainEntity.Xmin nel mapper; UpdateAsync persiste un grafo detached (#3651 lotto 6)"),
             ["ToolkitVersionEntity"] = (WritePathTechnique.TokenRoundTrip, "ToolkitVersionRepository:173 (#3688 → #3704)"),
 
+            ["AgentProfile"] = (WritePathTechnique.TrackedMutation, "AgentProfileRepository.GetAsync — AsTracking esplicito; l'aggregato si muta e si salva con la UoW, mai Update() su detached. Provato su Postgres in AgentProfilePersistenceIntegrationTests (#4167)"),
+            ["AssistantProposal"] = (WritePathTechnique.TrackedMutation, "AssistantProposalRepository.GetAsync / ListOpenBySessionAsync — AsTracking esplicito; l'aggregato si muta e si salva con la UoW, mai Update() su detached. Provato su Postgres in AssistantProposalRepositoryIntegrationTests (#4275). ExpirePendingBySessionAsync (#4276) è una seconda scrittura, d'insieme e senza token di proposito: porta a Expired solo le righe ancora Pending, e chi stava prenotando la stessa proposta perde sul token"),
             ["BggTosHashEntity"] = (WritePathTechnique.TrackedMutation, "BggTosWatcherJob:129-169 — riga singleton caricata AsTracking e mutata (#3651 lotto 4)"),
             ["DomainEventOutboxEntity"] = (WritePathTechnique.TrackedMutation, "DomainEventOutboxProcessor:118 — righe tracked mutate via MarkSent/MarkRetry/MarkFailed (#1535)"),
             ["CatalogSeedDraftEntity"] = (WritePathTechnique.TrackedMutation, "CatalogSeedDraftRepository — le letture dei percorsi di scrittura usano AsTracking (PERF-06), #3651 lotto 5"),

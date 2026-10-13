@@ -71,12 +71,8 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     // Either the button shows "Invio..." or we see a streaming response bubble
     const hasInvioText = await page
       .locator('button[type="submit"]:has-text("Invio...")')
-      .isVisible()
-      .catch(() => false);
-    const hasStreamingBubble = await page
-      .locator('text=Sto pensando')
-      .isVisible()
-      .catch(() => false);
+      .isVisible();
+    const hasStreamingBubble = await page.locator('text=Sto pensando').isVisible();
 
     expect(hasInvioText || hasStreamingBubble).toBe(true);
   });
@@ -96,7 +92,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     const stopButton = page.locator('button[aria-label="Stop streaming"], button:has-text("Stop")');
 
     // Check if streaming started (stop button may appear)
-    const isStreaming = await stopButton.isVisible().catch(() => false);
+    const isStreaming = await stopButton.isVisible();
 
     if (isStreaming) {
       // If streaming, stop button should be functional (use force: true to handle nextjs-portal overlay)
@@ -120,7 +116,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     // Try to find and click stop button (use force: true to handle nextjs-portal overlay)
     const stopButton = page.locator('button[aria-label="Stop streaming"], button:has-text("Stop")');
 
-    if (await stopButton.isVisible().catch(() => false)) {
+    if (await stopButton.isVisible()) {
       await stopButton.click({ force: true });
 
       // Streaming should stop (button changes back to "Invia")
@@ -162,7 +158,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     // Adaptation: Check if citations UI appears (if backend returns snippets)
     // Not all responses have citations, so verify structure if present
     const citationsSection = page.getByText(/Fonti|sources/i);
-    const hasCitations = await citationsSection.isVisible().catch(() => false);
+    const hasCitations = await citationsSection.isVisible();
 
     if (hasCitations) {
       // If citations present, verify sources section exists
@@ -233,10 +229,7 @@ test.describe('Chat Streaming (CHAT-01)', () => {
     await expect(assistantBubbles.first()).toBeVisible({ timeout: 10000 });
 
     // Optional: Check if state update UI appeared (may be too fast to catch)
-    const hasStateUpdate = await page
-      .getByText(/Generating|Searching|Thinking/i)
-      .isVisible()
-      .catch(() => false);
+    const hasStateUpdate = await page.getByText(/Generating|Searching|Thinking/i).isVisible();
 
     // Test passes if response appeared (state updates are implementation detail)
     expect(await assistantBubbles.first().isVisible()).toBe(true);

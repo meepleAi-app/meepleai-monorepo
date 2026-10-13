@@ -12,14 +12,7 @@
 
 import React from 'react';
 
-import {
-  Bot,
-  CheckSquare,
-  FileText,
-  MessageSquare,
-  Play,
-  Tag,
-} from 'lucide-react';
+import { CheckSquare, FileText, MessageSquare, Play, Tag } from 'lucide-react';
 
 import {
   Dialog,
@@ -31,6 +24,8 @@ import {
 } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 import type { BulkAssociatedDataDto } from '@/lib/api/schemas/collections.schemas';
+
+import type { LucideIcon } from 'lucide-react';
 
 // ============================================================================
 // Types
@@ -54,7 +49,7 @@ export interface BulkCollectionWarningProps {
 }
 
 interface AggregatedDataItemProps {
-  icon: typeof Bot;
+  icon: LucideIcon;
   label: string;
 }
 
@@ -103,14 +98,7 @@ export function BulkCollectionWarning({
   onCancel,
 }: BulkCollectionWarningProps) {
   // Build list of aggregated data loss items
-  const dataLossItems: Array<{ icon: typeof Bot; label: string }> = [];
-
-  if (aggregatedData.totalCustomAgents > 0) {
-    dataLossItems.push({
-      icon: Bot,
-      label: `${aggregatedData.totalCustomAgents} agenti AI personalizzati`,
-    });
-  }
+  const dataLossItems: Array<{ icon: LucideIcon; label: string }> = [];
 
   if (aggregatedData.totalChatSessions > 0) {
     dataLossItems.push({
@@ -180,11 +168,7 @@ export function BulkCollectionWarning({
           <Button variant="outline" onClick={onCancel} disabled={loading}>
             Annulla
           </Button>
-          <Button
-            variant="destructive"
-            onClick={onConfirm}
-            disabled={loading}
-          >
+          <Button variant="destructive" onClick={onConfirm} disabled={loading}>
             {loading ? 'Rimozione...' : 'Rimuovi Definitivamente'}
           </Button>
         </DialogFooter>

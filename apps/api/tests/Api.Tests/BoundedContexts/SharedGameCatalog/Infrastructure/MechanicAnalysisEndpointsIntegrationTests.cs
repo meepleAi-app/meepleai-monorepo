@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
+using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -13,6 +14,7 @@ using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
+using MediatR;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -90,6 +92,11 @@ public sealed class MechanicAnalysisEndpointsIntegrationTests : IAsyncLifetime
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
             await dbContext.Database.MigrateAsync();
+
+            // #4164: l'estrattore prende i prezzi dal catalogo modelli, e senza prezzo rifiuta
+            // l'analisi (409). In produzione il seed Core lo popola a ogni avvio; qui il seed non
+            // gira, quindi si esegue lo stesso comando.
+            await scope.ServiceProvider.GetRequiredService<IMediator>().Send(new SeedAiModelsCommand());
 
             var (_, token) = await TestSessionHelper.CreateAdminSessionAsync(dbContext, TestAdminId);
             _adminSessionToken = token;

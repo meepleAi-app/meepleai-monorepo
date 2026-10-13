@@ -3,8 +3,8 @@
  *
  * Onboarding argTypes matrix story — DS-17 Phase C-1 (sub-issue #2160).
  *
- * Multi-route mockup covering 4 (authenticated) routes:
- *   /welcome, /onboarding, /setup, /setup-account
+ * Multi-route mockup covering the (authenticated) routes
+ *   /welcome, /onboarding, /setup-account (`/setup` was removed in #4206)
  *
  * Stage axis (onboarding.jsx STEP_LABELS, 5 step + 1 hub frame, Desktop only
  * Phase C-1; Mobile DEFERRED a Phase 4):

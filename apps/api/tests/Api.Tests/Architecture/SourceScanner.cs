@@ -90,6 +90,50 @@ internal static class SourceScanner
     }
 
     /// <summary>
+    /// Offsets of <paramref name="needle"/> outside comments: in code <b>and inside string literals</b>.
+    /// For gates whose subject IS a literal — a provider host, an endpoint path — that
+    /// <see cref="FindCodeOccurrences"/> would skip by design. Literals are still parsed, so the
+    /// <c>//</c> of <c>https://</c> is not mistaken for a comment.
+    /// </summary>
+    /// <remarks>
+    /// Known blind spot, inherited from <see cref="SkipTrivia"/>: a multi-line raw string literal
+    /// (<c>"""</c>) is not recognised, so a <c>//</c> on one of its lines reads as a comment and the
+    /// rest of that line is skipped.
+    /// </remarks>
+    internal static List<int> FindOccurrencesOutsideComments(string text, string needle)
+    {
+        var found = new List<int>();
+        for (var i = 0; i < text.Length; i++)
+        {
+            var skipped = SkipTrivia(text, i);
+            if (skipped != i)
+            {
+                if (text[i] != '/')
+                {
+                    // A literal, not a comment: its content counts.
+                    var at = text.IndexOf(needle, i, skipped - i, StringComparison.Ordinal);
+                    while (at >= 0 && at + needle.Length <= skipped)
+                    {
+                        found.Add(at);
+                        at = text.IndexOf(needle, at + needle.Length, skipped - at - needle.Length, StringComparison.Ordinal);
+                    }
+                }
+
+                i = skipped - 1;
+                continue;
+            }
+
+            if (string.CompareOrdinal(text, i, needle, 0, needle.Length) == 0)
+            {
+                found.Add(i);
+                i += needle.Length - 1;
+            }
+        }
+
+        return found;
+    }
+
+    /// <summary>
     /// If <paramref name="index"/> starts a comment or a string/char literal, returns the offset just
     /// past it; otherwise returns <paramref name="index"/> unchanged.
     /// </summary>

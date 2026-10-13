@@ -14,14 +14,13 @@ import {
 
 // Locks each builder's slot order (entityType sequence) against silent drift (#2860).
 describe('connection-bar build*ConnectionPips slot order', () => {
-  it('game -> agent, kb, chat, session', () => {
+  it('game -> kb, chat, session', () => {
     const pips = buildGameConnectionPips({
-      agentCount: 1,
       kbCount: 3,
       chatCount: 5,
       sessionCount: 2,
     });
-    expect(pips.map(p => p.entityType)).toEqual(['agent', 'kb', 'chat', 'session']);
+    expect(pips.map(p => p.entityType)).toEqual(['kb', 'chat', 'session']);
   });
   it('player -> session, game', () => {
     const pips = buildPlayerConnectionPips({ sessionCount: 4, favoriteGameCount: 2 });
@@ -62,11 +61,10 @@ describe('connection-bar build*ConnectionPips slot order', () => {
   });
   it('sets isEmpty when count is 0', () => {
     const pips = buildGameConnectionPips({
-      agentCount: 0,
       kbCount: 2,
       chatCount: 0,
       sessionCount: 1,
     });
-    expect(pips.map(p => p.isEmpty)).toEqual([true, false, true, false]);
+    expect(pips.map(p => p.isEmpty)).toEqual([false, true, false]);
   });
 });

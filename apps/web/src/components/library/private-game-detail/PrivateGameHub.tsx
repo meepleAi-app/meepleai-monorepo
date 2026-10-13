@@ -12,9 +12,10 @@ import { PdfProcessingProgressBar } from '@/components/pdf/PdfProcessingProgress
 import { ProgressCard } from '@/components/pdf/progress-card';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { usePrivateGame } from '@/hooks/queries/useLibrary';
+import { useChatPanel } from '@/hooks/useChatPanel';
 import { api } from '@/lib/api';
 
-import { ActivationChecklist, type PdfStatus, type AgentStatus } from './ActivationChecklist';
+import { ActivationChecklist, type PdfStatus } from './ActivationChecklist';
 import { MeeplePausedSessionCard, type PausedSession } from './MeeplePausedSessionCard';
 
 interface PrivateGameHubProps {
@@ -29,23 +30,30 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
   const [pdfStatus, setPdfStatus] = useState<PdfStatus>('none');
   const [activePdfId, setActivePdfId] = useState<string | null>(null);
   const [activePdfName, setActivePdfName] = useState<string>('');
+
+  // Issue #4137: the surface that was missing. The backend grants a PrivateGame
+  // owner access to their own KB, but nothing in the UI could ask - this hub had
+  // neither a chat panel nor an entry point, so the permission was unreachable.
+  // The global slide-over is scoped by game (#4139 moved the stream from an agent
+  // id to /agents/qa/stream), so opening it with the private game's id is all it
+  // takes.
+  const { open: openChatPanel } = useChatPanel();
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [agentStatus, setAgentStatus] = useState<AgentStatus>('none');
   const [pausedSessions, setPausedSessions] = useState<PausedSession[]>([]);
   const [showPlayerSetup, setShowPlayerSetup] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
 
-  // Derive PDF, agent, and session status from API on mount
+  // Derive PDF and session status from API on mount.
+  // Issue #4138: the agents fetch is gone — nothing per-game is awaited now
+  // that the agent is system-wide; the knowledge base is what gates an answer.
   useEffect(() => {
     if (!privateGameId) return;
     let cancelled = false;
 
     async function loadStatus() {
       try {
-        // Fetch PDFs, agents, and active sessions in parallel
-        const [pdfs, agents, sessions] = await Promise.all([
+        const [pdfs, sessions] = await Promise.all([
           api.documents.getDocumentsByGame(privateGameId).catch(() => []),
-          api.agents.getUserAgentsForGame(privateGameId).catch(() => []),
           api.liveSessions.getActive().catch(() => []),
         ]);
 
@@ -62,11 +70,6 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
           } else if (state === 'Failed') {
             setPdfStatus('failed');
           }
-        }
-
-        // Derive agent status
-        if (agents.length > 0) {
-          setAgentStatus('ready');
         }
 
         // Derive paused sessions for this game
@@ -105,19 +108,11 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
     };
   }, [privateGameId]);
 
-  // Auto-create agent when PDF becomes ready (per spec)
-  const autoCreateAttempted = useRef(false);
-  useEffect(() => {
-    if (pdfStatus === 'ready' && agentStatus === 'none' && !autoCreateAttempted.current) {
-      autoCreateAttempted.current = true;
-      setAgentStatus('creating');
-      api.agents
-        .createUserAgent({ gameId: privateGameId, agentType: 'TutorAgent' })
-        .then(() => setAgentStatus('ready'))
-        .catch(() => setAgentStatus('none'));
-    }
-  }, [pdfStatus, agentStatus, privateGameId]);
-
+  // Issue #4138: the "auto-create agent when the PDF becomes ready" effect that
+  // stood here is gone. It called createUserAgent with agentType 'TutorAgent',
+  // which AgentType.Parse rejects, so it answered 400 on every run and the
+  // catch folded the failure back into 'none'. The backend already does this
+  // correctly in AutoCreateAgentOnPdfReadyHandler.
   const handleUploadPdf = useCallback(() => {
     setShowDisclaimer(true);
   }, []);
@@ -159,18 +154,17 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
     [privateGameId]
   );
 
-  const handleCreateAgent = useCallback(async () => {
-    setAgentStatus('creating');
-    try {
-      await api.agents.createUserAgent({
-        gameId: privateGameId,
-        agentType: 'TutorAgent',
-      });
-      setAgentStatus('ready');
-    } catch {
-      setAgentStatus('none');
-    }
-  }, [privateGameId]);
+  // Issue #4137: `onTryQuestion` was already a prop of ActivationChecklist and no
+  // host passed it, so the CTA never rendered. It is gated on the KB being ready,
+  // which is also what decides whether an answer is possible.
+  const handleTryQuestion = useCallback(() => {
+    openChatPanel({
+      id: privateGameId,
+      name: game?.title ?? 'Gioco privato',
+      pdfCount: activePdfId ? 1 : 0,
+      kbStatus: pdfStatus === 'ready' ? 'ready' : pdfStatus === 'failed' ? 'failed' : 'indexing',
+    });
+  }, [openChatPanel, privateGameId, game?.title, activePdfId, pdfStatus]);
 
   const handleStartGame = useCallback(() => {
     setShowPlayerSetup(true);
@@ -289,10 +283,9 @@ export function PrivateGameHub({ privateGameId }: PrivateGameHubProps) {
       <ActivationChecklist
         gameAdded={true}
         pdfStatus={pdfStatus}
-        agentStatus={agentStatus}
         onUploadPdf={handleUploadPdf}
-        onCreateAgent={handleCreateAgent}
         onStartGame={handleStartGame}
+        onTryQuestion={handleTryQuestion}
       >
         {pdfStatus === 'uploading' && (
           <div className="space-y-2">

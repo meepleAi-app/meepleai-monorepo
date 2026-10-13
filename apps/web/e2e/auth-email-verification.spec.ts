@@ -16,45 +16,27 @@
  * @see Issue #3076 - Email Verification Frontend Flow
  */
 
+import {
+  mockRegisterResponse,
+  mockRegistrationMode,
+  submitRegistration,
+} from './_helpers/registerPage';
+import { seedCookieConsent } from './_helpers/seedCookieConsent';
 import { test, expect } from './fixtures';
 import { AuthHelper, USER_FIXTURES } from './pages';
-
-const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 test.describe('Email Verification Flow', () => {
   test.describe('Registration → Verification Pending', () => {
     test('should redirect to verification-pending page after successful registration', async ({
       page,
     }) => {
-      const authHelper = new AuthHelper(page);
-
-      // Start unauthenticated
-      await authHelper.mockUnauthenticatedSession();
-
-      // Mock successful registration that requires email verification
-      await page.route(`${apiBase}/api/v1/auth/register`, async route => {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            requiresEmailVerification: true,
-            email: 'newuser@test.com',
-            message: 'Registration successful. Please verify your email.',
-          }),
-        });
-      });
-
-      // Navigate to registration page
+      // #4248: the register page, not a modal. Public mode and the registration response
+      // are simulated in the browser, with the real response contract.
+      await seedCookieConsent(page);
+      await mockRegistrationMode(page, true);
+      await mockRegisterResponse(page, 'newuser@test.com');
       await page.goto('/register');
-      await expect(page.locator('[data-testid="auth-modal"]')).toBeVisible({ timeout: 10000 });
-
-      // Fill registration form
-      await page.locator('[data-testid="register-email"]').fill('newuser@test.com');
-      await page.locator('[data-testid="register-password"]').fill('TestPassword123!');
-      await page.locator('[data-testid="register-confirm-password"]').fill('TestPassword123!');
-
-      // Submit registration
-      await page.locator('[data-testid="register-submit"]').click();
+      await submitRegistration(page, { email: 'newuser@test.com', password: 'TestPassword123!' });
 
       // Should redirect to verification-pending
       await page.waitForURL('**/verification-pending**', { timeout: 10000 });
@@ -76,7 +58,7 @@ test.describe('Email Verification Flow', () => {
   test.describe('Verification Pending Page', () => {
     test('should show resend button and allow clicking', async ({ page }) => {
       // Mock resend endpoint
-      await page.route(`${apiBase}/api/v1/auth/email/resend`, async route => {
+      await page.route('**/api/v1/auth/email/resend', async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -104,7 +86,7 @@ test.describe('Email Verification Flow', () => {
 
     test('should display cooldown timer after resend', async ({ page }) => {
       // Mock resend endpoint with cooldown
-      await page.route(`${apiBase}/api/v1/auth/email/resend`, async route => {
+      await page.route('**/api/v1/auth/email/resend', async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -128,7 +110,7 @@ test.describe('Email Verification Flow', () => {
 
     test('should show error message when resend fails', async ({ page }) => {
       // Mock resend endpoint with error
-      await page.route(`${apiBase}/api/v1/auth/email/resend`, async route => {
+      await page.route('**/api/v1/auth/email/resend', async route => {
         await route.fulfill({
           status: 429,
           contentType: 'application/json',
@@ -155,7 +137,7 @@ test.describe('Email Verification Flow', () => {
   test.describe('Verify Email Page', () => {
     test('should successfully verify email with valid token', async ({ page }) => {
       // Mock verify endpoint - success
-      await page.route(`${apiBase}/api/v1/auth/email/verify`, async route => {
+      await page.route('**/api/v1/auth/email/verify', async route => {
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
@@ -171,12 +153,14 @@ test.describe('Email Verification Flow', () => {
       await page.waitForLoadState('networkidle');
 
       // Should show success state or redirect
-      await expect(page.locator('text=/verified|success/i').first()).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('text=/verified|success/i').first()).toBeVisible({
+        timeout: 10000,
+      });
     });
 
     test('should show expired error for expired token', async ({ page }) => {
       // Mock verify endpoint - expired
-      await page.route(`${apiBase}/api/v1/auth/email/verify`, async route => {
+      await page.route('**/api/v1/auth/email/verify', async route => {
         await route.fulfill({
           status: 400,
           contentType: 'application/json',
@@ -192,7 +176,9 @@ test.describe('Email Verification Flow', () => {
       await page.waitForLoadState('networkidle');
 
       // Should show expired error
-      await expect(page.locator('text=/expired|link expired/i').first()).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('text=/expired|link expired/i').first()).toBeVisible({
+        timeout: 5000,
+      });
 
       // Should show resend button
       await expect(page.locator('[data-testid="resend-verification-button"]')).toBeVisible();
@@ -200,7 +186,7 @@ test.describe('Email Verification Flow', () => {
 
     test('should show invalid error for malformed token', async ({ page }) => {
       // Mock verify endpoint - invalid
-      await page.route(`${apiBase}/api/v1/auth/email/verify`, async route => {
+      await page.route('**/api/v1/auth/email/verify', async route => {
         await route.fulfill({
           status: 400,
           contentType: 'application/json',
@@ -224,7 +210,7 @@ test.describe('Email Verification Flow', () => {
 
     test('should show already verified message', async ({ page }) => {
       // Mock verify endpoint - already verified
-      await page.route(`${apiBase}/api/v1/auth/email/verify`, async route => {
+      await page.route('**/api/v1/auth/email/verify', async route => {
         await route.fulfill({
           status: 400,
           contentType: 'application/json',
@@ -313,7 +299,7 @@ test.describe('Email Verification Flow', () => {
 
     test('verification error page should have alert role', async ({ page }) => {
       // Mock verify endpoint - error
-      await page.route(`${apiBase}/api/v1/auth/email/verify`, async route => {
+      await page.route('**/api/v1/auth/email/verify', async route => {
         await route.fulfill({
           status: 400,
           contentType: 'application/json',
@@ -347,7 +333,7 @@ test.describe('Email Verification Flow', () => {
   test.describe('Rate Limiting', () => {
     test('should handle rate limit error from resend endpoint', async ({ page }) => {
       // Mock rate limit error
-      await page.route(`${apiBase}/api/v1/auth/email/resend`, async route => {
+      await page.route('**/api/v1/auth/email/resend', async route => {
         await route.fulfill({
           status: 429,
           contentType: 'application/json',
@@ -374,7 +360,7 @@ test.describe('Email Verification Flow', () => {
 
     test('should handle rate limit error from verify endpoint', async ({ page }) => {
       // Mock rate limit error
-      await page.route(`${apiBase}/api/v1/auth/email/verify`, async route => {
+      await page.route('**/api/v1/auth/email/verify', async route => {
         await route.fulfill({
           status: 429,
           contentType: 'application/json',
@@ -391,7 +377,9 @@ test.describe('Email Verification Flow', () => {
       await page.waitForLoadState('networkidle');
 
       // Should show rate limit error
-      await expect(page.locator('text=/too many|requests/i').first()).toBeVisible({ timeout: 5000 });
+      await expect(page.locator('text=/too many|requests/i').first()).toBeVisible({
+        timeout: 5000,
+      });
 
       // Should show cooldown message
       await expect(page.locator('text=/seconds/i')).toBeVisible();
@@ -399,70 +387,40 @@ test.describe('Email Verification Flow', () => {
   });
 
   test.describe('Complete User Journey', () => {
-    test('should complete full registration → verify → dashboard flow', async ({ page }) => {
-      const authHelper = new AuthHelper(page);
+    test('should complete registration → verification link → the success page sends to the library', async ({
+      page,
+    }) => {
+      // #4248: the page, not a modal. The registration and the verification are simulated in
+      // the browser; no session cookie is set, so the library may answer with the login page.
       const testEmail = `e2e-${Date.now()}@test.com`;
+      await seedCookieConsent(page);
+      await mockRegistrationMode(page, true);
+      await mockRegisterResponse(page, testEmail);
 
-      // Step 1: Start unauthenticated
-      await authHelper.mockUnauthenticatedSession();
-
-      // Step 2: Mock registration that requires verification
-      await page.route(`${apiBase}/api/v1/auth/register`, async route => {
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            requiresEmailVerification: true,
-            email: testEmail,
-            message: 'Please verify your email',
-          }),
-        });
-      });
-
-      // Step 3: Register
+      // Step 1: Register
       await page.goto('/register');
-      await expect(page.locator('[data-testid="auth-modal"]')).toBeVisible({ timeout: 10000 });
+      await submitRegistration(page, { email: testEmail, password: 'TestPassword123!' });
 
-      await page.locator('[data-testid="register-email"]').fill(testEmail);
-      await page.locator('[data-testid="register-password"]').fill('TestPassword123!');
-      await page.locator('[data-testid="register-confirm-password"]').fill('TestPassword123!');
-      await page.locator('[data-testid="register-submit"]').click();
-
-      // Step 4: Should be on verification-pending
+      // Step 2: Should be on verification-pending
       await page.waitForURL('**/verification-pending**', { timeout: 10000 });
 
-      // Step 5: Mock successful verification
-      await page.route(`${apiBase}/api/v1/auth/email/verify`, async route => {
-        // After verification, set authenticated session
-        await authHelper.mockAuthenticatedSession({
-          id: 'verified-user-1',
-          email: testEmail,
-          displayName: 'Verified User',
-          role: 'User',
-        });
-
-        await route.fulfill({
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            ok: true,
-            message: 'Email verified successfully',
-          }),
-        });
+      // Step 3: The verification link succeeds
+      await page.route('**/api/v1/auth/email/verify', route =>
+        route.fulfill({ json: { ok: true, message: 'Email verified successfully' } })
+      );
+      await page.goto('/verify-email?token=valid-verification-token');
+      await expect(page.locator('text=/verified|success/i').first()).toBeVisible({
+        timeout: 10000,
       });
 
-      // Step 6: Simulate clicking verification link
-      await page.goto('/verify-email?token=valid-verification-token');
-      await page.waitForLoadState('networkidle');
-
-      // Step 7: Should show success
-      await expect(page.locator('text=/verified|success/i').first()).toBeVisible({ timeout: 10000 });
-
-      // Step 8: Click continue to dashboard
-      await page.locator('[data-testid="continue-to-dashboard-button"]').click();
-
-      // Step 9: Should be on dashboard
-      await page.waitForURL('**/dashboard', { timeout: 10000 });
+      // Step 4: The success page sends the user to the library on its own (auto-redirect
+      // after 3 seconds), which answers directly or through the login page that remembers it.
+      // The continue button is not clicked here: with the auto-redirect running, a click
+      // would prove nothing. Its own test is tracked in #4249.
+      await page.waitForURL(
+        url => url.pathname === '/library' || url.searchParams.get('from') === '/library',
+        { timeout: 10000 }
+      );
     });
   });
 });

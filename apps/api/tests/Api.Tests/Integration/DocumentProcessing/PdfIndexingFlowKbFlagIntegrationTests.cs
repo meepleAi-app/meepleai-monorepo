@@ -481,8 +481,13 @@ public sealed class PdfIndexingFlowKbFlagIntegrationTests : IAsyncLifetime
         // is my agent's KB?" once indexing finishes. Sub #1 Block D wires the real ChunkCount
         // from the VectorDocument row.
         var kbStatus = await mediator.Send(
+            // Issue #4137: the query carries the caller identity and the handler
+            // authorizes it. Admin here, so the assertion stays about the chunk count
+            // rather than about access.
             new Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKnowledgeBaseStatusQuery(
                 GameId: testGame.Id,
+                RequestingUserId: Guid.NewGuid(),
+                RequestingUserRole: "Admin",
                 IsPrivateGame: false),
             TestCancellationToken);
         kbStatus.Should().NotBeNull();

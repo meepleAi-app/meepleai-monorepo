@@ -31,6 +31,12 @@ overrides:
   markdown-it: '>=14.1.1'
   picomatch: '>=4.0.4'
   postcss: '>=8.5.18'
+  # GHSA-68fv-2mgg-jv7q (#4128): DoS dell'event loop, patchato in 1.2.2. Entra dal grafo di
+  # produzione come `next > postcss > source-map-js`, quindi non lo alza un bump di `next` —
+  # la PR Dependabot che porta next a 16.3.8 lo lascia a 1.2.1. Il vincolo e' '>=1.2.2' e non
+  # '>=1.2.0' per la ragione documentata su `sharp` qui sotto: un override gia' soddisfatto
+  # dalla versione installata non alza niente.
+  source-map-js: '>=1.2.2'
   fast-uri: '>=3.1.6 <4'
   brace-expansion: '>=5.0.9'
   # Alzato per GHSA-g89c-p67h-r497 / GHSA-2jg2-4ch7-h545 (libheif), patchate in 0.35.4.

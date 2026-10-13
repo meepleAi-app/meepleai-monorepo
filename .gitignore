@@ -247,6 +247,8 @@ tools/bgg-fetcher/logs/
 tests/llm-eval/ocr-validation/results.json
 tests/llm-eval/ocr-validation/manuals/*
 !tests/llm-eval/ocr-validation/manuals/.gitkeep
+# Spike dell'assistente in partita: risultati grezzi (l'esito va nella spec)
+tests/llm-eval/session-assistant/results/
 
 # Golden set contractor CSV uploads (before JSONL conversion)
 tests/llm-eval/golden-set/*.csv

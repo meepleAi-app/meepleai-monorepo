@@ -10,11 +10,103 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.Commands;
 
 /// <summary>
 /// Handler for SeedAiModelsCommand.
-/// Populates default AI model configurations (OpenRouter + Ollama).
-/// Idempotent: Only executes if no AI models exist.
+/// Populates default AI model configurations (OpenRouter, DeepSeek, Ollama).
 /// </summary>
+/// <remarks>
+/// <para>
+/// #4164 (ADR-095): il catalogo è l'unico listino, quindi il seed deve poterlo aggiornare anche
+/// quando è già popolato — prima girava solo su una tabella vuota, e un modello aggiunto dopo il
+/// primo avvio non arrivava mai in staging. Ora, per ogni modello del seed:
+/// </para>
+/// <list type="bullet">
+/// <item><description>se il catalogo non lo ha, lo inserisce;</description></item>
+/// <item><description>se lo ha, ne aggiorna <b>solo il prezzo</b>, e solo se la verifica del seed
+/// è più recente di quella registrata (<see cref="AiModelConfiguration.ApplyVerifiedPricing"/>).
+/// Abilitazione, priorità e modello primario restano quelli scelti dall'admin.</description></item>
+/// <item><description>se il seed dichiara il tool calling (#4275), lo dichiara anche sulla riga già
+/// presente: è un fatto misurato del modello, non una scelta dell'admin.</description></item>
+/// </list>
+/// <para>
+/// I modelli nuovi entrano disattivati: l'ordine di fallback dei provider si costruisce dalle
+/// righe attive, quindi una riga attiva in più cambierebbe l'instradamento. Il prezzo vale anche
+/// per un modello disattivato.
+/// </para>
+/// <para>
+/// #4179: l'unica eccezione a «la scelta resta all'admin» sono i modelli dismessi dal provider
+/// (<see cref="RetiredModels"/>). Non sono una scelta: una chiamata a un modello che il provider
+/// non elenca più non può riuscire. Il seed li disattiva, ne toglie il ruolo di primario e lo passa
+/// al sostituto. La riga resta, con il suo prezzo, per le righe del registro costi che la citano.
+/// </para>
+/// </remarks>
 internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsCommand>
 {
+    /// <summary>Giorno della verifica alla fonte dei prezzi qui sotto.</summary>
+    internal static readonly DateOnly PricesVerifiedOn = new(2026, 10, 10);
+
+    internal const string OpenRouterPriceSource = "https://openrouter.ai/api/v1/models";
+    internal const string DeepSeekPriceSource = "https://api-docs.deepseek.com/quick_start/pricing";
+
+    /// <summary>
+    /// I modelli del seed. Le righe gratuite non portano una data di verifica: costano zero per
+    /// costruzione (modelli in casa) e non si aggiornano.
+    /// </summary>
+    internal static IReadOnlyList<SeedModel> Models { get; } =
+    [
+        // OpenRouter, prezzo del modello nel listino (i provider a valle variano). #4179: è il
+        // primario di OpenRouter al posto della variante «:free», sparita dal listino.
+        new("meta-llama/llama-3.3-70b-instruct", "Llama 3.3 70B Instruct", "OpenRouter",
+            Priority: 2, MaxTokens: 4096,
+            new ModelPricing(0.22m, 0.50m, cacheReadPricePerMillion: 0.11m,
+                verifiedOn: PricesVerifiedOn, source: OpenRouterPriceSource),
+            IsActive: true, IsPrimary: true),
+
+        // OpenRouter non pubblica un prezzo della cache per questo modello.
+        new("deepseek/deepseek-chat", "DeepSeek Chat", "OpenRouter",
+            Priority: 4, MaxTokens: 4096,
+            new ModelPricing(0.32m, 0.89m,
+                verifiedOn: PricesVerifiedOn, source: OpenRouterPriceSource),
+            IsActive: true, IsPrimary: false),
+
+        new("llama3:8b", "Llama 3 8B (Local)", "Ollama",
+            Priority: 5, MaxTokens: 2048, ModelPricing.Free, IsActive: false, IsPrimary: false),
+
+        new("mistral", "Mistral (Local)", "Ollama",
+            Priority: 6, MaxTokens: 2048, ModelPricing.Free, IsActive: false, IsPrimary: false),
+
+        // API diretta di DeepSeek, nome dismesso il 2026-07-24 (changelog del 2026-04-24). Dal
+        // #4179 nessun percorso lo chiede più, ma risponde ancora e punta alla linea Flash: la riga
+        // resta per prezzare le chiamate già registrate. Prezzo di deepseek-flash, fascia di punta,
+        // il limite superiore fra le due fasce orarie.
+        new("deepseek-chat", "DeepSeek Chat (direct API)", "DeepSeek",
+            Priority: 7, MaxTokens: 4096,
+            new ModelPricing(0.30m, 1.20m, cacheReadPricePerMillion: 0.006m,
+                verifiedOn: PricesVerifiedOn, source: DeepSeekPriceSource),
+            IsActive: false, IsPrimary: false),
+
+        // #4164 fetta 1b: è il nome che DeepSeek restituisce nei chunk dello streaming quando gli
+        // si chiede «deepseek-chat», e il client in streaming prezza quel nome. Misurato il
+        // 2026-10-11 sullo stack locale: senza questa riga la risposta in streaming finiva nel
+        // registro come Unpriced, a $0. Stesso listino di deepseek-chat. Dal #4179 è anche il nome
+        // che chiedono le chiamate instradate (strategia Balanced) e l'estrattore; resta disattivato
+        // perché la scelta del modello DeepSeek viene dalla mappa della strategia, non dal catalogo.
+        // #4275: è il solo modello misurato sul set di scenari dell'assistente (spec 2026-10-11 §7.1).
+        new("deepseek-flash", "DeepSeek Flash (direct API)", "DeepSeek",
+            Priority: 8, MaxTokens: 4096,
+            new ModelPricing(0.30m, 1.20m, cacheReadPricePerMillion: 0.006m,
+                verifiedOn: PricesVerifiedOn, source: DeepSeekPriceSource),
+            IsActive: false, IsPrimary: false, SupportsToolCalling: true)
+    ];
+
+    /// <summary>
+    /// #4179: i modelli che il provider non elenca più, ciascuno con il suo sostituto. Verificati
+    /// sul listino di OpenRouter il <see cref="PricesVerifiedOn"/>.
+    /// </summary>
+    internal static IReadOnlyList<RetiredModel> RetiredModels { get; } =
+    [
+        new("meta-llama/llama-3.3-70b-instruct:free", ReplacedBy: "meta-llama/llama-3.3-70b-instruct"),
+        new("google/gemini-2.0-flash-exp:free", ReplacedBy: "meta-llama/llama-3.3-70b-instruct")
+    ];
+
     private readonly IAiModelConfigurationRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<SeedAiModelsCommandHandler> _logger;
@@ -33,108 +125,121 @@ internal sealed class SeedAiModelsCommandHandler : ICommandHandler<SeedAiModelsC
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        // Check idempotency: Skip if AI models already exist
-        var hasModels = await _repository.AnyAsync(cancellationToken).ConfigureAwait(false);
+        var existing = (await _repository.GetAllAsync(cancellationToken).ConfigureAwait(false))
+            .ToDictionary(m => m.ModelId, StringComparer.Ordinal);
 
-        if (hasModels)
+        var added = new List<AiModelConfiguration>();
+        // Un modello può cambiare due volte nello stesso giro (sostituto promosso a primario e
+        // riprezzato): il repository attacca un'istanza nuova a ogni UpdateAsync, e una seconda
+        // istanza con la stessa chiave fa lanciare EF. Si aggiorna una volta sola, alla fine.
+        var changed = new HashSet<AiModelConfiguration>(ReferenceEqualityComparer.Instance);
+        var repriced = 0;
+        var declared = 0;
+        var retired = Retire(existing, changed);
+
+        foreach (var seed in Models)
         {
-            _logger.LogInformation("AI models already seeded. Skipping seed.");
+            if (!existing.TryGetValue(seed.ModelId, out var model))
+            {
+                added.Add(AiModelConfiguration.Create(
+                    modelId: seed.ModelId,
+                    displayName: seed.DisplayName,
+                    provider: seed.Provider,
+                    priority: seed.Priority,
+                    settings: new ModelSettings(seed.MaxTokens, temperature: 0.7m, seed.Pricing) { SupportsToolCalling = seed.SupportsToolCalling },
+                    isActive: seed.IsActive,
+                    isPrimary: seed.IsPrimary));
+                continue;
+            }
+
+            if (seed.Pricing.VerifiedOn is not null && model.ApplyVerifiedPricing(seed.Pricing))
+            {
+                changed.Add(model);
+                repriced++;
+            }
+
+            // #4275: la capacità misurata vale anche per una riga già presente. Il seed la dichiara e non
+            // la toglie mai: se un giorno un modello la perde, lo dice chi l'ha misurato.
+            if (seed.SupportsToolCalling && model.DeclareToolCalling(true))
+            {
+                changed.Add(model);
+                declared++;
+            }
+        }
+
+        foreach (var model in changed)
+        {
+            await _repository.UpdateAsync(model, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (added.Count == 0 && repriced == 0 && declared == 0 && retired.Count == 0)
+        {
+            _logger.LogInformation("AI model catalog already up to date. Skipping seed.");
             return;
         }
 
-        // Define default AI models (Issue #2520: JSON settings approach)
-        var models = new[]
+        if (added.Count > 0)
         {
-            AiModelConfiguration.Create(
-                modelId: "meta-llama/llama-3.3-70b-instruct:free",
-                displayName: "Llama 3.3 70B Instruct (Free)",
-                provider: "OpenRouter",
-                priority: 1,
-                settings: new ModelSettings(
-                    maxTokens: 4096,
-                    temperature: 0.7m,
-                    pricing: ModelPricing.Free
-                ),
-                isActive: true,
-                isPrimary: true
-            ),
-            AiModelConfiguration.Create(
-                modelId: "meta-llama/llama-3.3-70b-instruct",
-                displayName: "Llama 3.3 70B Instruct",
-                provider: "OpenRouter",
-                priority: 2,
-                settings: new ModelSettings(
-                    maxTokens: 4096,
-                    temperature: 0.7m,
-                    pricing: new ModelPricing(
-                        inputPricePerMillion: 0.10m,  // OpenRouter 2026 rates
-                        outputPricePerMillion: 0.32m
-                    )
-                ),
-                isActive: true,
-                isPrimary: false
-            ),
-            AiModelConfiguration.Create(
-                modelId: "google/gemini-2.0-flash-exp:free",
-                displayName: "Gemini 2.0 Flash Experimental (Free)",
-                provider: "OpenRouter",
-                priority: 3,
-                settings: new ModelSettings(
-                    maxTokens: 8192,
-                    temperature: 0.7m,
-                    pricing: ModelPricing.Free
-                ),
-                isActive: true,
-                isPrimary: false
-            ),
-            AiModelConfiguration.Create(
-                modelId: "deepseek/deepseek-chat",
-                displayName: "DeepSeek Chat",
-                provider: "OpenRouter",
-                priority: 4,
-                settings: new ModelSettings(
-                    maxTokens: 4096,
-                    temperature: 0.7m,
-                    pricing: new ModelPricing(
-                        inputPricePerMillion: 0.19m,  // OpenRouter 2026 rates
-                        outputPricePerMillion: 0.87m
-                    )
-                ),
-                isActive: true,
-                isPrimary: false
-            ),
-            AiModelConfiguration.Create(
-                modelId: "llama3:8b",
-                displayName: "Llama 3 8B (Local)",
-                provider: "Ollama",
-                priority: 5,
-                settings: new ModelSettings(
-                    maxTokens: 2048,
-                    temperature: 0.7m,
-                    pricing: ModelPricing.Free
-                ),
-                isActive: false,
-                isPrimary: false
-            ),
-            AiModelConfiguration.Create(
-                modelId: "mistral",
-                displayName: "Mistral (Local)",
-                provider: "Ollama",
-                priority: 6,
-                settings: new ModelSettings(
-                    maxTokens: 2048,
-                    temperature: 0.7m,
-                    pricing: ModelPricing.Free
-                ),
-                isActive: false,
-                isPrimary: false
-            )
-        };
+            await _repository.AddRangeAsync(added, cancellationToken).ConfigureAwait(false);
+        }
 
-        // Persist all models
-        await _repository.AddRangeAsync(models, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        _logger.LogInformation("AI models seeded successfully: {Count} models", models.Length);
+        _logger.LogInformation(
+            "AI model catalog seeded: {Added} models added ({AddedIds}), {Repriced} prices updated to the {VerifiedOn} verification, {Declared} tool-calling capabilities declared, {Retired} retired models deactivated ({RetiredIds})",
+            added.Count, string.Join(", ", added.Select(m => m.ModelId)), repriced, PricesVerifiedOn, declared,
+            retired.Count, string.Join(", ", retired));
     }
+
+    /// <summary>
+    /// Disattiva i modelli dismessi ancora attivi o primari. Se uno era il primario del suo provider,
+    /// il ruolo passa al sostituto, quando questo esiste, è attivo ed è dello stesso provider: un
+    /// sostituto che l'admin ha disattivato resta una sua scelta.
+    /// </summary>
+    /// <param name="existing">Il catalogo, per id del modello.</param>
+    /// <param name="changed">Raccoglie i modelli modificati, da salvare una volta sola.</param>
+    /// <returns>Gli id dei modelli dismessi disattivati.</returns>
+    private static List<string> Retire(
+        IReadOnlyDictionary<string, AiModelConfiguration> existing,
+        HashSet<AiModelConfiguration> changed)
+    {
+        var retired = new List<string>();
+        foreach (var retiredModel in RetiredModels)
+        {
+            if (!existing.TryGetValue(retiredModel.ModelId, out var model) || (!model.IsActive && !model.IsPrimary))
+            {
+                continue;
+            }
+
+            if (model.IsPrimary
+                && existing.TryGetValue(retiredModel.ReplacedBy, out var replacement)
+                && string.Equals(replacement.Provider, model.Provider, StringComparison.OrdinalIgnoreCase)
+                && replacement.IsActive
+                && !replacement.IsPrimary)
+            {
+                replacement.SetPrimary(true);
+                changed.Add(replacement);
+            }
+
+            model.SetActive(false);
+            model.SetPrimary(false);
+            changed.Add(model);
+            retired.Add(model.ModelId);
+        }
+
+        return retired;
+    }
+
+    internal sealed record SeedModel(
+        string ModelId,
+        string DisplayName,
+        string Provider,
+        int Priority,
+        int MaxTokens,
+        ModelPricing Pricing,
+        bool IsActive,
+        bool IsPrimary,
+        bool SupportsToolCalling = false);
+
+    internal sealed record RetiredModel(string ModelId, string ReplacedBy);
 }

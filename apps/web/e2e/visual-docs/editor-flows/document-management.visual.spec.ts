@@ -119,27 +119,41 @@ test.describe('Document Management Flow - Visual Documentation (Editor)', () => 
       title: 'Game Documents',
       description: 'View and manage game documents',
       annotations: [
-        { selector: 'button:has-text("Upload"), [data-testid="upload-pdf"]', label: 'Upload PDF', color: ANNOTATION_COLORS.success },
+        {
+          selector: 'button:has-text("Upload"), [data-testid="upload-pdf"]',
+          label: 'Upload PDF',
+          color: ANNOTATION_COLORS.success,
+        },
       ],
       nextAction: 'Upload new document',
     });
 
     // Step 2: Click upload
     const uploadBtn = page.locator('button:has-text("Upload"), [data-testid="upload-pdf"]').first();
-    if (await uploadBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await uploadBtn.isVisible({ timeout: 3000 })) {
       await uploadBtn.click();
       await waitForStableState(page);
 
       // Step 3: Upload form/modal
-      const uploadForm = page.locator('[role="dialog"], .upload-form, form:has(input[type="file"])').first();
-      if (await uploadForm.isVisible({ timeout: 2000 }).catch(() => false)) {
+      const uploadForm = page
+        .locator('[role="dialog"], .upload-form, form:has(input[type="file"])')
+        .first();
+      if (await uploadForm.isVisible({ timeout: 2000 })) {
         await helper.capture(page, {
           step: 2,
           title: 'Upload Form',
           description: 'Select PDF file to upload',
           annotations: [
-            { selector: 'input[type="file"]', label: 'File Input', color: ANNOTATION_COLORS.primary },
-            { selector: 'select, [data-testid="document-type"]', label: 'Document Type', color: ANNOTATION_COLORS.info },
+            {
+              selector: 'input[type="file"]',
+              label: 'File Input',
+              color: ANNOTATION_COLORS.primary,
+            },
+            {
+              selector: 'select, [data-testid="document-type"]',
+              label: 'Document Type',
+              color: ANNOTATION_COLORS.info,
+            },
           ],
           previousAction: 'Open upload form',
           nextAction: 'Select file',
@@ -149,13 +163,17 @@ test.describe('Document Management Flow - Visual Documentation (Editor)', () => 
 
     // Step 4: Document type selection
     const typeSelect = page.locator('select, [data-testid="document-type"]').first();
-    if (await typeSelect.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await typeSelect.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 3,
         title: 'Document Type',
         description: 'Select document type (base rulebook, expansion, FAQ)',
         annotations: [
-          { selector: 'select, [data-testid="document-type"]', label: 'Type Selection', color: ANNOTATION_COLORS.primary },
+          {
+            selector: 'select, [data-testid="document-type"]',
+            label: 'Type Selection',
+            color: ANNOTATION_COLORS.primary,
+          },
         ],
         previousAction: 'View types',
         nextAction: 'Select type and upload',
@@ -179,14 +197,20 @@ test.describe('Document Management Flow - Visual Documentation (Editor)', () => 
     });
 
     // Step 2: Processing indicator
-    const processingItem = page.locator('text=Processing, [data-status="processing"], .processing').first();
-    if (await processingItem.isVisible({ timeout: 3000 }).catch(() => false)) {
+    const processingItem = page
+      .locator('text=Processing, [data-status="processing"], .processing')
+      .first();
+    if (await processingItem.isVisible({ timeout: 3000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Processing Status',
         description: 'Document being processed - text extraction in progress',
         annotations: [
-          { selector: 'text=Processing, [data-status="processing"]', label: 'Processing', color: ANNOTATION_COLORS.warning },
+          {
+            selector: 'text=Processing, [data-status="processing"]',
+            label: 'Processing',
+            color: ANNOTATION_COLORS.warning,
+          },
         ],
         previousAction: 'View list',
         nextAction: 'Check progress',
@@ -195,14 +219,22 @@ test.describe('Document Management Flow - Visual Documentation (Editor)', () => 
 
     // Step 3: Progress details
     const progressBar = page.locator('[role="progressbar"], .progress-bar, .progress').first();
-    if (await progressBar.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await progressBar.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 3,
         title: 'Processing Progress',
         description: 'Detailed progress of PDF processing',
         annotations: [
-          { selector: '[role="progressbar"], .progress-bar', label: 'Progress', color: ANNOTATION_COLORS.info },
-          { selector: 'text=/\\d+%|\\d+ of \\d+/', label: 'Percentage', color: ANNOTATION_COLORS.primary },
+          {
+            selector: '[role="progressbar"], .progress-bar',
+            label: 'Progress',
+            color: ANNOTATION_COLORS.info,
+          },
+          {
+            selector: 'text=/\\d+%|\\d+ of \\d+/',
+            label: 'Percentage',
+            color: ANNOTATION_COLORS.primary,
+          },
         ],
         previousAction: 'View processing',
         nextAction: 'Wait for completion',
@@ -227,15 +259,27 @@ test.describe('Document Management Flow - Visual Documentation (Editor)', () => 
 
     // Step 2: Document card/row
     const docItem = page.locator('[data-testid="document-item"], .document-card, tr').first();
-    if (await docItem.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await docItem.isVisible({ timeout: 3000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Document Item',
         description: 'Individual document with actions',
         annotations: [
-          { selector: '[data-testid="document-item"], .document-card', label: 'Document', color: ANNOTATION_COLORS.info },
-          { selector: 'button:has-text("View"), [data-testid="view-pdf"]', label: 'View', color: ANNOTATION_COLORS.primary },
-          { selector: 'button:has-text("Delete"), [data-testid="delete-pdf"]', label: 'Delete', color: ANNOTATION_COLORS.error },
+          {
+            selector: '[data-testid="document-item"], .document-card',
+            label: 'Document',
+            color: ANNOTATION_COLORS.info,
+          },
+          {
+            selector: 'button:has-text("View"), [data-testid="view-pdf"]',
+            label: 'View',
+            color: ANNOTATION_COLORS.primary,
+          },
+          {
+            selector: 'button:has-text("Delete"), [data-testid="delete-pdf"]',
+            label: 'Delete',
+            color: ANNOTATION_COLORS.error,
+          },
         ],
         previousAction: 'View documents',
         nextAction: 'Perform action',
@@ -244,13 +288,17 @@ test.describe('Document Management Flow - Visual Documentation (Editor)', () => 
 
     // Step 3: Completed document details
     const completedDoc = page.locator('text=Completed, [data-status="completed"]').first();
-    if (await completedDoc.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await completedDoc.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 3,
         title: 'Completed Document',
         description: 'Successfully processed document ready for use',
         annotations: [
-          { selector: 'text=Completed, [data-status="completed"]', label: 'Completed', color: ANNOTATION_COLORS.success },
+          {
+            selector: 'text=Completed, [data-status="completed"]',
+            label: 'Completed',
+            color: ANNOTATION_COLORS.success,
+          },
           { selector: 'text=/\\d+ pages/', label: 'Page Count', color: ANNOTATION_COLORS.info },
         ],
         previousAction: 'View document',
@@ -277,21 +325,35 @@ test.describe('Document Management Flow - Visual Documentation (Editor)', () => 
     await waitForStableState(page);
 
     const viewBtn = page.locator('button:has-text("View"), [data-testid="view-pdf"]').first();
-    if (await viewBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await viewBtn.isVisible({ timeout: 3000 })) {
       await viewBtn.click();
       await waitForStableState(page);
 
       // Step 2: PDF viewer modal
-      const viewer = page.locator('[role="dialog"], .pdf-viewer, [data-testid="pdf-viewer"]').first();
-      if (await viewer.isVisible({ timeout: 2000 }).catch(() => false)) {
+      const viewer = page
+        .locator('[role="dialog"], .pdf-viewer, [data-testid="pdf-viewer"]')
+        .first();
+      if (await viewer.isVisible({ timeout: 2000 })) {
         await helper.capture(page, {
           step: 1,
           title: 'PDF Viewer',
           description: 'View uploaded PDF document',
           annotations: [
-            { selector: 'button:has-text("Previous"), [data-testid="prev-page"]', label: 'Previous', color: ANNOTATION_COLORS.neutral },
-            { selector: 'button:has-text("Next"), [data-testid="next-page"]', label: 'Next', color: ANNOTATION_COLORS.neutral },
-            { selector: 'button:has-text("Close"), [data-testid="close-viewer"]', label: 'Close', color: ANNOTATION_COLORS.primary },
+            {
+              selector: 'button:has-text("Previous"), [data-testid="prev-page"]',
+              label: 'Previous',
+              color: ANNOTATION_COLORS.neutral,
+            },
+            {
+              selector: 'button:has-text("Next"), [data-testid="next-page"]',
+              label: 'Next',
+              color: ANNOTATION_COLORS.neutral,
+            },
+            {
+              selector: 'button:has-text("Close"), [data-testid="close-viewer"]',
+              label: 'Close',
+              color: ANNOTATION_COLORS.primary,
+            },
           ],
           nextAction: 'Navigate pages',
         });

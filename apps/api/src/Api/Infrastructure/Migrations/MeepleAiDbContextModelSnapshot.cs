@@ -2235,22 +2235,20 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("tools");
 
-                    b.Property<string>("_typeDescription")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
-                        .HasColumnName("type_description");
-
-                    b.Property<string>("_typeValue")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)")
-                        .HasColumnName("type_value");
-
                     b.Property<string>("_typologySlug")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("typology_slug");
+
+                    b.Property<string>("type_description")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("type_description");
+
+                    b.Property<string>("type_value")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("type_value");
 
                     b.HasKey("Id");
 
@@ -2269,13 +2267,164 @@ namespace Api.Infrastructure.Migrations
 
                     NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("_kbCardIdsJson"), "gin");
 
-                    b.HasIndex("_typeValue")
-                        .HasDatabaseName("ix_agent_definitions_type_value");
-
                     b.HasIndex("_typologySlug")
                         .HasDatabaseName("ix_agent_definitions_typology_slug");
 
                     b.ToTable("agent_definitions", "knowledge_base");
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AgentProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("Xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("agent_profiles", "knowledge_base", t =>
+                        {
+                            t.HasCheckConstraint("ck_agent_profiles_singleton", "id = 'a9e7f5c1-4167-4095-9a1e-000000000001'");
+                        });
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AgentProfileVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AgentProfileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("agent_profile_id");
+
+                    b.Property<DateTime?>("ArchivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("archived_at");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("content");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("published_at");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
+                    b.Property<int>("VersionNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("version_number");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AgentProfileId", "VersionNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ux_agent_profile_versions_profile_version");
+
+                    b.HasIndex(new[] { "AgentProfileId" }, "ux_agent_profile_versions_one_draft")
+                        .IsUnique()
+                        .HasFilter("status = 0");
+
+                    b.ToTable("agent_profile_versions", "knowledge_base");
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AssistantProposal", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ChatThreadId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("chat_thread_id");
+
+                    b.Property<string>("ConfirmedPayload")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("confirmed_payload");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Expected")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("expected");
+
+                    b.Property<string>("FailureCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("failure_code");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid>("LiveSessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("live_session_id");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("message_id");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("payload");
+
+                    b.Property<Guid>("ProfileVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("profile_version_id");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolved_at");
+
+                    b.Property<Guid?>("ResolvedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("resolved_by");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
+                    b.Property<uint>("Xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChatThreadId")
+                        .HasDatabaseName("ix_assistant_proposals_thread");
+
+                    b.HasIndex("LiveSessionId", "Status")
+                        .HasDatabaseName("ix_assistant_proposals_session_status");
+
+                    b.ToTable("assistant_proposals", "knowledge_base");
                 });
 
             modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.KbUserFeedback", b =>
@@ -2301,6 +2450,11 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("game_id");
 
+                    b.Property<string>("Language")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("language");
+
                     b.Property<Guid>("MessageId")
                         .HasColumnType("uuid")
                         .HasColumnName("message_id");
@@ -2310,6 +2464,10 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("outcome");
+
+                    b.Property<Guid?>("ProfileVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("profile_version_id");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid")
@@ -3827,6 +3985,10 @@ namespace Api.Infrastructure.Migrations
                     b.Property<bool>("IsLowQuality")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Language")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
                     b.Property<int>("LatencyMs")
                         .HasColumnType("integer");
 
@@ -3839,6 +4001,9 @@ namespace Api.Infrastructure.Migrations
 
                     b.Property<double?>("OverallConfidence")
                         .HasColumnType("double precision");
+
+                    b.Property<Guid?>("ProfileVersionId")
+                        .HasColumnType("uuid");
 
                     b.Property<int>("PromptTokens")
                         .ValueGeneratedOnAdd()
@@ -4749,9 +4914,15 @@ namespace Api.Infrastructure.Migrations
                     b.Property<int>("LastSummarizedMessageCount")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("LiveSessionId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("MessagesJson")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<Guid?>("PrivateGameId")
+                        .HasColumnType("uuid");
 
                     b.Property<string>("SelectedKnowledgeBaseIdsJson")
                         .HasColumnType("text");
@@ -4769,6 +4940,11 @@ namespace Api.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("GameId");
+
+                    b.HasIndex("LiveSessionId")
+                        .HasDatabaseName("IX_ChatThreads_LiveSessionId");
+
+                    b.HasIndex("PrivateGameId");
 
                     b.HasIndex("UserId");
 
@@ -9010,6 +9186,15 @@ namespace Api.Infrastructure.Migrations
                     b.Property<decimal>("OutputCost")
                         .HasColumnType("decimal(18,6)")
                         .HasColumnName("output_cost_usd");
+
+                    b.Property<string>("PricingStatus")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("pricing_status");
+
+                    b.Property<Guid?>("ProfileVersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("profile_version_id");
 
                     b.Property<int>("PromptTokens")
                         .HasColumnType("integer")
@@ -14268,6 +14453,11 @@ namespace Api.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("BackgroundQuotaPercent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(30);
+
                     b.Property<int>("CircuitBreakerFailureThreshold")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -14293,6 +14483,16 @@ namespace Api.Infrastructure.Migrations
                         .HasPrecision(18, 6)
                         .HasColumnType("numeric(18,6)")
                         .HasDefaultValue(10.00m);
+
+                    b.Property<int>("DegradeThresholdPercent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(80);
+
+                    b.Property<int>("EvaluationQuotaPercent")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(20);
 
                     b.Property<string>("FallbackChainJson")
                         .IsRequired()
@@ -14633,6 +14833,9 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("PrivateGameId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("RoleTags")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -14659,6 +14862,8 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex("ParentChunkId");
 
                     b.HasIndex("PdfDocumentId");
+
+                    b.HasIndex("PrivateGameId");
 
                     b.HasIndex("RoleTags")
                         .HasDatabaseName("ix_text_chunks_role_tags")
@@ -15582,11 +15787,6 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("CurrentState")
                         .HasDatabaseName("IX_UserLibraryEntries_CurrentState");
-
-                    b.HasIndex("CustomAgentConfigJson")
-                        .HasDatabaseName("IX_UserLibraryEntries_CustomAgentConfigJson");
-
-                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("CustomAgentConfigJson"), "gin");
 
                     b.HasIndex("LastPlayed")
                         .HasDatabaseName("IX_UserLibraryEntries_LastPlayed");
@@ -16513,6 +16713,9 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("PrivateGameId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("SharedGameId")
                         .HasColumnType("uuid")
                         .HasColumnName("shared_game_id");
@@ -16526,6 +16729,8 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("PdfDocumentId")
                         .IsUnique();
+
+                    b.HasIndex("PrivateGameId");
 
                     b.HasIndex("SharedGameId");
 
@@ -16975,6 +17180,15 @@ namespace Api.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AgentProfileVersion", b =>
+                {
+                    b.HasOne("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AgentProfile", null)
+                        .WithMany("Versions")
+                        .HasForeignKey("AgentProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Api.BoundedContexts.SessionTracking.Domain.Entities.GamebookCampaignSession", b =>
                 {
                     b.OwnsOne("Api.SharedKernel.Domain.ValueObjects.GameRef", "GameRef", b1 =>
@@ -17033,6 +17247,10 @@ namespace Api.Infrastructure.Migrations
                             b1.Property<int>("MaxGamebookTranslationsPerMonth")
                                 .HasColumnType("integer")
                                 .HasColumnName("max_gamebook_translations_per_month");
+
+                            b1.Property<int>("MaxLibraryGames")
+                                .HasColumnType("integer")
+                                .HasColumnName("max_library_games");
 
                             b1.Property<long>("MaxPdfSizeBytes")
                                 .HasColumnType("bigint")
@@ -17274,6 +17492,11 @@ namespace Api.Infrastructure.Migrations
                     b.HasOne("Api.Infrastructure.Entities.SharedGameCatalog.SharedGameEntity", "Game")
                         .WithMany()
                         .HasForeignKey("GameId");
+
+                    b.HasOne("Api.Infrastructure.Entities.UserLibrary.PrivateGameEntity", null)
+                        .WithMany()
+                        .HasForeignKey("PrivateGameId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("Api.Infrastructure.Entities.UserEntity", "User")
                         .WithMany()
@@ -18781,6 +19004,11 @@ namespace Api.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Api.Infrastructure.Entities.UserLibrary.PrivateGameEntity", null)
+                        .WithMany()
+                        .HasForeignKey("PrivateGameId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.Navigation("Game");
 
                     b.Navigation("PdfDocument");
@@ -19002,6 +19230,11 @@ namespace Api.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Api.Infrastructure.Entities.UserLibrary.PrivateGameEntity", null)
+                        .WithMany()
+                        .HasForeignKey("PrivateGameId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.Navigation("Game");
 
                     b.Navigation("PdfDocument");
@@ -19087,6 +19320,11 @@ namespace Api.Infrastructure.Migrations
             modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AbTestSession", b =>
                 {
                     b.Navigation("Variants");
+                });
+
+            modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.AgentProfile", b =>
+                {
+                    b.Navigation("Versions");
                 });
 
             modelBuilder.Entity("Api.BoundedContexts.SessionTracking.Domain.Entities.VisionSnapshot", b =>

@@ -24,7 +24,6 @@ import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { AddToWishlistDialog } from '@/components/wishlist/AddToWishlistDialog';
 import { MeepleWishlistCard } from '@/components/wishlist/MeepleWishlistCard';
-import { useLibrary } from '@/hooks/queries/useLibrary';
 import { useRemoveFromWishlist, useWishlist } from '@/hooks/queries/useWishlist';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { WishlistItemDto } from '@/lib/api/schemas/wishlist.schemas';
@@ -44,9 +43,6 @@ import {
 // ============================================================================
 // Constants
 // ============================================================================
-
-/** Batch size for the library fetch that resolves the gameId → gameTitle map. */
-const LIBRARY_BATCH_LIMIT = 500;
 
 const DEFAULT_FILTER_STATE: WishlistFilterState = {
   search: '',
@@ -77,24 +73,14 @@ export default function WishlistPage(): JSX.Element {
   const [editingItem, setEditingItem] = useState<WishlistItemDto | null>(null);
 
   const { data, isLoading, isError, refetch } = useWishlist();
-  const { data: libraryData } = useLibrary({ pageSize: LIBRARY_BATCH_LIMIT });
   const { mutate: removeItem } = useRemoveFromWishlist();
 
-  // Build a gameId → gameTitle lookup from the user's library, used as a
-  // fallback when a wishlist item has no denormalized `gameName`.
-  const gameNameMap = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const entry of libraryData?.items ?? []) {
-      map.set(entry.gameId, entry.gameTitle);
-    }
-    return map;
-  }, [libraryData?.items]);
-
   const allItems = useMemo(() => data ?? [], [data]);
+
   const stats = useMemo(() => computeStats(allItems), [allItems]);
   const filtered = useMemo(
-    () => sortItems(filterItems(allItems, filterState, gameNameMap), filterState.sort),
-    [allItems, filterState, gameNameMap]
+    () => sortItems(filterItems(allItems, filterState), filterState.sort),
+    [allItems, filterState]
   );
   const activeFilterCount = countActiveFilters(filterState);
 
@@ -269,7 +255,6 @@ export default function WishlistPage(): JSX.Element {
             <MeepleWishlistCard
               key={item.id}
               item={item}
-              gameName={item.gameName ?? gameNameMap.get(item.gameId)}
               onRemove={id => removeItem(id)}
               onEdit={setEditingItem}
               onFilterPriority={handleFilterPriority}
@@ -293,6 +278,8 @@ export default function WishlistPage(): JSX.Element {
         <AddToWishlistDialog
           key={editingItem.id}
           mode="edit"
+          // The wishlist read carries the catalog title in `gameName` (#4227), so the dialog
+          // does not query the library while editing (#4187).
           item={editingItem}
           open
           onOpenChange={next => {

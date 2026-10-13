@@ -1,9 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Queries.GameKbStatus;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.RemoveDocumentFromKb;
-using Api.BoundedContexts.KnowledgeBase.Application.Commands.SetGameKbSettings;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetAdminGameKbDocuments;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetAdminKbFeedback;
-using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGameKbSettings;
 using Api.Filters;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -15,7 +13,8 @@ namespace Api.Routing;
 /// KB-01: List indexed documents for a game.
 /// KB-02: Remove a document from a game's KB.
 /// KB-08: Paginated feedback review per-game.
-/// KB-10: Get/set per-game KB settings overrides.
+/// #4169: the per-game KB settings override (KB-10) is gone: it was saved, never read by the
+/// answer path. Retrieval settings belong to the agent profile (ADR-095).
 /// KB-GAMES: Overview dashboard with KB status per game.
 /// </summary>
 internal static class AdminGameKbEndpoints
@@ -80,33 +79,6 @@ internal static class AdminGameKbEndpoints
         .WithName("GetAdminKbFeedback")
         .WithSummary("Lista feedback utenti su risposte KB per-gioco (admin)");
 
-        // KB-10: GET /api/v1/admin/kb/games/{gameId}/settings
-        g.MapGet("/{gameId:guid}/settings", async (Guid gameId, IMediator mediator, CancellationToken ct) =>
-        {
-            var result = await mediator.Send(new GetGameKbSettingsQuery(gameId), ct).ConfigureAwait(false);
-            return Results.Ok(result);
-        })
-        .WithName("GetGameKbSettings")
-        .WithSummary("Impostazioni KB override per un gioco (admin)");
-
-        // KB-10: PUT /api/v1/admin/kb/games/{gameId}/settings
-        g.MapPut("/{gameId:guid}/settings", async (
-            Guid gameId,
-            [FromBody] SetGameKbSettingsRequest req,
-            IMediator mediator,
-            CancellationToken ct) =>
-        {
-            await mediator.Send(new SetGameKbSettingsCommand(
-                gameId, req.MaxChunks, req.ChunkSize, req.CacheEnabled, req.Language), ct)
-                .ConfigureAwait(false);
-            return Results.NoContent();
-        })
-        .WithName("SetGameKbSettings")
-        .WithSummary("Imposta override impostazioni KB per-gioco (admin)");
-
         return group;
     }
 }
-
-internal sealed record SetGameKbSettingsRequest(
-    int? MaxChunks, int? ChunkSize, bool? CacheEnabled, string? Language);

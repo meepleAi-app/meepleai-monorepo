@@ -114,4 +114,84 @@ describe('kbAskClient.askGlobal', () => {
     await consume;
     expect(received).toHaveLength(1);
   });
+
+  /**
+   * #4168: il filo vero di /ask/global, nella forma dei record C# serializzati dal backend
+   * (Snippet: text/source/page/line/score/chunkId/chunkPosition; StreamingError:
+   * errorMessage/errorCode). Lo schema chiedeva docId/snippet e message/code, quindi questi due
+   * eventi fallivano la validazione e il client li scartava in silenzio: la pagina della KB
+   * globale non mostrava mai né le citazioni né il motivo di un errore.
+   */
+  it('accepts the citations and the error exactly as the backend serializes them', async () => {
+    const encoder = new TextEncoder();
+    const wire = [
+      {
+        type: 1,
+        data: {
+          citations: [
+            {
+              text: 'The Scout class begins with three signature abilities.',
+              source: '550e8400-e29b-41d4-a716-446655440000',
+              page: 14,
+              line: 0,
+              score: 0.42,
+              chunkId: '550e8400-e29b-41d4-a716-446655440000_3',
+              chunkPosition: 3,
+            },
+          ],
+        },
+        timestamp: '2026-10-12T10:00:00Z',
+      },
+      {
+        type: 5,
+        data: {
+          errorMessage: 'Il servizio AI è in pausa.',
+          errorCode: 'AI_BUDGET_DAILY_EXHAUSTED',
+        },
+        timestamp: '2026-10-12T10:00:01Z',
+      },
+    ];
+    vi.spyOn(global, 'fetch').mockResolvedValueOnce(
+      new Response(
+        new ReadableStream<Uint8Array>({
+          start(controller) {
+            for (const evt of wire)
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify(evt)}
+
+`)
+              );
+            controller.close();
+          },
+        }),
+        { status: 200, headers: { 'content-type': 'text/event-stream' } }
+      )
+    );
+
+    const received: KbAskEvent[] = [];
+    for await (const evt of kbAskClient.askGlobal({ query: 'q' }, new AbortController().signal)) {
+      received.push(evt);
+    }
+
+    expect(received.map(e => e.type)).toEqual([1, 5]);
+    expect(received[0]).toMatchObject({
+      type: 1,
+      data: {
+        citations: [
+          {
+            docId: '550e8400-e29b-41d4-a716-446655440000',
+            page: 14,
+            snippet: 'The Scout class begins with three signature abilities.',
+            score: 0.42,
+            chunkId: '550e8400-e29b-41d4-a716-446655440000_3',
+            chunkPosition: 3,
+          },
+        ],
+      },
+    });
+    expect(received[1]).toMatchObject({
+      type: 5,
+      data: { message: 'Il servizio AI è in pausa.', code: 'AI_BUDGET_DAILY_EXHAUSTED' },
+    });
+  });
 });

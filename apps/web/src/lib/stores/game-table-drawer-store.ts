@@ -2,7 +2,9 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
 export type DrawerContent =
-  | { type: 'chat'; agentId: string; threadId?: string }
+  // Issue #4139: era `agentId`. La chat e' scopata sul gioco: l'id agente
+  // serviva solo a /api/v1/agents/{agentId}/chat, rotta mai montata.
+  | { type: 'chat'; gameId: string; threadId?: string }
   | { type: 'stats'; gameId: string }
   | { type: 'kb'; gameId: string }
   | { type: 'toolkit'; gameId: string }

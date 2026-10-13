@@ -11,6 +11,7 @@ import {
   CostTrackingDtoSchema,
   TestModelResponseSchema,
   LlmSystemConfigDtoSchema,
+  LlmBudgetUsageSchema,
   AbTestSessionDtoSchema,
   AbTestSessionListDtoSchema,
   AbTestSessionRevealedDtoSchema,
@@ -19,11 +20,13 @@ import {
   type PagedAiModels,
   type ConfigureModelRequest,
   type SetPrimaryModelRequest,
+  type UpdateModelPricingRequest,
   type CostTrackingDto,
   type TestModelRequest,
   type TestModelResponse,
   type LlmSystemConfigDto,
   type UpdateLlmSystemConfigRequest,
+  type LlmBudgetUsage,
   type AbTestSessionDto,
   type AbTestSessionListDto,
   type AbTestSessionRevealedDto,
@@ -86,27 +89,6 @@ export const ADMIN_KB_ROUTES = {
   vectorStats: '/api/v1/admin/kb/vector-stats',
   vectorSearch: '/api/v1/admin/kb/vector-search',
 } as const;
-
-// ========== Agent Typology Types (Issue #3179) ==========
-
-export type AgentTypology = {
-  id: string;
-  name: string;
-  description: string;
-  systemMessage: string;
-  status: 'Draft' | 'PendingReview' | 'Approved' | 'Rejected';
-  createdBy: string;
-  createdByDisplayName: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type AgentTypologyListResponse = {
-  typologies: AgentTypology[];
-  total: number;
-  page: number;
-  pageSize: number;
-};
 
 // ========== Embedding Service Types (Issue #4878) ==========
 
@@ -263,8 +245,10 @@ export function createAdminAiClient(http: HttpClient) {
       pageSize?: number;
     }): Promise<PagedAiModels> {
       const queryParams = new URLSearchParams();
+      // #4169: il backend filtra per `isActive`; il parametro `status` che si mandava era ignorato,
+      // e chi chiedeva solo i modelli attivi riceveva anche gli inattivi.
       if (params?.status && params.status !== 'all') {
-        queryParams.append('status', params.status);
+        queryParams.append('isActive', String(params.status === 'active'));
       }
       if (params?.page !== undefined) {
         queryParams.append('page', params.page.toString());
@@ -307,14 +291,47 @@ export function createAdminAiClient(http: HttpClient) {
       return result;
     },
 
+    /**
+     * #4169: rende il modello il predefinito del suo provider (gli altri modelli dello stesso provider
+     * smettono di esserlo). Prima chiamava `POST /ai-models/set-primary`, una rotta inesistente.
+     */
     async setPrimaryModel(request: SetPrimaryModelRequest): Promise<AiModelDto> {
       const result = await http.post(
-        '/api/v1/admin/ai-models/set-primary',
-        request,
+        `/api/v1/admin/ai-models/${encodeURIComponent(request.modelId)}/set-primary`,
+        undefined,
         AiModelDtoSchema
       );
       if (!result) {
         throw new Error('Failed to set primary model');
+      }
+      return result;
+    },
+
+    /** #4169: il prezzo del modello, e nient'altro. */
+    async updateModelPricing(
+      modelId: string,
+      request: UpdateModelPricingRequest
+    ): Promise<AiModelDto> {
+      const result = await http.patch(
+        `/api/v1/admin/ai-models/${encodeURIComponent(modelId)}/pricing`,
+        request,
+        AiModelDtoSchema
+      );
+      if (!result) {
+        throw new Error('Failed to update the model price');
+      }
+      return result;
+    },
+
+    /** #4169: attiva o disattiva il modello nell'ordine di fallback. */
+    async toggleModelActive(modelId: string): Promise<AiModelDto> {
+      const result = await http.patch(
+        `/api/v1/admin/ai-models/${encodeURIComponent(modelId)}/toggle`,
+        undefined,
+        AiModelDtoSchema
+      );
+      if (!result) {
+        throw new Error('Failed to toggle the model');
       }
       return result;
     },
@@ -374,6 +391,16 @@ export function createAdminAiClient(http: HttpClient) {
       return result;
     },
 
+    /** #4169: today's and this month's LLM spend per budget class, as the gateway counts it. */
+    async getLlmBudgetUsage(): Promise<LlmBudgetUsage> {
+      const result = await http.get<LlmBudgetUsage>(
+        '/api/v1/admin/llm/budget/usage',
+        LlmBudgetUsageSchema
+      );
+      if (!result) throw new Error('Failed to fetch LLM budget usage');
+      return result;
+    },
+
     async updateLlmSystemConfig(
       request: UpdateLlmSystemConfigRequest
     ): Promise<LlmSystemConfigDto> {
@@ -418,46 +445,6 @@ export function createAdminAiClient(http: HttpClient) {
     async triggerModelAvailabilityCheck(): Promise<{ triggered: boolean; message: string }> {
       const result = await http.post('/api/v1/admin/tier-strategy/check-now', {});
       return result as { triggered: boolean; message: string };
-    },
-
-    // ========== Agent Typologies Management (Issue #3179) ==========
-
-    async getAgentTypologies(params?: {
-      status?: string;
-      createdBy?: string;
-      search?: string;
-      page?: number;
-      pageSize?: number;
-    }) {
-      const queryParams = new URLSearchParams();
-      if (params?.status && params.status !== 'All') queryParams.set('status', params.status);
-      if (params?.createdBy && params.createdBy !== 'All')
-        queryParams.set('createdBy', params.createdBy);
-      if (params?.search) queryParams.set('search', params.search);
-      if (params?.page) queryParams.set('page', params.page.toString());
-      if (params?.pageSize) queryParams.set('pageSize', params.pageSize.toString());
-
-      const url = `/api/v1/admin/agent-typologies${queryParams.toString() ? `?${queryParams.toString()}` : ''}`;
-      const result = await http.get<AgentTypologyListResponse>(url);
-      return result || { typologies: [], total: 0, page: 1, pageSize: 20 };
-    },
-
-    async getAgentTypologyById(id: string) {
-      return http.get<AgentTypology>(`/api/v1/admin/agent-typologies/${id}`);
-    },
-
-    async deleteAgentTypology(id: string) {
-      await http.delete(`/api/v1/admin/agent-typologies/${id}`);
-    },
-
-    async approveAgentTypology(id: string) {
-      return http.post<AgentTypology>(`/api/v1/admin/agent-typologies/${id}/approve`, {});
-    },
-
-    async rejectAgentTypology(id: string, reason: string) {
-      return http.post<AgentTypology>(`/api/v1/admin/agent-typologies/${id}/reject`, {
-        reason,
-      });
     },
 
     // ========== A/B Testing (Issue #5497) ==========

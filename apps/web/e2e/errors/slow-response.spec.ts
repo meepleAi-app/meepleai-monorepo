@@ -29,7 +29,7 @@ async function setupSlowResponseMocks(
   const { responseDelay = 0, timeout = false } = options;
 
   // Mock auth
-  await page.route(`${API_BASE}/api/v1/auth/me`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/auth/me`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -46,7 +46,7 @@ async function setupSlowResponseMocks(
   });
 
   // Mock games endpoint
-  await page.route(`${API_BASE}/api/v1/games**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/games**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -55,7 +55,7 @@ async function setupSlowResponseMocks(
   });
 
   // Mock chat threads
-  await page.route(`${API_BASE}/api/v1/chat/threads**`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/chat/threads**`, async route => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -64,15 +64,15 @@ async function setupSlowResponseMocks(
   });
 
   // Mock slow chat endpoint
-  await page.route(`${API_BASE}/api/v1/agents/ask*`, async (route) => {
+  await page.route(`${API_BASE}/api/v1/agents/ask*`, async route => {
     if (timeout) {
       // Don't respond to simulate timeout
-      await new Promise((resolve) => setTimeout(resolve, 60000));
+      await new Promise(resolve => setTimeout(resolve, 60000));
       return;
     }
 
     if (responseDelay > 0) {
-      await new Promise((resolve) => setTimeout(resolve, responseDelay));
+      await new Promise(resolve => setTimeout(resolve, responseDelay));
     }
 
     await route.fulfill({
@@ -105,9 +105,9 @@ test.describe('ERR-08: Slow Response Indicator', () => {
 
         // Should show loading indicator
         await expect(
-          page.locator('.loading, .spinner, [data-loading="true"]').or(
-            page.getByText(/loading|thinking|processing/i)
-          )
+          page
+            .locator('.loading, .spinner, [data-loading="true"]')
+            .or(page.getByText(/loading|thinking|processing/i))
         ).toBeVisible({ timeout: 2000 });
       }
     });
@@ -125,9 +125,9 @@ test.describe('ERR-08: Slow Response Indicator', () => {
 
         // After a few seconds, should show "taking longer"
         await expect(
-          page.getByText(/taking.*longer|slow|please.*wait/i).or(
-            page.locator('[data-testid="slow-indicator"]')
-          )
+          page
+            .getByText(/taking.*longer|slow|please.*wait/i)
+            .or(page.locator('[data-testid="slow-indicator"]'))
         ).toBeVisible({ timeout: 6000 });
       }
     });
@@ -149,7 +149,7 @@ test.describe('ERR-08: Slow Response Indicator', () => {
         await page.waitForTimeout(5000);
 
         const timeIndicator = page.getByText(/\d+.*second|sec/i);
-        const hasTimeIndicator = await timeIndicator.isVisible().catch(() => false);
+        const hasTimeIndicator = await timeIndicator.isVisible();
         await expect(page.locator('body')).toBeVisible();
       }
     });
@@ -167,9 +167,9 @@ test.describe('ERR-08: Slow Response Indicator', () => {
 
         // Should show animated progress
         await expect(
-          page.locator('.animate-pulse, .animate-spin, @keyframes, .progress').or(
-            page.locator('[data-loading]')
-          )
+          page
+            .locator('.animate-pulse, .animate-spin, @keyframes, .progress')
+            .or(page.locator('[data-loading]'))
         ).toBeVisible({ timeout: 2000 });
       }
     });
@@ -212,9 +212,9 @@ test.describe('ERR-08: Slow Response Indicator', () => {
 
         // Wait for timeout (may be 30-60 seconds in real app, shorter in test)
         await expect(
-          page.getByText(/timeout|took.*too.*long|try.*again/i).or(
-            page.locator('[data-testid="timeout-error"]')
-          )
+          page
+            .getByText(/timeout|took.*too.*long|try.*again/i)
+            .or(page.locator('[data-testid="timeout-error"]'))
         ).toBeVisible({ timeout: 35000 });
       }
     });
@@ -282,9 +282,9 @@ test.describe('ERR-08: Slow Response Indicator', () => {
 
         // Should show reassuring message
         await expect(
-          page.getByText(/complex|analyzing|detailed|thorough/i).or(
-            page.getByText(/please.*wait|moment/i)
-          )
+          page
+            .getByText(/complex|analyzing|detailed|thorough/i)
+            .or(page.getByText(/please.*wait|moment/i))
         ).toBeVisible();
       }
     });
@@ -324,7 +324,7 @@ test.describe('ERR-08: Slow Response Indicator', () => {
 
         // May show estimated time
         const estimateText = page.getByText(/estimat|\d+.*sec|remaining/i);
-        const hasEstimate = await estimateText.isVisible().catch(() => false);
+        const hasEstimate = await estimateText.isVisible();
         // Not all implementations show this
         await expect(page.locator('body')).toBeVisible();
       }
@@ -368,7 +368,7 @@ test.describe('ERR-08: Slow Response Indicator', () => {
 
         // May show response time
         const responseTimeText = page.getByText(/\d+.*ms|\d+.*sec.*took/i);
-        const hasResponseTime = await responseTimeText.isVisible().catch(() => false);
+        const hasResponseTime = await responseTimeText.isVisible();
         await expect(page.locator('body')).toBeVisible();
       }
     });

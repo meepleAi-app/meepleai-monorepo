@@ -1,6 +1,6 @@
 {
   "description": "Gate #4127 — test E2E le cui UNICHE asserzioni stanno dentro un blocco condizionato sulla presenza di un elemento, per file. Un file nuovo deve essere assente da questa mappa; uno presente non deve crescere. Rigenera con `pnpm lint:blind-tests --update` SOLO per registrare un miglioramento.",
-  "updatedAt": "2026-10-08",
+  "updatedAt": "2026-10-13",
   "files": {
     "e2e/admin-analytics-quality.spec.ts": 1,
     "e2e/admin-configuration.spec.ts": 2,
@@ -8,7 +8,6 @@
     "e2e/admin-dashboard-navigation.spec.ts": 1,
     "e2e/admin-dashboard-security.spec.ts": 7,
     "e2e/admin-dashboard-user-journeys.spec.ts": 3,
-    "e2e/admin-game-creation.spec.ts": 2,
     "e2e/admin-negative.spec.ts": 4,
     "e2e/admin-prompts-management.spec.ts": 2,
     "e2e/admin-share-requests.spec.ts": 2,
@@ -37,7 +36,7 @@
     "e2e/api-key-rotation.spec.ts": 1,
     "e2e/auth-validation-negative.spec.ts": 2,
     "e2e/auth-visual.chromatic.spec.ts": 8,
-    "e2e/auth.spec.ts": 10,
+    "e2e/auth.spec.ts": 9,
     "e2e/auth/account-lockout.spec.ts": 1,
     "e2e/auth/device-management.spec.ts": 4,
     "e2e/auth/login-notifications.spec.ts": 2,

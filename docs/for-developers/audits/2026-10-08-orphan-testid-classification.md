@@ -310,3 +310,25 @@ La seconda è quella che conta: un gate che accusasse chi gestisce legittimament
 ## 5. Cosa NON serve decidere
 
 Il gate #4120 è già in posizione e blocca il peggioramento, con la baseline per file come inventario. Nessuna di queste decisioni è un prerequisito per mergiare la PR del gate: la bonifica può procedere a fette, e ogni calo si registra con `pnpm lint:orphan-testids --update`.
+
+## 6. Aggiornamento del 2026-10-13: le baseline al merge
+
+La PR dei due gate è rimasta ferma dal 2026-10-08 al 2026-10-13. Unendo `main-dev` le baseline sono state rimisurate con `--update`. Molte voci sono scese o sparite, perché nel frattempo `main-dev` ha eliminato o corretto delle spec. Tre file sono **saliti**, e in nessuno dei tre è cambiata la spec: è la produzione che ha tolto la dichiarazione.
+
+| file E2E | id diventati orfani | commit che ha tolto la dichiarazione |
+|---|---|---|
+| `e2e/onboarding/accept-invite-to-onboarding.spec.ts` | `skip-wizard` | `75317f035` (#4174), «via "Crea Agente" dal catalogo admin e l'onboarding morto» |
+| `e2e/session-flow-v2.1.spec.ts` | `contextual-hand-sidebar`, `start-session-from-sidebar` | `af75fcace` (#4237), «via il codice morto emerso con #4187, #4190 e #4206» |
+| `e2e/agent/agent-config-flow.spec.ts` | `model-selector` | `c1c0e0872` (#4162), che ha tolto `AgentSettingsDrawer.tsx` |
+
+Nei primi due casi il commit dichiara di togliere **codice morto**. Finché quel codice restava nel sorgente il gate vedeva la dichiarazione e assolveva la spec: è il limite 2 dell'intestazione di `lint-orphan-testids.mjs`, «verifica l'esistenza, non la raggiungibilità». Tolto il codice, il gate può dimostrare ciò che era già vero. Nel terzo è stata ritirata una funzione, le impostazioni dell'agente per utente.
+
+Sono tre candidati alla categoria B (§2), da trattare come le spec di #4122. Qui sono solo registrati nella baseline: ripuntare i selettori senza aver stabilito che la spec possa passare farebbe scendere il numero senza riparare niente (§3-sexies).
+
+Per rimisurarli:
+
+```bash
+pnpm lint:orphan-testids --list | grep -E "accept-invite-to-onboarding|session-flow-v2|agent-config-flow"
+```
+
+Con il gate su `main-dev`, la prossima rimozione di questo tipo si ferma sulla PR che la fa: o porta con sé la spec, o dichiara l'aumento nella baseline.

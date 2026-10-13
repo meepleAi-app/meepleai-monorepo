@@ -22,6 +22,9 @@ on:
       - '.github/actions/**'
       - 'infra/scripts/**'
       - 'infra/seed-schema.version'
+      # #4298: la baseline degli shard di dev-async, che shard-skip-assert.bats legge dal
+      # repository (vedi il filtro `infra` più sotto).
+      - 'infra/fixtures/dev-async-shard-baseline.json'
       # #4256: il prompt misurato e il set di scenari dell'assistente, che due classi di test unit
       # del backend leggono dal repository (vedi il filtro `backend` più sotto).
       - 'tests/llm-eval/session-assistant/prompts/**'
@@ -104,8 +107,15 @@ jobs:
               # ones, so a PR editing infra/fixtures/ would boot a gate that
               # cannot observe the change. infra/seed-schema.version IS here —
               # snapshot-verify.bats reads the live counter.
+              #
+              # #4298: one fixture IS read from the repo. shard-skip-assert.bats
+              # checks the committed dev-async-shard-baseline.json (runId,
+              # capturedAt, the three shards), so a PR that rewrites only that
+              # file changed something this gate observes and did not wake it.
+              # Listed by name, not as infra/fixtures/**, for the reason above.
               - 'infra/scripts/**'
               - 'infra/seed-schema.version'
+              - 'infra/fixtures/dev-async-shard-baseline.json'
               - '.github/workflows/dev-fast.yml'
 
   # Sharding strategy (incident #1115): the apps/web Vitest suite runs >15min

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { createThread, explainThreadCreationFailure } from '@/components/chat/entry/ThreadCreator';
+import { createThread } from '@/components/chat/entry/ThreadCreator';
 import { useRecentChatSessions } from '@/hooks/queries/useChatSessions';
 import { useLibrarySearch } from '@/hooks/queries/useLibrarySearch';
 import { useAgentChatStream } from '@/hooks/useAgentChatStream';
@@ -216,12 +216,10 @@ export function ChatSlideOverPanel() {
           });
           currentThreadId = result.threadId;
           setThreadId(currentThreadId);
-        } catch (err) {
+        } catch {
           toast({
             title: 'Errore creazione chat',
-            description:
-              explainThreadCreationFailure(err) ??
-              'Non è stato possibile avviare la conversazione.',
+            description: 'Non è stato possibile avviare la conversazione.',
             variant: 'destructive',
           });
           return;

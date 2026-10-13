@@ -79,16 +79,21 @@ public sealed class CreateChatThreadCommandHandlerTests
     }
 
     /// <summary>
-    /// Issue #4230. A thread on the caller's own private game cannot be stored: ChatThreads.GameId
-    /// references shared_games. This test used to assert the opposite ("PrivateGameId stored as
-    /// GameId"), and passed only because the in-memory provider enforces no foreign key; on
-    /// Postgres the same request was a 500. The web client sends the private id as <c>gameId</c>,
-    /// the API also accepts <c>privateGameId</c>: both are refused the same way.
+    /// Issue #4244. A thread on the caller's own private game is created as a thread on a private
+    /// game: <c>ChatThreads.GameId</c> references shared_games, so the game goes in the column of
+    /// its own. The web client sends the private id as <c>gameId</c>, the API also accepts
+    /// <c>privateGameId</c>: both give the same thread.
     /// </summary>
+    /// <remarks>
+    /// History of this test: before #4230 it asserted "PrivateGameId stored as GameId" and passed
+    /// only because the in-memory provider enforces no foreign key (on Postgres the request was a
+    /// 500); #4230 made it assert a 422 until the thread could hold a private game. The foreign
+    /// key itself is exercised on Postgres in <c>PrivateGameRetrievalTests</c>.
+    /// </remarks>
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task Handle_OnTheCallersOwnPrivateGame_SaysItIsNotAvailableYet(bool sentAsPrivateGameId)
+    public async Task Handle_OnTheCallersOwnPrivateGame_CreatesAThreadOnAPrivateGame(bool sentAsPrivateGameId)
     {
         var userId = Guid.NewGuid();
         var privateGameId = await SeedPrivateGameAsync(userId);
@@ -96,13 +101,16 @@ public sealed class CreateChatThreadCommandHandlerTests
             ? new CreateChatThreadCommand(UserId: userId, PrivateGameId: privateGameId, Title: "Private Game Chat")
             : new CreateChatThreadCommand(UserId: userId, GameId: privateGameId, Title: "Private Game Chat");
 
-        var act = () => _handler.Handle(command, CancellationToken.None);
+        var result = await _handler.Handle(command, CancellationToken.None);
 
-        var thrown = await act.Should().ThrowAsync<PrivateGameChatUnavailableException>();
-        thrown.Which.PrivateGameId.Should().Be(privateGameId);
-        thrown.Which.StatusCode.Should().Be(422);
-        thrown.Which.ErrorCode.Should().Be("PRIVATE_GAME_CHAT_UNAVAILABLE");
-        NothingWasStored();
+        result.GameId.Should().Be(privateGameId, "the game of the thread, as every reader sees it");
+        result.PrivateGameId.Should().Be(privateGameId, "and the client is told the game is private");
+        _mockRepo.Verify(
+            r => r.AddAsync(
+                It.Is<ChatThread>(t => t.GameIsPrivate && t.PrivateGameId == privateGameId && t.SharedGameId == null),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _mockUow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     /// <summary>

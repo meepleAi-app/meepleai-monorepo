@@ -14,7 +14,7 @@ using Pgvector;
 namespace Api.Infrastructure.Migrations
 {
     [DbContext(typeof(MeepleAiDbContext))]
-    [Migration("20261013033650_AddPrivateGameIdToTextChunksAndVectorDocuments")]
+    [Migration("20261013062822_AddPrivateGameIdToTextChunksAndVectorDocuments")]
     partial class AddPrivateGameIdToTextChunksAndVectorDocuments
     {
         /// <inheritdoc />
@@ -4917,6 +4917,9 @@ namespace Api.Infrastructure.Migrations
                     b.Property<int>("LastSummarizedMessageCount")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("LiveSessionId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("MessagesJson")
                         .IsRequired()
                         .HasColumnType("text");
@@ -4937,6 +4940,9 @@ namespace Api.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("GameId");
+
+                    b.HasIndex("LiveSessionId")
+                        .HasDatabaseName("IX_ChatThreads_LiveSessionId");
 
                     b.HasIndex("UserId");
 

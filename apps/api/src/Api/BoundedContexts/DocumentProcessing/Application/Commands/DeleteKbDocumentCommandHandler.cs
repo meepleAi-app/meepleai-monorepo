@@ -23,7 +23,8 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 ///   4. EF delete: remove PdfDocument; cascade removes TextChunks + VectorDocument.
 ///   5. Blob: delete physical file (best-effort).
 ///   6. Cache: invalidate AI response cache (best-effort).
-///   7. Cache: invalidate the uploader's «my documents» list (best-effort).
+///   7. Cache: invalidate what the hybrid cache still holds of the document — the uploader's
+///      «my documents» list, the document, its chunks (best-effort).
 ///
 /// Issue #1653: F3-FU-4 — Admin delete KB document action.
 /// </summary>
@@ -151,37 +152,14 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
         // 6. Cache — best-effort AI response cache invalidation
         await InvalidateCacheSafelyAsync(storageGameId, "KB doc deletion", cancellationToken).ConfigureAwait(false);
 
-        // 7. Cache — «I miei documenti» di chi l'aveva caricato
-        await InvalidateUploaderDocumentListSafelyAsync(uploadedByUserId, id, cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// #4244: <c>GET /api/v1/kb-docs</c> tiene in cache per cinque minuti l'elenco dei documenti di
-    /// chi li ha caricati, e finora lo invalidavano solo i cambi di stato e di metadati
-    /// (<c>PdfStateChangedCacheInvalidationHandler</c>, di cui questo ripete le due etichette). Un
-    /// documento cancellato restava nell'elenco fino alla scadenza. Best-effort come le altre cache:
-    /// se fallisce, il danno è un elenco vecchio per qualche minuto.
-    /// </summary>
-    private async Task InvalidateUploaderDocumentListSafelyAsync(
-        Guid uploadedByUserId, Guid pdfId, CancellationToken cancellationToken)
-    {
-        try
-        {
-            await _hybridCache.RemoveByTagAsync($"user:{uploadedByUserId}", cancellationToken).ConfigureAwait(false);
-            await _hybridCache.RemoveByTagAsync("user-docs", cancellationToken).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
-#pragma warning disable CA1031 // Do not catch general exception types — best-effort, come le altre cache
-        catch (Exception ex)
-#pragma warning restore CA1031
-        {
-            _logger.LogWarning(ex,
-                "Error invalidating the document list of the uploader after deleting KB document {PdfId} — the list may be stale until the TTL expires",
-                pdfId);
-        }
+        // 7. Cache — l'elenco di chi l'aveva caricato, il documento, i suoi passaggi.
+        // ⚠️ Questo comando è [AtomicAudit]: qui siamo ancora dentro la transazione, e il commit
+        // arriva dopo. Una lettura che cade fra questa riga e il commit rimette in cache il
+        // documento. Chi invia il comando e ha un punto dopo il commit può ripetere
+        // l'invalidazione lì: la pulizia di un gioco privato lo fa.
+        await DeletedKbDocumentCaches
+            .InvalidateSafelyAsync(_hybridCache, _logger, uploadedByUserId, id, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     /// <summary>

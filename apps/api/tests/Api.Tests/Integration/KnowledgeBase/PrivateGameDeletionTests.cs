@@ -1,8 +1,11 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Text.Json;
+using Api.BoundedContexts.EntityRelationships.Domain.Aggregates;
+using Api.BoundedContexts.EntityRelationships.Domain.Enums;
 using Api.BoundedContexts.UserLibrary.Domain.Enums;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.UserLibrary;
 using Api.Services;
 using Api.Tests.Constants;
@@ -25,6 +28,12 @@ namespace Api.Tests.Integration.KnowledgeBase;
 /// l'elenco «I miei documenti» in produzione sta in cache, e un test che non ha cache non può
 /// dire se la cancellazione la invalida.
 /// </summary>
+/// <remarks>
+/// Non è la cache vera. Quella di produzione (<c>HybridCacheService</c>) tiene le etichette in
+/// Redis, che in questi host è finto. Questi test provano che la cancellazione chiede di togliere
+/// le etichette giuste a una cache che rispetta il contratto di <c>IHybridCacheService</c>; che
+/// la cache vera poi le tolga è un fatto suo, fuori da qui.
+/// </remarks>
 public sealed class PrivateGameDeletionHostFixture(SharedTestcontainersFixture shared)
     : SharedHostPerTestDatabaseFixture(shared, "pg_deletion")
 {
@@ -43,6 +52,11 @@ internal sealed class RememberingHybridCache : IHybridCacheService
 {
     private readonly ConcurrentDictionary<string, (object Value, string[] Tags)> _entries =
         new(StringComparer.Ordinal);
+
+    private readonly ConcurrentDictionary<string, int> _removalsByTag = new(StringComparer.Ordinal);
+
+    /// <summary>Quante volte è stato chiesto di togliere un'etichetta.</summary>
+    public int RemovalsOf(string tag) => _removalsByTag.GetValueOrDefault(tag);
 
     public async Task<T> GetOrCreateAsync<T>(
         string cacheKey,
@@ -69,6 +83,7 @@ internal sealed class RememberingHybridCache : IHybridCacheService
 
     public Task<int> RemoveByTagAsync(string tag, CancellationToken ct = default)
     {
+        _removalsByTag.AddOrUpdate(tag, 1, (_, count) => count + 1);
         var removed = 0;
         foreach (var (key, entry) in _entries)
         {
@@ -98,7 +113,11 @@ internal sealed class RememberingHybridCache : IHybridCacheService
     public Task<HybridCacheStats> GetStatsAsync(CancellationToken ct = default) =>
         Task.FromResult(new HybridCacheStats());
 
-    public void Clear() => _entries.Clear();
+    public void Clear()
+    {
+        _entries.Clear();
+        _removalsByTag.Clear();
+    }
 }
 
 /// <summary>
@@ -126,6 +145,9 @@ public sealed class PrivateGameDeletionTests
 {
     /// <summary>Quante righe di un gioco privato ci sono, tabella per tabella.</summary>
     private sealed record Content(int Threads, int Pdfs, int VectorDocuments, int Passages, int Embeddings);
+
+    /// <summary>Che cosa c'è di un PDF: la riga e il suo indice.</summary>
+    private sealed record PdfRows(bool Exists, int VectorDocuments, int Passages, int Embeddings);
 
     private static readonly Content Nothing = new(0, 0, 0, 0, 0);
 
@@ -234,6 +256,137 @@ public sealed class PrivateGameDeletionTests
         (await ContentOfAsync(_gameId)).Should().Be(before);
         (await IsDeletedAsync(_gameId)).Should().BeFalse();
     }
+
+    // ─── Un PDF che un altro gioco usa ancora ───────────────────
+
+    /// <summary>
+    /// La deduplicazione non ricarica due volte lo stesso file: al secondo gioco dà un
+    /// collegamento verso il PDF del primo (<c>CompleteChunkedUploadCommandHandler</c>). Per chi lo
+    /// ha caricato quel regolamento è anche del secondo gioco: cancellare il primo non glielo
+    /// deve togliere. È la regola di #2949 (un PDF collegato da più giochi si scollega, non si
+    /// distrugge), che qui vale anche quando a lasciarlo è il gioco che lo aveva caricato.
+    /// </summary>
+    [Fact]
+    public async Task APdfAnotherGameStillUses_IsNotDestroyed()
+    {
+        var usedByBoth = await SeedPdfUsedByBothGamesAsync();
+        var before = await RowsOfPdfAsync(usedByBoth);
+        before.Should().Be(new PdfRows(Exists: true, VectorDocuments: 1, Passages: 1, Embeddings: 1));
+
+        var response = await DeleteGameAsync(_gameId, _token);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent, await response.Content.ReadAsStringAsync(Ct));
+        (await RowsOfPdfAsync(usedByBoth)).Should().Be(before);
+        // Quello che era solo del gioco se n'è andato comunque.
+        (await RowsOfPdfAsync(_pdfId)).Should().Be(new PdfRows(false, 0, 0, 0));
+        (await ContentOfAsync(_gameId)).Threads.Should().Be(0);
+    }
+
+    /// <summary>
+    /// Non resta per sempre: quando anche l'ultimo gioco che lo usa viene cancellato, il PDF se
+    /// ne va con lui, e del primo gioco non resta più niente.
+    /// </summary>
+    [Fact]
+    public async Task APdfAnotherGameStillUses_GoesWhenTheLastGameUsingItIsDeleted()
+    {
+        var usedByBoth = await SeedPdfUsedByBothGamesAsync();
+        (await DeleteGameAsync(_gameId, _token)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await RowsOfPdfAsync(usedByBoth)).Exists.Should().BeTrue();
+
+        var response = await DeleteGameAsync(_otherGameId, _token);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent, await response.Content.ReadAsStringAsync(Ct));
+        (await RowsOfPdfAsync(usedByBoth)).Should().Be(new PdfRows(false, 0, 0, 0));
+        (await ContentOfAsync(_gameId)).Should().Be(Nothing);
+        (await ContentOfAsync(_otherGameId)).Should().Be(Nothing);
+    }
+
+    /// <summary>
+    /// I collegamenti di un gioco cancellato spariscono con lui, e non tengono in vita i PDF
+    /// degli altri: qui il gioco cancellato usava un PDF dell'altro gioco.
+    /// </summary>
+    [Fact]
+    public async Task TheLinksOfTheDeletedGame_GoWithIt_AndKeepNothingAlive()
+    {
+        await LinkGameToPdfAsync(_gameId, _otherPdfId);
+        (await LiveLinksFromAsync(_gameId)).Should().Be(1);
+
+        (await DeleteGameAsync(_gameId, _token)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        (await LiveLinksFromAsync(_gameId)).Should().Be(0);
+        // Il PDF dell'altro gioco è ancora suo…
+        (await RowsOfPdfAsync(_otherPdfId)).Exists.Should().BeTrue();
+
+        (await DeleteGameAsync(_otherGameId, _token)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        // …e se ne va con lui: il collegamento del gioco già cancellato non lo trattiene.
+        (await RowsOfPdfAsync(_otherPdfId)).Should().Be(new PdfRows(false, 0, 0, 0));
+    }
+
+    /// <summary>
+    /// Un gioco privato cancellato prima di questa pulizia ha lasciato i suoi collegamenti dov'erano.
+    /// Non contano: un collegamento da un gioco che non c'è più non tiene in vita un PDF.
+    /// </summary>
+    [Fact]
+    public async Task ALinkLeftByAGameDeletedBefore_DoesNotKeepThePdfAlive()
+    {
+        var goneGameId = await SeedGameDeletedBeforeAsync();
+        await LinkGameToPdfAsync(goneGameId, _otherPdfId);
+
+        (await DeleteGameAsync(_otherGameId, _token)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        (await RowsOfPdfAsync(_otherPdfId)).Should().Be(new PdfRows(false, 0, 0, 0));
+    }
+
+    /// <summary>
+    /// La cancellazione del documento svuota le sue cache da dentro la propria transazione: una
+    /// lettura che cade prima del commit le riempie di nuovo. La pulizia le svuota un'altra volta
+    /// a commit avvenuto. La corsa non si riproduce in un test; si vede che la seconda volta c'è.
+    /// </summary>
+    [Fact]
+    public async Task TheCachesOfADeletedDocument_AreClearedAgainOnceItIsCommitted()
+    {
+        (await DeleteGameAsync(_gameId, _token)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        _hostFixture.HybridCache.RemovalsOf($"kbDoc:{_pdfId:N}").Should().Be(2);
+        _hostFixture.HybridCache.RemovalsOf($"kbChunks:{_pdfId:N}").Should().Be(2);
+        _hostFixture.HybridCache.RemovalsOf($"user:{_userId}").Should().Be(2);
+        // Il PDF dell'altro gioco non c'entra.
+        _hostFixture.HybridCache.RemovalsOf($"kbDoc:{_otherPdfId:N}").Should().Be(0);
+    }
+
+    /// <summary>
+    /// Un caricamento a pezzi lasciato a metà porta l'id del gioco. Completato dopo la
+    /// cancellazione creerebbe un PDF su un gioco che non c'è più.
+    /// </summary>
+    [Fact]
+    public async Task AnUploadStillOpenOnTheGame_IsDropped()
+    {
+        await OpenChunkedUploadAsync(_gameId);
+        await OpenChunkedUploadAsync(_otherGameId);
+
+        (await DeleteGameAsync(_gameId, _token)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        (await OpenUploadsOfAsync(_gameId)).Should().Be(0);
+        (await OpenUploadsOfAsync(_otherGameId)).Should().Be(1);
+    }
+
+    /// <summary>
+    /// Il documento e i suoi passaggi stanno in cache anche loro (<c>kbDoc:</c>, <c>kbChunks:</c>),
+    /// i passaggi per mezz'ora, col testo dentro. Chi li aveva aperti non deve poterli rileggere.
+    /// </summary>
+    [Fact]
+    public async Task ADocumentReadBefore_CannotBeReadAfterTheGameIsDeleted()
+    {
+        (await GetAsync($"/api/v1/kb-docs/{_pdfId}")).Should().Be(HttpStatusCode.OK);
+        (await GetAsync($"/api/v1/kb-docs/{_pdfId}/chunks")).Should().Be(HttpStatusCode.OK);
+
+        (await DeleteGameAsync(_gameId, _token)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        (await GetAsync($"/api/v1/kb-docs/{_pdfId}")).Should().Be(HttpStatusCode.NotFound);
+        (await GetAsync($"/api/v1/kb-docs/{_pdfId}/chunks")).Should().Be(HttpStatusCode.NotFound);
+    }
+
 
     /// <summary>
     /// «I miei documenti» (<c>GET /api/v1/kb-docs</c>) tiene l'elenco in cache per cinque minuti.
@@ -384,6 +537,111 @@ public sealed class PrivateGameDeletionTests
         await command.ExecuteNonQueryAsync(Ct);
 
         return detachedPdfId;
+    }
+
+    /// <summary>
+    /// Un secondo PDF del gioco che cancello, a cui l'altro gioco è collegato: il caso che la
+    /// deduplicazione crea quando lo stesso file viene caricato su due giochi.
+    /// </summary>
+    private async Task<Guid> SeedPdfUsedByBothGamesAsync()
+    {
+        Guid pdfId;
+        using (var scope = _hostFixture.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            pdfId = await PrivateGameKbSeed.IndexPdfAsync(db, _userId, _gameId, "Ready", Ct,
+                ("A rulebook both prototypes share.", QueryVectorEmbeddings.Axis(0f, 1f)));
+        }
+
+        await LinkGameToPdfAsync(_otherGameId, pdfId);
+        return pdfId;
+    }
+
+    /// <summary>Un gioco privato dello stesso proprietario, già cancellato (logicamente).</summary>
+    private async Task<Guid> SeedGameDeletedBeforeAsync()
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var gameId = Guid.NewGuid();
+        db.PrivateGames.Add(new PrivateGameEntity
+        {
+            Id = gameId,
+            OwnerId = _userId,
+            Title = "Un prototipo di una volta",
+            MinPlayers = 1,
+            MaxPlayers = 4,
+            Source = PrivateGameSource.Manual,
+            IsDeleted = true,
+            DeletedAt = DateTime.UtcNow.AddDays(-30),
+        });
+        await db.SaveChangesAsync(Ct);
+        return gameId;
+    }
+
+    private async Task LinkGameToPdfAsync(Guid gameId, Guid pdfId)
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        db.EntityLinks.Add(EntityLink.Create(
+            MeepleEntityType.Game, gameId,
+            MeepleEntityType.KbCard, pdfId,
+            EntityLinkType.RelatedTo, EntityLinkScope.User, _userId));
+        await db.SaveChangesAsync(Ct);
+    }
+
+    private async Task<int> LiveLinksFromAsync(Guid gameId)
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        return await db.EntityLinks.IgnoreQueryFilters().CountAsync(
+            l => l.SourceEntityType == MeepleEntityType.Game && l.SourceEntityId == gameId && !l.IsDeleted, Ct);
+    }
+
+    private async Task OpenChunkedUploadAsync(Guid gameId)
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        db.ChunkedUploadSessions.Add(new ChunkedUploadSessionEntity
+        {
+            PrivateGameId = gameId,
+            UserId = _userId,
+            FileName = "regolamento.pdf",
+            TotalFileSize = 20_000_000,
+            TotalChunks = 4,
+            ReceivedChunks = 2,
+            TempDirectory = $"/tmp/upload-{Guid.NewGuid():N}",
+            Status = "uploading",
+            ExpiresAt = DateTime.UtcNow.AddHours(1),
+        });
+        await db.SaveChangesAsync(Ct);
+    }
+
+    private async Task<int> OpenUploadsOfAsync(Guid gameId)
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        return await db.ChunkedUploadSessions.IgnoreQueryFilters().CountAsync(u => u.PrivateGameId == gameId, Ct);
+    }
+
+    private async Task<PdfRows> RowsOfPdfAsync(Guid pdfId)
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var vectorDocumentIds = await db.VectorDocuments.IgnoreQueryFilters()
+            .Where(v => v.PdfDocumentId == pdfId).Select(v => v.Id).ToListAsync(Ct);
+        return new PdfRows(
+            Exists: await db.PdfDocuments.IgnoreQueryFilters().AnyAsync(p => p.Id == pdfId, Ct),
+            VectorDocuments: vectorDocumentIds.Count,
+            Passages: await db.TextChunks.IgnoreQueryFilters().CountAsync(c => c.PdfDocumentId == pdfId, Ct),
+            Embeddings: await db.PgVectorEmbeddings.IgnoreQueryFilters()
+                .CountAsync(e => vectorDocumentIds.Contains(e.VectorDocumentId), Ct));
+    }
+
+    private async Task<HttpStatusCode> GetAsync(string path)
+    {
+        var response = await _client.SendAsync(
+            TestSessionHelper.CreateAuthenticatedRequest(HttpMethod.Get, path, _token), Ct);
+        return response.StatusCode;
     }
 
     private async Task<bool> PdfExistsAsync(Guid pdfId)

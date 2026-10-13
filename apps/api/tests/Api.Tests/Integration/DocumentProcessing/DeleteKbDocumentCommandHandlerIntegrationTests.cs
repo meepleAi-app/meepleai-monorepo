@@ -164,12 +164,13 @@ public sealed class DeleteKbDocumentCommandHandlerIntegrationTests : IAsyncLifet
     }
 
     /// <summary>
-    /// #4244: <c>GET /api/v1/kb-docs</c> tiene in cache l'elenco dei documenti di chi li ha
-    /// caricati. Senza questa invalidazione un documento cancellato resta elencato fino alla
-    /// scadenza. Le due etichette sono quelle di <c>PdfStateChangedCacheInvalidationHandler</c>.
+    /// #4244: la cache ibrida tiene l'elenco «I miei documenti» di chi li ha caricati, il
+    /// documento e i suoi passaggi. Senza questa invalidazione un documento cancellato resta
+    /// elencato e leggibile fino alla scadenza. Le etichette sono quelle con cui scrivono
+    /// <c>ListUserKbDocsQueryHandler</c>, <c>GetKbDocumentByIdHandler</c> e <c>GetKbChunksHandler</c>.
     /// </summary>
     [Fact]
-    public async Task Handle_InvalidatesTheDocumentListOfWhoUploadedIt()
+    public async Task Handle_InvalidatesWhatTheCacheHoldsOfTheDocument()
     {
         var pdfId = await SeedIndexedDocWithAgentsAsync(agentCount: 0);
 
@@ -178,7 +179,12 @@ public sealed class DeleteKbDocumentCommandHandlerIntegrationTests : IAsyncLifet
         _hybridCacheMock.Verify(
             c => c.RemoveByTagAsync($"user:{TestUserId}", It.IsAny<CancellationToken>()), Times.Once);
         _hybridCacheMock.Verify(
-            c => c.RemoveByTagAsync("user-docs", It.IsAny<CancellationToken>()), Times.Once);
+            c => c.RemoveByTagAsync($"kbDoc:{pdfId:N}", It.IsAny<CancellationToken>()), Times.Once);
+        _hybridCacheMock.Verify(
+            c => c.RemoveByTagAsync($"kbChunks:{pdfId:N}", It.IsAny<CancellationToken>()), Times.Once);
+        // L'elenco di tutti gli altri utenti resta dov'è: l'etichetta per utente basta.
+        _hybridCacheMock.Verify(
+            c => c.RemoveByTagAsync("user-docs", It.IsAny<CancellationToken>()), Times.Never);
     }
 
     /// <summary>Un documento che non c'è non ha un elenco da invalidare.</summary>

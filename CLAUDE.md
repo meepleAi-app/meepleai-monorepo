@@ -261,7 +261,7 @@ tests/                    # Api.Tests, k6, api-smoke, llm-eval, fixtures — see
 | DB connection | `docker compose logs postgres && dotnet ef database update` |
 | Build fails (FE) | `rm -rf .next && pnpm build` |
 | Build fails (BE) | `dotnet clean && dotnet build` |
-| Testhost blocking | `tasklist \| grep testhost` → `taskkill //PID <PID> //F` |
+| Testhost blocking | `powershell -File tools/cleanup/cleanup-test-processes.ps1 -TestHostOnly` (solo i `testhost` di questo checkout), o `taskkill //PID <PID> //F` dopo aver letto la riga di comando. **Mai per nome d'immagine**: abbatte i test delle altre sessioni (#4310) |
 | Port conflict | `netstat -ano \| findstr :8080` → `taskkill /PID <PID> /F` |
 | Snapshot drift | `make seed-index` (rigenera) or `make dev` (fallback) — [workflow](./docs/for-developers/workflows/snapshot-seed-workflow.md#compat-gate--exit-codes) |
 | Full ops reference | [operations-manual.md](./docs/for-developers/operations/operations-manual.md) |
@@ -347,7 +347,7 @@ Spec: [`2026-10-02-test-dependency-tiers-and-observable-skips.md`](./docs/for-de
 | #2567 | Endpoint flow: DTOs → Queries → Commands → Validators → Handlers → Routing |
 | #2568 | Exceptions: `ConflictException` (409), `NotFoundException` (404) — never `InvalidOperationException` (500) |
 | #2565 | DI: register both `IService` interface and implementation |
-| #2593 | Kill testhost before running tests; use culture-independent `$"{val*100:0}%"` |
+| #2593 | Before running tests, kill only **your own** stale testhost: `tools/cleanup/cleanup-test-processes.ps1 -TestHostOnly` is scoped to this checkout (#4310). Never `taskkill //IM testhost.exe` or `Get-Process testhost \| Stop-Process`: other checkouts on this machine have test runs in progress. Use culture-independent `$"{val*100:0}%"` |
 | #2600 | OAuth: defensive validation + InMemory transaction + manual rollback |
 | #2620 | FK constraints: seed dependent entities first; HybridCache needs `IHybridCacheService` for event handlers |
 | [ADR-062](./docs/for-claude/architecture/adr/adr-062-config-environment-field-semantics.md) | Config `Environment` field: default to `"All"` for global keys; per-env per-row only when value diverges by design |

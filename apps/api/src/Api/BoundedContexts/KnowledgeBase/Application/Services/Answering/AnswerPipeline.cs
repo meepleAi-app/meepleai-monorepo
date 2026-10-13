@@ -185,7 +185,8 @@ internal sealed class AnswerPipeline : IAnswerPipeline
                 new StreamingStateUpdate("Retrieved from cache"));
 
             // Emit citations — SP-C (#3407): STRIP regions/char offsets from cache-served snippets.
-            // The QA cache key is (game, query) only, NOT user/tier (AiResponseCacheService), so a
+            // The QA cache key carries what shapes the answer (see QaCacheKey) but NOT the user or
+            // the copyright tier, so a
             // Full-tier user's cached Full-gated regions must NOT be replayed to a later Protected-tier
             // user (DA-4). Regions are transient per-request data; fresh, correctly-gated regions are
             // emitted only on a cache MISS. Cache hits gracefully fall back to the text-quote highlight.
@@ -507,7 +508,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
     /// <summary>
     /// SP-C (#3407): returns a copy of <paramref name="snippets"/> with the Full-gated region-grounding
     /// fields (regions/charStart/charEnd) removed. Used on the cache-hit path because the QA cache is
-    /// keyed only by (game, query) — not by user/tier — so cached regions must never be replayed across
+    /// not keyed by user or copyright tier (see QaCacheKey), so cached regions must never be replayed across
     /// tiers (DA-4). Verbatim text is left intact (its cross-tier caching is pre-existing behavior).
     /// </summary>
     private static IReadOnlyList<Snippet> StripRegions(IReadOnlyList<Snippet> snippets) =>
@@ -633,7 +634,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
             llmConfidence);
 
         // Build and cache response — SP-C (#3407): NEVER cache the Full-gated regions/char offsets.
-        // The cache key is (game, query) only (not user/tier), so caching gated data risks a
+        // The cache key does not carry the user or the copyright tier, so caching gated data risks a
         // cross-tier replay leak (DA-4). Fresh, correctly-gated regions are emitted per-request on a
         // cache MISS; cache hits fall back to the text-quote highlight. (StripRegions on the read path
         // stays as defense-in-depth for any entry cached before this line shipped.)

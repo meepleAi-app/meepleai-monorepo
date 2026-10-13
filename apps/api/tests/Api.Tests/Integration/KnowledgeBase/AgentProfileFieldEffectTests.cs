@@ -809,6 +809,64 @@ public sealed class AgentProfileFieldEffectTests
             .And.Contain("Answer thoroughly");
     }
 
+    /// <summary>
+    /// Un thread che non è di chi chiede non entra nel prompt (#4242): la domanda è quindi quella di
+    /// chi non nomina alcun thread, e ne condivide la risposta in cache.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4279")]
+    public async Task Cache_TreatsARefusedThreadAsNoThread()
+    {
+        var threadId = await CreateThreadWithMessageAsync($"La nostra variante si chiama {ThreadSecret}.");
+        var strangerToken = await CreateAnotherOwnerOfTheGameAsync();
+        await AskAsync(Question, token: strangerToken);
+        _hostFixture.Llm.Reset();
+
+        var events = await AskAsync(Question, chatId: threadId, token: strangerToken);
+
+        _hostFixture.Llm.LastAnswer.Should().BeNull("il thread altrui non conta: è la stessa domanda di prima");
+        FirstStateOf(events).Should().Be("Retrieved from cache");
+    }
+
+    /// <summary>
+    /// Il filtro per documento in forma canonica: un elenco vuoto è «nessun filtro», e lo stesso
+    /// documento nominato due volte è lo stesso filtro.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4279")]
+    public async Task Cache_ReadsTheDocumentFilterInCanonicalForm()
+    {
+        var documentId = await TheVectorDocumentOfTheGameAsync();
+        await AskAsync(Question);
+        await AskAsync(Question, documentIds: [documentId]);
+        _hostFixture.Llm.Reset();
+
+        var unfiltered = await AskAsync(Question, documentIds: []);
+        var sameDocumentTwice = await AskAsync(Question, documentIds: [documentId, documentId]);
+
+        _hostFixture.Llm.LastAnswer.Should().BeNull("nessuna delle due domande è nuova");
+        FirstStateOf(unfiltered).Should().Be("Retrieved from cache");
+        FirstStateOf(sameDocumentTwice).Should().Be("Retrieved from cache");
+    }
+
+    /// <summary>
+    /// Uno stile che il costruttore del prompt non conosce riceve le istruzioni di quello conciso:
+    /// stesso prompt, stessa risposta, stessa voce di cache. (Senza stile la rotta manda già
+    /// «concise», quindi quel caso non distingue nulla.)
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4279")]
+    public async Task Cache_TreatsAnUnknownStyleAsConcise()
+    {
+        await AskAsync(Question, responseStyle: "concise");
+        _hostFixture.Llm.Reset();
+
+        var events = await AskAsync(Question, responseStyle: "bullet-points");
+
+        _hostFixture.Llm.LastAnswer.Should().BeNull("uno stile sconosciuto riceve le stesse istruzioni di quello conciso");
+        FirstStateOf(events).Should().Be("Retrieved from cache");
+    }
+
     /// <summary>Il token che il client manda con «Continua»: la risposta parziale, in base64.</summary>
     private static string ContinuationOf(string partialAnswer) =>
         Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(

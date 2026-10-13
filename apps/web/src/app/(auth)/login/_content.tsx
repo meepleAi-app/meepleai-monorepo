@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -74,6 +74,17 @@ export function LoginPageContent({ fromParam, reason }: LoginPageContentProps) {
   const [tempSessionToken, setTempSessionToken] = useState<string | null>(null);
   const [twoFactorError, setTwoFactorError] = useState<string>('');
 
+  // #4134: un login riuscito naviga via, quindi i due gestori qui sotto finiscono a pagina
+  // smontata. Aggiornare lo stato a quel punto non serve a nessuno, e sotto lo smantellamento di
+  // jsdom diventa un «window is not defined» che fa uscire rosso uno shard senza test falliti.
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const redirectAfterAuth = useCallback(
     async (_role: string | null | undefined) => {
       // Issue #893 demo follow-up: admins/superadmins land on the user app by
@@ -119,7 +130,9 @@ export function LoginPageContent({ fromParam, reason }: LoginPageContentProps) {
         // (apps/web/src/lib/api/core/httpClient.ts) → re-logging here produced
         // duplicate console.error noise. UX feedback is preserved via setError.
       } finally {
-        setIsAuthenticating(false);
+        if (isMountedRef.current) {
+          setIsAuthenticating(false);
+        }
       }
     },
     [refreshUser, redirectAfterAuth, t]
@@ -148,7 +161,9 @@ export function LoginPageContent({ fromParam, reason }: LoginPageContentProps) {
         setTwoFactorError(errorMessage);
         // Issue #2171: HttpClient already logs API failures — see comment in handleLogin.
       } finally {
-        setIsAuthenticating(false);
+        if (isMountedRef.current) {
+          setIsAuthenticating(false);
+        }
       }
     },
     [tempSessionToken, refreshUser, redirectAfterAuth, t]

@@ -117,6 +117,7 @@ The hooks are the tracked files in `.husky/` (`pre-commit`, `commit-msg`, `pre-p
 - Check: `git config --get core.hooksPath` prints `.husky`. If it does not, hooks are silently skipped or run from another checkout; fix it with `git config core.hooksPath .husky`.
 - Do not run `husky` (`npx husky`, `husky init`): it sets `core.hooksPath` to `.husky/_`, a generated, git-ignored folder that exists only in the checkout where it ran. Every other worktree then runs no hooks at all, without saying so (#4316).
 - Git runs the hooks directly, so on Linux and macOS a hook must be executable in the index. A hook added from Windows is not: `git update-index --chmod=+x .husky/<hook>`.
+- The hooks are bash scripts and say so: the first line is `#!/usr/bin/env bash`. Keep it. Under `#!/bin/sh` a bashism (`[[ … ]]`, `&>`) works on Windows, where `sh` is bash, and silently takes the wrong branch where `sh` is dash — the checks reserved to `main-dev` and `main` were skipped there (#4321).
 - `HUSKY=0` in the environment skips the installation.
 
 ---

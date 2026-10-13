@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # Pre-push hook for MeepleAI
 # Build verification + branch protection - tests are delegated to CI
 

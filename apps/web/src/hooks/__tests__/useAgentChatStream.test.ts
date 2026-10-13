@@ -751,6 +751,40 @@ describe('useAgentChatStream', () => {
     expect(onError).toHaveBeenCalledWith(expected);
   });
 
+  /**
+   * #4168 (5g-b): la domanda fermata dalla quota del piano. Il backend manda un messaggio tecnico
+   * («Tier limit exceeded: AgentQuery (3/3)»): il pannello mostra la spiegazione, con i numeri del
+   * piano e l'ora in cui il conteggio riparte.
+   */
+  it('explains the plan quota for errorCode TIER_LIMIT_EXCEEDED', async () => {
+    const events = [
+      sseEvent(EventType.Error, {
+        errorMessage: 'Tier limit exceeded: AgentQuery (3/3)',
+        errorCode: 'TIER_LIMIT_EXCEEDED',
+        limitType: 'AgentQuery',
+        current: 3,
+        max: 3,
+        upgradeUrl: '/pricing',
+      }),
+    ];
+
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const onError = vi.fn();
+    const { result } = renderHook(() => useAgentChatStream({ onError }));
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    const explained =
+      /^Hai usato tutte le domande di oggi previste dal tuo piano \(3 su 3\)\. Il conteggio riparte alle \d{2}:\d{2} \(mezzanotte UTC\)\.$/;
+    expect(result.current.state.error).toMatch(explained);
+    expect(onError).toHaveBeenCalledWith(expect.stringMatching(explained));
+  });
+
   it('shows Italian provider_unavailable message for errorCode provider_unavailable', async () => {
     const events = [
       sseEvent(EventType.Error, {

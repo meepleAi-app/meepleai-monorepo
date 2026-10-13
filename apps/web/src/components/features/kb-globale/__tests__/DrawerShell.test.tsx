@@ -234,6 +234,74 @@ describe('DrawerShell — FSM state rendering', () => {
     );
     expect(screen.getByTestId('drawer-state-error-server')).toBeInTheDocument();
     expect(screen.getByText(/RBAC_RESOLUTION_FAILED/)).toBeInTheDocument();
+    // Un guasto si può riprovare.
+    expect(screen.getByRole('button', { name: /Riprova/ })).toBeInTheDocument();
+  });
+
+  /**
+   * #4168 (5g-b): la quota del piano non è un guasto. Niente riquadro d'errore, niente codice in
+   * chiaro, e soprattutto niente «Riprova»: riproverebbe la stessa domanda, fermata allo stesso
+   * modo fino a domani. Al suo posto l'avviso della chat, con i numeri del piano e il link ai piani.
+   */
+  it('renders the plan quota as a notice with the way to the plans, not as a server error', () => {
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'error',
+      error: {
+        kind: 'server',
+        message: 'Tier limit exceeded: AgentQuery (3/3)',
+        code: 'TIER_LIMIT_EXCEEDED',
+        tierLimit: { current: 3, max: 3, upgradeUrl: '/pricing' },
+      },
+    };
+    render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+
+    const notice = screen.getByTestId('tier-limit-exceeded');
+    expect(notice).toHaveTextContent(
+      'Hai usato tutte le domande di oggi previste dal tuo piano (3 su 3)'
+    );
+    expect(screen.getByRole('link', { name: 'Vedi i piani' })).toHaveAttribute('href', '/pricing');
+    expect(screen.queryByTestId('drawer-state-error-server')).not.toBeInTheDocument();
+    expect(screen.queryByText(/TIER_LIMIT_EXCEEDED/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Tier limit exceeded/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Riprova/ })).not.toBeInTheDocument();
+  });
+
+  /** Senza i numeri (un backend che non li manda) l'avviso c'è lo stesso, e porta ai piani. */
+  it('renders the plan quota notice even when the numbers are missing', () => {
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'error',
+      error: { kind: 'server', message: 'Tier limit exceeded', code: 'TIER_LIMIT_EXCEEDED' },
+    };
+    render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId('tier-limit-exceeded')).toHaveTextContent(
+      'Hai usato tutte le domande di oggi previste dal tuo piano.'
+    );
+    expect(screen.getByRole('link', { name: 'Vedi i piani' })).toHaveAttribute('href', '/pricing');
   });
 
   it('calls onClose when header close pressed (all states)', async () => {

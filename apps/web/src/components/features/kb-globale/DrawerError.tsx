@@ -1,6 +1,9 @@
 'use client';
 import { type JSX } from 'react';
 
+import { TierLimitNotice } from '@/components/chat-unified/TierLimitNotice';
+import { readTierLimit, TIER_LIMIT_EXCEEDED } from '@/lib/tier-limit';
+
 import type { KbAskError } from '../../../hooks/useKbAskStream';
 
 export interface DrawerErrorLabelsForKind {
@@ -29,6 +32,17 @@ export function DrawerError({
   onCancel?: () => void;
   labels: DrawerErrorLabels;
 }): JSX.Element {
+  // #4168 (5g-b): la quota del piano non è un guasto. Niente riquadro d'errore e niente
+  // «Riprova», che ripeterebbe una domanda fermata allo stesso modo fino a domani: l'avviso della
+  // chat, con i numeri del piano e il link ai piani.
+  if (error.code === TIER_LIMIT_EXCEEDED) {
+    return (
+      <div data-testid="drawer-state-error-quota" className="flex-1 p-4">
+        <TierLimitNotice limit={readTierLimit(error.tierLimit)} />
+      </div>
+    );
+  }
+
   const cfg = labels[error.kind];
   const icons = { connection: '📡', timeout: '⏱️', partial: '⚠', server: '⚙' } as const;
   return (

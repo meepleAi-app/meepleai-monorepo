@@ -12,6 +12,8 @@ import { useEffect, useMemo, useRef } from 'react';
 
 import { toast } from 'sonner';
 
+import { readTierLimit, TIER_LIMIT_EXCEEDED, tierLimitMessage } from '@/lib/tier-limit';
+
 import { useSseStreamFsm, type SseStreamFsmConfig } from './useSseStreamFsm';
 
 // StreamingEventType enum values from backend
@@ -377,6 +379,10 @@ function agentChatEventReducer(
       } else if (data?.errorCode === 'AI_BUDGET_MONTHLY_EXHAUSTED') {
         errorMsg =
           'Il servizio AI è in pausa fino al mese prossimo: è stato raggiunto il budget di spesa del mese.';
+      } else if (data?.errorCode === TIER_LIMIT_EXCEEDED) {
+        // #4168 (5g-b): la quota del piano. Il messaggio del backend è tecnico; qui la
+        // spiegazione, con i numeri del piano e l'ora in cui il conteggio riparte.
+        errorMsg = tierLimitMessage(readTierLimit(event.data));
       } else {
         errorMsg = data?.errorMessage ?? 'Si è verificato un errore. Riprova.';
       }

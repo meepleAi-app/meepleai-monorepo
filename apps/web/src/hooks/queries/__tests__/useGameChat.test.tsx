@@ -258,6 +258,43 @@ describe('useGameChat', () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
   });
 
+  /**
+   * #4168 (5g-b): la domanda fermata dalla quota del piano. Chi chiama `ask` riceve la
+   * spiegazione — i numeri del piano e quando riparte il conteggio — invece di «QA stream error».
+   */
+  it('rejects with the plan quota explanation when the stream stops for the quota', async () => {
+    vi.mocked(qaStream).mockReturnValueOnce(
+      mockStream([
+        {
+          type: 5,
+          data: {
+            errorMessage: 'Tier limit exceeded: AgentQuery (3/3)',
+            errorCode: 'TIER_LIMIT_EXCEEDED',
+            current: 3,
+            max: 3,
+            upgradeUrl: '/pricing',
+          },
+        },
+      ]) as any
+    );
+    const { result } = renderHook(() => useGameChat('wingspan'));
+
+    let rejection: unknown;
+    await act(async () => {
+      try {
+        await result.current.ask('q');
+      } catch (e) {
+        rejection = e;
+      }
+    });
+
+    expect(rejection).toBeInstanceOf(Error);
+    expect((rejection as Error).message).toMatch(
+      /^Hai usato tutte le domande di oggi previste dal tuo piano \(3 su 3\)\. Il conteggio riparte alle \d{2}:\d{2} \(mezzanotte UTC\)\.$/
+    );
+    await waitFor(() => expect(result.current.isError).toBe(true));
+  });
+
   it('switchAgent updates currentAgent', () => {
     const { result } = renderHook(() => useGameChat('wingspan'));
     act(() => {

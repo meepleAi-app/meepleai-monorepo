@@ -135,6 +135,38 @@ describe('useKbAskStream — transitions', () => {
     expect(result.current.state.error?.code).toBe('RBAC_RESOLUTION_FAILED');
   });
 
+  /**
+   * #4168 (5g-b): la domanda fermata dalla quota del piano. L'errore porta i numeri e il link,
+   * così il pannello può dire che cosa è successo invece di «errore del server».
+   */
+  it('Error event for the plan quota carries the numbers of the plan', async () => {
+    vi.spyOn(kbAskClient, 'askGlobal').mockImplementation(() =>
+      eventsAsAsyncGen([
+        {
+          type: 5,
+          data: {
+            message: 'Tier limit exceeded: AgentQuery (3/3)',
+            code: 'TIER_LIMIT_EXCEEDED',
+            tierLimit: { current: 3, max: 3, upgradeUrl: '/pricing' },
+          },
+        },
+      ])
+    );
+    const { result } = renderHook(() => useKbAskStream());
+
+    act(() => {
+      result.current.ask('q');
+    });
+
+    await waitFor(() => expect(result.current.state.status).toBe('error'));
+    expect(result.current.state.error).toEqual({
+      kind: 'server',
+      message: 'Tier limit exceeded: AgentQuery (3/3)',
+      code: 'TIER_LIMIT_EXCEEDED',
+      tierLimit: { current: 3, max: 3, upgradeUrl: '/pricing' },
+    });
+  });
+
   it('Error event with LLM_STREAMING_FAILED + accumulated partial text maps to kind=partial', async () => {
     vi.spyOn(kbAskClient, 'askGlobal').mockImplementation(() =>
       eventsAsAsyncGen([

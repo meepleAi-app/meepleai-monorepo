@@ -25,6 +25,7 @@ import type { AgentKind } from '@/components/features/game-chat/GameChatHeader';
 import { api } from '@/lib/api';
 import { qaStream } from '@/lib/api/clients/chatClient';
 import type { ChatThreadMessageDto } from '@/lib/api/schemas/chat.schemas';
+import { readTierLimit, TIER_LIMIT_EXCEEDED, tierLimitMessage } from '@/lib/tier-limit';
 import type { Citation } from '@/types';
 
 export interface ChatMessage {
@@ -78,6 +79,7 @@ interface StreamingCompletePayload {
 
 interface ErrorPayload {
   readonly message?: string;
+  readonly errorCode?: string | null;
 }
 
 // Issue #V: the QA stream (POST /agents/qa/stream) delivers citations in the
@@ -250,6 +252,11 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
             }
           } else if (event.type === ERROR_EVENT_TYPE) {
             const errPayload = event.data as ErrorPayload;
+            if (errPayload?.errorCode === TIER_LIMIT_EXCEEDED) {
+              // #4168 (5g-b): la quota del piano. Chi chiama riceve la spiegazione, con i numeri
+              // del piano e l'ora in cui il conteggio riparte.
+              throw new Error(tierLimitMessage(readTierLimit(event.data)));
+            }
             throw new Error(errPayload?.message ?? 'QA stream error');
           } else if (event.type === CITATIONS_EVENT_TYPE) {
             // Issue #V: the early CITATIONS event is the ONLY place citations

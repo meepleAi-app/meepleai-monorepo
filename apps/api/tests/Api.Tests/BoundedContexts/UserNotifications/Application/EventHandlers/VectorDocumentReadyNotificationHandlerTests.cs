@@ -74,4 +74,24 @@ public sealed class VectorDocumentReadyNotificationHandlerTests
         var act = async () => await sut.Handle(evt, CancellationToken.None);
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
+    /// <summary>
+    /// #4244: <c>/library/{id}</c> è la pagina di un gioco del catalogo in libreria, e per l'id di
+    /// un gioco privato non esiste. Il gioco privato ha la sua pagina.
+    /// </summary>
+    [Fact]
+    public async Task Handle_ForAPrivateGame_LinksToThePageOfThePrivateGame()
+    {
+        var privateGameId = Guid.NewGuid();
+        var evt = CreateEvent() with { GameId = privateGameId, PrivateGameId = privateGameId };
+
+        await CreateHandler().Handle(evt, CancellationToken.None);
+
+        _dispatcher.Verify(d => d.DispatchAsync(
+            It.Is<NotificationMessage>(m =>
+                m.Type == NotificationType.DocumentReady &&
+                m.RecipientUserId == _userId &&
+                m.DeepLinkPath == $"/library/private/{privateGameId}"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
 }

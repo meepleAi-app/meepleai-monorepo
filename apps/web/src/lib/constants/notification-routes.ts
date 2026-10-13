@@ -18,6 +18,8 @@ export const NotificationRoutes = {
   // per-game agent. Must stay byte-identical to the C# twin (ADR-075 gate).
   libraryGameChatTemplate: '/library/{id}?tab=aiChat',
   privateToolkitTemplate: '/library/private/{id}/toolkit',
+  // Issue #4244: the page of a private game. `/library/{id}` resolves catalogue games only.
+  privateGameTemplate: '/library/private/{id}',
   contributionRequestTemplate: '/contributions/requests/{id}',
   sharedGameTemplate: '/shared-games/{id}',
   adminSharedGameTemplate: '/admin/shared-games/{id}',
@@ -51,6 +53,8 @@ export const libraryGameChat = (id: string): string =>
   withId(NotificationRoutes.libraryGameChatTemplate, id);
 export const privateToolkit = (id: string): string =>
   withId(NotificationRoutes.privateToolkitTemplate, id);
+export const privateGame = (id: string): string =>
+  withId(NotificationRoutes.privateGameTemplate, id);
 export const contributionRequest = (id: string): string =>
   withId(NotificationRoutes.contributionRequestTemplate, id);
 export const sharedGame = (id: string): string => withId(NotificationRoutes.sharedGameTemplate, id);

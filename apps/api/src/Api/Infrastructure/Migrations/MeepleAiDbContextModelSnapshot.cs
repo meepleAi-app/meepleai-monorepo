@@ -14828,6 +14828,9 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("PrivateGameId")
+                        .HasColumnType("uuid");
+
                     b.Property<int>("RoleTags")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -14854,6 +14857,8 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex("ParentChunkId");
 
                     b.HasIndex("PdfDocumentId");
+
+                    b.HasIndex("PrivateGameId");
 
                     b.HasIndex("RoleTags")
                         .HasDatabaseName("ix_text_chunks_role_tags")
@@ -16703,6 +16708,9 @@ namespace Api.Infrastructure.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("PrivateGameId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("SharedGameId")
                         .HasColumnType("uuid")
                         .HasColumnName("shared_game_id");
@@ -16716,6 +16724,8 @@ namespace Api.Infrastructure.Migrations
 
                     b.HasIndex("PdfDocumentId")
                         .IsUnique();
+
+                    b.HasIndex("PrivateGameId");
 
                     b.HasIndex("SharedGameId");
 
@@ -18984,6 +18994,11 @@ namespace Api.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Api.Infrastructure.Entities.UserLibrary.PrivateGameEntity", null)
+                        .WithMany()
+                        .HasForeignKey("PrivateGameId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
                     b.Navigation("Game");
 
                     b.Navigation("PdfDocument");
@@ -19204,6 +19219,11 @@ namespace Api.Infrastructure.Migrations
                         .HasForeignKey("PdfDocumentId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("Api.Infrastructure.Entities.UserLibrary.PrivateGameEntity", null)
+                        .WithMany()
+                        .HasForeignKey("PrivateGameId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Game");
 

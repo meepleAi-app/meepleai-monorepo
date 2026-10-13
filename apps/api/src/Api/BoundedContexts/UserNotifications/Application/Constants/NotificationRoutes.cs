@@ -25,6 +25,8 @@ internal static class NotificationRoutes
     // (the legacy `/library/{id}/agent` page is a 307 redirect to exactly this).
     public const string LibraryGameChatTemplate = "/library/{id}?tab=aiChat";
     public const string PrivateToolkitTemplate = "/library/private/{id}/toolkit";
+    // Issue #4244: the page of a private game. `/library/{id}` resolves catalogue games only.
+    public const string PrivateGameTemplate = "/library/private/{id}";
     public const string ContributionRequestTemplate = "/contributions/requests/{id}";
     public const string SharedGameTemplate = "/shared-games/{id}";
     public const string AdminSharedGameTemplate = "/admin/shared-games/{id}";
@@ -55,6 +57,7 @@ internal static class NotificationRoutes
     // ── Builders for parameterized routes ──
     public static string LibraryGameChat(Guid id) => LibraryGameChatTemplate.Replace("{id}", id.ToString());
     public static string PrivateToolkit(Guid id) => PrivateToolkitTemplate.Replace("{id}", id.ToString());
+    public static string PrivateGame(Guid id) => PrivateGameTemplate.Replace("{id}", id.ToString());
     public static string ContributionRequest(Guid id) => ContributionRequestTemplate.Replace("{id}", id.ToString());
     public static string SharedGame(Guid id) => SharedGameTemplate.Replace("{id}", id.ToString());
     public static string AdminSharedGame(Guid id) => AdminSharedGameTemplate.Replace("{id}", id.ToString());

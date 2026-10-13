@@ -21,6 +21,7 @@ public sealed class NotificationRoutesTests
         // parameterized templates
         "/library/{id}?tab=aiChat",
         "/library/private/{id}/toolkit",
+        "/library/private/{id}",
         "/contributions/requests/{id}",
         "/shared-games/{id}",
         "/admin/shared-games/{id}",
@@ -68,6 +69,7 @@ public sealed class NotificationRoutesTests
 
         NotificationRoutes.LibraryGameChat(id).Should().Be($"/library/{s}?tab=aiChat");
         NotificationRoutes.PrivateToolkit(id).Should().Be($"/library/private/{s}/toolkit");
+        NotificationRoutes.PrivateGame(id).Should().Be($"/library/private/{s}");
         NotificationRoutes.ContributionRequest(id).Should().Be($"/contributions/requests/{s}");
         NotificationRoutes.SharedGame(id).Should().Be($"/shared-games/{s}");
         NotificationRoutes.AdminSharedGame(id).Should().Be($"/admin/shared-games/{s}");

@@ -93,8 +93,8 @@ public sealed class ConfirmAssistantProposalTests
     private void VerifyNothingApplied()
     {
         _applier.Verify(a => a.ApplyScoreAsync(
-            It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
-        _applier.Verify(a => a.AdvanceTurnAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+            It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<AssistantScoreWrite>(), It.IsAny<CancellationToken>()), Times.Never);
+        _applier.Verify(a => a.AdvanceTurnAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public sealed class ConfirmAssistantProposalTests
         var proposal = ScoreProposal(points: 5, cellBefore: 7);
         AssistantProposalStatus? statusWhenApplied = null;
         var savesBeforeApply = -1;
-        _applier.Setup(a => a.ApplyScoreAsync(Session, Owner, Marco, 2, "punti", 12, It.IsAny<CancellationToken>()))
+        _applier.Setup(a => a.ApplyScoreAsync(Session, Owner, new AssistantScoreWrite(Marco, 2, "punti", 12, 7), It.IsAny<CancellationToken>()))
             .Callback(() =>
             {
                 statusWhenApplied = proposal.Status;
@@ -129,7 +129,7 @@ public sealed class ConfirmAssistantProposalTests
 
         var dto = await ConfirmAsync(proposal, corrected: 3);
 
-        _applier.Verify(a => a.ApplyScoreAsync(Session, Owner, Marco, 2, "punti", 10, It.IsAny<CancellationToken>()), Times.Once);
+        _applier.Verify(a => a.ApplyScoreAsync(Session, Owner, new AssistantScoreWrite(Marco, 2, "punti", 10, 7), It.IsAny<CancellationToken>()), Times.Once);
         proposal.Status.Should().Be(AssistantProposalStatus.Edited);
         dto.ConfirmedPoints.Should().Be(3);
         dto.ResultingValue.Should().Be(10);
@@ -154,7 +154,7 @@ public sealed class ConfirmAssistantProposalTests
 
         await ConfirmAsync(proposal);
 
-        _applier.Verify(a => a.ApplyScoreAsync(Session, Owner, Marco, 2, "punti", 5, It.IsAny<CancellationToken>()), Times.Once);
+        _applier.Verify(a => a.ApplyScoreAsync(Session, Owner, new AssistantScoreWrite(Marco, 2, "punti", 5, 0), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     /// <summary>Review Focus 4: qualcuno ha scritto la stessa cella fra la proposta e la conferma.</summary>
@@ -172,6 +172,50 @@ public sealed class ConfirmAssistantProposalTests
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(2), "prenotazione ed esito");
     }
 
+    /// <summary>
+    /// Dalla review dell'intero branch: il controllo qui sopra e la scrittura sono due letture. Se fra le
+    /// due passa un'altra conferma, a dirlo è il comando della sessione, che ricontrolla sull'aggregato
+    /// che sta per salvare. La proposta è superata, non fallita, e nulla è stato scritto.
+    /// </summary>
+    [Fact]
+    public async Task Confirm_WhenTheSessionSaysTheGameChangedMeanwhile_IsStale_NotFailed()
+    {
+        var proposal = ScoreProposal();
+        _applier.Setup(a => a.ApplyScoreAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<AssistantScoreWrite>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new AssistantProposalApplyException(
+                AssistantProposalApplyException.GameChanged, "The score cell changed", new InvalidOperationException()));
+
+        var act = () => ConfirmAsync(proposal);
+
+        (await act.Should().ThrowAsync<ConflictException>()).Which.ErrorCode.Should().Be("proposal_stale");
+        proposal.Status.Should().Be(AssistantProposalStatus.Stale);
+        proposal.FailureCode.Should().BeNull();
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(2), "prenotazione ed esito");
+    }
+
+    /// <summary>
+    /// La decisione centrale della fetta (spec §5.3): Failed solo quando si sa che la partita non è stata
+    /// scritta. Un errore qualunque dell'applicazione può essere arrivato dopo il salvataggio della
+    /// sessione: la proposta resta Applying e l'errore risale. Chiuderla come fallita inviterebbe l'host
+    /// a ripetere un punteggio già registrato.
+    /// </summary>
+    [Fact]
+    public async Task Confirm_WhenTheApplyFailsForAnUnknownReason_StaysApplying_AndTheErrorPropagates()
+    {
+        var proposal = ScoreProposal();
+        _applier.Setup(a => a.ApplyScoreAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<AssistantScoreWrite>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("the hub is down"));
+
+        var act = () => ConfirmAsync(proposal);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        proposal.Status.Should().Be(AssistantProposalStatus.Applying);
+        proposal.FailureCode.Should().BeNull();
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once, "solo la prenotazione");
+    }
+
     [Fact]
     public async Task Confirm_ATurn_AdvancesIt()
     {
@@ -179,7 +223,7 @@ public sealed class ConfirmAssistantProposalTests
 
         var dto = await ConfirmAsync(proposal);
 
-        _applier.Verify(a => a.AdvanceTurnAsync(Session, It.IsAny<CancellationToken>()), Times.Once);
+        _applier.Verify(a => a.AdvanceTurnAsync(Session, 4, It.IsAny<CancellationToken>()), Times.Once);
         dto.Status.Should().Be("Accepted");
     }
 
@@ -229,7 +273,7 @@ public sealed class ConfirmAssistantProposalTests
     {
         var proposal = ScoreProposal();
         _applier.Setup(a => a.ApplyScoreAsync(
-                It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+                It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<AssistantScoreWrite>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new AssistantProposalApplyException(failureCode, "the domain said no", new InvalidOperationException()));
 
         var act = () => ConfirmAsync(proposal);
@@ -340,7 +384,7 @@ public sealed class ConfirmAssistantProposalTests
         await Handler().Handle(new ConfirmAssistantProposalCommand(Session, proposal.Id, Owner, null), client.Token);
 
         _applier.Verify(a => a.ApplyScoreAsync(
-            Session, Owner, Marco, 2, "punti", 12, It.Is<CancellationToken>(token => !token.CanBeCanceled)), Times.Once);
+            Session, Owner, new AssistantScoreWrite(Marco, 2, "punti", 12, 7), It.Is<CancellationToken>(token => !token.CanBeCanceled)), Times.Once);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.Is<CancellationToken>(token => token.CanBeCanceled)), Times.Once, "la prenotazione");
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.Is<CancellationToken>(token => !token.CanBeCanceled)), Times.Once, "l'esito");
         _reader.Verify(r => r.GetStateAsync(It.Is<CancellationToken>(token => !token.CanBeCanceled)), Times.Once);

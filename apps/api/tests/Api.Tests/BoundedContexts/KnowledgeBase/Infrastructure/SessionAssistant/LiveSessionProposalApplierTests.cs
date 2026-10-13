@@ -40,20 +40,20 @@ public sealed class LiveSessionProposalApplierTests
     [Fact]
     public async Task AScore_GoesThroughTheHostConfirmationCommand()
     {
-        await Applier().ApplyScoreAsync(Session, Owner, Marco, 2, "punti", 12, Ct);
+        await Applier().ApplyScoreAsync(Session, Owner, new AssistantScoreWrite(Marco, 2, "punti", 12, ExpectedCurrentValue: 7), Ct);
 
         _mediator.Verify(m => m.Send(
-            It.Is<IRequest>(r => r.Equals(new ConfirmScoreProposalCommand(Session, Owner, Marco, 2, "punti", 12))),
+            It.Is<IRequest>(r => r.Equals(new ConfirmScoreProposalCommand(Session, Owner, Marco, 2, "punti", 12, 7))),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task ATurn_GoesThroughTheAdvanceTurnCommand()
     {
-        await Applier().AdvanceTurnAsync(Session, Ct);
+        await Applier().AdvanceTurnAsync(Session, 4, Ct);
 
         _mediator.Verify(m => m.Send(
-            It.Is<IRequest>(r => r.Equals(new AdvanceLiveSessionTurnCommand(Session))), It.IsAny<CancellationToken>()), Times.Once);
+            It.Is<IRequest>(r => r.Equals(new AdvanceLiveSessionTurnCommand(Session, 4))), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     /// <summary>
@@ -63,6 +63,9 @@ public sealed class LiveSessionProposalApplierTests
     public static TheoryData<Exception, string> Refusals() => new()
     {
         { new ConflictException("Cannot record scores in Completed status."), "session_state_invalid" },
+        // #4277: la cella o il turno non sono più quelli attesi. Non è un rifiuto per stato: la proposta è superata.
+        { new ConflictException(ConfirmScoreProposalCommand.ScoreChangedCode, "The score cell changed"), "proposal_stale" },
+        { new ConflictException(AdvanceLiveSessionTurnCommand.TurnChangedCode, "The turn already moved"), "proposal_stale" },
         { new DbUpdateConcurrencyException("xmin"), "session_state_invalid" },
         { new NotFoundException("LiveGameSession", "a1"), "session_state_invalid" },
         { new DomainException("Active player not found in this session"), "proposal_not_applicable" },
@@ -76,7 +79,7 @@ public sealed class LiveSessionProposalApplierTests
     {
         _mediator.Setup(m => m.Send(It.IsAny<IRequest>(), It.IsAny<CancellationToken>())).ThrowsAsync(refusal);
 
-        var act = () => Applier().AdvanceTurnAsync(Session, Ct);
+        var act = () => Applier().AdvanceTurnAsync(Session, 4, Ct);
 
         var thrown = (await act.Should().ThrowAsync<AssistantProposalApplyException>()).Which;
         thrown.FailureCode.Should().Be(expectedCode);
@@ -93,7 +96,7 @@ public sealed class LiveSessionProposalApplierTests
         _mediator.Setup(m => m.Send(It.IsAny<IRequest>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("the hub is down"));
 
-        var act = () => Applier().AdvanceTurnAsync(Session, Ct);
+        var act = () => Applier().AdvanceTurnAsync(Session, 4, Ct);
 
         await act.Should().ThrowAsync<InvalidOperationException>();
     }

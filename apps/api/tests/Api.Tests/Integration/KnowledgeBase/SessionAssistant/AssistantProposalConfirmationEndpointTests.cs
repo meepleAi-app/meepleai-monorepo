@@ -45,6 +45,7 @@ public sealed class AssistantProposalConfirmationEndpointTests(SessionAssistantH
     {
         await host.BeginTestAsync();
         host.Llm.Reset();
+        host.WriteGate.Reset();
         _client = host.Factory.CreateClient();
         (_owner, _token) = await SessionAssistantTestData.SeedHostAsync(host.Factory, Ct);
         await SessionAssistantTestData.EnableAssistantAsync(host.Factory, Ct);
@@ -343,6 +344,72 @@ public sealed class AssistantProposalConfirmationEndpointTests(SessionAssistantH
         second.Should().Be(HttpStatusCode.Conflict, secondBody);
         secondBody.Should().Contain("proposal_stale");
         (await MarcoFirstRoundAsync()).Should().Be(12, "l'incremento è entrato una volta sola");
+        host.Hub.Count(ScoreConfirmed).Should().Be(1);
+        (await StoredAsync(proposals[1])).Status.Should().Be(AssistantProposalStatus.Stale);
+    }
+
+    // ─── Due proposte diverse confermate una dentro l'altra ─────────────────────
+
+    /// <summary>Le proposte lasciate da un turno in cui il modello chiama due volte uno strumento.</summary>
+    private async Task<List<Guid>> ProposeTwiceAsync(string tool, string firstArguments, string secondArguments, string question)
+    {
+        host.Llm.Reset(Calls(tool, firstArguments), Calls(tool, secondArguments), Says("Proposte pronte: confermale dalle card."));
+        var (status, events, body) = await SessionAssistantTestData.AskAsync(_client, _token, _table.SessionId, question, Ct);
+        status.Should().Be(HttpStatusCode.OK, body);
+        var proposals = events
+            .Where(e => e.GetProperty("type").GetString() == "proposal")
+            .Select(e => e.GetProperty("proposal").GetProperty("id").GetGuid())
+            .ToList();
+        proposals.Should().HaveCount(2);
+        return proposals;
+    }
+
+    /// <summary>
+    /// Dalla review dell'intero branch: il controllo dello stato atteso e la scrittura erano due letture
+    /// distinte. La conferma della seconda proposta supera il suo controllo e si ferma un attimo prima di
+    /// scrivere; nel mezzo passa, intera, la conferma della prima. Il turno deve passare una volta sola.
+    /// </summary>
+    [Fact]
+    public async Task TwoTurnProposals_ConfirmedAcrossEachOther_AdvanceOnce()
+    {
+        var proposals = await ProposeTwiceAsync("proponi_turno", "{}", "{}", "passa il turno");
+
+        var held = host.WriteGate.HoldNextWrite();
+        var late = PostAsync("confirm", proposals[1]);
+        await held.Entered.WaitAsync(TimeSpan.FromSeconds(30), Ct);
+        var (first, firstBody) = await PostAsync("confirm", proposals[0]);
+        held.Release();
+        var (second, secondBody) = await late;
+
+        first.Should().Be(HttpStatusCode.OK, firstBody);
+        second.Should().Be(HttpStatusCode.Conflict, secondBody);
+        secondBody.Should().Contain("proposal_stale");
+        (await SessionAsync()).CurrentTurnIndex.Should().Be(2, "il turno è passato una volta sola");
+        (await StoredAsync(proposals[0])).Status.Should().Be(AssistantProposalStatus.Accepted);
+        (await StoredAsync(proposals[1])).Status.Should().Be(AssistantProposalStatus.Stale);
+    }
+
+    /// <summary>
+    /// Lo stesso incrocio su una cella: «+5» e «+3» a Marco nello stesso round. Senza il controllo dentro
+    /// la scrittura vince l'ultima, e un incremento sparisce con tutte e due le card verdi.
+    /// </summary>
+    [Fact]
+    public async Task TwoScoreProposalsOnTheSameCell_ConfirmedAcrossEachOther_KeepTheFirstAndRefuseTheSecond()
+    {
+        var proposals = await ProposeTwiceAsync(
+            "proponi_punteggio", """{"giocatore":"Marco","punti":5}""", """{"giocatore":"Marco","punti":3}""", "Marco fa 5 punti e 3 di bonus");
+
+        var held = host.WriteGate.HoldNextWrite();
+        var late = PostAsync("confirm", proposals[1]);
+        await held.Entered.WaitAsync(TimeSpan.FromSeconds(30), Ct);
+        var (first, firstBody) = await PostAsync("confirm", proposals[0]);
+        held.Release();
+        var (second, secondBody) = await late;
+
+        first.Should().Be(HttpStatusCode.OK, firstBody);
+        second.Should().Be(HttpStatusCode.Conflict, secondBody);
+        secondBody.Should().Contain("proposal_stale");
+        (await MarcoFirstRoundAsync()).Should().Be(12, "resta l'incremento confermato per primo: il secondo non lo sovrascrive");
         host.Hub.Count(ScoreConfirmed).Should().Be(1);
         (await StoredAsync(proposals[1])).Status.Should().Be(AssistantProposalStatus.Stale);
     }

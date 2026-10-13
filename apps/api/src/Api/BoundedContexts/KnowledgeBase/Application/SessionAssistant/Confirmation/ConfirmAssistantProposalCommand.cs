@@ -40,6 +40,8 @@ internal sealed class ConfirmAssistantProposalCommandHandler
     /// <summary>Il <c>failure_code</c> di una proposta che, dopo la prenotazione, non ha potuto leggere la partita.</summary>
     public const string StateUnavailableCode = "session_state_unavailable";
 
+    private const string StaleMessage = "The game has changed since the assistant made this proposal. Ask again.";
+
     private readonly IAssistantProposalRepository _proposals;
     private readonly IAssistantSessionDirectory _directory;
     private readonly IAssistantProposalApplier _applier;
@@ -117,7 +119,9 @@ internal sealed class ConfirmAssistantProposalCommandHandler
     private async Task<AssistantProposalDto> CompleteAsync(
         AssistantProposal proposal, ConfirmAssistantProposalCommand command, int? valueToWrite)
     {
-        // 3. Stato atteso: se la cella o l'indice di turno sono cambiati, la proposta è superata.
+        // 3. Stato atteso: se la cella o l'indice di turno sono cambiati, la proposta è superata. È un
+        // primo controllo, che evita una scrittura inutile: quello che decide lo fa il comando della
+        // sessione al passo 4, sull'aggregato che sta per salvare.
         AssistantSessionState state;
         try
         {
@@ -137,7 +141,7 @@ internal sealed class ConfirmAssistantProposalCommandHandler
         {
             proposal.MarkStale(Now());
             await _unitOfWork.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
-            throw new ConflictException(StaleCode, "The game has changed since the assistant made this proposal. Ask again.");
+            throw new ConflictException(StaleCode, StaleMessage);
         }
 
         // 4. Applicazione, attraverso i comandi della sessione live.
@@ -148,16 +152,29 @@ internal sealed class ConfirmAssistantProposalCommandHandler
                 await _applier.ApplyScoreAsync(
                     command.LiveSessionId,
                     command.UserId,
-                    proposal.Payload.PlayerId ?? Guid.Empty,
-                    proposal.Payload.Round ?? 1,
-                    proposal.Payload.Dimension ?? string.Empty,
-                    value,
+                    new AssistantScoreWrite(
+                        proposal.Payload.PlayerId ?? Guid.Empty,
+                        proposal.Payload.Round ?? 1,
+                        proposal.Payload.Dimension ?? string.Empty,
+                        value,
+                        ExpectedCurrentValue: proposal.Expected.CellValue ?? 0),
                     CancellationToken.None).ConfigureAwait(false);
             }
             else
             {
-                await _applier.AdvanceTurnAsync(command.LiveSessionId, CancellationToken.None).ConfigureAwait(false);
+                await _applier.AdvanceTurnAsync(
+                    command.LiveSessionId, proposal.Expected.TurnIndex ?? state.CurrentTurnIndex, CancellationToken.None)
+                    .ConfigureAwait(false);
             }
+        }
+        catch (AssistantProposalApplyException ex)
+            when (string.Equals(ex.FailureCode, AssistantProposalApplyException.GameChanged, StringComparison.Ordinal))
+        {
+            // La partita è cambiata fra il controllo qui sopra e la scrittura: lo dice il comando della
+            // sessione, che ricontrolla sull'aggregato che sta per salvare. Nulla è stato scritto.
+            proposal.MarkStale(Now());
+            await _unitOfWork.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+            throw new ConflictException(StaleCode, StaleMessage);
         }
         catch (AssistantProposalApplyException ex)
         {

@@ -22,12 +22,18 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.SessionAssistant;
 internal sealed class LiveSessionProposalApplier(IServiceScopeFactory scopes) : IAssistantProposalApplier
 {
     public Task ApplyScoreAsync(
-        Guid liveSessionId, Guid confirmingUserId, Guid playerId, int round, string dimension, int value,
-        CancellationToken cancellationToken) =>
-        SendAsync(new ConfirmScoreProposalCommand(liveSessionId, confirmingUserId, playerId, round, dimension, value), cancellationToken);
+        Guid liveSessionId, Guid confirmingUserId, AssistantScoreWrite write, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(write);
+        return SendAsync(
+            new ConfirmScoreProposalCommand(
+                liveSessionId, confirmingUserId, write.PlayerId, write.Round, write.Dimension, write.Value,
+                write.ExpectedCurrentValue),
+            cancellationToken);
+    }
 
-    public Task AdvanceTurnAsync(Guid liveSessionId, CancellationToken cancellationToken) =>
-        SendAsync(new AdvanceLiveSessionTurnCommand(liveSessionId), cancellationToken);
+    public Task AdvanceTurnAsync(Guid liveSessionId, int expectedTurnIndex, CancellationToken cancellationToken) =>
+        SendAsync(new AdvanceLiveSessionTurnCommand(liveSessionId, expectedTurnIndex), cancellationToken);
 
     private async Task SendAsync(IRequest command, CancellationToken cancellationToken)
     {
@@ -39,6 +45,13 @@ internal sealed class LiveSessionProposalApplier(IServiceScopeFactory scopes) : 
         }
         // I rami qui sotto sono i rifiuti che i due comandi lanciano PRIMA di salvare: nulla è stato scritto.
         // Ogni altra eccezione risale così com'è, perché può essere arrivata dopo il salvataggio.
+        catch (ConflictException ex)
+            when (ex.ErrorCode is ConfirmScoreProposalCommand.ScoreChangedCode or AdvanceLiveSessionTurnCommand.TurnChangedCode)
+        {
+            // La cella o il turno non sono più quelli su cui la proposta era nata: il comando ha
+            // ricontrollato sull'aggregato che stava per salvare, e non ha scritto.
+            throw new AssistantProposalApplyException(AssistantProposalApplyException.GameChanged, ex.Message, ex);
+        }
         catch (ConflictException ex)
         {
             // Il dominio rifiuta per lo stato della sessione: conclusa, non in corso.

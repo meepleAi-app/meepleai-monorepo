@@ -175,6 +175,91 @@ public sealed class PrivateGameRetrievalTests
         _hostFixture.Llm.LastUserPrompt.Should().BeNull("a un estraneo non si costruisce nessun prompt");
     }
 
+    /// <summary>
+    /// La domanda singola (<c>/knowledge-base/ask</c>) ha la sua copia del controllo «documenti in
+    /// elaborazione». Guardava solo il catalogo: per un gioco privato non trovava PDF e rispondeva
+    /// da un contenuto parziale.
+    /// </summary>
+    [Fact]
+    public async Task APdfStillBeingProcessed_StopsTheSingleQuestionToo()
+    {
+        using (var scope = _hostFixture.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            await IndexPrivatePdfAsync(db, processingState: "Extracting");
+        }
+
+        var response = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, "/api/v1/knowledge-base/ask", _token,
+            new { gameId = _privateGameId.ToString(), query = Question }), Ct);
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+
+        // La rotta non espone il codice d'errore: il rifiuto si riconosce dal testo e dal fatto
+        // che il modello non viene chiamato.
+        using var json = JsonDocument.Parse(body);
+        json.RootElement.GetProperty("answer").GetString().Should().Contain("still being processed", body);
+        _hostFixture.Llm.LastUserPrompt.Should().BeNull("la domanda si ferma prima del modello");
+    }
+
+    /// <summary>
+    /// <c>GET /games/{id}/knowledge-base</c> non controlla chi chiede: per un gioco del catalogo
+    /// dice a chiunque se c'è una KB. Di un gioco privato non deve dire nulla a un estraneo — né
+    /// che è indicizzato, né quanti documenti e passaggi ha.
+    /// </summary>
+    [Fact]
+    public async Task AnotherUser_LearnsNothingAboutTheKbOfThePrivateGame()
+    {
+        string strangerToken;
+        using (var scope = _hostFixture.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            (_, strangerToken) = await TestSessionHelper.CreateUserSessionAsync(db, cancellationToken: Ct);
+        }
+
+        var response = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get, $"/api/v1/games/{_privateGameId}/knowledge-base", strangerToken), Ct);
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+
+        using var json = JsonDocument.Parse(body);
+        json.RootElement.GetProperty("isIndexed").GetBoolean().Should().BeFalse(body);
+        json.RootElement.GetProperty("documentCount").GetInt32().Should().Be(0, body);
+    }
+
+    /// <summary>
+    /// Il braccio lessicale toglie dalla domanda le parole del titolo del gioco (#3768): dentro il
+    /// corpus di quel gioco non distinguono nulla, e portano in alto copertina e colophon. Il titolo
+    /// veniva cercato solo nel catalogo, quindi per un gioco privato restavano nella ricerca.
+    /// </summary>
+    [Fact]
+    public async Task TheLexicalArm_KnowsTheTitleOfThePrivateGame()
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var keywordSearch = scope.ServiceProvider.GetRequiredService<Api.Services.IKeywordSearchService>();
+
+        var title = await keywordSearch.ResolveGameTitleAsync(_privateGameId, Ct);
+
+        title.Should().Be("Il mio prototipo");
+    }
+
+    /// <summary>Un gioco privato cancellato non ha più un titolo da leggere.</summary>
+    [Fact]
+    public async Task TheLexicalArm_DoesNotReadTheTitleOfADeletedPrivateGame()
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var deleted = await db.PrivateGames.AsTracking().SingleAsync(g => g.Id == _privateGameId, Ct);
+        deleted.IsDeleted = true;
+        deleted.DeletedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(Ct);
+
+        var keywordSearch = scope.ServiceProvider.GetRequiredService<Api.Services.IKeywordSearchService>();
+        var title = await keywordSearch.ResolveGameTitleAsync(_privateGameId, Ct);
+
+        title.Should().BeNull();
+    }
+
     // ─── Supporto ───────────────────────────────────────────────────────────────
 
     private async Task<List<JsonElement>> AskAsync(string token)

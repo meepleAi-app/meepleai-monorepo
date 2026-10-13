@@ -109,11 +109,11 @@ internal sealed class PdfIndexingPipeline : IPdfIndexingPipeline
 
         var nowUtc = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // #4244: the PDF says whether this document belongs to a private game. Callers pass in
-        // `gameId` the game of the PDF, private or shared; but vector_documents.GameId is an FK to
-        // shared_games, so for a private game it stays null and the game goes in PrivateGameId.
-        // Read here, in the one write path every indexing flow goes through, so no caller can
-        // forget it.
+        // #4244: the PDF says whether this document belongs to a private game. The callers do not
+        // agree on `gameId` for a private PDF — one passes the private id, the others the shared
+        // game, which is null — and vector_documents.GameId is an FK to shared_games, so for a
+        // private game it stays null and the game goes in PrivateGameId. Read here, in the one
+        // write path every indexing flow goes through, so no caller can get it wrong.
         var privateGameId = await _db.PdfDocuments
             .AsNoTracking()
             .Where(p => p.Id == pdfDocumentId)
@@ -148,7 +148,8 @@ internal sealed class PdfIndexingPipeline : IPdfIndexingPipeline
             // mapper round-trip (mapper now writes domain.TotalCharacters instead of 0).
             newDomainAggregate = VectorDocument.Create(
                 pdfDocumentId: pdfDocumentId,
-                gameId: gameId ?? Guid.Empty,
+                // The game the event announces: the private one when the PDF is private.
+                gameId: privateGameId ?? gameId ?? Guid.Empty,
                 totalChunks: chunkCount,
                 language: language,
                 sharedGameId: sharedGameId,
@@ -245,7 +246,7 @@ internal sealed class PdfIndexingPipeline : IPdfIndexingPipeline
             await _mediator.Publish(
                 new VectorDocumentIndexedEvent(
                     documentId: existing.Id,
-                    gameId: existing.GameId ?? Guid.Empty,
+                    gameId: existing.GameId ?? existing.PrivateGameId ?? Guid.Empty,
                     chunkCount: existing.ChunkCount,
                     // Prefer the healed row value; fall back to the caller-supplied id so the
                     // KB-flag projection never receives a null SharedGameId when the caller knew it.

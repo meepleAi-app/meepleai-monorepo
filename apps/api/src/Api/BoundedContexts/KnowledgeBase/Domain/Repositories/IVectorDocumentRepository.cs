@@ -35,10 +35,18 @@ internal interface IVectorDocumentRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets all vector documents for a specific game.
+    /// Gets all vector documents for a specific game of the shared catalogue.
     /// </summary>
     Task<List<VectorDocument>> GetByGameIdAsync(
         Guid gameId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Issue #4244: gets all vector documents of a private game. The caller must have checked that
+    /// whoever asks may read that game: this method does not.
+    /// </summary>
+    Task<List<VectorDocument>> GetByPrivateGameIdAsync(
+        Guid privateGameId,
         CancellationToken cancellationToken = default);
 
     /// <summary>

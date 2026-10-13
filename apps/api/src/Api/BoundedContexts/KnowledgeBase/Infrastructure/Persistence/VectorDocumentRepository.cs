@@ -48,17 +48,26 @@ internal class VectorDocumentRepository : RepositoryBase, IVectorDocumentReposit
         Guid gameId,
         CancellationToken cancellationToken = default)
     {
-        // #4244: a private game's documents carry it in PrivateGameId (GameId is an FK to
-        // shared_games and stays null). Without the second column the citations of a private game
-        // could not resolve their PDF, and a document filter named nothing.
-        //
-        // This method does not check who is asking. Its callers are the answer pipeline, which
-        // has already passed the RAG access check for this game, and the admin debug handler.
-        // The other "by game" methods of this repository stay on GameId: some are reached from
-        // routes that check no ownership, and widening them would expose private documents.
+        // #4244: shared games only, on purpose. This method does not check who is asking and is
+        // reached from routes that check no ownership (GET /games/{id}/knowledge-base among them):
+        // matching PrivateGameId here would tell anyone who knows the id whether a private game
+        // is indexed, and how much. The documents of a private game are read with
+        // GetByPrivateGameIdAsync, by callers that have passed the RAG access check.
         var entities = await DbContext.VectorDocuments
             .AsNoTracking()
-            .Where(vd => vd.GameId == gameId || vd.PrivateGameId == gameId)
+            .Where(vd => vd.GameId == gameId)
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return entities.Select(e => e.ToDomain()).ToList();
+    }
+
+    public async Task<List<VectorDocument>> GetByPrivateGameIdAsync(
+        Guid privateGameId,
+        CancellationToken cancellationToken = default)
+    {
+        var entities = await DbContext.VectorDocuments
+            .AsNoTracking()
+            .Where(vd => vd.PrivateGameId == privateGameId)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         return entities.Select(e => e.ToDomain()).ToList();

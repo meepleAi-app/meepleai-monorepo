@@ -638,8 +638,13 @@ internal class KeywordSearchService : IKeywordSearchService
         {
             _dbContext.Database.SetCommandTimeout(3);
             return await _dbContext.Database
+                // #4244: a private game has a title too. Raw SQL does not go through the EF query
+                // filter of PrivateGameEntity, hence the explicit is_deleted.
                 .SqlQueryRaw<string>(
-                    @"SELECT title AS ""Value"" FROM shared_games WHERE id = @gameId::uuid LIMIT 1",
+                    @"SELECT title AS ""Value"" FROM shared_games WHERE id = @gameId::uuid
+                      UNION ALL
+                      SELECT title AS ""Value"" FROM private_games WHERE id = @gameId::uuid AND NOT is_deleted
+                      LIMIT 1",
                     new NpgsqlParameter("@gameId", gameId.ToString()))
                 .AsNoTracking()
                 .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);

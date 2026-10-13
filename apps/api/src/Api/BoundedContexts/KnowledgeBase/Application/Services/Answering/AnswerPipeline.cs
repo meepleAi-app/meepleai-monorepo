@@ -441,7 +441,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         // it 404s and the cited source is unreadable. Resolve VectorDocumentId →
         // PdfDocumentId via the game's vector documents (typically 1-2 per game).
         var vectorDocs = await _vectorDocumentRepository
-            .GetByGameIdAsync(Guid.Parse(gameId), cancellationToken).ConfigureAwait(false);
+            .FindVectorDocumentsOfGameAsync(Guid.Parse(gameId), cancellationToken).ConfigureAwait(false);
         var pdfIdByVectorId = vectorDocs.ToDictionary(v => v.Id, v => v.PdfDocumentId);
 
         // SP-C (#3407): resolve the copyright tier per citation and gate BOTH the verbatim excerpt and
@@ -699,8 +699,8 @@ internal sealed class AnswerPipeline : IAnswerPipeline
             return null;
         }
 
-        var vectorDocs = await _vectorDocumentRepository.GetByGameIdAsync(gameId, ct).ConfigureAwait(false);
-        return (vectorDocs ?? [])
+        var vectorDocs = await _vectorDocumentRepository.FindVectorDocumentsOfGameAsync(gameId, ct).ConfigureAwait(false);
+        return vectorDocs
             .Where(vd => vectorDocumentIds.Contains(vd.Id))
             .Select(vd => vd.PdfDocumentId)
             .Distinct()
@@ -710,19 +710,11 @@ internal sealed class AnswerPipeline : IAnswerPipeline
     private async Task<(bool allReady, int processing, int total)> CheckDocumentsReadyAsync(
         Guid gameId, List<Guid>? pdfDocumentIds, CancellationToken ct)
     {
+        // #4244: the PDFs of the game, shared or private. Before, only the shared catalogue was
+        // looked at, so for a private game this guard passed whatever the state of its PDFs.
         var documents = pdfDocumentIds is null
-            ? await _pdfDocumentRepository.FindByGameIdAsync(gameId, ct).ConfigureAwait(false)
+            ? await _pdfDocumentRepository.FindPdfsOfGameAsync(gameId, ct).ConfigureAwait(false)
             : await _pdfDocumentRepository.GetByIdsAsync(pdfDocumentIds, ct).ConfigureAwait(false);
-
-        // #4244: FindByGameIdAsync knows shared games only, so for a private game it returned
-        // nothing and this guard passed whatever the state of its PDFs. A game is one or the
-        // other, hence the second lookup only when the first found nothing. Not folded into
-        // FindByGameIdAsync on purpose: that method also serves a route that lists the PDFs of a
-        // game without checking who asks, and this one has already passed the RAG access check.
-        if (pdfDocumentIds is null && (documents is null or { Count: 0 }))
-        {
-            documents = await _pdfDocumentRepository.FindByPrivateGameIdAsync(gameId, ct).ConfigureAwait(false);
-        }
 
         // Defensive: Handle null or empty collection
         if (documents is null or { Count: 0 }) return (true, 0, 0);

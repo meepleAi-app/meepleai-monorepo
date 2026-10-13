@@ -11,6 +11,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunks;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
+using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Configuration;
 using Api.Infrastructure;
@@ -162,6 +163,12 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         // write path. Real implementation so the "completed" transition actually happens
         // (asserted via vectorDoc.IndexingStatus) and VectorDocumentIndexedEvent is published.
         services.AddScoped<IPdfIndexingPipeline, PdfIndexingPipeline>();
+
+        // #4244: MediatR consegna l'evento a ogni gestore registrato; questo lo mette da parte,
+        // così un test può leggere quale gioco è stato annunciato.
+        services.AddSingleton<IndexedEventRecorder>();
+        services.AddSingleton<MediatR.INotificationHandler<VectorDocumentIndexedEvent>>(
+            sp => sp.GetRequiredService<IndexedEventRecorder>());
 
         // VectorDocumentIndexedEvent (published by PdfIndexingPipeline.IndexAsync on every
         // successful index) fans out to 2 notification handlers:
@@ -412,6 +419,56 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         vectorDoc!.IndexingStatus.Should().Be("completed");
         vectorDoc.GameId.Should().BeNull();
         vectorDoc.PrivateGameId.Should().Be(privateGameId);
+    }
+
+    /// <summary>
+    /// Issue #4244. L'upload a blocchi e la pipeline di elaborazione passano alla pipeline
+    /// <c>pdf.SharedGameId</c>, che per un PDF privato è null. L'evento «documento indicizzato»
+    /// usciva con il gioco vuoto, e la notifica all'utente portava a
+    /// <c>/library/00000000-0000-0000-0000-000000000000</c>.
+    /// </summary>
+    [Fact]
+    public async Task PipelineIndex_OfAPrivateGamePdf_WhenTheCallerKnowsOnlyTheSharedGame_AnnouncesThePrivateGame()
+    {
+        // Arrange
+        await ResetDatabaseAsync();
+        var (privateGameId, pdfId) = await SeedPrivateGamePdfAsync();
+        var pipeline = _serviceProvider!.GetRequiredService<IPdfIndexingPipeline>();
+
+        // Act
+        await pipeline.IndexAsync(
+            pdfDocumentId: pdfId,
+            gameId: null,
+            sharedGameId: null,
+            chunkCount: 3,
+            totalCharacters: 80,
+            language: "en",
+            cancellationToken: TestCancellationToken);
+
+        // Assert
+        var announced = _serviceProvider!.GetRequiredService<IndexedEventRecorder>().Events;
+        announced.Should().ContainSingle().Which.GameId.Should().Be(privateGameId);
+    }
+
+    /// <summary>
+    /// Lo stesso, sul percorso di <c>IndexPdfCommandHandler</c>: la riga esiste già in
+    /// «processing» e l'evento nasce dalla sua transizione a «completed».
+    /// </summary>
+    [Fact]
+    public async Task IndexPdfOfAPrivateGame_AnnouncesThePrivateGame()
+    {
+        // Arrange
+        await ResetDatabaseAsync();
+        var (privateGameId, pdfId) = await SeedPrivateGamePdfAsync();
+        var handler = _serviceProvider!.GetRequiredService<IndexPdfCommandHandler>();
+
+        // Act
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), TestCancellationToken);
+
+        // Assert
+        result.Success.Should().BeTrue($"{result.ErrorCode}: {result.ErrorMessage}");
+        var announced = _serviceProvider!.GetRequiredService<IndexedEventRecorder>().Events;
+        announced.Should().ContainSingle().Which.GameId.Should().Be(privateGameId);
     }
 
     /// <summary>Un gioco privato dell'utente del test e un suo PDF con il testo già estratto.</summary>
@@ -783,5 +840,17 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
             TestCancellationToken);
 
         resp.Items.Should().Contain(c => c.HeadingPath.Count > 0, "the recursive CTE must resolve the heading path for at least one chunk");
+    }
+
+    /// <summary>Mette da parte gli eventi «documento indicizzato» pubblicati durante un test.</summary>
+    private sealed class IndexedEventRecorder : MediatR.INotificationHandler<VectorDocumentIndexedEvent>
+    {
+        public List<VectorDocumentIndexedEvent> Events { get; } = [];
+
+        public Task Handle(VectorDocumentIndexedEvent notification, CancellationToken cancellationToken)
+        {
+            Events.Add(notification);
+            return Task.CompletedTask;
+        }
     }
 }

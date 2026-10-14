@@ -15,6 +15,9 @@
 
 import { type JSX } from 'react';
 
+import { TierLimitRegion } from '@/components/chat-unified/TierLimitNotice';
+import { readTierLimit, TIER_LIMIT_EXCEEDED } from '@/lib/tier-limit';
+
 import { DrawerCompleted, type DrawerCompletedLabels } from './DrawerCompleted';
 import { DrawerEmpty, type DrawerEmptyLabels } from './DrawerEmpty';
 import { DrawerError, type DrawerErrorLabels } from './DrawerError';
@@ -62,6 +65,14 @@ export function DrawerShell({
   onRegenerate,
   onCitationClick,
 }: DrawerShellProps): JSX.Element {
+  // #4168 (5g-b): la quota del piano non è un guasto. Niente riquadro d'errore e niente «Riprova»,
+  // che ripeterebbe una domanda fermata allo stesso modo fino a domani: l'avviso della chat, con
+  // i numeri del piano e il link ai piani.
+  const tierLimit =
+    state.status === 'error' && state.error?.code === TIER_LIMIT_EXCEEDED
+      ? readTierLimit(state.error.tierLimit)
+      : null;
+
   return (
     <div
       role="dialog"
@@ -117,7 +128,22 @@ export function DrawerShell({
       {state.status === 'completed-empty' && (
         <DrawerEmpty onCta={onEmptyCta} labels={labels.empty} />
       )}
-      {state.status === 'error' && state.error && (
+      {/* La regione c'è da prima, vuota: l'avviso arriva dopo l'invio e senza che il fuoco si sposti. */}
+      <TierLimitRegion limit={tierLimit} className="p-4 pb-0" />
+      {tierLimit && (
+        <div className="px-4 pt-3">
+          {/* Il pannello resta montato quando lo si chiude: senza un modo di lasciare l'avviso,
+              riaprirlo lo rimostrerebbe, anche il giorno dopo. */}
+          <button
+            type="button"
+            onClick={onReset}
+            className="px-3 py-1.5 rounded-md bg-muted text-xs text-foreground"
+          >
+            Ho capito
+          </button>
+        </div>
+      )}
+      {state.status === 'error' && state.error && !tierLimit && (
         <DrawerError
           error={state.error}
           partialText={state.partialText}

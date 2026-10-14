@@ -23,7 +23,12 @@ import { useCallback, useMemo, useRef } from 'react';
 import { useSseStreamFsm, type SseStreamFsmConfig } from './useSseStreamFsm';
 import { kbAskClient } from '../lib/api/clients/kbAskClient';
 
-import type { KbAskEvent, KbAskRequest, KbCitation } from '../lib/api/schemas/kb-ask.schemas';
+import type {
+  KbAskEvent,
+  KbAskRequest,
+  KbCitation,
+  KbTierLimit,
+} from '../lib/api/schemas/kb-ask.schemas';
 
 export type KbAskStatus = 'idle' | 'streaming' | 'completed' | 'completed-empty' | 'error';
 export type KbAskErrorKind = 'connection' | 'timeout' | 'partial' | 'server';
@@ -32,6 +37,11 @@ export interface KbAskError {
   readonly kind: KbAskErrorKind;
   readonly message: string;
   readonly code?: string;
+  /**
+   * #4168 (5g-b): solo quando il codice è `TIER_LIMIT_EXCEEDED`. I numeri del piano e il link ai
+   * piani, come li manda il backend: chi li mostra li valida con `readTierLimit`.
+   */
+  readonly tierLimit?: KbTierLimit;
 }
 
 export interface KbAskStreamState {
@@ -134,7 +144,12 @@ export function useKbAskStream(): UseKbAskStream {
             return {
               ...next,
               status: 'error',
-              error: { kind, message: event.data.message, code },
+              error: {
+                kind,
+                message: event.data.message,
+                code,
+                ...(event.data.tierLimit ? { tierLimit: event.data.tierLimit } : {}),
+              },
             };
           }
 

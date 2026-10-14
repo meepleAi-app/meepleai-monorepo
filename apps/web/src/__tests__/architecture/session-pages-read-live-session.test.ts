@@ -52,6 +52,11 @@ const FORBIDDEN_USAGE: ReadonlyArray<readonly [name: string, pattern: RegExp]> =
   ['api.sessionTracking.', /\bapi\s*\.\s*sessionTracking\s*\./],
   ['api.agentSessions.', /\bapi\s*\.\s*agentSessions\s*\./],
   ['api.games.getSessions', /\bapi\s*\.\s*games\s*\.\s*getSessions\b/],
+  // Il client «Session Flow v2.1» parla con SessionTracking per tutto ciò che prende l'id di una
+  // sessione (`/api/v1/sessions/{id}/diary`, `/turn/advance`, `/scores-with-diary`, il lancio dei
+  // dadi su `/game-sessions/{id}`). La fetta 0 non lo aveva in elenco, e il riepilogo leggeva il
+  // diario di SessionTracking con l'id di una live senza che il gate se ne accorgesse.
+  ['api.sessionFlow.', /\bapi\s*\.\s*sessionFlow\s*\./],
   ['/api/v1/sessions/', /\/api\/v1\/sessions\//],
   ['/api/v1/game-sessions/', /\/api\/v1\/game-sessions\//],
 ];
@@ -71,22 +76,12 @@ const FORBIDDEN_CLIENTS: ReadonlyArray<string> = [
  */
 const P = 'app/(authenticated)/sessions/[id]';
 const KNOWN: Readonly<Record<string, string>> = {
-  [`${P}/page.tsx ⇒ hooks/queries/useSessionDetail.ts · api.sessions.`]:
-    '#4156 fetta 1 — il riepilogo legge la LiveGameSession',
-  [`${P}/page.tsx ⇒ hooks/queries/useActiveSessions.ts · api.sessions.`]:
-    '#4156 fetta 1 — raggiunto solo attraverso useSessionDetail',
-  [`${P}/page.tsx ⇒ hooks/queries/useSessionQuota.ts · api.sessions.`]:
-    '#4156 fetta 1 — raggiunto solo attraverso useSessionDetail',
-  [`${P}/scoreboard/page.tsx ⇒ components/session/ScoreboardPage.tsx · api.sessions.`]:
-    '#4156 fetta 1 — il tabellone legge la LiveGameSession',
-  [`${P}/notes/page.tsx ⇒ ${P}/notes/page.tsx · api.sessions.`]:
-    '#4156 fetta 1 — le note leggono la LiveGameSession',
   [`${P}/live/page.tsx ⇒ ${P}/live/_components/SessionLiveView.tsx · /api/v1/game-sessions/`]:
-    '#4156 fetta 1 — la ripresa passa da /live-sessions; ask-agent esce con l’agente vecchio (D5)',
+    '#4156 fetta 1c — la domanda con foto all’agente vecchio (ask-agent) esce con lui (D5)',
   [`${P}/live/page.tsx ⇒ hooks/queries/useSessionAgentLaunch.ts · api.agentSessions.`]:
-    '#4156 fetta 1 — l’agente vecchio esce da /live (D5); l’assistente arriva con A4 di #4238',
+    '#4156 fetta 1c — l’agente vecchio esce da /live (D5); l’assistente arriva con A4 di #4238',
   [`${P}/live/page.tsx ⇒ lib/domain-hooks/useSessionAgentChat.ts · import lib/api/clients/sessionAgentClient.ts`]:
-    '#4156 fetta 1 — l’agente vecchio esce da /live (D5); l’assistente arriva con A4 di #4238',
+    '#4156 fetta 1c — l’agente vecchio esce da /live (D5); l’assistente arriva con A4 di #4238',
   [`${P}/live/page.tsx ⇒ hooks/use-update-session-scores.ts · /api/v1/game-sessions/`]:
     '#4156 fetta 2 — la scheda Score scrive su /live-sessions/{id}/scores',
 };

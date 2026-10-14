@@ -718,13 +718,12 @@ export function SessionLiveView(): ReactElement {
     if (!hasRequiredRole(activeSession.viewerRole, 'Host')) return;
 
     try {
-      await fetch(`/api/v1/game-sessions/${sessionId}/resume`, {
-        method: 'POST',
-        credentials: 'include',
-      });
+      // #4156: the route id is a LiveGameSession id. This called /game-sessions/{id}/resume
+      // (SessionTracking), got 404, and — fetch does not throw on 4xx — closed the panel anyway.
+      await api.liveSessions.resumeSession(sessionId);
       handleDialogChange('none');
     } catch {
-      // Fail silently
+      // The panel stays open: the session is still paused.
     }
   }, [sessionId, activeSession, handleDialogChange]);
 
@@ -1271,10 +1270,7 @@ export function SessionLiveView(): ReactElement {
               visibility: 'shared' as const,
               timestamp: new Date().toISOString(),
               groundingStatus: json.groundingStatus as
-                | 'Grounded'
-                | 'Partial'
-                | 'Ungrounded'
-                | undefined,
+                'Grounded' | 'Partial' | 'Ungrounded' | undefined,
               isNonGrounded: json.groundingStatus === 'Ungrounded',
               // Task 4 (#3388): tag as image-modality so the disclaimer copy reflects
               // that the answer came from the photo, not the rulebook.

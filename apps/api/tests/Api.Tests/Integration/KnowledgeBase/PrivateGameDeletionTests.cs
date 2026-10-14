@@ -86,6 +86,7 @@ internal sealed class DocumentDeletionFailure
     public void ArmAfter(int documents)
     {
         Interlocked.Exchange(ref _stillToLetThrough, documents);
+        _onlyFor = null;
         _armed = true;
     }
 

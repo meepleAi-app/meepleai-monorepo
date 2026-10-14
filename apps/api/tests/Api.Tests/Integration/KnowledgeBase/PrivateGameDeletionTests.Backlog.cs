@@ -258,6 +258,55 @@ public sealed partial class PrivateGameDeletionTests
     }
 
     /// <summary>
+    /// L'avvio aspetta i seed, e ogni PDF costa una cancellazione con il suo file: il pregresso si
+    /// smaltisce a rate, dal gioco cancellato da più tempo. Il resto aspetta l'avvio dopo.
+    /// </summary>
+    [Fact]
+    public async Task TheSweep_CleansAtMostSoManyGamesPerStartup_OldestFirst()
+    {
+        await MarkDeletedTheOldWayAsync(_otherGameId, DateTime.UtcNow.AddDays(-1));
+        await MarkDeletedTheOldWayAsync(_gameId, DateTime.UtcNow.AddDays(-2));
+
+        await SweepAsync(new DeletedPrivateGameContentCleanupLayer { MaxGamesPerRun = 1 });
+
+        (await GamesStillToCleanAsync()).Should().Equal([_otherGameId], "il più vecchio prima, uno solo per giro");
+        (await ContentOfAsync(_gameId)).Should().Be(Nothing);
+
+        await SweepAsync(new DeletedPrivateGameContentCleanupLayer { MaxGamesPerRun = 1 });
+
+        (await GamesStillToCleanAsync()).Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// Un gioco che tiene un PDF ancora in uso da un altro gioco resta da visitare a ogni avvio,
+    /// e fra i più vecchi. Se contasse per il tetto, a tetto pieno di giochi così nessun altro
+    /// verrebbe mai pulito: conta solo il gioco che si è svuotato o che è fallito.
+    /// </summary>
+    [Fact]
+    public async Task AGameThatOnlyKeepsAPdfInUse_DoesNotUseUpTheLimit()
+    {
+        var kept = await SeedPdfUsedByBothGamesAsync();
+        (await DeleteGameAsync(_gameId, _token)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        await MarkDeletedTheOldWayAsync(_gameId, DateTime.UtcNow.AddDays(-2));
+        Guid thirdGameId;
+        using (var scope = _hostFixture.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            (thirdGameId, _) = await SeedPrivateGameAsync(db, "Un terzo prototipo",
+                ("A third prototype with its own rulebook.", QueryVectorEmbeddings.Axis(1f, 0f)));
+        }
+
+        await MarkDeletedTheOldWayAsync(thirdGameId, DateTime.UtcNow.AddDays(-1));
+        (await GamesStillToCleanAsync()).Should().Equal([_gameId, thirdGameId], "il gioco che tiene il PDF è il più vecchio");
+
+        await SweepAsync(new DeletedPrivateGameContentCleanupLayer { MaxGamesPerRun = 1 });
+
+        (await ContentOfAsync(thirdGameId)).Should().Be(Nothing, "il posto del tetto non l'ha preso il gioco che non cambia");
+        (await RowsOfPdfAsync(kept)).Exists.Should().BeTrue();
+        (await GamesStillToCleanAsync()).Should().Equal([_gameId]);
+    }
+
+    /// <summary>
     /// Se la passata non riesce nemmeno a leggere il database, l'avvio va avanti: l'orchestratore
     /// non protegge gli strati, e un'eccezione qui salterebbe tutti quelli dopo.
     /// </summary>
@@ -296,13 +345,13 @@ public sealed partial class PrivateGameDeletionTests
     // ─── Aiuti ───────────────────────────────────────────────────────────────────────────────
 
     /// <summary>Esegue la passata come la esegue l'orchestratore dei seed: lo strato, con il suo contesto.</summary>
-    private async Task SweepAsync()
+    private async Task SweepAsync(DeletedPrivateGameContentCleanupLayer? layer = null)
     {
         using var scope = _hostFixture.Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var context = new SeedContext(SeedProfile.Staging, db, scope.ServiceProvider, NullLogger.Instance, Guid.Empty);
 
-        await new DeletedPrivateGameContentCleanupLayer().SeedAsync(context, Ct);
+        await (layer ?? new DeletedPrivateGameContentCleanupLayer()).SeedAsync(context, Ct);
     }
 
     private async Task<List<Guid>> GamesStillToCleanAsync()

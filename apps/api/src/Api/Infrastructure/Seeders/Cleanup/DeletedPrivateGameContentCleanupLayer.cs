@@ -1,5 +1,6 @@
 using Api.BoundedContexts.EntityRelationships.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.PurgePrivateGameContent;
+using Api.Infrastructure.Entities.UserLibrary;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,7 +29,8 @@ namespace Api.Infrastructure.Seeders.Cleanup;
 /// <para>
 /// Non reimplementa niente: invia lo stesso comando, gioco per gioco. Ciò che la pulizia tiene
 /// (un PDF che chi l'ha caricato usa ancora da un altro gioco) lo tiene anche qui; quel gioco
-/// verrà rivisitato a ogni avvio finché il PDF è in uso, senza effetto.
+/// verrà rivisitato a ogni avvio finché il PDF è in uso, senza effetto e senza togliere posto agli
+/// altri nel tetto per avvio (<see cref="MaxGamesPerRun"/>).
 /// </para>
 /// <para>
 /// È uno strato di seed perché è lì che stanno i lavori da fare una volta all'avvio, sotto il
@@ -45,6 +47,13 @@ internal sealed class DeletedPrivateGameContentCleanupLayer : ISeedLayer
     /// <summary>Gira in ogni profilo che semina: non dipende dai dati del catalogo.</summary>
     public SeedProfile MinimumProfile => SeedProfile.Prod;
 
+    /// <summary>
+    /// Quanti giochi al massimo per avvio. L'avvio aspetta i seed, e ogni PDF costa una
+    /// cancellazione con il suo file: il pregresso, di cui non si conosce il volume, si smaltisce a
+    /// rate, dal gioco cancellato da più tempo.
+    /// </summary>
+    internal int MaxGamesPerRun { get; init; } = 50;
+
     public async Task SeedAsync(SeedContext context, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(context);
@@ -60,15 +69,32 @@ internal sealed class DeletedPrivateGameContentCleanupLayer : ISeedLayer
             }
 
             var mediator = context.Services.GetRequiredService<IMediator>();
-            var cleaned = 0;
+            var purged = 0;
+            var kept = 0;
             var failed = 0;
             foreach (var gameId in gameIds)
             {
+                // Il tetto conta solo il lavoro vero: un gioco che si è svuotato, o che è fallito.
+                // Un gioco che tiene soltanto un PDF ancora in uso da un altro gioco resta in lista a
+                // ogni avvio, e fra i più vecchi: se contasse, a tetto pieno di giochi così nessun
+                // altro verrebbe mai pulito. Visitarlo costa qualche lettura, non una cancellazione.
+                if (purged + failed >= MaxGamesPerRun)
+                {
+                    break;
+                }
+
                 try
                 {
                     await mediator.Send(new PurgePrivateGameContentCommand(gameId), cancellationToken)
                         .ConfigureAwait(false);
-                    cleaned++;
+                    if (await StillHasContentAsync(context.DbContext, gameId, cancellationToken).ConfigureAwait(false))
+                    {
+                        kept++;
+                    }
+                    else
+                    {
+                        purged++;
+                    }
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
@@ -82,8 +108,9 @@ internal sealed class DeletedPrivateGameContentCleanupLayer : ISeedLayer
             }
 
             context.Logger.LogInformation(
-                "[{Layer}] {Cleaned} deleted private games purged, {Failed} failed and left for the next run",
-                Name, cleaned, failed);
+                "[{Layer}] {Purged} deleted private games purged, {Kept} keep a PDF another game still uses, "
+                + "{Failed} failed, {Left} left for the next run (limit {Limit} per run)",
+                Name, purged, kept, failed, gameIds.Count - purged - kept - failed, MaxGamesPerRun);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -100,6 +127,17 @@ internal sealed class DeletedPrivateGameContentCleanupLayer : ISeedLayer
     {
         ArgumentNullException.ThrowIfNull(db);
 
+        return DeletedGamesWithContent(db)
+            .OrderBy(g => g.DeletedAt)
+            .Select(g => g.Id)
+            .ToListAsync(ct);
+    }
+
+    private static Task<bool> StillHasContentAsync(MeepleAiDbContext db, Guid gameId, CancellationToken ct) =>
+        DeletedGamesWithContent(db).AnyAsync(g => g.Id == gameId, ct);
+
+    private static IQueryable<PrivateGameEntity> DeletedGamesWithContent(MeepleAiDbContext db)
+    {
         return db.PrivateGames
             .IgnoreQueryFilters()
             .Where(g => g.IsDeleted
@@ -111,9 +149,6 @@ internal sealed class DeletedPrivateGameContentCleanupLayer : ISeedLayer
                             || db.ChunkedUploadSessions.Any(u => u.PrivateGameId == g.Id)
                             || db.EntityLinks.Any(l => !l.IsDeleted
                                                        && l.SourceEntityType == MeepleEntityType.Game
-                                                       && l.SourceEntityId == g.Id)))
-            .OrderBy(g => g.DeletedAt)
-            .Select(g => g.Id)
-            .ToListAsync(ct);
+                                                       && l.SourceEntityId == g.Id)));
     }
 }

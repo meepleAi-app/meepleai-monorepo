@@ -857,6 +857,81 @@ describe('useAgentChatStream', () => {
     );
   });
 
+  // #4244: lo stream cade dopo le fonti e prima dei token, l'hook riprova, e il secondo tentativo
+  // risponde senza fonti (per esempio una risposta servita senza recupero). Le fonti del tentativo
+  // caduto non sono di questa risposta.
+  it('does not hand the sources of a dropped attempt to the answer of the retry', async () => {
+    vi.useFakeTimers();
+    try {
+      const encoder = new TextEncoder();
+      let sent = false;
+      const dropsAfterTheSources = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          if (!sent) {
+            sent = true;
+            controller.enqueue(
+              encoder.encode(
+                sseEvent(EventType.Citations, {
+                  citations: [{ text: 'x', source: 'PDF:pdf-coup', page: 1, line: 0, score: 0.9 }],
+                })
+              )
+            );
+          } else {
+            controller.error(new TypeError('network error'));
+          }
+        },
+      });
+      fetchMock
+        .mockResolvedValueOnce({ ok: true, body: dropsAfterTheSources })
+        .mockResolvedValueOnce({
+          ok: true,
+          body: createSSEStream([
+            sseEvent(EventType.Token, { token: 'Due carte.' }),
+            sseEvent(EventType.Complete, { totalTokens: 2 }),
+          ]),
+        });
+      const onComplete = vi.fn();
+      const { result } = renderHook(() => useAgentChatStream({ onComplete }));
+
+      act(() => {
+        result.current.sendMessage('game-1', 'Quante carte?');
+      });
+      await vi.runAllTimersAsync();
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(onComplete).toHaveBeenCalledWith(
+        'Due carte.',
+        expect.objectContaining({ citations: [] })
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Un evento malformato non deve far cadere chi rende le fonti: si scarta.
+  it('drops sources that are not a list', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      body: createSSEStream([
+        sseEvent(EventType.Citations, { citations: 'PDF:pdf-coup' }),
+        sseEvent(EventType.Token, { token: 'Due carte.' }),
+        sseEvent(EventType.Complete, { totalTokens: 2 }),
+      ]),
+    });
+    const onComplete = vi.fn();
+    const { result } = renderHook(() => useAgentChatStream({ onComplete }));
+
+    await act(async () => {
+      result.current.sendMessage('game-1', 'Quante carte?');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(onComplete).toHaveBeenCalledWith(
+      'Due carte.',
+      expect.objectContaining({ citations: [] })
+    );
+  });
+
   it('forgets the plan quota with the next question', async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,

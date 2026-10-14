@@ -336,6 +336,9 @@ function agentChatEventReducer(
       // Synthetic event: set connecting state before fetch begins
       return {
         ...state,
+        // #4244: arriva a ogni tentativo, e un retry non riporta lo stato all'inizio. Le fonti di un
+        // tentativo caduto non sono della risposta che arriverà.
+        citations: [],
         isStreaming: true,
         statusMessage: 'Connecting...',
         connectionStatus: 'connecting',
@@ -364,10 +367,10 @@ function agentChatEventReducer(
 
     case StreamingEventType.Citations: {
       // #4244: arriva prima dei token. Ignorarlo lasciava la risposta senza fonti.
-      const data = event.data as { citations?: StreamCitation[] };
+      const data = event.data as { citations?: unknown };
       return {
         ...state,
-        citations: data?.citations ?? [],
+        citations: Array.isArray(data?.citations) ? (data.citations as StreamCitation[]) : [],
       };
     }
 

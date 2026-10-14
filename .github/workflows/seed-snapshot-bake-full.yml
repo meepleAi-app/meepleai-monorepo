@@ -189,6 +189,39 @@ jobs:
           # descriptions (full Path A) is tracked separately.
           make seed-index
 
+      # #4363: quando il bake fallisce, lo stato della coda e i log dei container. Il 2026-10-11
+      # la coda si è fermata con 24 job in coda e nessuno in esecuzione, per quattro ore, e del
+      # perché non restava niente: il job non salvava i log, e i container muoiono col runner.
+      - name: Collect queue state and container logs on failure
+        if: failure()
+        working-directory: infra
+        run: |
+          out="${RUNNER_TEMP}/bake-logs"
+          mkdir -p "$out"
+          docker ps -a --format '{{.Names}}\t{{.Image}}\t{{.Status}}' > "$out/containers.txt" 2>&1 || true
+          for c in $(docker ps -a --format '{{.Names}}'); do
+            docker logs --timestamps "$c" > "$out/$c.log" 2>&1 || true
+          done
+          PG_USER="$(sed -n 's/^POSTGRES_USER=//p' secrets/database.secret)"
+          PG_DB="$(sed -n 's/^POSTGRES_DB=//p' secrets/database.secret)"
+          # I job non terminali, col loro PDF e il passo in cui stanno: quelli che la coda non ha preso.
+          docker exec meepleai-postgres psql -U "$PG_USER" -d "$PG_DB" -c \
+            "SELECT j.\"Id\", j.status, j.current_step, j.created_at, j.started_at, j.last_progress_at, j.retry_count, p.\"FileName\", p.processing_state
+             FROM processing_jobs j
+             JOIN pdf_documents p ON p.\"Id\" = j.pdf_document_id
+             WHERE j.status NOT IN ('Completed','Failed','DeadLettered')
+             ORDER BY j.created_at;" > "$out/processing-jobs-not-terminal.txt" 2>&1 || true
+          ls -la "$out"
+
+      - name: Upload queue state and container logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: seed-bake-logs-${{ github.run_id }}
+          path: ${{ runner.temp }}/bake-logs
+          retention-days: 30
+          if-no-files-found: warn
+
       - name: Run verify gates (exit codes 2/3/4/5/6)
         working-directory: infra
         env:

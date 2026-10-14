@@ -474,7 +474,42 @@ public sealed class PrivateGameRetrievalTests
         return otherGameId;
     }
 
+    // ─── La lista dei PDF del gioco privato (#4348) ───
+    // `PrivateGameHub` la legge al caricamento della pagina: vuota, ricaricata la pagina il
+    // regolamento spariva. La rotta non guardava chi chiede, quindi i PDF privati li vede solo il
+    // proprietario: per chiunque altro il gioco risponde come uno inesistente.
+
+    [Fact]
+    public async Task TheOwner_FindsThePdfOfThePrivateGameInItsList()
+    {
+        var json = await GetJsonAsync($"/api/v1/games/{_privateGameId}/pdfs");
+
+        json.GetProperty("pdfs").EnumerateArray()
+            .Select(p => p.GetProperty("id").GetGuid())
+            .Should().Equal(_pdfId);
+    }
+
+    [Fact]
+    public async Task AnotherUser_GetsForThePrivateGameWhatANonexistentGameGets()
+    {
+        var stranger = await CreateStrangerAsync();
+
+        var (privateStatus, privateBody) = await GetAsync($"/api/v1/games/{_privateGameId}/pdfs", stranger);
+        var (missingStatus, missingBody) = await GetAsync($"/api/v1/games/{Guid.NewGuid()}/pdfs", stranger);
+
+        privateStatus.Should().Be(missingStatus);
+        privateBody.Should().Be(missingBody, "dire di più direbbe che il gioco esiste");
+        privateBody.Should().NotContain(_pdfId.ToString());
+    }
+
     // ─── Supporto ───────────────────────────────────────────────────────────────
+
+    private async Task<(HttpStatusCode Status, string Body)> GetAsync(string path, string token)
+    {
+        var response = await _client.SendAsync(
+            TestSessionHelper.CreateAuthenticatedRequest(HttpMethod.Get, path, token), Ct);
+        return (response.StatusCode, await response.Content.ReadAsStringAsync(Ct));
+    }
 
     private async Task<List<JsonElement>> AskAsync(string token, Guid? chatId = null, Guid? gameId = null)
     {

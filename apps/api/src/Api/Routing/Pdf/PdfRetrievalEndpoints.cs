@@ -158,9 +158,12 @@ internal static class PdfRetrievalEndpoints
             });
     }
 
-    private static async Task<IResult> HandleListPdfs(Guid gameId, IMediator mediator, CancellationToken ct)
+    // #4348: chi chiede, perché i PDF di un gioco privato li vede solo il proprietario.
+    private static async Task<IResult> HandleListPdfs(Guid gameId, HttpContext context, IMediator mediator, CancellationToken ct)
     {
-        var pdfs = await mediator.Send(new GetPdfDocumentsByGameQuery(gameId), ct).ConfigureAwait(false);
+        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+        var pdfs = await mediator.Send(
+            new GetPdfDocumentsByGameQuery(gameId, session!.Principal!.Subject.Id), ct).ConfigureAwait(false);
         return Results.Json(new { pdfs });
     }
 

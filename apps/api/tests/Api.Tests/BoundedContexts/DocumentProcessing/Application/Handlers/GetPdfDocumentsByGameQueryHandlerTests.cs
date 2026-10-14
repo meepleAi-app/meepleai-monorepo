@@ -2,6 +2,8 @@ using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.BoundedContexts.UserLibrary.Domain.Entities;
+using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Tests.BoundedContexts.DocumentProcessing.TestHelpers;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -19,12 +21,15 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Handlers;
 public class GetPdfDocumentsByGameQueryHandlerTests
 {
     private readonly Mock<IPdfDocumentRepository> _documentRepositoryMock;
+    private readonly Mock<IPrivateGameRepository> _privateGameRepositoryMock;
     private readonly GetPdfDocumentsByGameQueryHandler _handler;
 
     public GetPdfDocumentsByGameQueryHandlerTests()
     {
         _documentRepositoryMock = new Mock<IPdfDocumentRepository>();
-        _handler = new GetPdfDocumentsByGameQueryHandler(_documentRepositoryMock.Object);
+        _privateGameRepositoryMock = new Mock<IPrivateGameRepository>();
+        _handler = new GetPdfDocumentsByGameQueryHandler(
+            _documentRepositoryMock.Object, _privateGameRepositoryMock.Object);
     }
     [Fact]
     public async Task Handle_WithMultipleDocuments_ReturnsAllMappedDtos()
@@ -288,4 +293,64 @@ public class GetPdfDocumentsByGameQueryHandlerTests
             r => r.FindByGameIdAsync(gameId, cancellationToken),
             Times.Once);
     }
+
+    // ─── #4348: il gioco privato ───
+    // I suoi PDF stanno in `PrivateGameId`, non nel gioco del catalogo, e li vede solo il proprietario.
+
+    [Fact]
+    public async Task Handle_PrivateGameOfTheCaller_ReturnsItsPdfs()
+    {
+        var ownerId = Guid.NewGuid();
+        var privateGameId = Guid.NewGuid();
+        GivenAPrivateGame(privateGameId, ownerId);
+        var pdf = new PdfDocumentBuilder().WithFileName("prototipo.pdf").Build();
+        _documentRepositoryMock
+            .Setup(r => r.FindByPrivateGameIdAsync(privateGameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PdfDocument> { pdf });
+
+        var result = await _handler.Handle(
+            new GetPdfDocumentsByGameQuery(privateGameId, ownerId), TestContext.Current.CancellationToken);
+
+        result.Select(d => d.Id).Should().Equal(pdf.Id);
+    }
+
+    [Fact]
+    public async Task Handle_PrivateGameOfSomeoneElse_ReturnsWhatANonexistentGameReturns()
+    {
+        var privateGameId = Guid.NewGuid();
+        GivenAPrivateGame(privateGameId, ownerId: Guid.NewGuid());
+        _documentRepositoryMock
+            .Setup(r => r.FindByPrivateGameIdAsync(privateGameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PdfDocument> { new PdfDocumentBuilder().Build() });
+
+        var result = await _handler.Handle(
+            new GetPdfDocumentsByGameQuery(privateGameId, Guid.NewGuid()), TestContext.Current.CancellationToken);
+
+        result.Should().BeEmpty();
+        _documentRepositoryMock.Verify(
+            r => r.FindByPrivateGameIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>Senza chi chiede (la sandbox dell'admin) un gioco privato non apre i suoi PDF.</summary>
+    [Fact]
+    public async Task Handle_PrivateGameWithoutACaller_DoesNotReadItsPdfs()
+    {
+        var privateGameId = Guid.NewGuid();
+        GivenAPrivateGame(privateGameId, ownerId: Guid.NewGuid());
+        _documentRepositoryMock
+            .Setup(r => r.FindByGameIdAsync(privateGameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<PdfDocument>());
+
+        var result = await _handler.Handle(
+            new GetPdfDocumentsByGameQuery(privateGameId), TestContext.Current.CancellationToken);
+
+        result.Should().BeEmpty();
+        _documentRepositoryMock.Verify(
+            r => r.FindByPrivateGameIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private void GivenAPrivateGame(Guid privateGameId, Guid ownerId) =>
+        _privateGameRepositoryMock
+            .Setup(r => r.GetByIdAsync(privateGameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(PrivateGame.CreateManual(ownerId, "Il mio prototipo", minPlayers: 1, maxPlayers: 4));
 }

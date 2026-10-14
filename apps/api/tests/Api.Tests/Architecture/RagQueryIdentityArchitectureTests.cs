@@ -50,6 +50,8 @@ public class RagQueryIdentityArchitectureTests
         ("Api.BoundedContexts.KnowledgeBase.Application.Queries.StreamSetupGuideQuery", "UserId", "UserRole"),
         // #4294: la spiegazione di un argomento cerca nella KB del gioco e ne restituisce i passaggi.
         ("Api.BoundedContexts.KnowledgeBase.Application.Queries.ExplainQuery", "UserId", "UserRole"),
+        // #4282: l'agente di sessione cerca nella KB del gioco con cui viene avviato.
+        ("Api.BoundedContexts.KnowledgeBase.Application.Commands.LaunchSessionAgentCommand", "UserId", "UserRole"),
     };
 
     /// <summary>

@@ -54,6 +54,11 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Commands;
 [Trait("Issue", "2600")]
 public sealed class ChatWithSessionAgentPerChunkTimeoutTests
 {
+    // #4282: the handler refuses a caller who did not launch the agent session, and an agent session
+    // of another game session. These harnesses exercise the happy path, so command and session agree.
+    private static readonly Guid SessionOwnerId = Guid.NewGuid();
+    private static readonly Guid SessionGameSessionId = Guid.NewGuid();
+
     // ──────────────────────────────────────────────────────────────────────────
     // T3-AC-1: stalled chunk → LLM_TIMEOUT error, graceful completion (no hang)
     // ──────────────────────────────────────────────────────────────────────────
@@ -405,8 +410,9 @@ public sealed class ChatWithSessionAgentPerChunkTimeoutTests
     private static ChatWithSessionAgentCommand BuildCommand() =>
         new ChatWithSessionAgentCommand(
             AgentSessionId: Guid.NewGuid(),
+            GameSessionId: SessionGameSessionId,
             UserQuestion: "What are the rules?",
-            UserId: Guid.NewGuid());
+            UserId: SessionOwnerId);
 
     /// <summary>
     /// Builds a fully-wired handler with the given <paramref name="llmService"/> and
@@ -429,8 +435,8 @@ public sealed class ChatWithSessionAgentPerChunkTimeoutTests
         var agentSession = new AgentSession(
             id: Guid.NewGuid(),
             agentDefinitionId: Guid.NewGuid(),
-            gameSessionId: Guid.NewGuid(),
-            userId: Guid.NewGuid(),
+            gameSessionId: SessionGameSessionId,
+            userId: SessionOwnerId,
             gameId: Guid.NewGuid(),
             initialState: initialState);
 

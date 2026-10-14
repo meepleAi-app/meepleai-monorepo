@@ -45,6 +45,10 @@ public sealed class AnswerPathsSharePreconditionsArchitectureTests
     private const string NotAnAnswer =
         "non risponde a una domanda: cerca, gestisce la KB o legge lo stato dell'accesso";
 
+    private const string GatesTheSessionAgent =
+        "avvia la sessione agente: non risponde, ma fissa il gioco su cui risponderà la sua chat, che non " +
+        "ha un cancello suo e la usa solo chi l'ha avviata (#4282). Il controllo d'accesso vale al momento dell'avvio";
+
     /// <summary>I percorsi che rispondono a una domanda.</summary>
     private static readonly string[] s_answerPaths =
     {
@@ -65,6 +69,8 @@ public sealed class AnswerPathsSharePreconditionsArchitectureTests
         ["Api.BoundedContexts.KnowledgeBase.Application.Commands.TutorQueryCommandHandler"] = AnswersOutsideTheSharedStep,
         ["Api.BoundedContexts.KnowledgeBase.Application.Commands.SuggestPlayerMoveCommandHandler"] = AnswersOutsideTheSharedStep,
         ["Api.BoundedContexts.KnowledgeBase.Application.Queries.StreamSetupGuideQueryHandler"] = AnswersOutsideTheSharedStep,
+
+        ["Api.BoundedContexts.KnowledgeBase.Application.Commands.LaunchSessionAgentCommandHandler"] = GatesTheSessionAgent,
 
         ["Api.BoundedContexts.KnowledgeBase.Application.Queries.SearchQueryHandler"] = NotAnAnswer,
         ["Api.BoundedContexts.KnowledgeBase.Application.Queries.GlobalKbSearch.GlobalKbSearchQueryHandler"] = NotAnAnswer,

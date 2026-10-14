@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.Extensions;
 using Api.Infrastructure.Serialization;
@@ -11,6 +12,8 @@ namespace Api.Routing;
 /// <summary>
 /// Agent Session endpoints for session-based agent lifecycle.
 /// Issue #3184 (AGT-010): Session-Based Agent Lifecycle.
+/// Issue #4282: ogni rotta passa chi chiama e la sessione di gioco del percorso. Gli handler
+/// rifiutano chi non e` il proprietario (403) e una sessione agente di un'altra sessione di gioco (404).
 /// </summary>
 internal static class AgentSessionEndpoints
 {
@@ -87,12 +90,14 @@ internal static class AgentSessionEndpoints
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var userId = httpContext.User.GetUserId();
+        // Session validated by RequireSessionFilter. Il ruolo serve al cancello RAG (#4282, ADR-096).
+        var session = (SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!;
 
         var command = new LaunchSessionAgentCommand(
             GameSessionId: gameSessionId,
             AgentDefinitionId: request.AgentDefinitionId,
-            UserId: userId,
+            UserId: session.Principal!.Subject.Id,
+            UserRole: session.Principal!.EffectiveActor.Role,
             GameId: request.GameId,
             InitialGameStateJson: request.InitialGameStateJson
         );
@@ -121,6 +126,7 @@ internal static class AgentSessionEndpoints
 
         var command = new ChatWithSessionAgentCommand(
             AgentSessionId: request.AgentSessionId,
+            GameSessionId: gameSessionId,
             UserQuestion: request.UserQuestion,
             UserId: userId,
             GameContext: gameContext,
@@ -146,11 +152,14 @@ internal static class AgentSessionEndpoints
         [FromRoute] Guid gameSessionId,
         [FromBody] UpdateAgentSessionStateRequest request,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
         var command = new UpdateAgentSessionStateCommand(
             AgentSessionId: request.AgentSessionId,
-            GameStateJson: request.GameStateJson
+            GameStateJson: request.GameStateJson,
+            GameSessionId: gameSessionId,
+            UserId: httpContext.User.GetUserId()
         );
 
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
@@ -162,11 +171,14 @@ internal static class AgentSessionEndpoints
         [FromRoute] Guid gameSessionId,
         [FromBody] UpdateAgentSessionDefinitionRequest request,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
         var command = new UpdateAgentSessionDefinitionCommand(
             AgentSessionId: request.AgentSessionId,
-            NewAgentDefinitionId: request.NewAgentDefinitionId
+            NewAgentDefinitionId: request.NewAgentDefinitionId,
+            GameSessionId: gameSessionId,
+            UserId: httpContext.User.GetUserId()
         );
 
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
@@ -178,6 +190,7 @@ internal static class AgentSessionEndpoints
         [FromRoute] Guid gameSessionId,
         [FromBody] UpdateAgentSessionConfigRequest request,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
         var command = new UpdateAgentSessionConfigCommand(
@@ -186,7 +199,9 @@ internal static class AgentSessionEndpoints
             Temperature: request.Temperature,
             MaxTokens: request.MaxTokens,
             RagStrategy: request.RagStrategy,
-            RagParams: request.RagParams
+            RagParams: request.RagParams,
+            GameSessionId: gameSessionId,
+            UserId: httpContext.User.GetUserId()
         );
 
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);
@@ -198,10 +213,13 @@ internal static class AgentSessionEndpoints
         [FromRoute] Guid gameSessionId,
         [FromBody] EndSessionAgentRequest request,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
         var command = new EndSessionAgentCommand(
-            AgentSessionId: request.AgentSessionId
+            AgentSessionId: request.AgentSessionId,
+            GameSessionId: gameSessionId,
+            UserId: httpContext.User.GetUserId()
         );
 
         await mediator.Send(command, cancellationToken).ConfigureAwait(false);

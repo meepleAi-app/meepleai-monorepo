@@ -41,6 +41,11 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Commands;
 [Trait("BoundedContext", "KnowledgeBase")]
 public class ChatSessionAgentBroadcastTests
 {
+    // #4282: the handler refuses a caller who did not launch the agent session, and an agent session
+    // of another game session. These harnesses exercise the happy path, so command and session agree.
+    private static readonly Guid SessionOwnerId = Guid.NewGuid();
+    private static readonly Guid SessionGameSessionId = Guid.NewGuid();
+
     // -----------------------------------------------------------------------
     // AC-CHAT-1: Full tier → broadcast with non-empty snippetPreview
     // -----------------------------------------------------------------------
@@ -335,8 +340,9 @@ public class ChatSessionAgentBroadcastTests
     private static ChatWithSessionAgentCommand BuildCommand() =>
         new ChatWithSessionAgentCommand(
             AgentSessionId: Guid.NewGuid(),
+            GameSessionId: SessionGameSessionId,
             UserQuestion: "What are the rules?",
-            UserId: Guid.NewGuid());
+            UserId: SessionOwnerId);
 
     /// <summary>
     /// Constructs a fully-wired handler with minimal happy-path mocks,
@@ -359,8 +365,8 @@ public class ChatSessionAgentBroadcastTests
         var agentSession = new AgentSession(
             id: Guid.NewGuid(),
             agentDefinitionId: Guid.NewGuid(),
-            gameSessionId: Guid.NewGuid(),
-            userId: Guid.NewGuid(),
+            gameSessionId: SessionGameSessionId,
+            userId: SessionOwnerId,
             gameId: Guid.NewGuid(),
             initialState: initialState);
 

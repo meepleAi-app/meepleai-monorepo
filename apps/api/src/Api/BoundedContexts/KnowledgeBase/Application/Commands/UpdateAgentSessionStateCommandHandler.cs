@@ -1,7 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
-using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -44,10 +43,9 @@ internal sealed class UpdateAgentSessionStateCommandHandler : IRequestHandler<Up
             .GetByIdAsync(request.AgentSessionId, cancellationToken)
             .ConfigureAwait(false);
 
-        if (agentSession == null)
-        {
-            throw new NotFoundException("AgentSession", request.AgentSessionId.ToString());
-        }
+        // #4282: solo chi ha avviato la sessione agente, e dalla sessione di gioco a cui appartiene.
+        agentSession = AgentSessionAccess.EnsureOwnedBy(
+            agentSession, request.AgentSessionId, request.GameSessionId, request.UserId);
 
         // Parse and validate new game state
         var newGameState = GameState.FromJson(request.GameStateJson);

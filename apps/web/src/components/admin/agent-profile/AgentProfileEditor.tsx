@@ -166,8 +166,10 @@ export function AgentProfileEditor() {
 
   const readOnly = (profile.draft ?? profile.published).content;
 
+  // #4255: il guscio admin è scuro ma non dichiara il colore del testo, che senza questa classe
+  // resterebbe quello del tema chiaro, scuro su scuro.
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-foreground">
       <div>
         <h1 className="font-quicksand text-xl font-semibold tracking-tight text-foreground">
           Agent profile

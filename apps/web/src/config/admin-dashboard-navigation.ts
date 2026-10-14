@@ -274,12 +274,6 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         activePattern: /^\/admin\/agents$/,
       },
       {
-        // #4169 (ADR-095 D8): il profilo dell'agente di sistema che risponde agli utenti.
-        href: '/admin/agents/profile',
-        label: 'Agent profile',
-        icon: BotIcon,
-      },
-      {
         href: '/admin/agents/infrastructure',
         label: 'Infrastructure',
         icon: ServerIcon,

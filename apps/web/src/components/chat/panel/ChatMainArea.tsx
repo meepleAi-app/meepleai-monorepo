@@ -2,7 +2,9 @@
 'use client';
 
 import type { ChatMessageRole } from '@/components/chat/shared';
+import { CitationBlock } from '@/components/chat-unified/CitationBlock';
 import { TierLimitRegion } from '@/components/chat-unified/TierLimitNotice';
+import type { StreamCitation } from '@/hooks/useAgentChatStream';
 import type { TierLimit } from '@/lib/tier-limit';
 
 import { ChatInputBar } from './ChatInputBar';
@@ -14,7 +16,12 @@ export interface ChatMessage {
   content: string;
   authorName: string;
   timestamp: string;
+  /** #4244: le fonti della risposta; ciascuna apre il PDF alla pagina citata. */
+  citations?: StreamCitation[];
 }
+
+/** Il pannello mostra tutte le fonti: nessuna è già citata nel testo. */
+const NO_EXCLUSIONS = new Set<number>();
 
 interface ChatMainAreaProps {
   messages: ChatMessage[];
@@ -86,6 +93,11 @@ export function ChatMainArea({
                 content={msg.content}
                 authorName={msg.authorName}
                 timestamp={msg.timestamp}
+                sources={
+                  msg.citations && msg.citations.length > 0 ? (
+                    <CitationBlock snippets={msg.citations} excludeIndices={NO_EXCLUSIONS} />
+                  ) : undefined
+                }
               />
             ))}
           </div>

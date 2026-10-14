@@ -121,6 +121,7 @@ export function ChatSlideOverPanel() {
         content: answer,
         authorName: 'Agente',
         timestamp: formatMessageTime(new Date().toISOString()),
+        citations: metadata.citations,
       };
       setMessages(prev => [...prev, assistantMessage]);
       if (metadata.chatThreadId && metadata.chatThreadId !== threadId) {

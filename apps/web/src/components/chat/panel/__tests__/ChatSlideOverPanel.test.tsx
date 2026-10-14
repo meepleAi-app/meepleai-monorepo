@@ -283,20 +283,32 @@ const STYLES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..
 
 /** Il valore di una variabile `--z-*` com'è nel browser. */
 function resolveZToken(token: string): number | undefined {
-  const find = (file: string) =>
-    new RegExp(`--${token}:\\s*(-?\\d+)\\s*;`).exec(
-      fs.readFileSync(path.join(STYLES, file), 'utf8')
-    )?.[1];
-  // Il file canonico dichiara le variabili fuori da ogni layer; `design-tokens.css` dentro
-  // `@layer tokens`. A parità di selettore vince la dichiarazione fuori dai layer.
-  const value = find('design-tokens-canonical.css') ?? find('design-tokens.css');
+  const read = (file: string) => fs.readFileSync(path.join(STYLES, file), 'utf8');
+  const canonical = read('design-tokens-canonical.css');
+  // `design-tokens.css` dichiara le variabili dentro `@layer tokens`, il file canonico fuori da
+  // ogni layer: una dichiarazione fuori dai layer vince sempre, qualunque siano il selettore e
+  // l'ordine dei file. Se un giorno il canonico entrasse in un layer, questa regola non varrebbe
+  // più e il test darebbe una risposta falsa: meglio fermarsi.
+  if (canonical.includes('@layer')) {
+    throw new Error(
+      'design-tokens-canonical.css ora usa @layer: la risoluzione dei livelli di questo test va rivista'
+    );
+  }
+  const find = (css: string) => new RegExp(`--${token}:\\s*(-?\\d+)\\s*;`).exec(css)?.[1];
+  const value = find(canonical) ?? find(read('design-tokens.css'));
   return value === undefined ? undefined : Number(value);
 }
 
 /** Il z-index che l'elemento avrà nel browser, dalla sua classe `z-[var(--z-…,fallback)]`. */
 function effectiveZIndex(element: HTMLElement): number {
   const match = /z-\[var\(--([a-z-]+),(\d+)\)\]/.exec(element.className);
-  if (!match) throw new Error(`nessuna classe z-[var(--z-…)] su ${element.dataset.testid}`);
+  if (!match) {
+    throw new Error(
+      `${element.dataset.testid}: questo test sa leggere solo un livello dichiarato come ` +
+        'z-[var(--z-…,N)]. Se il livello ora si dichiara in un altro modo, aggiorna la lettura qui: ' +
+        'non è detto che i livelli siano sbagliati.'
+    );
+  }
   const [, token, fallback] = match;
   return resolveZToken(token) ?? Number(fallback);
 }

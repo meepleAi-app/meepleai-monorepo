@@ -74,7 +74,10 @@ function toRequest(form: EditableForm): SaveAgentProfileDraftRequest {
     temperature: Number(form.temperature),
     maxResponseTokens: Number(form.maxResponseTokens),
     citationStyle: form.citationStyle,
-    systemPrompts: form.systemPrompts,
+    // In ordine: il confronto con la bozza salvata non deve dipendere dall'ordine di inserimento.
+    systemPrompts: Object.fromEntries(
+      Object.entries(form.systemPrompts).sort(([a], [b]) => a.localeCompare(b))
+    ),
     fallbackLanguage: form.fallbackLanguage,
   };
 }
@@ -128,6 +131,7 @@ export function AgentProfileEditor() {
   );
   const published = useMemo(() => (profile ? toForm(profile.published.content) : null), [profile]);
   const dirty = form !== null && base !== null && !sameForm(form, base);
+  const valid = form !== null && isNumber(form.temperature) && isNumber(form.maxResponseTokens);
 
   const run = async (action: () => Promise<AgentProfileAdmin>, failure: string) => {
     setBusy(true);
@@ -317,7 +321,7 @@ export function AgentProfileEditor() {
               'Could not save the draft'
             )
           }
-          disabled={busy || !dirty}
+          disabled={busy || !dirty || !valid}
         >
           {busy && <Loader2 className="mr-1 h-4 w-4 animate-spin" aria-hidden="true" />}
           Save draft
@@ -348,6 +352,7 @@ export function AgentProfileEditor() {
       <History
         profile={profile}
         busy={busy}
+        dirty={dirty}
         confirming={confirmRollback}
         onAsk={setConfirmRollback}
         onRollback={n =>
@@ -459,6 +464,8 @@ function NumberField({
   onChange: (value: string) => void;
 }) {
   const id = useId();
+  const errorId = useId();
+  const invalid = !isNumber(value);
   return (
     <div className="space-y-1">
       <Label htmlFor={id}>{label}</Label>
@@ -471,11 +478,23 @@ function NumberField({
         step={step}
         value={value}
         onChange={e => onChange(e.target.value)}
+        aria-invalid={invalid}
+        aria-describedby={invalid ? errorId : undefined}
         className="max-w-[12rem]"
       />
+      {invalid && (
+        <p id={errorId} className="text-xs font-medium text-destructive">
+          Enter a number.
+        </p>
+      )}
       <PublishedValue value={published} current={value} />
     </div>
   );
+}
+
+/** Un campo numerico svuotato non vale zero: `Number('')` lo farebbe, e lo zero è una temperatura valida. */
+function isNumber(value: string): boolean {
+  return value.trim() !== '' && Number.isFinite(Number(value));
 }
 
 function SelectField({
@@ -730,12 +749,15 @@ function PromptField({
 function History({
   profile,
   busy,
+  dirty,
   confirming,
   onAsk,
   onRollback,
 }: {
   profile: AgentProfileAdmin;
   busy: boolean;
+  /** Il rollback rimette il modulo sulla bozza: con modifiche non salvate le perderebbe. */
+  dirty: boolean;
   confirming: number | null;
   onAsk: (versionNumber: number | null) => void;
   onRollback: (versionNumber: number) => void;
@@ -749,6 +771,7 @@ function History({
       <p className="text-xs text-muted-foreground">
         Rolling back publishes the content of an archived version as a new version: the history
         stays as it is.
+        {dirty && ' Save or discard your changes before rolling back.'}
       </p>
       <div className="overflow-x-auto rounded-xl border border-border/60 bg-card/70">
         <table className="w-full text-sm">
@@ -794,7 +817,8 @@ function History({
                         <Button
                           size="sm"
                           onClick={() => onRollback(v.versionNumber)}
-                          disabled={busy}
+                          disabled={busy || dirty}
+                          aria-label={`Confirm roll back to version ${v.versionNumber}`}
                         >
                           Confirm roll back
                         </Button>
@@ -812,7 +836,8 @@ function History({
                         size="sm"
                         variant="outline"
                         onClick={() => onAsk(v.versionNumber)}
-                        disabled={busy}
+                        disabled={busy || dirty}
+                        aria-label={`Roll back to version ${v.versionNumber}`}
                       >
                         Roll back
                       </Button>

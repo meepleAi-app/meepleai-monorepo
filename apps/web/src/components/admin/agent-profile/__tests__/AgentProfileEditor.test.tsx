@@ -264,6 +264,35 @@ describe('AgentProfileEditor', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('does not roll back over unsaved changes', async () => {
+    // Il rollback rimette il modulo sulla bozza: le modifiche non salvate sparirebbero in silenzio.
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    const temperature = screen.getByLabelText('Temperature');
+    await user.clear(temperature);
+    await user.type(temperature, '0.9');
+
+    const archived = screen.getByRole('row', { name: /version 1/i });
+    expect(within(archived).getByRole('button', { name: /roll back/i })).toBeDisabled();
+  });
+
+  it('does not save an emptied number as zero', async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    await user.clear(screen.getByLabelText('Temperature'));
+
+    expect(screen.getByRole('button', { name: /save draft/i })).toBeDisabled();
+    expect(screen.getByText(/enter a number/i)).toBeInTheDocument();
+  });
+
+  it('names each roll back button after its version', async () => {
+    await renderLoaded();
+
+    expect(screen.getByRole('button', { name: 'Roll back to version 1' })).toBeInTheDocument();
+  });
+
   it('says so when the profile cannot be loaded', async () => {
     mockGetProfile.mockRejectedValue(new Error('boom'));
     render(<AgentProfileEditor />);

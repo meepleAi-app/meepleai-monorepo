@@ -190,6 +190,64 @@ public sealed class LiveSessionCompletedEventHandlerTests
             Times.Once);
     }
 
+    // ── #4156 fetta 2 — the play record carries the totals of the live session ──────────────────
+
+    [Fact]
+    public async Task Handle_WithTheWizardDimension_PersistsThePlayRecordWithThatDimension()
+    {
+        // The desktop wizard's default dimension is «Punti». The play record used the default
+        // scoring config, which enables only "points": recording «Punti» threw, the handler
+        // swallowed it, and no play record was written.
+        PlayRecord? persisted = null;
+        _playRecordRepository
+            .Setup(r => r.AddAsync(It.IsAny<PlayRecord>(), It.IsAny<CancellationToken>()))
+            .Callback<PlayRecord, CancellationToken>((record, _) => persisted = record)
+            .Returns(Task.CompletedTask);
+        var marco = new CompletedPlayerSnapshot(Guid.NewGuid(), null, "Marco", 10, 2);
+        var giulia = new CompletedPlayerSnapshot(Guid.NewGuid(), null, "Giulia", 30, 1);
+        var @event = CreateCompletedEvent(
+            gameId: Guid.NewGuid(),
+            players: [marco, giulia],
+            scores: [new(marco.PlayerId, "Punti", 10, "PV"), new(giulia.PlayerId, "Punti", 30, "PV")]);
+
+        await CreateHandler().Handle(@event, CancellationToken.None);
+
+        persisted.Should().NotBeNull("a completed live session must produce its play record");
+        persisted!.Players.Single(p => p.DisplayName == "Marco").GetScore("Punti")!.Value.Should().Be(10);
+        persisted.Players.Single(p => p.DisplayName == "Giulia").GetScore("Punti")!.Value.Should().Be(30);
+    }
+
+    [Fact]
+    public async Task Handle_WithSeveralRounds_RecordsTheTotalOfEachDimension()
+    {
+        // A play record keeps one value per player and dimension: recording each round replaced
+        // the previous one, so the record carried the last round instead of the total.
+        PlayRecord? persisted = null;
+        _playRecordRepository
+            .Setup(r => r.AddAsync(It.IsAny<PlayRecord>(), It.IsAny<CancellationToken>()))
+            .Callback<PlayRecord, CancellationToken>((record, _) => persisted = record)
+            .Returns(Task.CompletedTask);
+        var marco = new CompletedPlayerSnapshot(Guid.NewGuid(), null, "Marco", 20, 1);
+        var giulia = new CompletedPlayerSnapshot(Guid.NewGuid(), null, "Giulia", 10, 2);
+        var @event = CreateCompletedEvent(
+            gameId: Guid.NewGuid(),
+            players: [marco, giulia],
+            scores:
+            [
+                new(marco.PlayerId, "points", 10, "pts"),
+                new(marco.PlayerId, "points", 4, "pts"),
+                new(marco.PlayerId, "points", 6, "pts"),
+                new(giulia.PlayerId, "points", 5, "pts"),
+                new(giulia.PlayerId, "points", 5, "pts"),
+            ]);
+
+        await CreateHandler().Handle(@event, CancellationToken.None);
+
+        persisted.Should().NotBeNull();
+        persisted!.Players.Single(p => p.DisplayName == "Marco").GetScore("points")!.Value.Should().Be(20);
+        persisted.Players.Single(p => p.DisplayName == "Giulia").GetScore("points")!.Value.Should().Be(10);
+    }
+
     [Fact]
     public void Constructor_NullDbContext_ThrowsArgumentNullException()
     {

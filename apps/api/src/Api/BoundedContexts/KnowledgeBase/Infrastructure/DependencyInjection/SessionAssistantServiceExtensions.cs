@@ -16,6 +16,7 @@ internal static class SessionAssistantServiceExtensions
         services.AddScoped<IAssistantChatClientFactory, AssistantChatClientFactory>();
         services.AddScoped<IAssistantPlayerMatcher, AssistantPlayerMatcher>();
         services.AddScoped<SessionAssistantEvaluator>();
+        services.AddScoped<SessionAssistantAvailability>();
         services.AddScoped<AssistantTurnRunner>();
         // Singleton: non ha stato e apre uno scope per ogni scrittura.
         services.AddSingleton<IAssistantProposalApplier, LiveSessionProposalApplier>();

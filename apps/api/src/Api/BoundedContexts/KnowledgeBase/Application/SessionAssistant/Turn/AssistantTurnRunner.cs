@@ -39,15 +39,14 @@ internal sealed class AssistantTurnRunner
     public const int HistoryMessages = 12;
 
     public const string ThreadAgentType = "session-assistant";
-    public const string DisabledCode = "assistant_disabled";
+    public const string DisabledCode = SessionAssistantAvailability.DisabledCode;
     public const string SessionStateInvalidCode = "session_state_invalid";
     public const string BudgetPausedCode = "budget_paused";
     public const string UnavailableCode = "assistant_unavailable";
     public const string TimeoutCode = "turn_timeout";
 
     private readonly IAssistantSessionDirectory _directory;
-    private readonly IPublishedAgentProfileReader _profiles;
-    private readonly IToolCallingModelCatalog _catalog;
+    private readonly SessionAssistantAvailability _availability;
     private readonly IChatThreadRepository _threads;
     private readonly IAssistantProposalRepository _proposals;
     private readonly IAssistantChatClientFactory _chatClients;
@@ -58,8 +57,7 @@ internal sealed class AssistantTurnRunner
 
     public AssistantTurnRunner(
         IAssistantSessionDirectory directory,
-        IPublishedAgentProfileReader profiles,
-        IToolCallingModelCatalog catalog,
+        SessionAssistantAvailability availability,
         IChatThreadRepository threads,
         IAssistantProposalRepository proposals,
         IAssistantChatClientFactory chatClients,
@@ -69,8 +67,7 @@ internal sealed class AssistantTurnRunner
         ILogger<AssistantTurnRunner> logger)
     {
         _directory = directory ?? throw new ArgumentNullException(nameof(directory));
-        _profiles = profiles ?? throw new ArgumentNullException(nameof(profiles));
-        _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+        _availability = availability ?? throw new ArgumentNullException(nameof(availability));
         _threads = threads ?? throw new ArgumentNullException(nameof(threads));
         _proposals = proposals ?? throw new ArgumentNullException(nameof(proposals));
         _chatClients = chatClients ?? throw new ArgumentNullException(nameof(chatClients));
@@ -112,25 +109,15 @@ internal sealed class AssistantTurnRunner
                 $"The session is {access.Status}: the assistant no longer answers once the game is over.");
         }
 
-        var profile = await _profiles.GetAsync(cancellationToken).ConfigureAwait(false);
-        var content = profile.Content;
-        var assistant = content.SessionAssistant;
-        var language = string.IsNullOrWhiteSpace(command.Language) ? content.FallbackLanguage : command.Language.Trim();
-        var prompt = assistant.PromptFor(language) ?? assistant.PromptFor(content.FallbackLanguage);
-        if (!assistant.Enabled || prompt is null)
+        // #4372: la stessa regola che legge il pannello, così non può dire «disponibile» a un turno che
+        // risponde 409.
+        var availability = await _availability.CheckAsync(command.Language, cancellationToken).ConfigureAwait(false);
+        if (availability.Code is { } code)
         {
-            throw new ConflictException(DisabledCode, "The session assistant is not enabled in the published agent profile.");
+            throw new ConflictException(code, availability.Problem!);
         }
 
-        // La pubblicazione applica la stessa regola, ma una migrazione di dati la scavalca e il catalogo
-        // può cambiare dopo: si ricontrolla a ogni turno.
-        var toolCallingModels = await _catalog.GetToolCallingModelIdsAsync(cancellationToken).ConfigureAwait(false);
-        if (content.SessionAssistantModelProblem(toolCallingModels) is { } problem)
-        {
-            throw new ConflictException(AgentProfile.AssistantModelWithoutToolsCode, problem);
-        }
-
-        return new PreparedAssistantTurn(command, profile, language, prompt);
+        return new PreparedAssistantTurn(command, availability.Profile, availability.Language, availability.SystemPrompt!);
     }
 
     /// <summary>

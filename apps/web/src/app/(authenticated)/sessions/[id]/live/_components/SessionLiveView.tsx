@@ -107,7 +107,6 @@ import {
   type ConnectionLostBannerLabels,
   type LiveSessionNotesLabels,
   type RightColumnTabsLabels,
-  type ScoringPanelRendererLabels,
   type ToolkitRendererLabels,
 } from '@/components/features/session-live';
 import { AgentDisputeTabContent } from '@/components/features/session-live/AgentDisputeTabContent';
@@ -130,7 +129,7 @@ import { mapConnectionState } from '@/lib/session-live/map-connection-state';
 import { mapTurnDataToTurnState } from '@/lib/session-live/map-turn-data-to-turn-state';
 import { mergeHydratedDiary } from '@/lib/session-live/merge-hydrated-diary';
 import { hasRequiredRole, type ParticipantRole } from '@/lib/session-live/participant-role';
-import { mapScoreDataToEndgameSummary } from '@/lib/session-live/score-data-to-endgame-summary';
+import { finalScores } from '@/lib/session-live/round-scores';
 import {
   deriveSessionLiveUiState,
   deriveSessionLiveDialogState,
@@ -638,10 +637,9 @@ export function SessionLiveView(): ReactElement {
   }, [saveIntent, resolveStatus, resolvedPlayRecordId, router]);
 
   // ── Write actions (Player+Host) ───────────────────────────────────────────
-  // Note: legacy per-participant score update flow was retired in #2433
-  // (post-#2389 Block C). The polymorphic flow now goes through
-  // useUpdateSessionScores → PUT /game-sessions/{id}/scores-polymorphic
-  // (wired in ScoreTabContent).
+  // Note: scores are written by ScoreTabContent on the LiveGameSession's RoundScores
+  // (POST/PUT /live-sessions/{id}/scores, #4156 fetta 2). The polymorphic flow that wrote to
+  // /game-sessions/{id}/scores-polymorphic with a live-session id is retired (ADR-089).
 
   // NOTE: the social-chat POST handler (/game-sessions/{id}/chat) was retired
   // in #2500 Task 4 (AC-CHAT-0). The social endpoint remains available on the backend for
@@ -794,49 +792,6 @@ export function SessionLiveView(): ReactElement {
     };
   }, [t, intl.messages, activeSession?.players.length]);
 
-  // G5a #2375: ScoringPanelRenderer labels (polymorphic Points/Ranking/BinaryWin/Objectives).
-  // Block C #2389 T6 — migrate to nested catalog keys; inline italian fallbacks removed.
-  // Aria templates still use `intl.messages[...]` direct access (not `t()`) because they
-  // contain `{name}`/`{label}` placeholders that are runtime string-replaced downstream;
-  // ICU `t()` would consume those braces. Aria-template catalog keys are not yet bundled
-  // (follow-up tracked: see T6 report).
-  const scoringPanelLabels = useMemo<ScoringPanelRendererLabels>(
-    (): ScoringPanelRendererLabels => ({
-      points: {
-        heading: t('pages.sessionLive.scoring.points.title'),
-        scoreAriaTemplate: intl.messages['pages.sessionLive.scoring.scoreAriaTemplate'] as string,
-        leaderBadgeLabel: t('pages.sessionLive.scoring.points.leaderLabel'),
-      },
-      ranking: {
-        heading: t('pages.sessionLive.scoring.ranking.title'),
-        rankAriaTemplate: intl.messages['pages.sessionLive.scoring.rankAriaTemplate'] as string,
-        firstPlaceBadgeLabel: intl.messages[
-          'pages.sessionLive.scoring.firstPlaceBadgeLabel'
-        ] as string,
-      },
-      binaryWin: {
-        heading: t('pages.sessionLive.scoring.binaryWin.title'),
-        inProgressLabel: t('pages.sessionLive.scoring.binaryWin.pendingLabel'),
-        winLabel: t('pages.sessionLive.scoring.binaryWin.winLabel'),
-        loseLabel: t('pages.sessionLive.scoring.binaryWin.loseLabel'),
-        outcomeAriaTemplate: intl.messages[
-          'pages.sessionLive.scoring.outcomeAriaTemplate'
-        ] as string,
-      },
-      objectives: {
-        heading: t('pages.sessionLive.scoring.objectives.title'),
-        completedAriaTemplate: intl.messages[
-          'pages.sessionLive.scoring.completedAriaTemplate'
-        ] as string,
-        doneAriaTemplate: intl.messages['pages.sessionLive.scoring.doneAriaTemplate'] as string,
-        pendingAriaTemplate: intl.messages[
-          'pages.sessionLive.scoring.pendingAriaTemplate'
-        ] as string,
-      },
-    }),
-    [t, intl.messages]
-  );
-
   const actionLogLabels = useMemo<ActionLogTimelineLabels>(
     (): ActionLogTimelineLabels => ({
       title: t('pages.sessionLive.actionLog.title'),
@@ -988,12 +943,6 @@ export function SessionLiveView(): ReactElement {
   // SignalR; wiring round-based scoring from LiveSessionDto.roundScores/
   // scoringConfig is deferred to Fase 2.
 
-  // #2431: polymorphic endgame summary — selectors feed mapScoreDataToEndgameSummary
-  // below. Subscribed reactively so the EndgameDialog refreshes as scoreData
-  // changes (final-tick edits before the host acknowledges).
-  const endgameScoringType = useLiveSessionStore(s => s.scoringType);
-  const endgameScoreData = useLiveSessionStore(s => s.scoreData);
-
   // ── G5c #2376: Zustand toolkit renderer store ─────────────────────────────
   // Store starts empty; real hydration via useQuery(['toolkit', sessionId]) is a
   // follow-up PR that wires GET /api/v1/toolkits/{toolkitId}/widgets.
@@ -1014,16 +963,6 @@ export function SessionLiveView(): ReactElement {
 
   // ── G6a #2787: per-game Catan flavor (conditional tab) ────────────────────
   const showFlavorTab = hasFlavor(liveSessionDto?.gameSlug);
-
-  // #2787: live SignalR points (Points scoring) overlaid on the DTO leaderboard —
-  // the store's scoreData is fresher than the up-to-staletime LiveSessionDto.totalScore.
-  const catanLivePoints = useMemo<ReadonlyMap<string, number> | null>(() => {
-    if (endgameScoringType !== 'Points' || endgameScoreData == null) return null;
-    const scores = (
-      endgameScoreData as { scores: ReadonlyArray<{ playerId: string; points: number }> }
-    ).scores;
-    return new Map(scores.map(s => [s.playerId, s.points]));
-  }, [endgameScoringType, endgameScoreData]);
 
   // #2787: current phase name for the flavor turn header. Fetched only when a flavor
   // tab exists; TurnPhasesDto returns hasPhases:false/currentPhaseName:null → graceful.
@@ -1104,7 +1043,6 @@ export function SessionLiveView(): ReactElement {
             session={liveSessionDto}
             viewerRole={activeSession.viewerRole}
             sessionId={liveSessionDto.id}
-            livePoints={catanLivePoints}
             phaseName={catanPhaseName}
             className="p-3"
           />
@@ -1175,9 +1113,8 @@ export function SessionLiveView(): ReactElement {
         return (
           <ScoreTabContent
             sessionId={sessionId ?? ''}
+            session={liveSessionDto}
             viewerRole={activeSession.viewerRole}
-            players={activeSession.players}
-            labels={scoringPanelLabels}
             className="p-2"
           />
         );
@@ -1186,11 +1123,9 @@ export function SessionLiveView(): ReactElement {
     effectiveMobileTab,
     activeSession,
     liveSessionDto,
-    catanLivePoints,
     catanPhaseName,
     sessionId,
     currentUser?.id,
-    scoringPanelLabels,
     turnRendererState,
     turnRendererPlayers,
     turnRendererLabels,
@@ -1315,7 +1250,6 @@ export function SessionLiveView(): ReactElement {
           session={liveSessionDto}
           viewerRole={activeSession.viewerRole}
           sessionId={liveSessionDto.id}
-          livePoints={catanLivePoints}
           phaseName={catanPhaseName}
           className="p-3"
         />
@@ -1323,9 +1257,8 @@ export function SessionLiveView(): ReactElement {
       {effectiveTab === 'score' && (
         <ScoreTabContent
           sessionId={sessionId ?? ''}
+          session={liveSessionDto}
           viewerRole={activeSession.viewerRole}
-          players={activeSession.players}
-          labels={scoringPanelLabels}
           className="p-3"
         />
       )}
@@ -1485,19 +1418,12 @@ export function SessionLiveView(): ReactElement {
       {dialogState === 'endgame' && (
         <Suspense fallback={null}>
           <EndgameDialog
-            // #2431: polymorphic path when scoringType + scoreData are loaded;
-            // otherwise the legacy `{ score, isWinner: false }` shape keeps the
-            // dialog renderable during cold-start.
-            // TODO(#2389 Block C cleanup): once the legacy `p.score` scalar is
-            // removed by the polymorphic migration, drop this fallback and
-            // either return [] or gate the dialog mount on scoringType !== null.
+            // #4156 fetta 2: the totals the backend recalculates from RoundScores (ADR-089).
+            // Without the DTO (the visual-test fixture) the adapted players keep the dialog
+            // renderable.
             finalScores={
-              endgameScoringType !== null && endgameScoreData !== null
-                ? mapScoreDataToEndgameSummary(
-                    endgameScoringType,
-                    endgameScoreData,
-                    activeSession.players
-                  )
+              liveSessionDto != null
+                ? finalScores(liveSessionDto)
                 : activeSession.players.map(p => ({
                     playerName: p.name,
                     score: p.score,

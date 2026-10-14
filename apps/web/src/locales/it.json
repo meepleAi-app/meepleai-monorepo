@@ -3681,6 +3681,19 @@
           "columns": {
             "player": "Giocatore"
           }
+        },
+        "rounds": {
+          "roundLabel": "Round {round}",
+          "previousRound": "Round precedente",
+          "nextRound": "Round successivo",
+          "currentRound": "Torna al round in corso",
+          "player": "Giocatore",
+          "total": "Totale",
+          "noDimensions": "Questa partita non ha dimensioni di punteggio.",
+          "noPlayers": "Nessun giocatore segna punti in questa partita.",
+          "cellAriaTemplate": "{dimension} di {player}, round {round}",
+          "saveError": "Punteggio non salvato: riprova.",
+          "notAnInteger": "Il punteggio deve essere un numero intero."
         }
       },
       "actionLog": {

@@ -1,109 +1,69 @@
 /**
- * ScoreTabContent — polymorphic score tab content for SessionLiveView.
+ * ScoreTabContent — the Score tab of the live page, on `RoundScores` (#4156 fetta 2, ADR-089).
  *
- * Owns ALL polymorphic scoring logic for the score tab:
- *   - Block B (read-only): store selectors + REST hydration race guard +
- *     scoringPanelData adapter memo + a11y placeholder.
- *   - Block B+ (mutable): role-based mount (Host=editor, others=renderer),
- *     debounced useUpdateSessionScores wire, optimistic local override,
- *     5-kind error mapper, retry button, 30s rate-limit countdown
- *     persisted in useLiveSessionStore.
+ * An editor player × dimension × round: the players are those who score (active, not spectators),
+ * the dimensions are the ones the wizard configured (`ScoringConfig`), and the round is the derived
+ * round of the game (D6), which the host can change. The host writes a cell on blur or Enter; the
+ * others read. The totals are the backend's (`totalScore`, recalculated on every write).
  *
- * Issue #2430 Block B+.
+ * Before #4156 the tab read a polymorphic `scoringType` that nothing ever set — it stayed on
+ * "Caricamento punteggi…" — and wrote to `/game-sessions/{id}/scores-polymorphic` with the id of a
+ * live session. The polymorphic scoring is retired from the live path, as ADR-089 provides.
  */
 
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
-import {
-  ScoringPanelRenderer,
-  type ScoringPanelData,
-  type ScoringPanelRendererLabels,
-} from '@/components/features/session-live';
-import { PolymorphicScoreEditor } from '@/components/sessions';
-import type { ScoreChangePayload } from '@/components/sessions/PolymorphicScoreEditor';
-import type { ScoreDataByType, ScoreType } from '@/components/sessions/score-strategies/types';
-import {
-  UpdateSessionScoresError,
-  useUpdateSessionScores,
-  type UpdateSessionScoresPayload,
-} from '@/hooks/use-update-session-scores';
-import { useGameObjectivesCatalogue } from '@/hooks/useGameObjectivesCatalogue';
+import { Button } from '@/components/ui/primitives/button';
+import { useRecordRoundScore } from '@/hooks/queries/useRecordRoundScore';
 import { useTranslation } from '@/hooks/useTranslation';
-import { mapScoreDataToPanelData } from '@/lib/session-live/score-data-to-panel-data';
-import { useDebouncedCallback } from '@/lib/session-live/use-debounced-callback';
-import { useLiveSessionStore } from '@/lib/stores/live-session-store';
-
-const RATE_LIMIT_WINDOW_MS = 30_000;
-
-// ─── Local normalized error type ─────────────────────────────────────────────
-
-type ScoredErrorKind = 'forbidden' | 'rate-limited' | 'validation' | 'server' | 'network';
-
-interface ScoredError {
-  readonly kind: ScoredErrorKind;
-  readonly status: number;
-  readonly message: string;
-  readonly details?: unknown;
-}
-
-function mapMutationError(err: unknown): ScoredError {
-  if (err instanceof UpdateSessionScoresError) {
-    if (err.status === 429) {
-      return { kind: 'rate-limited', status: 429, message: err.message };
-    }
-    return {
-      kind: err.kind,
-      status: err.status,
-      message: err.message,
-      details: err.details,
-    };
-  }
-  return {
-    kind: 'network',
-    status: 0,
-    message: err instanceof Error ? err.message : 'Network error',
-  };
-}
-
-// ─── Props ────────────────────────────────────────────────────────────────────
+import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
+import {
+  canRecordScores,
+  cellValue,
+  deriveRound,
+  scoringPlayers,
+} from '@/lib/session-live/round-scores';
 
 export interface ScoreTabContentProps {
   readonly sessionId: string;
+  /** The live session; `null`/`undefined` while it loads. */
+  readonly session: LiveSessionDto | null | undefined;
   readonly viewerRole: 'Host' | 'Player' | 'Spectator';
-  readonly players: ReadonlyArray<{
-    readonly id: string;
-    readonly name: string;
-    readonly displayName?: string;
-  }>;
-  readonly labels: ScoringPanelRendererLabels;
   readonly className?: string;
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+/** A cell of the editor, and the value it holds (`undefined` when nobody has scored it). */
+interface Cell {
+  readonly playerId: string;
+  readonly round: number;
+  readonly dimension: string;
+  readonly unit?: string;
+  readonly current?: number;
+}
 
-export function ScoreTabContent(props: ScoreTabContentProps): ReactElement {
-  const { sessionId, viewerRole, players, labels, className } = props;
+function cellKey(playerId: string, round: number, dimension: string): string {
+  return `${playerId}|${round}|${dimension.toLowerCase()}`;
+}
+
+export function ScoreTabContent({
+  sessionId,
+  session,
+  viewerRole,
+  className,
+}: ScoreTabContentProps): ReactElement {
   const { t } = useTranslation();
+  const mutation = useRecordRoundScore(sessionId);
 
-  // Store selectors
-  const scoringType = useLiveSessionStore(s => s.scoringType);
-  const scoreData = useLiveSessionStore(s => s.scoreData);
-  const rateLimitedUntil = useLiveSessionStore(s => s.rateLimitedUntil);
-  const setRateLimitedUntil = useLiveSessionStore(s => s.setRateLimitedUntil);
+  /** The round the host picked; `null` follows the derived round of the game. */
+  const [chosenRound, setChosenRound] = useState<number | null>(null);
+  /** What the host is typing, per cell, until it is written. */
+  const [drafts, setDrafts] = useState<Readonly<Record<string, string>>>({});
 
-  // Mutation hook
-  const mutation = useUpdateSessionScores();
-
-  // Refs (unmount safety).
-  // isMountedRef alone is sufficient to guard against post-unmount setState;
-  // the host-transfer mid-mutation case is covered by the flush effect's
-  // [viewerRole, flush] deps which fires cleanup on role change.
-  // The retry button captures the payload via closure (handleMutationError's
-  // second arg), so no lastPayloadRef is needed.
   const isMountedRef = useRef(true);
   useEffect(() => {
     isMountedRef.current = true;
@@ -112,211 +72,209 @@ export function ScoreTabContent(props: ScoreTabContentProps): ReactElement {
     };
   }, []);
 
-  // Optimistic local override (cleared on success/error)
-  const [localScoreOverride, setLocalScoreOverride] = useState<ScoreDataByType[ScoreType] | null>(
-    null
-  );
+  // Writes go one at a time: two writes on the same live session at once collide on its
+  // optimistic concurrency, and one of them would fail.
+  const queueRef = useRef<Promise<void>>(Promise.resolve());
+  const { mutateAsync } = mutation;
 
-  // Tick state for 429 countdown
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    if (rateLimitedUntil == null) return;
-    const intervalId = setInterval(() => {
-      setTick(n => n + 1);
-      if (Date.now() >= rateLimitedUntil) {
-        setRateLimitedUntil(null);
+  const dropDraft = useCallback((key: string) => {
+    if (!isMountedRef.current) return;
+    setDrafts(current => {
+      const next = { ...current };
+      delete next[key];
+      return next;
+    });
+  }, []);
+
+  const commit = useCallback(
+    (key: string, cell: Cell) => {
+      const raw = drafts[key];
+      if (raw === undefined) return;
+      const trimmed = raw.trim();
+      const value = Number(trimmed);
+      if (trimmed === '' || value === cell.current) {
+        dropDraft(key);
+        return;
       }
-    }, 1000);
-    return () => clearInterval(intervalId);
-  }, [rateLimitedUntil, setRateLimitedUntil]);
-
-  const isRateLimited = rateLimitedUntil != null && Date.now() < rateLimitedUntil;
-  const rateLimitRemainingSec =
-    isRateLimited && rateLimitedUntil != null
-      ? Math.max(0, Math.ceil((rateLimitedUntil - Date.now()) / 1000))
-      : 0;
-
-  // Effective score data: localOverride wins during pending debounce
-  const effectiveScoreData = localScoreOverride ?? scoreData;
-
-  // #2432: catalogue lookup centralised at the hook so a future per-game
-  // BE endpoint becomes an internal swap. The store does not yet carry
-  // `gameId` (#1899-followup, same TODO that gates `scoringType` wiring),
-  // so we pass null today and let the hook resolve to the default catalogue.
-  const availableObjectives = useGameObjectivesCatalogue(null);
-
-  // Renderer data (Block B path, used for non-Host roles + Host's null fallback)
-  const scoringPanelData = useMemo<ScoringPanelData | null>(
-    () =>
-      mapScoreDataToPanelData(scoringType, effectiveScoreData, players, {
-        availableObjectives,
-      }),
-    [scoringType, effectiveScoreData, players, availableObjectives]
-  );
-
-  // Error handler — normalized via mapMutationError
-  const handleMutationError = useCallback(
-    (err: unknown, payload: UpdateSessionScoresPayload | null) => {
-      if (!isMountedRef.current) return;
-      const scored = mapMutationError(err);
-      setLocalScoreOverride(null); // rollback to store
-      switch (scored.kind) {
-        case 'forbidden':
-          toast.error(t('pages.sessionLive.scoring.forbiddenToast'), {
-            id: 'score-403',
-          });
-          break;
-        case 'rate-limited': {
-          const deadline = Date.now() + RATE_LIMIT_WINDOW_MS;
-          setRateLimitedUntil(deadline);
-          toast.warning(
-            t('pages.sessionLive.scoring.rateLimitedToast', {
-              seconds: RATE_LIMIT_WINDOW_MS / 1000,
-            }),
-            { id: 'score-429' }
-          );
-          break;
-        }
-        case 'validation': {
-          toast.error(
-            t('pages.sessionLive.scoring.validationFailedTemplate', {
-              message: JSON.stringify(scored.details ?? scored.message),
-            }),
-            { id: 'score-400' }
-          );
-          break;
-        }
-        case 'server':
-          toast.error(t('pages.sessionLive.scoring.serverErrorToast'), {
-            id: 'score-5xx',
-            action: {
-              label: t('pages.sessionLive.scoring.retryCta'),
-              onClick: () => {
-                if (payload) {
-                  mutation.mutate(payload, {
-                    onError: e => handleMutationError(e, payload),
-                  });
-                }
-              },
-            },
-          });
-          break;
-        case 'network':
-          toast.error(t('pages.sessionLive.scoring.networkErrorToast'), {
-            id: 'score-network',
-            action: {
-              label: t('pages.sessionLive.scoring.retryCta'),
-              onClick: () => {
-                if (payload) {
-                  mutation.mutate(payload, {
-                    onError: e => handleMutationError(e, payload),
-                  });
-                }
-              },
-            },
-          });
-          break;
+      if (!Number.isInteger(value)) {
+        toast.error(t('pages.sessionLive.scoring.rounds.notAnInteger'), {
+          id: 'round-score-integer',
+        });
+        dropDraft(key);
+        return;
       }
-    },
-    // `mutation.mutate` is referentially stable across renders (TanStack Query
-    // guarantee), so we depend on the method, not the whole mutation object.
-    // Whole `mutation` would change identity on pending/idle flips, forcing
-    // handleMutationError → submitMutation → debouncedSubmit recreation
-    // mid-edit and potentially dropping in-flight debounced calls.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mutation.mutate is stable per TanStack Query v5
-    [t, mutation.mutate, setRateLimitedUntil]
-  );
-
-  // Debounced mutation dispatch.
-  // Hook-level useUpdateSessionScores.onSuccess invalidates queries; the
-  // inline onSuccess below ADDS the local-override clear — TanStack Query v5
-  // merges per-mutate callbacks with hook-level ones (both fire).
-  const submitMutation = useCallback(
-    (payload: UpdateSessionScoresPayload) => {
-      mutation.mutate(payload, {
-        onSuccess: () => {
-          if (!isMountedRef.current) return;
-          setLocalScoreOverride(null);
-        },
-        onError: err => handleMutationError(err, payload),
+      queueRef.current = queueRef.current.then(async () => {
+        try {
+          await mutateAsync({
+            request: {
+              playerId: cell.playerId,
+              round: cell.round,
+              dimension: cell.dimension,
+              value,
+              ...(cell.unit ? { unit: cell.unit } : {}),
+            },
+            correction: cell.current !== undefined,
+          });
+        } catch {
+          if (isMountedRef.current) {
+            toast.error(t('pages.sessionLive.scoring.rounds.saveError'), {
+              id: 'round-score-save',
+            });
+          }
+        } finally {
+          dropDraft(key);
+        }
       });
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mutation.mutate is stable per TanStack Query v5
-    [mutation.mutate, handleMutationError]
+    [drafts, dropDraft, mutateAsync, t]
   );
 
-  const [debouncedSubmit, flush] = useDebouncedCallback(submitMutation, 500);
-
-  // Flush-on-unmount + flush-on-role-change (DEC-4).
-  // [viewerRole, flush] deps ensure cleanup fires on in-tree role transitions
-  // (Host → Player without a full unmount).
-  useEffect(() => {
-    return () => {
-      flush();
-    };
-  }, [viewerRole, flush]);
-
-  // onChange handler for the editor: optimistic UI + debounced submit
-  const handleScoreChange = useCallback(
-    (payload: ScoreChangePayload) => {
-      setLocalScoreOverride(payload.data);
-      debouncedSubmit({
-        sessionId,
-        scoringType: payload.scoringType,
-        scoreData: payload.data,
-      });
-    },
-    [sessionId, debouncedSubmit]
-  );
-
-  // ── Render ────────────────────────────────────────────────────────────────
-
-  const playerOptions = useMemo(
-    () => players.map(p => ({ id: p.id, displayName: p.displayName ?? p.name })),
-    [players]
-  );
-
-  const hostEditing = viewerRole === 'Host' && scoringType !== null;
-
-  if (hostEditing && scoringType !== null) {
+  if (session == null) {
     return (
-      <div className={className}>
-        <PolymorphicScoreEditor
-          scoringType={scoringType}
-          players={playerOptions}
-          initialData={effectiveScoreData ?? undefined}
-          availableObjectives={availableObjectives}
-          onChange={handleScoreChange}
-          disabled={isRateLimited || mutation.isPending}
-        />
-        {isRateLimited && (
-          <div
-            role="status"
-            aria-live="polite"
-            data-slot="score-rate-limit-countdown"
-            className="mt-1 text-xs text-amber-500"
-          >
-            {t('pages.sessionLive.scoring.rateLimitedTemplate', {
-              seconds: rateLimitRemainingSec,
-            })}
-          </div>
+      <div
+        role="status"
+        aria-live="polite"
+        data-slot="scoring-panel-empty"
+        className={`${className ?? ''} text-xs text-muted-foreground`.trim()}
+      >
+        {t('pages.sessionLive.scoring.loadingLabel')}
+      </div>
+    );
+  }
+
+  const players = scoringPlayers(session);
+  const dimensions = session.scoringConfig.enabledDimensions;
+  const units = session.scoringConfig.dimensionUnits;
+
+  if (dimensions.length === 0 || players.length === 0) {
+    return (
+      <div
+        role="status"
+        data-slot="scoring-panel-empty"
+        className={`${className ?? ''} text-xs text-muted-foreground`.trim()}
+      >
+        {t(
+          dimensions.length === 0
+            ? 'pages.sessionLive.scoring.rounds.noDimensions'
+            : 'pages.sessionLive.scoring.rounds.noPlayers'
         )}
       </div>
     );
   }
 
-  if (scoringPanelData != null) {
-    return <ScoringPanelRenderer data={scoringPanelData} labels={labels} className={className} />;
-  }
+  const derivedRound = deriveRound(session.currentTurnIndex, players.length);
+  const round = chosenRound ?? derivedRound;
+  const editable = viewerRole === 'Host' && canRecordScores(session);
 
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      data-slot="scoring-panel-empty"
-      className={`${className ?? ''} text-xs text-muted-foreground`.trim()}
-    >
-      {t('pages.sessionLive.scoring.loadingLabel')}
+    <div data-slot="round-score-editor" className={className}>
+      <div className="mb-3 flex items-center gap-1" data-slot="round-score-round">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label={t('pages.sessionLive.scoring.rounds.previousRound')}
+          disabled={round <= 1}
+          onClick={() => setChosenRound(Math.max(1, round - 1))}
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        </Button>
+        <span
+          className="min-w-[5rem] text-center text-sm font-semibold text-foreground"
+          aria-live="polite"
+          data-slot="round-score-round-label"
+        >
+          {t('pages.sessionLive.scoring.rounds.roundLabel', { round })}
+        </span>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          aria-label={t('pages.sessionLive.scoring.rounds.nextRound')}
+          onClick={() => setChosenRound(round + 1)}
+        >
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        </Button>
+        {round !== derivedRound && (
+          <Button type="button" variant="link" size="sm" onClick={() => setChosenRound(null)}>
+            {t('pages.sessionLive.scoring.rounds.currentRound')}
+          </Button>
+        )}
+      </div>
+
+      <table className="w-full border-collapse text-sm">
+        <thead>
+          <tr className="border-b border-border text-left text-xs text-muted-foreground">
+            <th scope="col" className="py-1 pr-2 font-medium">
+              {t('pages.sessionLive.scoring.rounds.player')}
+            </th>
+            {dimensions.map(dimension => (
+              <th key={dimension} scope="col" className="px-1 py-1 font-medium">
+                {units[dimension] ? `${dimension} (${units[dimension]})` : dimension}
+              </th>
+            ))}
+            <th scope="col" className="py-1 pl-2 text-right font-medium">
+              {t('pages.sessionLive.scoring.rounds.total')}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {players.map(player => (
+            <tr key={player.id} className="border-b border-border/60">
+              <th scope="row" className="py-1.5 pr-2 text-left font-medium text-foreground">
+                {player.displayName}
+              </th>
+              {dimensions.map(dimension => {
+                const key = cellKey(player.id, round, dimension);
+                const current = cellValue(session, player.id, round, dimension);
+                const label = t('pages.sessionLive.scoring.rounds.cellAriaTemplate', {
+                  dimension,
+                  player: player.displayName,
+                  round,
+                });
+                return (
+                  <td key={dimension} className="px-1 py-1">
+                    {editable ? (
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        step={1}
+                        aria-label={label}
+                        data-slot="round-score-cell"
+                        value={drafts[key] ?? (current === undefined ? '' : String(current))}
+                        onChange={event =>
+                          setDrafts(previous => ({ ...previous, [key]: event.target.value }))
+                        }
+                        onBlur={() =>
+                          commit(key, {
+                            playerId: player.id,
+                            round,
+                            dimension,
+                            unit: units[dimension],
+                            current,
+                          })
+                        }
+                        onKeyDown={event => {
+                          if (event.key === 'Enter') event.currentTarget.blur();
+                        }}
+                        className="w-16 rounded-md border border-border bg-background px-2 py-1 text-right text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      />
+                    ) : (
+                      <span className="block text-right text-foreground">{current ?? '—'}</span>
+                    )}
+                  </td>
+                );
+              })}
+              <td
+                className="py-1.5 pl-2 text-right font-semibold text-foreground"
+                data-slot="round-score-total"
+              >
+                {player.totalScore}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

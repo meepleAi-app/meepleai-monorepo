@@ -29,7 +29,7 @@
  * Mocks: useSession, useSessionLiveStream, next/navigation, next-intl, session-live-visual-test-fixture.
  */
 
-import { fireEvent, render, screen, act, within } from '@testing-library/react';
+import { fireEvent, render, screen, act, waitFor, within } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactElement } from 'react';
@@ -37,7 +37,6 @@ import type { ReactElement } from 'react';
 import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
 import type { UseSessionLiveStreamResult } from '@/lib/session-live/use-session-live-stream';
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
-import type { ScoreDataByType } from '@/components/sessions/score-strategies/types';
 
 // ─── useSignalRSession mock (#2588 A4: dispute hydration via SignalR) ─────────
 // The hook connects to /hubs/game-state — mock it to a no-op so tests don't try
@@ -119,20 +118,13 @@ vi.mock('@/lib/session-live/use-session-live-stream', () => ({
   useSessionLiveStream: (args: unknown) => useSessionLiveStreamMock(args),
 }));
 
-// ─── useUpdateSessionScores mock (#2430 Block B+: avoid QueryClientProvider) ──
+// ─── useRecordRoundScore mock (#4156 fetta 2: avoid QueryClientProvider) ─────
 
-vi.mock('@/hooks/use-update-session-scores', async () => {
-  const actual = await vi.importActual<typeof import('@/hooks/use-update-session-scores')>(
-    '@/hooks/use-update-session-scores'
-  );
-  return {
-    ...actual,
-    useUpdateSessionScores: () => ({
-      mutate: vi.fn(),
-      isPending: false,
-    }),
-  };
-});
+const recordRoundScoreMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@/hooks/queries/useRecordRoundScore', () => ({
+  useRecordRoundScore: () => ({ mutateAsync: recordRoundScoreMock, isPending: false }),
+}));
 
 // ─── sonner mock (#2430 Block B+: ScoreTabContent toasts) ─────────────────
 
@@ -357,6 +349,18 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.scoring.playerCount':
     '{count, plural, =0 {Nessun giocatore} =1 {1 giocatore} other {# giocatori}}',
   'pages.sessionLive.scoring.loadingLabel': 'Caricamento punteggi…',
+  // #4156 fetta 2 — editor on RoundScores
+  'pages.sessionLive.scoring.rounds.roundLabel': 'Round {round}',
+  'pages.sessionLive.scoring.rounds.previousRound': 'Round precedente',
+  'pages.sessionLive.scoring.rounds.nextRound': 'Round successivo',
+  'pages.sessionLive.scoring.rounds.currentRound': 'Torna al round in corso',
+  'pages.sessionLive.scoring.rounds.player': 'Giocatore',
+  'pages.sessionLive.scoring.rounds.total': 'Totale',
+  'pages.sessionLive.scoring.rounds.noDimensions': 'Questa partita non ha dimensioni di punteggio.',
+  'pages.sessionLive.scoring.rounds.noPlayers': 'Nessun giocatore segna punti in questa partita.',
+  'pages.sessionLive.scoring.rounds.cellAriaTemplate': '{dimension} di {player}, round {round}',
+  'pages.sessionLive.scoring.rounds.saveError': 'Punteggio non salvato: riprova.',
+  'pages.sessionLive.scoring.rounds.notAnInteger': 'Il punteggio deve essere un numero intero.',
   // Block C #2389 T6 — nested polymorphic scoring keys (mirror locale catalog T5 additions).
   'pages.sessionLive.scoring.points.title': 'Punteggi',
   'pages.sessionLive.scoring.points.leaderLabel': 'in testa',
@@ -1113,16 +1117,13 @@ describe('SessionLiveView (Wave D.2 Interactions — Task 3)', () => {
     expect(container.querySelector('[data-slot="live-session-notes"]')).toBeInTheDocument();
   });
 
-  it('T4.11: RIGHT tab=score renders ScoringPanelRenderer (G5a #2375)', () => {
-    // ?tab default → 'score'. ScoringPanelRenderer replaces LiveScoringPanel (#2421 wire-up).
-    // #2389 Block B: renderer is now gated on scoringType != null — seed the store
-    // first so the renderer mounts instead of the a11y placeholder.
-    useLiveSessionStore.getState().setScoringConfig({
-      scoringType: 'Points',
-      scoreData: { scores: [] },
-    });
+  it('T4.11: RIGHT tab=score is the Score tab — a session without dimensions says so (#4156)', () => {
+    // ?tab default → 'score'. MOCK_SESSION_DTO configures no scoring dimension.
     const { container } = renderWithIntl(<SessionLiveView />);
-    expect(container.querySelector('[data-slot="scoring-panel-renderer"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="scoring-panel-empty"]')).toBeInTheDocument();
+    expect(
+      screen.getAllByText('Questa partita non ha dimensioni di punteggio.').length
+    ).toBeGreaterThan(0);
   });
 
   // ─── T3.3: Mobile drawer tab routing — Interactions panels (T9 sess.46r) ─
@@ -1284,11 +1285,52 @@ describe('SessionLiveView (Wave D.2 Interactions — Task 3)', () => {
 
 // ─── Block B (#2389) scoring wire-up tests ────────────────────────────────────
 
-describe('SessionLiveView — Block B (#2389) scoring wire-up', () => {
+describe('SessionLiveView — #4156 fetta 2: the Score tab scores on RoundScores', () => {
+  const HOST_ID = '55555555-5555-4555-8555-555555555555';
+  // Two scoring players and turn 3: the derived round (D6) is (3 − 1) / 2 + 1 = 2.
+  const SCORED_DTO = {
+    ...MOCK_SESSION_DTO,
+    currentTurnIndex: 3,
+    players: [
+      {
+        id: 'player-001',
+        displayName: 'Marco',
+        userId: HOST_ID,
+        color: 'blue',
+        role: 'Host',
+        totalScore: 10,
+        isActive: true,
+      },
+      {
+        id: 'player-002',
+        displayName: 'Anna',
+        userId: null,
+        color: 'red',
+        role: 'Player',
+        totalScore: 0,
+        isActive: true,
+      },
+    ],
+    roundScores: [
+      {
+        playerId: 'player-001',
+        round: 2,
+        dimension: 'punti',
+        value: 10,
+        unit: null,
+        recordedAt: '',
+      },
+    ],
+    scoringConfig: { enabledDimensions: ['punti'], dimensionUnits: {} },
+  } as unknown as LiveSessionDto;
+
   beforeEach(() => {
-    // Default useSession + useSessionLiveStream returns for these tests.
+    vi.clearAllMocks();
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    mockParamsId = 'session-abc-123';
+    IS_VISUAL_TEST_BUILD_MOCK = false;
     useLiveSessionMock.mockReturnValue({
-      data: MOCK_SESSION_DTO,
+      data: SCORED_DTO,
       isLoading: false,
       isError: false,
       isSuccess: true,
@@ -1296,108 +1338,56 @@ describe('SessionLiveView — Block B (#2389) scoring wire-up', () => {
       refetch: vi.fn(),
     });
     useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+    recordRoundScoreMock.mockResolvedValue(undefined);
   });
 
-  // ── REST hydration removed (ADR-083 Fase 1, #2501) ──────────────────────────
-  // The polymorphic scoring REST hydration (scoringType/scoreData/turnOrderType
-  // from GameSessionDto) was removed when the loader switched to the canonical
-  // LiveGameSession aggregate (LiveSessionDto, which is round-based and exposes
-  // no polymorphic fields). On the real funnel those fields were always
-  // undefined (empty GameSession shell) so the effects never ran in production.
-  // The store can still be populated directly (SignalR / explicit action) — the
-  // null-gate, placeholder and renderer-variant tests below exercise that path.
-  // Round-based scoring wiring from LiveSessionDto.roundScores/scoringConfig is
-  // deferred to Fase 2.
-
-  // ── Null gate + a11y placeholder (2) ────────────────────────────────────────
-
-  it('renders aria-live placeholder when scoringType is null', () => {
-    // Default beforeEach leaves store null; no DTO config either.
-    renderWithIntl(<SessionLiveView />);
-
-    const placeholder = document.querySelector('[data-slot="scoring-panel-empty"]');
-    expect(placeholder).not.toBeNull();
-    expect(placeholder?.getAttribute('role')).toBe('status');
-    expect(placeholder?.getAttribute('aria-live')).toBe('polite');
-  });
-
-  it('placeholder shows the localized loading label text', () => {
-    renderWithIntl(<SessionLiveView />);
-    expect(screen.getByText('Caricamento punteggi…')).toBeInTheDocument();
-  });
-
-  // ── Variant mount via setScoringConfig action (4) ───────────────────────────
-
-  it('mounts Points renderer when scoringType=Points', () => {
-    renderWithIntl(<SessionLiveView />);
-    act(() => {
-      useLiveSessionStore.getState().setScoringConfig({
-        scoringType: 'Points',
-        scoreData: { scores: [{ playerId: 'player-001', points: 10 }] },
-      });
-    });
-    expect(document.querySelector('[data-slot="scoring-panel-points"]')).not.toBeNull();
-  });
-
-  it('mounts BinaryWin renderer when scoringType=BinaryWin', () => {
-    renderWithIntl(<SessionLiveView />);
-    act(() => {
-      useLiveSessionStore.getState().setScoringConfig({
-        scoringType: 'BinaryWin',
-        scoreData: { results: [{ playerId: 'player-001', isWinner: true }] },
-      });
-    });
-    expect(document.querySelector('[data-slot="scoring-panel-binary-win"]')).not.toBeNull();
-  });
-
-  it('mounts Ranking renderer when scoringType=Ranking', () => {
-    renderWithIntl(<SessionLiveView />);
-    act(() => {
-      useLiveSessionStore.getState().setScoringConfig({
-        scoringType: 'Ranking',
-        scoreData: { positions: [{ playerId: 'player-001', position: 1 }] },
-      });
-    });
-    expect(document.querySelector('[data-slot="scoring-panel-ranking"]')).not.toBeNull();
-  });
-
-  it('mounts Objectives renderer when scoringType=Objectives', () => {
-    renderWithIntl(<SessionLiveView />);
-    act(() => {
-      useLiveSessionStore.getState().setScoringConfig({
-        scoringType: 'Objectives',
-        scoreData: {
-          completedByPlayer: [{ playerId: 'player-001', objectives: [] }],
-        },
-      });
-    });
-    expect(document.querySelector('[data-slot="scoring-panel-objectives"]')).not.toBeNull();
-  });
-
-  // ── #2430 Block B+ smoke: ScoreTabContent mount ──────────────────────────
-
-  it('mounts ScoreTabContent inside score tab (any state)', () => {
+  it('opens on the derived round, with the cells and totals of the live session', () => {
     const { container } = renderWithIntl(<SessionLiveView />);
-    // ScoreTabContent has no unique top-level data-slot; probe via children:
-    // it renders either the placeholder (when scoringType=null) or a renderer.
-    const hasMount =
-      container.querySelector('[data-slot="polymorphic-score-editor"]') ||
-      container.querySelector('[data-slot="scoring-panel-points"]') ||
-      container.querySelector('[data-slot="scoring-panel-empty"]');
-    expect(hasMount).not.toBeNull();
+    const editor = container.querySelector('[data-slot="round-score-editor"]');
+    expect(editor).not.toBeNull();
+    expect(editor?.querySelector('[data-slot="round-score-round-label"]')?.textContent).toBe(
+      'Round 2'
+    );
+    expect(editor?.textContent).toContain('Marco');
+    expect(editor?.textContent).toContain('Anna');
   });
 
-  it('renders ScoringPanelRenderer (not editor) when viewerRole=Player', () => {
-    // Default fixture viewerRole is 'Player'.
-    act(() => {
-      useLiveSessionStore.getState().setScoringConfig({
-        scoringType: 'Points',
-        scoreData: { scores: [{ playerId: 'player-001', points: 10 }] },
-      });
-    });
+  it('a player reads the scores and has nothing to edit', () => {
+    useCurrentUserMock.mockReturnValue({ data: null });
     const { container } = renderWithIntl(<SessionLiveView />);
-    expect(container.querySelector('[data-slot="polymorphic-score-editor"]')).toBeNull();
-    expect(container.querySelector('[data-slot="scoring-panel-points"]')).not.toBeNull();
+    expect(container.querySelector('[data-slot="round-score-editor"]')).not.toBeNull();
+    expect(container.querySelector('[data-slot="round-score-cell"]')).toBeNull();
+  });
+
+  it('the endgame dialog shows the live totals, with the player alone in the lead as the winner', async () => {
+    // Before #4156 the dialog read the polymorphic store, which nothing fed on the live path,
+    // and fell back to the adapted players with no winner at all.
+    searchParamsMap['dialog'] = 'endgame';
+    await act(async () => {
+      renderWithIntl(<SessionLiveView />);
+    });
+    await act(async () => {});
+    const scores = screen.getByRole('list', { name: 'Punteggi finali' });
+    const [first, second] = within(scores).getAllByRole('listitem');
+    expect(first).toHaveTextContent('Marco');
+    expect(first).toHaveTextContent('10');
+    expect(within(first!).getByText('Vincitore')).toBeInTheDocument();
+    expect(second).toHaveTextContent('Anna');
+    expect(within(second!).queryByText('Vincitore')).toBeNull();
+  });
+
+  it('the host writes an empty cell as a new score of the live session', async () => {
+    useCurrentUserMock.mockReturnValue({ data: { id: HOST_ID } });
+    renderWithIntl(<SessionLiveView />);
+    const [cell] = screen.getAllByLabelText('punti di Anna, round 2');
+    fireEvent.change(cell!, { target: { value: '30' } });
+    fireEvent.blur(cell!);
+    await waitFor(() =>
+      expect(recordRoundScoreMock).toHaveBeenCalledWith({
+        request: { playerId: 'player-002', round: 2, dimension: 'punti', value: 30 },
+        correction: false,
+      })
+    );
   });
 });
 

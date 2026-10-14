@@ -173,7 +173,7 @@ export function DraftTrial({
       {error && (
         <div
           role="alert"
-          className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+          className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-foreground"
         >
           {error}
         </div>

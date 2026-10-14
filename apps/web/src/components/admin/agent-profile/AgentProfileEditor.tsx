@@ -12,7 +12,7 @@
  */
 import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 
-import { Loader2 } from 'lucide-react';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 
 import { DraftTrial } from '@/components/admin/agent-profile/DraftTrial';
 import { priceStatus } from '@/components/admin/ai/model-price-status';
@@ -150,7 +150,7 @@ export function AgentProfileEditor() {
   if (loadError) {
     return (
       <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/10 p-4">
-        <p className="text-sm font-medium text-destructive">Could not load the agent profile.</p>
+        <p className="text-sm font-medium text-foreground">Could not load the agent profile.</p>
         <p className="mt-1 text-xs text-muted-foreground">{loadError}</p>
       </div>
     );
@@ -200,7 +200,7 @@ export function AgentProfileEditor() {
       {actionError && (
         <div
           role="alert"
-          className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+          className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-foreground"
         >
           {actionError}
         </div>
@@ -486,7 +486,8 @@ function NumberField({
         className="max-w-[12rem]"
       />
       {invalid && (
-        <p id={errorId} className="text-xs font-medium text-destructive">
+        <p id={errorId} className="flex items-center gap-1 text-xs font-medium text-foreground">
+          <AlertTriangle className="h-3.5 w-3.5 text-destructive" aria-hidden="true" />
           Enter a number.
         </p>
       )}
@@ -618,11 +619,18 @@ function ModelField({
       </NativeSelect>
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
       {price && (
+        // #4255: nel guscio admin scuro il rosso del testo non arriva a 4,5:1 sul fondo; resta
+        // sull'icona, a cui basta 3:1.
         <p
           className={
-            price.warn ? 'text-xs font-medium text-destructive' : 'text-xs text-muted-foreground'
+            price.warn
+              ? 'flex items-center gap-1 text-xs font-medium text-foreground'
+              : 'text-xs text-muted-foreground'
           }
         >
+          {price.warn && (
+            <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-destructive" aria-hidden="true" />
+          )}
           {price.text}
         </p>
       )}

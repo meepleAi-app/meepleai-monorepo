@@ -35,10 +35,14 @@ public sealed class CrossGameStreamQaQueryHandlerTests
     private readonly IMultiGameHybridSearchService _searchService = Substitute.For<IMultiGameHybridSearchService>();
     private readonly ILlmService _llmService = Substitute.For<ILlmService>();
 
+    // #4168 (5g-b): il piano di chi chiede. Senza limite, finché un test non ne dà uno.
+    private Moq.Mock<Api.SharedKernel.Services.ITierEnforcementService> _tiers =
+        AnswerPipelineTestDoubles.PlanWith(used: 0, max: int.MaxValue);
+
     // #4168: l'handler è un adattatore; la risposta sta nel flusso cross-game della pipeline, con il
     // profilo del seed e un reranker che non riordina.
     private CrossGameStreamQaQueryHandler CreateSut() => new(new CrossGameAnswerFlow(
-        new Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPreconditions(_ragAccessService),
+        Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Preconditions(_ragAccessService, _tiers.Object),
         AnswerPipelineTestDoubles.RetrievalAcrossGames(_searchService),
         AnswerPipelineTestDoubles.ProfileReader(),
         AnswerPipelineTestDoubles.UncertainLanguageDetection(),
@@ -193,11 +197,174 @@ public sealed class CrossGameStreamQaQueryHandlerTests
         events.Should().NotContain(e => e.Type == StreamingEventType.Complete);
     }
 
+    // ── #4168 (5g-b): la quota del piano, passo 2 ───────────────────────────
+
+    private void ThePlanSays(int used, int max) =>
+        _tiers = AnswerPipelineTestDoubles.PlanWith(used, max);
+
+    private void NothingWasCounted() =>
+        _tiers.Verify(
+            t => t.RecordUsageAsync(
+                Moq.It.IsAny<Guid>(), Moq.It.IsAny<Api.SharedKernel.Services.TierAction>(), Moq.It.IsAny<CancellationToken>()),
+            Moq.Times.Never);
+
+    /// <summary>
+    /// Tre risposte consegnate oggi su un piano da tre: la domanda fra giochi si ferma con lo
+    /// stesso evento della chat, senza cercare e senza chiamare il gateway.
+    /// </summary>
+    [Fact]
+    public async Task OverTheQuotaOfThePlan_EndsWithTheTierLimitError_BeforeSearchAndLlm()
+    {
+        SetupTwoAccessibleGames();
+        SetupSearchResults();
+        SetupLlmStream("unused");
+        ThePlanSays(used: 3, max: 3);
+
+        var events = await CollectEventsAsync(CreateSut(), new CrossGameStreamQaQuery("How do I win?", UserId, UserRole.User));
+
+        var only = events.Should().ContainSingle().Which;
+        only.Type.Should().Be(StreamingEventType.Error);
+        only.Data.Should().Be(new StreamingError(
+            "Tier limit exceeded: AgentQuery (3/3)",
+            "TIER_LIMIT_EXCEEDED",
+            limitType: "AgentQuery",
+            current: 3,
+            max: 3,
+            upgradeUrl: "/pricing"));
+        await _searchService.DidNotReceive().SearchAsync(
+            Arg.Any<string>(), Arg.Any<IReadOnlyList<Guid>>(),
+            Arg.Any<int>(), Arg.Any<SearchMode>(), Arg.Any<double>(),
+            Arg.Any<IReadOnlyList<Guid>?>(),
+            Arg.Any<CancellationToken>());
+        _llmService.DidNotReceive().GenerateAnswerStreamAsync(Arg.Any<LlmAnswerRequest>(), Arg.Any<CancellationToken>());
+        NothingWasCounted();
+    }
+
+    /// <summary>Una domanda su più giochi è una domanda: conta uno, non uno per gioco.</summary>
+    [Fact]
+    public async Task AnAnswerAcrossTwoGames_IsCountedOnce_BeforeCompleteIsSent()
+    {
+        SetupTwoAccessibleGames();
+        SetupSearchResults();
+        SetupLlmStream("Hello World");
+        ThePlanSays(used: 2, max: 3);
+        bool? countedWhenCompleteArrived = null;
+
+        await foreach (var evt in CreateSut().Handle(
+            new CrossGameStreamQaQuery("How do I win?", UserId, UserRole.User), TestContext.Current.CancellationToken))
+        {
+            if (evt.Type == StreamingEventType.Complete)
+            {
+                countedWhenCompleteArrived = _tiers.Invocations.Any(i =>
+                    string.Equals(i.Method.Name, nameof(Api.SharedKernel.Services.ITierEnforcementService.RecordUsageAsync), StringComparison.Ordinal));
+            }
+        }
+
+        countedWhenCompleteArrived.Should().BeTrue();
+        _tiers.Verify(
+            t => t.RecordUsageAsync(UserId, Api.SharedKernel.Services.TierAction.AgentQuery, Moq.It.IsAny<CancellationToken>()),
+            Moq.Times.Once);
+    }
+
+    [Fact]
+    public async Task WhenTheGatewayRefuses_NothingIsCounted()
+    {
+        SetupTwoAccessibleGames();
+        SetupSearchResults();
+        _llmService
+            .GenerateAnswerStreamAsync(Arg.Any<LlmAnswerRequest>(), Arg.Any<CancellationToken>())
+            .Returns(RefusedStream());
+        ThePlanSays(used: 2, max: 3);
+
+        var events = await CollectEventsAsync(CreateSut(), new CrossGameStreamQaQuery("What rules apply?", UserId, UserRole.User));
+
+        events.Should().NotContain(e => e.Type == StreamingEventType.Complete);
+        NothingWasCounted();
+    }
+
+    /// <summary>
+    /// Nessun gioco da interrogare: lo stream si chiude senza cercare e senza una risposta. Non c'è
+    /// niente da contare.
+    /// </summary>
+    [Fact]
+    public async Task WithNoGameToAskAbout_NothingIsCounted()
+    {
+        _ragAccessService
+            .GetAccessibleGameIdsAsync(UserId, UserRole.User, Arg.Any<CancellationToken>())
+            .Returns((IReadOnlyList<Guid>)Array.Empty<Guid>());
+        ThePlanSays(used: 2, max: 3);
+
+        var events = await CollectEventsAsync(CreateSut(), new CrossGameStreamQaQuery("What are the rules?", UserId, UserRole.User));
+
+        events.Should().Contain(e => e.Type == StreamingEventType.Complete);
+        NothingWasCounted();
+    }
+
     private static async IAsyncEnumerable<StreamChunk> RefusedStream()
     {
         await Task.Yield();
         yield return new StreamChunk(null, IsFinal: true, ErrorCode: "AI_BUDGET_DAILY_EXHAUSTED",
             ErrorMessage: "Il servizio AI è in pausa fino a domani: è stato raggiunto il budget di spesa del giorno.");
+    }
+
+    /// <summary>Il modello non ha scritto niente: non c'è una risposta da contare.</summary>
+    [Fact]
+    public async Task WhenTheModelWritesNothing_NothingIsCounted()
+    {
+        SetupTwoAccessibleGames();
+        SetupSearchResults();
+        _llmService
+            .GenerateAnswerStreamAsync(Arg.Any<LlmAnswerRequest>(), Arg.Any<CancellationToken>())
+            .Returns(SilentStream());
+        ThePlanSays(used: 2, max: 3);
+
+        var events = await CollectEventsAsync(CreateSut(), new CrossGameStreamQaQuery("What rules apply?", UserId, UserRole.User));
+
+        events.Should().NotContain(e => e.Type == StreamingEventType.Token);
+        NothingWasCounted();
+    }
+
+    /// <summary>
+    /// Il client se n'è andato e lo stream del modello finisce senza un'eccezione: la risposta non
+    /// è arrivata a nessuno, e non si conta.
+    /// </summary>
+    [Fact]
+    public async Task WhenTheClientGoesAwayAndTheStreamJustEnds_NothingIsCounted()
+    {
+        SetupTwoAccessibleGames();
+        SetupSearchResults();
+        using var clientGone = new CancellationTokenSource();
+        _llmService
+            .GenerateAnswerStreamAsync(Arg.Any<LlmAnswerRequest>(), Arg.Any<CancellationToken>())
+            .Returns(StreamThatEndsWhenTheClientLeaves(clientGone));
+        ThePlanSays(used: 2, max: 3);
+
+        try
+        {
+            await foreach (var _ in CreateSut().Handle(new CrossGameStreamQaQuery("What rules apply?", UserId, UserRole.User), clientGone.Token))
+            {
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Anche uscire con la cancellazione va bene: conta che non si sia contato.
+        }
+
+        clientGone.IsCancellationRequested.Should().BeTrue("il test ha senso solo se il client se n'è andato");
+        NothingWasCounted();
+    }
+
+    private static async IAsyncEnumerable<StreamChunk> SilentStream()
+    {
+        await Task.Yield();
+        yield return new StreamChunk(null, IsFinal: true, FinishReason: "stop");
+    }
+
+    private static async IAsyncEnumerable<StreamChunk> StreamThatEndsWhenTheClientLeaves(CancellationTokenSource client)
+    {
+        await Task.Yield();
+        yield return new StreamChunk("Le regole");
+        await client.CancelAsync();
     }
 
     // ── Exception in search → Error event, no propagation ───────────────────

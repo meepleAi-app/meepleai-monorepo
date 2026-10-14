@@ -89,6 +89,27 @@ Le risposte della pipeline unica (ADR-095 D3) passano da un ingresso proprio del
 
 Ogni tentativo aggiorna il circuit breaker, tranne quando è il client a smettere di leggere. Ogni riga del registro costi di una risposta porta la versione del profilo (`llm_cost_logs.profile_version_id`, ADR-095 D2). Fanno eccezione le righe dei tentativi falliti senza token, che non hanno costo.
 
+## La quota di domande del piano (#4168, 5g-b)
+
+Non è un tetto di spesa: è il numero di domande al giorno che il piano dell'utente prevede (`TierDefinition.Limits.MaxAgentQueriesPerDay`, modificabile dalla pagina dei piani dell'admin). Sta nella pipeline al passo 2 di ADR-095 D3, dopo l'accesso e prima di tutto il resto, nel passo che i tre percorsi di risposta condividono (`IAnswerPreconditions`): la chat (`/agents/qa/stream`), la domanda singola (`/knowledge-base/ask`, `/agents/qa`) e la domanda fra giochi (`/knowledge-base/ask/global`).
+
+| caso | cosa succede |
+|---|---|
+| la domanda arriva oltre la quota | si ferma prima della cache e prima del gateway. Nello stream: un evento `Error` con codice `TIER_LIMIT_EXCEEDED` e i campi `limitType`, `current`, `max`, `upgradeUrl`. Fuori dallo stream: `403` con `error: "tier_limit_exceeded"` e gli stessi campi |
+| la risposta è stata consegnata, dal modello o **dalla cache** | il contatore cresce di uno, prima dell'evento `Complete` |
+| il gateway rifiuta (`AI_BUDGET_*`), la risposta si interrompe a metà, l'accesso è negato, la ricerca non trova niente | il contatore non cresce |
+| una domanda fra giochi | conta uno, quanti che siano i giochi |
+| admin ed editor | nessun limite, e il contatore non cresce |
+| Redis non risponde | la domanda passa. È voluto: la spesa la protegge il tetto del gateway, che invece blocca (`AI_BUDGET_UNAVAILABLE`) |
+
+**Il contatore** è in Redis: `tier:usage:{userId}:AgentQuery:{yyyy-MM-dd}`, dove il giorno è quello **UTC**, e scade da solo dopo due giorni. Per questo il frontend dice all'utente l'ora del suo fuso in cui il conteggio riparte, con «mezzanotte UTC» accanto.
+
+**Quando Redis è giù la quota non vale per nessuno.** Lo si vede da un warning nel log dell'API («The plan quota of user … could not be read») e dalla metrica `meepleai.answer.quota.unreadable`, che su Prometheus si chiama `meepleai_answer_quota_unreadable_checks_total` (l'exporter aggiunge l'unità e `_total`). Non c'è ancora un allarme che la legga.
+
+**Verificare e contare sono due momenti**: due domande partite insieme all'ultima disponibile passano entrambe. È accettato (#4168).
+
+**Che cosa non conta nella quota**: il playground dell'admin, la valutazione dei dataset e l'auto-test del wizard, che non passano dai tre percorsi; e i gestori che generano con l'LLM sulla KB per conto loro (arbitro, tutor, suggerimento di mossa, guida alla preparazione), che hanno un cancello d'accesso ma non il passo condiviso. Se debbano contare è una decisione aperta in #4168.
+
 ## KbQuality
 
 Il tetto di KbQuality è la **quota delle valutazioni** (D6: «il tetto di KbQuality diventa una quota dentro il tetto unico»). Prima della fetta 3b era un contatore per tenant di 50 $ al mese (`EvalQuality:MonthlyCostCap`), fuori da ogni altro budget.

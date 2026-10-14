@@ -62,6 +62,28 @@ internal static class AnswerPipelineTestDoubles
         return detector.Object;
     }
 
+    /// <summary>
+    /// Il passo delle precondizioni. Senza un piano, quello senza limite: nessuna domanda fermata e
+    /// nessuna contata, che è ciò che si aspettano i test che non parlano di quota.
+    /// </summary>
+    public static AnswerPreconditions Preconditions(
+        IRagAccessService ragAccess, Api.SharedKernel.Services.ITierEnforcementService? tiers = null) =>
+        new(ragAccess, tiers ?? PlanWith(used: 0, max: int.MaxValue).Object, NullLogger<AnswerPreconditions>.Instance);
+
+    /// <summary>
+    /// Ciò che il servizio dei piani direbbe a un certo punto della giornata: quante domande hanno
+    /// già avuto risposta, quante ne prevede il piano, e se il contatore si è potuto leggere.
+    /// </summary>
+    public static Mock<Api.SharedKernel.Services.ITierEnforcementService> PlanWith(
+        int used, int max, bool counterReadable = true)
+    {
+        var tiers = new Mock<Api.SharedKernel.Services.ITierEnforcementService>();
+        tiers.Setup(t => t.CheckUsageAsync(
+                It.IsAny<Guid>(), Api.SharedKernel.Services.TierAction.AgentQuery, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Api.SharedKernel.Services.TierUsageCheck(used, max, counterReadable));
+        return tiers;
+    }
+
     public static AnswerRetrieval Retrieval(
         SearchQueryHandler searchQueryHandler,
         ICrossEncoderReranker reranker,

@@ -42,7 +42,6 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private readonly ISemanticResponseCache _responseCache;
     private readonly IEmbeddingService _embeddingService;
     private readonly IHouseRuleMatcher _houseRuleMatcher;
-    private readonly IPricingEngine _pricingEngine;
     private readonly IGenericTranslationService _genericTranslationService;
     private readonly IIntentClassifierService _intentClassifier;
     private readonly IMechanicCardProvider _mechanicCardProvider;
@@ -65,7 +64,6 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         ISemanticResponseCache responseCache,
         IEmbeddingService embeddingService,
         IHouseRuleMatcher houseRuleMatcher,
-        IPricingEngine pricingEngine,
         IGenericTranslationService genericTranslationService,
         IIntentClassifierService intentClassifier,
         IMechanicCardProvider mechanicCardProvider,
@@ -87,7 +85,6 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _responseCache = responseCache ?? throw new ArgumentNullException(nameof(responseCache));
         _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _houseRuleMatcher = houseRuleMatcher ?? throw new ArgumentNullException(nameof(houseRuleMatcher));
-        _pricingEngine = pricingEngine ?? throw new ArgumentNullException(nameof(pricingEngine));
         _genericTranslationService = genericTranslationService ?? throw new ArgumentNullException(nameof(genericTranslationService));
         _intentClassifier = intentClassifier ?? throw new ArgumentNullException(nameof(intentClassifier));
         _mechanicCardProvider = mechanicCardProvider ?? throw new ArgumentNullException(nameof(mechanicCardProvider));
@@ -112,13 +109,22 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         // #4168: il livello di complessità resta nelle metriche; il modello non lo sceglie più lui
         // (l'override di `LlmRouting:QueryComplexityModels`), ma la versione pubblicata del profilo.
 
-        // Passo 1 di D3 — e, con la 5g-b, il 2 — nel passo condiviso con la chat e la ricerca fra
-        // giochi. Solo quando la domanda nomina un utente: l'unico mittente che non lo fa è
+        // Passi 1 e 2 di D3, nel passo condiviso con la chat e la ricerca fra giochi: l'accesso, poi
+        // la quota del piano (prima della cache: anche una risposta servita dalla cache è una
+        // domanda). Solo quando la domanda nomina un utente: l'unico mittente che non lo fa è
         // l'auto-test del wizard (RunAgentAutoTestCommandHandler), dietro una rotta admin.
+        AnswerQuota? quota = null;
         if (query.UserId.HasValue)
         {
             await _preconditions.EnsureCanAskAboutGameAsync(
                 query.UserId.Value, query.UserRole, query.GameId, cancellationToken).ConfigureAwait(false);
+
+            quota = await _preconditions.CheckQuotaAsync(query.UserId.Value, cancellationToken).ConfigureAwait(false);
+            if (quota.Exceeded)
+            {
+                // Fuori dallo stream: il 403 tier_limit_exceeded degli altri limiti di piano.
+                throw quota.ToException();
+            }
         }
 
         // D2: la versione pubblicata, letta una volta. Senza profilo nessuna risposta, mai i valori compilati.
@@ -153,12 +159,6 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
                     query.GameId);
             }
         }
-
-        // PHASE 2: Pricing quota check — throws ForbiddenException if daily quota exhausted.
-        var quotaAllowed = await _pricingEngine.ConsumeQuotaAsync(
-            query.UserId, "qa_question", cancellationToken).ConfigureAwait(false);
-        if (!quotaAllowed)
-            throw new ForbiddenException("Quota giornaliera esaurita. Acquista crediti per continuare.");
 
         // R1 (issue #3416, ADR-088): fetch approved mechanic-card claims to inject as authoritative
         // context. Feature-flag gated (default off), best-effort, and computed HERE — above the semantic
@@ -282,6 +282,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
                             NoRelevantContext: false);
                         await _qualityTracker.TrackQueryAsync(cacheMetrics, cancellationToken)
                             .ConfigureAwait(false);
+                        await CountDeliveredAnswerAsync(quota, cancellationToken).ConfigureAwait(false);
                         return new QaResponseDto(
                             Answer: cached.Answer,
                             Sources: [],
@@ -505,8 +506,19 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
             }
         }
 
+        await CountDeliveredAnswerAsync(quota, cancellationToken).ConfigureAwait(false);
         return response;
     }
+
+    /// <summary>
+    /// La risposta è stata consegnata, dal modello o dalla cache: si conta nella quota del piano.
+    /// Le uscite senza una risposta (documenti ancora in lavorazione, nessun passaggio trovato) e
+    /// quelle con un'eccezione (rifiuto del gateway) non passano di qui.
+    /// </summary>
+    private Task CountDeliveredAnswerAsync(AnswerQuota? quota, CancellationToken cancellationToken) =>
+        quota is null
+            ? Task.CompletedTask
+            : _preconditions.RecordAnswerDeliveredAsync(quota, cancellationToken);
 
     /// <summary>
     /// Performs vector search and calculates search confidence.

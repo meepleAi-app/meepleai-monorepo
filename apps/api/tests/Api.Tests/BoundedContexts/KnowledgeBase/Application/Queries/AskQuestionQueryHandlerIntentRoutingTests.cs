@@ -181,11 +181,6 @@ public sealed class AskQuestionQueryHandlerIntentRoutingTests
 
         var qaTrackerMock = new Mock<IRagQualityTracker>();
 
-        var pricingMock = new Mock<IPricingEngine>();
-        pricingMock
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
         var handler = new AskQuestionQueryHandler(
             Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Retrieval(
                 searchHandler, CreatePassthroughReranker(), intentClassifier),
@@ -197,13 +192,12 @@ public sealed class AskQuestionQueryHandlerIntentRoutingTests
             pdfRepoMock.Object,
             new Mock<ILlmService>().Object,
             new Mock<IRagValidationPipelineService>().Object,
-            new Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPreconditions(ragAccessMock.Object),
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Preconditions(ragAccessMock.Object),
             qaTrackerMock.Object,
             new QueryComplexityAnalyzer(),
             new Mock<ISemanticResponseCache>().Object,
             new Mock<IEmbeddingService>().Object,
             new Mock<IHouseRuleMatcher>().Object,
-            pricingMock.Object,
             new Mock<IGenericTranslationService>().Object,
             intentClassifier,
             Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),

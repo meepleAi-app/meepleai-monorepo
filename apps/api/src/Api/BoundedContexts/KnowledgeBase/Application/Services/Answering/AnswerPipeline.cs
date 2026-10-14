@@ -35,7 +35,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 /// I passi, nell'ordine di D3:
 /// <list type="number">
 /// <item>accesso (possesso dichiarato, KB pubblica, gioco privato): <see cref="IAnswerPreconditions"/>;</item>
-/// <item>quota utente: non ancora. Arriva con la consegna 5g-b, nello stesso passo dell'accesso;</item>
+/// <item>quota del piano, prima della cache: anche una risposta servita dalla cache è una domanda
+/// (<see cref="IAnswerPreconditions"/>, consegna 5g-b). Si conta a risposta consegnata;</item>
 /// <item>recupero nella lingua di chi chiede;</item>
 /// <item>reranking, se il profilo lo vuole;</item>
 /// <item>prompt dalla versione pubblicata;</item>
@@ -44,8 +45,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 /// <item>registro: metriche, cache, costo con la versione del profilo.</item>
 /// </list>
 /// La usa <c>StreamQa</c>. <c>AskQuestion</c> e la ricerca fra giochi (<see cref="CrossGameAnswerFlow"/>)
-/// hanno ancora il loro percorso, ma eseguono il passo 1 nello stesso punto,
-/// <see cref="IAnswerPreconditions"/> (consegna 5g-a): è lì che arriverà il passo 2. Il contratto
+/// hanno ancora il loro percorso, ma eseguono i passi 1 e 2 nello stesso punto,
+/// <see cref="IAnswerPreconditions"/> (consegne 5g-a e 5g-b). Il contratto
 /// SSE è quello che <c>StreamQaSseContractCharacterizationTests</c> fissava prima dello spostamento.
 /// </remarks>
 internal sealed class AnswerPipeline : IAnswerPipeline
@@ -125,6 +126,15 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         {
             await _preconditions.EnsureCanAskAboutGameAsync(
                 query.UserId, query.UserRole, accessGameId, cancellationToken).ConfigureAwait(false);
+        }
+
+        // Passo 2 di D3: la quota del piano. Prima della cache, perché anche una risposta servita
+        // dalla cache è una domanda; non lancia, perché lo stream lo dice con un evento.
+        var quota = await _preconditions.CheckQuotaAsync(query.UserId, cancellationToken).ConfigureAwait(false);
+        if (quota.Exceeded)
+        {
+            yield return CreateEvent(StreamingEventType.Error, quota.ToStreamingError());
+            yield break;
         }
 
         // Issue #1445: Use centralized query validation
@@ -207,6 +217,10 @@ internal sealed class AnswerPipeline : IAnswerPipeline
                 }
             }
 
+            // La risposta è stata consegnata: si conta, prima di Complete — un client che smette
+            // di leggere a Complete la sua risposta l'ha avuta.
+            await _preconditions.RecordAnswerDeliveredAsync(quota, cancellationToken).ConfigureAwait(false);
+
             // Emit complete
             yield return CreateEvent(StreamingEventType.Complete,
                 new StreamingComplete(
@@ -225,7 +239,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
 
         // Stream fresh QA response
         await foreach (var evt in AskStreamInternalAsync(
-            query, profile, language.Language, verifiedBlock, chatHistoryContext, cacheKey, cancellationToken).ConfigureAwait(false))
+            query, profile, language.Language, verifiedBlock, chatHistoryContext, cacheKey, quota, cancellationToken).ConfigureAwait(false))
         {
             yield return evt;
         }
@@ -238,6 +252,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         VerifiedRulesBlock verifiedBlock,
         string chatHistoryContext,
         string cacheKey,
+        AnswerQuota quota,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var injectClaims = !verifiedBlock.IsEmpty;
@@ -368,6 +383,14 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         var overallConfidence = await CalculateAndCacheResponseAsync(
             answer, ragSnippets, domainResults, confidence,
             tokenCount, cacheKey, llmUsage, llmCost, injectClaims, cancellationToken).ConfigureAwait(false);
+
+        // La risposta è stata consegnata per intero: si conta. Un rifiuto del gateway o
+        // un'interruzione a metà escono prima di qui, e non contano. Nemmeno una risposta vuota, né
+        // una che nessuno legge più: il client se n'è andato e lo stream è finito senza lanciare.
+        if (answer.Length > 0 && !cancellationToken.IsCancellationRequested)
+        {
+            await _preconditions.RecordAnswerDeliveredAsync(quota, cancellationToken).ConfigureAwait(false);
+        }
 
         yield return CreateEvent(StreamingEventType.Complete,
             new StreamingComplete(0, 0, tokenCount, tokenCount, overallConfidence.Value,

@@ -14,6 +14,14 @@ public interface ITierEnforcementService
     /// <summary>Checks if a user can perform the given action within their tier limits.</summary>
     Task<bool> CanPerformAsync(Guid userId, TierAction action, CancellationToken ct = default);
 
+    /// <summary>
+    /// The counter and the limit of a rate-based action, read once. Unlike
+    /// <see cref="CanPerformAsync"/> it says how many, and whether the counter could be read at
+    /// all: a caller that has to tell "under the limit" from "Redis is down" needs this one.
+    /// Issue #4168 (5g-b).
+    /// </summary>
+    Task<TierUsageCheck> CheckUsageAsync(Guid userId, TierAction action, CancellationToken ct = default);
+
     /// <summary>Records that a user performed an action (increments Redis counter).</summary>
     Task RecordUsageAsync(Guid userId, TierAction action, CancellationToken ct = default);
 
@@ -25,6 +33,24 @@ public interface ITierEnforcementService
     /// Issue #2750 (C14).
     /// </summary>
     Task<GamebookQuotaSnapshot> GetGamebookQuotaSnapshotAsync(Guid userId, CancellationToken ct = default);
+}
+
+/// <summary>
+/// What <see cref="ITierEnforcementService.CheckUsageAsync"/> found. Issue #4168 (5g-b).
+/// </summary>
+/// <param name="Current">The counter. Zero when it could not be read.</param>
+/// <param name="Max">The limit of the user's tier for the action.</param>
+/// <param name="CounterReadable">False when Redis did not answer: the count is unknown, not zero.</param>
+public sealed record TierUsageCheck(int Current, int Max, bool CounterReadable)
+{
+    /// <summary>Admins and editors: no limit, and nothing to count.</summary>
+    public bool IsUnlimited => Max == int.MaxValue;
+
+    /// <summary>
+    /// The limit is reached. Never true when the counter could not be read: an unknown count
+    /// does not stop anybody.
+    /// </summary>
+    public bool Exceeded => CounterReadable && !IsUnlimited && Current >= Max;
 }
 
 /// <summary>

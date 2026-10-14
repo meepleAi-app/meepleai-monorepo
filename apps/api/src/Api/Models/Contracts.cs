@@ -226,10 +226,16 @@ internal record CitationRegion(int Page, double X, double Y, double Width, doubl
 }
 // #4155: gameId solo per i dinieghi legati a un gioco (RAG_OWNERSHIP_REQUIRED); omesso altrove, cosi'
 // gli altri eventi di errore restano byte-identici.
+// #4168 (5g-b): limitType, current, max e upgradeUrl solo per la quota del piano
+// (TIER_LIMIT_EXCEEDED), con gli stessi nomi del 403 tier_limit_exceeded; omessi altrove.
 internal record StreamingError(
     string errorMessage,
     string? errorCode = null,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] Guid? gameId = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] Guid? gameId = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? limitType = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? current = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? max = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? upgradeUrl = null);
 internal record StreamingToken(string token); // CHAT-01: Individual LLM token
 internal record StreamingSetupStep(SetupGuideStep step); // AI-03: Individual setup step
 

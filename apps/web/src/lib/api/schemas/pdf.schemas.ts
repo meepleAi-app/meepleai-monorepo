@@ -30,7 +30,8 @@ export const PdfDocumentDtoSchema = z.object({
   fileName: z.string().min(1),
   filePath: z.string().min(1),
   fileSizeBytes: z.number().int().nonnegative(),
-  processingStatus: z.string().min(1),
+  // #4356: qui c'era `processingStatus`, obbligatorio, che il backend non manda (lo stato è
+  // `processingState`, sotto): ogni lista non vuota faceva lanciare il client.
   uploadedAt: z.string().datetime({ offset: true }),
   processedAt: z.string().datetime({ offset: true }).nullable(),
   pageCount: z.number().int().positive().nullable(),

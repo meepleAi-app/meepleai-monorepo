@@ -30,6 +30,12 @@ export const statusIndicators: Record<string, { label: string; color: string; do
   pending: { label: 'In attesa', color: 'text-amber-600', dot: 'bg-amber-500' },
   Processing: { label: 'Elaborazione...', color: 'text-blue-600', dot: 'bg-blue-500' },
   processing: { label: 'Elaborazione...', color: 'text-blue-600', dot: 'bg-blue-500' },
+  // #4356: le fasi intermedie di PdfProcessingState, che finivano su «In attesa».
+  Uploading: { label: 'Elaborazione...', color: 'text-blue-600', dot: 'bg-blue-500' },
+  Extracting: { label: 'Elaborazione...', color: 'text-blue-600', dot: 'bg-blue-500' },
+  Chunking: { label: 'Elaborazione...', color: 'text-blue-600', dot: 'bg-blue-500' },
+  Embedding: { label: 'Elaborazione...', color: 'text-blue-600', dot: 'bg-blue-500' },
+  Indexing: { label: 'Elaborazione...', color: 'text-blue-600', dot: 'bg-blue-500' },
   Ready: { label: 'Completato', color: 'text-green-600', dot: 'bg-green-500' },
   completed: { label: 'Completato', color: 'text-green-600', dot: 'bg-green-500' },
   Failed: { label: 'Errore', color: 'text-red-600', dot: 'bg-red-500' },

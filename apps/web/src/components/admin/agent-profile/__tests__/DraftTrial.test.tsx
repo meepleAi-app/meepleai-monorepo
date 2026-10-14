@@ -90,6 +90,25 @@ describe('DraftTrial', () => {
     );
   });
 
+  it('keeps naming the version that answered when the draft changes', async () => {
+    // Dopo la risposta l'admin pubblica o salva un'altra bozza: l'etichetta resta della versione provata.
+    const user = userEvent.setup();
+    mockTry.mockReturnValue(
+      stream([
+        { type: 7, data: { token: 'Draw two cards.' } },
+        { type: 4, data: {} },
+      ])
+    );
+    const { rerender } = render(<DraftTrial draftVersion={3} dirty={false} />);
+    await screen.findByRole('option', { name: 'Catan' });
+    await ask(user);
+    await screen.findByText('Draw two cards.');
+
+    rerender(<DraftTrial draftVersion={4} dirty={false} />);
+
+    expect(screen.getByText(/answered by draft version 3/i)).toBeInTheDocument();
+  });
+
   it('shows why a trial was refused', async () => {
     const user = userEvent.setup();
     mockTry.mockImplementation(() => {
@@ -104,9 +123,10 @@ describe('DraftTrial', () => {
   });
 
   it('shows an error event from the stream', async () => {
+    // La forma vera di StreamingError sul filo: errorMessage ed errorCode (camelCase del backend).
     const user = userEvent.setup();
     mockTry.mockReturnValue(
-      stream([{ type: 5, data: { message: 'AI budget paused', code: 'AI_BUDGET' } }])
+      stream([{ type: 5, data: { errorMessage: 'AI budget paused', errorCode: 'AI_BUDGET' } }])
     );
     render(<DraftTrial draftVersion={3} dirty={false} />);
     await screen.findByRole('option', { name: 'Catan' });

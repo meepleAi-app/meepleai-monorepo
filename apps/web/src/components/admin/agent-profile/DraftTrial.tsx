@@ -22,6 +22,8 @@ interface TrialResult {
   answer: string;
   sources: number;
   done: boolean;
+  /** La versione provata, fissata alla domanda: una bozza salvata o pubblicata dopo non la cambia. */
+  version: number | null;
 }
 
 function tokenOf(data: unknown): string {
@@ -35,8 +37,10 @@ function sourcesOf(data: unknown): number {
   return Array.isArray(citations) ? citations.length : 0;
 }
 
+/** `StreamingError` arriva come `{ errorMessage, errorCode }` (camelCase del backend). */
 function messageOf(data: unknown): string {
-  const message = (data as { message?: unknown } | null)?.message;
+  const error = data as { errorMessage?: unknown; message?: unknown } | null;
+  const message = error?.errorMessage ?? error?.message;
   return typeof message === 'string' && message ? message : 'The trial failed.';
 }
 
@@ -82,7 +86,7 @@ export function DraftTrial({
     abort.current = controller;
     setRunning(true);
     setError(null);
-    setResult({ answer: '', sources: 0, done: false });
+    setResult({ answer: '', sources: 0, done: false, version: draftVersion });
     try {
       for await (const event of tryAgentProfileDraft(
         { gameId: game, question: question.trim() },
@@ -183,8 +187,8 @@ export function DraftTrial({
           <p className="whitespace-pre-wrap text-sm text-foreground">{result.answer}</p>
           <p className="text-xs text-muted-foreground">
             {result.sources} {result.sources === 1 ? 'source' : 'sources'}
-            {result.done && draftVersion !== null
-              ? ` · answered by draft version ${draftVersion}`
+            {result.done && result.version !== null
+              ? ` · answered by draft version ${result.version}`
               : ''}
           </p>
         </div>

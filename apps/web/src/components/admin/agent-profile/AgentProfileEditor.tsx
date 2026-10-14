@@ -14,6 +14,7 @@ import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from
 
 import { Loader2 } from 'lucide-react';
 
+import { DraftTrial } from '@/components/admin/agent-profile/DraftTrial';
 import { priceStatus } from '@/components/admin/ai/model-price-status';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
@@ -348,6 +349,8 @@ export function AgentProfileEditor() {
               : 'Change a field to start a draft.'}
         </p>
       </div>
+
+      <DraftTrial draftVersion={profile.draft?.versionNumber ?? null} dirty={dirty} />
 
       <History
         profile={profile}

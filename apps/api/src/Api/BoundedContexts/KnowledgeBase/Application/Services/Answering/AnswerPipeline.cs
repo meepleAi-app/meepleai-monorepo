@@ -130,7 +130,10 @@ internal sealed class AnswerPipeline : IAnswerPipeline
 
         // Passo 2 di D3: la quota del piano. Prima della cache, perché anche una risposta servita
         // dalla cache è una domanda; non lancia, perché lo stream lo dice con un evento.
-        var quota = await _preconditions.CheckQuotaAsync(query.UserId, cancellationToken).ConfigureAwait(false);
+        // #4169 (6c-3): una prova della bozza non è una domanda dell'admin, e non conta.
+        var quota = query.Trial is null
+            ? await _preconditions.CheckQuotaAsync(query.UserId, cancellationToken).ConfigureAwait(false)
+            : new AnswerQuota(query.UserId, 0, 0, Exceeded: false, Counts: false);
         if (quota.Exceeded)
         {
             yield return CreateEvent(StreamingEventType.Error, quota.ToStreamingError());
@@ -151,7 +154,10 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         }
 
         // Passo 0 di D2: la versione pubblicata, letta una volta. Quella che si usa è quella che si registra.
-        var profile = await TryReadProfileAsync(cancellationToken).ConfigureAwait(false);
+        // #4169 (6c-3): nella prova la versione è la bozza, e si registra quella.
+        var profile = query.Trial is { } trial
+            ? new PublishedAgentProfile(trial.VersionId, trial.VersionNumber, trial.Content)
+            : await TryReadProfileAsync(cancellationToken).ConfigureAwait(false);
         if (profile is null)
         {
             yield return CreateEvent(StreamingEventType.Error, new StreamingError(
@@ -181,7 +187,10 @@ internal sealed class AnswerPipeline : IAnswerPipeline
             query.ThreadId, query.GameId, query.UserId, cancellationToken).ConfigureAwait(false);
 
         var cacheKey = QaCacheKey(query, profile, language.Language, chatHistoryContext);
-        var cachedResponse = injectClaims
+        // #4169 (6c-3): una bozza cambia contenuto tenendo lo stesso id, quindi la sua prova non legge
+        // né scrive la cache: una risposta salvata sotto quell'id sarebbe di un contenuto vecchio.
+        var skipCache = injectClaims || query.Trial is not null;
+        var cachedResponse = skipCache
             ? null
             : await _cache.GetAsync<QaResponse>(cacheKey, cancellationToken).ConfigureAwait(false);
 
@@ -256,6 +265,8 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var injectClaims = !verifiedBlock.IsEmpty;
+        // #4169 (6c-3): né le risposte con le regole iniettate né le prove della bozza vanno in cache.
+        var skipCache = injectClaims || query.Trial is not null;
         var startTime = _timeProvider.GetUtcNow();
 
         // Step 0: Check if documents are still being processed
@@ -334,7 +345,8 @@ internal sealed class AnswerPipeline : IAnswerPipeline
             profile.Content.FallbackModelId,
             (double)profile.Content.Temperature,
             profile.Content.MaxResponseTokens,
-            profile.VersionId);
+            profile.VersionId,
+            Source: query.Trial is null ? RequestSource.RagPipeline : RequestSource.AdminOperation);
 
         await foreach (var chunk in _llmService.GenerateAnswerStreamAsync(answerRequest, cancellationToken).ConfigureAwait(false))
         {
@@ -382,7 +394,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         // R1: never cache a claim-injected answer (the (game,query) key carries no card fingerprint, §6.2).
         var overallConfidence = await CalculateAndCacheResponseAsync(
             answer, ragSnippets, domainResults, confidence,
-            tokenCount, cacheKey, llmUsage, llmCost, injectClaims, cancellationToken).ConfigureAwait(false);
+            tokenCount, cacheKey, llmUsage, llmCost, skipCache, cancellationToken).ConfigureAwait(false);
 
         // La risposta è stata consegnata per intero: si conta. Un rifiuto del gateway o
         // un'interruzione a metà escono prima di qui, e non contano. Nemmeno una risposta vuota, né

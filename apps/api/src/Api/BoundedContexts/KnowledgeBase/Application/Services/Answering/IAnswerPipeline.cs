@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Models;
 
 #pragma warning disable MA0048 // File name must match type name - the pipeline contract and its request
@@ -30,6 +31,7 @@ internal interface IAnswerPipeline
 /// <param name="DocumentIds">I documenti a cui restringere il recupero.</param>
 /// <param name="ResponseStyle">«concise», «detailed» o «continuation».</param>
 /// <param name="ContinuationContext">La risposta parziale da continuare.</param>
+/// <param name="Trial">#4169 (6c-3): la bozza da provare al posto della versione pubblicata; di solito <c>null</c>.</param>
 internal sealed record AnswerRequest(
     string GameId,
     string Query,
@@ -39,4 +41,13 @@ internal sealed record AnswerRequest(
     Guid? ThreadId = null,
     IReadOnlyList<Guid>? DocumentIds = null,
     string? ResponseStyle = null,
-    string? ContinuationContext = null);
+    string? ContinuationContext = null,
+    AnswerTrial? Trial = null);
+
+/// <summary>
+/// #4169 (6c-3, ADR-095 D8): la prova di una versione non pubblicata dalla pagina «Agente». La pipeline
+/// usa questo contenuto invece della versione pubblicata; non legge né scrive la cache, perché una bozza
+/// cambia contenuto tenendo lo stesso id; non conta la quota del piano, perché la domanda è dell'admin
+/// che prova; e la chiamata al gateway esce come <see cref="Api.Services.RequestSource.AdminOperation"/>.
+/// </summary>
+internal sealed record AnswerTrial(Guid VersionId, int VersionNumber, AgentProfileContent Content);

@@ -59,6 +59,7 @@ function mapToSessionDetailData(json: Record<string, unknown>): SessionDetailDat
 
   return {
     id: String(json.id ?? ''),
+    liveSessionId: json.liveSessionId != null ? String(json.liveSessionId) : undefined,
     sessionCode: String(json.sessionCode ?? ''),
     status: (json.status as SessionDetailData['status']) ?? 'Setup',
     title: String(json.title ?? json.gameName ?? 'Sessione'),

@@ -67,14 +67,14 @@ export function SerataResumeButton({
     resume.mutate(
       { campaignId },
       {
-        onSuccess: result => {
-          // The freshly-opened session is in-progress → /sessions/{id} forks to the live view
-          // (where the SI-4 startedAt chip renders).
-          router.push(`/sessions/${result.sessionId}`);
+        onSuccess: () => {
+          // #4156 (D7): the freshly-opened sitting is a SessionTracking session of this night, with
+          // no LiveGameSession and so no page under /sessions/{id}: the night live page is its page.
+          router.push(`/game-nights/${gameNightId}/live`);
         },
       }
     );
-  }, [resume, campaignId, router]);
+  }, [resume, campaignId, router, gameNightId]);
 
   return (
     <div className="flex flex-col gap-1">

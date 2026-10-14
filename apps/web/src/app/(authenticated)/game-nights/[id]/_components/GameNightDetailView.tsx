@@ -511,7 +511,11 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
             sessionCount={activeSessions.length}
             isCompleted={isCompleted}
           />
-          <GameNightSessionsList sessions={activeSessions} gameNightId={id} />
+          <GameNightSessionsList
+            sessions={activeSessions}
+            gameNightId={id}
+            isCompleted={isCompleted}
+          />
           <GameNightDiaryPanel gameNightId={id} />
         </>
       )}

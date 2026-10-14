@@ -16,6 +16,16 @@ internal class RrfFusionDomainService
     private const int DefaultRrfK = FusionSignals.DefaultRrfK; // PERF-08: Standard RRF constant
 
     /// <summary>
+    /// I pesi del seed del profilo dell'agente, che la fusione aveva scritti nel codice prima della
+    /// fetta 5 di ADR-095 (#4168). Valgono per chi fonde senza un profilo: il recupero della risposta
+    /// passa sempre quelli della versione pubblicata.
+    /// </summary>
+    internal const float DefaultVectorWeight = 0.7f;
+
+    /// <inheritdoc cref="DefaultVectorWeight"/>
+    internal const float DefaultKeywordWeight = 0.3f;
+
+    /// <summary>
     /// Fuses vector and keyword search results via <see cref="HybridFusionCore"/> (weighted RRF +
     /// legend-demotion + role-boost), preserving each result's carried cosine as its
     /// <see cref="SearchResult.RelevanceScore"/> (issue #2712) — the hybrid score drives ORDER only.
@@ -25,13 +35,17 @@ internal class RrfFusionDomainService
     /// <param name="rrfK">RRF constant (default 60)</param>
     /// <param name="queryRoleHint">Optional role hint used to boost matching chunks (default None)</param>
     /// <param name="queryTerms">#3270: normalized query terms (lowercased, len≥3) for the heading-match boost (default null = no-op)</param>
+    /// <param name="vectorWeight">#4168: il peso del braccio vettoriale, dal profilo</param>
+    /// <param name="keywordWeight">#4168: il peso del braccio lessicale, dal profilo</param>
     /// <returns>Fused and re-ranked results</returns>
     public virtual List<SearchResult> FuseResults(
         List<SearchResult> vectorResults,
         List<SearchResult> keywordResults,
         int rrfK = DefaultRrfK,
         GameBookRole queryRoleHint = GameBookRole.None,
-        IReadOnlyList<string>? queryTerms = null)
+        IReadOnlyList<string>? queryTerms = null,
+        float vectorWeight = DefaultVectorWeight,
+        float keywordWeight = DefaultKeywordWeight)
     {
         if (rrfK <= 0)
             throw new ArgumentException("RRF K must be positive", nameof(rrfK));
@@ -43,7 +57,7 @@ internal class RrfFusionDomainService
             .Select((r, i) => new FusionCandidate(GetChunkKey(r), r.TextContent, r.RoleTags, r.Heading, i + 1, (float)r.RelevanceScore.Value))
             .ToList();
 
-        var fused = HybridFusionCore.Fuse(vectorArm, keywordArm, new FusionOptions(0.7f, 0.3f, rrfK, queryRoleHint, queryTerms));
+        var fused = HybridFusionCore.Fuse(vectorArm, keywordArm, new FusionOptions(vectorWeight, keywordWeight, rrfK, queryRoleHint, queryTerms));
 
         var vByKey = vectorResults.ToLookup(GetChunkKey, StringComparer.Ordinal);
         var kByKey = keywordResults.ToLookup(GetChunkKey, StringComparer.Ordinal);

@@ -113,7 +113,8 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
 
             // Phase D (D6): forward QueryRoleHint to the hybrid search re-ranker.
             "hybrid" => await PerformHybridSearchAsync(
-                query.GameId, queryVector, query.Query, query.TopK, query.MinScore, pdfDocumentIds, query.QueryRoleHint, cancellationToken).ConfigureAwait(false),
+                query.GameId, queryVector, query.Query, query.TopK, query.MinScore, pdfDocumentIds, query.QueryRoleHint,
+                query.VectorWeight, query.KeywordWeight, cancellationToken).ConfigureAwait(false),
 
             _ => throw new ArgumentException($"Invalid search mode: {query.SearchMode}", nameof(query))
         } ?? new List<Domain.Entities.SearchResult>();
@@ -200,6 +201,8 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         double minScore,
         IReadOnlyList<Guid>? documentIds,
         GameBookRole queryRoleHint,
+        float vectorWeight,
+        float keywordWeight,
         CancellationToken cancellationToken)
     {
         // Vector search
@@ -258,6 +261,8 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
             vectorResults,
             keywordResults,
             queryRoleHint: queryRoleHint,
-            queryTerms: headingTerms);
+            queryTerms: headingTerms,
+            vectorWeight: vectorWeight,
+            keywordWeight: keywordWeight);
     }
 }

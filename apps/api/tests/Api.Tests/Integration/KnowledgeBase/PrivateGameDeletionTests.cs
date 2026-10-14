@@ -59,12 +59,28 @@ public sealed class PrivateGameDeletionHostFixture(SharedTestcontainersFixture s
 internal sealed class DocumentDeletionFailure
 {
     private volatile bool _armed;
+    private int _stillToLetThrough;
 
+    /// <summary>Acceso, ogni cancellazione di documento fallisce. Spegnerlo azzera anche il conto.</summary>
     public bool Armed
     {
         get => _armed;
-        set => _armed = value;
+        set
+        {
+            Interlocked.Exchange(ref _stillToLetThrough, 0);
+            _armed = value;
+        }
     }
+
+    /// <summary>Lascia passare le prime <paramref name="documents"/> cancellazioni, poi le fa fallire.</summary>
+    public void ArmAfter(int documents)
+    {
+        Interlocked.Exchange(ref _stillToLetThrough, documents);
+        _armed = true;
+    }
+
+    /// <summary>Dice se questa cancellazione deve fallire; se no, consuma uno dei passaggi concessi.</summary>
+    public bool ShouldFail() => _armed && Interlocked.Decrement(ref _stillToLetThrough) < 0;
 }
 
 /// <summary>
@@ -76,7 +92,7 @@ internal sealed class FailDocumentDeletionWhenArmed(DocumentDeletionFailure fail
 {
     public Task<MediatR.Unit> Handle(
         DeleteKbDocumentCommand request, RequestHandlerDelegate<MediatR.Unit> next, CancellationToken cancellationToken) =>
-        failure.Armed
+        failure.ShouldFail()
             ? throw new InvalidOperationException("La cancellazione del documento è fatta fallire dal test.")
             : next(cancellationToken);
 }
@@ -533,6 +549,54 @@ public sealed class PrivateGameDeletionTests
         (await ContentOfAsync(_gameId)).Should().Be(Nothing);
         (await ContentOfAsync(_otherGameId)).Should().Be(Nothing);
         (await LiveLinksFromAsync(_otherGameId)).Should().Be(0);
+    }
+
+    /// <summary>
+    /// E a metà per davvero: un documento se ne va, il successivo fallisce. Nel test qui sopra la
+    /// pulizia si ferma al primo documento, quando non ha ancora distrutto niente. Qui l'altro
+    /// gioco ha tre documenti — il suo, e due rimasti dal gioco già cancellato, raggiungibili solo
+    /// dai collegamenti: qualunque sia l'ordine, dopo il fallimento ne resta almeno uno di questi.
+    /// </summary>
+    [Fact]
+    public async Task APurgeThatDestroysOneDocumentAndFailsOnTheNext_CanBeRepeated()
+    {
+        var firstLeftover = await SeedPdfUsedByBothGamesAsync();
+        var secondLeftover = await SeedPdfUsedByBothGamesAsync();
+        (await DeleteGameAsync(_gameId, _token)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        Guid[] documents = [_otherPdfId, firstLeftover, secondLeftover];
+
+        _hostFixture.DocumentDeletion.ArmAfter(1);
+        var failed = await DeleteGameAsync(_otherGameId, _token);
+
+        failed.IsSuccessStatusCode.Should().BeFalse();
+        (await IsDeletedAsync(_otherGameId)).Should().BeFalse();
+        // Uno è andato, due no: la pulizia si è fermata a metà, e i collegamenti sono ancora lì.
+        (await StillThereAsync(documents)).Should().Be(2);
+        (await LiveLinksFromAsync(_otherGameId)).Should().Be(2);
+
+        _hostFixture.DocumentDeletion.Armed = false;
+        var retried = await DeleteGameAsync(_otherGameId, _token);
+
+        retried.StatusCode.Should().Be(HttpStatusCode.NoContent, await retried.Content.ReadAsStringAsync(Ct));
+        (await StillThereAsync(documents)).Should().Be(0);
+        (await ContentOfAsync(_gameId)).Should().Be(Nothing);
+        (await ContentOfAsync(_otherGameId)).Should().Be(Nothing);
+        (await LiveLinksFromAsync(_otherGameId)).Should().Be(0);
+    }
+
+    /// <summary>Quanti di questi documenti hanno ancora la loro riga.</summary>
+    private async Task<int> StillThereAsync(Guid[] pdfIds)
+    {
+        var count = 0;
+        foreach (var pdfId in pdfIds)
+        {
+            if (await PdfExistsAsync(pdfId))
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     /// <summary>

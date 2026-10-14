@@ -20,7 +20,9 @@ while :; do
     # Gli stati sono quelli di DocumentProcessing.Domain.Enums.JobStatus: Queued, Processing,
     # Completed, Failed, Cancelled. Lo script contava «Running» e «DeadLettered», che non esistono:
     # un job vivo risultava running=0, e uno annullato non chiudeva mai la coda (#4363).
-    read -r total completed failed cancelled queued processing < <(
+    # Letti in una variabile: con «read < <(…)», un psql che non risponde dava EOF a read e set -e
+    # fermava lo script senza un messaggio.
+    counts=$(
         docker exec meepleai-postgres psql -U "$PG_USER" -d "$PG_DB" -At -F' ' -c \
         "SELECT
            COUNT(*),
@@ -30,7 +32,8 @@ while :; do
            COUNT(*) FILTER (WHERE status='Queued'),
            COUNT(*) FILTER (WHERE status='Processing')
          FROM processing_jobs;"
-    )
+    ) || fail "la query su processing_jobs non risponde (meepleai-postgres): impossibile sapere lo stato della coda"
+    read -r total completed failed cancelled queued processing <<< "$counts"
     terminal=$((completed + failed + cancelled))
     log "total=$total completed=$completed failed=$failed cancelled=$cancelled queued=$queued processing=$processing"
 

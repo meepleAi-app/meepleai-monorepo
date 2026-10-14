@@ -22,8 +22,8 @@ setup() {
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "$CALLS"
 case "$1" in
-    exec) printf '%s\n' "$FAKE_COUNTS" ;;
-    inspect) printf '%s\n' "$FAKE_API_STATE" ;;
+    exec) [ "$FAKE_COUNTS" = "FAIL" ] && exit 1; printf '%s\n' "$FAKE_COUNTS" ;;
+    inspect) [ "$FAKE_API_STATE" = "FAIL" ] && exit 1; printf '%s\n' "$FAKE_API_STATE" ;;
 esac
 exit 0
 EOF
@@ -50,6 +50,29 @@ teardown() {
     [[ "$output" == *"meepleai-api"* ]]
     [[ "$output" == *"exited"* ]]
     [[ "$output" == *"139"* ]]
+}
+
+@test "senza il container dell'API fallisce subito, dicendo che manca" {
+    export FAKE_COUNTS="127 102 0 0 24 0"
+    export FAKE_API_STATE="FAIL"                      # docker inspect: nessun container con quel nome
+
+    run timeout 15 bash "$SCRIPT"
+
+    [ -f "$CALLS" ]
+    [ "$status" -ne 0 ]
+    [ "$status" -ne 124 ]
+    [[ "$output" == *"assente"* ]]
+}
+
+@test "se la query sulla coda fallisce, lo dice invece di fermarsi in silenzio" {
+    export FAKE_COUNTS="FAIL"
+
+    run timeout 15 bash "$SCRIPT"
+
+    [ -f "$CALLS" ]
+    [ "$status" -ne 0 ]
+    [ "$status" -ne 124 ]
+    [[ "$output" == *"processing_jobs non risponde"* ]]
 }
 
 @test "con l'API viva e la coda drenata finisce bene" {

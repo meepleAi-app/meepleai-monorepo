@@ -58,6 +58,11 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Commands;
 [Collection("AgentGroundingMetrics")]
 public sealed class ChatWithSessionAgentMetricsTests
 {
+    // #4282: the handler refuses a caller who did not launch the agent session, and an agent session
+    // of another game session. These harnesses exercise the happy path, so command and session agree.
+    private static readonly Guid SessionOwnerId = Guid.NewGuid();
+    private static readonly Guid SessionGameSessionId = Guid.NewGuid();
+
     private const string FirstTokenLatencyName = "meepleai.rag.first_token_latency";
     private const string CitationsPerAnswerName = "meepleai.rag.citations_per_answer";
 
@@ -345,8 +350,9 @@ public sealed class ChatWithSessionAgentMetricsTests
     private static ChatWithSessionAgentCommand BuildCommand() =>
         new ChatWithSessionAgentCommand(
             AgentSessionId: Guid.NewGuid(),
+            GameSessionId: SessionGameSessionId,
             UserQuestion: "What are the rules?",
-            UserId: Guid.NewGuid());
+            UserId: SessionOwnerId);
 
     /// <summary>
     /// Builds a fully-wired handler with happy-path mocks.
@@ -437,8 +443,8 @@ public sealed class ChatWithSessionAgentMetricsTests
         var agentSession = new AgentSession(
             id: Guid.NewGuid(),
             agentDefinitionId: Guid.NewGuid(),
-            gameSessionId: Guid.NewGuid(),
-            userId: Guid.NewGuid(),
+            gameSessionId: SessionGameSessionId,
+            userId: SessionOwnerId,
             gameId: Guid.NewGuid(),
             initialState: initialState);
 

@@ -48,6 +48,7 @@ public sealed class LaunchSessionAgentCommandValidatorTests
             GameSessionId: _gameSessionId,
             AgentDefinitionId: agentDefinitionId ?? _agentDefinitionId,
             UserId: _userId,
+            UserRole: "User",
             GameId: gameId ?? _gameId,
             InitialGameStateJson: gameStateJson ?? ValidGameStateJson);
 
@@ -78,6 +79,7 @@ public sealed class LaunchSessionAgentCommandValidatorTests
             GameSessionId: Guid.Empty,
             AgentDefinitionId: _agentDefinitionId,
             UserId: _userId,
+            UserRole: "User",
             GameId: _gameId,
             InitialGameStateJson: ValidGameStateJson);
 
@@ -93,6 +95,7 @@ public sealed class LaunchSessionAgentCommandValidatorTests
             GameSessionId: _gameSessionId,
             AgentDefinitionId: Guid.Empty,
             UserId: _userId,
+            UserRole: "User",
             GameId: _gameId,
             InitialGameStateJson: ValidGameStateJson);
 
@@ -202,6 +205,7 @@ public sealed class LaunchSessionAgentCommandValidatorTests
             GameSessionId: _gameSessionId,
             AgentDefinitionId: null,
             UserId: _userId,
+            UserRole: "User",
             GameId: _gameId,
             InitialGameStateJson: string.Empty);
 
@@ -248,6 +252,7 @@ public sealed class LaunchSessionAgentCommandValidatorTests
             GameSessionId: _gameSessionId,
             AgentDefinitionId: _agentDefinitionId,
             UserId: _userId,
+            UserRole: "User",
             GameId: _gameId,
             InitialGameStateJson: string.Empty);
 
@@ -269,6 +274,7 @@ public sealed class LaunchSessionAgentCommandValidatorTests
             GameSessionId: _gameSessionId,
             AgentDefinitionId: _agentDefinitionId,
             UserId: _userId,
+            UserRole: "User",
             GameId: _gameId,
             InitialGameStateJson: "   ");
 

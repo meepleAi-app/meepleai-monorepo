@@ -48,6 +48,7 @@ public sealed class ChatWithSessionAgentThreadOwnershipTests
     private const string Question = "What are the rules?";
     private const string OwnersMessage = "We play with the long variant.";
     private static readonly Guid Asker = Guid.NewGuid();
+    private static readonly Guid AskerGameSession = Guid.NewGuid();
     private static readonly Guid SessionGame = Guid.NewGuid();
 
     [Fact]
@@ -161,6 +162,7 @@ public sealed class ChatWithSessionAgentThreadOwnershipTests
         {
             var command = new ChatWithSessionAgentCommand(
                 AgentSessionId: Guid.NewGuid(),
+                GameSessionId: AskerGameSession,
                 UserQuestion: Question,
                 UserId: Asker,
                 ChatThreadId: chatThreadId);
@@ -214,7 +216,7 @@ public sealed class ChatWithSessionAgentThreadOwnershipTests
             var agentSession = new AgentSession(
                 id: Guid.NewGuid(),
                 agentDefinitionId: Guid.NewGuid(),
-                gameSessionId: Guid.NewGuid(),
+                gameSessionId: AskerGameSession,
                 userId: Asker,
                 gameId: SessionGame,
                 initialState: initialState);

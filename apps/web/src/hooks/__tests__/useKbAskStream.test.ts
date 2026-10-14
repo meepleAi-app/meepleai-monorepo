@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { useKbAskStream } from '../useKbAskStream';
 import { kbAskClient } from '../../lib/api/clients/kbAskClient';
-import type { KbAskEvent } from '../../lib/api/schemas/kb-ask.schemas';
+import { KbAskEventSchema, type KbAskEvent } from '../../lib/api/schemas/kb-ask.schemas';
 
 async function* eventsAsAsyncGen(events: KbAskEvent[]): AsyncGenerator<KbAskEvent> {
   for (const e of events) yield e;
@@ -133,6 +133,72 @@ describe('useKbAskStream — transitions', () => {
     await waitFor(() => expect(result.current.state.status).toBe('error'));
     expect(result.current.state.error?.kind).toBe('server');
     expect(result.current.state.error?.code).toBe('RBAC_RESOLUTION_FAILED');
+  });
+
+  /**
+   * #4168 (5g-b): la domanda fermata dalla quota del piano. L'errore porta i numeri e il link,
+   * così il pannello può dire che cosa è successo invece di «errore del server».
+   */
+  it('Error event for the plan quota carries the numbers of the plan', async () => {
+    vi.spyOn(kbAskClient, 'askGlobal').mockImplementation(() =>
+      eventsAsAsyncGen([
+        {
+          type: 5,
+          data: {
+            message: 'Tier limit exceeded: AgentQuery (3/3)',
+            code: 'TIER_LIMIT_EXCEEDED',
+            tierLimit: { current: 3, max: 3, upgradeUrl: '/pricing' },
+          },
+        },
+      ])
+    );
+    const { result } = renderHook(() => useKbAskStream());
+
+    act(() => {
+      result.current.ask('q');
+    });
+
+    await waitFor(() => expect(result.current.state.status).toBe('error'));
+    expect(result.current.state.error).toEqual({
+      kind: 'server',
+      message: 'Tier limit exceeded: AgentQuery (3/3)',
+      code: 'TIER_LIMIT_EXCEEDED',
+      tierLimit: { current: 3, max: 3, upgradeUrl: '/pricing' },
+    });
+  });
+
+  /**
+   * La giunzione fra lo schema e l'hook: l'evento com'è sul filo, passato dallo schema come fa il
+   * client, arriva allo stato con i numeri. Se lo schema smettesse di conservarli, qui si vede.
+   */
+  it('the plan quota survives from the wire to the state', async () => {
+    const onTheWire = {
+      type: 5,
+      data: {
+        errorMessage: 'Tier limit exceeded: AgentQuery (3/3)',
+        errorCode: 'TIER_LIMIT_EXCEEDED',
+        limitType: 'AgentQuery',
+        current: 3,
+        max: 3,
+        upgradeUrl: '/pricing',
+      },
+    };
+    vi.spyOn(kbAskClient, 'askGlobal').mockImplementation(() =>
+      eventsAsAsyncGen([KbAskEventSchema.parse(onTheWire)])
+    );
+    const { result } = renderHook(() => useKbAskStream());
+
+    act(() => {
+      result.current.ask('q');
+    });
+
+    await waitFor(() => expect(result.current.state.status).toBe('error'));
+    expect(result.current.state.error?.code).toBe('TIER_LIMIT_EXCEEDED');
+    expect(result.current.state.error?.tierLimit).toEqual({
+      current: 3,
+      max: 3,
+      upgradeUrl: '/pricing',
+    });
   });
 
   it('Error event with LLM_STREAMING_FAILED + accumulated partial text maps to kind=partial', async () => {

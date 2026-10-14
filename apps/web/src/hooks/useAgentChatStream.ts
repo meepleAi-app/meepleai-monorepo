@@ -12,6 +12,13 @@ import { useEffect, useMemo, useRef } from 'react';
 
 import { toast } from 'sonner';
 
+import {
+  readTierLimit,
+  TIER_LIMIT_EXCEEDED,
+  tierLimitMessage,
+  type TierLimit,
+} from '@/lib/tier-limit';
+
 import { useSseStreamFsm, type SseStreamFsmConfig } from './useSseStreamFsm';
 
 // StreamingEventType enum values from backend
@@ -92,6 +99,11 @@ export interface AgentChatStreamState {
   isStreaming: boolean;
   /** Error message if any */
   error: string | null;
+  /**
+   * #4168 (5g-b): la domanda è stata fermata dalla quota del piano. I numeri e il link, per chi
+   * mostra l'avviso; `error` porta comunque la frase, per chi mostra solo testo.
+   */
+  tierLimit: TierLimit | null;
   /** Chat thread ID returned by backend */
   chatThreadId: string | null;
   /** Token count from complete event */
@@ -163,6 +175,7 @@ const INITIAL_STATE: AgentChatInternalState = {
   currentAnswer: '',
   followUpQuestions: [],
   isStreaming: false,
+  tierLimit: null,
   chatThreadId: null,
   totalTokens: 0,
   debugSteps: [],
@@ -366,6 +379,7 @@ function agentChatEventReducer(
     case StreamingEventType.Error: {
       const data = event.data as { errorMessage?: string; errorCode?: string };
       let errorMsg: string;
+      let tierLimit: TierLimit | null = null;
       if (data?.errorCode === 'rate_limited') {
         errorMsg = 'Hai raggiunto il limite di messaggi. Riprova tra qualche minuto.';
       } else if (data?.errorCode === 'provider_unavailable') {
@@ -377,6 +391,11 @@ function agentChatEventReducer(
       } else if (data?.errorCode === 'AI_BUDGET_MONTHLY_EXHAUSTED') {
         errorMsg =
           'Il servizio AI è in pausa fino al mese prossimo: è stato raggiunto il budget di spesa del mese.';
+      } else if (data?.errorCode === TIER_LIMIT_EXCEEDED) {
+        // #4168 (5g-b): la quota del piano. Il messaggio del backend è tecnico; qui la
+        // spiegazione, con i numeri del piano e l'ora in cui il conteggio riparte.
+        tierLimit = readTierLimit(event.data);
+        errorMsg = tierLimitMessage(tierLimit);
       } else {
         errorMsg = data?.errorMessage ?? 'Si è verificato un errore. Riprova.';
       }
@@ -386,6 +405,7 @@ function agentChatEventReducer(
         ...state,
         // We store the error message in a special field; the wrapper will pick it up
         _sseError: errorMsg,
+        tierLimit,
         isStreaming: false,
         statusMessage: null,
         connectionStatus: 'error',
@@ -553,6 +573,7 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks): {
     currentAnswer: stateWithExtras.currentAnswer,
     followUpQuestions: stateWithExtras.followUpQuestions,
     isStreaming: stateWithExtras.isStreaming,
+    tierLimit: stateWithExtras.tierLimit,
     chatThreadId: stateWithExtras.chatThreadId,
     totalTokens: stateWithExtras.totalTokens,
     debugSteps: stateWithExtras.debugSteps,

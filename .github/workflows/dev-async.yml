@@ -108,14 +108,34 @@ jobs:
     strategy:
       fail-fast: false  # uno shard rosso non deve nascondere l'esito degli altri
       matrix:
-        # Stessa ripartizione di ci.yml, deliberatamente: se i due gate misurassero insiemi diversi,
+        # Stessa SELEZIONE di ci.yml, deliberatamente: se i due gate misurassero insiemi diversi,
         # un test potrebbe non essere eseguito da nessuno dei due — il difetto di #3622 su un altro
-        # asse. Misurati 2950 test totali (esclusioni incluse): 910 / 1123 / 929.
+        # asse. La ripartizione invece qui e' piu' fine (#3742): cio' che ci.yml chiama `Games` e'
+        # diviso in `Catalog` e `GamesAdmin`.
+        #
+        # Perche' divisa, e perche' li'. Uno shard dura quanto la sua catena seriale piu' lunga:
+        # xUnit mette in parallelo le collection e in serie i test dentro una collection. In `Games`
+        # la collection Integration-GroupC, con le classi di SharedGameCatalog e di GameManagement,
+        # occupava il runner da sola dal ventesimo minuto alla fine: 59 minuti su un runner veloce,
+        # e oltre i 75 del TestSessionTimeout su uno lento, dove ogni test dura circa il 45% in piu'
+        # (tre run troncati su sette il 2026-10-13). Dividere lungo il confine fra i due contesti
+        # spezza quella catena su due runner, senza spostare alcuna classe di collection: nessun
+        # test comincia a girare in parallelo con uno con cui prima era in serie.
+        #
+        # `GamesAdmin` esclude SharedGameCatalog perche' i filtri sono per nome: una classe col nome
+        # di entrambi i contesti girerebbe in tutti e due gli shard.
+        #
+        # 🔴 Le due meta' di questa regola non si tengono da sole. Togliere un token da uno shard
+        # lasciandolo escluso da `Core` fa sparire quei test da OGNI shard, e nessun job cambia
+        # colore. Lo verifica infra/scripts/tests/integration-shard-matrix.bats, insieme
+        # all'uguaglianza con ci.yml e alla presenza di ogni shard nella baseline.
         shard:
           - name: "KnowledgeBase"
             filter_extra: "&(FullyQualifiedName~KnowledgeBase|FullyQualifiedName~DocumentProcessing|FullyQualifiedName~Authentication)"
-          - name: "Games"
-            filter_extra: "&(FullyQualifiedName~SharedGameCatalog|FullyQualifiedName~GameManagement|FullyQualifiedName~Administration)"
+          - name: "Catalog"
+            filter_extra: "&(FullyQualifiedName~SharedGameCatalog)"
+          - name: "GamesAdmin"
+            filter_extra: "&(FullyQualifiedName~GameManagement|FullyQualifiedName~Administration)&FullyQualifiedName!~SharedGameCatalog"
           - name: "Core"
             filter_extra: "&FullyQualifiedName!~KnowledgeBase&FullyQualifiedName!~DocumentProcessing&FullyQualifiedName!~Authentication&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
 
@@ -393,6 +413,42 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
             status=1
             truncated=true
+          fi
+
+          # #3742 — quanta parte del TestSessionTimeout ha usato la sessione. La troncatura non
+          # arriva all'improvviso: lo shard Games e' stato per settimane a pochi minuti dal limite,
+          # verde sui runner veloci, e nessun numero lo diceva finche' un runner lento non lo ha
+          # superato. Lo script riporta la quota a ogni run e avvisa oltre l'80%; non decide il
+          # colore del job, che resta al confronto con la baseline e alla guardia qui sopra.
+          #
+          # Lo script assente e' un errore e non un avviso, per la stessa ragione del comparatore:
+          # un percorso sbagliato qui produrrebbe un riepilogo senza la riga, che si legge come
+          # «tutto a posto». Un .trx da cui la durata non si ricava e' invece solo un avviso: il
+          # margine non e' misurabile, ma la selezione lo e' stata.
+          budget="${GITHUB_WORKSPACE}/infra/scripts/shard-session-budget.sh"
+          if [ ! -f "$budget" ]; then
+            echo "::error::script del margine non trovato in $budget — il percorso e' sbagliato, non e' un problema dei tempi"
+            status=1
+          elif [ ${#trx_files[@]} -gt 0 ]; then
+            set +e
+            bash "$budget" \
+              --shard "${SHARD}" \
+              --trx "${trx_files[0]}" \
+              --runsettings "${GITHUB_WORKSPACE}/apps/api/tests/Api.Tests/integration.runsettings" > /tmp/shard-budget.out 2>&1
+            budget_rc=$?
+            set -e
+            cat /tmp/shard-budget.out
+            if [ "$budget_rc" -ne 0 ]; then
+              echo "::warning::Shard ${SHARD}: il margine sul TestSessionTimeout non e' calcolabile (vedi la riga sopra)."
+            fi
+            {
+              echo
+              if [ "$budget_rc" -eq 0 ]; then
+                echo "**Margine (#3742):** $(grep -v '^::' /tmp/shard-budget.out | head -1)"
+              else
+                echo "**Margine (#3742):** non calcolabile."
+              fi
+            } >> "$GITHUB_STEP_SUMMARY"
           fi
 
           # #4298 — il codice d'uscita di `dotnet test`. Da quando il passo dei test non fa piu'

@@ -198,6 +198,7 @@ describe('useAgentChatStream', () => {
       followUpQuestions: [],
       isStreaming: false,
       error: null,
+      tierLimit: null,
       chatThreadId: null,
       totalTokens: 0,
       debugSteps: [],
@@ -749,6 +750,96 @@ describe('useAgentChatStream', () => {
 
     expect(result.current.state.error).toBe(expected);
     expect(onError).toHaveBeenCalledWith(expected);
+  });
+
+  /**
+   * #4168 (5g-b): la domanda fermata dalla quota del piano. Il backend manda un messaggio tecnico
+   * («Tier limit exceeded: AgentQuery (3/3)»): il pannello mostra la spiegazione, con i numeri del
+   * piano e l'ora in cui il conteggio riparte.
+   */
+  it('explains the plan quota for errorCode TIER_LIMIT_EXCEEDED', async () => {
+    const events = [
+      sseEvent(EventType.Error, {
+        errorMessage: 'Tier limit exceeded: AgentQuery (3/3)',
+        errorCode: 'TIER_LIMIT_EXCEEDED',
+        limitType: 'AgentQuery',
+        current: 3,
+        max: 3,
+        upgradeUrl: '/pricing',
+      }),
+    ];
+
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const onError = vi.fn();
+    const { result } = renderHook(() => useAgentChatStream({ onError }));
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    const explained =
+      /^Hai usato tutte le domande di oggi previste dal tuo piano \(3 su 3\)\. Il conteggio riparte alle \d{2}:\d{2} \(mezzanotte UTC\)\.$/;
+    expect(result.current.state.error).toMatch(explained);
+    expect(onError).toHaveBeenCalledWith(expect.stringMatching(explained));
+    // Chi sa mostrare l'avviso con il link trova i numeri accanto alla frase.
+    expect(result.current.state.tierLimit).toEqual({ current: 3, max: 3, upgradeUrl: '/pricing' });
+  });
+
+  it('carries no plan quota for another error', async () => {
+    const stream = createSSEStream([
+      sseEvent(EventType.Error, { errorMessage: 'Agent not found', errorCode: 'AGENT_NOT_FOUND' }),
+    ]);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const { result } = renderHook(() => useAgentChatStream());
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.state.error).toBe('Agent not found');
+    expect(result.current.state.tierLimit).toBeNull();
+  });
+
+  /** L'avviso riguarda la domanda appena fermata: con la successiva se ne va. */
+  it('forgets the plan quota with the next question', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      body: createSSEStream([
+        sseEvent(EventType.Error, {
+          errorMessage: 'Tier limit exceeded: AgentQuery (3/3)',
+          errorCode: 'TIER_LIMIT_EXCEEDED',
+          current: 3,
+          max: 3,
+          upgradeUrl: '/pricing',
+        }),
+      ]),
+    });
+    const { result } = renderHook(() => useAgentChatStream());
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+    expect(result.current.state.tierLimit).not.toBeNull();
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      body: createSSEStream([
+        sseEvent(EventType.Token, { token: 'Cinque carte.' }),
+        sseEvent(EventType.Complete, { totalTokens: 3 }),
+      ]),
+    });
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'E adesso?');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.state.tierLimit).toBeNull();
+    expect(result.current.state.error).toBeNull();
   });
 
   it('shows Italian provider_unavailable message for errorCode provider_unavailable', async () => {

@@ -359,6 +359,7 @@ export function ChatSlideOverPanel() {
             suggestedQuestions={suggestedQuestions}
             onSend={handleSend}
             error={stream.state.error}
+            tierLimit={stream.state.tierLimit}
           />
         </div>
       </aside>

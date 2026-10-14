@@ -1,6 +1,10 @@
 /**
  * Library Game Detail Layout
  * Issue #5042 — Library + Game Detail Hub
+ *   (#4105: that number resolves to nothing in this repository — it belongs to
+ *   a family of #50xx references across the codebase whose origin is not this
+ *   issue tracker. The verifiable history of this file is #2158 and #1816
+ *   below; do not spend time chasing #5042.)
  *
  * Canonical route: /library/[gameId]
  *

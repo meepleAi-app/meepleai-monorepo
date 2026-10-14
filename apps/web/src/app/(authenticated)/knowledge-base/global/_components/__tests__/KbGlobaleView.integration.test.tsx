@@ -30,7 +30,7 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { type ReactNode } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -60,18 +60,39 @@ vi.mock('next/navigation', () => ({
 }));
 
 // ─── next/dynamic mock ────────────────────────────────────────────────────────
-// Resolves lazy imports synchronously so ssr:false dynamic components
-// (KbDocViewerDesktopLazy, DrawerShellLazy) mount immediately in jsdom.
+// The ssr:false dynamic components (KbDocViewerDesktopLazy, DrawerShellLazy) are loaded once,
+// when KbGlobaleView is imported, and the beforeAll below waits for them: no test depends on how
+// long the first import takes.
+//
+// The previous closure-only variant (`let Inner; loader().then(...)`) set Inner without
+// re-rendering, so the component mounted only when an unrelated re-render happened to occur after
+// the loader resolved. #2537 fixed it in the phase3 file; this one kept it, and S9 — red every
+// time when run alone — passed in-file by ordering luck, until the drawer imported one more
+// module and a CI shard lost the race (#4330).
+const dynamicLoads = vi.hoisted(() => ({ pending: [] as Array<Promise<unknown>> }));
+
 vi.mock('next/dynamic', () => ({
   default: (
     loader: () => Promise<{ default: React.ComponentType<Record<string, unknown>> }>
   ): React.ComponentType<Record<string, unknown>> => {
-    let Inner: React.ComponentType<Record<string, unknown>> | null = null;
-    void loader().then(mod => {
-      Inner = mod.default;
-    });
-    const Wrapper = (props: Record<string, unknown>) =>
-      Inner ? React.createElement(Inner, props) : null;
+    const loaded = loader();
+    dynamicLoads.pending.push(loaded);
+    // State, so that resolving the loader triggers a re-render of whoever mounted before it.
+    const Wrapper = (props: Record<string, unknown>) => {
+      const [Inner, setInner] = React.useState<React.ComponentType<Record<string, unknown>> | null>(
+        null
+      );
+      React.useEffect(() => {
+        let active = true;
+        void loaded.then(mod => {
+          if (active) setInner(() => mod.default);
+        });
+        return () => {
+          active = false;
+        };
+      }, []);
+      return Inner ? React.createElement(Inner, props) : null;
+    };
     Wrapper.displayName = 'NextDynamicStub';
     return Wrapper;
   },
@@ -100,6 +121,12 @@ function createWrapper() {
 // ─── Import after mocks ───────────────────────────────────────────────────────
 
 import { KbGlobaleView } from '../KbGlobaleView';
+
+// The lazy components started loading when KbGlobaleView was imported: wait for them once, here,
+// instead of leaving each test to race the first import.
+beforeAll(async () => {
+  await Promise.all(dynamicLoads.pending);
+});
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
 

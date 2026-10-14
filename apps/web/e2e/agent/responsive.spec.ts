@@ -51,7 +51,7 @@ test.describe('Responsive - Mobile (375x667)', () => {
     await page.goto('/library');
 
     // Open config
-    const gameCard = page.locator('[data-testid="game-card"]').first();
+    const gameCard = page.locator('[data-testid="meeple-card"][data-entity="game"]').first();
     const askButton = gameCard.locator('button:has-text("Ask Agent")');
 
     if (await askButton.isVisible()) {
@@ -118,9 +118,7 @@ test.describe('Responsive - Mobile (375x667)', () => {
       const hasBottomPadding = await actionBar.evaluate(el => {
         const computedStyle = window.getComputedStyle(el);
         // Check for pb-safe class or padding-bottom
-        return (
-          el.classList.contains('pb-safe') || parseInt(computedStyle.paddingBottom) > 0
-        );
+        return el.classList.contains('pb-safe') || parseInt(computedStyle.paddingBottom) > 0;
       });
 
       expect(hasBottomPadding).toBe(true);
@@ -131,7 +129,7 @@ test.describe('Responsive - Mobile (375x667)', () => {
     await page.goto('/library');
 
     // Open config
-    const gameCard = page.locator('[data-testid="game-card"]').first();
+    const gameCard = page.locator('[data-testid="meeple-card"][data-entity="game"]').first();
     const askButton = gameCard.locator('button:has-text("Ask Agent")');
 
     if (await askButton.isVisible()) {
@@ -197,7 +195,7 @@ test.describe('Responsive - Tablet (768x1024)', () => {
   test('config sheet should be side drawer from right (500px width)', async ({ page }) => {
     await page.goto('/library');
 
-    const gameCard = page.locator('[data-testid="game-card"]').first();
+    const gameCard = page.locator('[data-testid="meeple-card"][data-entity="game"]').first();
     const askButton = gameCard.locator('button:has-text("Ask Agent")');
 
     if (await askButton.isVisible()) {
@@ -302,7 +300,7 @@ test.describe('Responsive - Desktop (1920x1080)', () => {
   test('config sheet should be centered modal (600px max-width)', async ({ page }) => {
     await page.goto('/library');
 
-    const gameCard = page.locator('[data-testid="game-card"]').first();
+    const gameCard = page.locator('[data-testid="meeple-card"][data-entity="game"]').first();
     const askButton = gameCard.locator('button:has-text("Ask Agent")');
 
     if (await askButton.isVisible()) {
@@ -360,7 +358,7 @@ test.describe('Responsive - Desktop (1920x1080)', () => {
 
       // Main content should still be visible alongside chat
       const mainContent = page.locator('[data-testid="game-content"]');
-      if (await mainContent.count() > 0) {
+      if ((await mainContent.count()) > 0) {
         await expect(mainContent).toBeVisible();
       }
     }
@@ -372,12 +370,15 @@ test.describe('Responsive - Desktop (1920x1080)', () => {
     const actionBar = page.locator('[data-testid="action-bar"]');
     if (await actionBar.isVisible()) {
       // On desktop, buttons may have full labels visible
-      const settingsButton = actionBar.locator('button:has-text("Settings"), button:has-text("Impostazioni")');
-      const exportButton = actionBar.locator('button:has-text("Export"), button:has-text("Esporta")');
+      const settingsButton = actionBar.locator(
+        'button:has-text("Settings"), button:has-text("Impostazioni")'
+      );
+      const exportButton = actionBar.locator(
+        'button:has-text("Export"), button:has-text("Esporta")'
+      );
 
       // Either button text visible or icon-only (both are valid on desktop)
-      const hasLabels =
-        (await settingsButton.count()) > 0 || (await exportButton.count()) > 0;
+      const hasLabels = (await settingsButton.count()) > 0 || (await exportButton.count()) > 0;
 
       // This is informational - desktop may still use icon-only
     }

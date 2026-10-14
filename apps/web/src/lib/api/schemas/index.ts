@@ -63,6 +63,9 @@ export * from './agent-typologies.schemas';
 // AI Models Management schemas (Issue #2521)
 export * from './ai-models.schemas';
 
+// Agent profile admin page (#4169, ADR-095 6c)
+export * from './agent-profile.schemas';
+
 // Badge & Gamification schemas (Issue #2747)
 export * from './badges.schemas';
 

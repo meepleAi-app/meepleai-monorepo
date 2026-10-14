@@ -212,17 +212,6 @@ describe('AdminClient - Issue #2340', () => {
     });
   });
 
-  describe('deletePrompt', () => {
-    it('should delete prompt template', async () => {
-      vi.mocked(mockHttpClient.delete).mockResolvedValue(undefined);
-
-      const client = createAdminClient({ httpClient: mockHttpClient });
-      await client.deletePrompt('prompt_123');
-
-      expect(mockHttpClient.delete).toHaveBeenCalledWith('/api/v1/admin/prompts/prompt_123');
-    });
-  });
-
   describe('activatePromptVersion', () => {
     it('should activate specific prompt version', async () => {
       const mockResult = {

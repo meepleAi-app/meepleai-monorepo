@@ -25,11 +25,7 @@ export type SessionSSEEventType =
   | 'session:timer';
 
 export type ConnectionStatus =
-  | 'disconnected'
-  | 'connecting'
-  | 'connected'
-  | 'reconnecting'
-  | 'failed';
+  'disconnected' | 'connecting' | 'connected' | 'reconnecting' | 'failed';
 
 export interface SessionSSEEvent<T = unknown> {
   type: SessionSSEEventType;
@@ -153,7 +149,12 @@ export function useSessionStream(
 
   const handleMessage = useCallback((event: MessageEvent) => {
     try {
-      const parsed: SessionSSEEvent = JSON.parse(event.data);
+      // #4114: the live session stream names the event (the SSE `event:` field) and sends the
+      // bare payload. This hook read a `{ type, data }` wrapper that neither stream sends.
+      const parsed = {
+        type: event.type as SessionSSEEventType,
+        data: JSON.parse(event.data) as unknown,
+      };
       const cbs = callbacksRef.current;
 
       switch (parsed.type) {
@@ -210,7 +211,9 @@ export function useSessionStream(
     setConnectionStatus('connecting');
 
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE || '';
-    const url = `${baseUrl}/api/v1/game-sessions/${sessionId}/stream`;
+    // #4114: the callers hold the id of a LiveGameSession, whose stream also fans in the companion
+    // SessionTracking channel (timers, toolkit). /game-sessions/{id}/stream answered 404 to it.
+    const url = `${baseUrl}/api/v1/live-sessions/${sessionId}/stream`;
 
     try {
       const es = new EventSource(url, { withCredentials: true });

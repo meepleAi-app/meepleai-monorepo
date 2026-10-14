@@ -70,7 +70,8 @@ export function SessionDrawerContent({ entityId, initialTabId }: SessionDrawerCo
           {
             icon: BarChart2,
             label: 'Risultati',
-            onClick: () => router.push(`/sessions/${entityId}/results`),
+            // #4156: /results does not exist; the results of a session are its scoreboard.
+            onClick: () => router.push(`/sessions/${entityId}/scoreboard`),
             variant: 'secondary' as const,
             enabled: true,
           },

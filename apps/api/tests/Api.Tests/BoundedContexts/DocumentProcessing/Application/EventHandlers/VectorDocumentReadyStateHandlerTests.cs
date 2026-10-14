@@ -125,7 +125,6 @@ public sealed class VectorDocumentReadyStateHandlerTests
             .FirstOrDefaultAsync(p => p.Id == _pdfDocumentId);
         updated.Should().NotBeNull();
         updated!.ProcessingState.Should().Be("Ready");
-        updated.ProcessingState.Should().Be("Ready");
     }
 
     /// <summary>

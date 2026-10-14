@@ -152,6 +152,8 @@ Il panel aveva raccomandato una issue separata. Si è deciso di tenere tutto in 
 
 ### Criteri di accettazione
 
+> Superati dalla revisione del 2026-10-14, più sotto.
+
 - **Rosso prima**: un test di `ScoreboardPage` con `api.liveSessions.getSession` simulato e `api.sessions.getById` non simulato. Oggi fallisce perché la pagina chiama il secondo.
 - **Rosso prima**: un test architetturale. Nessun file sotto `app/(authenticated)/sessions/[id]/` importa `useSession` né chiama `api.sessions.getById`.
 - **Rosso prima**: un test di `ScoreTabContent` in cui l'inserimento di un punteggio chiama `POST /api/v1/live-sessions/{id}/scores`. Oggi chiama `/game-sessions/{id}/scores-polymorphic`.
@@ -172,6 +174,75 @@ Scenario: il percorso completo di una partita creata dal wizard
 ```
 
 - **Nel browser**: `/notes` e `/sessions/{id}` non mostrano più l'errore 404.
+
+### Revisione del 2026-10-14 — panel sulla spec, decisioni D4–D6
+
+> Sostituisce i criteri qui sopra e i due criteri che #4154 aveva lasciato su #4156. Discussione e decisioni: [commento su #4156](https://github.com/meepleAi-app/meepleai-monorepo/issues/4156#issuecomment-6161490414).
+
+#### Cosa ha trovato il panel, su `main-dev`
+
+1. **`/sessions/[id]` riceve id di tre aggregati.** La mappa per pagina qui sopra dava per scontato che fosse sempre l'id di una `LiveGameSession`. L'inventario sotto dice altrimenti, e la pagina è già mista anche dentro: il layout carica `api.liveSessions.getSession` (`lib/stores/session-store.ts`), mentre riepilogo, tabellone e note leggono `GameSession`.
+2. **Un test architetturale sul testo non vede il difetto.** La chiamata sbagliata passa quasi sempre da un hook in `lib/` o `hooks/` (`useUpdateSessionScores`, `useSessionDetail`, `useSessionAgentChat`), non da un URL nel file della pagina. E sarebbe rosso dal primo giorno per due chiamate che questa spec non nominava: `/game-sessions/{id}/resume` e `/game-sessions/{id}/chat/ask-agent` in `SessionLiveView.tsx`. Il controllo va fatto sugli **import**, da un elenco nominato.
+3. **Il criterio di #4154 sul lancio dell'agente andava contro #4238.** Chiedeva di far funzionare `POST /game-sessions/{id}/agent/launch`, cioè una migrazione della chiave esterna di `agent_sessions` per un componente che A4 sostituisce e A7 ritira.
+4. **Il round dell'editor non era definito**, e la spec dell'assistente (§13.1) aspettava questa issue per confermarlo.
+5. **#4114 non condivide la superficie.** `/live` non usa `useSessionSync` né `useSessionStream`, e `components/toolkit/Timer.tsx` lo montano solo le pagine toolkit. La terza fetta del piano esce da #4156.
+6. **Link a sotto-rotte che non esistono** sulla stessa superficie: `tools` e `chat` nella mini-nav di `sessions/[id]/layout.tsx`, `chats` in `config/entity-navigation.ts`, `results` in `extra-meeple-card/entities/SessionDrawerContent.tsx`.
+7. **Le note personali** stanno in `localStorage`, con l'id della rotta come chiave: non sono note di sessione sul server.
+8. **La generazione della partita registrata inghiotte i propri errori** (`LiveSessionCompletedEventHandler`): lo scenario finale è l'unica guardia, e deve verificare che la partita registrata esista.
+
+#### Decisioni
+
+| | decisione | nota |
+|---|---|---|
+| **D4** | l'id di `/sessions/[id]` è sempre quello di una `LiveGameSession`. Chi ha l'id di una `GameSession` passa alla live correlata, che `GameSessionDto` espone come `liveSessionId`. Una `GameSession` senza live non ha pagina di dettaglio | il rimando alla partita registrata, previsto dalla decisione, non è costruibile: `PlayRecord` porta solo `SourceEventId`, l'evento di chiusura della live, quindi una `GameSession` senza live non ha una partita registrata raggiungibile |
+| **D5** | l'agente di sessione vecchio esce da `/live` | il criterio di #4154 passa ad A4 (#4238), che porta l'assistente sulla rotta `POST /live-sessions/{id}/assistant` |
+| **D6** | il round dell'editor è il round derivato della spec dell'assistente (§5.1), `(CurrentTurnIndex − 1) / n + 1`: predefinito e modificabile dall'host | chiude §13.1 di quella spec |
+| proposta | i tipi polimorfici (vittoria sì/no, obiettivi, classifica) si rinviano | il wizard non li offre; da confermare prima della fetta 2 |
+
+#### Inventario dei produttori di link a `/sessions/<id>`
+
+Comando che rienumera i siti (le righe dentro `sessions/[id]/` costruiscono link verso la stessa sessione e non contano):
+
+```bash
+git grep -n -F 'sessions/${' -- apps/web/src \
+  | grep -v -E "__tests__|\.test\.|\.stories\.|api/v1|live-sessions/|game-sessions/|agent-sessions|chat-sessions|tracking-sessions"
+```
+
+L'aggregato si ricava risalendo alla chiamata che produce l'id, non dal nome della variabile.
+
+| aggregato dell'id | produttori | trattamento |
+|---|---|---|
+| `LiveGameSession` | wizard mobile (`sessions/new/session-wizard-mobile.tsx`), `HomeFeed`, `PlayPanel`, `PrivateGameHub`, `StartSessionSheet`, `LiveSessionPill`, `MobileBottomBar`, `play-records/[id]/edit` (`liveSessionId`), `sessions/[id]/join` (`sessionInvites.joinSession`), primo ramo di `sessions/join` (`liveSessions.getByCode`), `SessionPanel` (store di sessione, che legge `liveSessions`), `GameOverModal` | corretti; `SessionCreationWizard` (desktop) naviga sulla radice invece che su `/live` |
+| `GameSession` | `SessionsLibraryView`, `session-hero` e `BackToSessionFAB` (`api.sessions.getActive`; il terzo porta anche su `/live`), `games/[id]/sessions/page.tsx` e `SessionDrawerSheet` (`api.games.getSessions`), `players/[id]/sessions/page.tsx` (`api.sessions`), `sessionToHubItem` in `lib/library/hybrid-hub.mappers.ts` (`GameSessionDto`) | D4: si passa a `liveSessionId`; senza live, niente link |
+| `Session` di `SessionTracking` | `NightLiveClientView` e `NightSummaryClientView` delle serate, `SerataResumeButton`, `GameNightSessionsList`, ramo di ripiego di `sessions/join` (`sessionTracking.getByCode`) | **non coperto da D4: decisione D7, aperta**. Le sessioni di una serata nascono in `SessionTracking` (`StartGameNightSessionCommandHandler` e `AttachGamebookCampaignToGameNightCommandHandler` mandano il `CreateSessionCommand` di quel contesto, e `GameNightSession.SessionId` punta lì): nessuna `LiveGameSession` viene creata |
+| dipende dal chiamante | le due `SessionDrawerContent`, di `extra-meeple-card` e di `layout/mobile/drawer` (`entityId`), l'entità `session` di `config/entity-navigation.ts` (`idKey: 'sessionId'`) | da risolvere nella fetta 1 |
+| nessun utente | `SessionsTimeline`, `IncompleteSessionHero`, `QuickCardsCarousel`, `MeepleResumeSessionCard` (nessun sito li monta), `lib/navigation` `sessionDetail` (nessun chiamante), `GamePickerDialog` (raggiunge il link solo dopo `sessionFlow.createSession`, che chiama `POST /api/v1/games/{gameId}/sessions`: nel routing del backend quella rotta non c'è) | non bloccano; da togliere come codice morto, a parte |
+
+**D7 — aperta**: le sessioni di una serata di gioco non hanno una `LiveGameSession`, quindi con D4 non hanno pagina in `/sessions/[id]`. Oggi il link porta già su una pagina rotta: il layout legge `liveSessions`, il riepilogo `GameSession`, ed entrambi rispondono 404 per un id di `SessionTracking`. La proposta è che il link porti alle pagine della serata (`/game-nights/{id}/live` mentre è in corso, `/game-nights/{id}/summary` a serata chiusa), senza una pagina nuova.
+
+**Per i produttori alimentati da props**, l'inventario a mano non basta: l'id arriva da più chiamanti. Proposta per il piano della fetta 1: un tipo marcato `LiveSessionId`, prodotto solo dagli schemi che portano l'id di una live, e un unico costruttore del link che lo richiede. Il compilatore farebbe l'inventario al posto della ricerca, anche per i produttori che arriveranno dopo.
+
+#### Criteri per fetta
+
+**Fetta 0 — produttori e guardia**
+- L'inventario qui sopra.
+- `GameSessionDto.liveSessionId`. **Rosso prima**: una sessione creata e avviata come fa il wizard espone, nella `GameSession` correlata, l'id della live; una `GameSession` senza live espone `null`.
+- Test architetturale **sugli import**: nessun file sotto `app/(authenticated)/sessions/[id]/` importa gli hook e i client di `GameSession` e `SessionTracking` di un elenco nominato, né scrive `/api/v1/game-sessions/`. Eccezioni esplicite, ciascuna con il numero della issue che la chiude. Verificato per perturbazione.
+
+**Fetta 1 — navigazione e letture**
+- Il wizard desktop porta a `/sessions/{id}/live`, come quello mobile.
+- Riepilogo, `/scoreboard` e `/notes` leggono `LiveGameSession`; il tabellone ordina per totale decrescente.
+- La ripresa passa da `/live-sessions/{id}/resume`.
+- I produttori dell'inventario passano tutti l'id di una live; quelli che non possono, non mostrano il link (e per le serate vale D7).
+- L'agente vecchio non è più in `/live` (D5); le eccezioni del test architetturale che lo riguardano sono rimosse.
+- Nessun link verso `tools`, `chat`, `chats` o `results` sotto `/sessions/{id}`.
+- Le note personali sono dichiarate per quello che sono: locali al browser.
+
+**Fetta 2 — scheda Score su `RoundScores`**
+- Editor giocatore × dimensione × round, con il round derivato come predefinito (D6); scrittura con `POST /live-sessions/{id}/scores`, correzione con `PUT`.
+- Esempi eseguibili: punteggio al round corrente, correzione, punteggio a un round futuro.
+- CLAUDE.md (§ *Live-session scoring*) e ADR-089 (riga «Update») aggiornati.
+- Lo scenario completo qui sopra, con una riga in più: la partita registrata **esiste**, oltre a portare gli stessi totali.
 
 ---
 
@@ -221,17 +292,17 @@ Scenario: il percorso completo di una partita creata dal wizard
 ## Ordine e dipendenze
 
 ```
-#4154 ──────────────► #4156 (verifica dell'assistente in /live)
+#4154 ──────────────► A4 di #4238 (verifica dell'assistente in /live; spostata da #4156 il 2026-10-14)
 #4157 ─┐ (indipendente)
 #4158 ─┴───────────► #4155 (la casella nell'onboarding tocca FirstGameStep, come #4158)
 D1 = A ─────────────► #4155
-#4114 ──────────────► #4156 (stessa famiglia: id di live session su /game-sessions; coordinare)
+#4114               (stessa famiglia, superficie diversa: procede da sola, vedi la revisione di #4156)
 ```
 
 1. **#4154 per prima**: è una regressione fresca su `main-dev`, è la correzione più piccola, e senza di essa non si può verificare l'assistente in sessione dopo #4156. Va coordinata con la linea #4138.
 2. **#4157 e #4158 in parallelo**: sono indipendenti e piccole. #4158 va chiusa prima che #4155 tocchi `FirstGameStep`, per non sovrapporre due modifiche allo stesso componente.
 3. **#4155**: è la più importante per l'utente, e con D1 = A non ha più blocchi di policy. Prima il codice d'errore nel backend, poi i tre punti d'ingresso.
-4. **#4156 per ultima**: è la più ampia, perché con D3 comprende anche la scrittura dei punteggi, e la sua verifica completa dipende da #4154. È la stessa famiglia di #4114 (gli hook SSE su `/game-sessions`). Conviene coordinarle o farle nello stesso ramo, perché toccano la stessa superficie `/sessions/[id]/live`.
+4. **#4156 per ultima**: è la più ampia, perché con D3 comprende anche la scrittura dei punteggi, e la sua verifica completa dipende da #4154. È la stessa famiglia di #4114 (gli hook SSE su `/game-sessions`). Conviene coordinarle o farle nello stesso ramo, perché toccano la stessa superficie `/sessions/[id]/live`. *(2026-10-14: il legame con #4114 e la dipendenza da #4154 sono caduti, vedi la revisione di #4156.)*
 
 ## Rischi trasversali
 

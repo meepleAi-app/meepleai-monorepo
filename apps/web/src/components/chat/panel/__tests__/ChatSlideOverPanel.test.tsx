@@ -1,3 +1,7 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -257,4 +261,42 @@ describe('ChatSlideOverPanel', () => {
     window.dispatchEvent(event);
     expect(useChatPanelStore.getState().isOpen).toBe(false);
   });
+
+  /**
+   * #4341: il velo stava SOPRA il pannello. I due livelli venivano da due scale: il velo da
+   * `design-tokens.css` (1040), il pannello da `--z-modal`, che `design-tokens-canonical.css`
+   * ridefinisce a 60. Nel browser un clic nel campo colpiva il velo, che chiude la chat. jsdom non
+   * carica il CSS: qui i due livelli si risolvono come fa il cascade, leggendo i file dei token.
+   */
+  it('keeps the panel above its own backdrop (#4341)', () => {
+    useChatPanelStore.getState().open();
+    render(<ChatSlideOverPanel />);
+
+    const backdrop = effectiveZIndex(screen.getByTestId('chat-panel-backdrop'));
+    const panel = effectiveZIndex(screen.getByTestId('chat-slide-over-panel'));
+
+    expect(panel).toBeGreaterThan(backdrop);
+  });
 });
+
+const STYLES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../styles');
+
+/** Il valore di una variabile `--z-*` com'è nel browser. */
+function resolveZToken(token: string): number | undefined {
+  const find = (file: string) =>
+    new RegExp(`--${token}:\\s*(-?\\d+)\\s*;`).exec(
+      fs.readFileSync(path.join(STYLES, file), 'utf8')
+    )?.[1];
+  // Il file canonico dichiara le variabili fuori da ogni layer; `design-tokens.css` dentro
+  // `@layer tokens`. A parità di selettore vince la dichiarazione fuori dai layer.
+  const value = find('design-tokens-canonical.css') ?? find('design-tokens.css');
+  return value === undefined ? undefined : Number(value);
+}
+
+/** Il z-index che l'elemento avrà nel browser, dalla sua classe `z-[var(--z-…,fallback)]`. */
+function effectiveZIndex(element: HTMLElement): number {
+  const match = /z-\[var\(--([a-z-]+),(\d+)\)\]/.exec(element.className);
+  if (!match) throw new Error(`nessuna classe z-[var(--z-…)] su ${element.dataset.testid}`);
+  const [, token, fallback] = match;
+  return resolveZToken(token) ?? Number(fallback);
+}

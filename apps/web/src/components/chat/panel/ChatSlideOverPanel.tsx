@@ -307,10 +307,13 @@ export function ChatSlideOverPanel() {
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop. #4341: velo e pannello prendono il livello dalla stessa scala, quella canonica
+          (design-tokens-canonical.css: overlay 50 < modal 60). Il velo prendeva --z-modal-backdrop
+          (1040, solo nella scala vecchia) e il pannello --z-modal, che la canonica ridefinisce a
+          60: il velo copriva il pannello, e un clic nel campo chiudeva la chat. */}
       <div
         data-testid="chat-panel-backdrop"
-        className="fixed inset-0 z-[var(--z-modal-backdrop,1040)]"
+        className="fixed inset-0 z-[var(--z-overlay,50)]"
         style={{
           background: 'rgba(40, 28, 14, 0.28)',
           backdropFilter: 'blur(2px)',
@@ -322,7 +325,7 @@ export function ChatSlideOverPanel() {
       {/* Panel */}
       <aside
         data-testid="chat-slide-over-panel"
-        className="fixed right-0 top-0 bottom-0 z-[var(--z-modal,1050)] flex w-[760px] max-w-[60vw] flex-col overflow-hidden border-l border-[var(--border)] shadow-[var(--shadow-warm-2xl)]"
+        className="fixed right-0 top-0 bottom-0 z-[var(--z-modal,60)] flex w-[760px] max-w-[60vw] flex-col overflow-hidden border-l border-[var(--border)] shadow-[var(--shadow-warm-2xl)]"
         style={{
           background: 'linear-gradient(180deg, var(--bg-card), var(--bg))',
           animation: 'chatPanelSlideIn 350ms cubic-bezier(0.4, 0, 0.2, 1)',

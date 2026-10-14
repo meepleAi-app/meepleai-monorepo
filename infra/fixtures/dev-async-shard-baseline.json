@@ -55,7 +55,7 @@
     "l'artifact di uno non esiste finche' il suo job gira. La provenienza che conta e' quella",
     "nel `_comment` di ciascuno shard, che ha precedenza su questi due campi."
   ],
-  "runId": "38503769458",
+  "runId": "38554611216",
   "capturedAt": "2026-10-14",
   "shards": {
     "Core": {
@@ -158,18 +158,21 @@
     },
     "KnowledgeBase": {
       "_comment": [
-        "Ricatturati il 2026-10-14 dal run 38503769458: dev-async sul merge di #4313 (849c224ae).",
+        "Ricatturati il 2026-10-14 dal run 38554611216: dev-async sul merge di #4346 (7c339c38d).",
         "Tutti i job del run 'success', nessuno 'skipped'; il log dello shard non contiene",
-        "'Aborting test run: test run timeout' (grep -c -> 0), sessione 37 min su 75.",
+        "'Aborting test run: test run timeout' (grep -c -> 0); la controprova dal trailer e' coerente.",
         "",
-        "failed 23 -> 20: i tre DeleteKbDocumentCommandHandlerIntegrationTests, rossi dal #3982",
-        "perche' il loro contenitore non registrava la cache semantica e fallivano alla costruzione,",
-        "li ha riparati #4313. Gli altri venti nomi sono quelli di prima.",
+        "failed 20 -> 18: escono PdfIndexingFlowKbFlagIntegrationTests.UploadPdf_OnSuccessfulIndexing_",
+        "SetsHasKnowledgeBaseTrue_OnSharedGame e UploadPdfExtractionPersistenceIntegrationTests.",
+        "ProcessPdfAsync_UploadPathReachesReady_PersistsExtractedTextAndStructuredElementsJson, che il loro",
+        "contenitore non sapeva costruire (cache semantica e accesso al RAG, #3982): li ha riparati #4346",
+        "(#4339). Gli altri diciotto nomi sono quelli di prima. Il comparatore li ha segnalati per nome",
+        "come «dichiarati ma non falliscono piu'» prima dell'aggiornamento.",
         "",
-        "Fatto con `gh run download 38503769458 --name integration-results-KnowledgeBase` e",
+        "Fatto con `gh run download 38554611216 --name integration-results-KnowledgeBase` e",
         "`shard-skip-assert.sh --shard KnowledgeBase --trx <file> --log <file> --update-baseline`."
       ],
-      "failed": 20,
+      "failed": 18,
       "skipped": 11,
       "failedTests": [
         "Api.Tests.Integration.DocumentProcessing.DeletePdfIntegrationTests.ConcurrentDeletion_HandlesRaceConditionGracefully",
@@ -186,11 +189,9 @@
         "Api.Tests.Integration.DocumentProcessing.DeletePdfIntegrationTests.DeleteWithVectorDocument_SuccessfullyRemovesBothRecords",
         "Api.Tests.Integration.DocumentProcessing.OrphanCleanupAndReattemptIntegrationTests.CleanupThenReattempt_RemovesOrphansCascade_AndReEnqueuesOnlyValidPending",
         "Api.Tests.Integration.DocumentProcessing.OrphanCleanupAndReattemptIntegrationTests.Cleanup_IsIdempotent_OnSecondRun",
-        "Api.Tests.Integration.DocumentProcessing.PdfIndexingFlowKbFlagIntegrationTests.UploadPdf_OnSuccessfulIndexing_SetsHasKnowledgeBaseTrue_OnSharedGame",
         "Api.Tests.Integration.DocumentProcessing.PdfPipelineIntegrationTests.PdfDocument_SevenStateProgression_ShouldAdvanceThroughAllStates",
         "Api.Tests.Integration.DocumentProcessing.PdfPipelineMetricsIntegrationTests.FullPipeline_StateDurations_CanBeCalculatedFromTimingFields",
         "Api.Tests.Integration.DocumentProcessing.PdfRowVersionConcurrencyIntegrationTests.Reindex_RacesWithDelete_LeavesNoOrphanState",
-        "Api.Tests.Integration.DocumentProcessing.UploadPdfExtractionPersistenceIntegrationTests.ProcessPdfAsync_UploadPathReachesReady_PersistsExtractedTextAndStructuredElementsJson",
         "Api.Tests.Integration.DocumentProcessing.UploadPdfHeadingAwareIntegrationTests.ChunkExtractedText_WithAdvancedChunking_PersistsHeadingBearingChunks"
       ],
       "skippedTests": [

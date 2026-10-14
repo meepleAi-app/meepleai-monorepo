@@ -141,8 +141,8 @@ internal sealed record SaveAgentProfileDraftRequest(
     string? Persona,
     string PrimaryModelId,
     string? FallbackModelId,
-    decimal Temperature,
-    int MaxResponseTokens,
-    CitationStyle CitationStyle,
+    decimal? Temperature,
+    int? MaxResponseTokens,
+    CitationStyle? CitationStyle,
     IReadOnlyDictionary<string, string>? SystemPrompts,
     string FallbackLanguage);

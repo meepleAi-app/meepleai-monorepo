@@ -6,6 +6,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 
 #pragma warning disable MA0048 // File name must match type name - the handlers of the admin agent page
@@ -37,9 +38,9 @@ internal sealed class SaveAgentProfileDraftCommandHandler : ICommandHandler<Save
             command.Persona ?? string.Empty,
             command.PrimaryModelId,
             command.FallbackModelId,
-            command.Temperature,
-            command.MaxResponseTokens,
-            command.CitationStyle,
+            Required(command.Temperature, "temperature"),
+            Required(command.MaxResponseTokens, "maxResponseTokens"),
+            Required(command.CitationStyle, "citationStyle"),
             command.SystemPrompts,
             command.FallbackLanguage,
             kept.CandidatePoolSize,
@@ -63,6 +64,12 @@ internal sealed class SaveAgentProfileDraftCommandHandler : ICommandHandler<Save
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return AgentProfileAdminDto.From(profile);
     }
+
+    // Un campo omesso non vale zero: la temperatura 0 e il primo stile di citazione sono valori validi
+    // che nessuno avrebbe scelto.
+    private static T Required<T>(T? value, string field)
+        where T : struct =>
+        value ?? throw new ValidationException(field, $"The field '{field}' is required.");
 }
 
 internal sealed class PublishAgentProfileDraftCommandHandler : ICommandHandler<PublishAgentProfileDraftCommand, AgentProfileAdminDto>

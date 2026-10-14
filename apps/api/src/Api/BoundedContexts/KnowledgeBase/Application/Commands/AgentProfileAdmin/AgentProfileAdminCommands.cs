@@ -10,6 +10,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands.AgentProfileAdm
 /// sezioni modificabili — Identità, Modello, Generazione, Prompt — e non ha campi per le altre:
 /// Recupero, Fonti e l'assistente in partita restano quelli della bozza, o della versione pubblicata
 /// se la bozza non c'è ancora. Così una pagina che non li mostra non può cambiarli per sbaglio.
+/// Temperatura, lunghezza e stile delle citazioni sono nullable solo per distinguere «omesso» da
+/// «zero»: il gestore rifiuta l'omissione.
 /// </summary>
 internal sealed record SaveAgentProfileDraftCommand(
     string Name,
@@ -17,9 +19,9 @@ internal sealed record SaveAgentProfileDraftCommand(
     string? Persona,
     string PrimaryModelId,
     string? FallbackModelId,
-    decimal Temperature,
-    int MaxResponseTokens,
-    CitationStyle CitationStyle,
+    decimal? Temperature,
+    int? MaxResponseTokens,
+    CitationStyle? CitationStyle,
     IReadOnlyDictionary<string, string> SystemPrompts,
     string FallbackLanguage) : ICommand<AgentProfileAdminDto>;
 

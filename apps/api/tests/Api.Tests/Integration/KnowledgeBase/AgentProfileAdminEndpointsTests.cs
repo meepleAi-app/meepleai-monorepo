@@ -162,6 +162,25 @@ public sealed class AgentProfileAdminEndpointsTests : IClassFixture<AgentProfile
         (await ProfileAsync()).Draft.Should().BeNull();
     }
 
+    /// <summary>
+    /// Un campo omesso non vale zero: senza la temperatura la bozza si salverebbe a 0, un valore
+    /// valido che nessuno ha scelto, e senza lo stile delle citazioni col primo dell'enum.
+    /// </summary>
+    [Theory]
+    [InlineData("temperature")]
+    [InlineData("citationStyle")]
+    [InlineData("maxResponseTokens")]
+    public async Task SaveDraft_WithoutARequiredField_IsABadRequest(string omitted)
+    {
+        var draft = await EditableSectionsAsync();
+        draft.Remove(omitted);
+
+        var response = await SendAsync(HttpMethod.Put, $"{Route}/draft", _adminToken, draft);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest, await response.Content.ReadAsStringAsync(Ct));
+        (await ProfileAsync()).Draft.Should().BeNull();
+    }
+
     // ─── Pubblicare ─────────────────────────────────────────────────────────────
 
     [Fact]

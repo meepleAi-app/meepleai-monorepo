@@ -10,6 +10,12 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.Services;
 /// un attimo prima deve contare. «Con un prezzo» vale come per <see cref="CatalogModelPriceList"/>: un
 /// modello che il registro dei costi sa prezzare, cioè in catalogo e in dollari. Un prezzo zero è un
 /// prezzo, quello dei modelli gratuiti.
+/// <para>
+/// Il registro dei costi invece legge un'istantanea che si ricarica ogni minuto: se l'admin imposta
+/// un prezzo e pubblica subito, per al più un minuto le risposte del modello nuovo possono finire nel
+/// registro come «senza prezzo», con l'errore nei log e il contatore. La pubblicazione non aspetta
+/// l'istantanea: il prezzo c'è, e la finestra è quella di ogni altra modifica del catalogo.
+/// </para>
 /// </summary>
 internal sealed class CatalogAgentProfileModels(IAiModelConfigurationRepository repository) : IAgentProfileModelCatalogReader
 {

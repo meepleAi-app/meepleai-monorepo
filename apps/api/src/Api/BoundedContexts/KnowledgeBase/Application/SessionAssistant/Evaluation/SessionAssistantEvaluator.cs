@@ -29,8 +29,21 @@ internal sealed record AssistantScenarioResult(
 internal sealed class SessionAssistantEvaluator(
     IAssistantChatClientFactory factory, IAssistantPlayerMatcher matcher, ILogger<SessionAssistantEvaluator> logger)
 {
+    public Task<AssistantScenarioResult> RunAsync(
+        AssistantScenario scenario, AssistantModelSettings settings, AssistantPromptSet prompts, CancellationToken cancellationToken) =>
+        RunAsync(scenario, settings, prompts, offerRules: true, cancellationToken);
+
+    /// <summary>
+    /// Come sopra. Con <paramref name="offerRules"/> falso <c>cerca_regole</c> non viene offerto a nessuno
+    /// scenario, come nel turno finché la fetta A5 non lo consegna (#4270): così si misura il testo da
+    /// pubblicare con gli strumenti che riceverà davvero.
+    /// </summary>
     public async Task<AssistantScenarioResult> RunAsync(
-        AssistantScenario scenario, AssistantModelSettings settings, AssistantPromptSet prompts, CancellationToken cancellationToken)
+        AssistantScenario scenario,
+        AssistantModelSettings settings,
+        AssistantPromptSet prompts,
+        bool offerRules,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(prompts);
         ArgumentNullException.ThrowIfNull(scenario);
@@ -42,7 +55,7 @@ internal sealed class SessionAssistantEvaluator(
         // il codice, non la perdita dell'intero report del modello. L'eccezione resta nei log.
         try
         {
-            await ExecuteAsync(scenario, settings, prompts, turn, cancellationToken).ConfigureAwait(false);
+            await ExecuteAsync(scenario, settings, prompts, offerRules, turn, cancellationToken).ConfigureAwait(false);
         }
         catch (AssistantGatewayException ex)
         {
@@ -68,7 +81,7 @@ internal sealed class SessionAssistantEvaluator(
     }
 
     private async Task ExecuteAsync(
-        AssistantScenario scenario, AssistantModelSettings settings, AssistantPromptSet prompts, Turn turn,
+        AssistantScenario scenario, AssistantModelSettings settings, AssistantPromptSet prompts, bool offerRules, Turn turn,
         CancellationToken cancellationToken)
     {
         var reader = new ScenarioSessionAssistantReader(scenario);
@@ -78,7 +91,7 @@ internal sealed class SessionAssistantEvaluator(
 
         using var chat = factory.Create(settings, turn.Meter);
         turn.Response = await chat.GetResponseAsync(
-            messages, new ChatOptions { Tools = turn.Toolset.CreateTools(includeRules: state.GameId is not null) }, cancellationToken)
+            messages, new ChatOptions { Tools = turn.Toolset.CreateTools(includeRules: offerRules && state.GameId is not null) }, cancellationToken)
             .ConfigureAwait(false);
     }
 

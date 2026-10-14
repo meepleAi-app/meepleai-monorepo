@@ -27,7 +27,8 @@ internal static class AdminSessionAssistantEndpoints
         double? Temperature,
         int? MaxTokens,
         int? MaxToolIterations,
-        AssistantPromptOverride? Prompts = null)
+        AssistantPromptOverride? Prompts = null,
+        bool? OfferRules = null)
     {
         public RunSessionAssistantEvaluationCommand ToCommand() => new(
             Scenarios,
@@ -36,6 +37,7 @@ internal static class AdminSessionAssistantEndpoints
             Temperature ?? 0.2,
             MaxTokens ?? 600,
             MaxToolIterations ?? 4,
-            Prompts);
+            Prompts,
+            OfferRules ?? true);
     }
 }

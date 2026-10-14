@@ -11,6 +11,8 @@
 //   --prompts=<file.json>       un prompt alternativo, { "italian": "...", "english": "..." } (una lingua basta);
 //                               il percorso parte dalla cartella da cui lanci lo script
 //   --label=candidato           entra nel nome del file dei risultati, che altrimenti si sovrascrive
+//   --rules=off                 (#4270) senza cerca_regole, come il turno finché la fetta A5 non lo consegna;
+//                               gli scenari che si aspettano cerca_regole restano fuori e il file li elenca
 import { createHash } from 'node:crypto';
 import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -18,12 +20,12 @@ import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const base = process.env.MEEPLE_API ?? 'http://localhost:8080/api/v1';
-const usage = 'uso: MEEPLE_EMAIL=... MEEPLE_PASSWORD=... node run-eval.mjs <modello> [altri modelli] [--only=id,id] [--repeat=N] [--prompts=file.json] [--label=nome]';
+const usage = 'uso: MEEPLE_EMAIL=... MEEPLE_PASSWORD=... node run-eval.mjs <modello> [altri modelli] [--only=id,id] [--repeat=N] [--prompts=file.json] [--label=nome] [--rules=off]';
 const fail = (message) => { console.error(message); process.exit(2); };
 
 // Un'opzione scritta male non deve essere ignorata: «--promtps=…» misurerebbe il prompt predefinito mentre
 // chi lancia crede di misurare il candidato, e «--repeat 6» farebbe di «6» un modello.
-const known = ['only', 'repeat', 'prompts', 'label'];
+const known = ['only', 'repeat', 'prompts', 'label', 'rules'];
 const args = process.argv.slice(2);
 const options = {};
 const models = [];
@@ -41,6 +43,10 @@ for (const arg of args) {
 const only = options.only?.split(',').map((id) => id.trim()).filter(Boolean);
 const repeat = Number(options.repeat ?? 1);
 const label = options.label?.replace(/[^a-z0-9._-]/gi, '_');
+if (options.rules !== undefined && options.rules !== 'off' && options.rules !== 'on') {
+  fail(`--rules vale on oppure off, non «${options.rules}»\n${usage}`);
+}
+const offerRules = options.rules !== 'off';
 
 if (models.length === 0 || models.some((m) => /^\d+$/.test(m)) || !Number.isInteger(repeat) || repeat < 1) {
   fail(usage);
@@ -54,7 +60,14 @@ const unknown = (only ?? []).filter((id) => !set.scenarios.some((s) => s.id === 
 if (unknown.length > 0 || (only && only.length === 0)) {
   fail(only?.length === 0 ? '--only non nomina nessuno scenario' : `scenari sconosciuti: ${unknown.join(', ')}`);
 }
-const scenarios = only ? set.scenarios.filter((s) => only.includes(s.id)) : set.scenarios;
+const chosen = only ? set.scenarios.filter((s) => only.includes(s.id)) : set.scenarios;
+// Senza cerca_regole uno scenario che lo aspetta fallirebbe per costruzione: resta fuori, e il file lo dice.
+const needsRules = (s) => (s.expected?.tools ?? []).includes('cerca_regole');
+const skippedForRules = offerRules ? [] : chosen.filter(needsRules).map((s) => s.id);
+const scenarios = offerRules ? chosen : chosen.filter((s) => !needsRules(s));
+if (scenarios.length === 0) {
+  fail('nessuno scenario da eseguire: con --rules=off restano fuori quelli che si aspettano cerca_regole');
+}
 const prompts = options.prompts ? JSON.parse(readFileSync(resolve(options.prompts), 'utf8')) : null;
 const sha256 = (text) => createHash('sha256').update(text, 'utf8').digest('hex');
 
@@ -109,6 +122,7 @@ for (const model of models) {
           scenarios: { version: set.version, scenarios: [scenario] },
           primaryModelId: model, temperature: 0.2, maxTokens: 600, maxToolIterations: 4,
           ...(prompts ? { prompts } : {}),
+          ...(offerRules ? {} : { offerRules: false }),
         }),
       });
       if (!response.ok) {
@@ -154,6 +168,8 @@ for (const model of models) {
     planned: scenarios.length * repeat,
     prompts,
     promptFingerprint,
+    offerRules,
+    skippedForRules,
     stopped,
     scenarios: results.length,
     passed: results.filter((r) => r.passed).length,
@@ -174,7 +190,7 @@ for (const model of models) {
   const name = [new Date().toISOString().slice(0, 10), model.replace(/[^a-z0-9.-]/gi, '_'), label].filter(Boolean).join('-');
   const file = join(outDir, `${name}${stopped ? '.interrotto' : ''}.json`);
   writeFileSync(file, JSON.stringify(summary, null, 2));
-  console.log(`\n== ${model}${prompts ? ` · prompt da ${options.prompts}` : ''}${only ? ` · solo ${only.join(', ')}` : ''}${repeat > 1 ? ` · ${repeat} volte` : ''}`);
+  console.log(`\n== ${model}${prompts ? ` · prompt da ${options.prompts}` : ''}${only ? ` · solo ${only.join(', ')}` : ''}${repeat > 1 ? ` · ${repeat} volte` : ''}${offerRules ? '' : ` · senza cerca_regole (fuori: ${skippedForRules.join(', ') || 'nessuno'})`}`);
   if (stopped) {
     console.log(`INTERROTTO: il gateway ha rifiutato con ${stopped} (quota delle valutazioni) dopo ${executed.length} turni su ${summary.planned}. I numeri sotto valgono per i soli turni eseguiti.`);
     process.exitCode = 1;

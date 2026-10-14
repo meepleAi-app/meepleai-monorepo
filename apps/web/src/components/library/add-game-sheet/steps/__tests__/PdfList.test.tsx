@@ -3,7 +3,7 @@
  * Issue #4820: Step 2 Knowledge Base & PDF Management
  */
 
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
@@ -108,5 +108,26 @@ describe('PdfList', () => {
     render(<PdfList documents={mockDocs} className="custom-class" />);
 
     expect(screen.getByTestId('pdf-list')).toHaveClass('custom-class');
+  });
+
+  // #4356: sono stati veri del backend. Il PDF appena caricato dal wizard nasce in `Uploading`, e
+  // `Indexing` è l'ultima fase prima di `Ready`: finivano su «In attesa», con l'icona ferma.
+  it('shows a document still uploading or indexing as in progress', () => {
+    render(
+      <PdfList
+        documents={[
+          { ...mockDocs[1], id: 'doc-up', processingState: 'Uploading' },
+          { ...mockDocs[1], id: 'doc-ix', processingState: 'Indexing' },
+        ]}
+      />
+    );
+
+    const uploading = screen.getByTestId('pdf-item-doc-up');
+    const indexing = screen.getByTestId('pdf-item-doc-ix');
+    expect(within(uploading).getByText('Caricamento')).toBeInTheDocument();
+    expect(within(indexing).getByText('Indicizzazione')).toBeInTheDocument();
+    for (const item of [uploading, indexing]) {
+      expect(item.querySelector('.animate-spin')).not.toBeNull();
+    }
   });
 });

@@ -22,9 +22,12 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof
   Completed: { label: 'Pronto', color: 'text-green-500 bg-green-500/10', icon: CheckCircle2 },
   Ready: { label: 'Pronto', color: 'text-green-500 bg-green-500/10', icon: CheckCircle2 },
   Processing: { label: 'In elaborazione', color: 'text-amber-500 bg-amber-500/10', icon: Loader2 },
+  // #4356: stati veri del backend senza una voce, che finivano su «In attesa».
+  Uploading: { label: 'Caricamento', color: 'text-blue-500 bg-blue-500/10', icon: Loader2 },
   Extracting: { label: 'Estrazione', color: 'text-blue-500 bg-blue-500/10', icon: Loader2 },
   Chunking: { label: 'Suddivisione', color: 'text-blue-500 bg-blue-500/10', icon: Loader2 },
   Embedding: { label: 'Embedding', color: 'text-indigo-500 bg-indigo-500/10', icon: Loader2 },
+  Indexing: { label: 'Indicizzazione', color: 'text-indigo-500 bg-indigo-500/10', icon: Loader2 },
   Failed: { label: 'Errore', color: 'text-red-500 bg-red-500/10', icon: AlertCircle },
   Pending: {
     label: 'In attesa',
@@ -74,9 +77,11 @@ export function PdfList({ documents, loading, className }: PdfListProps) {
         const StatusIcon = status.icon;
         const isProcessing = [
           'Processing',
+          'Uploading',
           'Extracting',
           'Chunking',
           'Embedding',
+          'Indexing',
           'Pending',
         ].includes(doc.processingState);
 

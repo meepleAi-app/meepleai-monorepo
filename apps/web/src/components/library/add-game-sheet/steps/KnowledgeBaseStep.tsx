@@ -117,7 +117,6 @@ export function KnowledgeBaseStep() {
           fileName,
           filePath: '',
           fileSizeBytes,
-          processingStatus: 'Processing',
           uploadedAt: new Date().toISOString(),
           processedAt: null,
           pageCount: null,

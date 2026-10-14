@@ -3617,6 +3617,19 @@
           "columns": {
             "player": "Player"
           }
+        },
+        "rounds": {
+          "roundLabel": "Round {round}",
+          "previousRound": "Previous round",
+          "nextRound": "Next round",
+          "currentRound": "Back to the current round",
+          "player": "Player",
+          "total": "Total",
+          "noDimensions": "This game has no scoring dimensions.",
+          "noPlayers": "No player is scoring in this game.",
+          "cellAriaTemplate": "{dimension} for {player}, round {round}",
+          "saveError": "Score not saved: try again.",
+          "notAnInteger": "The score must be a whole number."
         }
       },
       "actionLog": {

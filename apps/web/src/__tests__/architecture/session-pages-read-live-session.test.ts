@@ -71,14 +71,12 @@ const FORBIDDEN_CLIENTS: ReadonlyArray<string> = [
 ];
 
 /**
- * Le violazioni presenti quando il gate è nato, ciascuna con la issue che la chiude.
+ * Le violazioni ammesse, ciascuna con la issue che la chiude. Vuoto dalla fetta 2 di #4156,
+ * quando l'ultima — la scheda Score — è passata a `/live-sessions/{id}/scores`: una voce nuova
+ * va motivata con la issue che la chiude.
  * Chiave: `pagina d'ingresso ⇒ file del sorgente · cosa usa`.
  */
-const P = 'app/(authenticated)/sessions/[id]';
-const KNOWN: Readonly<Record<string, string>> = {
-  [`${P}/live/page.tsx ⇒ hooks/use-update-session-scores.ts · /api/v1/game-sessions/`]:
-    '#4156 fetta 2 — la scheda Score scrive su /live-sessions/{id}/scores',
-};
+const KNOWN: Readonly<Record<string, string>> = {};
 
 // ─── Analisi ────────────────────────────────────────────────────────────────────────────────
 

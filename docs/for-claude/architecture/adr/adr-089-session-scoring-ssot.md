@@ -79,7 +79,7 @@ Ogni responsabilità ha **un solo** owner autoritativo. Nessuna responsabilità 
 - **In-play**: l'unica fonte autoritativa del punteggio a tavolo è `LiveGameSession.RoundScores` (round-based). Il `GameSession` correlato **non** deve mai essere letto come fonte del risultato; i suoi campi scoring restano `null`.
 - **Storico**: il record post-partita si deriva **da `LiveGameSession`** (evento `LiveSessionCompletedEvent`), non dal companion né dal polimorfico.
 - Lo scoring **polimorfico** (`ScoreData`) e lo **storico-righe** (`ScoreEntry`) di SessionTracking **non** sono, e non devono diventare, sincronizzati con `RoundScores`. Non è previsto alcun reconciler bidirezionale: sincronizzarli reintrodurrebbe il rischio dual-write/dedup che ADR-083 SP3 ha esplicitamente evitato per il diary.
-- Regola operativa: **scegli l'SSOT giusto per il contesto**, non ponticellare tra modelli. FE già oggi scrive lo scoring live via `useUpdateSessionScores` (CLAUDE.md); l'accoppiamento allo store round-based è responsabilità del wiring di quel path, non di una riconciliazione runtime.
+- Regola operativa: **scegli l'SSOT giusto per il contesto**, non ponticellare tra modelli. FE già oggi scrive lo scoring live via `useUpdateSessionScores` (CLAUDE.md); l'accoppiamento allo store round-based è responsabilità del wiring di quel path, non di una riconciliazione runtime. *(Superato: dal 2026-10-14 FE scrive su `RoundScores`, vedi § Update 2026-10-14.)*
 
 ### 3. Direzione — **coesistenza documentata e delimitata** (non nuova convergenza)
 
@@ -103,17 +103,26 @@ L'unico item genuinamente aperto **non** è una sincronizzazione, ma un **ritiro
 
 ### Negative / debt
 - La coesistenza di tre aggregati resta cognitivamente costosa: un nuovo contributor deve leggere questo ADR + ADR-083 per orientarsi. Mitigazione: pointer da CLAUDE.md (§ Domain Model).
-- Il ritiro dello scoring polimorfico/`ScoreEntry` dal path live è debito reale, qui **dichiarato ma non eseguito**. Finché non è fatto, esistono comandi di scrittura scoring in SessionTracking che, se cablati per errore al path live, producono dati non autoritativi.
+- Il ritiro dello scoring polimorfico/`ScoreEntry` dal path live è debito reale, qui **dichiarato ma non eseguito**. *(Eseguito per il FE il 2026-10-14, vedi § Update 2026-10-14.)* Finché non è fatto, esistono comandi di scrittura scoring in SessionTracking che, se cablati per errore al path live, producono dati non autoritativi.
 - La "tassa di traduzione" cross-context per feature che attraversano i due modelli (es. correlare uno score live a una nota companion) rimane: è il prezzo accettato della separazione degli SSOT.
 
 ### Neutral
 - Nessun cambiamento di schema, DTO o API. Nessun impatto su test esistenti.
 
 ## Follow-up (tracciati, non parte di questo ADR)
-- Ritiro delimitato dello scoring polimorfico/`ScoreEntry` di SessionTracking dal path live (re-orientamento ai play-records storici). Da aprire come issue di cleanup con guard di non-uso sul path live.
+- ~~Ritiro delimitato dello scoring polimorfico/`ScoreEntry` di SessionTracking dal path live (re-orientamento ai play-records storici). Da aprire come issue di cleanup con guard di non-uso sul path live.~~ Eseguito con #4156, vedi § Update 2026-10-14.
 - #3390 (epic) — contratto RAG grounded unificato (risposta agente): concern separato, dipendente da #3388/#3389.
 
-## References
+## Update 2026-10-14 — ritiro delimitato eseguito sul path live (#4156)
+
+Il ritiro previsto da § 3 è fatto per la superficie `/sessions/[id]/live` (#4156, fetta 2):
+
+- La scheda Score scrive su `RoundScores` di `LiveGameSession`: un editor giocatore × dimensione × round, con le dimensioni dello `ScoringConfig` e il round derivato dall'indice di turno, `(CurrentTurnIndex − 1) / n + 1`, modificabile dall'host. La scrittura passa da `POST /api/v1/live-sessions/{id}/scores` (`PUT` per una correzione), una scrittura alla volta.
+- Prima la scheda leggeva un `scoringType` polimorfico che nessuno impostava (restava su «Caricamento punteggi…») e scriveva su `PUT /api/v1/game-sessions/{id}/scores-polymorphic` con l'id di una live: un 404.
+- Il riepilogo di fine partita e il pannello di Catan leggono i `totalScore` della live, non più lo store polimorfico.
+- La guardia di non-uso è il test architetturale `session-pages-read-live-session`: nessun file raggiungibile dalle pagine di `sessions/[id]` importa i client e gli hook di `GameSession`/`SessionTracking`, né usa `/api/v1/game-sessions/`. La sua lista di eccezioni è vuota.
+- I comandi polimorfici di SessionTracking (`UpdateSessionScoresCommand` e affini) restano nel backend, per i play-record storici.
+
 - Issue #3395 (questo ADR); audit `docs/for-developers/audits/2026-07-29-in-session-agent-grounding-audit.md` (finding C1 + C10); programma-ombrello #3397; epic #3390.
 - ADR-083 (convergenza aggregati live; OQ1/OQ3; Fase 4 Opzione B; #2587 shadow scoring; SP0/SP3/SP5-c companion).
 - ADR-060 (persistence + xmin), ADR-065 (namespace split), ADR-071 (5-state FSM).

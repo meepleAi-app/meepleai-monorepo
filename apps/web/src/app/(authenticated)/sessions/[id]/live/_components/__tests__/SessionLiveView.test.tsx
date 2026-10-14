@@ -274,6 +274,14 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
+// ─── SessionAssistantPanel stub (#4238 A4) ────────────────────────────────────
+// The panel has its own tests; here only who gets it matters.
+vi.mock('@/components/features/session-live/assistant/SessionAssistantPanel', () => ({
+  SessionAssistantPanel: ({ sessionId }: { sessionId: string }) => (
+    <div data-slot="session-assistant-panel" data-session-id={sessionId} />
+  ),
+}));
+
 // ─── AddPlayerDialog mock (#2505: lazy import — suppress real render) ─────────
 // The dialog is lazy-loaded; mock it so tests don't need Suspense async resolve
 // for the core SessionLiveView behavior tests.
@@ -2329,5 +2337,72 @@ describe('SessionLiveView — #4156 (D5): no legacy session agent on /live', () 
   it('does not open the legacy agent chat', () => {
     renderWithIntl(<SessionLiveView />);
     expect(useSessionAgentChatMock).not.toHaveBeenCalled();
+  });
+});
+
+// ─── #4238 A4 (#4373) — the in-game assistant panel ──────────────────────────
+
+describe('SessionLiveView — #4373: only the owner of the session gets the assistant panel', () => {
+  const OWNER_ID = '44444444-4444-4444-4444-444444444444';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    mockParamsId = 'session-abc-123';
+    IS_VISUAL_TEST_BUILD_MOCK = false;
+    useLiveSessionMock.mockReturnValue({
+      data: MOCK_SESSION_DTO,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+  });
+
+  const panels = (container: HTMLElement) =>
+    container.querySelectorAll('[data-slot="session-assistant-panel"]');
+
+  it('the owner of the session gets the panel, even when no player is linked to them', () => {
+    // The server checks CreatedByUserId: an owner who is not at the table still asks.
+    expect(MOCK_SESSION_DTO.createdByUserId).toBe(OWNER_ID);
+    expect(MOCK_SESSION_DTO.players.some(p => p.userId === OWNER_ID)).toBe(false);
+    useCurrentUserMock.mockReturnValue({ data: { id: OWNER_ID } });
+
+    const { container } = renderWithIntl(<SessionLiveView />);
+
+    expect(panels(container).length).toBeGreaterThan(0);
+    expect(panels(container)[0]).toHaveAttribute('data-session-id', 'session-abc-123');
+  });
+
+  it('a host player who is not the owner does not get it', () => {
+    const notOwner = '99999999-9999-4999-8999-999999999999';
+    useLiveSessionMock.mockReturnValue({
+      data: {
+        ...MOCK_SESSION_DTO,
+        players: MOCK_SESSION_DTO.players.map((p, i) =>
+          i === 0 ? { ...p, userId: notOwner, role: 'Host' } : p
+        ),
+      } as LiveSessionDto,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useCurrentUserMock.mockReturnValue({ data: { id: notOwner } });
+
+    const { container } = renderWithIntl(<SessionLiveView />);
+
+    expect(panels(container)).toHaveLength(0);
+  });
+
+  it('without a signed-in user nobody gets it', () => {
+    useCurrentUserMock.mockReturnValue({ data: null });
+
+    const { container } = renderWithIntl(<SessionLiveView />);
+
+    expect(panels(container)).toHaveLength(0);
   });
 });

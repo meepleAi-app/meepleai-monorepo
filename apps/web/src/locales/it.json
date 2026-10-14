@@ -4033,6 +4033,75 @@
           "toolCircleLabel": "Cerchio",
           "placeholderLabel": "Area disegno condivisa"
         }
+      },
+      "assistant": {
+        "title": "Assistente",
+        "hostOnly": "Solo l'host parla con l'assistente.",
+        "loading": "Carico l'assistente…",
+        "loadError": "Non riesco a leggere l'assistente. Riprova tra poco.",
+        "unavailable": {
+          "assistant_disabled": "L'assistente non è attivo.",
+          "assistant_model_without_tools": "L'assistente non è disponibile: il modello configurato non sa usare gli strumenti.",
+          "session_state_invalid": "La partita è conclusa: l'assistente non risponde più.",
+          "other": "L'assistente non è disponibile."
+        },
+        "empty": "Dimmi un punteggio o chiedimi a chi tocca: io propongo, tu confermi.",
+        "inputLabel": "Domanda all'assistente",
+        "placeholder": "Es. «Marco fa 5 punti»",
+        "send": "Invia",
+        "you": "Tu",
+        "tool": {
+          "start": "Ci penso…",
+          "stato_partita": "Leggo la partita…",
+          "proponi_punteggio": "Preparo un punteggio…",
+          "proponi_turno": "Preparo il passaggio di turno…",
+          "cerca_regole": "Cerco nelle regole…",
+          "other": "Ci lavoro…"
+        },
+        "turnError": {
+          "budget_paused": "L'assistente è in pausa: il tetto di spesa è stato raggiunto.",
+          "turn_timeout": "L'assistente non ha fatto in tempo a rispondere. Riprova.",
+          "assistant_disabled": "L'assistente non è attivo.",
+          "assistant_model_without_tools": "L'assistente non è disponibile: il modello configurato non sa usare gli strumenti.",
+          "session_state_invalid": "La partita è conclusa: l'assistente non risponde più.",
+          "other": "L'assistente non è disponibile in questo momento. Riprova, o segna a mano."
+        },
+        "card": {
+          "score": "{points} {dimension} a {player}, round {round}",
+          "resulting": "Totale dopo la conferma: {value}",
+          "advanceTurn": "Passare il turno al giocatore successivo",
+          "confirm": "Conferma",
+          "correct": "Correggi",
+          "correctLabel": "Punti corretti",
+          "applyCorrection": "Conferma con correzione",
+          "cancel": "Annulla",
+          "reject": "Rifiuta",
+          "busy": "Un'altra conferma è in corso.",
+          "status": {
+            "Pending": "Da confermare",
+            "Applying": "In applicazione",
+            "Accepted": "Confermata",
+            "Edited": "Confermata con correzione",
+            "Failed": "Non applicata",
+            "Rejected": "Rifiutata",
+            "Expired": "Scaduta",
+            "Stale": "Superata: la partita è cambiata",
+            "other": "Chiusa"
+          },
+          "failure": {
+            "session_state_invalid": "La partita non accetta più questa scrittura.",
+            "proposal_not_applicable": "La proposta non vale più per questa partita.",
+            "session_state_unavailable": "Non sono riuscito a leggere la partita.",
+            "other": "Non è stato scritto nulla."
+          },
+          "error": {
+            "proposal_stale": "La partita è cambiata dalla proposta: non è stato scritto nulla.",
+            "proposal_not_pending": "La proposta era già chiusa.",
+            "session_state_invalid": "La partita non accetta più questa scrittura.",
+            "proposal_not_applicable": "La proposta non vale più per questa partita.",
+            "other": "Non sono riuscito ad applicare la proposta. Riprova."
+          }
+        }
       }
     },
     "sessionSummary": {

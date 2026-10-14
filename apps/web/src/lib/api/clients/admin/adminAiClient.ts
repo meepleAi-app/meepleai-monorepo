@@ -16,6 +16,9 @@ import {
   AbTestSessionListDtoSchema,
   AbTestSessionRevealedDtoSchema,
   AbTestAnalyticsDtoSchema,
+  AgentProfileAdminSchema,
+  type AgentProfileAdmin,
+  type SaveAgentProfileDraftRequest,
   type AiModelDto,
   type PagedAiModels,
   type ConfigureModelRequest,
@@ -410,6 +413,44 @@ export function createAdminAiClient(http: HttpClient) {
         LlmSystemConfigDtoSchema
       );
       if (!result) throw new Error('Failed to update LLM system config');
+      return result;
+    },
+
+    // ========== Agent profile (#4169, ADR-095 6c) ==========
+
+    async getAgentProfile(): Promise<AgentProfileAdmin> {
+      const result = await http.get('/api/v1/admin/agent-profile', AgentProfileAdminSchema);
+      if (!result) throw new Error('Failed to fetch the agent profile');
+      return result;
+    },
+
+    async saveAgentProfileDraft(request: SaveAgentProfileDraftRequest): Promise<AgentProfileAdmin> {
+      const result = await http.put(
+        '/api/v1/admin/agent-profile/draft',
+        request,
+        AgentProfileAdminSchema
+      );
+      if (!result) throw new Error('Failed to save the agent profile draft');
+      return result;
+    },
+
+    async publishAgentProfileDraft(): Promise<AgentProfileAdmin> {
+      const result = await http.post(
+        '/api/v1/admin/agent-profile/draft/publish',
+        undefined,
+        AgentProfileAdminSchema
+      );
+      if (!result) throw new Error('Failed to publish the agent profile draft');
+      return result;
+    },
+
+    async rollbackAgentProfile(versionNumber: number): Promise<AgentProfileAdmin> {
+      const result = await http.post(
+        `/api/v1/admin/agent-profile/versions/${versionNumber}/rollback`,
+        undefined,
+        AgentProfileAdminSchema
+      );
+      if (!result) throw new Error('Failed to roll the agent profile back');
       return result;
     },
 

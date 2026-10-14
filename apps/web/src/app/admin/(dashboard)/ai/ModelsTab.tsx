@@ -16,22 +16,11 @@ import { useCallback, useEffect, useId, useState } from 'react';
 
 import { Cpu, Loader2, Pencil, Star } from 'lucide-react';
 
+import { priceStatus, type PriceStatus } from '@/components/admin/ai/model-price-status';
 import { AdminHubEmptyState } from '@/components/admin/layout/AdminHubEmptyState';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
 import type { AiModelDto } from '@/lib/api/schemas';
-
-/** Providers that cost nothing: models served in house. */
-const FREE_PROVIDERS = new Set(['ollama']);
-
-type PriceStatus = 'priced' | 'free' | 'unpriced' | 'foreign-currency';
-
-function priceStatus(model: AiModelDto): PriceStatus {
-  const { pricing } = model.settings;
-  if (pricing.currency.toUpperCase() !== 'USD') return 'foreign-currency';
-  if (pricing.inputPricePerMillion > 0 || pricing.outputPricePerMillion > 0) return 'priced';
-  return FREE_PROVIDERS.has(model.provider.toLowerCase()) ? 'free' : 'unpriced';
-}
 
 const STATUS_TEXT: Record<PriceStatus, string> = {
   priced: 'Priced',

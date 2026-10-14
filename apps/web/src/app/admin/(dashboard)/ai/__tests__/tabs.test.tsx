@@ -21,7 +21,6 @@ const mocks = vi.hoisted(() => ({
     bucketSize: '1h',
     datapoints: [],
   }),
-  deletePrompt: vi.fn().mockResolvedValue(undefined),
   setPrimaryModel: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -115,6 +114,32 @@ describe('PromptsTab', () => {
   it('shows empty state when no prompts', async () => {
     render(<PromptsTab />);
     expect(await screen.findByText('No prompt templates found')).toBeInTheDocument();
+  });
+
+  /**
+   * #4169 (6c): «Delete» chiamava DELETE /admin/prompts/{id}, una rotta che non esiste, e «Edit» non
+   * faceva nulla. Il prompt delle risposte sta nella versione pubblicata del profilo, che non si
+   * cancella: la scheda lo dice e rimanda lì.
+   */
+  it('has no delete or edit buttons, and points to the agent profile', async () => {
+    mocks.getPrompts.mockResolvedValueOnce([
+      {
+        id: 'p1',
+        name: 'Rules prompt',
+        description: null,
+        category: 'qa',
+        isActive: true,
+      },
+    ]);
+    render(<PromptsTab />);
+
+    expect(await screen.findByText('Rules prompt')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /delete prompt/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /edit prompt/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /agent profile/i })).toHaveAttribute(
+      'href',
+      '/admin/agents/profile'
+    );
   });
 });
 

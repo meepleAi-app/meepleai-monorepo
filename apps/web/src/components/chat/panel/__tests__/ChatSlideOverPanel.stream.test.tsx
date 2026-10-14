@@ -1,0 +1,144 @@
+/**
+ * #4333 — il pannello a scomparsa con l'hook VERO dello stream.
+ *
+ * `ChatSlideOverPanel.test.tsx` sostituisce `useAgentChatStream` con un doppio inerte: lì il
+ * pannello non può fermare uno stream che non esiste. Qui l'hook è quello vero e la rete è finta:
+ * è la strada che fa la chat dei giochi privati (#4244).
+ */
+
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { useChatPanelStore } from '@/lib/stores/chat-panel-store';
+import { sseEvent, steppedFetch } from '@/test-utils/sse-stepped-stream';
+
+vi.mock('@/hooks/queries/useChatSessions', () => ({
+  useRecentChatSessions: () => ({
+    data: { sessions: [], totalCount: 0 },
+    isLoading: false,
+    error: null,
+  }),
+}));
+
+vi.mock('@/hooks/queries/useLibrarySearch', () => ({
+  useLibrarySearch: (term: unknown) => ({
+    items: [],
+    totalCount: 0,
+    isLoading: false,
+    resultsMatchQuery: true,
+    term: String(term ?? ''),
+  }),
+}));
+
+vi.mock('@/hooks/useEmbeddingStatus', () => ({
+  useEmbeddingStatus: () => ({ isReady: true, data: { status: 'Completed' } }),
+}));
+
+vi.mock('@/components/chat/entry/ThreadCreator', () => ({
+  createThread: vi.fn().mockResolvedValue({ threadId: 'thread-1' }),
+}));
+
+vi.mock('@/lib/api', () => ({
+  api: { chat: { getThreadById: vi.fn().mockResolvedValue(null) } },
+}));
+
+import { ChatSlideOverPanel } from '../ChatSlideOverPanel';
+
+// I tipi numerici di `StreamingEventType`, com'è sul filo.
+const STATE_UPDATE = 0;
+const COMPLETE = 4;
+const TOKEN = 7;
+
+const AZUL = { id: 'azul', name: 'Azul', year: 2017, pdfCount: 3, kbStatus: 'ready' as const };
+
+function ask(question: string) {
+  const input = screen.getByTestId('gamebook-chat-input');
+  fireEvent.change(input, { target: { value: question } });
+  fireEvent.keyDown(input, { key: 'Enter' });
+}
+
+/** Consegna un evento e lascia al pannello il tempo di rendere. */
+async function deliver(next: () => void) {
+  await act(async () => {
+    next();
+    await new Promise(resolve => setTimeout(resolve, 10));
+  });
+}
+
+function answers(): Array<string | null> {
+  return screen
+    .getAllByTestId('chat-message-bubble')
+    .filter(node => node.getAttribute('data-role') === 'assistant')
+    .map(node => node.textContent);
+}
+
+describe("ChatSlideOverPanel — lo stream, con l'hook vero (#4333)", () => {
+  const originalFetch = globalThis.fetch;
+
+  beforeEach(() => {
+    useChatPanelStore.getState().close();
+    useChatPanelStore.getState().clearGameContext();
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it('shows the answer the stream delivers', async () => {
+    const wire = steppedFetch([
+      sseEvent(STATE_UPDATE, { message: 'Cerco nel manuale...' }),
+      sseEvent(TOKEN, { token: 'Cinque ' }),
+      sseEvent(TOKEN, { token: 'tessere.' }),
+      sseEvent(COMPLETE, { totalTokens: 2 }),
+    ]);
+    globalThis.fetch = wire.fetch;
+    useChatPanelStore.getState().open(AZUL);
+
+    render(<ChatSlideOverPanel />);
+    ask('Quante tessere?');
+
+    // La richiesta parte: prima di #4333 `fetch` non veniva nemmeno chiamata.
+    await waitFor(() => expect(wire.calls()).toBe(1));
+
+    // Un evento alla volta, più la chiusura dello stream.
+    for (let i = 0; i < wire.steps; i++) await deliver(wire.next);
+
+    await waitFor(() =>
+      expect(answers().some(text => text?.includes('Cinque tessere.'))).toBe(true)
+    );
+    expect(answers()).toHaveLength(1);
+    expect(wire.signal()?.aborted).toBe(false);
+    expect(wire.calls()).toBe(1);
+  });
+
+  /** Lo stream si ferma ancora quando deve: quando il pannello viene chiuso. */
+  it('stops the stream in flight when the panel is closed', async () => {
+    const wire = steppedFetch([sseEvent(TOKEN, { token: 'Cinque ' })]);
+    globalThis.fetch = wire.fetch;
+    useChatPanelStore.getState().open(AZUL);
+
+    render(<ChatSlideOverPanel />);
+    ask('Quante tessere?');
+    await waitFor(() => expect(wire.calls()).toBe(1));
+    expect(wire.signal()?.aborted).toBe(false);
+
+    act(() => useChatPanelStore.getState().close());
+
+    expect(wire.signal()?.aborted).toBe(true);
+  });
+
+  /** E quando il pannello se ne va del tutto. */
+  it('stops the stream in flight when the panel goes away', async () => {
+    const wire = steppedFetch([sseEvent(TOKEN, { token: 'Cinque ' })]);
+    globalThis.fetch = wire.fetch;
+    useChatPanelStore.getState().open(AZUL);
+
+    const { unmount } = render(<ChatSlideOverPanel />);
+    ask('Quante tessere?');
+    await waitFor(() => expect(wire.calls()).toBe(1));
+
+    unmount();
+
+    expect(wire.signal()?.aborted).toBe(true);
+  });
+});

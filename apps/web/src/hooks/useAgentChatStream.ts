@@ -8,7 +8,7 @@
  * Parses RagStreamingEvent format (numeric StreamingEventType enum)
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { toast } from 'sonner';
 
@@ -625,29 +625,39 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks): {
   }, [stop]);
 
   // ── Public API ────────────────────────────────────────────────────────────
+  //
+  // #4333: le tre funzioni devono restare LE STESSE da un render all'altro. Chi usa l'hook le mette
+  // nelle dipendenze di un effetto e chiama `stopStreaming` dal cleanup ("ferma lo stream quando la
+  // vista se ne va"): una funzione nuova a ogni render fa girare quel cleanup a ogni render, e il
+  // primo render dopo l'invio fermava lo stream prima ancora della richiesta. Non è un'ottimizzazione:
+  // togliere `useCallback` qui spegne la chat nel pannello a scomparsa e in quella incorporata.
+  // `ask`, `stop` e `baseReset` sono già stabili (useSseStreamFsm).
 
-  const sendMessage = (
-    gameId: string,
-    message: string,
-    chatThreadId?: string,
-    proxyGameContext?: ProxyGameContext,
-    gameSessionId?: string
-  ): void => {
-    currentAnswerRef.current = ''; // reset M-4 guard for new stream
-    ask({ gameId, message, chatThreadId, proxyGameContext, gameSessionId });
-  };
+  const sendMessage = useCallback(
+    (
+      gameId: string,
+      message: string,
+      chatThreadId?: string,
+      proxyGameContext?: ProxyGameContext,
+      gameSessionId?: string
+    ): void => {
+      currentAnswerRef.current = ''; // reset M-4 guard for new stream
+      ask({ gameId, message, chatThreadId, proxyGameContext, gameSessionId });
+    },
+    [ask]
+  );
 
-  const stopStreaming = (): void => {
+  const stopStreaming = useCallback((): void => {
     stop();
     // reset() instead of stop() so state resets to INITIAL (isStreaming: false, connectionStatus: 'idle')
     // matching original stopStreaming behavior (lines 168-182)
     baseReset();
-  };
+  }, [stop, baseReset]);
 
-  const reset = (): void => {
+  const reset = useCallback((): void => {
     currentAnswerRef.current = '';
     baseReset();
-  };
+  }, [baseReset]);
 
   return { state: merged, sendMessage, stopStreaming, reset };
 }

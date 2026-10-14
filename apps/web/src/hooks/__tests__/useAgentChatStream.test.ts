@@ -968,4 +968,68 @@ describe('useAgentChatStream', () => {
     expect(result.current.state.error).not.toBeNull();
     vi.useRealTimers();
   });
+
+  /**
+   * #4333: chi usa l'hook mette queste funzioni nelle dipendenze di un effetto, e ne chiama una
+   * (`stopStreaming`) dal cleanup. Se cambiano a ogni render, il cleanup gira a ogni render e ferma
+   * lo stream appena partito.
+   */
+  describe('the functions it returns (#4333)', () => {
+    it('stay the same from one render to the next', () => {
+      const { result, rerender } = renderHook(() => useAgentChatStream());
+      const first = result.current;
+
+      rerender();
+
+      expect(result.current.sendMessage).toBe(first.sendMessage);
+      expect(result.current.stopStreaming).toBe(first.stopStreaming);
+      expect(result.current.reset).toBe(first.reset);
+    });
+
+    it('stay the same while a stream changes the state', async () => {
+      const stream = createSSEStream([
+        sseEvent(EventType.Token, { token: 'partial' }),
+        sseEvent(EventType.Complete, { totalTokens: 1 }),
+      ]);
+      fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+      const { result } = renderHook(() => useAgentChatStream());
+      const first = result.current;
+
+      await act(async () => {
+        result.current.sendMessage('game-1', 'Hi');
+        await new Promise(resolve => setTimeout(resolve, 50));
+      });
+
+      // Lo stato è cambiato davvero: senza questo, il confronto sotto non direbbe niente.
+      expect(result.current.state.currentAnswer).toBe('partial');
+      expect(result.current.sendMessage).toBe(first.sendMessage);
+      expect(result.current.stopStreaming).toBe(first.stopStreaming);
+      expect(result.current.reset).toBe(first.reset);
+    });
+
+    /** Chi ha in mano la funzione di un render passato ferma comunque lo stream di adesso. */
+    it('stopStreaming taken from an earlier render still stops the stream in flight', async () => {
+      let signal: AbortSignal | null | undefined;
+      fetchMock.mockImplementationOnce(async (_url: unknown, init?: RequestInit) => {
+        signal = init?.signal;
+        return { ok: true, body: new ReadableStream<Uint8Array>({ start() {} }) };
+      });
+
+      const { result } = renderHook(() => useAgentChatStream());
+      const stopFromTheFirstRender = result.current.stopStreaming;
+
+      await act(async () => {
+        result.current.sendMessage('game-1', 'Hi');
+        await new Promise(resolve => setTimeout(resolve, 20));
+      });
+      expect(signal?.aborted).toBe(false);
+      expect(result.current.state.isStreaming).toBe(true);
+
+      act(() => stopFromTheFirstRender());
+
+      expect(signal?.aborted).toBe(true);
+      expect(result.current.state.isStreaming).toBe(false);
+    });
+  });
 });

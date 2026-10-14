@@ -4074,7 +4074,7 @@
     "editGame": "Edit Game",
     "editDescription": "Update the details of \"{title}\".",
     "deleteGame": "Delete Game",
-    "deleteConfirm": "Are you sure you want to delete \"{title}\"? This action cannot be undone.",
+    "deleteConfirm": "Are you sure you want to delete \"{title}\"? The chats and the documents uploaded for this game will be permanently deleted too. This action cannot be undone.",
     "deleting": "Deleting...",
     "saving": "Saving...",
     "saveChanges": "Save Changes",

@@ -35,6 +35,23 @@ describe('GameSessionDtoSchema #3022', () => {
   });
 });
 
+// #4156: le pagine di /sessions/[id] leggono una LiveGameSession, quindi chi ha in mano una
+// GameSession ci arriva con l'id della live correlata. Il backend lo manda come GUID, oppure null
+// quando nessuna live correla.
+describe('GameSessionDtoSchema #4156', () => {
+  it('keeps the id of the correlated live session', () => {
+    const liveSessionId = '00000000-0000-4000-8000-0000000000ff';
+    expect(GameSessionDtoSchema.parse({ ...base, liveSessionId }).liveSessionId).toBe(
+      liveSessionId
+    );
+  });
+
+  it('accepts a session no live session correlates to', () => {
+    expect(GameSessionDtoSchema.parse({ ...base, liveSessionId: null }).liveSessionId).toBeNull();
+    expect(GameSessionDtoSchema.parse(base).liveSessionId).toBeUndefined();
+  });
+});
+
 // #4158: il catalogo condiviso salva giocatori e durata come int non nullable (SharedGameEntity), e
 // usa 0 per «sconosciuto». Lo schema esigeva valori positivi: un solo gioco così faceva scartare
 // l'intera pagina. Si è visto quando getAll ha cominciato a rispettare pageSize: Chess, 31° gioco

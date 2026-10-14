@@ -76,28 +76,30 @@ Si procede a strati, ciascuno verificabile da solo:
 
 **Verifica**: uno spec Playwright con login reale (registrazione → aggiunta → dichiarazione → domanda → risposta con citazione). Il gate E2E non gira sulle PR verso `main-dev` (#4032), quindi va lanciato a mano (`gh workflow run`) con un run di controllo su `main-dev`.
 
-### Fase 4 — #4156, coordinata con #4114 (D3: lo Score tab resta dentro)
+### Fase 4 — #4156 (D3: lo Score tab resta dentro; rivista il 2026-10-14)
 
-**Perché coordinare**: #4114 (gli hook SSE `useSessionSync`/`useSessionStream` su `/game-sessions`) e #4156 hanno la stessa radice, un id di `LiveGameSession` passato al namespace di un altro aggregato, e la stessa superficie `/sessions/[id]/live`. #4114 è aperta e non assegnata. **Proposta**: prenderla insieme, nello stesso ramo o in due PR consecutive dallo stesso worktree, con un unico test architetturale che vieta `/game-sessions/` e `api.sessions.getById` sotto `app/(authenticated)/sessions/[id]/`.
+> Rivista dopo un panel sulla spec: decisioni D4–D6, inventario dei produttori di link e criteri per fetta nella spec dei bloccanti, § #4156 «Revisione del 2026-10-14». #4114 non è più coordinata con questa fase: la sua superficie sono le pagine toolkit, non `/sessions/[id]/live`.
 
 Si procede a fette, ciascuna con la sua PR:
 
-1. **Navigazione e letture**: il wizard porta a `/sessions/{id}/live`; riepilogo, `/scoreboard` e `/notes` leggono `LiveGameSession` (`useLiveSession`); il tabellone ordina per totale; si aggiunge il test architetturale.
-2. **Lo Score tab su `RoundScores`**: editor giocatore × dimensione × round; scrittura con `POST`/`PUT /api/v1/live-sessions/{id}/scores`; il polimorfico esce dal percorso live; si aggiornano CLAUDE.md (§ *Live-session scoring*) e ADR-089 (riga «Update»).
-3. **SSE (#4114)**: gli hook passano su `/live-sessions/{id}/stream`, se #4114 non è già stata chiusa altrove.
+0. **Produttori e guardia**: l'inventario dei link a `/sessions/<id>`; `GameSessionDto.liveSessionId`; un test architetturale sugli import, con eccezioni esplicite legate a una issue.
+1. **Navigazione e letture**: il wizard desktop porta a `/sessions/{id}/live`; riepilogo, `/scoreboard` e `/notes` leggono `LiveGameSession`; la ripresa passa da `/live-sessions`; i produttori passano l'id di una live (D4, e D7 per le serate); l'agente vecchio esce da `/live` (D5); si tolgono i link a sotto-rotte inesistenti.
+2. **Lo Score tab su `RoundScores`**: editor giocatore × dimensione × round con il round derivato come predefinito (D6); scrittura con `POST`/`PUT /api/v1/live-sessions/{id}/scores`; il polimorfico esce dal percorso live; si aggiornano CLAUDE.md (§ *Live-session scoring*) e ADR-089 (riga «Update»).
 
-**Domanda aperta**, da chiudere prima della fetta 2: i tipi polimorfici (vittoria sì/no, obiettivi, classifica) diventano dimensioni convenzionali o si rinviano? Oggi il wizard non li offre.
+**Aperte**:
+- **D7**, da chiudere prima della fetta 1: le sessioni delle serate di gioco nascono in `SessionTracking` e non hanno una `LiveGameSession`, quindi con D4 non hanno pagina in `/sessions/[id]`.
+- I tipi polimorfici (vittoria sì/no, obiettivi, classifica), da chiudere prima della fetta 2. La proposta è rinviarli: oggi il wizard non li offre.
 
-**Verifica**: lo scenario Gherkin «percorso completo» del design (crea → segna → ricarica → tabellone → chiudi → riepilogo e partita registrata con gli stessi totali).
+**Verifica**: lo scenario Gherkin «percorso completo» del design (crea → segna → ricarica → tabellone → chiudi → riepilogo e partita registrata con gli stessi totali), più la verifica che la partita registrata esista.
 
 ## Dipendenze
 
 ```
 Fase 0 ─► tutte
 #4159 (linea #4138) ─► #4154
-#4154 ─► #4156 (verifica dell'assistente in /live)
+#4154 ─► A4 di #4238 (verifica dell'assistente in /live, spostata da #4156)
 #4158 ─► #4155 (FirstGameStep)
-#4114 ⇄ #4156 (stessa superficie: coordinare)
+#4114 — indipendente (superficie diversa: pagine toolkit)
 #4157 — indipendente
 ```
 
@@ -110,7 +112,7 @@ Fase 0 ─► tutte
 | #4157 | `feature/issue-4157-preferences-partial-update` | — | da iniziare |
 | #4158 | `feature/issue-4158-games-getall-server-params` | — | da iniziare |
 | #4155 | `feature/issue-4155-declare-ownership-entry-points` | — | dopo #4158 |
-| #4156 | `feature/issue-4156-sessions-live-aggregate` | — | dopo #4154; con #4114 |
+| #4156 | un ramo per fetta, dalla fetta 0 `feature/issue-4156-0-session-id-producers` | — | fetta 0 in corso |
 
 ## Rischi
 

@@ -12,10 +12,12 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries;
 internal class GetGameSessionsQueryHandler : IQueryHandler<GetGameSessionsQuery, List<GameSessionDto>>
 {
     private readonly IGameSessionRepository _sessionRepository;
+    private readonly ILiveSessionLinkReader _liveLinks;
 
-    public GetGameSessionsQueryHandler(IGameSessionRepository sessionRepository)
+    public GetGameSessionsQueryHandler(IGameSessionRepository sessionRepository, ILiveSessionLinkReader liveLinks)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _liveLinks = liveLinks ?? throw new ArgumentNullException(nameof(liveLinks));
     }
 
     public async Task<List<GameSessionDto>> Handle(GetGameSessionsQuery query, CancellationToken cancellationToken)
@@ -40,6 +42,8 @@ internal class GetGameSessionsQueryHandler : IQueryHandler<GetGameSessionsQuery,
             sessionsList = sessionsList.Skip(skip).Take(query.PageSize.Value);
         }
 
-        return sessionsList.Select(s => s.ToDto()).ToList();
+        // #4156: the session pages address the live session, so each row carries its id.
+        return await sessionsList.Select(s => s.ToDto()).ToList()
+            .WithLiveSessionIdsAsync(_liveLinks, cancellationToken).ConfigureAwait(false);
     }
 }

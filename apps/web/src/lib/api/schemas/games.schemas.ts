@@ -132,6 +132,10 @@ export const GameSessionDtoSchema = z.object({
   gameSlug: z.string().nullable().optional(),
   gameName: z.string().nullable().optional(),
   scorePlayers: z.array(ScorePlayerDtoSchema).nullable().optional(),
+  // #4156: the id of the live session this GameSession is the companion of. The pages under
+  // /sessions/[id] read a LiveGameSession, so links built from a GameSession use this id.
+  // Null when no live session correlates (legacy or non-live sessions): then there is no link.
+  liveSessionId: z.string().uuid().nullable().optional(),
 });
 
 export type GameSessionDto = z.infer<typeof GameSessionDtoSchema>;

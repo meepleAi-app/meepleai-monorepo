@@ -13,10 +13,12 @@ namespace Api.BoundedContexts.GameManagement.Application.Queries;
 internal class GetActiveSessionsQueryHandler : IQueryHandler<GetActiveSessionsQuery, PaginatedSessionsResponseDto>
 {
     private readonly IGameSessionRepository _sessionRepository;
+    private readonly ILiveSessionLinkReader _liveLinks;
 
-    public GetActiveSessionsQueryHandler(IGameSessionRepository sessionRepository)
+    public GetActiveSessionsQueryHandler(IGameSessionRepository sessionRepository, ILiveSessionLinkReader liveLinks)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
+        _liveLinks = liveLinks ?? throw new ArgumentNullException(nameof(liveLinks));
     }
 
     public async Task<PaginatedSessionsResponseDto> Handle(GetActiveSessionsQuery query, CancellationToken cancellationToken)
@@ -41,7 +43,9 @@ internal class GetActiveSessionsQueryHandler : IQueryHandler<GetActiveSessionsQu
             cancellationToken: cancellationToken
         ).ConfigureAwait(false);
 
-        var sessionDtos = sessions.Select(s => s.ToDto()).ToList();
+        // #4156: the session pages address the live session, so each row carries its id.
+        var sessionDtos = await sessions.Select(s => s.ToDto()).ToList()
+            .WithLiveSessionIdsAsync(_liveLinks, cancellationToken).ConfigureAwait(false);
 
         // #4080: the count must be scoped too. An unscoped total would advertise pages the
         // caller cannot reach, and would still leak how many sessions exist overall.

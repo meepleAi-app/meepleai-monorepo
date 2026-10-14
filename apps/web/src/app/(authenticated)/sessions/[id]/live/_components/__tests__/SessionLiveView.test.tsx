@@ -162,18 +162,6 @@ vi.mock('@/lib/domain-hooks/useSessionAgentChat', () => ({
   useSessionAgentChat: (...args: unknown[]) => useSessionAgentChatMock(...args),
 }));
 
-// ─── useSessionAgentLaunch mock (#2500 Task 4-FE: wire hook) ──────────────
-// Default: 'ready' with a valid agentSessionId so other describe blocks are unaffected.
-
-const useSessionAgentLaunchMock = vi.fn(() => ({
-  status: 'ready' as const,
-  agentSessionId: 'agent-session-uuid-0001',
-}));
-
-vi.mock('@/hooks/queries/useSessionAgentLaunch', () => ({
-  useSessionAgentLaunch: (...args: unknown[]) => useSessionAgentLaunchMock(...args),
-}));
-
 // ─── useCurrentUser mock (#2505: viewerRole derivation) ─────────────────────
 
 const useCurrentUserMock = vi.fn(() => ({ data: null }));
@@ -419,7 +407,6 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.connectionLost.degradedPolling': 'Aggiornamenti ogni 5s',
   'pages.sessionLive.connectionLost.failed': 'Sessione affollata o errore',
   'pages.sessionLive.connectionLost.manualRetryLabel': 'Riprova connessione',
-  'pages.sessionLive.a11y.viewLabel': 'Vista sessione live',
   // Interactions sub-PR labels
   'pages.sessionLive.rightColumn.tabsAriaLabel': 'Pannelli sessione',
   // G1 #2374 sess.46r canonical tab keys
@@ -762,12 +749,11 @@ describe('SessionLiveView (Wave D.2 Foundation)', () => {
 
   // ─── 3.8: URL state — mobile bottom-sheet (G1 #2374 T9 sess.46r) ────────
 
-  it('mobile renders mainContent = ChatAgentPanel + ActionLogTimeline (full-width, no bottom-nav)', () => {
+  it('mobile renders mainContent = ActionLogTimeline (full-width, no bottom-nav)', () => {
     const { container } = renderWithIntl(<SessionLiveView />);
-    // Main column should contain ChatAgentPanel + ActionLogTimeline (mirrors desktop LEFT)
+    // #4156 (D5): the legacy agent chat left the main column; the action log stays.
     const mobileBody = container.querySelector('[data-slot="mobile-body"]');
     expect(mobileBody).toBeInTheDocument();
-    expect(mobileBody?.querySelector('[data-slot="chat-agent-panel"]')).not.toBeNull();
     expect(mobileBody?.querySelector('[data-slot="action-log-timeline"]')).not.toBeNull();
     // NO legacy bottom-nav tabs
     expect(container.querySelector('[data-slot="mobile-body-tab"]')).toBeNull();
@@ -1099,15 +1085,9 @@ describe('SessionLiveView (Wave D.2 Interactions — Task 3)', () => {
     expect(root).toHaveAttribute('data-layout', '2col-60-40');
   });
 
-  it('T4.6: Cell 5 desktop renders ChatAgentPanel in LEFT mainColumn', () => {
-    const { container } = renderWithIntl(<SessionLiveView />);
-    // ChatAgentPanel data-slot stable per §5 frozen contract for #2375 G3
-    expect(container.querySelector('[data-slot="chat-agent-panel"]')).toBeInTheDocument();
-  });
-
   it('T4.7: Cell 5 desktop renders ActionLogTimeline stacked in LEFT mainColumn', () => {
     const { container } = renderWithIntl(<SessionLiveView />);
-    // ActionLogTimeline is rendered alongside ChatAgentPanel in mainColumn
+    // #4156 (D5): ActionLogTimeline is the whole LEFT mainColumn
     expect(container.querySelector('[data-slot="action-log-timeline"]')).toBeInTheDocument();
   });
 
@@ -1146,14 +1126,6 @@ describe('SessionLiveView (Wave D.2 Interactions — Task 3)', () => {
   });
 
   // ─── T3.3: Mobile drawer tab routing — Interactions panels (T9 sess.46r) ─
-
-  it('T3.3a: chat is always-visible in mobile main column (no longer a drawer tab)', () => {
-    // Post-T9: chat lives in the main column (ChatAgentPanel), not the drawer.
-    const { container } = renderWithIntl(<SessionLiveView />);
-    // LiveAgentChat is mounted as the body of ChatAgentPanel inside MobileBody main column.
-    const mobileBody = container.querySelector('[data-slot="mobile-body"]');
-    expect(mobileBody?.querySelector('[data-slot="live-agent-chat"]')).not.toBeNull();
-  });
 
   it('T3.3b: ?msheet=open + ?mtab=widget mounts ToolkitRenderer in drawer (G5c #2376)', () => {
     // G5c swap: ToolkitRenderer replaces SessionToolsRail in the mobile 'widget' tab.
@@ -1307,100 +1279,6 @@ describe('SessionLiveView (Wave D.2 Interactions — Task 3)', () => {
       ],
     });
     expect(() => renderWithIntl(<SessionLiveView />)).not.toThrow();
-  });
-});
-
-// ─── #2375 G3 — accordion FSM URL SSOT ──────────────────────────────────────
-
-describe('SessionLiveView (#2375 G3 — accordion FSM URL SSOT)', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
-    mockParamsId = 'session-abc-123';
-    IS_VISUAL_TEST_BUILD_MOCK = false;
-    useLiveSessionMock.mockReturnValue({
-      data: MOCK_SESSION_DTO,
-      isLoading: false,
-      isError: false,
-      isSuccess: true,
-      error: null,
-      refetch: vi.fn(),
-    });
-    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
-  });
-
-  it('G3-1: renders ChatAgentPanel expanded by default (no ?chat param)', () => {
-    const { container } = renderWithIntl(<SessionLiveView />);
-    // Desktop ChatAgentPanel — no ?chat param → data-collapsed attribute absent (expanded).
-    const desktopBody = container.querySelector('[data-slot="desktop-body"]');
-    expect(desktopBody).toBeInTheDocument();
-    const panels = desktopBody?.querySelectorAll('[data-slot="chat-agent-panel"]');
-    expect(panels).toBeTruthy();
-    expect(panels!.length).toBeGreaterThanOrEqual(1);
-    // No data-collapsed="true" when expanded (attribute is absent per ChatAgentPanel contract).
-    expect(panels![0]).not.toHaveAttribute('data-collapsed', 'true');
-  });
-
-  it('G3-2: ?chat=collapsed → desktop ChatAgentPanel has data-collapsed="true"', () => {
-    searchParamsMap['chat'] = 'collapsed';
-    const { container } = renderWithIntl(<SessionLiveView />);
-    const desktopBody = container.querySelector('[data-slot="desktop-body"]');
-    expect(desktopBody).toBeInTheDocument();
-    const panels = desktopBody?.querySelectorAll('[data-slot="chat-agent-panel"]');
-    expect(panels).toBeTruthy();
-    expect(panels![0]).toHaveAttribute('data-collapsed', 'true');
-  });
-
-  it('G3-3: ?mchat=collapsed → mobile ChatAgentPanel has data-collapsed="true"', () => {
-    searchParamsMap['mchat'] = 'collapsed';
-    const { container } = renderWithIntl(<SessionLiveView />);
-    const mobileBody = container.querySelector('[data-slot="mobile-body"]');
-    expect(mobileBody).toBeInTheDocument();
-    const panels = mobileBody?.querySelectorAll('[data-slot="chat-agent-panel"]');
-    expect(panels).toBeTruthy();
-    expect(panels!.length).toBeGreaterThanOrEqual(1);
-    expect(panels![0]).toHaveAttribute('data-collapsed', 'true');
-  });
-
-  it('G3-4: ?chat=collapsed&mchat=collapsed → both desktop and mobile ChatAgentPanel collapsed', () => {
-    searchParamsMap['chat'] = 'collapsed';
-    searchParamsMap['mchat'] = 'collapsed';
-    const { container } = renderWithIntl(<SessionLiveView />);
-    const desktopBody = container.querySelector('[data-slot="desktop-body"]');
-    const mobileBody = container.querySelector('[data-slot="mobile-body"]');
-    const desktopPanels = desktopBody?.querySelectorAll('[data-slot="chat-agent-panel"]');
-    const mobilePanels = mobileBody?.querySelectorAll('[data-slot="chat-agent-panel"]');
-    expect(desktopPanels![0]).toHaveAttribute('data-collapsed', 'true');
-    expect(mobilePanels![0]).toHaveAttribute('data-collapsed', 'true');
-  });
-
-  it('G3-5: clicking desktop ChatAgentPanel header calls router.replace with ?chat=collapsed', () => {
-    const { container } = renderWithIntl(<SessionLiveView />);
-    const desktopBody = container.querySelector('[data-slot="desktop-body"]');
-    // Header is a <button> (a11y) when onHeaderClick is provided (§5 contract).
-    const headerBtn = desktopBody?.querySelector(
-      '[data-slot="chat-agent-panel"] button[aria-expanded]'
-    ) as HTMLButtonElement | null;
-    expect(headerBtn).not.toBeNull();
-    fireEvent.click(headerBtn!);
-    expect(routerReplace).toHaveBeenCalled();
-    const callArg = routerReplace.mock.calls[0]?.[0] as string;
-    expect(callArg).toContain('chat=collapsed');
-  });
-
-  it('G3-6: clicking header when ?chat=collapsed calls router.replace WITHOUT chat param (toggle expand)', () => {
-    searchParamsMap['chat'] = 'collapsed';
-    const { container } = renderWithIntl(<SessionLiveView />);
-    const desktopBody = container.querySelector('[data-slot="desktop-body"]');
-    const headerBtn = desktopBody?.querySelector(
-      '[data-slot="chat-agent-panel"] button[aria-expanded]'
-    ) as HTMLButtonElement | null;
-    expect(headerBtn).not.toBeNull();
-    fireEvent.click(headerBtn!);
-    expect(routerReplace).toHaveBeenCalled();
-    const callArg = routerReplace.mock.calls[0]?.[0] as string;
-    // When expanding, 'chat' param is removed (null → deleted from query string).
-    expect(callArg).not.toContain('chat=collapsed');
   });
 });
 
@@ -1591,414 +1469,6 @@ describe('SessionLiveView — #2483 Task 4: TurnIndicatorRenderer from store', (
   // longer hydrated from the DTO loader (LiveSessionDto exposes no turnOrderType).
   // The store-seeded branch tests above cover the renderer; DTO→store wiring for
   // round-based turn metadata is deferred to Fase 2.
-});
-
-// ─── #2500 Task 4-FE — useSessionAgentLaunch wired into ChatAgentPanel ──────────
-// AC-CHAT-0: send goes through useSessionAgentChat (RAG path), not /chat social endpoint.
-// AC-CHAT-NULL: when agentSessionId absent → panel renders + status feedback visible.
-// R-FINDING-4/5/6: correct comments, status feedback messages, viewerId consistency.
-
-describe('SessionLiveView — #2500 Task 4-FE: RAG agent wiring via useSessionAgentLaunch', () => {
-  const agentAskMock = vi.fn();
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
-    mockParamsId = 'session-abc-123';
-    IS_VISUAL_TEST_BUILD_MOCK = false;
-    useLiveSessionMock.mockReturnValue({
-      data: { ...MOCK_SESSION_DTO, gameId: 'game-00000001' },
-      isLoading: false,
-      isError: false,
-      isSuccess: true,
-      error: null,
-      refetch: vi.fn(),
-    });
-    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
-    useSessionAgentLaunchMock.mockReturnValue({
-      status: 'ready' as const,
-      agentSessionId: 'agent-session-uuid-0001',
-    });
-    useSessionAgentChatMock.mockReturnValue({
-      messages: [],
-      isLoading: false,
-      error: null,
-      streamingContent: '',
-      ask: agentAskMock,
-      stop: vi.fn(),
-    });
-  });
-
-  it('RAG-1: renders ChatAgentPanel without crash when agentLaunch is ready', () => {
-    const { container } = renderWithIntl(<SessionLiveView />);
-    expect(container.querySelector('[data-slot="chat-agent-panel"]')).toBeInTheDocument();
-  });
-
-  it('RAG-2: AC-CHAT-NULL — renders ChatAgentPanel without crash when no-agent status', () => {
-    useSessionAgentLaunchMock.mockReturnValue({
-      status: 'no-agent' as const,
-      agentSessionId: '',
-    });
-    useSessionAgentChatMock.mockReturnValue({
-      messages: [],
-      isLoading: false,
-      error: null,
-      streamingContent: '',
-      ask: agentAskMock,
-      stop: vi.fn(),
-    });
-    expect(() => renderWithIntl(<SessionLiveView />)).not.toThrow();
-    const { container } = renderWithIntl(<SessionLiveView />);
-    expect(container.querySelector('[data-slot="chat-agent-panel"]')).toBeInTheDocument();
-  });
-
-  it('RAG-3: assistant citation is rendered in ChatAgentPanel (pag. N pattern)', () => {
-    useSessionAgentChatMock.mockReturnValue({
-      messages: [
-        {
-          id: 'msg-001',
-          role: 'assistant' as const,
-          content: 'Il regolamento dice…',
-          timestamp: new Date().toISOString(),
-          citations: [{ documentName: 'Reg', pages: [7], excerpt: 'x' }],
-        },
-      ],
-      isLoading: false,
-      error: null,
-      streamingContent: '',
-      ask: agentAskMock,
-      stop: vi.fn(),
-    });
-    const { container } = renderWithIntl(<SessionLiveView />);
-    // Citation card renders "pag. 7" (or page list) — asserting presence
-    expect(container.querySelector('[data-slot="chat-citations"]')).toBeInTheDocument();
-    expect(container.textContent).toMatch(/pag\.\s*7/i);
-  });
-
-  it('RAG-4: useSessionAgentChat is called with sessionId and agentSessionId from useSessionAgentLaunch', () => {
-    renderWithIntl(<SessionLiveView />);
-    expect(useSessionAgentChatMock).toHaveBeenCalledWith(
-      'session-abc-123',
-      'agent-session-uuid-0001',
-      {
-        persistHistory: true, // fixture=false in test → !fixture=true (R5 #2500)
-        gameContext: {
-          // I1 #2500: built from LiveSessionDto, not from useSessionStore
-          gameId: 'game-00000001',
-          gameTitle: 'Mage Knight',
-          players: ['Marco', 'Anna'],
-          currentTurn: 0,
-        },
-      }
-    );
-  });
-
-  it('RAG-5: AC-CHAT-NULL — useSessionAgentChat called with empty string when no-agent', () => {
-    useSessionAgentLaunchMock.mockReturnValue({
-      status: 'no-agent' as const,
-      agentSessionId: '',
-    });
-    useSessionAgentChatMock.mockReturnValue({
-      messages: [],
-      isLoading: false,
-      error: null,
-      streamingContent: '',
-      ask: agentAskMock,
-      stop: vi.fn(),
-    });
-    renderWithIntl(<SessionLiveView />);
-    // Hook called with empty agentSessionId guard (no-agent → no ready session)
-    // R5: persistHistory passed as third arg — fixture=false → !fixture=true
-    // I1 #2500: gameContext still injected from LiveSessionDto even when no-agent
-    expect(useSessionAgentChatMock).toHaveBeenCalledWith('session-abc-123', '', {
-      persistHistory: true,
-      gameContext: {
-        gameId: 'game-00000001',
-        gameTitle: 'Mage Knight',
-        players: ['Marco', 'Anna'],
-        currentTurn: 0,
-      },
-    });
-  });
-
-  it('RAG-6: useSessionAgentLaunch called with sessionId, gameId, and !fixture', () => {
-    renderWithIntl(<SessionLiveView />);
-    expect(useSessionAgentLaunchMock).toHaveBeenCalledWith(
-      'session-abc-123',
-      'game-00000001',
-      true // enabled = !fixture = !false
-    );
-  });
-
-  it('RAG-7: useSessionAgentLaunch disabled in fixture mode (IS_VISUAL_TEST_BUILD)', () => {
-    IS_VISUAL_TEST_BUILD_MOCK = true;
-    renderWithIntl(<SessionLiveView />);
-    expect(useSessionAgentLaunchMock).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.anything(),
-      false // enabled = !fixture = !true
-    );
-  });
-
-  // R-FINDING-5: feedback messages for non-ready status
-  it('RAG-8: launching status — shows launching feedback message in chat', () => {
-    useSessionAgentLaunchMock.mockReturnValue({
-      status: 'launching' as const,
-      agentSessionId: '',
-    });
-    const { container } = renderWithIntl(<SessionLiveView />);
-    // Launching message appears in the chat messages list
-    expect(container.textContent).toMatch(/Avvio/i);
-  });
-
-  it('RAG-9: no-agent status — shows no-agent feedback message in chat', () => {
-    useSessionAgentLaunchMock.mockReturnValue({
-      status: 'no-agent' as const,
-      agentSessionId: '',
-    });
-    const { container } = renderWithIntl(<SessionLiveView />);
-    expect(container.textContent).toMatch(/Nessun assistente/i);
-  });
-
-  it('RAG-10: error status — shows error feedback message in chat', () => {
-    useSessionAgentLaunchMock.mockReturnValue({
-      status: 'error' as const,
-      agentSessionId: '',
-    });
-    const { container } = renderWithIntl(<SessionLiveView />);
-    expect(container.textContent).toMatch(/Impossibile avviare/i);
-  });
-
-  // R-FINDING-6: viewerId consistency — no magic-string 'user' fallback
-  it('RAG-11: user messages use viewerId from activeSession (not magic-string fallback)', () => {
-    // When activeSession.viewerId is '', messages should have senderId='' not 'user'
-    useSessionAgentChatMock.mockReturnValue({
-      messages: [
-        {
-          id: 'msg-user-1',
-          role: 'user' as const,
-          content: 'Domanda utente',
-          timestamp: new Date().toISOString(),
-          citations: undefined,
-        },
-      ],
-      isLoading: false,
-      error: null,
-      streamingContent: '',
-      ask: agentAskMock,
-      stop: vi.fn(),
-    });
-    // If viewerId is '' (activeSession default) and senderId is '', the message
-    // is own (isOwn=true) — no sender name label. The test checks no 'user' magic string
-    // by verifying the mapped senderId matches viewerId (both ''). Since both are '',
-    // isOwn=true, and the <span senderName> should NOT appear (only shown when !isOwn).
-    const { container } = renderWithIntl(<SessionLiveView />);
-    // The message content should be present
-    expect(container.textContent).toContain('Domanda utente');
-  });
-
-  // ─── AC-CHAT-3: vincolo critico — disclaimer NOT su messaggi di sistema di stato ───
-
-  it('RAG-12 (AC-CHAT-3 critical): system status message (no-agent) NON mostra il disclaimer non-grounded', () => {
-    // Un messaggio di SISTEMA (iniettato da SessionLiveView per status no-agent)
-    // non deve mostrare il disclaimer non-grounded, anche se è assistant senza citazioni.
-    useSessionAgentLaunchMock.mockReturnValue({
-      status: 'no-agent' as const,
-      agentSessionId: '',
-    });
-    useSessionAgentChatMock.mockReturnValue({
-      messages: [], // nessun messaggio dal hook — il messaggio viene iniettato da SessionLiveView
-      isLoading: false,
-      error: null,
-      streamingContent: '',
-      ask: agentAskMock,
-      stop: vi.fn(),
-    });
-    const { container } = renderWithIntl(<SessionLiveView />);
-    // Il messaggio di stato è presente nel DOM
-    expect(container.textContent).toMatch(/Nessun assistente/i);
-    // Il disclaimer non-grounded NON deve apparire sui messaggi di sistema
-    expect(
-      container.querySelector('[data-slot="chat-nongrounded-disclaimer"]')
-    ).not.toBeInTheDocument();
-  });
-
-  it('RAG-12b (AC-CHAT-3 critical): system status message (error) NON mostra il disclaimer non-grounded', () => {
-    useSessionAgentLaunchMock.mockReturnValue({
-      status: 'error' as const,
-      agentSessionId: '',
-    });
-    useSessionAgentChatMock.mockReturnValue({
-      messages: [],
-      isLoading: false,
-      error: null,
-      streamingContent: '',
-      ask: agentAskMock,
-      stop: vi.fn(),
-    });
-    const { container } = renderWithIntl(<SessionLiveView />);
-    expect(container.textContent).toMatch(/Impossibile avviare/i);
-    expect(
-      container.querySelector('[data-slot="chat-nongrounded-disclaimer"]')
-    ).not.toBeInTheDocument();
-  });
-
-  it('RAG-13 (AC-CHAT-3): vera risposta RAG senza citazioni (isNonGrounded:true) MOSTRA il disclaimer', () => {
-    // Il hook produce un messaggio assistant con isNonGrounded:true (vera risposta RAG, 0 citazioni)
-    useSessionAgentChatMock.mockReturnValue({
-      messages: [
-        {
-          id: 'msg-ng-rag',
-          role: 'assistant' as const,
-          content: 'Risposta RAG senza fonti.',
-          timestamp: new Date().toISOString(),
-          citations: undefined,
-          isNonGrounded: true,
-        },
-      ],
-      isLoading: false,
-      error: null,
-      streamingContent: '',
-      ask: agentAskMock,
-      stop: vi.fn(),
-    });
-    const { container } = renderWithIntl(<SessionLiveView />);
-    // Il disclaimer deve essere presente
-    expect(
-      container.querySelector('[data-slot="chat-nongrounded-disclaimer"]')
-    ).toBeInTheDocument();
-  });
-});
-
-// ─── #2588 A3 — dual-path send handler (images → /ask-agent, text → RAG) ────────
-// Asserts the SessionLiveView.handleAgentSendMessage routing:
-//   - text-only send → agentChat.ask() (RAG SSE) and NOT fetch /ask-agent
-//   - image send     → multipart POST /chat/ask-agent and NOT agentChat.ask()
-
-describe('SessionLiveView — #2588 A3: dual-path image/text send handler', () => {
-  const agentAskMock = vi.fn();
-  let fetchMock: ReturnType<typeof vi.fn>;
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
-    mockParamsId = 'session-abc-123';
-    IS_VISUAL_TEST_BUILD_MOCK = false;
-    useLiveSessionMock.mockReturnValue({
-      data: { ...MOCK_SESSION_DTO, gameId: 'game-00000001' },
-      isLoading: false,
-      isError: false,
-      isSuccess: true,
-      error: null,
-      refetch: vi.fn(),
-    });
-    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
-    useSessionAgentLaunchMock.mockReturnValue({
-      status: 'ready' as const,
-      agentSessionId: 'agent-session-uuid-0001',
-    });
-    useSessionAgentChatMock.mockReturnValue({
-      messages: [],
-      isLoading: false,
-      error: null,
-      streamingContent: '',
-      ask: agentAskMock,
-      stop: vi.fn(),
-    });
-    fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ answer: 'Risposta immagine.', confidence: 0.9 }),
-    });
-    vi.stubGlobal('fetch', fetchMock);
-    // crypto.randomUUID is used for optimistic message ids on the image path.
-    if (typeof globalThis.crypto?.randomUUID !== 'function') {
-      vi.stubGlobal('crypto', {
-        ...globalThis.crypto,
-        randomUUID: () => `uuid-${Math.random().toString(36).slice(2)}`,
-      });
-    }
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it('A3-1: text-only send calls agentChat.ask() and does NOT POST /ask-agent', async () => {
-    renderWithIntl(<SessionLiveView />);
-    // The desktop ChatAgentPanel mounts LiveAgentChat with the text input.
-    const input = screen.getAllByRole('textbox', { name: 'Scrivi un messaggio' })[0];
-    const sendBtn = screen.getAllByRole('button', { name: 'Invia messaggio' })[0];
-
-    fireEvent.change(input, { target: { value: 'Spiega la regola' } });
-    await act(async () => {
-      fireEvent.click(sendBtn);
-    });
-
-    expect(agentAskMock).toHaveBeenCalledWith('Spiega la regola');
-    // No multipart /ask-agent fetch for text-only sends.
-    const askAgentCalls = fetchMock.mock.calls.filter(c =>
-      String(c[0]).includes('/chat/ask-agent')
-    );
-    expect(askAgentCalls).toHaveLength(0);
-  });
-
-  it('A3-2: image send POSTs multipart /ask-agent and does NOT call agentChat.ask()', async () => {
-    renderWithIntl(<SessionLiveView />);
-
-    // Attach an image via the hidden file input in LiveAgentChat.
-    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    expect(fileInput).not.toBeNull();
-
-    const file = new File(['x'], 'board.jpg', { type: 'image/jpeg' });
-    await act(async () => {
-      fireEvent.change(fileInput, { target: { files: [file] } });
-    });
-
-    const sendBtn = screen.getAllByRole('button', { name: 'Invia messaggio' })[0];
-    await act(async () => {
-      fireEvent.click(sendBtn);
-    });
-
-    // RAG path NOT taken for image sends.
-    expect(agentAskMock).not.toHaveBeenCalled();
-    // Multipart POST to /ask-agent issued.
-    const askAgentCalls = fetchMock.mock.calls.filter(c =>
-      String(c[0]).includes('/game-sessions/session-abc-123/chat/ask-agent')
-    );
-    expect(askAgentCalls).toHaveLength(1);
-    const [, init] = askAgentCalls[0];
-    expect((init as RequestInit).method).toBe('POST');
-    expect((init as RequestInit).body).toBeInstanceOf(FormData);
-  });
-
-  it('A3-3 (Task 3 #3388): image response groundingStatus="Ungrounded" flags the agent message non-grounded', async () => {
-    fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ answer: 'Risposta immagine.', groundingStatus: 'Ungrounded' }),
-    });
-    vi.stubGlobal('fetch', fetchMock);
-
-    const { container } = renderWithIntl(<SessionLiveView />);
-
-    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    expect(fileInput).not.toBeNull();
-
-    const file = new File(['x'], 'board.jpg', { type: 'image/jpeg' });
-    await act(async () => {
-      fireEvent.change(fileInput, { target: { files: [file] } });
-    });
-
-    const sendBtn = screen.getAllByRole('button', { name: 'Invia messaggio' })[0];
-    await act(async () => {
-      fireEvent.click(sendBtn);
-    });
-
-    expect(
-      container.querySelector('[data-slot="chat-nongrounded-disclaimer"]')
-    ).toBeInTheDocument();
-  });
 });
 
 // ─── #2505 — viewerRole derivation + AddPlayerDialog wiring ──────────────────
@@ -2834,5 +2304,40 @@ describe('SessionLiveView — #4156: resume goes through the live session', () =
       expect.not.stringContaining('dialog=pause'),
       expect.anything()
     );
+  });
+});
+
+// ─── #4156 (D5) — l'agente di sessione vecchio non è più in /live ─────────────
+
+describe('SessionLiveView — #4156 (D5): no legacy session agent on /live', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    mockParamsId = 'session-abc-123';
+    IS_VISUAL_TEST_BUILD_MOCK = false;
+    useLiveSessionMock.mockReturnValue({
+      data: MOCK_SESSION_DTO,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+  });
+
+  it('mounts no agent chat, on desktop or on mobile', () => {
+    // L'agente vecchio lanciava una sessione agente su /game-sessions/{id}: con l'id di una live
+    // falliva sulla chiave esterna (23503). L'assistente in partita arriva con A4 di #4238.
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.querySelector('[data-slot="mobile-body"]')).not.toBeNull();
+    expect(container.querySelector('[data-slot="chat-agent-panel"]')).toBeNull();
+    expect(container.querySelector('[data-slot="live-agent-chat"]')).toBeNull();
+    expect(container.querySelector('[data-slot="action-log-timeline"]')).not.toBeNull();
+  });
+
+  it('does not open the legacy agent chat', () => {
+    renderWithIntl(<SessionLiveView />);
+    expect(useSessionAgentChatMock).not.toHaveBeenCalled();
   });
 });

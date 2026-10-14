@@ -76,12 +76,6 @@ const FORBIDDEN_CLIENTS: ReadonlyArray<string> = [
  */
 const P = 'app/(authenticated)/sessions/[id]';
 const KNOWN: Readonly<Record<string, string>> = {
-  [`${P}/live/page.tsx ⇒ ${P}/live/_components/SessionLiveView.tsx · /api/v1/game-sessions/`]:
-    '#4156 fetta 1c — la domanda con foto all’agente vecchio (ask-agent) esce con lui (D5)',
-  [`${P}/live/page.tsx ⇒ hooks/queries/useSessionAgentLaunch.ts · api.agentSessions.`]:
-    '#4156 fetta 1c — l’agente vecchio esce da /live (D5); l’assistente arriva con A4 di #4238',
-  [`${P}/live/page.tsx ⇒ lib/domain-hooks/useSessionAgentChat.ts · import lib/api/clients/sessionAgentClient.ts`]:
-    '#4156 fetta 1c — l’agente vecchio esce da /live (D5); l’assistente arriva con A4 di #4238',
   [`${P}/live/page.tsx ⇒ hooks/use-update-session-scores.ts · /api/v1/game-sessions/`]:
     '#4156 fetta 2 — la scheda Score scrive su /live-sessions/{id}/scores',
 };

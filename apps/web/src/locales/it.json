@@ -3714,9 +3714,6 @@
         "failed": "Sessione affollata o errore — riprova tra 60s",
         "manualRetryLabel": "Riprova connessione"
       },
-      "a11y": {
-        "viewLabel": "Vista sessione live"
-      },
       "rightColumn": {
         "tabsAriaLabel": "Pannelli sessione",
         "tabFlavor": "Catan",

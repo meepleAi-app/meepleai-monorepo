@@ -3650,9 +3650,6 @@
         "failed": "Session is busy or there was an error — try again in 60s",
         "manualRetryLabel": "Retry connection"
       },
-      "a11y": {
-        "viewLabel": "Live session view"
-      },
       "rightColumn": {
         "tabsAriaLabel": "Session panels",
         "tabFlavor": "Catan",

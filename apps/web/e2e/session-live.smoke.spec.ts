@@ -33,13 +33,12 @@
  *
  * ## Auth pattern
  * Triple-helper pattern (seedAuthSession + seedCookieConsent + mockAuthEndpoints)
- * required for `(authenticated)` routes — identical to session-live-mobile.spec.ts
- * and session-live-chat-agent-g3.spec.ts.
+ * required for `(authenticated)` routes — identical to session-live-mobile.spec.ts.
  *
  * ## Fixture session
  * `?fixture=host` activates STATE_OVERRIDE_ENABLED visual-test mode (NODE_ENV !== 'production'),
  * which renders the session with deterministic data and avoids backend calls.
- * This is the same fixture used by session-live-chat-agent-g3.spec.ts.
+ * This is the same fixture used by a11y/session-live.spec.ts.
  *
  * Issue #2561 SP2 T11.
  */
@@ -73,7 +72,7 @@ async function seedAuth(page: Page): Promise<void> {
 
 /**
  * Navigate to the fixture-loaded session-live page and wait for the shell to render.
- * Mirrors gotoSessionLive in session-live-chat-agent-g3.spec.ts.
+ * Mirrors gotoSessionLive in a11y/session-live.spec.ts.
  */
 async function gotoFixtureLivePage(page: Page, extraSearch = ''): Promise<void> {
   await seedAuth(page);

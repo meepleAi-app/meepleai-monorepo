@@ -9,11 +9,11 @@
  *   - RightColumnTabs mounted (desktop right column) with tab URL SSOT
  *   - PauseOverlay / EndgameDialog lazy-loaded, mounted from ?dialog= URL param
  *   - ConnectionLostBanner shown for reconnecting/degraded-polling/failed states
- *   - Mobile bottom-sheet (G1 #2374 T9 sess.46r): full-width main = ChatAgentPanel + ActionLogTimeline;
+ *   - Mobile bottom-sheet (G1 #2374 T9 sess.46r): full-width main = ActionLogTimeline;
  *     floating action button opens MobileBottomSheetDrawer (Score/Turn/Widget/Notes — same content as
  *     desktop RIGHT). URL SSOT: ?msheet=open|closed + ?mtab=score|turn|widget|notes.
  *   - Desktop right column (G1 #2374): score → LiveScoringPanel, turn → TurnIndicator+PlayerRosterLive,
- *     widget → SessionToolsRail, notes → LiveSessionNotes. ChatAgentPanel now lives in LEFT mainColumn.
+ *     widget → SessionToolsRail, notes → LiveSessionNotes. The LEFT mainColumn holds the action log (#4156: the legacy agent chat left /live).
  *   - Write actions: handleScoreUpdate (optimistic UI), handleToolExecute,
  *     handleSendMessage, handleAddNote, handleResume, handlePause, handleEndgame
  *   - 403 handling: score rollback + toast "Permesso negato"
@@ -50,7 +50,8 @@
  * **G1 #2374 (2026-06-15)**:
  *   Refactored from 3-col fixed-width layout (LEFT 280px / CENTER flex / RIGHT 340px)
  *   to a 2-col 60/40 grid (LEFT minmax(0,3fr) / RIGHT minmax(0,2fr)).
- *   - LEFT (60%) = ChatAgentPanel (new primitive, always visible) + ActionLogTimeline stacked.
+ *   - LEFT (60%) = ActionLogTimeline. Until #4156 (D5) the legacy agent chat (ChatAgentPanel)
+ *     sat above it; the in-game assistant takes that place with A4 of #4238.
  *   - RIGHT (40%) = RightColumnTabs polymorphic with keys: Score | Turn | Widget | Notes.
  *     - Score tab → LiveScoringPanel (G5 will swap for polymorphic dispatcher).
  *     - Turn tab → TurnIndicator + PlayerRosterLive (moved out of the deprecated LEFT sidebar).
@@ -84,7 +85,6 @@ import { toast } from 'sonner';
 
 import {
   ActionLogTimeline,
-  ChatAgentPanel,
   DesktopBody,
   LiveMobileMetaStrip,
   LiveTopBar,
@@ -92,7 +92,6 @@ import {
   PlayerRosterLive,
   TurnIndicatorRenderer,
   type ActionLogTimelineLabels,
-  type ChatAgentPanelLabels,
   type LiveTopBarLabels,
   type MobileBodyLabels,
   type PlayerRosterLiveLabels,
@@ -106,14 +105,12 @@ import {
   RightColumnTabs,
   ToolkitRenderer,
   type ConnectionLostBannerLabels,
-  type LiveAgentChatLabels,
   type LiveSessionNotesLabels,
   type RightColumnTabsLabels,
   type ScoringPanelRendererLabels,
   type ToolkitRendererLabels,
 } from '@/components/features/session-live';
 import { AgentDisputeTabContent } from '@/components/features/session-live/AgentDisputeTabContent';
-import type { ChatMessage as LiveAgentChatMessage } from '@/components/features/session-live/LiveAgentChat';
 import { PhotosTabContent } from '@/components/features/session-live/PhotosTabContent';
 import { useAddDiaryEntry } from '@/hooks/mutations/useAddDiaryEntry';
 import { useCompleteLiveSession } from '@/hooks/mutations/useCompleteLiveSession';
@@ -121,12 +118,9 @@ import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useLiveSession } from '@/hooks/queries/useLiveSession';
 import { useLiveSessionDiary } from '@/hooks/queries/useLiveSessionDiary';
 import { useLiveSessionPhases } from '@/hooks/queries/useLiveSessionPhases';
-import { useSessionAgentLaunch } from '@/hooks/queries/useSessionAgentLaunch';
-import type { ChatImagePreview } from '@/hooks/useChatImageAttachments';
 import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 import { ConflictError } from '@/lib/api/core/errors';
-import { useSessionAgentChat } from '@/lib/domain-hooks/useSessionAgentChat';
 import { useSignalRSession } from '@/lib/domain-hooks/useSignalrSession';
 import { getNavigationLinks } from '@/lib/navigation';
 import { composeSessionLiveState } from '@/lib/session-live/compose-session-live-state';
@@ -245,11 +239,6 @@ function parseMobileTab(raw: string | null): LiveTab {
 
 function parseMobileSheetOpen(raw: string | null): boolean {
   return raw === 'open';
-}
-
-// G3 #2375 — shared accordion FSM URL parser
-function parseCollapsed(raw: string | null): boolean {
-  return raw === 'collapsed';
 }
 
 // ─── Skeleton shell components ────────────────────────────────────────────────
@@ -387,8 +376,6 @@ export function SessionLiveView(): ReactElement {
   const tab = parseLiveTab(searchParams.get('tab'));
   const mobileTab = parseMobileTab(searchParams.get('mtab'));
   const mobileSheetOpen = parseMobileSheetOpen(searchParams.get('msheet'));
-  const chatCollapsed = parseCollapsed(searchParams.get('chat'));
-  const mobileChatCollapsed = parseCollapsed(searchParams.get('mchat'));
   const fixtureVariantParam = searchParams.get('fixture');
 
   // State override hatch (dev/visual-test builds only)
@@ -552,35 +539,6 @@ export function SessionLiveView(): ReactElement {
     [router, pathname, buildQuery]
   );
 
-  // G3 #2375 — accordion FSM handlers (DEC-1: ?chat desktop, ?mchat mobile, separate params).
-  // Default expanded (param omitted) per DEC-4 / mockup canonical.
-  const handleChatCollapsedChange = useCallback(
-    (collapsed: boolean) => {
-      const val = collapsed ? 'collapsed' : null;
-      router.replace(`${pathname}${buildQuery({ chat: val })}`, { scroll: false });
-    },
-    [router, pathname, buildQuery]
-  );
-
-  const handleMobileChatCollapsedChange = useCallback(
-    (collapsed: boolean) => {
-      const val = collapsed ? 'collapsed' : null;
-      router.replace(`${pathname}${buildQuery({ mchat: val })}`, { scroll: false });
-    },
-    [router, pathname, buildQuery]
-  );
-
-  // G3 #2375 — stable header-click handlers (avoids new closure every render).
-  const handleChatHeaderClick = useCallback(
-    () => handleChatCollapsedChange(!chatCollapsed),
-    [handleChatCollapsedChange, chatCollapsed]
-  );
-
-  const handleMobileChatHeaderClick = useCallback(
-    () => handleMobileChatCollapsedChange(!mobileChatCollapsed),
-    [handleMobileChatCollapsedChange, mobileChatCollapsed]
-  );
-
   /** Dialog dismiss/open handler — updates ?dialog= URL param.
    *  'none' removes the param (clears dialog from URL). */
   const handleDialogChange = useCallback(
@@ -686,10 +644,8 @@ export function SessionLiveView(): ReactElement {
   // (wired in ScoreTabContent).
 
   // NOTE: the social-chat POST handler (/game-sessions/{id}/chat) was retired
-  // in #2500 Task 4 (AC-CHAT-0). ChatAgentPanel now routes through handleAgentSendMessage
-  // (→ useSessionAgentChat → /agent/chat RAG endpoint). The social endpoint remains
-  // available on the backend for SSE-driven action-log entries but is no longer
-  // called from this orchestrator.
+  // in #2500 Task 4 (AC-CHAT-0). The social endpoint remains available on the backend for
+  // SSE-driven action-log entries but is no longer called from this orchestrator.
 
   const handleAddNote = useCallback(
     // #2575: repointed off the legacy raw fetch to /game-sessions/{id}/diary onto the SP3
@@ -1011,30 +967,6 @@ export function SessionLiveView(): ReactElement {
     [t, intl.messages]
   );
 
-  const chatLabels = useMemo<LiveAgentChatLabels>(
-    (): LiveAgentChatLabels => ({
-      title: t('pages.sessionLive.chat.title'),
-      inputAriaLabel: t('pages.sessionLive.chat.inputAriaLabel'),
-      sendAriaLabel: t('pages.sessionLive.chat.sendAriaLabel'),
-      visibilityPrivate: t('pages.sessionLive.chat.visibilityPrivate'),
-      visibilityShared: t('pages.sessionLive.chat.visibilityShared'),
-      emptyMessage: t('pages.sessionLive.chat.emptyMessage'),
-      newMessagesToastAriaLabel: t('pages.sessionLive.chat.newMessagesToastAriaLabel'),
-      attachAriaLabel: t('pages.sessionLive.chat.attachAriaLabel'),
-    }),
-    [t]
-  );
-
-  // G1 #2374 sess.46r — ChatAgentPanel composite labels (Gate A: ICU resolved here).
-  const chatAgentLabels = useMemo<ChatAgentPanelLabels>(
-    (): ChatAgentPanelLabels => ({
-      title: t('pages.sessionLive.chatAgent.title'),
-      agentNameAriaLabel: t('pages.sessionLive.chatAgent.agentNameAriaLabel', { name: 'MeepleAI' }),
-      chatPanelLabels: chatLabels,
-    }),
-    [t, chatLabels]
-  );
-
   const notesLabels = useMemo<LiveSessionNotesLabels>(
     (): LiveSessionNotesLabels => ({
       title: t('pages.sessionLive.notes.title'),
@@ -1076,39 +1008,9 @@ export function SessionLiveView(): ReactElement {
     [activeSession]
   );
 
-  // ── RAG agent chat (AC-CHAT-0) ────────────────────────────────────────────
-  // agentSessionId is resolved lazily via useSessionAgentLaunch:
-  //   1. getAgents(gameId) → pick first active agent
-  //   2. launch(sessionId, { agentDefinitionId }) → { agentSessionId }
-  // status discriminates lifecycle so the panel always shows feedback (R-FINDING-5):
-  //   'idle'      → preconditions not met (no sessionId/gameId or fixture mode)
-  //   'launching' → getAgents/launch in flight
-  //   'ready'     → agentSessionId obtained, chat can send
-  //   'no-agent'  → no assistant for this game
-  //   'error'     → getAgents or launch failed
-  // Disabled in fixture/visual-test builds so no real fetch is issued.
-  const agentLaunch = useSessionAgentLaunch(
-    sessionId ?? null,
-    sessionQuery.data?.gameId ?? null,
-    !fixture
-  );
-  const agentSessionId = agentLaunch.agentSessionId;
-
-  // I1 (#2500 Opzione A): inject gameContext from LiveSessionDto so the RAG retrieval
-  // receives the real game/player context. The game-night store (useSessionStore) is NOT
-  // populated in the live session route, so we pass data explicitly here.
-  // Nullable gameId guard: if the session has no associated game, gameContext is undefined
-  // (RAG will still run in degraded mode, same as before).
+  // #4156 (D5): the legacy session agent — launch, RAG chat, ask-agent with photos — is no
+  // longer mounted on /live. The in-game assistant arrives here with A4 of #4238.
   const liveSessionDto = sessionQuery.data;
-  const agentGameContext = useMemo(() => {
-    if (!liveSessionDto?.gameId) return undefined;
-    return {
-      gameId: liveSessionDto.gameId,
-      gameTitle: liveSessionDto.gameName,
-      players: liveSessionDto.players.map(p => p.displayName),
-      currentTurn: liveSessionDto.currentTurnIndex,
-    };
-  }, [liveSessionDto]);
 
   // ── G6a #2787: per-game Catan flavor (conditional tab) ────────────────────
   const showFlavorTab = hasFlavor(liveSessionDto?.gameSlug);
@@ -1135,11 +1037,6 @@ export function SessionLiveView(): ReactElement {
   const effectiveMobileTab: LiveTab =
     mobileTab === 'flavor' && !showFlavorTab ? 'score' : mobileTab;
 
-  const agentChat = useSessionAgentChat(sessionId ?? '', agentSessionId, {
-    persistHistory: !fixture,
-    gameContext: agentGameContext,
-  });
-
   // #2588 A4: SignalR connection for dispute hydration.
   // Mounted once at orchestrator level so DisputeResolved events populate
   // useLiveSessionStore.disputes even when the user is on another tab.
@@ -1147,159 +1044,7 @@ export function SessionLiveView(): ReactElement {
   // Disabled in fixture/visual-test builds to avoid real hub connections.
   useSignalRSession(!fixture ? (sessionId ?? '') : '');
 
-  // #2588 A3: local state for image-path messages (ask-agent JSON endpoint).
-  // These are merged into agentChatMessages below so they appear in the same panel.
-  const [imageMessages, setImageMessages] = useState<LiveAgentChatMessage[]>([]);
-
-  // Map useSessionAgentChat.ChatMessage → LiveAgentChat.ChatMessage.
-  // The two shapes differ: agent uses role:'user'|'assistant', LiveAgentChat uses
-  // senderId/senderName/visibility.  We map:
-  //   role:'user'      → senderId=viewerId (consistent with how LiveAgentChat
-  //                       computes isOwn; '' when viewerId not yet known — R-FINDING-6)
-  //   role:'assistant' → senderId='agent', senderName='MeepleAI', visibility:'shared'
-  // Citations pass through unchanged (same ChatCitation type, shared via ChatCitationCard import).
-  // When the launch is not yet ready, a single system message is prepended so the user
-  // always sees feedback instead of a silent empty panel (R-FINDING-5 / AC-CHAT-NULL).
-  const agentChatMessages = useMemo<LiveAgentChatMessage[]>(() => {
-    const viewerId = activeSession?.viewerId ?? '';
-    const realMessages = agentChat.messages.map(m => ({
-      id: m.id,
-      senderId: m.role === 'user' ? viewerId : 'agent',
-      senderName: m.role === 'user' ? '' : 'MeepleAI',
-      content: m.content,
-      visibility: 'shared' as const,
-      timestamp: m.timestamp,
-      citations: m.citations,
-      // Task 3 (#3388): propagate the server-authoritative groundingStatus alongside
-      // isNonGrounded — ONLY from hook messages (system status messages prepended
-      // below never carry either field, so they never show the disclaimer).
-      groundingStatus: m.groundingStatus,
-      isNonGrounded: m.isNonGrounded,
-    }));
-
-    // Prepend a system status message when not ready (R-FINDING-5).
-    // 'idle' → preconditions not met yet, no message needed.
-    let statusContent: string | null = null;
-    if (agentLaunch.status === 'launching') {
-      statusContent = t('pages.sessionLive.chatAgent.launchingMessage');
-    } else if (agentLaunch.status === 'no-agent') {
-      statusContent = t('pages.sessionLive.chatAgent.noAgentMessage');
-    } else if (agentLaunch.status === 'error') {
-      statusContent = t('pages.sessionLive.chatAgent.errorMessage');
-    }
-
-    // #2588 A3: merge image-path messages (ask-agent) with RAG messages, sorted by timestamp.
-    const merged = [...realMessages, ...imageMessages].sort((a, b) =>
-      a.timestamp.localeCompare(b.timestamp)
-    );
-
-    if (statusContent != null) {
-      const statusMessage: LiveAgentChatMessage = {
-        id: `agent-status-${agentLaunch.status}`,
-        senderId: 'agent',
-        senderName: 'MeepleAI',
-        content: statusContent,
-        visibility: 'shared' as const,
-        timestamp: new Date().toISOString(),
-      };
-      return [statusMessage, ...merged];
-    }
-
-    return merged;
-  }, [agentChat.messages, activeSession?.viewerId, agentLaunch.status, t, imageMessages]);
-
-  // AC-CHAT-0: send goes to the RAG agent, NOT /game-sessions/{id}/chat.
-  // AC-CHAT-NULL: if agentLaunch.status !== 'ready', agent is not available yet —
-  // the status message above provides user feedback; suppress the actual ask() call.
-  // #2588 A3: dual-path — images → /ask-agent (multipart JSON); text-only → RAG SSE.
-  const handleAgentSendMessage = useCallback(
-    async (
-      content: string,
-      _visibility: 'private' | 'shared',
-      images?: ChatImagePreview[]
-    ): Promise<void> => {
-      if (images && images.length > 0) {
-        // Image path: multipart POST to /ask-agent (JSON response, not SSE).
-        if (sessionId == null) return;
-        const question =
-          content.trim() ||
-          intl.formatMessage({ id: 'pages.sessionLive.chatAgent.imageAsk.defaultQuestion' });
-        const fd = new FormData();
-        fd.append('question', question);
-        fd.append('senderId', activeSession?.viewerId ?? '');
-        images.forEach(img => fd.append('images', img.file));
-
-        // Optimistically append user message so the UI feels responsive.
-        const userMsgId = crypto.randomUUID();
-        const now = new Date().toISOString();
-        setImageMessages(prev => [
-          ...prev,
-          {
-            id: userMsgId,
-            senderId: activeSession?.viewerId ?? '',
-            senderName: '',
-            content: question,
-            visibility: 'shared' as const,
-            timestamp: now,
-          },
-        ]);
-
-        try {
-          const res = await fetch(`/api/v1/game-sessions/${sessionId}/chat/ask-agent`, {
-            method: 'POST',
-            credentials: 'include',
-            body: fd,
-          });
-          if (!res.ok) throw new Error(`ask-agent ${res.status}`);
-          // Task 3 (#3388): the multipart JSON response now carries a top-level
-          // groundingStatus (string, PascalCase — same wire contract as the SSE path).
-          const json = (await res.json()) as {
-            answer?: string;
-            confidence?: number;
-            groundingStatus?: string;
-          };
-          setImageMessages(prev => [
-            ...prev,
-            {
-              id: crypto.randomUUID(),
-              senderId: 'agent',
-              senderName: 'MeepleAI',
-              content:
-                json.answer ??
-                intl.formatMessage({ id: 'pages.sessionLive.chatAgent.imageAsk.fallbackResponse' }),
-              visibility: 'shared' as const,
-              timestamp: new Date().toISOString(),
-              groundingStatus: json.groundingStatus as
-                'Grounded' | 'Partial' | 'Ungrounded' | undefined,
-              isNonGrounded: json.groundingStatus === 'Ungrounded',
-              // Task 4 (#3388): tag as image-modality so the disclaimer copy reflects
-              // that the answer came from the photo, not the rulebook.
-              modality: 'image',
-            },
-          ]);
-        } catch {
-          toast.error(
-            intl.formatMessage({ id: 'pages.sessionLive.chatAgent.imageAsk.errorToast' }),
-            {
-              id: 'image-ask-error',
-            }
-          );
-          // Remove the optimistic user message on failure.
-          setImageMessages(prev => prev.filter(m => m.id !== userMsgId));
-        }
-      } else {
-        // Text-only RAG path (unchanged).
-        if (!agentSessionId || !content.trim()) return;
-        await agentChat.ask(content);
-      }
-    },
-    // `intl` is stable (react-intl memoizes useIntl); listing it clears a pre-existing
-    // exhaustive-deps baseline error surfaced while touching this file for SI-4 (#2635).
-    [agentSessionId, agentChat, sessionId, activeSession?.viewerId, intl]
-  );
-
   // ── Chat messages from SSE events ────────────────────────────────────────
-  // NOTE: ChatAgentPanel now receives agentChatMessages (RAG) — see above.
   // ActionLogTimeline uses activeSession.actionLog directly; this extraction
   // is no longer needed and has been removed to avoid unused-var lint errors.
 
@@ -1333,39 +1078,17 @@ export function SessionLiveView(): ReactElement {
   }, [activeSession]);
 
   // ── Mobile main content (G1 #2374 T9 sess.46r) ───────────────────────────
-  // Full-width LEFT-equivalent: ChatAgentPanel + ActionLogTimeline stacked.
+  // Full-width LEFT-equivalent: the action log.
   // Mirrors the desktop LEFT 60% column (see desktopMainColumn below).
   // MUST be declared BEFORE any early return per react-hooks/rules-of-hooks.
   const mobileMainContent = useMemo<React.ReactNode>(() => {
     if (activeSession == null) return null;
     return (
       <div className="flex flex-col gap-3">
-        <ChatAgentPanel
-          sessionId={sessionId}
-          messages={agentChatMessages}
-          viewerRole={activeSession.viewerRole}
-          viewerId={activeSession.viewerId}
-          onSendMessage={handleAgentSendMessage}
-          agentName="MeepleAI"
-          agentEmoji="🤖"
-          collapsed={mobileChatCollapsed}
-          onHeaderClick={handleMobileChatHeaderClick}
-          labels={chatAgentLabels}
-          compact
-        />
         <ActionLogTimeline entries={activeSession.actionLog} labels={actionLogLabels} compact />
       </div>
     );
-  }, [
-    activeSession,
-    sessionId,
-    agentChatMessages,
-    handleAgentSendMessage,
-    chatAgentLabels,
-    actionLogLabels,
-    mobileChatCollapsed,
-    handleMobileChatHeaderClick,
-  ]);
+  }, [activeSession, actionLogLabels]);
 
   // ── Mobile bottom-sheet content (G1 #2374 T9 sess.46r) ───────────────────
   // Same switch as desktopRightColumn (DRY): score / turn / widget / notes.
@@ -1566,23 +1289,11 @@ export function SessionLiveView(): ReactElement {
   // G1 #2374 sess.46r — Desktop refactor from 3-zone (LEFT sidebar + CENTER
   // column + RIGHT tabs) to 2-zone 60/40 grid (LEFT mainColumn + RIGHT tabs).
   // TurnIndicator + PlayerRosterLive moved to RIGHT 'turn' tab (D-6).
-  // LEFT mainColumn stacks ChatAgentPanel (Issue #2375 G3 §5 contract) on top
-  // of ActionLogTimeline — mirrors mockup `sp4-session-skeleton-live.jsx`.
+  // LEFT mainColumn: ActionLogTimeline. The legacy agent chat (ChatAgentPanel) sat above it
+  // until #4156 (D5); the in-game assistant takes that place with A4 of #4238.
 
   const desktopMainColumn = (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-3">
-      <ChatAgentPanel
-        sessionId={sessionId}
-        messages={agentChatMessages}
-        viewerRole={activeSession.viewerRole}
-        viewerId={activeSession.viewerId}
-        onSendMessage={handleAgentSendMessage}
-        agentName="MeepleAI"
-        agentEmoji="🤖"
-        collapsed={chatCollapsed}
-        onHeaderClick={handleChatHeaderClick}
-        labels={chatAgentLabels}
-      />
       <ActionLogTimeline entries={activeSession.actionLog} labels={actionLogLabels} />
     </div>
   );
@@ -1683,7 +1394,6 @@ export function SessionLiveView(): ReactElement {
       data-layout="2col-60-40"
       data-theme="dark"
       className="flex flex-col h-screen overflow-hidden bg-background text-foreground"
-      aria-label={t('pages.sessionLive.a11y.viewLabel')}
     >
       {/* Sticky top bar */}
       <LiveTopBar

@@ -49,7 +49,7 @@
  *     Cross-referenced here so future regressions are not missed.
  *
  * Auth fixtures: triple helper (seedAuthSession + seedCookieConsent +
- * mockAuthEndpoints) mirrors `session-live-chat-agent-g3.spec.ts`.
+ * mockAuthEndpoints) mirrors `session-live-mobile.spec.ts`.
  *
  * #2389 Block C T8.
  */

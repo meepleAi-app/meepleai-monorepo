@@ -307,6 +307,66 @@ public sealed class CrossGameStreamQaQueryHandlerTests
             ErrorMessage: "Il servizio AI è in pausa fino a domani: è stato raggiunto il budget di spesa del giorno.");
     }
 
+    /// <summary>Il modello non ha scritto niente: non c'è una risposta da contare.</summary>
+    [Fact]
+    public async Task WhenTheModelWritesNothing_NothingIsCounted()
+    {
+        SetupTwoAccessibleGames();
+        SetupSearchResults();
+        _llmService
+            .GenerateAnswerStreamAsync(Arg.Any<LlmAnswerRequest>(), Arg.Any<CancellationToken>())
+            .Returns(SilentStream());
+        ThePlanSays(used: 2, max: 3);
+
+        var events = await CollectEventsAsync(CreateSut(), new CrossGameStreamQaQuery("What rules apply?", UserId, UserRole.User));
+
+        events.Should().NotContain(e => e.Type == StreamingEventType.Token);
+        NothingWasCounted();
+    }
+
+    /// <summary>
+    /// Il client se n'è andato e lo stream del modello finisce senza un'eccezione: la risposta non
+    /// è arrivata a nessuno, e non si conta.
+    /// </summary>
+    [Fact]
+    public async Task WhenTheClientGoesAwayAndTheStreamJustEnds_NothingIsCounted()
+    {
+        SetupTwoAccessibleGames();
+        SetupSearchResults();
+        using var clientGone = new CancellationTokenSource();
+        _llmService
+            .GenerateAnswerStreamAsync(Arg.Any<LlmAnswerRequest>(), Arg.Any<CancellationToken>())
+            .Returns(StreamThatEndsWhenTheClientLeaves(clientGone));
+        ThePlanSays(used: 2, max: 3);
+
+        try
+        {
+            await foreach (var _ in CreateSut().Handle(new CrossGameStreamQaQuery("What rules apply?", UserId, UserRole.User), clientGone.Token))
+            {
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Anche uscire con la cancellazione va bene: conta che non si sia contato.
+        }
+
+        clientGone.IsCancellationRequested.Should().BeTrue("il test ha senso solo se il client se n'è andato");
+        NothingWasCounted();
+    }
+
+    private static async IAsyncEnumerable<StreamChunk> SilentStream()
+    {
+        await Task.Yield();
+        yield return new StreamChunk(null, IsFinal: true, FinishReason: "stop");
+    }
+
+    private static async IAsyncEnumerable<StreamChunk> StreamThatEndsWhenTheClientLeaves(CancellationTokenSource client)
+    {
+        await Task.Yield();
+        yield return new StreamChunk("Le regole");
+        await client.CancelAsync();
+    }
+
     // ── Exception in search → Error event, no propagation ───────────────────
 
     [Fact]

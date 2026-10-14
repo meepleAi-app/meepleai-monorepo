@@ -61,11 +61,22 @@ internal sealed class TierEnforcementService : ITierEnforcementService
             || string.Equals(user.Role, "editor", StringComparison.OrdinalIgnoreCase))
             return TierLimits.Unlimited;
 
-        // Contributors are resolved as premium
-        var tierName = user.IsContributor ? "premium" : user.Tier;
+        // Contributors are resolved as premium. "pro" is an alias of premium (UserTier), and no
+        // plan carries that name: without this, a pro user got the free plan's limits (#4168).
+        var tierName = user.IsContributor || string.Equals(user.Tier, "pro", StringComparison.OrdinalIgnoreCase)
+            ? "premium"
+            : user.Tier;
 
         var definition = await GetTierDefinitionAsync(tierName, ct).ConfigureAwait(false);
-        return definition?.Limits ?? TierLimits.FreeTier;
+        if (definition is null)
+        {
+            // Not silent: since #4168 this fallback caps the user's questions at the free plan's.
+            _logger.LogWarning(
+                "No plan named {Tier} for user {UserId}: using the free plan's limits", tierName, userId);
+            return TierLimits.FreeTier;
+        }
+
+        return definition.Limits;
     }
 
     public async Task<bool> CanPerformAsync(Guid userId, TierAction action, CancellationToken ct = default)

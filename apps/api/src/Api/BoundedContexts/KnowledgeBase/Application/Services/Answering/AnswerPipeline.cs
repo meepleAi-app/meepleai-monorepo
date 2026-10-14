@@ -385,8 +385,12 @@ internal sealed class AnswerPipeline : IAnswerPipeline
             tokenCount, cacheKey, llmUsage, llmCost, injectClaims, cancellationToken).ConfigureAwait(false);
 
         // La risposta è stata consegnata per intero: si conta. Un rifiuto del gateway o
-        // un'interruzione a metà escono prima di qui, e non contano.
-        await _preconditions.RecordAnswerDeliveredAsync(quota, cancellationToken).ConfigureAwait(false);
+        // un'interruzione a metà escono prima di qui, e non contano. Nemmeno una risposta vuota, né
+        // una che nessuno legge più: il client se n'è andato e lo stream è finito senza lanciare.
+        if (answer.Length > 0 && !cancellationToken.IsCancellationRequested)
+        {
+            await _preconditions.RecordAnswerDeliveredAsync(quota, cancellationToken).ConfigureAwait(false);
+        }
 
         yield return CreateEvent(StreamingEventType.Complete,
             new StreamingComplete(0, 0, tokenCount, tokenCount, overallConfidence.Value,

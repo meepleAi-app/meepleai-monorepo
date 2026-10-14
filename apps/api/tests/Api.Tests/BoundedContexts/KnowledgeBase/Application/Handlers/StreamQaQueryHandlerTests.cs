@@ -643,6 +643,85 @@ public class StreamQaQueryHandlerTests
         OneAnswerWasCounted(tiers);
     }
 
+    /// <summary>
+    /// E dopo l'ultimo token: «prima di Complete» non basta, un conteggio fatto a metà dello stream
+    /// conterebbe una risposta che può ancora interrompersi.
+    /// </summary>
+    [Fact]
+    public async Task Handle_AnAnswerFromTheModel_IsCountedAfterItsLastToken()
+    {
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "How to win?", TestUserId, "User");
+        SetupHappyPathMocks(gameId, query.Query);
+        var tiers = APlanWith(used: 2, max: 3);
+        var tokensSeen = 0;
+        int? tokensWhenCounted = null;
+        tiers.Setup(t => t.RecordUsageAsync(
+                It.IsAny<Guid>(), Api.SharedKernel.Services.TierAction.AgentQuery, It.IsAny<CancellationToken>()))
+            .Callback(() => tokensWhenCounted = tokensSeen)
+            .Returns(Task.CompletedTask);
+
+        await foreach (var evt in HandlerOnThePlan(tiers).Handle(query, TestContext.Current.CancellationToken))
+        {
+            if (evt.Type == StreamingEventType.Token)
+            {
+                tokensSeen++;
+            }
+        }
+
+        tokensSeen.Should().BeGreaterThan(1, "il test ha senso solo con più token");
+        tokensWhenCounted.Should().Be(tokensSeen);
+    }
+
+    /// <summary>Il modello non ha scritto niente: non c'è una risposta da contare.</summary>
+    [Fact]
+    public async Task Handle_WhenTheModelWritesNothing_NothingIsCounted()
+    {
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "How to win?", TestUserId, "User");
+        SetupHappyPathMocks(gameId, query.Query);
+        _llmServiceMock
+            .Setup(x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .Returns(SilentStreamAsync());
+        var tiers = APlanWith(used: 2, max: 3);
+
+        var events = await EventsOfAsync(HandlerOnThePlan(tiers), query);
+
+        events.Should().NotContain(e => e.Type == StreamingEventType.Token);
+        NothingWasCounted(tiers);
+    }
+
+    /// <summary>
+    /// Il client se n'è andato e lo stream del modello finisce senza un'eccezione: la risposta non
+    /// è arrivata a nessuno, e non si conta.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenTheClientGoesAwayAndTheStreamJustEnds_NothingIsCounted()
+    {
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "How to win?", TestUserId, "User");
+        SetupHappyPathMocks(gameId, query.Query);
+        using var clientGone = new CancellationTokenSource();
+        _llmServiceMock
+            .Setup(x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .Returns(StreamThatEndsWhenTheClientLeavesAsync(clientGone));
+        var tiers = APlanWith(used: 2, max: 3);
+
+        try
+        {
+            await foreach (var _ in HandlerOnThePlan(tiers).Handle(query, clientGone.Token))
+            {
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Anche uscire con la cancellazione va bene: conta che non si sia contato.
+        }
+
+        clientGone.IsCancellationRequested.Should().BeTrue("il test ha senso solo se il client se n'è andato");
+        NothingWasCounted(tiers);
+    }
+
     /// <summary>Una risposta servita dalla cache è una domanda che ha avuto risposta: conta come le altre.</summary>
     [Fact]
     public async Task Handle_AnAnswerFromTheCache_IsCountedToo()
@@ -756,6 +835,21 @@ public class StreamQaQueryHandlerTests
         yield return new StreamChunk("Each player");
         yield return new StreamChunk(null, IsFinal: true,
             ErrorCode: LlmAnswerErrorCodes.StreamInterrupted, ErrorMessage: "The answer was interrupted before it was complete.");
+    }
+
+    /// <summary>Uno stream che finisce senza contenuto e senza errore.</summary>
+    private static async IAsyncEnumerable<StreamChunk> SilentStreamAsync()
+    {
+        await Task.Yield();
+        yield return new StreamChunk(null, IsFinal: true, FinishReason: "stop");
+    }
+
+    /// <summary>Un token, poi il client se ne va e lo stream finisce senza lanciare.</summary>
+    private static async IAsyncEnumerable<StreamChunk> StreamThatEndsWhenTheClientLeavesAsync(CancellationTokenSource client)
+    {
+        await Task.Yield();
+        yield return new StreamChunk("Each player");
+        await client.CancelAsync();
     }
 
     private static async IAsyncEnumerable<StreamChunk> RefusedStreamAsync()

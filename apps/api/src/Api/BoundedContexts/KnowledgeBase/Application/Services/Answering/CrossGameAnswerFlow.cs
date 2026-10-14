@@ -195,8 +195,12 @@ internal sealed class CrossGameAnswerFlow : ICrossGameAnswerFlow
             }
         }
 
-        // La risposta è stata consegnata: si conta una volta, prima di Complete.
-        await _preconditions.RecordAnswerDeliveredAsync(quota, cancellationToken).ConfigureAwait(false);
+        // La risposta è stata consegnata: si conta una volta, prima di Complete. Non una risposta
+        // vuota, né una che nessuno legge più: il client se n'è andato e lo stream è finito senza lanciare.
+        if (tokenCount > 0 && !cancellationToken.IsCancellationRequested)
+        {
+            await _preconditions.RecordAnswerDeliveredAsync(quota, cancellationToken).ConfigureAwait(false);
+        }
 
         yield return CreateEvent(StreamingEventType.Complete,
             new StreamingComplete(

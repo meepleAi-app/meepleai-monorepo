@@ -143,6 +143,29 @@ public sealed class AgentProfileContentTests
         act.Should().Throw<ValidationException>();
     }
 
+    // #4168 (5e-c-1): i pesi governano la fusione per gioco, dove nell'RRF conta la loro GRANDEZZA,
+    // non solo il rapporto, perché i boost di ruolo e di heading sono additivi. Con la somma fissata a
+    // 1 la grandezza smette di essere una manopola nascosta.
+    [Theory]
+    [InlineData(0.7, 0.4)]
+    [InlineData(0.5, 0.4)]
+    [InlineData(7, 3)]
+    public void Create_WithFusionWeightsThatDoNotSumToOne_IsRejected(double vector, double keyword)
+    {
+        var act = () => Build(vectorWeight: (decimal)vector, keywordWeight: (decimal)keyword);
+        act.Should().Throw<ValidationException>();
+    }
+
+    [Theory]
+    [InlineData(0.7, 0.3)]
+    [InlineData(0.1, 0.9)]
+    [InlineData(1, 0)]
+    public void Create_WithFusionWeightsSummingToOne_IsAccepted(double vector, double keyword)
+    {
+        var content = Build(vectorWeight: (decimal)vector, keywordWeight: (decimal)keyword);
+        (content.VectorWeight + content.KeywordWeight).Should().Be(1m);
+    }
+
     [Fact]
     public void Create_WithoutAllowedCategories_IsRejected()
     {

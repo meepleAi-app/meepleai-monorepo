@@ -123,8 +123,11 @@ public sealed class AgentProfileContent : ValueObject
         Require(finalTopK >= 1 && finalTopK <= candidatePoolSize, nameof(finalTopK),
             "Final top-K must be between 1 and the candidate pool size.");
         Require(minScore is >= 0m and <= 1m, nameof(minScore), "Min score must be between 0 and 1.");
-        Require(vectorWeight >= 0m && keywordWeight >= 0m && vectorWeight + keywordWeight > 0m,
-            nameof(vectorWeight), "Fusion weights must be non-negative and not both zero.");
+        // #4168 (5e-c-1): nella fusione per gioco conta la GRANDEZZA dei pesi, non solo il rapporto,
+        // perché i boost di ruolo e di heading sono additivi. Con la somma fissata a 1 la grandezza
+        // smette di essere una manopola nascosta. Le versioni archiviate passano da Restore.
+        Require(vectorWeight >= 0m && keywordWeight >= 0m && vectorWeight + keywordWeight == 1m,
+            nameof(vectorWeight), "Fusion weights must be non-negative and sum to 1.");
 
         Require(allowedCategories is { Count: > 0 }, nameof(allowedCategories), "At least one document category is required.");
         Require(allowedCategories.All(c => Enum.IsDefined(c)), nameof(allowedCategories), "Unknown document category.");

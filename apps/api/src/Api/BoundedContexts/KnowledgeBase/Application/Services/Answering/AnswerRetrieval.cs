@@ -69,7 +69,10 @@ internal sealed class AnswerRetrieval
                 Language: language,
                 PdfDocumentIds: request.PdfDocumentIds, // Issue #2051, #4243
                 QueryVector: request.QueryVector, // Issue #563: reuse the vector computed for the semantic cache
-                QueryRoleHint: queryRoleHint),
+                QueryRoleHint: queryRoleHint,
+                // #4168 (5e-c-1): i pesi della fusione per gioco vengono dal profilo
+                VectorWeight: (float)profile.VectorWeight,
+                KeywordWeight: (float)profile.KeywordWeight),
             cancellationToken).ConfigureAwait(false);
 
         if (searchResults is null || searchResults.Count == 0)

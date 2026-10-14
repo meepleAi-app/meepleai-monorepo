@@ -474,6 +474,49 @@ public sealed class PrivateGameRetrievalTests
         return otherGameId;
     }
 
+    // ─── I pesi della fusione vengono dal profilo (#4168, 5e-c-1) ───
+    // Il corpus ha un passaggio in entrambi i bracci, uno solo nel lessicale e uno solo nel
+    // vettoriale. Il reranker di prova non riordina, quindi l'ordine dei passaggi nel prompt è quello
+    // della fusione per gioco.
+    //
+    // Il corpus presuppone la soglia vettoriale del seed (0,55): è lei che tiene fuori dal braccio
+    // vettoriale il passaggio solo lessicale, che ha un vettore ortogonale alla domanda. Con una soglia
+    // a 0 entrerebbe anche lì, e l'ordine cambierebbe per una ragione che non sono i pesi.
+
+    /// <summary>
+    /// Caratterizzazione: coi pesi del seed (0,7 e 0,3, gli stessi che la fusione aveva scritti nel
+    /// codice) l'ordine resta quello di prima.
+    /// </summary>
+    [Fact]
+    public async Task WithTheSeedWeights_TheFusionKeepsItsOrder()
+    {
+        await AskAsync(_token);
+
+        PassageOrder().Should().Equal(BothArms, VectorOnly, LexicalOnly);
+    }
+
+    [Fact]
+    public async Task AHigherKeywordWeight_PutsTheLexicalPassageBeforeTheVectorOne()
+    {
+        await AgentProfilePublisher.PublishAsync(_hostFixture.Factory.Services,
+            c => AgentProfilePublisher.WithFusionWeights(c, vectorWeight: 0.1m, keywordWeight: 0.9m), Ct);
+
+        await AskAsync(_token);
+
+        PassageOrder().Should().Equal(BothArms, LexicalOnly, VectorOnly);
+    }
+
+    /// <summary>I tre passaggi del corpus, nell'ordine in cui compaiono nel prompt.</summary>
+    private List<string> PassageOrder()
+    {
+        var prompt = _hostFixture.Llm.LastUserPrompt;
+        prompt.Should().NotBeNull("il modello è stato interrogato");
+        return new[] { BothArms, LexicalOnly, VectorOnly }
+            .Where(p => prompt!.Contains(p, StringComparison.Ordinal))
+            .OrderBy(p => prompt!.IndexOf(p, StringComparison.Ordinal))
+            .ToList();
+    }
+
     // ─── La lista dei PDF del gioco privato (#4348) ───
     // `PrivateGameHub` la legge al caricamento della pagina: vuota, ricaricata la pagina il
     // regolamento spariva. La rotta non guardava chi chiede, quindi i PDF privati li vede solo il

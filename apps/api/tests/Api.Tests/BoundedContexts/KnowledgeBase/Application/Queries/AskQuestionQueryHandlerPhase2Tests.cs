@@ -80,7 +80,7 @@ public class AskQuestionQueryHandlerPhase2Tests
             .Returns(new List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>());
 
         _mockRrfService
-            .Setup(r => r.FuseResults(It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<int>(), It.IsAny<GameBookRole>(), It.IsAny<IReadOnlyList<string>?>()))
+            .Setup(r => r.FuseResults(It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(), It.IsAny<int>(), It.IsAny<GameBookRole>(), It.IsAny<IReadOnlyList<string>?>(), It.IsAny<float>(), It.IsAny<float>()))
             .Returns(new List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>());
 
         mockKeywordSearchService
@@ -702,7 +702,7 @@ public class AskQuestionQueryHandlerPhase2Tests
     public async Task Handle_OnCacheHit_CarriesTheVersionAndTheLanguage()
     {
         var gameId = Guid.NewGuid();
-        SetupDefaultMocksWithSearchResults(gameId, "unused — served from cache");        _mockResponseCache
+        SetupDefaultMocksWithSearchResults(gameId, "unused — served from cache"); _mockResponseCache
             .Setup(c => c.TryGetAsync(gameId, It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new CachedRagResponse(
                 Answer: "Cached answer.",
@@ -1314,7 +1314,7 @@ public class AskQuestionQueryHandlerPhase2Tests
                 It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(),
                 It.IsAny<int>(),
                 It.IsAny<GameBookRole>(),
-                It.IsAny<IReadOnlyList<string>?>()))
+                It.IsAny<IReadOnlyList<string>?>(), It.IsAny<float>(), It.IsAny<float>()))
             .Returns(oneResult);
 
         _mockLlmService

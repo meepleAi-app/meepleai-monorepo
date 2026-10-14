@@ -151,9 +151,9 @@ public sealed class AskQuestionQueryHandlerIntentRoutingTests
                 It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(),
                 It.IsAny<int>(),
                 It.IsAny<GameBookRole>(),
-                It.IsAny<IReadOnlyList<string>?>()))
-            .Callback<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>, List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>, int, GameBookRole, IReadOnlyList<string>?>(
-                (v, k, rk, rh, qt) => capturedRoleHint = rh)
+                It.IsAny<IReadOnlyList<string>?>(), It.IsAny<float>(), It.IsAny<float>()))
+            .Callback<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>, List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>, int, GameBookRole, IReadOnlyList<string>?, float, float>(
+                (v, k, rk, rh, qt, _, _) => capturedRoleHint = rh)
             .Returns(new List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>());
 
         var ragAccessMock = new Mock<IRagAccessService>();

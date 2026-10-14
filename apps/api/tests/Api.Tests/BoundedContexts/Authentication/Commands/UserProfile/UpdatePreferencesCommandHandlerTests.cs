@@ -114,4 +114,59 @@ public class UpdatePreferencesCommandHandlerTests
 
         _mockRepository.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    // ── #4157: aggiornamento parziale ─────────────────────────────────────────────
+
+    private static User UserWithSavedPreferences()
+    {
+        var user = new User(
+            id: TestUserId,
+            email: new Email("partial@test.com"),
+            displayName: "Partial User",
+            passwordHash: PasswordHash.Create("UnusualPwd123!"),
+            role: Role.User,
+            tier: UserTier.Free
+        );
+        user.UpdatePreferences("en", "light", emailNotifications: false, dataRetentionDays: 30);
+        user.UpdatePrivacySettings(showProfile: false, showActivity: false, showLibrary: true);
+        return user;
+    }
+
+    [Fact]
+    public async Task Handle_FieldsLeftOut_KeepTheirSavedValues_PrivacyIncluded()
+    {
+        // The body of /settings/preferences: theme, language and notifications, nothing else.
+        var user = UserWithSavedPreferences();
+        _mockRepository.Setup(r => r.GetByIdAsync(TestUserId, It.IsAny<CancellationToken>())).ReturnsAsync(user);
+
+        var result = await _handler.Handle(
+            new UpdatePreferencesCommand { UserId = TestUserId, Language = "it", Theme = "dark", EmailNotifications = true },
+            CancellationToken.None);
+
+        result.Language.Should().Be("it");
+        result.Theme.Should().Be("dark");
+        result.EmailNotifications.Should().BeTrue();
+        result.DataRetentionDays.Should().Be(30, "a field the request leaves out is not reset to its default");
+        result.ShowProfile.Should().BeFalse("before #4157 an absent privacy flag came back true");
+        result.ShowActivity.Should().BeFalse();
+        result.ShowLibrary.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Handle_OnlyAPrivacyFlag_ChangesThatFlagAndNothingElse()
+    {
+        var user = UserWithSavedPreferences();
+        _mockRepository.Setup(r => r.GetByIdAsync(TestUserId, It.IsAny<CancellationToken>())).ReturnsAsync(user);
+
+        var result = await _handler.Handle(
+            new UpdatePreferencesCommand { UserId = TestUserId, ShowProfile = true },
+            CancellationToken.None);
+
+        result.ShowProfile.Should().BeTrue();
+        result.ShowActivity.Should().BeFalse();
+        result.Language.Should().Be("en");
+        result.Theme.Should().Be("light");
+        result.EmailNotifications.Should().BeFalse();
+        result.DataRetentionDays.Should().Be(30);
+    }
 }

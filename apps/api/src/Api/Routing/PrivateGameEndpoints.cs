@@ -263,7 +263,8 @@ internal static class PrivateGameEndpoints
         .WithOpenApi(operation =>
         {
             operation.Summary = "Delete a private game";
-            operation.Description = "Soft-delete a private game. You can only delete your own private games.";
+            operation.Description = "Delete a private game. Its chats, uploaded documents and index are permanently " +
+                "removed; the game itself is soft-deleted. You can only delete your own private games.";
             return operation;
         })
         .Produces(StatusCodes.Status204NoContent)

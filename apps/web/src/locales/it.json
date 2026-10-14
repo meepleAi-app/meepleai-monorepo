@@ -735,7 +735,7 @@
     "editGame": "Modifica Gioco",
     "editDescription": "Aggiorna i dettagli di \"{title}\".",
     "deleteGame": "Elimina Gioco",
-    "deleteConfirm": "Sei sicuro di voler eliminare \"{title}\"? Questa azione non può essere annullata.",
+    "deleteConfirm": "Sei sicuro di voler eliminare \"{title}\"? Verranno eliminati per sempre anche le chat e i documenti caricati per questo gioco. Questa azione non può essere annullata.",
     "deleting": "Eliminazione...",
     "saving": "Salvataggio...",
     "saveChanges": "Salva Modifiche",

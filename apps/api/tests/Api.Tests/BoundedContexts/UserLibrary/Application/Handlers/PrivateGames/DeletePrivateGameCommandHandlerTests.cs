@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Application.Commands.PurgePrivateGameContent;
 using Api.BoundedContexts.UserLibrary.Application.Commands.PrivateGames;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
@@ -5,6 +6,7 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -22,6 +24,7 @@ public sealed class DeletePrivateGameCommandHandlerTests
 {
     private readonly Mock<IPrivateGameRepository> _repositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
+    private readonly Mock<IMediator> _mediatorMock;
     private readonly Mock<ILogger<DeletePrivateGameCommandHandler>> _loggerMock;
     private readonly DeletePrivateGameCommandHandler _handler;
 
@@ -29,11 +32,13 @@ public sealed class DeletePrivateGameCommandHandlerTests
     {
         _repositoryMock = new Mock<IPrivateGameRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
+        _mediatorMock = new Mock<IMediator>();
         _loggerMock = new Mock<ILogger<DeletePrivateGameCommandHandler>>();
 
         _handler = new DeletePrivateGameCommandHandler(
             _repositoryMock.Object,
             _unitOfWorkMock.Object,
+            _mediatorMock.Object,
             _loggerMock.Object);
     }
 
@@ -47,6 +52,7 @@ public sealed class DeletePrivateGameCommandHandlerTests
             new DeletePrivateGameCommandHandler(
                 null!,
                 _unitOfWorkMock.Object,
+                _mediatorMock.Object,
                 _loggerMock.Object);
         var exception = act.Should().Throw<ArgumentNullException>().Which;
 
@@ -61,6 +67,7 @@ public sealed class DeletePrivateGameCommandHandlerTests
             new DeletePrivateGameCommandHandler(
                 _repositoryMock.Object,
                 null!,
+                _mediatorMock.Object,
                 _loggerMock.Object);
         var exception = act2.Should().Throw<ArgumentNullException>().Which;
 
@@ -75,10 +82,24 @@ public sealed class DeletePrivateGameCommandHandlerTests
             new DeletePrivateGameCommandHandler(
                 _repositoryMock.Object,
                 _unitOfWorkMock.Object,
+                _mediatorMock.Object,
                 null!);
         var exception = act3.Should().Throw<ArgumentNullException>().Which;
 
         exception.ParamName.Should().Be("logger");
+    }
+
+    [Fact]
+    public void Constructor_NullMediator_ThrowsArgumentNullException()
+    {
+        var act = () =>
+            new DeletePrivateGameCommandHandler(
+                _repositoryMock.Object,
+                _unitOfWorkMock.Object,
+                null!,
+                _loggerMock.Object);
+
+        act.Should().Throw<ArgumentNullException>().Which.ParamName.Should().Be("mediator");
     }
 
     #endregion
@@ -198,6 +219,100 @@ public sealed class DeletePrivateGameCommandHandlerTests
         _repositoryMock.Verify(
             r => r.UpdateAsync(It.IsAny<PrivateGame>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    #endregion
+
+    #region Content Purge Tests (#4244)
+
+    private PrivateGame GameOwnedBy(Guid ownerId, Guid gameId)
+    {
+        var game = PrivateGame.CreateManual(ownerId: ownerId, title: "Il mio prototipo", minPlayers: 2, maxPlayers: 4);
+        typeof(PrivateGame).GetProperty("Id")!.SetValue(game, gameId);
+        _repositoryMock
+            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+        return game;
+    }
+
+    /// <summary>
+    /// Prima il contenuto, poi il gioco. Al contrario, una pulizia che fallisce lascerebbe un
+    /// gioco sparito col contenuto ancora nel database, e nessuno a cui dirlo.
+    /// </summary>
+    [Fact]
+    public async Task Handle_ValidOwner_PurgesTheContentBeforeDeletingTheGame()
+    {
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var game = GameOwnedBy(userId, gameId);
+        var steps = new List<string>();
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<PurgePrivateGameContentCommand>(), It.IsAny<CancellationToken>()))
+            .Callback(() => steps.Add(game.IsDeleted ? "purge-after-delete" : "purge"))
+            .Returns(Task.CompletedTask);
+        _repositoryMock
+            .Setup(r => r.UpdateAsync(It.IsAny<PrivateGame>(), It.IsAny<CancellationToken>()))
+            .Callback(() => steps.Add("update"))
+            .Returns(Task.CompletedTask);
+        _unitOfWorkMock
+            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Callback(() => steps.Add("save"))
+            .ReturnsAsync(1);
+
+        await _handler.Handle(new DeletePrivateGameCommand(gameId, userId), CancellationToken.None);
+
+        steps.Should().Equal("purge", "update", "save");
+        _mediatorMock.Verify(
+            m => m.Send(It.Is<PurgePrivateGameContentCommand>(c => c.PrivateGameId == gameId), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenThePurgeFails_TheGameIsNotDeleted()
+    {
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var game = GameOwnedBy(userId, gameId);
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<PurgePrivateGameContentCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ConflictException("documento modificato da un'altra operazione"));
+
+        var act = () => _handler.Handle(new DeletePrivateGameCommand(gameId, userId), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConflictException>();
+        game.IsDeleted.Should().BeFalse();
+        _repositoryMock.Verify(
+            r => r.UpdateAsync(It.IsAny<PrivateGame>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>Il comando di pulizia non controlla chi lo chiede: lo fa questo gestore, prima.</summary>
+    [Fact]
+    public async Task Handle_DifferentOwner_PurgesNothing()
+    {
+        var gameId = Guid.NewGuid();
+        GameOwnedBy(Guid.NewGuid(), gameId);
+
+        var act = () => _handler.Handle(new DeletePrivateGameCommand(gameId, Guid.NewGuid()), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+        _mediatorMock.Verify(
+            m => m.Send(It.IsAny<PurgePrivateGameContentCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_GameNotFound_PurgesNothing()
+    {
+        var gameId = Guid.NewGuid();
+        _repositoryMock
+            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((PrivateGame?)null);
+
+        var act = () => _handler.Handle(new DeletePrivateGameCommand(gameId, Guid.NewGuid()), CancellationToken.None);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+        _mediatorMock.Verify(
+            m => m.Send(It.IsAny<PurgePrivateGameContentCommand>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     #endregion

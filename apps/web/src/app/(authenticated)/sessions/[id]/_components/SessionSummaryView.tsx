@@ -12,31 +12,15 @@
  *   status is `InProgress` / `Paused` / `Setup`, the orchestrator redirects to
  *   `/sessions/[id]/live`.
  *
- * Hook composition (contract §3):
- *   1. useSessionDetail(sessionId)            — parent, GameSessionDto from games.schemas.ts
- *      (canonical SessionDetailsDto adapter applied at boundary — Gate B carryover)
- *   2. useSessionDiaryQuery(sessionId)        — sub-hook, mounts after parent success
- *   3. useSessionVisionSnapshots(sessionId)   — sub-hook, mounts after parent success
- *   4. Achievements via fixture stub          — no backend in v1 (Gate B documented)
- *
- * Schema reality v1 carryover (Gate B):
- *   - useSessionDetail returns `GameSessionDto` not `SessionDetailsDto`. Adapter
- *     `adaptGameSessionToDetails` synthesises ParticipantDto[] from
- *     SessionPlayerDto[] using stable id + ranking from totalScore. Fields
- *     not on GameSessionDto are filled with safe defaults:
- *       sessionCode  → synthesized from id prefix
- *       sessionType  → 'Standard'
- *       sessionDate  → startedAt
- *       location     → null
- *       userId       → '' (no current viewer-side info)
- *       finalizedAt  → completedAt
- *       scores       → [] (not exposed on GameSessionDto)
- *       notes        → []
- *       finalRank    → derived from totalScore desc rank position
- *       totalScore   → SessionPlayerDto has no score → 0 placeholder until
- *                       backend exposes per-participant scoring on this DTO.
- *   - Achievements have no backend endpoint v1 → fixture-only stub.
- *   - Chat highlights have no backend endpoint v1 → empty array fallback,
+ * Hook composition (#4156 — the route id is a LiveGameSession id, decision D4):
+ *   1. useLiveSession(sessionId)              — parent, LiveSessionDto; adapted at the
+ *      boundary into the SessionDetailsDto shape the components speak, with the real
+ *      totals and per-round scores from RoundScores (ADR-089 §1)
+ *   2. useSessionVisionSnapshots(sessionId)   — sub-hook on /live-sessions, after parent success
+ *   3. Diary: empty. The SessionTracking diary does not exist for a live session id, and the
+ *      live diary (text notes) is not something the timeline can show yet
+ *   4. Achievements: no backend → empty on real data (fixtures only under ?fixture=)
+ *   - Chat highlights have no backend endpoint → empty array fallback,
  *     ChatHighlights renders empty state.
  *
  * URL state SSOT (contract §6, no useState mirror):
@@ -97,12 +81,13 @@ import {
   type ShareCardTheme,
   type ShareChannel,
 } from '@/components/features/session-summary';
-import { useSessionDetail } from '@/hooks/queries/useSessionDetail';
-import { useSessionDiaryQuery } from '@/hooks/queries/useSessionFlow';
+import { useLiveSession } from '@/hooks/queries/useLiveSession';
 import { useSessionVisionSnapshots } from '@/hooks/queries/useSessionSnapshots';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { GameSessionDto } from '@/lib/api/schemas/games.schemas';
+import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
 import type { ParticipantDto, SessionDetailsDto } from '@/lib/api/schemas/session-tracking.schemas';
+import type { DiaryEntryDto } from '@/lib/api/session-flow/types';
 import { shouldShowConfetti } from '@/lib/sessions-summary/confetti-trigger';
 import { deriveSessionSummaryState, type SessionSummaryFSMCell } from '@/lib/sessions-summary/fsm';
 import type { AchievementDto } from '@/lib/sessions-summary/schemas';
@@ -139,60 +124,96 @@ function parseShareTheme(raw: string | null): ShareCardTheme {
   return raw === 'dark' ? 'dark' : 'light';
 }
 
-// ─── GameSessionDto → SessionDetailsDto-like adapter (Gate B carryover) ────
+const NO_ACHIEVEMENTS: readonly AchievementDto[] = [];
+const NO_DIARY: readonly DiaryEntryDto[] = [];
+const NO_DIARY_QUERY = { isPending: false, isError: false, error: null, data: NO_DIARY };
+
+// ─── LiveSessionDto → SessionDetailsDto-like adapter (#4156) ───────────────
 
 /**
- * Adapt the actual hook output (`GameSessionDto` from `useSessionDetail`) into
- * a minimal `SessionDetailsDto`-shaped value compatible with the FSM and
- * downstream components.
- *
- * **v1 carryover gaps** (documented for future backend extension):
- *   - SessionPlayerDto carries no per-participant `score` field. We use 0 as
- *     a placeholder pending backend exposure of scoring on this DTO. The
- *     `winnerName` field on GameSessionDto is used to elevate the winner's
- *     placeholder score by 1 so the ranking algorithm produces a deterministic
- *     order until the real scoring lands.
- *   - SessionDetailsDto's `scores: ScoreEntryDto[]` (per-round, per-category)
- *     has no equivalent on GameSessionDto. Adapter returns `[]`.
- *   - `sessionCode`, `sessionType`, `location`, `userId` are not on
- *     GameSessionDto. Synthesised with safe defaults.
- *   - SessionPlayerDto.id is optional (Gate B Wave D.2 backward-compat).
- *     Adapter synthesises stable id from `playerName + playerOrder + idx`.
+ * L'id della rotta è quello di una `LiveGameSession` (decisione D4 di #4156): il riepilogo la
+ * legge, e i suoi componenti parlano la forma `SessionDetailsDto`, che si costruisce qui. Totali
+ * e punteggi per round sono quelli veri, da `RoundScores` (ADR-089 §1). Prima il riepilogo
+ * leggeva la `GameSession` con l'id di una live, riceveva 404, e anche quando la trovava usava
+ * un punteggio segnaposto (1 al vincitore, 0 agli altri).
  */
-function adaptGameSessionToDetails(gameSession: GameSessionDto): SessionDetailsDto {
-  const winnerName = gameSession.winnerName?.trim() ?? null;
-  const participants: ParticipantDto[] = gameSession.players.map((p, idx) => {
-    const id = p.id ?? `synth-${gameSession.id}-${p.playerOrder}-${idx}`;
-    const isWinner = winnerName !== null && p.playerName === winnerName;
-    // v1 placeholder: SessionPlayerDto has no score → use isWinner=1 vs 0
-    // so RankedParticipant ordering is deterministic. Real scoring will
-    // require backend extension of GameSessionDto OR migration to a new
-    // `useSessionTrackingDetails(id)` hook returning SessionDetailsDto natively.
-    const totalScore = isWinner ? 1 : 0;
-    return {
-      id,
-      userId: null,
-      displayName: p.playerName,
-      isOwner: idx === 0,
-      joinOrder: p.playerOrder,
-      finalRank: null, // computed downstream by computeRankedParticipants
-      totalScore,
-    };
-  });
+function adaptLiveSessionToDetails(live: LiveSessionDto): SessionDetailsDto {
+  const participants: ParticipantDto[] = playersOf(live).map((p, idx) => ({
+    id: p.id,
+    userId: p.userId,
+    displayName: p.displayName,
+    isOwner: p.role === 'Host',
+    joinOrder: idx + 1,
+    finalRank: null, // computed downstream by computeRankedParticipants
+    totalScore: p.totalScore,
+  }));
 
   return {
-    id: gameSession.id,
-    userId: '', // no viewer info on GameSessionDto
-    gameId: gameSession.gameId,
-    sessionCode: `S-${gameSession.id.slice(0, 8).toUpperCase()}`,
+    id: live.id,
+    userId: live.createdByUserId,
+    gameId: live.gameId ?? '',
+    sessionCode: live.sessionCode,
     sessionType: 'Standard',
-    status: gameSession.status,
-    sessionDate: gameSession.startedAt,
+    status: live.status,
+    sessionDate: live.startedAt ?? live.createdAt,
     location: null,
-    finalizedAt: gameSession.completedAt,
+    finalizedAt: live.completedAt,
     participants,
-    scores: [], // v1 carryover: no per-round/category scoring on GameSessionDto
-    notes: [], // PlayerNoteDto[] — not on GameSessionDto
+    scores: live.roundScores.map(s => ({
+      id: `${s.playerId}-${s.round}-${s.dimension}`,
+      participantId: s.playerId,
+      roundNumber: s.round,
+      category: s.dimension,
+      scoreValue: s.value,
+      timestamp: s.recordedAt,
+    })),
+    notes: [], // le note personali della pagina /notes restano nel browser
+  };
+}
+
+/** Chi gioca: gli spettatori non segnano punti e non salgono sul podio. */
+function playersOf(live: LiveSessionDto): LiveSessionDto['players'] {
+  return live.players.filter(p => p.role !== 'Spectator');
+}
+
+/**
+ * L'aspetto per gioco del riepilogo (#3022, Catan) riceve una `GameSessionDto`. La si costruisce
+ * dalla live, con il punteggio «Points» ricavato dai totali di `RoundScores`: il polimorfico di
+ * SessionTracking esce dal percorso live (ADR-089), quindi non c'è un altro punteggio da leggere.
+ */
+function adaptLiveSessionToFlavorSession(live: LiveSessionDto): GameSessionDto {
+  const players = playersOf(live);
+  const top = players.reduce((max, p) => Math.max(max, p.totalScore), Number.NEGATIVE_INFINITY);
+  const leaders = players.filter(p => p.totalScore === top);
+  const durationMinutes =
+    live.startedAt && live.completedAt
+      ? Math.max(0, Math.round((Date.parse(live.completedAt) - Date.parse(live.startedAt)) / 60000))
+      : 0;
+
+  return {
+    id: live.id,
+    gameId: live.gameId ?? '',
+    status: live.status,
+    startedAt: live.startedAt ?? live.createdAt,
+    completedAt: live.completedAt,
+    playerCount: Math.max(players.length, 1),
+    players: players.map((p, idx) => ({
+      id: p.id,
+      playerName: p.displayName,
+      playerOrder: idx + 1,
+      color: p.color,
+    })),
+    // Un vincitore solo se il primo posto non è condiviso: un pareggio non ha un nome.
+    winnerName: leaders.length === 1 ? leaders[0].displayName : null,
+    notes: live.notes,
+    durationMinutes,
+    scoringType: 'Points',
+    scoreData: JSON.stringify({
+      scores: players.map(p => ({ playerId: p.id, points: p.totalScore })),
+    }),
+    gameSlug: live.gameSlug,
+    gameName: live.gameName,
+    scorePlayers: players.map(p => ({ id: p.id, displayName: p.displayName, color: p.color })),
   };
 }
 
@@ -403,33 +424,32 @@ export function SessionSummaryView({
   }, [fixtureOverride]);
 
   // ── Real data hooks (disabled when fixture active) ────────────────────
-  const sessionQuery = useSessionDetail(sessionId ?? '', fixture === null && sessionId !== null);
-  const diaryQuery = useSessionDiaryQuery(
-    fixture === null && sessionId !== null && sessionQuery.isSuccess && sessionQuery.data != null
-      ? (sessionId ?? '')
-      : ''
-  );
+  const sessionQuery = useLiveSession(sessionId ?? '', fixture === null && sessionId !== null);
   const snapshotsQuery = useSessionVisionSnapshots(
     sessionId ?? '',
     fixture === null && sessionId !== null && sessionQuery.isSuccess && sessionQuery.data != null
   );
 
-  // ── Achievements stub (Gate B v1 carryover) ───────────────────────────
-  // No backend endpoint v1 — orchestrator sources from default fixture and
-  // applies the empty-achievements override only when ?fixture=empty-achievements.
+  // ── Achievements ──────────────────────────────────────────────────────
+  // Non c'è un backend per gli achievement: sui dati reali il carosello è vuoto. Fino a #4156
+  // questo ramo mostrava gli achievement della fixture di default, cioè dati di prova presentati
+  // come se la partita li avesse sbloccati.
   const achievements: readonly AchievementDto[] = useMemo(() => {
     if (fixture !== null) return fixture.achievements;
-    // Real-data path: stub until backend lands. We expose deterministic
-    // achievements via the default fixture so the carousel renders meaningfully.
-    return sessionSummaryFixtures.default.achievements;
+    return NO_ACHIEVEMENTS;
   }, [fixture]);
 
-  // ── Adapt useSessionDetail GameSessionDto → SessionDetailsDto-shape ───
+  // ── Adapt LiveSessionDto → SessionDetailsDto-shape ────────────────────
   const adaptedSession: SessionDetailsDto | null = useMemo(() => {
     if (fixture !== null) return fixture.session;
     if (!sessionQuery.data) return null;
-    return adaptGameSessionToDetails(sessionQuery.data);
+    return adaptLiveSessionToDetails(sessionQuery.data);
   }, [fixture, sessionQuery.data]);
+
+  const flavorSession: GameSessionDto | null = useMemo(
+    () => (sessionQuery.data ? adaptLiveSessionToFlavorSession(sessionQuery.data) : null),
+    [sessionQuery.data]
+  );
 
   // ── FSM derivation (delegate to foundation) ───────────────────────────
   // Build QueryLike inputs from our hook results / fixture.
@@ -470,13 +490,11 @@ export function SessionSummaryView({
         error: sessionQuery.error,
         data: adaptedSession,
       },
-      diaryQuery: {
-        // Diary fetched only after session success; treat unrun as success-empty.
-        isPending: sessionQuery.isSuccess && diaryQuery.isLoading,
-        isError: diaryQuery.isError,
-        error: diaryQuery.error,
-        data: diaryQuery.data ?? [],
-      },
+      // #4156: il diario di questa vista è quello di SessionTracking, che con l'id di una live
+      // non esiste. Il diario della live è fatto di note di testo, che la timeline non sa ancora
+      // mostrare: finché non lo sa, il diario resta vuoto invece di interrogare l'aggregato
+      // sbagliato.
+      diaryQuery: NO_DIARY_QUERY,
       snapshotsQuery: {
         isPending: sessionQuery.isSuccess && snapshotsQuery.isLoading,
         isError: snapshotsQuery.isError,
@@ -500,10 +518,6 @@ export function SessionSummaryView({
     sessionQuery.error,
     sessionQuery.isSuccess,
     adaptedSession,
-    diaryQuery.isLoading,
-    diaryQuery.isError,
-    diaryQuery.error,
-    diaryQuery.data,
     snapshotsQuery.isLoading,
     snapshotsQuery.isError,
     snapshotsQuery.error,
@@ -516,7 +530,7 @@ export function SessionSummaryView({
   useEffect(() => {
     if (fsmCell.kind !== 'not-completed') return;
     if (sessionId === null) return;
-    const inProgressStatuses = new Set(['InProgress', 'Paused', 'Setup']);
+    const inProgressStatuses = new Set(['Created', 'InProgress', 'Paused', 'Setup']);
     if (inProgressStatuses.has(fsmCell.status)) {
       router.replace(`/sessions/${sessionId}/live`);
     }
@@ -898,13 +912,11 @@ export function SessionSummaryView({
     >
       {/* #3022: per-game summary flavor (Catan…), completed sessions only. */}
       {sessionQuery.data != null &&
+        flavorSession != null &&
         sessionQuery.data.status === 'Completed' &&
         hasSummaryFlavor(sessionQuery.data.gameSlug) && (
           <div className="px-4 pt-4 sm:px-6">
-            <SummaryFlavorRenderer
-              gameSlug={sessionQuery.data.gameSlug}
-              session={sessionQuery.data}
-            />
+            <SummaryFlavorRenderer gameSlug={sessionQuery.data.gameSlug} session={flavorSession} />
           </div>
         )}
 

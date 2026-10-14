@@ -452,7 +452,9 @@ export function SessionCreationWizard() {
         trackSessionCreated({ gameId: realGameId, playerCount: players.length });
       }
 
-      router.push(`/sessions/${sessionId}`);
+      // #4156: the id is a LiveGameSession id, and the page that plays it is /live — like the
+      // mobile wizard. The root page is the post-game summary.
+      router.push(`/sessions/${sessionId}/live`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Errore nella creazione della sessione');
       setIsCreating(false);

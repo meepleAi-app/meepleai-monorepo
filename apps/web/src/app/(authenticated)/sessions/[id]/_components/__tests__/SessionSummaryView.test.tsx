@@ -8,12 +8,13 @@
  *   - URL state SSOT: ?diary= ?theme= reflected in active filter pill +
  *     theme toggle; handlers update URL via router.replace
  *   - Visual fixture override: ?fixture=tied renders tied podium
- *   - GameSessionDto → SessionDetailsDto adapter at boundary (Gate B carryover)
+ *   - LiveSessionDto → SessionDetailsDto adapter at boundary (#4156: the route id is a
+ *     LiveGameSession id; totals and per-round scores are the real ones from RoundScores)
  *   - Achievements stub: empty-achievements fixture renders empty carousel
  *   - Loading shell renders during pending state
  *   - Confetti shows on first load via shouldShowConfetti
  *
- * Mocks: useSessionDetail, useSessionDiaryQuery, useSessionVisionSnapshots,
+ * Mocks: useLiveSession, useSessionVisionSnapshots,
  *        next/navigation, react-intl (via react-intl IntlProvider).
  *
  * Pattern blueprint: Wave D.2 SessionLiveView.test.tsx (4-state FSM, fixture
@@ -25,7 +26,7 @@ import { IntlProvider } from 'react-intl';
 import type { ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { GameSessionDto } from '@/lib/api/schemas/games.schemas';
+import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
 import { clearConfettiFlag } from '@/lib/sessions-summary/confetti-trigger';
 import { sessionSummaryFixtures } from '@/lib/sessions-summary/visual-test-fixture';
 
@@ -49,10 +50,10 @@ vi.mock('next/navigation', () => ({
   usePathname: () => `/sessions/${mockParamsId}`,
 }));
 
-// ─── useSessionDetail / useSessionFlow / useSessionSnapshots mocks ───────
+// ─── useLiveSession / useSessionSnapshots mocks ───────────────────────────
 
 type SessionDetailReturn = {
-  data?: GameSessionDto | null;
+  data?: LiveSessionDto | null;
   isLoading: boolean;
   isError: boolean;
   isSuccess: boolean;
@@ -60,16 +61,11 @@ type SessionDetailReturn = {
   refetch?: () => void;
 };
 
-const useSessionDetailMock = vi.fn<[], SessionDetailReturn>();
-const useSessionDiaryQueryMock = vi.fn();
+const useLiveSessionMock = vi.fn<[], SessionDetailReturn>();
 const useSessionVisionSnapshotsMock = vi.fn();
 
-vi.mock('@/hooks/queries/useSessionDetail', () => ({
-  useSessionDetail: () => useSessionDetailMock(),
-}));
-
-vi.mock('@/hooks/queries/useSessionFlow', () => ({
-  useSessionDiaryQuery: () => useSessionDiaryQueryMock(),
+vi.mock('@/hooks/queries/useLiveSession', () => ({
+  useLiveSession: () => useLiveSessionMock(),
 }));
 
 vi.mock('@/hooks/queries/useSessionSnapshots', () => ({
@@ -82,8 +78,20 @@ vi.mock('@/hooks/queries/useSessionSnapshots', () => ({
 // the dynamic-import loading race.
 vi.mock('@/components/features/session-live/SummaryFlavorRenderer', () => ({
   hasSummaryFlavor: (slug: string | null | undefined) => slug === 'catan',
-  SummaryFlavorRenderer: ({ gameSlug }: { gameSlug: string | null | undefined }) => (
-    <div data-testid="summary-flavor-mounted" data-slug={gameSlug ?? ''} />
+  SummaryFlavorRenderer: ({
+    gameSlug,
+    session,
+  }: {
+    gameSlug: string | null | undefined;
+    session: { scoringType?: string | null; scoreData?: string | null; winnerName: string | null };
+  }) => (
+    <div
+      data-testid="summary-flavor-mounted"
+      data-slug={gameSlug ?? ''}
+      data-scoring-type={session.scoringType ?? ''}
+      data-score-data={session.scoreData ?? ''}
+      data-winner={session.winnerName ?? ''}
+    />
   ),
 }));
 
@@ -177,42 +185,77 @@ function renderView(sessionId: string = '00000000-0000-4000-8000-000000000aaa'):
 
 // ─── Fixture helpers ──────────────────────────────────────────────────────
 
-function makeGameSession(overrides: Partial<GameSessionDto> = {}): GameSessionDto {
+type LivePlayer = LiveSessionDto['players'][number];
+
+function makePlayer(
+  id: string,
+  displayName: string,
+  totalScore: number,
+  overrides: Partial<LivePlayer> = {}
+): LivePlayer {
   return {
-    id: '00000000-0000-4000-8000-000000000aaa',
-    gameId: '00000000-0000-4000-8000-00000000c001',
-    status: 'Completed',
-    startedAt: '2026-05-04T19:00:00Z',
-    completedAt: '2026-05-04T20:30:00Z',
-    playerCount: 4,
-    players: [
-      { id: 'p1', playerName: 'Marco Rossi', playerOrder: 1, color: null },
-      { id: 'p2', playerName: 'Anna Bianchi', playerOrder: 2, color: null },
-      { id: 'p3', playerName: 'Luigi Verdi', playerOrder: 3, color: null },
-      { id: 'p4', playerName: 'Sofia Russo', playerOrder: 4, color: null },
-    ],
-    winnerName: 'Marco Rossi',
-    notes: null,
-    durationMinutes: 90,
+    id,
+    userId: null,
+    displayName,
+    avatarUrl: null,
+    color: 'Red',
+    role: 'Player',
+    teamId: null,
+    totalScore,
+    currentRank: 0,
+    joinedAt: '2026-05-04T18:55:00Z',
+    isActive: true,
     ...overrides,
   };
 }
 
-function setHookSuccess(session: GameSessionDto = makeGameSession()): void {
-  useSessionDetailMock.mockReturnValue({
+const P1 = '00000000-0000-4000-8000-0000000000a1';
+const P2 = '00000000-0000-4000-8000-0000000000a2';
+const P3 = '00000000-0000-4000-8000-0000000000a3';
+const P4 = '00000000-0000-4000-8000-0000000000a4';
+
+function makeLiveSession(overrides: Partial<LiveSessionDto> = {}): LiveSessionDto {
+  return {
+    id: '00000000-0000-4000-8000-000000000aaa',
+    sessionCode: 'ABC123',
+    gameId: '00000000-0000-4000-8000-00000000c001',
+    gameName: 'Azul',
+    gameSlug: 'azul',
+    createdByUserId: '00000000-0000-4000-8000-00000000f001',
+    status: 'Completed',
+    visibility: 'Private',
+    groupId: null,
+    createdAt: '2026-05-04T18:50:00Z',
+    startedAt: '2026-05-04T19:00:00Z',
+    pausedAt: null,
+    completedAt: '2026-05-04T20:30:00Z',
+    updatedAt: '2026-05-04T20:30:00Z',
+    lastSavedAt: null,
+    currentTurnIndex: 12,
+    currentTurnPlayerId: null,
+    agentMode: 'None',
+    notes: null,
+    players: [
+      makePlayer(P1, 'Marco Rossi', 40, { role: 'Host' }),
+      makePlayer(P2, 'Anna Bianchi', 25),
+      makePlayer(P3, 'Luigi Verdi', 18),
+      makePlayer(P4, 'Sofia Russo', 12),
+    ],
+    teams: [],
+    roundScores: [],
+    scoringConfig: { enabledDimensions: ['punti'], dimensionUnits: {} },
+    ...overrides,
+  };
+}
+
+function setHookSuccess(session: LiveSessionDto = makeLiveSession()): void {
+  useLiveSessionMock.mockReturnValue({
     data: session,
     isLoading: false,
     isError: false,
     isSuccess: true,
     error: null,
     refetch: vi.fn(),
-  });
-  useSessionDiaryQueryMock.mockReturnValue({
-    data: [],
-    isLoading: false,
-    isError: false,
-    isSuccess: true,
-    error: null,
   });
   useSessionVisionSnapshotsMock.mockReturnValue({
     data: [],
@@ -232,24 +275,16 @@ beforeEach(() => {
   routerPush.mockClear();
   routerReplace.mockClear();
   // Reset hook mocks
-  useSessionDetailMock.mockReset();
-  useSessionDiaryQueryMock.mockReset();
+  useLiveSessionMock.mockReset();
   useSessionVisionSnapshotsMock.mockReset();
   // Default: not loading, no data, not error
-  useSessionDetailMock.mockReturnValue({
+  useLiveSessionMock.mockReturnValue({
     data: null,
     isLoading: false,
     isError: false,
     isSuccess: false,
     error: null,
     refetch: vi.fn(),
-  });
-  useSessionDiaryQueryMock.mockReturnValue({
-    data: undefined,
-    isLoading: false,
-    isError: false,
-    isSuccess: false,
-    error: null,
   });
   useSessionVisionSnapshotsMock.mockReturnValue({
     data: undefined,
@@ -268,7 +303,7 @@ beforeEach(() => {
 
 describe('SessionSummaryView — 6-cell FSM', () => {
   it('renders loading shell when sessionQuery is pending', () => {
-    useSessionDetailMock.mockReturnValue({
+    useLiveSessionMock.mockReturnValue({
       data: undefined,
       isLoading: true,
       isError: false,
@@ -283,7 +318,7 @@ describe('SessionSummaryView — 6-cell FSM', () => {
   });
 
   it('renders error shell when sessionQuery errored', () => {
-    useSessionDetailMock.mockReturnValue({
+    useLiveSessionMock.mockReturnValue({
       data: null,
       isLoading: false,
       isError: true,
@@ -299,7 +334,7 @@ describe('SessionSummaryView — 6-cell FSM', () => {
   });
 
   it('renders not-found shell when session data is null', () => {
-    useSessionDetailMock.mockReturnValue({
+    useLiveSessionMock.mockReturnValue({
       data: null,
       isLoading: false,
       isError: false,
@@ -307,7 +342,6 @@ describe('SessionSummaryView — 6-cell FSM', () => {
       error: null,
       refetch: vi.fn(),
     });
-    useSessionDiaryQueryMock.mockReturnValue({ data: [], isLoading: false, isError: false });
     useSessionVisionSnapshotsMock.mockReturnValue({ data: [], isLoading: false, isError: false });
     renderView();
     // Issue #2088: title renamed "Sessione non trovata" → "Nessuna sessione attiva"
@@ -320,7 +354,7 @@ describe('SessionSummaryView — 6-cell FSM', () => {
   });
 
   it('not-found shell exposes "Inizia nuova sessione" CTA → /sessions/new (Issue #2088)', () => {
-    useSessionDetailMock.mockReturnValue({
+    useLiveSessionMock.mockReturnValue({
       data: null,
       isLoading: false,
       isError: false,
@@ -328,7 +362,6 @@ describe('SessionSummaryView — 6-cell FSM', () => {
       error: null,
       refetch: vi.fn(),
     });
-    useSessionDiaryQueryMock.mockReturnValue({ data: [], isLoading: false, isError: false });
     useSessionVisionSnapshotsMock.mockReturnValue({ data: [], isLoading: false, isError: false });
     renderView();
 
@@ -339,7 +372,7 @@ describe('SessionSummaryView — 6-cell FSM', () => {
   });
 
   it('renders not-completed shell + redirect to /live for InProgress status', () => {
-    setHookSuccess(makeGameSession({ status: 'InProgress' }));
+    setHookSuccess(makeLiveSession({ status: 'InProgress' }));
     renderView();
     const root = document.querySelector('[data-slot="session-summary-view"]');
     expect(root).toHaveAttribute('data-ui-state', 'not-completed');
@@ -349,34 +382,25 @@ describe('SessionSummaryView — 6-cell FSM', () => {
   });
 
   it('renders not-completed shell + redirect for Paused status', () => {
-    setHookSuccess(makeGameSession({ status: 'Paused' }));
+    setHookSuccess(makeLiveSession({ status: 'Paused' }));
     renderView();
     expect(routerReplace).toHaveBeenCalledWith(
       '/sessions/00000000-0000-4000-8000-000000000aaa/live'
     );
   });
 
-  it('renders default shell when status=Completed and all data present', () => {
-    setHookSuccess(makeGameSession({ status: 'Completed' }));
-    // Provide non-empty diary/snapshots so we get default not partial
-    useSessionDiaryQueryMock.mockReturnValue({
-      data: [
-        {
-          id: 'd1',
-          sessionId: '00000000-0000-4000-8000-000000000aaa',
-          gameNightId: null,
-          eventType: 'turn_advanced',
-          timestamp: '2026-05-04T19:30:00Z',
-          payload: null,
-          createdBy: null,
-          source: 'system',
-        },
-      ],
-      isLoading: false,
-      isError: false,
-      isSuccess: true,
-      error: null,
-    });
+  it('redirects to /live a session that was created and never started (#4156)', () => {
+    setHookSuccess(makeLiveSession({ status: 'Created', startedAt: null, completedAt: null }));
+    renderView();
+    expect(routerReplace).toHaveBeenCalledWith(
+      '/sessions/00000000-0000-4000-8000-000000000aaa/live'
+    );
+  });
+
+  it('renders the summary of a completed session, partial on real data (#4156)', () => {
+    // Sui dati reali non ci sono né diario né achievement, quindi la cella è «partial»: la
+    // cella «default» si raggiunge solo con le fixture (vedi i test sotto).
+    setHookSuccess(makeLiveSession({ status: 'Completed' }));
     useSessionVisionSnapshotsMock.mockReturnValue({
       data: [
         {
@@ -396,7 +420,7 @@ describe('SessionSummaryView — 6-cell FSM', () => {
     });
     renderView();
     const root = document.querySelector('[data-slot="session-summary-view"]');
-    expect(root).toHaveAttribute('data-ui-state', 'default');
+    expect(root).toHaveAttribute('data-ui-state', 'partial');
     // Hero podium should render
     expect(document.querySelector('[data-slot="session-summary-hero"]')).toBeInTheDocument();
     // ScoringBreakdownTable should render
@@ -404,7 +428,7 @@ describe('SessionSummaryView — 6-cell FSM', () => {
   });
 
   it('renders partial shell when sub-arrays empty (default fallback for diary/photos/chat)', () => {
-    setHookSuccess(makeGameSession({ status: 'Completed' }));
+    setHookSuccess(makeLiveSession({ status: 'Completed' }));
     // Default mock has empty diary/snapshots → partial cell
     renderView();
     const root = document.querySelector('[data-slot="session-summary-view"]');
@@ -509,31 +533,51 @@ describe('SessionSummaryView — visual fixture override', () => {
 
 // ─── Adapter tests ────────────────────────────────────────────────────────
 
-describe('SessionSummaryView — GameSessionDto → SessionDetailsDto adapter', () => {
-  it('adapter assigns deterministic placeholder score so winner ranks first', () => {
-    const session = makeGameSession({
-      winnerName: 'Anna Bianchi',
-      players: [
-        { id: 'p1', playerName: 'Marco Rossi', playerOrder: 1, color: null },
-        { id: 'p2', playerName: 'Anna Bianchi', playerOrder: 2, color: null },
-        { id: 'p3', playerName: 'Luigi Verdi', playerOrder: 3, color: null },
-      ],
-    });
-    setHookSuccess(session);
+describe('SessionSummaryView — LiveSessionDto → SessionDetailsDto adapter (#4156)', () => {
+  it('ranks the players by the totals the live session recorded', () => {
+    // Lo scenario della spec: Marco segna 10, Giulia 30. Prima il riepilogo leggeva la
+    // GameSession e dava 1 punto a chi aveva il nome del vincitore, 0 agli altri.
+    setHookSuccess(
+      makeLiveSession({
+        players: [makePlayer(P1, 'Marco', 10, { role: 'Host' }), makePlayer(P2, 'Giulia', 30)],
+      })
+    );
     renderView();
-    // First scoring row should be the winner Anna Bianchi
-    const firstRow = document.querySelector('[data-slot="scoring-row"][data-rank="1"]');
-    expect(firstRow?.textContent).toContain('Anna Bianchi');
+    const first = document.querySelector('[data-slot="scoring-row"][data-rank="1"]');
+    const second = document.querySelector('[data-slot="scoring-row"][data-rank="2"]');
+    expect(first?.textContent).toContain('Giulia');
+    expect(first?.textContent).toContain('30');
+    expect(second?.textContent).toContain('Marco');
+    expect(second?.textContent).toContain('10');
   });
 
-  it('adapter handles missing player ids by synthesizing stable ids', () => {
-    const session = makeGameSession({
-      players: [{ playerName: 'Anonymous Player', playerOrder: 1, color: null }],
-    });
-    setHookSuccess(session);
+  it('leaves spectators off the scoreboard', () => {
+    setHookSuccess(
+      makeLiveSession({
+        players: [
+          makePlayer(P1, 'Marco', 10, { role: 'Host' }),
+          makePlayer(P2, 'Giulia', 30),
+          makePlayer(P3, 'Chi guarda', 0, { role: 'Spectator' }),
+        ],
+      })
+    );
     renderView();
-    // Should render without crashing — the synthetic id is used in keys
-    expect(document.querySelector('[data-slot="session-summary-hero"]')).toBeInTheDocument();
+    const rows = document.querySelectorAll('[data-slot="scoring-row"]');
+    expect(rows).toHaveLength(2);
+    expect(
+      document.querySelector('[data-slot="scoring-breakdown-table"]')?.textContent
+    ).not.toContain('Chi guarda');
+  });
+
+  it('shows no test achievements on real data', () => {
+    // Fino a #4156 il ramo dei dati reali mostrava gli achievement della fixture di default,
+    // come se la partita li avesse sbloccati.
+    setHookSuccess(makeLiveSession());
+    renderView();
+    expect(document.querySelector('[data-slot="achievements-carousel"]')).toHaveAttribute(
+      'data-empty',
+      'true'
+    );
   });
 });
 
@@ -544,7 +588,7 @@ describe('SessionSummaryView — sessionId guard', () => {
     mockParamsId = undefined;
     // Hook will be called with '' — set isSuccess=true with null data so the
     // FSM resolves to not-found via the empty-id branch.
-    useSessionDetailMock.mockReturnValue({
+    useLiveSessionMock.mockReturnValue({
       data: null,
       isLoading: false,
       isError: false,
@@ -552,7 +596,6 @@ describe('SessionSummaryView — sessionId guard', () => {
       error: null,
       refetch: vi.fn(),
     });
-    useSessionDiaryQueryMock.mockReturnValue({ data: [], isLoading: false, isError: false });
     useSessionVisionSnapshotsMock.mockReturnValue({ data: [], isLoading: false, isError: false });
     renderView('');
     const root = document.querySelector('[data-slot="session-summary-view"]');
@@ -589,7 +632,7 @@ describe('SessionSummaryView — fixture data sanity', () => {
 describe('SessionSummaryView — handlers', () => {
   it('error retry triggers useSessionDetail.refetch', () => {
     const refetchSpy = vi.fn();
-    useSessionDetailMock.mockReturnValue({
+    useLiveSessionMock.mockReturnValue({
       data: null,
       isLoading: false,
       isError: true,
@@ -603,7 +646,7 @@ describe('SessionSummaryView — handlers', () => {
   });
 
   it('not-found back button navigates to /sessions', () => {
-    useSessionDetailMock.mockReturnValue({
+    useLiveSessionMock.mockReturnValue({
       data: null,
       isLoading: false,
       isError: false,
@@ -611,7 +654,6 @@ describe('SessionSummaryView — handlers', () => {
       error: null,
       refetch: vi.fn(),
     });
-    useSessionDiaryQueryMock.mockReturnValue({ data: [], isLoading: false, isError: false });
     useSessionVisionSnapshotsMock.mockReturnValue({ data: [], isLoading: false, isError: false });
     renderView();
     fireEvent.click(screen.getByText('Torna alle sessioni'));
@@ -622,22 +664,30 @@ describe('SessionSummaryView — handlers', () => {
 // ─── #3022 Catan summary flavor wiring ─────────────────────────────────────
 
 describe('SessionSummaryView — Catan summary flavor (#3022)', () => {
-  const catanSession = (overrides: Partial<GameSessionDto> = {}): GameSessionDto =>
-    makeGameSession({
+  const catanSession = (overrides: Partial<LiveSessionDto> = {}): LiveSessionDto =>
+    makeLiveSession({
+      gameName: 'Catan',
       gameSlug: 'catan',
-      scoringType: 'Points',
-      scoreData: JSON.stringify({
-        scores: [
-          { playerId: 'p1', points: 10 },
-          { playerId: 'p2', points: 8 },
-        ],
-      }),
-      scorePlayers: [
-        { id: 'p1', displayName: 'Marco Rossi', color: 'Red' },
-        { id: 'p2', displayName: 'Anna Bianchi', color: 'Blue' },
+      players: [
+        makePlayer(P1, 'Marco Rossi', 10, { role: 'Host', color: 'Red' }),
+        makePlayer(P2, 'Anna Bianchi', 8, { color: 'Blue' }),
       ],
       ...overrides,
     });
+
+  it('hands the flavor the points of the live totals (#4156)', () => {
+    setHookSuccess(catanSession());
+    renderView();
+    const mounted = screen.getByTestId('summary-flavor-mounted');
+    expect(mounted).toHaveAttribute('data-scoring-type', 'Points');
+    expect(JSON.parse(mounted.getAttribute('data-score-data') ?? '{}')).toEqual({
+      scores: [
+        { playerId: P1, points: 10 },
+        { playerId: P2, points: 8 },
+      ],
+    });
+    expect(mounted).toHaveAttribute('data-winner', 'Marco Rossi');
+  });
 
   it('mounts the summary flavor for a completed Catan session, forwarding the slug', () => {
     setHookSuccess(catanSession());
@@ -653,8 +703,8 @@ describe('SessionSummaryView — Catan summary flavor (#3022)', () => {
     expect(screen.queryByTestId('summary-flavor-mounted')).toBeNull();
   });
 
-  it('does NOT mount for a non-completed (Abandoned) session', () => {
-    setHookSuccess(catanSession({ status: 'Abandoned' }));
+  it('does NOT mount for a non-completed session', () => {
+    setHookSuccess(catanSession({ status: 'Paused' }));
     renderView();
     expect(screen.queryByTestId('summary-flavor-mounted')).toBeNull();
   });

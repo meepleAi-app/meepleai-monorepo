@@ -83,12 +83,15 @@ Si procede a strati, ciascuno verificabile da solo:
 Si procede a fette, ciascuna con la sua PR:
 
 0. **Produttori e guardia**: l'inventario dei link a `/sessions/<id>`; `GameSessionDto.liveSessionId`; un test architetturale sugli import, con eccezioni esplicite legate a una issue.
-1. **Navigazione e letture**: il wizard desktop porta a `/sessions/{id}/live`; riepilogo, `/scoreboard` e `/notes` leggono `LiveGameSession`; la ripresa passa da `/live-sessions`; i produttori passano l'id di una live (D4, e D7 per le serate); l'agente vecchio esce da `/live` (D5); si tolgono i link a sotto-rotte inesistenti.
+1. **Navigazione e letture**, in tre PR (2026-10-14):
+   - **1a — le pagine di `/sessions/[id]`**: il wizard desktop porta a `/sessions/{id}/live`; riepilogo, `/scoreboard` e `/notes` leggono `LiveGameSession`, il tabellone ordina per totale; la ripresa passa da `/live-sessions`; si tolgono i link a sotto-rotte inesistenti, con un gate che li tiene fuori. Il diario del riepilogo resta vuoto: quello di `SessionTracking` non esiste per una live, e la timeline non sa ancora mostrare le note di testo del diario della live;
+   - **1b — chi costruisce i link**: i produttori dell'inventario passano l'id di una live (D4) o vanno alle pagine della serata (D7);
+   - **1c — l'agente vecchio esce da `/live`** (D5): lancio, chat RAG e domanda con foto.
 2. **Lo Score tab su `RoundScores`**: editor giocatore × dimensione × round con il round derivato come predefinito (D6); scrittura con `POST`/`PUT /api/v1/live-sessions/{id}/scores`; il polimorfico esce dal percorso live; si aggiornano CLAUDE.md (§ *Live-session scoring*) e ADR-089 (riga «Update»).
 
 **Aperte**:
-- **D7**, da chiudere prima della fetta 1: le sessioni delle serate di gioco nascono in `SessionTracking` e non hanno una `LiveGameSession`, quindi con D4 non hanno pagina in `/sessions/[id]`.
-- I tipi polimorfici (vittoria sì/no, obiettivi, classifica), da chiudere prima della fetta 2. La proposta è rinviarli: oggi il wizard non li offre.
+- ~~**D7**~~ — **decisa il 2026-10-14**: le sessioni delle serate di gioco, che nascono in `SessionTracking` e non hanno una `LiveGameSession`, portano alle pagine della serata (`/game-nights/{id}/live` in corso, `/game-nights/{id}/summary` a serata chiusa).
+- ~~I tipi polimorfici~~ — **decisi il 2026-10-14**: vittoria sì/no, obiettivi e classifica si rinviano, perché il wizard non li offre.
 
 **Verifica**: lo scenario Gherkin «percorso completo» del design (crea → segna → ricarica → tabellone → chiudi → riepilogo e partita registrata con gli stessi totali), più la verifica che la partita registrata esista.
 

@@ -29,7 +29,7 @@
  * Mocks: useSession, useSessionLiveStream, next/navigation, next-intl, session-live-visual-test-fixture.
  */
 
-import { fireEvent, render, screen, act } from '@testing-library/react';
+import { fireEvent, render, screen, act, within } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactElement } from 'react';
@@ -281,11 +281,15 @@ vi.mock('@/lib/session-live/use-resolve-play-record', () => ({
 // must be initialised before the hoisted vi.mock runs.
 
 const getHistoryMock = vi.hoisted(() => vi.fn());
+const resumeSessionMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api', () => ({
   api: {
     playRecords: {
       getHistory: getHistoryMock,
+    },
+    liveSessions: {
+      resumeSession: resumeSessionMock,
     },
   },
 }));
@@ -2752,5 +2756,83 @@ describe('SessionLiveView — Catan flavor tab (#2787)', () => {
     renderWithIntl(<SessionLiveView />);
     // FlavorRenderer lazy-loads CatanLiveFlavor (<section aria-label> → role region).
     expect(await screen.findByRole('region', { name: 'Pannello Catan' })).toBeInTheDocument();
+  });
+});
+
+// ─── #4156 — la ripresa passa da /live-sessions ──────────────────────────────
+
+describe('SessionLiveView — #4156: resume goes through the live session', () => {
+  const HOST_ID = 'user-55555555-5555-5555-5555-555555555555';
+
+  const PAUSED_DTO_WITH_HOST = {
+    ...MOCK_SESSION_DTO,
+    status: 'Paused',
+    players: [
+      {
+        id: 'player-001',
+        displayName: 'Marco',
+        userId: HOST_ID,
+        color: 'Blue',
+        role: 'Host',
+        totalScore: 0,
+        isActive: true,
+      },
+    ],
+  } as unknown as LiveSessionDto;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    searchParamsMap['dialog'] = 'pause';
+    mockParamsId = 'session-abc-123';
+    IS_VISUAL_TEST_BUILD_MOCK = false;
+    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+    useCurrentUserMock.mockReturnValue({ data: { id: HOST_ID } });
+    useLiveSessionMock.mockReturnValue({
+      data: PAUSED_DTO_WITH_HOST,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+    });
+  });
+
+  it('the host resumes the live session of the route id', async () => {
+    // L'id della rotta è quello di una LiveGameSession. Prima la ripresa chiamava
+    // /game-sessions/{id}/resume (SessionTracking), riceveva 404 e chiudeva comunque il pannello.
+    resumeSessionMock.mockResolvedValue(undefined);
+    let container: HTMLElement;
+    await act(async () => {
+      container = renderWithIntl(<SessionLiveView />).container;
+    });
+    await act(async () => {});
+
+    const overlay = container!.querySelector('[data-slot="pause-overlay"]') as HTMLElement;
+    expect(overlay).not.toBeNull();
+    await act(async () => {
+      fireEvent.click(within(overlay).getByRole('button', { name: 'Riprendi' }));
+    });
+
+    expect(resumeSessionMock).toHaveBeenCalledWith('session-abc-123');
+  });
+
+  it('keeps the pause panel open when the resume fails', async () => {
+    resumeSessionMock.mockRejectedValue(new Error('409'));
+    let container: HTMLElement;
+    await act(async () => {
+      container = renderWithIntl(<SessionLiveView />).container;
+    });
+    await act(async () => {});
+
+    const overlay = container!.querySelector('[data-slot="pause-overlay"]') as HTMLElement;
+    await act(async () => {
+      fireEvent.click(within(overlay).getByRole('button', { name: 'Riprendi' }));
+    });
+
+    expect(resumeSessionMock).toHaveBeenCalledTimes(1);
+    expect(routerReplace).not.toHaveBeenCalledWith(
+      expect.not.stringContaining('dialog=pause'),
+      expect.anything()
+    );
   });
 });

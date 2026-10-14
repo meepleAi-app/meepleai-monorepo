@@ -146,11 +146,6 @@ export const ENTITY_NAVIGATION_GRAPH: Partial<Record<MeepleEntityType, EntityNav
         idKey: 'agentId',
         buildHref: id => `/agents/${id}`,
       },
-      {
-        entity: 'chat',
-        label: 'Chats',
-        buildHref: id => `/sessions/${id}/chats`,
-      },
     ],
 
     player: [

@@ -154,7 +154,12 @@ export default function PlayerSessionsPage() {
 
                 return (
                   <LiveSessionLink key={session.id} liveSessionId={session.liveSessionId}>
-                    <Card className="hover:shadow-md transition-shadow cursor-pointer border border-border/60">
+                    <Card
+                      className={cn(
+                        'border border-border/60',
+                        session.liveSessionId && 'hover:shadow-md transition-shadow cursor-pointer'
+                      )}
+                    >
                       <CardHeader className="pb-2">
                         <div className="flex items-start justify-between gap-3">
                           <CardTitle className="font-quicksand text-base flex items-center gap-2">

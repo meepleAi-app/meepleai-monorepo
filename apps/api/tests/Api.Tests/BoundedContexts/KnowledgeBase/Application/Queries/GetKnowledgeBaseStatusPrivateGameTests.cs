@@ -229,6 +229,40 @@ public sealed class GetKnowledgeBaseStatusPrivateGameTests : IDisposable
         result.GameName.Should().Be("Il mio prototipo");
     }
 
+    /// <summary>
+    /// L'admin legge lo stato di un gioco privato altrui (#4137): dalla rotta privata già prima, ora
+    /// anche da quella generica, dove prima riceveva "Pending" senza nome.
+    /// </summary>
+    [Fact]
+    public async Task Handle_PrivateGameOfSomeoneElseThroughTheGenericRoute_AnAdminReadsItsStatus()
+    {
+        _dbContext.PrivateGames.Add(new PrivateGameEntity
+        {
+            Id = PrivateGameId,
+            Title = "Another user's game",
+            OwnerId = Guid.NewGuid(),
+            Source = PrivateGameSource.Manual,
+        });
+        _dbContext.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = Guid.NewGuid(),
+            PrivateGameId = PrivateGameId,
+            FileName = "theirs.pdf",
+            FilePath = "/uploads/theirs.pdf",
+            ProcessingState = "Ready",
+            UploadedAt = DateTime.UtcNow,
+            FileSizeBytes = 1024,
+            UploadedByUserId = Guid.NewGuid(),
+        });
+        await _dbContext.SaveChangesAsync();
+
+        var query = new GetKnowledgeBaseStatusQuery(PrivateGameId, Guid.NewGuid(), "Admin", IsPrivateGame: false);
+        var result = await _handler.Handle(query, CancellationToken.None);
+
+        result!.Status.Should().Be("Completed");
+        result.GameName.Should().Be("Another user's game");
+    }
+
     /// <summary>Sulla rotta generica il gioco privato di un altro resta un 404, come su quella privata.</summary>
     [Fact]
     public async Task Handle_PrivateGameOfSomeoneElseThroughTheGenericRoute_ReturnsNull()

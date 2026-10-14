@@ -280,11 +280,13 @@ internal static class UserProfileEndpoints
         .WithName("UpdateUserPreferences")
         .WithTags("User Profile")
         .WithSummary("Update user preferences")
-        .WithDescription(@"Updates user preferences including language, theme, email notifications, and data retention settings.
+        .WithDescription(@"Updates user preferences including language, theme, email notifications, data retention and privacy settings.
+
+**Partial update** (#4157): every field is optional. A field that is absent or null keeps its saved value, so this PUT behaves like a PATCH. A field that is present is validated as before: an explicit dataRetentionDays of 0 is still rejected with 422.
 
 **Authorization**: Requires active session (cookie-based authentication).
 
-**Request Body**: UpdatePreferencesPayload with language, theme, emailNotifications, dataRetentionDays.
+**Request Body**: UpdatePreferencesPayload with any of language, theme, emailNotifications, dataRetentionDays, showProfile, showActivity, showLibrary.
 
 **Response**: Updated UserProfileDto with all profile information including new preferences.")
         .Produces<UserProfileDto>(200)
@@ -651,11 +653,15 @@ internal record ChangePasswordPayload(
 /// <summary>
 /// Payload for updating user preferences.
 /// </summary>
+/// <summary>
+/// #4157: ogni campo e` opzionale. Un campo assente (o <c>null</c>) resta com'e`: il <c>PUT</c> ha la
+/// semantica di un aggiornamento parziale.
+/// </summary>
 internal record UpdatePreferencesPayload(
-    string Language,
-    string Theme,
-    bool EmailNotifications,
-    int DataRetentionDays,
-    bool ShowProfile = true,
-    bool ShowActivity = true,
-    bool ShowLibrary = true);
+    string? Language = null,
+    string? Theme = null,
+    bool? EmailNotifications = null,
+    int? DataRetentionDays = null,
+    bool? ShowProfile = null,
+    bool? ShowActivity = null,
+    bool? ShowLibrary = null);

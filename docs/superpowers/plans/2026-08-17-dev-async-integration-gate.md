@@ -1,5 +1,9 @@
 # Dev Async Integration Gate — Implementation Plan
 
+> ⚠️ **Piano superato: non eseguirlo.** Solo la PR1 (#3744) è stata unita. Le PR2 e PR3 (#3745,
+> #3746) sono state chiuse senza unione perché le misure ne hanno smentito la premessa. Lo stato
+> corrente è in [#3742](https://github.com/meepleAi-app/meepleai-monorepo/issues/3742).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** far sì che il gate `Backend Integration` di `dev-async` produca, su `main-dev`, un esito che misuri la selezione **intera** e che non venga cancellato prima di arrivarci.

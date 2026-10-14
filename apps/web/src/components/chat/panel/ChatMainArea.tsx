@@ -2,6 +2,8 @@
 'use client';
 
 import type { ChatMessageRole } from '@/components/chat/shared';
+import { TierLimitRegion } from '@/components/chat-unified/TierLimitNotice';
+import type { TierLimit } from '@/lib/tier-limit';
 
 import { ChatInputBar } from './ChatInputBar';
 import { ChatMessageBubble } from './ChatMessageBubble';
@@ -21,6 +23,11 @@ interface ChatMainAreaProps {
   onSend: (message: string) => void;
   /** Stream error message to show above the input bar. */
   error?: string | null;
+  /**
+   * #4168 (5g-b): la domanda è stata fermata dalla quota del piano. Non è un guasto: al posto del
+   * riquadro d'errore compare l'avviso, con i numeri del piano e il link ai piani.
+   */
+  tierLimit?: TierLimit | null;
 }
 
 export function ChatMainArea({
@@ -29,6 +36,7 @@ export function ChatMainArea({
   suggestedQuestions,
   onSend,
   error,
+  tierLimit = null,
 }: ChatMainAreaProps) {
   const isEmpty = messages.length === 0;
 
@@ -83,8 +91,12 @@ export function ChatMainArea({
           </div>
         )}
       </div>
-      {error && (
-        <div className="mx-6 mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 font-nunito text-sm text-red-700">
+      <TierLimitRegion limit={tierLimit} className="mx-6 mb-3" />
+      {error && !tierLimit && (
+        <div
+          data-testid="chat-stream-error"
+          className="mx-6 mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 font-nunito text-sm text-red-700"
+        >
           {error}
         </div>
       )}

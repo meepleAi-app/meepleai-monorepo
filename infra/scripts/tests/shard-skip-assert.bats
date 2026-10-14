@@ -239,10 +239,5 @@ setup() {
     [ "$status" -eq 0 ]
 }
 
-@test "la baseline committata ha i tre shard di dev-async" {
-    real="$BATS_TEST_DIRNAME/../../fixtures/dev-async-shard-baseline.json"
-    for shard in Core KnowledgeBase Games; do
-        run jq -e --arg s "$shard" '.shards[$s].failed != null and .shards[$s].skipped != null' "$real"
-        [ "$status" -eq 0 ]
-    done
-}
+# Che la baseline abbia una voce per ogni shard lo verifica integration-shard-matrix.bats, che i
+# nomi degli shard li legge dalla matrice di dev-async.yml invece di ripeterli qui (#3742).

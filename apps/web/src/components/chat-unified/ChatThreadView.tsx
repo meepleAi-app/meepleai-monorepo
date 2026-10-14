@@ -53,6 +53,12 @@ import { DebugStepCard } from './DebugStepCard';
 import { DebugSummaryBar } from './DebugSummaryBar';
 import { qaStreamErrorMessage } from './qaStreamErrors';
 import { RAG_OWNERSHIP_REQUIRED, RagOwnershipRequiredNotice } from './RagOwnershipRequiredNotice';
+import {
+  TIER_LIMIT_EXCEEDED,
+  TierLimitRegion,
+  readTierLimit,
+  type TierLimit,
+} from './TierLimitNotice';
 import { VoiceTranscriptOverlay } from './VoiceTranscriptOverlay';
 
 // ============================================================================
@@ -115,6 +121,8 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   // e l'avviso per un gioco posseduto ma senza manuale caricato.
   const [ownershipDenied, setOwnershipDenied] = useState(false);
   const [noManualNotice, setNoManualNotice] = useState(false);
+  // #4168 (5g-b): la domanda fermata dalla quota del piano.
+  const [tierLimit, setTierLimit] = useState<TierLimit | null>(null);
   // La domanda da rinviare la legge un ref, non la closure del callback: se l'utente manda
   // un'altra domanda mentre la dichiarazione è in volo, il nuovo invio la azzera e la
   // dichiarazione, quando arriva, non rimanda quella vecchia sopra la nuova.
@@ -220,6 +228,13 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   // (invariant: tests/ChatThreadView.invariants.test.tsx).
   useEffect(() => {
     abortCurrent();
+    // La pagina non rimonta la vista cambiando thread: gli avvisi nati da una domanda del
+    // thread di prima non devono restare su questo. Quello del possesso offrirebbe la
+    // dichiarazione per il gioco di QUESTO thread, che nessuno ha negato.
+    deniedQuestionRef.current = null;
+    setOwnershipDenied(false);
+    setNoManualNotice(false);
+    setTierLimit(null);
     async function loadThread() {
       setIsLoading(true);
       setError(null);
@@ -456,6 +471,11 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
                 removeMessageById(assistantMsgId);
                 deniedQuestionRef.current = question;
                 setOwnershipDenied(true);
+              } else if (data?.errorCode === TIER_LIMIT_EXCEEDED) {
+                // #4168 (5g-b): nemmeno questo è un guasto — per oggi le domande del piano sono
+                // finite. La bolla vuota dell'assistente se ne va; la domanda resta nel thread.
+                removeMessageById(assistantMsgId);
+                setTierLimit(readTierLimit(data));
               } else {
                 // #4168: i codici del gateway e della pipeline in italiano. Su un'interruzione il
                 // testo parziale resta nella bolla ma non viene salvato: si esce prima di addMessage.
@@ -536,6 +556,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       deniedQuestionRef.current = null;
       setOwnershipDenied(false);
       setNoManualNotice(false);
+      setTierLimit(null);
 
       // Optimistic UI: add user message
       const userMessage: ChatMessageItem = {
@@ -814,6 +835,8 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           onOwnershipDeclared={handleOwnershipDeclared}
         />
       )}
+      {/* #4168 (5g-b): la quota del piano — quante domande, quando riparte, dove sono i piani */}
+      <TierLimitRegion limit={tierLimit} className="mx-4 mt-2" />
       {noManualNotice && (
         <div
           data-testid="rag-no-manual"

@@ -61,6 +61,11 @@ vi.mock('@/hooks/queries/useLibrarySearch', () => ({
 // Mock the streaming hook to surface a stable, inert state
 const streamResetMock = vi.fn();
 const streamSendMock = vi.fn();
+// #4168 (5g-b): ciò che lo stream dice di una domanda fermata. Vuoto, finché un test non lo riempie.
+const streamOutcome = vi.hoisted(() => ({
+  error: null as string | null,
+  tierLimit: null as { current?: number; max?: number; upgradeUrl: string } | null,
+}));
 vi.mock('@/hooks/useAgentChatStream', () => ({
   useAgentChatStream: () => ({
     state: {
@@ -68,7 +73,8 @@ vi.mock('@/hooks/useAgentChatStream', () => ({
       currentAnswer: '',
       followUpQuestions: [],
       isStreaming: false,
-      error: null,
+      error: streamOutcome.error,
+      tierLimit: streamOutcome.tierLimit,
       chatThreadId: null,
       totalTokens: 0,
       debugSteps: [],
@@ -104,6 +110,25 @@ describe('ChatSlideOverPanel', () => {
     useChatPanelStore.getState().clearGameContext();
     streamResetMock.mockClear();
     streamSendMock.mockClear();
+    streamOutcome.error = null;
+    streamOutcome.tierLimit = null;
+  });
+
+  /**
+   * #4168 (5g-b): da questo pannello passa anche la chat dei giochi privati. Una domanda fermata
+   * dalla quota del piano mostra l'avviso con il link ai piani, non il riquadro d'errore.
+   */
+  it('mostra la quota del piano come un avviso con il link ai piani, non come un errore', () => {
+    streamOutcome.error =
+      'Hai usato tutte le domande di oggi previste dal tuo piano (3 su 3). Il conteggio riparte alle 02:00 (mezzanotte UTC).';
+    streamOutcome.tierLimit = { current: 3, max: 3, upgradeUrl: '/pricing' };
+    useChatPanelStore.getState().open();
+
+    render(<ChatSlideOverPanel />);
+
+    expect(screen.getByTestId('tier-limit-exceeded')).toHaveTextContent('3 su 3');
+    expect(screen.getByRole('link', { name: 'Vedi i piani' })).toHaveAttribute('href', '/pricing');
+    expect(screen.queryByTestId('chat-stream-error')).not.toBeInTheDocument();
   });
 
   it('renders nothing when panel is closed', () => {

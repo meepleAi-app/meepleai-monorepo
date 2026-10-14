@@ -238,4 +238,34 @@ describe('ChatThreadView — diniego per possesso non dichiarato (#4155)', () =>
     ).toBeInTheDocument();
     expect(qa.requests).toHaveLength(1);
   });
+
+  /**
+   * La pagina non rimonta la vista quando si passa da un thread all'altro. L'avviso offre la
+   * dichiarazione per «il gioco del thread»: restando acceso, sull'altro thread la offrirebbe
+   * per un gioco che nessuno ha negato.
+   */
+  it('the denial notice does not follow the user to another thread', async () => {
+    qa.scripts.push([OWNERSHIP_DENIAL]);
+    const user = userEvent.setup();
+    const { rerender } = render(<ChatThreadView threadId="thread-1" />);
+    await waitFor(() => expect(screen.getByTestId('message-input')).toBeInTheDocument());
+    await user.type(screen.getByTestId('message-input'), 'Come si vince?');
+    await user.click(screen.getByTestId('send-btn'));
+    await screen.findByTestId('rag-ownership-required');
+
+    (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+      ...thread,
+      id: 'thread-2',
+      title: 'Azul',
+      gameId: 'game-2',
+    });
+    (apiMock.games.getById as Mock).mockResolvedValue({ id: 'game-2', title: 'Azul' });
+    rerender(<ChatThreadView threadId="thread-2" />);
+
+    // Mentre il thread nuovo si carica la vista mostra solo l'attesa, e l'avviso non c'è comunque:
+    // l'asserzione vale a thread caricato.
+    await waitFor(() => expect(apiMock.chat.getThreadById).toHaveBeenCalledWith('thread-2'));
+    await screen.findByTestId('message-input');
+    expect(screen.queryByTestId('rag-ownership-required')).not.toBeInTheDocument();
+  });
 });

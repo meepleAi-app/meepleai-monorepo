@@ -38,10 +38,8 @@ type Site =
 
 const D4 = 'GameSessionDto.liveSessionId — la live correlata (D4)';
 const LIVE_STORE = 'useLiveSessionStore, valorizzato dalla pagina live';
-const D7 =
-  '#4156 fetta 1b-2 (D7): id di una Session di SessionTracking, va alle pagine della serata';
-const BY_CALLER =
-  '#4156 fetta 1b-2: id ricevuto dal chiamante (entityId), che passa anche GameSession';
+const DRAWER =
+  'liveSessionId della GameSession che il cassetto carica da GET /api/v1/sessions/{id} (D4)';
 
 const PRODUCERS: Readonly<Record<string, readonly Site[]>> = {
   // ── id di una LiveGameSession ──
@@ -66,10 +64,7 @@ const PRODUCERS: Readonly<Record<string, readonly Site[]>> = {
     { live: 'api.liveSessions.createSession' },
     { live: 'api.liveSessions.createSession' },
   ],
-  'app/(authenticated)/sessions/join/page.tsx': [
-    { live: 'api.liveSessions.getByCode' },
-    { pending: `${D7}; la Session non porta l'id della serata` },
-  ],
+  'app/(authenticated)/sessions/join/page.tsx': [{ live: 'api.liveSessions.getByCode' }],
   'components/dashboard/SessionPanel.tsx': [
     { live: 'store di sessione, che legge api.liveSessions' },
   ],
@@ -87,27 +82,13 @@ const PRODUCERS: Readonly<Record<string, readonly Site[]>> = {
     { live: 'store di sessione, che crea con api.liveSessions.createSession' },
   ],
   'components/session/StartSessionSheet.tsx': [{ live: 'api.liveSessions.createSession' }],
-
-  // ── debito: id di un altro aggregato, o dal chiamante ──
-  'app/(authenticated)/game-nights/[id]/live/_components/NightLiveClientView.tsx': [
-    { pending: D7 },
-  ],
-  'app/(authenticated)/game-nights/[id]/summary/_components/NightSummaryClientView.tsx': [
-    { pending: D7 },
-  ],
-  'components/features/gamebook/SerataResumeButton.tsx': [{ pending: D7 }],
-  'components/game-night/GameNightSessionsList.tsx': [{ pending: D7 }],
-  'components/layout/mobile/drawer/SessionDrawerContent.tsx': [
-    { pending: BY_CALLER },
-    { pending: BY_CALLER },
-  ],
   'components/ui/data-display/extra-meeple-card/entities/SessionDrawerContent.tsx': [
-    { pending: BY_CALLER },
-    { pending: BY_CALLER },
-    { pending: BY_CALLER },
+    { live: DRAWER },
+    { live: DRAWER },
+    { live: DRAWER },
   ],
-  'config/entity-navigation.ts': [{ pending: BY_CALLER }],
 
+  // ── debito: id di un altro aggregato ──
   'components/session/GamePickerDialog.tsx': [
     {
       pending:
@@ -117,6 +98,12 @@ const PRODUCERS: Readonly<Record<string, readonly Site[]>> = {
   ],
 
   // ── codice che nessuno monta ──
+  // Il modulo mobile/drawer lo importa solo un test. Il nome SessionDrawerContent coincide con
+  // quello vivo della card estesa, quindi si cerca il percorso del modulo, non il componente.
+  'components/layout/mobile/drawer/SessionDrawerContent.tsx': [
+    { dead: 'nessuno importa mobile/drawer', unusedWhen: /layout\/mobile\/drawer/ },
+    { dead: 'nessuno importa mobile/drawer', unusedWhen: /layout\/mobile\/drawer/ },
+  ],
   'app/(authenticated)/dashboard/_components/sections/SessionsTimeline.tsx': [
     { dead: 'nessuno lo monta', unusedWhen: mountOf('SessionsTimeline') },
   ],

@@ -32,7 +32,7 @@ internal sealed class CatalogModelPriceList : IModelPriceList, IHostedService, I
     /// </summary>
     internal static readonly TimeSpan RetryInterval = TimeSpan.FromSeconds(5);
 
-    private const string PricingCurrency = "USD";
+    internal const string PricingCurrency = "USD";
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly TimeProvider _timeProvider;

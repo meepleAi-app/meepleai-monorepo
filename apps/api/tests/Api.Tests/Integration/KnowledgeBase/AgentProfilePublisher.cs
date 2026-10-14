@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Tests.BoundedContexts.KnowledgeBase.Domain.Entities;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -20,7 +21,8 @@ internal static class AgentProfilePublisher
         var profile = await scope.ServiceProvider.GetRequiredService<IAgentProfileRepository>().GetAsync(ct);
         profile.Should().NotBeNull("le migrazioni pubblicano la prima versione del profilo");
         profile!.CreateDraft(change(profile.Published.Content));
-        profile.PublishDraft(new HashSet<string>(StringComparer.Ordinal));
+        // I modelli di prova dei test non sono nel catalogo: qui si osserva l'effetto di un campo, non D5.
+        profile.PublishDraft(AgentProfileTests.PricingTheModelsOf(profile.Draft!.Content));
         await db.SaveChangesAsync(ct);
     }
 

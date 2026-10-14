@@ -11,6 +11,12 @@ internal interface IAgentReserveModelProvider
 {
     /// <summary>Il modello di riserva, o <c>null</c> se il profilo non ne ha o non si legge.</summary>
     Task<string?> GetReserveModelAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// #4169 (6c): dimentica la lettura in cache, così la prossima richiesta legge la versione appena
+    /// pubblicata invece di aspettare la fine del minuto.
+    /// </summary>
+    void Invalidate();
 }
 
 /// <summary>
@@ -27,6 +33,10 @@ internal sealed class PublishedProfileReserveModelProvider : IAgentReserveModelP
     private readonly Lock _lock = new();
     private (string? Model, DateTimeOffset ReadAt)? _cached;
 
+    // Cresce a ogni Invalidate: una lettura partita prima della pubblicazione e finita dopo non rimette
+    // in cache il modello vecchio.
+    private long _generation;
+
     public PublishedProfileReserveModelProvider(
         IServiceScopeFactory scopeFactory,
         TimeProvider timeProvider,
@@ -40,12 +50,15 @@ internal sealed class PublishedProfileReserveModelProvider : IAgentReserveModelP
     public async Task<string?> GetReserveModelAsync(CancellationToken cancellationToken)
     {
         var now = _timeProvider.GetUtcNow();
+        long generation;
         lock (_lock)
         {
             if (_cached is { } cached && now - cached.ReadAt < CacheDuration)
             {
                 return cached.Model;
             }
+
+            generation = _generation;
         }
 
         try
@@ -56,7 +69,10 @@ internal sealed class PublishedProfileReserveModelProvider : IAgentReserveModelP
             var model = profile?.Published.Content.FallbackModelId;
             lock (_lock)
             {
-                _cached = (model, now);
+                if (_generation == generation)
+                {
+                    _cached = (model, now);
+                }
             }
 
             return model;
@@ -69,9 +85,22 @@ internal sealed class PublishedProfileReserveModelProvider : IAgentReserveModelP
             lock (_lock)
             {
                 var model = _cached?.Model;
-                _cached = (model, now);
+                if (_generation == generation)
+                {
+                    _cached = (model, now);
+                }
+
                 return model;
             }
+        }
+    }
+
+    public void Invalidate()
+    {
+        lock (_lock)
+        {
+            _cached = null;
+            _generation++;
         }
     }
 }

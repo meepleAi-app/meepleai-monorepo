@@ -14,6 +14,7 @@ using Api.Infrastructure;
 using Api.Services;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.Tests.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
 using MediatR;
@@ -260,7 +261,7 @@ internal static class SessionAssistantTestData
             c.VectorWeight, c.KeywordWeight, c.RerankerEnabled, c.AllowedCategories.ToList(),
             change?.Invoke(assistant) ?? assistant));
         var toolCallingModels = await services.GetRequiredService<IToolCallingModelCatalog>().GetToolCallingModelIdsAsync(ct);
-        var version = profile.PublishDraft(toolCallingModels);
+        var version = profile.PublishDraft(AgentProfileTests.PricingTheModelsOf(profile.Draft!.Content, toolCallingModels));
         await services.GetRequiredService<IUnitOfWork>().SaveChangesAsync(ct);
         return version.Id;
     }

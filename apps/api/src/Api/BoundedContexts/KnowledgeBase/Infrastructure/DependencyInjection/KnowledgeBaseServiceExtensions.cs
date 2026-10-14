@@ -454,6 +454,7 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IPlaygroundTestScenarioRepository, PlaygroundTestScenarioRepository>(); // Issue #4396: Playground test scenarios
         services.AddScoped<IAbTestSessionRepository, AbTestSessionRepository>(); // Issue #5491: A/B test sessions
         services.AddScoped<IAgentProfileRepository, AgentProfileRepository>(); // Issue #4167 / ADR-095: versioned system agent profile
+        services.AddScoped<IAgentProfileModelCatalogReader, CatalogAgentProfileModels>(); // #4169 (6c): prezzi e tool calling alla pubblicazione
         services.AddScoped<IAssistantProposalRepository, AssistantProposalRepository>(); // #4275: proposte dell'assistente in partita
         services.AddScoped<IRagExecutionRepository, RagExecutionRepository>(); // Issue #4458: RAG execution history
         services.AddScoped<IRagUserConfigRepository, RagUserConfigRepository>(); // Issue #5311: Per-user RAG config persistence

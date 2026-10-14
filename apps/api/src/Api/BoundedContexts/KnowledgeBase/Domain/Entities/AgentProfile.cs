@@ -22,6 +22,9 @@ public sealed class AgentProfile : AggregateRoot<Guid>
     /// <summary>Il codice del 409 quando l'assistente in partita è abilitato su un modello senza tool calling.</summary>
     public const string AssistantModelWithoutToolsCode = "assistant_model_without_tools";
 
+    /// <summary>Il codice del 409 quando un modello del profilo non ha un prezzo nel catalogo (ADR-095 D5).</summary>
+    public const string ModelWithoutPriceCode = "model_without_price";
+
     private readonly List<AgentProfileVersion> _versions = new();
 
     public IReadOnlyList<AgentProfileVersion> Versions => _versions.AsReadOnly();
@@ -94,14 +97,14 @@ public sealed class AgentProfile : AggregateRoot<Guid>
         draft.ReplaceContent(content);
     }
 
-    /// <param name="toolCallingModels">
-    /// Gli id dei modelli del catalogo con tool calling: l'aggregato non legge il catalogo, quindi chi
-    /// pubblica glieli passa (spec 2026-10-11 §3.2).
+    /// <param name="catalog">
+    /// Prezzi e tool calling dal catalogo modelli: l'aggregato non legge il catalogo, quindi chi
+    /// pubblica glieli passa.
     /// </param>
-    public AgentProfileVersion PublishDraft(IReadOnlySet<string> toolCallingModels)
+    public AgentProfileVersion PublishDraft(AgentProfileModelCatalog catalog)
     {
         var draft = Draft ?? throw new ConflictException("Agent profile has no draft to publish.");
-        EnsureTheAssistantCanRun(draft.Content, toolCallingModels);
+        EnsurePublishable(draft.Content, catalog);
 
         var now = Touch();
         Published.Archive(now);
@@ -114,11 +117,11 @@ public sealed class AgentProfile : AggregateRoot<Guid>
     /// com'è: il rollback non cancella lavoro in corso.
     /// </summary>
     /// <param name="versionNumber">Il numero della versione archiviata da ripubblicare.</param>
-    /// <param name="toolCallingModels">
-    /// Gli id dei modelli del catalogo con tool calling: il catalogo può essere cambiato da quando quella
+    /// <param name="catalog">
+    /// Prezzi e tool calling dal catalogo modelli: il catalogo può essere cambiato da quando quella
     /// versione era pubblicata.
     /// </param>
-    public AgentProfileVersion RollbackTo(int versionNumber, IReadOnlySet<string> toolCallingModels)
+    public AgentProfileVersion RollbackTo(int versionNumber, AgentProfileModelCatalog catalog)
     {
         var target = _versions.SingleOrDefault(v => v.VersionNumber == versionNumber)
             ?? throw new ValidationException(nameof(versionNumber), $"Agent profile version {versionNumber} does not exist.");
@@ -129,7 +132,7 @@ public sealed class AgentProfile : AggregateRoot<Guid>
         }
 
         // Il catalogo può essere cambiato da quando quella versione era pubblicata.
-        EnsureTheAssistantCanRun(target.Content, toolCallingModels);
+        EnsurePublishable(target.Content, catalog);
 
         var now = Touch();
         var restored = AgentProfileVersion.NewDraft(Id, NextVersionNumber(), target.Content, now);
@@ -145,6 +148,25 @@ public sealed class AgentProfile : AggregateRoot<Guid>
     {
         UpdatedAt = DateTime.UtcNow;
         return UpdatedAt;
+    }
+
+    private static void EnsurePublishable(AgentProfileContent content, AgentProfileModelCatalog catalog)
+    {
+        ArgumentNullException.ThrowIfNull(catalog);
+
+        // ADR-095 D5: senza prezzo ogni risposta finirebbe nel registro dei costi a $0, fuori da ogni
+        // tetto. Vale anche per la riserva, che risponde fra la soglia di degrado e il tetto (D6).
+        foreach (var model in new[] { content.PrimaryModelId, content.FallbackModelId })
+        {
+            if (model is not null && !catalog.PricedModels.Contains(model))
+            {
+                throw new ConflictException(
+                    ModelWithoutPriceCode,
+                    $"The model '{model}' has no price in the model catalog: set its price before publishing.");
+            }
+        }
+
+        EnsureTheAssistantCanRun(content, catalog.ToolCallingModels);
     }
 
     private static void EnsureTheAssistantCanRun(AgentProfileContent content, IReadOnlySet<string> toolCallingModels)

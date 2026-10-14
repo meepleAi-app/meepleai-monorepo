@@ -18,15 +18,18 @@ internal class GetGameSessionByIdQueryHandler : IQueryHandler<GetGameSessionById
     private readonly IGameSessionRepository _sessionRepository;
     private readonly IGameCoreDataProvider _gameCoreData;
     private readonly IHistorySessionScoreProvider _scoreProvider;
+    private readonly ILiveSessionLinkReader _liveLinks;
 
     public GetGameSessionByIdQueryHandler(
         IGameSessionRepository sessionRepository,
         IGameCoreDataProvider gameCoreData,
-        IHistorySessionScoreProvider scoreProvider)
+        IHistorySessionScoreProvider scoreProvider,
+        ILiveSessionLinkReader liveLinks)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _gameCoreData = gameCoreData ?? throw new ArgumentNullException(nameof(gameCoreData));
         _scoreProvider = scoreProvider ?? throw new ArgumentNullException(nameof(scoreProvider));
+        _liveLinks = liveLinks ?? throw new ArgumentNullException(nameof(liveLinks));
     }
 
     public async Task<GameSessionDto?> Handle(GetGameSessionByIdQuery query, CancellationToken cancellationToken)
@@ -43,7 +46,11 @@ internal class GetGameSessionByIdQueryHandler : IQueryHandler<GetGameSessionById
         var scoreboard = await _scoreProvider
             .GetScoreboardAsync(session.Id, cancellationToken).ConfigureAwait(false);
 
-        return MapToDto(session, gameSlug, gameName, scoreboard);
+        // #4156: the session pages address the live session this GameSession is the companion of.
+        var liveLinks = await _liveLinks
+            .GetLiveSessionIdsAsync([session.Id], cancellationToken).ConfigureAwait(false);
+        var dto = MapToDto(session, gameSlug, gameName, scoreboard);
+        return liveLinks.TryGetValue(session.Id, out var liveSessionId) ? dto with { LiveSessionId = liveSessionId } : dto;
     }
 
     private static GameSessionDto MapToDto(

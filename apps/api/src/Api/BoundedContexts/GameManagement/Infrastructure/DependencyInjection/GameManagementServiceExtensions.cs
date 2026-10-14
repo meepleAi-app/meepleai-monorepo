@@ -34,6 +34,8 @@ internal static class GameManagementServiceExtensions
         services.AddScoped<IGameSessionRepository, GameSessionRepository>();
         // #3080: cross-context read-model resolving polymorphic score for session history.
         services.AddScoped<IHistorySessionScoreProvider, HistorySessionScoreProvider>();
+        // #4156: GameSession → id of the live session it is the companion of.
+        services.AddScoped<ILiveSessionLinkReader, LiveSessionLinkReader>();
         services.AddScoped<IGameSessionStateRepository, GameSessionStateRepository>(); // ISSUE-2403
         services.AddScoped<IPlayRecordRepository, PlayRecordRepository>(); // ISSUE-3889
         services.AddScoped<IPlayRecordVersionRepository, PlayRecordVersionRepository>(); // #2437-3: version history + restore

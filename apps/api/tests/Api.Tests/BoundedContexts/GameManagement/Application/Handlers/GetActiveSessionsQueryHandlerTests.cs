@@ -18,6 +18,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Handlers;
 public class GetActiveSessionsQueryHandlerTests
 {
     private readonly Mock<IGameSessionRepository> _sessionRepositoryMock;
+    private readonly Mock<ILiveSessionLinkReader> _liveLinksMock;
     private readonly GetActiveSessionsQueryHandler _handler;
 
     /// <summary>
@@ -34,7 +35,11 @@ public class GetActiveSessionsQueryHandlerTests
     public GetActiveSessionsQueryHandlerTests()
     {
         _sessionRepositoryMock = new Mock<IGameSessionRepository>();
-        _handler = new GetActiveSessionsQueryHandler(_sessionRepositoryMock.Object);
+        _liveLinksMock = new Mock<ILiveSessionLinkReader>();
+        _liveLinksMock
+            .Setup(r => r.GetLiveSessionIdsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, Guid>());
+        _handler = new GetActiveSessionsQueryHandler(_sessionRepositoryMock.Object, _liveLinksMock.Object);
     }
 
     [Fact]
@@ -259,6 +264,39 @@ public class GetActiveSessionsQueryHandlerTests
         _sessionRepositoryMock.Verify(
             r => r.CountActiveByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    /// <summary>
+    /// #4156: ogni riga porta l'id della live di cui la GameSession è il companion, e la pagina
+    /// lo chiede con una lettura sola, non con una per riga.
+    /// </summary>
+    [Fact]
+    public async Task Handle_SetsTheLiveSessionIdOfTheCorrelatedRows_WithOneReadForThePage()
+    {
+        var gameId = Guid.NewGuid();
+        var correlated = CreateActiveSession(gameId);
+        var orphan = CreateActiveSession(gameId);
+        var liveSessionId = Guid.NewGuid();
+
+        _sessionRepositoryMock
+            .Setup(r => r.FindActiveAsync(Owner, null, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<GameSession> { correlated, orphan });
+        _sessionRepositoryMock
+            .Setup(r => r.CountActiveByUserIdAsync(Owner, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(2);
+        _liveLinksMock
+            .Setup(r => r.GetLiveSessionIdsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, Guid> { [correlated.Id] = liveSessionId });
+
+        var result = await _handler.Handle(new GetActiveSessionsQuery(Owner), TestContext.Current.CancellationToken);
+
+        result.Sessions.Single(s => s.Id == correlated.Id).LiveSessionId.Should().Be(liveSessionId);
+        result.Sessions.Single(s => s.Id == orphan.Id).LiveSessionId.Should().BeNull();
+        _liveLinksMock.Verify(
+            r => r.GetLiveSessionIdsAsync(
+                It.Is<IReadOnlyCollection<Guid>>(ids => ids.Count == 2 && ids.Contains(correlated.Id) && ids.Contains(orphan.Id)),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     private static GameSession CreateActiveSession(Guid gameId)

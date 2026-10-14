@@ -1,3 +1,7 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -257,4 +261,54 @@ describe('ChatSlideOverPanel', () => {
     window.dispatchEvent(event);
     expect(useChatPanelStore.getState().isOpen).toBe(false);
   });
+
+  /**
+   * #4341: il velo stava SOPRA il pannello. I due livelli venivano da due scale: il velo da
+   * `design-tokens.css` (1040), il pannello da `--z-modal`, che `design-tokens-canonical.css`
+   * ridefinisce a 60. Nel browser un clic nel campo colpiva il velo, che chiude la chat. jsdom non
+   * carica il CSS: qui i due livelli si risolvono come fa il cascade, leggendo i file dei token.
+   */
+  it('keeps the panel above its own backdrop (#4341)', () => {
+    useChatPanelStore.getState().open();
+    render(<ChatSlideOverPanel />);
+
+    const backdrop = effectiveZIndex(screen.getByTestId('chat-panel-backdrop'));
+    const panel = effectiveZIndex(screen.getByTestId('chat-slide-over-panel'));
+
+    expect(panel).toBeGreaterThan(backdrop);
+  });
 });
+
+const STYLES = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../styles');
+
+/** Il valore di una variabile `--z-*` com'è nel browser. */
+function resolveZToken(token: string): number | undefined {
+  const read = (file: string) => fs.readFileSync(path.join(STYLES, file), 'utf8');
+  const canonical = read('design-tokens-canonical.css');
+  // `design-tokens.css` dichiara le variabili dentro `@layer tokens`, il file canonico fuori da
+  // ogni layer: una dichiarazione fuori dai layer vince sempre, qualunque siano il selettore e
+  // l'ordine dei file. Se un giorno il canonico entrasse in un layer, questa regola non varrebbe
+  // più e il test darebbe una risposta falsa: meglio fermarsi.
+  if (canonical.includes('@layer')) {
+    throw new Error(
+      'design-tokens-canonical.css ora usa @layer: la risoluzione dei livelli di questo test va rivista'
+    );
+  }
+  const find = (css: string) => new RegExp(`--${token}:\\s*(-?\\d+)\\s*;`).exec(css)?.[1];
+  const value = find(canonical) ?? find(read('design-tokens.css'));
+  return value === undefined ? undefined : Number(value);
+}
+
+/** Il z-index che l'elemento avrà nel browser, dalla sua classe `z-[var(--z-…,fallback)]`. */
+function effectiveZIndex(element: HTMLElement): number {
+  const match = /z-\[var\(--([a-z-]+),(\d+)\)\]/.exec(element.className);
+  if (!match) {
+    throw new Error(
+      `${element.dataset.testid}: questo test sa leggere solo un livello dichiarato come ` +
+        'z-[var(--z-…,N)]. Se il livello ora si dichiara in un altro modo, aggiorna la lettura qui: ' +
+        'non è detto che i livelli siano sbagliati.'
+    );
+  }
+  const [, token, fallback] = match;
+  return resolveZToken(token) ?? Number(fallback);
+}

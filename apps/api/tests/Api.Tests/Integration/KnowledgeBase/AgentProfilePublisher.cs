@@ -10,7 +10,7 @@ namespace Api.Tests.Integration.KnowledgeBase;
 /// Pubblica una versione nuova del profilo dell'agente, come farà l'admin: una bozza ricavata da
 /// quella pubblicata, poi la pubblicazione.
 /// </summary>
-internal static class PublishedAgentProfile
+internal static class AgentProfilePublisher
 {
     public static async Task PublishAsync(
         IServiceProvider services, Func<AgentProfileContent, AgentProfileContent> change, CancellationToken ct)

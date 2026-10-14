@@ -918,16 +918,8 @@ public sealed class AgentProfileFieldEffectTests
 
     // ─── Supporto ───────────────────────────────────────────────────────────────
 
-    private async Task PublishAsync(Func<AgentProfileContent, AgentProfileContent> change)
-    {
-        using var scope = _hostFixture.Factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var profile = await scope.ServiceProvider.GetRequiredService<IAgentProfileRepository>().GetAsync(Ct);
-        profile.Should().NotBeNull("le migrazioni pubblicano la prima versione del profilo");
-        profile!.CreateDraft(change(profile.Published.Content));
-        profile.PublishDraft(new HashSet<string>(StringComparer.Ordinal));
-        await db.SaveChangesAsync(Ct);
-    }
+    private Task PublishAsync(Func<AgentProfileContent, AgentProfileContent> change) =>
+        AgentProfilePublisher.PublishAsync(_hostFixture.Factory.Services, change, Ct);
 
     private static AgentProfileContent Modified(
         AgentProfileContent c,

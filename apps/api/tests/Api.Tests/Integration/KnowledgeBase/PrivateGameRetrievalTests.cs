@@ -478,6 +478,10 @@ public sealed class PrivateGameRetrievalTests
     // Il corpus ha un passaggio in entrambi i bracci, uno solo nel lessicale e uno solo nel
     // vettoriale. Il reranker di prova non riordina, quindi l'ordine dei passaggi nel prompt è quello
     // della fusione per gioco.
+    //
+    // Il corpus presuppone la soglia vettoriale del seed (0,55): è lei che tiene fuori dal braccio
+    // vettoriale il passaggio solo lessicale, che ha un vettore ortogonale alla domanda. Con una soglia
+    // a 0 entrerebbe anche lì, e l'ordine cambierebbe per una ragione che non sono i pesi.
 
     /// <summary>
     /// Caratterizzazione: coi pesi del seed (0,7 e 0,3, gli stessi che la fusione aveva scritti nel
@@ -494,8 +498,8 @@ public sealed class PrivateGameRetrievalTests
     [Fact]
     public async Task AHigherKeywordWeight_PutsTheLexicalPassageBeforeTheVectorOne()
     {
-        await PublishedAgentProfile.PublishAsync(_hostFixture.Factory.Services,
-            c => PublishedAgentProfile.WithFusionWeights(c, vectorWeight: 0.1m, keywordWeight: 0.9m), Ct);
+        await AgentProfilePublisher.PublishAsync(_hostFixture.Factory.Services,
+            c => AgentProfilePublisher.WithFusionWeights(c, vectorWeight: 0.1m, keywordWeight: 0.9m), Ct);
 
         await AskAsync(_token);
 

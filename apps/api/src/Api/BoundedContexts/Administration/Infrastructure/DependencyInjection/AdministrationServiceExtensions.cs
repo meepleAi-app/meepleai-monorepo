@@ -13,6 +13,7 @@ using Api.Infrastructure.BackgroundServices;
 using Api.Infrastructure.Configuration;
 using Api.Infrastructure.Seeders;
 using Api.Infrastructure.Seeders.Catalog;
+using Api.Infrastructure.Seeders.Cleanup;
 using Api.Infrastructure.Seeders.Core;
 using Api.Infrastructure.Seeders.LivedIn;
 using Api.Infrastructure.Seeders.MechanicValidation;
@@ -193,6 +194,8 @@ internal static class AdministrationServiceExtensions
 
         // Epic #318: Layered seeding system
         services.AddScoped<ISeedLayer, CoreSeedLayer>();
+        // #4244 (C2): i giochi privati cancellati che hanno ancora del contenuto. Non dipende dal catalogo.
+        services.AddScoped<ISeedLayer, DeletedPrivateGameContentCleanupLayer>();
         services.AddScoped<ISeedLayer, CatalogSeedLayer>();
         services.AddScoped<ISeedLayer, LivedInSeedLayer>();
         // ADR-051 Sprint 1 / Task 40: MechanicValidation golden seed (Catan ~40 claims + ~15 BGG tags)

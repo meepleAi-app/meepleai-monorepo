@@ -55,8 +55,8 @@
     "l'artifact di uno non esiste finche' il suo job gira. La provenienza che conta e' quella",
     "nel `_comment` di ciascuno shard, che ha precedenza su questi due campi."
   ],
-  "runId": "38469497589",
-  "capturedAt": "2026-10-13",
+  "runId": "38503769458",
+  "capturedAt": "2026-10-14",
   "shards": {
     "Core": {
       "_comment": [
@@ -158,26 +158,20 @@
     },
     "KnowledgeBase": {
       "_comment": [
-        "⚠️ NON ricatturati il 2026-10-05: questi due numeri vengono ancora dal run 36997819474",
-        "(2026-10-02), mentre `runId` in testa al file e' stato aggiornato a 37281025300 perche'",
-        "da quel run viene Core. Senza questa nota il file avrebbe affermato implicitamente una",
-        "misura che non e' stata fatta.",
+        "Ricatturati il 2026-10-14 dal run 38503769458: dev-async sul merge di #4313 (849c224ae).",
+        "Tutti i job del run 'success', nessuno 'skipped'; il log dello shard non contiene",
+        "'Aborting test run: test run timeout' (grep -c -> 0), sessione 37 min su 75.",
         "",
-        "Perche' non ricatturati: quando Core e' finito, il job KnowledgeBase di 37281025300 era",
-        "ancora in corso e il suo artifact non esisteva. Da rifare con",
-        "`gh run download <run> --name integration-results-KnowledgeBase` e",
-        "`shard-skip-assert.sh --shard KnowledgeBase --trx <file> --log <file> --update-baseline`.",
+        "failed 23 -> 20: i tre DeleteKbDocumentCommandHandlerIntegrationTests, rossi dal #3982",
+        "perche' il loro contenitore non registrava la cache semantica e fallivano alla costruzione,",
+        "li ha riparati #4313. Gli altri venti nomi sono quelli di prima.",
         "",
-        "Nota: nel run 37249402387 i conteggi misurati erano esattamente 23/11, cioe' identici a",
-        "questi — quindi il riferimento non e' invecchiato in silenzio, ma non e' la stessa cosa",
-        "di una misura fresca."
+        "Fatto con `gh run download 38503769458 --name integration-results-KnowledgeBase` e",
+        "`shard-skip-assert.sh --shard KnowledgeBase --trx <file> --log <file> --update-baseline`."
       ],
-      "failed": 23,
+      "failed": 20,
       "skipped": 11,
       "failedTests": [
-        "Api.Tests.Integration.DocumentProcessing.DeleteKbDocumentCommandHandlerIntegrationTests.Handle_RemovesDoc_ChunksVectors_AndDetachesFromConsumingAgents",
-        "Api.Tests.Integration.DocumentProcessing.DeleteKbDocumentCommandHandlerIntegrationTests.Handle_RemovesDoc_WithNoConsumingAgents_Succeeds",
-        "Api.Tests.Integration.DocumentProcessing.DeleteKbDocumentCommandHandlerIntegrationTests.Handle_Throws_NotFound_WhenDocMissing",
         "Api.Tests.Integration.DocumentProcessing.DeletePdfIntegrationTests.ConcurrentDeletion_HandlesRaceConditionGracefully",
         "Api.Tests.Integration.DocumentProcessing.DeletePdfIntegrationTests.DeleteExistingPdf_WithoutVectors_Success",
         "Api.Tests.Integration.DocumentProcessing.DeletePdfIntegrationTests.DeleteNonExistentPdf_Returns404Message",

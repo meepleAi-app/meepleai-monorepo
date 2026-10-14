@@ -60,16 +60,26 @@ internal sealed class DocumentDeletionFailure
 {
     private volatile bool _armed;
     private int _stillToLetThrough;
+    private Guid? _onlyFor;
 
-    /// <summary>Acceso, ogni cancellazione di documento fallisce. Spegnerlo azzera anche il conto.</summary>
+    /// <summary>Acceso, ogni cancellazione di documento fallisce. Spegnerlo azzera anche il conto e il bersaglio.</summary>
     public bool Armed
     {
         get => _armed;
         set
         {
             Interlocked.Exchange(ref _stillToLetThrough, 0);
+            _onlyFor = null;
             _armed = value;
         }
+    }
+
+    /// <summary>Fa fallire solo la cancellazione di quel documento.</summary>
+    public void ArmFor(Guid pdfId)
+    {
+        Interlocked.Exchange(ref _stillToLetThrough, 0);
+        _onlyFor = pdfId;
+        _armed = true;
     }
 
     /// <summary>Lascia passare le prime <paramref name="documents"/> cancellazioni, poi le fa fallire.</summary>
@@ -80,7 +90,8 @@ internal sealed class DocumentDeletionFailure
     }
 
     /// <summary>Dice se questa cancellazione deve fallire; se no, consuma uno dei passaggi concessi.</summary>
-    public bool ShouldFail() => _armed && Interlocked.Decrement(ref _stillToLetThrough) < 0;
+    public bool ShouldFail(Guid pdfId) =>
+        _armed && (_onlyFor is { } target ? target == pdfId : Interlocked.Decrement(ref _stillToLetThrough) < 0);
 }
 
 /// <summary>
@@ -92,7 +103,7 @@ internal sealed class FailDocumentDeletionWhenArmed(DocumentDeletionFailure fail
 {
     public Task<MediatR.Unit> Handle(
         DeleteKbDocumentCommand request, RequestHandlerDelegate<MediatR.Unit> next, CancellationToken cancellationToken) =>
-        failure.ShouldFail()
+        failure.ShouldFail(request.Id)
             ? throw new InvalidOperationException("La cancellazione del documento è fatta fallire dal test.")
             : next(cancellationToken);
 }
@@ -204,7 +215,7 @@ internal sealed class RememberingHybridCache : IHybridCacheService
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "4244")]
-public sealed class PrivateGameDeletionTests
+public sealed partial class PrivateGameDeletionTests
     : IClassFixture<PrivateGameDeletionHostFixture>, IAsyncLifetime
 {
     /// <summary>Quante righe di un gioco privato ci sono, tabella per tabella.</summary>

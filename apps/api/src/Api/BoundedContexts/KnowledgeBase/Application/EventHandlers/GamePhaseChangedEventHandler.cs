@@ -66,8 +66,12 @@ internal sealed class GamePhaseChangedEventHandler : DomainEventHandlerBase<Game
                 // Send command to update session state
                 await _mediator.Send(
                     new UpdateAgentSessionStateCommand(
-                        session.Id,
-                        updatedState.ToJson()),
+                        AgentSessionId: session.Id,
+                        GameStateJson: updatedState.ToJson(),
+                        // #4282: the system syncs the session on its owner's behalf, so it passes
+                        // the session's own owner and game session to the ownership check.
+                        GameSessionId: session.GameSessionId,
+                        UserId: session.UserId),
                     cancellationToken).ConfigureAwait(false);
 
                 Logger.LogInformation(

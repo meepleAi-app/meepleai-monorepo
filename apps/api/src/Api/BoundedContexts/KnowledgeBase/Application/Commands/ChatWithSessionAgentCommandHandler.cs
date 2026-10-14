@@ -15,6 +15,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Observability;
 using Api.Services;
@@ -167,6 +168,23 @@ internal sealed class ChatWithSessionAgentCommandHandler : IStreamingQueryHandle
             .ConfigureAwait(false);
 
         if (agentSession == null)
+        {
+            yield return CreateEvent(
+                StreamingEventType.Error,
+                new StreamingError($"AgentSession {command.AgentSessionId} not found", "SESSION_NOT_FOUND"));
+            yield break;
+        }
+
+        // Security (#4282): the prompt carries this session's game state and its owner's agent memory
+        // (house rules, notes). Only the user who launched it may ask. Thrown before the first event,
+        // so the response is still a plain 403, as on the other routes of the session agent.
+        if (agentSession.UserId != command.UserId)
+        {
+            throw new ForbiddenException("Only the user who launched this agent session can use it.");
+        }
+
+        // An agent session of another game session does not exist under this route.
+        if (agentSession.GameSessionId != command.GameSessionId)
         {
             yield return CreateEvent(
                 StreamingEventType.Error,

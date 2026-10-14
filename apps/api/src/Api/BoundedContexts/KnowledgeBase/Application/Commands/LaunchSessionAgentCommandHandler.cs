@@ -1,7 +1,10 @@
+using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.Infrastructure.Entities;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
@@ -18,17 +21,23 @@ internal sealed class LaunchSessionAgentCommandHandler : IRequestHandler<LaunchS
 {
     private readonly IAgentSessionRepository _sessionRepository;
     private readonly IAgentDefinitionRepository _agentDefinitionRepository;
+    private readonly IMediator _mediator;
+    private readonly IRagAccessService _ragAccessService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<LaunchSessionAgentCommandHandler> _logger;
 
     public LaunchSessionAgentCommandHandler(
         IAgentSessionRepository sessionRepository,
         IAgentDefinitionRepository agentDefinitionRepository,
+        IMediator mediator,
+        IRagAccessService ragAccessService,
         IUnitOfWork unitOfWork,
         ILogger<LaunchSessionAgentCommandHandler> logger)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _agentDefinitionRepository = agentDefinitionRepository ?? throw new ArgumentNullException(nameof(agentDefinitionRepository));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -43,6 +52,11 @@ internal sealed class LaunchSessionAgentCommandHandler : IRequestHandler<LaunchS
             "Launching agent session for GameSession {GameSessionId}, AgentDefinition {AgentDefinitionId}",
             request.GameSessionId,
             request.AgentDefinitionId);
+
+        // #4282: prima chi chiede, poi lo stato. Se il 409 venisse prima, chiunque conosca l'id di una
+        // sessione di gioco saprebbe se ha un agente attivo, e chi arrivava primo lo rubava al
+        // proprietario, che riceveva 409.
+        await EnsureCanLaunchAsync(request, cancellationToken).ConfigureAwait(false);
 
         // Check if an active session already exists
         var hasActiveSession = await _sessionRepository
@@ -85,6 +99,36 @@ internal sealed class LaunchSessionAgentCommandHandler : IRequestHandler<LaunchS
             request.GameSessionId);
 
         return agentSession.Id;
+    }
+
+    /// <summary>
+    /// #4282: la sessione di gioco esiste ed e` di chi chiede, il gioco della richiesta e` il suo, e chi
+    /// chiede puo` interrogarne la KB. KnowledgeBase non legge il repository di GameManagement (ADR-090):
+    /// chiede proprietario e gioco con <see cref="GetGameSessionOwnerQuery"/>.
+    /// </summary>
+    private async Task EnsureCanLaunchAsync(LaunchSessionAgentCommand request, CancellationToken cancellationToken)
+    {
+        var gameSession = await _mediator
+            .Send(new GetGameSessionOwnerQuery(request.GameSessionId), cancellationToken)
+            .ConfigureAwait(false);
+
+        // Prima la chiave esterna di agent_sessions era l'unico controllo, e il salvataggio falliva.
+        if (gameSession is null)
+            throw new NotFoundException("GameSession", request.GameSessionId.ToString());
+
+        // Una sessione senza proprietario (creata prima di #3070) non e` di nessuno: nessuno vi avvia l'agente.
+        if (gameSession.OwnerUserId is null || gameSession.OwnerUserId.Value != request.UserId)
+            throw new ForbiddenException("Only the owner of the game session can launch its agent.");
+
+        if (gameSession.GameId != request.GameId)
+            throw new BadRequestException("The game of the request is not the game of the game session.");
+
+        // ADR-096: l'agente cerca nella KB del gioco e ne mette i passaggi nel prompt.
+        var role = Enum.TryParse<UserRole>(request.UserRole, ignoreCase: true, out var parsedRole)
+            ? parsedRole : UserRole.User;
+        await _ragAccessService
+            .EnsureRagAccessAsync(request.UserId, request.GameId, role, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     /// <summary>

@@ -31,13 +31,22 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands.PurgePrivateGam
 /// PDF a cui il gioco era collegato e che sono rimasti senza il gioco che li aveva caricati.
 /// </para>
 /// <para>
+/// <b>«Lo usa ancora» è una regola stretta</b>: un collegamento vivo, di chi ha caricato il PDF,
+/// che parte da un suo gioco privato che esiste o da un gioco del catalogo che esiste. Un
+/// collegamento vivo qualunque non basta: <c>POST /library/entity-links</c> lascia creare a
+/// chiunque un collegamento fra due id qualunque, e un altro utente terrebbe nel database, per
+/// sempre, il PDF di chi ha cancellato il gioco. Per la stessa ragione attraverso i
+/// collegamenti si raggiungono solo i PDF caricati da chi ha creato il collegamento.
+/// </para>
+/// <para>
 /// <b>Le tre cancellazioni per gioco</b> che seguono sono la rete sotto: valgono per le righe che
 /// non pendono da un PDF cancellato qui. Gli embedding in particolare non hanno una chiave
 /// esterna verso il documento vettoriale, e <c>game_id</c> è il loro unico legame col gioco.
 /// </para>
 /// <para>
-/// <b>Si può ripetere.</b> Ogni passo cancella ciò che trova: se la richiesta si ferma a metà, o
-/// due richieste si incrociano, rifarla porta allo stesso stato.
+/// <b>Si può ripetere.</b> Ogni passo cancella ciò che trova, e i collegamenti del gioco — da cui
+/// si arriva ai PDF che aspettavano solo lui — si tolgono per ultimi: se la richiesta si ferma a
+/// metà il gioco resta, con i suoi collegamenti, e rifarla porta allo stesso stato.
 /// </para>
 /// </remarks>
 internal sealed class PurgePrivateGameContentCommandHandler : ICommandHandler<PurgePrivateGameContentCommand>
@@ -64,50 +73,38 @@ internal sealed class PurgePrivateGameContentCommandHandler : ICommandHandler<Pu
         ArgumentNullException.ThrowIfNull(command);
         var gameId = command.PrivateGameId;
 
-        // 1. I collegamenti del gioco. Prima si annotano i PDF a cui portavano, poi si tolgono:
-        //    un gioco cancellato non usa più niente, e non deve tenere in vita i PDF degli altri.
-        var linkedPdfIds = await _db.EntityLinks
-            .IgnoreQueryFilters()
-            .Where(l => !l.IsDeleted
-                        && l.SourceEntityType == MeepleEntityType.Game && l.SourceEntityId == gameId
-                        && l.TargetEntityType == MeepleEntityType.KbCard)
-            .Select(l => l.TargetEntityId)
-            .Distinct()
-            .ToListAsync(cancellationToken).ConfigureAwait(false);
-
-        var now = DateTime.UtcNow;
-        var links = await _db.EntityLinks
-            .IgnoreQueryFilters()
-            .Where(l => !l.IsDeleted
-                        && l.SourceEntityType == MeepleEntityType.Game && l.SourceEntityId == gameId)
-            .ExecuteUpdateAsync(
-                s => s.SetProperty(l => l.IsDeleted, true)
-                      .SetProperty(l => l.DeletedAt, now)
-                      .SetProperty(l => l.UpdatedAt, now),
-                cancellationToken).ConfigureAwait(false);
-
-        // 2. I PDF in gioco: quelli caricati per questo gioco, e quelli a cui era collegato e che
+        // 1. I PDF in gioco: quelli caricati per questo gioco, e quelli a cui era collegato e che
         //    aspettavano solo lui, perché il gioco che li aveva caricati è già stato cancellato.
+        //    Attraverso un collegamento si arriva solo al PDF di chi quel collegamento l'ha creato.
+        //    IgnoreQueryFilters vale per tutta la query: i filtri di cancellazione sono scritti a mano.
         var candidates = await _db.PdfDocuments
+            .IgnoreQueryFilters()
             .AsNoTracking()
             .Where(p => p.PrivateGameId == gameId
-                        || (linkedPdfIds.Contains(p.Id)
-                            && _db.PrivateGames.IgnoreQueryFilters()
-                                .Any(g => g.Id == p.PrivateGameId && g.IsDeleted)))
+                        || (_db.EntityLinks.Any(l => !l.IsDeleted
+                                && l.SourceEntityType == MeepleEntityType.Game && l.SourceEntityId == gameId
+                                && l.TargetEntityType == MeepleEntityType.KbCard && l.TargetEntityId == p.Id
+                                && l.OwnerUserId == p.UploadedByUserId)
+                            && _db.PrivateGames.Any(g => g.Id == p.PrivateGameId && g.IsDeleted)))
             .Select(p => new { p.Id, p.UploadedByUserId, p.PrivateGameId })
             .ToListAsync(cancellationToken).ConfigureAwait(false);
         var candidateIds = candidates.Select(p => p.Id).ToList();
 
-        // 3. Quelli che qualcun altro usa ancora: un collegamento vivo, da un gioco che non sia
-        //    un gioco privato già cancellato. I collegamenti di questo gioco sono appena andati.
-        var stillUsed = await _db.EntityLinks
-            .IgnoreQueryFilters()
-            .Where(l => !l.IsDeleted
-                        && l.TargetEntityType == MeepleEntityType.KbCard
-                        && candidateIds.Contains(l.TargetEntityId)
-                        && !_db.PrivateGames.IgnoreQueryFilters()
-                            .Any(g => g.Id == l.SourceEntityId && g.IsDeleted))
-            .Select(l => l.TargetEntityId)
+        // 2. Quelli che chi li ha caricati usa ancora da un altro gioco: un collegamento vivo, suo,
+        //    che parte da un suo gioco privato che esiste o da un gioco del catalogo che esiste.
+        var stillUsed = await (
+            from link in _db.EntityLinks.IgnoreQueryFilters()
+            join pdf in _db.PdfDocuments on link.TargetEntityId equals pdf.Id
+            where !link.IsDeleted
+                  && link.TargetEntityType == MeepleEntityType.KbCard
+                  && link.SourceEntityType == MeepleEntityType.Game
+                  && link.SourceEntityId != gameId
+                  && candidateIds.Contains(pdf.Id)
+                  && link.OwnerUserId == pdf.UploadedByUserId
+                  && (_db.PrivateGames.Any(g => g.Id == link.SourceEntityId
+                                                && !g.IsDeleted && g.OwnerId == pdf.UploadedByUserId)
+                      || _db.SharedGames.Any(s => s.Id == link.SourceEntityId && !s.IsDeleted))
+            select pdf.Id)
             .Distinct()
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
@@ -124,14 +121,16 @@ internal sealed class PurgePrivateGameContentCommandHandler : ICommandHandler<Pu
                 // Qualcun altro l'ha cancellato fra la lettura e qui: è lo stato che volevamo.
             }
 
-            // Il comando svuota queste cache da dentro la sua transazione. Qui il commit c'è
-            // stato: una lettura caduta nel mezzo non lascia il documento in cache.
+            // Il comando svuota queste cache da dentro la sua transazione, prima del commit: una
+            // lettura caduta in quel momento le riempie di nuovo. Qui il commit c'è stato. Resta
+            // la finestra di chi ha letto il database prima del commit e scrive in cache dopo
+            // questa riga: la chiude la scadenza della voce.
             await DeletedKbDocumentCaches
                 .InvalidateSafelyAsync(_hybridCache, _logger, pdf.UploadedByUserId, pdf.Id, cancellationToken)
                 .ConfigureAwait(false);
         }
 
-        // 4. La rete: ciò che porta l'id del gioco senza pendere da un PDF cancellato qui sopra.
+        // 3. La rete: ciò che porta l'id del gioco senza pendere da un PDF cancellato qui sopra.
         //    Restano fuori le righe dei PDF tenuti perché un altro gioco li usa.
         var keptPdfIds = candidates
             .Where(p => p.PrivateGameId == gameId && stillUsed.Contains(p.Id))
@@ -152,17 +151,31 @@ internal sealed class PurgePrivateGameContentCommandHandler : ICommandHandler<Pu
             .Where(v => v.PrivateGameId == gameId && !keptPdfIds.Contains(v.PdfDocumentId))
             .ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
 
-        // 5. I caricamenti a pezzi lasciati a metà: completati dopo, creerebbero un PDF su un
+        // 4. I caricamenti a pezzi lasciati a metà: completati dopo, creerebbero un PDF su un
         //    gioco che non c'è più.
         var uploads = await _db.ChunkedUploadSessions
             .Where(u => u.PrivateGameId == gameId)
             .ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
 
-        // 6. Le chat. I messaggi stanno nella riga del thread; citazioni, raccolte e link di
+        // 5. Le chat. I messaggi stanno nella riga del thread; citazioni, raccolte e link di
         //    condivisione seguono per cascata.
         var threads = await _db.ChatThreads
             .Where(t => t.PrivateGameId == gameId)
             .ExecuteDeleteAsync(cancellationToken).ConfigureAwait(false);
+
+        // 6. I collegamenti del gioco, per ultimi: un gioco cancellato non usa più niente. Prima
+        //    servono, perché è da lì che il passo 1 arriva ai PDF che aspettavano solo lui: tolti
+        //    all'inizio, una pulizia fermata a metà non li ritroverebbe al secondo tentativo.
+        var now = DateTime.UtcNow;
+        var links = await _db.EntityLinks
+            .IgnoreQueryFilters()
+            .Where(l => !l.IsDeleted
+                        && l.SourceEntityType == MeepleEntityType.Game && l.SourceEntityId == gameId)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(l => l.IsDeleted, true)
+                      .SetProperty(l => l.DeletedAt, now)
+                      .SetProperty(l => l.UpdatedAt, now),
+                cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Purged private game {PrivateGameId}: {Pdfs} PDFs deleted, {KeptPdfs} kept because another game still uses them, "

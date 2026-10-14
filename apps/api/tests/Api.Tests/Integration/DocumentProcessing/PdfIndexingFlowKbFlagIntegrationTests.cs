@@ -93,6 +93,14 @@ public sealed class PdfIndexingFlowKbFlagIntegrationTests : IAsyncLifetime
 
         _redis = await ConnectionMultiplexer.ConnectAsync(_fixture.RedisConnectionString);
         services.AddSingleton<IConnectionMultiplexer>(_redis);
+        // #4339: un gestore degli eventi di stato del PDF chiede la cache semantica (da #3982). Senza,
+        // la pubblicazione fallisce e la pipeline finisce con "Invalid operation" per una ragione
+        // che non è quella che questo test prova.
+        services.AddSingleton(Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.ISemanticResponseCache>());
+        // La query dello stato della KB, che il test legge, controlla l'accesso: qui il caricatore la vede.
+        services.AddSingleton(Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.IRagAccessService>(r =>
+            r.CanAccessRagAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Api.Infrastructure.Entities.UserRole>(), It.IsAny<CancellationToken>())
+            == Task.FromResult(true)));
 
         // Real repositories
         services.AddScoped<IUserRepository, UserRepository>();

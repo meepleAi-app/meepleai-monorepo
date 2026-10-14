@@ -88,6 +88,10 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
 
         _redis = await ConnectionMultiplexer.ConnectAsync(_fixture.RedisConnectionString);
         services.AddSingleton<IConnectionMultiplexer>(_redis);
+        // #4339: un gestore degli eventi di stato del PDF chiede la cache semantica (da #3982). Senza,
+        // la pubblicazione fallisce e la pipeline finisce con "Invalid operation" per una ragione
+        // che non è quella che questo test prova.
+        services.AddSingleton(Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.ISemanticResponseCache>());
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
@@ -430,6 +434,42 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
         persisted.StructuredElementsJson.Should().NotBeNull(
             "StructuredElementsJson must durably persist for Upload-originated PDFs (re-index " +
             "parity: IndexPdfCommandHandler reads it to rebuild headings)");
+    }
+
+    /// <summary>
+    /// #4339: the upload page follows the progress (GET /pdfs/{id}/progress) and waits for
+    /// Completed. Finalization wrote Completed and THEN moved the PDF to Ready through the
+    /// repository, whose MapToPersistence omits the progress column and rewrites the whole row:
+    /// the progress came back null, and the page stayed at "Indexing 80%" forever.
+    /// </summary>
+    [Fact(Timeout = 90000)]
+    public async Task ProcessPdfAsync_UploadPathReachesReady_LeavesTheProgressAtCompleted()
+    {
+        var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
+        var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
+        var command = new Api.BoundedContexts.DocumentProcessing.Application.Commands.UploadPdfCommand(
+            GameId: testGame.Id.ToString(),
+            Metadata: null,
+            PrivateGameId: null,
+            UserId: testUser.Id,
+            File: CreateMockFormFile("progress-completed.pdf", CreateValidPdfBytes(1024)));
+
+        var result = await handler.Handle(command, TestCancellationToken);
+        await _inlineBgService!.WaitForAllAsync();
+
+        result.Success.Should().BeTrue();
+        var pdfDocId = Guid.Parse(result.Document!.Id.ToString());
+        var persisted = await _dbContext.PdfDocuments
+            .AsNoTracking()
+            .FirstAsync(p => p.Id == pdfDocId, TestCancellationToken);
+        persisted.ProcessingState.Should().Be(
+            nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Ready),
+            $"the test needs the pipeline to reach Ready. ProcessingError='{persisted.ProcessingError}'.");
+
+        persisted.ProcessingProgressJson.Should().NotBeNull("the page reads the progress to know the PDF is done");
+        var progress = System.Text.Json.JsonSerializer.Deserialize<Api.Models.ProcessingProgress>(persisted.ProcessingProgressJson!);
+        progress!.CurrentStep.Should().Be(Api.Models.ProcessingStep.Completed);
     }
 
     /// <summary>

@@ -7,6 +7,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.UserLibrary;
@@ -17,6 +18,7 @@ using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
+using MediatR;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
@@ -142,6 +144,31 @@ public sealed class AgentProfileFieldEffectTests
         await AskAsync(Question);
 
         _hostFixture.Llm.LastAnswer.Should().NotBeNull("la risposta passa dalla pipeline, con i parametri del profilo");
+        _hostFixture.Llm.LastAnswer!.Temperature.Should().Be(1.1);
+    }
+
+    /// <summary>
+    /// #4169 (6c), il «rosso prima» della fetta: la stessa temperatura, pubblicata come la pubblica
+    /// l'admin. La bozza parte dalle sezioni modificabili della versione pubblicata, cambia solo la
+    /// temperatura, e passa dalle rotte della pagina «Agente», con i modelli del catalogo seminato.
+    /// </summary>
+    [Fact]
+    public async Task Temperature_PublishedFromTheAgentPage_IsTheOneSentToTheGateway()
+    {
+        var adminToken = await AdminTokenWithTheSeededCatalogAsync();
+        var draft = await EditableSectionsOfThePublishedVersionAsync();
+        draft["temperature"] = 1.1m;
+
+        var saved = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Put, "/api/v1/admin/agent-profile/draft", adminToken, draft), Ct);
+        saved.StatusCode.Should().Be(HttpStatusCode.OK, await saved.Content.ReadAsStringAsync(Ct));
+        var published = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, "/api/v1/admin/agent-profile/draft/publish", adminToken), Ct);
+        published.StatusCode.Should().Be(HttpStatusCode.OK, await published.Content.ReadAsStringAsync(Ct));
+
+        await AskAsync(Question);
+
+        _hostFixture.Llm.LastAnswer.Should().NotBeNull();
         _hostFixture.Llm.LastAnswer!.Temperature.Should().Be(1.1);
     }
 
@@ -920,6 +947,37 @@ public sealed class AgentProfileFieldEffectTests
 
     private Task PublishAsync(Func<AgentProfileContent, AgentProfileContent> change) =>
         AgentProfilePublisher.PublishAsync(_hostFixture.Factory.Services, change, Ct);
+
+    /// <summary>Un admin, e il catalogo modelli seminato: la pubblicazione vuole i prezzi dei modelli (D5).</summary>
+    private async Task<string> AdminTokenWithTheSeededCatalogAsync()
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<IMediator>().Send(new SeedAiModelsCommand(), Ct);
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, token) = await TestSessionHelper.CreateAdminSessionAsync(db, cancellationToken: Ct);
+        return token;
+    }
+
+    /// <summary>Il corpo della bozza com'è nella versione pubblicata: solo le sezioni che la pagina modifica.</summary>
+    private async Task<Dictionary<string, object?>> EditableSectionsOfThePublishedVersionAsync()
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var profile = await scope.ServiceProvider.GetRequiredService<IAgentProfileRepository>().GetAsync(Ct);
+        var c = profile!.Published.Content;
+        return new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["name"] = c.Name,
+            ["description"] = c.Description,
+            ["persona"] = c.Persona,
+            ["primaryModelId"] = c.PrimaryModelId,
+            ["fallbackModelId"] = c.FallbackModelId,
+            ["temperature"] = c.Temperature,
+            ["maxResponseTokens"] = c.MaxResponseTokens,
+            ["citationStyle"] = c.CitationStyle.ToString(),
+            ["systemPrompts"] = c.SystemPrompts,
+            ["fallbackLanguage"] = c.FallbackLanguage,
+        };
+    }
 
     private static AgentProfileContent Modified(
         AgentProfileContent c,

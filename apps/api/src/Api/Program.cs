@@ -1079,6 +1079,7 @@ v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation
 
 // AI extended
 v1Api.MapAiModelAdminEndpoints();      // AI model management (Issue #2567)
+v1Api.MapAgentProfileAdminEndpoints(); // #4169 (ADR-095 6c): admin agent page — draft, publish, rollback
 v1Api.MapArbitroAgentEndpoints(); // Issue #3759: Arbitro agent endpoints (Rules Arbitration Engine)
 v1Api.MapAgentSessionEndpoints(); // Issue #3184 (AGT-010): Agent session lifecycle endpoints
 v1Api.MapGroup("/admin/ab-tests").MapAdminAbTestEndpoints(); // Issue #5497: A/B Test backend API endpoints

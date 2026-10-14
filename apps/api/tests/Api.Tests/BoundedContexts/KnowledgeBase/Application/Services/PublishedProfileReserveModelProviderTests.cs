@@ -89,4 +89,37 @@ public sealed class PublishedProfileReserveModelProviderTests : IDisposable
         await ReserveAsync();
         ProfileReads(3);
     }
+
+    // ─── #4169 (6c): la pubblicazione invalida ───────────────────────────────────
+
+    [Fact]
+    public async Task AfterInvalidate_TheNextReadGoesBackToTheProfile()
+    {
+        await ReserveAsync();
+
+        _sut.Invalidate();
+        await ReserveAsync();
+
+        ProfileReads(2);
+    }
+
+    /// <summary>
+    /// Una lettura partita prima della pubblicazione e finita dopo l'invalidazione porta il modello
+    /// vecchio: lo restituisce, perché è quello che ha letto, ma non lo rimette in cache per un minuto.
+    /// </summary>
+    [Fact]
+    public async Task AReadInFlightDuringInvalidate_DoesNotCacheTheOldReserve()
+    {
+        var inFlight = new TaskCompletionSource<AgentProfile?>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _profiles.Setup(p => p.GetAsync(It.IsAny<CancellationToken>())).Returns(inFlight.Task);
+        var read = ReserveAsync();
+
+        _sut.Invalidate();
+        inFlight.SetResult(AgentProfile.CreateWithPublishedVersion(AgentProfileTests.Content()));
+        (await read).Should().Be("meta-llama/llama-3.3-70b-instruct:free");
+
+        _profiles.Setup(p => p.GetAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(AgentProfile.CreateWithPublishedVersion(AgentProfileTests.Content(fallbackModel: "deepseek-flash")));
+        (await ReserveAsync()).Should().Be("deepseek-flash", "la lettura in volo non ha rimesso in cache la riserva di prima");
+    }
 }

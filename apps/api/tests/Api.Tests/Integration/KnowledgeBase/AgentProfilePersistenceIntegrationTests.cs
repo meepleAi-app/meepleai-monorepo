@@ -198,7 +198,7 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
 
         profile!.CreateDraft(AgentProfileTests.Content(temperature: 0.5m));
         await _dbContext.SaveChangesAsync(ct);
-        profile.PublishDraft(new HashSet<string>(StringComparer.Ordinal));
+        profile.PublishDraft(AgentProfileTests.PricingTheModelsOf(profile.Draft!.Content));
         await _dbContext.SaveChangesAsync(ct);
 
         await using var verification = _fixture.CreateDbContext(_connectionString);
@@ -227,7 +227,7 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
         var seenByFirst = await new AgentProfileRepository(firstContext).GetAsync(ct);
         var seenBySecond = await new AgentProfileRepository(secondContext).GetAsync(ct);
 
-        seenByFirst!.PublishDraft(new HashSet<string>(StringComparer.Ordinal));
+        seenByFirst!.PublishDraft(AgentProfileTests.PricingTheModelsOf(seenByFirst.Draft!.Content));
         await firstContext.SaveChangesAsync(ct);
 
         seenBySecond!.UpdateDraft(AgentProfileTests.Content(temperature: 0.9m));

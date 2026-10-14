@@ -58,10 +58,31 @@ public sealed class AgentProfileTests
             },
             useReserveModel: useReserveModel);
 
-    internal static readonly IReadOnlySet<string> NoToolCallingModels = new HashSet<string>(StringComparer.Ordinal);
+    /// <summary>I modelli che questi test usano, tutti con un prezzo: la regola D5 ha i suoi test, in fondo.</summary>
+    private static readonly IReadOnlySet<string> PricedModels =
+        new HashSet<string>(StringComparer.Ordinal) { "deepseek-chat", "deepseek-flash", ReserveModel, "un-modello-qualunque" };
 
-    internal static readonly IReadOnlySet<string> FlashHasTools =
-        new HashSet<string>(StringComparer.Ordinal) { "deepseek-flash" };
+    internal static readonly AgentProfileModelCatalog NoToolCallingModels =
+        new(PricedModels, new HashSet<string>(StringComparer.Ordinal));
+
+    internal static readonly AgentProfileModelCatalog FlashHasTools =
+        new(PricedModels, new HashSet<string>(StringComparer.Ordinal) { "deepseek-flash" });
+
+    /// <summary>
+    /// Un catalogo che dà un prezzo proprio ai modelli di <paramref name="content"/>: per i test che
+    /// pubblicano modelli di prova per osservarne l'effetto, non la regola D5.
+    /// </summary>
+    internal static AgentProfileModelCatalog PricingTheModelsOf(
+        AgentProfileContent content, IReadOnlySet<string>? toolCallingModels = null)
+    {
+        var priced = new HashSet<string>(StringComparer.Ordinal) { content.PrimaryModelId };
+        if (content.FallbackModelId is { } fallback)
+        {
+            priced.Add(fallback);
+        }
+
+        return new AgentProfileModelCatalog(priced, toolCallingModels ?? new HashSet<string>(StringComparer.Ordinal));
+    }
 
     private static int PublishedCount(AgentProfile p) =>
         p.Versions.Count(v => v.Status == AgentProfileVersionStatus.Published);
@@ -254,7 +275,7 @@ public sealed class AgentProfileTests
         act.Should().Throw<ConflictException>().Which.ErrorCode.Should().Be(AgentProfile.AssistantModelWithoutToolsCode);
 
         var both = new HashSet<string>(StringComparer.Ordinal) { "deepseek-flash", ReserveModel };
-        profile.PublishDraft(both);
+        profile.PublishDraft(new AgentProfileModelCatalog(PricedModels, both));
         profile.Published.Content.SessionAssistant.UseReserveModel.Should().BeTrue();
     }
 
@@ -294,5 +315,62 @@ public sealed class AgentProfileTests
 
         profile.RollbackTo(1, FlashHasTools);
         profile.Published.VersionNumber.Should().Be(3);
+    }
+
+    // ─── ADR-095 D5: un modello senza prezzo non si pubblica ───
+
+    private static readonly IReadOnlySet<string> NoTools = new HashSet<string>(StringComparer.Ordinal);
+
+    [Fact]
+    public void PublishDraft_WithAPrimaryModelWithoutAPrice_IsRejected_AndNothingChanges()
+    {
+        // Senza prezzo ogni risposta finirebbe nel registro dei costi a $0, fuori da ogni tetto.
+        var profile = AgentProfile.CreateWithPublishedVersion(Content());
+        profile.CreateDraft(Content(model: "modello-senza-prezzo"));
+
+        var act = () => profile.PublishDraft(NoToolCallingModels);
+
+        act.Should().Throw<ConflictException>().Which.ErrorCode.Should().Be(AgentProfile.ModelWithoutPriceCode);
+        profile.Published.VersionNumber.Should().Be(1);
+        profile.Draft.Should().NotBeNull("la bozza resta, da correggere");
+    }
+
+    [Fact]
+    public void PublishDraft_WithAReserveModelWithoutAPrice_IsRejected()
+    {
+        // La riserva risponde fra la soglia di degrado e il tetto (D6): conta come il principale.
+        var profile = AgentProfile.CreateWithPublishedVersion(Content());
+        profile.CreateDraft(Content(fallbackModel: "riserva-senza-prezzo"));
+
+        var act = () => profile.PublishDraft(NoToolCallingModels);
+
+        act.Should().Throw<ConflictException>().Which.ErrorCode.Should().Be(AgentProfile.ModelWithoutPriceCode);
+    }
+
+    [Fact]
+    public void PublishDraft_WithoutAReserveModel_NeedsOnlyThePrimaryToBePriced()
+    {
+        var profile = AgentProfile.CreateWithPublishedVersion(Content());
+        profile.CreateDraft(Content(fallbackModel: null));
+
+        profile.PublishDraft(new AgentProfileModelCatalog(new HashSet<string>(StringComparer.Ordinal) { "deepseek-chat" }, NoTools));
+
+        profile.Published.VersionNumber.Should().Be(2);
+    }
+
+    [Fact]
+    public void RollbackTo_AVersionWhoseModelLostItsPrice_IsRejected()
+    {
+        // Il catalogo può essere cambiato da quando quella versione era pubblicata.
+        var profile = AgentProfile.CreateWithPublishedVersion(Content(model: "deepseek-chat"));
+        profile.CreateDraft(Content(model: "deepseek-flash"));
+        profile.PublishDraft(NoToolCallingModels);
+        var chatNoLongerPriced = new AgentProfileModelCatalog(
+            new HashSet<string>(StringComparer.Ordinal) { "deepseek-flash", ReserveModel }, NoTools);
+
+        var act = () => profile.RollbackTo(1, chatNoLongerPriced);
+
+        act.Should().Throw<ConflictException>().Which.ErrorCode.Should().Be(AgentProfile.ModelWithoutPriceCode);
+        profile.Published.VersionNumber.Should().Be(2);
     }
 }

@@ -101,7 +101,7 @@ describe("ChatSlideOverPanel — lo stream, con l'hook vero (#4333)", () => {
     await waitFor(() => expect(wire.calls()).toBe(1));
 
     // Un evento alla volta, più la chiusura dello stream.
-    for (let i = 0; i < 5; i++) await deliver(wire.next);
+    for (let i = 0; i < wire.steps; i++) await deliver(wire.next);
 
     await waitFor(() =>
       expect(answers().some(text => text?.includes('Cinque tessere.'))).toBe(true)

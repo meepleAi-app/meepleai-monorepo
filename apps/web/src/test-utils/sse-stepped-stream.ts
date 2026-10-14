@@ -13,24 +13,44 @@ export function sseEvent(type: number, data: unknown): string {
 
 export interface SteppedStream {
   readonly body: ReadableStream<Uint8Array>;
-  /** Consegna il prossimo evento; dopo l'ultimo, chiude lo stream. */
+  /**
+   * Autorizza la prossima consegna: un evento, oppure — dopo l'ultimo — la chiusura dello stream.
+   * Le autorizzazioni si accumulano: chiamarla prima che lo stream sia pronto, o due volte di
+   * fila, non ne perde nessuna.
+   */
   next(): void;
 }
 
 export function steppedStream(events: string[], signal?: AbortSignal | null): SteppedStream {
   const encoder = new TextEncoder();
-  let release: (() => void) | null = null;
+  let permits = 0;
   let index = 0;
+  let wake: (() => void) | null = null;
+
+  const waitForPermit = async (): Promise<void> => {
+    while (permits === 0 && !signal?.aborted) {
+      await new Promise<void>(resolve => {
+        wake = resolve;
+      });
+    }
+    permits = Math.max(0, permits - 1);
+  };
 
   const body = new ReadableStream<Uint8Array>({
-    async pull(controller) {
-      await new Promise<void>(resolve => {
-        release = resolve;
+    start(controller) {
+      // Come la `fetch` vera: fermata la richiesta, la lettura in corso fallisce.
+      signal?.addEventListener('abort', () => {
+        try {
+          controller.error(new DOMException('Aborted', 'AbortError'));
+        } catch {
+          /* lo stream era già chiuso */
+        }
+        wake?.();
       });
-      if (signal?.aborted) {
-        controller.error(new DOMException('Aborted', 'AbortError'));
-        return;
-      }
+    },
+    async pull(controller) {
+      await waitForPermit();
+      if (signal?.aborted) return;
       if (index >= events.length) {
         controller.close();
         return;
@@ -40,7 +60,13 @@ export function steppedStream(events: string[], signal?: AbortSignal | null): St
     },
   });
 
-  return { body, next: () => release?.() };
+  return {
+    body,
+    next: () => {
+      permits++;
+      wake?.();
+    },
+  };
 }
 
 export interface SteppedFetch {
@@ -50,8 +76,10 @@ export interface SteppedFetch {
   calls(): number;
   /** Il segnale passato all'ultima chiamata: dice se lo stream è stato fermato. */
   signal(): AbortSignal | null;
-  /** Consegna il prossimo evento dell'ultima chiamata. */
+  /** Autorizza la prossima consegna dell'ultima chiamata: un evento, o la chiusura. */
   next(): void;
+  /** Quante consegne servono per arrivare in fondo: gli eventi, più la chiusura. */
+  readonly steps: number;
 }
 
 /** Una `fetch` che risponde con uno stream a passi, e ricorda il segnale di interruzione. */
@@ -72,5 +100,6 @@ export function steppedFetch(events: string[]): SteppedFetch {
     calls: () => count,
     signal: () => lastSignal,
     next: () => stream?.next(),
+    steps: events.length + 1,
   };
 }

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Confirmation;
+using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Panel;
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Turn;
 using Api.Extensions;
 using Api.Infrastructure.Serialization;
@@ -16,6 +17,17 @@ internal static class SessionAssistantEndpoints
 {
     public static RouteGroupBuilder MapSessionAssistantEndpoints(this RouteGroupBuilder group)
     {
+        group.MapGet("/live-sessions/{sessionId}/assistant", HandleGet)
+            .RequireAuthenticatedUser()
+            .RequireLiveSessionParticipant()
+            .Produces<SessionAssistantPanelDto>(200)
+            .Produces(401)
+            .Produces(403)
+            .Produces(404)
+            .WithTags("LiveSessions")
+            .WithSummary("Read the in-game assistant panel")
+            .WithDescription("Host only (#4372). Whether the assistant answers (and, if not, the code the turn would return), the conversation and the proposals of the session, for the panel to load and reload.");
+
         group.MapPost("/live-sessions/{sessionId}/assistant", HandleAsk)
             .RequireAuthenticatedUser()
             .RequireLiveSessionParticipant()
@@ -55,6 +67,19 @@ internal static class SessionAssistantEndpoints
             .WithSummary("Reject a proposal of the in-game assistant");
 
         return group;
+    }
+
+    private static async Task<IResult> HandleGet(
+        [FromRoute] Guid sessionId,
+        [FromQuery] string? language,
+        HttpContext httpContext,
+        IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        var panel = await mediator.Send(
+            new GetSessionAssistantQuery(sessionId, httpContext.User.GetUserId(), language), cancellationToken)
+            .ConfigureAwait(false);
+        return Results.Ok(panel);
     }
 
     private static async Task HandleAsk(

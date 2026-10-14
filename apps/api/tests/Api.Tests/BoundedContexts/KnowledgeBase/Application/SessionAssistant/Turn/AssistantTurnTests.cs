@@ -118,8 +118,7 @@ public sealed class AssistantTurnTests
 
     private AskSessionAssistantCommandHandler Handler() => new(new AssistantTurnRunner(
         _directory.Object,
-        _profiles.Object,
-        _catalog.Object,
+        new SessionAssistantAvailability(_profiles.Object, _catalog.Object),
         _threads.Object,
         _proposals.Object,
         new AssistantChatClientFactory(_gateway.Object, NullLoggerFactory.Instance, new ServiceCollection().BuildServiceProvider()),

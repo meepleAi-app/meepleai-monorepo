@@ -3,6 +3,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 using Api.Infrastructure;
+using Api.Middleware.Exceptions;
 using Api.Observability;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -145,7 +146,7 @@ internal sealed class GlobalKbSearchQueryHandler
         var probeLimit = query.Limit + 1;
         // #4168 (5e-c-2): il recupero per gioco è quello della risposta, con i numeri del profilo
         // pubblicato: la ricerca nella KB trova ciò che l'agente userebbe per rispondere.
-        var profile = await _profileReader.GetAsync(cancellationToken).ConfigureAwait(false);
+        var profile = await ReadProfileAsync(cancellationToken).ConfigureAwait(false);
         var rawResults = await _multiGameSearch
             .SearchAsync(
                 query: query.Query,
@@ -241,6 +242,24 @@ internal sealed class GlobalKbSearchQueryHandler
     }
 
     // ─── Private helpers ─────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// #4168 (5e-c-2): la versione pubblicata del profilo. Senza, la ricerca si rifiuta con un 503
+    /// che dice il motivo, come la domanda singola: niente valori compilati (ADR-095), e niente 500.
+    /// </summary>
+    private async Task<PublishedAgentProfile> ReadProfileAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _profileReader.GetAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (AgentProfileNotPublishedException ex)
+        {
+            _logger.LogError(ex, "No published agent profile: the knowledge-base search is refused");
+            throw new HttpException(
+                StatusCodes.Status503ServiceUnavailable, AgentProfileNotPublishedException.Code, ex.Message, ex);
+        }
+    }
 
     /// <summary>
     /// Issue #1686 D-4: computes the document allowlist for the push-down facet filter.

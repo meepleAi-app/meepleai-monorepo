@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Helpers;
+using Api.Observability;
 using Api.Services;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,7 +15,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 ///
 /// Strategy (R3 verdict b):
 /// 1. Early-exit when gameIds is empty (EC-1).
-/// 2. Launch one <see cref="IHybridSearchService.SearchAsync"/> task per game. Each task runs in its
+/// 2. Launch one per-game retrieval per game — a <c>SearchQuery</c> through the mediator, the same
+///    retrieval the single-game answer uses (#4168, 5e-c-2). Each task runs in its
 ///    OWN DI scope so it gets its OWN <c>MeepleAiDbContext</c> — the per-game services are scoped and
 ///    a single request-scoped DbContext is NOT safe for concurrent use ("A second operation was
 ///    started on this context instance…"), which previously made every cross-game search throw and
@@ -297,6 +299,14 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
             // RrfFusionDomainService), con la soglia vettoriale e i pesi del profilo. Prima era
             // HybridSearchService, con una soglia vettoriale sua (0,3) e un adattatore di fusione suo.
             var perGameMode = PerGameSearchMode(mode, queryEmbedding);
+            if (mode != SearchMode.Keyword && queryEmbedding is { Succeeded: false })
+            {
+                // #3786: il braccio vettoriale di questo gioco non viene eseguito. Lo contava
+                // HybridSearchService, a cui il vettore fallito arrivava; il recupero per gioco di
+                // ora ripiega sul lessicale senza interrogarlo, quindi non lo vedrebbe.
+                MeepleAiMetrics.RecordVectorArmOutcome(MeepleAiMetrics.RagArmOutcome.Failed);
+            }
+
             if (perGameMode is null)
             {
                 // Ricerca solo vettoriale con l'embedding fallito a monte: nessun braccio da interrogare.

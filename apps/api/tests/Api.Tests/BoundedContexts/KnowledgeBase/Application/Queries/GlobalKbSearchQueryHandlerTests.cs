@@ -1,9 +1,11 @@
 using Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GlobalKbSearch;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
@@ -59,6 +61,31 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
         result.Results.Should().BeEmpty();
         result.HasMore.Should().BeFalse();
         result.NextCursor.Should().BeNull();
+        _searchMock.VerifyNoOtherCalls();
+    }
+
+    // ─── #4168 (5e-c-2): senza profilo pubblicato ───────────────────────────────
+
+    [Fact]
+    public async Task WithoutAPublishedAgentProfile_TheSearchIsRefusedWith503_NotA500()
+    {
+        // La ricerca usa ora i numeri del profilo. Senza profilo non ricade su valori compilati
+        // (ADR-095), ma il rifiuto va detto come per la domanda singola: 503 con il motivo, non un
+        // InvalidOperationException che il middleware trasforma in 500 (#2568).
+        var userId = Guid.NewGuid();
+        _ragAccessMock
+            .Setup(s => s.GetAccessibleGameIdsAsync(userId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { Guid.NewGuid() });
+        var reader = new Mock<IPublishedAgentProfileReader>();
+        reader.Setup(r => r.GetAsync(It.IsAny<CancellationToken>())).ThrowsAsync(new AgentProfileNotPublishedException());
+        var sut = new GlobalKbSearchQueryHandler(
+            _ragAccessMock.Object, _searchMock.Object, reader.Object, _db, NullLogger<GlobalKbSearchQueryHandler>.Instance);
+
+        var act = () => sut.Handle(BuildQuery(userId, "catan rules"), CancellationToken.None);
+
+        var refused = (await act.Should().ThrowAsync<HttpException>()).Which;
+        refused.StatusCode.Should().Be(503);
+        refused.ErrorCode.Should().Be(AgentProfileNotPublishedException.Code);
         _searchMock.VerifyNoOtherCalls();
     }
 

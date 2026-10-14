@@ -20,6 +20,14 @@ namespace Api.Tests.Services;
 /// nella collection anche le classi che <b>emettono</b> la metrica senza asserirci sopra
 /// — altrimenti restano libere di inquinare chi lo fa.
 /// </para>
+/// <para>
+/// #4168 (5e-c-2): la emette anche <c>SearchQueryHandler</c>, cioè il recupero per gioco di ogni
+/// risposta, e le classi che lo esercitano sono troppe per stare qui. Le protegge la stessa
+/// <c>DisableParallelization</c>: i test di una collection così non girano in parallelo con nessun
+/// altro test (documentazione di xUnit, «Running tests in parallel»), quindi nessun'altra classe
+/// emette mentre questa misura. Le classi che ASSERISCONO sul
+/// contatore restano comunque qui dentro.
+/// </para>
 /// </remarks>
 [CollectionDefinition("VectorArmMetrics", DisableParallelization = true)]
 public sealed class VectorArmMetricsCollection

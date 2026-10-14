@@ -9,6 +9,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.Mappers;
 using Api.Infrastructure.Entities;
+using Api.Observability;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 
@@ -158,9 +159,26 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         // (SearchByVectorAsync) returned placeholder vectors and forced a rank-based score
         // (1.0 - index*0.05), which made the downstream confidence degenerate (always ≈0.53) and
         // hid grounded answers behind the "Non sono certo" card.
-        var scoredEmbeddings = await _embeddingRepository.SearchByVectorWithScoresAsync(
-            gameId, queryVector, topK, minScore, documentIds, cancellationToken).ConfigureAwait(false)
-            ?? (IReadOnlyList<Domain.Entities.ScoredEmbedding>)Array.Empty<Domain.Entities.ScoredEmbedding>();
+        IReadOnlyList<Domain.Entities.ScoredEmbedding> scoredEmbeddings;
+        try
+        {
+            scoredEmbeddings = await _embeddingRepository.SearchByVectorWithScoresAsync(
+                gameId, queryVector, topK, minScore, documentIds, cancellationToken).ConfigureAwait(false)
+                ?? (IReadOnlyList<Domain.Entities.ScoredEmbedding>)Array.Empty<Domain.Entities.ScoredEmbedding>();
+        }
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
+        {
+            // #3786: la ricerca vettoriale NON è stata eseguita. Senza questo segnale un guasto è
+            // indistinguibile da «nessun risultato». Chi chiama decide se ripiegare (l'ibrido) o no.
+            MeepleAiMetrics.RecordVectorArmOutcome(MeepleAiMetrics.RagArmOutcome.Failed);
+            throw;
+        }
+
+        // #3786: `empty` è un esito legittimo (gioco senza contenuto indicizzato, o nessun chunk
+        // sopra la soglia), tenuto distinto da `failed`.
+        MeepleAiMetrics.RecordVectorArmOutcome(scoredEmbeddings.Count > 0
+            ? MeepleAiMetrics.RagArmOutcome.Hit
+            : MeepleAiMetrics.RagArmOutcome.Empty);
 
         _logger.LogInformation(
             "Vector search returned {Count} scored embeddings for gameId={GameId}",
@@ -214,9 +232,25 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         float keywordWeight,
         CancellationToken cancellationToken)
     {
-        // Vector search
-        var vectorResults = await PerformVectorSearchAsync(
-            gameId, queryVector, topK, minScore, documentIds, cancellationToken).ConfigureAwait(false);
+        // Vector search. #4168 (5e-c-2): un guasto del braccio vettoriale degrada al solo lessicale
+        // invece di far cadere la ricerca, come faceva HybridSearchService per la ricerca fra giochi
+        // che ora passa da qui: altrimenti il gioco uscirebbe dal pool, lessicale compreso. L'esito
+        // `failed` l'ha già contato PerformVectorSearchAsync (#3786).
+        List<Domain.Entities.SearchResult> vectorResults;
+        try
+        {
+            vectorResults = await PerformVectorSearchAsync(
+                gameId, queryVector, topK, minScore, documentIds, cancellationToken).ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // Degradazione: un guasto del braccio vettoriale non deve far cadere la ricerca
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
+        {
+            _logger.LogWarning(ex,
+                "[SearchQueryHandler] Vector search failed, falling back to keyword-only for gameId={GameId}",
+                gameId);
+            vectorResults = new List<Domain.Entities.SearchResult>();
+        }
+#pragma warning restore CA1031
 
         // #3338 WP1c: resolve the per-game FTS config for the heading-term synonym expansion below.
         // NOTE: SearchAsync resolves the same config internally, so this is one extra (fast, GameId-

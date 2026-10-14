@@ -172,6 +172,73 @@ public sealed class AgentProfileFieldEffectTests
         _hostFixture.Llm.LastAnswer!.Temperature.Should().Be(1.1);
     }
 
+    // ─── #4169 (6c-3): la prova della bozza dalla pagina «Agente» ───────────────
+
+    /// <summary>
+    /// D8: l'admin prova la bozza con la stessa pipeline delle risposte, prima di pubblicarla. La
+    /// chiamata esce come AdminOperation, con l'id della bozza nel registro, e la versione pubblicata
+    /// resta quella che risponde agli utenti.
+    /// </summary>
+    [Fact]
+    public async Task TheDraftTriedFromTheAgentPage_AnswersWithItsSettings_AndThePublishedStays()
+    {
+        var adminToken = await AdminTokenWithTheSeededCatalogAsync();
+        var draftId = await SaveDraftAsync(adminToken, temperature: 1.7m);
+
+        var (status, events) = await TryDraftAsync(adminToken, Question);
+
+        status.Should().Be(HttpStatusCode.OK);
+        events.Should().Contain(e => e.GetProperty("type").GetInt32() == (int)StreamingEventType.Complete);
+        _hostFixture.Llm.LastAnswer.Should().NotBeNull();
+        _hostFixture.Llm.LastAnswer!.Temperature.Should().Be(1.7);
+        _hostFixture.Llm.LastAnswer.Source.Should().Be(RequestSource.AdminOperation);
+        _hostFixture.Llm.LastAnswer.ProfileVersionId.Should().Be(draftId);
+
+        _hostFixture.Llm.Reset();
+        await AskAsync(Question);
+        _hostFixture.Llm.LastAnswer!.Temperature.Should().Be(0.3, "la bozza provata non è pubblicata");
+    }
+
+    /// <summary>
+    /// Una bozza aggiornata tiene il suo id: una risposta messa in cache sotto quell'id sarebbe di un
+    /// contenuto che non c'è più. La prova va sempre al modello e non lascia niente in cache.
+    /// </summary>
+    [Fact]
+    public async Task ATrial_NeitherReadsNorWritesTheAnswerCache()
+    {
+        var adminToken = await AdminTokenWithTheSeededCatalogAsync();
+        await SaveDraftAsync(adminToken, temperature: 1.7m);
+        await TryDraftAsync(adminToken, Question);
+        await SaveDraftAsync(adminToken, temperature: 1.9m);
+        _hostFixture.Llm.Reset();
+
+        await TryDraftAsync(adminToken, Question);
+
+        _hostFixture.Llm.LastAnswer.Should().NotBeNull("la seconda prova va al modello, non alla cache");
+        _hostFixture.Llm.LastAnswer!.Temperature.Should().Be(1.9);
+        _hostFixture.Cache.Count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task WithoutADraft_ThereIsNothingToTry()
+    {
+        var adminToken = await AdminTokenWithTheSeededCatalogAsync();
+
+        var (status, _) = await TryDraftAsync(adminToken, Question);
+
+        status.Should().Be(HttpStatusCode.Conflict);
+        _hostFixture.Llm.LastAnswer.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task OnlyAnAdmin_CanTryTheDraft()
+    {
+        var (status, _) = await TryDraftAsync(_token, Question);
+
+        status.Should().Be(HttpStatusCode.Forbidden);
+        _hostFixture.Llm.LastAnswer.Should().BeNull();
+    }
+
     [Fact]
     public async Task PrimaryModel_IsTheOneSentToTheGateway()
     {
@@ -956,6 +1023,44 @@ public sealed class AgentProfileFieldEffectTests
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (_, token) = await TestSessionHelper.CreateAdminSessionAsync(db, cancellationToken: Ct);
         return token;
+    }
+
+    /// <summary>Salva la bozza con un'altra temperatura, dalla rotta della pagina, e ne restituisce l'id.</summary>
+    private async Task<Guid> SaveDraftAsync(string adminToken, decimal temperature)
+    {
+        var draft = await EditableSectionsOfThePublishedVersionAsync();
+        draft["temperature"] = temperature;
+        var saved = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Put, "/api/v1/admin/agent-profile/draft", adminToken, draft), Ct);
+        saved.StatusCode.Should().Be(HttpStatusCode.OK, await saved.Content.ReadAsStringAsync(Ct));
+
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var profile = await scope.ServiceProvider.GetRequiredService<IAgentProfileRepository>().GetAsync(Ct);
+        return profile!.Draft!.Id;
+    }
+
+    /// <summary>La prova della bozza: lo stato HTTP e, se è uno stream, i suoi eventi.</summary>
+    private async Task<(HttpStatusCode Status, List<JsonElement> Events)> TryDraftAsync(string token, string question)
+    {
+        var response = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, "/api/v1/admin/agent-profile/draft/try", token,
+            new { gameId = _gameId, question }), Ct);
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        var events = new List<JsonElement>();
+        if (response.StatusCode == HttpStatusCode.OK)
+        {
+            foreach (var line in body.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var trimmed = line.Trim();
+                if (!trimmed.StartsWith("data:", StringComparison.Ordinal)) continue;
+                using var doc = JsonDocument.Parse(trimmed["data:".Length..].Trim());
+                events.Add(doc.RootElement.Clone());
+            }
+
+            events.Should().NotContain(e => e.GetProperty("type").GetInt32() == (int)StreamingEventType.Error, body);
+        }
+
+        return (response.StatusCode, events);
     }
 
     /// <summary>Il corpo della bozza com'è nella versione pubblicata: solo le sezioni che la pagina modifica.</summary>

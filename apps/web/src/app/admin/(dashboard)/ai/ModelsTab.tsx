@@ -112,7 +112,7 @@ export function ModelsTab() {
       {actionError && (
         <div
           role="alert"
-          className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+          className="rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-foreground"
         >
           {actionError}
         </div>
@@ -130,7 +130,7 @@ export function ModelsTab() {
           className="rounded-xl border border-destructive/30 bg-destructive/10 p-4"
           data-testid="models-tab-error"
         >
-          <p className="text-sm font-medium text-destructive">Could not load the AI models.</p>
+          <p className="text-sm font-medium text-foreground">Could not load the AI models.</p>
           <p className="mt-1 text-xs text-muted-foreground">{error}</p>
         </div>
       ) : models.length > 0 ? (
@@ -391,7 +391,7 @@ function PriceEditor({
         </div>
       </div>
       {invalid && (
-        <p role="alert" className="text-xs text-destructive">
+        <p role="alert" className="text-xs font-medium text-foreground">
           Prices are numbers between 0 and 1000 USD per million tokens.
         </p>
       )}

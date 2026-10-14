@@ -26,6 +26,7 @@ vi.mock('@/lib/api', () => ({
       publishAgentProfileDraft: mockPublish,
       rollbackAgentProfile: mockRollback,
       getAiModels: mockGetAiModels,
+      getGameKbStatuses: vi.fn().mockResolvedValue({ items: [] }),
     },
   },
 }));
@@ -134,7 +135,7 @@ describe('AgentProfileEditor', () => {
     await renderLoaded();
 
     expect(screen.getByText(/published: version 2/i)).toBeInTheDocument();
-    expect(screen.getByText(/no draft/i)).toBeInTheDocument();
+    expect(screen.getByText('· No draft')).toBeInTheDocument();
     expect(screen.getByLabelText('Name')).toHaveValue('MeepleAI');
     expect(screen.getByLabelText('Temperature')).toHaveValue(0.3);
     expect(screen.getByLabelText('System prompt (en)')).toHaveValue('You are MeepleAI.');
@@ -291,6 +292,13 @@ describe('AgentProfileEditor', () => {
     await renderLoaded();
 
     expect(screen.getByRole('button', { name: 'Roll back to version 1' })).toBeInTheDocument();
+  });
+
+  it('offers to try the saved draft', async () => {
+    mockGetProfile.mockResolvedValue(profile(version(3, 'Draft', content({ temperature: 0.9 }))));
+    await renderLoaded();
+
+    expect(screen.getByRole('region', { name: 'Try the draft' })).toBeInTheDocument();
   });
 
   it('says so when the profile cannot be loaded', async () => {

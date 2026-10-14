@@ -196,6 +196,7 @@ describe('useAgentChatStream', () => {
       statusMessage: null,
       currentAnswer: '',
       followUpQuestions: [],
+      citations: [],
       isStreaming: false,
       error: null,
       tierLimit: null,
@@ -806,6 +807,56 @@ describe('useAgentChatStream', () => {
   });
 
   /** L'avviso riguarda la domanda appena fermata: con la successiva se ne va. */
+  // #4244 (consegna D): le fonti arrivano in un evento a parte, prima dei token. Chi mostra la
+  // risposta le riceve insieme a lei, e la domanda dopo riparte senza.
+  it('hands the sources of the answer to onComplete, and forgets them with the next question', async () => {
+    const coup = {
+      text: 'Deal two to each player.',
+      source: 'PDF:pdf-coup',
+      page: 1,
+      line: 0,
+      score: 0.9,
+    };
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      body: createSSEStream([
+        sseEvent(EventType.Citations, { citations: [coup] }),
+        sseEvent(EventType.Token, { token: 'Due carte.' }),
+        sseEvent(EventType.Complete, { totalTokens: 2 }),
+      ]),
+    });
+    const onComplete = vi.fn();
+    const { result } = renderHook(() => useAgentChatStream({ onComplete }));
+
+    await act(async () => {
+      result.current.sendMessage('game-1', 'Quante carte?');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(onComplete).toHaveBeenLastCalledWith(
+      'Due carte.',
+      expect.objectContaining({ citations: [coup] })
+    );
+    expect(result.current.state.citations).toEqual([coup]);
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      body: createSSEStream([
+        sseEvent(EventType.Token, { token: 'Due monete.' }),
+        sseEvent(EventType.Complete, { totalTokens: 2 }),
+      ]),
+    });
+    await act(async () => {
+      result.current.sendMessage('game-1', 'E le monete?');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(onComplete).toHaveBeenLastCalledWith(
+      'Due monete.',
+      expect.objectContaining({ citations: [] })
+    );
+  });
+
   it('forgets the plan quota with the next question', async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,

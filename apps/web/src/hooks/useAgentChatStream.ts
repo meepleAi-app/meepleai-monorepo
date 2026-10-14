@@ -88,6 +88,18 @@ const DEBUG_STEP_NAMES: Record<number, string> = {
 export type ConnectionStatus =
   'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'error';
 
+/**
+ * #4244: una fonte della risposta, come la manda l'evento `Citations` (lo `Snippet` del backend).
+ * `source` è `PDF:<id del PDF>`.
+ */
+export interface StreamCitation {
+  text: string;
+  source: string;
+  page: number;
+  line: number;
+  score: number;
+}
+
 export interface AgentChatStreamState {
   /** Current streaming status text */
   statusMessage: string | null;
@@ -95,6 +107,8 @@ export interface AgentChatStreamState {
   currentAnswer: string;
   /** Follow-up questions from the agent */
   followUpQuestions: string[];
+  /** #4244: le fonti della risposta in corso, dall'evento `Citations` */
+  citations: StreamCitation[];
   /** Whether currently streaming */
   isStreaming: boolean;
   /** Error message if any */
@@ -142,6 +156,7 @@ export interface AgentChatStreamCallbacks {
       totalTokens: number;
       chatThreadId: string | null;
       followUpQuestions: string[];
+      citations: StreamCitation[];
     }
   ) => void;
   onError?: (error: string) => void;
@@ -174,6 +189,7 @@ const INITIAL_STATE: AgentChatInternalState = {
   statusMessage: null,
   currentAnswer: '',
   followUpQuestions: [],
+  citations: [],
   isStreaming: false,
   tierLimit: null,
   chatThreadId: null,
@@ -346,7 +362,15 @@ function agentChatEventReducer(
       };
     }
 
-    case StreamingEventType.Citations:
+    case StreamingEventType.Citations: {
+      // #4244: arriva prima dei token. Ignorarlo lasciava la risposta senza fonti.
+      const data = event.data as { citations?: StreamCitation[] };
+      return {
+        ...state,
+        citations: data?.citations ?? [],
+      };
+    }
+
     case StreamingEventType.Outline:
     case StreamingEventType.ScriptChunk:
     case StreamingEventType.SetupStep: {
@@ -572,6 +596,7 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks): {
     statusMessage: stateWithExtras.statusMessage,
     currentAnswer: stateWithExtras.currentAnswer,
     followUpQuestions: stateWithExtras.followUpQuestions,
+    citations: stateWithExtras.citations,
     isStreaming: stateWithExtras.isStreaming,
     tierLimit: stateWithExtras.tierLimit,
     chatThreadId: stateWithExtras.chatThreadId,
@@ -597,6 +622,7 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks): {
         totalTokens: merged.totalTokens,
         chatThreadId: merged.chatThreadId,
         followUpQuestions: merged.followUpQuestions,
+        citations: merged.citations,
       });
     }
   });

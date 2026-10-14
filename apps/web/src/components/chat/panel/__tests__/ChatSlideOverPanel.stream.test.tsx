@@ -46,6 +46,7 @@ import { ChatSlideOverPanel } from '../ChatSlideOverPanel';
 
 // I tipi numerici di `StreamingEventType`, com'è sul filo.
 const STATE_UPDATE = 0;
+const CITATIONS = 1;
 const COMPLETE = 4;
 const TOKEN = 7;
 
@@ -109,6 +110,78 @@ describe("ChatSlideOverPanel — lo stream, con l'hook vero (#4333)", () => {
     expect(answers()).toHaveLength(1);
     expect(wire.signal()?.aborted).toBe(false);
     expect(wire.calls()).toBe(1);
+  });
+
+  /**
+   * #4244 (consegna D): la risposta dice da dove viene, e la fonte apre il PDF alla pagina citata.
+   * Lo stream le manda in un evento a parte, prima dei token: il pannello lo ignorava.
+   */
+  it('shows the source of the answer, with a link that opens the cited page of the PDF', async () => {
+    const wire = steppedFetch([
+      sseEvent(CITATIONS, {
+        citations: [
+          {
+            text: 'Deal two to each player.',
+            source: 'PDF:pdf-coup',
+            page: 3,
+            line: 0,
+            score: 0.9,
+          },
+        ],
+      }),
+      sseEvent(TOKEN, { token: 'Due carte.' }),
+      sseEvent(COMPLETE, { totalTokens: 2 }),
+    ]);
+    globalThis.fetch = wire.fetch;
+    useChatPanelStore.getState().open(AZUL);
+
+    render(<ChatSlideOverPanel />);
+    ask('Quante carte?');
+    await waitFor(() => expect(wire.calls()).toBe(1));
+    for (let i = 0; i < wire.steps; i++) await deliver(wire.next);
+
+    const link = await screen.findByTestId('citation-pdf-link-0');
+    expect(link).toHaveAttribute('href', '/api/v1/pdfs/pdf-coup/download#page=3');
+    expect(screen.getAllByTestId('citation')).toHaveLength(1);
+  });
+
+  /** Le fonti di una risposta restano sue: la risposta dopo non le eredita. */
+  it('does not give the sources of one answer to the next', async () => {
+    const first = steppedFetch([
+      sseEvent(CITATIONS, {
+        citations: [
+          {
+            text: 'Deal two to each player.',
+            source: 'PDF:pdf-coup',
+            page: 3,
+            line: 0,
+            score: 0.9,
+          },
+        ],
+      }),
+      sseEvent(TOKEN, { token: 'Due carte.' }),
+      sseEvent(COMPLETE, { totalTokens: 2 }),
+    ]);
+    globalThis.fetch = first.fetch;
+    useChatPanelStore.getState().open(AZUL);
+
+    render(<ChatSlideOverPanel />);
+    ask('Quante carte?');
+    await waitFor(() => expect(first.calls()).toBe(1));
+    for (let i = 0; i < first.steps; i++) await deliver(first.next);
+    await screen.findByTestId('citation-pdf-link-0');
+
+    const second = steppedFetch([
+      sseEvent(TOKEN, { token: 'Due monete.' }),
+      sseEvent(COMPLETE, { totalTokens: 2 }),
+    ]);
+    globalThis.fetch = second.fetch;
+    ask('E le monete?');
+    await waitFor(() => expect(second.calls()).toBe(1));
+    for (let i = 0; i < second.steps; i++) await deliver(second.next);
+
+    await waitFor(() => expect(answers()).toHaveLength(2));
+    expect(screen.getAllByTestId('citation')).toHaveLength(1);
   });
 
   /** Lo stream si ferma ancora quando deve: quando il pannello viene chiuso. */

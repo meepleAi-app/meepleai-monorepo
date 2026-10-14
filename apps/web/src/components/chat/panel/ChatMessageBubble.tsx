@@ -14,6 +14,8 @@ interface ChatMessageBubbleProps {
   authorName: string;
   timestamp: string;
   imageUrls?: string[];
+  /** #4244: le fonti della risposta, sotto il testo e allineate alla bolla. */
+  sources?: ReactNode;
 }
 
 function initials(name: string): string {
@@ -79,6 +81,7 @@ export function ChatMessageBubble({
   authorName,
   timestamp,
   imageUrls,
+  sources,
 }: ChatMessageBubbleProps) {
   const isUser = role === 'user';
 
@@ -143,6 +146,7 @@ export function ChatMessageBubble({
           )}
           <div className="whitespace-pre-wrap">{renderContentWithCitations(content)}</div>
         </div>
+        {sources}
       </div>
     </div>
   );

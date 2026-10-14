@@ -217,6 +217,7 @@ describe('kbDocToHubItem', () => {
 
 const baseSession: GameSessionDto = {
   id: '00000000-0000-0000-0000-0000000000d1',
+  liveSessionId: '00000000-0000-0000-0000-0000000000f1',
   gameId: '00000000-0000-0000-0000-0000000000aa',
   status: 'Completed',
   startedAt: '2026-04-20T19:00:00Z',
@@ -236,7 +237,13 @@ describe('sessionToHubItem', () => {
     expect(result.status).toBe('Completed');
     expect(result.playerCount).toBe(4);
     expect(result.subtitle).toBe('Alice');
-    expect(result.href).toBe(`/sessions/${baseSession.id}`);
+    // #4156 (D4): the session pages live under the LiveGameSession id.
+    expect(result.href).toBe(`/sessions/${baseSession.liveSessionId}`);
+  });
+
+  it('#4156 (D4): has no href when the GameSession has no live session', () => {
+    expect(sessionToHubItem({ ...baseSession, liveSessionId: null }).href).toBeNull();
+    expect(sessionToHubItem({ ...baseSession, liveSessionId: undefined }).href).toBeNull();
   });
 
   it('leaves gameName undefined (DTO does not include it; Phase 2 enrich)', () => {

@@ -35,7 +35,8 @@ export interface HybridHubItemBase {
   readonly title: string;
   readonly subtitle?: string;
   readonly updatedAt: string;
-  readonly href: string;
+  /** `null` when the entity has no detail page: a GameSession without a live (#4156 D4). */
+  readonly href: string | null;
 }
 
 export interface GameHubItem extends HybridHubItemBase {

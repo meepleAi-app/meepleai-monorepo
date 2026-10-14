@@ -85,7 +85,7 @@ Si procede a fette, ciascuna con la sua PR:
 0. **Produttori e guardia**: l'inventario dei link a `/sessions/<id>`; `GameSessionDto.liveSessionId`; un test architetturale sugli import, con eccezioni esplicite legate a una issue.
 1. **Navigazione e letture**, in tre PR (2026-10-14):
    - **1a — le pagine di `/sessions/[id]`**: il wizard desktop porta a `/sessions/{id}/live`; riepilogo, `/scoreboard` e `/notes` leggono `LiveGameSession`, il tabellone ordina per totale; la ripresa passa da `/live-sessions`; si tolgono i link a sotto-rotte inesistenti, con un gate che li tiene fuori. Il diario del riepilogo resta vuoto: quello di `SessionTracking` non esiste per una live, e la timeline non sa ancora mostrare le note di testo del diario della live;
-   - **1b — chi costruisce i link**: i produttori dell'inventario passano l'id di una live (D4) o vanno alle pagine della serata (D7);
+   - **1b — chi costruisce i link**, in due PR: **1b-1** i produttori con l'id di una `GameSession` passano a `liveSessionId` (D4), e un gate (`session-link-producers.test.ts`) tiene l'inventario al posto della ricerca a mano; **1b-2** le sessioni delle serate vanno alle pagine della serata (D7) e i produttori alimentati da props ricevono l'id di una live;
    - **1c — l'agente vecchio esce da `/live`** (D5): lancio, chat RAG e domanda con foto.
 2. **Lo Score tab su `RoundScores`**: editor giocatore × dimensione × round con il round derivato come predefinito (D6); scrittura con `POST`/`PUT /api/v1/live-sessions/{id}/scores`; il polimorfico esce dal percorso live; si aggiornano CLAUDE.md (§ *Live-session scoring*) e ADR-089 (riga «Update»).
 

@@ -62,9 +62,12 @@ function SessionRow({ session }: { session: GameSessionDto }) {
           )}
         </div>
       </div>
-      <Button asChild variant="ghost" size="sm" className="font-nunito shrink-0">
-        <Link href={`/sessions/${session.id}`}>View</Link>
-      </Button>
+      {/* #4156 (D4): the session pages live under the LiveGameSession id; without one, no link */}
+      {session.liveSessionId != null && (
+        <Button asChild variant="ghost" size="sm" className="font-nunito shrink-0">
+          <Link href={`/sessions/${session.liveSessionId}`}>View</Link>
+        </Button>
+      )}
     </li>
   );
 }

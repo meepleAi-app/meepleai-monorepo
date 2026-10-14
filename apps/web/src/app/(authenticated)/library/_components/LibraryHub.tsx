@@ -366,7 +366,7 @@ export function LibraryHub(): ReactElement {
   const handleCardClick = useCallback(
     (itemId: string) => {
       const item = merged.find(i => i.id === itemId);
-      if (item) router.push(item.href);
+      if (item?.href) router.push(item.href);
     },
     [router, merged]
   );

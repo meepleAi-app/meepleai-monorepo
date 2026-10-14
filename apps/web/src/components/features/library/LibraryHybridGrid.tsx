@@ -124,6 +124,7 @@ export function LibraryHybridGrid({
           data-slot="library-grid-card"
           data-entry-id={item.id}
           onClick={() => onCardClick(item.id)}
+          disabled={item.href == null}
           className={clsx(
             'relative block w-full text-left',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-2xl'

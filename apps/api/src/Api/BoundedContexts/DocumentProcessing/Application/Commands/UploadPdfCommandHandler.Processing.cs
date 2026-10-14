@@ -966,8 +966,6 @@ internal partial class UploadPdfCommandHandler
         CancellationToken cancellationToken)
     {
         var totalPages = pdfDoc.PageCount ?? 0;
-        await UpdateProgressAsync(db, pdfId, ProcessingStep.Completed, totalPages, totalPages, startTime, null, cancellationToken).ConfigureAwait(false);
-
         var pdfGuid = Guid.Parse(pdfId);
 
         // Load aggregate, call TransitionTo(Ready) + MarkProcessed(now) so
@@ -999,6 +997,13 @@ internal partial class UploadPdfCommandHandler
                 pdfId, nameof(UploadPdfCommandHandler));
             return;
         }
+
+        // #4339: Completed goes AFTER the Ready transition. The transition persists through
+        // IPdfDocumentRepository.UpdateAsync, whose MapToPersistence has no progress column and
+        // rewrites the whole row: a Completed written before it came back null, and the upload page,
+        // which waits for Completed on GET /pdfs/{id}/progress, stayed at "Indexing" forever.
+        // CancellationToken.None for the same reason as the persist below: the PDF is Ready.
+        await UpdateProgressAsync(db, pdfId, ProcessingStep.Completed, totalPages, totalPages, startTime, null, CancellationToken.None).ConfigureAwait(false);
 
         // Issue #3281 / pre-existing AsNoTracking bug: the pipeline's working pdfDoc is AsNoTracking
         // and state transitions route through IPdfDocumentRepository (MapToPersistence omits + clobbers

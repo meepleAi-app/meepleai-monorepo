@@ -278,7 +278,13 @@ export interface PlayerDetailData {
 
 /** Session entity detail data (drawer view) */
 export interface SessionDetailData {
+  /** Id of the GameSession: the drawer loads it from `GET /api/v1/sessions/{id}`. */
   id: string;
+  /**
+   * Id of the LiveGameSession correlated to this GameSession (#4156 D4): the session pages live
+   * under `/sessions/{liveSessionId}`. Absent when the session has no live, and then it has no page.
+   */
+  liveSessionId?: string;
   sessionCode: string;
   status: SessionStatus;
   /** Display title (game name or custom) */

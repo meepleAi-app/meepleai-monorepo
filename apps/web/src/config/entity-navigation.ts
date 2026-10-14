@@ -182,12 +182,8 @@ export const ENTITY_NAVIGATION_GRAPH: Partial<Record<MeepleEntityType, EntityNav
         idKey: 'agentId',
         buildHref: id => `/agents/${id}`,
       },
-      {
-        entity: 'session',
-        label: 'Session',
-        idKey: 'sessionId',
-        buildHref: id => `/sessions/${id}`,
-      },
+      // #4156: no session link. No caller ever passed `sessionId` for a chat, and a thread does not
+      // carry the id of a LiveGameSession, which is the only id `/sessions/{id}` resolves (D4).
     ],
 
     event: [

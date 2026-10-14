@@ -71,10 +71,8 @@ export function NightSummaryClientView({ nightId }: NightSummaryClientViewProps)
     [setArchived, nightId]
   );
   const handleGoToList = useCallback(() => router.push('/game-nights'), [router]);
-  const handleJumpToSession = useCallback(
-    (sessionId: string) => router.push(`/sessions/${sessionId}`),
-    [router]
-  );
+  // #4156 (D7): the games of a night are SessionTracking sessions, with no page under
+  // /sessions/{id}: their recap is this summary. No "jump to session" is offered.
 
   if (summaryQuery.isLoading) {
     return (
@@ -110,7 +108,6 @@ export function NightSummaryClientView({ nightId }: NightSummaryClientViewProps)
         onArchive={handleArchive}
         onUnarchive={handleUnarchive}
         onGoToList={handleGoToList}
-        onJumpToSession={handleJumpToSession}
       />
 
       <GameNightPhotoGallery

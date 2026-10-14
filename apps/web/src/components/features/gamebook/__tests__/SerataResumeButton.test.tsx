@@ -87,7 +87,7 @@ describe('SerataResumeButton', () => {
     vi.clearAllMocks();
   });
 
-  it('opens a live sitting and routes to the new session on success', async () => {
+  it('opens a live sitting and routes to the night live page on success (#4156 D7)', async () => {
     attachMock.mockResolvedValue({
       sessionId: 's99',
       gameNightSessionId: 'gns',
@@ -99,7 +99,8 @@ describe('SerataResumeButton', () => {
     fireEvent.click(screen.getByRole('button', { name: /riprendi la serata/i }));
 
     await waitFor(() => expect(attachMock).toHaveBeenCalledWith(GN, CAMPAIGN));
-    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/sessions/s99'));
+    // The sitting is a SessionTracking session: /sessions/s99 would be a 404.
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith(`/game-nights/${GN}/live`));
   });
 
   it('shows a distinct message on a max-live 409 and does not route', async () => {

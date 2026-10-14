@@ -239,10 +239,9 @@ describe('NightLiveClientView — Published happy path', () => {
     expect(pushMock).toHaveBeenCalledWith(`/game-nights/${NIGHT_ID}`);
   });
 
-  it('jumps to the session via its SessionId route key (AC3)', async () => {
-    // currentGame is Slice C (null from the mapper today) — but the jump handler
-    // is wired now, so we exercise it with a non-null currentGame to assert the
-    // /sessions/{SessionId} routing contract Slice C will rely on.
+  it('#4156 (D7): offers no jump to a session page — the night page is the game page', () => {
+    // The games of a night are SessionTracking sessions, with no LiveGameSession: under
+    // /sessions/{id} they would open a 404. Before #4156 this test asserted that very route.
     mockQuery({
       data: vm({
         currentGame: {
@@ -253,8 +252,9 @@ describe('NightLiveClientView — Published happy path', () => {
       }),
     });
     render(<NightLiveClientView nightId={NIGHT_ID} />);
-    await userEvent.click(screen.getByRole('button', { name: /Apri sessione live/i }));
-    expect(pushMock).toHaveBeenCalledWith(`/sessions/${IN_PROGRESS_SESSION_ID}`);
+    expect(screen.getAllByText('Spirit Island').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: /Apri sessione live/i })).toBeNull();
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it('renders a defined empty state for a Published night with 0 sessions (LD-11)', () => {

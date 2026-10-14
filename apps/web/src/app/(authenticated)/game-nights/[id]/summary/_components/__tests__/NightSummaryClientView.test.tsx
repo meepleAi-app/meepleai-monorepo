@@ -43,6 +43,7 @@ vi.mock('@/components/features/game-nights/summary', () => ({
     archived?: boolean;
     onShare?: () => void;
     onArchive?: () => void;
+    onJumpToSession?: (sessionId: string) => void;
   }) => (
     <div
       data-testid="night-summary-view"
@@ -50,6 +51,7 @@ vi.mock('@/components/features/game-nights/summary', () => ({
       data-mvp={props.mvp?.name ?? ''}
       data-games={props.games.length}
       data-archived={String(props.archived)}
+      data-jump-to-session={String(props.onJumpToSession !== undefined)}
     >
       <button type="button" data-testid="share-btn" onClick={props.onShare}>
         share
@@ -117,6 +119,15 @@ describe('NightSummaryClientView', () => {
     expect(view).toHaveAttribute('data-mvp', 'Davide');
     expect(view).toHaveAttribute('data-games', '1');
     expect(view).toHaveAttribute('data-archived', 'false');
+  });
+
+  it('#4156 (D7): offers no jump to a session page — the summary is the game recap', () => {
+    // The games of a night are SessionTracking sessions: under /sessions/{id} they open a 404.
+    render(<NightSummaryClientView nightId="gn-1" />);
+    expect(screen.getByTestId('night-summary-view')).toHaveAttribute(
+      'data-jump-to-session',
+      'false'
+    );
   });
 
   it('generates a share token when sharing', async () => {

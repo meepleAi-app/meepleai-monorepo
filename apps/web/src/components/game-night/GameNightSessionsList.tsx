@@ -2,7 +2,9 @@
  * GameNightSessionsList — Displays sessions played within a game night
  *
  * Shows each session as a card with game title, status badge, play order,
- * and a link to the live session page.
+ * and a link to the night page (#4156 D7): the sessions of a night are SessionTracking sessions,
+ * with no LiveGameSession and so no page under /sessions/{id}. The night live page is their page
+ * while the night runs, the summary once it is completed.
  *
  * Plan 2 Task 5 — Session Flow v2.1
  */
@@ -60,12 +62,16 @@ const FALLBACK_STATUS: StatusMeta = {
 export interface GameNightSessionsListProps {
   sessions: GameNightActiveSession[];
   gameNightId: string;
+  /** The night is completed: its sessions link to the summary instead of the live page. */
+  isCompleted?: boolean;
 }
 
 export function GameNightSessionsList({
   sessions,
-  gameNightId: _gameNightId,
+  gameNightId,
+  isCompleted = false,
 }: GameNightSessionsListProps) {
+  const nightHref = `/game-nights/${gameNightId}/${isCompleted ? 'summary' : 'live'}`;
   if (sessions.length === 0) {
     return (
       <Card>
@@ -95,7 +101,7 @@ export function GameNightSessionsList({
           return (
             <Link
               key={session.id}
-              href={`/sessions/${session.id}`}
+              href={nightHref}
               className="flex items-center justify-between gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
             >
               <div className="flex items-center gap-3 min-w-0">

@@ -12,6 +12,7 @@
 import { useState, useRef, useCallback } from 'react';
 
 import { ArrowLeft, Loader2, Users } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/primitives/button';
@@ -23,6 +24,7 @@ export default function JoinSessionPage() {
   const [code, setCode] = useState('');
   const [isJoining, setIsJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [joinedNightSession, setJoinedNightSession] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleJoin = useCallback(async () => {
@@ -40,11 +42,13 @@ export default function JoinSessionPage() {
       const session = await api.liveSessions.getByCode(trimmed);
       router.push(`/sessions/${session.id}`);
     } catch {
-      // Fallback: try SessionTracking join
+      // Fallback: a SessionTracking session — the games of a game night.
       try {
         await api.sessionTracking.joinByCode(trimmed);
-        const session = await api.sessionTracking.getByCode(trimmed);
-        router.push(`/sessions/${session.id}`);
+        // #4156 (D7): a night's session has no LiveGameSession, so no page under /sessions/{id}: its
+        // page is the night's, and the SessionTracking session does not carry the night id.
+        setJoinedNightSession(true);
+        setIsJoining(false);
       } catch {
         setError('Sessione non trovata. Controlla il codice e riprova.');
         setIsJoining(false);
@@ -76,36 +80,52 @@ export default function JoinSessionPage() {
           </p>
         </div>
 
-        {/* Code Input */}
-        <div className="space-y-3">
-          <Input
-            ref={inputRef}
-            value={code}
-            onChange={e => handleCodeChange(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleJoin()}
-            placeholder="Es. K7X2M9"
-            className="text-center text-2xl font-mono tracking-[0.3em] h-14"
-            maxLength={8}
-            autoFocus
-          />
-
-          {error && <p className="text-sm text-red-600 dark:text-red-400 text-center">{error}</p>}
-
-          <Button
-            onClick={handleJoin}
-            disabled={code.length < 4 || isJoining}
-            className="w-full bg-indigo-600 hover:bg-indigo-700"
+        {joinedNightSession ? (
+          <div
+            role="status"
+            data-testid="joined-night-session"
+            className="space-y-3 rounded-lg border border-border bg-muted p-4 text-center"
           >
-            {isJoining ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Connessione...
-              </>
-            ) : (
-              'Unisciti'
-            )}
-          </Button>
-        </div>
+            <p className="text-sm font-medium text-foreground">Sei entrato nella partita.</p>
+            <p className="text-sm text-muted-foreground">
+              È una partita di una serata di gioco: la segui dalla pagina della serata.
+            </p>
+            <Button asChild className="w-full">
+              <Link href="/game-nights">Vai alle serate</Link>
+            </Button>
+          </div>
+        ) : (
+          /* Code Input */
+          <div className="space-y-3">
+            <Input
+              ref={inputRef}
+              value={code}
+              onChange={e => handleCodeChange(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleJoin()}
+              placeholder="Es. K7X2M9"
+              className="text-center text-2xl font-mono tracking-[0.3em] h-14"
+              maxLength={8}
+              autoFocus
+            />
+
+            {error && <p className="text-sm text-red-600 dark:text-red-400 text-center">{error}</p>}
+
+            <Button
+              onClick={handleJoin}
+              disabled={code.length < 4 || isJoining}
+              className="w-full bg-indigo-600 hover:bg-indigo-700"
+            >
+              {isJoining ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Connessione...
+                </>
+              ) : (
+                'Unisciti'
+              )}
+            </Button>
+          </div>
+        )}
 
         {/* Back */}
         <div className="text-center">

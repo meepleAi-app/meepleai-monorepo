@@ -164,7 +164,6 @@ internal class PdfDiagram
     public string Description { get; set; } = string.Empty;
     public int Width { get; set; }
     public int Height { get; set; }
-    public byte[]? ImageData { get; set; }
 }
 
 /// <summary>
@@ -208,5 +207,4 @@ internal class ExtractedImage
 {
     public int Width { get; set; }
     public int Height { get; set; }
-    public byte[] Data { get; set; } = Array.Empty<byte>();
 }

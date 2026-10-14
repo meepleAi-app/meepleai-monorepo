@@ -9,6 +9,7 @@ import {
   formatDuration,
   parseStatusFilter,
   parseViewMode,
+  transformSessionsToItems,
 } from '../sessions-filters';
 
 // ---------------------------------------------------------------------------
@@ -19,6 +20,7 @@ function makeSession(
   overrides: Partial<SessionListItem> & Pick<SessionListItem, 'id' | 'gameName' | 'status'>
 ): SessionListItem {
   return {
+    liveSessionId: null,
     date: '23 apr 2026',
     when: '2 giorni fa',
     duration: '1h 24m',
@@ -286,5 +288,37 @@ describe('SessionViewMode type', () => {
     modes.forEach(m => {
       expect(parseViewMode(m)).toBe(m);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// transformSessionsToItems — #4156 (D4)
+// ---------------------------------------------------------------------------
+
+describe('transformSessionsToItems — liveSessionId', () => {
+  const dto = {
+    id: 'game-session-1',
+    gameId: 'game-1',
+    status: 'Completed',
+    startedAt: '2026-04-20T19:00:00Z',
+    completedAt: '2026-04-20T21:00:00Z',
+    playerCount: 2,
+    players: [],
+    winnerName: null,
+    notes: null,
+    durationMinutes: 120,
+  };
+
+  it('carries the id of the correlated live session, where the session pages live', () => {
+    const [item] = transformSessionsToItems([{ ...dto, liveSessionId: 'live-1' }]);
+    expect(item?.id).toBe('game-session-1');
+    expect(item?.liveSessionId).toBe('live-1');
+  });
+
+  it('is null when the GameSession has no live session, or the field is absent', () => {
+    expect(
+      transformSessionsToItems([{ ...dto, liveSessionId: null }])[0]?.liveSessionId
+    ).toBeNull();
+    expect(transformSessionsToItems([dto])[0]?.liveSessionId).toBeNull();
   });
 });

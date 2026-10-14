@@ -22,6 +22,7 @@ const { useActiveSessions } = await import('@/hooks/queries/useActiveSessions');
 
 const mockActiveSession = {
   id: 'session-1',
+  liveSessionId: 'live-1',
   gameId: 'game-1',
   status: 'InProgress',
   startedAt: new Date().toISOString(),
@@ -61,10 +62,28 @@ describe('DashboardSessionHero', () => {
 
     expect(screen.getByText('Sessione attiva')).toBeInTheDocument();
     expect(screen.getByText(/4 giocatori/)).toBeInTheDocument();
+    // #4156 (D4): the session pages live under the LiveGameSession id.
     expect(screen.getByRole('link', { name: /Riprendi/ })).toHaveAttribute(
       'href',
-      '/sessions/session-1'
+      '/sessions/live-1'
     );
+  });
+
+  it('#4156 (D4): shows no resume link when the active session has no live session', () => {
+    (useActiveSessions as ReturnType<typeof vi.fn>).mockReturnValue({
+      data: {
+        sessions: [{ ...mockActiveSession, liveSessionId: null }],
+        total: 1,
+        page: 1,
+        pageSize: 1,
+      },
+      isLoading: false,
+    });
+
+    render(<DashboardSessionHero />);
+
+    expect(screen.getByText('Sessione attiva')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Riprendi/ })).not.toBeInTheDocument();
   });
 
   it('shows game title from useGame when available', async () => {

@@ -107,7 +107,8 @@ export function sessionToHubItem(session: GameSessionDto): SessionHubItem {
     title: `Session ${session.id.slice(0, 8)}`,
     subtitle: session.winnerName ?? undefined,
     updatedAt: session.completedAt ?? session.startedAt,
-    href: `/sessions/${session.id}`,
+    // #4156 (D4): the session pages live under the LiveGameSession id; without one, no page.
+    href: session.liveSessionId ? `/sessions/${session.liveSessionId}` : null,
     gameName: undefined,
     status: session.status,
     playerCount: session.playerCount,

@@ -78,7 +78,7 @@ public sealed class CrossGameStreamQaQueryHandlerTests
         // Search must never be called either
         await _searchService.DidNotReceive().SearchAsync(
             Arg.Any<string>(), Arg.Any<IReadOnlyList<Guid>>(),
-            Arg.Any<int>(), Arg.Any<SearchMode>(), Arg.Any<double>(),
+            Arg.Any<int>(), Arg.Any<PerGameRetrievalParameters>(), Arg.Any<SearchMode>(), Arg.Any<double>(),
             Arg.Any<IReadOnlyList<Guid>?>(),
             Arg.Any<CancellationToken>());
 
@@ -233,7 +233,7 @@ public sealed class CrossGameStreamQaQueryHandlerTests
             upgradeUrl: "/pricing"));
         await _searchService.DidNotReceive().SearchAsync(
             Arg.Any<string>(), Arg.Any<IReadOnlyList<Guid>>(),
-            Arg.Any<int>(), Arg.Any<SearchMode>(), Arg.Any<double>(),
+            Arg.Any<int>(), Arg.Any<PerGameRetrievalParameters>(), Arg.Any<SearchMode>(), Arg.Any<double>(),
             Arg.Any<IReadOnlyList<Guid>?>(),
             Arg.Any<CancellationToken>());
         _llmService.DidNotReceive().GenerateAnswerStreamAsync(Arg.Any<LlmAnswerRequest>(), Arg.Any<CancellationToken>());
@@ -377,7 +377,7 @@ public sealed class CrossGameStreamQaQueryHandlerTests
 
         _searchService
             .SearchAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<Guid>>(),
-                         Arg.Any<int>(), Arg.Any<SearchMode>(), Arg.Any<double>(),
+                         Arg.Any<int>(), Arg.Any<PerGameRetrievalParameters>(), Arg.Any<SearchMode>(), Arg.Any<double>(),
                          Arg.Any<IReadOnlyList<Guid>?>(),
                          Arg.Any<CancellationToken>())
             .Throws(new InvalidOperationException("Vector store unavailable"));
@@ -493,7 +493,7 @@ public sealed class CrossGameStreamQaQueryHandlerTests
 
         _searchService
             .SearchAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<Guid>>(),
-                         Arg.Any<int>(), Arg.Any<SearchMode>(), Arg.Any<double>(),
+                         Arg.Any<int>(), Arg.Any<PerGameRetrievalParameters>(), Arg.Any<SearchMode>(), Arg.Any<double>(),
                          Arg.Any<IReadOnlyList<Guid>?>(),
                          Arg.Any<CancellationToken>())
             .Returns((IReadOnlyList<MultiGameSearchResultItem>)new[]
@@ -514,7 +514,7 @@ public sealed class CrossGameStreamQaQueryHandlerTests
             Arg.Any<string>(),
             Arg.Is<IReadOnlyList<Guid>>(ids =>
                 ids.Count == 1 && ids.Contains(GameId1) && !ids.Contains(GameId2)),
-            Arg.Any<int>(), Arg.Any<SearchMode>(), Arg.Any<double>(),
+            Arg.Any<int>(), Arg.Any<PerGameRetrievalParameters>(), Arg.Any<SearchMode>(), Arg.Any<double>(),
             Arg.Any<IReadOnlyList<Guid>?>(),
             Arg.Any<CancellationToken>());
     }
@@ -529,7 +529,7 @@ public sealed class CrossGameStreamQaQueryHandlerTests
     private void SetupSearchResults() =>
         _searchService
             .SearchAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<Guid>>(),
-                         Arg.Any<int>(), Arg.Any<SearchMode>(), Arg.Any<double>(),
+                         Arg.Any<int>(), Arg.Any<PerGameRetrievalParameters>(), Arg.Any<SearchMode>(), Arg.Any<double>(),
                          Arg.Any<IReadOnlyList<Guid>?>(),
                          Arg.Any<CancellationToken>())
             .Returns((IReadOnlyList<MultiGameSearchResultItem>)new[]

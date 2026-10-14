@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
@@ -73,8 +75,16 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         // Issue #563: When the caller supplies a pre-computed QueryVector (e.g., AskQuestionQueryHandler
         // already produced one for semantic cache lookup), reuse it to avoid a duplicate embedding call
         // (~50–200ms savings per cache miss). Otherwise fall back to generating one here.
-        Vector queryVector;
-        if (query.QueryVector is { Count: > 0 } precomputed)
+        // #4168 (5e-c-2): la ricerca solo lessicale non ha un braccio vettoriale, quindi nemmeno un
+        // embedding da calcolare. La chiede la ricerca fra giochi quando l'embedding della domanda è
+        // fallito a monte: calcolarlo qui, per ogni gioco, sarebbe una chiamata per gioco.
+        var searchMode = query.SearchMode.ToLowerInvariant();
+        Vector queryVector = null!;
+        if (string.Equals(searchMode, "keyword", StringComparison.Ordinal))
+        {
+            _logger.LogDebug("[SearchQueryHandler] Step 1: keyword-only search, no query embedding");
+        }
+        else if (query.QueryVector is { Count: > 0 } precomputed)
         {
             _logger.LogDebug(
                 "[SearchQueryHandler] Step 1: Reusing caller-supplied query vector (Dim={Dim}) — skipping embedding call",
@@ -106,8 +116,11 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         // Execute search based on mode
         _logger.LogDebug("[SearchQueryHandler] Step 2: Executing {SearchMode} search...", query.SearchMode);
         var sw2 = System.Diagnostics.Stopwatch.StartNew();
-        var searchResults = query.SearchMode.ToLowerInvariant() switch
+        var searchResults = searchMode switch
         {
+            "keyword" => await SearchKeywordArmAsync(
+                query.Query, query.GameId, query.TopK, pdfDocumentIds, cancellationToken).ConfigureAwait(false),
+
             "vector" => await PerformVectorSearchAsync(
                 query.GameId, queryVector, query.TopK, query.MinScore, pdfDocumentIds, cancellationToken).ConfigureAwait(false),
 
@@ -122,18 +135,8 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         _logger.LogInformation("[SearchQueryHandler] Step 2 DONE: {SearchMode} search completed in {ElapsedMs}ms - {ResultCount} results",
             query.SearchMode, sw2.ElapsedMilliseconds, searchResults.Count);
 
-        // Map to DTOs
-        var dtos = searchResults.Select(sr => new SearchResultDto(
-            VectorDocumentId: sr.VectorDocumentId.ToString(),
-            TextContent: sr.TextContent,
-            PageNumber: sr.PageNumber,
-            RelevanceScore: sr.RelevanceScore.Value,
-            Rank: sr.Rank,
-            SearchMethod: sr.SearchMethod,
-            BoundingBoxesJson: sr.BoundingBoxesJson,   // SP-C (#3407)
-            CharStart: sr.CharStart,
-            CharEnd: sr.CharEnd
-        )).ToList();
+        // Map to DTOs. #4168 (5e-c-2): con l'identità del chunk e i segnali della fusione.
+        var dtos = searchResults.Select(SearchResultDto.FromDomain).ToList();
 
         _logger.LogInformation(
             "[SearchQueryHandler] COMPLETE - SearchQuery completed: Found {ResultCount} results",
@@ -182,7 +185,13 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
                 heading: scored.Embedding.Heading,                                    // #3270
                 boundingBoxesJson: scored.Embedding.BoundingBoxesJson,               // SP-C (#3407)
                 charStart: scored.Embedding.CharStart,
-                charEnd: scored.Embedding.CharEnd
+                charEnd: scored.Embedding.CharEnd,
+                // #4168 (5e-c-2): il coseno grezzo, il rango e la lingua, per chi fonde fra giochi.
+                signals: new RetrievalSignals(
+                    HybridScore: (float)cosine,
+                    VectorScore: (float)scored.Score,
+                    VectorRank: index + 1,
+                    Language: scored.Embedding.Language)
             );
         }).ToList();
 
@@ -209,9 +218,6 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         var vectorResults = await PerformVectorSearchAsync(
             gameId, queryVector, topK, minScore, documentIds, cancellationToken).ConfigureAwait(false);
 
-        // Issue #423: ts_rank_cd scores ~0-0.3; 0.01 filters ToC noise.
-        const double KeywordMinScore = 0.01;
-
         // #3338 WP1c: resolve the per-game FTS config for the heading-term synonym expansion below.
         // NOTE: SearchAsync resolves the same config internally, so this is one extra (fast, GameId-
         // indexed) language-detection query per hybrid search — an accepted minor cost; threading it
@@ -225,6 +231,46 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         var gameTitle = await _keywordSearchService
             .ResolveGameTitleAsync(gameId, cancellationToken)
             .ConfigureAwait(false);
+
+        var keywordResults = await SearchKeywordArmAsync(query, gameId, topK, documentIds, cancellationToken)
+            .ConfigureAwait(false);
+
+        // Use RRF fusion domain service. #3270: derive heading-match query terms from the raw query
+        // (the same string used for the keyword arm) and forward them so the heading boost can fire.
+        // #3338 WP1c: expand those terms with the game's FTS-language intent synonyms (setup ->
+        // preparazione/allestimento) so an English-loanword query boosts a native-lexeme heading.
+        // #3768: stessa esclusione del braccio lessicale — questo percorso e' filtrato per gameId,
+        // quindi il nome del gioco ha IDF nullo e premiarlo porta in cima colophon e copertine.
+        var headingTerms = KeywordSearchService.ExpandHeadingMatchTerms(
+            FusionSignals.ExtractHeadingMatchTerms(query), ftsConfig, gameTitle);
+
+        var fused = _rrfFusionService.FuseResults(
+            vectorResults,
+            keywordResults,
+            queryRoleHint: queryRoleHint,
+            queryTerms: headingTerms,
+            vectorWeight: vectorWeight,
+            keywordWeight: keywordWeight);
+
+        LogPerGameArenaForTuning(query, gameId, ftsConfig, headingTerms, queryRoleHint, fused);
+
+        return fused;
+    }
+
+    /// <summary>
+    /// Il braccio lessicale: i passaggi del gioco per <c>ts_rank_cd</c>, col filtro per documento.
+    /// Lo usano la ricerca ibrida e quella solo lessicale (#4168, 5e-c-2: la ricerca fra giochi la
+    /// chiede quando l'embedding della domanda non c'è, o quando la ricerca globale la sceglie).
+    /// </summary>
+    private async Task<List<Domain.Entities.SearchResult>> SearchKeywordArmAsync(
+        string query,
+        Guid gameId,
+        int topK,
+        IReadOnlyList<Guid>? documentIds,
+        CancellationToken cancellationToken)
+    {
+        // Issue #423: ts_rank_cd scores ~0-0.3; 0.01 filters ToC noise.
+        const double KeywordMinScore = 0.01;
 
         // Spec §6: RAW keyword arm sourced directly from IKeywordSearchService (un-boosted, raw ts_rank_cd
         // order) so HybridFusionCore applies role-boost + legend exactly once.
@@ -244,25 +290,66 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
                 .Where(r => documentIds.Any(id => string.Equals(id.ToString(), r.PdfDocumentId, StringComparison.Ordinal)))
                 .ToList();
 
-        var keywordResults = filteredKeyword
+        return filteredKeyword
             .Select((kr, index) => kr.ToDomainSearchResult(index + 1))
             .ToList();
+    }
 
-        // Use RRF fusion domain service. #3270: derive heading-match query terms from the raw query
-        // (the same string used for the keyword arm) and forward them so the heading boost can fire.
-        // #3338 WP1c: expand those terms with the game's FTS-language intent synonyms (setup ->
-        // preparazione/allestimento) so an English-loanword query boosts a native-lexeme heading.
-        // #3768: stessa esclusione del braccio lessicale — questo percorso e' filtrato per gameId,
-        // quindi il nome del gioco ha IDF nullo e premiarlo porta in cima colophon e copertine.
-        var headingTerms = KeywordSearchService.ExpandHeadingMatchTerms(
-            FusionSignals.ExtractHeadingMatchTerms(query), ftsConfig, gameTitle);
+    private static readonly JsonSerializerOptions PerGameTuningJsonOptions = new()
+    {
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+    };
 
-        return _rrfFusionService.FuseResults(
-            vectorResults,
-            keywordResults,
-            queryRoleHint: queryRoleHint,
-            queryTerms: headingTerms,
-            vectorWeight: vectorWeight,
-            keywordWeight: keywordWeight);
+    /// <summary>
+    /// La scomposizione del punteggio di ogni candidato fuso di questo gioco, a livello Debug, con lo
+    /// stesso prefisso e lo stesso formato di <c>HybridSearchService</c>
+    /// (<see cref="Api.Services.HybridSearchService.PerGameTuningLogPrefix"/>).
+    /// </summary>
+    /// <remarks>
+    /// #4168 (5e-c-2): il passo per gioco della ricerca fra giochi passa ora da qui, e questa riga è
+    /// quella che mostra i candidati che il gioco ha RIFIUTATO prima della fusione globale — il dump
+    /// <c>[RAG-TUNE]</c> mostra solo quelli che arrivano. I fattori sono ricalcolati con le stesse
+    /// funzioni pure della fusione; <c>s</c> è il punteggio reale letto dal risultato fuso.
+    /// </remarks>
+    private void LogPerGameArenaForTuning(
+        string query,
+        Guid gameId,
+        string? ftsConfig,
+        IReadOnlyList<string>? headingTerms,
+        GameBookRole queryRoleHint,
+        IReadOnlyList<Domain.Entities.SearchResult> fused)
+    {
+        if (!_logger.IsEnabled(LogLevel.Debug))
+            return;
+
+        var payload = new
+        {
+            q = query,
+            g = gameId,
+            f = ftsConfig,
+            t = headingTerms,
+            n = fused.Count,
+            c = fused.Select(r => new
+            {
+                d = r.PdfDocumentId.ToString(),
+                i = r.ChunkIndex,
+                vr = r.Signals.VectorRank,
+                kr = r.Signals.KeywordRank,
+                v = r.Signals.VectorScore,
+                k = r.Signals.KeywordScore,
+                lg = FusionSignals.ComputeLegendPenaltyFactor(r.TextContent),
+                nn = FusionSignals.ComputeNumberNoiseFactor(r.TextContent),
+                rb = FusionSignals.ComputeRoleMatchBoost(queryRoleHint, r.RoleTags),
+                hb = FusionSignals.ComputeHeadingMatchBoost(headingTerms, r.Heading),
+                h = r.Heading,
+                l = r.Signals.Language,
+                s = r.Signals.HybridScore
+            }).ToList()
+        };
+
+        _logger.LogDebug(
+            "{Prefix} {Payload}",
+            Api.Services.HybridSearchService.PerGameTuningLogPrefix,
+            JsonSerializer.Serialize(payload, PerGameTuningJsonOptions));
     }
 }

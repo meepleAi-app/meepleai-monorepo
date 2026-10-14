@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Services;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
@@ -28,6 +29,10 @@ internal interface IMultiGameHybridSearchService
     /// <param name="query">The user's natural-language query.</param>
     /// <param name="gameIds">Accessible game IDs (pre-filtered by RBAC). Empty → returns empty immediately (EC-1).</param>
     /// <param name="limit">Maximum number of results to return (hard cap, EC-7).</param>
+    /// <param name="perGame">
+    /// #4168 (5e-c-2): i parametri del recupero per gioco, gli stessi della risposta per gioco (soglia
+    /// del braccio vettoriale e pesi della fusione, dal profilo pubblicato).
+    /// </param>
     /// <param name="mode">Search mode forwarded to each per-game call.</param>
     /// <param name="minScore">Minimum hybrid score; results below this threshold are discarded.</param>
     /// <param name="pdfDocumentIds">
@@ -45,10 +50,25 @@ internal interface IMultiGameHybridSearchService
         string query,
         IReadOnlyList<Guid> gameIds,
         int limit,
+        PerGameRetrievalParameters perGame,
         SearchMode mode = SearchMode.Hybrid,
         double minScore = 0.0,
         IReadOnlyList<Guid>? pdfDocumentIds = null,
         CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// I parametri del recupero per gioco dentro la ricerca fra giochi (#4168, 5e-c-2). Il passo per gioco
+/// usa lo stesso recupero della risposta per gioco, quindi gli stessi numeri: la soglia del braccio
+/// vettoriale e i pesi della fusione del profilo pubblicato.
+/// </summary>
+internal sealed record PerGameRetrievalParameters(double VectorMinScore, float VectorWeight, float KeywordWeight)
+{
+    public static PerGameRetrievalParameters From(AgentProfileContent profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        return new((double)profile.MinScore, (float)profile.VectorWeight, (float)profile.KeywordWeight);
+    }
 }
 
 /// <summary>

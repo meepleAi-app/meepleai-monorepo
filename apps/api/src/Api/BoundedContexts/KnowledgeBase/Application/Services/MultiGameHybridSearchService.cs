@@ -1,7 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Helpers;
 using Api.Services;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
@@ -145,11 +148,14 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
         string query,
         IReadOnlyList<Guid> gameIds,
         int limit,
+        PerGameRetrievalParameters perGame,
         SearchMode mode = SearchMode.Hybrid,
         double minScore = 0.0,
         IReadOnlyList<Guid>? pdfDocumentIds = null,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(perGame);
+
         // EC-1: no accessible games → return empty immediately
         if (gameIds.Count == 0)
             return Array.Empty<MultiGameSearchResultItem>();
@@ -198,7 +204,7 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
 
         using var throttle = new SemaphoreSlim(MaxConcurrentGameSearches);
         var tasks = gameIds
-            .Select(gameId => SearchGameSafeAsync(query, gameId, perGameLimit, mode, pdfDocumentIdsList, queryEmbedding, throttle, cancellationToken))
+            .Select(gameId => SearchGameSafeAsync(query, gameId, perGameLimit, perGame, mode, pdfDocumentIdsList, queryEmbedding, throttle, cancellationToken))
             .ToList();
 
         // Task.WhenAll guarantees parallel execution (all tasks start before any is awaited);
@@ -208,7 +214,7 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
         // Step 2: Aggregate, project to MultiGameSearchResultItem (preserving origin gameId).
         // perGameResultArrays is (GameId, List<HybridSearchResult>)[] — we flatten while keeping gameId.
         var aggregated = perGameResultArrays
-            .SelectMany(tuple => tuple.Results, (tuple, r) => ProjectItem(tuple.GameId, r))
+            .SelectMany(tuple => tuple.Results)
             .ToList();
 
         _logger.LogInformation(
@@ -267,10 +273,11 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
     /// The <paramref name="pdfDocumentIds"/> allowlist (Issue #1686) restricts the per-game hit set to a
     /// subset of PDF documents; <c>null</c> = no document filter.
     /// </summary>
-    private async Task<(Guid GameId, List<HybridSearchResult> Results)> SearchGameSafeAsync(
+    private async Task<(Guid GameId, List<MultiGameSearchResultItem> Results)> SearchGameSafeAsync(
         string query,
         Guid gameId,
         int limit,
+        PerGameRetrievalParameters perGame,
         SearchMode mode,
         List<Guid>? pdfDocumentIds,
         QueryEmbedding? queryEmbedding,
@@ -284,18 +291,35 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
             // share a DbContext instance (the root cause of the cross-game "second operation on
             // this context" failures that returned 0 results, #2480).
             using var scope = _scopeFactory.CreateScope();
-            var hybridSearch = scope.ServiceProvider.GetRequiredService<IHybridSearchService>();
+            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
 
-            var results = await hybridSearch.SearchAsync(
-                query,
-                gameId,
-                mode,
-                limit,
-                pdfDocumentIds: pdfDocumentIds,
-                precomputedQueryEmbedding: queryEmbedding,
-                cancellationToken: cancellationToken).ConfigureAwait(false);
+            // #4168 (5e-c-2): lo stesso recupero della risposta per gioco (SearchQueryHandler →
+            // RrfFusionDomainService), con la soglia vettoriale e i pesi del profilo. Prima era
+            // HybridSearchService, con una soglia vettoriale sua (0,3) e un adattatore di fusione suo.
+            var perGameMode = PerGameSearchMode(mode, queryEmbedding);
+            if (perGameMode is null)
+            {
+                // Ricerca solo vettoriale con l'embedding fallito a monte: nessun braccio da interrogare.
+                return (gameId, new List<MultiGameSearchResultItem>());
+            }
 
-            return (gameId, results);
+            var results = await mediator.Send(
+                new SearchQuery(
+                    GameId: gameId,
+                    Query: query,
+                    // Chi chiama passa solo giochi accessibili: il controllo l'ha fatto lui (RBAC).
+                    Access: SearchAccess.AlreadyChecked,
+                    TopK: limit,
+                    MinScore: perGame.VectorMinScore,
+                    SearchMode: perGameMode,
+                    PdfDocumentIds: pdfDocumentIds,
+                    QueryVector: queryEmbedding?.Vector,
+                    VectorWeight: perGame.VectorWeight,
+                    KeywordWeight: perGame.KeywordWeight),
+                cancellationToken).ConfigureAwait(false);
+
+            // Ogni gioco porta al più `limit` candidati, come la risposta per gioco prende il suo pool.
+            return (gameId, results.Take(limit).Select(r => ProjectItem(gameId, r, mode)).ToList());
         }
 #pragma warning disable CA1031 // Resilience: per-game exception must not abort cross-game query
         catch (Exception ex)
@@ -303,7 +327,7 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
             _logger.LogWarning(ex,
                 "MultiGameHybridSearch: search failed for gameId={GameId}, skipping game. Query='{Query}'",
                 gameId, query);
-            return (gameId, new List<HybridSearchResult>());
+            return (gameId, new List<MultiGameSearchResultItem>());
         }
 #pragma warning restore CA1031
         finally
@@ -577,24 +601,45 @@ internal sealed class MultiGameHybridSearchService : IMultiGameHybridSearchServi
     }
 
     /// <summary>
-    /// Projects a per-game <see cref="HybridSearchResult"/> to a <see cref="MultiGameSearchResultItem"/>,
-    /// using the explicitly passed <paramref name="gameId"/> (the origin game from the parallel task)
-    /// rather than <c>r.GameId</c> which may be the query-default rather than the actual game.
+    /// Il modo della ricerca per gioco. Se l'embedding della domanda è fallito a monte, la ricerca
+    /// ibrida prosegue col solo braccio lessicale, come faceva il braccio vettoriale di
+    /// HybridSearchService; quella solo vettoriale non ha niente da cercare (<c>null</c>).
     /// </summary>
-    private static MultiGameSearchResultItem ProjectItem(Guid gameId, HybridSearchResult r) =>
-        new()
+    private static string? PerGameSearchMode(SearchMode mode, QueryEmbedding? queryEmbedding)
+    {
+        var embeddingFailed = queryEmbedding is { Succeeded: false };
+        return mode switch
+        {
+            SearchMode.Keyword => "keyword",
+            SearchMode.Semantic => embeddingFailed ? null : "vector",
+            _ => embeddingFailed ? "keyword" : "hybrid",
+        };
+    }
+
+    /// <summary>
+    /// Projects a per-game <see cref="SearchResultDto"/> to a <see cref="MultiGameSearchResultItem"/>,
+    /// using the explicitly passed <paramref name="gameId"/> (the origin game from the parallel task).
+    /// #4168 (5e-c-2): i punteggi sono quelli grezzi della fusione per gioco (coseno e
+    /// <c>ts_rank_cd</c>), che <c>FuseGlobally</c> confronta fra giochi.
+    /// </summary>
+    private static MultiGameSearchResultItem ProjectItem(Guid gameId, SearchResultDto r, SearchMode mode)
+    {
+        var pdfDocumentId = r.PdfDocumentId ?? r.VectorDocumentId;
+        return new()
         {
             GameId = gameId,
-            ChunkId = r.ChunkId,
-            PdfDocumentId = r.PdfDocumentId,
+            ChunkId = $"{pdfDocumentId}_{r.ChunkIndex}",
+            PdfDocumentId = pdfDocumentId,
             ChunkIndex = r.ChunkIndex,
             PageNumber = r.PageNumber,
-            Content = r.Content,
-            HybridScore = r.HybridScore,
+            Content = r.TextContent,
+            // Il punteggio ibrido PER GIOCO: la soglia minScore lo filtra, poi FuseGlobally lo sostituisce.
+            HybridScore = r.HybridScore ?? (float)r.RelevanceScore,
             VectorScore = r.VectorScore,
             KeywordScore = r.KeywordScore,
-            MatchedTerms = r.MatchedTerms,
-            Mode = r.Mode,
+            MatchedTerms = r.MatchedTerms ?? Array.Empty<string>(),
+            Mode = mode,
             Language = r.Language
         };
+    }
 }

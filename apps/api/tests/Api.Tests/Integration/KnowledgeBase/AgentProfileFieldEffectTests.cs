@@ -478,6 +478,43 @@ public sealed class AgentProfileFieldEffectTests
         _hostFixture.Reranker.Calls.Should().Be(1, "il profilo del seed ha il reranker attivo");
     }
 
+    // 5e-c-2: il passo per gioco della ricerca fra giochi usa lo stesso recupero della risposta per
+    // gioco, con i parametri del profilo. Prima aveva una soglia vettoriale sua, fissa a 0,3: un
+    // passaggio con coseno 0,4, che la risposta per gioco scarta (soglia del seed 0,55), entrava
+    // nella risposta fra giochi. Il passaggio non ha parole della domanda, quindi il braccio
+    // lessicale non lo trova: o entra dal vettoriale, o non entra.
+    private const string WeakPassage = "Tokens go back into the box once the evening is over.";
+
+    [Fact]
+    public async Task CrossGame_TheProfileThreshold_KeepsAWeakVectorPassageOut()
+    {
+        await AddWeakPassageAsync();
+
+        await AskLibraryAsync(Question);
+
+        _hostFixture.Llm.LastUserPrompt.Should().NotBeNull("la ricerca nella libreria passa dalla pipeline");
+        _hostFixture.Llm.LastUserPrompt.Should().NotContain(WeakPassage, "il suo coseno è 0,4, sotto la soglia del profilo");
+    }
+
+    /// <summary>Il controllo del precedente: con una soglia sotto 0,4 il passaggio entra.</summary>
+    [Fact]
+    public async Task CrossGame_AProfileThresholdBelowThePassage_LetsItIn()
+    {
+        await AddWeakPassageAsync();
+        await PublishAsync(c => Modified(c, minScore: 0.35m));
+
+        await AskLibraryAsync(Question);
+
+        _hostFixture.Llm.LastUserPrompt.Should().Contain(WeakPassage);
+    }
+
+    private async Task AddWeakPassageAsync()
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        await IndexedRulebookSeed.AddPassageAsync(db, _gameId, WeakPassage, QueryVectorEmbeddings.Axis(0.4f, 0.9165f), page: 12, Ct);
+    }
+
     [Fact]
     public async Task CrossGame_FinalTopK_IsTheNumberOfCitations()
     {
@@ -1094,7 +1131,8 @@ public sealed class AgentProfileFieldEffectTests
         IReadOnlyDictionary<string, string>? systemPrompts = null,
         int? candidatePoolSize = null,
         int? finalTopK = null,
-        bool? rerankerEnabled = null) =>
+        bool? rerankerEnabled = null,
+        decimal? minScore = null) =>
         AgentProfileContent.Create(
             c.Name,
             c.Description,
@@ -1108,7 +1146,7 @@ public sealed class AgentProfileFieldEffectTests
             c.FallbackLanguage,
             candidatePoolSize ?? c.CandidatePoolSize,
             finalTopK ?? c.FinalTopK,
-            c.MinScore,
+            minScore ?? c.MinScore,
             c.VectorWeight,
             c.KeywordWeight,
             rerankerEnabled ?? c.RerankerEnabled,

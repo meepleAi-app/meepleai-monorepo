@@ -91,4 +91,52 @@ internal static class IndexedRulebookSeed
             await command.ExecuteNonQueryAsync(ct);
         }
     }
+
+    /// <summary>
+    /// Un passaggio in più nel manuale già seminato del gioco, con il vettore che il test sceglie:
+    /// così il coseno con la domanda (che vale <c>Axis(1, 0)</c>) è un numero deciso dal test.
+    /// </summary>
+    public static async Task AddPassageAsync(
+        MeepleAiDbContext db, Guid gameId, string text, float[] vector, int page, CancellationToken ct)
+    {
+        var pdfId = await db.PdfDocuments.Where(p => p.SharedGameId == gameId).Select(p => p.Id).SingleAsync(ct);
+        var vectorDocumentId = await db.VectorDocuments.Where(v => v.PdfDocumentId == pdfId).Select(v => v.Id).SingleAsync(ct);
+        var chunkIndex = await db.TextChunks.CountAsync(c => c.PdfDocumentId == pdfId, ct);
+
+        var chunk = new TextChunkEntity
+        {
+            Id = Guid.NewGuid(),
+            GameId = gameId,
+            PdfDocumentId = pdfId,
+            Content = text,
+            ChunkIndex = chunkIndex,
+            PageNumber = page,
+            CharacterCount = text.Length,
+        };
+        db.TextChunks.Add(chunk);
+        await db.SaveChangesAsync(ct);
+
+        var connection = db.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+            await connection.OpenAsync(ct);
+
+        await using var command = (NpgsqlCommand)connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO pgvector_embeddings
+                (id, vector_document_id, game_id, text_content, vector, model,
+                 chunk_index, page_number, created_at, lang, source_chunk_id, is_translation, role_tags)
+            VALUES
+                (@id, @vdId, @gameId, @text, @vec, 'test-model',
+                 @chunkIndex, @pageNumber, NOW(), 'en', @sourceChunkId, false, 0)
+            """;
+        command.Parameters.AddWithValue("@id", Guid.NewGuid());
+        command.Parameters.AddWithValue("@vdId", vectorDocumentId);
+        command.Parameters.AddWithValue("@gameId", gameId);
+        command.Parameters.AddWithValue("@text", text);
+        command.Parameters.AddWithValue("@vec", new Pgvector.Vector(vector));
+        command.Parameters.AddWithValue("@chunkIndex", chunkIndex);
+        command.Parameters.AddWithValue("@pageNumber", page);
+        command.Parameters.AddWithValue("@sourceChunkId", chunk.Id);
+        await command.ExecuteNonQueryAsync(ct);
+    }
 }

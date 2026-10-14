@@ -57,7 +57,7 @@ export function KnowledgeBaseStep() {
               id: d.id,
               fileName: d.fileName,
               pageCount: d.pageCount ?? undefined,
-              status: d.processingStatus,
+              status: d.processingState,
               documentType: d.documentType,
             }))
           );
@@ -196,7 +196,9 @@ export function KnowledgeBaseStep() {
             <Upload className="h-5 w-5 text-muted-foreground" />
             <div>
               <p className="text-sm font-medium text-slate-300">Carica un PDF personalizzato</p>
-              <p className="text-xs text-muted-foreground">Aggiungi il regolamento o un manuale privato</p>
+              <p className="text-xs text-muted-foreground">
+                Aggiungi il regolamento o un manuale privato
+              </p>
             </div>
           </button>
         ) : customPdfUploaded && !showUpload ? (

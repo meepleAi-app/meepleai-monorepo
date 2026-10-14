@@ -315,7 +315,6 @@ export function PdfUploadSection({
           fileName: file.name,
           filePath: '',
           fileSizeBytes: file.size,
-          processingStatus: 'Processing',
           uploadedAt: new Date().toISOString(),
           processedAt: null,
           pageCount: null,

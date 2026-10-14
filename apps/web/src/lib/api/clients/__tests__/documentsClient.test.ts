@@ -51,7 +51,6 @@ describe('createDocumentsClient', () => {
           fileName: 'rules.pdf',
           filePath: '/uploads/rules.pdf',
           fileSizeBytes: 1024000,
-          processingStatus: 'Completed',
           uploadedAt: '2024-01-01T00:00:00Z',
           processedAt: '2024-01-01T00:05:00Z',
           pageCount: 10,
@@ -79,6 +78,42 @@ describe('createDocumentsClient', () => {
       expect(mockHttpClient.get).toHaveBeenCalledWith(`/api/v1/games/${mockGameId}/pdfs`);
       expect(result).toEqual(mockDocuments);
       expect(result).toHaveLength(1);
+    });
+
+    // #4356: la risposta com'è davvero, copiata da `GET /api/v1/games/{gameId}/pdfs` sullo stack
+    // locale (2026-10-14). Non ha `processingStatus`: lo schema lo richiedeva, e il client rifiutava
+    // ogni lista non vuota. Il test qui sopra non se ne accorgeva perché quel campo lo inventava.
+    it('accepts the list exactly as the backend sends it (#4356)', async () => {
+      const asSent = {
+        id: '7d7a27b8-04d5-45fd-97bc-ea8fa303d4d2',
+        gameId: '892c6733-3634-494d-99f2-ae18ebe27500',
+        fileName: 'coup.pdf',
+        filePath:
+          'pdfs/892c6733-3634-494d-99f2-ae18ebe27500/7d7a27b804d545fd97bcea8fa303d4d2_coup.pdf',
+        fileSizeBytes: 28963,
+        uploadedAt: '2026-10-14T12:05:24.823641Z',
+        processedAt: '2026-10-14T12:05:38.781241Z',
+        pageCount: 1,
+        documentType: 'base',
+        isPublic: false,
+        processingState: 'Ready',
+        progressPercentage: 100,
+        retryCount: 0,
+        maxRetries: 3,
+        canRetry: false,
+        errorCategory: null,
+        processingError: null,
+        documentCategory: 'Rulebook',
+        baseDocumentId: null,
+        isActiveForRag: true,
+        hasAcceptedDisclaimer: false,
+        versionLabel: null,
+      };
+      mockHttpClient.get.mockResolvedValueOnce({ pdfs: [asSent] });
+
+      const result = await documentsClient.getDocumentsByGame(mockGameId);
+
+      expect(result.map(d => [d.id, d.processingState])).toEqual([[asSent.id, 'Ready']]);
     });
 
     it('should return empty array when no documents found', async () => {

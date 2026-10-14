@@ -26,7 +26,11 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: typeof
   Chunking: { label: 'Suddivisione', color: 'text-blue-500 bg-blue-500/10', icon: Loader2 },
   Embedding: { label: 'Embedding', color: 'text-indigo-500 bg-indigo-500/10', icon: Loader2 },
   Failed: { label: 'Errore', color: 'text-red-500 bg-red-500/10', icon: AlertCircle },
-  Pending: { label: 'In attesa', color: 'text-muted-foreground bg-muted-foreground/10', icon: Loader2 },
+  Pending: {
+    label: 'In attesa',
+    color: 'text-muted-foreground bg-muted-foreground/10',
+    icon: Loader2,
+  },
 };
 
 function getStatusConfig(status: string) {
@@ -66,7 +70,7 @@ export function PdfList({ documents, loading, className }: PdfListProps) {
   return (
     <div className={cn('space-y-2', className)} data-testid="pdf-list">
       {documents.map(doc => {
-        const status = getStatusConfig(doc.processingStatus);
+        const status = getStatusConfig(doc.processingState);
         const StatusIcon = status.icon;
         const isProcessing = [
           'Processing',
@@ -74,7 +78,7 @@ export function PdfList({ documents, loading, className }: PdfListProps) {
           'Chunking',
           'Embedding',
           'Pending',
-        ].includes(doc.processingStatus);
+        ].includes(doc.processingState);
 
         return (
           <div

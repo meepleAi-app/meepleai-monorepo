@@ -158,9 +158,7 @@ export function KbDrawerSheet({ open, onOpenChange, gameId, gameTitle }: KbDrawe
 
             {/* Document list */}
             {documents.map(doc => {
-              const status = getStatusIndicator(
-                doc.processingState || doc.processingStatus || 'Pending'
-              );
+              const status = getStatusIndicator(doc.processingState || 'Pending');
               const ready = isDocumentReady(doc);
 
               return (

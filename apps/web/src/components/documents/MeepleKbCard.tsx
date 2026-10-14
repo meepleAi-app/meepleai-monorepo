@@ -67,8 +67,8 @@ export interface MeepleKbCardProps {
 // Helper Functions
 // ============================================================================
 
-function mapDocumentStatus(processingStatus: string): 'indexed' | 'processing' | 'failed' | 'none' {
-  switch (processingStatus) {
+function mapDocumentStatus(processingState: string): 'indexed' | 'processing' | 'failed' | 'none' {
+  switch (processingState) {
     case 'Completed':
     case 'Ready':
       return 'indexed';
@@ -106,7 +106,7 @@ export function MeepleKbCard({
   className,
 }: MeepleKbCardProps) {
   const isEditorOrAdmin = isEditor || isAdmin;
-  const documentStatus = mapDocumentStatus(document.processingStatus);
+  const documentStatus = mapDocumentStatus(document.processingState);
   const isProcessing = documentStatus === 'processing';
   const isIndexed = documentStatus === 'indexed';
   const mapperProps = buildKbCardProps(document);

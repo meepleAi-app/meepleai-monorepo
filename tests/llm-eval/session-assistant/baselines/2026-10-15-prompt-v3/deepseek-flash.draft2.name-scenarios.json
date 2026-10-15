@@ -1,0 +1,441 @@
+{
+  "model": "deepseek-flash",
+  "setVersion": 5,
+  "only": [
+    "it-mixed-ambiguous-turn",
+    "en-score-nickname",
+    "it-score-ambiguous",
+    "en-score-ambiguous",
+    "it-score-unknown-player",
+    "en-score-unknown-player"
+  ],
+  "repeat": 3,
+  "planned": 18,
+  "prompts": {
+    "italian": "Sei l'assistente di MeepleAI al tavolo di gioco e aiuti l'host di una partita in corso.\nRegole:\n1. Per punteggi, turno, round, fase o giocatori chiama sempre stato_partita: non indovinare e non usare ciò che ricordi.\n2. In questa versione non puoi consultare il regolamento. A una domanda sulle regole rispondi solo con le house rules della partita, se ne parlano; altrimenti di' che non puoi consultare il regolamento, e non rispondere a memoria.\n3. Quando l'host dice che un giocatore ha fatto dei punti, chiama proponi_punteggio con i punti guadagnati adesso (un incremento, anche negativo). Se l'host dice un totale, calcola l'incremento da stato_partita. Se l'host dice un round, usa quello, anche se non è il round corrente; ma se è un round che non è ancora cominciato, non proporre niente: chiedi conferma.\n4. Non scegliere mai tu il giocatore o la dimensione. Passa a proponi_punteggio il nome come l'ha detto l'host, anche un cognome o un diminutivo: è lo strumento a riconoscerlo, e se il nome è ambiguo o sconosciuto ti risponde con un errore. Se l'host nomina una dimensione che non esiste, o non dice quale fra più possibili, non proporre quel punteggio: chiedi. Se una parte della richiesta non si può proporre, proponi comunque le altre, per esempio il turno.\n5. Quando l'host dice di passare il turno, chiama proponi_turno. Leggere lo stato non basta: il turno si propone solo con quello strumento.\n6. Tu non registri mai niente: crei solo proposte che l'host conferma. Non dire mai «ho segnato», «ho registrato» o «ho passato il turno». Di' che hai preparato una proposta solo dopo che proponi_punteggio o proponi_turno te l'ha restituita in questo turno: senza quella chiamata la proposta non esiste.\n7. Se uno strumento risponde con un errore (giocatore ambiguo, dimensione mancante, partita non in corso), spiegalo e chiedi all'host di chiarire.\n8. Rispondi in modo breve, in italiano.",
+    "english": "You are MeepleAI's assistant at the game table, helping the host of a game in progress.\nRules:\n1. For scores, turn, round, phase or players always call stato_partita: never guess and never rely on memory.\n2. In this version you cannot consult the rulebook. For a rules question answer only from the house rules of the game, if they cover it; otherwise say that you cannot consult the rulebook, and do not answer from memory.\n3. When the host says a player scored points, call proponi_punteggio with the points scored now (a delta, possibly negative). If the host gives a total, compute the delta from stato_partita. If the host names a round, use that one, even if it is not the current round; but if that round has not started yet, propose nothing: ask for confirmation.\n4. Never choose the player or the dimension yourself. Pass the name to proponi_punteggio as the host said it, even a surname or a nickname: the tool recognises it, and answers with an error if the name is ambiguous or unknown. If the host names a dimension that does not exist, or does not say which one of several, do not propose that score: ask. If one part of a request cannot be proposed, still propose the others, for example the turn.\n5. When the host says to pass the turn, call proponi_turno. Reading the state is not enough: the turn is proposed only with that tool.\n6. You never record anything: you only create proposals that the host confirms. Never say \"I recorded\", \"I added\" or \"I passed the turn\". Say you prepared a proposal only after proponi_punteggio or proponi_turno has returned it in this turn: without that call the proposal does not exist.\n7. If a tool returns an error (ambiguous player, missing dimension, game not in progress), explain it and ask the host to clarify.\n8. Answer briefly, in English."
+  },
+  "promptFingerprint": {
+    "italian": "ebe6fd28e30b6b4a0e2d634e287d62a1b2fdbc9c2ac6420b68c8d0ca645a5238",
+    "english": "fda35ee5d81f5a43012a41c8451e44e3f74239fab586c4cb15886f7aedc35a5e"
+  },
+  "offerRules": false,
+  "skippedForRules": [],
+  "stopped": null,
+  "scenarios": 18,
+  "passed": 17,
+  "scenariosWithExtraProposals": 0,
+  "scenariosWithMissingProposals": 1,
+  "claimedActionsWithoutProposal": 0,
+  "toolErrors": 8,
+  "invalidArguments": 0,
+  "gatewayErrors": 0,
+  "averageRoundTrips": 2.5,
+  "averageCostPerTurnUsd": 0.0010666666666666667,
+  "totalCostUsd": 0.019200000000000002,
+  "latencyP95Ms": 11856,
+  "byScenario": [
+    {
+      "id": "it-score-ambiguous",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "id": "it-score-unknown-player",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "id": "en-score-unknown-player",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "id": "en-score-ambiguous",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "id": "en-score-nickname",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "id": "it-mixed-ambiguous-turn",
+      "passed": 2,
+      "runs": 3
+    }
+  ],
+  "results": [
+    {
+      "id": "it-score-ambiguous",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 1,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001373,
+      "latencyMs": 11856,
+      "errorCode": null,
+      "finalText": "«Marco» è ambiguo: ci sono Marco Rossi e Marco Bianchi. Quale dei due?",
+      "pass": 1
+    },
+    {
+      "id": "it-score-unknown-player",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 1,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000848,
+      "latencyMs": 7059,
+      "errorCode": null,
+      "finalText": "Non c'è nessun giocatore chiamato «Paolo»: i giocatori sono Marco, Giulia e Luca. Intendevi uno di loro?",
+      "pass": 1
+    },
+    {
+      "id": "en-score-unknown-player",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 1,
+      "costUsd": 0.000345,
+      "latencyMs": 3316,
+      "errorCode": null,
+      "finalText": "I don't have a player named Paul in this game — the players are Marco, Giulia and Luca. Could you tell me which of them scored the 3 points?",
+      "pass": 1
+    },
+    {
+      "id": "en-score-ambiguous",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000773,
+      "latencyMs": 6871,
+      "errorCode": null,
+      "finalText": "I need to check the state first, since there are two players named Marco.\nThere are two players named Marco (Marco Rossi and Marco Bianchi), so I can't tell who scored. Which Marco do you mean?",
+      "pass": 1
+    },
+    {
+      "id": "en-score-nickname",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001261,
+      "latencyMs": 9131,
+      "errorCode": null,
+      "finalText": "I'll check the current state first.\nI prepared a proposal: +6 points to Federico Verdi (round 2). It's not recorded yet — please confirm.",
+      "pass": 1
+    },
+    {
+      "id": "it-mixed-ambiguous-turn",
+      "category": "misto",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001394,
+      "latencyMs": 10642,
+      "errorCode": null,
+      "finalText": "Il nome \"Marco\" è ambiguo: ci sono Marco Rossi e Marco Bianchi. Quale dei due?\n\nIntanto preparo il passaggio di turno.\nHo preparato la proposta di passaggio turno (in attesa della tua conferma).\n\nPer i 4 punti, però, dimmi quale Marco: Rossi o Bianchi?",
+      "pass": 1
+    },
+    {
+      "id": "it-score-ambiguous",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 1,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001375,
+      "latencyMs": 8648,
+      "errorCode": null,
+      "finalText": "«Marco» è ambiguo: c'è Marco Rossi e Marco Bianchi. Quale dei due?",
+      "pass": 2
+    },
+    {
+      "id": "it-score-unknown-player",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 1,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000846,
+      "latencyMs": 6239,
+      "errorCode": null,
+      "finalText": "Non c'è nessun giocatore chiamato «Paolo»: i giocatori sono Marco, Giulia e Luca. Quale intendevi?",
+      "pass": 2
+    },
+    {
+      "id": "en-score-unknown-player",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 1,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001237,
+      "latencyMs": 10277,
+      "errorCode": null,
+      "finalText": "There's no player named \"Paul\" in this game — the players are Marco, Giulia and Luca. Which one scored the 3 points?",
+      "pass": 2
+    },
+    {
+      "id": "en-score-ambiguous",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000774,
+      "latencyMs": 5440,
+      "errorCode": null,
+      "finalText": "I need to check the state first, since there are two players named Marco.\nThere are two players named Marco (Marco Rossi and Marco Bianchi), so I can't tell which one scored. Which Marco do you mean?",
+      "pass": 2
+    },
+    {
+      "id": "en-score-nickname",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001263,
+      "latencyMs": 8123,
+      "errorCode": null,
+      "finalText": "I'll check the current state first.\nI prepared a proposal: +6 points to Federico Verdi (round 2). It's not recorded yet — please confirm.",
+      "pass": 2
+    },
+    {
+      "id": "it-mixed-ambiguous-turn",
+      "category": "misto",
+      "passed": false,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [
+        "proponi_turno"
+      ],
+      "extraProposals": 0,
+      "missingProposals": 1,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000839,
+      "latencyMs": 5562,
+      "errorCode": null,
+      "finalText": "Il nome \"Marco\" è ambiguo: ci sono Marco Rossi e Marco Bianchi. Quale dei due?",
+      "pass": 2
+    },
+    {
+      "id": "it-score-ambiguous",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 1,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001375,
+      "latencyMs": 9797,
+      "errorCode": null,
+      "finalText": "«Marco» è ambiguo: c'è Marco Rossi e Marco Bianchi. Quale dei due?",
+      "pass": 3
+    },
+    {
+      "id": "it-score-unknown-player",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 1,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000848,
+      "latencyMs": 6360,
+      "errorCode": null,
+      "finalText": "Non c'è nessun giocatore chiamato «Paolo»: i giocatori sono Marco, Giulia e Luca. Intendevi uno di loro?",
+      "pass": 3
+    },
+    {
+      "id": "en-score-unknown-player",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 1,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001235,
+      "latencyMs": 8614,
+      "errorCode": null,
+      "finalText": "There is no player named \"Paul\" in this game — the players are Marco, Giulia and Luca. Which one did you mean?",
+      "pass": 3
+    },
+    {
+      "id": "en-score-ambiguous",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000769,
+      "latencyMs": 5958,
+      "errorCode": null,
+      "finalText": "I need to check the state first, since there are two players named Marco.\n\"Marco\" is ambiguous — there are two: Marco Rossi and Marco Bianchi. Which one scored the 4 points?",
+      "pass": 3
+    },
+    {
+      "id": "en-score-nickname",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001264,
+      "latencyMs": 9246,
+      "errorCode": null,
+      "finalText": "I'll check the current state first.\nI prepared a proposal: +6 points to Federico Verdi (points, round 2). It's not recorded yet — please confirm.",
+      "pass": 3
+    },
+    {
+      "id": "it-mixed-ambiguous-turn",
+      "category": "misto",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001381,
+      "latencyMs": 8632,
+      "errorCode": null,
+      "finalText": "Il nome \"Marco\" è ambiguo: ci sono Marco Rossi e Marco Bianchi. Quale dei due?\nHo preparato la proposta per passare il turno (in attesa della tua conferma). Per i 4 punti, invece, dimmi quale Marco: Rossi o Bianchi?",
+      "pass": 3
+    }
+  ]
+}

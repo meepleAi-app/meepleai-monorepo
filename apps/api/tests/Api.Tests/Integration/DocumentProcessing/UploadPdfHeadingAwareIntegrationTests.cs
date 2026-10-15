@@ -7,6 +7,8 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 using Api.Infrastructure;
@@ -161,6 +163,15 @@ public sealed class UploadPdfHeadingAwareIntegrationTests : IAsyncLifetime
             });
         services.AddSingleton<IAdvancedChunkingService>(advancedChunkingMock.Object);
 
+        // #4384: un ruolo diverso da None per ogni passaggio, così role_tags è osservabile sulle righe
+        // di pgvector_embeddings (senza classificatore resterebbe 0 su entrambe le tabelle).
+        var roleClassifierMock = new Mock<Api.BoundedContexts.KnowledgeBase.Application.Services.IRoleClassifierService>();
+        roleClassifierMock
+            .Setup(c => c.ClassifyAsync(It.IsAny<IReadOnlyList<ChunkInput>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<ChunkInput> inputs, CancellationToken _) =>
+                inputs.Select((_, i) => i % 2 == 0 ? GameBookRole.Setup : GameBookRole.RulesReference).ToList());
+        services.AddSingleton(roleClassifierMock.Object);
+
         var blobStorageMock = new Mock<IBlobStorageService>();
         blobStorageMock
             .Setup(b => b.StoreAsync(
@@ -210,6 +221,10 @@ public sealed class UploadPdfHeadingAwareIntegrationTests : IAsyncLifetime
 
         services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.IPdfIndexingPipeline,
             Api.BoundedContexts.KnowledgeBase.Application.Services.PdfIndexingPipeline>();
+        // PdfIndexingPipeline invalida la cache semantica dopo l'indicizzazione. Senza questa riga
+        // l'elaborazione cadeva su «Unable to resolve ISemanticResponseCache» e finiva Failed con
+        // ProcessingError='Invalid operation': il test qui sotto era rosso anche su main-dev (#4384).
+        services.AddSingleton(Mock.Of<ISemanticResponseCache>());
 
         services.AddSingleton<IMemoryCache, MemoryCache>();
         services.AddSingleton<IDistributedCache>(new MemoryDistributedCache(
@@ -395,6 +410,61 @@ public sealed class UploadPdfHeadingAwareIntegrationTests : IAsyncLifetime
         childChunk.Level.Should().Be((short)2);
         childChunk.ParentChunkId.Should().Be(parentChunk.Id,
             "the child's ParentChunkId must point at the persisted parent row's Id");
+    }
+
+    /// <summary>
+    /// #4384: il caricamento da <c>/ingest/pdf</c> scriveva le righe di <c>pgvector_embeddings</c>
+    /// senza <c>source_chunk_id</c> né <c>role_tags</c>. Ogni riga deve puntare al passaggio con lo
+    /// stesso <c>ChunkIndex</c> e portarne il ruolo, come fa la pipeline di Quartz.
+    /// </summary>
+    [Fact(Timeout = 90000)]
+    public async Task Upload_LinksEveryPgvectorRowToTheTextChunkAtTheSameIndex()
+    {
+        // Arrange
+        var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
+        var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
+
+        var command = new Api.BoundedContexts.DocumentProcessing.Application.Commands.UploadPdfCommand(
+            GameId: testGame.Id.ToString(),
+            Metadata: null,
+            PrivateGameId: null,
+            UserId: testUser.Id,
+            File: CreateMockFormFile("linked.pdf", CreateValidPdfBytes(1024)));
+
+        // Act
+        var result = await handler.Handle(command, TestCancellationToken);
+        await _inlineBgService!.WaitForAllAsync();
+
+        // Assert
+        result.Success.Should().BeTrue();
+        var pdfDocId = Guid.Parse(result.Document!.Id.ToString());
+        var pdfDoc = await _dbContext.PdfDocuments.AsNoTracking().SingleAsync(p => p.Id == pdfDocId, TestCancellationToken);
+        pdfDoc.ProcessingState.Should().Be(
+            nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Ready),
+            $"ProcessingError='{pdfDoc.ProcessingError}'");
+
+        var chunksByIndex = await _dbContext.TextChunks
+            .AsNoTracking()
+            .Where(tc => tc.PdfDocumentId == pdfDocId)
+            .ToDictionaryAsync(tc => tc.ChunkIndex, TestCancellationToken);
+        var vectorDocumentId = await _dbContext.VectorDocuments
+            .AsNoTracking()
+            .Where(v => v.PdfDocumentId == pdfDocId)
+            .Select(v => v.Id)
+            .SingleAsync(TestCancellationToken);
+        var rows = await _dbContext.PgVectorEmbeddings
+            .AsNoTracking()
+            .Where(e => e.VectorDocumentId == vectorDocumentId)
+            .ToListAsync(TestCancellationToken);
+
+        rows.Should().HaveCount(chunksByIndex.Count).And.NotBeEmpty();
+        foreach (var row in rows)
+        {
+            var chunk = chunksByIndex[row.ChunkIndex];
+            row.SourceChunkId.Should().Be(chunk.Id, "la riga {0} deve puntare al passaggio con lo stesso indice", row.ChunkIndex);
+            row.RoleTags.Should().Be((int)chunk.RoleTags).And.NotBe(0, "il classificatore ha dato un ruolo a ogni passaggio");
+        }
     }
 
     /// <summary>

@@ -246,8 +246,8 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                     var lang = await ReadLanguageAsync(reader, 13, cancellationToken).ConfigureAwait(false);
                     // #4288 Column 14: the text_chunks row the embedding came from. KbQuality scores a
                     // hit by this id. Null when the embedding was written without it: a photo batch
-                    // (no row to point to), a pre-SP2 embedding, or a PDF uploaded through
-                    // /ingest/pdf while #4384 is open.
+                    // (no row to point to), a pre-SP2 embedding, or a row whose text chunk was not saved.
+                    // #4384 linked the writers that left it null and backfilled the old rows.
                     var sourceChunkId = await reader.IsDBNullAsync(14, cancellationToken).ConfigureAwait(false)
                         ? (Guid?)null
                         : reader.GetGuid(14);

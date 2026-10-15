@@ -34,6 +34,7 @@ namespace Api.Tests.Integration.KnowledgeBase;
 public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
 {
     private const string RepublishMigration = "20261011061616_RepublishAgentProfileWithCurrentModels";
+    private const string AssistantMigration = "20261015073526_PublishAgentProfileWithSessionAssistant";
 
     private readonly SharedTestcontainersFixture _fixture;
     private string _databaseName = null!;
@@ -78,10 +79,10 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
     /// #4238: la sezione «Assistente in partita» che la migration pubblica. I numeri sono scritti a mano,
     /// i valori raccomandati in spec §7.1; i prompt vengono dal file misurato in #4270, non dal codice.
     /// </summary>
-    private static SessionAssistantSettings AssistantSection()
+    private static SessionAssistantSettings AssistantSection(string promptFile = "v3.json")
     {
         using var measured = JsonDocument.Parse(File.ReadAllText(
-            Path.Combine(FindRepoRoot(), "tests", "llm-eval", "session-assistant", "prompts", "v3.json")));
+            Path.Combine(FindRepoRoot(), "tests", "llm-eval", "session-assistant", "prompts", promptFile)));
         return SessionAssistantSettings.Create(
             enabled: true,
             new Dictionary<string, string>(StringComparer.Ordinal)
@@ -99,6 +100,10 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
     /// <summary>#4238: i valori della versione 2 con l'assistente abilitato, quelli della versione 3.</summary>
     private static AgentProfileContent AssistantValues() =>
         HardcodedValues("deepseek-flash", "meta-llama/llama-3.3-70b-instruct", AssistantSection());
+
+    /// <summary>#4411: la versione 3 con il prompt v4 dell'assistente, misurato con A5: quella della versione 4.</summary>
+    private static AgentProfileContent AssistantV4Values() =>
+        HardcodedValues("deepseek-flash", "meta-llama/llama-3.3-70b-instruct", AssistantSection("v4.json"));
 
     private static string FindRepoRoot()
     {
@@ -143,15 +148,19 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
             sessionAssistant: sessionAssistant ?? SessionAssistantSettings.Disabled);
 
     [Fact]
-    public async Task FreshDatabase_PublishesVersionThree_WithTheAssistant_AndArchivesTheEarlierOnes()
+    public async Task FreshDatabase_PublishesVersionFour_WithThePromptV4_AndArchivesTheEarlierOnes()
     {
         var profile = await new AgentProfileRepository(_dbContext).GetAsync(TestContext.Current.CancellationToken);
 
         profile.Should().NotBeNull("la tabella ammette una sola riga e il seed deve crearla");
-        profile!.Versions.Should().HaveCount(3);
+        profile!.Versions.Should().HaveCount(4);
         profile.Draft.Should().BeNull();
-        profile.Published.VersionNumber.Should().Be(3);
-        profile.Published.Content.Should().Be(AssistantValues(),
+        profile.Published.VersionNumber.Should().Be(4);
+        profile.Published.Content.Should().Be(AssistantV4Values(),
+            "#4411: la migration pubblica la versione 3 con il prompt v4 dell'assistente, misurato con A5");
+        var withV3 = profile.Versions.Single(v => v.VersionNumber == 3);
+        withV3.Status.Should().Be(AgentProfileVersionStatus.Archived);
+        withV3.Content.Should().Be(AssistantValues(),
             "#4238: la migration pubblica la versione 2 con l'assistente in partita abilitato");
         var republished = profile.Versions.Single(v => v.VersionNumber == 2);
         republished.Status.Should().Be(AgentProfileVersionStatus.Archived);
@@ -277,7 +286,7 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
                 """,
                 ct);
 
-            await migrator.MigrateAsync(cancellationToken: ct);
+            await migrator.MigrateAsync(AssistantMigration, ct);
 
             var profile = await new AgentProfileRepository(context).GetAsync(ct);
             profile!.Published.VersionNumber.Should().Be(2, "l'assistente era già abilitato");
@@ -314,7 +323,7 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
                 """,
                 ct);
 
-            await migrator.MigrateAsync(cancellationToken: ct);
+            await migrator.MigrateAsync(AssistantMigration, ct);
 
             var profile = await new AgentProfileRepository(context).GetAsync(ct);
             profile!.Draft!.VersionNumber.Should().Be(3);
@@ -344,6 +353,90 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
         profile.Published.Content.Should().Be(CurrentModelValues());
     }
 
+    /// <summary>#4411: la migrazione del prompt v4 cambia solo il prompt di un profilo che ha ancora la v3.</summary>
+    [Fact]
+    public async Task PromptV4Migration_LeavesAPromptChosenElsewhereUntouched()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var databaseName = $"agent_profile_{Guid.NewGuid():N}";
+        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(databaseName);
+        try
+        {
+            await using var context = _fixture.CreateDbContext(connectionString);
+            var migrator = context.GetService<IMigrator>();
+            await migrator.MigrateAsync(AssistantMigration, ct);
+            await context.Database.ExecuteSqlRawAsync(
+                """
+                UPDATE knowledge_base.agent_profile_versions
+                SET content = jsonb_set(content, ARRAY['sessionAssistant','systemPrompts','it'], to_jsonb('Un prompt scelto altrove.'::text))
+                WHERE status = 1
+                """,
+                ct);
+
+            await migrator.MigrateAsync(cancellationToken: ct);
+
+            var profile = await new AgentProfileRepository(context).GetAsync(ct);
+            profile!.Published.VersionNumber.Should().Be(3, "il prompt non era più la v3");
+            profile.Published.Content.SessionAssistant.PromptFor("it").Should().Be("Un prompt scelto altrove.");
+        }
+        finally
+        {
+            await _fixture.DropIsolatedDatabaseAsync(databaseName);
+        }
+    }
+
+    /// <summary>#4411: una bozza con il prompt v3 riceve la v4; il resto della bozza non cambia.</summary>
+    [Fact]
+    public async Task PromptV4Migration_MovesADraftWithTheV3PromptToV4()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var databaseName = $"agent_profile_{Guid.NewGuid():N}";
+        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(databaseName);
+        try
+        {
+            await using var context = _fixture.CreateDbContext(connectionString);
+            var migrator = context.GetService<IMigrator>();
+            await migrator.MigrateAsync(AssistantMigration, ct);
+            await context.Database.ExecuteSqlRawAsync(
+                """
+                INSERT INTO knowledge_base.agent_profile_versions
+                    (id, agent_profile_id, version_number, status, content, created_at)
+                SELECT gen_random_uuid(), agent_profile_id, 4, 0, content || jsonb_build_object('temperature', 0.5), NOW()
+                FROM knowledge_base.agent_profile_versions
+                WHERE status = 1
+                """,
+                ct);
+
+            await migrator.MigrateAsync(cancellationToken: ct);
+
+            var profile = await new AgentProfileRepository(context).GetAsync(ct);
+            profile!.Draft!.VersionNumber.Should().Be(4);
+            profile.Draft.Content.Temperature.Should().Be(0.5m, "il resto della bozza non si tocca");
+            profile.Draft.Content.SessionAssistant.Should().Be(AssistantSection("v4.json"));
+            profile.Published.VersionNumber.Should().Be(5);
+            profile.Published.Content.Should().Be(AssistantV4Values());
+        }
+        finally
+        {
+            await _fixture.DropIsolatedDatabaseAsync(databaseName);
+        }
+    }
+
+    /// <summary>#4411: il Down ripristina la versione 3, con il prompt v3, come pubblicata.</summary>
+    [Fact]
+    public async Task PromptV4Migration_Down_RestoresVersionThree()
+    {
+        var ct = TestContext.Current.CancellationToken;
+
+        await _dbContext.GetService<IMigrator>().MigrateAsync(AssistantMigration, ct);
+
+        await using var verification = _fixture.CreateDbContext(_connectionString);
+        var profile = await new AgentProfileRepository(verification).GetAsync(ct);
+        profile!.Versions.Should().HaveCount(3);
+        profile.Published.VersionNumber.Should().Be(3);
+        profile.Published.Content.Should().Be(AssistantValues());
+    }
+
     [Fact]
     public async Task PublishingADraft_IsPersisted_AndArchivesThePublishedVersion()
     {
@@ -358,10 +451,10 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
 
         await using var verification = _fixture.CreateDbContext(_connectionString);
         var persisted = await new AgentProfileRepository(verification).GetAsync(ct);
-        persisted!.Published.VersionNumber.Should().Be(4);
+        persisted!.Published.VersionNumber.Should().Be(5);
         persisted.Published.Content.Temperature.Should().Be(0.5m);
-        persisted.Versions.Single(v => v.VersionNumber == 3).Status.Should().Be(AgentProfileVersionStatus.Archived);
-        persisted.Versions.Single(v => v.VersionNumber == 3).Content.Should().Be(AssistantValues());
+        persisted.Versions.Single(v => v.VersionNumber == 4).Status.Should().Be(AgentProfileVersionStatus.Archived);
+        persisted.Versions.Single(v => v.VersionNumber == 4).Content.Should().Be(AssistantV4Values());
     }
 
     /// <summary>
@@ -390,11 +483,11 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
 
         await secondWrite.Should().ThrowAsync<DbUpdateConcurrencyException>(
             "la radice cambia a ogni comando, quindi il suo xmin respinge la scrittura basata su "
-            + "una copia in cui la versione 4 era ancora una bozza");
+            + "una copia in cui la versione 5 era ancora una bozza");
 
         await using var verification = _fixture.CreateDbContext(_connectionString);
         var persisted = await new AgentProfileRepository(verification).GetAsync(ct);
-        persisted!.Published.VersionNumber.Should().Be(4);
+        persisted!.Published.VersionNumber.Should().Be(5);
         persisted.Published.Content.Temperature.Should().Be(0.5m);
     }
 

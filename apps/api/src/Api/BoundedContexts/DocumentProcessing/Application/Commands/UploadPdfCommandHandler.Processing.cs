@@ -633,12 +633,13 @@ internal partial class UploadPdfCommandHandler
         await UpdateVectorDocumentAsync(pdfId, pdfDoc, allDocumentChunks.Count, db, scope, cancellationToken).ConfigureAwait(false);
 
         // Save text chunks to PostgreSQL for hybrid search (FTS) — non-blocking, can proceed independently
-        await SaveTextChunksForHybridSearchAsync(pdfId, pdfDoc, allDocumentChunks, db, scope, cancellationToken).ConfigureAwait(false);
+        var savedChunks = await SaveTextChunksForHybridSearchAsync(pdfId, pdfDoc, allDocumentChunks, db, scope, cancellationToken).ConfigureAwait(false);
 
-        // Persist embeddings to pgvector — critical path; VectorDocument row is guaranteed to exist above
+        // Persist embeddings to pgvector — critical path; VectorDocument row is guaranteed to exist above.
+        // #4384: each row is linked to the text chunk saved just above (source_chunk_id + role_tags).
         var embeddingService = scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
         var modelName = embeddingService.GetModelName();
-        await SaveEmbeddingsToPgVectorAsync(pdfId, pdfDoc, allDocumentChunks, embeddings, db, modelName, cancellationToken).ConfigureAwait(false);
+        await SaveEmbeddingsToPgVectorAsync(pdfId, pdfDoc, allDocumentChunks, embeddings, savedChunks, db, modelName, cancellationToken).ConfigureAwait(false);
 
         indexingStopwatch.Stop();
         RecordPipelineMetricSafely("indexing", indexingStopwatch.Elapsed.TotalMilliseconds);
@@ -678,7 +679,11 @@ internal partial class UploadPdfCommandHandler
     /// <summary>
     /// Saves text chunks to PostgreSQL for hybrid search with FTS.
     /// </summary>
-    private async Task SaveTextChunksForHybridSearchAsync(
+    /// <returns>
+    /// #4384: the saved chunks by <c>ChunkIndex</c>, so the pgvector rows can point at them; empty when
+    /// the save lost a concurrency conflict and nothing was written.
+    /// </returns>
+    private async Task<IReadOnlyDictionary<int, TextChunkEntity>> SaveTextChunksForHybridSearchAsync(
         string pdfId,
         PdfDocumentEntity pdfDoc,
         List<DocumentChunkInput> allDocumentChunks,
@@ -748,11 +753,12 @@ internal partial class UploadPdfCommandHandler
             _logger.LogWarning(ex,
                 "Concurrency conflict on TextChunks for PDF {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
                 pdfId, nameof(UploadPdfCommandHandler));
-            return;
+            return new Dictionary<int, TextChunkEntity>();
         }
 
         _logger.LogInformation("Saved {ChunkCount} text chunks to PostgreSQL for hybrid search (PDF {PdfId})",
             textChunkEntities.Count, pdfId);
+        return textChunkEntities.ToDictionary(tc => tc.ChunkIndex);
     }
 
     /// <summary>
@@ -764,6 +770,7 @@ internal partial class UploadPdfCommandHandler
         PdfDocumentEntity pdfDoc,
         List<DocumentChunkInput> chunks,
         List<float[]> embeddings,
+        IReadOnlyDictionary<int, TextChunkEntity> savedChunks,
         MeepleAiDbContext db,
         string modelName,
         CancellationToken cancellationToken)
@@ -805,19 +812,18 @@ internal partial class UploadPdfCommandHandler
             var batchChunks = chunks.Skip(skip).Take(saveBatchSize).ToList();
             var batchEmbeddings = embeddings.Skip(skip).Take(saveBatchSize).ToList();
 
-            var entities = batchChunks.Select((chunk, i) => new PgVectorEmbeddingEntity
-            {
-                Id = Guid.NewGuid(),
-                VectorDocumentId = vectorDoc.Id,
-                GameId = gameId,
-                TextContent = chunk.Text,
-                Vector = new Pgvector.Vector(batchEmbeddings[i]),
-                Model = modelName,
-                ChunkIndex = skip + i,
-                PageNumber = Math.Max(1, chunk.Page),
-                Lang = language,
-                CreatedAt = DateTimeOffset.UtcNow
-            }).ToList();
+            var entities = batchChunks.Select((chunk, i) => PgVectorEmbeddingEntity.ForChunk(
+                vectorDocumentId: vectorDoc.Id,
+                gameId: gameId,
+                chunkIndex: skip + i,
+                textContent: chunk.Text,
+                vector: batchEmbeddings[i],
+                model: modelName,
+                pageNumber: Math.Max(1, chunk.Page),
+                lang: language,
+                sourceChunk: savedChunks.TryGetValue(skip + i, out var saved)
+                    ? new TextChunkLink(saved.Id, (int)saved.RoleTags)
+                    : null)).ToList();
 
             await db.PgVectorEmbeddings.AddRangeAsync(entities, cancellationToken).ConfigureAwait(false);
             try

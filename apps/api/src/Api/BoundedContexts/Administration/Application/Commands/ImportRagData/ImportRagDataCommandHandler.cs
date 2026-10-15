@@ -6,7 +6,6 @@ using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Pgvector;
 
 namespace Api.BoundedContexts.Administration.Application.Commands.ImportRagData;
 
@@ -220,7 +219,9 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
 
                 _db.VectorDocuments.Add(vectorDocument);
 
-                // g. Create TextChunkEntity for each chunk
+                // g. Create TextChunkEntity for each chunk.
+                // #4384: kept by ChunkIndex so each imported pgvector row can point at its chunk.
+                var textChunksByIndex = new Dictionary<int, TextChunkEntity>();
                 foreach (var chunk in chunks)
                 {
                     var textChunk = new TextChunkEntity
@@ -236,6 +237,7 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                     };
 
                     _db.TextChunks.Add(textChunk);
+                    textChunksByIndex[chunk.ChunkIndex] = textChunk;
                 }
 
                 // h/i. Embeddings: import or mark for re-embed
@@ -250,19 +252,18 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
 
                         foreach (var embedding in embeddings)
                         {
-                            var pgEmbedding = new PgVectorEmbeddingEntity
-                            {
-                                Id = Guid.NewGuid(),
-                                VectorDocumentId = vectorDocumentId,
-                                GameId = game.Id,
-                                TextContent = embedding.TextContent,
-                                Vector = new Vector(embedding.Vector),
-                                Model = embedding.Model,
-                                ChunkIndex = embedding.ChunkIndex,
-                                PageNumber = embedding.PageNumber ?? 0,
-                                Lang = docInfo.Language,
-                                CreatedAt = DateTimeOffset.UtcNow,
-                            };
+                            var pgEmbedding = PgVectorEmbeddingEntity.ForChunk(
+                                vectorDocumentId: vectorDocumentId,
+                                gameId: game.Id,
+                                chunkIndex: embedding.ChunkIndex,
+                                textContent: embedding.TextContent,
+                                vector: embedding.Vector,
+                                model: embedding.Model,
+                                pageNumber: embedding.PageNumber ?? 0,
+                                lang: docInfo.Language,
+                                sourceChunk: textChunksByIndex.TryGetValue(embedding.ChunkIndex, out var textChunk)
+                                    ? new TextChunkLink(textChunk.Id, (int)textChunk.RoleTags)
+                                    : null);
 
                             _db.PgVectorEmbeddings.Add(pgEmbedding);
                         }

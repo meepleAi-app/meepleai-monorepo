@@ -307,6 +307,68 @@ public class IndexPdfCommandHandlerTests
         textChunkRoleTags.Should().Equal(expectedRoles);
     }
 
+    // #4384: la reindicizzazione passa di qui (KbReindexProcessorService, wizard admin, endpoint di
+    // indicizzazione). Ogni riga di pgvector_embeddings deve puntare al text_chunks con lo stesso
+    // ChunkIndex: il braccio vettoriale ne legge heading, regioni e offset con una LEFT JOIN su
+    // source_chunk_id. Prima il ruolo arrivava (test qui sopra) ma il collegamento restava nullo.
+    [Fact]
+    public async Task Handle_LinksEveryPgvectorRowToTheTextChunkAtTheSameIndex()
+    {
+        // Arrange
+        using var context = CreateFreshDbContext();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+
+        var pdfId = Guid.NewGuid();
+        var pdf = CreatePdfDocument(pdfId, Guid.NewGuid(), "completed", GenerateExtractedText(120));
+        await context.PdfDocuments.AddAsync(pdf);
+        await context.SaveChangesAsync();
+
+        advancedChunkingServiceMock
+            .Setup(x => x.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GenerateFlatHierarchicalChunks(4));
+        embeddingServiceMock
+            .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((List<string> texts, CancellationToken ct) =>
+                new EmbeddingResult { Success = true, Embeddings = texts.Select(_ => GenerateRandomEmbedding(3072)).ToList() });
+        embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
+        embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
+
+        var classifierMock = new Mock<IRoleClassifierService>();
+        classifierMock
+            .Setup(x => x.ClassifyAsync(It.IsAny<IReadOnlyList<ChunkInput>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync([GameBookRole.Setup, GameBookRole.RulesReference, GameBookRole.Lore, GameBookRole.Setup]);
+
+        var handler = new IndexPdfCommandHandler(
+            context,
+            advancedChunkingServiceMock.Object,
+            embeddingServiceMock.Object,
+            loggerMock.Object,
+            indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>(),
+            timeProvider: null,
+            roleClassifier: classifierMock.Object);
+
+        // Act
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
+
+        // Assert
+        result.Success.Should().BeTrue();
+        var chunksByIndex = await context.TextChunks
+            .Where(tc => tc.PdfDocumentId == pdfId)
+            .ToDictionaryAsync(tc => tc.ChunkIndex);
+        var rows = await context.PgVectorEmbeddings.ToListAsync();
+
+        rows.Should().HaveCount(4);
+        chunksByIndex.Should().HaveCount(4);
+        foreach (var row in rows)
+        {
+            var chunk = chunksByIndex[row.ChunkIndex];
+            row.SourceChunkId.Should().Be(chunk.Id, "la riga {0} deve puntare al passaggio con lo stesso indice", row.ChunkIndex);
+            row.RoleTags.Should().Be((int)chunk.RoleTags);
+        }
+    }
+
     // Slice D (Issue #730), task 5: handler-driven test that heading-aware hierarchy (parent +
     // children built by IAdvancedChunkingService via HeadingAwareChunker) survives the re-index
     // path into BOTH persisted sinks. Also covers the Task-1 binding that a supplied

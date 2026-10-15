@@ -76,4 +76,47 @@ public class PgVectorEmbeddingEntity
     [Required]
     [Column("role_tags")]
     public int RoleTags { get; set; } = 0;
+
+    /// <summary>
+    /// #4384: la riga del passaggio <paramref name="chunkIndex"/>. Ogni scrittore che crea righe di
+    /// questa entità passa da qui (lo verifica <c>PgVectorEmbeddingWritersArchitectureTests</c>), e deve
+    /// dire a quale <c>text_chunks</c> la riga appartiene.
+    /// </summary>
+    /// <remarks>
+    /// Senza il collegamento la riga perde tre cose, in silenzio: il boost di ruolo
+    /// (<see cref="RoleTags"/>, #1391), il boost di heading (#3270) e la localizzazione della citazione
+    /// (#3407), che il braccio vettoriale legge con una <c>LEFT JOIN text_chunks ON tc."Id" =
+    /// e.source_chunk_id</c>. <paramref name="sourceChunk"/> è <c>null</c> solo se i passaggi non sono
+    /// stati salvati.
+    /// </remarks>
+    public static PgVectorEmbeddingEntity ForChunk(
+        Guid vectorDocumentId,
+        Guid gameId,
+        int chunkIndex,
+        string textContent,
+        float[] vector,
+        string model,
+        int pageNumber,
+        string lang,
+        TextChunkLink? sourceChunk) => new()
+    {
+        Id = Guid.NewGuid(),
+        VectorDocumentId = vectorDocumentId,
+        GameId = gameId,
+        TextContent = textContent,
+        Vector = new Vector(vector),
+        Model = model,
+        ChunkIndex = chunkIndex,
+        PageNumber = pageNumber,
+        Lang = lang,
+        CreatedAt = DateTimeOffset.UtcNow,
+        SourceChunkId = sourceChunk?.TextChunkId,
+        RoleTags = sourceChunk?.RoleTags ?? 0,
+    };
 }
+
+/// <summary>
+/// #4384: il passaggio di <c>text_chunks</c> a cui appartiene una riga di <c>pgvector_embeddings</c>,
+/// con il suo ruolo (il valore intero di <c>GameBookRole</c>).
+/// </summary>
+public sealed record TextChunkLink(Guid TextChunkId, int RoleTags);

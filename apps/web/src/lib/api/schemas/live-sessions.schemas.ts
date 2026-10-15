@@ -334,3 +334,81 @@ export const AddDiaryEntryRequestSchema = z.object({
 });
 
 export type AddDiaryEntryRequest = z.infer<typeof AddDiaryEntryRequestSchema>;
+
+// ── In-game assistant (#4238 A4, spec 2026-10-11 §5–§6) ──
+// Tolerant on purpose (#4154: consumers before producers). Unknown keys are stripped, and `kind`,
+// `status` and every code are plain strings: a value the server adds later must not break the panel.
+// Ids are plain strings for the same reason.
+
+/** The statuses of a proposal the panel acts on. A status not listed here is shown as closed. */
+export const ASSISTANT_PROPOSAL_STATUS = {
+  pending: 'Pending',
+  applying: 'Applying',
+  accepted: 'Accepted',
+  edited: 'Edited',
+  failed: 'Failed',
+  rejected: 'Rejected',
+  expired: 'Expired',
+  stale: 'Stale',
+} as const;
+
+export const ASSISTANT_PROPOSAL_KIND = { score: 'Score', advanceTurn: 'AdvanceTurn' } as const;
+
+/** Mirrors BE `AssistantProposalDto`: the `proposal` event, the panel read, confirm and reject. */
+export const AssistantProposalDtoSchema = z.object({
+  id: z.string().min(1),
+  kind: z.string(),
+  status: z.string(),
+  messageId: z.string().min(1),
+  playerId: z.string().nullish(),
+  playerName: z.string().nullish(),
+  dimension: z.string().nullish(),
+  round: z.number().int().nullish(),
+  points: z.number().int().nullish(),
+  cellValueBefore: z.number().int().nullish(),
+  resultingValue: z.number().int().nullish(),
+  expectedTurnIndex: z.number().int().nullish(),
+  confirmedPoints: z.number().int().nullish(),
+  failureCode: z.string().nullish(),
+  summary: z.string(),
+});
+
+export type AssistantProposalDto = z.infer<typeof AssistantProposalDtoSchema>;
+
+/**
+ * Mirrors BE `AssistantTurnEvent`: one `data:` line of the turn stream. `type` is `status`,
+ * `proposal`, `answer`, `done` or `error`; each type fills some of the other fields.
+ */
+export const AssistantTurnEventSchema = z.object({
+  type: z.string(),
+  tool: z.string().nullish(),
+  proposal: AssistantProposalDtoSchema.nullish(),
+  text: z.string().nullish(),
+  responseId: z.string().nullish(),
+  profileVersionId: z.string().nullish(),
+  profileVersionNumber: z.number().nullish(),
+  code: z.string().nullish(),
+});
+
+export type AssistantTurnEvent = z.infer<typeof AssistantTurnEventSchema>;
+
+export const SessionAssistantMessageDtoSchema = z.object({
+  id: z.string().min(1),
+  role: z.string(),
+  content: z.string(),
+  createdAt: z.string(),
+});
+
+export type SessionAssistantMessageDto = z.infer<typeof SessionAssistantMessageDtoSchema>;
+
+/** Mirrors BE `SessionAssistantPanelDto` (#4372): `GET /live-sessions/{id}/assistant`. */
+export const SessionAssistantPanelDtoSchema = z.object({
+  availability: z.object({
+    enabled: z.boolean(),
+    code: z.string().nullish(),
+  }),
+  messages: z.array(SessionAssistantMessageDtoSchema).default([]),
+  proposals: z.array(AssistantProposalDtoSchema).default([]),
+});
+
+export type SessionAssistantPanelDto = z.infer<typeof SessionAssistantPanelDtoSchema>;

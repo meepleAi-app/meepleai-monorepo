@@ -3969,6 +3969,75 @@
           "toolCircleLabel": "Circle",
           "placeholderLabel": "Shared drawing area"
         }
+      },
+      "assistant": {
+        "title": "Assistant",
+        "hostOnly": "Only the host talks to the assistant.",
+        "loading": "Loading the assistant…",
+        "loadError": "I cannot read the assistant. Try again shortly.",
+        "unavailable": {
+          "assistant_disabled": "The assistant is not enabled.",
+          "assistant_model_without_tools": "The assistant is unavailable: the configured model cannot use tools.",
+          "session_state_invalid": "The game is over: the assistant no longer answers.",
+          "other": "The assistant is unavailable."
+        },
+        "empty": "Tell me a score or ask whose turn it is: I propose, you confirm.",
+        "inputLabel": "Question for the assistant",
+        "placeholder": "E.g. “Marco scores 5”",
+        "send": "Send",
+        "you": "You",
+        "tool": {
+          "start": "Thinking…",
+          "stato_partita": "Reading the game…",
+          "proponi_punteggio": "Preparing a score…",
+          "proponi_turno": "Preparing the turn change…",
+          "cerca_regole": "Searching the rules…",
+          "other": "Working on it…"
+        },
+        "turnError": {
+          "budget_paused": "The assistant is paused: the spending cap has been reached.",
+          "turn_timeout": "The assistant could not answer in time. Try again.",
+          "assistant_disabled": "The assistant is not enabled.",
+          "assistant_model_without_tools": "The assistant is unavailable: the configured model cannot use tools.",
+          "session_state_invalid": "The game is over: the assistant no longer answers.",
+          "other": "The assistant is not available right now. Try again, or record it by hand."
+        },
+        "card": {
+          "score": "{points} {dimension} to {player}, round {round}",
+          "resulting": "Total after confirming: {value}",
+          "advanceTurn": "Pass the turn to the next player",
+          "confirm": "Confirm",
+          "correct": "Correct",
+          "correctLabel": "Corrected points",
+          "applyCorrection": "Confirm with correction",
+          "cancel": "Cancel",
+          "reject": "Reject",
+          "busy": "Another confirmation is in progress.",
+          "status": {
+            "Pending": "To confirm",
+            "Applying": "Applying",
+            "Accepted": "Confirmed",
+            "Edited": "Confirmed with a correction",
+            "Failed": "Not applied",
+            "Rejected": "Rejected",
+            "Expired": "Expired",
+            "Stale": "Outdated: the game changed",
+            "other": "Closed"
+          },
+          "failure": {
+            "session_state_invalid": "The game no longer accepts this write.",
+            "proposal_not_applicable": "The proposal no longer applies to this game.",
+            "session_state_unavailable": "I could not read the game.",
+            "other": "Nothing was written."
+          },
+          "error": {
+            "proposal_stale": "The game changed since the proposal: nothing was written.",
+            "proposal_not_pending": "The proposal was already closed.",
+            "session_state_invalid": "The game no longer accepts this write.",
+            "proposal_not_applicable": "The proposal no longer applies to this game.",
+            "other": "I could not apply the proposal. Try again."
+          }
+        }
       }
     },
     "sessionSummary": {

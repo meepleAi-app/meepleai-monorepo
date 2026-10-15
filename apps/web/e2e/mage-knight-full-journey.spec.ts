@@ -13,9 +13,10 @@
  *   M2  — Mage Knight session loaded (game data in DTO, session shell rendered)
  *   M3  — 4 players in roster; AddPlayerDialog exercised at least once
  *   M4  — Go-live confirmed; URL is /sessions/{id}/live (anti-fragmentation base)
- *   M5–M7 — removed with #4156 (D5): they asked the legacy session agent (set up the table,
- *           explain the game, rule doubt with a cited page) through the chat panel in /live,
- *           which is gone. They come back against the in-game assistant, A4 of #4238.
+ *   M5  — The host asks the in-game assistant (#4238 A4): a score card comes back under its answer
+ *   M6  — The host confirms the card: it is applied, and the panel says so
+ *   M7  — rule doubt with a cited page: comes back with A5 of #4238 (`cerca_regole` + citations).
+ *         M5–M7 used to ask the legacy session agent, which left /live with #4156 (D5).
  *   M8  — Scores tab: ScoreTabContent renders
  *   M9  — Photos tab: capture photo via hidden file input (CRACK 2)
  *   M10 — Save: endgame confirm → endgame dialog → save CTA (CRACK 3)
@@ -47,6 +48,11 @@ const C = {
   PLAYER_ID_2: 'dddddddd-dddd-4ddd-8ddd-ddddddddddd2', // Bob
   PLAYER_ID_3: 'dddddddd-dddd-4ddd-8ddd-ddddddddddd3', // Carol
   PLAYER_ID_4: 'dddddddd-dddd-4ddd-8ddd-ddddddddddd4', // Dave
+  // In-game assistant (#4238 A4): the thread messages and the proposal of M5–M6.
+  QUESTION_ID: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee1',
+  ANSWER_ID: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee2',
+  PROPOSAL_ID: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee3',
+  PROFILE_VERSION_ID: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeee4',
 } as const;
 
 // The session name derived in SessionLiveView.tsx line 474:
@@ -138,7 +144,54 @@ test('Mage Knight full journey — single canonical surface', async ({ page }) =
     expect(page.url()).toContain(`/sessions/${C.SESSION_ID}/live`);
   });
 
-  // ─── M5–M7: removed with #4156 (D5) — see the header. ─────────────────────
+  // ─── M5: ask the in-game assistant (#4238 A4) ──────────────────────────────
+  // The panel is the owner's: createdByUserId === USER_ID, the mocked signed-in user.
+  // Selectors are data-slots: Playwright's browser reads the English locale.
+  const assistantPanel = page.locator('[data-slot="session-assistant-panel"]').filter({
+    visible: true,
+  });
+  const card = assistantPanel.locator('[data-slot="assistant-proposal-card"]');
+
+  await test.step('M5: ask the assistant — a score card comes back under its answer', async () => {
+    await expect(assistantPanel).toBeVisible({ timeout: 10_000 });
+    await assistantPanel
+      .locator('[data-slot="session-assistant-input"]')
+      .fill('Alice fa 5 punti di fama');
+    await assistantPanel.locator('[data-slot="session-assistant-send"]').click();
+
+    await expect(
+      assistantPanel.getByText('Ho preparato la proposta: +5 fama ad Alice.')
+    ).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(card).toHaveAttribute('data-status', 'Pending');
+    // The card sits under the answer that produced it.
+    await expect(
+      assistantPanel.locator('li[data-role="assistant"] [data-slot="assistant-proposal-card"]')
+    ).toHaveCount(1);
+
+    // ANTI-FRAGMENTATION
+    expect(page.url()).toContain(`/sessions/${C.SESSION_ID}/live`);
+  });
+
+  // ─── M6: confirm the card ──────────────────────────────────────────────────
+  await test.step('M6: confirm the card — the proposal is applied', async () => {
+    const confirmRequest = page.waitForRequest(
+      request =>
+        request.method() === 'POST' &&
+        request.url().includes(`/assistant/proposals/${C.PROPOSAL_ID}/confirm`)
+    );
+    await card.locator('[data-slot="assistant-proposal-confirm"]').click();
+    await confirmRequest;
+
+    await expect(card).toHaveAttribute('data-status', 'Accepted', { timeout: 10_000 });
+    await expect(card.locator('[data-slot="assistant-proposal-confirm"]')).toHaveCount(0);
+
+    // ANTI-FRAGMENTATION
+    expect(page.url()).toContain(`/sessions/${C.SESSION_ID}/live`);
+  });
+
+  // ─── M7: comes back with A5 of #4238 — see the header. ─────────────────────
 
   // ─── M8: Scores tab ───────────────────────────────────────────────────────
   await test.step('M8: scores tab — ScoreTabContent renders', async () => {
@@ -396,6 +449,85 @@ async function setupMageKnightMocks(page: Page): Promise<void> {
     .route(`**/api/v1/live-sessions/${C.SESSION_ID}/vision-snapshots**`, route =>
       route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
     );
+
+  // ── In-game assistant (#4238 A4): panel read, turn (SSE) and confirmation ──
+  // Stateful like the server: the read after the turn returns the saved conversation, and
+  // the read after the confirmation the applied proposal.
+  const assistantState = { asked: false, confirmed: false };
+  const proposal = (status: string) => ({
+    id: C.PROPOSAL_ID,
+    kind: 'Score',
+    status,
+    messageId: C.ANSWER_ID,
+    playerId: C.PLAYER_ID_1,
+    playerName: 'Alice',
+    dimension: 'fama',
+    round: 1,
+    points: 5,
+    cellValueBefore: 0,
+    resultingValue: 5,
+    expectedTurnIndex: null,
+    confirmedPoints: null,
+    failureCode: null,
+    summary: '+5 fama a Alice, round 1',
+  });
+  const answer = 'Ho preparato la proposta: +5 fama ad Alice.';
+  await page.context().route(`**/api/v1/live-sessions/${C.SESSION_ID}/assistant**`, route => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    if (request.method() === 'GET') {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          availability: { enabled: true, code: null },
+          messages: assistantState.asked
+            ? [
+                {
+                  id: C.QUESTION_ID,
+                  role: 'user',
+                  content: 'Alice fa 5 punti di fama',
+                  createdAt: nowIso,
+                },
+                { id: C.ANSWER_ID, role: 'assistant', content: answer, createdAt: nowIso },
+              ]
+            : [],
+          proposals: assistantState.asked
+            ? [proposal(assistantState.confirmed ? 'Accepted' : 'Pending')]
+            : [],
+        }),
+      });
+    }
+    if (request.method() === 'POST' && path.endsWith(`/proposals/${C.PROPOSAL_ID}/confirm`)) {
+      assistantState.confirmed = true;
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(proposal('Accepted')),
+      });
+    }
+    if (request.method() === 'POST' && path.endsWith('/assistant')) {
+      assistantState.asked = true;
+      const events = [
+        { type: 'status' },
+        { type: 'status', tool: 'proponi_punteggio' },
+        { type: 'proposal', proposal: proposal('Pending') },
+        { type: 'answer', text: answer },
+        {
+          type: 'done',
+          responseId: C.ANSWER_ID,
+          profileVersionId: C.PROFILE_VERSION_ID,
+          profileVersionNumber: 1,
+        },
+      ];
+      return route.fulfill({
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' },
+        body: events.map(event => `data: ${JSON.stringify(event)}\n\n`).join(''),
+      });
+    }
+    return route.continue();
+  });
 
   // ── Session hydration GET — LAST (overrides catch-all above) ──────────────
   await page.context().route(`**/api/v1/live-sessions/${C.SESSION_ID}`, route => {

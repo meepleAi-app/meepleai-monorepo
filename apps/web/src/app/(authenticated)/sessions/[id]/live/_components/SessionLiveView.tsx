@@ -9,11 +9,12 @@
  *   - RightColumnTabs mounted (desktop right column) with tab URL SSOT
  *   - PauseOverlay / EndgameDialog lazy-loaded, mounted from ?dialog= URL param
  *   - ConnectionLostBanner shown for reconnecting/degraded-polling/failed states
- *   - Mobile bottom-sheet (G1 #2374 T9 sess.46r): full-width main = ActionLogTimeline;
+ *   - Mobile bottom-sheet (G1 #2374 T9 sess.46r): full-width main = the in-game assistant (owner
+ *     only, #4238 A4) + ActionLogTimeline;
  *     floating action button opens MobileBottomSheetDrawer (Score/Turn/Widget/Notes — same content as
  *     desktop RIGHT). URL SSOT: ?msheet=open|closed + ?mtab=score|turn|widget|notes.
  *   - Desktop right column (G1 #2374): score → LiveScoringPanel, turn → TurnIndicator+PlayerRosterLive,
- *     widget → SessionToolsRail, notes → LiveSessionNotes. The LEFT mainColumn holds the action log (#4156: the legacy agent chat left /live).
+ *     widget → SessionToolsRail, notes → LiveSessionNotes. The LEFT mainColumn holds the in-game assistant (owner only, #4238 A4) and the action log.
  *   - Write actions: handleScoreUpdate (optimistic UI), handleToolExecute,
  *     handleSendMessage, handleAddNote, handleResume, handlePause, handleEndgame
  *   - 403 handling: score rollback + toast "Permesso negato"
@@ -50,8 +51,8 @@
  * **G1 #2374 (2026-06-15)**:
  *   Refactored from 3-col fixed-width layout (LEFT 280px / CENTER flex / RIGHT 340px)
  *   to a 2-col 60/40 grid (LEFT minmax(0,3fr) / RIGHT minmax(0,2fr)).
- *   - LEFT (60%) = ActionLogTimeline. Until #4156 (D5) the legacy agent chat (ChatAgentPanel)
- *     sat above it; the in-game assistant takes that place with A4 of #4238.
+ *   - LEFT (60%) = the in-game assistant (owner only, #4238 A4) above ActionLogTimeline. Until
+ *     #4156 (D5) the legacy agent chat (ChatAgentPanel) sat in that place.
  *   - RIGHT (40%) = RightColumnTabs polymorphic with keys: Score | Turn | Widget | Notes.
  *     - Score tab → LiveScoringPanel (G5 will swap for polymorphic dispatcher).
  *     - Turn tab → TurnIndicator + PlayerRosterLive (moved out of the deprecated LEFT sidebar).
@@ -110,6 +111,7 @@ import {
   type ToolkitRendererLabels,
 } from '@/components/features/session-live';
 import { AgentDisputeTabContent } from '@/components/features/session-live/AgentDisputeTabContent';
+import { SessionAssistantPanel } from '@/components/features/session-live/assistant/SessionAssistantPanel';
 import { PhotosTabContent } from '@/components/features/session-live/PhotosTabContent';
 import { useAddDiaryEntry } from '@/hooks/mutations/useAddDiaryEntry';
 import { useCompleteLiveSession } from '@/hooks/mutations/useCompleteLiveSession';
@@ -957,9 +959,17 @@ export function SessionLiveView(): ReactElement {
     [activeSession]
   );
 
-  // #4156 (D5): the legacy session agent — launch, RAG chat, ask-agent with photos — is no
-  // longer mounted on /live. The in-game assistant arrives here with A4 of #4238.
+  // #4156 (D5): the legacy session agent — launch, RAG chat, ask-agent with photos — left /live.
+  // Its place in the main column is the in-game assistant (A4 of #4238).
   const liveSessionDto = sessionQuery.data;
+
+  // #4238 A4: the assistant answers the owner of the session (`CreatedByUserId`), as the server
+  // checks. Not `viewerRole`: that comes from the player linked to the user, and an owner who is
+  // not at the table as a player would lose the panel the server still lets them use.
+  const isSessionOwner =
+    liveSessionDto != null &&
+    currentUser?.id != null &&
+    liveSessionDto.createdByUserId === currentUser.id;
 
   // ── G6a #2787: per-game Catan flavor (conditional tab) ────────────────────
   const showFlavorTab = hasFlavor(liveSessionDto?.gameSlug);
@@ -1024,10 +1034,13 @@ export function SessionLiveView(): ReactElement {
     if (activeSession == null) return null;
     return (
       <div className="flex flex-col gap-3">
+        {isSessionOwner && sessionId ? (
+          <SessionAssistantPanel sessionId={sessionId} compact />
+        ) : null}
         <ActionLogTimeline entries={activeSession.actionLog} labels={actionLogLabels} compact />
       </div>
     );
-  }, [activeSession, actionLogLabels]);
+  }, [activeSession, actionLogLabels, isSessionOwner, sessionId]);
 
   // ── Mobile bottom-sheet content (G1 #2374 T9 sess.46r) ───────────────────
   // Same switch as desktopRightColumn (DRY): score / turn / widget / notes.
@@ -1224,11 +1237,14 @@ export function SessionLiveView(): ReactElement {
   // G1 #2374 sess.46r — Desktop refactor from 3-zone (LEFT sidebar + CENTER
   // column + RIGHT tabs) to 2-zone 60/40 grid (LEFT mainColumn + RIGHT tabs).
   // TurnIndicator + PlayerRosterLive moved to RIGHT 'turn' tab (D-6).
-  // LEFT mainColumn: ActionLogTimeline. The legacy agent chat (ChatAgentPanel) sat above it
-  // until #4156 (D5); the in-game assistant takes that place with A4 of #4238.
+  // LEFT mainColumn: the in-game assistant (A4 of #4238, owner only) above ActionLogTimeline.
+  // The legacy agent chat (ChatAgentPanel) sat there until #4156 (D5).
 
   const desktopMainColumn = (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-3">
+      {isSessionOwner && sessionId ? (
+        <SessionAssistantPanel sessionId={sessionId} className="max-h-[60%]" />
+      ) : null}
       <ActionLogTimeline entries={activeSession.actionLog} labels={actionLogLabels} />
     </div>
   );

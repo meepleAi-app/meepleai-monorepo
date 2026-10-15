@@ -326,11 +326,11 @@ internal sealed class AssistantTurnRunner
                 .ConfigureAwait(false);
             if (grounded.LeakMatchCount > 0)
             {
-                return new ComposedAnswer(grounded.ResponseText, CopyrightSanitizedCode, grounded.CitationDtos);
+                return new ComposedAnswer(grounded.ResponseText, CopyrightSanitizedCode, AsTheHostSeesThem(grounded.CitationDtos));
             }
 
             text = grounded.ResponseText;
-            sources = grounded.CitationDtos;
+            sources = AsTheHostSeesThem(grounded.CitationDtos);
         }
 
         // Spec §6.3: il modello dice di aver registrato, o di aver preparato una proposta, e nel turno non ce n'è
@@ -404,6 +404,14 @@ internal sealed class AssistantTurnRunner
         .ToList();
 
     private sealed record TurnOutcome(string? Text, string? ErrorCode);
+
+    /// <summary>
+    /// Una fonte per ciò che l'host vede. Il controllo dei leak ha già letto tutti i passaggi; dopo il tier due
+    /// passaggi protetti della stessa pagina sono la stessa chip «p.3», senza testo (review della PR 2, #4411).
+    /// </summary>
+    private static List<CitationDto> AsTheHostSeesThem(IReadOnlyList<CitationDto> citations) => citations
+        .DistinctBy(c => (c.DocumentId, c.PageNumber, c.CopyrightTier, c.SnippetPreview, c.ParaphrasedSnippet))
+        .ToList();
 
     private sealed record ComposedAnswer(string Text, string? FallbackCode, IReadOnlyList<CitationDto> Citations);
 }

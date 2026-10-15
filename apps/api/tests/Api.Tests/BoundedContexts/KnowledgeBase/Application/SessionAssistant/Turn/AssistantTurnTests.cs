@@ -816,4 +816,28 @@ public sealed class AssistantTurnTests
         events.Single(e => e.Type == AssistantTurnEvent.AnswerType).Citations.Should().BeNull();
         _savedThread!.Messages[^1].CitationsJson.Should().BeNull();
     }
+
+    // Review della PR 2 (#4411): due passaggi protetti della stessa pagina, con testi diversi, dopo FinalizeAsync
+    // sono la stessa fonte per l'host (niente testo, stessa pagina). Mostrati due volte sarebbero due chip «p.3»
+    // identiche sotto «2 fonti dal regolamento».
+    [Fact]
+    public async Task TwoProtectedPassagesOfTheSamePage_ReachTheHostAsOneSource()
+    {
+        WithGame();
+        _rules.Setup(r => r.SearchAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AssistantRuleSearch(
+                [new AssistantRulePassage(Passage, 3), new AssistantRulePassage("Le tessere avanzate vanno al centro.", 3)],
+                [
+                    new ChunkCitation("pdf-1", 3, 0.9f, Passage, CopyrightTier.Protected),
+                    new ChunkCitation("pdf-1", 3, 0.8f, "Le tessere avanzate vanno al centro.", CopyrightTier.Protected),
+                ]));
+        Script(Calls(SessionAssistantToolset.CercaRegole, "{\"domanda\":\"quante tessere?\"}"),
+            Says("Quattro tessere per espositore (pagina 3)."));
+
+        var events = await AskAsync("quante tessere si mettono?");
+
+        events.Single(e => e.Type == AssistantTurnEvent.AnswerType).Citations.Should().ContainSingle()
+            .Which.PageNumber.Should().Be(3);
+        AssistantCitations.Read(_savedThread!.Messages[^1].CitationsJson).Should().ContainSingle();
+    }
 }

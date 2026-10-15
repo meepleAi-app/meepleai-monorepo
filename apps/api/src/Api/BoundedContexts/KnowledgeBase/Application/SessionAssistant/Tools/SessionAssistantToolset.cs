@@ -89,8 +89,12 @@ internal sealed class SessionAssistantToolset
         return tools;
     }
 
-    public Task<AssistantSessionState> GetStateAsync(CancellationToken cancellationToken = default) =>
-        _reader.GetStateAsync(cancellationToken);
+    /// <summary>stato_partita. I nomi arrivano al modello su una riga sola, e corti (#4393).</summary>
+    public async Task<AssistantSessionState> GetStateAsync(CancellationToken cancellationToken = default)
+    {
+        var state = await _reader.GetStateAsync(cancellationToken).ConfigureAwait(false);
+        return state with { Players = state.Players.Select(p => p with { Name = AssistantNames.ForModel(p.Name) }).ToList() };
+    }
 
     public async Task<object> SearchRulesAsync(
         [Description("La domanda sulle regole, con parole proprie")] string domanda,
@@ -158,12 +162,12 @@ internal sealed class SessionAssistantToolset
         var match = _matcher.Match(giocatore, state.Players);
         if (match.IsAmbiguous)
         {
-            return Error("giocatore_ambiguo", $"«{giocatore}» corrisponde a più giocatori: chiedi all'host quale.", match.Candidates);
+            return Error("giocatore_ambiguo", $"«{giocatore}» corrisponde a più giocatori: chiedi all'host quale.", match.Candidates.Select(AssistantNames.ForModel).ToList());
         }
 
         if (match.PlayerId is not { } playerId)
         {
-            return Error("giocatore_sconosciuto", $"Nessun giocatore si chiama «{giocatore}».", state.Players.Select(p => p.Name).ToList());
+            return Error("giocatore_sconosciuto", $"Nessun giocatore si chiama «{giocatore}».", state.Players.Select(p => AssistantNames.ForModel(p.Name)).ToList());
         }
 
         var resolvedDimension = ResolveDimension(dimensione, state.Dimensions);
@@ -186,7 +190,7 @@ internal sealed class SessionAssistantToolset
             .Select(s => s.Value)
             .FirstOrDefault();
         var receipt = await _sink.ProposeScoreAsync(
-            new ScoreProposalDraft(playerId, match.Name ?? giocatore, resolvedDimension, targetRound, punti, before),
+            new ScoreProposalDraft(playerId, AssistantNames.ForModel(match.Name ?? giocatore), resolvedDimension, targetRound, punti, before),
             cancellationToken).ConfigureAwait(false);
         return new ProposalCreated(receipt.ProposalId, receipt.Summary, PendingNote);
     }

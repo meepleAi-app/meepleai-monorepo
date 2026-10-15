@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   AssistantProposalDtoSchema,
   AssistantTurnEventSchema,
+  SessionAssistantMessageDtoSchema,
   SessionAssistantPanelDtoSchema,
 } from '../live-sessions.schemas';
 
@@ -122,5 +123,59 @@ describe('SessionAssistantPanelDtoSchema (#4372, #4373)', () => {
       proposals: [],
     });
     expect(parsed.availability).toEqual({ enabled: false, code: 'assistant_disabled' });
+  });
+});
+
+describe('citations (#4411)', () => {
+  const full = {
+    documentId: 'pdf-1',
+    pageNumber: 3,
+    relevanceScore: 0.9,
+    snippetPreview: 'Si pescano 4 tessere.',
+    copyrightTier: 'full',
+    paraphrasedSnippet: null,
+    isPublic: true,
+  };
+  const protectedCitation = {
+    ...full,
+    snippetPreview: null,
+    copyrightTier: 'protected',
+    paraphrasedSnippet: 'Quattro tessere.',
+  };
+
+  it('reads an answer without citations, as the server sends it today', () => {
+    const event = AssistantTurnEventSchema.parse({ type: 'answer', text: 'Tocca a Marco.' });
+    expect(event.citations ?? null).toBeNull();
+  });
+
+  it('reads the citations of an answer', () => {
+    const event = AssistantTurnEventSchema.parse({
+      type: 'answer',
+      text: 'Quattro.',
+      citations: [full, protectedCitation],
+    });
+    expect(event.citations).toHaveLength(2);
+    expect(event.citations?.[1]?.copyrightTier).toBe('protected');
+  });
+
+  it('keeps the answer when a citation has a shape it does not know', () => {
+    const event = AssistantTurnEventSchema.parse({
+      type: 'answer',
+      text: 'Quattro.',
+      citations: [{ ...full, copyrightTier: 'partial' }],
+    });
+    expect(event.text).toBe('Quattro.');
+    expect(event.citations).toBeNull();
+  });
+
+  it('reads the citations of a saved message', () => {
+    const message = SessionAssistantMessageDtoSchema.parse({
+      id: 'm1',
+      role: 'assistant',
+      content: 'Quattro.',
+      createdAt: '2026-10-15T10:00:00Z',
+      citations: [full],
+    });
+    expect(message.citations).toHaveLength(1);
   });
 });

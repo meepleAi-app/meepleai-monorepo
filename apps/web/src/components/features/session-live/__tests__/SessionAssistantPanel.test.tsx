@@ -45,6 +45,8 @@ vi.mock('@/lib/api', () => ({
       rejectAssistantProposal: (sessionId: string, proposalId: string) =>
         rejectAssistantProposal(sessionId, proposalId),
     },
+    // #4411: the sources card mounts the PDF page viewer, which reads the download url.
+    pdf: { getPdfDownloadUrl: (id: string) => `/api/v1/pdfs/${id}/download` },
   },
 }));
 
@@ -338,5 +340,82 @@ describe('SessionAssistantPanel (#4373)', () => {
       await screen.findByText("La partita è conclusa: l'assistente non risponde più.")
     ).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByText('a chi tocca?')).not.toBeInTheDocument());
+  });
+});
+
+describe('SessionAssistantPanel — sources (#4411)', () => {
+  const citation = {
+    documentId: 'pdf-1',
+    pageNumber: 3,
+    relevanceScore: 0.9,
+    snippetPreview: null,
+    copyrightTier: 'protected' as const,
+    paraphrasedSnippet: 'Quattro tessere per espositore.',
+    isPublic: false,
+  };
+
+  it('after a reload, shows the sources under the answer that cited them, and none elsewhere', async () => {
+    getAssistant.mockResolvedValue(
+      panel({
+        messages: [
+          { id: 'm1', role: 'user', content: 'quante tessere?', createdAt: '2026-10-15T10:00:00Z' },
+          {
+            id: 'm2',
+            role: 'assistant',
+            content: 'Quattro per espositore (pagina 3).',
+            createdAt: '2026-10-15T10:00:01Z',
+            citations: [citation],
+          },
+          { id: 'm3', role: 'user', content: 'a chi tocca?', createdAt: '2026-10-15T10:01:00Z' },
+          {
+            id: 'm4',
+            role: 'assistant',
+            content: 'Tocca a Giulia.',
+            createdAt: '2026-10-15T10:01:01Z',
+          },
+        ],
+        proposals: [],
+      })
+    );
+
+    const { container } = renderPanel();
+
+    expect(await screen.findByText('Quattro per espositore (pagina 3).')).toBeInTheDocument();
+    const sources = container.querySelectorAll('[data-slot="session-assistant-sources"]');
+    expect(sources).toHaveLength(1);
+    expect(
+      within(sources[0] as HTMLElement).getByText('1 fonte dal regolamento')
+    ).toBeInTheDocument();
+    expect(
+      screen
+        .getByText('Quattro per espositore (pagina 3).')
+        .closest('li')
+        ?.querySelector('[data-slot="session-assistant-sources"]')
+    ).not.toBeNull();
+  });
+
+  it('shows the sources of an answer as the turn delivers it', async () => {
+    getAssistant.mockResolvedValue(panel({ messages: [], proposals: [] }));
+    const release = deferred<void>();
+    askSessionAssistant.mockImplementation(
+      heldTurn(
+        [
+          { type: 'status' },
+          { type: 'status', tool: 'cerca_regole' },
+          { type: 'answer', text: 'Quattro per espositore.', citations: [citation] },
+        ],
+        release.promise
+      )
+    );
+
+    const { container } = renderPanel();
+    await screen.findByText(/io propongo, tu confermi/);
+    await act(async () => ask('quante tessere?'));
+
+    const answer = (await screen.findByText('Quattro per espositore.')).closest('li')!;
+    expect(answer.querySelectorAll('[data-slot="session-assistant-sources"]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-slot="session-assistant-sources"]')).toHaveLength(1);
+
+    await act(async () => release.resolve());
   });
 });

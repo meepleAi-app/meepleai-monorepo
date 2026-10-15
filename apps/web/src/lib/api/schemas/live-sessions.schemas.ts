@@ -10,6 +10,7 @@
 import { z } from 'zod';
 
 import { GameIdString } from './common.schemas';
+import { CitationSchema } from './streaming.schemas';
 
 // ========== Enums ==========
 
@@ -376,6 +377,12 @@ export const AssistantProposalDtoSchema = z.object({
 export type AssistantProposalDto = z.infer<typeof AssistantProposalDtoSchema>;
 
 /**
+ * #4411: the citations of an answer, already gated by copyright tier on the server. Tolerant: a citation
+ * the schema does not know drops the citations, never the answer.
+ */
+const AssistantCitationsSchema = z.array(CitationSchema).nullish().catch(null);
+
+/**
  * Mirrors BE `AssistantTurnEvent`: one `data:` line of the turn stream. `type` is `status`,
  * `proposal`, `answer`, `done` or `error`; each type fills some of the other fields.
  */
@@ -388,6 +395,7 @@ export const AssistantTurnEventSchema = z.object({
   profileVersionId: z.string().nullish(),
   profileVersionNumber: z.number().nullish(),
   code: z.string().nullish(),
+  citations: AssistantCitationsSchema,
 });
 
 export type AssistantTurnEvent = z.infer<typeof AssistantTurnEventSchema>;
@@ -397,6 +405,7 @@ export const SessionAssistantMessageDtoSchema = z.object({
   role: z.string(),
   content: z.string(),
   createdAt: z.string(),
+  citations: AssistantCitationsSchema,
 });
 
 export type SessionAssistantMessageDto = z.infer<typeof SessionAssistantMessageDtoSchema>;

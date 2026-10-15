@@ -412,11 +412,13 @@ public sealed class HybridLlmServiceAnswerTests
 
     // ─── Risposta pagata senza testo (#4381) ────────────────────────────────────
     // Il modello consuma i token e non scrive niente (deepseek-flash con il thinking attivo che
-    // esaurisce max_tokens). Non c'è un primo token, quindi vale la regola di prima del primo
-    // token: guasto sul circuit breaker e riserva. Ma i token sono stati pagati: il costo si registra.
+    // esaurisce max_tokens). Non c'è un primo token, quindi si passa alla riserva (D3). Il provider
+    // però ha risposto: per il circuit breaker è un successo, altrimenti un modello che non scrive
+    // aprirebbe il circuito per tutte le chiamate a quel provider. I token sono pagati: la riga del
+    // registro porta il costo, ed è una riga fallita.
 
     [Fact]
-    public async Task AnswerStream_PrimaryPaysForNoText_AnswersWithTheReserve_AndLogsThePaidCost()
+    public async Task AnswerStream_PrimaryPaysForNoText_AnswersWithTheReserve_AndLogsAFailedRowWithTheCost()
     {
         _deepSeek
             .Setup(c => c.GenerateCompletionStreamAsync(Primary, It.IsAny<string>(), It.IsAny<string>(),
@@ -427,10 +429,56 @@ public sealed class HybridLlmServiceAnswerTests
 
         TextOf(chunks).Should().Be("Reserve answer.");
         chunks.Should().NotContain(c => c.ErrorCode != null);
+        _selector.Verify(s => s.RecordSuccess("DeepSeek", Primary, It.IsAny<long>(), It.IsAny<LlmCompletionResult>()), Times.Once);
+        _selector.Verify(s => s.RecordFailure("DeepSeek", Primary, It.IsAny<long>(), It.IsAny<LlmCompletionResult?>()), Times.Never);
+        var paid = _loggedCosts.Should().ContainSingle(r => r.Cost.ModelId == Primary).Which;
+        paid.Usage.CompletionTokens.Should().Be(1500, "i token del tentativo vuoto sono stati pagati");
+        paid.Success.Should().BeFalse();
+        paid.ErrorMessage.Should().Contain("without writing any text").And.Contain("length");
+    }
+
+    [Fact]
+    public async Task AnswerStream_AClientThatCanSkipReasoning_PaysForNoText_AnswersWithTheReserve()
+    {
+        _deepSeek.As<ILlmReasoningSwitch>()
+            .Setup(c => c.GenerateCompletionStreamWithoutReasoningAsync(Primary, It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns(() => PaidWithoutText(Primary, "DeepSeek"));
+
+        var chunks = await ReadAsync(CreateSut().GenerateAnswerStreamAsync(Request()));
+
+        TextOf(chunks).Should().Be("Reserve answer.");
+        _loggedCosts.Should().ContainSingle(r => r.Cost.ModelId == Primary).Which.Success.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task AnswerStream_ThrowsAfterTheUsageChunk_WithoutText_StillLogsThePaidCost()
+    {
+        _deepSeek
+            .Setup(c => c.GenerateCompletionStreamAsync(Primary, It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns(() => PaidWithoutTextThenFailing(Primary, "DeepSeek"));
+
+        var chunks = await ReadAsync(CreateSut().GenerateAnswerStreamAsync(Request()));
+
+        TextOf(chunks).Should().Be("Reserve answer.");
+        _loggedCosts.Should().ContainSingle(r => r.Cost.ModelId == Primary).Which.Usage.CompletionTokens.Should().Be(1500);
         _selector.Verify(s => s.RecordFailure("DeepSeek", Primary, It.IsAny<long>(), It.IsAny<LlmCompletionResult?>()), Times.Once);
-        _selector.Verify(s => s.RecordSuccess("DeepSeek", Primary, It.IsAny<long>(), It.IsAny<LlmCompletionResult>()), Times.Never);
-        _loggedCosts.Should().Contain(r => r.Cost.ModelId == Primary && r.Usage.CompletionTokens == 1500,
-            "i token del tentativo vuoto sono stati pagati");
+    }
+
+    [Fact]
+    public async Task AnswerStream_OnlyWhitespaceThenADrop_IsNotAnInterruption_AnswersWithTheReserve()
+    {
+        // Solo spazi non è un primo token: niente è arrivato all'utente, quindi la riserva può rispondere.
+        _deepSeek
+            .Setup(c => c.GenerateCompletionStreamAsync(Primary, It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<double>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Returns(() => Failing(afterTokens: ["\n\n"]));
+
+        var chunks = await ReadAsync(CreateSut().GenerateAnswerStreamAsync(Request()));
+
+        TextOf(chunks).Trim().Should().Be("Reserve answer.");
+        chunks.Should().NotContain(c => c.ErrorCode == LlmAnswerErrorCodes.StreamInterrupted);
     }
 
     [Fact]
@@ -448,7 +496,7 @@ public sealed class HybridLlmServiceAnswerTests
     }
 
     [Fact]
-    public async Task Answer_PrimaryPaysForNoText_AnswersWithTheReserve_AndLogsThePaidCost()
+    public async Task Answer_PrimaryPaysForNoText_AnswersWithTheReserve_AndLogsAFailedRowWithTheCost()
     {
         _deepSeek
             .Setup(c => c.GenerateCompletionAsync(Primary, It.IsAny<string>(), It.IsAny<string>(),
@@ -462,8 +510,12 @@ public sealed class HybridLlmServiceAnswerTests
 
         result.Success.Should().BeTrue();
         result.Response.Should().Be("answer from OpenRouter");
-        _selector.Verify(s => s.RecordFailure("DeepSeek", Primary, It.IsAny<long>(), It.IsAny<LlmCompletionResult?>()), Times.Once);
-        _loggedCosts.Should().Contain(r => r.Cost.ModelId == Primary && r.Usage.CompletionTokens == 1500);
+        _selector.Verify(s => s.RecordSuccess("DeepSeek", Primary, It.IsAny<long>(), It.IsAny<LlmCompletionResult>()), Times.Once);
+        _selector.Verify(s => s.RecordFailure("DeepSeek", Primary, It.IsAny<long>(), It.IsAny<LlmCompletionResult?>()), Times.Never);
+        var paid = _loggedCosts.Should().ContainSingle(r => r.Cost.ModelId == Primary).Which;
+        paid.Usage.CompletionTokens.Should().Be(1500);
+        paid.Success.Should().BeFalse();
+        paid.ProfileVersionId.Should().Be(VersionId);
     }
 
     // ─── Ragionamento spento nelle risposte (#4381) ─────────────────────────────
@@ -567,6 +619,18 @@ public sealed class HybridLlmServiceAnswerTests
             new LlmCost { InputCost = 0.000456m, OutputCost = 0.0018m, ModelId = model, Provider = provider },
             IsFinal: true,
             FinishReason: "length");
+    }
+
+    /// <summary>Come <see cref="PaidWithoutText"/>, poi la connessione si rompe prima della fine dello stream.</summary>
+    private static async IAsyncEnumerable<StreamChunk> PaidWithoutTextThenFailing(
+        string model, string provider, [EnumeratorCancellation] CancellationToken ct = default)
+    {
+        await foreach (var chunk in PaidWithoutText(model, provider, ct))
+        {
+            yield return chunk;
+        }
+
+        throw new IOException("The response ended prematurely.");
     }
 
     /// <summary>

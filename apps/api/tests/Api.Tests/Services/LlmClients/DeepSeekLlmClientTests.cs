@@ -180,7 +180,7 @@ public class DeepSeekLlmClientTests
     {
         // Arrange
         var sent = new List<string>();
-        var client = CreateClientCapturing(sent, SseResponse(ContentOnlyStream));
+        var client = CreateClientWithResponse(SseResponse(ContentOnlyStream), sent);
 
         // Act
         await DrainAsync(((ILlmReasoningSwitch)client).GenerateCompletionStreamWithoutReasoningAsync(
@@ -196,7 +196,7 @@ public class DeepSeekLlmClientTests
     {
         // Arrange
         var sent = new List<string>();
-        var client = CreateClientCapturing(sent, JsonResponse(HttpStatusCode.OK, CompletionBody));
+        var client = CreateClientWithResponse(JsonResponse(HttpStatusCode.OK, CompletionBody), sent);
 
         // Act
         var result = await ((ILlmReasoningSwitch)client).GenerateCompletionWithoutReasoningAsync(
@@ -213,7 +213,7 @@ public class DeepSeekLlmClientTests
     {
         // Arrange: le chiamate che non sono risposte della pipeline non cambiano.
         var sent = new List<string>();
-        var client = CreateClientCapturing(sent, SseResponse(ContentOnlyStream));
+        var client = CreateClientWithResponse(SseResponse(ContentOnlyStream), sent);
 
         // Act
         await DrainAsync(client.GenerateCompletionStreamAsync(
@@ -229,7 +229,7 @@ public class DeepSeekLlmClientTests
     {
         // Arrange: la forma registrata il 2026-10-15 da una risposta vuota di deepseek-flash, con
         // il thinking attivo — ogni token pagato è ragionamento, nessuno è testo.
-        var client = CreateClientCapturing([], SseResponse(ReasoningOnlyStream));
+        var client = CreateClientWithResponse(SseResponse(ReasoningOnlyStream));
 
         // Act
         var chunks = await DrainAsync(client.GenerateCompletionStreamAsync(
@@ -284,53 +284,6 @@ public class DeepSeekLlmClientTests
     private static HttpResponseMessage SseResponse(string body) =>
         new(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "text/event-stream") };
 
-    /// <summary>
-    /// Un client configurato che risponde con <paramref name="response"/> e annota in
-    /// <paramref name="sentBodies"/> il corpo di ogni richiesta, con un listino che prezza ogni chiamata.
-    /// </summary>
-    private static DeepSeekLlmClient CreateClientCapturing(List<string> sentBodies, HttpResponseMessage response)
-    {
-        var handler = new Mock<HttpMessageHandler>(MockBehavior.Strict);
-        handler.Protected()
-            .Setup<Task<HttpResponseMessage>>(
-                "SendAsync",
-                ItExpr.IsAny<HttpRequestMessage>(),
-                ItExpr.IsAny<CancellationToken>())
-            .Returns<HttpRequestMessage, CancellationToken>(async (request, ct) =>
-            {
-                sentBodies.Add(await request.Content!.ReadAsStringAsync(ct));
-                return response;
-            });
-
-        var httpClient = new HttpClient(handler.Object);
-        var mockFactory = new Mock<IHttpClientFactory>();
-        mockFactory.Setup(f => f.CreateClient(It.IsAny<string>())).Returns(httpClient);
-
-        var resolver = new Mock<IProviderCredentialResolver>();
-        resolver
-            .Setup(r => r.ResolveAsync(DeepSeekLlmClient.ProviderKey, It.IsAny<CancellationToken>()))
-            .ReturnsAsync("test-api-key");
-
-        var services = new ServiceCollection();
-        services.AddSingleton(resolver.Object);
-        var scopeFactory = services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
-
-        var calculator = new Mock<ILlmCostCalculator>();
-        calculator
-            .Setup(c => c.CalculateCost(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
-            .Returns((string modelId, string provider, int prompt, int completion) => new LlmCostCalculation
-            {
-                ModelId = modelId,
-                Provider = provider,
-                PromptTokens = prompt,
-                CompletionTokens = completion,
-                InputCost = prompt * 0.0000003m,
-                OutputCost = completion * 0.0000012m,
-            });
-
-        return new DeepSeekLlmClient(mockFactory.Object, scopeFactory, calculator.Object, Mock.Of<ILogger<DeepSeekLlmClient>>());
-    }
-
     // ─── Factory helpers ─────────────────────────────────────────────────────
 
     /// <summary>
@@ -381,8 +334,10 @@ public class DeepSeekLlmClientTests
     /// Creates a configured DeepSeekLlmClient whose HTTP calls are all served by
     /// <paramref name="response"/>. The resolver returns a dummy key so CheckHealthAsync reaches
     /// the HTTP call (unlike <see cref="CreateUnconfiguredClient"/> which short-circuits).
+    /// #4381: <paramref name="sentBodies"/>, se c'è, riceve il corpo di ogni richiesta; il listino
+    /// prezza ogni chiamata, così anche lo stream arriva al chunk finale con il costo.
     /// </summary>
-    private static DeepSeekLlmClient CreateClientWithResponse(HttpResponseMessage response)
+    private static DeepSeekLlmClient CreateClientWithResponse(HttpResponseMessage response, List<string>? sentBodies = null)
     {
         var handler = new Mock<HttpMessageHandler>(MockBehavior.Strict);
         handler.Protected()
@@ -390,7 +345,15 @@ public class DeepSeekLlmClientTests
                 "SendAsync",
                 ItExpr.IsAny<HttpRequestMessage>(),
                 ItExpr.IsAny<CancellationToken>())
-            .ReturnsAsync(response);
+            .Returns<HttpRequestMessage, CancellationToken>(async (request, ct) =>
+            {
+                if (sentBodies is not null && request.Content is not null)
+                {
+                    sentBodies.Add(await request.Content.ReadAsStringAsync(ct));
+                }
+
+                return response;
+            });
 
         var httpClient = new HttpClient(handler.Object);
         var mockFactory = new Mock<IHttpClientFactory>();
@@ -405,10 +368,23 @@ public class DeepSeekLlmClientTests
         services.AddSingleton(resolver.Object);
         var scopeFactory = services.BuildServiceProvider().GetRequiredService<IServiceScopeFactory>();
 
+        var calculator = new Mock<ILlmCostCalculator>();
+        calculator
+            .Setup(c => c.CalculateCost(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
+            .Returns((string modelId, string provider, int prompt, int completion) => new LlmCostCalculation
+            {
+                ModelId = modelId,
+                Provider = provider,
+                PromptTokens = prompt,
+                CompletionTokens = completion,
+                InputCost = prompt * 0.0000003m,
+                OutputCost = completion * 0.0000012m,
+            });
+
         return new DeepSeekLlmClient(
             mockFactory.Object,
             scopeFactory,
-            Mock.Of<ILlmCostCalculator>(),
+            calculator.Object,
             Mock.Of<ILogger<DeepSeekLlmClient>>());
     }
 

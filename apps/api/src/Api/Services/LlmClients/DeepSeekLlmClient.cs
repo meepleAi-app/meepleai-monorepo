@@ -196,10 +196,10 @@ internal class DeepSeekLlmClient : ILlmClient, ILlmReasoningSwitch
         };
 
         // #4381: col thinking attivo (il default) il ragionamento consuma max_tokens e la temperatura
-        // è ignorata (api-docs.deepseek.com/guides/thinking_mode). Vedi ILlmReasoningSwitch.
+        // è ignorata. Vedi ILlmReasoningSwitch.
         if (disableThinking)
         {
-            requestPayload["thinking"] = new { type = "disabled" };
+            OpenAiToolPayload.DisableThinking(requestPayload);
         }
 
         var json = JsonSerializer.Serialize(requestPayload);

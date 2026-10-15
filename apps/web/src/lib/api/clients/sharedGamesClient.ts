@@ -168,6 +168,8 @@ export interface WizardExtractedMetadata {
 }
 
 export interface ImportGameFromPdfRequest {
+  /** The draft game created by `startGameImport` (#4401). */
+  gameId: string;
   title: string;
   pdfDocumentId: string;
   yearPublished?: number | null;
@@ -203,6 +205,25 @@ export interface KnowledgeBaseSearchResult {
 
 export interface CreateSharedGamesClientParams {
   httpClient: HttpClient;
+}
+
+/**
+ * The message of a failed chunked-upload call. The API answers in more than one shape — a
+ * validation error is `{ error: 'validation_error', errors: { field: [message] } }`, a refused init
+ * is `{ error: message }` — and reading only `detail`/`title` showed "Failed to initialize upload"
+ * for all of them (#4401).
+ */
+async function readUploadError(res: Response, fallback: string): Promise<string> {
+  const body = (await res.json().catch(() => ({}))) as {
+    detail?: string;
+    title?: string;
+    message?: string;
+    error?: string;
+    errors?: Record<string, string[]>;
+  };
+  const fieldError = body.errors ? Object.values(body.errors).flat()[0] : undefined;
+  const error = body.error === 'validation_error' ? undefined : body.error;
+  return body.detail ?? fieldError ?? body.message ?? error ?? body.title ?? fallback;
 }
 
 /**
@@ -1329,27 +1350,40 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
     },
 
     /**
-     * Chunked upload for wizard (orphaned PDF, no gameId).
-     * Calls init → chunks → complete with gameId=null.
+     * Step 1 of the import wizard: creates the draft game the rulebook is uploaded for (#4401).
+     * POST /api/v1/admin/shared-games/import-from-pdf/start
+     */
+    async startGameImport(title: string): Promise<{ gameId: string }> {
+      const result = await httpClient.post(
+        '/api/v1/admin/shared-games/import-from-pdf/start',
+        { title },
+        z.object({ gameId: z.string().uuid() })
+      );
+      return result!;
+    },
+
+    /**
+     * Chunked upload for the wizard: init → chunks → complete, for the draft game.
+     * #4401: the upload needs a game — without one the init answers 422 — and a PDF uploaded for
+     * its game is tied to it and indexed by the upload itself.
      * Returns { pdfDocumentId, fileName }.
      */
     async wizardChunkedUpload(
       file: File,
+      gameId: string,
       onProgress?: (percent: number) => void
     ): Promise<{ pdfDocumentId: string; fileName: string }> {
       const baseUrl = getApiBase();
       const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB
 
-      // Init session (no gameId → orphaned)
       const initRes = await fetch(`${baseUrl}/api/v1/ingest/pdf/chunked/init`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ fileName: file.name, totalFileSize: file.size }),
+        body: JSON.stringify({ gameId, fileName: file.name, totalFileSize: file.size }),
       });
       if (!initRes.ok) {
-        const err = await initRes.json().catch(() => ({}));
-        throw new Error(err.detail ?? err.title ?? 'Failed to initialize upload');
+        throw new Error(await readUploadError(initRes, 'Failed to initialize upload'));
       }
       const initData = (await initRes.json()) as {
         sessionId: string;
@@ -1375,8 +1409,9 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
           body: formData,
         });
         if (!chunkRes.ok) {
-          const err = await chunkRes.json().catch(() => ({}));
-          throw new Error(err.detail ?? `Chunk ${i + 1}/${totalChunks} upload failed`);
+          throw new Error(
+            await readUploadError(chunkRes, `Chunk ${i + 1}/${totalChunks} upload failed`)
+          );
         }
         const chunkData = (await chunkRes.json()) as { progressPercentage: number };
         onProgress?.(chunkData.progressPercentage ?? Math.round(((i + 1) / totalChunks) * 100));
@@ -1390,8 +1425,7 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
         body: JSON.stringify({ sessionId }),
       });
       if (!completeRes.ok) {
-        const err = await completeRes.json().catch(() => ({}));
-        throw new Error(err.detail ?? 'Failed to complete upload');
+        throw new Error(await readUploadError(completeRes, 'Failed to complete upload'));
       }
       const completeData = (await completeRes.json()) as {
         success: boolean;
@@ -1408,7 +1442,8 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
     },
 
     /**
-     * Import game from uploaded PDF (saga: create + link + index).
+     * Step 4 of the import wizard: completes the draft game with the reviewed metadata and
+     * registers the uploaded PDF as its rulebook.
      * POST /api/v1/admin/shared-games/import-from-pdf
      */
     async importGameFromPdf(request: ImportGameFromPdfRequest): Promise<ImportGameFromPdfResult> {

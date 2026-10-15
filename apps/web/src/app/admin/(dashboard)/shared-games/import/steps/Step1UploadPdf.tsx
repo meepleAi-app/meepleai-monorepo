@@ -6,7 +6,8 @@
  * Features:
  * - Native file input (project standard, no react-dropzone)
  * - Client-side validation: PDF format (magic bytes), max 150 MB
- * - Chunked upload via wizardChunkedUpload (10 MB chunks, no gameId → orphaned)
+ * - The game comes first (#4401): the title creates a draft game, and the PDF is uploaded for it
+ *   (wizardChunkedUpload, 10 MB chunks). A retry reuses the draft already created.
  * - Real upload progress tracking
  * - Error handling with clear messages
  */
@@ -23,7 +24,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { api } from '@/lib/api';
-import type { UploadedPdf } from '@/stores/useGameImportWizardStore';
+import { type UploadedPdf, useGameImportWizardStore } from '@/stores/useGameImportWizardStore';
 
 export interface Step1UploadPdfProps {
   onUploadComplete?: (pdf: UploadedPdf) => void;
@@ -93,6 +94,11 @@ export function Step1UploadPdf({ onUploadComplete }: Step1UploadPdfProps): JSX.E
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  const importTitle = useGameImportWizardStore(s => s.importTitle);
+  const importGameId = useGameImportWizardStore(s => s.importGameId);
+  const setImportTitle = useGameImportWizardStore(s => s.setImportTitle);
+  const setImportGameId = useGameImportWizardStore(s => s.setImportGameId);
+
   // Handle file selection
   const handleFileChange = useCallback(async (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -124,14 +130,22 @@ export function Step1UploadPdf({ onUploadComplete }: Step1UploadPdfProps): JSX.E
 
   // Handle upload — always use chunked upload (supports up to 150 MB)
   const handleUpload = useCallback(async () => {
-    if (!file) return;
+    const title = importTitle.trim();
+    if (!file || !title) return;
 
     setIsUploading(true);
     setProgress(0);
     setUploadError(null);
 
     try {
-      const result = await api.sharedGames.wizardChunkedUpload(file, pct => setProgress(pct));
+      let gameId = importGameId;
+      if (!gameId) {
+        gameId = (await api.sharedGames.startGameImport(title)).gameId;
+        setImportGameId(gameId);
+      }
+      const result = await api.sharedGames.wizardChunkedUpload(file, gameId, pct =>
+        setProgress(pct)
+      );
       setUploadSuccess(true);
       onUploadComplete?.({
         pdfDocumentId: result.pdfDocumentId,
@@ -143,24 +157,44 @@ export function Step1UploadPdf({ onUploadComplete }: Step1UploadPdfProps): JSX.E
     } finally {
       setIsUploading(false);
     }
-  }, [file, onUploadComplete]);
+  }, [file, importTitle, importGameId, setImportGameId, onUploadComplete]);
 
   const hasValidationErrors = Object.keys(validationErrors).length > 0;
-  const canUpload = file && !hasValidationErrors && !isUploading && !uploadSuccess;
+  const canUpload =
+    file && importTitle.trim() && !hasValidationErrors && !isUploading && !uploadSuccess;
 
   return (
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold">Carica regolamento PDF</h3>
         <p className="text-sm text-muted-foreground">
-          Seleziona il PDF del regolamento per estrarre i metadati del gioco. Dimensione massima:
-          150 MB.
+          Scrivi il titolo del gioco e seleziona il PDF del regolamento: il gioco viene creato come
+          bozza e il PDF caricato per quel gioco. I metadati estratti dal PDF li rivedi allo step 2.
+          Dimensione massima: 150 MB.
         </p>
       </div>
 
       {/* File Input */}
       <Card className="p-6">
         <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="game-title">Titolo del gioco</Label>
+            <Input
+              id="game-title"
+              value={importTitle}
+              onChange={e => setImportTitle(e.target.value)}
+              maxLength={300}
+              disabled={isUploading || uploadSuccess || importGameId !== null}
+              placeholder="Es. Catan"
+            />
+            {importGameId !== null && !uploadSuccess && (
+              <p className="text-xs text-muted-foreground">
+                La bozza del gioco è già stata creata: il nuovo tentativo carica il PDF per lei. Il
+                titolo si corregge allo step 2.
+              </p>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="pdf-file">Select PDF File</Label>
             <Input

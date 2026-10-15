@@ -2,7 +2,8 @@
  * Game Import Wizard Store — 5-step PDF direct import flow
  *
  * Steps:
- * 1. Upload PDF (chunked, up to 150MB) → { pdfDocumentId }
+ * 1. Title + PDF: creates the draft game, then uploads the PDF for it (chunked, up to 150MB)
+ *    → { gameId, pdfDocumentId }. #4401: the game comes first — the upload needs one.
  * 2. Review metadata (LLM-extracted) + cover image picker + live MeepleCard preview
  * 3. Preview & Confirm (read-only MeepleCard)
  * 4. Creation progress (ImportGameFromPdfCommand saga)
@@ -52,7 +53,7 @@ export interface CoverImageSelection {
 export interface ImportResult {
   gameId: string;
   pdfDocumentId: string;
-  indexingStatus: 'pending' | 'failed';
+  indexingStatus: 'ready' | 'pending' | 'failed';
   warning?: string;
 }
 
@@ -73,6 +74,10 @@ export interface GameImportWizardState {
   currentStep: WizardStep;
 
   // Step 1
+  /** The title typed at step 1; the draft game is created with it. */
+  importTitle: string;
+  /** The draft game created at step 1 (#4401). A retried upload reuses it. */
+  importGameId: string | null;
   uploadedPdf: UploadedPdf | null;
 
   // Step 2
@@ -100,6 +105,8 @@ export interface GameImportWizardState {
   canGoBack: () => boolean;
 
   // Step 1 actions
+  setImportTitle: (title: string) => void;
+  setImportGameId: (gameId: string) => void;
   setUploadedPdf: (pdf: UploadedPdf) => void;
 
   // Step 2 actions
@@ -125,10 +132,22 @@ export interface GameImportWizardState {
   submitWizard: () => Promise<void>;
 }
 
+/**
+ * The cover to save with the game. The wizard's previews (a PDF page, an uploaded image) are
+ * `blob:` URLs that live in this browser tab: saved, they would be dead links. Only an http(s) URL
+ * is sent; otherwise the game keeps its placeholder.
+ */
+export function persistableCoverUrl(cover: CoverImageSelection): string | null {
+  if (cover.mode === 'placeholder' || !cover.imageUrl) return null;
+  return /^https?:\/\//i.test(cover.imageUrl) ? cover.imageUrl : null;
+}
+
 // ─── Initial State ─────────────────────────────────────────────────────────────
 
 const initialState = {
   currentStep: 1 as WizardStep,
+  importTitle: '',
+  importGameId: null as string | null,
   uploadedPdf: null,
   reviewedMetadata: null,
   coverImage: { mode: 'placeholder' as CoverImageMode, imageUrl: null },
@@ -176,7 +195,12 @@ export const useGameImportWizardStore = create<GameImportWizardState>()(
             case 1:
               return uploadedPdf !== null;
             case 2:
-              return reviewedMetadata !== null && !!reviewedMetadata.title?.trim();
+              // The game's description is required (domain rule): without it step 4 is refused.
+              return (
+                reviewedMetadata !== null &&
+                !!reviewedMetadata.title?.trim() &&
+                !!reviewedMetadata.description?.trim()
+              );
             case 3:
               return reviewedMetadata !== null;
             case 4:
@@ -197,6 +221,10 @@ export const useGameImportWizardStore = create<GameImportWizardState>()(
 
         // ── Step 1 ─────────────────────────────────────────────────────────
 
+        setImportTitle: title => set({ importTitle: title }),
+
+        setImportGameId: gameId => set({ importGameId: gameId }),
+
         setUploadedPdf: pdf => {
           set({ uploadedPdf: pdf, extractedMetadata: null, error: null });
         },
@@ -214,9 +242,9 @@ export const useGameImportWizardStore = create<GameImportWizardState>()(
         // ── Step 4: Import saga ────────────────────────────────────────────
 
         executeImport: async () => {
-          const { uploadedPdf, reviewedMetadata, coverImage } = get();
+          const { importGameId, uploadedPdf, reviewedMetadata, coverImage } = get();
 
-          if (!uploadedPdf) {
+          if (!importGameId || !uploadedPdf) {
             set({ error: 'Nessun PDF caricato' });
             return;
           }
@@ -229,6 +257,7 @@ export const useGameImportWizardStore = create<GameImportWizardState>()(
 
           try {
             const result = await api.sharedGames.importGameFromPdf({
+              gameId: importGameId,
               title: reviewedMetadata.title,
               pdfDocumentId: uploadedPdf.pdfDocumentId,
               yearPublished: reviewedMetadata.yearPublished,
@@ -237,7 +266,7 @@ export const useGameImportWizardStore = create<GameImportWizardState>()(
               maxPlayers: reviewedMetadata.maxPlayers,
               playingTimeMinutes: reviewedMetadata.playingTimeMinutes,
               minAge: reviewedMetadata.minAge,
-              coverImageUrl: coverImage.mode !== 'placeholder' ? coverImage.imageUrl : null,
+              coverImageUrl: persistableCoverUrl(coverImage),
               publishers: reviewedMetadata.publishers,
               designers: reviewedMetadata.designers,
               categories: reviewedMetadata.categories,
@@ -298,9 +327,13 @@ export const useGameImportWizardStore = create<GameImportWizardState>()(
       }),
       {
         name: 'game-import-wizard-v2',
-        version: 2,
+        // 3 (#4401): the draft game id joined the state. A version-2 state holds an upload with no
+        // game — which the API never accepted — so it is dropped rather than migrated.
+        version: 3,
         partialize: state => ({
           currentStep: state.currentStep,
+          importTitle: state.importTitle,
+          importGameId: state.importGameId,
           uploadedPdf: state.uploadedPdf,
           reviewedMetadata: state.reviewedMetadata,
           // Sanitize blob: URLs — they are session-scoped and invalid after reload.

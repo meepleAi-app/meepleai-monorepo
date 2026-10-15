@@ -480,12 +480,23 @@ internal static class SharedGameCatalogAdminEndpoints
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden);
 
-        // Import game from PDF (wizard 5-step saga)
+        // #4401: the PDF import wizard creates the game first (step 1), then uploads the rulebook for it.
+        group.MapPost("/admin/shared-games/import-from-pdf/start", HandleStartGameImport)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("StartGameImportFromPdf")
+            .WithSummary("Start a PDF import: create the draft game (Admin/Editor)")
+            .WithDescription("Creates a draft skeleton game with the given title, so the wizard can upload the rulebook for it.")
+            .Produces<StartGameImportResponse>(StatusCodes.Status201Created)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
+        // Import game from PDF (wizard step 4)
         group.MapPost("/admin/shared-games/import-from-pdf", HandleImportGameFromPdf)
             .RequireAuthorization("AdminOrEditorPolicy")
             .WithName("ImportGameFromPdf")
             .WithSummary("Import shared game from PDF (Admin/Editor)")
-            .WithDescription("Orchestrates a saga: creates SharedGame, links the orphaned PDF, and enqueues RAG indexing.")
+            .WithDescription("Completes the draft game created by the start step with the reviewed metadata, and registers the uploaded PDF as its rulebook.")
             .Produces<ImportGameFromPdfResult>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
@@ -520,6 +531,20 @@ internal static class SharedGameCatalogAdminEndpoints
     // ADMIN HANDLERS
     // ========================================
 
+    private static async Task<IResult> HandleStartGameImport(
+        [FromBody] StartGameImportRequest request,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var (authenticated, session, error) = context.TryGetActiveSession();
+        if (!authenticated) return error!;
+
+        var gameId = await mediator.Send(
+            new StartGameImportCommand(request.Title, session!.Principal!.Subject.Id), ct).ConfigureAwait(false);
+        return Results.Created($"/admin/shared-games/{gameId}", new StartGameImportResponse(gameId));
+    }
+
     private static async Task<IResult> HandleImportGameFromPdf(
         [FromBody] ImportGameFromPdfRequest request,
         HttpContext context,
@@ -530,6 +555,7 @@ internal static class SharedGameCatalogAdminEndpoints
         if (!authenticated) return error!;
 
         var command = new ImportGameFromPdfCommand(
+            GameId: request.GameId,
             Metadata: new ImportGameMetadataDto(
                 request.Title,
                 request.YearPublished,
@@ -1668,9 +1694,20 @@ internal static class SharedGameCatalogAdminEndpoints
 internal sealed record EnrichCatalogCoverBatchRequest(IReadOnlyList<Guid>? GameIds);
 
 /// <summary>
+/// Request body for POST /admin/shared-games/import-from-pdf/start (#4401).
+/// </summary>
+internal sealed record StartGameImportRequest(string Title);
+
+/// <summary>
+/// Response of POST /admin/shared-games/import-from-pdf/start: the draft game to upload the rulebook for.
+/// </summary>
+internal sealed record StartGameImportResponse(Guid GameId);
+
+/// <summary>
 /// Request body for POST /admin/shared-games/import-from-pdf
 /// </summary>
 internal sealed record ImportGameFromPdfRequest(
+    Guid GameId,
     string Title,
     Guid PdfDocumentId,
     int? YearPublished = null,

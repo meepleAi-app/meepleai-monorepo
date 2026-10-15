@@ -13,22 +13,26 @@ public record ImportGameFromPdfResult(
 );
 
 /// <summary>
-/// Orchestrating saga command that imports a board game from an already-uploaded (orphaned) PDF.
+/// Step 4 of the PDF import wizard: completes the draft game created at step 1
+/// (<see cref="StartGameImportCommand"/>) with the metadata the admin reviewed.
 ///
-/// Saga steps (Nygard Production Resilience pattern):
-///   Step 1 — CreateSharedGame(metadata)        → gameId
-///   Step 2 — AddDocumentToSharedGame(gameId, pdfId)
-///             ON FAILURE → DeleteSharedGame(gameId) [compensation], re-throw
-///   Step 3 — Enqueue IndexDocumentCommand(pdfId, gameId)  [fire-and-forget, async]
-///             ON FAILURE → return result with warning (game + PDF linked, indexing deferred)
+/// #4401: the game comes first. The rulebook was uploaded FOR it (chunked upload with its id), so
+/// the PDF is already tied to the game and indexed by the upload itself (#4395): this command does
+/// not create the game, link the PDF or start an indexing. Steps, each safe to repeat when the
+/// wizard retries:
+///   1 — the reviewed metadata goes on the game (<c>UpdateSharedGameCommand</c>);
+///   2 — the skeleton becomes complete, out of the BGG enrichment queue;
+///   3 — the PDF is registered as the game's rulebook, unless it already is.
 ///
-/// The game is created in Draft status; caller must explicitly publish it.
+/// The game stays in Draft status; the caller publishes it.
 /// </summary>
+/// <param name="GameId">The draft game created at step 1.</param>
 /// <param name="Metadata">Reviewed metadata (from wizard step 2)</param>
-/// <param name="PdfDocumentId">ID of the already-uploaded orphaned PdfDocument</param>
-/// <param name="CoverImageUrl">Optional cover image URL (null = placeholder)</param>
+/// <param name="PdfDocumentId">The rulebook uploaded for <paramref name="GameId"/>.</param>
+/// <param name="CoverImageUrl">Optional absolute cover URL (null = keep the game's, a placeholder for a new one)</param>
 /// <param name="RequestedBy">UserId of the admin executing the import</param>
 internal record ImportGameFromPdfCommand(
+    Guid GameId,
     ImportGameMetadataDto Metadata,
     Guid PdfDocumentId,
     string? CoverImageUrl,

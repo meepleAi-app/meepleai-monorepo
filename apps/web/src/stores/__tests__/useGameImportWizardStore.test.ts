@@ -17,6 +17,7 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import {
+  persistableCoverUrl,
   useGameImportWizardStore,
   type GameMetadata,
   type UploadedPdf,
@@ -73,6 +74,8 @@ beforeEach(() => {
   // Reset store to initial state
   useGameImportWizardStore.setState({
     currentStep: 1,
+    importTitle: '',
+    importGameId: null,
     uploadedPdf: null,
     reviewedMetadata: null,
     coverImage: { mode: 'placeholder', imageUrl: null },
@@ -229,6 +232,17 @@ describe('useGameImportWizardStore', () => {
       expect(result.current.canGoNext()).toBe(true);
     });
 
+    it('step 2: canGoNext false without a description (#4401: the domain requires it)', () => {
+      const { result } = renderHook(() => useGameImportWizardStore());
+
+      act(() => {
+        result.current.setStep(2);
+        result.current.setReviewedMetadata({ ...mockMetadata, description: '  ' });
+      });
+
+      expect(result.current.canGoNext()).toBe(false);
+    });
+
     it('step 2: canGoNext false when title is blank', () => {
       const { result } = renderHook(() => useGameImportWizardStore());
 
@@ -318,6 +332,7 @@ describe('useGameImportWizardStore', () => {
       const { result } = renderHook(() => useGameImportWizardStore());
 
       act(() => {
+        result.current.setImportGameId('game-draft-1');
         result.current.setUploadedPdf(mockUploadedPdf);
         result.current.setReviewedMetadata(mockMetadata);
         result.current.setCoverImage(mockCoverImage);
@@ -329,8 +344,10 @@ describe('useGameImportWizardStore', () => {
 
       expect(mockImportGameFromPdf).toHaveBeenCalledWith(
         expect.objectContaining({
+          gameId: 'game-draft-1',
           title: mockMetadata.title,
           pdfDocumentId: mockUploadedPdf.pdfDocumentId,
+          coverImageUrl: 'https://example.com/cover.jpg',
         })
       );
 
@@ -338,6 +355,51 @@ describe('useGameImportWizardStore', () => {
       expect(result.current.importResult?.gameId).toBe('game-new-123');
       expect(result.current.isProcessing).toBe(false);
       expect(result.current.error).toBeNull();
+    });
+
+    it('executeImport returns early without the draft game of step 1 (#4401)', async () => {
+      const { result } = renderHook(() => useGameImportWizardStore());
+
+      act(() => {
+        result.current.setUploadedPdf(mockUploadedPdf);
+        result.current.setReviewedMetadata(mockMetadata);
+      });
+
+      await act(async () => {
+        await result.current.executeImport();
+      });
+
+      expect(mockImportGameFromPdf).not.toHaveBeenCalled();
+      expect(result.current.error).toBeTruthy();
+    });
+
+    it('executeImport does not send a blob: preview as the cover (#4401)', async () => {
+      const { result } = renderHook(() => useGameImportWizardStore());
+      mockImportGameFromPdf.mockResolvedValue({
+        gameId: 'game-draft-1',
+        pdfDocumentId: 'pdf-123',
+        indexingStatus: 'ready',
+      });
+
+      act(() => {
+        result.current.setImportGameId('game-draft-1');
+        result.current.setUploadedPdf(mockUploadedPdf);
+        result.current.setReviewedMetadata(mockMetadata);
+        result.current.setCoverImage({
+          mode: 'pdf-page',
+          imageUrl: 'blob:http://localhost:3000/5f0c',
+          pdfPageNumber: 1,
+        });
+      });
+
+      await act(async () => {
+        await result.current.executeImport();
+      });
+
+      expect(mockImportGameFromPdf).toHaveBeenCalledWith(
+        expect.objectContaining({ coverImageUrl: null })
+      );
+      expect(result.current.importResult?.indexingStatus).toBe('ready');
     });
 
     it('executeImport sets error and returns early when no PDF', async () => {
@@ -378,6 +440,7 @@ describe('useGameImportWizardStore', () => {
       mockImportGameFromPdf.mockRejectedValue(new Error('Internal Server Error'));
 
       act(() => {
+        result.current.setImportGameId('game-draft-1');
         result.current.setUploadedPdf(mockUploadedPdf);
         result.current.setReviewedMetadata(mockMetadata);
       });
@@ -399,6 +462,7 @@ describe('useGameImportWizardStore', () => {
       const { result } = renderHook(() => useGameImportWizardStore());
 
       act(() => {
+        result.current.setImportGameId('game-draft-1');
         result.current.setUploadedPdf(mockUploadedPdf);
         result.current.setReviewedMetadata(mockMetadata);
       });
@@ -459,6 +523,8 @@ describe('useGameImportWizardStore', () => {
       const { result } = renderHook(() => useGameImportWizardStore());
 
       act(() => {
+        result.current.setImportTitle('Typed');
+        result.current.setImportGameId('game-draft-1');
         result.current.setUploadedPdf(mockUploadedPdf);
         result.current.setReviewedMetadata(mockMetadata);
         result.current.setCoverImage(mockCoverImage);
@@ -471,6 +537,8 @@ describe('useGameImportWizardStore', () => {
       });
 
       expect(result.current.currentStep).toBe(1);
+      expect(result.current.importTitle).toBe('');
+      expect(result.current.importGameId).toBeNull();
       expect(result.current.uploadedPdf).toBeNull();
       expect(result.current.reviewedMetadata).toBeNull();
       expect(result.current.importResult).toBeNull();
@@ -491,5 +559,23 @@ describe('useGameImportWizardStore', () => {
 
       expect(result.current.selectedBggId).toBeNull();
     });
+  });
+});
+
+describe('persistableCoverUrl (#4401)', () => {
+  it('keeps an http(s) URL', () => {
+    expect(persistableCoverUrl({ mode: 'upload', imageUrl: 'https://cdn.example/c.png' })).toBe(
+      'https://cdn.example/c.png'
+    );
+  });
+
+  it('drops a blob: preview, which would be a dead link once saved', () => {
+    expect(persistableCoverUrl({ mode: 'upload', imageUrl: 'blob:http://localhost:3000/a1' })).toBe(
+      null
+    );
+  });
+
+  it('sends nothing for the placeholder', () => {
+    expect(persistableCoverUrl({ mode: 'placeholder', imageUrl: null })).toBeNull();
   });
 });

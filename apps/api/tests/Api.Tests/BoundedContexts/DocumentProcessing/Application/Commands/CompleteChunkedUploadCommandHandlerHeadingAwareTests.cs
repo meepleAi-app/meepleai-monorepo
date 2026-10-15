@@ -92,6 +92,9 @@ public class CompleteChunkedUploadCommandHandlerHeadingAwareTests
                 UploadedAt = DateTime.UtcNow,
                 ProcessingState = nameof(PdfProcessingState.Extracting)
             });
+            // #4395: the pgvector rows hang off the VectorDocument, which IPdfIndexingPipeline creates
+            // in production; here the pipeline is a no-op double, so the row is seeded.
+            seedDb.VectorDocuments.Add(new VectorDocumentEntity { PdfDocumentId = pdfId, GameId = gameId, SharedGameId = gameId });
             await seedDb.SaveChangesAsync();
         }
 
@@ -148,6 +151,8 @@ public class CompleteChunkedUploadCommandHandlerHeadingAwareTests
                 .Setup(e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((List<string> texts, CancellationToken _) =>
                     EmbeddingResult.CreateSuccess(texts.Select(t => new float[] { 0.1f, 0.2f, 0.3f }).ToList()));
+            // #4395: the pgvector rows carry the model name (a required column).
+            embeddingMock.Setup(e => e.GetModelName()).Returns("test-embedding-model");
 
             var sc = new ServiceCollection();
             // Each scope resolves a FRESH DbContext instance backed by the same in-memory store —
@@ -237,6 +242,9 @@ public class CompleteChunkedUploadCommandHandlerHeadingAwareTests
                 UploadedAt = DateTime.UtcNow,
                 ProcessingState = nameof(PdfProcessingState.Extracting)
             });
+            // #4395: the pgvector rows hang off the VectorDocument, which IPdfIndexingPipeline creates
+            // in production; here the pipeline is a no-op double, so the row is seeded.
+            seedDb.VectorDocuments.Add(new VectorDocumentEntity { PdfDocumentId = pdfId, GameId = gameId, SharedGameId = gameId });
             await seedDb.SaveChangesAsync();
         }
 
@@ -283,6 +291,8 @@ public class CompleteChunkedUploadCommandHandlerHeadingAwareTests
                 .Setup(e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((List<string> texts, CancellationToken _) =>
                     EmbeddingResult.CreateSuccess(texts.Select(t => new float[] { 0.1f, 0.2f, 0.3f }).ToList()));
+            // #4395: the pgvector rows carry the model name (a required column).
+            embeddingMock.Setup(e => e.GetModelName()).Returns("test-embedding-model");
 
             var sc = new ServiceCollection();
             sc.AddScoped<MeepleAiDbContext>(_ => CreateNoTrackingInMemoryDbContext(dbName));

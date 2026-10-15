@@ -54,12 +54,10 @@ using Serilog;
 using Serilog.Events;
 using StackExchange.Redis;
 using System;
-using System.Globalization;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Security.Claims;
-using AspNetIpNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
 
 // Load environment variables from .env.development file (single source of truth for secrets)
 // SECURITY: Only load .env files in Development environment - NEVER in Production/CI
@@ -241,7 +239,7 @@ if (forwardedHeadersEnabled)
     {
         options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
 
-        options.KnownNetworks.Clear();
+        options.KnownIPNetworks.Clear();
         options.KnownProxies.Clear();
 
         var knownProxies = forwardedHeadersSection.GetSection("KnownProxies").Get<string[]>() ?? Array.Empty<string>();
@@ -256,21 +254,11 @@ if (forwardedHeadersEnabled)
         var knownNetworks = forwardedHeadersSection.GetSection("KnownNetworks").Get<string[]>() ?? Array.Empty<string>();
         foreach (var network in knownNetworks)
         {
-            if (string.IsNullOrWhiteSpace(network))
+            // System.Net.IPNetwork accetta anche una base con bit di host (172.18.0.1/16) e li azzera:
+            // il ripiego manuale serviva al tipo di HttpOverrides, deprecato in .NET 10 (#4429).
+            if (!string.IsNullOrWhiteSpace(network) && System.Net.IPNetwork.TryParse(network.Trim(), out var ipNetwork))
             {
-                continue;
-            }
-
-            if (AspNetIpNetwork.TryParse(network, out var ipNetwork))
-            {
-                options.KnownNetworks.Add(ipNetwork);
-                continue;
-            }
-
-            var parts = network.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            if (parts.Length == 2 && IPAddress.TryParse(parts[0], out var networkAddress) && int.TryParse(parts[1], CultureInfo.InvariantCulture, out var prefixLength))
-            {
-                options.KnownNetworks.Add(new AspNetIpNetwork(networkAddress, prefixLength));
+                options.KnownIPNetworks.Add(ipNetwork);
             }
         }
 

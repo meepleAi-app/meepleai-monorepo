@@ -35,7 +35,7 @@ Controlled at runtime via admin toggle (`/admin/config` → General → Registra
 
 ## Stack
 
-**Backend** (.NET 9): ASP.NET Minimal APIs + MediatR | PostgreSQL 16 + EF Core (pgvector) + Redis | FluentValidation | xUnit + Testcontainers
+**Backend** (.NET 10): ASP.NET Minimal APIs + MediatR | PostgreSQL 16 + EF Core (pgvector) + Redis | FluentValidation | xUnit + Testcontainers
 
 **Frontend** (Next.js 16): App Router + React 19 | Tailwind 4 + shadcn/ui | Zustand + React Query | Vitest + Playwright
 
@@ -242,7 +242,7 @@ pnpm typecheck && pnpm lint       # Quality
 
 ```
 apps/
-├── api/src/Api/          # .NET 9: BoundedContexts/, Routing/, Infrastructure/
+├── api/src/Api/          # .NET 10: BoundedContexts/, Routing/, Infrastructure/
 ├── web/                  # Next.js: src/app/, components/, lib/, __tests__/
 ├── embedding-service/    # Python: embeddings
 ├── reranker-service/     # Python: reranking

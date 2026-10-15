@@ -184,7 +184,7 @@ jobs:
 
       - uses: ./.github/actions/setup-backend
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
           working-directory: apps/api
           cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
 

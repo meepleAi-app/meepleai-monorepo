@@ -121,10 +121,10 @@ internal static class SessionCommandEndpoints
             "PUT /game-sessions/{id}/scores-polymorphic (Asse A #1896 T10), which accepts a " +
             "polymorphic ScoringType + ScoreData JSON payload with per-type schema validation. " +
             "Removal scheduled after a 30-day deprecation window from the merge of #2433.")
-        .WithOpenApi(operation =>
+        .AddOpenApiOperationTransformer((operation, _, _) =>
         {
             operation.Deprecated = true;
-            return operation;
+            return Task.CompletedTask;
         })
         .WithMetadata(new ObsoleteAttribute(
             "#2433: legacy per-participant score endpoint. Use UpdateSessionScoresCommand at " +

@@ -172,7 +172,8 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                    1 - (e.vector <=> @queryVector) AS similarity,
                    tc."Heading",
                    tc.char_start, tc.char_end, tc.bounding_boxes_json,
-                   e.lang
+                   e.lang,
+                   e.source_chunk_id
             FROM {TableName} e
             JOIN vector_documents vd ON vd."Id" = e.vector_document_id
             LEFT JOIN text_chunks tc ON tc."Id" = e.source_chunk_id
@@ -243,6 +244,13 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                     // #3740 Column 13: chunk language. This is the arm the RAG gate measures, so an
                     // "en"-for-everything projection made any per-language reasoning unfalsifiable.
                     var lang = await ReadLanguageAsync(reader, 13, cancellationToken).ConfigureAwait(false);
+                    // #4288 Column 14: the text_chunks row the embedding came from. KbQuality scores a
+                    // hit by this id. Null when the embedding was written without it: a photo batch
+                    // (no row to point to), a pre-SP2 embedding, or a PDF uploaded through
+                    // /ingest/pdf while #4384 is open.
+                    var sourceChunkId = await reader.IsDBNullAsync(14, cancellationToken).ConfigureAwait(false)
+                        ? (Guid?)null
+                        : reader.GetGuid(14);
 
                     var placeholderVector = DomainVector.CreatePlaceholder(queryVector.Dimensions);
                     var embedding = new Embedding(
@@ -254,6 +262,7 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                         chunkIndex: chunkIndex,
                         pageNumber: Math.Max(1, pageNumber),
                         language: lang,
+                        sourceChunkId: sourceChunkId,
                         roleTags: roleTags,
                         pdfDocumentId: pdfDocumentId,
                         heading: heading,

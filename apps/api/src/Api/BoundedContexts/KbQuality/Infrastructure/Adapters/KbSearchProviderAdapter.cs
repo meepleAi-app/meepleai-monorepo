@@ -26,12 +26,12 @@ namespace Api.BoundedContexts.KbQuality.Infrastructure.Adapters;
 /// same game are not retrievable. Search runs as the system (no UserId), since KbQuality is
 /// admin-only and the RAG access service short-circuits when UserId is null.</para>
 ///
-/// <para>Chunk-id contract: the port's <see cref="SearchResult.RetrievedChunkIds"/> are
-/// <c>TextChunkEntity.Id</c> values. The KB internally exposes them as
-/// <see cref="SearchResultDto.VectorDocumentId"/> string (matches the
-/// <c>Guid.Parse(sr.VectorDocumentId)</c> convention in
-/// <c>AskQuestionQueryHandler</c>:441). Non-parseable rows are skipped defensively rather than
-/// crashing the whole eval run.</para>
+/// <para>Chunk-id contract (#4288): the port's <see cref="SearchResult.RetrievedChunkIds"/> are
+/// <c>TextChunkEntity.Id</c> values, read from <see cref="SearchResultDto.TextChunkId"/>. Not from
+/// <see cref="SearchResultDto.VectorDocumentId"/>, which never holds a chunk id: the vector arm puts
+/// the vector document there and the keyword arm the PDF, so comparing it with the goldset's
+/// <c>SourceChunkId</c> scored every evaluation zero. A result without a chunk id keeps its rank
+/// as <c>null</c> instead of being skipped, so the results after it do not move up.</para>
 /// </summary>
 internal sealed class KbSearchProviderAdapter(IMediator mediator, MeepleAiDbContext db) : IKbSearchProvider
 {
@@ -74,15 +74,6 @@ internal sealed class KbSearchProviderAdapter(IMediator mediator, MeepleAiDbCont
 
         sw.Stop();
 
-        var chunkIds = new List<Guid>(hits.Count);
-        foreach (var hit in hits)
-        {
-            if (Guid.TryParse(hit.VectorDocumentId, out var parsed))
-            {
-                chunkIds.Add(parsed);
-            }
-        }
-
-        return new SearchResult(chunkIds, sw.Elapsed);
+        return new SearchResult(hits.Select(hit => hit.TextChunkId).ToList(), sw.Elapsed);
     }
 }

@@ -18,6 +18,15 @@ internal sealed class SearchResult : Entity<Guid>
     public string? SearchMethod { get; private set; } // "vector", "keyword", "hybrid"
     public Guid PdfDocumentId { get; private set; }
     public int ChunkIndex { get; private set; }
+
+    /// <summary>
+    /// #4288: l'id del <c>text_chunks</c> da cui viene il passaggio. Null quando il braccio vettoriale
+    /// lo restituisce da un embedding scritto senza <c>source_chunk_id</c>: un lotto di foto, che non
+    /// ha un chunk testuale, un embedding precedente a SP2, o un PDF caricato da <c>/ingest/pdf</c>
+    /// finché è aperta #4384.
+    /// </summary>
+    public Guid? TextChunkId { get; private set; }
+
     public GameBookRole RoleTags { get; private set; }
 
     /// <summary>#3270: chunk heading-path label for the heading-match boost (nullable).</summary>
@@ -61,7 +70,8 @@ internal sealed class SearchResult : Entity<Guid>
         string? boundingBoxesJson = null,
         int? charStart = null,
         int? charEnd = null,
-        RetrievalSignals? signals = null) : base(id)
+        RetrievalSignals? signals = null,
+        Guid? textChunkId = null) : base(id)
     {
         if (string.IsNullOrWhiteSpace(textContent))
             throw new ArgumentException("Text content cannot be empty", nameof(textContent));
@@ -86,6 +96,7 @@ internal sealed class SearchResult : Entity<Guid>
         CharStart = charStart;
         CharEnd = charEnd;
         Signals = signals ?? RetrievalSignals.None;
+        TextChunkId = textChunkId;
     }
 
     /// <summary>

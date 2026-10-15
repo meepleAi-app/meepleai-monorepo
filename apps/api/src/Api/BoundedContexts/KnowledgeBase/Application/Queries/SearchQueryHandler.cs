@@ -199,6 +199,7 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
                 searchMethod: "vector",
                 pdfDocumentId: scored.Embedding.PdfDocumentId,                       // real (JOIN-resolved)
                 chunkIndex: scored.Embedding.ChunkIndex,
+                textChunkId: scored.Embedding.SourceChunkId,                         // #4288
                 roleTags: (GameBookRole)scored.Embedding.RoleTags,                   // int → enum
                 heading: scored.Embedding.Heading,                                    // #3270
                 boundingBoxesJson: scored.Embedding.BoundingBoxesJson,               // SP-C (#3407)

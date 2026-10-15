@@ -26,7 +26,10 @@ internal record SearchResultDto(
     float? VectorScore = null,
     float? KeywordScore = null,
     string? Language = null,
-    IReadOnlyList<string>? MatchedTerms = null
+    IReadOnlyList<string>? MatchedTerms = null,
+    // #4288: l'id del text_chunks del passaggio. VectorDocumentId non lo identifica: il braccio
+    // vettoriale ci mette l'id del documento vettoriale, quello lessicale l'id del PDF.
+    Guid? TextChunkId = null
 )
 {
     /// <summary>
@@ -52,7 +55,8 @@ internal record SearchResultDto(
             VectorScore: searchResult.Signals.VectorScore,
             KeywordScore: searchResult.Signals.KeywordScore,
             Language: searchResult.Signals.Language,
-            MatchedTerms: searchResult.Signals.MatchedTerms
+            MatchedTerms: searchResult.Signals.MatchedTerms,
+            TextChunkId: searchResult.TextChunkId
         );
     }
 };

@@ -89,6 +89,8 @@ internal class RrfFusionDomainService
                     searchMethod: "hybrid",
                     pdfDocumentId: original.PdfDocumentId,
                     chunkIndex: original.ChunkIndex,
+                    // #4288: either arm can carry it; the vector one is null for a pre-SP2 embedding.
+                    textChunkId: fromVector?.TextChunkId ?? fromKeyword?.TextChunkId,
                     roleTags: f.RoleTags,
                     heading: f.Heading,
                     // SP-C (#3407): carry the region-grounding primitives from the (vector-preferred)

@@ -54,7 +54,7 @@ public sealed class AssistantConversationTests
     [Fact]
     public void DefaultPrompts_AreTheMeasuredOnes()
     {
-        var path = Path.Combine(FindRepoRoot(), "tests", "llm-eval", "session-assistant", "prompts", "v3.json");
+        var path = Path.Combine(FindRepoRoot(), "tests", "llm-eval", "session-assistant", "prompts", "v4.json");
         using var measured = JsonDocument.Parse(File.ReadAllText(path));
 
         SessionAssistantPrompts.Italian.Should().Be(measured.RootElement.GetProperty("italian").GetString());

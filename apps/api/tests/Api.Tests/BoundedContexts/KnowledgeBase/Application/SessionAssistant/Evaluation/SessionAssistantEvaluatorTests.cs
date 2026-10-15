@@ -193,6 +193,29 @@ public sealed class SessionAssistantEvaluatorTests
         sent.Messages[0].Content.Should().Be("PROMPT ITALIANO DI PROVA");
     }
 
+    /// <summary>
+    /// #4270: il testo da pubblicare si misura con gli strumenti che il turno offre finché la fetta A5 non
+    /// consegna <c>cerca_regole</c>. Lo scenario ha un gioco con le regole: senza l'opzione lo riceverebbe.
+    /// </summary>
+    [Theory]
+    [InlineData(true, true)]
+    [InlineData(false, false)]
+    public async Task Run_OffersTheRulesTool_OnlyWhenAsked(bool offerRules, bool rulesOffered)
+    {
+        LlmChatRequest? sent = null;
+        var gateway = new Mock<ILlmService>();
+        gateway.Setup(g => g.ChatAsync(It.IsAny<LlmChatRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<LlmChatRequest, CancellationToken>((request, _) => sent ??= request)
+            .ReturnsAsync(Answer("Tocca a Luca."));
+
+        await Evaluator(gateway).RunAsync(
+            Scenario(), Settings, SessionAssistantPrompts.Default, offerRules, TestContext.Current.CancellationToken);
+
+        var offered = sent!.Tools.Select(t => t.Name).ToList();
+        offered.Should().Contain(["stato_partita", "proponi_punteggio", "proponi_turno"]);
+        offered.Contains("cerca_regole").Should().Be(rulesOffered);
+    }
+
     [Fact]
     public async Task Handler_PartialPromptOverride_KeepsTheDefaultForTheOtherLanguage()
     {
@@ -213,6 +236,25 @@ public sealed class SessionAssistantEvaluatorTests
         report.Results.Should().HaveCount(2);
         sent[0].Messages[0].Content.Should().Be("PROMPT ITALIANO DI PROVA");
         sent[1].Messages[0].Content.Should().Be(SessionAssistantPrompts.English);
+    }
+
+    [Fact]
+    public async Task Handler_WithoutTheRulesTool_DoesNotOfferIt_ToAnyScenario()
+    {
+        var sent = new List<LlmChatRequest>();
+        var gateway = new Mock<ILlmService>();
+        gateway.Setup(g => g.ChatAsync(It.IsAny<LlmChatRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<LlmChatRequest, CancellationToken>((request, _) => sent.Add(request))
+            .ReturnsAsync(Answer("ok"));
+        var handler = new RunSessionAssistantEvaluationCommandHandler(Evaluator(gateway));
+
+        await handler.Handle(
+            new RunSessionAssistantEvaluationCommand(
+                new AssistantScenarioSet(2, [Scenario()]), "deepseek-flash", null, 0.2, 600, 4, OfferRules: false),
+            TestContext.Current.CancellationToken);
+
+        sent.Should().NotBeEmpty();
+        sent.SelectMany(r => r.Tools).Select(t => t.Name).Should().NotContain("cerca_regole");
     }
 
     // Review di #4256: il file dei risultati deve dire quale prompt è stato USATO, non quale è stato mandato.

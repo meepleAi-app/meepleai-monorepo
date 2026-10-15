@@ -240,10 +240,26 @@ internal static class SessionAssistantTestData
     /// dal seed, che dichiara il tool calling di <c>deepseek-flash</c>, il modello principale del profilo.
     /// </summary>
     /// <returns>L'id della versione pubblicata.</returns>
-    public static async Task<Guid> EnableAssistantAsync(
+    public static Task<Guid> EnableAssistantAsync(
         WebApplicationFactory<Program> factory,
         CancellationToken ct,
         Func<SessionAssistantSettings, SessionAssistantSettings>? change = null)
+    {
+        var assistant = SessionAssistantSettings.Create(
+            enabled: true,
+            new Dictionary<string, string>(StringComparer.Ordinal) { ["it"] = ItalianPrompt, ["en"] = EnglishPrompt });
+        return PublishAssistantAsync(factory, change?.Invoke(assistant) ?? assistant, ct);
+    }
+
+    /// <summary>
+    /// Pubblica una versione del profilo senza la sezione dell'assistente. Dal #4238 le migrazioni lo
+    /// pubblicano abilitato: un test che lo vuole spento lo deve dire.
+    /// </summary>
+    public static Task<Guid> DisableAssistantAsync(WebApplicationFactory<Program> factory, CancellationToken ct) =>
+        PublishAssistantAsync(factory, SessionAssistantSettings.Disabled, ct);
+
+    private static async Task<Guid> PublishAssistantAsync(
+        WebApplicationFactory<Program> factory, SessionAssistantSettings assistant, CancellationToken ct)
     {
         await using var scope = factory.Services.CreateAsyncScope();
         var services = scope.ServiceProvider;
@@ -252,14 +268,11 @@ internal static class SessionAssistantTestData
         var profile = await services.GetRequiredService<IAgentProfileRepository>().GetAsync(ct)
             ?? throw new InvalidOperationException("The migrations publish the first version of the agent profile.");
         var c = profile.Published.Content;
-        var assistant = SessionAssistantSettings.Create(
-            enabled: true,
-            new Dictionary<string, string>(StringComparer.Ordinal) { ["it"] = ItalianPrompt, ["en"] = EnglishPrompt });
         profile.CreateDraft(AgentProfileContent.Create(
             c.Name, c.Description, c.Persona, c.PrimaryModelId, c.FallbackModelId, c.Temperature, c.MaxResponseTokens,
             c.CitationStyle, c.SystemPrompts, c.FallbackLanguage, c.CandidatePoolSize, c.FinalTopK, c.MinScore,
             c.VectorWeight, c.KeywordWeight, c.RerankerEnabled, c.AllowedCategories.ToList(),
-            change?.Invoke(assistant) ?? assistant));
+            assistant));
         var toolCallingModels = await services.GetRequiredService<IToolCallingModelCatalog>().GetToolCallingModelIdsAsync(ct);
         var version = profile.PublishDraft(AgentProfileTests.PricingTheModelsOf(profile.Draft!.Content, toolCallingModels));
         await services.GetRequiredService<IUnitOfWork>().SaveChangesAsync(ct);

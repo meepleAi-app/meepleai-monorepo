@@ -131,6 +131,7 @@ public sealed class SessionAssistantPanelEndpointTests(SessionAssistantHostFixtu
     [Fact]
     public async Task WithTheAssistantOff_ThePanelSaysSo_WithTheCodeTheTurnWouldReturn()
     {
+        await SessionAssistantTestData.DisableAssistantAsync(host.Factory, Ct);
         var table = await StartedTableAsync();
 
         var (status, panel, raw) = await GetPanelAsync(table.SessionId, _token);

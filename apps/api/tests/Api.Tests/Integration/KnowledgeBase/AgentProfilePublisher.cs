@@ -22,7 +22,11 @@ internal static class AgentProfilePublisher
         profile.Should().NotBeNull("le migrazioni pubblicano la prima versione del profilo");
         profile!.CreateDraft(change(profile.Published.Content));
         // I modelli di prova dei test non sono nel catalogo: qui si osserva l'effetto di un campo, non D5.
-        profile.PublishDraft(AgentProfileTests.PricingTheModelsOf(profile.Draft!.Content));
+        // Per lo stesso motivo il modello principale si dichiara con tool calling: dal #4238 la versione
+        // pubblicata dalle migrazioni ha l'assistente abilitato, e la bozza ricavata da lei lo conserva.
+        var draft = profile.Draft!.Content;
+        profile.PublishDraft(AgentProfileTests.PricingTheModelsOf(
+            draft, new HashSet<string>(StringComparer.Ordinal) { draft.PrimaryModelId }));
         await db.SaveChangesAsync(ct);
     }
 

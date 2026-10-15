@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -20,7 +21,8 @@ namespace Api.Tests.Integration.KnowledgeBase;
 /// Persistenza di <see cref="AgentProfile"/> su Postgres vero (ADR-095, #4167): il seed della
 /// versione 1, una pubblicazione che attraversa la unit of work, la concorrenza ottimistica sulla
 /// radice (ADR-060) e il vincolo «al più una bozza» nello schema. Dal #4179 un database nuovo
-/// porta anche la versione 2, ripubblicata dalla migration con i modelli correnti.
+/// porta anche la versione 2, ripubblicata dalla migration con i modelli correnti, e dal #4238 (A2) la
+/// versione 3, con l'assistente in partita abilitato.
 /// </summary>
 [Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
@@ -28,8 +30,11 @@ namespace Api.Tests.Integration.KnowledgeBase;
 [Trait("BoundedContext", "KnowledgeBase")]
 [Trait("Issue", "4167")]
 [Trait("Issue", "4179")]
+[Trait("Issue", "4238")]
 public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
 {
+    private const string RepublishMigration = "20261011061616_RepublishAgentProfileWithCurrentModels";
+
     private readonly SharedTestcontainersFixture _fixture;
     private string _databaseName = null!;
     private string _connectionString = null!;
@@ -69,7 +74,45 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
     private static AgentProfileContent CurrentModelValues() =>
         HardcodedValues(primaryModelId: "deepseek-flash", fallbackModelId: "meta-llama/llama-3.3-70b-instruct");
 
-    private static AgentProfileContent HardcodedValues(string primaryModelId, string fallbackModelId) =>
+    /// <summary>
+    /// #4238: la sezione «Assistente in partita» che la migration pubblica. I numeri sono scritti a mano,
+    /// i valori raccomandati in spec §7.1; i prompt vengono dal file misurato in #4270, non dal codice.
+    /// </summary>
+    private static SessionAssistantSettings AssistantSection()
+    {
+        using var measured = JsonDocument.Parse(File.ReadAllText(
+            Path.Combine(FindRepoRoot(), "tests", "llm-eval", "session-assistant", "prompts", "v3.json")));
+        return SessionAssistantSettings.Create(
+            enabled: true,
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["it"] = measured.RootElement.GetProperty("italian").GetString()!,
+                ["en"] = measured.RootElement.GetProperty("english").GetString()!,
+            },
+            temperature: 0.2m,
+            maxResponseTokens: 600,
+            maxToolIterations: 3,
+            turnTimeoutSeconds: 15,
+            useReserveModel: false);
+    }
+
+    /// <summary>#4238: i valori della versione 2 con l'assistente abilitato, quelli della versione 3.</summary>
+    private static AgentProfileContent AssistantValues() =>
+        HardcodedValues("deepseek-flash", "meta-llama/llama-3.3-70b-instruct", AssistantSection());
+
+    private static string FindRepoRoot()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+        while (directory is not null && !Directory.Exists(Path.Combine(directory.FullName, "tests", "llm-eval")))
+        {
+            directory = directory.Parent;
+        }
+
+        return directory?.FullName ?? throw new InvalidOperationException("Radice del repository non trovata.");
+    }
+
+    private static AgentProfileContent HardcodedValues(
+        string primaryModelId, string fallbackModelId, SessionAssistantSettings? sessionAssistant = null) =>
         AgentProfileContent.Create(
             name: "MeepleAI",
             description: "Specialized agent for board game rules interpretation and clarification.",
@@ -97,18 +140,22 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
             keywordWeight: 0.3m,
             rerankerEnabled: true,
             allowedCategories: Enum.GetValues<DocumentCategory>(),
-            sessionAssistant: Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.SessionAssistantSettings.Disabled);
+            sessionAssistant: sessionAssistant ?? SessionAssistantSettings.Disabled);
 
     [Fact]
-    public async Task FreshDatabase_PublishesVersionTwo_WithCurrentModels_AndArchivesTheSeed()
+    public async Task FreshDatabase_PublishesVersionThree_WithTheAssistant_AndArchivesTheEarlierOnes()
     {
         var profile = await new AgentProfileRepository(_dbContext).GetAsync(TestContext.Current.CancellationToken);
 
         profile.Should().NotBeNull("la tabella ammette una sola riga e il seed deve crearla");
-        profile!.Versions.Should().HaveCount(2);
+        profile!.Versions.Should().HaveCount(3);
         profile.Draft.Should().BeNull();
-        profile.Published.VersionNumber.Should().Be(2);
-        profile.Published.Content.Should().Be(CurrentModelValues(),
+        profile.Published.VersionNumber.Should().Be(3);
+        profile.Published.Content.Should().Be(AssistantValues(),
+            "#4238: la migration pubblica la versione 2 con l'assistente in partita abilitato");
+        var republished = profile.Versions.Single(v => v.VersionNumber == 2);
+        republished.Status.Should().Be(AgentProfileVersionStatus.Archived);
+        republished.Content.Should().Be(CurrentModelValues(),
             "#4179: la versione 1 nomina due modelli dismessi, e la migration ne pubblica una con i correnti");
         var seed = profile.Versions.Single(v => v.VersionNumber == 1);
         seed.Status.Should().Be(AgentProfileVersionStatus.Archived);
@@ -140,7 +187,7 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
                 """,
                 ct);
 
-            await migrator.MigrateAsync(cancellationToken: ct);
+            await migrator.MigrateAsync(RepublishMigration, ct);
 
             var profile = await new AgentProfileRepository(context).GetAsync(ct);
             profile!.Versions.Should().ContainSingle("la versione pubblicata nomina già i modelli correnti");
@@ -175,7 +222,7 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
                 """,
                 ct);
 
-            await migrator.MigrateAsync(cancellationToken: ct);
+            await migrator.MigrateAsync(RepublishMigration, ct);
 
             var profile = await new AgentProfileRepository(context).GetAsync(ct);
             profile!.Published.VersionNumber.Should().Be(2);
@@ -187,6 +234,114 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
         {
             await _fixture.DropIsolatedDatabaseAsync(databaseName);
         }
+    }
+
+    /// <summary>
+    /// #4238: la migration scrive ogni campo della sezione. Un campo assente varrebbe il default del codice,
+    /// che può cambiare dopo la misura: si guarda il jsonb, non il value object che i default li riempie.
+    /// </summary>
+    [Fact]
+    public async Task AssistantMigration_WritesEveryFieldOfTheSection_InTheJsonb()
+    {
+        var keys = await _dbContext.Database.SqlQueryRaw<string>(
+                """
+                SELECT jsonb_object_keys(content->'sessionAssistant') AS "Value"
+                FROM knowledge_base.agent_profile_versions
+                WHERE status = 1
+                """)
+            .ToListAsync(TestContext.Current.CancellationToken);
+
+        keys.Should().BeEquivalentTo(
+            "enabled", "systemPrompts", "temperature", "maxResponseTokens", "maxToolIterations", "turnTimeoutSeconds",
+            "useReserveModel");
+    }
+
+    /// <summary>#4238: un profilo che ha già l'assistente abilitato non riceve una versione in più.</summary>
+    [Fact]
+    public async Task AssistantMigration_LeavesAProfileWithTheAssistantOnUntouched()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var databaseName = $"agent_profile_{Guid.NewGuid():N}";
+        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(databaseName);
+        try
+        {
+            await using var context = _fixture.CreateDbContext(connectionString);
+            var migrator = context.GetService<IMigrator>();
+            await migrator.MigrateAsync(RepublishMigration, ct);
+            await context.Database.ExecuteSqlRawAsync(
+                """
+                UPDATE knowledge_base.agent_profile_versions
+                SET content = content || jsonb_build_object('sessionAssistant', jsonb_build_object(
+                    'enabled', true, 'systemPrompts', jsonb_build_object('it', 'Un prompt scelto altrove.')))
+                WHERE status = 1
+                """,
+                ct);
+
+            await migrator.MigrateAsync(cancellationToken: ct);
+
+            var profile = await new AgentProfileRepository(context).GetAsync(ct);
+            profile!.Published.VersionNumber.Should().Be(2, "l'assistente era già abilitato");
+            profile.Published.Content.SessionAssistant.PromptFor("it").Should().Be("Un prompt scelto altrove.");
+        }
+        finally
+        {
+            await _fixture.DropIsolatedDatabaseAsync(databaseName);
+        }
+    }
+
+    /// <summary>
+    /// #4238: una bozza scritta prima della migration non ha la sezione. La pagina admin la conserva dalla
+    /// bozza, quindi pubblicarla spegnerebbe l'assistente in silenzio: la migration la aggiunge anche lì.
+    /// </summary>
+    [Fact]
+    public async Task AssistantMigration_GivesTheSectionToADraftThatLacksIt()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var databaseName = $"agent_profile_{Guid.NewGuid():N}";
+        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(databaseName);
+        try
+        {
+            await using var context = _fixture.CreateDbContext(connectionString);
+            var migrator = context.GetService<IMigrator>();
+            await migrator.MigrateAsync(RepublishMigration, ct);
+            await context.Database.ExecuteSqlRawAsync(
+                """
+                INSERT INTO knowledge_base.agent_profile_versions
+                    (id, agent_profile_id, version_number, status, content, created_at)
+                SELECT gen_random_uuid(), agent_profile_id, 3, 0, content || jsonb_build_object('temperature', 0.5), NOW()
+                FROM knowledge_base.agent_profile_versions
+                WHERE status = 1
+                """,
+                ct);
+
+            await migrator.MigrateAsync(cancellationToken: ct);
+
+            var profile = await new AgentProfileRepository(context).GetAsync(ct);
+            profile!.Draft!.VersionNumber.Should().Be(3);
+            profile.Draft.Content.Temperature.Should().Be(0.5m, "il resto della bozza non si tocca");
+            profile.Draft.Content.SessionAssistant.Should().Be(AssistantSection());
+            profile.Published.VersionNumber.Should().Be(4);
+            profile.Published.Content.Should().Be(AssistantValues());
+        }
+        finally
+        {
+            await _fixture.DropIsolatedDatabaseAsync(databaseName);
+        }
+    }
+
+    /// <summary>#4238: il Down ripristina la versione 2 come pubblicata, e toglie la versione 3.</summary>
+    [Fact]
+    public async Task AssistantMigration_Down_RestoresVersionTwo()
+    {
+        var ct = TestContext.Current.CancellationToken;
+
+        await _dbContext.GetService<IMigrator>().MigrateAsync(RepublishMigration, ct);
+
+        await using var verification = _fixture.CreateDbContext(_connectionString);
+        var profile = await new AgentProfileRepository(verification).GetAsync(ct);
+        profile!.Versions.Should().HaveCount(2);
+        profile.Published.VersionNumber.Should().Be(2);
+        profile.Published.Content.Should().Be(CurrentModelValues());
     }
 
     [Fact]
@@ -203,10 +358,10 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
 
         await using var verification = _fixture.CreateDbContext(_connectionString);
         var persisted = await new AgentProfileRepository(verification).GetAsync(ct);
-        persisted!.Published.VersionNumber.Should().Be(3);
+        persisted!.Published.VersionNumber.Should().Be(4);
         persisted.Published.Content.Temperature.Should().Be(0.5m);
-        persisted.Versions.Single(v => v.VersionNumber == 2).Status.Should().Be(AgentProfileVersionStatus.Archived);
-        persisted.Versions.Single(v => v.VersionNumber == 2).Content.Should().Be(CurrentModelValues());
+        persisted.Versions.Single(v => v.VersionNumber == 3).Status.Should().Be(AgentProfileVersionStatus.Archived);
+        persisted.Versions.Single(v => v.VersionNumber == 3).Content.Should().Be(AssistantValues());
     }
 
     /// <summary>
@@ -235,11 +390,11 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
 
         await secondWrite.Should().ThrowAsync<DbUpdateConcurrencyException>(
             "la radice cambia a ogni comando, quindi il suo xmin respinge la scrittura basata su "
-            + "una copia in cui la versione 3 era ancora una bozza");
+            + "una copia in cui la versione 4 era ancora una bozza");
 
         await using var verification = _fixture.CreateDbContext(_connectionString);
         var persisted = await new AgentProfileRepository(verification).GetAsync(ct);
-        persisted!.Published.VersionNumber.Should().Be(3);
+        persisted!.Published.VersionNumber.Should().Be(4);
         persisted.Published.Content.Temperature.Should().Be(0.5m);
     }
 

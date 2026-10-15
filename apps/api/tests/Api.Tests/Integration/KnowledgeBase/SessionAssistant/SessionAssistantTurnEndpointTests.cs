@@ -132,6 +132,7 @@ public sealed class SessionAssistantTurnEndpointTests(SessionAssistantHostFixtur
     [Fact]
     public async Task WithoutTheSectionInThePublishedProfile_TheAssistantIsOff()
     {
+        await SessionAssistantTestData.DisableAssistantAsync(host.Factory, Ct);
         var table = await StartedTableAsync();
 
         var (status, events, body) = await SessionAssistantTestData.AskAsync(_client, _token, table.SessionId, "a chi tocca?", Ct);

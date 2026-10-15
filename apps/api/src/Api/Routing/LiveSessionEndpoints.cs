@@ -97,6 +97,7 @@ internal static class LiveSessionEndpoints
             .RequireLiveSessionParticipant()
             .Produces<Guid>(201)
             .Produces(400)
+            .Produces(403) // #4398: only the session host adds players
             .Produces(404)
             .WithTags("LiveSessions")
             .WithSummary("Add a player to the session");
@@ -561,15 +562,19 @@ internal static class LiveSessionEndpoints
         Guid sessionId,
         [FromBody] AddPlayerRequest request,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
+        // #4398: il filtro della rotta controlla la partecipazione; che chi chiede sia il proprietario lo controlla
+        // l'handler.
         var command = new AddPlayerToLiveSessionCommand(
             sessionId,
             request.DisplayName,
             request.Color,
             request.UserId,
             request.Role,
-            request.AvatarUrl);
+            request.AvatarUrl,
+            RequestedByUserId: httpContext.User.GetUserId());
 
         var playerId = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.Created($"/api/v1/live-sessions/{sessionId}/players/{playerId}", playerId);

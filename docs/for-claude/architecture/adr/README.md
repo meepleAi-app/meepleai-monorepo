@@ -68,6 +68,7 @@ Architecture Decision Records for MeepleAI. Each ADR captures significant archit
 | [090](adr-090-in-session-grounded-answer-ownership.md) | In-Session Grounded Answer Ownership (KnowledgeBase owner, SessionTracking consumer) | 2026-08-02 | Accepted |
 | [095](adr-095-single-answer-pipeline-and-versioned-agent-profile.md) | Una sola pipeline di risposta, profilo dell'agente con versioni, gateway LLM con tetto unico (numerato fuori fascia: 080–090 è piena) | 2026-10-10 | Accepted |
 | [097](adr-097-meai-facade-over-the-llm-gateway.md) | Microsoft.Extensions.AI come facciata del gateway per il tool calling (numerato fuori fascia: 080–090 è piena) | 2026-10-12 | Accepted |
+| [098](adr-098-arbiter-is-a-task-not-an-agent.md) | L'arbitro è un compito dell'agente unico, non un agente: disputa solo in partita, validatore come suo strumento, selettore della chat a intenti (emenda ADR-092; numerato fuori fascia: 080–090 è piena) | 2026-10-15 | Accepted |
 
 ### Frontend Routing & Information Architecture (091–099)
 

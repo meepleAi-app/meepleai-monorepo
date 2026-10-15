@@ -381,4 +381,27 @@ public sealed class SessionAssistantTurnEndpointTests(SessionAssistantHostFixtur
         session.RoundScores.Should().BeEmpty();
         session.CurrentTurnIndex.Should().Be(0);
     }
+
+    /// <summary>
+    /// #4411: l'host non ha dichiarato di possedere il gioco e la KB non è pubblica. cerca_regole risponde con un
+    /// errore tipizzato, prima del recupero: con il controllo saltato (o un ruolo che lo supera) il recupero parte,
+    /// non trova niente nel database di prova e il modello leggerebbe «non ne parla», non questo codice.
+    /// </summary>
+    [Fact]
+    public async Task AHostWithoutAccessToTheRulebook_GetsATypedErrorFromTheTool()
+    {
+        await SessionAssistantTestData.EnableAssistantAsync(host.Factory, Ct);
+        var table = await SessionAssistantTestData.CreateGameTableAsync(host.Factory, _owner, Ct, "Marco", "Giulia");
+        host.Llm.Reset(
+            Calls("cerca_regole", """{"domanda":"quante tessere?"}"""),
+            Says("Non posso consultare il regolamento."));
+
+        var (status, events, body) = await SessionAssistantTestData.AskAsync(_client, _token, table.SessionId, "quante tessere?", Ct);
+
+        status.Should().Be(HttpStatusCode.OK, body);
+        host.Llm.Requests[0].Tools.Select(t => t.Name).Should().Contain("cerca_regole");
+        var toolResult = host.Llm.Requests[1].Messages.Last(m => m.Role == "tool");
+        toolResult.Content.Should().Contain("regolamento_non_accessibile");
+        events.Should().Contain(e => Type(e) == "done");
+    }
 }

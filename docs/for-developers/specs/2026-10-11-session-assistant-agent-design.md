@@ -324,7 +324,7 @@ Anche fra gli scenari che supera ci sono testi falsi («Adesso Marco ha 4 punti�
 
 | Parametro | Valore | Perché |
 |---|---|---|
-| Modello predefinito | `deepseek-flash`, con il prompt v2 | È l'unico candidato che usa bene gli strumenti; i suoi due difetti erano di istruzioni, non di capacità: il prompt v2 di #4256 li corregge (esito più sotto) |
+| Modello predefinito | `deepseek-flash`, con il prompt v3 | È l'unico candidato che usa bene gli strumenti; i suoi due difetti erano di istruzioni, non di capacità: il prompt v2 di #4256 li corregge, e la v3 di #4270 adatta il testo ai tre strumenti del turno (esiti più sotto) |
 | Modello di riserva | **nessuno**, finché uno non supera il gate | `qwen2.5:3b` inventa punteggi. La riserva del profilo pubblicato (`meta-llama/llama-3.3-70b-instruct`) non è misurata: la chiave OpenRouter locale risponde `401`. Meglio un turno che fallisce con «assistente non disponibile» di una riserva che nessuno ha misurato (§4.3) |
 | Giri con strumenti | 3, cioè al più 4 chiamate per turno | Il caso peggiore misurato ne usa 2 (lettura dello stato, poi le proposte). Il terzo copre un nuovo tentativo dopo un errore tipizzato. Nessun turno ha toccato il limite, quindi le misure valgono per ogni limite da 2 in su |
 | Scadenza per turno | 15 s | La latenza di un turno divisa per le sue chiamate è in media 1,0 s e al massimo 1,7 s: quattro chiamate fanno meno di 7 s, e 15 s lasciano un margine di oltre due volte per i momenti lenti del provider. È 4,7 volte il p95 per turno. La misura viene da due finestre di pochi minuti nello stesso pomeriggio, in locale: va rivista con il p95 di staging |
@@ -343,7 +343,7 @@ Con il prompt v1 `deepseek-flash` non passa le regole 1, 2 e 4; con il prompt v2
 **Cosa chiede lo spike alle fette successive.**
 
 - **Prima di A2, il prompt (#4256): fatto.** Il prompt v2 è il seme della sezione «Assistente in partita». Nelle sessioni inglesi i nomi e i messaggi degli strumenti restano in italiano: non ha impedito al prompt v2 di passare, ma resta da decidere con il testo che verrà pubblicato (#4270).
-- **Prima di pubblicare (#4270), strumenti offerti.** Il prompt deve nominare solo gli strumenti del turno. In `it-rules-no-game` il modello chiama `cerca_regole`, che il prompt cita ma il turno non offre: M.E.AI risponde `Function 'cerca_regole' not found` e il turno spreca una chiamata, che il report non conta fra gli strumenti. Finché A5 non consegna `cerca_regole`, la regola 2 del prompt va tolta.
+- **Prima di pubblicare (#4270), strumenti offerti: fatto, con il prompt v3** (esito più sotto). Il prompt deve nominare solo gli strumenti del turno. In `it-rules-no-game` il modello chiama `cerca_regole`, che il prompt cita ma il turno non offre: M.E.AI risponde `Function 'cerca_regole' not found` e il turno spreca una chiamata, che il report non conta fra gli strumenti. Finché A5 non consegna `cerca_regole`, la regola 2 del prompt va tolta.
 - **A3, duplicati.** `qwen2.5:3b` ha creato tre proposte di turno identiche in un turno. Il turno non le unisce: le proposte di troppo le conta il set di valutazione, e unirle in produzione nasconderebbe ciò che il gate misura. Alla conferma le ferma `Stale` (§5.3), anche quando vengono confermate nello stesso istante, e lo fissano i test di integrazione della fetta A3b: di più proposte identiche se ne conferma una sola.
 - **A3, testo mostrato.** `ChatResponse.Text` concatena il testo di tutti i giri («I'll check the current game state first.» seguito dalla risposta). All'host va solo l'ultimo messaggio dell'assistente.
 - **A3, errori tipizzati e confini.** Ogni validazione degli strumenti va provata con il lettore reale. Il test di architettura oggi guarda costruttori e campi: prima che arrivi un sink vero deve coprire anche i parametri dei metodi. I nomi dei giocatori entrano in un messaggio di sistema: conviene un blocco di dati delimitato. Cambia ciò che il modello vede, quindi va con il testo da pubblicare e si misura con lui (#4270), non in A3.
@@ -379,6 +379,52 @@ Costo e latenza non cambiano le raccomandazioni. Sui 75 turni dei tre run comple
 - Le correzioni al codice fatte insieme: il prompt è un dato (`AssistantPromptSet`) che la richiesta di valutazione può sostituire, così una variante si misura senza ricostruire l'immagine; `en-US` e le altre varianti regionali prendono il prompt inglese; il contesto statico è nella lingua della sessione; lo script esegue scenari scelti, li ripete, e si ferma quando la quota finisce.
 
 **Limiti di questa misura.** Il prompt è stato scritto guardando gli scenari che falliva, e gli scenari nuovi li ha scritti la stessa mano: è una prova di regressione, non una stima di come andrà al tavolo. Il prompt v2 è stato misurato mandandolo nella richiesta, contro un'immagine il cui predefinito era ancora la v1: che il predefinito del codice sia lo stesso testo lo garantisce un test, non un run. Il set non contiene casi in cui la prudenza della regola 4 sarebbe un errore (una dimensione unica chiamata in un altro modo, un diminutivo, un nome che identifica un solo giocatore). Tutto questo è in #4270. Il set alla versione 3 non è stato eseguito per intero in una volta: i 25 scenari della versione 2 hanno tre run completi, gli otto nuovi tre esecuzioni a parte. Restano non misurati i modelli via OpenRouter, la latenza su staging, le conversazioni con storia e `cerca_regole` con il recupero vero.
+
+#### Esito di #4270: il testo da pubblicare (2026-10-15)
+
+Stesso modello e stessi parametri delle misure precedenti, con i soli tre strumenti del turno: `--rules=off` non offre `cerca_regole`, e `it-rules`, che lo aspetta, resta fuori. I risultati grezzi sono in `tests/llm-eval/session-assistant/baselines/2026-10-15-prompt-v3/`.
+
+**Il prompt v3 supera il gate, ed è il predefinito del codice.** Tre run completi del set alla versione 5, con l'immagine costruita dal branch di #4270 e **senza** mandare il prompt nella richiesta: tutti gli scenari superati in tutti e tre. L'impronta registrata nei tre file coincide con quella di `prompts/v3.json`: questa volta ha girato il testo che il codice spedisce, non un testo che un test dice uguale. Nei 138 turni non c'è una proposta non dovuta, una proposta dichiarata e mai creata, un argomento non valido o un errore del gateway. Le chiamate sono al più tre per turno. Il costo è $0,00095 per turno in media, con un massimo di $0,0015. La latenza è p50 1,6 s, p95 2,5 s, massimo 5,1 s. Gli errori tipizzati degli strumenti stanno tutti nelle trappole sui nomi e sulla partita conclusa: il modello passa il nome allo strumento e lo strumento lo rifiuta, come chiede la regola 4 nuova.
+
+**Rispetto alla v2 cambiano le regole 2, 3, 4 e 5.**
+
+- *Regola 2.* Non nomina più `cerca_regole`. Dice che in questa versione il regolamento non si consulta, che si risponde solo con le house rules e che non si risponde a memoria. In `it-rules-no-game` il modello non chiama più uno strumento che il turno non offre.
+- *Regola 3.* Un round non ancora cominciato non si propone: si chiede conferma. Lo strumento rifiuta solo i round minori di 1, quindi senza questa frase il modello proporrebbe sul round 9 al round 2.
+- *Regola 4.* Il nome del giocatore si passa a `proponi_punteggio` com'è detto, anche un cognome o un diminutivo. Lo risolve il matcher, e se è ambiguo o sconosciuto lo strumento risponde con un errore. Una parte della richiesta che non si può proporre non ferma le altre.
+- *Regola 5.* Il turno si propone anche quando un'altra parte della stessa richiesta resta in sospeso.
+
+**Gli scenari della versione 5** sono stati scritti prima di vedere il comportamento del modello. L'esito dei casi dubbi è stato deciso su #4270.
+
+| Caso | Scenari | Esito atteso |
+|---|---|---|
+| dimensione unica con un altro nome, o non detta | `it-score-single-dimension-renamed`, `it-score-single-dimension-bare` | proposta |
+| nome di dimensione flesso o in un'altra lingua | `it-score-dimension-inflected`, `en-score-dimension-translated` | proposta |
+| cognome, nome di battesimo, diminutivo in un elenco di nomi completi | `it-score-surname`, `it-score-first-name`, `en-score-nickname` | proposta |
+| «ho fatto 5 punti»: l'assistente non sa quale giocatore è l'host | `it-score-first-person` | nessuna proposta |
+| richiesta mista con un nome ambiguo | `it-mixed-ambiguous-turn` | il turno sì, il punteggio no |
+| round futuro | `it-score-future-round`, `en-score-future-round` | nessuna proposta: chiede conferma |
+| round relativo («il round scorso») | `it-score-relative-round` | proposta sul round precedente |
+| domanda sulle regole senza regolamento consultabile | `it-rules-unavailable`, `en-rules-unavailable` | nessuno strumento |
+
+**Come ci si è arrivati.**
+
+1. La prima stesura cambiava solo le regole 2 e 3. Sugli scenari nuovi ha superato 37 turni su 42, senza proposte non dovute. I cinque fallimenti erano tutti prudenza di troppo, cioè la classe che il set prima non vedeva. Con due Marco il modello non proponeva nemmeno il turno: 0 su 3. «Fede» non arrivava allo strumento, che pure lo risolve: 1 su 3. In entrambi i casi il modello decideva dal contesto statico che il nome non andava.
+2. La regola 4 nuova ha portato il diminutivo a 3 su 3, con le quattro trappole sui nomi intatte, e il caso misto a 2 su 3.
+3. La clausola della regola 5 lo ha portato a 6 su 6.
+
+**Il testo, dove la traiettoria non arriva.** L'esecutore non giudica il testo. Che il modello non risponda alle regole a memoria si è controllato leggendo le risposte:
+- in tutti i turni di `it-rules-unavailable`, `en-rules-unavailable` e `it-rules-no-game` dice che non può consultare il regolamento, e non dà la risposta;
+- in `en-rules-house-rule` risponde con la house rule.
+
+A volte invita l'host a dirgli le house rules, che però ha già nel contesto. È innocuo, ma va riguardato quando A5 riscriverà la regola 2.
+
+**Costo della misura.** I tre run sono costati $0,131, cioè il 65% della quota giornaliera delle valutazioni; con le stesure intermedie si arriva a $0,203. Per misurare, la quota è stata portata dal 20% al 35% e poi riportata al valore di `appsettings`. La regola 5 delle soglie va letta con questo costo: tre run del set alla versione 5 non stanno più in un terzo della quota.
+
+**Limiti.**
+- Valgono quelli dell'esito di #4256: le stesure sono state corrette guardando gli scenari che fallivano, e scenari e prompt li ha scritti la stessa mano.
+- La v2 non è mai girata come predefinito: è stata sostituita prima, e il suo esito resta quello misurato mandandola nella richiesta.
+- Quando A5 consegnerà `cerca_regole`, la regola 2 andrà riscritta e il testo rimisurato con quattro strumenti.
+- Restano fuori da questa misura i tre punti della review di A3a (blocco di dati delimitato per i nomi, testi di ripiego nella storia, lingua senza prompt) e i nomi degli strumenti in italiano nelle sessioni inglesi.
 
 ### 7.2 Test, ciascuno «rosso prima» nella sua fetta
 
@@ -498,6 +544,6 @@ Vincoli che valgono già per il pilota: la conversazione dell'assistente passa s
 2. **Gioco pilota**: uno con dimensioni di punteggio semplici, KB indicizzata e house rules di prova, fra quelli del golden set.
 3. **Quota del tetto** da riservare al costo per partita. Lo spike dà il costo per turno (§7.1): manca la decisione. La quota giornaliera delle valutazioni (il 20% del tetto) non basta per uno spike e una correzione del prompt nello stesso giorno: per #4256 è stata alzata al 35% per poche ore. Tre run del set alla versione 3 ne consumano circa il 40%.
 4. **Chi scrive gli scenari** dello spike, e se partire da partite reali trascritte.
-5. **Prompt della prima versione** della sezione «Assistente in partita», in italiano e in inglese: è il prompt v2 di #4256, che supera il gate (§7.1). Va allineato agli strumenti offerti prima di pubblicarlo (#4270).
+5. **Prompt della prima versione** della sezione «Assistente in partita», in italiano e in inglese: è il prompt v3 di #4270, che supera il gate con i tre strumenti del turno (§7.1) ed è il predefinito del codice (`prompts/v3.json`).
 6. **Pilota solo in italiano?** Non serve: con il prompt v2 gli scenari inglesi passano tutti (§7.1).
 7. **Chiave OpenRouter locale**: va risincronizzata (`make secrets-sync`, che richiede SSH) per misurare i modelli via OpenRouter e la riserva del profilo. Fino ad allora l'assistente non ha un modello di riserva (§7.1).

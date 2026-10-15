@@ -25,8 +25,14 @@ import { useGameImportWizardStore, type GameMetadata } from '@/stores/useGameImp
 import { CoverImagePicker } from '../components/CoverImagePicker';
 
 export function Step2MetadataReview(): JSX.Element {
-  const { uploadedPdf, reviewedMetadata, coverImage, setReviewedMetadata, setCoverImage } =
-    useGameImportWizardStore();
+  const {
+    importTitle,
+    uploadedPdf,
+    reviewedMetadata,
+    coverImage,
+    setReviewedMetadata,
+    setCoverImage,
+  } = useGameImportWizardStore();
 
   const pdfId = uploadedPdf?.pdfDocumentId ?? null;
 
@@ -39,19 +45,23 @@ export function Step2MetadataReview(): JSX.Element {
     enabled: !!pdfId && !reviewedMetadata,
   });
 
-  // Auto-populate from extraction when it arrives
+  // Auto-populate from extraction when it arrives. The title the admin typed at step 1 wins over
+  // the extracted one (#4401): a rulebook's first page is often not the game's name.
   useEffect(() => {
     if (extractedMetadata && !reviewedMetadata) {
-      setReviewedMetadata(extractedMetadata);
+      setReviewedMetadata({
+        ...extractedMetadata,
+        title: importTitle.trim() || extractedMetadata.title,
+      });
     }
-  }, [extractedMetadata, reviewedMetadata, setReviewedMetadata]);
+  }, [extractedMetadata, reviewedMetadata, importTitle, setReviewedMetadata]);
 
   const meepleCardProps = useMetadataToMeepleCard(reviewedMetadata, coverImage);
 
   const current = reviewedMetadata ?? extractedMetadata ?? null;
 
   const updateField = <K extends keyof GameMetadata>(key: K, value: GameMetadata[K]) => {
-    const updated: GameMetadata = { ...(current ?? { title: '' }), [key]: value };
+    const updated: GameMetadata = { ...(current ?? { title: importTitle }), [key]: value };
     setReviewedMetadata(updated);
   };
 
@@ -238,7 +248,9 @@ export function Step2MetadataReview(): JSX.Element {
 
           {/* Description */}
           <div className="space-y-1">
-            <Label htmlFor="meta-description">Descrizione</Label>
+            <Label htmlFor="meta-description">
+              Descrizione <span className="text-destructive">*</span>
+            </Label>
             <Textarea
               id="meta-description"
               rows={4}

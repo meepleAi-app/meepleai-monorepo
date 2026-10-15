@@ -4,7 +4,8 @@
  * Step 4: Creation Progress
  *
  * - Calls executeImport() on mount (ImportGameFromPdfCommand saga)
- * - Shows live status labels: Creazione gioco... → Associazione documento... → Avvio indicizzazione...
+ * - Shows live status labels: Salvataggio metadati... → Registrazione regolamento... → Verifica indicizzazione...
+ *   (#4401: the game exists since step 1 and the upload indexes the PDF; this step completes the draft)
  * - On saga success → auto-advances to Step 5
  * - On saga failure → shows error with optional recovery link to created game
  */
@@ -21,9 +22,9 @@ import { useGameImportWizardStore } from '@/stores/useGameImportWizardStore';
 type SagaPhase = 'creating' | 'linking' | 'indexing' | 'done' | 'error';
 
 const PHASE_LABELS: Record<SagaPhase, string> = {
-  creating: 'Creazione gioco...',
-  linking: 'Associazione documento...',
-  indexing: 'Avvio indicizzazione...',
+  creating: 'Salvataggio metadati...',
+  linking: 'Registrazione regolamento...',
+  indexing: 'Verifica indicizzazione...',
   done: 'Gioco creato con successo!',
   error: 'Creazione fallita',
 };
@@ -103,9 +104,9 @@ export function Step4CreationProgress(): JSX.Element {
       <div className="w-full max-w-sm space-y-2">
         {(
           [
-            { key: 'creating', label: 'Creazione gioco nel catalogo' },
-            { key: 'linking', label: 'Associazione PDF al gioco' },
-            { key: 'indexing', label: 'Accodamento indicizzazione RAG' },
+            { key: 'creating', label: 'Metadati salvati sulla bozza del gioco' },
+            { key: 'linking', label: 'PDF registrato come regolamento' },
+            { key: 'indexing', label: "Stato dell'indicizzazione RAG" },
           ] as const
         ).map(({ key, label }) => {
           const phases: SagaPhase[] = ['creating', 'linking', 'indexing', 'done'];

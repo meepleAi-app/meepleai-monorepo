@@ -759,6 +759,38 @@ public sealed class SharedGame : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// #4401: the PDF import wizard creates the game as a skeleton before uploading the rulebook,
+    /// and fills it with the metadata the admin reviewed. Once filled there is nothing left to
+    /// enrich: the game is complete.
+    /// </summary>
+    /// <remarks>
+    /// A named exception to <see cref="ValidDataStatusTransitions"/>, which keeps a skeleton away
+    /// from <see cref="GameDataStatus.Complete"/> on purpose: on the enrichment path a skeleton has
+    /// no data yet. Left a skeleton, the imported game would be picked up by "enqueue all
+    /// skeletons" and its reviewed metadata overwritten from BGG.
+    /// </remarks>
+    /// <exception cref="InvalidOperationException">The game is not a skeleton, or its data is incomplete.</exception>
+    public void CompleteFromReviewedImport(Guid modifiedBy)
+    {
+        if (_gameDataStatus != GameDataStatus.Skeleton)
+            throw new InvalidOperationException(
+                $"Only a skeleton can be completed by the import wizard; this game is {_gameDataStatus}.");
+
+        if (modifiedBy == Guid.Empty)
+            throw new ArgumentException("ModifiedBy cannot be empty.", nameof(modifiedBy));
+
+        // The skeleton's zero defaults must be gone: the import fills them through UpdateInfo first.
+        ValidateYear(_yearPublished);
+        ValidateDescription(_description);
+        ValidatePlayers(_minPlayers, _maxPlayers);
+        ValidatePlayingTime(_playingTimeMinutes);
+
+        _gameDataStatus = GameDataStatus.Complete;
+        _modifiedBy = modifiedBy;
+        _modifiedAt = DateTime.UtcNow;
+    }
+
+    /// <summary>
     /// Sets the HasUploadedPdf flag. Called by event handler when PDF upload completes.
     /// </summary>
     public void SetHasUploadedPdf()

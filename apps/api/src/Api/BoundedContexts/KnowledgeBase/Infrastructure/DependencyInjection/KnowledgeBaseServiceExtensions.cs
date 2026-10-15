@@ -480,6 +480,9 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.IPublishedAgentProfileReader,
             Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.PublishedAgentProfileReader>();
         services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerRetrieval>();
+        // #4410 (E1): recupero e citazioni con tier, per la pipeline e per cerca_regole dell'assistente.
+        services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.ITieredPassageSearch,
+            Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.TieredPassageSearch>();
         // #4168 (5g-a): accesso — e, con la 5g-b, quota — in un passo solo per i tre percorsi di risposta.
         services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.IAnswerPreconditions,
             Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPreconditions>();

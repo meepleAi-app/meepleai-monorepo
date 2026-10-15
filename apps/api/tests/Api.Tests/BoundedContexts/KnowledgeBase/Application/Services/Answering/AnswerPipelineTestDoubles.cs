@@ -92,6 +92,13 @@ internal static class AnswerPipelineTestDoubles
         new(searchQueryHandler, multiGameSearch ?? Mock.Of<IMultiGameHybridSearchService>(), reranker,
             intentClassifier ?? new IntentClassifierService(), NullLogger<AnswerRetrieval>.Instance);
 
+    /// <summary>#4410: il passo di recupero e citazioni della pipeline, con il recupero e il resolver dati.</summary>
+    public static TieredPassageSearch PassageSearch(
+        AnswerRetrieval retrieval,
+        Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IVectorDocumentRepository vectorDocuments,
+        ICopyrightTierResolver tiers) =>
+        new(retrieval, vectorDocuments, tiers);
+
     /// <summary>Il recupero per la ricerca fra giochi: la ricerca per gioco non serve, il reranker non riordina.</summary>
     public static AnswerRetrieval RetrievalAcrossGames(IMultiGameHybridSearchService multiGameSearch, ICrossEncoderReranker? reranker = null)
     {

@@ -1,6 +1,6 @@
 {
   "description": "Gate #4120 — orfani `data-testid` per spec E2E. Un file nuovo deve essere assente da questa mappa (zero orfani); un file presente non deve crescere. Rigenera con `pnpm lint:orphan-testids --update` SOLO per registrare un miglioramento, mai per assorbire un peggioramento.",
-  "updatedAt": "2026-10-13",
+  "updatedAt": "2026-10-15",
   "files": {
     "e2e/_helpers/dataAssertionUtils.ts": 1,
     "e2e/add-game-wizard.spec.ts": 1,
@@ -24,7 +24,6 @@
     "e2e/admin/admin-workflow-actions.spec.ts": 5,
     "e2e/admin/api-keys-ui-security.spec.ts": 3,
     "e2e/admin/audit-log.spec.ts": 3,
-    "e2e/admin/game-import-wizard.spec.ts": 6,
     "e2e/admin/kb-documents-library.spec.ts": 1,
     "e2e/admin/kb-pdf-upload.spec.ts": 3,
     "e2e/admin/kb-vectors.spec.ts": 2,

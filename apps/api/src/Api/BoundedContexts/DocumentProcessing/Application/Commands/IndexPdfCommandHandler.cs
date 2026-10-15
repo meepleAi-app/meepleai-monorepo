@@ -118,10 +118,19 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                 .ClassifyRolesAsync(_roleClassifier, documentChunks!, _logger, cancellationToken)
                 .ConfigureAwait(false);
 
-            // #4384: the text chunk ids are fixed before both writes. The pgvector rows are saved
-            // first (Step 3) and the text chunks after (Step 4), so each row can only point at its
-            // text_chunks row if the id already exists here.
+            // #4384: every chunk gets its id here, so the pgvector row and the text_chunks row of the
+            // same chunk share it.
             documentChunks = WithStableIds(documentChunks!);
+
+            // #4384: the text chunks are staged BEFORE the pgvector rows, so the first embedding batch
+            // commits them in the same transaction. The other way round, a failure after the pgvector
+            // save (e.g. the final save losing a concurrency conflict) left rows pointing at text chunk
+            // ids that were never written — worse than a null link, because the fusion prefers the vector
+            // arm's chunk id over the keyword arm's valid one.
+            // #4244: text_chunks.GameId is an FK to shared_games, so it only ever carries the shared
+            // game. A private game goes in its own column: writing its id into GameId (which the
+            // resolver used to hand over) made this save fail on the foreign key.
+            await SaveTextChunksToPostgresAsync(pdfId, pdf.SharedGameId, pdf.PrivateGameId, documentChunks, chunkRoles, cancellationToken).ConfigureAwait(false);
 
             // Step 3: Update VectorDocument status
             // For private PDFs GameId is null — fall back to PrivateGameId so vectors are scoped
@@ -147,12 +156,6 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                 totalCharacters: pdf.ExtractedText!.Length,
                 language: string.IsNullOrWhiteSpace(pdf.Language) ? "en" : pdf.Language,
                 cancellationToken: cancellationToken).ConfigureAwait(false);
-
-            // Step 4: Save text chunks to PostgreSQL for hybrid search
-            // #4244: text_chunks.GameId is an FK to shared_games, so it only ever carries the shared
-            // game. A private game goes in its own column: writing its id into GameId (which the
-            // resolver used to hand over) made this save fail on the foreign key.
-            await SaveTextChunksToPostgresAsync(pdfId, pdf.SharedGameId, pdf.PrivateGameId, documentChunks!, chunkRoles, cancellationToken).ConfigureAwait(false);
 
             // Mark processing complete
             pdf.ProcessingState = nameof(PdfProcessingState.Ready);
@@ -511,9 +514,10 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                     model: modelName,
                     pageNumber: Math.Max(1, chunk.Page),
                     lang: language,
-                    // #4384: the text chunk is saved later with this same id (SaveTextChunksToPostgresAsync).
-                    // role_tags: the role classified once up-front for both tables (it was always 0 when
-                    // classification ran only after this write). Guarded against a None/mismatched list.
+                    // #4384: the text chunk staged with this same id (SaveTextChunksToPostgresAsync), committed
+                    // with the first batch. role_tags: the role classified once up-front for both tables (it
+                    // was always 0 when classification ran only after this write). Guarded against a
+                    // None/mismatched list.
                     sourceChunk: new TextChunkLink(chunk.Id, globalIndex < roles.Count ? (int)roles[globalIndex] : 0));
             }).ToList();
 
@@ -578,7 +582,8 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         var textChunkEntities = documentChunks
             .Select((chunk, index) => new TextChunkEntity
             {
-                Id = chunk.Id == Guid.Empty ? Guid.NewGuid() : chunk.Id,
+                // #4384: WithStableIds gave every chunk its id; the pgvector row points at this one.
+                Id = chunk.Id,
                 GameId = sharedGameId,
                 SharedGameId = sharedGameId,
                 PrivateGameId = privateGameId,

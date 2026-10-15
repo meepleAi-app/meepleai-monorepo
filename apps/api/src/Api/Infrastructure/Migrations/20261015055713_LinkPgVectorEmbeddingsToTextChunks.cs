@@ -8,15 +8,17 @@ namespace Api.Infrastructure.Migrations
     /// #4384: ricollega a <c>text_chunks</c> le righe di <c>pgvector_embeddings</c> nate senza
     /// <c>source_chunk_id</c>. Le scrivevano così il caricamento da <c>/ingest/pdf</c>, la
     /// reindicizzazione (<c>IndexPdfCommandHandler</c>) e l'import dei dati RAG; dalla stessa consegna
-    /// tutti e tre passano da <c>PgVectorEmbeddingEntity.ForChunk</c>, che chiede il collegamento.
+    /// passano tutti da <c>PgVectorEmbeddingEntity.ForChunk</c>, che chiede il collegamento.
     /// </summary>
     /// <remarks>
     /// <para>
-    /// La regola di unione è quella della pipeline di Quartz: stesso PDF (<c>vector_documents</c>) e stesso
-    /// <c>ChunkIndex</c>. Misurata sul database locale il 2026-10-15: sulle 10.890 righe già collegate dalla
-    /// pipeline, <c>source_chunk_id</c> e <c>role_tags</c> coincidono con il passaggio trovato così; le 125
-    /// righe scollegate hanno tutte un passaggio corrispondente, e nessun PDF ha due passaggi con lo stesso
-    /// indice. Per sicurezza l'aggiornamento salta i casi ambigui (due passaggi sullo stesso indice).
+    /// La regola di unione è quella della pipeline di Quartz, più una verifica: stesso PDF
+    /// (<c>vector_documents</c>), stesso <c>ChunkIndex</c> e <b>stesso testo</b>. Il testo esclude una riga
+    /// rimasta accanto ai passaggi di un'altra suddivisione (una reindicizzazione che aveva salvato i vettori
+    /// e perso il salvataggio finale dei passaggi): lì lo stesso indice è un altro passaggio. Ogni scrittore
+    /// salva lo stesso testo nelle due tabelle. Misurato sul database locale il 2026-10-15: le coppie trovate
+    /// per indice hanno tutte lo stesso testo, comprese quelle già collegate dalla pipeline, e nessun PDF ha
+    /// due passaggi sullo stesso indice. L'aggiornamento salta comunque i casi ambigui.
     /// </para>
     /// <para>
     /// Tocca solo righe con <c>source_chunk_id</c> nullo: si può rieseguire, e non cambia le righe già
@@ -39,6 +41,7 @@ namespace Api.Infrastructure.Migrations
                 JOIN text_chunks AS tc ON tc."PdfDocumentId" = vd."PdfDocumentId"
                 WHERE vd."Id" = e.vector_document_id
                   AND tc."ChunkIndex" = e.chunk_index
+                  AND tc."Content" = e.text_content
                   AND e.source_chunk_id IS NULL
                   AND NOT EXISTS (
                       SELECT 1 FROM text_chunks AS other

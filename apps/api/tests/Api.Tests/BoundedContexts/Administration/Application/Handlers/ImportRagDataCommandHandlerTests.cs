@@ -257,4 +257,66 @@ public class ImportRagDataCommandHandlerTests
         rows.Should().OnlyContain(row => row.SourceChunkId == chunkIdByIndex[row.ChunkIndex],
             "ogni riga deve puntare al passaggio con lo stesso ChunkIndex");
     }
+
+    /// <summary>
+    /// #4384, dalla revisione: due passaggi sullo stesso indice sono ambigui. L'embedding di quell'indice
+    /// non si collega a nessuno dei due, e l'import lo dice nei warning invece di sceglierne uno in silenzio.
+    /// </summary>
+    [Fact]
+    public async Task Handle_TwoChunksOnOneIndex_LeavesThatEmbeddingUnlinked_AndWarns()
+    {
+        // Arrange
+        await using var db = CreateInMemoryDb(nameof(Handle_TwoChunksOnOneIndex_LeavesThatEmbeddingUnlinked_AndWarns));
+        db.SharedGames.Add(new SharedGameEntity { Id = Guid.NewGuid(), Title = "testgame", CreatedBy = Guid.NewGuid(), CreatedAt = DateTime.UtcNow });
+        await db.SaveChangesAsync();
+
+        const string snapshotPath = "rag-exports/2026-10-15b";
+        var documentId = Guid.NewGuid();
+        var entryPath = $"{snapshotPath}/documents/{documentId}";
+        var storage = new Mock<IRagBackupStorageService>();
+        storage.Setup(s => s.ReadFileAsync($"{snapshotPath}/manifest.json", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Encoding.UTF8.GetBytes($$"""
+                { "exportVersion": "1.0", "exportedAt": "2026-10-15T00:00:00Z", "totalDocuments": 1, "totalChunks": 3,
+                  "totalEmbeddings": 2, "embeddingModel": "test-model",
+                  "documents": [{ "pdfDocumentId": "{{documentId}}", "gameSlug": "testgame", "gameName": "Test Game",
+                                  "path": "{{entryPath}}", "chunks": 3, "embeddings": 2, "language": "en" }] }
+                """));
+        storage.Setup(s => s.ReadFileAsync($"{entryPath}/metadata.json", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Encoding.UTF8.GetBytes($$"""
+                { "exportVersion": "1.0", "exportedAt": "2026-10-15T00:00:00Z", "embeddingModel": "test-model",
+                  "embeddingDimensions": 4,
+                  "document": { "pdfDocumentId": "{{documentId}}", "gameId": null, "gameSlug": "testgame",
+                                "gameName": "Test Game", "fileName": "rules.pdf", "language": "en",
+                                "languageConfidence": null, "documentCategory": null, "versionLabel": null,
+                                "licenseType": null, "pageCount": 1, "characterCount": 30, "contentHash": null,
+                                "fileSizeBytes": null },
+                  "stats": { "totalChunks": 3, "totalEmbeddings": 2, "chunkSizeAvg": 10 } }
+                """));
+        storage.Setup(s => s.ReadFileAsync($"{entryPath}/chunks.parquet", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(await RagParquetSerializer.SerializeChunksAsync(
+            [
+                new(0, 1, "Setup the board.", 16),
+                new(1, 1, "Each player draws.", 18),
+                new(1, 1, "Each player discards.", 21),
+            ]));
+        storage.Setup(s => s.ReadFileAsync($"{entryPath}/embeddings.parquet", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(await RagParquetSerializer.SerializeEmbeddingsAsync(
+            [
+                new(0, 1, "Setup the board.", [0.1f, 0.2f, 0.3f, 0.4f], "test-model"),
+                new(1, 1, "Each player draws.", [0.2f, 0.3f, 0.4f, 0.1f], "test-model"),
+            ]));
+
+        var handler = new ImportRagDataCommandHandler(db, storage.Object, Mock.Of<ILogger<ImportRagDataCommandHandler>>());
+
+        // Act
+        var result = await handler.Handle(new ImportRagDataCommand { SnapshotPath = snapshotPath }, CancellationToken.None);
+
+        // Assert
+        result.Imported.Should().Be(1);
+        var rows = await db.PgVectorEmbeddings.ToDictionaryAsync(e => e.ChunkIndex);
+        rows[0].SourceChunkId.Should().NotBeNull("l'indice 0 ha un solo passaggio");
+        rows[1].SourceChunkId.Should().BeNull("l'indice 1 ha due passaggi: nessuno dei due è quello giusto per certo");
+        result.Warnings.Should().Contain(w => w.Contains("more than once"));
+        result.Warnings.Should().Contain(w => w.Contains("without a link"));
+    }
 }

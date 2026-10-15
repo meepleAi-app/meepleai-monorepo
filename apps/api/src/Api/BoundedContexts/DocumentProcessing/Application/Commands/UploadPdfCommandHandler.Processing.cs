@@ -632,7 +632,9 @@ internal partial class UploadPdfCommandHandler
         // Create/update VectorDocument row FIRST so SaveEmbeddingsToPgVectorAsync can find it by PdfDocumentId
         await UpdateVectorDocumentAsync(pdfId, pdfDoc, allDocumentChunks.Count, db, scope, cancellationToken).ConfigureAwait(false);
 
-        // Save text chunks to PostgreSQL for hybrid search (FTS) — non-blocking, can proceed independently
+        // Save text chunks to PostgreSQL for hybrid search (FTS). #4384: BEFORE the pgvector rows, which
+        // point at them — moving this after the embeddings, or running the two in parallel, brings back
+        // rows with a null or dangling source_chunk_id.
         var savedChunks = await SaveTextChunksForHybridSearchAsync(pdfId, pdfDoc, allDocumentChunks, db, scope, cancellationToken).ConfigureAwait(false);
 
         // Persist embeddings to pgvector — critical path; VectorDocument row is guaranteed to exist above.
@@ -753,6 +755,15 @@ internal partial class UploadPdfCommandHandler
             _logger.LogWarning(ex,
                 "Concurrency conflict on TextChunks for PDF {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
                 pdfId, nameof(UploadPdfCommandHandler));
+
+            // #4384: the failed inserts and deletes stay in the change tracker, and the next
+            // SaveChangesAsync (the pgvector batch) would submit them again. Drop them: nothing was
+            // written, so the pgvector rows get no link rather than a link to rows that may not exist.
+            foreach (var entry in db.ChangeTracker.Entries<TextChunkEntity>().ToList())
+            {
+                entry.State = EntityState.Detached;
+            }
+
             return new Dictionary<int, TextChunkEntity>();
         }
 
@@ -821,9 +832,7 @@ internal partial class UploadPdfCommandHandler
                 model: modelName,
                 pageNumber: Math.Max(1, chunk.Page),
                 lang: language,
-                sourceChunk: savedChunks.TryGetValue(skip + i, out var saved)
-                    ? new TextChunkLink(saved.Id, (int)saved.RoleTags)
-                    : null)).ToList();
+                sourceChunk: savedChunks.TryGetValue(skip + i, out var saved) ? TextChunkLink.From(saved) : null)).ToList();
 
             await db.PgVectorEmbeddings.AddRangeAsync(entities, cancellationToken).ConfigureAwait(false);
             try

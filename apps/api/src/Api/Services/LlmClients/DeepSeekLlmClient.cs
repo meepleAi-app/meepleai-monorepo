@@ -30,7 +30,7 @@ namespace Api.Services.LlmClients;
 /// <see cref="ProviderCredentialNotConfiguredException"/>; the call paths convert this into a
 /// graceful failure (return-failure for completion, yield-break for streaming).
 /// </remarks>
-internal class DeepSeekLlmClient : ILlmClient
+internal class DeepSeekLlmClient : ILlmClient, ILlmReasoningSwitch
 {
     internal const string ProviderKey = "deepseek";
 
@@ -79,13 +79,33 @@ internal class DeepSeekLlmClient : ILlmClient
     }
 
     /// <inheritdoc/>
-    public async Task<LlmCompletionResult> GenerateCompletionAsync(
+    public Task<LlmCompletionResult> GenerateCompletionAsync(
         string model,
         string systemPrompt,
         string userPrompt,
         double temperature,
         int maxTokens,
-        CancellationToken ct = default)
+        CancellationToken ct = default) =>
+        CompleteAsync(model, systemPrompt, userPrompt, temperature, maxTokens, disableThinking: false, ct);
+
+    /// <inheritdoc/>
+    public Task<LlmCompletionResult> GenerateCompletionWithoutReasoningAsync(
+        string model,
+        string systemPrompt,
+        string userPrompt,
+        double temperature,
+        int maxTokens,
+        CancellationToken ct = default) =>
+        CompleteAsync(model, systemPrompt, userPrompt, temperature, maxTokens, disableThinking: true, ct);
+
+    private async Task<LlmCompletionResult> CompleteAsync(
+        string model,
+        string systemPrompt,
+        string userPrompt,
+        double temperature,
+        int maxTokens,
+        bool disableThinking,
+        CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(userPrompt))
         {
@@ -105,11 +125,11 @@ internal class DeepSeekLlmClient : ILlmClient
 
         try
         {
-            using var httpRequest = CreateChatRequest(model, systemPrompt, userPrompt, temperature, maxTokens, stream: false);
+            using var httpRequest = CreateChatRequest(model, systemPrompt, userPrompt, temperature, maxTokens, stream: false, disableThinking);
             ApplyAuthorization(httpRequest, apiKey);
 
-            _logger.LogInformation("Generating DeepSeek completion using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
-                model, temperature, maxTokens);
+            _logger.LogInformation("Generating DeepSeek completion using {Model} (temp={Temperature}, max_tokens={MaxTokens}, thinking={Thinking})",
+                model, temperature, maxTokens, disableThinking ? "disabled" : "default");
 
             using var response = await _httpClient.SendAsync(httpRequest, ct).ConfigureAwait(false);
             return await HandleCompletionResponseAsync(response, model, ct).ConfigureAwait(false);
@@ -152,7 +172,8 @@ internal class DeepSeekLlmClient : ILlmClient
         string userPrompt,
         double temperature,
         int maxTokens,
-        bool stream)
+        bool stream,
+        bool disableThinking)
     {
         var messages = new List<object>();
 
@@ -173,6 +194,13 @@ internal class DeepSeekLlmClient : ILlmClient
             ["max_tokens"] = maxTokens,
             ["stream"] = stream
         };
+
+        // #4381: col thinking attivo (il default) il ragionamento consuma max_tokens e la temperatura
+        // è ignorata. Vedi ILlmReasoningSwitch.
+        if (disableThinking)
+        {
+            OpenAiToolPayload.DisableThinking(requestPayload);
+        }
 
         var json = JsonSerializer.Serialize(requestPayload);
         return new HttpRequestMessage(HttpMethod.Post, "chat/completions")
@@ -587,13 +615,33 @@ internal class DeepSeekLlmClient : ILlmClient
     }
 
     /// <inheritdoc/>
-    public async IAsyncEnumerable<StreamChunk> GenerateCompletionStreamAsync(
+    public IAsyncEnumerable<StreamChunk> GenerateCompletionStreamAsync(
         string model,
         string systemPrompt,
         string userPrompt,
         double temperature,
         int maxTokens,
-        [EnumeratorCancellation] CancellationToken ct = default)
+        CancellationToken ct = default) =>
+        StreamAsync(model, systemPrompt, userPrompt, temperature, maxTokens, disableThinking: false, ct);
+
+    /// <inheritdoc/>
+    public IAsyncEnumerable<StreamChunk> GenerateCompletionStreamWithoutReasoningAsync(
+        string model,
+        string systemPrompt,
+        string userPrompt,
+        double temperature,
+        int maxTokens,
+        CancellationToken ct = default) =>
+        StreamAsync(model, systemPrompt, userPrompt, temperature, maxTokens, disableThinking: true, ct);
+
+    private async IAsyncEnumerable<StreamChunk> StreamAsync(
+        string model,
+        string systemPrompt,
+        string userPrompt,
+        double temperature,
+        int maxTokens,
+        bool disableThinking,
+        [EnumeratorCancellation] CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(userPrompt))
         {
@@ -607,8 +655,8 @@ internal class DeepSeekLlmClient : ILlmClient
             yield break;
         }
 
-        _logger.LogInformation("Starting DeepSeek streaming completion using {Model} (temp={Temperature}, max_tokens={MaxTokens})",
-            model, temperature, maxTokens);
+        _logger.LogInformation("Starting DeepSeek streaming completion using {Model} (temp={Temperature}, max_tokens={MaxTokens}, thinking={Thinking})",
+            model, temperature, maxTokens, disableThinking ? "disabled" : "default");
 
         // Retry loop for transient 429 (TooManyRequests) errors.
         // The retry wraps only the HTTP send + status check; yield return stays outside try-catch
@@ -619,7 +667,7 @@ internal class DeepSeekLlmClient : ILlmClient
 
         for (var attempt = 0; attempt <= maxRetries; attempt++)
         {
-            using var httpRequest = CreateChatRequest(model, systemPrompt, userPrompt, temperature, maxTokens, stream: true);
+            using var httpRequest = CreateChatRequest(model, systemPrompt, userPrompt, temperature, maxTokens, stream: true, disableThinking);
             ApplyAuthorization(httpRequest, apiKey);
             response = null;
 

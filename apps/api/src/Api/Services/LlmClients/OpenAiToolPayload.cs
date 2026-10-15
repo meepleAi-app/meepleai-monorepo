@@ -31,7 +31,7 @@ internal static class OpenAiToolPayload
         // la temperatura torna ad avere effetto (api-docs.deepseek.com/guides/thinking_mode).
         if (disableThinking)
         {
-            payload["thinking"] = new { type = "disabled" };
+            DisableThinking(payload);
         }
 
         if (tools.Count > 0)
@@ -48,6 +48,14 @@ internal static class OpenAiToolPayload
             Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
         };
     }
+
+    /// <summary>
+    /// Spegne il ragionamento di DeepSeek in un corpo di richiesta (api-docs.deepseek.com/guides/thinking_mode).
+    /// Una sola forma per la chat con strumenti e per le risposte (#4381): se DeepSeek cambia il parametro,
+    /// cambia qui.
+    /// </summary>
+    public static void DisableThinking(IDictionary<string, object> payload) =>
+        payload["thinking"] = new { type = "disabled" };
 
     public static IReadOnlyList<LlmToolCall> ReadToolCalls(OpenAiChatMessage? message)
     {

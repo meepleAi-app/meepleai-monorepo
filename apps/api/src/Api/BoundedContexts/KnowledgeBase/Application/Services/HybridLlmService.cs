@@ -406,19 +406,27 @@ internal class HybridLlmService : ILlmService
     private const string StreamInterruptedMessage =
         "The answer was interrupted before it was complete. Please ask again.";
 
+    /// <summary>
+    /// #4381: il motivo, per i log e il registro, di un tentativo che ha speso token senza scrivere testo.
+    /// <c>length</c> vuol dire che il limite di token è finito prima del testo (per esempio nel ragionamento).
+    /// </summary>
+    private static string NoTextFailure(string? finishReason) =>
+        $"The model spent its tokens without writing any text (finish reason: {finishReason ?? "unknown"})";
+
     /// <inheritdoc/>
     public async Task<LlmCompletionResult> GenerateAnswerAsync(LlmAnswerRequest request, CancellationToken ct = default)
     {
         // Resta async: un argomento non valido continua a uscire dal Task, come prima del refactor.
         ValidateAnswerRequest(request);
         return await RunAnswerAttemptsAsync(
-            new AnswerAttemptPlan(request.PrimaryModelId, request.FallbackModelId, request.MaxTokens, request.ProfileVersionId, request.Source),
+            new AnswerAttemptPlan(request.PrimaryModelId, request.FallbackModelId, request.MaxTokens, request.ProfileVersionId, request.Source,
+                RequiresText: true),
             (client, model) =>
             {
                 var (systemPrompt, userPrompt) = RedactFor(client, request.SystemPrompt, request.UserPrompt);
                 return new AnswerAttempt(
                     systemPrompt.Length + userPrompt.Length,
-                    token => client.GenerateCompletionAsync(model, systemPrompt, userPrompt, request.Temperature, request.MaxTokens, token));
+                    token => CompleteAnswerAsync(client, model, systemPrompt, userPrompt, request, token));
             },
             "Answer",
             ct).ConfigureAwait(false);
@@ -430,7 +438,8 @@ internal class HybridLlmService : ILlmService
         ValidateChatRequest(request);
         var toolCharacters = request.Tools.Sum(t => t.Name.Length + t.Description.Length + t.ParametersSchema.GetRawText().Length);
         return await RunAnswerAttemptsAsync(
-            new AnswerAttemptPlan(request.PrimaryModelId, request.FallbackModelId, request.MaxTokens, request.ProfileVersionId, request.Source),
+            new AnswerAttemptPlan(request.PrimaryModelId, request.FallbackModelId, request.MaxTokens, request.ProfileVersionId, request.Source,
+                RequiresText: false),
             (client, model) =>
             {
                 var messages = RedactFor(client, request.Messages);
@@ -444,9 +453,14 @@ internal class HybridLlmService : ILlmService
             ct).ConfigureAwait(false);
     }
 
-    /// <summary>Ciò che serve al ciclo dei tentativi, uguale per la risposta e per la chat con strumenti.</summary>
+    /// <summary>
+    /// Ciò che serve al ciclo dei tentativi, uguale per la risposta e per la chat con strumenti.
+    /// <paramref name="RequiresText"/>: una risposta senza testo è un tentativo fallito (#4381). Non vale
+    /// per la chat con strumenti, dove un testo vuoto con delle chiamate è una risposta valida.
+    /// </summary>
     private sealed record AnswerAttemptPlan(
-        string PrimaryModelId, string? FallbackModelId, int MaxTokens, Guid? ProfileVersionId, RequestSource Source);
+        string PrimaryModelId, string? FallbackModelId, int MaxTokens, Guid? ProfileVersionId, RequestSource Source,
+        bool RequiresText);
 
     /// <summary>Un tentativo già preparato per un client: i caratteri del prompt (per il tetto) e la chiamata.</summary>
     private sealed record AnswerAttempt(int PromptCharacters, Func<CancellationToken, Task<LlmCompletionResult>> Call);
@@ -511,6 +525,22 @@ internal class HybridLlmService : ILlmService
                 if (!result.Success && ct.IsCancellationRequested)
                 {
                     ct.ThrowIfCancellationRequested();
+                }
+
+                if (result.Success && plan.RequiresText && string.IsNullOrWhiteSpace(result.Response))
+                {
+                    // #4381: il provider ha risposto, il modello ha speso i token senza scrivere niente.
+                    // Per il circuit breaker è un successo (misura il provider); la riga del registro
+                    // porta il costo pagato ed è fallita; si passa alla riserva.
+                    actualCost = result.Cost.TotalCost;
+                    var failure = NoTextFailure(result.Metadata.GetValueOrDefault("finish_reason"));
+                    _logger.LogWarning("{Operation}: model {Model} via {Provider} failed: {Error}", operation, model, client.ProviderName, failure);
+                    _providerSelector.RecordSuccess(client.ProviderName, model, stopwatch.ElapsedMilliseconds, result);
+                    await _costService.LogSuccessAsync(
+                        result with { ProfileVersionId = plan.ProfileVersionId, Success = false, ErrorMessage = failure },
+                        costContext, stopwatch.ElapsedMilliseconds, plan.Source, CancellationToken.None).ConfigureAwait(false);
+                    lastError = failure;
+                    continue;
                 }
 
                 if (result.Success)
@@ -669,6 +699,11 @@ internal class HybridLlmService : ILlmService
         var stopwatch = Stopwatch.StartNew();
         StreamChunk? costChunk = null;
         var generatedCharacters = 0;
+        // #4381: il primo token è il primo testo, non il primo token pagato né uno spazio. Finché non
+        // c'è testo, il chunk finale con l'uso resta trattenuto: se il tentativo finisce senza testo
+        // (e si passa alla riserva) il consumatore non lo vede.
+        var producedText = false;
+        var costChunkHeld = false;
         Exception? error = null;
         var loopExited = false;
 
@@ -679,8 +714,7 @@ internal class HybridLlmService : ILlmService
         IAsyncEnumerator<StreamChunk>? enumerator = null;
         try
         {
-            enumerator = client.GenerateCompletionStreamAsync(
-                attempt.Model, systemPrompt, userPrompt, request.Temperature, request.MaxTokens, ct).GetAsyncEnumerator(ct);
+            enumerator = StreamAnswer(client, attempt.Model, systemPrompt, userPrompt, request, ct).GetAsyncEnumerator(ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
         {
@@ -714,9 +748,25 @@ internal class HybridLlmService : ILlmService
                     }
 
                     var chunk = enumerator.Current;
+                    var isText = !string.IsNullOrWhiteSpace(chunk.Content);
                     if (chunk.Usage is not null && chunk.Cost is not null)
                     {
                         costChunk = chunk;
+                        if (!producedText && !isText)
+                        {
+                            costChunkHeld = true;
+                            continue;
+                        }
+                    }
+
+                    if (isText && !producedText)
+                    {
+                        producedText = true;
+                        if (costChunkHeld && !ReferenceEquals(costChunk, chunk))
+                        {
+                            costChunkHeld = false;
+                            yield return costChunk!;
+                        }
                     }
 
                     generatedCharacters += chunk.Content?.Length ?? 0;
@@ -752,7 +802,7 @@ internal class HybridLlmService : ILlmService
             yield break;
         }
 
-        if (error is not null && generatedCharacters > 0)
+        if (producedText && error is not null)
         {
             // D3: dopo il primo token non si passa a un secondo modello. Lo stream finisce con un
             // errore, il costo dei token generati entra nel registro e il circuit breaker conta il guasto.
@@ -767,7 +817,7 @@ internal class HybridLlmService : ILlmService
             yield break;
         }
 
-        if (error is null && (generatedCharacters > 0 || costChunk is not null))
+        if (producedText)
         {
             attempt.Answered = true;
             _providerSelector.RecordSuccess(attempt.Provider, attempt.Model, stopwatch.ElapsedMilliseconds,
@@ -777,14 +827,54 @@ internal class HybridLlmService : ILlmService
             yield break;
         }
 
-        // Fallito prima del primo token: un'eccezione, o uno stream chiuso senza niente — i client
-        // scrivono l'errore nei log e chiudono. Il chiamante passa alla riserva.
-        attempt.Failure = error?.Message ?? "Streaming ended without content or usage: the provider call failed";
-        _providerSelector.RecordFailure(attempt.Provider, attempt.Model, stopwatch.ElapsedMilliseconds);
+        // Nessun testo: un fallimento di prima del primo token, e il chiamante passa alla riserva (D3).
+        if (error is null && costChunk is not null)
+        {
+            // #4381: il provider ha risposto e il modello ha speso i token senza scrivere testo
+            // (deepseek-flash col thinking che esaurisce max_tokens). Per il circuit breaker, che misura
+            // il provider, è un successo: contarlo come guasto aprirebbe il circuito a tutte le chiamate
+            // verso quel provider. I token sono pagati, e il conto li registra come riga fallita.
+            attempt.Failure = NoTextFailure(costChunk.FinishReason);
+            _logger.LogWarning("Answer stream via {Provider} ({Model}): {Failure}", attempt.Provider, attempt.Model, attempt.Failure);
+            _providerSelector.RecordSuccess(attempt.Provider, attempt.Model, stopwatch.ElapsedMilliseconds,
+                LlmCompletionResult.CreateSuccess(string.Empty, costChunk.Usage, costChunk.Cost));
+        }
+        else
+        {
+            // Un'eccezione, o uno stream chiuso senza testo né uso: i client scrivono l'errore nei log e chiudono.
+            attempt.Failure = error?.Message ?? "Streaming ended without text or usage: the provider call failed";
+            _providerSelector.RecordFailure(attempt.Provider, attempt.Model, stopwatch.ElapsedMilliseconds);
+        }
+
+        if (costChunk is not null || generatedCharacters > 0)
+        {
+            // Qualcosa è stato generato, quindi pagato: il conto lo registra come riga fallita.
+            await SettleAnswerStreamAsync(attempt, request, admission, costContext, costChunk, generatedCharacters,
+                stopwatch.ElapsedMilliseconds, failure: attempt.Failure).ConfigureAwait(false);
+            yield break;
+        }
+
         await _costService.LogFailureAsync(attempt.Failure, costContext, stopwatch.ElapsedMilliseconds, request.Source, CancellationToken.None)
             .ConfigureAwait(false);
         CompleteAdmission(admission, 0m);
     }
+
+    /// <summary>
+    /// #4381: le risposte chiedono di non ragionare a un client che lo sa fare (<see cref="ILlmReasoningSwitch"/>);
+    /// gli altri rispondono come sempre.
+    /// </summary>
+    private static IAsyncEnumerable<StreamChunk> StreamAnswer(
+        ILlmClient client, string model, string systemPrompt, string userPrompt, LlmAnswerRequest request, CancellationToken ct) =>
+        client is ILlmReasoningSwitch withoutReasoning
+            ? withoutReasoning.GenerateCompletionStreamWithoutReasoningAsync(model, systemPrompt, userPrompt, request.Temperature, request.MaxTokens, ct)
+            : client.GenerateCompletionStreamAsync(model, systemPrompt, userPrompt, request.Temperature, request.MaxTokens, ct);
+
+    /// <inheritdoc cref="StreamAnswer"/>
+    private static Task<LlmCompletionResult> CompleteAnswerAsync(
+        ILlmClient client, string model, string systemPrompt, string userPrompt, LlmAnswerRequest request, CancellationToken ct) =>
+        client is ILlmReasoningSwitch withoutReasoning
+            ? withoutReasoning.GenerateCompletionWithoutReasoningAsync(model, systemPrompt, userPrompt, request.Temperature, request.MaxTokens, ct)
+            : client.GenerateCompletionAsync(model, systemPrompt, userPrompt, request.Temperature, request.MaxTokens, ct);
 
     /// <summary>
     /// Chiude il conto di uno stream che ha prodotto qualcosa: la riga del registro con la versione
@@ -827,9 +917,13 @@ internal class HybridLlmService : ILlmService
     {
         if (costChunk is { Usage: { } usage, Cost: { } cost })
         {
+            // #4381: un tentativo fallito con token fatturati (senza testo, o interrotto dopo il chunk
+            // d'uso) è una riga fallita con il suo costo, come nel ramo della stima qui sotto.
             var completed = LlmCompletionResult.CreateSuccess(string.Empty, usage, cost) with
             {
                 ProfileVersionId = request.ProfileVersionId,
+                Success = failure is null,
+                ErrorMessage = failure,
             };
             await _costService.LogSuccessAsync(completed, costContext, latencyMs, request.Source, CancellationToken.None)
                 .ConfigureAwait(false);

@@ -106,7 +106,7 @@ La **polarità** (permette/vieta) di un claim è derivata in questa prima versio
 
 `confidence` resta `null` finché non esiste una misura (per esempio accordo con il golden set per gioco).
 
-**Lato C#**: client `IArbiterValidationClient` in `KnowledgeBase/Infrastructure`, invocato da `AskArbiterCommandHandler` via handler/`IMediator`; timeout dal budget di latenza configurato; timeout o errore ⇒ `Unknown` e risposta senza citazioni inventate. `SsrfPin` applicato come a ogni `HttpClient`.
+**Lato C#**: client `IArbiterValidationClient` in `KnowledgeBase/Infrastructure`, invocato dalla disputa sulle regole della partita dal vivo quando passa sulla pipeline (fetta 8 di ADR-095, #4171), con gli endpoint su `IMediator` — ADR-092 emendata da ADR-098 il 2026-10-15; timeout dal budget di latenza configurato; timeout o errore ⇒ `Unknown` e risposta senza citazioni inventate. `SsrfPin` applicato come a ogni `HttpClient`.
 
 ## 7. Riestrazione dei giochi esistenti
 

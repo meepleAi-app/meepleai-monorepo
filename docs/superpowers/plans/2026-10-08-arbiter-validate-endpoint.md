@@ -2,13 +2,15 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** `orchestration-service` espone `POST /validate` che, dati stato, mossa e i claim v3 della card pubblicata, restituisce un verdetto deterministico (`Valid | Invalid | Unknown`) senza LLM e con `confidence` mai fissa; il C# lo chiama da `AskArbiterCommandHandler` e, in caso di timeout o errore, risponde `Unknown` senza inventare citazioni.
+**Goal:** `orchestration-service` espone `POST /validate` che, dati stato, mossa e i claim v3 della card pubblicata, restituisce un verdetto deterministico (`Valid | Invalid | Unknown`) senza LLM e con `confidence` mai fissa; il C# lo chiama dalla disputa sulle regole della partita (ADR-098, dopo la fetta 8 di ADR-095) e, in caso di timeout o errore, risponde `Unknown` senza inventare citazioni.
 
-**Architecture:** Un modulo Python puro (`src/application/validation_kernel.py`) implementa la risoluzione defettibile leggera (trigger → scarto sovrascritte → priorità massima → conflitto ⇒ Unknown); FastAPI lo espone con schemi Pydantic; un client C# tipizzato in `KnowledgeBase/Infrastructure` lo chiama via l'`HttpClient` nominato `OrchestrationService` già registrato, con SSRF pin e timeout dedicato; `AskArbiterCommandHandler` arricchisce `ArbiterVerdictDto` con il verdetto formale. Dipende dal piano gemello `2026-10-08-mechanic-claims-v3.md` (Task 7: `PublishedMechanicCardClaimDto` con `Kind/Priority/Overrides/Trigger`).
+**Architecture:** Un modulo Python puro (`src/application/validation_kernel.py`) implementa la risoluzione defettibile leggera (trigger → scarto sovrascritte → priorità massima → conflitto ⇒ Unknown); FastAPI lo espone con schemi Pydantic; un client C# tipizzato in `KnowledgeBase/Infrastructure` lo chiama via l'`HttpClient` nominato `OrchestrationService` già registrato, con SSRF pin e timeout dedicato; la disputa sulla pipeline lo usa come strumento e fa spiegare il verdetto formale dal modello (Task 4, sospeso fino alla fetta 8). Dipende dal piano gemello `2026-10-08-mechanic-claims-v3.md` (Task 7: `PublishedMechanicCardClaimDto` con `Kind/Priority/Overrides/Trigger`).
 
 **Tech Stack:** Python 3.11, FastAPI, Pydantic v2, pytest (`asyncio_mode = auto`); .NET 9, `IHttpClientFactory`, MediatR, xUnit + Moq.
 
 **Spec:** `docs/for-developers/specs/2026-10-08-mechanic-claims-v3-defeasible-rules-design.md` §6 · ADR-092.
+
+> ✏️ 2026-10-15, ADR-098: il consumatore C# del verdetto è la disputa sulle regole della partita, quando passa sulla pipeline con la fetta 8 di ADR-095 (#4171). I Task 1–3 e 5 restano; il Task 4 è sospeso e si riscrive su quella fetta; il Task 6 verifica tramite una disputa. Né `AskArbiterCommandHandler` (#4386) né `ValidateMoveCommandHandler` (ADR-098) sono il punto d'innesto.
 
 ## Global Constraints
 
@@ -27,7 +29,7 @@
 1. Due regole applicabili allo stesso livello, polarità opposte, senza `Overrides` fra loro ⇒ `Unknown` con entrambe in `applied_rule_ids`, non la prima che capita. Test in Task 1 (`conflict_same_level_is_unknown`).
 2. Regola sovrascritta da un'eccezione il cui trigger **non** combacia con la mossa: l'eccezione non si applica e la regola generale resta attiva. Test in Task 1 (`override_only_counts_when_overrider_applies`).
 3. Claim con `kind = Example` o `Clarification` nella lista: non devono mai produrre un verdetto. Test in Task 1 (`examples_and_clarifications_never_decide`).
-4. Timeout del servizio Python (`HttpClient.Timeout`): `AskArbiterCommandHandler` deve restituire il verdetto RAG con `FormalVerdict = "Unknown"` e una metrica incrementata, non 500. Test in Task 4 (`Validate_Timeout_YieldsUnknown`).
+4. Timeout del servizio Python (`HttpClient.Timeout`): la disputa deve restituire il verdetto del modello sui passaggi recuperati con `FormalVerdict = "Unknown"` e una metrica incrementata, non 500. Test in Task 4 (`Validate_Timeout_YieldsUnknown`).
 5. Regole con `trigger` nullo (jolly) devono applicarsi a qualunque mossa, anche con `state` vuoto. Test in Task 1 (`wildcard_trigger_applies_to_any_move`).
 
 ---
@@ -44,9 +46,9 @@
 | `apps/api/src/Api/BoundedContexts/KnowledgeBase/Application/Services/Validation/IArbiterValidationClient.cs` (new) | interfaccia + record `ArbiterValidationRequest/Result` |
 | `apps/api/src/Api/BoundedContexts/KnowledgeBase/Infrastructure/External/ArbiterValidationClient.cs` (new) | implementazione HTTP |
 | `apps/api/src/Api/BoundedContexts/KnowledgeBase/Infrastructure/DependencyInjection/KnowledgeBaseServiceExtensions.cs` | registrazione client + `AddHttpClient("ArbiterValidation")` con SSRF pin |
-| `apps/api/src/Api/BoundedContexts/KnowledgeBase/Application/DTOs/ArbiterVerdictDto.cs` | campi `FormalVerdict`, `AppliedRuleIds`, `ViolatedRuleIds`, `FormalConfidence` |
-| `apps/api/src/Api/BoundedContexts/KnowledgeBase/Application/Commands/AskArbiterCommandHandler.cs` | chiamata al validatore dopo il RAG |
-| `apps/api/tests/Api.Tests/BoundedContexts/KnowledgeBase/Infrastructure/ArbiterValidationClientTests.cs`, `.../Application/Commands/AskArbiterCommandHandlerValidationTests.cs` (new) | test |
+| DTO del verdetto della disputa (si definisce nella fetta 8) | campi `FormalVerdict`, `AppliedRuleIds`, `ViolatedRuleIds`, `FormalConfidence`, `FormalExplanation` |
+| gestore della disputa sulla pipeline (fetta 8, #4171) | chiamata al validatore; il verdetto formale arriva al prompt del compito «arbitro» (Task 4, sospeso) |
+| `apps/api/tests/Api.Tests/BoundedContexts/KnowledgeBase/Infrastructure/ArbiterValidationClientTests.cs`, i test della disputa si scrivono con la fetta 8 | test |
 
 ---
 
@@ -805,113 +807,19 @@ git commit -m "feat(kb): client HTTP verso /validate con timeout e verdetto Unkn
 
 ---
 
-### Task 4: Innesto in `AskArbiterCommandHandler` e DTO esteso
+### Task 4: Il validatore come strumento della disputa — SOSPESO fino alla fetta 8
 
-**Files:**
-- Modify: `apps/api/src/Api/BoundedContexts/KnowledgeBase/Application/DTOs/ArbiterVerdictDto.cs`
-- Modify: `apps/api/src/Api/BoundedContexts/KnowledgeBase/Application/Commands/AskArbiterCommandHandler.cs` (DI: `IMechanicCardProvider`, `IArbiterValidationClient`; passo dopo la ricerca ibrida)
-- Modify: test esistente `AskArbiterCommandHandlerTests` (costruttore con i due mock nuovi; `IMechanicCardProvider` → `null` card; `IArbiterValidationClient` → `Unknown`)
-- Test: `apps/api/tests/Api.Tests/BoundedContexts/KnowledgeBase/Application/Commands/AskArbiterCommandHandlerValidationTests.cs`
+> ⏸️ **Sospeso il 2026-10-15 da ADR-098.** Il consumatore C# del verdetto formale è la disputa sulle regole della partita dal vivo, che oggi chiama il modello senza recupero (`SubmitRuleDisputeCommandHandler`, in `GameManagement`) e che la fetta 8 di ADR-095 (#4171) porta sulla pipeline. Innestare il validatore nel gestore di oggi vorrebbe dire riscriverlo con la fetta: questo task si scrive lì, sul gestore della disputa sulla pipeline.
+>
+> Le due stesure precedenti sono superate: innestavano il validatore in `AskArbiterCommandHandler` (che #4386 toglie) e poi in `ValidateMoveCommandHandler` (che nessuna pagina chiama e che ADR-098 toglie con tutta la rotta `/agents/arbitro/*`).
 
-**Interfaces:**
-- Consumes: Task 3; `IMechanicCardProvider.GetActiveCardAsync(Guid sharedGameId, ct)` (`BoundedContexts/KnowledgeBase/Application/Services/MechanicClaimInjection/IMechanicCardProvider.cs:17`, già usato da `AskQuestionQueryHandler` con `query.GameId`: usa `definition.GameId.Value` allo stesso modo).
-- Produces: su `ArbiterVerdictDto`: `string FormalVerdict` (`Valid|Invalid|Unknown`), `IReadOnlyList<Guid> AppliedRuleIds`, `IReadOnlyList<Guid> ViolatedRuleIds`, `double? FormalConfidence` (sempre `null` in questa versione), `IReadOnlyList<string> FormalExplanation`. Il campo esistente `Confidence` (RAG) resta e viene documentato come «retrieval confidence».
-- Regola: `move = { "text": $"{Situation}\n{PositionA}\n{PositionB}" }`, `state = {}` (nessuno stato live nel comando attuale); se la card è assente o senza claim ⇒ `FormalVerdict = Unknown` senza chiamare il client; il prompt LLM del verdetto riceve una riga aggiuntiva `Formal verdict: {FormalVerdict} (applied: n)` solo se diverso da `Unknown`.
+Cosa deve restare vero quando il task si riscrive, dalla stesura precedente:
 
-- [ ] **Step 1: Scrivi i test**
-
-```csharp
-// apps/api/tests/Api.Tests/BoundedContexts/KnowledgeBase/Application/Commands/AskArbiterCommandHandlerValidationTests.cs
-// Setup: copia il costruttore di AskArbiterCommandHandlerTests (InMemory DbContext, mock repo/LLM/hybrid) e aggiungi:
-//   Mock<IMechanicCardProvider> _cards; Mock<IArbiterValidationClient> _validator;
-// Definizione con GameId = G; LLM che risponde "Verdetto: A ha ragione."; hybrid search vuota.
-
-[Fact]
-public async Task Handle_WithCardAndValidator_PropagatesFormalVerdict()
-{
-    var ruleId = Guid.NewGuid();
-    _cards.Setup(c => c.GetActiveCardAsync(G, It.IsAny<CancellationToken>()))
-        .ReturnsAsync(CardWithClaims(new PublishedMechanicCardClaimDto(ruleId, "non puoi fare tre azioni", [], MechanicClaimKind.Rule, MechanicRulePriority.Base, [], null)));
-    _validator.Setup(v => v.ValidateAsync(It.Is<ArbiterValidationRequest>(r => r.GameId == G && r.Rules.Count == 1 && ((string)r.Move["text"]!).Contains("tre azioni")), It.IsAny<CancellationToken>()))
-        .ReturnsAsync(new ArbiterValidationResult("Invalid", [ruleId], [ruleId], [(ruleId, "wildcard trigger")], null));
-
-    var result = await _handler.Handle(Command(situation: "Anna vuole fare tre azioni"), CancellationToken.None);
-
-    result.FormalVerdict.Should().Be("Invalid");
-    result.AppliedRuleIds.Should().Equal(ruleId);
-    result.FormalConfidence.Should().BeNull();
-    result.FormalExplanation.Should().ContainSingle(s => s.Contains("wildcard trigger"));
-}
-
-[Fact]
-public async Task Handle_WithoutCard_DoesNotCallValidator_AndIsUnknown()
-{
-    _cards.Setup(c => c.GetActiveCardAsync(G, It.IsAny<CancellationToken>())).ReturnsAsync((PublishedMechanicCardDto?)null);
-    var result = await _handler.Handle(Command(), CancellationToken.None);
-    result.FormalVerdict.Should().Be("Unknown");
-    _validator.Verify(v => v.ValidateAsync(It.IsAny<ArbiterValidationRequest>(), It.IsAny<CancellationToken>()), Times.Never);
-}
-
-[Fact]
-public async Task Validate_Timeout_YieldsUnknown()
-{
-    _cards.Setup(c => c.GetActiveCardAsync(G, It.IsAny<CancellationToken>())).ReturnsAsync(CardWithClaims(/* un claim */));
-    _validator.Setup(v => v.ValidateAsync(It.IsAny<ArbiterValidationRequest>(), It.IsAny<CancellationToken>()))
-        .ReturnsAsync(ArbiterValidationResult.Unknown("TaskCanceledException"));
-    var result = await _handler.Handle(Command(), CancellationToken.None);
-    result.FormalVerdict.Should().Be("Unknown");
-    result.Verdict.Should().NotBeNullOrWhiteSpace("the RAG verdict still answers");
-}
-```
-
-Completa `Command(...)`, `CardWithClaims(...)` e `G` come helper privati della classe, replicando `AskArbiterCommandHandlerTests` (leggi le sue righe 30-70 per i mock e il `DbContext` InMemory).
-
-- [ ] **Step 2: Esegui e verifica che fallisca** — `dotnet test ../../tests/Api.Tests --filter "FullyQualifiedName~AskArbiterCommandHandler"` → FAIL (compilazione: costruttore e campi DTO).
-
-- [ ] **Step 3: Estendi il DTO e l'handler**
-
-`ArbiterVerdictDto`: aggiungi
-
-```csharp
-    /// <summary>ADR-092: deterministic verdict from the Python validator: Valid | Invalid | Unknown.</summary>
-    public string FormalVerdict { get; init; } = "Unknown";
-    public IReadOnlyList<Guid> AppliedRuleIds { get; init; } = Array.Empty<Guid>();
-    public IReadOnlyList<Guid> ViolatedRuleIds { get; init; } = Array.Empty<Guid>();
-    /// <summary>Always null until a real measure exists (ADR-092 §2). Distinct from the retrieval <see cref="Confidence"/>.</summary>
-    public double? FormalConfidence { get; init; }
-    public IReadOnlyList<string> FormalExplanation { get; init; } = Array.Empty<string>();
-```
-
-Handler: aggiungi i due campi al costruttore (`IMechanicCardProvider mechanicCardProvider, IArbiterValidationClient validationClient`), e dopo il passo 3 (ricerca ibrida) inserisci:
-
-```csharp
-        // 3b. ADR-092: deterministic verdict from the published card's v3 claims (best effort, never throws).
-        var formal = ArbiterValidationResult.Unknown("no card");
-        if (definition.GameId is { } gameId && gameId != Guid.Empty)
-        {
-            var card = await _mechanicCardProvider.GetActiveCardAsync(gameId, cancellationToken).ConfigureAwait(false);
-            var rules = card?.Sections.SelectMany(s => s.Claims).ToList() ?? new List<PublishedMechanicCardClaimDto>();
-            if (rules.Count > 0)
-            {
-                var move = new Dictionary<string, object?> { ["text"] = $"{command.Situation}\n{command.PositionA}\n{command.PositionB}" };
-                formal = await _validationClient.ValidateAsync(
-                    new ArbiterValidationRequest(gameId, new Dictionary<string, object?>(), move, rules), cancellationToken).ConfigureAwait(false);
-            }
-        }
-```
-
-Nel prompt al LLM, se `formal.Verdict != "Unknown"`, aggiungi la riga `Formal verdict from the rule validator: {formal.Verdict} (rules applied: {formal.AppliedRuleIds.Count}). Explain it to the players; do not contradict it.` Nel `return` popola `FormalVerdict = formal.Verdict, AppliedRuleIds = formal.AppliedRuleIds, ViolatedRuleIds = formal.ViolatedRuleIds, FormalConfidence = formal.Confidence, FormalExplanation = formal.ExplanationSteps.Select(s => $"{s.RuleId}: {s.Step}").ToList()`.
-
-Aggiorna il costruttore nel test esistente `AskArbiterCommandHandlerTests` con `Mock.Of<IMechanicCardProvider>()` (ritorna `null`) e `Mock.Of<IArbiterValidationClient>()` configurato per ritornare `ArbiterValidationResult.Unknown("test")`.
-
-- [ ] **Step 4: Esegui e verifica che passi** — `dotnet test ../../tests/Api.Tests --filter "FullyQualifiedName~AskArbiterCommandHandler|FullyQualifiedName~ArbiterValidation"` → PASS, compresi i test preesistenti dell'Arbitro.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add apps/api/src/Api/BoundedContexts/KnowledgeBase/Application/DTOs/ArbiterVerdictDto.cs apps/api/src/Api/BoundedContexts/KnowledgeBase/Application/Commands/AskArbiterCommandHandler.cs apps/api/tests/Api.Tests/BoundedContexts/KnowledgeBase/Application/Commands
-git commit -m "feat(kb): verdetto formale ADR-092 nella risposta dell'Arbitro"
-```
+- su un gioco con claim v3 pubblicati la disputa chiama `IArbiterValidationClient` (Task 3); senza card o senza claim non lo chiama e il verdetto formale è `Unknown`;
+- il verdetto formale entra nel prompt del compito «arbitro» solo se diverso da `Unknown`, con l'istruzione di spiegarlo e non contraddirlo;
+- la risposta porta `FormalVerdict`, `AppliedRuleIds`, `ViolatedRuleIds`, `FormalConfidence` (sempre `null` in questa versione) e `FormalExplanation`;
+- timeout o errore del validatore ⇒ `Unknown`, una metrica, e nessun 500 (Review Focus 4);
+- prima di chiamare `IMechanicCardProvider.GetActiveCardAsync(sharedGameId)` va verificato che l'id del gioco della sessione sia lo `SharedGameId` atteso: con l'id sbagliato il provider risponde `null` e i test con il mock passano lo stesso.
 
 ---
 
@@ -970,7 +878,7 @@ Aggiungi `apps/orchestration-service/tests/test_validate_contract.py` che carica
 
 - [ ] **Step 2: Avvio su staging**
 
-Con il profilo opt-in (`compose.staging.tutor.yml`), dopo il deploy: `curl -s https://<staging>/api/v1/health` deve mostrare `orchestration` sano; `pwsh -c "docker logs meepleai-orchestration --tail=50"` deve mostrare l'avvio; una disputa dall'UI deve produrre in `ArbiterVerdictDto` un `formalVerdict` diverso da `Unknown` su un gioco con card v3 pubblicata (piano gemello Task 10). Salva la risposta nel PR.
+Con il profilo opt-in (`compose.staging.tutor.yml`), dopo il deploy: `curl -s https://<staging>/api/v1/health` deve mostrare `orchestration` sano; `pwsh -c "docker logs meepleai-orchestration --tail=50"` deve mostrare l'avvio; una disputa aperta dalla scheda «Arbitro» di una partita, su un gioco con card v3 pubblicata, deve produrre un `formalVerdict` diverso da `Unknown` (piano gemello Task 10). Si può verificare solo dopo la fetta 8 e il Task 4. Salva la risposta nel PR.
 
 - [ ] **Step 3: Documenta** la sezione nel manuale operativo: variabili (`ORCHESTRATION_SERVICE_URL`, `ArbiterValidation:TimeoutSeconds`), metriche (`validate_verdict_*_total`, `meepleai_arbiter_validation_unavailable_total`), comportamento `Unknown`. Commit `docs(ops): orchestration /validate`.
 

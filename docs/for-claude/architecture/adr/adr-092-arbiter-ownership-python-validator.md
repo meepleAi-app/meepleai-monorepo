@@ -2,7 +2,8 @@
 
 **Date**: 2026-10-08
 **Status**: Accepted — decisione del committente presa nel brainstorming del 2026-10-08, a valle della revisione a pannello `docs/for-developers/research/2026-10-08-neuro-symbolic-architecture-spec-panel.md` §2.4.
-**Related**: ADR-004 (AI Agents BC) · ADR-006 (multi-layer validation) · ADR-090 (grounded answer: `KnowledgeBase` owner) · spec `docs/for-developers/specs/2026-10-08-mechanic-claims-v3-defeasible-rules-design.md` §5 · #3759 (orchestration-service) · #3668 (`Constraint` non valutati).
+**Amended**: 2026-10-15, da **ADR-098** — il consumatore C# del verdetto (decisione 4) è la **disputa sulle regole della partita dal vivo**, quando passa sulla pipeline (fetta 8 di ADR-095, #4171). Non `AskArbiterCommandHandler`, che #4386 toglie, né `ValidateMoveCommandHandler`, che nessuna pagina chiama e che ADR-098 toglie con tutta la rotta `/agents/arbitro/*`.
+**Related**: ADR-004 (AI Agents BC) · ADR-006 (multi-layer validation) · ADR-090 (grounded answer: `KnowledgeBase` owner) · spec `docs/for-developers/specs/2026-10-08-mechanic-claims-v3-defeasible-rules-design.md` §5 · #3759 (orchestration-service) · #3668 (`Constraint` non valutati) · #4386 (via `AskArbiterCommandHandler`).
 
 ---
 
@@ -12,11 +13,13 @@ Esistono due Arbitri che rispondono alla stessa domanda («questa mossa è legal
 
 | | Python `apps/orchestration-service` | C# `KnowledgeBase` / `GameManagement` |
 |---|---|---|
-| Codice | `src/application/arbitro_agent.py` (LangGraph lineare `retrieve_rules → validate_move → generate_explanation`), `rule_engine.py` | `ArbitroAgentService.cs`, `MoveValidationDomainService.cs`, `AskArbiterCommandHandler.cs` |
+| Codice | `src/application/arbitro_agent.py` (LangGraph lineare `retrieve_rules → validate_move → generate_explanation`), `rule_engine.py` | `ValidateMoveCommandHandler.cs` (dietro `POST /api/v1/agents/arbitro/validate`, `ArbitroAgentEndpoints.cs`), `ArbitroAgentService.cs`, `MoveValidationDomainService.cs` ¹ |
 | Validazione | `re.match` sulla notazione algebrica; i `Constraint` sono saltati («no board model exists», #3668) | match a keyword («cannot», «must not») su `RuleAtom` |
 | Confidence | fissa: `0.95` se valido, `0.90` se no | `avg(score chunk) × (citazioni > 0 ? 1 : 0.5)` |
 | Spiegazione | `gpt-4o-mini` via OpenRouter | pipeline RAG con citazioni e ADR-006 |
 | Stato | pubblicato su GHCR, **non avviato su staging** (opt-in `compose.staging.tutor.yml`); `enable_checkpointing` dichiarato e non cablato | in produzione |
+
+¹ La colonna descrive il codice al 2026-10-08; la prima stesura citava anche `AskArbiterCommandHandler.cs`, che non ha una rotta e che #4386 rimuove. Nessuno di questi file è chiamato dal web: l'unico arbitro raggiungibile è la disputa della partita dal vivo (`SubmitRuleDisputeCommandHandler`, in `GameManagement`), che chiama il modello senza recuperare passaggi. Vedi ADR-098.
 
 ADR-090 stabilisce che la risposta grounded all'utente è di `KnowledgeBase`. Nessun ADR dice chi è il proprietario del **verdetto**. Finché la cosa resta aperta, ogni lavoro su uno dei due Arbitri rischia di essere buttato, e la confidence fissa di Python è un valore che i consumatori leggono come misura.
 
@@ -27,15 +30,15 @@ Due fatti tirano in direzioni opposte: il C# ha già citazioni, validazione mult
 1. **Il verdetto è di Python, la risposta è di C#.** `orchestration-service` diventa un **validatore puro**: riceve stato, mossa e regole, restituisce verdetto, regole applicate, regole violate e passi di spiegazione. Non chiama alcun LLM per produrre il verdetto. `KnowledgeBase` resta proprietario della risposta all'utente (ADR-090) e compone spiegazione, citazioni e validazione multi-livello (ADR-006) a partire dal verdetto.
 2. **Contratto**: `POST /validate` con `{game_id, state, move, rules}` dove `rules` sono i claim v3 della mechanic card pubblicata (spec §5). Risposta `{verdict: Valid | Invalid | Unknown, applied_rule_ids[], violated_rule_ids[], explanation_steps[], confidence: number | null}`. `confidence` è `null` salvo quando deriva da una misura reale; **nessun valore fisso**.
 3. **Kernel deterministico iniziale** (risoluzione defettibile leggera): regole applicabili per match del `Trigger` su stato e mossa; scarto delle regole sovrascritte via `Overrides`; vince la `Priority` più alta; conflitto allo stesso livello senza `Overrides` ⇒ `Unknown`. ASP/clingo si innesta su questo kernel come pilota successivo, non come prerequisito.
-4. **Il C# chiama Python** da `AskArbiterCommandHandler` attraverso un client registrato in `KnowledgeBase` e invocato via `IMediator` (nessuna iniezione diretta di servizi negli endpoint). In assenza di risposta entro il budget di latenza il verdetto è `Unknown`, mai `Valid` per default.
-5. **Ritiro del doppione C#**: `MoveValidationDomainService` (match a keyword) e la parte di verdetto di `ArbitroAgentService` vengono marcati `[Obsolete]` con riferimento a questo ADR e rimossi quando `/validate` è in produzione. `RuleSpec`/`RuleAtom` restano come sorgente testuale finché i claim v3 non li coprono.
+4. **Il C# chiama Python dalla disputa sulle regole**, come strumento del compito «arbitro» sulla pipeline unica (ADR-098, fetta 8 di ADR-095), attraverso un client registrato in `KnowledgeBase`; gli endpoint restano su `IMediator.Send()` (nessuna iniezione diretta di servizi negli endpoint). Il verdetto formale entra nel prompt del compito, e il modello lo spiega con citazioni senza contraddirlo. In assenza di risposta entro il budget di latenza il verdetto è `Unknown`, mai `Valid` per default. *(Emendata il 2026-10-15 da ADR-098: la prima stesura indicava `AskArbiterCommandHandler`, che #4386 rimuove.)*
+5. **Ritiro del doppione C#**: `MoveValidationDomainService` (match a keyword) e la parte di verdetto di `ArbitroAgentService` vengono marcati `[Obsolete]` con riferimento a questo ADR e rimossi quando `/validate` è in produzione. *(Estesa il 2026-10-15 da ADR-098: esce tutta la rotta `/agents/arbitro/*` con `ValidateMoveCommandHandler` e `ArbitroAgentService`, senza aspettare `/validate`, perché nessuna pagina la chiama.)* `RuleSpec`/`RuleAtom` restano come sorgente testuale finché i claim v3 non li coprono.
 6. **Prerequisiti operativi** prima di caricare Python di responsabilità: servizio avviato su staging con `/health` e metriche nel Prometheus esistente; checkpointer LangGraph cablato su Postgres (`langgraph-checkpoint-postgres`, nessun servizio nuovo); deadline per chiamata come nello streaming (#3601). `/execute` resta per il tutor fino a una deprecazione separata.
 
 ## Consequences
 
 **Positive**: un solo proprietario per il verdetto e uno per la risposta, coerente con ADR-090; la confidence torna onesta; il pilota ASP e l'esercizio AI-200 (container Python, messaging, osservabilità) hanno un consumatore reale; il C# non duplica logica di validazione.
 
-**Negative**: una chiamata di rete sincrona nel percorso della chat (budget di latenza da fissare e misurare dal dump `[RAG-TUNE]`); `orchestration-service` va osservato e mantenuto davvero; finché i claim v3 non coprono un gioco, `/validate` risponde `Unknown` su quel gioco.
+**Negative**: una chiamata di rete sincrona nel percorso della disputa (budget di latenza da fissare e misurare dal dump `[RAG-TUNE]`); `orchestration-service` va osservato e mantenuto davvero; finché i claim v3 non coprono un gioco, `/validate` risponde `Unknown` su quel gioco.
 
 **Neutral**: LangGraph resta per il tutor e per l'orchestrazione futura; la scelta non impegna su Neo4j, ASP o XState.
 

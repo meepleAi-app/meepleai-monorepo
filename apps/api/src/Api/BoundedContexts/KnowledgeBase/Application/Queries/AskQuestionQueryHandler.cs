@@ -307,23 +307,21 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         }
 
         // Step 0: Check if documents are still being processed
-        var (allReady, processingCount, totalCount) = await CheckDocumentsReadyAsync(
-            query.GameId, null, cancellationToken).ConfigureAwait(false);
-
-        if (!allReady)
+        var readiness = await CheckDocumentsReadyAsync(query.GameId, null, cancellationToken).ConfigureAwait(false);
+        if (!readiness.CanAnswer)
         {
             _logger.LogInformation(
-                "Documents not ready for game {GameId}: {Processing}/{Total} still processing",
-                query.GameId, processingCount, totalCount);
+                "Documents not ready for game {GameId}: {InProgress} in progress, {Failed} failed, of {Total}",
+                query.GameId, readiness.InProgress, readiness.Failed, readiness.Total);
             return new QaResponseDto(
-                Answer: $"{processingCount} of {totalCount} documents are still being processed. Please wait for processing to complete before asking questions.",
+                Answer: readiness.ErrorMessage!,
                 Sources: [],
                 SearchConfidence: 0,
                 LlmConfidence: 0,
                 OverallConfidence: 0,
                 IsLowQuality: false,
                 Citations: [],
-                ErrorCode: "DOCUMENT_PROCESSING");
+                ErrorCode: readiness.ErrorCode);
         }
 
         // Step 1: Perform vector search and calculate confidence
@@ -763,7 +761,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         response.IsLowQuality ||
         string.Equals(response.Answer, "This information is not available in the provided rulebook.", StringComparison.Ordinal);
 
-    private async Task<(bool allReady, int processing, int total)> CheckDocumentsReadyAsync(
+    private async Task<DocumentReadiness> CheckDocumentsReadyAsync(
         Guid gameId, List<Guid>? documentIds, CancellationToken ct)
     {
         // #4244: the PDFs of the game, shared or private (see GameDocuments).
@@ -771,11 +769,6 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
             ? await _pdfDocumentRepository.GetByIdsAsync(documentIds, ct).ConfigureAwait(false)
             : await _pdfDocumentRepository.FindPdfsOfGameAfterAccessCheckAsync(gameId, ct).ConfigureAwait(false);
 
-        // Defensive: Handle null or empty collection
-        if (documents is null or { Count: 0 }) return (true, 0, 0);
-
-        var notCompleted = documents.Count(d =>
-            d.ProcessingState != PdfProcessingState.Ready);
-        return (notCompleted == 0, notCompleted, documents.Count);
+        return DocumentReadiness.Of(documents);
     }
 }

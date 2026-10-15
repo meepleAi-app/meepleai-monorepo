@@ -142,22 +142,20 @@ internal class StreamDebugQaQueryHandler : IStreamingQueryHandler<StreamDebugQaQ
         // ── Step 2: Document readiness check ─────────────────────────────
         var docStopwatch = Stopwatch.StartNew();
         var documentIdsList = query.DocumentIds?.ToList();
-        var (allReady, processingCount, totalCount) = await CheckDocumentsReadyAsync(
-            gameGuid, documentIdsList, cancellationToken).ConfigureAwait(false);
+        var readiness = await CheckDocumentsReadyAsync(gameGuid, documentIdsList, cancellationToken).ConfigureAwait(false);
         docStopwatch.Stop();
 
         yield return CreateEvent(StreamingEventType.DebugDocumentCheck,
             new DebugDocumentCheckData(
-                AllReady: allReady,
-                ProcessingCount: processingCount,
-                TotalCount: totalCount,
+                AllReady: readiness.CanAnswer,
+                ProcessingCount: readiness.InProgress,
+                TotalCount: readiness.Total,
                 DurationMs: docStopwatch.Elapsed.TotalMilliseconds));
 
-        if (!allReady)
+        if (!readiness.CanAnswer)
         {
             yield return CreateEvent(StreamingEventType.Error, new StreamingError(
-                $"{processingCount} of {totalCount} documents are still being processed. Please wait for processing to complete before asking questions.",
-                "DOCUMENT_PROCESSING"));
+                readiness.ErrorMessage!, readiness.ErrorCode));
             yield break;
         }
 
@@ -493,7 +491,7 @@ internal class StreamDebugQaQueryHandler : IStreamingQueryHandler<StreamDebugQaQ
             WindowRadius: 1);
     }
 
-    private async Task<(bool allReady, int processing, int total)> CheckDocumentsReadyAsync(
+    private async Task<DocumentReadiness> CheckDocumentsReadyAsync(
         Guid gameId, List<Guid>? documentIds, CancellationToken ct)
     {
         IReadOnlyList<DocumentProcessing.Domain.Entities.PdfDocument>? documents;
@@ -514,11 +512,7 @@ internal class StreamDebugQaQueryHandler : IStreamingQueryHandler<StreamDebugQaQ
             documents = await _pdfDocumentRepository.FindPdfsOfGameAfterAccessCheckAsync(gameId, ct).ConfigureAwait(false);
         }
 
-        if (documents is null or { Count: 0 }) return (true, 0, 0);
-
-        var notCompleted = documents.Count(d =>
-            d.ProcessingState != PdfProcessingState.Ready);
-        return (notCompleted == 0, notCompleted, documents.Count);
+        return DocumentReadiness.Of(documents);
     }
 
     private RagStreamingEvent CreateEvent(StreamingEventType type, object? data)

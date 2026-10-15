@@ -157,6 +157,92 @@ public sealed class PrivateGameRetrievalTests
         ErrorsOf(events).Should().Equal("DOCUMENT_PROCESSING");
     }
 
+    /// <summary>
+    /// #4408: un PDF fallito è finito, non «in lavorazione». Prima bloccava ogni domanda sul gioco
+    /// con «N of M documents are still being processed» finché un admin non lo cancellava; ora la
+    /// domanda risponde dai PDF pronti.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4408")]
+    public async Task AFailedPdf_DoesNotStopTheQuestion()
+    {
+        using (var scope = _hostFixture.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            await IndexPrivatePdfAsync(db, processingState: "Failed");
+        }
+
+        var events = await AskAsync(_token);
+
+        ErrorsOf(events).Should().BeEmpty();
+        _hostFixture.Llm.LastUserPrompt.Should().Contain(BothArms, "the answer comes from the PDF that is ready");
+    }
+
+    /// <summary>#4408, la domanda singola (<c>/knowledge-base/ask</c>): ha la sua copia del controllo.</summary>
+    [Fact]
+    [Trait("Issue", "4408")]
+    public async Task AFailedPdf_DoesNotStopTheSingleQuestionEither()
+    {
+        using (var scope = _hostFixture.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            await IndexPrivatePdfAsync(db, processingState: "Failed");
+        }
+
+        var response = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post, "/api/v1/knowledge-base/ask", _token,
+            new { gameId = _privateGameId.ToString(), query = Question }), Ct);
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+
+        using var json = JsonDocument.Parse(body);
+        json.RootElement.GetProperty("answer").GetString().Should().NotContain("still being processed", body);
+        _hostFixture.Llm.LastUserPrompt.Should().NotBeNull("the question reaches the model");
+    }
+
+    /// <summary>
+    /// #4408: un PDF fallito non entra nel conteggio dei documenti in lavorazione. Con uno ancora in
+    /// estrazione la domanda si ferma come prima, ma il messaggio conta solo quello.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4408")]
+    public async Task AFailedPdf_IsNotCountedAmongThoseBeingProcessed()
+    {
+        using (var scope = _hostFixture.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            await IndexPrivatePdfAsync(db, processingState: "Failed");
+            await IndexPrivatePdfAsync(db, processingState: "Extracting");
+        }
+
+        var events = await AskAsync(_token);
+
+        ErrorsOf(events).Should().Equal("DOCUMENT_PROCESSING");
+        ErrorMessagesOf(events).Single().Should().StartWith("1 of 3 documents are still being processed");
+    }
+
+    /// <summary>
+    /// #4408: se tutti i PDF del gioco sono falliti non c'è niente da cui rispondere, e il messaggio
+    /// lo dice invece di promettere un'elaborazione che non arriverà.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4408")]
+    public async Task OnlyFailedPdfs_SayTheyFailed_NotThatTheyAreBeingProcessed()
+    {
+        using (var scope = _hostFixture.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            await db.PdfDocuments.Where(p => p.Id == _pdfId)
+                .ExecuteUpdateAsync(set => set.SetProperty(p => p.ProcessingState, "Failed"), Ct);
+        }
+
+        var events = await AskAsync(_token);
+
+        ErrorsOf(events).Should().Equal("DOCUMENTS_FAILED");
+        ErrorMessagesOf(events).Single().Should().NotContain("still being processed");
+        _hostFixture.Llm.LastUserPrompt.Should().BeNull("la domanda si ferma prima del modello");
+    }
+
     /// <summary>Il controllo d'accesso: il gioco privato di un altro non risponde.</summary>
     [Fact]
     public async Task AnotherUser_GetsNothingFromThePrivateGame()
@@ -579,6 +665,12 @@ public sealed class PrivateGameRetrievalTests
 
         return events;
     }
+
+    private static List<string?> ErrorMessagesOf(IEnumerable<JsonElement> events) =>
+        events
+            .Where(e => e.GetProperty("type").GetInt32() == (int)StreamingEventType.Error)
+            .Select(e => e.GetProperty("data").GetProperty("errorMessage").GetString())
+            .ToList();
 
     private static List<string?> ErrorsOf(IEnumerable<JsonElement> events) =>
         events

@@ -31,8 +31,7 @@ internal static class ActivityTimelineEndpoints
 
 **Performance**: Target latency < 500ms with 5-minute cache.")
             .Produces<ActivityTimelineResponseDto>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .WithOpenApi();
+            .Produces(StatusCodes.Status401Unauthorized);
 
         return group;
     }

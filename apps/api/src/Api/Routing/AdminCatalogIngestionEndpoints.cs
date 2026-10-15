@@ -35,12 +35,8 @@ internal static class AdminCatalogIngestionEndpoints
         .DisableAntiforgery()
         .RequireRateLimiting("BulkImportAdmin")
         .WithName("ExcelImport")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Import games from Excel file";
-            operation.Description = "Parses .xlsx file, creates skeleton SharedGame entries. Deduplicates by title and BggId.";
-            return operation;
-        });
+        .WithSummary("Import games from Excel file")
+        .WithDescription("Parses .xlsx file, creates skeleton SharedGame entries. Deduplicates by title and BggId.");
 
         // POST /api/v1/admin/catalog-ingestion/enqueue-enrichment
         // Enqueue selected games for BGG enrichment
@@ -59,12 +55,8 @@ internal static class AdminCatalogIngestionEndpoints
             return Results.Ok(result);
         })
         .WithName("EnqueueEnrichment")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Enqueue games for BGG enrichment";
-            operation.Description = "Enqueues selected skeleton/failed games for BGG data enrichment.";
-            return operation;
-        });
+        .WithSummary("Enqueue games for BGG enrichment")
+        .WithDescription("Enqueues selected skeleton/failed games for BGG data enrichment.");
 
         // POST /api/v1/admin/catalog-ingestion/enqueue-all-skeletons
         // Enqueue all skeleton and failed games for enrichment
@@ -82,12 +74,8 @@ internal static class AdminCatalogIngestionEndpoints
             return Results.Ok(result);
         })
         .WithName("EnqueueAllSkeletons")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Enqueue all skeleton games for enrichment";
-            operation.Description = "Finds all games with Skeleton or Failed status and enqueues them for BGG enrichment.";
-            return operation;
-        });
+        .WithSummary("Enqueue all skeleton games for enrichment")
+        .WithDescription("Finds all games with Skeleton or Failed status and enqueues them for BGG enrichment.");
 
         // POST /api/v1/admin/catalog-ingestion/mark-complete
         // Mark enriched games as complete
@@ -106,12 +94,8 @@ internal static class AdminCatalogIngestionEndpoints
             return Results.Ok(new { Completed = result });
         })
         .WithName("MarkGamesComplete")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Mark games as complete";
-            operation.Description = "Transitions enriched games to Complete status (no PDF download needed).";
-            return operation;
-        });
+        .WithSummary("Mark games as complete")
+        .WithDescription("Transitions enriched games to Complete status (no PDF download needed).");
 
         // GET /api/v1/admin/catalog-ingestion/excel-export
         // Export catalog as Excel file with optional filters
@@ -145,12 +129,8 @@ internal static class AdminCatalogIngestionEndpoints
                 "catalog-export.xlsx");
         })
         .WithName("ExcelExport")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Export catalog to Excel";
-            operation.Description = "Exports shared games catalog as .xlsx with optional filters by status and PDF availability. Max 10,000 rows.";
-            return operation;
-        });
+        .WithSummary("Export catalog to Excel")
+        .WithDescription("Exports shared games catalog as .xlsx with optional filters by status and PDF availability. Max 10,000 rows.");
 
         // POST /api/v1/admin/catalog-ingestion/excel-preview
         // Upload Excel and get a diff preview (new/modified/removed games)
@@ -171,12 +151,8 @@ internal static class AdminCatalogIngestionEndpoints
         .DisableAntiforgery()
         .RequireRateLimiting("BulkImportAdmin")
         .WithName("ExcelPreview")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Preview Excel import diff";
-            operation.Description = "Parses .xlsx file, compares with existing catalog, returns categorized diff (new/modified/removed/unchanged). Does not modify data.";
-            return operation;
-        });
+        .WithSummary("Preview Excel import diff")
+        .WithDescription("Parses .xlsx file, compares with existing catalog, returns categorized diff (new/modified/removed/unchanged). Does not modify data.");
 
         // POST /api/v1/admin/catalog-ingestion/excel-confirm
         // Apply confirmed Excel import changes (create/update/delete)
@@ -195,12 +171,8 @@ internal static class AdminCatalogIngestionEndpoints
             return Results.Ok(result);
         })
         .WithName("ExcelConfirm")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Confirm Excel import changes";
-            operation.Description = "Applies previewed changes: creates new games, updates Draft games, soft-deletes removed Draft games. Published games are protected.";
-            return operation;
-        });
+        .WithSummary("Confirm Excel import changes")
+        .WithDescription("Applies previewed changes: creates new games, updates Draft games, soft-deletes removed Draft games. Published games are protected.");
 
         // POST /api/v1/admin/catalog-ingestion/assign-bgg-id
         // Assign a BGG ID to a skeleton game
@@ -222,12 +194,8 @@ internal static class AdminCatalogIngestionEndpoints
                 : Results.BadRequest(new { assigned = false, error = "BGG ID already in use or game not found/eligible" });
         })
         .WithName("AssignBggId")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Assign BGG ID to skeleton game";
-            operation.Description = "Sets BGG ID on a Skeleton/Failed game, enabling BGG enrichment. Rejects if BGG ID is already assigned to another game.";
-            return operation;
-        });
+        .WithSummary("Assign BGG ID to skeleton game")
+        .WithDescription("Sets BGG ID on a Skeleton/Failed game, enabling BGG enrichment. Rejects if BGG ID is already assigned to another game.");
 
         // ============================================================
         // #1861 — Catalog sync run history (Phase 4)
@@ -246,12 +214,8 @@ internal static class AdminCatalogIngestionEndpoints
             return Results.Ok(result);
         })
         .WithName("GetCatalogSyncStatus")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Catalog sync status";
-            operation.Description = "Returns current status (running|idle|never_run), last/current run summary, cumulative games total, and next scheduled timestamp.";
-            return operation;
-        });
+        .WithSummary("Catalog sync status")
+        .WithDescription("Returns current status (running|idle|never_run), last/current run summary, cumulative games total, and next scheduled timestamp.");
 
         // GET /api/v1/admin/catalog-ingestion/runs?page=N&pageSize=M
         group.MapGet("/runs", async (
@@ -269,12 +233,8 @@ internal static class AdminCatalogIngestionEndpoints
             return Results.Ok(result);
         })
         .WithName("GetCatalogSyncRuns")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Catalog sync run history (paged)";
-            operation.Description = "Returns recent catalog sync runs ordered by CreatedAt DESC. Defaults: page=1, pageSize=12. Bounds: pageSize 1-100.";
-            return operation;
-        });
+        .WithSummary("Catalog sync run history (paged)")
+        .WithDescription("Returns recent catalog sync runs ordered by CreatedAt DESC. Defaults: page=1, pageSize=12. Bounds: pageSize 1-100.");
 
         // GET /api/v1/admin/catalog-ingestion/runs/{id}/logs?tail=N
         group.MapGet("/runs/{id:guid}/logs", async (
@@ -294,12 +254,8 @@ internal static class AdminCatalogIngestionEndpoints
                 : Results.Ok(result);
         })
         .WithName("GetCatalogSyncRunLogs")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Catalog sync run logs (tail-N)";
-            operation.Description = "Returns the last N log lines for the given run. 404 if run missing. LogsAvailable=false when no log file attached or unreadable.";
-            return operation;
-        });
+        .WithSummary("Catalog sync run logs (tail-N)")
+        .WithDescription("Returns the last N log lines for the given run. 404 if run missing. LogsAvailable=false when no log file attached or unreadable.");
 
         // POST /api/v1/admin/catalog-ingestion/trigger
         group.MapPost("/trigger", async (
@@ -326,12 +282,8 @@ internal static class AdminCatalogIngestionEndpoints
         })
         .RequireRateLimiting("BulkImportAdmin")
         .WithName("TriggerCatalogSync")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Trigger manual catalog sync";
-            operation.Description = "Enqueues a new catalog sync run for the given provider. 202 Accepted with runId on success. 409 Conflict if a run is already in progress.";
-            return operation;
-        });
+        .WithSummary("Trigger manual catalog sync")
+        .WithDescription("Enqueues a new catalog sync run for the given provider. 202 Accepted with runId on success. 409 Conflict if a run is already in progress.");
 
         // ============================================================
         // #1874 — Enrichment queue + failed items aggregator
@@ -353,12 +305,8 @@ internal static class AdminCatalogIngestionEndpoints
             return Results.Ok(result);
         })
         .WithName("GetEnrichmentQueue")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Enrichment queue (pending entries)";
-            operation.Description = "Returns queued BGG enrichment requests sorted by Priority DESC, QueuedAt ASC. Filters by priority when supplied. Default limit=25 (1-100).";
-            return operation;
-        });
+        .WithSummary("Enrichment queue (pending entries)")
+        .WithDescription("Returns queued BGG enrichment requests sorted by Priority DESC, QueuedAt ASC. Filters by priority when supplied. Default limit=25 (1-100).");
 
         // GET /api/v1/admin/catalog-ingestion/failed-items?days=&limit=
         group.MapGet("/failed-items", async (
@@ -376,12 +324,8 @@ internal static class AdminCatalogIngestionEndpoints
             return Results.Ok(result);
         })
         .WithName("GetFailedItems")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Failed enrichment items (aggregated)";
-            operation.Description = "Returns the most recent failed enrichment attempt per shared game within the trailing N days. Default days=30 (1-365), default limit=50 (1-100).";
-            return operation;
-        });
+        .WithSummary("Failed enrichment items (aggregated)")
+        .WithDescription("Returns the most recent failed enrichment attempt per shared game within the trailing N days. Default days=30 (1-365), default limit=50 (1-100).");
 
         return group;
     }

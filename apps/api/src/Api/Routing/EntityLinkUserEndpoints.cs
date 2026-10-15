@@ -77,8 +77,7 @@ internal static class EntityLinkUserEndpoints
         .Produces(401)
         .WithTags("EntityLinks")
         .WithSummary("Get entity links (user scope)")
-        .WithDescription("Returns all user-scope links where the entity appears as source or target of a bidirectional link. Supports optional targetEntityType filter (Issue #5188). Issue #5137.")
-        .WithOpenApi();
+        .WithDescription("Returns all user-scope links where the entity appears as source or target of a bidirectional link. Supports optional targetEntityType filter (Issue #5188). Issue #5137.");
     }
 
     private static void MapGetEntityLinkCountEndpoint(RouteGroupBuilder group)
@@ -107,8 +106,7 @@ internal static class EntityLinkUserEndpoints
         .Produces(401)
         .WithTags("EntityLinks")
         .WithSummary("Get entity link count (badge)")
-        .WithDescription("Returns the total count of links for an entity (as source or bidirectional target). Used by MeepleCard badge. Issue #5137.")
-        .WithOpenApi();
+        .WithDescription("Returns the total count of links for an entity (as source or bidirectional target). Used by MeepleCard badge. Issue #5137.");
     }
 
     // POST /library/entity-links
@@ -156,8 +154,7 @@ internal static class EntityLinkUserEndpoints
         .Produces(409)
         .WithTags("EntityLinks")
         .WithSummary("Create entity link (user scope)")
-        .WithDescription("Creates a new user-scope link between two entities. Scope=User, IsAdminApproved=true automatically (BR-04). Returns 409 for duplicates. Issue #5137.")
-        .WithOpenApi();
+        .WithDescription("Creates a new user-scope link between two entities. Scope=User, IsAdminApproved=true automatically (BR-04). Returns 409 for duplicates. Issue #5137.");
     }
 
     // DELETE /library/entity-links/{linkId}
@@ -202,8 +199,7 @@ internal static class EntityLinkUserEndpoints
         .Produces(404)
         .WithTags("EntityLinks")
         .WithSummary("Delete entity link")
-        .WithDescription("Soft-deletes an entity link. Only the owner can delete. BGG-imported links cannot be deleted by users. Issue #5137.")
-        .WithOpenApi();
+        .WithDescription("Soft-deletes an entity link. Only the owner can delete. BGG-imported links cannot be deleted by users. Issue #5137.");
     }
 }
 

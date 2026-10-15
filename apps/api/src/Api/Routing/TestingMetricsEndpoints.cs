@@ -62,12 +62,8 @@ internal static class TestingMetricsEndpoints
         })
         .WithName("GetAccessibilityMetrics")
         .WithTags("Admin", "Testing")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Get accessibility testing metrics";
-            operation.Description = "Returns Lighthouse and axe-core accessibility scores from latest test run";
-            return operation;
-        });
+        .WithSummary("Get accessibility testing metrics")
+        .WithDescription("Returns Lighthouse and axe-core accessibility scores from latest test run");
     }
 
     private static void MapGetPerformanceMetricsEndpoint(RouteGroupBuilder group)
@@ -126,12 +122,8 @@ internal static class TestingMetricsEndpoints
         })
         .WithName("GetPerformanceMetrics")
         .WithTags("Admin", "Testing")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Get performance testing metrics";
-            operation.Description = "Returns Core Web Vitals and performance budgets from latest Lighthouse run";
-            return operation;
-        });
+        .WithSummary("Get performance testing metrics")
+        .WithDescription("Returns Core Web Vitals and performance budgets from latest Lighthouse run");
     }
 
     private static void MapGetE2EMetricsEndpoint(RouteGroupBuilder group)
@@ -179,11 +171,7 @@ internal static class TestingMetricsEndpoints
         })
         .WithName("GetE2EMetrics")
         .WithTags("Admin", "Testing")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Get E2E testing metrics";
-            operation.Description = "Returns Playwright test execution results including coverage, pass rate, and flaky tests";
-            return operation;
-        });
+        .WithSummary("Get E2E testing metrics")
+        .WithDescription("Returns Playwright test execution results including coverage, pass rate, and flaky tests");
     }
 }

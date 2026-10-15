@@ -41,12 +41,8 @@ internal static class PdfUploadEndpoints
              .DisableAntiforgery()
              .RequireSession()
              .WithName("UploadPrivatePdf")
-             .WithOpenApi(operation =>
-             {
-                 operation.Summary = "Upload a private PDF for a library entry";
-                 operation.Description = "Uploads a private PDF file and associates it with a user's library entry. The PDF will be processed and indexed in a private namespace.";
-                 return operation;
-             });
+             .WithSummary("Upload a private PDF for a library entry")
+             .WithDescription("Uploads a private PDF file and associates it with a user's library entry. The PDF will be processed and indexed in a private namespace.");
     }
 
     private static void MapChunkedUploadEndpoints(RouteGroupBuilder group)

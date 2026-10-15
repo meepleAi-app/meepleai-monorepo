@@ -495,8 +495,7 @@ internal static class SessionQueryEndpoints
         .WithName("GetToolkitSessionState")
         .WithTags("Toolkit")
         .WithSummary("Get toolkit widget states for a session")
-        .WithDescription("Returns the persisted widget states for the session's active toolkit. Returns 204 if no state saved yet. Issue #5148.")
-        .WithOpenApi();
+        .WithDescription("Returns the persisted widget states for the session's active toolkit. Returns 204 if no state saved yet. Issue #5148.");
     }
 
     // ========== Session Diary / Timeline Endpoints (Issue #276) ==========

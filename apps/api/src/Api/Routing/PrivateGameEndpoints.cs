@@ -71,12 +71,8 @@ internal static class PrivateGameEndpoints
         .RequireAuthorization()
         .WithName("GetPrivateGamesList")
         .WithTags("PrivateGames")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "List private games";
-            operation.Description = "Returns a paginated list of the user's private games with optional search and sorting.";
-            return operation;
-        })
+        .WithSummary("List private games")
+        .WithDescription("Returns a paginated list of the user's private games with optional search and sorting.")
         .Produces<PaginatedPrivateGamesResponseDto>()
         .Produces(StatusCodes.Status401Unauthorized);
     }
@@ -122,13 +118,9 @@ internal static class PrivateGameEndpoints
         .RequireAuthorization()
         .WithName("AddPrivateGame")
         .WithTags("PrivateGames")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Add a private game";
-            operation.Description = "Add a game to your private library. Supports both manual entry and BoardGameGeek import. " +
-                "Auto-redirects to shared catalog if BGG ID already exists there.";
-            return operation;
-        })
+        .WithSummary("Add a private game")
+        .WithDescription("Add a game to your private library. Supports both manual entry and BoardGameGeek import. " +
+            "Auto-redirects to shared catalog if BGG ID already exists there.")
         .ProducesValidationProblem()
         .Produces<Api.BoundedContexts.UserLibrary.Application.DTOs.PrivateGameDto>(StatusCodes.Status201Created)
         .Produces<ProblemDetails>(StatusCodes.Status409Conflict)
@@ -166,12 +158,8 @@ internal static class PrivateGameEndpoints
         .RequireAuthorization()
         .WithName("GetPrivateGame")
         .WithTags("PrivateGames")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Get a private game";
-            operation.Description = "Retrieve a private game by ID. You can only access your own private games.";
-            return operation;
-        })
+        .WithSummary("Get a private game")
+        .WithDescription("Retrieve a private game by ID. You can only access your own private games.")
         .Produces<Api.BoundedContexts.UserLibrary.Application.DTOs.PrivateGameDto>()
         .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
         .Produces<ProblemDetails>(StatusCodes.Status403Forbidden);
@@ -217,12 +205,8 @@ internal static class PrivateGameEndpoints
         .RequireAuthorization()
         .WithName("UpdatePrivateGame")
         .WithTags("PrivateGames")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Update a private game";
-            operation.Description = "Update a private game's information. You can only update your own private games.";
-            return operation;
-        })
+        .WithSummary("Update a private game")
+        .WithDescription("Update a private game's information. You can only update your own private games.")
         .ProducesValidationProblem()
         .Produces<Api.BoundedContexts.UserLibrary.Application.DTOs.PrivateGameDto>()
         .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
@@ -260,13 +244,9 @@ internal static class PrivateGameEndpoints
         .RequireAuthorization()
         .WithName("DeletePrivateGame")
         .WithTags("PrivateGames")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Delete a private game";
-            operation.Description = "Delete a private game. Its chats, uploaded documents and index are permanently " +
-                "removed; the game itself is soft-deleted. You can only delete your own private games.";
-            return operation;
-        })
+        .WithSummary("Delete a private game")
+        .WithDescription("Delete a private game. Its chats, uploaded documents and index are permanently " +
+            "removed; the game itself is soft-deleted. You can only delete your own private games.")
         .Produces(StatusCodes.Status204NoContent)
         .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
         .Produces<ProblemDetails>(StatusCodes.Status403Forbidden);

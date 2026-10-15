@@ -275,17 +275,14 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         // #4243: the client names documents by vector document id (GameDocumentDto.Id), the retrieval
         // filters by PDF id. Translated once, here, for the readiness check and for both arms.
         var pdfFilter = await ResolvePdfFilterAsync(gameGuid, query.DocumentIds, cancellationToken).ConfigureAwait(false);
-        var (allReady, processingCount, totalCount) = await CheckDocumentsReadyAsync(
-            gameGuid, pdfFilter, cancellationToken).ConfigureAwait(false);
-
-        if (!allReady)
+        var readiness = await CheckDocumentsReadyAsync(gameGuid, pdfFilter, cancellationToken).ConfigureAwait(false);
+        if (!readiness.CanAnswer)
         {
             _logger.LogInformation(
-                "Documents not ready for game {GameId}: {Processing}/{Total} still processing",
-                query.GameId, processingCount, totalCount);
+                "Documents not ready for game {GameId}: {InProgress} in progress, {Failed} failed, of {Total}",
+                query.GameId, readiness.InProgress, readiness.Failed, readiness.Total);
             yield return CreateEvent(StreamingEventType.Error, new StreamingError(
-                $"{processingCount} of {totalCount} documents are still being processed. Please wait for processing to complete before asking questions.",
-                "DOCUMENT_PROCESSING"));
+                readiness.ErrorMessage!, readiness.ErrorCode));
             yield break;
         }
 
@@ -748,7 +745,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
             .ToList();
     }
 
-    private async Task<(bool allReady, int processing, int total)> CheckDocumentsReadyAsync(
+    private async Task<DocumentReadiness> CheckDocumentsReadyAsync(
         Guid gameId, List<Guid>? pdfDocumentIds, CancellationToken ct)
     {
         // #4244: the PDFs of the game, shared or private. Before, only the shared catalogue was
@@ -757,12 +754,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
             ? await _pdfDocumentRepository.FindPdfsOfGameAfterAccessCheckAsync(gameId, ct).ConfigureAwait(false)
             : await _pdfDocumentRepository.GetByIdsAsync(pdfDocumentIds, ct).ConfigureAwait(false);
 
-        // Defensive: Handle null or empty collection
-        if (documents is null or { Count: 0 }) return (true, 0, 0);
-
-        var notCompleted = documents.Count(d =>
-            d.ProcessingState != PdfProcessingState.Ready);
-        return (notCompleted == 0, notCompleted, documents.Count);
+        return DocumentReadiness.Of(documents);
     }
 
     /// <summary>

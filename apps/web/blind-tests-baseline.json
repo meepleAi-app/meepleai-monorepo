@@ -1,6 +1,6 @@
 {
   "description": "Gate #4127 — test E2E le cui UNICHE asserzioni stanno dentro un blocco condizionato sulla presenza di un elemento, per file. Un file nuovo deve essere assente da questa mappa; uno presente non deve crescere. Rigenera con `pnpm lint:blind-tests --update` SOLO per registrare un miglioramento.",
-  "updatedAt": "2026-10-13",
+  "updatedAt": "2026-10-15",
   "files": {
     "e2e/admin-analytics-quality.spec.ts": 1,
     "e2e/admin-configuration.spec.ts": 2,
@@ -15,7 +15,6 @@
     "e2e/admin/admin-overview.spec.ts": 5,
     "e2e/admin/agent-builder-kb-cards.spec.ts": 3,
     "e2e/admin/audit-log.spec.ts": 6,
-    "e2e/admin/game-import-wizard.spec.ts": 1,
     "e2e/admin/kb-documents-library.spec.ts": 3,
     "e2e/admin/kb-pdf-upload.spec.ts": 2,
     "e2e/admin/kb-vectors.spec.ts": 5,

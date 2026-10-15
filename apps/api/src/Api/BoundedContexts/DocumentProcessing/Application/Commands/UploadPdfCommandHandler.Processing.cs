@@ -629,19 +629,18 @@ internal partial class UploadPdfCommandHandler
 
         var indexingStopwatch = Stopwatch.StartNew();
 
-        // Create/update VectorDocument row FIRST so SaveEmbeddingsToPgVectorAsync can find it by PdfDocumentId
+        // Create/update VectorDocument row FIRST so the pgvector rows can hang off it
         await UpdateVectorDocumentAsync(pdfId, pdfDoc, allDocumentChunks.Count, db, scope, cancellationToken).ConfigureAwait(false);
 
-        // Save text chunks to PostgreSQL for hybrid search (FTS). #4384: BEFORE the pgvector rows, which
-        // point at them — moving this after the embeddings, or running the two in parallel, brings back
-        // rows with a null or dangling source_chunk_id.
-        var savedChunks = await SaveTextChunksForHybridSearchAsync(pdfId, pdfDoc, allDocumentChunks, db, scope, cancellationToken).ConfigureAwait(false);
-
-        // Persist embeddings to pgvector — critical path; VectorDocument row is guaranteed to exist above.
-        // #4384: each row is linked to the text chunk saved just above (source_chunk_id + role_tags).
-        var embeddingService = scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
-        var modelName = embeddingService.GetModelName();
-        await SaveEmbeddingsToPgVectorAsync(pdfId, pdfDoc, allDocumentChunks, embeddings, savedChunks, db, modelName, cancellationToken).ConfigureAwait(false);
+        // #4395: both writes go through PdfChunkPersistence, shared with the chunked upload.
+        // #4384: text chunks BEFORE the pgvector rows, which point at them — moving this after the
+        // embeddings, or running the two in parallel, brings back rows with a null or dangling
+        // source_chunk_id.
+        await PdfChunkPersistence.SaveAsync(
+            db, Guid.Parse(pdfId), pdfDoc, allDocumentChunks, embeddings,
+            scope.ServiceProvider.GetRequiredService<IEmbeddingService>().GetModelName(),
+            scope.ServiceProvider.GetService<Api.BoundedContexts.KnowledgeBase.Application.Services.IRoleClassifierService>(),
+            _timeProvider, _logger, nameof(UploadPdfCommandHandler), cancellationToken).ConfigureAwait(false);
 
         indexingStopwatch.Stop();
         RecordPipelineMetricSafely("indexing", indexingStopwatch.Elapsed.TotalMilliseconds);
@@ -676,186 +675,6 @@ internal partial class UploadPdfCommandHandler
             totalCharacters: pdfDoc.ExtractedText?.Length ?? 0,
             language: string.IsNullOrWhiteSpace(pdfDoc.Language) ? "en" : pdfDoc.Language,
             cancellationToken: cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Saves text chunks to PostgreSQL for hybrid search with FTS.
-    /// </summary>
-    /// <returns>
-    /// #4384: the saved chunks by <c>ChunkIndex</c>, so the pgvector rows can point at them; empty when
-    /// the save lost a concurrency conflict and nothing was written.
-    /// </returns>
-    private async Task<IReadOnlyDictionary<int, TextChunkEntity>> SaveTextChunksForHybridSearchAsync(
-        string pdfId,
-        PdfDocumentEntity pdfDoc,
-        List<DocumentChunkInput> allDocumentChunks,
-        MeepleAiDbContext db,
-        IServiceScope scope,
-        CancellationToken cancellationToken)
-    {
-        var pdfGuid = Guid.Parse(pdfId);
-
-        // Delete existing chunks for re-processing scenario
-        var existingChunks = await db.TextChunks
-            .Where(tc => tc.PdfDocumentId == pdfGuid)
-            .ToListAsync(cancellationToken).ConfigureAwait(false);
-        if (existingChunks.Count > 0)
-        {
-            db.TextChunks.RemoveRange(existingChunks);
-        }
-
-        // Create TextChunkEntity for each document chunk (for FTS)
-        // #4244: text_chunks.GameId is an FK to shared_games, so it only ever carries the shared
-        // game; a private game goes in its own column.
-        var textChunkEntities = allDocumentChunks
-            .Select((chunk, index) => new TextChunkEntity
-            {
-                Id = chunk.Id == Guid.Empty ? Guid.NewGuid() : chunk.Id,
-                GameId = pdfDoc.SharedGameId,
-                SharedGameId = pdfDoc.SharedGameId,
-                PrivateGameId = pdfDoc.PrivateGameId,
-                PdfDocumentId = pdfGuid,
-                Content = chunk.Text,
-                ChunkIndex = index,
-                PageNumber = chunk.Page,
-                CharacterCount = chunk.Text.Length,
-                CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
-                // Issue #730: persist chunk hierarchy fields from chunking pipeline
-                Heading = chunk.Heading,
-                Level = chunk.Level,
-                ParentChunkId = chunk.ParentChunkId,
-                ElementType = chunk.ElementType,
-                // SP-A (#3405): persist char offsets for citation grounding
-                CharStart = chunk.CharStart,
-                CharEnd = chunk.CharEnd,
-                // SP-B (#3406): persist the normalized region for citation grounding
-                BoundingBoxesJson = ChunkBoundingBoxJson.Serialize(chunk.BBox, chunk.Page)
-            })
-            .ToList();
-
-        // Phase D4: classify chunks by GameBookRole before persistence so
-        // text_chunks.role_tags is populated on insert. Resolved from the local
-        // async scope (background task lifetime != original HTTP request scope).
-        var roleClassifier = scope.ServiceProvider
-            .GetService<Api.BoundedContexts.KnowledgeBase.Application.Services.IRoleClassifierService>();
-        await TextChunkRoleClassifier.AssignRoleTagsAsync(
-            roleClassifier, textChunkEntities, allDocumentChunks, _logger, cancellationToken)
-            .ConfigureAwait(false);
-
-        db.TextChunks.AddRange(textChunkEntities);
-        try
-        {
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                nameof(UploadPdfCommandHandler),
-                MeepleAiMetrics.PdfConcurrencyCategories.B);
-            _logger.LogWarning(ex,
-                "Concurrency conflict on TextChunks for PDF {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                pdfId, nameof(UploadPdfCommandHandler));
-
-            // #4384: the failed inserts and deletes stay in the change tracker, and the next
-            // SaveChangesAsync (the pgvector batch) would submit them again. Drop them: nothing was
-            // written, so the pgvector rows get no link rather than a link to rows that may not exist.
-            foreach (var entry in db.ChangeTracker.Entries<TextChunkEntity>().ToList())
-            {
-                entry.State = EntityState.Detached;
-            }
-
-            return new Dictionary<int, TextChunkEntity>();
-        }
-
-        _logger.LogInformation("Saved {ChunkCount} text chunks to PostgreSQL for hybrid search (PDF {PdfId})",
-            textChunkEntities.Count, pdfId);
-        return textChunkEntities.ToDictionary(tc => tc.ChunkIndex);
-    }
-
-    /// <summary>
-    /// Persists embeddings to the pgvector_embeddings table for semantic search.
-    /// Replaces the removed pgvector indexing path.
-    /// </summary>
-    private async Task SaveEmbeddingsToPgVectorAsync(
-        string pdfId,
-        PdfDocumentEntity pdfDoc,
-        List<DocumentChunkInput> chunks,
-        List<float[]> embeddings,
-        IReadOnlyDictionary<int, TextChunkEntity> savedChunks,
-        MeepleAiDbContext db,
-        string modelName,
-        CancellationToken cancellationToken)
-    {
-        var pdfGuid = Guid.Parse(pdfId);
-        var gameId = pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId ?? Guid.Empty;
-        var language = pdfDoc.Language ?? "en";
-
-        // Find VectorDocument for this PDF (read-only here — no AsTracking needed)
-        var vectorDoc = await db.VectorDocuments
-            .AsTracking()
-            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, cancellationToken)
-            .ConfigureAwait(false);
-
-        if (vectorDoc == null)
-        {
-            throw new InvalidOperationException(
-                $"VectorDocument not found for PDF {pdfId} — cannot persist pgvector embeddings");
-        }
-
-        // Remove existing embeddings (re-index scenario)
-        var existing = await db.PgVectorEmbeddings
-            .Where(e => e.VectorDocumentId == vectorDoc.Id)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-        if (existing.Count > 0)
-        {
-            db.PgVectorEmbeddings.RemoveRange(existing);
-            _logger.LogInformation("🗑️ [PG-VECTOR] Removed {Count} existing embeddings for {PdfId}", existing.Count, pdfId);
-        }
-
-        // Save in batches of 500
-        const int saveBatchSize = 500;
-        var batchCount = (int)Math.Ceiling((double)chunks.Count / saveBatchSize);
-
-        for (var batchIdx = 0; batchIdx < batchCount; batchIdx++)
-        {
-            var skip = batchIdx * saveBatchSize;
-            var batchChunks = chunks.Skip(skip).Take(saveBatchSize).ToList();
-            var batchEmbeddings = embeddings.Skip(skip).Take(saveBatchSize).ToList();
-
-            var entities = batchChunks.Select((chunk, i) => PgVectorEmbeddingEntity.ForChunk(
-                vectorDocumentId: vectorDoc.Id,
-                gameId: gameId,
-                chunkIndex: skip + i,
-                textContent: chunk.Text,
-                vector: batchEmbeddings[i],
-                model: modelName,
-                pageNumber: Math.Max(1, chunk.Page),
-                lang: language,
-                sourceChunk: savedChunks.TryGetValue(skip + i, out var saved) ? TextChunkLink.From(saved) : null)).ToList();
-
-            await db.PgVectorEmbeddings.AddRangeAsync(entities, cancellationToken).ConfigureAwait(false);
-            try
-            {
-                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                    nameof(UploadPdfCommandHandler),
-                    MeepleAiMetrics.PdfConcurrencyCategories.B);
-                _logger.LogWarning(ex,
-                    "Concurrency conflict on PgVectorEmbeddings for PDF {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                    pdfId, nameof(UploadPdfCommandHandler));
-                return;
-            }
-
-            _logger.LogInformation("💾 [PG-VECTOR] Saved batch {Idx}/{Total}: {Count} embeddings for PDF {PdfId}",
-                batchIdx + 1, batchCount, entities.Count, pdfId);
-        }
-
-        _logger.LogInformation("✅ [PG-VECTOR] Completed pgvector indexing for PDF {PdfId}: {Total} embeddings saved",
-            pdfId, chunks.Count);
     }
 
     /// <summary>
@@ -922,6 +741,10 @@ internal partial class UploadPdfCommandHandler
         PdfProcessingState? failedAtState,
         CancellationToken cancellationToken)
     {
+        // #4395: whatever failed may have left rows in the change tracker (chunks, vector rows), and the
+        // save below would submit them again, fail again, and leave the PDF in flight forever.
+        db.ChangeTracker.Clear();
+
         var pdfRepo = scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.DocumentProcessing.Domain.Repositories.IPdfDocumentRepository>();
         var pdfDomain = await pdfRepo.GetByIdAsync(pdfGuid, cancellationToken).ConfigureAwait(false);
         if (pdfDomain is null)

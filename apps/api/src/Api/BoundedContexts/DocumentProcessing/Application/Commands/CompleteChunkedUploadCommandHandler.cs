@@ -335,6 +335,10 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         {
             Id = Guid.Parse(storageResult.FileId!),
             PrivateGameId = session.PrivateGameId,
+            // #4395: retrieval finds the documents of a catalogue game by SharedGameId. Without it a
+            // PDF uploaded in chunks for a shared game was tied to the game only by the EntityLink
+            // below, and invisible to both retrieval arms.
+            SharedGameId = session.PrivateGameId is null ? session.GameId : null,
             FileName = sanitizedFileName,
             FilePath = storageResult.FilePath!,
             FileSizeBytes = storageResult.FileSizeBytes,
@@ -557,6 +561,10 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                     pdfId, nameof(CompleteChunkedUploadCommandHandler));
                 return; // CRITICAL: do not throw — background task must see success
             }
+
+            // #4395: now that the PDF reaches retrieval, an answer cached before it was indexed ("not in
+            // the rulebook") must not outlive it. /ingest/pdf does the same when it finishes.
+            await InvalidateAnswerCacheSafelyAsync(scope, pdfDoc, pdfId, cancellationToken).ConfigureAwait(false);
 
             var totalTime = (_timeProvider.GetUtcNow().UtcDateTime - startTime).TotalSeconds;
             _logger.LogInformation(
@@ -826,8 +834,13 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
     }
 
     /// <summary>
-    /// Indexes document chunks in pgvector and saves text chunks to PostgreSQL for hybrid search.
+    /// Saves the text chunks (hybrid search, FTS) and then the pgvector rows that point at them.
     /// </summary>
+    /// <remarks>
+    /// #4395: since the Qdrant removal (<c>c828f26bb</c>) this step computed the embeddings and threw
+    /// them away, so a PDF uploaded in chunks had no vector rows at all. Both writes now go through
+    /// <see cref="PdfChunkPersistence"/>, shared with <c>/ingest/pdf</c>.
+    /// </remarks>
     private async Task IndexAndStoreChunksAsync(
         string pdfId,
         Guid pdfGuid,
@@ -839,12 +852,16 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         IServiceScope scope,
         CancellationToken cancellationToken)
     {
-
-        // Update vector document with chunk count (no pgvector indexing)
+        // The VectorDocument row comes first: the pgvector rows hang off it.
         await UpdateOrCreateVectorDocumentAsync(pdfGuid, pdfDoc, fullText, allDocumentChunks.Count, db, scope, _logger, cancellationToken).ConfigureAwait(false);
 
-        // Save text chunks to PostgreSQL for hybrid search (FTS)
-        await SaveTextChunksForHybridSearchAsync(pdfGuid, pdfDoc, allDocumentChunks, db, scope, cancellationToken).ConfigureAwait(false);
+        await PdfChunkPersistence.SaveAsync(
+            db, pdfGuid, pdfDoc, allDocumentChunks, embeddings,
+            scope.ServiceProvider.GetRequiredService<IEmbeddingService>().GetModelName(),
+            scope.ServiceProvider.GetService<Api.BoundedContexts.KnowledgeBase.Application.Services.IRoleClassifierService>(),
+            _timeProvider, _logger, nameof(CompleteChunkedUploadCommandHandler), cancellationToken).ConfigureAwait(false);
+
+        _logger.LogInformation("Chunked upload {PdfId}: {Count} chunks indexed for hybrid and vector search", pdfId, allDocumentChunks.Count);
     }
 
     /// <summary>
@@ -891,75 +908,32 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
     }
 
     /// <summary>
-    /// Saves text chunks to PostgreSQL for hybrid search with FTS.
+    /// Best effort: the per-game AI answer cache, so an answer given before the PDF existed is not served
+    /// after it. A failure here must not fail the upload.
     /// </summary>
-    private async Task SaveTextChunksForHybridSearchAsync(
-        Guid pdfGuid,
-        PdfDocumentEntity pdfDoc,
-        List<DocumentChunkInput> allDocumentChunks,
-        MeepleAiDbContext db,
-        IServiceScope scope,
-        CancellationToken cancellationToken)
+    private async Task InvalidateAnswerCacheSafelyAsync(
+        IServiceScope scope, PdfDocumentEntity pdfDoc, string pdfId, CancellationToken cancellationToken)
     {
-        // Delete existing chunks
-        var existingChunks = await db.TextChunks
-            .Where(tc => tc.PdfDocumentId == pdfGuid)
-            .ToListAsync(cancellationToken).ConfigureAwait(false);
-        if (existingChunks.Count > 0)
+        var gameId = pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId;
+        var cache = scope.ServiceProvider.GetService<IAiResponseCacheService>();
+        if (gameId is null || cache is null)
         {
-            db.TextChunks.RemoveRange(existingChunks);
+            return;
         }
 
-        // Create new text chunk entities
-        var textChunkEntities = allDocumentChunks
-            .Select((chunk, index) => new TextChunkEntity
-            {
-                Id = chunk.Id == Guid.Empty ? Guid.NewGuid() : chunk.Id,
-                GameId = pdfDoc.SharedGameId,
-                // #4244: without this a private game's chunks carried no game at all, and the
-                // keyword arm (which filters by game) never found them.
-                PrivateGameId = pdfDoc.PrivateGameId,
-                PdfDocumentId = pdfGuid,
-                ChunkIndex = index,
-                PageNumber = chunk.Page,
-                Content = chunk.Text,
-                CharacterCount = chunk.Text.Length,
-                CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
-                // Issue #730: persist chunk hierarchy fields from chunking pipeline
-                Heading = chunk.Heading,
-                Level = chunk.Level,
-                ParentChunkId = chunk.ParentChunkId,
-                ElementType = chunk.ElementType,
-                // SP-A (#3405): persist char offsets for citation grounding
-                CharStart = chunk.CharStart,
-                CharEnd = chunk.CharEnd,
-                // SP-B (#3406): persist the normalized region for citation grounding
-                BoundingBoxesJson = ChunkBoundingBoxJson.Serialize(chunk.BBox, chunk.Page)
-            })
-            .ToList();
-
-        // Phase D4: classify chunks by GameBookRole before persistence so
-        // text_chunks.role_tags is populated on insert. Resolved from the local
-        // async scope (background task lifetime != original HTTP request scope).
-        var roleClassifier = scope.ServiceProvider
-            .GetService<Api.BoundedContexts.KnowledgeBase.Application.Services.IRoleClassifierService>();
-        await TextChunkRoleClassifier.AssignRoleTagsAsync(
-            roleClassifier, textChunkEntities, allDocumentChunks, _logger, cancellationToken)
-            .ConfigureAwait(false);
-
-        db.TextChunks.AddRange(textChunkEntities);
         try
         {
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            await cache.InvalidateGameAsync(gameId.Value.ToString(), cancellationToken).ConfigureAwait(false);
         }
-        catch (DbUpdateConcurrencyException ex)
+        catch (OperationCanceledException)
         {
-            MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                nameof(CompleteChunkedUploadCommandHandler),
-                MeepleAiMetrics.PdfConcurrencyCategories.B);
-            _logger.LogWarning(ex,
-                "Concurrency conflict on TextChunks for PDF {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                pdfGuid, nameof(CompleteChunkedUploadCommandHandler));
+            throw;
+        }
+#pragma warning disable CA1031 // Do not catch general exception types — cache invalidation is best effort
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogWarning(ex, "Invalidating the AI answer cache for game {GameId} after chunked upload {PdfId} failed", gameId, pdfId);
         }
     }
 
@@ -978,7 +952,13 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         {
             if (Guid.TryParse(pdfId, out var pdfGuid))
             {
-                var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfGuid }, cancellationToken).ConfigureAwait(false);
+                // #4395: whatever failed may have left rows in the change tracker (chunks, vector rows,
+                // the VectorDocument), and this save would submit them again, fail again, and leave the
+                // PDF in flight forever. Start clean, and reload the PDF tracked: under the NoTracking
+                // default FindAsync on an empty tracker returns a detached entity, and the save is a no-op.
+                db.ChangeTracker.Clear();
+                var pdfDoc = await db.PdfDocuments.AsTracking()
+                    .FirstOrDefaultAsync(p => p.Id == pdfGuid, cancellationToken).ConfigureAwait(false);
                 if (pdfDoc != null)
                 {
                     pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);

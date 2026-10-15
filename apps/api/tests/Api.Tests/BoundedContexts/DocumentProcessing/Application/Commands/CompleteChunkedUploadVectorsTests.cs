@@ -106,11 +106,12 @@ public class CompleteChunkedUploadVectorsTests
     }
 
     [Fact]
-    public async Task TriggerPdfProcessing_WhenThePgvectorSaveFails_EndsFailed_NotStuckInFlight()
+    public async Task TriggerPdfProcessing_WithoutAModelName_EndsFailed_NotStuckInFlight()
     {
-        // Arrange: a save that fails (a required column left empty). Before, the failed rows stayed in
-        // the change tracker, the failure handler's own save failed on them, and the PDF stayed in
-        // Extracting forever, with no error.
+        // Arrange: no embedding model name. Before, the rows were saved with a NULL required column; the
+        // failed rows stayed in the change tracker, the failure handler's own save failed on them, and the
+        // PDF stayed in Extracting forever, with no error. Now the inputs are checked before any write, and
+        // the failure handler starts from a clean change tracker in any case.
         var dbName = $"chunked_vectors_fail_{Guid.NewGuid():N}";
         var pdfId = Guid.NewGuid();
         var gameId = Guid.NewGuid();
@@ -151,6 +152,104 @@ public class CompleteChunkedUploadVectorsTests
         var pdf = await assertDb.PdfDocuments.SingleAsync(p => p.Id == pdfId);
         pdf.ProcessingState.Should().Be(nameof(PdfProcessingState.Failed));
         pdf.ProcessingError.Should().NotBeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task TriggerPdfProcessing_WhenSavingTheVectorRowsFails_EndsFailed_NotStuckInFlight()
+    {
+        // Arrange: the vector rows' save fails in the database. The failed rows stay in the change
+        // tracker; before, the failure handler's own save submitted them again, failed again, and the PDF
+        // stayed in Extracting forever with no error.
+        var dbName = $"chunked_vectors_dbfail_{Guid.NewGuid():N}";
+        var pdfId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        await using (var seedDb = CreateNoTrackingInMemoryDbContext(dbName))
+        {
+            seedDb.PdfDocuments.Add(new PdfDocumentEntity
+            {
+                Id = pdfId,
+                SharedGameId = gameId,
+                UploadedByUserId = Guid.NewGuid(),
+                FileName = "rules.pdf",
+                FilePath = "/test/rules.pdf",
+                FileSizeBytes = 1024,
+                ContentType = "application/pdf",
+                UploadedAt = DateTime.UtcNow,
+                ProcessingState = nameof(PdfProcessingState.Extracting),
+            });
+            seedDb.VectorDocuments.Add(new VectorDocumentEntity { PdfDocumentId = pdfId, GameId = gameId, SharedGameId = gameId });
+            await seedDb.SaveChangesAsync();
+        }
+
+        var handler = CreateHandlerForProcessing(dbName, chunkTexts: ["Setup the board.", "The game ends."], failVectorSave: true);
+        var tmp = Path.GetTempFileName();
+        await File.WriteAllTextAsync(tmp, "dummy pdf bytes");
+
+        // Act
+        try
+        {
+            await handler.TriggerPdfProcessingAsync(pdfId.ToString(), tmp, CancellationToken.None);
+        }
+        finally
+        {
+            File.Delete(tmp);
+        }
+
+        // Assert
+        await using var assertDb = CreateNoTrackingInMemoryDbContext(dbName);
+        var pdf = await assertDb.PdfDocuments.SingleAsync(p => p.Id == pdfId);
+        pdf.ProcessingState.Should().Be(nameof(PdfProcessingState.Failed));
+        pdf.ProcessingError.Should().Contain("vector rows");
+    }
+
+    [Fact]
+    public async Task TriggerPdfProcessing_WithAnInvalidVector_EndsFailed_WithoutRewritingAnything()
+    {
+        // Arrange: /ingest/pdf rejects NaN/Infinity vectors before saving; the chunked path saved none
+        // at all, and once it started saving them it had no such check. The inputs are now checked
+        // before the first write.
+        var dbName = $"chunked_vectors_nan_{Guid.NewGuid():N}";
+        var pdfId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        await using (var seedDb = CreateNoTrackingInMemoryDbContext(dbName))
+        {
+            seedDb.PdfDocuments.Add(new PdfDocumentEntity
+            {
+                Id = pdfId,
+                SharedGameId = gameId,
+                UploadedByUserId = Guid.NewGuid(),
+                FileName = "rules.pdf",
+                FilePath = "/test/rules.pdf",
+                FileSizeBytes = 1024,
+                ContentType = "application/pdf",
+                UploadedAt = DateTime.UtcNow,
+                ProcessingState = nameof(PdfProcessingState.Extracting),
+            });
+            seedDb.VectorDocuments.Add(new VectorDocumentEntity { PdfDocumentId = pdfId, GameId = gameId, SharedGameId = gameId });
+            await seedDb.SaveChangesAsync();
+        }
+
+        var handler = CreateHandlerForProcessing(dbName, chunkTexts: ["Setup the board."], vector: [0.1f, float.NaN, 0.3f]);
+        var tmp = Path.GetTempFileName();
+        await File.WriteAllTextAsync(tmp, "dummy pdf bytes");
+
+        // Act
+        try
+        {
+            await handler.TriggerPdfProcessingAsync(pdfId.ToString(), tmp, CancellationToken.None);
+        }
+        finally
+        {
+            File.Delete(tmp);
+        }
+
+        // Assert
+        await using var assertDb = CreateNoTrackingInMemoryDbContext(dbName);
+        var pdf = await assertDb.PdfDocuments.SingleAsync(p => p.Id == pdfId);
+        pdf.ProcessingState.Should().Be(nameof(PdfProcessingState.Failed));
+        pdf.ProcessingError.Should().Contain("NaN");
+        (await assertDb.PgVectorEmbeddings.CountAsync()).Should().Be(0);
+        (await assertDb.TextChunks.CountAsync(tc => tc.PdfDocumentId == pdfId)).Should().Be(0, "the inputs are checked before any write");
     }
 
     [Theory]
@@ -227,7 +326,8 @@ public class CompleteChunkedUploadVectorsTests
     }
 
     private static CompleteChunkedUploadCommandHandler CreateHandlerForProcessing(
-        string dbName, string[] chunkTexts, string? modelName = "test-embedding-model")
+        string dbName, string[] chunkTexts, string? modelName = "test-embedding-model", float[]? vector = null,
+        bool failVectorSave = false)
     {
         var extractor = new Mock<IPdfTextExtractor>();
         extractor
@@ -253,7 +353,7 @@ public class CompleteChunkedUploadVectorsTests
         embeddings
             .Setup(e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((List<string> texts, CancellationToken _) =>
-                EmbeddingResult.CreateSuccess(texts.Select(_ => new[] { 0.1f, 0.2f, 0.3f }).ToList()));
+                EmbeddingResult.CreateSuccess(texts.Select(_ => vector ?? new[] { 0.1f, 0.2f, 0.3f }).ToList()));
         embeddings.Setup(e => e.GetModelName()).Returns(modelName!);
 
         var roles = new Mock<IRoleClassifierService>();
@@ -263,7 +363,7 @@ public class CompleteChunkedUploadVectorsTests
                 inputs.Select((_, i) => i % 2 == 0 ? GameBookRole.Setup : GameBookRole.RulesReference).ToList());
 
         var sc = new ServiceCollection();
-        sc.AddScoped<MeepleAiDbContext>(_ => CreateNoTrackingInMemoryDbContext(dbName));
+        sc.AddScoped<MeepleAiDbContext>(_ => CreateNoTrackingInMemoryDbContext(dbName, failVectorSave ? new FailVectorRowsInterceptor() : null));
         sc.AddScoped(_ => chunking.Object);
         sc.AddScoped(_ => embeddings.Object);
         sc.AddScoped(_ => roles.Object);
@@ -284,10 +384,35 @@ public class CompleteChunkedUploadVectorsTests
             TimeProvider.System);
     }
 
-    /// <summary>Come in produzione: un contesto con <c>NoTracking</c> per default (PERF-06).</summary>
-    private static MeepleAiDbContext CreateNoTrackingInMemoryDbContext(string dbName)
+    /// <summary>Un guasto del database sul salvataggio delle righe vettoriali, e solo su quello.</summary>
+    private sealed class FailVectorRowsInterceptor : Microsoft.EntityFrameworkCore.Diagnostics.SaveChangesInterceptor
     {
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+        public override ValueTask<Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int>> SavingChangesAsync(
+            Microsoft.EntityFrameworkCore.Diagnostics.DbContextEventData eventData,
+            Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int> result,
+            CancellationToken cancellationToken = default)
+        {
+            if (eventData.Context!.ChangeTracker.Entries<Api.Infrastructure.Entities.KnowledgeBase.PgVectorEmbeddingEntity>()
+                .Any(e => e.State == EntityState.Added))
+            {
+                throw new DbUpdateException("simulated database failure on pgvector_embeddings");
+            }
+
+            return base.SavingChangesAsync(eventData, result, cancellationToken);
+        }
+    }
+
+    /// <summary>Come in produzione: un contesto con <c>NoTracking</c> per default (PERF-06).</summary>
+    private static MeepleAiDbContext CreateNoTrackingInMemoryDbContext(
+        string dbName, Microsoft.EntityFrameworkCore.Diagnostics.IInterceptor? interceptor = null)
+    {
+        var builder = new DbContextOptionsBuilder<MeepleAiDbContext>();
+        if (interceptor is not null)
+        {
+            builder.AddInterceptors(interceptor);
+        }
+
+        var options = builder
             .UseInMemoryDatabase(databaseName: dbName)
             .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
             .ConfigureWarnings(warnings =>

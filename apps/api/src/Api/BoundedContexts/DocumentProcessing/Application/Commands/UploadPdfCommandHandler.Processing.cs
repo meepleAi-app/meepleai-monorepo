@@ -636,16 +636,11 @@ internal partial class UploadPdfCommandHandler
         // #4384: text chunks BEFORE the pgvector rows, which point at them — moving this after the
         // embeddings, or running the two in parallel, brings back rows with a null or dangling
         // source_chunk_id.
-        var pdfGuid = Guid.Parse(pdfId);
-        var savedChunks = await PdfChunkPersistence.SaveTextChunksAsync(
-            db, pdfGuid, pdfDoc, allDocumentChunks,
+        await PdfChunkPersistence.SaveAsync(
+            db, Guid.Parse(pdfId), pdfDoc, allDocumentChunks, embeddings,
+            scope.ServiceProvider.GetRequiredService<IEmbeddingService>().GetModelName(),
             scope.ServiceProvider.GetService<Api.BoundedContexts.KnowledgeBase.Application.Services.IRoleClassifierService>(),
             _timeProvider, _logger, nameof(UploadPdfCommandHandler), cancellationToken).ConfigureAwait(false);
-
-        var modelName = scope.ServiceProvider.GetRequiredService<IEmbeddingService>().GetModelName();
-        await PdfChunkPersistence.SaveEmbeddingsAsync(
-            db, pdfGuid, pdfDoc, allDocumentChunks, embeddings, savedChunks, modelName,
-            _logger, nameof(UploadPdfCommandHandler), cancellationToken).ConfigureAwait(false);
 
         indexingStopwatch.Stop();
         RecordPipelineMetricSafely("indexing", indexingStopwatch.Elapsed.TotalMilliseconds);
@@ -746,6 +741,10 @@ internal partial class UploadPdfCommandHandler
         PdfProcessingState? failedAtState,
         CancellationToken cancellationToken)
     {
+        // #4395: whatever failed may have left rows in the change tracker (chunks, vector rows), and the
+        // save below would submit them again, fail again, and leave the PDF in flight forever.
+        db.ChangeTracker.Clear();
+
         var pdfRepo = scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.DocumentProcessing.Domain.Repositories.IPdfDocumentRepository>();
         var pdfDomain = await pdfRepo.GetByIdAsync(pdfGuid, cancellationToken).ConfigureAwait(false);
         if (pdfDomain is null)

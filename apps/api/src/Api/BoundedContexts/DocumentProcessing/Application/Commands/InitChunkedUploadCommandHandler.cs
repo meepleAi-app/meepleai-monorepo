@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
@@ -74,6 +75,24 @@ internal class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUplo
                     ChunkSizeBytes: 0,
                     ExpiresAt: null,
                     ErrorMessage: "Either GameId or PrivateGameId must be provided."
+                );
+            }
+
+            // #4395: the game must exist. The completed upload ties the PDF to it (SharedGameId is a foreign
+            // key), so an unknown id used to fail only after the whole file was uploaded and stored,
+            // leaving the blob behind.
+            var gameExists = request.PrivateGameId.HasValue
+                ? await _dbContext.PrivateGames.AnyAsync(g => g.Id == request.PrivateGameId.Value, cancellationToken).ConfigureAwait(false)
+                : await _dbContext.SharedGames.AnyAsync(g => g.Id == request.GameId!.Value, cancellationToken).ConfigureAwait(false);
+            if (!gameExists)
+            {
+                return new InitChunkedUploadResult(
+                    Success: false,
+                    SessionId: null,
+                    TotalChunks: 0,
+                    ChunkSizeBytes: 0,
+                    ExpiresAt: null,
+                    ErrorMessage: "Game not found."
                 );
             }
 

@@ -562,6 +562,10 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 return; // CRITICAL: do not throw — background task must see success
             }
 
+            // #4395: now that the PDF reaches retrieval, an answer cached before it was indexed ("not in
+            // the rulebook") must not outlive it. /ingest/pdf does the same when it finishes.
+            await InvalidateAnswerCacheSafelyAsync(scope, pdfDoc, pdfId, cancellationToken).ConfigureAwait(false);
+
             var totalTime = (_timeProvider.GetUtcNow().UtcDateTime - startTime).TotalSeconds;
             _logger.LogInformation(
                 "PDF processing completed for chunked upload {PdfId}: {TotalPages} pages, {ChunkCount} chunks, {TotalSeconds}s",
@@ -851,15 +855,11 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         // The VectorDocument row comes first: the pgvector rows hang off it.
         await UpdateOrCreateVectorDocumentAsync(pdfGuid, pdfDoc, fullText, allDocumentChunks.Count, db, scope, _logger, cancellationToken).ConfigureAwait(false);
 
-        var savedChunks = await PdfChunkPersistence.SaveTextChunksAsync(
-            db, pdfGuid, pdfDoc, allDocumentChunks,
+        await PdfChunkPersistence.SaveAsync(
+            db, pdfGuid, pdfDoc, allDocumentChunks, embeddings,
+            scope.ServiceProvider.GetRequiredService<IEmbeddingService>().GetModelName(),
             scope.ServiceProvider.GetService<Api.BoundedContexts.KnowledgeBase.Application.Services.IRoleClassifierService>(),
             _timeProvider, _logger, nameof(CompleteChunkedUploadCommandHandler), cancellationToken).ConfigureAwait(false);
-
-        var modelName = scope.ServiceProvider.GetRequiredService<IEmbeddingService>().GetModelName();
-        await PdfChunkPersistence.SaveEmbeddingsAsync(
-            db, pdfGuid, pdfDoc, allDocumentChunks, embeddings, savedChunks, modelName,
-            _logger, nameof(CompleteChunkedUploadCommandHandler), cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("Chunked upload {PdfId}: {Count} chunks indexed for hybrid and vector search", pdfId, allDocumentChunks.Count);
     }
@@ -908,6 +908,36 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
     }
 
     /// <summary>
+    /// Best effort: the per-game AI answer cache, so an answer given before the PDF existed is not served
+    /// after it. A failure here must not fail the upload.
+    /// </summary>
+    private async Task InvalidateAnswerCacheSafelyAsync(
+        IServiceScope scope, PdfDocumentEntity pdfDoc, string pdfId, CancellationToken cancellationToken)
+    {
+        var gameId = pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId;
+        var cache = scope.ServiceProvider.GetService<IAiResponseCacheService>();
+        if (gameId is null || cache is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await cache.InvalidateGameAsync(gameId.Value.ToString(), cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+#pragma warning disable CA1031 // Do not catch general exception types — cache invalidation is best effort
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogWarning(ex, "Invalidating the AI answer cache for game {GameId} after chunked upload {PdfId} failed", gameId, pdfId);
+        }
+    }
+
+    /// <summary>
     /// Handles PDF processing failure with consistent error logging and status update.
     /// </summary>
     private async Task HandleProcessingFailureAsync(
@@ -922,7 +952,13 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         {
             if (Guid.TryParse(pdfId, out var pdfGuid))
             {
-                var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfGuid }, cancellationToken).ConfigureAwait(false);
+                // #4395: whatever failed may have left rows in the change tracker (chunks, vector rows,
+                // the VectorDocument), and this save would submit them again, fail again, and leave the
+                // PDF in flight forever. Start clean, and reload the PDF tracked: under the NoTracking
+                // default FindAsync on an empty tracker returns a detached entity, and the save is a no-op.
+                db.ChangeTracker.Clear();
+                var pdfDoc = await db.PdfDocuments.AsTracking()
+                    .FirstOrDefaultAsync(p => p.Id == pdfGuid, cancellationToken).ConfigureAwait(false);
                 if (pdfDoc != null)
                 {
                     pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);

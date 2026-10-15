@@ -2266,3 +2266,23 @@ git commit -m "docs(spec): esito di A5 e #4393, prompt v4 (#4411)"
 Chiusura della PR con `Closes #4411` e `Closes #4393` (parole chiave in inglese: «Chiude» non chiude). Poi:
 - su #4238 spunta A5;
 - aggiorna la memoria del pilota (`session-assistant-pilot-state.md`): A5 consegnata, prompt v4 pubblicato da una migrazione, #4393 chiusa.
+
+---
+
+## Dopo l'esecuzione
+
+Dove il codice consegnato differisce dai task. Le decisioni prese durante l'esecuzione, una per riga, con il loro costo se sbagliate, stanno nel registro di esecuzione; qui restano quelle che cambiano il disegno.
+
+- **`cerca_regole` legge da una porta sua**, `IAssistantRuleSource`, non da `ISessionAssistantReader` come diceva §3.2: la sorgente ha bisogno di identità, ruolo, profilo e lingua del turno, che il lettore dello stato non conosce.
+- **Le fonti si deduplicano dopo `FinalizeAsync`**, su ciò che l'host vede, oltre che per passaggio nello strumento: due passaggi protetti della stessa pagina, con testi diversi, diventavano due chip «p.3» identiche (review della PR #4432).
+- **Il blocco di dati delimitato non bastava (Task 9).** Misurato: un a capo nel nome che finge una house rule vinceva anche con le liste JSON e con una regola del prompt sui dati. Si è aggiunto `AssistantNames.ForModel`: il nome arriva al modello su una riga sola e al più di 40 caratteri.
+- **Il prompt v4 non ha la regola 9 sui dati, e ha la regola 3 esplicita (Task 12).** Con la regola 9 tornavano due difetti dello spike sul punteggio; senza, il round esplicito falliva ancora due volte su sei. Contro i nomi costruiti apposta regge il limite nel codice.
+- **Il set è arrivato alla versione 7**, non alla 6: la 6 è quella con gli scenari d'iniezione di #4393, consegnata da sola.
+- **#4398** è nei test esistenti di `LiveSessionParticipantAuthzEndpointTests`, non in un file nuovo con una fixture sua.
+- **Rimandati dalla review della PR #4432:**
+  - la parafrasi delle citazioni protette resta vuota su questo percorso (scritto in §4.2);
+  - il ruolo si legge dal claim invece che da `EffectiveActor`;
+  - `domanda` non ha un limite di lunghezza;
+  - `AssistantCitations.Read` si fida del JSON salvato;
+  - la card delle fonti ha testi in italiano anche nelle sessioni inglesi.
+

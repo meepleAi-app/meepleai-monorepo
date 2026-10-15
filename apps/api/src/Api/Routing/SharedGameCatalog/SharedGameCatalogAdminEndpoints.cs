@@ -115,6 +115,19 @@ internal static class SharedGameCatalogAdminEndpoints
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound);
 
+        // #4413: a page of the game's own rulebook becomes its cover, at once (the user path,
+        // propose-from-pdf, creates a request to approve instead).
+        group.MapPost("/admin/shared-games/{id:guid}/pdf-cover", HandleSetPdfCoverFromPage)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("SetPdfCoverFromPage")
+            .WithSummary("Set the game's cover from a page of its PDF (Admin/Editor)")
+            .WithDescription("Renders the page of one of the game's PDFs, stores it in R2 and makes it the game's PDF cover. The PDF must be Ready: rendering writes the PDF row, which the processing still holds while it runs.")
+            .Produces<SetPdfCoverFromPageResponse>()
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict)
+            .Produces(StatusCodes.Status503ServiceUnavailable);
+
         // Revoke a manual cover (epic #3470 Slice 3a-3): clears the manual cover + attestation.
         group.MapDelete("/admin/shared-games/{id:guid}/manual-cover", HandleRevokeManualCover)
             .RequireAuthorization("AdminOrEditorPolicy")
@@ -1045,6 +1058,22 @@ internal static class SharedGameCatalogAdminEndpoints
         return Results.Ok(result);
     }
 
+    private static async Task<IResult> HandleSetPdfCoverFromPage(
+        Guid id,
+        SetPdfCoverFromPageRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = httpContext.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
+        var coverKey = await mediator.Send(
+            new SetPdfCoverFromPageCommand(id, request.PdfDocumentId, request.PageNumber, session!.Principal!.Subject.Id),
+            ct).ConfigureAwait(false);
+        return Results.Ok(new SetPdfCoverFromPageResponse(coverKey));
+    }
+
     private static async Task<IResult> HandleRevokeManualCover(
         Guid id,
         IMediator mediator,
@@ -1692,6 +1721,14 @@ internal static class SharedGameCatalogAdminEndpoints
 /// Request body for <c>POST /admin/catalog/covers/enrich-batch</c> (issue #2123).
 /// </summary>
 internal sealed record EnrichCatalogCoverBatchRequest(IReadOnlyList<Guid>? GameIds);
+
+/// <summary>
+/// Request body for POST /admin/shared-games/{id}/pdf-cover (#4413). The page is 1-based.
+/// </summary>
+internal sealed record SetPdfCoverFromPageRequest(Guid PdfDocumentId, int PageNumber);
+
+/// <summary>Response of POST /admin/shared-games/{id}/pdf-cover: the stored key of the new cover.</summary>
+internal sealed record SetPdfCoverFromPageResponse(string CoverR2Key);
 
 /// <summary>
 /// Request body for POST /admin/shared-games/import-from-pdf/start (#4401).

@@ -4,6 +4,8 @@
  * Step 5: RAG Agent Test
  *
  * - Waits for indexing to complete (useIndexingStatus polling)
+ * - Applies the PDF page chosen as cover at step 2, once the PDF is ready (#4413): rendering it
+ *   earlier would write the PDF row while the upload still processes it
  * - Interactive Q&A panel: user sends queries, response shown with chunk sources
  * - Multi-turn: history of questions/answers within the session
  * - CTAs: "Vai alla scheda gioco" | "Pubblica gioco" | "Aggiungi documentazione"
@@ -37,6 +39,9 @@ export function Step5RagTest(): JSX.Element {
   const {
     importResult,
     reviewedMetadata,
+    coverImage,
+    coverAppliedPage,
+    setCoverAppliedPage,
     ragTestHistory,
     isIndexingReady,
     setIndexingReady,
@@ -59,6 +64,39 @@ export function Step5RagTest(): JSX.Element {
   });
 
   const ready = isIndexingReady || isReady;
+
+  // ── Cover from the chosen PDF page (#4413) ─────────────────────────────────
+  const coverPage = coverImage.mode === 'pdf-page' ? (coverImage.pdfPageNumber ?? null) : null;
+  const [coverState, setCoverState] = useState<'idle' | 'applying' | 'failed'>('idle');
+  const [coverError, setCoverError] = useState<string | null>(null);
+  const applyingCoverRef = useRef(false);
+
+  const applyCover = useCallback(async () => {
+    if (!importResult || coverPage == null || applyingCoverRef.current) return;
+    applyingCoverRef.current = true;
+    setCoverState('applying');
+    setCoverError(null);
+    try {
+      await api.sharedGames.setPdfCoverFromPage(
+        importResult.gameId,
+        importResult.pdfDocumentId,
+        coverPage
+      );
+      setCoverAppliedPage(coverPage);
+      setCoverState('idle');
+    } catch (err) {
+      setCoverError(err instanceof Error ? err.message : 'Copertina non impostata');
+      setCoverState('failed');
+    } finally {
+      applyingCoverRef.current = false;
+    }
+  }, [importResult, coverPage, setCoverAppliedPage]);
+
+  useEffect(() => {
+    if (ready && coverPage != null && coverAppliedPage !== coverPage && coverState === 'idle') {
+      void applyCover();
+    }
+  }, [ready, coverPage, coverAppliedPage, coverState, applyCover]);
 
   const [query, setQuery] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -166,6 +204,33 @@ export function Step5RagTest(): JSX.Element {
           {chunkCount != null && ` (${chunkCount} chunk)`}
         </span>
       </div>
+
+      {coverPage != null && coverState === 'applying' && (
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Imposto la copertina dalla pagina {coverPage}
+          ...
+        </p>
+      )}
+      {coverPage != null && coverAppliedPage === coverPage && coverState === 'idle' && (
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <CheckCircle2 className="h-4 w-4 shrink-0" /> Copertina impostata dalla pagina {coverPage}{' '}
+          del PDF.
+        </p>
+      )}
+      {coverState === 'failed' && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Copertina non impostata</AlertTitle>
+          <AlertDescription className="space-y-2 text-sm">
+            <p>
+              La pagina {coverPage} non è diventata la copertina: {coverError}
+            </p>
+            <Button size="sm" variant="outline" onClick={() => setCoverState('idle')}>
+              Riprova
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Chat history */}
       <div className="max-h-[420px] overflow-y-auto space-y-4 rounded-md border bg-muted/10 p-4">

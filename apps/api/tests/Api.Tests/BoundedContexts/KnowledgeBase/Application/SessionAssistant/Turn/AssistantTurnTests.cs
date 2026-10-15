@@ -243,6 +243,7 @@ public sealed class AssistantTurnTests
         _savedThread.Messages[1].Id.Should().Be(proposal.MessageId, "la proposta punta al messaggio che l'ha prodotta");
         _savedThread.Messages[1].ProfileVersionId.Should().Be(VersionId);
         _savedThread.Messages[1].Language.Should().Be("it");
+        _savedThread.Messages[1].FallbackCode.Should().BeNull("il testo è del modello, e torna al modello nei turni dopo");
         proposal.ChatThreadId.Should().Be(_savedThread.Id);
 
         events[2].Proposal!.Id.Should().Be(proposal.Id);
@@ -290,11 +291,12 @@ public sealed class AssistantTurnTests
     [Theory]
     [InlineData("en-US", "You are the table assistant.", "Game: Azul")]
     [InlineData(null, "You are the table assistant.", "Game: Azul")]
-    [InlineData("de", "You are the table assistant.", "Gioco: Azul")]
+    [InlineData("de", "You are the table assistant.", "Game: Azul")]
     public async Task TheLanguage_PicksThePrompt_AndFallsBackToTheProfileLanguage(string? language, string prompt, string context)
     {
-        // «de» non ha un prompt: vale quello della lingua di riserva del profilo («en»). Il contesto
-        // statico conosce solo italiano e inglese, e per ogni altra lingua resta in italiano.
+        // «de» non ha un prompt: vale quello della lingua di riserva del profilo («en»), e con lui la lingua del
+        // turno (#4397). Prima il contesto statico seguiva la lingua chiesta e restava in italiano, accanto a un
+        // prompt inglese.
         Script(Says("ok"));
 
         await AskAsync("who's next?", language);
@@ -320,7 +322,11 @@ public sealed class AssistantTurnTests
         _requests.Should().HaveCount(2, "un giro con strumenti, poi la chiamata finale senza");
         _requests[1].Tools.Should().BeEmpty();
         events.Select(e => e.Type).Where(type => type != "status").Should().Equal("answer", "done");
-        events.Single(e => e.Type == "answer").Text.Should().Be(AssistantTurnTexts.NoAnswer(english: false, hasProposals: false));
+        // #4397: la sezione ha solo il prompt inglese, quindi il turno parla inglese anche se la lingua chiesta
+        // è «it»; prima il testo scritto al posto del modello restava in italiano.
+        events.Single(e => e.Type == "answer").Text.Should().Be(AssistantTurnTexts.NoAnswer(english: true, hasProposals: false));
+        _savedThread!.Messages[1].Language.Should().Be("en");
+        _savedThread.Messages[1].FallbackCode.Should().Be(AssistantTurnRunner.NoAnswerCode);
     }
 
     [Fact]
@@ -363,6 +369,67 @@ public sealed class AssistantTurnTests
         thread.Messages.Should().HaveCount(4);
     }
 
+    /// <summary>
+    /// #4397: un turno fallito senza proposte non torna al modello, né il testo che il turno ha scritto al
+    /// posto suo né la domanda. Il turno riuscito prima di lui sì: la guardia non toglie troppo.
+    /// </summary>
+    [Fact]
+    public async Task AFailedTurnWithoutProposals_DoesNotReachTheModel_QuestionIncluded()
+    {
+        var thread = new ChatThread(Guid.NewGuid(), Owner, gameId: null, title: null, agentId: null,
+            agentType: "session-assistant", liveSessionId: Session);
+        thread.AddUserMessage("chi vince?");
+        thread.AddMessage(new DomainChatMessage("Vince Giulia.", DomainChatMessage.AssistantRole, 1));
+        thread.AddUserMessage("Marco fa 5 punti");
+        var fallback = new DomainChatMessage(
+            AssistantTurnTexts.ForError("assistant_unavailable", english: false, hasProposals: false), DomainChatMessage.AssistantRole, 3);
+        fallback.MarkAsFallback("assistant_unavailable");
+        thread.AddMessage(fallback);
+        _threads.Setup(t => t.FindByLiveSessionIdAsync(Session, It.IsAny<CancellationToken>())).ReturnsAsync(thread);
+        Script(Says("Tocca a Giulia."));
+
+        await AskAsync("a chi tocca?");
+
+        var sent = _requests[0].Messages;
+        sent.Select(m => m.Role).Should().Equal(
+            LlmChatRoles.System, LlmChatRoles.System, LlmChatRoles.User, LlmChatRoles.Assistant, LlmChatRoles.User);
+        sent[2].Content.Should().Be("chi vince?");
+        sent[3].Content.Should().Be("Vince Giulia.");
+        sent[4].Content.Should().Be("a chi tocca?");
+        thread.Messages.Should().HaveCount(6, "nella conversazione che vede l'host il turno fallito resta");
+    }
+
+    /// <summary>
+    /// #4397: se il turno fallito aveva già creato una proposta, il suo esito è un fatto e torna al modello,
+    /// con la domanda che l'ha chiesta. Il testo scritto dal turno no.
+    /// </summary>
+    [Fact]
+    public async Task AFailedTurnWithAProposal_KeepsTheQuestionAndTheOutcome_NotTheTextTheTurnWrote()
+    {
+        var thread = new ChatThread(Guid.NewGuid(), Owner, gameId: null, title: null, agentId: null,
+            agentType: "session-assistant", liveSessionId: Session);
+        thread.AddUserMessage("Marco fa 5 punti");
+        var answerId = Guid.NewGuid();
+        var fallback = new DomainChatMessage(
+            AssistantTurnTexts.ForError("turn_timeout", english: false, hasProposals: true), DomainChatMessage.AssistantRole, 1, id: answerId);
+        fallback.MarkAsFallback("turn_timeout");
+        thread.AddMessage(fallback);
+        var earlier = AssistantProposal.ForScore(
+            Session, thread.Id, answerId, VersionId, Marco, "Marco", "punti", 2, 5, 7, _time.GetUtcNow().UtcDateTime);
+        earlier.Expire(_time.GetUtcNow().UtcDateTime);
+        _threads.Setup(t => t.FindByLiveSessionIdAsync(Session, It.IsAny<CancellationToken>())).ReturnsAsync(thread);
+        _proposals.Setup(p => p.ListByThreadAsync(thread.Id, It.IsAny<CancellationToken>())).ReturnsAsync([earlier]);
+        Script(Says("Tocca a Giulia."));
+
+        await AskAsync("a chi tocca?");
+
+        var sent = _requests[0].Messages;
+        sent.Select(m => m.Role).Should().Equal(
+            LlmChatRoles.System, LlmChatRoles.System, LlmChatRoles.User, LlmChatRoles.Assistant, LlmChatRoles.User);
+        sent[2].Content.Should().Be("Marco fa 5 punti");
+        sent[3].Content.Should().Be("[+5 punti a Marco, round 2: scaduta senza conferma]");
+    }
+
     // ─── Il turno che fallisce a metà (Review Focus 5) ──────────────────────────
 
     [Fact]
@@ -393,6 +460,21 @@ public sealed class AssistantTurnTests
         events.Select(e => e.Type).Should().Equal("status", "answer", "error");
         events[^1].Code.Should().Be("assistant_unavailable");
         events[1].Text.Should().Be(AssistantTurnTexts.ForError("assistant_unavailable", english: false, hasProposals: false));
+        _savedThread!.Messages[1].FallbackCode.Should().Be("assistant_unavailable", "il testo l'ha scritto il turno (#4397)");
+    }
+
+    /// <summary>#4397: anche il testo che il turno scrive al posto del modello segue la lingua del prompt.</summary>
+    [Fact]
+    public async Task WithALanguageWithoutAPrompt_TheTextTheTurnWrites_IsInTheLanguageOfThePrompt()
+    {
+        Script(Refuses(LlmAnswerErrorCodes.ProviderUnavailable));
+
+        var events = await AskAsync(language: "de");
+
+        _requests[0].Messages[0].Content.Should().Be("You are the table assistant.");
+        events.Single(e => e.Type == "answer").Text.Should()
+            .Be(AssistantTurnTexts.ForError("assistant_unavailable", english: true, hasProposals: false));
+        _savedThread!.Messages[1].Language.Should().Be("en", "è la lingua in cui il turno ha risposto");
     }
 
     /// <summary>

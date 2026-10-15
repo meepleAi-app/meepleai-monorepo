@@ -29,6 +29,9 @@ internal sealed class ChatMessage
     public Guid? ProfileVersionId { get; private set; }
     public string? Language { get; private set; }
 
+    // #4397: il codice del testo che il turno dell'assistente ha scritto al posto del modello; null se il testo è del modello
+    public string? FallbackCode { get; private set; }
+
     // Known roles
     public static readonly string UserRole = "user";
     public static readonly string AssistantRole = "assistant";
@@ -136,6 +139,21 @@ internal sealed class ChatMessage
 
         ProfileVersionId = profileVersionId;
         Language = language;
+    }
+
+    /// <summary>
+    /// #4397: segna una risposta dell'assistente che non viene dal modello, ma dal turno che l'ha scritta al
+    /// suo posto (un guasto, una scadenza, una risposta vuota). Così non torna al modello nella storia.
+    /// </summary>
+    public void MarkAsFallback(string code)
+    {
+        if (!IsAssistantMessage)
+            throw new InvalidOperationException("Only an assistant message can be a fallback");
+
+        if (string.IsNullOrWhiteSpace(code))
+            throw new ValidationException("A fallback needs its code");
+
+        FallbackCode = code;
     }
 
     public override string ToString() => $"[{Role}] {Content.Substring(0, Math.Min(50, Content.Length))}...";

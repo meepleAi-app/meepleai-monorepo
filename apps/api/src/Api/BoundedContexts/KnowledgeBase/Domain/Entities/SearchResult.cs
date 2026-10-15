@@ -31,6 +31,9 @@ internal sealed class SearchResult : Entity<Guid>
     public int? CharStart { get; private set; }
     public int? CharEnd { get; private set; }
 
+    /// <summary>#4168 (5e-c-2): i segnali grezzi della fusione, per chi fonde di nuovo sopra di lei.</summary>
+    public RetrievalSignals Signals { get; private set; } = RetrievalSignals.None;
+
     /// <summary>
     /// Private constructor for EF Core.
     /// </summary>
@@ -57,7 +60,8 @@ internal sealed class SearchResult : Entity<Guid>
         string? heading = null,
         string? boundingBoxesJson = null,
         int? charStart = null,
-        int? charEnd = null) : base(id)
+        int? charEnd = null,
+        RetrievalSignals? signals = null) : base(id)
     {
         if (string.IsNullOrWhiteSpace(textContent))
             throw new ArgumentException("Text content cannot be empty", nameof(textContent));
@@ -81,6 +85,7 @@ internal sealed class SearchResult : Entity<Guid>
         BoundingBoxesJson = boundingBoxesJson;
         CharStart = charStart;
         CharEnd = charEnd;
+        Signals = signals ?? RetrievalSignals.None;
     }
 
     /// <summary>

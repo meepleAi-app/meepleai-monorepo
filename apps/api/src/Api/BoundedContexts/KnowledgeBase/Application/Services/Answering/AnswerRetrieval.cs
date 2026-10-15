@@ -95,8 +95,10 @@ internal sealed class AnswerRetrieval
     /// candidati chiedere e se e fin dove passarli al reranker, che prima su questo percorso non c'era.
     /// </summary>
     /// <remarks>
-    /// La soglia del profilo non si applica: è una soglia di coseno, mentre la ricerca multi-gioco
-    /// filtra sul punteggio ibrido per gioco, che ha un'altra scala.
+    /// #4168 (5e-c-2): il passo per gioco usa lo stesso recupero della risposta per gioco, quindi la
+    /// soglia del profilo vale sul suo braccio vettoriale (è una soglia di coseno) e i pesi del
+    /// profilo sulla sua fusione. Il filtro <c>minScore</c> della ricerca multi-gioco è un'altra cosa
+    /// — guarda il punteggio ibrido per gioco, su un'altra scala — e qui resta spento.
     /// </remarks>
     public async Task<List<MultiGameSearchResultItem>> RetrieveAcrossGamesAsync(
         string question,
@@ -111,6 +113,7 @@ internal sealed class AnswerRetrieval
             question,
             gameIds,
             limit: profile.CandidatePoolSize,
+            perGame: PerGameRetrievalParameters.From(profile),
             mode: SearchMode.Hybrid,
             minScore: 0.0,
             cancellationToken: cancellationToken).ConfigureAwait(false);

@@ -1,4 +1,3 @@
-using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Services;
 using Api.Helpers;
@@ -33,9 +32,8 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 [Trait("Issue", "3786")]
 public sealed class MultiGameHybridSearchServiceQueryEmbeddingTests
 {
-    private readonly Mock<IHybridSearchService> _hybridSearchMock = new();
+    private readonly PerGameSearchStub _perGame = new();
     private readonly Mock<IEmbeddingService> _embeddingMock = new();
-    private readonly Mock<IServiceScopeFactory> _scopeFactoryMock = new();
 
     private static readonly float[] QueryVector = { 0.11f, 0.22f, 0.33f };
 
@@ -45,7 +43,7 @@ public sealed class MultiGameHybridSearchServiceQueryEmbeddingTests
         var gameIds = Enumerable.Range(0, 40).Select(_ => Guid.NewGuid()).ToArray();
         var sut = CreateSut(embeddingSucceeds: true);
 
-        await sut.SearchAsync("come si prepara Catan?", gameIds, limit: 10);
+        await sut.SearchAsync("come si prepara Catan?", gameIds, 10, PerGameSearchStub.Seed);
 
         _embeddingMock.Verify(
             e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()),
@@ -57,15 +55,15 @@ public sealed class MultiGameHybridSearchServiceQueryEmbeddingTests
     public async Task ManyGames_ReceiveTheSameEmbeddingInstance()
     {
         var gameIds = Enumerable.Range(0, 5).Select(_ => Guid.NewGuid()).ToArray();
-        var seen = new List<QueryEmbedding?>();
-        var sut = CreateSut(embeddingSucceeds: true, onSearch: e => seen.Add(e));
+        var sut = CreateSut(embeddingSucceeds: true);
 
-        await sut.SearchAsync("come si prepara Catan?", gameIds, limit: 10);
+        await sut.SearchAsync("come si prepara Catan?", gameIds, 10, PerGameSearchStub.Seed);
 
+        var seen = _perGame.Received.Select(q => q.QueryVector).ToList();
         seen.Should().HaveCount(5);
-        seen.Should().AllSatisfy(e => e!.Succeeded.Should().BeTrue());
-        seen.Distinct().Should().HaveCount(1, "un unico calcolo deve produrre un unico oggetto condiviso da tutti i giochi");
-        seen[0]!.Vector.Should().Equal(QueryVector);
+        seen.Distinct(ReferenceEqualityComparer.Instance).Should().HaveCount(1,
+            "un unico calcolo deve produrre un unico vettore condiviso da tutti i giochi");
+        seen[0].Should().Equal(QueryVector);
     }
 
     [Fact]
@@ -75,18 +73,20 @@ public sealed class MultiGameHybridSearchServiceQueryEmbeddingTests
         // servizio di embedding irraggiungibile avrebbe prodotto un tentativo per gioco — cioè
         // le ~160 chiamate che questa correzione toglie, riproposte nel caso peggiore.
         var gameIds = Enumerable.Range(0, 12).Select(_ => Guid.NewGuid()).ToArray();
-        var seen = new List<QueryEmbedding?>();
-        var sut = CreateSut(embeddingSucceeds: false, onSearch: e => seen.Add(e));
+        var sut = CreateSut(embeddingSucceeds: false);
 
-        var result = await sut.SearchAsync("come si prepara Catan?", gameIds, limit: 10);
+        var result = await sut.SearchAsync("come si prepara Catan?", gameIds, 10, PerGameSearchStub.Seed);
 
         _embeddingMock.Verify(
             e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()),
             Times.Exactly(2),
             "i tentativi restano quelli fissi a monte (uno piu' il ritentativo): il fallimento non va ripetuto PER GIOCO, che con 12 giochi darebbe 12");
-        seen.Should().HaveCount(12);
-        seen.Should().AllSatisfy(e => e!.Succeeded.Should().BeFalse(),
-            "ogni gioco deve poter registrare la degradazione, che e' il segnale introdotto da #3793");
+        _perGame.Received.Should().HaveCount(12);
+        _perGame.Received.Should().AllSatisfy(q =>
+        {
+            q.SearchMode.Should().Be("keyword", "#4168 (5e-c-2): senza vettore la ricerca per gioco prosegue solo lessicale");
+            q.QueryVector.Should().BeNull("nessun gioco deve ricalcolare l'embedding fallito a monte");
+        });
         result.Should().NotBeNull("la ricerca prosegue solo-lessicale: il fallimento degrada, non aborta");
     }
 
@@ -98,7 +98,7 @@ public sealed class MultiGameHybridSearchServiceQueryEmbeddingTests
         // corpus reale — e qui il difetto sarebbe globale invece che per gioco.
         var sut = CreateSut(embeddingSucceeds: true);
 
-        await sut.SearchAsync("come si prepara Catan?", new[] { Guid.NewGuid() }, limit: 10);
+        await sut.SearchAsync("come si prepara Catan?", new[] { Guid.NewGuid() }, 10, PerGameSearchStub.Seed);
 
         _embeddingMock.Verify(
             e => e.GenerateEmbeddingAsync("come si prepara Catan?", EmbeddingPurpose.Query, It.IsAny<CancellationToken>()),
@@ -111,16 +111,18 @@ public sealed class MultiGameHybridSearchServiceQueryEmbeddingTests
         // Il modo Keyword non usa il braccio vettoriale: una chiamata HTTP spesa per un vettore
         // che nessuno legge sarebbe un costo introdotto da questa correzione, non tolto.
         var gameIds = Enumerable.Range(0, 6).Select(_ => Guid.NewGuid()).ToArray();
-        var seen = new List<QueryEmbedding?>();
-        var sut = CreateSut(embeddingSucceeds: true, onSearch: e => seen.Add(e));
+        var sut = CreateSut(embeddingSucceeds: true);
 
-        await sut.SearchAsync("catan setup", gameIds, limit: 10, mode: SearchMode.Keyword);
+        await sut.SearchAsync("catan setup", gameIds, 10, PerGameSearchStub.Seed, mode: SearchMode.Keyword);
 
         _embeddingMock.Verify(
             e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()),
             Times.Never);
-        seen.Should().AllSatisfy(e => e.Should().BeNull(),
-            "«non fornito» e' lo stato giusto: il percorso per-gioco non deve ne' usarlo ne' considerarlo fallito");
+        _perGame.Received.Should().HaveCount(6).And.AllSatisfy(q =>
+        {
+            q.SearchMode.Should().Be("keyword");
+            q.QueryVector.Should().BeNull("il percorso per-gioco solo lessicale non usa un vettore");
+        });
     }
 
     [Fact]
@@ -128,7 +130,7 @@ public sealed class MultiGameHybridSearchServiceQueryEmbeddingTests
     {
         var sut = CreateSut(embeddingSucceeds: true);
 
-        var result = await sut.SearchAsync("catan setup", Array.Empty<Guid>(), limit: 10);
+        var result = await sut.SearchAsync("catan setup", Array.Empty<Guid>(), 10, PerGameSearchStub.Seed);
 
         result.Should().BeEmpty();
         _embeddingMock.Verify(
@@ -149,7 +151,7 @@ public sealed class MultiGameHybridSearchServiceQueryEmbeddingTests
         // correzione, nata per togliere chiamate, ne aggiungerebbe una dove prima erano zero.
         var sut = CreateSut(embeddingSucceeds: true);
 
-        var result = await sut.SearchAsync(query, new[] { Guid.NewGuid() }, limit: 10);
+        var result = await sut.SearchAsync(query, new[] { Guid.NewGuid() }, 10, PerGameSearchStub.Seed);
 
         result.Should().BeEmpty();
         _embeddingMock.Verify(
@@ -166,7 +168,7 @@ public sealed class MultiGameHybridSearchServiceQueryEmbeddingTests
         var tooLong = new string('x', QueryValidator.MaxQueryLength + 1);
         var sut = CreateSut(embeddingSucceeds: true);
 
-        var result = await sut.SearchAsync(tooLong, new[] { Guid.NewGuid() }, limit: 10);
+        var result = await sut.SearchAsync(tooLong, new[] { Guid.NewGuid() }, 10, PerGameSearchStub.Seed);
 
         result.Should().BeEmpty();
         _embeddingMock.Verify(
@@ -190,11 +192,12 @@ public sealed class MultiGameHybridSearchServiceQueryEmbeddingTests
         var act = async () => await sut.SearchAsync(
             "come si prepara Catan?",
             Enumerable.Range(0, 20).Select(_ => Guid.NewGuid()).ToArray(),
-            limit: 10,
+            10,
+            PerGameSearchStub.Seed,
             cancellationToken: cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
-        _hybridSearchMock.VerifyNoOtherCalls();
+        _perGame.Received.Should().BeEmpty();
     }
 
     [Fact]
@@ -212,14 +215,16 @@ public sealed class MultiGameHybridSearchServiceQueryEmbeddingTests
                 ? EmbeddingResult.CreateFailure("transient timeout")
                 : EmbeddingResult.CreateSuccess(new List<float[]> { QueryVector }));
 
-        var seen = new List<QueryEmbedding?>();
-        var sut = CreateSut(embeddingSucceeds: true, onSearch: e => seen.Add(e), configureEmbedding: false);
+        var sut = CreateSut(embeddingSucceeds: true, configureEmbedding: false);
 
-        await sut.SearchAsync("come si prepara Catan?", new[] { Guid.NewGuid(), Guid.NewGuid() }, limit: 10);
+        await sut.SearchAsync("come si prepara Catan?", new[] { Guid.NewGuid(), Guid.NewGuid() }, 10, PerGameSearchStub.Seed);
 
         calls.Should().Be(2, "un fallimento transitorio va ritentato una volta, non zero e non per gioco");
-        seen.Should().AllSatisfy(e => e!.Succeeded.Should().BeTrue(),
-            "il secondo tentativo e' riuscito: i giochi devono ricevere il vettore, non una degradazione");
+        _perGame.Received.Should().HaveCount(2).And.AllSatisfy(q =>
+        {
+            q.SearchMode.Should().Be("hybrid", "il secondo tentativo e' riuscito: niente degradazione");
+            q.QueryVector.Should().Equal(QueryVector);
+        });
     }
 
     [Fact]
@@ -228,7 +233,7 @@ public sealed class MultiGameHybridSearchServiceQueryEmbeddingTests
         var gameIds = Enumerable.Range(0, 30).Select(_ => Guid.NewGuid()).ToArray();
         var sut = CreateSut(embeddingSucceeds: false);
 
-        await sut.SearchAsync("come si prepara Catan?", gameIds, limit: 10);
+        await sut.SearchAsync("come si prepara Catan?", gameIds, 10, PerGameSearchStub.Seed);
 
         _embeddingMock.Verify(
             e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()),
@@ -240,7 +245,6 @@ public sealed class MultiGameHybridSearchServiceQueryEmbeddingTests
 
     private MultiGameHybridSearchService CreateSut(
         bool embeddingSucceeds,
-        Action<QueryEmbedding?>? onSearch = null,
         bool configureEmbedding = true)
     {
         // configureEmbedding: false quando il test ha gia' impostato il proprio comportamento
@@ -254,31 +258,8 @@ public sealed class MultiGameHybridSearchServiceQueryEmbeddingTests
                     : EmbeddingResult.CreateFailure("embedding service unreachable"));
         }
 
-        _hybridSearchMock
-            .Setup(s => s.SearchAsync(
-                It.IsAny<string>(),
-                It.IsAny<Guid>(),
-                It.IsAny<SearchMode>(),
-                It.IsAny<int>(),
-                It.IsAny<List<Guid>?>(),
-                It.IsAny<float>(),
-                It.IsAny<float>(),
-                It.IsAny<double>(),
-                It.IsAny<GameBookRole>(),
-                It.IsAny<QueryEmbedding?>(),
-                It.IsAny<CancellationToken>()))
-            .Callback((string _, Guid _, SearchMode _, int _, List<Guid>? _, float _, float _, double _,
-                       GameBookRole _, QueryEmbedding? precomputed, CancellationToken _) => onSearch?.Invoke(precomputed))
-            .ReturnsAsync(new List<HybridSearchResult>());
-
-        var provider = new Mock<IServiceProvider>();
-        provider.Setup(p => p.GetService(typeof(IHybridSearchService))).Returns(_hybridSearchMock.Object);
-        var scope = new Mock<IServiceScope>();
-        scope.SetupGet(s => s.ServiceProvider).Returns(provider.Object);
-        _scopeFactoryMock.Setup(f => f.CreateScope()).Returns(scope.Object);
-
         return new MultiGameHybridSearchService(
-            _scopeFactoryMock.Object,
+            _perGame.ScopeFactory(),
             _embeddingMock.Object,
             NullLogger<MultiGameHybridSearchService>.Instance);
     }

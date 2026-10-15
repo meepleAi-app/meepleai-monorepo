@@ -50,11 +50,16 @@ internal class RrfFusionDomainService
         if (rrfK <= 0)
             throw new ArgumentException("RRF K must be positive", nameof(rrfK));
 
+        // #4168 (5e-c-2): nei candidati il punteggio GREZZO del braccio, quando c'è (il ts_rank_cd
+        // supera 1, e relevanceScore lo schiaccia). L'ordine non cambia: la fusione usa i ranghi, i
+        // punteggi li porta soltanto, per chi fonde di nuovo fra giochi.
         var vectorArm = vectorResults
-            .Select((r, i) => new FusionCandidate(GetChunkKey(r), r.TextContent, r.RoleTags, r.Heading, i + 1, (float)r.RelevanceScore.Value))
+            .Select((r, i) => new FusionCandidate(GetChunkKey(r), r.TextContent, r.RoleTags, r.Heading, i + 1,
+                r.Signals.VectorScore ?? (float)r.RelevanceScore.Value))
             .ToList();
         var keywordArm = keywordResults
-            .Select((r, i) => new FusionCandidate(GetChunkKey(r), r.TextContent, r.RoleTags, r.Heading, i + 1, (float)r.RelevanceScore.Value))
+            .Select((r, i) => new FusionCandidate(GetChunkKey(r), r.TextContent, r.RoleTags, r.Heading, i + 1,
+                r.Signals.KeywordScore ?? (float)r.RelevanceScore.Value))
             .ToList();
 
         var fused = HybridFusionCore.Fuse(vectorArm, keywordArm, new FusionOptions(vectorWeight, keywordWeight, rrfK, queryRoleHint, queryTerms));
@@ -66,7 +71,9 @@ internal class RrfFusionDomainService
             .Select(f =>
             {
                 // Prefer the vector-arm original when the chunk was found by both arms.
-                var original = vByKey[f.Key].FirstOrDefault() ?? kByKey[f.Key].First();
+                var fromVector = vByKey[f.Key].FirstOrDefault();
+                var fromKeyword = kByKey[f.Key].FirstOrDefault();
+                var original = fromVector ?? fromKeyword!;
                 return new SearchResult(
                     id: Guid.NewGuid(),
                     vectorDocumentId: original.VectorDocumentId,
@@ -88,7 +95,16 @@ internal class RrfFusionDomainService
                     // original, else the fused result drops the bbox/char offsets before the citation.
                     boundingBoxesJson: original.BoundingBoxesJson,
                     charStart: original.CharStart,
-                    charEnd: original.CharEnd);
+                    charEnd: original.CharEnd,
+                    // #4168 (5e-c-2): i segnali della fusione, per chi fonde di nuovo fra giochi.
+                    signals: new RetrievalSignals(
+                        HybridScore: f.HybridScore,
+                        VectorScore: f.VectorScore,
+                        KeywordScore: f.KeywordScore,
+                        VectorRank: f.VectorRank,
+                        KeywordRank: f.KeywordRank,
+                        Language: fromVector?.Signals.Language,
+                        MatchedTerms: fromKeyword?.Signals.MatchedTerms));
             })
             .ToList();
     }

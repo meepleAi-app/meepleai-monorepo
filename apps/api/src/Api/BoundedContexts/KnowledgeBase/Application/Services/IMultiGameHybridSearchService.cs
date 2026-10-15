@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Services;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
@@ -5,18 +6,16 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 /// <summary>
 /// Orchestrates hybrid search across multiple games in parallel.
 ///
-/// Rationale (R3 verdict b): <see cref="IHybridSearchService.SearchAsync"/> accepts only a single
-/// <c>gameId</c> — the keyword/BM25 search is hard-wired per-game at the infrastructure level
-/// (PostgreSQL FTS filtered by game). Rather than modifying that interface, this wrapper issues
-/// one <see cref="IHybridSearchService.SearchAsync"/> call per accessible game id
-/// via Task.WhenAll (parallel), then aggregates the per-game already-fused results
-/// into a single ranked list.
+/// Rationale (R3 verdict b): the per-game retrieval accepts a single <c>gameId</c> — the
+/// keyword/BM25 search is hard-wired per-game at the infrastructure level (PostgreSQL FTS
+/// filtered by game). This wrapper issues one per-game retrieval per accessible game id in
+/// parallel, then re-fuses the aggregated candidates globally (#3735, see
+/// <see cref="MultiGameHybridSearchService"/>).
 ///
-/// <b>Why no second RRF pass?</b>  The scores returned by <see cref="IHybridSearchService.SearchAsync"/>
-/// are already RRF-fused within each game (vector rank + keyword rank → float in [0, ≈0.03]).
-/// Since all per-game scores are on the same scale, a simple sort-by-score is rank-equivalent to
-/// a full RRF re-fuse over the combined list. This avoids the double-normalisation problem that
-/// would arise from applying RRF a second time on already-fused inputs.
+/// #4168 (5e-c-2): the per-game retrieval is the same one the single-game answer uses — a
+/// <c>SearchQuery</c> handled by <c>SearchQueryHandler</c>, with the agent profile's vector threshold
+/// and fusion weights (<see cref="PerGameRetrievalParameters"/>). Before, it was
+/// <see cref="IHybridSearchService.SearchAsync"/> with its own threshold and fusion adapter.
 ///
 /// Issue #1661 — cross-game KB search.
 /// </summary>
@@ -28,12 +27,16 @@ internal interface IMultiGameHybridSearchService
     /// <param name="query">The user's natural-language query.</param>
     /// <param name="gameIds">Accessible game IDs (pre-filtered by RBAC). Empty → returns empty immediately (EC-1).</param>
     /// <param name="limit">Maximum number of results to return (hard cap, EC-7).</param>
+    /// <param name="perGame">
+    /// #4168 (5e-c-2): i parametri del recupero per gioco, gli stessi della risposta per gioco (soglia
+    /// del braccio vettoriale e pesi della fusione, dal profilo pubblicato).
+    /// </param>
     /// <param name="mode">Search mode forwarded to each per-game call.</param>
     /// <param name="minScore">Minimum hybrid score; results below this threshold are discarded.</param>
     /// <param name="pdfDocumentIds">
     /// Optional document allowlist (Issue #1686, D-4). When non-null, each per-game search
     /// restricts its hit set to <c>PdfDocumentEntity.Id</c> values in this list. Forwarded to
-    /// <see cref="IHybridSearchService.SearchAsync"/>'s <c>pdfDocumentIds</c> parameter.
+    /// the per-game <c>SearchQuery</c> as <c>PdfDocumentIds</c>.
     /// When null, no document filter is applied (legacy behaviour, D-3).
     /// </param>
     /// <param name="cancellationToken">Propagated to all parallel per-game calls (EC-3 resource safety).</param>
@@ -45,10 +48,25 @@ internal interface IMultiGameHybridSearchService
         string query,
         IReadOnlyList<Guid> gameIds,
         int limit,
+        PerGameRetrievalParameters perGame,
         SearchMode mode = SearchMode.Hybrid,
         double minScore = 0.0,
         IReadOnlyList<Guid>? pdfDocumentIds = null,
         CancellationToken cancellationToken = default);
+}
+
+/// <summary>
+/// I parametri del recupero per gioco dentro la ricerca fra giochi (#4168, 5e-c-2). Il passo per gioco
+/// usa lo stesso recupero della risposta per gioco, quindi gli stessi numeri: la soglia del braccio
+/// vettoriale e i pesi della fusione del profilo pubblicato.
+/// </summary>
+internal sealed record PerGameRetrievalParameters(double VectorMinScore, float VectorWeight, float KeywordWeight)
+{
+    public static PerGameRetrievalParameters From(AgentProfileContent profile)
+    {
+        ArgumentNullException.ThrowIfNull(profile);
+        return new((double)profile.MinScore, (float)profile.VectorWeight, (float)profile.KeywordWeight);
+    }
 }
 
 /// <summary>

@@ -104,7 +104,14 @@ internal static class KnowledgeBaseMappers
             pdfDocumentId: pdfDocId,
             chunkIndex: result.ChunkIndex,
             roleTags: result.RoleTags,
-            heading: result.Heading); // #3270
+            heading: result.Heading, // #3270
+            signals: new RetrievalSignals(
+                HybridScore: result.RelevanceScore,
+                // #4168 (5e-c-2): il ts_rank_cd GREZZO, che supera 1 e che relevanceScore schiaccia in [0,1]:
+                // la fusione fra giochi normalizza i punteggi lessicali grezzi di giochi diversi.
+                KeywordScore: result.RelevanceScore,
+                KeywordRank: rank,
+                MatchedTerms: result.MatchedTerms));
     }
 
     /// <summary>

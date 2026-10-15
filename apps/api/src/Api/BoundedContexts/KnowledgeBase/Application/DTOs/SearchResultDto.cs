@@ -17,7 +17,16 @@ internal record SearchResultDto(
     // pre-coordinate corpus. Parsed to CitationRegion + Full-gated at the StreamQa handler boundary.
     string? BoundingBoxesJson = null,
     int? CharStart = null,
-    int? CharEnd = null
+    int? CharEnd = null,
+    // #4168 (5e-c-2): l'identità del chunk e i segnali grezzi della fusione. Li legge la ricerca fra
+    // giochi, che fonde di nuovo sopra questo recupero e ne scrive il dump di taratura.
+    string? PdfDocumentId = null,
+    int ChunkIndex = 0,
+    float? HybridScore = null,
+    float? VectorScore = null,
+    float? KeywordScore = null,
+    string? Language = null,
+    IReadOnlyList<string>? MatchedTerms = null
 )
 {
     /// <summary>
@@ -36,7 +45,14 @@ internal record SearchResultDto(
             SearchMethod: searchResult.SearchMethod,
             BoundingBoxesJson: searchResult.BoundingBoxesJson,
             CharStart: searchResult.CharStart,
-            CharEnd: searchResult.CharEnd
+            CharEnd: searchResult.CharEnd,
+            PdfDocumentId: searchResult.PdfDocumentId.ToString(),
+            ChunkIndex: searchResult.ChunkIndex,
+            HybridScore: searchResult.Signals.HybridScore,
+            VectorScore: searchResult.Signals.VectorScore,
+            KeywordScore: searchResult.Signals.KeywordScore,
+            Language: searchResult.Signals.Language,
+            MatchedTerms: searchResult.Signals.MatchedTerms
         );
     }
 };

@@ -1064,12 +1064,13 @@ public sealed class GlobalKbSearchEndpointTests : IAsyncLifetime
                 It.IsAny<string>(),
                 It.IsAny<IReadOnlyList<Guid>>(),
                 It.IsAny<int>(),
+                It.IsAny<PerGameRetrievalParameters>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<double>(),
                 It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<string, IReadOnlyList<Guid>, int, SearchMode, double, IReadOnlyList<Guid>?, CancellationToken>(
-                (_, gameIds, _, _, _, documentIds, _) =>
+            .Callback<string, IReadOnlyList<Guid>, int, PerGameRetrievalParameters, SearchMode, double, IReadOnlyList<Guid>?, CancellationToken>(
+                (_, gameIds, _, _, _, _, documentIds, _) =>
                 {
                     // Capture the gameIds the handler asked the search to run on. This is what
                     // RBAC enforcement actually controls — verifying the post-enrichment Results
@@ -1082,6 +1083,7 @@ public sealed class GlobalKbSearchEndpointTests : IAsyncLifetime
                 string _,
                 IReadOnlyList<Guid> gameIds,
                 int limit,
+                PerGameRetrievalParameters _perGame,
                 SearchMode mode,
                 double minScore,
                 IReadOnlyList<Guid>? _,

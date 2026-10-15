@@ -40,11 +40,15 @@ export interface GameMetadata {
   confidenceScore?: number;
 }
 
-export type CoverImageMode = 'placeholder' | 'pdf-page' | 'upload';
+/**
+ * #4413: no 'upload' mode. An image from the admin's disk had no server path — the manual cover takes
+ * a URL with a license, in the cover editor — so the wizard offered a choice it then dropped.
+ */
+export type CoverImageMode = 'placeholder' | 'pdf-page';
 
 export interface CoverImageSelection {
   mode: CoverImageMode;
-  /** URL of the selected image (blob URL for uploads, API URL for pdf-page, null for placeholder) */
+  /** Preview of the selected page (a blob: URL of this tab, never sent to the server), null for placeholder */
   imageUrl: string | null;
   /** Page number selected (only for mode=pdf-page) */
   pdfPageNumber?: number;
@@ -90,6 +94,11 @@ export interface GameImportWizardState {
   importResult: ImportResult | null;
 
   // Step 5
+  /**
+   * The PDF page applied as the game's cover (#4413). The cover is applied at step 5, once the PDF
+   * is ready: rendering it while the upload still processes the PDF would make the processing fail.
+   */
+  coverAppliedPage: number | null;
   ragTestHistory: RagTestMessage[];
   isIndexingReady: boolean;
 
@@ -117,6 +126,7 @@ export interface GameImportWizardState {
   executeImport: () => Promise<void>;
 
   // Step 5 actions
+  setCoverAppliedPage: (page: number) => void;
   setIndexingReady: (ready: boolean) => void;
   addRagMessage: (question: string) => string;
   updateRagMessage: (id: string, update: Partial<RagTestMessage>) => void;
@@ -132,16 +142,6 @@ export interface GameImportWizardState {
   submitWizard: () => Promise<void>;
 }
 
-/**
- * The cover to save with the game. The wizard's previews (a PDF page, an uploaded image) are
- * `blob:` URLs that live in this browser tab: saved, they would be dead links. Only an http(s) URL
- * is sent; otherwise the game keeps its placeholder.
- */
-export function persistableCoverUrl(cover: CoverImageSelection): string | null {
-  if (cover.mode === 'placeholder' || !cover.imageUrl) return null;
-  return /^https?:\/\//i.test(cover.imageUrl) ? cover.imageUrl : null;
-}
-
 // ─── Initial State ─────────────────────────────────────────────────────────────
 
 const initialState = {
@@ -152,6 +152,7 @@ const initialState = {
   reviewedMetadata: null,
   coverImage: { mode: 'placeholder' as CoverImageMode, imageUrl: null },
   importResult: null,
+  coverAppliedPage: null as number | null,
   ragTestHistory: [] as RagTestMessage[],
   isIndexingReady: false,
   isProcessing: false,
@@ -242,7 +243,7 @@ export const useGameImportWizardStore = create<GameImportWizardState>()(
         // ── Step 4: Import saga ────────────────────────────────────────────
 
         executeImport: async () => {
-          const { importGameId, uploadedPdf, reviewedMetadata, coverImage } = get();
+          const { importGameId, uploadedPdf, reviewedMetadata } = get();
 
           if (!importGameId || !uploadedPdf) {
             set({ error: 'Nessun PDF caricato' });
@@ -266,7 +267,6 @@ export const useGameImportWizardStore = create<GameImportWizardState>()(
               maxPlayers: reviewedMetadata.maxPlayers,
               playingTimeMinutes: reviewedMetadata.playingTimeMinutes,
               minAge: reviewedMetadata.minAge,
-              coverImageUrl: persistableCoverUrl(coverImage),
               publishers: reviewedMetadata.publishers,
               designers: reviewedMetadata.designers,
               categories: reviewedMetadata.categories,
@@ -294,6 +294,8 @@ export const useGameImportWizardStore = create<GameImportWizardState>()(
         },
 
         // ── Step 5 ─────────────────────────────────────────────────────────
+
+        setCoverAppliedPage: page => set({ coverAppliedPage: page }),
 
         setIndexingReady: ready => set({ isIndexingReady: ready }),
 
@@ -336,12 +338,9 @@ export const useGameImportWizardStore = create<GameImportWizardState>()(
           importGameId: state.importGameId,
           uploadedPdf: state.uploadedPdf,
           reviewedMetadata: state.reviewedMetadata,
-          // Sanitize blob: URLs — they are session-scoped and invalid after reload.
-          // Upload mode loses its preview; other modes (none/pdfPage) are URL-safe.
-          coverImage:
-            state.coverImage?.mode === 'upload'
-              ? { ...state.coverImage, imageUrl: null }
-              : state.coverImage,
+          // The page preview is a blob: URL of this tab, dead after a reload: keep the page only.
+          coverImage: { ...state.coverImage, imageUrl: null },
+          coverAppliedPage: state.coverAppliedPage,
         }),
       }
     ),

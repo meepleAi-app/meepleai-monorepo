@@ -1462,6 +1462,25 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
     },
 
     /**
+     * Make a page of one of the game's PDFs its cover (ADMIN/EDITOR, #4413).
+     * POST /api/v1/admin/shared-games/{gameId}/pdf-cover
+     *
+     * The PDF must be ready (409 otherwise): rendering writes the PDF row, which the upload still
+     * holds while it processes it. 503 `cover_render_unavailable` when the page renderer is down.
+     */
+    async setPdfCoverFromPage(
+      gameId: string,
+      pdfDocumentId: string,
+      pageNumber: number
+    ): Promise<void> {
+      await httpClient.post(
+        `/api/v1/admin/shared-games/${encodeURIComponent(gameId)}/pdf-cover`,
+        { pdfDocumentId, pageNumber },
+        z.object({ coverR2Key: z.string() })
+      );
+    },
+
+    /**
      * Get a single PDF page as JPEG image.
      * GET /api/v1/ingest/pdf/{pdfId}/page-image?page=N
      * Returns a blob URL string.

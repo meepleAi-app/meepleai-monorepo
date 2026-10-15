@@ -10,7 +10,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Turn;
 /// per <c>status</c>: lo strumento che sta girando, assente per l'avvio del turno. <c>Proposal</c> per
 /// <c>proposal</c>, <c>Text</c> per <c>answer</c>. <c>ResponseId</c> (l'id del messaggio dell'assistente) e la
 /// versione del profilo per <c>done</c>. <c>Code</c> per <c>error</c>: <c>budget_paused</c>,
-/// <c>turn_timeout</c> o <c>assistant_unavailable</c>.
+/// <c>turn_timeout</c> o <c>assistant_unavailable</c>. <c>Citations</c> per <c>answer</c>, dalla fetta A5 (#4411): le
+/// fonti della risposta, già filtrate per tier.
 /// </remarks>
 internal sealed record AssistantTurnEvent(
     string Type,
@@ -20,7 +21,8 @@ internal sealed record AssistantTurnEvent(
     Guid? ResponseId = null,
     Guid? ProfileVersionId = null,
     int? ProfileVersionNumber = null,
-    string? Code = null)
+    string? Code = null,
+    IReadOnlyList<Api.Models.CitationDto>? Citations = null)
 {
     public const string StatusType = "status";
     public const string ProposalType = "proposal";
@@ -32,7 +34,8 @@ internal sealed record AssistantTurnEvent(
 
     public static AssistantTurnEvent ForProposal(AssistantProposalDto proposal) => new(ProposalType, Proposal: proposal);
 
-    public static AssistantTurnEvent Answer(string text) => new(AnswerType, Text: text);
+    public static AssistantTurnEvent Answer(string text, IReadOnlyList<Api.Models.CitationDto>? citations = null) =>
+        new(AnswerType, Text: text, Citations: citations is { Count: > 0 } ? citations : null);
 
     public static AssistantTurnEvent Done(Guid responseId, Guid profileVersionId, int profileVersionNumber) =>
         new(DoneType, ResponseId: responseId, ProfileVersionId: profileVersionId, ProfileVersionNumber: profileVersionNumber);

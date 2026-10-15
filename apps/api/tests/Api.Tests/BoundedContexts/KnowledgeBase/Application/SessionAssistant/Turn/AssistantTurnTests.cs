@@ -1,8 +1,11 @@
+using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant;
+using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Tools;
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Turn;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
@@ -15,6 +18,7 @@ using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
@@ -47,6 +51,8 @@ public sealed class AssistantTurnTests
     private readonly Mock<IAssistantProposalRepository> _proposals = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<ILlmService> _gateway = new();
+    private readonly Mock<IAssistantRuleSourceFactory> _ruleSources = new();
+    private readonly Mock<IAssistantRuleSource> _rules = new();
     private readonly FakeTimeProvider _time = new(new DateTimeOffset(2026, 10, 12, 20, 0, 0, TimeSpan.Zero));
     private readonly List<LlmChatRequest> _requests = [];
     private readonly List<AssistantProposal> _addedProposals = [];
@@ -69,6 +75,7 @@ public sealed class AssistantTurnTests
             .Callback<AssistantProposal, CancellationToken>((proposal, _) => _addedProposals.Add(proposal)).Returns(Task.CompletedTask);
         _proposals.Setup(p => p.ListByThreadAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
         _proposals.Setup(p => p.ListOpenBySessionAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        _ruleSources.Setup(f => f.Create(It.IsAny<AssistantRuleScope>())).Returns(_rules.Object);
     }
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
@@ -123,6 +130,8 @@ public sealed class AssistantTurnTests
         _proposals.Object,
         new AssistantChatClientFactory(_gateway.Object, NullLoggerFactory.Instance, new ServiceCollection().BuildServiceProvider()),
         new ExactNameMatcher(),
+        _ruleSources.Object,
+        Grounded(),
         _unitOfWork.Object,
         _time,
         NullLogger<AssistantTurnRunner>.Instance));
@@ -130,7 +139,8 @@ public sealed class AssistantTurnTests
     private async Task<List<AssistantTurnEvent>> AskAsync(string question = "Marco fa 5 punti", string? language = "it", Guid? user = null)
     {
         var events = new List<AssistantTurnEvent>();
-        await foreach (var turnEvent in Handler().Handle(new AskSessionAssistantCommand(Session, user ?? Owner, question, language), Ct))
+        await foreach (var turnEvent in Handler().Handle(new AskSessionAssistantCommand(
+            LiveSessionId: Session, UserId: user ?? Owner, UserRole: "User", Question: question, Language: language), Ct))
         {
             events.Add(turnEvent);
         }
@@ -525,7 +535,8 @@ public sealed class AssistantTurnTests
                 Interlocked.Increment(ref calls) == 1 ? Task.FromResult(Calls("stato_partita", "{}")) : release.Task);
 
         await using var events = Handler()
-            .Handle(new AskSessionAssistantCommand(Session, Owner, "a chi tocca?", "it"), Ct)
+            .Handle(new AskSessionAssistantCommand(
+                LiveSessionId: Session, UserId: Owner, UserRole: "User", Question: "a chi tocca?", Language: "it"), Ct)
             .GetAsyncEnumerator(Ct);
 
         (await events.MoveNextAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(30), Ct)).Should().BeTrue();
@@ -622,7 +633,8 @@ public sealed class AssistantTurnTests
             });
         using var request = CancellationTokenSource.CreateLinkedTokenSource(Ct);
         var events = Handler()
-            .Handle(new AskSessionAssistantCommand(Session, Owner, "a chi tocca?", "it"), request.Token)
+            .Handle(new AskSessionAssistantCommand(
+                LiveSessionId: Session, UserId: Owner, UserRole: "User", Question: "a chi tocca?", Language: "it"), request.Token)
             .GetAsyncEnumerator(request.Token);
 
         (await events.MoveNextAsync()).Should().BeTrue();
@@ -680,5 +692,152 @@ public sealed class AssistantTurnTests
             var player = players.FirstOrDefault(p => string.Equals(p.Name, name.Trim(), StringComparison.OrdinalIgnoreCase));
             return new AssistantPlayerMatch(player?.Id, player?.Name, IsAmbiguous: false, []);
         }
+    }
+
+    // ─── #4411 (A5): cerca_regole nel turno ──────────────────────────────────────────────────────
+
+    private static readonly Guid Game = Guid.Parse("00000000-0000-0000-0000-0000000000aa");
+
+    /// <summary>Il finalize vero, con la guardia n-gram vera: il test di §8 A5 vuole la sanificazione reale.</summary>
+    private static GroundedAnswerService Grounded() => new(
+        new NgramCopyrightLeakGuard(Options.Create(new CopyrightLeakGuardOptions()), NullLogger<NgramCopyrightLeakGuard>.Instance),
+        new DefaultCopyrightFallbackMessageProvider(),
+        Options.Create(new CopyrightLeakGuardOptions()),
+        NullLogger<GroundedAnswerService>.Instance);
+
+    private const string Passage =
+        "All'inizio di ogni round si riempiono gli espositori con quattro tessere ciascuno, pescate a caso dal sacchetto di stoffa.";
+
+    private void WithGame() =>
+        _reader.Setup(r => r.GetStateAsync(It.IsAny<CancellationToken>())).ReturnsAsync(State() with { GameId = Game });
+
+    private void RulesFind(CopyrightTier tier) =>
+        _rules.Setup(r => r.SearchAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AssistantRuleSearch(
+                [new AssistantRulePassage(Passage, 3)],
+                [new ChunkCitation("pdf-1", 3, 0.9f, Passage, tier)]));
+
+    [Fact]
+    public async Task WithoutAGame_TheRulesAreNotOffered()
+    {
+        Script(Says("Tocca a Giulia."));
+
+        await AskAsync("a chi tocca?");
+
+        _requests[0].Tools.Select(t => t.Name).Should().NotContain(SessionAssistantToolset.CercaRegole);
+        _ruleSources.Verify(f => f.Create(It.IsAny<AssistantRuleScope>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task WithAGame_TheRulesAreOffered_ForTheOwner_WithTheirRole_InTheLanguageOfTheTurn()
+    {
+        WithGame();
+        Script(Says("Tocca a Giulia."));
+
+        await AskAsync("a chi tocca?", language: "en-US");
+
+        _requests[0].Tools.Select(t => t.Name).Should().Contain(SessionAssistantToolset.CercaRegole);
+        _ruleSources.Verify(f => f.Create(It.Is<AssistantRuleScope>(s =>
+            s.GameId == Game && s.UserId == Owner && s.UserRole == "User" && s.Language == "en")), Times.Once);
+    }
+
+    // Spec §8, A5, «rosso prima»: una risposta che riporta un passaggio protetto oltre il limite viene sanificata.
+    [Fact]
+    public async Task AnAnswerThatCopiesAProtectedPassage_IsReplaced_AndIsMarkedAsNotTheModels()
+    {
+        WithGame();
+        RulesFind(CopyrightTier.Protected);
+        Script(Calls(SessionAssistantToolset.CercaRegole, "{\"domanda\":\"quante tessere?\"}"), Says(Passage));
+
+        var events = await AskAsync("quante tessere si mettono?");
+
+        var answer = events.Single(e => e.Type == AssistantTurnEvent.AnswerType);
+        answer.Text.Should().StartWith("Non posso mostrare il contenuto in forma letterale");
+        answer.Text.Should().NotContain("sacchetto di stoffa");
+        _savedThread!.Messages[^1].FallbackCode.Should().Be(AssistantTurnRunner.CopyrightSanitizedCode,
+            "il testo l'ha scritto il turno, non il modello: non torna nella storia (#4397)");
+    }
+
+    // Review Focus 3 del piano 3.
+    [Fact]
+    public async Task InEnglish_ASanitizedAnswer_IsTheEnglishCopyrightMessage()
+    {
+        WithGame();
+        RulesFind(CopyrightTier.Protected);
+        Script(Calls(SessionAssistantToolset.CercaRegole, "{\"domanda\":\"how many tiles?\"}"), Says(Passage));
+
+        var events = await AskAsync("how many tiles?", language: "en");
+
+        events.Single(e => e.Type == AssistantTurnEvent.AnswerType).Text.Should().StartWith("I cannot display the content verbatim");
+    }
+
+    [Fact]
+    public async Task AFullPassage_ReachesTheHostWithItsText_InTheEventAndInTheSavedMessage()
+    {
+        WithGame();
+        RulesFind(CopyrightTier.Full);
+        Script(Calls(SessionAssistantToolset.CercaRegole, "{\"domanda\":\"quante tessere?\"}"),
+            Says("Quattro tessere per espositore (pagina 3)."));
+
+        var events = await AskAsync("quante tessere si mettono?");
+
+        var citation = events.Single(e => e.Type == AssistantTurnEvent.AnswerType).Citations.Should().ContainSingle().Which;
+        citation.PageNumber.Should().Be(3);
+        citation.SnippetPreview.Should().Be(Passage);
+        var saved = _savedThread!.Messages[^1];
+        saved.FallbackCode.Should().BeNull();
+        AssistantCitations.Read(saved.CitationsJson).Should().ContainSingle().Which.SnippetPreview.Should().Be(Passage);
+    }
+
+    [Fact]
+    public async Task AProtectedCitation_ReachesTheHostWithoutItsText()
+    {
+        WithGame();
+        RulesFind(CopyrightTier.Protected);
+        Script(Calls(SessionAssistantToolset.CercaRegole, "{\"domanda\":\"quante tessere?\"}"),
+            Says("Quattro tessere per espositore (pagina 3)."));
+
+        var events = await AskAsync("quante tessere si mettono?");
+
+        var citation = events.Single(e => e.Type == AssistantTurnEvent.AnswerType).Citations.Should().ContainSingle().Which;
+        citation.CopyrightTier.Should().Be("protected");
+        citation.SnippetPreview.Should().BeNull();
+        AssistantCitations.Read(_savedThread!.Messages[^1].CitationsJson)!.Single().SnippetPreview.Should().BeNull(
+            "si salva la forma già filtrata: un ricaricamento non deve mostrare più di quanto ha mostrato il turno");
+    }
+
+    [Fact]
+    public async Task ATurnWithoutRules_HasNoCitations()
+    {
+        Script(Says("Tocca a Giulia."));
+
+        var events = await AskAsync("a chi tocca?");
+
+        events.Single(e => e.Type == AssistantTurnEvent.AnswerType).Citations.Should().BeNull();
+        _savedThread!.Messages[^1].CitationsJson.Should().BeNull();
+    }
+
+    // Review della PR 2 (#4411): due passaggi protetti della stessa pagina, con testi diversi, dopo FinalizeAsync
+    // sono la stessa fonte per l'host (niente testo, stessa pagina). Mostrati due volte sarebbero due chip «p.3»
+    // identiche sotto «2 fonti dal regolamento».
+    [Fact]
+    public async Task TwoProtectedPassagesOfTheSamePage_ReachTheHostAsOneSource()
+    {
+        WithGame();
+        _rules.Setup(r => r.SearchAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AssistantRuleSearch(
+                [new AssistantRulePassage(Passage, 3), new AssistantRulePassage("Le tessere avanzate vanno al centro.", 3)],
+                [
+                    new ChunkCitation("pdf-1", 3, 0.9f, Passage, CopyrightTier.Protected),
+                    new ChunkCitation("pdf-1", 3, 0.8f, "Le tessere avanzate vanno al centro.", CopyrightTier.Protected),
+                ]));
+        Script(Calls(SessionAssistantToolset.CercaRegole, "{\"domanda\":\"quante tessere?\"}"),
+            Says("Quattro tessere per espositore (pagina 3)."));
+
+        var events = await AskAsync("quante tessere si mettono?");
+
+        events.Single(e => e.Type == AssistantTurnEvent.AnswerType).Citations.Should().ContainSingle()
+            .Which.PageNumber.Should().Be(3);
+        AssistantCitations.Read(_savedThread!.Messages[^1].CitationsJson).Should().ContainSingle();
     }
 }

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Turn;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.Models;
 using Api.SharedKernel.Application.Interfaces;
 
 #pragma warning disable MA0048 // File name must match type name - the panel query, its handler and what it returns
@@ -12,8 +13,12 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Panel;
 /// </summary>
 internal sealed record SessionAssistantAvailabilityDto(bool Enabled, string? Code);
 
-/// <summary>Un messaggio della conversazione: <c>Role</c> è <c>user</c> o <c>assistant</c>.</summary>
-internal sealed record SessionAssistantMessageDto(Guid Id, string Role, string Content, DateTime CreatedAt);
+/// <summary>
+/// Un messaggio della conversazione: <c>Role</c> è <c>user</c> o <c>assistant</c>. <c>Citations</c> sono le fonti
+/// di una risposta che ha consultato il regolamento (#4411), già filtrate per tier.
+/// </summary>
+internal sealed record SessionAssistantMessageDto(
+    Guid Id, string Role, string Content, DateTime CreatedAt, IReadOnlyList<CitationDto>? Citations = null);
 
 /// <summary>
 /// Ciò che il pannello dell'assistente mostra al montaggio e dopo un ricaricamento (#4372): disponibilità,
@@ -73,7 +78,7 @@ internal sealed class GetSessionAssistantQueryHandler : IQueryHandler<GetSession
         var messages = thread.Messages
             .Where(m => !m.IsDeleted)
             .OrderBy(m => m.SequenceNumber)
-            .Select(m => new SessionAssistantMessageDto(m.Id, m.Role, m.Content, m.Timestamp))
+            .Select(m => new SessionAssistantMessageDto(m.Id, m.Role, m.Content, m.Timestamp, AssistantCitations.Read(m.CitationsJson)))
             .ToList();
         var proposals = await _proposals.ListByThreadAsync(thread.Id, cancellationToken).ConfigureAwait(false);
         return new SessionAssistantPanelDto(availability, messages, proposals.Select(AssistantProposalDto.From).ToList());

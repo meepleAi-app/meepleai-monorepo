@@ -1,4 +1,5 @@
 using System.Threading.Channels;
+using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Tools;
@@ -7,6 +8,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Middleware.Exceptions;
+using Api.Models;
 using Api.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.AI;
@@ -23,7 +25,8 @@ internal sealed record PreparedAssistantTurn(
 /// <summary>
 /// Un turno dell'assistente in partita (spec 2026-10-11 §6.2): controlli, ciclo con gli strumenti,
 /// salvataggio di messaggi e proposte, eventi. Non scrive mai la partita: gli strumenti ricevono un
-/// lettore e un sink di proposte, e questa classe non ha né il mediator né la porta di scrittura.
+/// lettore e un sink di proposte, e questa classe non ha né il mediator né la porta di scrittura. Da A5 (#4411) la
+/// risposta del modello passa da <c>FinalizeAsync</c> quando il turno ha consultato il regolamento.
 /// </summary>
 internal sealed class AssistantTurnRunner
 {
@@ -48,12 +51,20 @@ internal sealed class AssistantTurnRunner
     /// <summary>#4397: il segno della risposta scritta dal turno quando il modello non ha dato testo.</summary>
     public const string NoAnswerCode = "no_answer";
 
+    /// <summary>
+    /// #4411: il segno della risposta sostituita dal messaggio di copyright, perché il modello aveva copiato un
+    /// passaggio protetto. Il testo l'ha scritto il turno, quindi non torna al modello nella storia (#4397).
+    /// </summary>
+    public const string CopyrightSanitizedCode = "copyright_sanitized";
+
     private readonly IAssistantSessionDirectory _directory;
     private readonly SessionAssistantAvailability _availability;
     private readonly IChatThreadRepository _threads;
     private readonly IAssistantProposalRepository _proposals;
     private readonly IAssistantChatClientFactory _chatClients;
     private readonly IAssistantPlayerMatcher _matcher;
+    private readonly IAssistantRuleSourceFactory _ruleSources;
+    private readonly IGroundedAnswerService _groundedAnswers;
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<AssistantTurnRunner> _logger;
@@ -65,6 +76,8 @@ internal sealed class AssistantTurnRunner
         IAssistantProposalRepository proposals,
         IAssistantChatClientFactory chatClients,
         IAssistantPlayerMatcher matcher,
+        IAssistantRuleSourceFactory ruleSources,
+        IGroundedAnswerService groundedAnswers,
         IUnitOfWork unitOfWork,
         TimeProvider timeProvider,
         ILogger<AssistantTurnRunner> logger)
@@ -75,6 +88,8 @@ internal sealed class AssistantTurnRunner
         _proposals = proposals ?? throw new ArgumentNullException(nameof(proposals));
         _chatClients = chatClients ?? throw new ArgumentNullException(nameof(chatClients));
         _matcher = matcher ?? throw new ArgumentNullException(nameof(matcher));
+        _ruleSources = ruleSources ?? throw new ArgumentNullException(nameof(ruleSources));
+        _groundedAnswers = groundedAnswers ?? throw new ArgumentNullException(nameof(groundedAnswers));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -174,7 +189,13 @@ internal sealed class AssistantTurnRunner
         var messageId = Guid.NewGuid();
         var sink = new RepositoryProposalSink(
             _proposals, command.LiveSessionId, thread.Id, messageId, turn.Profile.VersionId, _timeProvider);
-        var toolset = new SessionAssistantToolset(reader, sink, _matcher);
+        // Spec §4.2: cerca_regole solo se la sessione ha un gioco. Per chi chiede, con il suo ruolo, e con i numeri
+        // di recupero della versione del profilo di questo turno.
+        var rules = state.GameId is { } gameId
+            ? _ruleSources.Create(new AssistantRuleScope(
+                gameId, command.UserId, command.UserRole, content, AssistantLanguage.Code(turn.Language)))
+            : null;
+        var toolset = new SessionAssistantToolset(reader, sink, _matcher, rules);
         var meter = new ChatTurnMeter { ToolCalled = tool => events.TryWrite(AssistantTurnEvent.Status(tool)) };
         var settings = new AssistantModelSettings(
             content.PrimaryModelId,
@@ -189,14 +210,21 @@ internal sealed class AssistantTurnRunner
 
         var outcome = await AskModelAsync(settings, meter, messages, toolset, assistant.TurnTimeoutSeconds, cancellationToken)
             .ConfigureAwait(false);
-        var text = FinalText(outcome, sink.Created.Count, turn.Language);
+        var composed = await ComposeAnswerAsync(
+            outcome, toolset.Citations, sink.Created.Count, turn.Language, command.Question, cancellationToken)
+            .ConfigureAwait(false);
 
         thread.AddUserMessage(command.Question);
-        var answer = new DomainChatMessage(text, DomainChatMessage.AssistantRole, thread.Messages.Count, id: messageId);
+        var answer = new DomainChatMessage(composed.Text, DomainChatMessage.AssistantRole, thread.Messages.Count, id: messageId);
         answer.SetAnswerProvenance(turn.Profile.VersionId, turn.Language);
-        if (FallbackCode(outcome) is { } fallbackCode)
+        if (composed.FallbackCode is { } fallbackCode)
         {
             answer.MarkAsFallback(fallbackCode);
+        }
+
+        if (composed.Citations.Count > 0)
+        {
+            answer.SetAgentMetadata(citationsJson: AssistantCitations.Write(composed.Citations));
         }
 
         thread.AddMessage(answer);
@@ -218,7 +246,7 @@ internal sealed class AssistantTurnRunner
             events.TryWrite(AssistantTurnEvent.ForProposal(AssistantProposalDto.From(proposal)));
         }
 
-        events.TryWrite(AssistantTurnEvent.Answer(text));
+        events.TryWrite(AssistantTurnEvent.Answer(composed.Text, composed.Citations));
         events.TryWrite(outcome.ErrorCode is null
             ? AssistantTurnEvent.Done(messageId, turn.Profile.VersionId, turn.Profile.VersionNumber)
             : AssistantTurnEvent.Error(outcome.ErrorCode));
@@ -242,9 +270,8 @@ internal sealed class AssistantTurnRunner
         try
         {
             using var chat = _chatClients.Create(settings, meter);
-            // cerca_regole arriva con la fetta A5: fino ad allora non è offerto.
             var response = await chat.GetResponseAsync(
-                messages, new ChatOptions { Tools = toolset.CreateTools(includeRules: false) }, linked.Token)
+                messages, new ChatOptions { Tools = toolset.CreateTools() }, linked.Token)
                 .ConfigureAwait(false);
 
             // L'ultimo messaggio dell'assistente, non la concatenazione: i giri intermedi possono portare
@@ -266,21 +293,23 @@ internal sealed class AssistantTurnRunner
         }
     }
 
-    /// <summary>Il codice del testo che <see cref="FinalText"/> scrive al posto del modello; null se il testo è del modello.</summary>
-    private static string? FallbackCode(TurnOutcome outcome) =>
-        outcome.ErrorCode ?? (string.IsNullOrWhiteSpace(outcome.Text) ? NoAnswerCode : null);
-
-    private static string FinalText(TurnOutcome outcome, int proposals, string language)
+    /// <summary>
+    /// Il testo della risposta, il suo segno e le sue fonti. Il testo del modello passa da <c>FinalizeAsync</c> con
+    /// le citazioni di tutte le chiamate a cerca_regole del turno (spec §4.2); i testi di ripiego no.
+    /// </summary>
+    private async Task<ComposedAnswer> ComposeAnswerAsync(
+        TurnOutcome outcome, IReadOnlyList<ChunkCitation> citations, int proposals, string language, string question,
+        CancellationToken cancellationToken)
     {
         var english = AssistantLanguage.IsEnglish(language);
-        if (outcome.ErrorCode is not null)
+        if (outcome.ErrorCode is { } errorCode)
         {
-            return AssistantTurnTexts.ForError(outcome.ErrorCode, english, hasProposals: proposals > 0);
+            return new ComposedAnswer(AssistantTurnTexts.ForError(errorCode, english, proposals > 0), errorCode, []);
         }
 
         if (string.IsNullOrWhiteSpace(outcome.Text))
         {
-            return AssistantTurnTexts.NoAnswer(english, hasProposals: proposals > 0);
+            return new ComposedAnswer(AssistantTurnTexts.NoAnswer(english, proposals > 0), NoAnswerCode, []);
         }
 
         var text = outcome.Text.Trim();
@@ -289,11 +318,26 @@ internal sealed class AssistantTurnRunner
             text = text[..MaxAnswerLength];
         }
 
-        // Spec §6.3: il modello dice di aver registrato, o di aver preparato una proposta, e nel turno non
-        // ce n'è nessuna. L'host cercherebbe un punteggio o una card che non esistono.
+        IReadOnlyList<CitationDto> sources = [];
+        if (citations.Count > 0)
+        {
+            var grounded = await _groundedAnswers
+                .FinalizeAsync(text, citations, question, AssistantLanguage.Code(language), cancellationToken)
+                .ConfigureAwait(false);
+            if (grounded.LeakMatchCount > 0)
+            {
+                return new ComposedAnswer(grounded.ResponseText, CopyrightSanitizedCode, AsTheHostSeesThem(grounded.CitationDtos));
+            }
+
+            text = grounded.ResponseText;
+            sources = AsTheHostSeesThem(grounded.CitationDtos);
+        }
+
+        // Spec §6.3: il modello dice di aver registrato, o di aver preparato una proposta, e nel turno non ce n'è
+        // nessuna. L'host cercherebbe un punteggio o una card che non esistono.
         var claimed = proposals == 0
             && (ClaimedActionDetector.ClaimsAction(text) || ClaimedActionDetector.ClaimsProposal(text));
-        return claimed ? text + AssistantTurnTexts.NothingRecorded(english) : text;
+        return new ComposedAnswer(claimed ? text + AssistantTurnTexts.NothingRecorded(english) : text, FallbackCode: null, sources);
     }
 
     /// <summary>
@@ -360,4 +404,14 @@ internal sealed class AssistantTurnRunner
         .ToList();
 
     private sealed record TurnOutcome(string? Text, string? ErrorCode);
+
+    /// <summary>
+    /// Una fonte per ciò che l'host vede. Il controllo dei leak ha già letto tutti i passaggi; dopo il tier due
+    /// passaggi protetti della stessa pagina sono la stessa chip «p.3», senza testo (review della PR 2, #4411).
+    /// </summary>
+    private static List<CitationDto> AsTheHostSeesThem(IReadOnlyList<CitationDto> citations) => citations
+        .DistinctBy(c => (c.DocumentId, c.PageNumber, c.CopyrightTier, c.SnippetPreview, c.ParaphrasedSnippet))
+        .ToList();
+
+    private sealed record ComposedAnswer(string Text, string? FallbackCode, IReadOnlyList<CitationDto> Citations);
 }

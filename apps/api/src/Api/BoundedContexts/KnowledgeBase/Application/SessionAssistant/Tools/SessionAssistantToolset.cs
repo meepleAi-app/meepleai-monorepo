@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Microsoft.Extensions.AI;
 
@@ -19,25 +20,52 @@ internal sealed class SessionAssistantToolset
 
     private const string PendingNote = "Proposta in attesa di conferma dell'host: NON è ancora registrata.";
 
+    private const string FoundNote =
+        "Rispondi solo con ciò che dicono questi passaggi, con parole tue e citando la pagina: non copiarli parola per parola.";
+
+    private const string NothingFoundNote =
+        "Il regolamento consultabile non ne parla: dillo all'host e non rispondere a memoria.";
+
     /// <summary>Risultati compatti: il JSON indentato di default gonfia i token di ogni giro.</summary>
     private static readonly JsonSerializerOptions ToolJson = CreateToolJson();
 
     private readonly ISessionAssistantReader _reader;
     private readonly IAssistantProposalSink _sink;
     private readonly IAssistantPlayerMatcher _matcher;
+    private readonly IAssistantRuleSource? _rules;
+    private readonly List<ChunkCitation> _citations = [];
     private int _errorCount;
 
-    public SessionAssistantToolset(ISessionAssistantReader reader, IAssistantProposalSink sink, IAssistantPlayerMatcher matcher)
+    /// <remarks>
+    /// <c>rules</c> è il regolamento del gioco della sessione (#4411). Null per una sessione senza gioco: allora
+    /// cerca_regole non viene offerto (spec §4.2).
+    /// </remarks>
+    public SessionAssistantToolset(
+        ISessionAssistantReader reader, IAssistantProposalSink sink, IAssistantPlayerMatcher matcher, IAssistantRuleSource? rules = null)
     {
         _reader = reader ?? throw new ArgumentNullException(nameof(reader));
         _sink = sink ?? throw new ArgumentNullException(nameof(sink));
         _matcher = matcher ?? throw new ArgumentNullException(nameof(matcher));
+        _rules = rules;
     }
 
     /// <summary>Quante volte uno strumento ha risposto con un errore in questo turno.</summary>
     public int ErrorCount => _errorCount;
 
-    public IList<AITool> CreateTools(bool includeRules)
+    /// <summary>Le citazioni di tutte le chiamate a cerca_regole di questo turno, una per passaggio.</summary>
+    public IReadOnlyList<ChunkCitation> Citations
+    {
+        get
+        {
+            lock (_citations)
+            {
+                return [.. _citations];
+            }
+        }
+    }
+
+    /// <summary>cerca_regole c'è solo se il turno ha una sorgente del regolamento: una sessione senza gioco non ne ha (§4.2).</summary>
+    public IList<AITool> CreateTools()
     {
         var tools = new List<AITool>
         {
@@ -45,10 +73,10 @@ internal sealed class SessionAssistantToolset
                 "Legge lo stato attuale della partita: giocatori e totali, giocatore di turno, round, fase, dimensioni del punteggio e punteggi per round. Chiamalo prima di rispondere su punteggi o turni.",
                 ToolJson),
         };
-        if (includeRules)
+        if (_rules is not null)
         {
             tools.Add(AIFunctionFactory.Create(SearchRulesAsync, CercaRegole,
-                "Cerca nel regolamento del gioco i passaggi utili a una domanda sulle regole. Rispondi solo con ciò che trovi, citando la pagina.",
+                "Cerca nel regolamento del gioco i passaggi utili a una domanda sulle regole. Rispondi solo con ciò che trovi, citando la pagina, con parole tue.",
                 ToolJson));
         }
 
@@ -61,13 +89,48 @@ internal sealed class SessionAssistantToolset
         return tools;
     }
 
-    public Task<AssistantSessionState> GetStateAsync(CancellationToken cancellationToken = default) =>
-        _reader.GetStateAsync(cancellationToken);
+    /// <summary>stato_partita. I nomi arrivano al modello su una riga sola, e corti (#4393).</summary>
+    public async Task<AssistantSessionState> GetStateAsync(CancellationToken cancellationToken = default)
+    {
+        var state = await _reader.GetStateAsync(cancellationToken).ConfigureAwait(false);
+        return state with { Players = state.Players.Select(p => p with { Name = AssistantNames.ForModel(p.Name) }).ToList() };
+    }
 
-    public Task<IReadOnlyList<AssistantRulePassage>> SearchRulesAsync(
+    public async Task<object> SearchRulesAsync(
         [Description("La domanda sulle regole, con parole proprie")] string domanda,
-        CancellationToken cancellationToken = default) =>
-        _reader.SearchRulesAsync(domanda, cancellationToken);
+        CancellationToken cancellationToken = default)
+    {
+        if (_rules is null)
+        {
+            return Error("regolamento_non_disponibile", "Questa partita non ha un regolamento da consultare: non rispondere a memoria.");
+        }
+
+        if (string.IsNullOrWhiteSpace(domanda))
+        {
+            return Error("domanda_mancante", "Serve la domanda sulle regole.");
+        }
+
+        var search = await _rules.SearchAsync(domanda.Trim(), cancellationToken).ConfigureAwait(false);
+        if (!search.Accessible)
+        {
+            return Error(
+                "regolamento_non_accessibile",
+                "L'host non ha accesso al regolamento di questo gioco: si ottiene dichiarando di possederlo. Non rispondere a memoria.");
+        }
+
+        lock (_citations)
+        {
+            foreach (var citation in search.Citations)
+            {
+                if (!_citations.Exists(c => SamePassage(c, citation)))
+                {
+                    _citations.Add(citation);
+                }
+            }
+        }
+
+        return new RulePassagesFound(search.Passages, search.Passages.Count == 0 ? NothingFoundNote : FoundNote);
+    }
 
     public async Task<object> ProposeScoreAsync(
         [Description("Il nome del giocatore, come l'ha detto l'host")] string giocatore,
@@ -99,12 +162,12 @@ internal sealed class SessionAssistantToolset
         var match = _matcher.Match(giocatore, state.Players);
         if (match.IsAmbiguous)
         {
-            return Error("giocatore_ambiguo", $"«{giocatore}» corrisponde a più giocatori: chiedi all'host quale.", match.Candidates);
+            return Error("giocatore_ambiguo", $"«{giocatore}» corrisponde a più giocatori: chiedi all'host quale.", match.Candidates.Select(AssistantNames.ForModel).ToList());
         }
 
         if (match.PlayerId is not { } playerId)
         {
-            return Error("giocatore_sconosciuto", $"Nessun giocatore si chiama «{giocatore}».", state.Players.Select(p => p.Name).ToList());
+            return Error("giocatore_sconosciuto", $"Nessun giocatore si chiama «{giocatore}».", state.Players.Select(p => AssistantNames.ForModel(p.Name)).ToList());
         }
 
         var resolvedDimension = ResolveDimension(dimensione, state.Dimensions);
@@ -127,7 +190,7 @@ internal sealed class SessionAssistantToolset
             .Select(s => s.Value)
             .FirstOrDefault();
         var receipt = await _sink.ProposeScoreAsync(
-            new ScoreProposalDraft(playerId, match.Name ?? giocatore, resolvedDimension, targetRound, punti, before),
+            new ScoreProposalDraft(playerId, AssistantNames.ForModel(match.Name ?? giocatore), resolvedDimension, targetRound, punti, before),
             cancellationToken).ConfigureAwait(false);
         return new ProposalCreated(receipt.ProposalId, receipt.Summary, PendingNote);
     }
@@ -157,6 +220,11 @@ internal sealed class SessionAssistantToolset
         Interlocked.Increment(ref _errorCount);
         return new AssistantToolError(code, message, candidates);
     }
+
+    private static bool SamePassage(ChunkCitation a, ChunkCitation b) =>
+        string.Equals(a.DocumentId, b.DocumentId, StringComparison.Ordinal)
+        && a.PageNumber == b.PageNumber
+        && string.Equals(a.SnippetPreview, b.SnippetPreview, StringComparison.Ordinal);
 
     private static string? ResolveDimension(string? requested, IReadOnlyList<string> dimensions)
     {

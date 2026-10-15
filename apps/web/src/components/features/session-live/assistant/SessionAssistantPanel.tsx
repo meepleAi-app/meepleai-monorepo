@@ -12,10 +12,12 @@
 
 import { useId, useState, type FormEvent, type JSX } from 'react';
 
+import { RuleSourceCard } from '@/components/chat-unified/RuleSourceCard';
 import { Button } from '@/components/ui/primitives/button';
 import { useSessionAssistant } from '@/hooks/queries/useSessionAssistant';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { AssistantProposalDto } from '@/lib/api/schemas/live-sessions.schemas';
+import { toRuleSourceCitations } from '@/lib/session-live/assistant-citations';
 import { cn } from '@/lib/utils';
 
 import { AssistantProposalCard } from './AssistantProposalCard';
@@ -167,6 +169,11 @@ export function SessionAssistantPanel({
               >
                 {message.content}
               </p>
+              {message.role === 'assistant' && message.citations && message.citations.length > 0 ? (
+                <div data-slot="session-assistant-sources" className="self-start">
+                  <RuleSourceCard citations={toRuleSourceCitations(message.citations)} />
+                </div>
+              ) : null}
               {message.role === 'assistant' ? cardsOf(message.id).map(renderCard) : null}
             </li>
           ))}

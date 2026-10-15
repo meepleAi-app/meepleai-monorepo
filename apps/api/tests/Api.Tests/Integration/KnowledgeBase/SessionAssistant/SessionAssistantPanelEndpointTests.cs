@@ -96,6 +96,38 @@ public sealed class SessionAssistantPanelEndpointTests(SessionAssistantHostFixtu
             messages[1].GetProperty("id").GetGuid(), "la card sta sotto il messaggio dell'assistente che l'ha prodotta");
     }
 
+    /// <summary>
+    /// #4397: il turno fallito resta nella conversazione che vede l'host, e non torna al modello. Il segno
+    /// passa dal database: il secondo turno rilegge il thread salvato dal primo.
+    /// </summary>
+    [Fact]
+    public async Task AFailedTurn_StaysInThePanel_ButDoesNotGoBackToTheModel()
+    {
+        await SessionAssistantTestData.EnableAssistantAsync(host.Factory, Ct);
+        var table = await StartedTableAsync();
+        host.Llm.Reset();   // copione vuoto: il gateway fallisce
+        var (failedStatus, failed, failedBody) = await SessionAssistantTestData.AskAsync(
+            _client, _token, table.SessionId, "Marco fa 5 punti", Ct);
+        failedStatus.Should().Be(HttpStatusCode.OK, failedBody);
+        failed[^1].GetProperty("code").GetString().Should().Be("assistant_unavailable");
+
+        host.Llm.Reset(Says("Tocca a Marco."));
+        var (askStatus, _, askBody) = await SessionAssistantTestData.AskAsync(_client, _token, table.SessionId, "a chi tocca?", Ct);
+
+        askStatus.Should().Be(HttpStatusCode.OK, askBody);
+        var sent = host.Llm.Requests.Single().Messages;
+        sent.Select(m => m.Role).Should().Equal("system", "system", "user");
+        sent[2].Content.Should().Be("a chi tocca?");
+
+        var (status, panel, raw) = await GetPanelAsync(table.SessionId, _token);
+        status.Should().Be(HttpStatusCode.OK, raw);
+        var messages = panel.GetProperty("messages").EnumerateArray().Select(m => m.GetProperty("content").GetString()).ToList();
+        messages.Should().HaveCount(4);
+        messages[0].Should().Be("Marco fa 5 punti");
+        messages[1].Should().StartWith("L'assistente non è disponibile", "l'host vede ancora il turno fallito");
+        messages[3].Should().Be("Tocca a Marco.");
+    }
+
     [Fact]
     public async Task WithTheAssistantOff_ThePanelSaysSo_WithTheCodeTheTurnWouldReturn()
     {

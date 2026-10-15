@@ -6,9 +6,14 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 namespace Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant;
 
 /// <summary>
-/// L'esito della regola di abilitazione: la versione pubblicata del profilo, la lingua risolta e il prompt
+/// L'esito della regola di abilitazione: la versione pubblicata del profilo, la lingua del turno e il prompt
 /// di sistema. Se l'assistente è spento, <c>Code</c> dice perché e <c>Problem</c> lo spiega.
 /// </summary>
+/// <remarks>
+/// La lingua del turno è quella del prompt usato (#4397): la chiesta se la sezione ha un prompt per lei,
+/// altrimenti quella di ripiego del profilo. Il contesto statico e i testi che il turno scrive la seguono,
+/// così il modello non riceve un prompt in una lingua e il contesto in un'altra.
+/// </remarks>
 internal sealed record AssistantAvailabilityResult(
     PublishedAgentProfile Profile, string Language, string? SystemPrompt, string? Code, string? Problem)
 {
@@ -45,7 +50,13 @@ internal sealed class SessionAssistantAvailability
         var content = profile.Content;
         var assistant = content.SessionAssistant;
         var resolved = string.IsNullOrWhiteSpace(language) ? content.FallbackLanguage : language.Trim();
-        var prompt = assistant.PromptFor(resolved) ?? assistant.PromptFor(content.FallbackLanguage);
+        var prompt = assistant.PromptFor(resolved);
+        if (prompt is null && assistant.PromptFor(content.FallbackLanguage) is { } fallbackPrompt)
+        {
+            prompt = fallbackPrompt;
+            resolved = content.FallbackLanguage;
+        }
+
         if (!assistant.Enabled || prompt is null)
         {
             return new AssistantAvailabilityResult(

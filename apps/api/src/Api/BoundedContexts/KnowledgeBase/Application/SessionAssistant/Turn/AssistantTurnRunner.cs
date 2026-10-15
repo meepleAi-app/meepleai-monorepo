@@ -45,6 +45,9 @@ internal sealed class AssistantTurnRunner
     public const string UnavailableCode = "assistant_unavailable";
     public const string TimeoutCode = "turn_timeout";
 
+    /// <summary>#4397: il segno della risposta scritta dal turno quando il modello non ha dato testo.</summary>
+    public const string NoAnswerCode = "no_answer";
+
     private readonly IAssistantSessionDirectory _directory;
     private readonly SessionAssistantAvailability _availability;
     private readonly IChatThreadRepository _threads;
@@ -191,6 +194,11 @@ internal sealed class AssistantTurnRunner
         thread.AddUserMessage(command.Question);
         var answer = new DomainChatMessage(text, DomainChatMessage.AssistantRole, thread.Messages.Count, id: messageId);
         answer.SetAnswerProvenance(turn.Profile.VersionId, turn.Language);
+        if (FallbackCode(outcome) is { } fallbackCode)
+        {
+            answer.MarkAsFallback(fallbackCode);
+        }
+
         thread.AddMessage(answer);
         if (isNewThread)
         {
@@ -258,6 +266,10 @@ internal sealed class AssistantTurnRunner
         }
     }
 
+    /// <summary>Il codice del testo che <see cref="FinalText"/> scrive al posto del modello; null se il testo è del modello.</summary>
+    private static string? FallbackCode(TurnOutcome outcome) =>
+        outcome.ErrorCode ?? (string.IsNullOrWhiteSpace(outcome.Text) ? NoAnswerCode : null);
+
     private static string FinalText(TurnOutcome outcome, int proposals, string language)
     {
         var english = AssistantLanguage.IsEnglish(language);
@@ -302,7 +314,16 @@ internal sealed class AssistantTurnRunner
         }
     }
 
-    /// <summary>Dei turni passati tornano al modello solo il testo e gli esiti delle proposte (spec §6.2).</summary>
+    /// <summary>
+    /// Dei turni passati tornano al modello solo il testo e gli esiti delle proposte (spec §6.2).
+    /// </summary>
+    /// <remarks>
+    /// #4397: torna solo ciò che ha scritto il modello. Il testo che il turno ha scritto al suo posto resta
+    /// nella conversazione che vede l'host, ma non nella storia: il modello vedrebbe sé stesso dire «non sono
+    /// disponibile» e potrebbe ripeterlo. Se prima del guasto il turno aveva creato proposte, i loro esiti
+    /// sono fatti e restano, con la domanda che le ha chieste; senza proposte il turno fallito sparisce,
+    /// domanda compresa. Il filtro precede la finestra, che conta solo i messaggi che arrivano al modello.
+    /// </remarks>
     private async Task<IReadOnlyList<AssistantHistoryTurn>> BuildHistoryAsync(ChatThread thread, CancellationToken cancellationToken)
     {
         if (thread.Messages.Count == 0)
@@ -312,20 +333,31 @@ internal sealed class AssistantTurnRunner
 
         var proposals = await _proposals.ListByThreadAsync(thread.Id, cancellationToken).ConfigureAwait(false);
         var byMessage = proposals.ToLookup(p => p.MessageId);
-        return thread.Messages
-            .Where(m => !m.IsDeleted)
-            .TakeLast(HistoryMessages)
-            .Select(m => new AssistantHistoryTurn(m.Role, WithOutcomes(m.Content, byMessage[m.Id])))
-            .ToList();
+        var turns = new List<AssistantHistoryTurn>();
+        foreach (var message in thread.Messages.Where(m => !m.IsDeleted))
+        {
+            var outcomes = Outcomes(byMessage[message.Id]);
+            if (message.FallbackCode is null)
+            {
+                turns.Add(new AssistantHistoryTurn(
+                    message.Role, outcomes.Count == 0 ? message.Content : $"{message.Content}\n{string.Join('\n', outcomes)}"));
+            }
+            else if (outcomes.Count > 0)
+            {
+                turns.Add(new AssistantHistoryTurn(message.Role, string.Join('\n', outcomes)));
+            }
+            else if (turns.Count > 0 && string.Equals(turns[^1].Role, DomainChatMessage.UserRole, StringComparison.Ordinal))
+            {
+                turns.RemoveAt(turns.Count - 1);
+            }
+        }
+
+        return turns.TakeLast(HistoryMessages).ToList();
     }
 
-    private static string WithOutcomes(string text, IEnumerable<AssistantProposal> proposals)
-    {
-        var lines = proposals
-            .Select(p => $"[{AssistantProposalSummary.For(p)}: {AssistantProposalSummary.Outcome(p.Status)}]")
-            .ToList();
-        return lines.Count == 0 ? text : $"{text}\n{string.Join('\n', lines)}";
-    }
+    private static List<string> Outcomes(IEnumerable<AssistantProposal> proposals) => proposals
+        .Select(p => $"[{AssistantProposalSummary.For(p)}: {AssistantProposalSummary.Outcome(p.Status)}]")
+        .ToList();
 
     private sealed record TurnOutcome(string? Text, string? ErrorCode);
 }

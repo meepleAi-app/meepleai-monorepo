@@ -340,6 +340,12 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
                 message.SetAnswerProvenance(dto.ProfileVersionId, dto.Language);
             }
 
+            // #4397: la risposta scritta dal turno al posto del modello
+            if (dto.FallbackCode != null)
+            {
+                message.MarkAsFallback(dto.FallbackCode);
+            }
+
             return message;
         }).ToList();
 
@@ -420,7 +426,8 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             CitationsJson: m.CitationsJson,
             TokenCount: m.TokenCount,
             ProfileVersionId: m.ProfileVersionId,
-            Language: m.Language
+            Language: m.Language,
+            FallbackCode: m.FallbackCode
         )).ToList();
 
         var messagesJson = JsonSerializer.Serialize(messageDtos);
@@ -488,7 +495,9 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
         int? TokenCount = null,
         // #4168: versione del profilo e lingua della risposta
         Guid? ProfileVersionId = null,
-        string? Language = null
+        string? Language = null,
+        // #4397: assente nei messaggi salvati prima, e quindi null
+        string? FallbackCode = null
     );
 
 }

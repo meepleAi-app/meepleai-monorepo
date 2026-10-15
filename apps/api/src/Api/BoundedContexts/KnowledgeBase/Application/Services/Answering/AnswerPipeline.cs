@@ -51,7 +51,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 /// </remarks>
 internal sealed class AnswerPipeline : IAnswerPipeline
 {
-    private readonly AnswerRetrieval _retrieval;
+    private readonly ITieredPassageSearch _passageSearch;
     private readonly QualityTrackingDomainService _qualityTrackingService;
     private readonly ChatContextDomainService _chatContextService;
     private readonly IChatThreadRepository _chatThreadRepository;
@@ -64,14 +64,13 @@ internal sealed class AnswerPipeline : IAnswerPipeline
     private readonly InlineCitationMatcherService _citationMatcher;
     private readonly IIntentClassifierService _intentClassifier;
     private readonly IAnswerPreconditions _preconditions;
-    private readonly ICopyrightTierResolver _copyrightTierResolver;
     private readonly IMechanicCardProvider _mechanicCardProvider;
     private readonly IFeatureFlagService _featureFlags;
     private readonly ILogger<AnswerPipeline> _logger;
     private readonly TimeProvider _timeProvider;
 
     public AnswerPipeline(
-        AnswerRetrieval retrieval,
+        ITieredPassageSearch passageSearch,
         QualityTrackingDomainService qualityTrackingService,
         ChatContextDomainService chatContextService,
         IChatThreadRepository chatThreadRepository,
@@ -84,13 +83,12 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         InlineCitationMatcherService citationMatcher,
         IIntentClassifierService intentClassifier,
         IAnswerPreconditions preconditions,
-        ICopyrightTierResolver copyrightTierResolver,
         IMechanicCardProvider mechanicCardProvider,
         IFeatureFlagService featureFlags,
         ILogger<AnswerPipeline> logger,
         TimeProvider? timeProvider = null)
     {
-        _retrieval = retrieval ?? throw new ArgumentNullException(nameof(retrieval));
+        _passageSearch = passageSearch ?? throw new ArgumentNullException(nameof(passageSearch));
         _qualityTrackingService = qualityTrackingService ?? throw new ArgumentNullException(nameof(qualityTrackingService));
         _chatContextService = chatContextService ?? throw new ArgumentNullException(nameof(chatContextService));
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
@@ -103,7 +101,6 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         _citationMatcher = citationMatcher ?? throw new ArgumentNullException(nameof(citationMatcher));
         _intentClassifier = intentClassifier ?? throw new ArgumentNullException(nameof(intentClassifier));
         _preconditions = preconditions ?? throw new ArgumentNullException(nameof(preconditions));
-        _copyrightTierResolver = copyrightTierResolver ?? throw new ArgumentNullException(nameof(copyrightTierResolver));
         _mechanicCardProvider = mechanicCardProvider ?? throw new ArgumentNullException(nameof(mechanicCardProvider));
         _featureFlags = featureFlags ?? throw new ArgumentNullException(nameof(featureFlags));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -445,22 +442,17 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         string language,
         CancellationToken cancellationToken)
     {
-        // #4243: the request filtered by document and none of the named documents belongs to this
-        // game. That finds nothing. It must stop here: further down an empty list means "no filter".
-        if (pdfDocumentIds is { Count: 0 })
-        {
-            return (false, null, null, null);
-        }
-
-        // Passi 3 e 4: recupero e reranking con i numeri del profilo, condivisi con la domanda singola.
-        var searchResults = await _retrieval.RetrieveAsync(
+        // Passi 3, 4 e 7: recupero, reranking e tier delle citazioni (#4410, E1). Un filtro per documenti
+        // che non nomina nessun documento del gioco (#4243) non trova niente.
+        var passages = await _passageSearch.SearchAsync(
             new AnswerRetrievalRequest(Guid.Parse(gameId), queryText, pdfDocumentIds),
-            profile, language, cancellationToken).ConfigureAwait(false);
-
-        if (searchResults.Count == 0)
+            profile, language, userId, cancellationToken).ConfigureAwait(false);
+        if (passages.IsEmpty)
         {
             return (false, null, null, null);
         }
+
+        var searchResults = passages.Results;
 
         // Map search results to domain entities for quality tracking
         var domainSearchResults = searchResults.Select(sr => new Domain.Entities.SearchResult(
@@ -476,43 +468,10 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         // Calculate search confidence
         var searchConfidence = _qualityTrackingService.CalculateSearchConfidence(domainSearchResults);
 
-        // Build citations — Issue #W: the search result's VectorDocumentId is the
-        // vector_documents.Id, but the citation "source" must carry the pdf_documents.Id
-        // so the FE PDF viewer (GET /api/v1/pdfs/{id}/download) can resolve it — otherwise
-        // it 404s and the cited source is unreadable. Resolve VectorDocumentId →
-        // PdfDocumentId via the game's vector documents (typically 1-2 per game).
-        var vectorDocs = await _vectorDocumentRepository
-            .FindVectorDocumentsOfGameAfterAccessCheckAsync(Guid.Parse(gameId), cancellationToken).ConfigureAwait(false);
-        var pdfIdByVectorId = vectorDocs.ToDictionary(v => v.Id, v => v.PdfDocumentId);
-
-        // SP-C (#3407): resolve the copyright tier per citation and gate BOTH the verbatim excerpt and
-        // the region overlay to Full — StreamQa previously emitted verbatim text with NO gate (a leak,
-        // #447/DA-4). The resolver keys on ChunkCitation.DocumentId = the resolved pdf id string (NOT
-        // the vector id, NOT the "PDF:"-prefixed source), matching the session-agent chain.
-        var rawCitations = searchResults.Select(r =>
-        {
-            // Fall back to the vector id if resolution fails (keeps a stable source string).
-            var citationDocId =
-                Guid.TryParse(r.VectorDocumentId, out var vecId)
-                && pdfIdByVectorId.TryGetValue(vecId, out var pdfId)
-                    ? pdfId.ToString()
-                    : r.VectorDocumentId;
-            return new ChunkCitation(
-                DocumentId: citationDocId,
-                PageNumber: r.PageNumber,
-                RelevanceScore: (float)r.RelevanceScore,
-                SnippetPreview: r.TextContent)
-            {
-                BoundingBoxesJson = r.BoundingBoxesJson,
-                CharStart = r.CharStart,
-                CharEnd = r.CharEnd,
-            };
-        }).ToList();
-
-        var resolvedCitations = await _copyrightTierResolver
-            .ResolveAsync(rawCitations, userId, cancellationToken).ConfigureAwait(false);
-
-        var snippets = resolvedCitations.Select(c =>
+        // SP-C (#3407): the citations carry the pdf id (Issue #W) and the copyright tier resolved for the
+        // asker (TieredPassageSearch). Here the verbatim excerpt stays and the region overlay is gated to
+        // Full — StreamQa previously emitted verbatim text with NO gate (a leak, #447/DA-4).
+        var snippets = passages.Citations.Select(c =>
         {
             var isFull = c.CopyrightTier == CopyrightTier.Full;
             return new Snippet(

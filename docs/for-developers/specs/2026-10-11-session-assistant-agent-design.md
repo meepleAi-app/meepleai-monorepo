@@ -484,7 +484,7 @@ La fetta 5 ha già consegnato la pipeline, quindi E1 ed E2 non sono vincoli su u
 
 | # | Dove | Emendamento |
 |---|---|---|
-| E1 | pipeline (#4219) | Estrarre da `AnswerPipeline.PerformSearchAndBuildCitationsAsync` il passo «recupero → citazioni con tier risolto, regioni e offset limitati al tier Full» in un servizio riusabile, usato dalla pipeline e da `cerca_regole`. Recupero (`AnswerRetrieval`) e finalizzazione (`IGroundedAnswerService.FinalizeAsync`) sono già separati |
+| E1 | pipeline (#4219) | Estrarre da `AnswerPipeline.PerformSearchAndBuildCitationsAsync` il passo «recupero → citazioni con tier risolto, regioni e offset limitati al tier Full» in un servizio riusabile, usato dalla pipeline e da `cerca_regole`. Recupero (`AnswerRetrieval`) e finalizzazione (`IGroundedAnswerService.FinalizeAsync`) sono già separati. **Fatto in #4410**: `ITieredPassageSearch` (`Services/Answering/TieredPassageSearch.cs`), usato dalla pipeline; da A5 anche da `cerca_regole`. Regioni e offset li limita al tier Full chi costruisce la forma per il client |
 | E2 | cache della pipeline | La cache esatta (`AiResponseCacheService`, chiavi `meepleai:qa:*`) **esce** dalla pipeline, e resta solo la cache semantica, con la versione del profilo nella chiave (§10.1). La chiave esatta contiene già lingua e versione del profilo dalla 5c (`AnswerPipeline.cs:719`): il motivo per toglierla non è la correttezza, ma il tasso di hit delle parafrasi |
 | E3 | fetta 8 | La fetta 8 si restringe: setup e disputa passano sulla pipeline come previsto; la chat di sessione live **viene sostituita** dall'assistente (fette A3-A7) invece di essere portata sulla pipeline |
 | E4 | D4, domanda aperta n. 4 | Chiusa da ADR-097 (fetta A0) |

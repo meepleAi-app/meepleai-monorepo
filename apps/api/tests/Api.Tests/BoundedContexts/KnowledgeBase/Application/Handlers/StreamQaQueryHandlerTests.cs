@@ -139,8 +139,9 @@ public class StreamQaQueryHandlerTests
             .ReturnsAsync(new List<VectorDocument>());
 
         _handler = new StreamQaQueryHandler(new AnswerPipeline(
-            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Retrieval(
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.PassageSearch(Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Retrieval(
                 _searchQueryHandler, _rerankerMock.Object, _intentClassifierMock.Object),
+                _vectorDocumentRepositoryMock.Object, _copyrightTierResolverMock.Object),
             _qualityTrackingServiceMock.Object,
             _chatContextServiceMock.Object,
             _chatThreadRepositoryMock.Object,
@@ -153,7 +154,6 @@ public class StreamQaQueryHandlerTests
             new InlineCitationMatcherService(),
             _intentClassifierMock.Object,
             Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Preconditions(CreatePermissiveRagAccessServiceMock()),
-            _copyrightTierResolverMock.Object,
             Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
             Mock.Of<Api.Services.IFeatureFlagService>(),
             _loggerMock.Object,
@@ -2075,8 +2075,9 @@ public class StreamQaQueryHandlerTests
         Api.SharedKernel.Services.ITierEnforcementService? tiers = null)
     {
         return new StreamQaQueryHandler(new AnswerPipeline(
-            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Retrieval(
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.PassageSearch(Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Retrieval(
                 _searchQueryHandler, _rerankerMock.Object, _intentClassifierMock.Object),
+                _vectorDocumentRepositoryMock.Object, _copyrightTierResolverMock.Object),
             _qualityTrackingServiceMock.Object,
             _chatContextServiceMock.Object,
             _chatThreadRepositoryMock.Object,
@@ -2089,7 +2090,6 @@ public class StreamQaQueryHandlerTests
             new InlineCitationMatcherService(),
             _intentClassifierMock.Object,
             Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Preconditions(ragAccessService, tiers),
-            _copyrightTierResolverMock.Object,
             mechanicCardProvider ?? Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
             featureFlags ?? Mock.Of<Api.Services.IFeatureFlagService>(),
             _loggerMock.Object,

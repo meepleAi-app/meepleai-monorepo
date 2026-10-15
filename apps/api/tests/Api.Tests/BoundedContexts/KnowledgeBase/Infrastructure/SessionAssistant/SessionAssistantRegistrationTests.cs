@@ -31,6 +31,9 @@ public sealed class SessionAssistantRegistrationTests
         services.AddScoped(_ => Mock.Of<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IChatThreadRepository>());
         services.AddScoped(_ => Mock.Of<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IAssistantProposalRepository>());
         services.AddScoped(_ => Mock.Of<Api.SharedKernel.Infrastructure.Persistence.IUnitOfWork>());
+        // #4411: cerca_regole usa il passo condiviso dell'accesso e la ricerca con tier di E1.
+        services.AddScoped(_ => Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.IAnswerPreconditions>());
+        services.AddScoped(_ => Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.ITieredPassageSearch>());
         services.AddSingleton(TimeProvider.System);
         services.AddSessionAssistant();
 

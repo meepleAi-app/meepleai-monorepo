@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant;
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Confirmation;
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Evaluation;
+using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Rules;
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Turn;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Services;
@@ -18,6 +19,8 @@ internal static class SessionAssistantServiceExtensions
         services.AddScoped<SessionAssistantEvaluator>();
         services.AddScoped<SessionAssistantAvailability>();
         services.AddScoped<AssistantTurnRunner>();
+        // #4411: cerca_regole, con l'accesso e il tier della chat sulle regole.
+        services.AddScoped<IAssistantRuleSourceFactory, AssistantRuleSourceFactory>();
         // Singleton: non ha stato e apre uno scope per ogni scrittura.
         services.AddSingleton<IAssistantProposalApplier, LiveSessionProposalApplier>();
         services.AddScoped<IAssistantSessionDirectory, LiveSessionAssistantDirectory>();

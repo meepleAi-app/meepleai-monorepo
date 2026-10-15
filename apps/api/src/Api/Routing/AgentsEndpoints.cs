@@ -97,8 +97,7 @@ internal static class AgentsEndpoints
         .Produces(422)
         .WithTags("Agents")
         .WithSummary("List all agents")
-        .WithDescription("Returns all agents. ?scope=my-library filters to agents whose game is in the caller's library plus system agents; no scope returns all agents (global). Optional activeOnly + type filters.")
-        .WithOpenApi();
+        .WithDescription("Returns all agents. ?scope=my-library filters to agents whose game is in the caller's library plus system agents; no scope returns all agents (global). Optional activeOnly + type filters.");
     }
 
     private static void MapGetAgentByIdEndpoint(RouteGroupBuilder group)
@@ -123,8 +122,7 @@ internal static class AgentsEndpoints
         .Produces(404)
         .WithTags("Agents")
         .WithSummary("Get agent by ID")
-        .WithDescription("Returns a single agent definition by id, mapped to AgentDto with GameName resolved via SharedGame catalog (PR #662 drift-fix). Issue #647 (Phase γ.1).")
-        .WithOpenApi();
+        .WithDescription("Returns a single agent definition by id, mapped to AgentDto with GameName resolved via SharedGame catalog (PR #662 drift-fix). Issue #647 (Phase γ.1).");
     }
 
     private static void MapGetRecentAgentsEndpoint(RouteGroupBuilder group)
@@ -147,8 +145,7 @@ internal static class AgentsEndpoints
         .Produces(401)
         .WithTags("Agents")
         .WithSummary("Get recently used agents")
-        .WithDescription("Returns active agents ordered by LastInvokedAt desc (limit clamped 1..50, default 10). Powers the dashboard recent-agents widget (frontend useRecentAgents hook). Issue #650 (Phase γ.3).")
-        .WithOpenApi();
+        .WithDescription("Returns active agents ordered by LastInvokedAt desc (limit clamped 1..50, default 10). Powers the dashboard recent-agents widget (frontend useRecentAgents hook). Issue #650 (Phase γ.3).");
     }
 
     /// <summary>
@@ -185,8 +182,7 @@ internal static class AgentsEndpoints
         .WithDescription(
             "Returns active agents sorted by installCount DESC + invocationCount DESC tiebreak "
             + "(limit clamped 1..50, default 10). Powers the SP4 /discover \"Popular agents\" "
-            + "rail. Cache: 15min via HybridCache. Wave 3 Phase 1 (Issue #805 / PR #732 §4.3.3).")
-        .WithOpenApi();
+            + "rail. Cache: 15min via HybridCache. Wave 3 Phase 1 (Issue #805 / PR #732 §4.3.3).");
     }
 
     private static void MapGetAgentStatusEndpoint(RouteGroupBuilder group)
@@ -210,8 +206,7 @@ internal static class AgentsEndpoints
         .Produces(404)
         .WithTags("Agents")
         .WithSummary("Get agent readiness status")
-        .WithDescription("Returns readiness derived from AgentDefinition flags (IsActive AND Strategy.Name presence). HasDocuments precise count is deferred to a follow-up if needed. Issue #648 — useAgentStatus widget.")
-        .WithOpenApi();
+        .WithDescription("Returns readiness derived from AgentDefinition flags (IsActive AND Strategy.Name presence). HasDocuments precise count is deferred to a follow-up if needed. Issue #648 — useAgentStatus widget.");
     }
 
     private static void MapGetAgentConfigurationEndpoint(RouteGroupBuilder group)
@@ -235,7 +230,6 @@ internal static class AgentsEndpoints
         .Produces(404)
         .WithTags("Agents")
         .WithSummary("Get agent LLM configuration")
-        .WithDescription("Returns the current LLM configuration view (model, provider, temperature, maxTokens). LlmProvider is heuristically inferred from the model name. Per-agent KB linking is owned by the AgentConfiguration aggregate / updateSelectedDocuments endpoint (#2391), not this contract (#3394). Issue #657.")
-        .WithOpenApi();
+        .WithDescription("Returns the current LLM configuration view (model, provider, temperature, maxTokens). LlmProvider is heuristically inferred from the model name. Per-agent KB linking is owned by the AgentConfiguration aggregate / updateSelectedDocuments endpoint (#2391), not this contract (#3394). Issue #657.");
     }
 }

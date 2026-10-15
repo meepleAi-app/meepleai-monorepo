@@ -54,8 +54,7 @@ internal static class AdminProviderEndpoints
             // available as the named policy "AdminProviderProbeGlobal" if needed via a
             // ChainedRateLimiter in the future.
             .RequireAuthorization("RequireSuperAdmin")
-            .RequireRateLimiting("AdminProviderProbe")
-            .WithOpenApi();
+            .RequireRateLimiting("AdminProviderProbe");
 
         // POST /api/v1/admin/providers/{name}/rotate-key — Issue #1859.
         // Superadmin-only. Step-up 2FA enforced by [RequireTwoFactor(ForceStrict=true,MaxAge=5)]
@@ -82,8 +81,7 @@ internal static class AdminProviderEndpoints
                 return Results.Ok(result);
             })
             .RequireAuthorization("RequireSuperAdmin")
-            .RequireRateLimiting("AdminProviderRotateKey")
-            .WithOpenApi();
+            .RequireRateLimiting("AdminProviderRotateKey");
 
         // GET /api/v1/admin/providers/{name}/quota — Issue #936 (G2). Admin-or-above.
         // Cache 5min server-side. 200 with QuotaSupported:false for unknown / unsupported providers.
@@ -92,8 +90,7 @@ internal static class AdminProviderEndpoints
                 var dto = await mediator.Send(new GetProviderQuotaQuery(name), ct).ConfigureAwait(false);
                 return Results.Ok(dto);
             })
-            .RequireAuthorization("RequireAdminOrAbove")
-            .WithOpenApi();
+            .RequireAuthorization("RequireAdminOrAbove");
 
         // GET /api/v1/admin/providers/quota — Issue #3043. Aggregated quota across all
         // quota-capable providers (SupportedProviderNames = openrouter, deepseek). Admin-or-above.
@@ -103,7 +100,6 @@ internal static class AdminProviderEndpoints
                 var dtos = await mediator.Send(new GetAllProvidersQuotaQuery(), ct).ConfigureAwait(false);
                 return Results.Ok(dtos);
             })
-            .RequireAuthorization("RequireAdminOrAbove")
-            .WithOpenApi();
+            .RequireAuthorization("RequireAdminOrAbove");
     }
 }

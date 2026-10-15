@@ -48,8 +48,7 @@ internal static class AchievementEndpoints
         .Produces(401)
         .WithTags("Achievements")
         .WithSummary("Get all achievements with user unlock status")
-        .WithDescription("Returns all active achievements with the authenticated user's progress and unlock status.")
-        .WithOpenApi();
+        .WithDescription("Returns all active achievements with the authenticated user's progress and unlock status.");
     }
 
     private static void MapGetRecentAchievementsEndpoint(RouteGroupBuilder group)
@@ -78,8 +77,7 @@ internal static class AchievementEndpoints
         .Produces(401)
         .WithTags("Achievements")
         .WithSummary("Get recently unlocked achievements")
-        .WithDescription("Returns the most recently unlocked achievements for the authenticated user, ordered by unlock date descending.")
-        .WithOpenApi();
+        .WithDescription("Returns the most recently unlocked achievements for the authenticated user, ordered by unlock date descending.");
     }
 
     private static bool TryGetUserId(HttpContext context, SessionStatusDto? session, out Guid userId)

@@ -96,8 +96,7 @@ internal static class PlayRecordEndpoints
             .Produces<PlayRecordPhotoUploadResult>(201)
             .Produces(400).Produces(401).Produces(StatusCodes.Status403Forbidden).Produces(404)
             .WithTags("PlayRecords")
-            .WithSummary("Upload a photo to a play record (creator-only, ≤5MB, opt-in OCR)")
-            .WithOpenApi();
+            .WithSummary("Upload a photo to a play record (creator-only, ≤5MB, opt-in OCR)");
 
         group.MapPost("/play-records/{recordId:guid}/share", HandleGenerateShareLink)
             .RequireAuthenticatedUser()

@@ -73,8 +73,7 @@ internal static class GamebookCampaignEndpoints
         .Produces(StatusCodes.Status401Unauthorized)
         .WithTags("Gamebook")
         .WithSummary("Create a new gamebook campaign session")
-        .WithDescription("Creates a new persistent gamebook campaign for the authenticated user with the given game and title.")
-        .WithOpenApi();
+        .WithDescription("Creates a new persistent gamebook campaign for the authenticated user with the given game and title.");
     }
 
     private static void MapListCampaignsEndpoint(RouteGroupBuilder group)
@@ -104,8 +103,7 @@ internal static class GamebookCampaignEndpoints
         .Produces(StatusCodes.Status401Unauthorized)
         .WithTags("Gamebook")
         .WithSummary("List gamebook campaigns for the current user")
-        .WithDescription("Returns all gamebook campaigns belonging to the authenticated user. Optionally filter by gameId.")
-        .WithOpenApi();
+        .WithDescription("Returns all gamebook campaigns belonging to the authenticated user. Optionally filter by gameId.");
     }
 
     private static void MapGetCampaignEndpoint(RouteGroupBuilder group)
@@ -137,8 +135,7 @@ internal static class GamebookCampaignEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .WithTags("Gamebook")
         .WithSummary("Get a gamebook campaign by ID")
-        .WithDescription("Returns the gamebook campaign with the specified ID, if it belongs to the authenticated user.")
-        .WithOpenApi();
+        .WithDescription("Returns the gamebook campaign with the specified ID, if it belongs to the authenticated user.");
     }
 
     private static void MapGetCampaignSpineEndpoint(RouteGroupBuilder group)
@@ -173,8 +170,7 @@ internal static class GamebookCampaignEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .WithTags("Gamebook")
         .WithSummary("Get the GameNight spine for a campaign")
-        .WithDescription("Returns the owning GameNight 'Serata' spine (title, organizer, status, session pip) + derived campaign status, or 204 if the campaign has no GameNight-attached play.")
-        .WithOpenApi();
+        .WithDescription("Returns the owning GameNight 'Serata' spine (title, organizer, status, session pip) + derived campaign status, or 204 if the campaign has no GameNight-attached play.");
     }
 
     private static void MapGetCampaignProgressEndpoint(RouteGroupBuilder group)
@@ -207,8 +203,7 @@ internal static class GamebookCampaignEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .WithTags("Gamebook")
         .WithSummary("Get per-book progress rows for a gamebook campaign")
-        .WithDescription("Returns one entry per book the authenticated owner has engaged with, sorted by most recent visit first. Orphan progress rows (book deleted) are filtered out.")
-        .WithOpenApi();
+        .WithDescription("Returns one entry per book the authenticated owner has engaged with, sorted by most recent visit first. Orphan progress rows (book deleted) are filtered out.");
     }
 
     private static void MapUpdateProgressEndpoint(RouteGroupBuilder group)
@@ -242,8 +237,7 @@ internal static class GamebookCampaignEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .WithTags("Gamebook")
         .WithSummary("Update the current paragraph progress for a gamebook campaign")
-        .WithDescription("Advances (or navigates) the authenticated user's gamebook campaign to the specified paragraph, appending the previous position to the history stack.")
-        .WithOpenApi();
+        .WithDescription("Advances (or navigates) the authenticated user's gamebook campaign to the specified paragraph, appending the previous position to the history stack.");
     }
 
     private static void MapRenameCampaignEndpoint(RouteGroupBuilder group)
@@ -277,8 +271,7 @@ internal static class GamebookCampaignEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .WithTags("Gamebook")
         .WithSummary("Rename a gamebook campaign")
-        .WithDescription("Updates the title of the campaign. Only the owner may rename.")
-        .WithOpenApi();
+        .WithDescription("Updates the title of the campaign. Only the owner may rename.");
     }
 
     private static void MapCloseCampaignEndpoint(RouteGroupBuilder group)
@@ -321,8 +314,7 @@ internal static class GamebookCampaignEndpoints
         .Produces(StatusCodes.Status409Conflict)
         .WithTags("Gamebook")
         .WithSummary("Terminally close a gamebook campaign")
-        .WithDescription("Sets the manual terminal outcome (Completed/Abandoned) on the campaign (SI-8). Only the owner may close; a campaign already closed returns 409.")
-        .WithOpenApi();
+        .WithDescription("Sets the manual terminal outcome (Completed/Abandoned) on the campaign (SI-8). Only the owner may close; a campaign already closed returns 409.");
     }
 
     private static void MapDeleteCampaignEndpoint(RouteGroupBuilder group)
@@ -351,8 +343,7 @@ internal static class GamebookCampaignEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .WithTags("Gamebook")
         .WithSummary("Soft-delete a gamebook campaign")
-        .WithDescription("Marks the campaign as deleted (IsDeleted=true). Only the owner may delete. Photos and glossary entries are retained for audit but become unreachable.")
-        .WithOpenApi();
+        .WithDescription("Marks the campaign as deleted (IsDeleted=true). Only the owner may delete. Photos and glossary entries are retained for audit but become unreachable.");
     }
 
     private static bool TryGetUserId(HttpContext context, SessionStatusDto? session, out Guid userId)

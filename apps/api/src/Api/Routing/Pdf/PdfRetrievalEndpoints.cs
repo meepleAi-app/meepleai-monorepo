@@ -150,12 +150,8 @@ internal static class PdfRetrievalEndpoints
         group.MapGet("/admin/pdfs", HandleGetAllPdfs)
             .RequireSession()
             .WithName("GetAllPdfs")
-            .WithOpenApi(operation =>
-            {
-                operation.Summary = "Get all PDF documents (admin-only)";
-                operation.Description = "Returns list of all PDFs with processing status, game association, and chunk counts.";
-                return operation;
-            });
+            .WithSummary("Get all PDF documents (admin-only)")
+            .WithDescription("Returns list of all PDFs with processing status, game association, and chunk counts.");
     }
 
     // #4348: chi chiede, perché i PDF di un gioco privato li vede solo il proprietario.

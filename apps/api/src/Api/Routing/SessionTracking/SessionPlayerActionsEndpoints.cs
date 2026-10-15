@@ -745,8 +745,7 @@ internal static class SessionPlayerActionsEndpoints
         .WithName("UpdateToolkitWidgetState")
         .WithTags("Toolkit")
         .WithSummary("Update a widget's runtime state in a session")
-        .WithDescription("Persists the runtime state for a single widget (turn count, scores, resources etc.). Auto-creates the state record on first save. Issue #5148.")
-        .WithOpenApi();
+        .WithDescription("Persists the runtime state for a single widget (turn count, scores, resources etc.). Auto-creates the state record on first save. Issue #5148.");
     }
 
     // ========== Session Diary Write Endpoints (Issue #276) ==========

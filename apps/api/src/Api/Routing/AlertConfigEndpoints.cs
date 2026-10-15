@@ -42,8 +42,7 @@ internal static class AlertConfigEndpoints
             return Results.Ok(rules);
         })
         .RequireAuthorization()
-        .WithName("GetAllAlertRules")
-        .WithOpenApi();
+        .WithName("GetAllAlertRules");
     }
 
     private static void MapGetAlertRuleByIdEndpoint(RouteGroupBuilder group)
@@ -55,8 +54,7 @@ internal static class AlertConfigEndpoints
             return rule == null ? Results.NotFound() : Results.Ok(rule);
         })
         .RequireAuthorization()
-        .WithName("GetAlertRuleById")
-        .WithOpenApi();
+        .WithName("GetAlertRuleById");
     }
 
     private static void MapCreateAlertRuleEndpoint(RouteGroupBuilder group)
@@ -82,8 +80,7 @@ internal static class AlertConfigEndpoints
             return Results.Created($"/api/v1/admin/alert-rules/{id}", new { id });
         })
         .RequireAuthorization()
-        .WithName("CreateAlertRule")
-        .WithOpenApi();
+        .WithName("CreateAlertRule");
     }
 
     private static void MapUpdateAlertRuleEndpoint(RouteGroupBuilder group)
@@ -109,8 +106,7 @@ internal static class AlertConfigEndpoints
             return Results.NoContent();
         })
         .RequireAuthorization()
-        .WithName("UpdateAlertRule")
-        .WithOpenApi();
+        .WithName("UpdateAlertRule");
     }
 
     private static void MapDeleteAlertRuleEndpoint(RouteGroupBuilder group)
@@ -122,8 +118,7 @@ internal static class AlertConfigEndpoints
             return Results.NoContent();
         })
         .RequireAuthorization()
-        .WithName("DeleteAlertRule")
-        .WithOpenApi();
+        .WithName("DeleteAlertRule");
     }
 
     private static void MapToggleAlertRuleEndpoint(RouteGroupBuilder group)
@@ -137,8 +132,7 @@ internal static class AlertConfigEndpoints
             return Results.NoContent();
         })
         .RequireAuthorization()
-        .WithName("ToggleAlertRule")
-        .WithOpenApi();
+        .WithName("ToggleAlertRule");
     }
 
     private static void MapTestAlertRuleEndpoint(RouteGroupBuilder group)
@@ -167,8 +161,7 @@ internal static class AlertConfigEndpoints
             })
             .RequireAdminSession()
             .WithName("TestAlertRule")
-            .WithSummary("Probe an existing alert rule by raising a synthetic AlertFiredEvent")
-            .WithOpenApi();
+            .WithSummary("Probe an existing alert rule by raising a synthetic AlertFiredEvent");
     }
 
     private static void MapGlobalAdminEndpoints(IEndpointRouteBuilder app)
@@ -183,8 +176,7 @@ internal static class AlertConfigEndpoints
         })
         .RequireAuthorization()
         .WithTags("Admin", "AlertRules")
-        .WithName("GetAlertTemplates")
-        .WithOpenApi();
+        .WithName("GetAlertTemplates");
 
         // POST /api/v1/admin/alert-test
         app.MapPost("/admin/alert-test", async ([FromBody] TestAlertRequest request, IMediator mediator, CancellationToken ct) =>
@@ -195,8 +187,7 @@ internal static class AlertConfigEndpoints
         })
         .RequireAuthorization()
         .WithTags("Admin", "AlertRules")
-        .WithName("TestAlert")
-        .WithOpenApi();
+        .WithName("TestAlert");
     }
 }
 

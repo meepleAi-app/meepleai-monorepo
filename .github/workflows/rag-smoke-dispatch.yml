@@ -140,14 +140,14 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Install dotnet-ef tool
         run: |
           if dotnet tool list --global | awk '{print $1}' | grep -qx 'dotnet-ef'; then
             echo "dotnet-ef already installed globally:"; dotnet tool list --global | grep '^dotnet-ef'
           else
-            dotnet tool install --global dotnet-ef --version 9.*
+            dotnet tool install --global dotnet-ef --version 10.*
           fi
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 

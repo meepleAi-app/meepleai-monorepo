@@ -52,12 +52,8 @@ internal static class BggEndpoints
         .RequireAuthenticatedUser()
         .RequireRateLimiting("BggSearch")
         .WithName("BggSearch")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Search BoardGameGeek catalog";
-            operation.Description = "Search for board games on BoardGameGeek. Requires authentication. Rate limited to 60 searches per hour per user (per-user sliding window).";
-            return operation;
-        });
+        .WithSummary("Search BoardGameGeek catalog")
+        .WithDescription("Search for board games on BoardGameGeek. Requires authentication. Rate limited to 60 searches per hour per user (per-user sliding window).");
 
         // GET /api/v1/bgg/games/{bggId}
         group.MapGet("/bgg/games/{bggId:int}", async (
@@ -78,12 +74,8 @@ internal static class BggEndpoints
         .RequireAuthenticatedUser()
         .RequireRateLimiting("BggSearch")
         .WithName("GetBggGameDetails")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Get BoardGameGeek game details";
-            operation.Description = "Retrieve detailed information about a specific board game from BoardGameGeek by its BGG ID. Requires authentication. Rate limited to 60 requests per hour per user (shared with /bgg/search).";
-            return operation;
-        });
+        .WithSummary("Get BoardGameGeek game details")
+        .WithDescription("Retrieve detailed information about a specific board game from BoardGameGeek by its BGG ID. Requires authentication. Rate limited to 60 requests per hour per user (shared with /bgg/search).");
 
         return group;
     }

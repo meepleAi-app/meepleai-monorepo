@@ -320,7 +320,7 @@ public sealed class SessionBroadcastService : ISessionBroadcastService, IDisposa
                 if (entry.IsNullOrEmpty) continue;
                 try
                 {
-                    var replayEntry = JsonSerializer.Deserialize<ReplayEntry>(entry!, _jsonOptions);
+                    var replayEntry = JsonSerializer.Deserialize<ReplayEntry>(((string?)entry)!, _jsonOptions);
                     if (replayEntry is null) continue;
 
                     // Visibility filter — EXACT mirror of CircularEventBuffer.GetSince (:671):
@@ -444,7 +444,7 @@ public sealed class SessionBroadcastService : ISessionBroadcastService, IDisposa
                 // Handle disconnect commands
                 if (channelStr.EndsWith("disconnect", StringComparison.Ordinal))
                 {
-                    if (Guid.TryParse(message!, out var disconnectSessionId))
+                    if (Guid.TryParse((string?)message, out var disconnectSessionId))
                     {
                         if (_pools.TryRemove(disconnectSessionId, out var pool))
                         {
@@ -455,7 +455,7 @@ public sealed class SessionBroadcastService : ISessionBroadcastService, IDisposa
                 }
 
                 // Handle normal event messages from other instances only
-                var redisMessage = JsonSerializer.Deserialize<RedisEventMessage>(message!, _jsonOptions);
+                var redisMessage = JsonSerializer.Deserialize<RedisEventMessage>(((string?)message)!, _jsonOptions);
                 if (redisMessage is not null)
                 {
                     // Skip events from this instance (already delivered locally in PublishAsync)

@@ -53,8 +53,7 @@ internal static class SessionTrackingEndpoints
         .Produces(401)
         .WithName("GetSessionStatistics")
         .WithTags("SessionStatistics")
-        .WithSummary("Get aggregated session statistics for the current user")
-        .WithOpenApi();
+        .WithSummary("Get aggregated session statistics for the current user");
 
         group.MapGet("/game-sessions/session-statistics/game/{gameId:guid}", async (
             Guid gameId, HttpContext httpContext, IMediator mediator) =>
@@ -73,8 +72,7 @@ internal static class SessionTrackingEndpoints
         .Produces(401)
         .WithName("GetGameStatistics")
         .WithTags("SessionStatistics")
-        .WithSummary("Get statistics for a specific game for the current user")
-        .WithOpenApi();
+        .WithSummary("Get statistics for a specific game for the current user");
 
         return group;
     }

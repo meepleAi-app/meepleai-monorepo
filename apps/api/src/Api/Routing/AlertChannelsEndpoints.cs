@@ -47,8 +47,7 @@ internal static class AlertChannelsEndpoints
             })
             .RequireAdminSession()
             .WithName("AlertChannels_GetAll")
-            .WithSummary("List all configured alert channels (email + slack)")
-            .WithOpenApi();
+            .WithSummary("List all configured alert channels (email + slack)");
 
         // PUT /api/v1/admin/alert-channels/{type}
         group.MapPut("/{type}", async (
@@ -73,8 +72,7 @@ internal static class AlertChannelsEndpoints
             })
             .RequireAdminSession()
             .WithName("AlertChannels_Upsert")
-            .WithSummary("Create or update an alert channel configuration")
-            .WithOpenApi();
+            .WithSummary("Create or update an alert channel configuration");
 
         // POST /api/v1/admin/alert-channels/{type}/test-connection
         group.MapPost("/{type}/test-connection", async (
@@ -89,8 +87,7 @@ internal static class AlertChannelsEndpoints
             })
             .RequireAdminSession()
             .WithName("AlertChannels_TestConnection")
-            .WithSummary("Probe the channel's transport (Slack: webhook POST · Email: config sanity-check)")
-            .WithOpenApi();
+            .WithSummary("Probe the channel's transport (Slack: webhook POST · Email: config sanity-check)");
     }
 }
 

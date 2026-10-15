@@ -153,7 +153,7 @@ jobs:
       - name: Setup backend environment
         uses: ./.github/actions/setup-backend
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
           working-directory: apps/api
           cache-nuget: 'true'
 
@@ -184,7 +184,7 @@ jobs:
 
       - name: Install EF Core tools
         run: |
-          dotnet tool update --global dotnet-ef || dotnet tool install --global dotnet-ef
+          dotnet tool update --global dotnet-ef --version 10.* || dotnet tool install --global dotnet-ef --version 10.*
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
       - name: Create test database

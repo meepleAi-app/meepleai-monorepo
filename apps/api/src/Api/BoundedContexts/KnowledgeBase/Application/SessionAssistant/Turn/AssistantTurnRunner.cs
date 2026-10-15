@@ -242,9 +242,8 @@ internal sealed class AssistantTurnRunner
         try
         {
             using var chat = _chatClients.Create(settings, meter);
-            // cerca_regole arriva con la fetta A5: fino ad allora non è offerto.
             var response = await chat.GetResponseAsync(
-                messages, new ChatOptions { Tools = toolset.CreateTools(includeRules: false) }, linked.Token)
+                messages, new ChatOptions { Tools = toolset.CreateTools() }, linked.Token)
                 .ConfigureAwait(false);
 
             // L'ultimo messaggio dell'assistente, non la concatenazione: i giri intermedi possono portare

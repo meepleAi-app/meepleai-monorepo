@@ -23,5 +23,3 @@ internal sealed record AssistantSessionState(
 internal sealed record AssistantPlayer(Guid Id, string Name, int Total, bool IsActive);
 
 internal sealed record AssistantScoreCell(Guid PlayerId, int Round, string Dimension, int Value);
-
-internal sealed record AssistantRulePassage(string Text, int? Page, string? Document);

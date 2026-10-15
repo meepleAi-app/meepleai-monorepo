@@ -1,5 +1,7 @@
+using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant;
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Tools;
+using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.AI;
@@ -30,7 +32,7 @@ public sealed class SessionAssistantToolsetTests
             .Returns(new AssistantPlayerMatch(Marco, "Marco", false, []));
     }
 
-    private SessionAssistantToolset Toolset()
+    private SessionAssistantToolset Toolset(IAssistantRuleSource? rules = null)
     {
         var sink = new Mock<IAssistantProposalSink>();
         sink.Setup(s => s.ProposeScoreAsync(It.IsAny<ScoreProposalDraft>(), It.IsAny<CancellationToken>()))
@@ -39,7 +41,7 @@ public sealed class SessionAssistantToolsetTests
         sink.Setup(s => s.ProposeTurnAsync(It.IsAny<TurnProposalDraft>(), It.IsAny<CancellationToken>()))
             .Callback<TurnProposalDraft, CancellationToken>((d, _) => _turns.Add(d))
             .ReturnsAsync(new ProposalReceipt(Guid.NewGuid(), "passa il turno"));
-        return new SessionAssistantToolset(_reader.Object, sink.Object, _matcher.Object);
+        return new SessionAssistantToolset(_reader.Object, sink.Object, _matcher.Object, rules);
     }
 
     private static AssistantSessionState State(
@@ -185,7 +187,7 @@ public sealed class SessionAssistantToolsetTests
     [Fact]
     public void CreateTools_NamesAndRequiredParameters()
     {
-        var tools = Toolset().CreateTools(includeRules: true).OfType<AIFunctionDeclaration>().ToList();
+        var tools = Toolset(Mock.Of<IAssistantRuleSource>()).CreateTools().OfType<AIFunctionDeclaration>().ToList();
 
         tools.Select(t => t.Name).Should().Equal("stato_partita", "cerca_regole", "proponi_punteggio", "proponi_turno");
         var required = tools.Single(t => t.Name == "proponi_punteggio").JsonSchema.GetProperty("required")
@@ -193,7 +195,90 @@ public sealed class SessionAssistantToolsetTests
         required.Should().BeEquivalentTo(["giocatore", "punti"]);
     }
 
+    private static CancellationToken Ct => TestContext.Current.CancellationToken;
+
+    private static ChunkCitation Cite(string text, int page = 3, string doc = "pdf-1") =>
+        new(doc, page, 0.9f, text, CopyrightTier.Full);
+
+    private static IAssistantRuleSource Rules(params AssistantRuleSearch[] answers)
+    {
+        var queue = new Queue<AssistantRuleSearch>(answers);
+        var rules = new Mock<IAssistantRuleSource>();
+        rules.Setup(r => r.SearchAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => queue.Dequeue());
+        return rules.Object;
+    }
+
+    private static AssistantRuleSearch Found(params ChunkCitation[] citations) =>
+        new(citations.Select(c => new AssistantRulePassage(c.SnippetPreview, c.PageNumber)).ToList(), citations);
+
+    // #4411: cerca_regole c'è solo se il turno ha una sorgente del regolamento (una sessione senza gioco non ne ha).
     [Fact]
-    public void CreateTools_WithoutAGame_DoesNotOfferTheRules() =>
-        Toolset().CreateTools(includeRules: false).Select(t => t.Name).Should().NotContain("cerca_regole");
+    public void CreateTools_OffersTheRules_OnlyWithARuleSource()
+    {
+        Toolset().CreateTools().Select(t => t.Name).Should().NotContain(SessionAssistantToolset.CercaRegole);
+        Toolset(Rules()).CreateTools().Select(t => t.Name).Should().Contain(SessionAssistantToolset.CercaRegole);
+    }
+
+    [Fact]
+    public async Task SearchRules_ReturnsThePassages_AndCollectsTheCitations()
+    {
+        var toolset = Toolset(Rules(Found(Cite("Si pescano 4 tessere."))));
+
+        var result = await toolset.SearchRulesAsync("quante tessere?", Ct);
+
+        result.Should().BeOfType<RulePassagesFound>()
+            .Which.Passaggi.Should().ContainSingle().Which.Should().Be(new AssistantRulePassage("Si pescano 4 tessere.", 3));
+        toolset.Citations.Should().ContainSingle();
+        toolset.ErrorCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task SearchRules_FindingNothing_SaysSo_WithoutAnError()
+    {
+        var toolset = Toolset(Rules(new AssistantRuleSearch([], [])));
+
+        var result = await toolset.SearchRulesAsync("quanti punti vale una riga?", Ct);
+
+        var found = result.Should().BeOfType<RulePassagesFound>().Which;
+        found.Passaggi.Should().BeEmpty();
+        found.Nota.Should().Contain("non rispondere a memoria");
+        toolset.ErrorCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task SearchRules_WithoutAccess_IsATypedError()
+    {
+        var toolset = Toolset(Rules(AssistantRuleSearch.NotAccessible));
+
+        var result = await toolset.SearchRulesAsync("quante tessere?", Ct);
+
+        result.Should().BeOfType<AssistantToolError>().Which.Error.Should().Be("regolamento_non_accessibile");
+        toolset.Citations.Should().BeEmpty();
+        toolset.ErrorCount.Should().Be(1);
+    }
+
+    // Review Focus 5 del piano 3.
+    [Fact]
+    public async Task SearchRules_WithAnEmptyQuestion_IsATypedError_AndDoesNotSearch()
+    {
+        var rules = new Mock<IAssistantRuleSource>(MockBehavior.Strict);
+        var toolset = Toolset(rules.Object);
+
+        var result = await toolset.SearchRulesAsync("  ", Ct);
+
+        result.Should().BeOfType<AssistantToolError>().Which.Error.Should().Be("domanda_mancante");
+    }
+
+    // Review Focus 1 del piano 3: due chiamate che trovano lo stesso passaggio danno una sola fonte.
+    [Fact]
+    public async Task SearchRules_TheSamePassageTwice_IsCitedOnce()
+    {
+        var toolset = Toolset(Rules(Found(Cite("Si pescano 4 tessere.")), Found(Cite("Si pescano 4 tessere."), Cite("Altro.", 5))));
+
+        await toolset.SearchRulesAsync("quante tessere?", Ct);
+        await toolset.SearchRulesAsync("quante tessere per espositore?", Ct);
+
+        toolset.Citations.Select(c => (c.PageNumber, c.SnippetPreview)).Should().Equal((3, "Si pescano 4 tessere."), (5, "Altro."));
+    }
 }

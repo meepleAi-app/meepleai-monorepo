@@ -1,9 +1,14 @@
 using System.Net;
 using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
+using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.Models;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using static Api.Tests.Integration.KnowledgeBase.SessionAssistant.ScriptedChatGateway;
 
@@ -185,5 +190,43 @@ public sealed class SessionAssistantPanelEndpointTests(SessionAssistantHostFixtu
         var (status, _, raw) = await GetPanelAsync(Guid.NewGuid(), _token);
 
         status.Should().Be(HttpStatusCode.NotFound, raw);
+    }
+
+    /// <summary>
+    /// #4411: le fonti di una risposta tornano con la rilettura del pannello, nella forma salvata dal turno: una
+    /// citazione Protected senza testo letterale.
+    /// </summary>
+    [Fact]
+    public async Task ThePanel_ReturnsTheSourcesOfAnAnswer_AsTheTurnSavedThem()
+    {
+        await SessionAssistantTestData.EnableAssistantAsync(host.Factory, Ct);
+        var table = await StartedTableAsync();
+        host.Llm.Reset(Says("Quattro tessere per espositore (pagina 3)."));
+        var (askStatus, _, askBody) = await SessionAssistantTestData.AskAsync(
+            _client, _token, table.SessionId, "quante tessere?", Ct);
+        askStatus.Should().Be(HttpStatusCode.OK, askBody);
+
+        // Il turno di questa sessione non ha un gioco, quindi non cerca: le fonti si scrivono sul messaggio salvato,
+        // nella forma che il turno usa (AssistantCitations).
+        await using (var scope = host.Factory.Services.CreateAsyncScope())
+        {
+            var threads = scope.ServiceProvider.GetRequiredService<IChatThreadRepository>();
+            var thread = await threads.FindByLiveSessionIdAsync(table.SessionId, Ct);
+            thread!.Messages[^1].SetAgentMetadata(citationsJson: AssistantCitations.Write(
+                [new CitationDto("pdf-1", 3, 0.9f, null, "protected", "Quattro tessere.")]));
+            await threads.UpdateAsync(thread, Ct);
+            await scope.ServiceProvider.GetRequiredService<IUnitOfWork>().SaveChangesAsync(Ct);
+        }
+
+        var (status, panel, raw) = await GetPanelAsync(table.SessionId, _token);
+
+        status.Should().Be(HttpStatusCode.OK, raw);
+        var messages = panel.GetProperty("messages").EnumerateArray().ToList();
+        messages[0].GetProperty("citations").ValueKind.Should().Be(JsonValueKind.Null, "la domanda non ha fonti");
+        var citation = messages[1].GetProperty("citations").EnumerateArray().Should().ContainSingle().Subject;
+        citation.GetProperty("pageNumber").GetInt32().Should().Be(3);
+        citation.GetProperty("copyrightTier").GetString().Should().Be("protected");
+        citation.GetProperty("snippetPreview").ValueKind.Should().Be(JsonValueKind.Null);
+        citation.GetProperty("paraphrasedSnippet").GetString().Should().Be("Quattro tessere.");
     }
 }

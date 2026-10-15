@@ -45,13 +45,6 @@ internal sealed class LiveSessionAssistantReader(IMediator mediator, Guid liveSe
 
         return LiveSessionAssistantState.From(session, phases.CurrentPhaseName, houseRules);
     }
-
-    /// <summary>
-    /// <c>cerca_regole</c> arriva con la fetta A5 e fino ad allora non è offerto al modello: una chiamata
-    /// qui è un errore di cablaggio, e fallisce invece di rispondere «nessun passaggio trovato».
-    /// </summary>
-    public Task<IReadOnlyList<AssistantRulePassage>> SearchRulesAsync(string question, CancellationToken cancellationToken) =>
-        throw new NotSupportedException("Rule search is not available to the session assistant yet (slice A5).");
 }
 
 internal static class LiveSessionAssistantState

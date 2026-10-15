@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Evaluation;
 
-/// <summary>Il lettore finto dello spike: lo stato e i passaggi del regolamento vengono dallo scenario.</summary>
+/// <summary>Il lettore finto dello spike: lo stato viene dallo scenario (il regolamento da <see cref="ScenarioRuleSource"/>).</summary>
 internal sealed class ScenarioSessionAssistantReader(AssistantScenario scenario) : ISessionAssistantReader
 {
     private static readonly Guid GameId = Guid.Parse("00000000-0000-0000-0000-0000000000aa");
@@ -35,8 +35,4 @@ internal sealed class ScenarioSessionAssistantReader(AssistantScenario scenario)
             scores,
             s.HouseRules));
     }
-
-    public Task<IReadOnlyList<AssistantRulePassage>> SearchRulesAsync(string question, CancellationToken cancellationToken) =>
-        Task.FromResult<IReadOnlyList<AssistantRulePassage>>(
-            scenario.Passages.Select(p => new AssistantRulePassage(p.Text, p.Page, scenario.State.Game)).ToList());
 }

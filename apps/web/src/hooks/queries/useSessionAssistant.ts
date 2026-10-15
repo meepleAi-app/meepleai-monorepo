@@ -25,6 +25,7 @@ import {
   type AssistantTurnEvent,
   type SessionAssistantPanelDto,
 } from '@/lib/api/schemas/live-sessions.schemas';
+import type { Citation } from '@/lib/api/schemas/streaming.schemas';
 import { askSessionAssistant } from '@/lib/session-live/assistant-stream';
 
 import { liveSessionKeys } from './useLiveSession';
@@ -38,6 +39,8 @@ export interface AssistantConversationMessage {
   readonly id: string;
   readonly role: string;
   readonly content: string;
+  /** #4411: the sources of an answer that read the rulebook, already gated by copyright tier. */
+  readonly citations?: readonly Citation[];
 }
 
 export interface AssistantTurnState {
@@ -88,7 +91,12 @@ function upsert(
 }
 
 function messagesOf(panel: SessionAssistantPanelDto): AssistantConversationMessage[] {
-  return panel.messages.map(m => ({ id: m.id, role: m.role, content: m.content }));
+  return panel.messages.map(m => ({
+    id: m.id,
+    role: m.role,
+    content: m.content,
+    citations: m.citations ?? undefined,
+  }));
 }
 
 function codeOf(error: unknown): string | null {
@@ -175,6 +183,7 @@ export function useSessionAssistant(
                 id: turnMessageId.current ?? `answer-${previous.length}`,
                 role: 'assistant',
                 content: text,
+                citations: event.citations ?? undefined,
               },
             ]);
           }

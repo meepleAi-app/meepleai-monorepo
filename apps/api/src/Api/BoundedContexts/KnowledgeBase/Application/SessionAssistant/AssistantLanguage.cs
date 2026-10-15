@@ -11,4 +11,10 @@ internal static class AssistantLanguage
         language is not null
         && language.StartsWith("en", StringComparison.OrdinalIgnoreCase)
         && (language.Length == 2 || language[2] is '-' or '_');
+
+    /// <summary>
+    /// Il codice a due lettere del recupero e del messaggio di copyright: «en» per l'inglese e le sue varianti,
+    /// «it» per il resto, con la stessa regola che sceglie il prompt (#4411).
+    /// </summary>
+    public static string Code(string? language) => IsEnglish(language) ? "en" : "it";
 }

@@ -8,8 +8,9 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Turn;
 /// <summary>
 /// Spec 2026-10-11 §6.2: una domanda dell'host all'assistente in partita. È in streaming perché il
 /// client vede cosa sta facendo l'assistente mentre il ciclo gira; la risposta resta bufferizzata (§6.1).
+/// <c>UserRole</c> decide l'accesso alla KB del gioco in <c>cerca_regole</c> (#4411), come in StreamQa.
 /// </summary>
-internal sealed record AskSessionAssistantCommand(Guid LiveSessionId, Guid UserId, string Question, string? Language)
+internal sealed record AskSessionAssistantCommand(Guid LiveSessionId, Guid UserId, string? UserRole, string Question, string? Language)
     : IStreamingQuery<AssistantTurnEvent>;
 
 internal sealed class AskSessionAssistantCommandHandler(AssistantTurnRunner runner)

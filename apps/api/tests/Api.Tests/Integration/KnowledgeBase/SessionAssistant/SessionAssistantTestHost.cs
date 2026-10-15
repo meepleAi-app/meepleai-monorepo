@@ -11,6 +11,7 @@ using Api.BoundedContexts.KnowledgeBase.Infrastructure.SessionAssistant;
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.Hubs;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Services;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -232,6 +233,47 @@ internal static class SessionAssistantTestData
             await SendAsync(factory, new StartLiveSessionCommand(sessionId, ownerId, UserTier.Free, Role.User), ct);
         }
 
+        return new LiveTable(sessionId, ids);
+    }
+
+    /// <summary>
+    /// #4411: una sessione avviata su un gioco del catalogo, con la dimensione «punti» e i giocatori dati. La KB del
+    /// gioco non è pubblica e l'host non ne ha dichiarato il possesso: non ha accesso al regolamento.
+    /// </summary>
+    public static async Task<LiveTable> CreateGameTableAsync(
+        WebApplicationFactory<Program> factory, Guid ownerId, CancellationToken ct, params string[] players)
+    {
+        var gameId = Guid.NewGuid();
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            db.SharedGames.Add(new SharedGameEntity
+            {
+                Id = gameId,
+                Title = "Azul",
+                YearPublished = 2017,
+                MinPlayers = 2,
+                MaxPlayers = 4,
+                PlayingTimeMinutes = 45,
+                MinAge = 8,
+                ImageUrl = string.Empty,
+                ThumbnailUrl = string.Empty,
+                Description = string.Empty,
+                CreatedBy = Guid.NewGuid(),
+                CreatedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync(ct);
+        }
+
+        var sessionId = await SendAsync(factory, new CreateLiveSessionCommand(
+            UserId: ownerId, GameName: "Azul", GameId: gameId, ScoringDimensions: ["punti"]), ct);
+        var ids = new Dictionary<string, Guid>(StringComparer.Ordinal);
+        for (var i = 0; i < players.Length; i++)
+        {
+            ids[players[i]] = await SendAsync(factory, new AddPlayerToLiveSessionCommand(sessionId, players[i], (PlayerColor)i), ct);
+        }
+
+        await SendAsync(factory, new StartLiveSessionCommand(sessionId, ownerId, UserTier.Free, Role.User), ct);
         return new LiveTable(sessionId, ids);
     }
 

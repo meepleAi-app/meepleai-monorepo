@@ -85,13 +85,14 @@ internal sealed class SessionAssistantEvaluator(
         CancellationToken cancellationToken)
     {
         var reader = new ScenarioSessionAssistantReader(scenario);
-        turn.Toolset = new SessionAssistantToolset(reader, turn.Sink, matcher);
         var state = await reader.GetStateAsync(cancellationToken).ConfigureAwait(false);
+        var rules = offerRules && state.GameId is not null ? new ScenarioRuleSource(scenario) : null;
+        turn.Toolset = new SessionAssistantToolset(reader, turn.Sink, matcher, rules);
         var messages = AssistantConversation.Build(prompts, scenario.Language, state, [], scenario.Utterance);
 
         using var chat = factory.Create(settings, turn.Meter);
         turn.Response = await chat.GetResponseAsync(
-            messages, new ChatOptions { Tools = turn.Toolset.CreateTools(includeRules: offerRules && state.GameId is not null) }, cancellationToken)
+            messages, new ChatOptions { Tools = turn.Toolset.CreateTools() }, cancellationToken)
             .ConfigureAwait(false);
     }
 

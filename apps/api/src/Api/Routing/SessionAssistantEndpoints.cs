@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Confirmation;
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Panel;
@@ -89,7 +90,13 @@ internal static class SessionAssistantEndpoints
         IMediator mediator,
         CancellationToken cancellationToken)
     {
-        var command = new AskSessionAssistantCommand(sessionId, httpContext.User.GetUserId(), request.Question, request.Language);
+        // #4411: il ruolo decide l'accesso alla KB del gioco in cerca_regole (bypass admin), come in StreamQa.
+        var command = new AskSessionAssistantCommand(
+            LiveSessionId: sessionId,
+            UserId: httpContext.User.GetUserId(),
+            UserRole: httpContext.User.FindFirst(ClaimTypes.Role)?.Value,
+            Question: request.Question,
+            Language: request.Language);
         var events = mediator.CreateStream(command, cancellationToken).GetAsyncEnumerator(cancellationToken);
         await using var disposal = events.ConfigureAwait(false);
 

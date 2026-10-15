@@ -102,8 +102,9 @@ public sealed class OllamaChatTests
         const string response = """{"model":"qwen2.5:3b","message":{"role":"assistant","content":"ok"},"done":true,"done_reason":"stop"}""";
         var client = Create(response, body => sent = body);
         var toolset = new SessionAssistantToolset(
-            Mock.Of<ISessionAssistantReader>(), Mock.Of<IAssistantProposalSink>(), Mock.Of<IAssistantPlayerMatcher>());
-        var tools = toolset.CreateTools(includeRules: true).OfType<AIFunctionDeclaration>()
+            Mock.Of<ISessionAssistantReader>(), Mock.Of<IAssistantProposalSink>(), Mock.Of<IAssistantPlayerMatcher>(),
+            Mock.Of<IAssistantRuleSource>());
+        var tools = toolset.CreateTools().OfType<AIFunctionDeclaration>()
             .Select(f => new LlmToolDefinition(f.Name, f.Description, f.JsonSchema))
             .ToList();
         tools.SelectMany(t => TypeArrays(t.ParametersSchema, t.Name)).Should().NotBeEmpty(

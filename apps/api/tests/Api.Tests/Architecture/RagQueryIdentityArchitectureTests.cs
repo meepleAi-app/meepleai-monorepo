@@ -52,6 +52,8 @@ public class RagQueryIdentityArchitectureTests
         ("Api.BoundedContexts.KnowledgeBase.Application.Queries.ExplainQuery", "UserId", "UserRole"),
         // #4282: l'agente di sessione cerca nella KB del gioco con cui viene avviato.
         ("Api.BoundedContexts.KnowledgeBase.Application.Commands.LaunchSessionAgentCommand", "UserId", "UserRole"),
+        // #4411: l'assistente in partita cerca nel regolamento del gioco della sessione con cerca_regole.
+        ("Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant.Turn.AskSessionAssistantCommand", "UserId", "UserRole"),
     };
 
     /// <summary>

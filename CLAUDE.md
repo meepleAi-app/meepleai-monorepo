@@ -13,16 +13,18 @@
 | Start Dev (core) | `make dev-core` | `infra/` |
 | Dev from Snapshot | `make dev-from-snapshot` | `infra/` — [guide](./docs/for-developers/workflows/snapshot-seed-workflow.md) |
 | Bake Snapshot | `make seed-index` | `infra/` — raro, indicizza tutti i PDF |
-| Integration | `make tunnel && make integration` | `infra/` — **Git Bash only (Windows)** |
-| Deploy Staging | `make staging` | `infra/` (on server) |
+| Integration | `make tunnel && make integration` | `infra/` — **Git Bash only (Windows)** — ⏸ sospeso, vedi sotto |
+| Deploy Staging | `make staging` | `infra/` (on server) — ⏸ sospeso, vedi sotto |
 | Game Reset (#1320) | `make game-reset-help` | `infra/` — [spec](./docs/for-developers/specs/2026-05-19-game-entity-reset.md) |
-| Setup Secrets | `make secrets-setup && make secrets-sync` | `infra/` |
+| Setup Secrets | `make secrets-setup && make secrets-sync` | `infra/` — `secrets-sync` ⏸ sospeso, vedi sotto |
 | Stop / Logs | `make dev-down` / `make logs s=api` | `infra/` |
 | All commands | `make help` | `infra/` |
 | Start API (no Docker) | `dotnet run` | `apps/api/src/Api/` |
 | Start Web (no Docker) | `pnpm dev` | `apps/web/` |
 | Migration | `dotnet ef migrations add Name` | `apps/api/src/Api/` |
 | API Docs | http://localhost:8080/scalar/v1 | Browser |
+
+> ⏸ **Nessun server staging dal 2026-10-15** ([#4428](https://github.com/meepleAi-app/meepleai-monorepo/issues/4428)). `make staging`, `make tunnel && make integration` e `make secrets-sync` hanno bisogno di quell'host e oggi non funzionano; `make secrets-setup` produce solo placeholder, quindi i `.secret` reali esistono solo dove sono già stati copiati ([#4427](https://github.com/meepleAi-app/meepleai-monorepo/issues/4427)). I workflow `deploy-staging.yml` e `title-health-staging.yml` sono **disattivati**, non rimossi: al ritorno di un server, prima di `gh workflow enable <file>`, fissa la chiave host al posto di `StrictHostKeyChecking=no` (vedi #4428). Un «verifica su staging» in una DoD va scritto sotto condizione, non come arretrato.
 
 ### Windows Notes
 

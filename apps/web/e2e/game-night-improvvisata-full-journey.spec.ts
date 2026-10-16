@@ -5,7 +5,6 @@ import {
   SessionHelper,
   MOCK_LIVE_SESSION,
   MOCK_SESSION_ID,
-  MOCK_SCORE_PARSE_RECORDED,
   MOCK_NOTIFICATION_AGENT_READY,
 } from './pages/helpers/SessionHelper';
 
@@ -63,12 +62,11 @@ test.describe('Game Night Improvvisata — Complete Journey', () => {
     });
   });
 
-  test.describe('Step 6-7: Live Session + ScoreAssistant', () => {
-    test('should render live session with score assistant', async ({ page }) => {
+  test.describe('Step 6-7: Live Session', () => {
+    test('should render the live session', async ({ page }) => {
       await sessionHelper.mockLiveSession();
       await sessionHelper.mockScoresList();
       await sessionHelper.mockPlayersList();
-      await sessionHelper.mockScoreParse(MOCK_SCORE_PARSE_RECORDED);
       await sessionHelper.mockSessionCatchAll();
       await page
         .context()

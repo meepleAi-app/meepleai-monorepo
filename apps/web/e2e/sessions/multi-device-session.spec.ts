@@ -410,39 +410,6 @@ test.describe('Multi-Device Session Flow', () => {
 
       await hostContext.close();
     });
-
-    test('score confirmation endpoint is called correctly', async ({ browser }) => {
-      const hostContext = await browser.newContext();
-      const hostPage = await hostContext.newPage();
-
-      await setupHostAuth(hostContext);
-      await setupSessionApiRoutes(hostContext);
-
-      let confirmCalled = false;
-      await hostContext.route(
-        `${API_BASE}/api/v1/live-sessions/${SESSION_ID}/scores/confirm**`,
-        async route => {
-          confirmCalled = true;
-          await route.fulfill({ status: 200, body: '{}' });
-        }
-      );
-
-      await hostPage.goto(`/sessions/${SESSION_ID}/scoreboard`);
-
-      // Look for confirm button on scoreboard
-      const confirmButton = hostPage
-        .getByRole('button', { name: /confirm/i })
-        .or(hostPage.locator('[data-testid="confirm-score"]'))
-        .first();
-
-      if (await confirmButton.isVisible({ timeout: 3000 })) {
-        await confirmButton.click();
-        await hostPage.waitForTimeout(500);
-        expect(confirmCalled).toBe(true);
-      }
-
-      await hostContext.close();
-    });
   });
 
   test.describe('Agent Access Toggle', () => {

@@ -75,6 +75,7 @@ public sealed class PdfProcessingPipelineFailureModesTests : IDisposable
         var pdf = await _db.PdfDocuments.AsNoTracking().SingleAsync();
         pdf.ProcessingState.Should().Be("Failed");
         pdf.ProcessingError.Should().Contain("no usable chunks");
+        pdf.FailedAtState.Should().Be("Chunking", "la fase in cui il documento si è fermato");
     }
 
     [Fact]
@@ -91,6 +92,7 @@ public sealed class PdfProcessingPipelineFailureModesTests : IDisposable
         var pdf = await _db.PdfDocuments.AsNoTracking().SingleAsync();
         pdf.ProcessingState.Should().Be("Failed", "un guasto di embedding non deve lasciare il documento in Embedding");
         pdf.ProcessingError.Should().Contain("embedding service down");
+        pdf.FailedAtState.Should().Be("Embedding");
     }
 
     [Fact]
@@ -110,6 +112,7 @@ public sealed class PdfProcessingPipelineFailureModesTests : IDisposable
         outcome.Should().Be(PdfPipelineOutcome.Failed);
         var pdf = await _db.PdfDocuments.AsNoTracking().SingleAsync();
         pdf.ProcessingState.Should().Be("Failed");
+        pdf.FailedAtState.Should().Be("Embedding");
         (await _db.TextChunks.CountAsync(tc => tc.PdfDocumentId == _pdfId)).Should().Be(0, "i vettori si controllano prima di ogni scrittura");
         (await _db.PgVectorEmbeddings.CountAsync()).Should().Be(0);
     }

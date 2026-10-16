@@ -382,7 +382,8 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         catch
         {
             // Nothing committed: the stored object would be an orphan. Best effort, like the dedup path.
-            await DeleteStoredObjectSafelyAsync(storageResult, session, cancellationToken).ConfigureAwait(false);
+            // CancellationToken.None: a cancelled request must not leave the object behind as well.
+            await DeleteStoredObjectSafelyAsync(storageResult, session, CancellationToken.None).ConfigureAwait(false);
             throw;
         }
 

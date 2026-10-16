@@ -268,6 +268,44 @@ public sealed class CompleteChunkedUploadS3IntegrationTests : IAsyncLifetime
         (await assertDb.TextChunks.CountAsync(tc => tc.PdfDocumentId == documentId, Ct)).Should().BeGreaterThan(0);
     }
 
+    [Fact]
+    public async Task QueuePipeline_WhenTheObjectIsMissing_EndsFailed_WithStageAndCategory()
+    {
+        RequireMinio();
+        var documentId = await CompleteAChunkedUploadAsync();
+        await _storage!.DeleteAsync(documentId.ToString("N"), BlobCategory.Pdf, TestSharedGameId.ToString(), Ct);
+
+        using var scope = _provider!.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var pdf = await db.PdfDocuments.AsNoTracking().SingleAsync(p => p.Id == documentId, Ct);
+        var language = new Mock<ILanguageDetector>();
+        language.Setup(l => l.Detect(It.IsAny<string>())).Returns(new LanguageDetectionResult("en", true, 0.95));
+        var pipeline = new PdfProcessingPipelineService(
+            db,
+            new RelationalPdfClaimService(db),
+            Mock.Of<IPdfTextExtractor>(),
+            Mock.Of<IPdfTableExtractor>(),
+            Mock.Of<ITextChunkingService>(),
+            Mock.Of<IEmbeddingService>(),
+            _storage,
+            TimeProvider.System,
+            NullLogger<PdfProcessingPipelineService>.Instance,
+            language.Object,
+            Mock.Of<IChunkTranslationService>(),
+            Mock.Of<IPdfIndexingPipeline>());
+
+        var outcome = await pipeline.ProcessAsync(documentId, pdf.FilePath, TestUserId, Ct);
+
+        outcome.Should().Be(PdfPipelineOutcome.Failed);
+        using var assertScope = _provider.CreateScope();
+        var failed = await assertScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>()
+            .PdfDocuments.AsNoTracking().SingleAsync(p => p.Id == documentId, Ct);
+        failed.ProcessingState.Should().Be(nameof(PdfProcessingState.Failed));
+        failed.FailedAtState.Should().Be(nameof(PdfProcessingState.Extracting), "la fase in cui il documento si è fermato");
+        failed.ErrorCategory.Should().Be(nameof(ErrorCategory.StorageObjectMissing));
+        failed.ProcessingError.Should().Contain(documentId.ToString("N"), "il messaggio nomina la chiave cercata, non un percorso su disco");
+    }
+
     private async Task<Guid> CompleteAChunkedUploadAsync()
     {
         var result = await SendCompleteAsync();

@@ -1218,8 +1218,22 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         }
     }
 
+    /// <summary>
+    /// #4442: records the stage the document was in when it failed, as the upload path already does
+    /// (<c>UploadPdfCommandHandler</c>). Informational: the admin KB document shows it; retries do not
+    /// resume from it.
+    /// </summary>
+    private static void RecordFailedAtState(PdfDocumentEntity pdfDoc)
+    {
+        if (!string.Equals(pdfDoc.ProcessingState, nameof(PdfProcessingState.Failed), StringComparison.Ordinal))
+        {
+            pdfDoc.FailedAtState = pdfDoc.ProcessingState;
+        }
+    }
+
     private async Task MarkFailedAsync(PdfDocumentEntity pdfDoc, string errorMessage)
     {
+        RecordFailedAtState(pdfDoc);
         // Issue #4215: Use Failed state
         pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
         pdfDoc.ProcessingError = errorMessage;
@@ -1266,6 +1280,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             if (pdfDoc != null
                 && !string.Equals(pdfDoc.ProcessingState, nameof(PdfProcessingState.Ready), StringComparison.Ordinal))
             {
+                RecordFailedAtState(pdfDoc);
                 // Issue #4215: Use Failed state
                 pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
                 pdfDoc.ProcessingError = errorMessage.Length > 500

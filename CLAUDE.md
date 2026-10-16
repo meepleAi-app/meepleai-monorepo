@@ -16,7 +16,7 @@
 | Integration | `make tunnel && make integration` | `infra/` — **Git Bash only (Windows)** — ⏸ sospeso, vedi sotto |
 | Deploy Staging | `make staging` | `infra/` (on server) — ⏸ sospeso, vedi sotto |
 | Game Reset (#1320) | `make game-reset-help` | `infra/` — [spec](./docs/for-developers/specs/2026-05-19-game-entity-reset.md) |
-| Setup Secrets | `make secrets-setup && make secrets-sync` | `infra/` — `secrets-sync` ⏸ sospeso, vedi sotto |
+| Setup Secrets | `make secrets-setup && make secrets-sync` | `infra/` — decifra i segreti del repo, serve la chiave age ([ADR-099](./docs/for-claude/architecture/adr/adr-099-secrets-sops-age-in-repo.md)) |
 | Stop / Logs | `make dev-down` / `make logs s=api` | `infra/` |
 | All commands | `make help` | `infra/` |
 | Start API (no Docker) | `dotnet run` | `apps/api/src/Api/` |
@@ -24,7 +24,7 @@
 | Migration | `dotnet ef migrations add Name` | `apps/api/src/Api/` |
 | API Docs | http://localhost:8080/scalar/v1 | Browser |
 
-> ⏸ **Nessun server staging dal 2026-10-15** ([#4428](https://github.com/meepleAi-app/meepleai-monorepo/issues/4428)). `make staging`, `make tunnel && make integration` e `make secrets-sync` hanno bisogno di quell'host e oggi non funzionano; `make secrets-setup` produce solo placeholder, quindi i `.secret` reali esistono solo dove sono già stati copiati ([#4427](https://github.com/meepleAi-app/meepleai-monorepo/issues/4427)). I workflow `deploy-staging.yml` e `title-health-staging.yml` sono **disattivati**, non rimossi: al ritorno di un server, prima di `gh workflow enable <file>`, fissa la chiave host al posto di `StrictHostKeyChecking=no` (vedi #4428). Un «verifica su staging» in una DoD va scritto sotto condizione, non come arretrato.
+> ⏸ **Nessun server staging dal 2026-10-15** ([#4428](https://github.com/meepleAi-app/meepleai-monorepo/issues/4428)). `make staging` e `make tunnel && make integration` hanno bisogno di quell'host e oggi non funzionano. I segreti non ne dipendono più: sono cifrati nel repository e `make secrets-sync` li decifra con la chiave age (ADR-099). I workflow `deploy-staging.yml` e `title-health-staging.yml` sono **disattivati**, non rimossi: al ritorno di un server, prima di `gh workflow enable <file>`, fissa la chiave host al posto di `StrictHostKeyChecking=no` (vedi #4428). Un «verifica su staging» in una DoD va scritto sotto condizione, non come arretrato.
 
 ### Windows Notes
 
@@ -115,14 +115,18 @@ cd ../../infra && make dev        # All services (make dev-core = no AI/monitori
 
 ### Secret Management
 
-`.secret` files in `infra/secrets/` — single flat directory. Staging is source of truth.
+`.secret` files in `infra/secrets/` — single flat directory, gitignored. **Source of truth: the encrypted copies in `infra/secrets/sops/<name>.secret.enc`** (SOPS + age, [ADR-099](./docs/for-claude/architecture/adr/adr-099-secrets-sops-age-in-repo.md)). Staging no longer is.
 
 | Command | Purpose |
 |---------|---------|
 | `make secrets-setup` | Generate placeholders from `.example` templates |
-| `make secrets-sync` | Pull real values from staging (requires SSH) |
+| `make secrets-sync` | Decrypt `sops/*.secret.enc` into `*.secret`. Refuses to overwrite a local file that differs (`secrets-sops.sh decrypt --force <name>`); replaces placeholders |
+| `make secrets-encrypt` | Encrypt the local `*.secret` that changed into `sops/` — then **commit** the `.secret.enc` |
+| `make secrets-status` | Aligned / different / local-only / encrypted-only, per secret |
 
-**Rule**: Never commit `.secret` files. Only `.secret.example` templates are committed.
+Needs `sops` and `age` (`winget install FiloSottile.age SecretsOPerationS.SOPS`) and the age private key at `%AppData%\sops\age\keys.txt` (Linux: `~/.config/sops/age/keys.txt`, or `SOPS_AGE_KEY_FILE`). The key is the one critical secret: two copies (password manager + offline), never in the repo. If it leaks, **rotate the secrets** — a new key alone does not protect values already in git history.
+
+**Rule**: Never commit plaintext `.secret` files — the pre-commit hook and `dev-fast` reject them, and reject any non-encrypted value under `infra/secrets/sops/`. Only `.secret.example` templates and `.secret.enc` files are committed. CI keeps using placeholders: it has no key.
 
 **S3 Storage**: Factory pattern via `STORAGE_PROVIDER` env var (`local` default, `s3` for R2/AWS/MinIO). Config in `infra/secrets/storage.secret` — see [Operations Manual](./docs/for-developers/operations/operations-manual.md).
 

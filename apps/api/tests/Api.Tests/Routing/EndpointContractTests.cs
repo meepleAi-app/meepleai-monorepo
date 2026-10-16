@@ -170,7 +170,8 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
         yield return ["GET", "/api/v1/admin/resources/tokens/top-consumers", "#4212 — token tiers and credits (Administration): a second per-user plan that never blocked a request; the plan is TierDefinition"];
         yield return ["PUT", "/api/v1/admin/resources/tokens/tiers/free", "#4212 — token tiers and credits (Administration): a second per-user plan that never blocked a request; the plan is TierDefinition"];
         yield return ["POST", "/api/v1/admin/resources/tokens/add-credits", "#4212 — token tiers and credits (Administration): a second per-user plan that never blocked a request; the plan is TierDefinition"];
-        yield return ["GET", "/api/v1/budget/user/00000000-0000-0000-0000-000000000001", "#4212 — token tiers and credits (Administration): a second per-user plan that never blocked a request; the plan is TierDefinition"];
+        yield return ["GET", "/api/v1/budget/user/00000000-0000-0000-0000-000000000001", "#4212 — token tiers and credits (Administration): a second per-user plan that never blocked a request; the plan is TierDefinition"];        yield return ["POST", "/api/v1/live-sessions/00000000-0000-0000-0000-000000000001/scores/parse", "#4448 (A7) — dictated score parsing: replaced by the in-game assistant, no page mounted its only caller (ScoreAssistant)"];
+        yield return ["POST", "/api/v1/live-sessions/00000000-0000-0000-0000-000000000001/scores/confirm", "#4448 (A7) — confirmation of a dictated score: same flow as scores/parse; host ratification of a guest proposal stays on scores/proposals/confirm"];
     }
 
     [Theory]

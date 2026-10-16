@@ -12,6 +12,27 @@ CURRENT_BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "detached")
 echo "📌 Current branch: $CURRENT_BRANCH"
 
 # ============================================
+# Secrets: nothing in plaintext (Issue #4427, ADR-099) — all branches
+# ============================================
+# The .secret files are gitignored, but `git add -f` gets past that. Encrypted files under
+# infra/secrets/sops/ are checked on the STAGED blob, not the working tree: that is what lands.
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACMR)
+PLAIN_SECRETS=$(echo "$STAGED_FILES" | grep -E '^infra/secrets/(prod/)?[^/]+\.secret(\.bak)?$' || true)
+if [ -n "$PLAIN_SECRETS" ]; then
+  echo "❌ Plaintext secrets staged — encrypt them with 'cd infra && make secrets-encrypt' instead:"
+  echo "$PLAIN_SECRETS" | sed 's/^/   /'
+  exit 1
+fi
+SOPS_FILES=$(echo "$STAGED_FILES" | grep -E '^infra/secrets/sops/' || true)
+if [ -n "$SOPS_FILES" ]; then
+  echo "🔐 Checking encrypted secrets..."
+  SOPS_TMP=$(mktemp -d)
+  for f in $SOPS_FILES; do git show ":$f" > "$SOPS_TMP/$(basename "$f")"; done
+  bash infra/scripts/secrets-sops.sh check "$SOPS_TMP"/* || { rm -rf "$SOPS_TMP"; exit 1; }
+  rm -rf "$SOPS_TMP"
+fi
+
+# ============================================
 # Port Conflict Check (Issue #3797)
 # ============================================
 

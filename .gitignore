@@ -53,6 +53,8 @@ infra/traefik/certs/*.*
 # Exclude actual secret files but keep templates
 infra/secrets/*.secret
 !infra/secrets/*.secret.example
+# #4427: copia in chiaro che `secrets-sops.sh decrypt --force` lascia prima di sovrascrivere
+infra/secrets/*.secret.bak
 
 # Production secrets (separate management)
 infra/secrets/prod/*.secret

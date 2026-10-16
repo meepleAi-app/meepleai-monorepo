@@ -37,6 +37,10 @@ on:
       # che ognuno sia eseguibile nell'indice, e un hook nuovo aggiunto da Windows entra come 100644.
       - 'tools/cleanup/**'
       - '.husky/**'
+      # #4427: i segreti cifrati e i destinatari age. Senza queste righe una PR che aggiunge un file
+      # cifrato non avvierebbe il controllo che ne rifiuta i valori in chiaro.
+      - 'infra/secrets/sops/**'
+      - '.sops.yaml'
       # #4256: il prompt misurato e il set di scenari dell'assistente, che due classi di test unit
       # del backend leggono dal repository (vedi il filtro `backend` più sotto).
       - 'tests/llm-eval/session-assistant/prompts/**'
@@ -152,6 +156,8 @@ jobs:
               - 'apps/api/tests/Api.Tests/integration.runsettings'
               - 'tools/cleanup/**'
               - '.husky/**'
+              - 'infra/secrets/sops/**'
+              - '.sops.yaml'
               - 'apps/web/scripts/install-git-hooks.mjs'
               - 'apps/web/package.json'
               - '.github/workflows/dev-fast.yml'
@@ -518,12 +524,41 @@ jobs:
             exit 1
           fi
 
+      - name: Install age and sops (secrets-sops.bats, #4427)
+        # secrets-sops.bats runs the REAL tools: a stub would only prove the script calls a
+        # command, not that the round-trip keeps every value. The suite treats a missing tool as
+        # an error under CI, so this step is what makes it run — removing it turns the suite red,
+        # not silently skipped. Versions and SHA-256 are pinned: sops' hash is the one in its
+        # official checksums.txt; age publishes no checksum file (only .proof), so its hash is the
+        # one of the v1.3.2 release asset, taken on 2026-10-16.
+        env:
+          AGE_VERSION: v1.3.2
+          AGE_SHA256: cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10
+          SOPS_VERSION: v3.13.3
+          SOPS_SHA256: e5bec3346a873ae91d871550f3e698c1aad962aff462a080e40f25fde17fef6b
+        run: |
+          set -euo pipefail
+          tmp=$(mktemp -d)
+          curl -fsSLo "$tmp/age.tgz" "https://github.com/FiloSottile/age/releases/download/${AGE_VERSION}/age-${AGE_VERSION}-linux-amd64.tar.gz"
+          echo "${AGE_SHA256}  $tmp/age.tgz" | sha256sum -c -
+          tar -xzf "$tmp/age.tgz" -C "$tmp"
+          sudo install -m 0755 "$tmp/age/age" "$tmp/age/age-keygen" /usr/local/bin/
+          curl -fsSLo "$tmp/sops" "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.amd64"
+          echo "${SOPS_SHA256}  $tmp/sops" | sha256sum -c -
+          sudo install -m 0755 "$tmp/sops" /usr/local/bin/sops
+          age --version && sops --version
+
       - name: Run bats suites
         # Version pinned so a bats major bump cannot silently change semantics.
         # jq and bash are preinstalled on ubuntu-latest; both scripts need them.
         # --print-output-on-failure surfaces the failing script's stderr in the
         # job log, so a red check is diagnosable without a local repro.
         run: npx --yes bats@1.13.0 --print-output-on-failure infra/scripts/tests/
+
+      - name: Encrypted secrets hold no plaintext (#4427)
+        # The pre-commit hook checks the same thing, but hooks can be skipped. This needs no key:
+        # it reads only the shape of each file (sops metadata present, every value ENC[...]).
+        run: bash infra/scripts/secrets-sops.sh check
 
       - name: Run Pester suites
         # #3680. Version pinned for the same reason bats is: a Pester major bump

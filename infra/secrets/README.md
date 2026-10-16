@@ -4,6 +4,24 @@
 
 ---
 
+## Where the real values live (ADR-099, #4427)
+
+The real values are committed **encrypted** in `sops/<name>.secret.enc` (SOPS, dotenv format, age recipients in `/.sops.yaml`). The plaintext `<name>.secret` files in this directory are what the API and compose read; they stay gitignored and are produced from the encrypted copies:
+
+```bash
+cd infra
+make secrets-setup     # placeholders for anything missing
+make secrets-sync      # decrypt sops/*.secret.enc over the placeholders
+make secrets-status    # aligned / different / local-only / encrypted-only
+make secrets-encrypt   # after changing a .secret: encrypt it, then commit sops/<name>.secret.enc
+```
+
+Prerequisites: `sops` and `age` on the PATH, and the age private key at `%AppData%\sops\age\keys.txt` on Windows (`~/.config/sops/age/keys.txt` on Linux, or `SOPS_AGE_KEY_FILE`). Without the key `make secrets-sync` fails instead of writing empty files.
+
+Until 2026-10 the source of truth was the staging server (`make secrets-sync` copied files *from* it with `scp`). That flow survives as `make secrets-pull-staging`, but staging is down: see [ADR-099](../../docs/for-claude/architecture/adr/adr-099-secrets-sops-age-in-repo.md). Sections below that mention syncing from staging describe that old flow.
+
+---
+
 ## Quick Reference - All Secret Files
 
 | File | Priority | Variables | Default Values | Path |

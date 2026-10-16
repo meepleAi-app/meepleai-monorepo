@@ -246,61 +246,6 @@ public sealed class AgentSessionOwnershipIntegrationTests
         (await AgentSessionCountAsync(lockedGameSessionId)).Should().Be(0);
     }
 
-    // ── chat ─────────────────────────────────────────────────────────────────────
-
-    private object ChatBody() => new { agentSessionId = _agentSessionId, userQuestion = "Who goes first?" };
-
-    [Fact]
-    public async Task Chat_by_another_user_is_forbidden()
-    {
-        var response = await SendAsync(HttpMethod.Post, AgentUrl(_gameSessionId, "chat"), _otherToken, ChatBody());
-
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-    }
-
-    [Fact]
-    public async Task Chat_by_the_owner_streams_past_the_check()
-    {
-        using var request = TestSessionHelper.CreateAuthenticatedRequest(
-            HttpMethod.Post, AgentUrl(_gameSessionId, "chat"), _ownerToken, ChatBody());
-        // Solo le intestazioni e il primo evento: la risposta dell'LLM non riguarda questo test.
-        using var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        response.Content.Headers.ContentType!.MediaType.Should().Be("text/event-stream");
-
-        using var reader = new StreamReader(await response.Content.ReadAsStreamAsync());
-        var firstData = await ReadFirstDataLineAsync(reader);
-        using var first = JsonDocument.Parse(firstData);
-        first.RootElement.GetProperty("type").GetInt32().Should().Be(0,
-            "il primo evento è lo StateUpdate che segue il controllo e la creazione del thread, non un errore");
-    }
-
-    [Fact]
-    public async Task Chat_on_an_agent_session_of_another_game_session_answers_session_not_found()
-    {
-        using var request = TestSessionHelper.CreateAuthenticatedRequest(
-            HttpMethod.Post, AgentUrl(_freeGameSessionId, "chat"), _ownerToken, ChatBody());
-        using var response = await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
-
-        using var reader = new StreamReader(await response.Content.ReadAsStreamAsync());
-        var firstData = await ReadFirstDataLineAsync(reader);
-        firstData.Should().Contain("SESSION_NOT_FOUND",
-            "la sessione agente del corpo appartiene a un'altra sessione di gioco del percorso");
-    }
-
-    private static async Task<string> ReadFirstDataLineAsync(StreamReader reader)
-    {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-        while (await reader.ReadLineAsync(timeout.Token) is { } line)
-        {
-            if (line.StartsWith("data: ", StringComparison.Ordinal))
-                return line["data: ".Length..];
-        }
-
-        throw new InvalidOperationException("The stream ended without a data line.");
-    }
-
     // ── stato, definizione, configurazione ───────────────────────────────────────
 
     [Fact]

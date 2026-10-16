@@ -18,7 +18,7 @@
  *   - useSessionLiveStream NOT called in IS_VISUAL_TEST_BUILD mode
  *   - Dialog state from URL: ?dialog=pause mounts PauseOverlay, ?dialog=endgame mounts EndgameDialog
  *   - ConnectionLostBanner renders for reconnecting / degraded-polling / failed states
- *   - Mobile tab routing: chat tab renders LiveAgentChat, tools/widget tab renders ToolkitRenderer (G5c #2376)
+ *   - Mobile tab routing: tools/widget tab renders ToolkitRenderer (G5c #2376)
  *   - Desktop right column: RightColumnTabs mounted with correct activeTab
  *   - Desktop tab change calls router.replace with ?tab= param
  *   - Optimistic score update via liveStream events
@@ -135,23 +135,6 @@ vi.mock('sonner', () => ({
     success: vi.fn(),
     dismiss: vi.fn(),
   },
-}));
-
-// ─── useSessionAgentChat mock (#2500 Task 4: RAG agent wiring) ────────────
-// Hoisted globally so all describe blocks get a safe no-op default.
-// The RAG-specific describe block overrides the return value in its beforeEach.
-
-const useSessionAgentChatMock = vi.fn(() => ({
-  messages: [],
-  isLoading: false,
-  error: null,
-  streamingContent: '',
-  ask: vi.fn(),
-  stop: vi.fn(),
-}));
-
-vi.mock('@/lib/domain-hooks/useSessionAgentChat', () => ({
-  useSessionAgentChat: (...args: unknown[]) => useSessionAgentChatMock(...args),
 }));
 
 // ─── useCurrentUser mock (#2505: viewerRole derivation) ─────────────────────
@@ -2332,11 +2315,6 @@ describe('SessionLiveView — #4156 (D5): no legacy session agent on /live', () 
     expect(container.querySelector('[data-slot="chat-agent-panel"]')).toBeNull();
     expect(container.querySelector('[data-slot="live-agent-chat"]')).toBeNull();
     expect(container.querySelector('[data-slot="action-log-timeline"]')).not.toBeNull();
-  });
-
-  it('does not open the legacy agent chat', () => {
-    renderWithIntl(<SessionLiveView />);
-    expect(useSessionAgentChatMock).not.toHaveBeenCalled();
   });
 });
 

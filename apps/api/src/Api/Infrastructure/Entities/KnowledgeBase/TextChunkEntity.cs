@@ -63,7 +63,7 @@ public class TextChunkEntity
     /// #2311 BE-1 — denormalized counter of distinct assistant messages that cited this chunk.
     /// Forward-looking metric (start-from-0 per DEC-D2): incremented post-SaveChanges by
     /// <see cref="Api.BoundedContexts.KnowledgeBase.Application.Commands.IncrementChunkUsageCountsCommand"/>
-    /// inside <see cref="Api.BoundedContexts.KnowledgeBase.Application.Commands.ChatWithSessionAgentCommandHandler"/>.
+    /// once sent by the legacy in-game agent chat, retired by #4448 (A7): with no sender today, it does not grow.
     /// Surfaced via <see cref="Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunks.KbChunkSummaryDto.UsedInChats"/>.
     /// </summary>
     public int UsageCount { get; set; }

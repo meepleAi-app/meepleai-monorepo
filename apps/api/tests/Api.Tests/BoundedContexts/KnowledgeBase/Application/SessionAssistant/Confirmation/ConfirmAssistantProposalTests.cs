@@ -70,16 +70,17 @@ public sealed class ConfirmAssistantProposalTests
                 : new List<AssistantScoreCell>(),
             HouseRules: []));
 
-    private AssistantProposal ScoreProposal(int points = 5, int cellBefore = 7)
+    private AssistantProposal ScoreProposal(int points = 5, int cellBefore = 7, Guid? version = null)
     {
-        var proposal = AssistantProposal.ForScore(Session, Thread, Guid.NewGuid(), Version, Marco, "Marco", "punti", 2, points, cellBefore, Now);
+        var proposal = AssistantProposal.ForScore(
+            Session, Thread, Guid.NewGuid(), version ?? Version, Marco, "Marco", "punti", 2, points, cellBefore, Now);
         _proposals.Setup(p => p.GetAsync(proposal.Id, It.IsAny<CancellationToken>())).ReturnsAsync(proposal);
         return proposal;
     }
 
-    private AssistantProposal TurnProposal(int turnIndex = 4)
+    private AssistantProposal TurnProposal(int turnIndex = 4, Guid? version = null)
     {
-        var proposal = AssistantProposal.ForAdvanceTurn(Session, Thread, Guid.NewGuid(), Version, turnIndex, Now);
+        var proposal = AssistantProposal.ForAdvanceTurn(Session, Thread, Guid.NewGuid(), version ?? Version, turnIndex, Now);
         _proposals.Setup(p => p.GetAsync(proposal.Id, It.IsAny<CancellationToken>())).ReturnsAsync(proposal);
         return proposal;
     }
@@ -432,5 +433,155 @@ public sealed class ConfirmAssistantProposalTests
         proposal.Status.Should().Be(AssistantProposalStatus.Pending);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
         VerifyNothingApplied();
+    }
+
+    // ─── #4453 (A6): le proposte chiuse, per il tasso di accettazione (spec §7.3) ────────────────
+
+    // Il nome è il contratto con Prometheus: meepleai_session_assistant_proposals_resolved_proposals_total.
+    private const string ResolvedMetric = "meepleai.session_assistant.proposals.resolved.total";
+
+    private static (string? Outcome, string? Kind) OutcomeAndKind(IReadOnlyDictionary<string, string?> tags) =>
+        (tags.GetValueOrDefault("outcome"), tags.GetValueOrDefault("kind"));
+
+    [Fact]
+    public async Task AnAcceptedProposal_IsCountedOnce_WithItsKind()
+    {
+        var version = Guid.NewGuid();
+        using var resolved = new SessionAssistantMetricCapture(ResolvedMetric, version);
+
+        await ConfirmAsync(ScoreProposal(version: version));
+
+        resolved.Measurements.Select(OutcomeAndKind).Should().Equal(("accepted", "score"));
+    }
+
+    [Fact]
+    public async Task ACorrectedProposal_IsCountedAsEdited()
+    {
+        var version = Guid.NewGuid();
+        using var resolved = new SessionAssistantMetricCapture(ResolvedMetric, version);
+
+        await ConfirmAsync(ScoreProposal(points: 5, version: version), corrected: 3);
+
+        resolved.Measurements.Select(OutcomeAndKind).Should().Equal(("edited", "score"));
+    }
+
+    [Fact]
+    public async Task AnAcceptedTurn_IsCountedWithTheTurnKind()
+    {
+        var version = Guid.NewGuid();
+        using var resolved = new SessionAssistantMetricCapture(ResolvedMetric, version);
+
+        await ConfirmAsync(TurnProposal(turnIndex: 4, version: version));
+
+        resolved.Measurements.Select(OutcomeAndKind).Should().Equal(("accepted", "advance_turn"));
+    }
+
+    [Fact]
+    public async Task AProposalTheGameOvertook_IsCountedAsStale()
+    {
+        var version = Guid.NewGuid();
+        using var resolved = new SessionAssistantMetricCapture(ResolvedMetric, version);
+        var proposal = ScoreProposal(points: 5, cellBefore: 7, version: version);
+        Table(cell: 9, turnIndex: 4);
+
+        var act = () => ConfirmAsync(proposal);
+
+        await act.Should().ThrowAsync<ConflictException>();
+        resolved.Measurements.Select(OutcomeAndKind).Should().Equal(("stale", "score"));
+    }
+
+    [Fact]
+    public async Task AProposalTheSessionCallsOvertaken_IsCountedAsStale()
+    {
+        var version = Guid.NewGuid();
+        using var resolved = new SessionAssistantMetricCapture(ResolvedMetric, version);
+        var proposal = ScoreProposal(version: version);
+        _applier.Setup(a => a.ApplyScoreAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<AssistantScoreWrite>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new AssistantProposalApplyException(
+                AssistantProposalApplyException.GameChanged, "the cell moved", new InvalidOperationException()));
+
+        var act = () => ConfirmAsync(proposal);
+
+        await act.Should().ThrowAsync<ConflictException>();
+        resolved.Measurements.Select(OutcomeAndKind).Should().Equal(("stale", "score"));
+    }
+
+    [Fact]
+    public async Task AProposalTheDomainRefuses_IsCountedAsFailed()
+    {
+        var version = Guid.NewGuid();
+        using var resolved = new SessionAssistantMetricCapture(ResolvedMetric, version);
+        var proposal = ScoreProposal(version: version);
+        _applier.Setup(a => a.ApplyScoreAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<AssistantScoreWrite>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new AssistantProposalApplyException("session_state_invalid", "the domain said no", new InvalidOperationException()));
+
+        var act = () => ConfirmAsync(proposal);
+
+        await act.Should().ThrowAsync<ConflictException>();
+        resolved.Measurements.Select(OutcomeAndKind).Should().Equal(("failed", "score"));
+    }
+
+    [Fact]
+    public async Task AProposalWhoseGameCannotBeRead_IsCountedAsFailed()
+    {
+        var version = Guid.NewGuid();
+        using var resolved = new SessionAssistantMetricCapture(ResolvedMetric, version);
+        var proposal = ScoreProposal(version: version);
+        _reader.Setup(r => r.GetStateAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new NotFoundException("LiveGameSession", Session.ToString()));
+
+        var act = () => ConfirmAsync(proposal);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+        resolved.Measurements.Select(OutcomeAndKind).Should().Equal(("failed", "score"));
+    }
+
+    /// <summary>Una proposta rimasta Applying non ha ancora un esito: non si conta.</summary>
+    [Fact]
+    public async Task AProposalLeftApplying_IsNotCounted()
+    {
+        var version = Guid.NewGuid();
+        using var resolved = new SessionAssistantMetricCapture(ResolvedMetric, version);
+        var proposal = ScoreProposal(version: version);
+        _applier.Setup(a => a.ApplyScoreAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<AssistantScoreWrite>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("the hub is down"));
+
+        var act = () => ConfirmAsync(proposal);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        resolved.Measurements.Should().BeEmpty();
+    }
+
+    /// <summary>Si conta dopo il salvataggio dell'esito: un esito che non è nel database non è un esito.</summary>
+    [Fact]
+    public async Task AnOutcomeThatIsNotSaved_IsNotCounted()
+    {
+        var version = Guid.NewGuid();
+        using var resolved = new SessionAssistantMetricCapture(ResolvedMetric, version);
+        var proposal = ScoreProposal(version: version);
+        _unitOfWork.SetupSequence(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1)
+            .ThrowsAsync(new InvalidOperationException("the database is down"));
+
+        var act = () => ConfirmAsync(proposal);
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        resolved.Measurements.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ASecondTap_IsNotCountedAgain()
+    {
+        var version = Guid.NewGuid();
+        var proposal = ScoreProposal(version: version);
+        await ConfirmAsync(proposal);
+        using var resolved = new SessionAssistantMetricCapture(ResolvedMetric, version);
+
+        await ConfirmAsync(proposal);
+
+        resolved.Measurements.Should().BeEmpty();
     }
 }

@@ -133,14 +133,14 @@ internal sealed class ConfirmAssistantProposalCommandHandler
             // Nulla è stato scritto: la proposta non deve restare Applying, con una card che non si può più
             // né confermare né rifiutare. L'errore originale risale.
             proposal.MarkFailed(StateUnavailableCode, Now());
-            await _unitOfWork.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+            await SaveOutcomeAsync(proposal).ConfigureAwait(false);
             throw;
         }
 
         if (!MatchesWhatTheProposalExpected(proposal, state))
         {
             proposal.MarkStale(Now());
-            await _unitOfWork.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+            await SaveOutcomeAsync(proposal).ConfigureAwait(false);
             throw new ConflictException(StaleCode, StaleMessage);
         }
 
@@ -173,13 +173,13 @@ internal sealed class ConfirmAssistantProposalCommandHandler
             // La partita è cambiata fra il controllo qui sopra e la scrittura: lo dice il comando della
             // sessione, che ricontrolla sull'aggregato che sta per salvare. Nulla è stato scritto.
             proposal.MarkStale(Now());
-            await _unitOfWork.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+            await SaveOutcomeAsync(proposal).ConfigureAwait(false);
             throw new ConflictException(StaleCode, StaleMessage);
         }
         catch (AssistantProposalApplyException ex)
         {
             proposal.MarkFailed(ex.FailureCode, Now());
-            await _unitOfWork.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+            await SaveOutcomeAsync(proposal).ConfigureAwait(false);
             throw new ConflictException(ex.FailureCode, ex.Message);
         }
 
@@ -193,8 +193,18 @@ internal sealed class ConfirmAssistantProposalCommandHandler
             proposal.MarkAccepted(Now());
         }
 
-        await _unitOfWork.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+        await SaveOutcomeAsync(proposal).ConfigureAwait(false);
         return AssistantProposalDto.From(proposal);
+    }
+
+    /// <summary>
+    /// Salva l'esito, e solo dopo lo conta (#4453): un esito che non è nel database non entra nel tasso di
+    /// accettazione. Non segue l'annullamento della richiesta, come tutto ciò che viene dopo la prenotazione.
+    /// </summary>
+    private async Task SaveOutcomeAsync(AssistantProposal proposal)
+    {
+        await _unitOfWork.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);
+        SessionAssistantMetrics.ProposalResolved(proposal);
     }
 
     /// <summary>

@@ -158,6 +158,7 @@ internal sealed class AssistantTurnRunner
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
             _logger.LogError(ex, "Session assistant: the turn failed for live session {LiveSessionId}", turn.Command.LiveSessionId);
+            SessionAssistantMetrics.Turn(UnavailableCode, turn.Profile.VersionId);
             events.TryWrite(AssistantTurnEvent.Error(UnavailableCode));
         }
 #pragma warning restore CA1031
@@ -238,6 +239,13 @@ internal sealed class AssistantTurnRunner
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // #4453: il turno si conta a conversazione salvata. Se il salvataggio fallisce lo conta RunAsync, una volta.
+        SessionAssistantMetrics.Turn(OutcomeOf(composed, meter, assistant.MaxToolIterations), turn.Profile.VersionId);
+        if (composed.ClaimedAction)
+        {
+            SessionAssistantMetrics.ClaimedAction(turn.Profile.VersionId);
+        }
 
         // Solo adesso le card: una proposta mostrata prima del salvataggio si potrebbe confermare quando
         // nel database non c'è ancora.
@@ -337,8 +345,20 @@ internal sealed class AssistantTurnRunner
         // nessuna. L'host cercherebbe un punteggio o una card che non esistono.
         var claimed = proposals == 0
             && (ClaimedActionDetector.ClaimsAction(text) || ClaimedActionDetector.ClaimsProposal(text));
-        return new ComposedAnswer(claimed ? text + AssistantTurnTexts.NothingRecorded(english) : text, FallbackCode: null, sources);
+        return new ComposedAnswer(
+            claimed ? text + AssistantTurnTexts.NothingRecorded(english) : text, FallbackCode: null, sources, ClaimedAction: claimed);
     }
+
+    /// <summary>
+    /// L'esito del turno per la metrica: il segno del messaggio, o «answered». Senza testo, i giri esauriti sono
+    /// <c>loop_exhausted</c>: oltre i giri con strumenti c'è solo la chiamata finale senza strumenti (spec §6.2).
+    /// </summary>
+    private static string OutcomeOf(ComposedAnswer composed, ChatTurnMeter meter, int maxToolIterations) => composed.FallbackCode switch
+    {
+        null => SessionAssistantMetrics.Answered,
+        NoAnswerCode when meter.RoundTrips > maxToolIterations => SessionAssistantMetrics.LoopExhausted,
+        var code => code,
+    };
 
     /// <summary>
     /// Spec §5.2: una proposta ancora <c>Pending</c> scade quando inizia il turno successivo. Una ancora
@@ -413,5 +433,6 @@ internal sealed class AssistantTurnRunner
         .DistinctBy(c => (c.DocumentId, c.PageNumber, c.CopyrightTier, c.SnippetPreview, c.ParaphrasedSnippet))
         .ToList();
 
-    private sealed record ComposedAnswer(string Text, string? FallbackCode, IReadOnlyList<CitationDto> Citations);
+    private sealed record ComposedAnswer(
+        string Text, string? FallbackCode, IReadOnlyList<CitationDto> Citations, bool ClaimedAction = false);
 }

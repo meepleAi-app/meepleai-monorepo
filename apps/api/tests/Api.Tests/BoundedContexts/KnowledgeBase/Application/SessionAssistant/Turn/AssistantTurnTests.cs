@@ -100,9 +100,10 @@ public sealed class AssistantTurnTests
             .ReturnsAsync(new AssistantSessionAccess(Owner, status, accepts));
 
     /// <summary>Il contenuto di prova ha «en» come lingua di riserva e deepseek-flash come modello.</summary>
-    private void Publish(SessionAssistantSettings assistant) =>
+    private void Publish(SessionAssistantSettings assistant, Guid? version = null) =>
         _profiles.Setup(p => p.GetAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new PublishedAgentProfile(VersionId, 3, AgentProfileTests.Content(model: "deepseek-flash", assistant: assistant)));
+            .ReturnsAsync(new PublishedAgentProfile(
+                version ?? VersionId, 3, AgentProfileTests.Content(model: "deepseek-flash", assistant: assistant)));
 
     private void Script(params LlmCompletionResult[] turns)
     {
@@ -839,5 +840,149 @@ public sealed class AssistantTurnTests
         events.Single(e => e.Type == AssistantTurnEvent.AnswerType).Citations.Should().ContainSingle()
             .Which.PageNumber.Should().Be(3);
         AssistantCitations.Read(_savedThread!.Messages[^1].CitationsJson).Should().ContainSingle();
+    }
+
+    // ─── #4453 (A6): le metriche del turno ───────────────────────────────────────────────────────
+
+    // I nomi sono il contratto con Prometheus (meepleai_session_assistant_turns_total,
+    // meepleai_session_assistant_claimed_actions_answers_total): il test li scrive per esteso.
+    private const string TurnsMetric = "meepleai.session_assistant.turns.total";
+    private const string ClaimedActionsMetric = "meepleai.session_assistant.claimed_actions.total";
+
+    /// <summary>Una versione nuova del profilo per ogni test: il listener vede le misure di tutto il processo.</summary>
+    private Guid MeasuredVersion(SessionAssistantSettings? assistant = null)
+    {
+        var version = Guid.NewGuid();
+        Publish(assistant ?? AgentProfileTests.Assistant(), version);
+        return version;
+    }
+
+    private static string? Outcome(IReadOnlyDictionary<string, string?> tags) => tags.GetValueOrDefault("outcome");
+
+    [Fact]
+    public async Task AnAnsweredTurn_IsCountedOnce_AsAnswered()
+    {
+        var version = MeasuredVersion();
+        using var turns = new SessionAssistantMetricCapture(TurnsMetric, version);
+        Script(Says("Tocca a Giulia."));
+
+        await AskAsync("a chi tocca?");
+
+        turns.Measurements.Select(Outcome).Should().Equal("answered");
+    }
+
+    // Spec §6.3: i giri esauriti senza una risposta hanno la loro metrica. Il turno scrive lo stesso testo di una
+    // risposta vuota, quindi il testo non basta a distinguerli.
+    [Fact]
+    public async Task AnExhaustedLoop_IsCountedAsLoopExhausted()
+    {
+        var version = MeasuredVersion(SessionAssistantSettings.Create(
+            true,
+            new Dictionary<string, string>(StringComparer.Ordinal) { ["en"] = "You are the table assistant." },
+            maxToolIterations: 1));
+        using var turns = new SessionAssistantMetricCapture(TurnsMetric, version);
+        _gateway.Setup(g => g.ChatAsync(It.IsAny<LlmChatRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => Calls("stato_partita", "{}"));
+
+        await AskAsync("a chi tocca?");
+
+        turns.Measurements.Select(Outcome).Should().Equal("loop_exhausted");
+    }
+
+    [Fact]
+    public async Task AnEmptyAnswerBeforeTheLimit_IsCountedAsNoAnswer_NotAsAnExhaustedLoop()
+    {
+        var version = MeasuredVersion();
+        using var turns = new SessionAssistantMetricCapture(TurnsMetric, version);
+        Script(Calls("stato_partita", "{}"), Says(string.Empty));
+
+        await AskAsync("a chi tocca?");
+
+        turns.Measurements.Select(Outcome).Should().Equal("no_answer");
+    }
+
+    [Theory]
+    [InlineData(LlmBudgetAdmission.DailyBudgetErrorCode, "budget_paused")]
+    [InlineData(LlmAnswerErrorCodes.ProviderUnavailable, "assistant_unavailable")]
+    public async Task ATurnTheGatewayStops_IsCountedWithItsCode(string gatewayCode, string outcome)
+    {
+        var version = MeasuredVersion();
+        using var turns = new SessionAssistantMetricCapture(TurnsMetric, version);
+        Script(Refuses(gatewayCode));
+
+        await AskAsync();
+
+        turns.Measurements.Select(Outcome).Should().Equal(outcome);
+    }
+
+    [Fact]
+    public async Task ASanitizedAnswer_IsCountedAsCopyrightSanitized()
+    {
+        var version = MeasuredVersion();
+        using var turns = new SessionAssistantMetricCapture(TurnsMetric, version);
+        WithGame();
+        RulesFind(CopyrightTier.Protected);
+        Script(Calls(SessionAssistantToolset.CercaRegole, "{\"domanda\":\"quante tessere?\"}"), Says(Passage));
+
+        await AskAsync("quante tessere si mettono?");
+
+        turns.Measurements.Select(Outcome).Should().Equal("copyright_sanitized");
+    }
+
+    [Fact]
+    public async Task AnUnexpectedFailure_IsCountedAsUnavailable()
+    {
+        var version = MeasuredVersion();
+        using var turns = new SessionAssistantMetricCapture(TurnsMetric, version);
+        _reader.Setup(r => r.GetStateAsync(It.IsAny<CancellationToken>())).ThrowsAsync(new InvalidOperationException("boom"));
+
+        await AskAsync();
+
+        turns.Measurements.Select(Outcome).Should().Equal("assistant_unavailable");
+    }
+
+    /// <summary>Il turno si conta quando la conversazione è salvata: se il salvataggio fallisce, una volta sola.</summary>
+    [Fact]
+    public async Task ATurnWhoseSaveFails_IsCountedOnce_AsUnavailable()
+    {
+        var version = MeasuredVersion();
+        using var turns = new SessionAssistantMetricCapture(TurnsMetric, version);
+        Script(Says("Tocca a Giulia."));
+        _unitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("the database is down"));
+
+        await AskAsync("a chi tocca?");
+
+        turns.Measurements.Select(Outcome).Should().Equal("assistant_unavailable");
+    }
+
+    // Spec §6.3: claimed_action_without_proposal.
+    [Fact]
+    public async Task AClaimedActionWithoutAProposal_IsCounted()
+    {
+        var version = MeasuredVersion();
+        using var claimed = new SessionAssistantMetricCapture(ClaimedActionsMetric, version);
+        using var turns = new SessionAssistantMetricCapture(TurnsMetric, version);
+        Script(Says("Ho segnato 5 punti a Marco."));
+
+        await AskAsync();
+
+        claimed.Measurements.Should().ContainSingle();
+        turns.Measurements.Select(Outcome).Should().ContainSingle()
+            .Which.Should().Be("answered", "il modello ha risposto; l'avviso è un'aggiunta del turno");
+    }
+
+    [Fact]
+    public async Task AnAnnouncedProposalThatExists_IsNotAClaimedAction()
+    {
+        var version = MeasuredVersion();
+        using var claimed = new SessionAssistantMetricCapture(ClaimedActionsMetric, version);
+        Script(
+            Calls("proponi_punteggio", """{"giocatore":"Marco","punti":5}"""),
+            Says("Ho preparato la proposta: +5 a Marco. Confermala dalla card."));
+
+        await AskAsync();
+
+        claimed.Measurements.Should().BeEmpty();
     }
 }

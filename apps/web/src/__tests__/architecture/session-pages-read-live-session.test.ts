@@ -67,7 +67,6 @@ const FORBIDDEN_CLIENTS: ReadonlyArray<string> = [
   'lib/api/clients/gameSessionsClient.ts',
   'lib/api/clients/sessionTrackingClient.ts',
   'lib/api/clients/agentSessionsClient.ts',
-  'lib/api/clients/sessionAgentClient.ts',
 ];
 
 /**

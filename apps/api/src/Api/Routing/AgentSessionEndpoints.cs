@@ -20,7 +20,6 @@ internal static class AgentSessionEndpoints
     public static RouteGroupBuilder MapAgentSessionEndpoints(this RouteGroupBuilder group)
     {
         MapLaunchEndpoint(group);
-        MapChatEndpoint(group);
         MapUpdateStateEndpoint(group);
         MapUpdateDefinitionEndpoint(group); // Issue #3252
         MapUpdateConfigEndpoint(group); // Issue #3253
@@ -36,15 +35,6 @@ internal static class AgentSessionEndpoints
             .RequireSession()
             .WithTags("AgentSessions")
             .WithDescription("Launch a new agent session for a game session");
-    }
-
-    private static void MapChatEndpoint(RouteGroupBuilder group)
-    {
-        group.MapPost("/game-sessions/{gameSessionId:guid}/agent/chat", HandleChat)
-            .WithName("ChatWithSessionAgent")
-            .RequireSession()
-            .WithTags("AgentSessions")
-            .WithDescription("Chat with session agent (SSE streaming)");
     }
 
     private static void MapUpdateStateEndpoint(RouteGroupBuilder group)
@@ -105,47 +95,6 @@ internal static class AgentSessionEndpoints
         var agentSessionId = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
 
         return Results.Ok(new LaunchSessionAgentResponse(agentSessionId));
-    }
-
-    private static async Task HandleChat(
-        [FromRoute] Guid gameSessionId,
-        [FromBody] ChatWithSessionAgentRequest request,
-        [FromServices] IMediator mediator,
-        HttpContext httpContext,
-        CancellationToken cancellationToken)
-    {
-        var userId = httpContext.User.GetUserId();
-
-        var gameContext = request.GameContext is null ? null : GameSessionContext.Create(
-            request.GameContext.GameId,
-            request.GameContext.GameTitle,
-            request.GameContext.Players,
-            request.GameContext.CurrentTurn,
-            request.GameContext.ResponseLanguage
-        );
-
-        var command = new ChatWithSessionAgentCommand(
-            AgentSessionId: request.AgentSessionId,
-            GameSessionId: gameSessionId,
-            UserQuestion: request.UserQuestion,
-            UserId: userId,
-            GameContext: gameContext,
-            ChatThreadId: request.ChatThreadId
-        );
-
-        // Set SSE headers
-        httpContext.Response.ContentType = "text/event-stream";
-        httpContext.Response.Headers.Append("Cache-Control", "no-cache");
-        httpContext.Response.Headers.Append("Connection", "keep-alive");
-
-        await foreach (var @event in mediator.CreateStream(command, cancellationToken).ConfigureAwait(false))
-        {
-            await httpContext.Response.WriteAsync(
-                $"data: {System.Text.Json.JsonSerializer.Serialize(@event, SseJsonOptions.Default)}\n\n",
-                cancellationToken).ConfigureAwait(false);
-
-            await httpContext.Response.Body.FlushAsync(cancellationToken).ConfigureAwait(false);
-        }
     }
 
     private static async Task<IResult> HandleUpdateState(
@@ -236,19 +185,6 @@ internal record LaunchSessionAgentRequest(
     string InitialGameStateJson);
 
 internal record LaunchSessionAgentResponse(Guid AgentSessionId);
-
-internal record ChatWithSessionAgentRequest(
-    Guid AgentSessionId,
-    string UserQuestion,
-    Guid? ChatThreadId = null,
-    GameSessionContextRequest? GameContext = null);
-
-internal record GameSessionContextRequest(
-    Guid GameId,
-    string GameTitle,
-    IReadOnlyList<string> Players,
-    int CurrentTurn,
-    string ResponseLanguage = "it");
 
 internal record UpdateAgentSessionStateRequest(
     Guid AgentSessionId,

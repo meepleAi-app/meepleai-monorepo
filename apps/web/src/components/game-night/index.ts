@@ -4,7 +4,6 @@
 
 export { ActivityFeed } from './ActivityFeed';
 export type { ActivityEvent } from './ActivityFeed';
-export { RulesExplainer, type RulesExplainerProps } from './RulesExplainer';
 export { SetupWizard, type SetupWizardResult } from './SetupWizard';
 export { PlayerSetup, type SetupPlayer, type PlayerRole, PLAYER_COLORS } from './PlayerSetup';
 export { PhysicalSetup } from './PhysicalSetup';

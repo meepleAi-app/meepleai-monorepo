@@ -121,4 +121,32 @@ public sealed class EnqueuePdfCommandHandlerTests
             .Should().ThrowAsync<ConflictException>()
             .WithMessage("*Queue is full*");
     }
+
+    [Fact]
+    public async Task Handle_QueueFull_WithTheCapBypassed_CreatesTheJob()
+    {
+        // Arrange — #4442: the chunked upload completion enqueues with BypassQueueCap.
+        var command = new EnqueuePdfCommand(Guid.NewGuid(), Guid.NewGuid(), Priority: 10, BypassQueueCap: true);
+
+        _pdfRepositoryMock
+            .Setup(r => r.ExistsAsync(command.PdfDocumentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _jobRepositoryMock
+            .Setup(r => r.ExistsByPdfDocumentIdAsync(command.PdfDocumentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _jobRepositoryMock
+            .Setup(r => r.CountByStatusAsync(JobStatus.Queued, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(127);
+        _jobRepositoryMock
+            .Setup(r => r.CountByStatusAsync(JobStatus.Processing, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
+        // Act
+        var jobId = await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        jobId.Should().NotBeEmpty();
+        _jobRepositoryMock.Verify(r => r.AddAsync(It.Is<ProcessingJob>(j => j.PdfDocumentId == command.PdfDocumentId && j.Priority == 10),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

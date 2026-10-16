@@ -41,10 +41,10 @@ public sealed class RejectAssistantProposalTests
 
     private DateTime Now => _time.GetUtcNow().UtcDateTime;
 
-    private AssistantProposal Proposal()
+    private AssistantProposal Proposal(Guid? version = null)
     {
         var proposal = AssistantProposal.ForScore(
-            Session, Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Marco, "Marco", "punti", 2, 5, 7, Now);
+            Session, Guid.NewGuid(), Guid.NewGuid(), version ?? Guid.NewGuid(), Marco, "Marco", "punti", 2, 5, 7, Now);
         _proposals.Setup(p => p.GetAsync(proposal.Id, It.IsAny<CancellationToken>())).ReturnsAsync(proposal);
         return proposal;
     }
@@ -139,5 +139,53 @@ public sealed class RejectAssistantProposalTests
         validator.TestValidate(new RejectAssistantProposalCommand(Session, Guid.NewGuid(), Owner)).ShouldNotHaveAnyValidationErrors();
         validator.TestValidate(new RejectAssistantProposalCommand(Session, Guid.Empty, Owner))
             .ShouldHaveValidationErrorFor(c => c.ProposalId);
+    }
+
+    // ─── #4453 (A6): il rifiuto nel tasso di accettazione (spec §7.3) ────────────────────────────
+
+    private const string ResolvedMetric = "meepleai.session_assistant.proposals.resolved.total";
+
+    [Fact]
+    public async Task ARejectedProposal_IsCountedOnce_WithItsKind()
+    {
+        var version = Guid.NewGuid();
+        using var resolved = new SessionAssistantMetricCapture(ResolvedMetric, version);
+
+        await RejectAsync(Proposal(version));
+
+        var tags = resolved.Measurements.Should().ContainSingle().Subject;
+        tags["outcome"].Should().Be("rejected");
+        tags["kind"].Should().Be("score");
+    }
+
+    [Fact]
+    public async Task ASecondTapOnReject_IsNotCountedAgain()
+    {
+        var version = Guid.NewGuid();
+        var proposal = Proposal(version);
+        await RejectAsync(proposal);
+        using var resolved = new SessionAssistantMetricCapture(ResolvedMetric, version);
+
+        await RejectAsync(proposal);
+
+        resolved.Measurements.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ARejectThatLosesTheRace_IsNotCounted()
+    {
+        var version = Guid.NewGuid();
+        using var resolved = new SessionAssistantMetricCapture(ResolvedMetric, version);
+        var proposal = Proposal(version);
+        var rejectedByTheOther = AssistantProposal.ForScore(
+            Session, proposal.ChatThreadId, proposal.MessageId, version, Marco, "Marco", "punti", 2, 5, 7, Now);
+        rejectedByTheOther.Reject(Owner, Now);
+        _unitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ThrowsAsync(new DbUpdateConcurrencyException("xmin"));
+        _proposals.Setup(p => p.GetReadOnlyAsync(proposal.Id, It.IsAny<CancellationToken>())).ReturnsAsync(rejectedByTheOther);
+
+        var dto = await RejectAsync(proposal);
+
+        dto.Status.Should().Be("Rejected");
+        resolved.Measurements.Should().BeEmpty("il rifiuto che ha vinto l'ha contato la richiesta che l'ha salvato");
     }
 }

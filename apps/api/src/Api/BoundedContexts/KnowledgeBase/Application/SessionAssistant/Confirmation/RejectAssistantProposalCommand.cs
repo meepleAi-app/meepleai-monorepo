@@ -66,6 +66,8 @@ internal sealed class RejectAssistantProposalCommandHandler(
             return CurrentStateOf(current);
         }
 
+        // #4453: contato dopo il salvataggio. Chi perde la corsa non conta: l'esito l'ha contato chi l'ha salvato.
+        SessionAssistantMetrics.ProposalResolved(proposal);
         return AssistantProposalDto.From(proposal);
     }
 

@@ -82,6 +82,8 @@ public sealed class UploadPdfHeadingAwareIntegrationTests : IAsyncLifetime
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
+        // #4443 R1: the upload background task claims the document before working on it.
+        services.AddScoped<Api.BoundedContexts.DocumentProcessing.Application.Services.IPdfClaimService, Api.BoundedContexts.DocumentProcessing.Infrastructure.Services.RelationalPdfClaimService>();
 
         services.AddScoped<UploadPdfCommandHandler>();
 

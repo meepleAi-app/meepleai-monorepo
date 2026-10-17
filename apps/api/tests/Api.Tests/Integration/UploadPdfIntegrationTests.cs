@@ -93,6 +93,8 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Register repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
+        // #4443 R1: the upload background task claims the document before working on it.
+        services.AddScoped<Api.BoundedContexts.DocumentProcessing.Application.Services.IPdfClaimService, Api.BoundedContexts.DocumentProcessing.Infrastructure.Services.RelationalPdfClaimService>();
 
         // Register the handler explicitly for test access
         services.AddScoped<UploadPdfCommandHandler>();
@@ -174,6 +176,8 @@ public sealed class UploadPdfIntegrationTests : IAsyncLifetime
         // Register repositories (required for handler)
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
+        // #4443 R1: the upload background task claims the document before working on it.
+        services.AddScoped<Api.BoundedContexts.DocumentProcessing.Application.Services.IPdfClaimService, Api.BoundedContexts.DocumentProcessing.Infrastructure.Services.RelationalPdfClaimService>();
         services.AddScoped<IUnitOfWork, EfCoreUnitOfWork>();
 
         // Register domain event infrastructure (required for handler)

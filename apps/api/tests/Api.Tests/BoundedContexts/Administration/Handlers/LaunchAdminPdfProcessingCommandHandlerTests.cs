@@ -2,6 +2,11 @@ using Api.BoundedContexts.Administration.Application.Commands.GameWizard;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+using Api.BoundedContexts.DocumentProcessing.Domain.Exceptions;
+using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -321,6 +326,56 @@ public sealed class LaunchAdminPdfProcessingCommandHandlerTests : IDisposable
         result.Status.Should().Be("processing");
         _mockMediator.Verify(
             m => m.Send(It.IsAny<ExtractPdfTextCommand>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>
+    /// #4443 R8: «already has an active job» is a success for launch-processing, a full queue is not.
+    /// Both used to be <see cref="ConflictException"/>, so a full queue was swallowed as «already
+    /// queued» and the document was left with no job. The enqueue here is the real handler, with the
+    /// queue at <see cref="ProcessingJob.MaxQueueSize"/>, so the test follows whatever it throws.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4443")]
+    public async Task Handle_WhenTheQueueIsFull_FailsWithQueueFull_InsteadOfSkippingTheEnqueue()
+    {
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+        _dbContext.SharedGames.Add(new SharedGameEntity { Id = gameId, Title = "Terraforming Mars" });
+        _dbContext.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = pdfId,
+            SharedGameId = gameId,
+            FileName = "terraforming-mars.pdf",
+            FilePath = "/uploads/terraforming-mars.pdf",
+            UploadedByUserId = UserId
+        });
+        await _dbContext.SaveChangesAsync();
+
+        var jobs = new Mock<IProcessingJobRepository>();
+        jobs.Setup(r => r.ExistsByPdfDocumentIdAsync(pdfId, It.IsAny<CancellationToken>())).ReturnsAsync(false);
+        jobs.Setup(r => r.CountByStatusAsync(JobStatus.Queued, It.IsAny<CancellationToken>())).ReturnsAsync(ProcessingJob.MaxQueueSize);
+        jobs.Setup(r => r.CountByStatusAsync(JobStatus.Processing, It.IsAny<CancellationToken>())).ReturnsAsync(0);
+        var pdfs = new Mock<IPdfDocumentRepository>();
+        pdfs.Setup(r => r.ExistsAsync(pdfId, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        var realEnqueue = new EnqueuePdfCommandHandler(jobs.Object, pdfs.Object, Mock.Of<IUnitOfWork>(), TimeProvider.System);
+        _mockMediator.Setup(m => m.Send(It.IsAny<EnqueuePdfCommand>(), It.IsAny<CancellationToken>()))
+            .Returns((EnqueuePdfCommand c, CancellationToken ct) => realEnqueue.Handle(c, ct));
+        SetupPipelineCommandsOnly();
+
+        var act = () => _handler.Handle(
+            new LaunchAdminPdfProcessingCommand(GameId: gameId, PdfDocumentId: pdfId, LaunchedByUserId: UserId),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<ProcessingQueueFullException>();
+        _mockMediator.Verify(m => m.Send(It.IsAny<ExtractPdfTextCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private void SetupPipelineCommandsOnly()
+    {
+        _mockMediator.Setup(m => m.Send(It.IsAny<ExtractPdfTextCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(ExtractPdfTextResultDto.CreateSuccess(1000, 5));
+        _mockMediator.Setup(m => m.Send(It.IsAny<IndexPdfCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(IndexingResultDto.CreateSuccess("vec-doc-1", 10, DateTime.UtcNow));
     }
 
     // ────────────────────────────────────────────────────────────────────────

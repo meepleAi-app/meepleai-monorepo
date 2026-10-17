@@ -1,6 +1,4 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
-using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
-using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -111,31 +109,13 @@ internal sealed class AddRagToSharedGameCommandHandler : ICommandHandler<AddRagT
             "Document auto-approved for RAG processing: SharedGameDocumentId={SharedGameDocumentId}",
             sharedGameDocumentId);
 
-        // Admin path: enqueue (graceful degradation on failure)
-        Guid? processingJobId = null;
-        try
-        {
-            processingJobId = await _mediator.Send(
-                new EnqueuePdfCommand(
-                    PdfDocumentId: pdfDocumentId,
-                    UserId: command.UserId,
-                    Priority: (int)ProcessingPriority.High),
-                cancellationToken).ConfigureAwait(false);
-
-            _logger.LogInformation(
-                "PDF enqueued for processing: ProcessingJobId={ProcessingJobId}",
-                processingJobId);
-        }
-        catch (OperationCanceledException)
-        {
-            throw; // propagate cancellation
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex,
-                "Failed to enqueue PDF for processing (graceful degradation): PdfDocumentId={PdfDocumentId}",
-                pdfDocumentId);
-        }
+        // #4443 R2: an admin upload is queued by the upload handler itself. Enqueuing again here added
+        // a second owner: with the background task processing the PDF, the job ended Failed
+        // («SkippedNotClaimed»); with the upload already queued, this got a 409.
+        var processingJobId = uploadResult.ProcessingJobId;
+        _logger.LogInformation(
+            "PDF queued for processing by the upload: ProcessingJobId={ProcessingJobId}",
+            processingJobId);
 
         return new AddRagToSharedGameResult(
             PdfDocumentId: pdfDocumentId,

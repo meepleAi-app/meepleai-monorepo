@@ -346,6 +346,12 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
                 message.MarkAsFallback(dto.FallbackCode);
             }
 
+            // #4456: il costo del turno. Un messaggio salvato prima non ha la chiave: resta senza costo, non a zero.
+            if (dto.CostUsd.HasValue)
+            {
+                typeof(ChatMessage).GetProperty(nameof(ChatMessage.CostUsd))?.SetValue(message, dto.CostUsd);
+            }
+
             return message;
         }).ToList();
 
@@ -427,7 +433,8 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             TokenCount: m.TokenCount,
             ProfileVersionId: m.ProfileVersionId,
             Language: m.Language,
-            FallbackCode: m.FallbackCode
+            FallbackCode: m.FallbackCode,
+            CostUsd: m.CostUsd
         )).ToList();
 
         var messagesJson = JsonSerializer.Serialize(messageDtos);
@@ -497,7 +504,9 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
         Guid? ProfileVersionId = null,
         string? Language = null,
         // #4397: assente nei messaggi salvati prima, e quindi null
-        string? FallbackCode = null
+        string? FallbackCode = null,
+        // #4456: il costo del turno dell'assistente; assente nei messaggi salvati prima
+        decimal? CostUsd = null
     );
 
 }

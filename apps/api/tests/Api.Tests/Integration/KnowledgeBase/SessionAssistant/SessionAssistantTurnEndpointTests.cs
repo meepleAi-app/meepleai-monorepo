@@ -5,6 +5,7 @@ using Api.BoundedContexts.GameManagement.Application.Queries.LiveSessions;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.Infrastructure;
+using Api.Services;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -12,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using static Api.Tests.Integration.KnowledgeBase.SessionAssistant.ScriptedChatGateway;
+using DomainChatMessage = Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.ChatMessage;
 
 namespace Api.Tests.Integration.KnowledgeBase.SessionAssistant;
 
@@ -403,5 +405,58 @@ public sealed class SessionAssistantTurnEndpointTests(SessionAssistantHostFixtur
         var toolResult = host.Llm.Requests[1].Messages.Last(m => m.Role == "tool");
         toolResult.Content.Should().Contain("regolamento_non_accessibile");
         events.Should().Contain(e => Type(e) == "done");
+    }
+
+    // ─── #4456: il costo del turno sul messaggio ─────────────────────────────────────────────────
+
+    private static LlmCompletionResult Costing(LlmCompletionResult result, decimal cost, int prompt, int completion) =>
+        result with
+        {
+            Usage = new LlmUsage(prompt, completion, prompt + completion),
+            Cost = new LlmCost { InputCost = cost, OutputCost = 0m, ModelId = "deepseek-flash", Provider = "OpenRouter" },
+        };
+
+    private async Task<DomainChatMessage> SavedAnswerAsync(Guid sessionId)
+    {
+        await using var scope = host.Factory.Services.CreateAsyncScope();
+        var thread = await scope.ServiceProvider.GetRequiredService<IChatThreadRepository>().FindByLiveSessionIdAsync(sessionId, Ct);
+        return thread!.Messages.Last(m => m.Role == DomainChatMessage.AssistantRole);
+    }
+
+    /// <summary>
+    /// #4456: il costo del turno va al database con la risposta. Un messaggio salvato prima non ha la chiave nel
+    /// JSON: si legge senza errori, e il suo costo è assente, non zero.
+    /// </summary>
+    [Fact]
+    public async Task TheCostOfATurn_IsSavedWithItsAnswer_AndAnOlderMessageHasNone()
+    {
+        await SessionAssistantTestData.EnableAssistantAsync(host.Factory, Ct);
+        var table = await StartedTableAsync();
+        host.Llm.Reset(
+            Costing(Calls("stato_partita", "{}"), 0.0012m, 100, 20),
+            Costing(Says("Tocca a Marco."), 0.0008m, 150, 30));
+
+        var (status, _, body) = await SessionAssistantTestData.AskAsync(_client, _token, table.SessionId, "a chi tocca?", Ct);
+
+        status.Should().Be(HttpStatusCode.OK, body);
+        var saved = await SavedAnswerAsync(table.SessionId);
+        saved.CostUsd.Should().Be(0.0020m);
+        saved.TokenCount.Should().Be(300);
+
+        await using (var scope = host.Factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            const string costKey = ",\"CostUsd\":[^,}]*";
+            await db.Database.ExecuteSqlAsync(
+                $"UPDATE \"ChatThreads\" SET \"MessagesJson\" = regexp_replace(\"MessagesJson\", {costKey}, '', 'g') WHERE \"LiveSessionId\" = {table.SessionId}",
+                Ct);
+            var json = await db.ChatThreads.AsNoTracking()
+                .Where(t => t.LiveSessionId == table.SessionId).Select(t => t.MessagesJson).SingleAsync(Ct);
+            json.Should().NotContain("CostUsd", "il messaggio deve essere come uno salvato prima di #4456");
+        }
+
+        var older = await SavedAnswerAsync(table.SessionId);
+        older.CostUsd.Should().BeNull();
+        older.TokenCount.Should().Be(300);
     }
 }

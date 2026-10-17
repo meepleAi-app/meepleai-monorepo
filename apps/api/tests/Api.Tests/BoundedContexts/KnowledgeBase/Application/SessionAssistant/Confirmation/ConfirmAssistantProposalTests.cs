@@ -584,4 +584,62 @@ public sealed class ConfirmAssistantProposalTests
 
         resolved.Measurements.Should().BeEmpty();
     }
+
+    // ─── #4455: a partita chiusa nessuna card agisce ─────────────────────────────────────────────
+
+    private void SessionClosed() =>
+        _directory.Setup(d => d.GetAccessAsync(Session, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AssistantSessionAccess(Owner, "Completed", false));
+
+    [Fact]
+    public async Task Confirm_OnAClosedSession_ExpiresTheProposal_WithoutReservingIt()
+    {
+        var version = Guid.NewGuid();
+        using var resolved = new SessionAssistantMetricCapture(ResolvedMetric, version);
+        var proposal = ScoreProposal(version: version);
+        SessionClosed();
+
+        var act = () => ConfirmAsync(proposal);
+
+        (await act.Should().ThrowAsync<ConflictException>()).Which.ErrorCode.Should().Be("proposal_not_pending");
+        proposal.Status.Should().Be(AssistantProposalStatus.Expired);
+        proposal.ResolvedAt.Should().Be(Now);
+        proposal.ResolvedBy.Should().BeNull("nessuno l'ha giudicata");
+        VerifyNothingApplied();
+        _reader.Verify(r => r.GetStateAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once, "la scadenza, senza prenotazione");
+        resolved.Measurements.Should().BeEmpty("una proposta scaduta non entra nel tasso di accettazione");
+    }
+
+    /// <summary>L'handler della chiusura l'ha fatta scadere per primo: vale ciò che ha lasciato.</summary>
+    [Fact]
+    public async Task Confirm_OnAClosedSession_ThatLosesTheRaceToTheExpiry_IsNotPending()
+    {
+        var proposal = ScoreProposal();
+        var expiredByTheClose = AssistantProposal.ForScore(
+            Session, Thread, proposal.MessageId, Version, Marco, "Marco", "punti", 2, 5, 7, Now);
+        expiredByTheClose.Expire(Now);
+        SessionClosed();
+        _unitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ThrowsAsync(new DbUpdateConcurrencyException("xmin"));
+        _proposals.Setup(p => p.GetReadOnlyAsync(proposal.Id, It.IsAny<CancellationToken>())).ReturnsAsync(expiredByTheClose);
+
+        var act = () => ConfirmAsync(proposal);
+
+        (await act.Should().ThrowAsync<ConflictException>()).Which.ErrorCode.Should().Be("proposal_not_pending");
+        VerifyNothingApplied();
+    }
+
+    [Fact]
+    public async Task ASecondTap_AfterTheClose_OnAProposalConfirmedBefore_StillReturnsItsState()
+    {
+        var proposal = ScoreProposal();
+        await ConfirmAsync(proposal);
+        SessionClosed();
+
+        var dto = await ConfirmAsync(proposal);
+
+        dto.Status.Should().Be("Accepted");
+        _applier.Verify(a => a.ApplyScoreAsync(
+            It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<AssistantScoreWrite>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

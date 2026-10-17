@@ -89,6 +89,15 @@ internal sealed class ConfirmAssistantProposalCommandHandler
             return CurrentStateOf(proposal);
         }
 
+        // #4455: a partita chiusa nessuna card agisce. Prima della prenotazione: il comando della sessione la
+        // rifiuterebbe, e la proposta finirebbe Failed, contata come un'applicazione fallita.
+        if (!access.AcceptsQuestions)
+        {
+            var current = await ClosedSessionProposals
+                .ExpireAsync(proposal, _proposals, _unitOfWork, Now(), cancellationToken).ConfigureAwait(false);
+            return current is null ? throw ClosedSessionProposals.Expired() : CurrentStateOf(current);
+        }
+
         // Il valore da scrivere si calcola PRIMA della prenotazione: una correzione che l'aggregato rifiuta
         // lancia qui, con la proposta ancora Pending. Calcolato dopo, la lascerebbe Applying senza nessuno
         // che la chiuda. Non dipende dallo stato della partita: è la cella attesa più l'incremento.

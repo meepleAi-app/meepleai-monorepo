@@ -8,6 +8,9 @@ using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.SessionAssistant;
+using MediatR;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
@@ -64,10 +67,11 @@ public sealed class AssistantProposalConfirmationEndpointTests(SessionAssistantH
     // ─── Supporto ───────────────────────────────────────────────────────────────
 
     /// <summary>Un turno dell'assistente che lascia una proposta: restituisce il suo id.</summary>
-    private async Task<Guid> ProposeAsync(string tool, string argumentsJson, string question)
+    private async Task<Guid> ProposeAsync(string tool, string argumentsJson, string question, Guid? sessionId = null)
     {
         host.Llm.Reset(Calls(tool, argumentsJson), Says("Proposta pronta: confermala dalla card."));
-        var (status, events, body) = await SessionAssistantTestData.AskAsync(_client, _token, _table.SessionId, question, Ct);
+        var (status, events, body) = await SessionAssistantTestData.AskAsync(
+            _client, _token, sessionId ?? _table.SessionId, question, Ct);
         status.Should().Be(HttpStatusCode.OK, body);
         return events.Single(e => e.GetProperty("type").GetString() == "proposal")
             .GetProperty("proposal").GetProperty("id").GetGuid();
@@ -90,6 +94,27 @@ public sealed class AssistantProposalConfirmationEndpointTests(SessionAssistantH
 
         var response = await _client.SendAsync(request, Ct);
         return (response.StatusCode, await response.Content.ReadAsStringAsync(Ct));
+    }
+
+    /// <summary>
+    /// Porta la chiusura della partita all'handler dell'assistente, preso dal contenitore vero: così si prova che
+    /// MediatR lo registra per <see cref="LiveSessionCompletedEvent"/>. In ambiente Testing l'host non registra il
+    /// processore dell'outbox, che su staging consegna l'evento (la stessa consegna che genera il PlayRecord), quindi
+    /// qui nessun handler di eventi parte da solo.
+    /// </summary>
+    private async Task DeliverTheCloseAsync(Guid sessionId)
+    {
+        var closed = await SessionAssistantTestData.SendAsync(host.Factory, new GetLiveSessionQuery(sessionId), Ct);
+        await using var scope = host.Factory.Services.CreateAsyncScope();
+        var handler = scope.ServiceProvider.GetServices<INotificationHandler<LiveSessionCompletedEvent>>()
+            .OfType<ExpireAssistantProposalsOnSessionCompletedHandler>()
+            .Should().ContainSingle("l'handler dell'assistente è registrato per la chiusura").Subject;
+        await handler.Handle(
+            new LiveSessionCompletedEvent(
+                sessionId, closed.CompletedAt!.Value, closed.CurrentTurnIndex, closed.GameId, closed.GameName,
+                _owner, PlayRecordVisibility.Private, groupId: null, closed.CreatedAt, closed.StartedAt, notes: null,
+                players: [], scores: []),
+            Ct);
     }
 
     private static JsonElement Json(string body) => JsonDocument.Parse(body).RootElement.Clone();
@@ -205,8 +230,14 @@ public sealed class AssistantProposalConfirmationEndpointTests(SessionAssistantH
         (await StoredAsync(proposalId)).Status.Should().Be(AssistantProposalStatus.Pending);
     }
 
+    /// <summary>
+    /// #4455: a partita chiusa nessuna card agisce. Prima la conferma prenotava la proposta, il comando della
+    /// sessione la rifiutava e la proposta finiva Failed, contata come un'applicazione fallita. Gli eventi di
+    /// dominio non vengono consegnati: è la finestra in cui l'outbox non ha ancora portato la chiusura
+    /// all'handler, e la proposta la fa scadere la guardia della conferma.
+    /// </summary>
     [Fact]
-    public async Task Confirm_OnACompletedSession_IsSessionStateInvalid_AndTheProposalIsFailed()
+    public async Task Confirm_OnACompletedSession_IsNotPending_AndTheProposalHasExpired()
     {
         var proposalId = await ProposeFivePointsToMarcoAsync();
         await SessionAssistantTestData.SendAsync(host.Factory, new CompleteLiveSessionCommand(_table.SessionId), Ct);
@@ -214,11 +245,29 @@ public sealed class AssistantProposalConfirmationEndpointTests(SessionAssistantH
         var (status, body) = await PostAsync("confirm", proposalId);
 
         status.Should().Be(HttpStatusCode.Conflict, body);
-        body.Should().Contain("session_state_invalid").And.NotContain("proposal_stale");
+        body.Should().Contain("proposal_not_pending").And.NotContain("session_state_invalid");
         var stored = await StoredAsync(proposalId);
-        stored.Status.Should().Be(AssistantProposalStatus.Failed);
-        stored.FailureCode.Should().Be("session_state_invalid");
+        stored.Status.Should().Be(AssistantProposalStatus.Expired);
+        stored.FailureCode.Should().BeNull();
         (await MarcoFirstRoundAsync()).Should().Be(7);
+    }
+
+    /// <summary>#4455: la chiusura fa scadere le proposte in attesa della sua partita, non quelle di un'altra.</summary>
+    [Fact]
+    public async Task TheClose_ExpiresThePendingProposalsOfItsSession_NotThoseOfAnother()
+    {
+        var closing = await ProposeFivePointsToMarcoAsync();
+        var other = await SessionAssistantTestData.CreateTableAsync(host.Factory, _owner, start: true, Ct, "Anna", "Bruno");
+        var stillOpen = await ProposeAsync(
+            "proponi_punteggio", """{"giocatore":"Anna","punti":3}""", "Anna fa 3 punti", other.SessionId);
+
+        await SessionAssistantTestData.SendAsync(host.Factory, new CompleteLiveSessionCommand(_table.SessionId), Ct);
+        await DeliverTheCloseAsync(_table.SessionId);
+
+        var expired = await StoredAsync(closing);
+        expired.Status.Should().Be(AssistantProposalStatus.Expired, "nessuno l'ha toccata: l'ha chiusa la fine della partita");
+        expired.ResolvedAt.Should().NotBeNull();
+        (await StoredAsync(stillOpen)).Status.Should().Be(AssistantProposalStatus.Pending);
     }
 
     [Fact]

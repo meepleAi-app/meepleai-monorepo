@@ -53,6 +53,15 @@ internal sealed class RejectAssistantProposalCommandHandler(
             return CurrentStateOf(proposal);
         }
 
+        // #4455: a partita chiusa nessuna card agisce, nemmeno per essere rifiutata.
+        if (!access.AcceptsQuestions)
+        {
+            var current = await ClosedSessionProposals
+                .ExpireAsync(proposal, proposals, unitOfWork, timeProvider.GetUtcNow().UtcDateTime, cancellationToken)
+                .ConfigureAwait(false);
+            return current is null ? throw ClosedSessionProposals.Expired() : CurrentStateOf(current);
+        }
+
         proposal.Reject(command.UserId, timeProvider.GetUtcNow().UtcDateTime);
         try
         {

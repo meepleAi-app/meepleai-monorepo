@@ -14,14 +14,7 @@ import {
   SearchIcon,
   ZapIcon,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
 
-import {
-  enqueuePdf,
-  PRIORITY_NORMAL,
-  PRIORITY_URGENT,
-} from '@/app/admin/(dashboard)/knowledge-base/queue/lib/queue-api';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
@@ -61,7 +54,6 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
   const [uploads, setUploads] = useState<FileUploadState[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [urgentPriority, setUrgentPriority] = useState(false);
-  const router = useRouter();
 
   // Issue #2246: Invalidate admin UI caches after upload completes so the
   // newly-uploaded document immediately shows up in:
@@ -103,37 +95,22 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
     setUploads(prev => prev.map((u, i) => (i === index ? { ...u, ...update } : u)));
   }, []);
 
-  const handleEnqueueError = useCallback(
-    (documentId: string, error: unknown) => {
-      toast.error('PDF caricato ma non accodato', {
-        description: error instanceof Error ? error.message : "Errore durante l'accodamento",
-      });
-      setTimeout(() => {
-        router.push(`/admin/knowledge-base/documents?highlight=${documentId}`);
-      }, 2000);
-    },
-    [router]
-  );
-
   const uploadSingleFile = useCallback(
     async (file: File, index: number) => {
       if (!selectedGame) return;
       try {
         updateUpload(index, { status: 'uploading', progress: 0 });
 
-        const result = await api.pdf.uploadPdf(selectedGame.id, file, percent =>
-          updateUpload(index, { progress: percent })
+        // #4443: the backend queues an admin upload itself, with this priority. Enqueuing it again from
+        // here made the queue a second owner of a document the upload was already processing.
+        const result = await api.pdf.uploadPdf(
+          selectedGame.id,
+          file,
+          percent => updateUpload(index, { progress: percent }),
+          { priority: urgentPriority ? 'urgent' : 'normal' }
         );
 
         updateUpload(index, { status: 'processing', progress: 100, documentId: result.documentId });
-
-        // Auto-enqueue for processing (Urgent=30 puts at head, Normal=10 default)
-        try {
-          await enqueuePdf(result.documentId, urgentPriority ? PRIORITY_URGENT : PRIORITY_NORMAL);
-        } catch (enqueueErr) {
-          handleEnqueueError(result.documentId, enqueueErr);
-        }
-
         updateUpload(index, { status: 'completed' });
         invalidateAdminCaches(selectedGame.id);
       } catch (err) {
@@ -143,7 +120,7 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
         });
       }
     },
-    [api.pdf, selectedGame, updateUpload, urgentPriority, handleEnqueueError, invalidateAdminCaches]
+    [api.pdf, selectedGame, updateUpload, urgentPriority, invalidateAdminCaches]
   );
 
   const uploadChunkedFile = useCallback(
@@ -175,7 +152,10 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
 
         // Step 3: Complete
         updateUpload(index, { status: 'processing', progress: 95 });
-        const completeResult = await api.pdf.completeChunkedUpload(sessionId);
+        const completeResult = await api.pdf.completeChunkedUpload(
+          sessionId,
+          urgentPriority ? 'urgent' : 'normal'
+        );
 
         if (!completeResult.success) {
           throw new Error('Failed to assemble chunks');
@@ -183,9 +163,8 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
 
         updateUpload(index, { progress: 100, documentId: completeResult.documentId });
 
-        // #4442: il completamento accoda già il documento (priorità normale), nella stessa transazione
-        // del record. Accodarlo di nuovo da qui darebbe un 409 «già in coda». La priorità «Urgente»
-        // per i caricamenti a pezzi arriva con #4443.
+        // #4442: il completamento accoda già il documento, nella stessa transazione del record, con la
+        // priorità scelta qui (#4443). Accodarlo di nuovo da qui darebbe un 409 «già in coda».
 
         updateUpload(index, { status: 'completed' });
         invalidateAdminCaches(selectedGame.id);
@@ -196,7 +175,7 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
         });
       }
     },
-    [api.pdf, selectedGame, updateUpload, invalidateAdminCaches]
+    [api.pdf, selectedGame, updateUpload, urgentPriority, invalidateAdminCaches]
   );
 
   const startUpload = useCallback(

@@ -1,8 +1,7 @@
 /**
- * #4442: il completamento del caricamento a pezzi accoda già il documento nel backend, nella stessa
- * transazione del record. Il pannello non deve accodarlo di nuovo: riceverebbe un 409 «già in coda» e
- * mostrerebbe «PDF caricato ma non accodato» per un upload riuscito. Il ramo normale accoda ancora
- * finché #4443 non sposta anche lui sulla coda.
+ * #4442 / #4443: il backend accoda da sé l'upload di un admin, in entrambi i rami (normale e a pezzi),
+ * con la priorità che il pannello gli passa. Il pannello non deve accodarlo di nuovo: la coda
+ * diventerebbe un secondo proprietario del documento, o risponderebbe 409 «già in coda».
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, waitFor } from '@testing-library/react';
@@ -90,18 +89,58 @@ describe('UploadZone', () => {
 
     await chooseFile(container, pdfFile('big.pdf', CHUNKED_SIZE));
 
-    await waitFor(() => expect(pdfApi.completeChunkedUpload).toHaveBeenCalledWith('session-1'));
+    await waitFor(() => expect(pdfApi.completeChunkedUpload).toHaveBeenCalled());
     // Lascia finire il ramo dopo il completamento.
     await waitFor(() => expect(container.textContent).toContain('big.pdf'));
     expect(enqueuePdf).not.toHaveBeenCalled();
   });
 
-  it('caricamento normale: accoda ancora il documento (fino a #4443)', async () => {
+  it('caricamento a pezzi: passa la priorità al completamento', async () => {
+    const { container } = renderZone();
+
+    await chooseFile(container, pdfFile('big.pdf', CHUNKED_SIZE));
+
+    await waitFor(() =>
+      expect(pdfApi.completeChunkedUpload).toHaveBeenCalledWith('session-1', 'normal')
+    );
+  });
+
+  it("caricamento normale: non accoda, passa la priorità all'upload", async () => {
     const { container } = renderZone();
 
     await chooseFile(container, pdfFile('small.pdf', 1024));
 
-    await waitFor(() => expect(enqueuePdf).toHaveBeenCalledWith('doc-single', 10));
+    await waitFor(() =>
+      expect(pdfApi.uploadPdf).toHaveBeenCalledWith(
+        GAME_ID,
+        expect.any(File),
+        expect.any(Function),
+        {
+          priority: 'normal',
+        }
+      )
+    );
+    await waitFor(() => expect(container.textContent).toContain('small.pdf'));
+    expect(enqueuePdf).not.toHaveBeenCalled();
     expect(pdfApi.completeChunkedUpload).not.toHaveBeenCalled();
+  });
+
+  it('«Urgente» arriva al backend come priorità', async () => {
+    const { container } = renderZone();
+    await waitFor(() => expect(container.textContent).toContain('Caricamento per: Catan'));
+    fireEvent.click(container.querySelector('[data-testid="priority-toggle"]') as HTMLElement);
+
+    await chooseFile(container, pdfFile('urgent.pdf', 1024));
+
+    await waitFor(() =>
+      expect(pdfApi.uploadPdf).toHaveBeenCalledWith(
+        GAME_ID,
+        expect.any(File),
+        expect.any(Function),
+        {
+          priority: 'urgent',
+        }
+      )
+    );
   });
 });

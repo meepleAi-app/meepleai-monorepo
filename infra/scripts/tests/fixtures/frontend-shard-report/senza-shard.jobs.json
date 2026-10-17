@@ -1,0 +1,4 @@
+{"jobs":[
+ {"id":1,"name":"Detect Changes","status":"completed","conclusion":"success","started_at":"2026-10-16T06:00:00Z","completed_at":"2026-10-16T06:00:20Z"},
+ {"id":2,"name":"Frontend Unit (shard 1/4)","status":"completed","conclusion":"success","started_at":"2026-10-16T06:00:00Z","completed_at":"2026-10-16T06:05:00Z"}
+]}

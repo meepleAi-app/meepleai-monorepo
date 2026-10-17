@@ -188,4 +188,24 @@ public sealed class RejectAssistantProposalTests
         dto.Status.Should().Be("Rejected");
         resolved.Measurements.Should().BeEmpty("il rifiuto che ha vinto l'ha contato la richiesta che l'ha salvato");
     }
+
+    // ─── #4455: a partita chiusa nessuna card agisce ─────────────────────────────────────────────
+
+    [Fact]
+    public async Task Reject_OnAClosedSession_ExpiresTheProposal_InsteadOfRejectingIt()
+    {
+        var version = Guid.NewGuid();
+        using var resolved = new SessionAssistantMetricCapture(ResolvedMetric, version);
+        var proposal = Proposal(version);
+        _directory.Setup(d => d.GetAccessAsync(Session, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AssistantSessionAccess(Owner, "Completed", false));
+
+        var act = () => RejectAsync(proposal);
+
+        (await act.Should().ThrowAsync<ConflictException>()).Which.ErrorCode.Should().Be("proposal_not_pending");
+        proposal.Status.Should().Be(AssistantProposalStatus.Expired);
+        proposal.ResolvedBy.Should().BeNull();
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        resolved.Measurements.Should().BeEmpty();
+    }
 }

@@ -72,6 +72,7 @@ Architecture Decision Records for MeepleAI. Each ADR captures significant archit
 | [095](adr-095-single-answer-pipeline-and-versioned-agent-profile.md) | Una sola pipeline di risposta, profilo dell'agente con versioni, gateway LLM con tetto unico (numerato fuori fascia: 080–090 è piena) | 2026-10-10 | Accepted |
 | [097](adr-097-meai-facade-over-the-llm-gateway.md) | Microsoft.Extensions.AI come facciata del gateway per il tool calling (numerato fuori fascia: 080–090 è piena) | 2026-10-12 | Accepted |
 | [098](adr-098-arbiter-is-a-task-not-an-agent.md) | L'arbitro è un compito dell'agente unico, non un agente: disputa solo in partita, validatore come suo strumento, selettore della chat a intenti (emenda ADR-092; numerato fuori fascia: 080–090 è piena) | 2026-10-15 | Accepted |
+| [100](adr-100-processing-queue-owns-admin-uploads.md) | La coda è l'unica proprietaria dell'elaborazione degli upload admin: presa in carico atomica per ogni percorso, priorità reale, coda piena = 429 (numerato fuori fascia: 080–099 è piena) | 2026-10-18 | Accepted |
 
 ### Frontend Routing & Information Architecture (091–099)
 

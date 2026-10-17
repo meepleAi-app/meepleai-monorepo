@@ -766,13 +766,11 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
             "Quota reserved for user {UserId}, PDF {PdfId}, expires at {ExpiresAt}",
             userId, storageResult.FileId, reservationResult.ExpiresAt);
 
-        // Start background processing via fire-and-forget (immediate attempt).
-        // Recovery for PDFs stuck in non-terminal states is handled separately by
-        // RetryFailedPdfsJob (Quartz, every 5 min). Enqueueing here would have the
-        // Quartz worker race the BG task end-to-end on the same PDF — both indexing,
-        // both finalizing, the second one's MarkFailed clobbering the first one's
-        // Ready state. The atomic claim added in PdfProcessingPipelineService still
-        // protects the recovery path.
+        // Start background processing via fire-and-forget. Only uploads by users below Editor get
+        // here: admin and editor uploads are queued instead (EnqueueForProcessingAsync, ADR-100), so
+        // the queue is never a second owner of this document. The task claims the document atomically
+        // (ValidateAndPrepareProcessingAsync), like the worker, process-pending and recovery at
+        // startup: whichever claims first processes it, the others do nothing.
         _backgroundTaskService.ExecuteWithCancellation(
             storageResult.FileId!,
             (ct) => ProcessPdfAsync(storageResult.FileId!, storageResult.FilePath!, userId, ct));

@@ -121,6 +121,16 @@ public sealed class ProcessingJobTests
         job.Status.Should().Be(JobStatus.Queued);
     }
 
+    [Fact]
+    public void Create_WhenQueueIsFull_ButTheCapIsBypassed_Succeeds()
+    {
+        // #4442: an interactive admin upload is not refused because a bulk reindex filled the queue.
+        var job = ProcessingJob.Create(Guid.NewGuid(), Guid.NewGuid(), 10, ProcessingJob.MaxQueueSize + 27, _timeProvider,
+            bypassQueueCap: true);
+
+        job.Status.Should().Be(JobStatus.Queued);
+    }
+
     #endregion
 
     #region Start Tests

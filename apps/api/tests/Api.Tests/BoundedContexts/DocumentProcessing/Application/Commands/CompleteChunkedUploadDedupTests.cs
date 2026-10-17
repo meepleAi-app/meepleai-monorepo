@@ -80,20 +80,12 @@ public class CompleteChunkedUploadDedupTests
 
             var mediatorMock = new Mock<IMediator>();
 
-            var sc = new ServiceCollection();
-            sc.AddSingleton(db);
-            var provider = sc.BuildServiceProvider();
-            var scopeFactory = provider.GetRequiredService<IServiceScopeFactory>();
-
             var handler = new CompleteChunkedUploadCommandHandler(
                 sessionRepoMock.Object,
                 db,
                 blobStorageMock.Object,
                 Mock.Of<IBackgroundTaskService>(),
                 NullLogger<CompleteChunkedUploadCommandHandler>.Instance,
-                scopeFactory,
-                Mock.Of<IPdfTextExtractor>(),
-                Mock.Of<IPdfTableExtractor>(),
                 mediatorMock.Object,
                 dedupMock.Object,
                 TimeProvider.System);

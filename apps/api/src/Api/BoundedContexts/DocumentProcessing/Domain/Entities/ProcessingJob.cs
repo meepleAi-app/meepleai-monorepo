@@ -61,18 +61,24 @@ public sealed class ProcessingJob : AggregateRoot<Guid>
     /// <summary>
     /// Factory method to create a new processing job.
     /// </summary>
+    /// <remarks>
+    /// #4442: <c>bypassQueueCap</c> skips the <see cref="MaxQueueSize"/> guard. Reserved for interactive
+    /// admin uploads, which must not be refused while a bulk reindex or a seed batch fills the queue;
+    /// never set from an external request.
+    /// </remarks>
     public static ProcessingJob Create(
         Guid pdfDocumentId,
         Guid userId,
         int priority,
         int currentQueueSize,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        bool bypassQueueCap = false)
     {
         if (pdfDocumentId == Guid.Empty)
             throw new ArgumentException("PdfDocumentId is required.", nameof(pdfDocumentId));
         if (userId == Guid.Empty)
             throw new ArgumentException("UserId is required.", nameof(userId));
-        if (currentQueueSize >= MaxQueueSize)
+        if (!bypassQueueCap && currentQueueSize >= MaxQueueSize)
             throw new ConflictException($"Queue is full. Maximum {MaxQueueSize} jobs allowed.");
 
         var now = (timeProvider ?? TimeProvider.System).GetUtcNow();

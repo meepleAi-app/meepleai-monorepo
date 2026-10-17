@@ -183,15 +183,9 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
 
         updateUpload(index, { progress: 100, documentId: completeResult.documentId });
 
-        // Auto-enqueue (Urgent=30 puts at head, Normal=10 default)
-        try {
-          await enqueuePdf(
-            completeResult.documentId,
-            urgentPriority ? PRIORITY_URGENT : PRIORITY_NORMAL
-          );
-        } catch (enqueueErr) {
-          handleEnqueueError(completeResult.documentId, enqueueErr);
-        }
+        // #4442: il completamento accoda già il documento (priorità normale), nella stessa transazione
+        // del record. Accodarlo di nuovo da qui darebbe un 409 «già in coda». La priorità «Urgente»
+        // per i caricamenti a pezzi arriva con #4443.
 
         updateUpload(index, { status: 'completed' });
         invalidateAdminCaches(selectedGame.id);
@@ -202,7 +196,7 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
         });
       }
     },
-    [api.pdf, selectedGame, updateUpload, urgentPriority, handleEnqueueError, invalidateAdminCaches]
+    [api.pdf, selectedGame, updateUpload, invalidateAdminCaches]
   );
 
   const startUpload = useCallback(

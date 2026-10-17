@@ -59,7 +59,8 @@ internal class EnqueuePdfCommandHandler : ICommandHandler<EnqueuePdfCommand, Gui
             command.UserId,
             command.Priority,
             currentQueueSize,
-            _timeProvider);
+            _timeProvider,
+            command.BypassQueueCap);
 
         await _jobRepository.AddAsync(job, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

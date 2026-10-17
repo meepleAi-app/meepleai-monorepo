@@ -228,6 +228,10 @@ internal sealed class AssistantTurnRunner
             answer.SetAgentMetadata(citationsJson: AssistantCitations.Write(composed.Citations));
         }
 
+        // #4456: costo e token di tutte le chiamate del turno, anche di un turno fermato con un codice. Dopo le fonti,
+        // perché SetAgentMetadata riscrive anche i token.
+        answer.SetTurnCost(meter.CostUsd, meter.PromptTokens + meter.CompletionTokens);
+
         thread.AddMessage(answer);
         if (isNewThread)
         {

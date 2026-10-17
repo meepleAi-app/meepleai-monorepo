@@ -142,6 +142,51 @@ Il **budget mode** (`LlmModelOverrideService`) non c'è più. Sostituiva per tut
 - **Traduzione del librogame**: `503` con il codice e il messaggio (`LlmCallRefusedException`).
 - **Valutazione dei dataset**: il campione risulta fallito, con il motivo, invece di una risposta vuota valutata come sbagliata.
 
+## Costo per partita dell'assistente (#4456)
+
+Il criterio 3 del pilota dell'assistente in partita (spec `2026-10-11-session-assistant-agent-design.md`, §7.3) confronta il costo di una partita con una quota del tetto mensile. Ogni turno dell'assistente salva sul messaggio di risposta il costo e i token di **tutte** le chiamate al modello che ha fatto, anche quando si ferma con un codice (budget, scadenza): sono i campi `CostUsd` e `TokenCount` nel JSON dei messaggi del thread della partita (`"ChatThreads"."MessagesJson"`, riconoscibile da `"LiveSessionId"`). Le domande non hanno costo, e i messaggi salvati prima di #4456 non hanno la chiave: il loro costo è assente, non zero.
+
+**Costo per partita**, dalla più cara:
+
+```sql
+SELECT t."LiveSessionId"                                      AS partita,
+       count(*) FILTER (WHERE m->>'Role' = 'assistant')       AS turni,
+       sum((m->>'CostUsd')::numeric)                          AS costo_usd,
+       count(*) FILTER (WHERE m->>'Role' = 'assistant'
+                          AND m->>'CostUsd' IS NULL)          AS turni_senza_costo
+FROM "ChatThreads" t
+CROSS JOIN LATERAL jsonb_array_elements(t."MessagesJson"::jsonb) AS m
+WHERE t."LiveSessionId" IS NOT NULL
+GROUP BY t."LiveSessionId"
+ORDER BY costo_usd DESC NULLS LAST;
+```
+
+**È una stima, e si riconcilia col registro.** Un turno finito in eccezione prima del salvataggio (`assistant_unavailable` dal `catch` del turno) non lascia messaggio: il suo costo sta solo in `llm_cost_logs`. La differenza fra le due somme, nella stessa finestra, è il costo che i messaggi non portano: i turni persi così, più i turni salvati prima di #4456. Le date della finestra sono in UTC; meglio una finestra di giorni, perché il registro data ogni chiamata e il messaggio la fine del turno.
+
+```sql
+WITH salvati AS (
+  SELECT sum((m->>'CostUsd')::numeric) AS costo
+  FROM "ChatThreads" t
+  CROSS JOIN LATERAL jsonb_array_elements(t."MessagesJson"::jsonb) AS m
+  WHERE t."LiveSessionId" IS NOT NULL
+    AND m->>'Role' = 'assistant'
+    AND (m->>'Timestamp')::timestamptz >= timestamptz '2026-10-01 00:00+00'
+    AND (m->>'Timestamp')::timestamptz <  timestamptz '2026-11-01 00:00+00'
+), registro AS (
+  SELECT sum(total_cost_usd) AS costo
+  FROM llm_cost_logs
+  WHERE request_source = 'SessionAssistant'
+    AND created_at >= timestamptz '2026-10-01 00:00+00'
+    AND created_at <  timestamptz '2026-11-01 00:00+00'
+)
+SELECT registro.costo                              AS registro_usd,
+       salvati.costo                               AS salvati_usd,
+       registro.costo - coalesce(salvati.costo, 0) AS non_attribuito_usd
+FROM registro, salvati;
+```
+
+Le valutazioni del set di scenari hanno `request_source = 'Evaluation'` e non entrano in nessuna delle due somme. Un tetto **per partita**, imposto dal sistema, chiederebbe invece l'id della sessione nelle righe del registro: oggi nessuno lo chiede, e se arriva si riapre da #4456.
+
 ## Osservabilità
 
 - Metrica: `meepleai_llm_budget_rejected_calls_total`, con le etichette `reason` (`DailyCapReached`, `MonthlyQuotaReached`, `BackgroundPaused`, `ModelNotInCatalog`, …) e `budget_class`.

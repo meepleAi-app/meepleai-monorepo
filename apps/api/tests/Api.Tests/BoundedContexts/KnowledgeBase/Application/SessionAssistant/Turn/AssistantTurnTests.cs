@@ -985,4 +985,61 @@ public sealed class AssistantTurnTests
 
         claimed.Measurements.Should().BeEmpty();
     }
+
+    // ─── #4456: il costo del turno sul messaggio ─────────────────────────────────────────────────
+
+    private static LlmCompletionResult Costing(LlmCompletionResult result, decimal cost, int prompt, int completion) =>
+        result with
+        {
+            Usage = new LlmUsage(prompt, completion, prompt + completion),
+            Cost = new LlmCost { InputCost = cost, OutputCost = 0m, ModelId = "deepseek-flash", Provider = "OpenRouter" },
+        };
+
+    [Fact]
+    public async Task ATwoRoundTurn_SavesOnTheAnswerTheSumOfItsCalls()
+    {
+        Script(
+            Costing(Calls("proponi_punteggio", """{"giocatore":"Marco","punti":5}"""), 0.0012m, 100, 20),
+            Costing(Says("Ho preparato la proposta: +5 a Marco. Confermala dalla card."), 0.0008m, 150, 30));
+
+        await AskAsync();
+
+        var answer = _savedThread!.Messages[^1];
+        answer.CostUsd.Should().Be(0.0020m);
+        answer.TokenCount.Should().Be(300);
+        _savedThread.Messages[0].CostUsd.Should().BeNull("la domanda non ha un costo suo");
+    }
+
+    [Fact]
+    public async Task ATurnStoppedWithACode_SavesTheCostOfTheCallsItMade()
+    {
+        Script(
+            Costing(Calls("proponi_punteggio", """{"giocatore":"Marco","punti":5}"""), 0.0012m, 100, 20),
+            Refuses(LlmBudgetAdmission.DailyBudgetErrorCode));
+
+        await AskAsync();
+
+        var answer = _savedThread!.Messages[^1];
+        answer.FallbackCode.Should().Be(AssistantTurnRunner.BudgetPausedCode);
+        answer.CostUsd.Should().Be(0.0012m);
+        answer.TokenCount.Should().Be(120);
+    }
+
+    /// <summary>SetAgentMetadata, che salva le fonti, riscrive anche i token: il costo si scrive dopo.</summary>
+    [Fact]
+    public async Task ATurnWithSources_KeepsItsCostAndTokens()
+    {
+        WithGame();
+        RulesFind(CopyrightTier.Full);
+        Script(
+            Costing(Calls(SessionAssistantToolset.CercaRegole, "{\"domanda\":\"quante tessere?\"}"), 0.001m, 200, 10),
+            Costing(Says("Quattro tessere per espositore (pagina 3)."), 0.002m, 400, 40));
+
+        await AskAsync("quante tessere si mettono?");
+
+        var answer = _savedThread!.Messages[^1];
+        answer.CitationsJson.Should().NotBeNull();
+        answer.CostUsd.Should().Be(0.003m);
+        answer.TokenCount.Should().Be(650);
+    }
 }

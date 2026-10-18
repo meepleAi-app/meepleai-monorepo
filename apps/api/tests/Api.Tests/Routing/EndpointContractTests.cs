@@ -138,6 +138,7 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
     // -----------------------------------------------------------------------
     public static IEnumerable<object[]> RetiredRoutes()
     {
+        yield return ["GET", "/api/v1/admin/kb/games/00000000-0000-0000-0000-000000000001/feedback", "#4469 — per-game feedback list behind a hand-typed game UUID; GET /admin/kb/feedback filters by version and game"];
         yield return ["POST", "/api/v1/agents/user", "#4138 — user agent creation"];
         yield return ["POST", "/api/v1/agents/create-with-setup", "#4138 — creation + library add + thread"];
         yield return ["POST", "/api/v1/agents/quick-create", "#4138 — 1-click Tutor creation"];

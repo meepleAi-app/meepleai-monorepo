@@ -164,7 +164,8 @@ internal record StreamingComplete(
     Guid? ProfileVersionId = null,
     string? Language = null,
     // #3388: grounding-contract invariant. Every producer below explicitly passes this
-    // (derived from its own citation count: Grounded iff count>0, else Ungrounded) rather
+    // (AnswerGrounding.WireOf: Grounded iff count>0 and the answer is not the refusal, #4481;
+    // else Ungrounded) rather
     // than relying on the default — the default only exists because C# requires optional
     // positional params to trail required ones, and this must stay the LAST param per the
     // plan. Wire value is the enum NAME string ("Grounded"/"Partial"/"Ungrounded"), NOT the

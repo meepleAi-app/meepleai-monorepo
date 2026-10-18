@@ -37,7 +37,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 /// Coverage: validation, search, LLM streaming, cache hit/miss, chat context, confidence tracking, errors, cancellation.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
-public class StreamQaQueryHandlerTests
+public partial class StreamQaQueryHandlerTests
 {
     // Issue #4137: StreamQaQuery porta l'identita' come parametro OBBLIGATORIO,
     // quindi ogni test deve dichiarare chi chiede. Il mock permissivo di default

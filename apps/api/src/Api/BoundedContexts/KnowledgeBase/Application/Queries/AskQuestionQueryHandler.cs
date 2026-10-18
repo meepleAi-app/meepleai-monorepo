@@ -358,7 +358,8 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
             await _qualityTracker.TrackQueryAsync(noContextMetrics, cancellationToken).ConfigureAwait(false);
 
             return new QaResponseDto(
-                Answer: "This information is not available in the provided rulebook.",
+                // #3850: la rinuncia nella lingua della risposta
+                Answer: RulebookRefusal.TextFor(language),
                 Sources: [],
                 SearchConfidence: 0,
                 LlmConfidence: 0,
@@ -412,8 +413,15 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         var response = await BuildValidatedResponseAsync(
             query, language, llmResponse ?? string.Empty, searchResults, domainSearchResults,
             searchConfidence, cancellationToken).ConfigureAwait(false);
-        // #4168 (ADR-095 D2): la versione e la lingua con cui la risposta è stata prodotta
-        response = response with { ProfileVersionId = profile.VersionId, Language = language };
+        // #4168 (ADR-095 D2): la versione e la lingua con cui la risposta è stata prodotta.
+        // #3850: il modello dice la rinuncia in inglese, come chiede il prompt; chi chiede la legge
+        // nella lingua della risposta.
+        response = response with
+        {
+            Answer = RulebookRefusal.Localize(response.Answer, language),
+            ProfileVersionId = profile.VersionId,
+            Language = language,
+        };
         sw5.Stop();
         _logger.LogInformation("[AskQuestionHandler] Step 5 DONE: Response validation completed in {ElapsedMs}ms",
             sw5.ElapsedMilliseconds);
@@ -759,9 +767,12 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         }
     }
 
+    /// <summary>
+    /// Una risposta che non va in cache: di bassa qualità, o la rinuncia (#3850: in qualunque lingua,
+    /// perché qui arriva già localizzata).
+    /// </summary>
     private static bool IsLowQualityResponse(QaResponseDto response) =>
-        response.IsLowQuality ||
-        string.Equals(response.Answer, "This information is not available in the provided rulebook.", StringComparison.Ordinal);
+        response.IsLowQuality || RulebookRefusal.IsRefusal(response.Answer);
 
     private async Task<DocumentReadiness> CheckDocumentsReadyAsync(
         Guid gameId, List<Guid>? documentIds, CancellationToken ct)

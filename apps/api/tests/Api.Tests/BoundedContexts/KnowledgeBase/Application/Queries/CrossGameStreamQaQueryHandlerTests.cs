@@ -519,6 +519,40 @@ public sealed class CrossGameStreamQaQueryHandlerTests
             Arg.Any<CancellationToken>());
     }
 
+    // ── #3850, #4481: la rinuncia del modello nella lingua della risposta ─────
+
+    [Fact]
+    public async Task ItalianQuestion_TheEnglishRefusal_ReachesTheUserInItalian_AndIsUngrounded()
+    {
+        SetupTwoAccessibleGames();
+        SetupSearchResults();
+        SetupLlmStream("This information is not available in the provided rulebook.");
+
+        var events = await CollectEventsAsync(
+            CreateSut(), new CrossGameStreamQaQuery("Si può?", UserId, UserRole.User, AgentLanguage: "it"));
+
+        var tokens = events.Where(e => e.Type == StreamingEventType.Token)
+            .Select(e => ((StreamingToken)e.Data!).token).ToList();
+        string.Concat(tokens).Trim().Should().Be("Questa informazione non è disponibile nel regolamento fornito.");
+        tokens.Should().NotContain(t => t.Contains("rulebook", StringComparison.OrdinalIgnoreCase));
+        var complete = (StreamingComplete)events.Single(e => e.Type == StreamingEventType.Complete).Data!;
+        complete.GroundingStatus.Should().Be("Ungrounded");
+    }
+
+    [Fact]
+    public async Task ItalianQuestion_AnAnswer_IsGrounded()
+    {
+        SetupTwoAccessibleGames();
+        SetupSearchResults();
+        SetupLlmStream("Sì, puoi [1].");
+
+        var events = await CollectEventsAsync(
+            CreateSut(), new CrossGameStreamQaQuery("Si può?", UserId, UserRole.User, AgentLanguage: "it"));
+
+        var complete = (StreamingComplete)events.Single(e => e.Type == StreamingEventType.Complete).Data!;
+        complete.GroundingStatus.Should().Be("Grounded");
+    }
+
     // ── Private helpers ─────────────────────────────────────────────────────
 
     private void SetupTwoAccessibleGames() =>

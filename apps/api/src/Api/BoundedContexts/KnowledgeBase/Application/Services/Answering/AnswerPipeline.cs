@@ -20,7 +20,6 @@ using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -208,8 +207,10 @@ internal sealed class AnswerPipeline : IAnswerPipeline
             yield return CreateEvent(StreamingEventType.Citations,
                 new StreamingCitations(StripRegions(cachedResponse.snippets)));
 
-            // Emit answer as tokens (simulate streaming for consistency)
-            var words = cachedResponse.answer.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            // Emit answer as tokens (simulate streaming for consistency).
+            // #3850: le voci scritte prima della correzione portano la rinuncia in inglese.
+            var cachedAnswer = RulebookRefusal.Localize(cachedResponse.answer, language.Language);
+            var words = cachedAnswer.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             for (int i = 0; i < words.Length; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -238,7 +239,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
                     // La chiave della cache contiene versione e lingua: la risposta servita e' di queste.
                     ProfileVersionId: profile.VersionId,
                     Language: language.Language,
-                    GroundingStatus: cachedResponse.snippets.Count > 0 ? "Grounded" : "Ungrounded"));
+                    GroundingStatus: AnswerGrounding.WireOf(cachedAnswer, cachedResponse.snippets.Count)));
 
             yield break;
         }
@@ -294,8 +295,10 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         // claims become the answer source in the retrieval-miss case (e.g. Catan/TM "Setup per N").
         if (!searchSuccess && !injectClaims)
         {
+            // #3850: il gemello della rinuncia, nella lingua della risposta. La chat mostra il
+            // messaggio del backend per i codici che non conosce, e NO_RESULTS è fra questi.
             yield return CreateEvent(StreamingEventType.Error,
-                new StreamingError("No relevant information found in the rulebook.", "NO_RESULTS"));
+                new StreamingError(RulebookRefusal.NoResultsTextFor(language), "NO_RESULTS"));
             yield break;
         }
 
@@ -323,8 +326,11 @@ internal sealed class AnswerPipeline : IAnswerPipeline
             profile.Content, language, query.Query, ragSnippets, chatHistoryContext,
             query.ResponseStyle, query.ContinuationContext, verifiedBlock);
 
-        // Step 4: Stream tokens from LLM
-        var answerBuilder = new StringBuilder();
+        // Step 4: Stream tokens from LLM.
+        // #3850: la rinuncia esce nella lingua della risposta. Il localizzatore trattiene solo ciò che
+        // potrebbe ancora diventare la frase inglese; il suo Delivered è il testo che l'utente legge,
+        // e quello si salva. tokenCount resta il conteggio dei pezzi del modello.
+        var answerText = new RefusalStreamLocalizer(language);
         var tokenCount = 0;
         LlmUsage? llmUsage = null;
         LlmCost? llmCost = null;
@@ -376,13 +382,23 @@ internal sealed class AnswerPipeline : IAnswerPipeline
             // Regular content chunk
             if (!string.IsNullOrEmpty(chunk.Content))
             {
-                answerBuilder.Append(chunk.Content);
                 tokenCount++;
-                yield return CreateEvent(StreamingEventType.Token, new StreamingToken(chunk.Content));
+                var visible = answerText.Push(chunk.Content);
+                if (visible.Length > 0)
+                {
+                    yield return CreateEvent(StreamingEventType.Token, new StreamingToken(visible));
+                }
             }
         }
 
-        var answer = answerBuilder.ToString().Trim();
+        var heldBack = answerText.Complete();
+        if (heldBack.Length > 0)
+        {
+            yield return CreateEvent(StreamingEventType.Token, new StreamingToken(heldBack));
+        }
+
+        var delivered = answerText.Delivered;
+        var answer = delivered.Trim();
 
         // Step 5: Calculate quality metrics, cache response, emit completion.
         // R1: never cache a claim-injected answer (the (game,query) key carries no card fingerprint, §6.2).
@@ -402,10 +418,11 @@ internal sealed class AnswerPipeline : IAnswerPipeline
             new StreamingComplete(0, 0, tokenCount, tokenCount, overallConfidence.Value,
                 ProfileVersionId: profile.VersionId,
                 Language: language,
-                GroundingStatus: allSnippets.Count > 0 ? "Grounded" : "Ungrounded"));
+                GroundingStatus: AnswerGrounding.WireOf(answer, allSnippets.Count)));
 
-        // Emit inline citation matches (over RAG + claim citations, so [Vk] claim markers can match too)
-        var inlineCitations = _citationMatcher.Match(answerBuilder.ToString(), allSnippets);
+        // Emit inline citation matches (over RAG + claim citations, so [Vk] claim markers can match too).
+        // Le posizioni sono sul testo che il client ha ricevuto.
+        var inlineCitations = _citationMatcher.Match(delivered, allSnippets);
         if (inlineCitations.Count > 0)
             yield return CreateEvent(StreamingEventType.InlineCitation, new StreamingInlineCitations(inlineCitations));
 
@@ -413,7 +430,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         if (string.Equals(llmFinishReason, "length", StringComparison.Ordinal))
         {
             var continuationToken = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(
-                System.Text.Json.JsonSerializer.Serialize(new { gameId = query.GameId, originalQuery = query.Query, partialAnswer = answerBuilder.ToString(), threadId = query.ThreadId })));
+                System.Text.Json.JsonSerializer.Serialize(new { gameId = query.GameId, originalQuery = query.Query, partialAnswer = delivered, threadId = query.ThreadId })));
             yield return CreateEvent(StreamingEventType.ContinuationAvailable, new StreamingContinuation(continuationToken, "max_tokens_reached"));
         }
 

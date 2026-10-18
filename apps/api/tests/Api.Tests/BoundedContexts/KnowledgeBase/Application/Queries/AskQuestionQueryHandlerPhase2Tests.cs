@@ -1491,4 +1491,44 @@ public class AskQuestionQueryHandlerPhase2Tests
             Times.Once);
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // #3850: la rinuncia nella lingua della risposta. Il modello la dice in inglese, come chiede il
+    // prompt del profilo; chi chiede in italiano la legge in italiano, e resta una rinuncia per la
+    // cache (non si conserva).
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private const string ItalianRefusal = "Questa informazione non è disponibile nel regolamento fornito.";
+
+    [Fact]
+    public async Task Handle_ItalianQuestion_TheEnglishRefusalOfTheModel_IsAnsweredInItalian_AndNotCached()
+    {
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "This information is not available in the provided rulebook.");
+
+        var result = await BuildHandler().Handle(
+            new AskQuestionQuery(GameId: gameId, Question: "Si può?", Language: "it", UserId: Guid.NewGuid(), UserRole: "User"),
+            TestContext.Current.CancellationToken);
+
+        result.Answer.Should().Be(ItalianRefusal);
+        result.Language.Should().Be("it");
+        _mockResponseCache.Verify(
+            c => c.SetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CachedRagResponse>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "a refusal is not cached, in whatever language it is written");
+    }
+
+    [Fact]
+    public async Task Handle_ItalianQuestion_WhenNoPassageIsFound_TheRefusalIsItalian()
+    {
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocks(gameId);
+
+        var result = await BuildHandler().Handle(
+            new AskQuestionQuery(GameId: gameId, Question: "Si può?", Language: "it", UserId: Guid.NewGuid(), UserRole: "User"),
+            TestContext.Current.CancellationToken);
+
+        result.Answer.Should().Be(ItalianRefusal);
+        _mockLlmService.Verify(
+            s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
 }

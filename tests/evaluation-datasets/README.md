@@ -21,6 +21,20 @@ and is the gate the in-session live path must pass before enhancements are wired
   Page-level, so stable across the #3427 re-index. A sample without it is not citation-graded.
 - `relevant_chunk_ids` are intentionally empty pending #3427 (recall labeling via the labeling-assist workflow).
 
+### `reference-questions-it.json` — domande di riferimento dell'agente (#4470)
+
+Il set scritto dall'utente il 2026-10-18 per verificare l'agente: domande in italiano su Catan, Carcassonne,
+Ticket to Ride e Gloomhaven, con risposta attesa in testo libero. Serve a due cose (ADR-095 fetta 7, #4170):
+la misura periodica, con tutto il set, e il gate di pubblicazione del profilo, con un sottoinsieme. Il giudizio
+lo dà un giudice LLM tarato (#4471), non le parole chiave: il set non ne ha.
+
+- Campi: `game`, `category`, `difficulty`, `question`, `ground_truth`, `context_reference`, `question_type`.
+  Le domande «Out of Scope» chiedono di un termine o una meccanica che il gioco non ha.
+- Non porta UUID: l'id di un gioco cambia da un ambiente all'altro, e il caricamento lo risolve sul posto.
+- Per contare le domande per gioco: `jq 'group_by(.game) | map({(.[0].game): length}) | add' reference-questions-it.json`.
+- Prima della taratura le risposte attese vanno confrontate con il regolamento nel corpus. Correzioni e
+  legami di gioco ancora da fare (domande di Ticket to Ride: Europe, regolamento di Gloomhaven) sono in #4470.
+
 ## Dataset Formats
 
 ### Mozilla Structured QA (`mozilla-boardgames.json`)

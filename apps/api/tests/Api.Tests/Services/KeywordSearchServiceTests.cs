@@ -166,6 +166,33 @@ public sealed class KeywordSearchServiceTests
         result.Should().NotContain(":B");
     }
 
+    /// <summary>
+    /// #4479: il testo dell'utente non deve portare nel tsquery la sintassi del tsquery. «2:1» mandava
+    /// in errore la chat (42601: syntax error in tsquery), «:*» trasformava una parola in un prefisso,
+    /// «&lt;2&gt;» in una distanza fra parole. Restano lettere, cifre e trattini.
+    /// </summary>
+    [Theory]
+    [InlineData("Per usare un porto specializzato (2:1), devo aver costruito una città?", "italian")]
+    [InlineData("carta:* e turno:A", "italian")]
+    [InlineData("board<2>setup \"rules\" a\\b", "english")]
+    [InlineData("Ticket to Ride: Europe stations", "english")]
+    public void BuildTsQuery_NonPhrase_CarriesNoTsQuerySyntaxFromTheUser(string query, string ftsConfig)
+    {
+        var result = KeywordSearchService.BuildTsQuery(query, phraseSearch: false, ftsConfig);
+
+        result.Should().NotContainAny(":", "*", "<2>", "\"", "\\");
+    }
+
+    [Fact]
+    public void BuildTsQuery_PunctuationSeparatesWords_ItDoesNotGlueThem()
+    {
+        // «2:1» sono due numeri, e l'apostrofo dell'elisione separa l'articolo dalla parola: prima
+        // l'apostrofo veniva tolto e «l'insediamento» diventava «linsediamento», un lessema che nessun
+        // regolamento contiene.
+        KeywordSearchService.BuildTsQuery("porto 2:1, l'insediamento", phraseSearch: false, "english")
+            .Should().Be("porto | 2 | 1 | l | insediamento");
+    }
+
     [Fact]
     public void BuildTsQuery_EnglishNonPhrase_PlainOrJoin()
     {

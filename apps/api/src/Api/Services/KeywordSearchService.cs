@@ -1,3 +1,4 @@
+using System.Globalization;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Helpers;
 using Api.Infrastructure;
@@ -565,25 +566,17 @@ internal class KeywordSearchService : IKeywordSearchService
             return string.Empty;
         }
 
-        // Remove or escape special tsquery operators: & | ! <-> ( ) '
-        // Keep only alphanumeric characters, spaces, and hyphens
-        var sanitized = query
-            .Replace("'", "") // Remove single quotes to prevent SQL injection
-            .Replace("&", " ")
-            .Replace("|", " ")
-            .Replace("!", " ")
-            .Replace("(", "")
-            .Replace(")", "")
-            .Replace("<->", " ")
-            .Trim();
+        // Keep only letters, digits and hyphens; every other character separates words. The text goes
+        // into to_tsquery, where punctuation is syntax: #4479 found «(2:1),» in a user's question
+        // failing the whole answer with 42601, and «:*» or «<2>» changing its meaning (prefix match,
+        // word distance). A blacklist of operators missed the colon, so this is an allowlist. The
+        // apostrophe separates too: «l'insediamento» is «l insediamento», not «linsediamento».
+        var kept = query
+            .Select(c => char.IsLetterOrDigit(c) || c == '-'
+                || CharUnicodeInfo.GetUnicodeCategory(c) == UnicodeCategory.NonSpacingMark ? c : ' ')
+            .ToArray();
 
-        // Remove multiple spaces
-        while (sanitized.Contains("  "))
-        {
-            sanitized = sanitized.Replace("  ", " ");
-        }
-
-        return sanitized;
+        return string.Join(' ', new string(kept).Split(' ', StringSplitOptions.RemoveEmptyEntries));
     }
 
     /// <summary>

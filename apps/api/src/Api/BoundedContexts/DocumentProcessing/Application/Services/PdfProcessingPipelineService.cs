@@ -507,6 +507,15 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             await TryMarkFailedAsync(pdfDocumentId, ex.Message, category).ConfigureAwait(false);
             return PdfPipelineOutcome.Failed;
         }
+        catch (PdfEmbeddingFailedException ex)
+        {
+            // #4443: the embedding service failed or answered badly. Service, as the upload's background
+            // task records it: transient, so RetryFailedPdfsJob retries it. This pipeline left the
+            // category NULL, and since ADR-100 it processes every admin upload.
+            _logger.LogError(ex, "[PdfPipeline] Embedding failed for PDF {PdfId}", pdfId);
+            await TryMarkFailedAsync(pdfDocumentId, ex.Message, ErrorCategory.Service).ConfigureAwait(false);
+            return PdfPipelineOutcome.Failed;
+        }
         catch (PdfStorageObjectMissingException ex)
         {
             // #3846: the object is not at the key FilePath records. Retrying cannot conjure it back,
@@ -892,19 +901,30 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             _logger.LogInformation("[PdfPipeline] Embedding batch {Current}/{Total} ({Count} texts)",
                 batchIndex + 1, batchCount, batchTexts.Count);
 
-            var batchResult = await _embeddingService
-                .GenerateEmbeddingsAsync(batchTexts, cancellationToken)
-                .ConfigureAwait(false);
+            EmbeddingResult batchResult;
+            try
+            {
+                batchResult = await _embeddingService
+                    .GenerateEmbeddingsAsync(batchTexts, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+#pragma warning disable CA1031 // Rethrown as the embedding failure it is
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // An unreachable service throws instead of returning a failed result: same failure.
+                throw new PdfEmbeddingFailedException($"Embedding batch {batchIndex + 1}/{batchCount} failed: {ex.Message}", ex);
+            }
+#pragma warning restore CA1031
 
             if (!batchResult.Success)
             {
-                throw new InvalidOperationException(
+                throw new PdfEmbeddingFailedException(
                     $"Embedding batch {batchIndex + 1}/{batchCount} failed: {batchResult.ErrorMessage}");
             }
 
             if (batchResult.Embeddings == null || batchResult.Embeddings.Count != batchTexts.Count)
             {
-                throw new InvalidOperationException(
+                throw new PdfEmbeddingFailedException(
                     $"Embedding batch {batchIndex + 1} returned {batchResult.Embeddings?.Count ?? 0} vectors for {batchTexts.Count} texts");
             }
 
@@ -914,7 +934,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 if (embedding == null || embedding.Length == 0
                     || Array.Exists(embedding, v => float.IsNaN(v) || float.IsInfinity(v)))
                 {
-                    throw new InvalidOperationException(
+                    throw new PdfEmbeddingFailedException(
                         $"Invalid embedding vector detected in batch {batchIndex + 1}");
                 }
             }
@@ -929,7 +949,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
         if (allEmbeddings.Count != chunks.Count)
         {
-            throw new InvalidOperationException(
+            throw new PdfEmbeddingFailedException(
                 $"Total embeddings {allEmbeddings.Count} != total chunks {chunks.Count}");
         }
 

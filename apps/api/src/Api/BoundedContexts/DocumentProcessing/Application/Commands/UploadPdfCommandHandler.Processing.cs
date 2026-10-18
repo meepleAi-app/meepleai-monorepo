@@ -43,12 +43,9 @@ internal partial class UploadPdfCommandHandler
             }
             _logger.LogInformation("✅ [PDF-DEBUG] Validation passed for {PdfId}, State: {State}", pdfId, pdfDoc.ProcessingState);
 
-            // #2284 follow-up: transition Uploading → Extracting via domain so the state
-            // machine + structural event raising stays consistent across the pipeline.
-            // (Replaces the bridge-save hack from PR C which set ProcessingState=Indexing
-            // directly via EF in FinalizeProcessingAsync.)
+            // #4443 R1: the claim in ValidateAndPrepareProcessingAsync already moved the document to
+            // Extracting; the later steps go through the domain (#2284) from there.
             var pdfGuid = Guid.Parse(pdfId);
-            await TransitionStateAsync(scope, db, pdfGuid, PdfProcessingState.Extracting, cancellationToken).ConfigureAwait(false);
 
             // Step 1: Extract text with page tracking (20-40%)
             _logger.LogInformation("📄 [PDF-DEBUG] Step 1: Starting ExtractPdfContentAsync for {PdfId}", pdfId);
@@ -152,12 +149,13 @@ internal partial class UploadPdfCommandHandler
         }
 
         _logger.LogInformation("🔍 [PDF-DEBUG-VALIDATE] Querying database for PDF {PdfId}", pdfId);
-        // AsTracking required: DbContext default is NoTracking (PERF-06), and FindAsync
-        // does not override per-DbContext default behavior — entity would otherwise be
-        // returned untracked and all mutations to it during the pipeline would be silently
-        // dropped at SaveChangesAsync.
+        // #4443: NOT tracked. This read only tells whether the document exists; the pipeline works on
+        // the snapshot reloaded after the claim below. A tracked copy taken here would keep the
+        // pre-claim xmin in the change tracker — the claim is a raw UPDATE — and the next save that
+        // reaches it (the progress update) would hit 0 rows and abort the pipeline as a
+        // concurrency conflict, leaving the document in Extracting.
         var pdfDoc = await db.PdfDocuments
-            .AsTracking()
+            .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == pdfGuid, cancellationToken)
             .ConfigureAwait(false);
         if (pdfDoc == null)
@@ -169,41 +167,49 @@ internal partial class UploadPdfCommandHandler
 
         _logger.LogInformation("✅ [PDF-DEBUG-VALIDATE] PDF found, current state: {State}", pdfDoc.ProcessingState);
 
-        // IDEMPOTENCY CHECK (#1742): Skip if already processing/processed
-        var pendingState = nameof(PdfProcessingState.Pending);
-        if (!string.Equals(pdfDoc.ProcessingState, pendingState, StringComparison.Ordinal))
+        // #4443 R1: take the document atomically (Pending → Extracting) with the same claim the queue
+        // worker, the admin process-pending and recovery at startup use. This used to check «Pending»
+        // (#1742) and then write Uploading in a separate step: an owner that claimed the document in
+        // between left the aggregate in Extracting, the transition threw, and this task marked Failed
+        // a document someone else was processing. Only one claimant wins; the other does nothing.
+        var claimService = scope.ServiceProvider.GetRequiredService<IPdfClaimService>();
+        if (!await claimService.TryClaimPendingAsync(pdfGuid, cancellationToken).ConfigureAwait(false))
         {
+            var currentState = await db.PdfDocuments.AsNoTracking()
+                .Where(p => p.Id == pdfGuid)
+                .Select(p => p.ProcessingState)
+                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
             _logger.LogInformation(
-                "⏭️ [PDF-DEBUG-VALIDATE] PDF {PdfId} already processed (state: {State}), skipping duplicate background task",
-                pdfId, pdfDoc.ProcessingState);
+                "⏭️ [PDF-DEBUG-VALIDATE] PDF {PdfId} not pending (state: {State}): owned elsewhere or already finished, skipping",
+                pdfId, currentState);
 
-            var failedState = nameof(PdfProcessingState.Failed);
-            if (string.Equals(pdfDoc.ProcessingState, failedState, StringComparison.Ordinal))
+            if (string.Equals(currentState, nameof(PdfProcessingState.Failed), StringComparison.Ordinal))
             {
                 await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
             }
 
             return null;
         }
+        _logger.LogInformation("✅ [PDF-DEBUG-VALIDATE] PDF {PdfId} claimed, proceeding with processing", pdfId);
 
-        // Mark as processing — transition through the domain so PdfStateChangedEvent
-        // (Pending → Uploading) is raised structurally instead of via direct EF mutation.
-        // #2284 follow-up: closes TD3.
-        _logger.LogInformation("🔄 [PDF-DEBUG-VALIDATE] Updating status from 'pending' to 'uploading' via domain");
+        // The claim is a raw UPDATE, so no aggregate raised a PdfStateChangedEvent. Publish the one
+        // transition it made: the handlers that react to any change (the uploader's document-list
+        // cache) must see the document leave Pending now, not when chunking starts minutes later.
         try
         {
-            await TransitionStateAsync(scope, db, pdfGuid, PdfProcessingState.Uploading, cancellationToken).ConfigureAwait(false);
+            await scope.ServiceProvider.GetRequiredService<IMediator>().Publish(
+                new PdfStateChangedEvent(pdfGuid, PdfProcessingState.Pending, PdfProcessingState.Extracting, pdfDoc.UploadedByUserId),
+                cancellationToken).ConfigureAwait(false);
         }
-        catch (DbUpdateConcurrencyException)
+#pragma warning disable CA1031 // A notification failure must not stop the processing the claim just started
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // TransitionStateAsync already recorded the metric + logged before throwing.
-            return null; // Null signals to caller that preparation failed; pipeline will skip
+            _logger.LogWarning(ex, "Failed to publish the claim transition of PDF {PdfId}", pdfId);
         }
-        _logger.LogInformation("✅ [PDF-DEBUG-VALIDATE] Status updated, proceeding with processing");
+#pragma warning restore CA1031
 
-        // Reload the EF snapshot the rest of ProcessPdfAsync uses — TransitionStateAsync
-        // persisted the new state via the repository (which detaches the existing tracked
-        // entity), so the local pdfDoc reference is stale w.r.t. ProcessingState.
+        // Reload the EF snapshot the rest of ProcessPdfAsync uses: the claim is a raw UPDATE, so the
+        // tracked pdfDoc above is stale w.r.t. ProcessingState.
         pdfDoc = await db.PdfDocuments.AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == pdfGuid, cancellationToken).ConfigureAwait(false);
         return pdfDoc;

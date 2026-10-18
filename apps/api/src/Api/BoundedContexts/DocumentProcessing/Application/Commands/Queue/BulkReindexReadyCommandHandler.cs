@@ -6,6 +6,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.BoundedContexts.DocumentProcessing.Domain.Exceptions;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using MediatR;
@@ -121,10 +122,11 @@ internal sealed class BulkReindexReadyCommandHandler
                     .ConfigureAwait(false);
                 enqueued++;
             }
-            catch (ConflictException ex)
+            catch (Exception ex) when (ex is ConflictException or ProcessingQueueFullException)
             {
                 // Document went in-flight (or concurrent modification) between selection and
-                // dispatch — skip it, the batch continues.
+                // dispatch, or another writer filled the queue after the pacing above (#4443: a
+                // full queue has its own type now) — skip it, the batch continues.
                 errors.Add(new BulkReindexError(id, ex.Message));
                 skipped++;
             }

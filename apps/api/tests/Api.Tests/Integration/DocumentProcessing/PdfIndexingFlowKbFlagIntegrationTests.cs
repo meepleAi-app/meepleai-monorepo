@@ -105,6 +105,8 @@ public sealed class PdfIndexingFlowKbFlagIntegrationTests : IAsyncLifetime
         // Real repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
+        // #4443 R1: the upload background task claims the document before working on it.
+        services.AddScoped<Api.BoundedContexts.DocumentProcessing.Application.Services.IPdfClaimService, Api.BoundedContexts.DocumentProcessing.Infrastructure.Services.RelationalPdfClaimService>();
 
         // Real handler under test
         services.AddScoped<UploadPdfCommandHandler>();
@@ -538,10 +540,11 @@ public sealed class PdfIndexingFlowKbFlagIntegrationTests : IAsyncLifetime
         var pdfStateChangedCount = outboxRows.Count(
             e => string.Equals(e.EventType, pdfStateChangedAlias, StringComparison.Ordinal)
                  && e.PayloadJson.Contains(pdfIdString, StringComparison.Ordinal));
-        pdfStateChangedCount.Should().Be(6,
-            "pipeline must raise PdfStateChangedEvent for EVERY state transition " +
-            "(Pending→Uploading + Uploading→Extracting + Extracting→Chunking + " +
-            "Chunking→Embedding + Embedding→Indexing + Indexing→Ready). " +
+        pdfStateChangedCount.Should().Be(4,
+            "pipeline must raise PdfStateChangedEvent for EVERY transition it makes through the domain " +
+            "(Extracting→Chunking + Chunking→Embedding + Embedding→Indexing + Indexing→Ready). " +
+            "Pending→Extracting is the atomic claim (#4443 R1): a raw UPDATE, published in-process, " +
+            "not through the outbox — the same as the queue pipeline. " +
             "If this counts 1, the bridge-save shortcut from PR #2295 has regressed.");
 
         var kbDocIndexedCount = outboxRows.Count(

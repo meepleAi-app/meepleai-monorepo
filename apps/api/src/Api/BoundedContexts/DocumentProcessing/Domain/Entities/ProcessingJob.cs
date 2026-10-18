@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
+using Api.BoundedContexts.DocumentProcessing.Domain.Exceptions;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.Entities;
 
@@ -79,7 +80,7 @@ public sealed class ProcessingJob : AggregateRoot<Guid>
         if (userId == Guid.Empty)
             throw new ArgumentException("UserId is required.", nameof(userId));
         if (!bypassQueueCap && currentQueueSize >= MaxQueueSize)
-            throw new ConflictException($"Queue is full. Maximum {MaxQueueSize} jobs allowed.");
+            throw new ProcessingQueueFullException();
 
         var now = (timeProvider ?? TimeProvider.System).GetUtcNow();
         return new ProcessingJob(pdfDocumentId, userId, priority, now);

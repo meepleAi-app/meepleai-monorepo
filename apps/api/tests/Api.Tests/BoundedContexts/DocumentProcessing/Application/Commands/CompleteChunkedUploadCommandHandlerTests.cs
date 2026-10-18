@@ -93,6 +93,32 @@ public class CompleteChunkedUploadCommandHandlerTests
             "un upload interattivo di un admin non va rifiutato perché una reindicizzazione ha riempito la coda (decisione 1a)");
     }
 
+    /// <summary>#4443 R2: «Urgente» del pannello vale anche per il caricamento a pezzi (prima la priorità era fissa).</summary>
+    [Fact]
+    [Trait("Issue", "4443")]
+    public async Task Complete_WithUrgentPriority_EnqueuesAtUrgent()
+    {
+        var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var fileId = Guid.NewGuid().ToString("N");
+        var mediator = new Mock<IMediator>();
+        EnqueuePdfCommand? sent = null;
+        mediator.Setup(m => m.Send(It.IsAny<EnqueuePdfCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<Guid>, CancellationToken>((c, _) => sent = (EnqueuePdfCommand)c)
+            .ReturnsAsync(Guid.NewGuid());
+
+        using var upload = TempChunkedUpload.Create(gameId, userId);
+        var handler = CreateHandler(db, upload.Session, $"pdfs/{gameId}/{fileId}_rules.pdf", fileId,
+            new InlineBackgroundTaskService(), mediator.Object);
+
+        var result = await handler.Handle(
+            new CompleteChunkedUploadCommand(upload.Session.Id, userId, Priority: "urgent"), CancellationToken.None);
+
+        result.Success.Should().BeTrue(result.ErrorMessage);
+        sent!.Priority.Should().Be((int)ProcessingPriority.Urgent);
+    }
+
     [Fact]
     public async Task Complete_WhenTheEnqueueFails_ReportsTheFailure()
     {

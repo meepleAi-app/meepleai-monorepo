@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
@@ -93,6 +94,26 @@ public sealed class PdfProcessingPipelineFailureModesTests : IDisposable
         pdf.ProcessingState.Should().Be("Failed", "un guasto di embedding non deve lasciare il documento in Embedding");
         pdf.ProcessingError.Should().Contain("embedding service down");
         pdf.FailedAtState.Should().Be("Embedding");
+        pdf.ErrorCategory.Should().Be(nameof(ErrorCategory.Service),
+            "#4443: transitorio, come lo registra il task in background, così RetryFailedPdfsJob lo ritenta");
+    }
+
+    [Fact]
+    [Trait("Issue", "4443")]
+    public async Task ProcessAsync_WhenTheEmbeddingServiceThrows_EndsFailedAsService()
+    {
+        SeedPendingPdf();
+        SetupTwoChunks();
+        _embeddings.Setup(e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("Connection refused"));
+
+        var outcome = await CreatePipeline().ProcessAsync(_pdfId, "pdfs/game/file_rules.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        outcome.Should().Be(PdfPipelineOutcome.Failed);
+        var pdf = await _db.PdfDocuments.AsNoTracking().SingleAsync();
+        pdf.FailedAtState.Should().Be("Embedding");
+        pdf.ErrorCategory.Should().Be(nameof(ErrorCategory.Service));
+        pdf.ProcessingError.Should().Contain("Connection refused");
     }
 
     [Fact]
@@ -113,6 +134,7 @@ public sealed class PdfProcessingPipelineFailureModesTests : IDisposable
         var pdf = await _db.PdfDocuments.AsNoTracking().SingleAsync();
         pdf.ProcessingState.Should().Be("Failed");
         pdf.FailedAtState.Should().Be("Embedding");
+        pdf.ErrorCategory.Should().Be(nameof(ErrorCategory.Service));
         (await _db.TextChunks.CountAsync(tc => tc.PdfDocumentId == _pdfId)).Should().Be(0, "i vettori si controllano prima di ogni scrittura");
         (await _db.PgVectorEmbeddings.CountAsync()).Should().Be(0);
     }

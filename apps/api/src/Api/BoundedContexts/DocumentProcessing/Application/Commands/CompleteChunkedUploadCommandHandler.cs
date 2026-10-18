@@ -31,8 +31,11 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
 {
     private static readonly string UploadTempBasePath = Path.Combine(Path.GetTempPath(), "meepleai_uploads");
 
-    /// <summary>Same value as the admin upload panel's «Normale» (<c>PRIORITY_NORMAL</c> in queue-api.ts).</summary>
-    internal const int InteractiveUploadPriority = 10;
+    /// <summary>
+    /// The job priority without an explicit one: the admin upload panel's «Normale» (<c>PRIORITY_NORMAL</c>
+    /// in queue-api.ts). «Urgente» is 30 (#4443 R2, <see cref="UploadPdfCommandHandler.ToJobPriority"/>).
+    /// </summary>
+    internal const int InteractiveUploadPriority = (int)ProcessingPriority.Normal;
 
     private readonly IChunkedUploadSessionRepository _sessionRepository;
     private readonly MeepleAiDbContext _dbContext;
@@ -156,7 +159,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
 
             // Create the PDF document record and hand it to the processing queue
             var pdfDocId = await CreatePdfRecordAndEnqueueAsync(
-                session, storageResult!, sanitizedFileName!, request.SessionId.ToString(), cancellationToken, contentHash).ConfigureAwait(false);
+                session, storageResult!, sanitizedFileName!, request.SessionId.ToString(), request.Priority, cancellationToken, contentHash).ConfigureAwait(false);
 
             return new CompleteChunkedUploadResult(
                 Success: true,
@@ -325,6 +328,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         BlobStorageResult storageResult,
         string sanitizedFileName,
         string sessionId,
+        string? priority,
         CancellationToken cancellationToken,
         string? contentHash = null)
     {
@@ -373,7 +377,7 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 // EnqueuePdfCommandHandler saves on the shared DbContext under this ambient transaction,
                 // so the job commits together with the record.
                 await _mediator.Send(
-                    new EnqueuePdfCommand(pdfDoc.Id, session.UserId, InteractiveUploadPriority, BypassQueueCap: true),
+                    new EnqueuePdfCommand(pdfDoc.Id, session.UserId, UploadPdfCommandHandler.ToJobPriority(priority), BypassQueueCap: true),
                     cancellationToken).ConfigureAwait(false);
 
                 await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);

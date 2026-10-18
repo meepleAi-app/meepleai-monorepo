@@ -267,9 +267,11 @@ internal static class PdfSeeder
 
     /// <summary>
     /// Repair mode (#2666): re-uploads a PDF blob that is missing from the runtime bucket
-    /// (typically after a DB-only snapshot restore) using the EXISTING pdf id, then resets
-    /// the record to <see cref="PdfProcessingState.Pending"/> and re-enqueues a ProcessingJob
-    /// so the RAG pipeline reprocesses it (extract → chunk → embed → index → Ready).
+    /// (typically after a DB-only snapshot restore) using the EXISTING pdf id. A
+    /// <see cref="PdfProcessingState.Ready"/> record only gets its new FilePath and size: its index
+    /// is intact (#4445). Any other record is reset to <see cref="PdfProcessingState.Pending"/> and
+    /// gets a ProcessingJob — unless it already has an active one (#4445) — so the RAG pipeline
+    /// reprocesses it (extract → chunk → embed → index → Ready).
     ///
     /// Uses <paramref name="existingId"/> for BOTH the storage bucket key and the DB record so
     /// the persisted FilePath (pdfs/{existingId}/...) keeps matching what the database already
@@ -315,8 +317,7 @@ internal static class PdfSeeder
             return false;
         }
 
-        // Load the existing record tracked and reset it to Pending, clearing every error field
-        // left over from the previous Failed run so the pipeline reprocesses it cleanly.
+        // Load the existing record tracked: every write below only reaches the DB on a tracked entity.
         var pdfEntity = await db.PdfDocuments
             // #3866: tracked on purpose — the write below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
             .AsTracking()
@@ -330,14 +331,41 @@ internal static class PdfSeeder
             return false;
         }
 
-        pdfEntity.ProcessingState = nameof(PdfProcessingState.Pending);
         pdfEntity.FilePath = result.FilePath ?? string.Empty;
         pdfEntity.FileSizeBytes = result.FileSizeBytes;
+
+        // #4445: a Ready document is missing only its file — its chunks and vectors are in the DB.
+        // Putting it back to Pending re-ran the whole pipeline, embeddings included, on every PDF
+        // of the corpus whenever the API started on a storage without the files.
+        if (string.Equals(pdfEntity.ProcessingState, nameof(PdfProcessingState.Ready), StringComparison.Ordinal))
+        {
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
+            logger.LogInformation(
+                "PdfSeeder: repaired: re-uploaded missing blob for Ready '{FileName}' (pdfId {Id}, {Size} bytes), state and index untouched",
+                fileName, existingId, result.FileSizeBytes);
+            return true;
+        }
+
+        // Not Ready (#2666: typically Failed with "PDF file not found in blob storage"): reset to
+        // Pending, clearing every error field left over from the previous run, so the pipeline
+        // reprocesses it cleanly.
+        pdfEntity.ProcessingState = nameof(PdfProcessingState.Pending);
         pdfEntity.ProcessingError = null;
         pdfEntity.ErrorCategory = null;
         pdfEntity.FailedAtState = null;
         pdfEntity.RetryCount = 0;
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        // #4445: a document that already has a job in the queue gets no second one — the worker
+        // takes the oldest first, and the second found the document already processed. The
+        // existing job processes the document now that it is Pending again.
+        if (await HasActiveProcessingJobAsync(db, existingId, ct).ConfigureAwait(false))
+        {
+            logger.LogInformation(
+                "PdfSeeder: repaired: re-uploaded missing blob for '{FileName}' (pdfId {Id}, {Size} bytes) and reset to Pending; its queued job will process it",
+                fileName, existingId, result.FileSizeBytes);
+            return true;
+        }
 
         // Re-enqueue a Queued ProcessingJob (+5 steps) identical to the new-record flow so
         // PdfProcessingQuartzJob picks the repaired PDF up again.
@@ -349,6 +377,18 @@ internal static class PdfSeeder
             fileName, existingId, jobEntity.Id, result.FileSizeBytes);
         return true;
     }
+
+    /// <summary>
+    /// Whether <paramref name="pdfDocumentId"/> has a <c>Queued</c> or <c>Processing</c> job — the
+    /// same notion of "active" as <see cref="ReattemptStalePendingPdfsSeeder"/> (#2908) and
+    /// <c>StalePdfRecoveryService</c> (#3588). Terminal jobs (Completed/Failed/Cancelled) do not count.
+    /// </summary>
+    internal static Task<bool> HasActiveProcessingJobAsync(
+        MeepleAiDbContext db, Guid pdfDocumentId, CancellationToken ct) =>
+        db.ProcessingJobs.AnyAsync(
+            j => j.PdfDocumentId == pdfDocumentId
+                && (j.Status == nameof(JobStatus.Queued) || j.Status == nameof(JobStatus.Processing)),
+            ct);
 
     /// <summary>
     /// Builds a Queued <see cref="ProcessingJobEntity"/> with the five standard pipeline steps

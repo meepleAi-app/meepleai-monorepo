@@ -505,6 +505,120 @@ public sealed class PdfSeederBlobTests
         db.ProcessingJobs.Should().BeEmpty();
     }
 
+    // ---------------------------------------------------------------
+    // #4445: repair of a Ready record → file only. Its chunks and vectors
+    //        are in the DB: no reset to Pending, no job, no reprocessing.
+    // ---------------------------------------------------------------
+    [Fact]
+    public async Task SeedAsync_ExistingHash_BlobMissing_ReadyDocument_ReuploadsTheFileOnly()
+    {
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var existingId = Guid.NewGuid();
+        ArrangeBlobMissingInRuntimeButInSeed();
+
+        using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        SeedExistingDocument(db, gameId, userId, existingId, nameof(PdfProcessingState.Ready));
+        await db.SaveChangesAsync();
+
+        await PdfSeeder.SeedAsync(db, CreateManifest(CreateBlobEntry(pdfSha256: "samehash")),
+            new Dictionary<int, Guid> { { 174430, gameId } }, userId,
+            _primaryBlob.Object, _seedBlob.Object, _logger.Object, CancellationToken.None);
+
+        _primaryBlob.Verify(x => x.StoreAsync(It.IsAny<Stream>(), "gloomhaven.pdf", BlobCategory.Pdf, PdfStorageKey.ForPdf(existingId), It.IsAny<CancellationToken>()), Times.Once);
+        var doc = db.PdfDocuments.Single(p => p.Id == existingId);
+        doc.ProcessingState.Should().Be(nameof(PdfProcessingState.Ready));
+        doc.FilePath.Should().Be("pdfs/repaired/newfile_gloomhaven.pdf");
+        doc.FileSizeBytes.Should().Be(4);
+        db.ProcessingJobs.Should().BeEmpty();
+    }
+
+    // ---------------------------------------------------------------
+    // #4445: a record that already has an active job gets no second one.
+    //        Before, the worker processed the older job and the newer one
+    //        found the document Ready: a block of Failed jobs per corpus.
+    // ---------------------------------------------------------------
+    [Theory]
+    [InlineData(nameof(JobStatus.Queued))]
+    [InlineData(nameof(JobStatus.Processing))]
+    public async Task SeedAsync_ExistingHash_BlobMissing_DocumentWithAnActiveJob_GetsNoSecondJob(string activeStatus)
+    {
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var existingId = Guid.NewGuid();
+        ArrangeBlobMissingInRuntimeButInSeed();
+
+        using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        SeedExistingDocument(db, gameId, userId, existingId, nameof(PdfProcessingState.Failed));
+        var existingJob = PdfSeeder.EnqueueProcessingJob(db, existingId, userId);
+        existingJob.Status = activeStatus;
+        await db.SaveChangesAsync();
+
+        await PdfSeeder.SeedAsync(db, CreateManifest(CreateBlobEntry(pdfSha256: "samehash")),
+            new Dictionary<int, Guid> { { 174430, gameId } }, userId,
+            _primaryBlob.Object, _seedBlob.Object, _logger.Object, CancellationToken.None);
+
+        // Still repaired (#2666): file back, record Pending for the job already in the queue.
+        db.PdfDocuments.Single(p => p.Id == existingId).ProcessingState
+            .Should().Be(nameof(PdfProcessingState.Pending));
+        db.ProcessingJobs.Select(j => j.Id).Should().Equal(existingJob.Id);
+    }
+
+    [Fact]
+    public async Task SeedAsync_ExistingHash_BlobMissing_DocumentWithOnlyATerminalJob_GetsANewJob()
+    {
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var existingId = Guid.NewGuid();
+        ArrangeBlobMissingInRuntimeButInSeed();
+
+        using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        SeedExistingDocument(db, gameId, userId, existingId, nameof(PdfProcessingState.Failed));
+        var oldJob = PdfSeeder.EnqueueProcessingJob(db, existingId, userId);
+        oldJob.Status = nameof(JobStatus.Failed);
+        await db.SaveChangesAsync();
+
+        await PdfSeeder.SeedAsync(db, CreateManifest(CreateBlobEntry(pdfSha256: "samehash")),
+            new Dictionary<int, Guid> { { 174430, gameId } }, userId,
+            _primaryBlob.Object, _seedBlob.Object, _logger.Object, CancellationToken.None);
+
+        db.ProcessingJobs.Should().HaveCount(2);
+        db.ProcessingJobs.Single(j => j.Id != oldJob.Id).Status.Should().Be(nameof(JobStatus.Queued));
+    }
+
+    private void ArrangeBlobMissingInRuntimeButInSeed()
+    {
+        _seedBlob.Setup(x => x.IsConfigured).Returns(true);
+        _primaryBlob.Setup(x => x.ExistsAsync(It.IsAny<string>(), BlobCategory.Pdf, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _seedBlob.Setup(x => x.ExistsAsync("rulebooks/v1/gloomhaven.pdf", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _seedBlob.Setup(x => x.OpenReadAsync("rulebooks/v1/gloomhaven.pdf", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 }));
+        _primaryBlob.Setup(x => x.StoreAsync(It.IsAny<Stream>(), "gloomhaven.pdf", BlobCategory.Pdf, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new BlobStorageResult(true, "newfile", "pdfs/repaired/newfile_gloomhaven.pdf", 4));
+    }
+
+    private static void SeedExistingDocument(
+        MeepleAiDbContext db, Guid gameId, Guid userId, Guid existingId, string processingState)
+    {
+        db.Users.Add(new UserEntity { Id = userId, Email = "system@test.com", PasswordHash = "hash" });
+        db.SharedGames.Add(new SharedGameEntity { Id = gameId, Title = "Gloomhaven" });
+        db.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = existingId,
+            SharedGameId = gameId,
+            FileName = "gloomhaven.pdf",
+            FilePath = $"pdfs/{PdfStorageKey.ForPdf(existingId)}/deadbeef_gloomhaven.pdf",
+            FileSizeBytes = 999,
+            ContentHash = "samehash",
+            ProcessingState = processingState,
+            UploadedByUserId = userId,
+            DocumentType = "base",
+            DocumentCategory = "Rulebook",
+        });
+    }
+
     // NOTE (Issue #2671): the fileId-from-path parsing helper was extracted from
     // PdfSeeder.ExtractFileIdFromPath into the shared PdfStorageKey.FileIdFromPath.
     // Its edge-case unit tests now live in PdfStorageKeyTests (single source of truth).

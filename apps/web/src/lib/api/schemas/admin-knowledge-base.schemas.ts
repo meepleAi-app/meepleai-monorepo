@@ -153,6 +153,41 @@ export type VectorStats = z.infer<typeof VectorStatsSchema>;
 export type VectorSearchResultItem = z.infer<typeof VectorSearchResultItemSchema>;
 export type VectorSemanticSearchResult = z.infer<typeof VectorSemanticSearchResultSchema>;
 
+// ========== Embedding Service Info (#4446) ==========
+
+/**
+ * GET /api/v1/admin/embedding/info. No consumer validated it, and each read it its own way: one
+ * showed `dimension` (a 1024 written in the endpoint), one read `dimensions`, which the API never
+ * sent, and showed "—". Model, device and languages are null or empty when the service is down;
+ * `dimension` is the API's and always known; `maxInputChars` is null when the service does not say.
+ */
+export const EmbeddingServiceInfoSchema = z.object({
+  status: z.string(),
+  model: z.string().nullable(),
+  device: z.string().nullable(),
+  supportedLanguages: z.array(z.string()),
+  dimension: z.number().int().nonnegative(),
+  maxInputChars: z.number().int().positive().nullable(),
+});
+
+export type EmbeddingServiceInfo = z.infer<typeof EmbeddingServiceInfoSchema>;
+
+/**
+ * GET /api/v1/admin/embedding/metrics: the service's Prometheus counters as JSON, zeros when it
+ * does not answer. `failureRate` is already a percentage (0-100). The RAG pipeline read other names
+ * (`totalRequests`, `throughputPerSecond`), and its queue sidebar crashed on the missing throughput.
+ */
+export const EmbeddingServiceMetricsSchema = z.object({
+  requestsTotal: z.number().int().nonnegative(),
+  failuresTotal: z.number().int().nonnegative(),
+  durationMsSum: z.number().nonnegative(),
+  totalCharsSum: z.number().nonnegative(),
+  avgDurationMs: z.number().nonnegative(),
+  failureRate: z.number().min(0).max(100),
+});
+
+export type EmbeddingServiceMetrics = z.infer<typeof EmbeddingServiceMetricsSchema>;
+
 // ========== PDF List (Admin) ==========
 
 export const PdfListItemSchema = z.object({

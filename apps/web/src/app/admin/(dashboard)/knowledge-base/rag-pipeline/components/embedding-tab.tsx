@@ -6,23 +6,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CpuIcon, Loader2Icon, RefreshCwIcon } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
+import {
+  useEmbeddingServiceInfo,
+  useEmbeddingServiceMetrics,
+} from '@/hooks/queries/useEmbeddingService';
 import { apiClient } from '@/lib/api/client';
 
 // ── Types ─────────────────────────────────────────────────────────────
-
-interface EmbeddingInfo {
-  model: string;
-  device: string;
-  dimensions: number;
-  maxTokens?: number;
-}
-
-interface EmbeddingMetrics {
-  totalRequests: number;
-  totalFailures: number;
-  failureRate: number;
-  avgDurationMs: number;
-}
 
 interface VectorGameStats {
   gameId: string;
@@ -39,16 +29,6 @@ interface VectorStatsResponse {
 
 // ── API ───────────────────────────────────────────────────────────────
 
-async function fetchEmbeddingInfo(): Promise<EmbeddingInfo> {
-  const result = await apiClient.get<EmbeddingInfo>('/api/v1/admin/embedding/info');
-  return result ?? { model: 'unknown', device: 'unknown', dimensions: 0 };
-}
-
-async function fetchEmbeddingMetrics(): Promise<EmbeddingMetrics> {
-  const result = await apiClient.get<EmbeddingMetrics>('/api/v1/admin/embedding/metrics');
-  return result ?? { totalRequests: 0, totalFailures: 0, failureRate: 0, avgDurationMs: 0 };
-}
-
 async function fetchVectorStats(): Promise<VectorStatsResponse> {
   const result = await apiClient.get<VectorStatsResponse>('/api/v1/admin/kb/vector-stats');
   return result ?? { games: [], totalVectors: 0, totalDocuments: 0 };
@@ -59,19 +39,10 @@ async function fetchVectorStats(): Promise<VectorStatsResponse> {
 export function EmbeddingTab() {
   const queryClient = useQueryClient();
 
-  const { data: info, isLoading: infoLoading } = useQuery({
-    queryKey: ['admin', 'embedding', 'info'],
-    queryFn: fetchEmbeddingInfo,
-    staleTime: 30_000,
-    refetchInterval: 30_000,
-  });
-
-  const { data: metrics, isLoading: metricsLoading } = useQuery({
-    queryKey: ['admin', 'embedding', 'metrics'],
-    queryFn: fetchEmbeddingMetrics,
-    staleTime: 30_000,
-    refetchInterval: 30_000,
-  });
+  // #4446: this tab read `dimensions`, `totalRequests` and `totalFailures`, which the API never
+  // sent, and multiplied by 100 a failure rate that is already a percentage.
+  const { data: info, isLoading: infoLoading } = useEmbeddingServiceInfo();
+  const { data: metrics, isLoading: metricsLoading } = useEmbeddingServiceMetrics();
 
   const { data: vectorStats, isLoading: vectorLoading } = useQuery({
     queryKey: ['admin', 'kb', 'vector-stats'],
@@ -117,13 +88,10 @@ export function EmbeddingTab() {
               <CardTitle className="text-base">Service Info</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                 <InfoCell label="Model" value={info?.model ?? '\u2014'} />
                 <InfoCell label="Device" value={info?.device ?? '\u2014'} />
-                <InfoCell label="Dimensions" value={info?.dimensions?.toString() ?? '\u2014'} />
-                {info?.maxTokens != null && (
-                  <InfoCell label="Max Tokens" value={info.maxTokens.toString()} />
-                )}
+                <InfoCell label="Dimensions" value={info ? String(info.dimension) : '\u2014'} />
               </div>
             </CardContent>
           </Card>
@@ -135,11 +103,11 @@ export function EmbeddingTab() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <MetricCell label="Total Requests" value={metrics?.totalRequests ?? 0} />
-                <MetricCell label="Failures" value={metrics?.totalFailures ?? 0} />
+                <MetricCell label="Total Requests" value={metrics?.requestsTotal ?? 0} />
+                <MetricCell label="Failures" value={metrics?.failuresTotal ?? 0} />
                 <MetricCell
                   label="Failure Rate"
-                  value={`${((metrics?.failureRate ?? 0) * 100).toFixed(1)}%`}
+                  value={`${(metrics?.failureRate ?? 0).toFixed(1)}%`}
                 />
                 <MetricCell
                   label="Avg Duration"

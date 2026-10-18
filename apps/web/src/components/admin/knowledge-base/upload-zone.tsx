@@ -23,6 +23,8 @@ import { useApiClient } from '@/lib/api/context';
 import { useGameSearch } from '@/lib/domain-hooks/useGameSearch';
 import { formatSizeLimit } from '@/lib/format/file-size';
 
+import { MAX_SINGLE_UPLOAD_SIZE } from './upload-thresholds';
+
 // ── Types ──────────────────────────────────────────────────────────────
 
 interface FileUploadState {
@@ -33,7 +35,6 @@ interface FileUploadState {
   documentId?: string;
 }
 
-const MAX_SINGLE_UPLOAD_SIZE = 10 * 1024 * 1024; // 10MB threshold for chunked upload
 const ACCEPTED_TYPES = ['application/pdf'];
 const MAX_CONCURRENT_UPLOADS = 3;
 

@@ -6,14 +6,14 @@
  * limit here is 20 MB on purpose: no component ever carried that number, so a zone that still read
  * a constant of its own would let the 21 MB file through. Zones with a test file of their own
  * (PdfUploadSection, add-game-sheet PdfUploadZone, the import wizard's Step1UploadPdf, the admin KB
- * upload zone) are covered there.
+ * upload zone) are covered there, and so is the KB Processing Settings panel
+ * (`components/admin/knowledge-base/__tests__/upload-settings.test.tsx`, #4446).
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resetPdfUploadLimit, setPdfUploadLimit } from '@/__tests__/utils/pdf-upload-limits-mock';
-import { UploadSettings } from '@/components/admin/knowledge-base/upload-settings';
 import { PdfUploadStep } from '@/app/(authenticated)/admin/wizard/steps/PdfUploadStep';
 import { UploadPrivatePDF } from '@/components/collection/wizard/steps/UploadPrivatePDF';
 import { UploadRulesStep } from '@/components/game-night/steps/UploadRulesStep';
@@ -176,12 +176,5 @@ describe('PDF upload zones read the size limit from the backend (#4449)', () => 
     choose(container.querySelector('#pdf-file-input')!, pdfOfSize(500 * MB));
 
     expect(toastError).not.toHaveBeenCalled();
-  });
-
-  it('the KB processing settings panel shows the limit it is given', () => {
-    render(<UploadSettings />);
-
-    expect(screen.getByText('20 MB')).toBeInTheDocument();
-    expect(screen.queryByText('500 MB')).not.toBeInTheDocument();
   });
 });

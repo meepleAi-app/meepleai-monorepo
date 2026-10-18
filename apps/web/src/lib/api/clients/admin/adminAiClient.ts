@@ -50,6 +50,10 @@ import {
   KbSnapshotListSchema,
   KbExportResultSchema,
   KbImportResultSchema,
+  EmbeddingServiceInfoSchema,
+  EmbeddingServiceMetricsSchema,
+  type EmbeddingServiceInfo,
+  type EmbeddingServiceMetrics,
   type BulkDeleteResult,
   type ReindexResponse,
   type MaintenanceResult,
@@ -95,24 +99,8 @@ export const ADMIN_KB_ROUTES = {
 
 // ========== Embedding Service Types (Issue #4878) ==========
 
-export interface EmbeddingServiceInfo {
-  status: string;
-  model: string | null;
-  device: string | null;
-  supportedLanguages: string[];
-  dimension: number;
-  maxInputChars: number;
-  maxBatchSize: number;
-}
-
-export interface EmbeddingServiceMetrics {
-  requestsTotal: number;
-  failuresTotal: number;
-  durationMsSum: number;
-  totalCharsSum: number;
-  avgDurationMs: number;
-  failureRate: number;
-}
+// #4446: both types are the schemas' (admin-knowledge-base.schemas), re-exported here.
+export type { EmbeddingServiceInfo, EmbeddingServiceMetrics };
 
 // ========== RAG Execution Types (Issue #4458) ==========
 
@@ -695,12 +683,13 @@ export function createAdminAiClient(http: HttpClient) {
       return result ?? { results: [], errorMessage: null };
     },
 
+    /** #4446: the only reader of /admin/embedding/info; every admin page goes through it. */
     async getEmbeddingInfo(): Promise<EmbeddingServiceInfo | null> {
-      return http.get<EmbeddingServiceInfo>('/api/v1/admin/embedding/info');
+      return http.get('/api/v1/admin/embedding/info', EmbeddingServiceInfoSchema);
     },
 
     async getEmbeddingMetrics(): Promise<EmbeddingServiceMetrics | null> {
-      return http.get<EmbeddingServiceMetrics>('/api/v1/admin/embedding/metrics');
+      return http.get('/api/v1/admin/embedding/metrics', EmbeddingServiceMetricsSchema);
     },
 
     // ========== PDF Management (Issue #4784) ==========

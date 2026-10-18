@@ -59,11 +59,6 @@ interface RagExecution {
   createdAt: string;
 }
 
-interface EmbeddingInfo {
-  status: string;
-  model: string | null;
-}
-
 interface OpenRouterStatus {
   currentRpm: number;
   limitRpm: number;
@@ -171,7 +166,7 @@ export default function MissionControlPage() {
     if (name === 'Embedding Service') {
       if (embeddingError) return 'unreachable';
       if (!embeddingInfo) return 'unknown';
-      return (embeddingInfo as EmbeddingInfo).status === 'healthy' ? 'healthy' : 'degraded';
+      return embeddingInfo.status === 'healthy' ? 'healthy' : 'degraded';
     }
     if (name === 'OpenRouter API') {
       if (!openRouterStatus) return 'unknown';

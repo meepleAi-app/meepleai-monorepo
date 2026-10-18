@@ -54,7 +54,6 @@ vi.mock('@/lib/api', () => ({
         supportedLanguages: [],
         dimension: 768,
         maxInputChars: 512,
-        maxBatchSize: 32,
       }),
       getOpenRouterStatus: vi.fn().mockResolvedValue({
         balanceUsd: 10,

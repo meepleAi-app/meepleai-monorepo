@@ -44,10 +44,10 @@ permissions:
   actions: read
 
 jobs:
-  # CodeQL SAST — forced to ubuntu-latest because CodeQL CLI doesn't support linux/arm64
+  # CodeQL SAST — forced to ubuntu-24.04 because CodeQL CLI doesn't support linux/arm64
   codeql:
     name: CodeQL Analysis
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
         language: ['csharp', 'javascript']
@@ -164,7 +164,7 @@ jobs:
   # Dependency scanning
   dependencies:
     name: Dependency Vulnerabilities
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -280,7 +280,7 @@ jobs:
   # Q2 2026 Security Review (#186) P1.4a
   hadolint:
     name: Dockerfile Lint (Hadolint)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -297,7 +297,7 @@ jobs:
   # Secrets scanning with Semgrep
   secrets:
     name: Secrets Detection
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v6

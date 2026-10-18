@@ -55,7 +55,7 @@ env:
 
 jobs:
   pdf-s3-upload:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6

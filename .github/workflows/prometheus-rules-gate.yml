@@ -36,7 +36,7 @@ env:
 jobs:
   rules-gate:
     name: promtool + nomi metrica
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # 20 e non 10, per la stessa ragione documentata su "Infra Scripts (bats + Pester)":
     # i controlli non sono mai il costo — su questa PR sono 4 passi da pochi secondi — mentre
     # `actions/checkout` su questo monorepo oscilla ~20x fra un run e l'altro. Il primo run con
@@ -95,7 +95,7 @@ jobs:
       #
       # Dal #3814 legge le regole con un parser YAML invece che per righe: le espressioni sono
       # blocchi multi-riga (`expr: |`), e un estrattore che guarda le sole righe `expr:` ne vede
-      # una frazione. PyYAML e' preinstallato sulle immagini ubuntu-latest, ma dichiararlo costa
+      # una frazione. PyYAML e' preinstallato sulle immagini ubuntu-24.04, ma dichiararlo costa
       # pochi secondi ed evita che il gate muoia per una dipendenza implicita.
       - name: Dipendenza del gate (PyYAML)
         run: python3 -c "import yaml" || pip install --quiet pyyaml

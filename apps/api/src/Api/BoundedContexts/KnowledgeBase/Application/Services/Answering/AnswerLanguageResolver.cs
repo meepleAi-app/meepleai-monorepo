@@ -8,11 +8,19 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 /// #4168: la lingua di una risposta, che guida il recupero e la scelta del prompt.
 /// <list type="number">
 /// <item>la lingua rilevata nel testo della domanda, se il rilevamento è sicuro;</item>
-/// <item>altrimenti — tipicamente una domanda di una o due parole — la lingua chiesta dal client,
-/// se la richiesta ne porta una supportata;</item>
+/// <item>altrimenti — una domanda breve, o che non separa bene due lingue — la lingua chiesta dal
+/// client, se la richiesta ne porta una supportata;</item>
 /// <item>altrimenti la prima lingua supportata di <c>Accept-Language</c>;</item>
 /// <item>altrimenti quella rilevata, che su un testo senza segnali è l'inglese.</item>
 /// </list>
+/// <para>
+/// #4480: la sicurezza del rilevamento conta in un punto solo, quando la lingua rilevata è diversa da
+/// quella che l'interfaccia chiede: se coincidono, o se l'interfaccia non ne chiede nessuna, la risposta
+/// è nella lingua rilevata comunque. Per questo «sicuro» è un requisito alto
+/// (<see cref="ILanguageDetectionService.Detect"/>): con un rilevamento solo «probabile», domande
+/// italiane con <c>Accept-Language: it</c> avevano risposta in spagnolo o in francese. Una domanda
+/// chiaramente inglese con l'interfaccia in italiano ha ancora risposta in inglese.
+/// </para>
 /// </summary>
 internal static class AnswerLanguageResolver
 {

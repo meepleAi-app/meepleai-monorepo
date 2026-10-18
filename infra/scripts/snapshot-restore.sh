@@ -4,10 +4,11 @@
 #
 # Flow:
 #   1. Guard: rifiuta se DB non vuoto
-#   2. dotnet ef database update (schema dal working tree)
+#   2. dotnet ef database update <migration dello snapshot> (schema del bake)
 #   3. pg_restore --data-only (main dump, esclude tabelle con generated columns)
 #   4. psql -f supplement.sql (INSERT-based, gestisce generated columns)
-#   5. Smoke test (chunk count + orphans)
+#   5. dotnet ef database update (migrations successive allo snapshot, sui dati)
+#   6. Smoke test (chunk count + orphans)
 set -euo pipefail
 
 OUT_DIR="${SEED_INDEX_OUT_DIR:-data/snapshots}"
@@ -50,11 +51,24 @@ EOF
     exit 10
 fi
 
-# Step 1: Schema dal working tree
-log "applico migrations dal working tree"
-( cd ../apps/api/src/Api 2>/dev/null || cd apps/api/src/Api
-  export CONNECTIONSTRINGS__POSTGRES="Host=localhost;Port=5432;Database=$PG_DB;Username=$PG_USER;Password=$PG_PASSWORD"
-  dotnet ef database update )
+# Le migrations si applicano in due tempi (#4489): fino a quella del bake prima
+# dei dati, le successive dopo. Cosi' uno snapshot piu' vecchio del working tree
+# si carica allo schema per cui e' stato scritto, e le migrations nuove — comprese
+# quelle che trasformano dati — girano sui dati caricati, come su un deploy.
+# Applicarle tutte prima, come si faceva, le faceva girare su tabelle vuote.
+# Con lo snapshot allineato al working tree il secondo tempo non applica nulla.
+ef_update() {
+    ( cd ../apps/api/src/Api 2>/dev/null || cd apps/api/src/Api
+      export CONNECTIONSTRINGS__POSTGRES="Host=localhost;Port=5432;Database=$PG_DB;Username=$PG_USER;Password=$PG_PASSWORD"
+      dotnet ef database update "$@" )
+}
+
+SNAPSHOT_HEAD=$(jq -r '.ef_migration_head // empty' "$META")
+[ -n "$SNAPSHOT_HEAD" ] || fail "ef_migration_head mancante in $META"
+
+# Step 1: Schema fino alla migration dello snapshot
+log "applico le migrations fino a quella dello snapshot: $SNAPSHOT_HEAD"
+ef_update "$SNAPSHOT_HEAD"
 
 # Step 2: Main data restore (tabelle SENZA generated columns)
 # Errori su tabelle non-EF (n8n, insights) vengono ignorati (exit code ≠ 0 è atteso).
@@ -117,7 +131,13 @@ CREATE INDEX IF NOT EXISTS idx_pgvector_embeddings_vector_document_id ON pgvecto
 SQL
 log "runtime-managed pgvector schema OK"
 
-# Step 4: Smoke test
+# Step 4: migrations successive allo snapshot, sui dati appena caricati (#4489).
+# Dopo lo step 3b: su un deploy queste migrations trovano lo schema che il
+# runtime ha gia' creato, e qui deve essere lo stesso.
+log "applico le migrations successive allo snapshot, sui dati caricati"
+ef_update --no-build
+
+# Step 5: Smoke test
 log "smoke test: chunk count + orphans"
 actual_chunks=$(docker exec meepleai-postgres psql -U "$PG_USER" -d "$PG_DB" -At -c "SELECT COUNT(*) FROM text_chunks;")
 expected_chunks=$(jq '.chunk_count' "$META")

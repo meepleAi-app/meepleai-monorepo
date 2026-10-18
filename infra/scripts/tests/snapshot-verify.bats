@@ -95,6 +95,41 @@ sync_seed_schema_version() {
     [ "$status" -eq 2 ]
 }
 
+# #4489: con l'uguaglianza ogni migration mergiata dopo il bake settimanale
+# fermava il gate RAG su tutti i branch. Uno snapshot piu' vecchio del working
+# tree si carica allo schema del bake, e snapshot-restore.sh applica dopo le
+# migrations successive: qui si controlla che il gate lo lasci passare e dica
+# quali applichera'.
+@test "exit 0 with the pending migrations when the snapshot is older than the working tree" {
+    install_fixture meta-good
+    sync_seed_schema_version
+    set_expected_env
+    export EXPECTED_EF_MIGRATIONS=$'20260301_Init\n20260401_AddSearchVector\n20260410_AddLater\n20260420_AddLatest'
+    export EXPECTED_EF_HEAD="20260420_AddLatest"
+    run bash "$SCRIPT_DIR/snapshot-verify.sh"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"snapshot piu' vecchio del working tree"* ]]
+    [[ "$output" == *"dei dati 2 migration"* ]]
+    [[ "$output" == *"[verify]   20260410_AddLater"* ]]
+    [[ "$output" == *"[verify]   20260420_AddLatest"* ]]
+    # La migration del bake e quelle prima sono gia' nello snapshot.
+    [[ "$output" != *"[verify]   20260401_AddSearchVector"* ]]
+    [[ "$output" != *"[verify]   20260301_Init"* ]]
+}
+
+# Il caso che l'uguaglianza proteggeva davvero: uno snapshot che il working tree
+# non conosce (piu' nuovo del checkout, o di un altro branch) resta exit 2.
+@test "exit 2 when the snapshot migration is unknown to the working tree" {
+    install_fixture meta-good
+    sync_seed_schema_version
+    set_expected_env
+    export EXPECTED_EF_MIGRATIONS=$'20260301_Init\n20260320_Before'
+    export EXPECTED_EF_HEAD="20260320_Before"
+    run bash "$SCRIPT_DIR/snapshot-verify.sh"
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"non e' fra quelle del working tree"* ]]
+}
+
 @test "exit 3 on model drift" {
     install_fixture meta-model-drift
     set_expected_env

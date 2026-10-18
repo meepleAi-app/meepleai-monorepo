@@ -4,7 +4,10 @@
 # Exit codes:
 #   0  ok
 #   1  altro (file mancanti, jq missing, ...)
-#   2  EF migration drift  — working tree avanti rispetto allo snapshot
+#   2  EF migration drift  — la migration dello snapshot non e' fra quelle del
+#      working tree: snapshot piu' nuovo, o di un altro branch. Uno snapshot piu'
+#      VECCHIO del working tree non e' drift (#4489): snapshot-restore.sh carica i
+#      dati allo schema del bake e applica dopo le migrations successive.
 #   3  embedding model drift
 #   4  embedding dim drift
 #   5  seed-table schema-version drift (#2126 D9) — una tabella seedata e'
@@ -28,28 +31,46 @@ META="$OUT_DIR/$BASENAME.meta.json"
 
 # 1. EF migration head
 expected_head=$(jq -r '.ef_migration_head' "$META")
-working_head=${EXPECTED_EF_HEAD:-}
-if [ -z "$working_head" ]; then
-    # Resolvi dal working tree — cerca file migration più recente.
-    # Le migration EF sono nominate YYYYMMDDHHMMSS_Name.cs ed EF genera una
-    # coppia <Name>.cs + <Name>.Designer.cs per ogni migration — escludi
-    # i Designer, altrimenti sort -r li ordina prima del file canonico.
-    working_head=$(find ../apps/api/src/Api apps/api/src/Api -name '[0-9]*_*.cs' -not -name '*.Designer.cs' -path '*/Migrations/*' 2>/dev/null \
+# Le migrations del working tree, una per riga e in ordine. Nei test le sostituisce
+# EXPECTED_EF_MIGRATIONS; EXPECTED_EF_HEAD da solo vale come elenco di una migration.
+working_migrations=${EXPECTED_EF_MIGRATIONS:-${EXPECTED_EF_HEAD:-}}
+if [ -z "$working_migrations" ]; then
+    # Resolvi dal working tree. Le migration EF sono nominate
+    # YYYYMMDDHHMMSS_Name.cs ed EF genera una coppia <Name>.cs + <Name>.Designer.cs
+    # per ogni migration — escludi i Designer, che sono lo stesso nome due volte.
+    working_migrations=$(find ../apps/api/src/Api apps/api/src/Api -name '[0-9]*_*.cs' -not -name '*.Designer.cs' -path '*/Migrations/*' 2>/dev/null \
         | xargs -I{} basename {} .cs \
-        | grep -E '^[0-9]{14}_[A-Za-z0-9_]+$' \
-        | sort -r | head -1 || echo "")
+        | grep -E '^[0-9]{14}_[A-Za-z0-9_]+$' || echo "")
 fi
+working_migrations=$(sed '/^$/d' <<<"$working_migrations" | LC_ALL=C sort -u)
+working_head=${EXPECTED_EF_HEAD:-$(tail -1 <<<"$working_migrations")}
 
 if [ "$expected_head" != "$working_head" ]; then
-    cat >&2 <<EOF
+    if [ -n "$expected_head" ] && grep -Fxq -- "$expected_head" <<<"$working_migrations"; then
+        # Snapshot piu' vecchio del working tree (#4489): non e' drift. Prima la
+        # regola era l'uguaglianza, e con il bake completo una volta a settimana
+        # ogni migration mergiata fermava il gate RAG su tutti i branch fino al
+        # bake successivo. snapshot-restore.sh porta lo schema alla migration del
+        # bake, carica i dati, e solo dopo applica queste: girano sui dati dello
+        # snapshot, come su un deploy.
+        pending=$(awk -v h="$expected_head" '$0 > h' <<<"$working_migrations")
+        echo "::warning:: snapshot piu' vecchio del working tree: snapshot-restore.sh applichera' dopo il caricamento dei dati $(grep -c . <<<"$pending") migration" >&2
+        log "snapshot head : $expected_head"
+        log "da applicare dopo il caricamento:"
+        sed 's/^/[verify]   /' <<<"$pending" >&2
+    else
+        cat >&2 <<EOF
 ::error:: snapshot disallineato con le migrations del working tree
   snapshot head : $expected_head
   working head  : $working_head
+La migration dello snapshot non e' fra quelle del working tree: lo snapshot e'
+piu' nuovo del checkout, o viene da un altro branch.
 Opzioni:
-  1. git checkout del commit compatibile con lo snapshot
+  1. aggiorna il checkout (git pull), o git checkout del commit compatibile
   2. make seed-index  (rigenera lo snapshot sul commit corrente)
 EOF
-    exit 2
+        exit 2
+    fi
 fi
 
 # 2. Embedding model

@@ -1,7 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
-
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ActivityIcon,
@@ -17,6 +15,10 @@ import {
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
+import {
+  useEmbeddingServiceInfo,
+  useEmbeddingServiceMetrics,
+} from '@/hooks/queries/useEmbeddingService';
 import { apiClient } from '@/lib/api/client';
 import { cn } from '@/lib/utils';
 
@@ -46,19 +48,6 @@ interface PipelineHealth {
   overallStatus: 'healthy' | 'degraded' | 'down';
 }
 
-interface EmbeddingInfo {
-  model: string;
-  dimension: number;
-  maxTokens: number;
-}
-
-interface EmbeddingMetrics {
-  totalRequests: number;
-  failedRequests: number;
-  avgLatencyMs: number;
-  throughputPerSecond: number;
-}
-
 // ── Fetch helpers ──────────────────────────────────────────────────────
 
 async function fetchPipelineMetrics(): Promise<PipelineMetrics | null> {
@@ -72,22 +61,6 @@ async function fetchPipelineMetrics(): Promise<PipelineMetrics | null> {
 async function fetchPipelineHealth(): Promise<PipelineHealth | null> {
   try {
     return await apiClient.get<PipelineHealth>('/api/v1/admin/pipeline/health');
-  } catch {
-    return null;
-  }
-}
-
-async function fetchEmbeddingInfo(): Promise<EmbeddingInfo | null> {
-  try {
-    return await apiClient.get<EmbeddingInfo>('/api/v1/admin/embedding/info');
-  } catch {
-    return null;
-  }
-}
-
-async function fetchEmbeddingMetrics(): Promise<EmbeddingMetrics | null> {
-  try {
-    return await apiClient.get<EmbeddingMetrics>('/api/v1/admin/embedding/metrics');
   } catch {
     return null;
   }
@@ -136,19 +109,12 @@ export function QueueETASidebar() {
     refetchInterval: 60_000,
   });
 
-  const { data: embeddingInfo } = useQuery({
-    queryKey: ['admin', 'embedding', 'info'],
-    queryFn: fetchEmbeddingInfo,
-    staleTime: 60_000,
-    refetchInterval: 120_000,
-  });
+  // #4446: the dimension shown here was a 1024 written in the endpoint.
+  const { data: embeddingInfo } = useEmbeddingServiceInfo({ refetchInterval: 120_000 });
 
-  const { data: embeddingMetrics } = useQuery({
-    queryKey: ['admin', 'embedding', 'metrics'],
-    queryFn: fetchEmbeddingMetrics,
-    staleTime: 15_000,
-    refetchInterval: 30_000,
-  });
+  // #4446: this read `throughputPerSecond`, `avgLatencyMs` and `failedRequests`, which the API
+  // never sent: the `.toFixed` on the missing throughput took the whole RAG pipeline page down.
+  const { data: embeddingMetrics } = useEmbeddingServiceMetrics();
 
   const { data: queueConfig } = useQueueConfig();
 
@@ -170,11 +136,8 @@ export function QueueETASidebar() {
 
   const isPaused = queueConfig?.isPaused ?? false;
 
-  // Computed embedding stats
-  const failureRate = useMemo(() => {
-    if (!embeddingMetrics || embeddingMetrics.totalRequests === 0) return 0;
-    return (embeddingMetrics.failedRequests / embeddingMetrics.totalRequests) * 100;
-  }, [embeddingMetrics]);
+  // Already a percentage, computed by the API from the service's counters.
+  const failureRate = embeddingMetrics?.failureRate ?? 0;
 
   return (
     <div className="space-y-4">
@@ -255,9 +218,9 @@ export function QueueETASidebar() {
                 <span className="text-muted-foreground">Model</span>
                 <span
                   className="font-mono text-foreground truncate ml-2 max-w-[140px]"
-                  title={embeddingInfo.model}
+                  title={embeddingInfo.model ?? undefined}
                 >
-                  {embeddingInfo.model}
+                  {embeddingInfo.model ?? 'unavailable'}
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -271,15 +234,9 @@ export function QueueETASidebar() {
           {embeddingMetrics && (
             <div className="text-xs space-y-1 border-t border-border/50 pt-2">
               <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Throughput</span>
-                <span className="font-mono text-foreground">
-                  {embeddingMetrics.throughputPerSecond.toFixed(1)}/s
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Avg latency</span>
                 <span className="font-mono text-foreground">
-                  {Math.round(embeddingMetrics.avgLatencyMs)}ms
+                  {Math.round(embeddingMetrics.avgDurationMs)}ms
                 </span>
               </div>
               <div className="flex items-center justify-between">

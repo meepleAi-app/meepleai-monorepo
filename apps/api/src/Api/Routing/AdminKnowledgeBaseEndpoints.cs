@@ -7,6 +7,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetCorpusTitleHealth
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetDocumentEmbeddingsMeta;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGamesWithoutKb;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbNavCounts;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.ProbeRetrieval;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.SearchDocumentChunks;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
 using Api.Filters;
@@ -203,6 +204,26 @@ internal static class AdminKnowledgeBaseEndpoints
         .WithDescription("Computes TitleHealthMetric over each shared game's distinct text_chunks.Heading values. Backs the WP3 regression guard + WP4 go/no-go read-out.")
         .Produces<IReadOnlyList<GameTitleHealthDto>>(StatusCodes.Status200OK);
 
+        // POST /api/v1/admin/kb/retrieval-probe — #4482: the chat's retrieval for one question on one
+        // game, returned whole (pool before the reranker and final passages). No LLM call.
+        kbGroup.MapPost("/retrieval-probe", async (
+            [FromBody] RetrievalProbeRequest request,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var result = await mediator.Send(
+                new ProbeRetrievalQuery(request.GameId, request.Question, request.AcceptLanguage), ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("ProbeKbRetrieval")
+        .WithSummary("Retrieval only, as the chat does it for a game: no LLM call, no cost")
+        .WithDescription(
+            "Runs the answer pipeline's retrieval for the question — language from the question and Accept-Language " +
+            "(default \"it\"), the published agent profile, hybrid search, reranker — and returns the candidate pool " +
+            "before the reranker and the final passages, with full chunk text and scores. Calls the embedding and " +
+            "reranker services, never a language model. #4482.")
+        .Produces<RetrievalProbeDto>(StatusCodes.Status200OK);
+
         // GET /api/v1/admin/shared-games (extended for admin - #4654, #4785)
         var gamesGroup = group.MapGroup("/admin/shared-games")
             .WithTags("Admin", "SharedGames")
@@ -239,6 +260,16 @@ internal record EstimateAgentCostByDocumentsRequest(
     Guid GameId,
     List<Guid> DocumentIds,
     string? StrategyName
+);
+
+/// <summary>
+/// #4482: request body for the retrieval probe. <c>AcceptLanguage</c> is what the chat would read in the
+/// <c>Accept-Language</c> header; absent means "it".
+/// </summary>
+internal record RetrievalProbeRequest(
+    Guid GameId,
+    string Question,
+    string? AcceptLanguage
 );
 
 /// <summary>

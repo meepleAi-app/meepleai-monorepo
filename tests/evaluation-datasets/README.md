@@ -21,6 +21,35 @@ and is the gate the in-session live path must pass before enhancements are wired
   Page-level, so stable across the #3427 re-index. A sample without it is not citation-graded.
 - `relevant_chunk_ids` are intentionally empty pending #3427 (recall labeling via the labeling-assist workflow).
 
+### `reference-questions-it.json` — domande di riferimento dell'agente (#4470)
+
+Il set scritto dall'utente il 2026-10-18 per verificare l'agente: domande in italiano su Catan, Carcassonne,
+Ticket to Ride e Gloomhaven, con risposta attesa in testo libero. Serve a due cose (ADR-095 fetta 7, #4170):
+la misura periodica, con tutto il set, e il gate di pubblicazione del profilo, con un sottoinsieme. Il giudizio
+lo dà un giudice LLM tarato (#4471), non le parole chiave: il set non ne ha.
+
+- Campi dell'utente: `game`, `category`, `difficulty`, `question`, `ground_truth`, `context_reference`,
+  `question_type`. Le domande «Out of Scope» chiedono di un termine o una meccanica che il gioco non ha.
+- Campi aggiunti con la verifica del 2026-10-18:
+  - `id` (`CAT-01`, `CAR-01`, `TTR-01`, `GLO-01`…): il nome con cui il gate confronta due versioni;
+  - `verifica`: esito, regolamento, pagina e citazione del testo che sostiene la risposta attesa;
+  - `ground_truth_originale` e `question_originale`, dove la risposta o la domanda è stata corretta;
+  - `fuori_dal_corpus`: la domanda chiede ciò che i documenti non contengono (per esempio i costi di
+    Catan, che nel regolamento sono solo una grafica). La risposta attesa ne accetta due: che i
+    documenti non lo riportano, oppure la regola vera; è sbagliata solo una regola falsa (criterio 6 di
+    `misure/criteri-giudizio.md`). La domanda misura se l'agente inventa.
+- `game` è il gioco del catalogo su cui la domanda va posta: le domande su Stazioni, Traghetti e Tunnel
+  sono di «Ticket to Ride: Europe», che ha il suo regolamento.
+- Ogni risposta attesa è stata confrontata con il testo del regolamento che l'agente legge, non con la
+  memoria del gioco, e le correzioni sono state decise una per una con l'utente. Un'eccezione voluta:
+  `CAR-12` tiene la regola delle edizioni recenti (4 punti), mentre il regolamento nel corpus, la prima
+  edizione italiana, dice 2. Il motivo è in `verifica.nota`.
+- Gloomhaven è verificato sulla traduzione italiana del regolamento
+  (`gloomhaven-it_rulebook.pdf` nel bucket dei seed, `rulebooks/v1/`: come vuole `.gitignore`, i regolamenti stanno nello storage e non in git). Il PDF `gloomhaven_rulebook.pdf` del
+  repository è una scansione senza testo, e non dà nulla all'agente.
+- Non porta UUID: l'id di un gioco cambia da un ambiente all'altro, e il caricamento lo risolve sul posto.
+- Per contare le domande per gioco: `jq 'group_by(.game) | map({(.[0].game): length}) | add' reference-questions-it.json`.
+
 ## Dataset Formats
 
 ### Mozilla Structured QA (`mozilla-boardgames.json`)

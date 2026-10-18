@@ -1,0 +1,1161 @@
+{
+  "data": "2026-10-18",
+  "descrizione": "Prima misura periodica (#4470): le domande di Catan poste all'agente pubblicato come in chat (POST /api/v1/agents/qa/stream, Accept-Language: it, utente admin), su una copia del database locale con l'API di main-dev (ed339d199). Voti dell'utente per tarare il giudice (#4471).",
+  "profilo": "a9e7f5c1-4167-4095-9a1e-000000000104",
+  "costo": {
+    "chiamate_llm": 29,
+    "totale_usd": 0.0208,
+    "nota": "llm_cost_logs RagPipeline deepseek-flash nella finestra della misura, compresa una chiamata di prova"
+  },
+  "criteri_utente": [
+    "Una rinuncia onesta (non lo trovo), senza invenzioni, vale corretta anche quando il regolamento avrebbe la risposta (CAT-03, confermato 2026-10-18).",
+    "Una risposta giusta nel merito vale corretta anche se il dato non viene dal regolamento indicizzato: a CAT-10 il costo della città arriva dal modello, e l utente la giudica corretta (2026-10-18).",
+    "Una risposta nella lingua sbagliata resta corretta nel merito, ma va tradotta: nota dell utente su CAT-10, «bisogna tradurla»."
+  ],
+  "risultati": [
+    {
+      "id": "CAT-01",
+      "domanda": "Posso scambiare risorse direttamente con un altro giocatore durante il turno di quel giocatore?",
+      "risposta_attesa": "Sì. Durante il turno di un altro giocatore puoi commerciare solo con lui, cioè con il giocatore di turno; non puoi scambiare con altri giocatori né con la riserva. Due giocatori che non sono di turno non possono scambiare tra loro.",
+      "risposta": "- No, non puoi scambiare risorse con un altro giocatore durante il suo turno. Lo scambio tra giocatori avviene solo nel turno del giocatore che propone lo scambio: nell’esempio, White non può scambiare con Orange perché non è il turno di Orange [Page 1].\n- Lo scambio diretto tra giocatori è descritto come parte delle azioni del giocatore di turno, che concorda lo scambio e le carte vengono scambiate [Page 1].",
+      "lingua_rilevata": "it",
+      "grounding": "Grounded",
+      "rinuncia": false,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.81337994
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8068546
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.80668616
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8009849
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.79675615
+        }
+      ],
+      "ms": 7933,
+      "voto_utente": "parziale"
+    },
+    {
+      "id": "CAT-02",
+      "domanda": "Posso giocare più di una carta Sviluppo nello stesso turno?",
+      "risposta_attesa": "No, puoi giocare al massimo una carta Sviluppo per turno. L'unica eccezione riguarda le carte Punto Vittoria, che possono essere rivelate tutte insieme nel momento in cui ti permettono di raggiungere i 10 punti vittoria per vincere la partita.",
+      "risposta": "- No, normalmente solo **1 carta de desarrollo por turno** [Page 1].\n- No puedes jugar una carta de desarrollo **el mismo turno en que la compras** [Page 1].\n- Puedes jugarla **antes de tirar los dados o durante la fase de acción** [Page 1].\n- **Excepción:** puedes jugar **múltiples cartas de Punto de Victoria** (incluso el turno en que las compras) para ganar la partida [Page 1].",
+      "lingua_rilevata": "es",
+      "grounding": "Grounded",
+      "rinuncia": false,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8331608
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.82520866
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.82449263
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8219608
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.81903374
+        }
+      ],
+      "ms": 6943,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-03",
+      "domanda": "Se la riserva della banca finisce un determinato tipo di risorsa e più giocatori dovrebbero riceverla, cosa succede?",
+      "risposta_attesa": "Se la banca non ha abbastanza carte di una determinata risorsa per soddisfare le produzioni di tutti i giocatori in quel turno, nessun giocatore riceve quella risorsa.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_rilevata": "it",
+      "grounding": "Grounded",
+      "rinuncia": true,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8168401
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.81473666
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.7978516
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.79590535
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.795884
+        }
+      ],
+      "ms": 6795,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-04",
+      "domanda": "Se la strada più lunga di un giocatore viene interrotta dall'insediamento di un avversario, cosa succede al titolo di 'Strada più Lunga'?",
+      "risposta_attesa": "La strada interrotta conta solo per il suo tratto continuo più lungo. Se un altro giocatore ha ora più strade continue, riceve subito la tessera. Se il detentore non soddisfa più i requisiti, la tessera torna nella riserva e vi resta finché un solo giocatore ha la strada continua più lunga di almeno 5 tratti: quel giocatore riceve subito la tessera e i 2 PV (in caso di parità resta nella riserva).",
+      "risposta": "- Se la strada di un giocatore viene interrotta e non soddisfa più i requisiti per la \"Strada più Lunga\", la tessera viene restituita alla riserva [Page 1].\n- Rimane nella riserva finché un solo giocatore non ha la strada continua più lunga di almeno 5 strade; quel giocatore riceve immediatamente la tessera bonus e i 2 PV [Page 1].\n- Esempio: Red ha 7 strade e la tessera; White ne ha 6 e costruisce un insediamento che spezza la strada di Red in segmenti da quattro e tre strade; poiché White ora ha la strada più lunga, riceve la tessera e i 2 PV [Page 1].",
+      "lingua_rilevata": "it",
+      "grounding": "Grounded",
+      "rinuncia": false,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.81195414
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.80235404
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.80198574
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.7983553
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.79272676
+        }
+      ],
+      "ms": 8215,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-05",
+      "domanda": "Posso posizionare il Brigante su un esagono dove si trova già senza muoverlo?",
+      "risposta_attesa": "No. Quando esce un 7 o viene giocata una carta Cavaliere, il Brigante DEVE essere spostato su un esagono differente da quello in cui si trova attualmente.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_rilevata": "it",
+      "grounding": "Grounded",
+      "rinuncia": true,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8043095
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.7838993
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.78316003
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.78149635
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.77959067
+        }
+      ],
+      "ms": 6364,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-06",
+      "domanda": "Per usare un porto specializzato (2:1), devo aver costruito una città o basta un insediamento?",
+      "risposta_attesa": "Basta possedere un insediamento (o una città) su uno dei due vertici dell'esagono che indicano il porto.",
+      "risposta": "",
+      "lingua_rilevata": null,
+      "grounding": null,
+      "rinuncia": false,
+      "errore": "An error occurred: Error during keyword search for query 'Per usare un porto specializzato (2:1), devo aver costruito una città o basta un insediamento?': 42601: syntax error in tsquery: \"Per | usare | un | porto | specializzato | 2:1, | devo | aver | costruito | una | città | o | basta | un | insediamento?\"",
+      "citazioni": [],
+      "ms": 1783,
+      "voto_utente": "errore"
+    },
+    {
+      "id": "CAT-07",
+      "domanda": "Posso giocare una carta Cavaliere prima di tirare i dadi per la produzione?",
+      "risposta_attesa": "Sì. Puoi giocare una carta Sviluppo, Cavaliere compreso, prima di tirare i dadi oppure in qualsiasi momento della fase Azione; al massimo una per turno, e non una carta acquistata nello stesso turno.",
+      "risposta": "Sì, puoi giocare una carta Cavaliere prima di tirare i dadi.\n\n- Puoi giocare una carta sviluppo (incluso il Cavaliere) nella fase di Produzione prima di tirare i dadi, oppure durante la fase di Azione [Page 1].\n- Non puoi giocarla nello stesso turno in cui l'hai acquistata [Page 1].\n- Puoi giocare solo 1 carta sviluppo per turno [Page 1].\n- Eccezione: puoi giocare più carte Punto Vittoria (anche nel turno in cui le acquisti) per vincere la partita [Page 1].",
+      "lingua_rilevata": "it",
+      "grounding": "Grounded",
+      "rinuncia": false,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8202434
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8188269
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8073285
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8167569
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.81655395
+        }
+      ],
+      "ms": 9726,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-08",
+      "domanda": "Quanti punti vittoria dà la carta 'Esercito Avanzato'?",
+      "risposta_attesa": "La carta 'Esercito Avanzato' non esiste nel gioco base di Catan. Esiste la targa 'Il Più Grande Esercito', che assegna 2 punti vittoria al primo giocatore che gioca 3 carte Cavaliere.",
+      "risposta": "- La carta \"Largest Army\" (Esercito Avanzato) vale 2 VPs [Page 1].\n- Il primo giocatore a giocare 3 carte Knight riceve la tessera; se un altro giocatore ne gioca di più, la riceve immediatamente [Page 1].",
+      "lingua_rilevata": "it",
+      "grounding": "Grounded",
+      "rinuncia": false,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.83508277
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8316811
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8308238
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.82432145
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.81998724
+        }
+      ],
+      "ms": 8415,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-09",
+      "domanda": "Nella fase di posizionamento iniziale, quante risorse riceve ciascun giocatore?",
+      "risposta_attesa": "Ogni giocatore riceve una carta risorsa per ciascun esagono adiacente al SECONDO insediamento che posiziona durante la fase di preparazione.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_rilevata": "it",
+      "grounding": "Grounded",
+      "rinuncia": true,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.81727815
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8163819
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8132864
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.81184125
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.81119967
+        }
+      ],
+      "ms": 6957,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-10",
+      "domanda": "Quanto costa costruire una città e cosa deve sostituire sulla mappa?",
+      "risposta_attesa": "Il regolamento dice che una città si costruisce sostituendo un proprio insediamento già sulla mappa, ma non riporta il costo della città: la risposta corretta lo dice, senza inventare il costo.",
+      "risposta": "- Una ciudad cuesta **3 recursos de mineral y 2 de trigo** (según la tabla de costes de construcción) [Page 1].\n- Una ciudad **siempre reemplaza un poblado**: se retira uno de tus poblados del tablero y se coloca la ciudad en su lugar [Page 1].\n- Cada ciudad vale **2 VP** [Page 1].",
+      "lingua_rilevata": "es",
+      "grounding": "Grounded",
+      "rinuncia": false,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8019806
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.7974458
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.7949181
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.79092836
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.7859073
+        }
+      ],
+      "ms": 8060,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-11",
+      "domanda": "Una città costruita su un esagono bloccato dal Brigante produce risorse quando esce il relativo numero?",
+      "risposta_attesa": "No. Finchè il Brigante si trova su un esagono, quell'esagono non produce risorse per nessun giocatore, indipendentemente dal fatto che vi siano insediamenti o città adiacenti.",
+      "risposta": "- No, un esagono con el Brigante no produce recursos cuando sale su número [Page 1].\n- Por tanto, una ciudad construida en ese esagono no produce recursos mientras el Brigante permanezca allí [Page 1].",
+      "lingua_rilevata": "es",
+      "grounding": "Grounded",
+      "rinuncia": false,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.81862044
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.7948527
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.79387
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.784785
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.79906756
+        }
+      ],
+      "ms": 8496,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-12",
+      "domanda": "Se non possiedo insediamenti sui porti, qual è il tasso di cambio standard per scambiare risorse con la banca?",
+      "risposta_attesa": "Il tasso di cambio generico (commercio marittimo base) è di 4 carte della stessa risorsa in cambio di 1 carta risorsa a scelta dalla banca.",
+      "risposta": "- Il tasso di cambio standard con la banca (senza edifici sui porti) è 4:1: si mettono 4 carte della stessa risorsa nella riserva e si prende 1 carta di una risorsa diversa [Page 1].\n- I porti 2:1 e 3:1 richiedono un edificio sul porto corrispondente [Page 1].",
+      "lingua_rilevata": "it",
+      "grounding": "Grounded",
+      "rinuncia": false,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.7794678
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.83156306
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.81038433
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.78731513
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.78700227
+        }
+      ],
+      "ms": 9330,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-13",
+      "domanda": "Cosa permette di fare la carta Sviluppo 'Monopolio'?",
+      "risposta_attesa": "Quando giochi 'Monopolio', dichiari un tipo di risorsa. Tutti gli altri giocatori devono consegnarti TUTTE le carte risorsa di quel tipo in loro possesso.",
+      "risposta": "- La carta Sviluppo \"Monopolio\" permette di annunciare un tipo di risorsa; ogni giocatore deve darti tutte le sue carte risorsa di quel tipo [Page 1].",
+      "lingua_rilevata": "it",
+      "grounding": "Grounded",
+      "rinuncia": false,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8299492
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8157032
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.81542623
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8109686
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.80948776
+        }
+      ],
+      "ms": 9696,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-14",
+      "domanda": "Cosa permette di fare la carta Sviluppo 'Costruzione Strade'?",
+      "risposta_attesa": "Permette di piazzare immediatamente 2 strade sulla mappa gratuitamente, rispettando le normali regole di costruzione.",
+      "risposta": "- La carta Sviluppo \"Costruzione Strade\" permette di costruire 2 strade senza alcun costo [Page 1].\n- Si possono giocare le carte Sviluppo prima del lancio dei dadi o durante la fase Azione [Page 1].\n- Non si può giocare una carta Sviluppo nello stesso turno in cui la si è acquistata, e se ne può giocare solo 1 per turno (eccezione: le carte Punto Vittoria) [Page 1].",
+      "lingua_rilevata": "it",
+      "grounding": "Grounded",
+      "rinuncia": false,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8392427
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8264805
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.82369924
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8227174
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8212435
+        }
+      ],
+      "ms": 9049,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-15",
+      "domanda": "Cosa permette di fare la carta Sviluppo 'Invenzione' (o Scoperte)?",
+      "risposta_attesa": "Permette di prendere immediatamente 2 carte risorsa a tua scelta dalla banca (possono essere 2 risorse uguali o 2 risorse diverse).",
+      "risposta": "- La carta Sviluppo \"Invention\" permette di prendere qualsiasi 2 carte risorsa dalla riserva [Page 1].\n- Si gioca 1 sola carta Sviluppo per turno, non quella appena acquistata, prima del tiro dei dadi o durante la fase Azione [Page 1].",
+      "lingua_rilevata": "it",
+      "grounding": "Grounded",
+      "rinuncia": false,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8138967
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8118322
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8099082
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8071545
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.80206275
+        }
+      ],
+      "ms": 7634,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-16",
+      "domanda": "Quanti punti vittoria fornisce rispettivamente un insediamento e una città?",
+      "risposta_attesa": "Un insediamento vale 1 punto vittoria, mentre una città vale 2 punti vittoria.",
+      "risposta": "- Un insediamento fornisce **1 punto vittoria** [Page 1].\n- Una città fornisce **2 punti vittoria** [Page 1].",
+      "lingua_rilevata": "it",
+      "grounding": "Grounded",
+      "rinuncia": false,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.7885607
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.78739756
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.82311046
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.81758064
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.81267536
+        }
+      ],
+      "ms": 6659,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-17",
+      "domanda": "Posso regalare una risorsa a un altro giocatore senza chiedere nulla in cambio?",
+      "risposta_attesa": "No, gli scambi 'a 0 risorse' o i regali non sono consentiti dal regolamento ufficiale. Ogni scambio tra giocatori deve coinvolgere almeno una risorsa da entrambe le parti.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_rilevata": "it",
+      "grounding": "Grounded",
+      "rinuncia": true,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8053919
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.7994038
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.7993532
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.7975602
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.7969643
+        }
+      ],
+      "ms": 6813,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-18",
+      "domanda": "I ramificati e i doppi percorsi contano per il calcolo della Strada più Lunga?",
+      "risposta_attesa": "Il regolamento parla solo di strade «continue» e non spiega come contare diramazioni o percorsi doppi: la risposta corretta lo dice, senza inventare un criterio.",
+      "risposta": "- La Strada più Lunga va al primo giocatore che ha **5 strade continue** in gioco [Page 8].\n- Se un altro giocatore ha **più strade continue** in gioco, riceve immediatamente la tessera [Page 8].\n- Se la rotta di un giocatore viene **spezzata** e non soddisfa più i requisiti, la tessera torna alla riserva e resta lì finché un solo giocatore non ha la rotta continua più lunga di almeno 5 strade [Page 8].\n- La tessera Strada più Lunga vale **2 PV** [Page 8].\n\nIl regolamento fornito non contiene indicazioni specifiche sul trattamento di ramificazioni o doppi percorsi nel calcolo della Strada più Lunga: This information is not available in the provided rulebook.",
+      "lingua_rilevata": "it",
+      "grounding": "Grounded",
+      "rinuncia": true,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.7952644
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.7921087
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.7890913
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.78855926
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8147065
+        }
+      ],
+      "ms": 14312,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-19",
+      "domanda": "Se sposto il Brigante su un esagono con insediamenti di più giocatori, a chi rubo una carta?",
+      "risposta_attesa": "Scegli un solo giocatore tra quelli che possiedono almeno un insediamento o una città adiacenti a quell'esagono e gli peschi una carta risorsa a caso dalla mano.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_rilevata": "it",
+      "grounding": "Grounded",
+      "rinuncia": true,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.81891394
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8137621
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8115096
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8105924
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.809745
+        }
+      ],
+      "ms": 6422,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-20",
+      "domanda": "Se sposto il Brigante su un esagono con un insediamento di un giocatore che ha 0 carte in mano, posso comunque scegliere lui per rubare?",
+      "risposta_attesa": "Il regolamento non tratta il caso del giocatore senza carte: dice solo che, se più giocatori hanno costruzioni sul nuovo esagono, scegli quale derubare. La risposta corretta lo dice, senza inventare.",
+      "risposta": "- Quando muovi il Brigante, puoi rubare 1 carta risorsa casuale da un giocatore con un edificio su quell'esagono [Page 1].\n- La regola non specifica alcun requisito sul numero di carte in mano del giocatore bersaglio [Page 1].\n\nThis information is not available in the provided rulebook.",
+      "lingua_rilevata": "it",
+      "grounding": "Grounded",
+      "rinuncia": true,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.7940897
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.78919554
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8071433
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8043955
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.80157846
+        }
+      ],
+      "ms": 9025,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-21",
+      "domanda": "Se raggiungo 10 punti vittoria durante il turno di un altro giocatore (es. perché interrompe la strada di un avversario), vinco immediatamente?",
+      "risposta_attesa": "No. Puoi dichiarare la vittoria e vincere la partita solo ed esclusivamente durante il tuo turno.",
+      "risposta": "- No: la vittoria si verifica solo se hai 10 o più PV **durante il tuo turno**; la partita termina immediatamente e vinci tu [Page 1].\n- L'obiettivo è: il primo giocatore a raggiungere 10 PV **nel proprio turno** vince [Page 1].\n- Non è indicato nel regolamento che si possa vincere raggiungendo 10 PV durante il turno di un altro giocatore [Page 1].",
+      "lingua_rilevata": "it",
+      "grounding": "Grounded",
+      "rinuncia": false,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8203102
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.818967
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.79385304
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.7864551
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8145091
+        }
+      ],
+      "ms": 10433,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-22",
+      "domanda": "Le carte Punto Vittoria giocate vengono mostrate agli altri giocatori prima della fine della partita?",
+      "risposta_attesa": "No, le carte Punto Vittoria acquistate rimangono coperte fino al momento in cui il giocatore dichiara di aver raggiunto 10 o più punti per vincere.",
+      "risposta": "- Sì: quando raggiungi 10 o più PV durante il tuo turno, giri/scopri un numero qualsiasi di carte Punto Vittoria, comprese quelle costruite in quel turno, per dimostrare di aver raggiunto 10 PV [Page 1].\n- Le carte Punto Vittoria possono essere giocate “anche nel turno in cui le costruisci” per vincere la partita [Page 1].",
+      "lingua_rilevata": "it",
+      "grounding": "Grounded",
+      "rinuncia": false,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8327267
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.83191717
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.82050854
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.816183
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8128197
+        }
+      ],
+      "ms": 10265,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-23",
+      "domanda": "Cosa succede se un giocatore esaurisce tutti i 5 insediamenti in legno della sua riserva e vuole costruirne un sesto?",
+      "risposta_attesa": "Non può farlo. I componenti fisici in legno costituiscono un limite severo. Per costruire un altro insediamento deve prima trasformarne uno esistente in città per riprendere il pezzo in riserva.",
+      "risposta": "- Un giocatore ha 5 pezzi di insediamento; per costruire altri insediamenti deve prima potenziarne uno a città [Page 1].\n- Quindi, esauriti i 5 insediamenti, non può costruirne un sesto: deve prima convertire un insediamento in città [Page 1].",
+      "lingua_rilevata": "it",
+      "grounding": "Grounded",
+      "rinuncia": false,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8124825
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.80690515
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8062332
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.79960907
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.7990419
+        }
+      ],
+      "ms": 9098,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-24",
+      "domanda": "Posso scambiare carte Sviluppo con gli altri giocatori?",
+      "risposta_attesa": "No, le carte Sviluppo non possono mai essere scambiate o cedute ad altri giocatori.",
+      "risposta": "No, non puoi scambiare o regalare carte Sviluppo: \"You may not trade or give away development cards\" [Page 1].",
+      "lingua_rilevata": "it",
+      "grounding": "Grounded",
+      "rinuncia": false,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8245607
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8238168
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8230119
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.81696296
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.81510067
+        }
+      ],
+      "ms": 9697,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-25",
+      "domanda": "Posso scambiare 1 carta Legno in cambio di 1 carta Legno con un altro giocatore?",
+      "risposta_attesa": "No, non è consentito effettuare scambi di carte risorsa identiche tra giocatori.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_rilevata": "it",
+      "grounding": "Grounded",
+      "rinuncia": true,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8271572
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.82443
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.81039023
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.81613606
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.81013334
+        }
+      ],
+      "ms": 7390,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-26",
+      "domanda": "Nella fase iniziale di posizionamento, è possibile costruire subito una città al posto di un insediamento?",
+      "risposta_attesa": "No, durante la preparazione iniziale si posizionano esclusivamente 2 insediamenti e 2 strade per ciascun giocatore.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_rilevata": "es",
+      "grounding": "Grounded",
+      "rinuncia": true,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.804971
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8036535
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.799292
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.79909474
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.79853606
+        }
+      ],
+      "ms": 7112,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-27",
+      "domanda": "Cosa succede se al lancio dei dadi esce un 2 o un 12?",
+      "risposta_attesa": "Gli esagoni contrassegnati dal numero 2 o 12 producono risorse normalmente per tutti i giocatori che vi sono adiacenti, esattamente come gli altri numeri.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_rilevata": "es",
+      "grounding": "Grounded",
+      "rinuncia": true,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.7871402
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.78903854
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.79096335
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.7879935
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.78628093
+        }
+      ],
+      "ms": 7824,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-28",
+      "domanda": "Se un giocatore gioca 3 Cavalieri e ottiene 'Il Più Grande Esercito', come fa un altro giocatore a sottrarglielo?",
+      "risposta_attesa": "Un altro giocatore deve giocare un numero STRETTAMENTE MAGGIORE di carte Cavaliere (ovvero almeno 4 Cavalieri) per sottrarre il titolo.",
+      "risposta": "- Il primo giocatore a giocare 3 carte Cavaliere riceve la tessera \"Il Più Grande Esercito\" [Page 1].\n- Se un altro giocatore gioca più carte Cavaliere, riceve immediatamente quella tessera [Page 1].",
+      "lingua_rilevata": "it",
+      "grounding": "Grounded",
+      "rinuncia": false,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8247446
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8185683
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8097909
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.81012595
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8087214
+        }
+      ],
+      "ms": 8901,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-29",
+      "domanda": "Qual è il costo di costruzione di un insediamento e di una strada?",
+      "risposta_attesa": "I documenti del gioco non riportano i costi di insediamento e strada: la risposta corretta lo dice, senza inventarli.",
+      "risposta": "- **Poblado (settlement):** vale 1 PV y se coloca en intersecciones vacías, siguiendo la Regla de Distancia y conectado a al menos una de tus carreteras [Page 1].\n- **Carretera (road):** vale 0 PV y se coloca en bordes vacíos, conectando a una carretera o construcción existente [Page 1].\n- Los costes concretos de construcción (recursos necesarios) no aparecen detallados en el contexto proporcionado; solo se indica que cada elemento tiene un coste diferente y que se devuelven las cartas de recurso requeridas a la reserva [Page 1].\n\nThis information is not available in the provided rulebook.",
+      "lingua_rilevata": "es",
+      "grounding": "Grounded",
+      "rinuncia": true,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8096145
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8006708
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.7974499
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.795703
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.7922299
+        }
+      ],
+      "ms": 5165,
+      "voto_utente": "corretta"
+    },
+    {
+      "id": "CAT-30",
+      "domanda": "Come si muovono le Navi nel gioco base di Catan?",
+      "risposta_attesa": "Le Navi non sono presenti nel gioco base di Catan. Si tratta di un elemento dell'espansione 'I Marinai'.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_rilevata": "it",
+      "grounding": "Grounded",
+      "rinuncia": true,
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.82947254
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8208169
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.81913
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.81676394
+        },
+        {
+          "fonte": "PDF:ecc39010-6164-48bd-b2d3-c33f5cb81b94",
+          "pagina": 1,
+          "punteggio": 0.8161911
+        }
+      ],
+      "ms": 1554,
+      "voto_utente": "corretta"
+    }
+  ]
+}

@@ -1,0 +1,1387 @@
+{
+  "data": "2026-10-18",
+  "descrizione": "Misura periodica (#4470) di Carcassonne: domande poste all'agente pubblicato come in chat (POST /api/v1/agents/qa/stream, Accept-Language: it, utente admin), su una copia del database locale con l'API di main-dev (ed339d199). Voti di Claude con i criteri dell'utente (criteri-giudizio.md), su delega esplicita dell'utente: non sono voti umani.",
+  "giudizio": "Claude",
+  "risultati": [
+    {
+      "id": "CAR-01",
+      "gioco": "Carcassonne",
+      "domanda": "Quanto punteggio assegna una città incompleta a fine partita?",
+      "risposta_attesa": "A fine partita, ogni tessera e ogni stemma presente in una città incompleta vale esattamente 1 punto (invece dei 2 punti per tessera/stemma assegnati a partita in corso).",
+      "risposta": "- A fine partita, per ogni città incompleta il giocatore con un cavaliere nella città guadagna **1 punto per ogni parte di città** [Page 1].\n- Gli stemmi nelle parti di città valgono **1 punto ciascuno** [Page 1].\n- Se vi sono più seguaci, prende tutti i punti il giocatore che ha più seguaci; in caso di parità prendono l'intero ammontare tutti i giocatori che hanno più seguaci [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.84563226
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8450431
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.83960414
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.840381
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8373212
+        }
+      ],
+      "ms": 10638,
+      "voto": "corretta",
+      "motivo": "Criterio 2: 1 punto per parte di città e 1 per stemma nella città incompleta, come atteso e come a p. 1 del regolamento; corretta anche la regola di maggioranza aggiunta.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-02",
+      "gioco": "Carcassonne",
+      "domanda": "Posso riprendere in mano un Meeple già piazzato prima che la struttura sia completata?",
+      "risposta_attesa": "No. Un Meeple piazzato su una tessera rimane bloccato lì fino a quando la relativa struttura (strada, città, monastero) non viene completamente chiusa e valutata.",
+      "risposta": "- No, un seguace non può essere richiamato prima che la struttura sia completata: “Sebbene un seguace non possa essere richiamato, essi ritornano ai giocatori quando si segnano i punti di monasteri, strade e città” [Page 1].\n- I seguaci coinvolti tornano nella dotazione solo dopo che sono stati assegnati i punti di una strada, città o monastero completati [Page 1].\n- È però possibile schierare un seguace, guadagnare i punti di una strada, città o monastero completati e riprendersi il seguace nello stesso turno [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.80231285
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.79570836
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.78996384
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.793701
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.7937187
+        }
+      ],
+      "ms": 8231,
+      "voto": "corretta",
+      "motivo": "Criterio 2: verdetto «No» come atteso, con la citazione esatta («un seguace non possa essere richiamato»); anche la ripresa del seguace nello stesso turno è nel regolamento (p. 2).",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-03",
+      "gioco": "Carcassonne",
+      "domanda": "Quando si considera completato un Monastero e quanti punti dà?",
+      "risposta_attesa": "Un monastero si considera completato quando la tessera del monastero è completamente circondata da altre 8 tessere (3x3). A quel punto assegna 9 punti totali e il Meeple torna al proprietario.",
+      "risposta": "- Un monastero è completo quando la tessera su cui si trova è completamente circondata da altre tessere [Page 1].\n- Il giocatore con un monaco sul monastero guadagna 9 punti (1 punto per ogni tessera) [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8352144
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.83430386
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8295208
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.83114016
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8248836
+        }
+      ],
+      "ms": 7001,
+      "voto": "corretta",
+      "motivo": "Criterio 2: completo quando la tessera è circondata da altre tessere, 9 punti (1 per tessera), come atteso e come a p. 2. Non cita il ritorno del seguace, che la domanda non chiede.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-04",
+      "gioco": "Carcassonne",
+      "domanda": "Se due campi separati contenenti ciascuno un contadino vengono uniti da un piazzamento successivo, chi prende i punti a fine partita?",
+      "risposta_attesa": "Il giocatore che possiede il maggior numero di contadini in quel campo unico risultante prende tutti i punti. In caso di parità, tutti i giocatori a pari merito ricevono i punti pieni del campo.",
+      "risposta": "- Quando due poderi separati vengono connessi, si determina il proprietario del podere unificato: se vi è un solo contadino, quel giocatore è proprietario; se vi sono più contadini, è proprietario chi ha la maggioranza dei contadini; in caso di parità entrambi i giocatori sono considerati proprietari [Page 1].\n- Il proprietario del podere ottiene 3 punti per ogni città completa che il podere rifornisce; se due giocatori sono proprietari dello stesso podere, entrambi ricevono 3 punti per ogni città rifornita [Page 1].\n- Nota: il giocatore che ha piazzato la nuova tessera non può schierare un contadino perché il podere che si è formato ha già dei contadini [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.86138177
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8552303
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8538699
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.87788826
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8408266
+        }
+      ],
+      "ms": 14503,
+      "voto": "corretta",
+      "motivo": "Criterio 2: il podere unificato va a chi ha la maggioranza di contadini, in parità a entrambi, con 3 punti per città completa rifornita: coincide con l'atteso e con p. 1.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-05",
+      "gioco": "Carcassonne",
+      "domanda": "Cosa succede se un giocatore pesca una tessera che non può collocare legalmente da nessuna parte sulla mappa?",
+      "risposta_attesa": "Nel raro caso in cui la tessera non possa essere piazzata legalmente (tutti i giocatori devono essere d'accordo), il giocatore di turno la scarta dal gioco rimettendola nella scatola e ne pesca un'altra.",
+      "risposta": "- Se un giocatore pesca una tessera che non può essere piazzata legalmente da nessuna parte, tutti i giocatori devono essere d'accordo su questa impossibilità [Page 1].\n- In questo raro caso, il giocatore di turno scarta la tessera dal gioco (nella scatola) e ne pesca un'altra [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8318731
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8405012
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.85186803
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8227083
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.81325114
+        }
+      ],
+      "ms": 13803,
+      "voto": "corretta",
+      "motivo": "Criterio 2: accordo di tutti i giocatori, tessera scartata nella scatola e nuova pescata, come atteso e come a p. 2.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-06",
+      "gioco": "Carcassonne",
+      "domanda": "Una strada aperta assegna punti durante la partita?",
+      "risposta_attesa": "No. Le strade (come le città e i monasteri) assegnano punti durante la partita solo nel momento in cui vengono completamente chiuse a entrambe le estremità.",
+      "risposta": "- No, una strada **incompleta** (aperta) non assegna punti durante la partita: i punti di strade, città e monasteri si assegnano solo quando vengono **completati** con il piazzamento di una tessera [Page 1].\n- Le strade incomplete vengono conteggiate solo nel **conteggio finale**, con 1 punto per ogni tratto di strada [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8299436
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8293843
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8286371
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8274446
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8259664
+        }
+      ],
+      "ms": 11110,
+      "voto": "corretta",
+      "motivo": "Criterio 2: «No», i punti si assegnano solo al completamento, come atteso; corretta anche l'aggiunta sul conteggio finale delle strade incomplete (1 punto per tratto, p. 1).",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-07",
+      "gioco": "Carcassonne",
+      "domanda": "Come funziona l'azione di Muovere il Drago nel gioco base?",
+      "risposta_attesa": "Il Drago non è presente nel gioco base di Carcassonne. Si tratta di una meccanica dell'espansione 'Principessa e Drago'.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.79127717
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.78918123
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.7862336
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.7862647
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.7799952
+        }
+      ],
+      "ms": 8045,
+      "voto": "corretta",
+      "motivo": "Criterio 1: rinuncia onesta su una meccanica d'espansione assente dal regolamento, senza inventare e senza accettare la premessa. Criterio 3: la rinuncia è in inglese.",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "en",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-08",
+      "gioco": "Carcassonne",
+      "domanda": "Quanti punti vale ogni tessera di una strada completata durante la partita e a fine partita?",
+      "risposta_attesa": "Ogni tessera che compone una strada completata assegna 1 punto vittoria, sia durante la partita sia a fine partita.",
+      "risposta": "- **Strada completata durante la partita:** il giocatore con un ladro sulla strada segna **1 punto per ogni segmento** (contando il numero di tessere) [Page 1].\n- **Strada incompleta a fine partita:** il giocatore con un ladro guadagna **1 punto per ogni tratto di strada** [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8384257
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8375391
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8366133
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8355624
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8346768
+        }
+      ],
+      "ms": 12557,
+      "voto": "corretta",
+      "motivo": "Criterio 2: 1 punto per tessera sia per la strada completata in partita sia a fine partita, come atteso; legge «fine partita» come strada incompleta, in linea con la nota di verifica (p. 1-2).",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-09",
+      "gioco": "Carcassonne",
+      "domanda": "Posso piazzare un Meeple su una tessera diversa da quella appena posizionata nel turno corrente?",
+      "risposta_attesa": "No. Puoi piazzare un Meeple soltanto sulla tessera che hai appena posizionato nel turno in corso.",
+      "risposta": "No. El seguidor (meeple) solo puede colocarse sobre la loseta recién jugada en ese turno: «Il seguace può essere posto solo sulla tessera appena giocata» [Page 1]. Además, solo se puede desplegar un seguidor por turno, tomado de la propia dotación [Page 1].",
+      "lingua_dichiarata": "es",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.81828386
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8177082
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8209
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.79299605
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.7911402
+        }
+      ],
+      "ms": 9416,
+      "voto": "corretta",
+      "motivo": "Criterio 2: «No», il seguace va solo sulla tessera appena giocata, con citazione esatta di p. 2. Criterio 3: risposta in spagnolo, da tradurre.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "es",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-10",
+      "gioco": "Carcassonne",
+      "domanda": "È obbligatorio piazzare un Meeple ogni volta che si posiziona una tessera?",
+      "risposta_attesa": "No, piazzare un Meeple è un'azione opzionale. Puoi decidere di posizionare la tessera senza mettere alcun Meeple.",
+      "risposta": "- No, no es obligatorio. Tras colocar la loseta, el jugador del turno **puede (si quiere)** desplegar uno de sus seguidores [Page 1].\n- El despliegue es opcional: “può (se vuole) schierare uno dei suoi 7 seguaci sulla tessera che ha appena piazzato” [Page 1].\n- Además, solo puede desplegar **un seguidor por turno**, y únicamente sobre la loseta recién jugada [Page 1].",
+      "lingua_dichiarata": "es",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8396624
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8291448
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8342085
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8110535
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8100597
+        }
+      ],
+      "ms": 9036,
+      "voto": "corretta",
+      "motivo": "Criterio 2: «No», lo schieramento è facoltativo («può (se vuole)», p. 1), come atteso. Criterio 3: risposta in spagnolo, da tradurre.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "es",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-11",
+      "gioco": "Carcassonne",
+      "domanda": "Quanto vale uno stemma (scudo) situato all'interno di una città completata durante la partita?",
+      "risposta_attesa": "Uno stemma all'interno di una città completata vale 2 punti vittoria aggiuntivi (pari al valore di una tessera città).",
+      "risposta": "- Ogni stemma su un segmento di città completata fa guadagnare un bonus di **2 punti extra** [Page 1].\n- I punti base della città sono 2 per ogni segmento (tessera) [Page 1].\n- Unica eccezione: se la città completata è costituita da sole 2 parti, il giocatore guadagna solo 2 punti (anziché 4), più un punto per ogni stemma [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.82061833
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.81271034
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.81190234
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8069775
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8074645
+        }
+      ],
+      "ms": 15013,
+      "voto": "corretta",
+      "motivo": "Criterio 2: 2 punti extra per stemma, come atteso e come a p. 2. L'eccezione aggiunta (città di 2 tessere: 2 punti più 1 per stemma) è fedele al regolamento del corpus, ma contrasta con l'atteso che l'utente ha tenuto a CAR-12.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-12",
+      "gioco": "Carcassonne",
+      "domanda": "Quanti punti dà una città completata formata da solo 2 tessere (la cosiddetta 'città a pallone')?",
+      "risposta_attesa": "Assegna 4 punti vittoria (2 tessere x 2 punti ciascuna). Nelle edizioni moderne non esiste più la penalità che la limitava a 2 punti.",
+      "risposta": "- Una città completata dà normalmente 2 punti per ogni segmento (tessera) [Page 1].\n- **Eccezione**: se la città completata è costituita da sole 2 parti (2 tessere), il giocatore guadagna solo **2 punti** (anziché 4), più 1 punto per ogni stemma [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.82986706
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.82919484
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.82217807
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.82382804
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.82446194
+        }
+      ],
+      "ms": 7663,
+      "voto": "parziale",
+      "motivo": "Criterio 4: verdetto 2 punti contro i 4 attesi, giusta solo la regola base (2 punti per tessera, «anziché 4»). Conflitto: la risposta riporta fedelmente l'eccezione della prima edizione nel corpus (p. 2), mentre l'atteso, tenuto dall'utente, segue le edizioni moderne; il criterio 7 non si applica perché l'atteso non è verificato sul regolamento.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": true
+      }
+    },
+    {
+      "id": "CAR-13",
+      "gioco": "Carcassonne",
+      "domanda": "Come si posiziona un Meeple per farlo diventare un contadino?",
+      "risposta_attesa": "Dopo aver piazzato la tessera, si schiera il seguace su una parte di campo della tessera appena giocata: in quella posizione è un contadino. Non è consentito se quella parte di campo è collegata a un campo dove c'è già un contadino (di qualsiasi giocatore).",
+      "risposta": "- Il seguace può essere schierato solo sulla tessera appena giocata, scegliendo una parte di campo [Page 1].\n- Non si può schierare un contadino in una parte di campo connessa a un'altra parte di campo dove c'è già un seguace (di qualsiasi giocatore) [Page 1].\n- I contadini restano per tutta la partita nei campi e non vengono mai restituiti ai giocatori [Page 1].\n- I punti dei poderi vengono assegnati solo nel conteggio finale [Page 1].",
+      "lingua_dichiarata": "fr",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.83482414
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8126103
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.80826247
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8071782
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.80375695
+        }
+      ],
+      "ms": 10778,
+      "voto": "corretta",
+      "motivo": "Criterio 2: seguace su una parte di campo della tessera appena giocata, vietato se il campo connesso ha già un seguace, come atteso e come a p. 2. Il campo language dice «fr» ma la risposta è in italiano.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-14",
+      "gioco": "Carcassonne",
+      "domanda": "Quando ritorna nella riserva del giocatore un Meeple piazzato come contadino?",
+      "risposta_attesa": "I contadini non tornano MAI in mano al giocatore durante la partita; rimangono nel campo fino al calcolo del punteggio finale a fine partita.",
+      "risposta": "- Un seguace piazzato come contadino **non viene mai restituito** al giocatore: i contadini rimangono per tutta la partita nei campi dove sono stati schierati [Page 1].\n- I seguaci ritornano nella dotazione solo dopo che si sono assegnati i punti di una strada, città o monastero completati [Page 1].\n- I punti dei poderi (e quindi dei contadini) vengono assegnati solo nel conteggio finale [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8330807
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8386997
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.86264586
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.84453547
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8382727
+        }
+      ],
+      "ms": 9915,
+      "voto": "corretta",
+      "motivo": "Criterio 2: i contadini non vengono mai restituiti durante la partita, con la citazione esatta di p. 2, come atteso.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-15",
+      "gioco": "Carcassonne",
+      "domanda": "Se una città completata contiene 1 Meeple del Giocatore Rosso e 1 Meeple del Giocatore Blu, come vengono assegnati i punti?",
+      "risposta_attesa": "Entrambi i giocatori sono in parità per la maggioranza, quindi sia il Giocatore Rosso sia il Giocatore Blu ricevono l'intero ammontare dei punti della città.",
+      "risposta": "- Se una città completata contiene **un cavaliere del Rosso e un cavaliere del Blu**, entrambi i giocatori guadagnano **tutti i punti** della città completata [Page 1].\n- Esempio nel regolamento: «Sia il Rosso che il Blu guadagnano tutti i 10 punti per la città completata, dato che entrambi vi hanno un cavaliere» [Page 1].\n- In generale, quando su una città completata c'è più di un cavaliere, **il giocatore con più cavalieri guadagna tutti i punti**; con parità, entrambi risultano proprietari e segnano i punti [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.85800534
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.851985
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.85699844
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8584862
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8501117
+        }
+      ],
+      "ms": 10791,
+      "voto": "corretta",
+      "motivo": "Criterio 2: in parità entrambi ricevono tutti i punti della città, con l'esempio dei 10 punti di p. 2, come atteso.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-16",
+      "gioco": "Carcassonne",
+      "domanda": "È possibile piazzare una tessera toccando un'altra tessera solo in diagonale (angolo contro angolo)?",
+      "risposta_attesa": "No. Ogni nuova tessera posizionata deve confinare ortogonalmente (almeno con un lato intero) con una o più tessere già presenti sul tavolo.",
+      "risposta": "- No, no es posible. La nueva tessera debe ser adyacente a al menos una tessera ya colocada y deben tocarse **lado con lado**; no basta con que se toquen **ángulo con ángulo** [Page 1].",
+      "lingua_dichiarata": "es",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8257906
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.82142586
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.84535867
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8134901
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.80112267
+        }
+      ],
+      "ms": 11017,
+      "voto": "corretta",
+      "motivo": "Criterio 2: «No», le tessere devono toccarsi lato con lato e l'angolo non basta, come atteso e come a p. 1. Criterio 3: risposta in spagnolo, da tradurre.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "es",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-17",
+      "gioco": "Carcassonne",
+      "domanda": "Quanti punti assegna un monastero non completato al termine della partita?",
+      "risposta_attesa": "Assegna 1 punto per la tessera monastero stessa più 1 punto per ciascuna delle tessere adiacenti posizionate attorno ad essa.",
+      "risposta": "- Al termine della partita, per ogni monastero incompleto il giocatore con il monaco guadagna 1 punto per la tessera del monastero e 1 punto per ciascuna tessera che la circonda [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8592464
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.86079824
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8601523
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8554605
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8521534
+        }
+      ],
+      "ms": 11734,
+      "voto": "corretta",
+      "motivo": "Criterio 2: 1 punto per la tessera monastero più 1 per ogni tessera che la circonda, come atteso e come a p. 1.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-18",
+      "gioco": "Carcassonne",
+      "domanda": "Quanti Meeple riceve ciascun giocatore all'inizio della partita e quanti ne usa per segnare i punti?",
+      "risposta_attesa": "Ogni giocatore riceve 8 Meeple del proprio colore: 7 vengono tenuti in riserva per essere piazzati sulla mappa, mentre 1 viene posizionato sul segnapunti.",
+      "risposta": "- Ogni giocatore prende **8 seguaci** del proprio colore [Page 1].\n- Ne piazza **uno** nella casella grande all'inizio del percorso segnapunti, e tiene gli **altri 7** davanti a sé a disposizione [Page 1].\n- Quindi: 8 seguaci totali, di cui **1 usato come pedina segnapunti** e **7 utilizzabili** in gioco [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8382467
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8348239
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8288045
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.84532064
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.82870036
+        }
+      ],
+      "ms": 13040,
+      "voto": "corretta",
+      "motivo": "Criterio 2: 8 seguaci, 1 sul percorso segnapunti e 7 a disposizione, come atteso e come a p. 1.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-19",
+      "gioco": "Carcassonne",
+      "domanda": "Le strade interrompono i campi per il calcolo dei contadini?",
+      "risposta_attesa": "Sì, le strade fungono da confini fisici per i campi. Un campo si interrompe e viene diviso da qualsiasi strada o città incontri.",
+      "risposta": "- Sì: le strade separano i poderi. I tratti di campo collegati tra loro formano un podere, e i poderi confinano con strade, città e bordi delle tessere [Page 1].\n- I contadini su campi separati da strade appartengono a poderi distinti: nell’esempio, “la città e i tratti di strada separano i poderi uno dall’altro” [Page 1].\n- Solo quando una nuova tessera connette le parti di campo i poderi diventano connessi [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8068016
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8033685
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.80389094
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.81427735
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.80003417
+        }
+      ],
+      "ms": 10797,
+      "voto": "corretta",
+      "motivo": "Criterio 2: «Sì», città e tratti di strada separano i poderi, con l'esempio di p. 2, come atteso.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-20",
+      "gioco": "Carcassonne",
+      "domanda": "Se si chiude una città nello stesso turno in cui si posiziona la tessera e il Meeple, il Meeple torna subito disponibile?",
+      "risposta_attesa": "Sì. Se il piazzamento della tessera chiude la struttura, si calcolano immediatamente i punti e il Meeple torna subito nella riserva del giocatore nello stesso turno.",
+      "risposta": "- Sì: dopo che si sono assegnati i punti di una strada, città o monastero (e solo allora), i seguaci coinvolti ritornano nella dotazione dei rispettivi giocatori [Page 1].\n- È possibile schierare un seguace, guadagnare i punti di una strada, città o monastero, e riprendersi il seguace nello stesso turno [Page 1].\n- I seguaci ritornati potranno essere usati nei turni successivi sotto qualsiasi forma (ladro, contadino, cavaliere o monaco) [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8371868
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8335099
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.81663644
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8323086
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.81380856
+        }
+      ],
+      "ms": 8182,
+      "voto": "corretta",
+      "motivo": "Criterio 2: «Sì», si può schierare, segnare i punti e riprendere il seguace nello stesso turno, come atteso e come a p. 2.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-21",
+      "gioco": "Carcassonne",
+      "domanda": "Cosa chiude o interrompe una strada?",
+      "risposta_attesa": "Una strada è completa quando entrambi i suoi estremi sono collegati a un incrocio, a una città o a un monastero; tra i due estremi può esserci un numero qualsiasi di tratti di strada.",
+      "risposta": "- Una strada è completa quando entrambi gli estremi sono connessi a un incrocio, una città o un monastero [Page 1].\n- I poderi confinano con strade, città e con i bordi delle aree dove sono state piazzate le tessere [Page 1].",
+      "lingua_dichiarata": "es",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.769633
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.76147884
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.76143736
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.76074624
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.7594969
+        }
+      ],
+      "ms": 8776,
+      "voto": "corretta",
+      "motivo": "Criterio 2: completa quando entrambi gli estremi toccano incrocio, città o monastero, come atteso e come a p. 2; il punto sui poderi è vero ma fuori tema. Il campo language dice «es» ma la risposta è in italiano.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-22",
+      "gioco": "Carcassonne",
+      "domanda": "Quando termina esattamente una partita a Carcassonne?",
+      "risposta_attesa": "La partita termina immediatamente alla fine del turno in cui viene posizionata l'ultima tessera disponibile nella riserva.",
+      "risposta": "- La partita termina **alla fine del turno in cui è piazzata l'ultima tessera** [Page 1].\n- Segue quindi il **conteggio finale** [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.78184736
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.7804019
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.780233
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.7781116
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.7797248
+        }
+      ],
+      "ms": 8099,
+      "voto": "corretta",
+      "motivo": "Criterio 2: alla fine del turno in cui si piazza l'ultima tessera, poi il conteggio finale, come atteso e come a p. 1.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-23",
+      "gioco": "Carcassonne",
+      "domanda": "Posso piazzare 2 Meeple nello stesso turno sulla stessa tessera in due sezioni diverse (es. uno sulla strada e uno sulla città)?",
+      "risposta_attesa": "No. Puoi piazzare al massimo 1 Meeple per turno.",
+      "risposta": "No, non puoi.\n\n- Puoi schierare **solo un seguace per turno** [Page 1].\n- Il seguace deve essere preso dalla propria dotazione e può essere posto **solo sulla tessera appena giocata** [Page 1].\n- Non è quindi possibile piazzarne due nello stesso turno, nemmeno su sezioni diverse della stessa tessera.",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8481869
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.84684277
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8372961
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.823674
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.82119733
+        }
+      ],
+      "ms": 7913,
+      "voto": "corretta",
+      "motivo": "Criterio 2: «No», un solo seguace per turno, come atteso e come a p. 2.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-24",
+      "gioco": "Carcassonne",
+      "domanda": "Un Meeple piazzato su un monastero vale per il calcolo dei contadini nel prato circostante?",
+      "risposta_attesa": "No, il Meeple sul monastero conta unicamente per la valutazione del monastero stesso e non ha alcuna influenza sul prato.",
+      "risposta": "- No: i contadini vengono conteggiati solo nei poderi, cioè tratti di campi collegati tra loro; i punti dei poderi si assegnano solo nel conteggio finale [Page 1].\n- Il monaco su un monastero dà punti per il monastero stesso (9 punti se completo; nel conteggio finale 1 punto per la tessera monastero e 1 per ciascuna tessera che la circonda), non per i poderi [Page 1].\n- Il proprietario di un podere ottiene 3 punti per ogni città completa con cui il podere confina; le città incomplete non si considerano [Page 1].\n\nThis information is not available in the provided rulebook.",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.837472
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8321706
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.84231526
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.82847404
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.82741106
+        }
+      ],
+      "ms": 11758,
+      "voto": "corretta",
+      "motivo": "Criterio 2: «No», il monaco conta solo per il monastero e il podere dipende dai contadini, come atteso. In coda compare però la frase fissa di rinuncia in inglese, che contraddice la risposta appena data: incoerente ma senza invenzioni (criterio 1).",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-25",
+      "gioco": "Carcassonne",
+      "domanda": "Cosa succede al punteggio se supero i 50 punti sul tracciato?",
+      "risposta_attesa": "Il regolamento non dice cosa fare superato il fondo del percorso segnapunti né quanto è lungo: dice solo di far avanzare il segnapunti di tante caselle quanti sono i punti guadagnati. La risposta corretta lo dice, senza inventare.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8079431
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.81188565
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.814996
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.80506295
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.80603683
+        }
+      ],
+      "ms": 6991,
+      "voto": "corretta",
+      "motivo": "Criteri 1 e 6: domanda fuori dal corpus, rinuncia onesta senza inventare la lunghezza del percorso segnapunti. Criterio 3: la rinuncia è in inglese.",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "en",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-26",
+      "gioco": "Carcassonne",
+      "domanda": "Come si riconosce la tessera iniziale del gioco base rispetto alle altre?",
+      "risposta_attesa": "La tessera di partenza è una delle 72 tessere paesaggio e si riconosce perché ha il dorso nero.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_dichiarata": "es",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.81921923
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.81579274
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.82772315
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8118938
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8042178
+        }
+      ],
+      "ms": 6931,
+      "voto": "corretta",
+      "motivo": "Criterio 1: rinuncia onesta, corretta anche se il regolamento ha la risposta («tessera di partenza col dorso nero», p. 1), quindi un mancato recupero. Criterio 3: la rinuncia è in inglese.",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "en",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-27",
+      "gioco": "Carcassonne",
+      "domanda": "È consentito piazzare una tessera in modo che la figura della strada combaci con il prato di una tessera adiacente?",
+      "risposta_attesa": "No. Tutti i lati della tessera piazzata devono corrispondere perfettamente alle caratteristiche del terreno dei lati delle tessere adiacenti (prato con prato, strada con strada, città con città).",
+      "risposta": "- No: la nuova tessera deve essere piazzata in modo che tutti i suoi campi, città e tratti di strada continuino i campi, città e tratti di strada di tutte le tessere confinanti [Page 1].\n- Quindi la strada deve combaciare con la strada (non con il prato) delle tessere adiacenti [Page 1].\n- La tessera deve inoltre essere adiacente ad almeno una tessera già sul tavolo, toccandosi lato con lato [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.83223915
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.82764345
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.84311277
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.82402956
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8266041
+        }
+      ],
+      "ms": 9432,
+      "voto": "corretta",
+      "motivo": "Criterio 2: «No», campi, città e strade devono continuare quelli delle tessere confinanti, come atteso e come a p. 1.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-28",
+      "gioco": "Carcassonne",
+      "domanda": "Una città non completata a fine partita assegna punti ai contadini nel campo adiacente?",
+      "risposta_attesa": "No. I contadini ricevono 3 punti SOLO per le città COMPLETATE che confinano con il loro campo.",
+      "risposta": "- No: i contadini ottengono punti solo per le città **complete** con cui il podere confina; le città incomplete non si considerano [Page 1].\n- Il proprietario del podere riceve 3 punti per ogni città completa rifornita [Page 1].\n- Le città incomplete vengono conteggiate separatamente: il cavaliere nella città incompleta guadagna 1 punto per ogni parte di città (e 1 punto per ogni stemma) [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8666683
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.86697614
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8643673
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8572882
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.86644256
+        }
+      ],
+      "ms": 14600,
+      "voto": "corretta",
+      "motivo": "Criterio 2: «No», il podere rifornisce solo le città complete (3 punti ciascuna), come atteso e come a p. 1; corretta anche l'aggiunta sul cavaliere nella città incompleta.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-29",
+      "gioco": "Carcassonne",
+      "domanda": "Come funziona la regola della 'Cattedrale' nel gioco base?",
+      "risposta_attesa": "Le Cattedrali non sono presenti nel gioco base di Carcassonne. Sono introdotte nella prima espansione 'Locande e Cattedrali'.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8162552
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8143029
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.815548
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.81514806
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8102133
+        }
+      ],
+      "ms": 9144,
+      "voto": "corretta",
+      "motivo": "Criterio 1: rinuncia onesta su un elemento d'espansione assente dal regolamento, senza accettare la premessa. Criterio 3: la rinuncia è in inglese.",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "en",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "CAR-30",
+      "gioco": "Carcassonne",
+      "domanda": "Quante risorse commerciali (vino, stoffa, grano) si guadagnano chiudendo una città nel gioco base?",
+      "risposta_attesa": "Nessuna. Le merci di commercio non esistono nel gioco base, ma fanno parte dell'espansione 'Commercianti e Costruttori'.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_dichiarata": "es",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.82918096
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.8252135
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.82572114
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.82695794
+        },
+        {
+          "fonte": "PDF:12421329-cc8d-4ace-a978-1be6e6b6534f",
+          "pagina": 1,
+          "punteggio": 0.83091617
+        }
+      ],
+      "ms": 8737,
+      "voto": "corretta",
+      "motivo": "Criterio 1: rinuncia onesta sulle merci, assenti dal gioco base e dal regolamento, senza accettare la premessa. Criterio 3: la rinuncia è in inglese.",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "en",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    }
+  ]
+}

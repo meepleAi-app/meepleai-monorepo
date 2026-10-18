@@ -1,0 +1,2366 @@
+[
+  {
+    "id": "CAT-01",
+    "game": "Catan",
+    "category": "Interazione / Commercio",
+    "difficulty": "Medium",
+    "question": "Posso scambiare risorse direttamente con un altro giocatore durante il turno di quel giocatore?",
+    "ground_truth": "Sì. Durante il turno di un altro giocatore puoi commerciare solo con lui, cioè con il giocatore di turno; non puoi scambiare con altri giocatori né con la riserva. Due giocatori che non sono di turno non possono scambiare tra loro.",
+    "context_reference": "Manuale Catan - Fase di Commercio",
+    "question_type": "Negativa / Restrizione",
+    "ground_truth_originale": "No. Il commercio tra giocatori può avvenire solo se coinvolge il giocatore di turno. Due giocatori che non stanno svolgendo il turno non possono fare scambi tra loro.",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": 7,
+      "citazione": "During your turn, other players may only trade with you, not with each other or with the supply.",
+      "nota": "Alla lettera la domanda chiede di scambiare con il giocatore di turno (consentito); se intendeva «durante il turno di un terzo giocatore», il «No» della GT è corretto e va riformulata la domanda."
+    }
+  },
+  {
+    "id": "CAT-02",
+    "game": "Catan",
+    "category": "Sviluppo / Condizioni di Vittoria",
+    "difficulty": "Hard",
+    "question": "Posso giocare più di una carta Sviluppo nello stesso turno?",
+    "ground_truth": "No, puoi giocare al massimo una carta Sviluppo per turno. L'unica eccezione riguarda le carte Punto Vittoria, che possono essere rivelate tutte insieme nel momento in cui ti permettono di raggiungere i 10 punti vittoria per vincere la partita.",
+    "context_reference": "Manuale Catan - Carte Sviluppo",
+    "question_type": "Eccezione / Limite",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": [
+        3,
+        9
+      ],
+      "citazione": "Only 1 development card per turn […] VP card exception: You may play multiple VP cards (even on the turn you buy them) in order to win the game.",
+      "nota": null
+    }
+  },
+  {
+    "id": "CAT-03",
+    "game": "Catan",
+    "category": "Gestione Risorse",
+    "difficulty": "Easy",
+    "question": "Se la riserva della banca finisce un determinato tipo di risorsa e più giocatori dovrebbero riceverla, cosa succede?",
+    "ground_truth": "Se la banca non ha abbastanza carte di una determinata risorsa per soddisfare le produzioni di tutti i giocatori in quel turno, nessun giocatore riceve quella risorsa.",
+    "context_reference": "Manuale Catan - Produzione di Risorse",
+    "question_type": "Caso Limite",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": 6,
+      "citazione": "If there are not enough resource cards in the supply to fulfill everyone’s production, then no one receives any of that resource.",
+      "nota": "Il testo aggiunge che, se il giocatore coinvolto è uno solo, riceve le carte rimaste; la domanda riguarda più giocatori, quindi la GT regge."
+    }
+  },
+  {
+    "id": "CAT-04",
+    "game": "Catan",
+    "category": "Costruzione",
+    "difficulty": "Medium",
+    "question": "Se la strada più lunga di un giocatore viene interrotta dall'insediamento di un avversario, cosa succede al titolo di 'Strada più Lunga'?",
+    "ground_truth": "La strada interrotta conta solo per il suo tratto continuo più lungo. Se un altro giocatore ha ora più strade continue, riceve subito la tessera. Se il detentore non soddisfa più i requisiti, la tessera torna nella riserva e vi resta finché un solo giocatore ha la strada continua più lunga di almeno 5 tratti: quel giocatore riceve subito la tessera e i 2 PV (in caso di parità resta nella riserva).",
+    "context_reference": "Manuale Catan - Strada più Lunga",
+    "question_type": "Interazione / Regola Avanzata",
+    "ground_truth_originale": "La continuità della strada viene bloccata e la lunghezza viene ricalcolata. Se il giocatore scende sotto le 5 strade o se un altro giocatore supera la nuova lunghezza, la tessera 'Strada più Lunga' passa al nuovo detentore o viene rimessa al centro se nessuno soddisfa le condizioni.",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": 8,
+      "citazione": "the tile is returned to the supply. It remains in the supply until a single player has the longest continuous route of at least 5 roads.",
+      "nota": "La GT non dice che, tornata nella riserva, la tessera vi resta finché un solo giocatore ha la strada più lunga di almeno 5: con una parità nessuno la prende."
+    }
+  },
+  {
+    "id": "CAT-05",
+    "game": "Catan",
+    "category": "Brigante / Dadi",
+    "difficulty": "Easy",
+    "question": "Posso posizionare il Brigante su un esagono dove si trova già senza muoverlo?",
+    "ground_truth": "No. Quando esce un 7 o viene giocata una carta Cavaliere, il Brigante DEVE essere spostato su un esagono differente da quello in cui si trova attualmente.",
+    "context_reference": "Manuale Catan - Il Brigante",
+    "question_type": "Procedurale / Obbligo",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": [
+        6,
+        9
+      ],
+      "citazione": "You must move the robber to a new hex.",
+      "nota": null
+    }
+  },
+  {
+    "id": "CAT-06",
+    "game": "Catan",
+    "category": "Porti / Commercio Marittimo",
+    "difficulty": "Medium",
+    "question": "Per usare un porto specializzato (2:1), devo aver costruito una città o basta un insediamento?",
+    "ground_truth": "Basta possedere un insediamento (o una città) su uno dei due vertici dell'esagono che indicano il porto.",
+    "context_reference": "Manuale Catan - Commercio con i Porti",
+    "question_type": "Fattuale",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": [
+        7,
+        8
+      ],
+      "citazione": "If you have a building on a 2:1 port, you may put 2 of the resource cards shown on the port into the supply",
+      "nota": "«Building» comprende insediamenti e città (p. 8); il dettaglio dei «due vertici» del porto non compare nel testo."
+    }
+  },
+  {
+    "id": "CAT-07",
+    "game": "Catan",
+    "category": "Cavalieri / Carte Sviluppo",
+    "difficulty": "Hard",
+    "question": "Posso giocare una carta Cavaliere prima di tirare i dadi per la produzione?",
+    "ground_truth": "Sì. Puoi giocare una carta Sviluppo, Cavaliere compreso, prima di tirare i dadi oppure in qualsiasi momento della fase Azione; al massimo una per turno, e non una carta acquistata nello stesso turno.",
+    "context_reference": "Manuale Catan - Uso delle Carte Sviluppo",
+    "question_type": "Timing / Sequenza",
+    "ground_truth_originale": "Sì, puoi giocare una carta Sviluppo (incluso il Cavaliere) in qualsiasi momento del tuo turno, compreso prima del lancio dei dadi.",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": [
+        3,
+        9
+      ],
+      "citazione": "It may not be a card you built this turn. You may play a development card before rolling dice or at any time during the Action phase.",
+      "nota": "La GT dice «in qualsiasi momento del tuo turno», mentre il testo ammette solo prima del lancio o durante la fase Azione, e omette il divieto sulle carte appena acquistate."
+    }
+  },
+  {
+    "id": "CAT-08",
+    "game": "Catan",
+    "category": "Out of Scope",
+    "difficulty": "Medium",
+    "question": "Quanti punti vittoria dà la carta 'Esercito Avanzato'?",
+    "ground_truth": "La carta 'Esercito Avanzato' non esiste nel gioco base di Catan. Esiste la targa 'Il Più Grande Esercito', che assegna 2 punti vittoria al primo giocatore che gioca 3 carte Cavaliere.",
+    "context_reference": "Manuale Catan - Titoli Speciali",
+    "question_type": "Out of Scope / Termine Errato",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "fuori ambito: conferma",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": [
+        2,
+        9
+      ],
+      "citazione": "The first player to have 3 Knight cards in play receives this tile. […] The Largest Army tile is worth 2 VPs.",
+      "nota": "Nessuna carta «Esercito Avanzato» nel testo; la tessera Largest Army passa poi a chi ha in gioco più Cavalieri."
+    }
+  },
+  {
+    "id": "CAT-09",
+    "game": "Catan",
+    "category": "Setup Iniziale",
+    "difficulty": "Easy",
+    "question": "Nella fase di posizionamento iniziale, quante risorse riceve ciascun giocatore?",
+    "ground_truth": "Ogni giocatore riceve una carta risorsa per ciascun esagono adiacente al SECONDO insediamento che posiziona durante la fase di preparazione.",
+    "context_reference": "Manuale Catan - Preparazione del Gioco",
+    "question_type": "Procedurale",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": [
+        5,
+        12
+      ],
+      "citazione": "Each player takes 1 matching resource card from the supply for each hex adjacent to their second settlement.",
+      "nota": null
+    }
+  },
+  {
+    "id": "CAT-10",
+    "game": "Catan",
+    "category": "Costruzione",
+    "difficulty": "Easy",
+    "question": "Quanto costa costruire una città e cosa deve sostituire sulla mappa?",
+    "ground_truth": "Valgono corrette due risposte: che il regolamento non riporta il costo della città, senza inventarlo; oppure il costo vero, 2 Grano e 3 Roccia. In tutti e due i casi la città si costruisce sostituendo un proprio insediamento già sulla mappa. È sbagliato un costo diverso.",
+    "context_reference": "Manuale Catan - Costruzione Città",
+    "question_type": "Fattuale / Costi",
+    "ground_truth_originale": "Una città costa 2 carte Grano e 3 carte Roccia. Può essere costruita unicamente per sostituire un insediamento già esistente del proprio colore sulla mappa.",
+    "fuori_dal_corpus": true,
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "fuori dal corpus",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": [
+        3,
+        8,
+        9
+      ],
+      "citazione": "Cities always replace settlements. To build a city, remove one of your settlements from the board",
+      "nota": "Solo in parte: la sostituzione dell'insediamento è confermata (p. 9), ma il costo (2 grano + 3 roccia) non è nel testo, dove «BUILDING COSTS» (pp. 3, 8) è solo grafica."
+    }
+  },
+  {
+    "id": "CAT-11",
+    "game": "Catan",
+    "category": "Produzione Risorse",
+    "difficulty": "Medium",
+    "question": "Una città costruita su un esagono bloccato dal Brigante produce risorse quando esce il relativo numero?",
+    "ground_truth": "No. Finchè il Brigante si trova su un esagono, quell'esagono non produce risorse per nessun giocatore, indipendentemente dal fatto che vi siano insediamenti o città adiacenti.",
+    "context_reference": "Manuale Catan - Effetti del Brigante",
+    "question_type": "Interazione / Restrizione",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": 6,
+      "citazione": "Important: A hex with the robber does not produce resources when its number is rolled.",
+      "nota": null
+    }
+  },
+  {
+    "id": "CAT-12",
+    "game": "Catan",
+    "category": "Commercio Interno",
+    "difficulty": "Easy",
+    "question": "Se non possiedo insediamenti sui porti, qual è il tasso di cambio standard per scambiare risorse con la banca?",
+    "ground_truth": "Il tasso di cambio generico (commercio marittimo base) è di 4 carte della stessa risorsa in cambio di 1 carta risorsa a scelta dalla banca.",
+    "context_reference": "Manuale Catan - Commercio Marittimo Base",
+    "question_type": "Fattuale",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": 7,
+      "citazione": "To trade with the supply, put 4 of the same resource cards into the supply and take 1 card of a different resource from the supply.",
+      "nota": "Il testo precisa che la carta presa è di una risorsa diversa; il «a scelta» della GT è accettabile."
+    }
+  },
+  {
+    "id": "CAT-13",
+    "game": "Catan",
+    "category": "Carte Sviluppo",
+    "difficulty": "Medium",
+    "question": "Cosa permette di fare la carta Sviluppo 'Monopolio'?",
+    "ground_truth": "Quando giochi 'Monopolio', dichiari un tipo di risorsa. Tutti gli altri giocatori devono consegnarti TUTTE le carte risorsa di quel tipo in loro possesso.",
+    "context_reference": "Manuale Catan - Carte Progresso: Monopolio",
+    "question_type": "Fattuale / Effetto Carta",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": [
+        3,
+        9
+      ],
+      "citazione": "When you play this card, announce one type of resource. Each player must give you all their resource cards of that type.",
+      "nota": null
+    }
+  },
+  {
+    "id": "CAT-14",
+    "game": "Catan",
+    "category": "Carte Sviluppo",
+    "difficulty": "Medium",
+    "question": "Cosa permette di fare la carta Sviluppo 'Costruzione Strade'?",
+    "ground_truth": "Permette di piazzare immediatamente 2 strade sulla mappa gratuitamente, rispettando le normali regole di costruzione.",
+    "context_reference": "Manuale Catan - Carte Progresso: Costruzione Strade",
+    "question_type": "Fattuale / Effetto Carta",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": [
+        3,
+        9
+      ],
+      "citazione": "When you play this card, build 2 roads at no cost (i.e., without spending any resource cards).",
+      "nota": "«Rispettando le normali regole di costruzione» non è esplicito nel testo, ma è coerente con «build»."
+    }
+  },
+  {
+    "id": "CAT-15",
+    "game": "Catan",
+    "category": "Carte Sviluppo",
+    "difficulty": "Medium",
+    "question": "Cosa permette di fare la carta Sviluppo 'Invenzione' (o Scoperte)?",
+    "ground_truth": "Permette di prendere immediatamente 2 carte risorsa a tua scelta dalla banca (possono essere 2 risorse uguali o 2 risorse diverse).",
+    "context_reference": "Manuale Catan - Carte Progresso: Invenzione",
+    "question_type": "Fattuale / Effetto Carta",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": [
+        3,
+        9
+      ],
+      "citazione": "When you play this card, take any 2 resource cards from the supply. Add them to your hand. They may be 2 of the same resource or 2 different resources.",
+      "nota": "Nel regolamento inglese la carta si chiama «Invention»."
+    }
+  },
+  {
+    "id": "CAT-16",
+    "game": "Catan",
+    "category": "Punti Vittoria",
+    "difficulty": "Easy",
+    "question": "Quanti punti vittoria fornisce rispettivamente un insediamento e una città?",
+    "ground_truth": "Un insediamento vale 1 punto vittoria, mentre una città vale 2 punti vittoria.",
+    "context_reference": "Manuale Catan - Punti Vittoria",
+    "question_type": "Fattuale / Punteggio",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": [
+        8,
+        9
+      ],
+      "citazione": "Settlements are worth 1 VP. […] Cities are worth 2 VPs.",
+      "nota": null
+    }
+  },
+  {
+    "id": "CAT-17",
+    "game": "Catan",
+    "category": "Commercio",
+    "difficulty": "Hard",
+    "question": "Posso regalare una risorsa a un altro giocatore senza chiedere nulla in cambio?",
+    "ground_truth": "No, gli scambi 'a 0 risorse' o i regali non sono consentiti dal regolamento ufficiale. Ogni scambio tra giocatori deve coinvolgere almeno una risorsa da entrambe le parti.",
+    "context_reference": "Manuale Catan - FAQ Commercio",
+    "question_type": "Negativa / Restrizione",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": 7,
+      "citazione": "Important: You may not give away cards in any way, which includes trading matching resource cards",
+      "nota": "«Almeno una risorsa da entrambe le parti» è una deduzione dal divieto di regalare carte, non una formulazione del testo."
+    }
+  },
+  {
+    "id": "CAT-18",
+    "game": "Catan",
+    "category": "Strada più Lunga",
+    "difficulty": "Medium",
+    "question": "I ramificati e i doppi percorsi contano per il calcolo della Strada più Lunga?",
+    "ground_truth": "Valgono corrette due risposte: che il regolamento parla solo di strade «continue» e non dice come contare diramazioni o percorsi doppi, senza inventare un criterio; oppure la regola vera: conta il singolo percorso continuo più lungo, senza ripassare due volte sullo stesso tratto di strada o incrocio. È sbagliato un criterio diverso.",
+    "context_reference": "Manuale Catan - Calcolo Strada più Lunga",
+    "question_type": "Calcolo / Geometria",
+    "ground_truth_originale": "No, la strada più lunga si calcola considerando il singolo percorso continuo più lungo senza mai ripassare due volte sullo stesso pezzo di strada o incrocio.",
+    "fuori_dal_corpus": true,
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "fuori dal corpus",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": 8,
+      "citazione": "The first player to have 5 continuous roads in play receives this tile.",
+      "nota": "Il testo parla solo di strade e percorso «continuous», senza dire come trattare diramazioni o percorsi doppi; il divieto di ripassare per lo stesso incrocio non è supportato."
+    }
+  },
+  {
+    "id": "CAT-19",
+    "game": "Catan",
+    "category": "Brigante / Furto",
+    "difficulty": "Medium",
+    "question": "Se sposto il Brigante su un esagono con insediamenti di più giocatori, a chi rubo una carta?",
+    "ground_truth": "Scegli un solo giocatore tra quelli che possiedono almeno un insediamento o una città adiacenti a quell'esagono e gli peschi una carta risorsa a caso dalla mano.",
+    "context_reference": "Manuale Catan - Azione del Brigante",
+    "question_type": "Procedurale",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": 6,
+      "citazione": "Steal 1 random resource card from a player who has a building on that hex. If multiple players have buildings on the new hex, you choose one player to rob.",
+      "nota": null
+    }
+  },
+  {
+    "id": "CAT-20",
+    "game": "Catan",
+    "category": "Brigante / Furto",
+    "difficulty": "Hard",
+    "question": "Se sposto il Brigante su un esagono con un insediamento di un giocatore che ha 0 carte in mano, posso comunque scegliere lui per rubare?",
+    "ground_truth": "Valgono corrette due risposte: che il regolamento non tratta il giocatore senza carte (dice solo che, se più giocatori hanno costruzioni sul nuovo esagono, scegli quale derubare), senza inventare; oppure la regola vera: puoi sceglierlo, ma non avendo carte non ottieni nulla. È sbagliata una regola diversa.",
+    "context_reference": "Manuale Catan - FAQ Brigante",
+    "question_type": "Caso Limite",
+    "ground_truth_originale": "Puoi scegliere quell'esagono, ma non potendo pescare alcuna carta da quel giocatore non ottieni alcuna risorsa.",
+    "fuori_dal_corpus": true,
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "fuori dal corpus",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": 6,
+      "citazione": "If multiple players have buildings on the new hex, you choose one player to rob.",
+      "nota": "Il testo non tratta il giocatore senza carte; la GT risponde sulla scelta dell'esagono anziché del giocatore, e la sua conclusione è una deduzione."
+    }
+  },
+  {
+    "id": "CAT-21",
+    "game": "Catan",
+    "category": "Condizioni di Vittoria",
+    "difficulty": "Medium",
+    "question": "Se raggiungo 10 punti vittoria durante il turno di un altro giocatore (es. perché interrompe la strada di un avversario), vinco immediatamente?",
+    "ground_truth": "No. Puoi dichiarare la vittoria e vincere la partita solo ed esclusivamente durante il tuo turno.",
+    "context_reference": "Manuale Catan - Dichiarazione di Vittoria",
+    "question_type": "Timing / Condizioni",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": [
+        2,
+        10
+      ],
+      "citazione": "If you have 10 or more VPs at any point during your turn, the game ends immediately and you are the winner!",
+      "nota": null
+    }
+  },
+  {
+    "id": "CAT-22",
+    "game": "Catan",
+    "category": "Carte Sviluppo",
+    "difficulty": "Easy",
+    "question": "Le carte Punto Vittoria giocate vengono mostrate agli altri giocatori prima della fine della partita?",
+    "ground_truth": "No, le carte Punto Vittoria acquistate rimangono coperte fino al momento in cui il giocatore dichiara di aver raggiunto 10 o più punti per vincere.",
+    "context_reference": "Manuale Catan - Carte Punto Vittoria",
+    "question_type": "Informazione Nascosta",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": 9,
+      "citazione": "Reveal all your Victory Point cards, including any built this turn, if you can reach the number of VPs needed to win. Otherwise, you must keep Victory Point cards hidden",
+      "nota": "La domanda dice «giocate», ma le carte PV non si giocano prima della rivelazione finale: meglio «acquistate»."
+    }
+  },
+  {
+    "id": "CAT-23",
+    "game": "Catan",
+    "category": "Componenti / Limiti",
+    "difficulty": "Hard",
+    "question": "Cosa succede se un giocatore esaurisce tutti i 5 insediamenti in legno della sua riserva e vuole costruirne un sesto?",
+    "ground_truth": "Non può farlo. I componenti fisici in legno costituiscono un limite severo. Per costruire un altro insediamento deve prima trasformarne uno esistente in città per riprendere il pezzo in riserva.",
+    "context_reference": "Manuale Catan - Limite Componenti",
+    "question_type": "Caso Limite / Limite Fisico",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": 8,
+      "citazione": "You have 5 settlement pieces. To continue building more settlements, you must first upgrade one to a city.",
+      "nota": null
+    }
+  },
+  {
+    "id": "CAT-24",
+    "game": "Catan",
+    "category": "Commercio",
+    "difficulty": "Medium",
+    "question": "Posso scambiare carte Sviluppo con gli altri giocatori?",
+    "ground_truth": "No, le carte Sviluppo non possono mai essere scambiate o cedute ad altri giocatori.",
+    "context_reference": "Manuale Catan - Divieti di Commercio",
+    "question_type": "Negativa / Restrizione",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": 9,
+      "citazione": "You may not trade or give away development cards.",
+      "nota": null
+    }
+  },
+  {
+    "id": "CAT-25",
+    "game": "Catan",
+    "category": "Commercio",
+    "difficulty": "Hard",
+    "question": "Posso scambiare 1 carta Legno in cambio di 1 carta Legno con un altro giocatore?",
+    "ground_truth": "No, non è consentito effettuare scambi di carte risorsa identiche tra giocatori.",
+    "context_reference": "Manuale Catan - FAQ Commercio",
+    "question_type": "Negativa / Restrizione",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": 7,
+      "citazione": "You may not give away cards in any way, which includes trading matching resource cards (for example, trying to trade 3 ore for 1 ore is not allowed).",
+      "nota": null
+    }
+  },
+  {
+    "id": "CAT-26",
+    "game": "Catan",
+    "category": "Setup Iniziale",
+    "difficulty": "Medium",
+    "question": "Nella fase iniziale di posizionamento, è possibile costruire subito una città al posto di un insediamento?",
+    "ground_truth": "No, durante la preparazione iniziale si posizionano esclusivamente 2 insediamenti e 2 strade per ciascun giocatore.",
+    "context_reference": "Manuale Catan - Preparazione",
+    "question_type": "Procedurale",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": [
+        5,
+        12
+      ],
+      "citazione": "Place 2 starting settlements and roads for each player as shown.",
+      "nota": "Il testo non vieta esplicitamente la città, ma sia la preparazione fissa sia quella variabile (p. 12) prevedono solo insediamenti e strade."
+    }
+  },
+  {
+    "id": "CAT-27",
+    "game": "Catan",
+    "category": "Dadi",
+    "difficulty": "Easy",
+    "question": "Cosa succede se al lancio dei dadi esce un 2 o un 12?",
+    "ground_truth": "Gli esagoni contrassegnati dal numero 2 o 12 producono risorse normalmente per tutti i giocatori che vi sono adiacenti, esattamente come gli altri numeri.",
+    "context_reference": "Manuale Catan - Produzione",
+    "question_type": "Fattuale",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": 6,
+      "citazione": "Hexes with a number disc matching the dice roll produce this turn.",
+      "nota": "Il testo non ha regole specifiche per 2 o 12: vale la regola generale, salvo l'esagono occupato dal brigante."
+    }
+  },
+  {
+    "id": "CAT-28",
+    "game": "Catan",
+    "category": "Il Più Grande Esercito",
+    "difficulty": "Medium",
+    "question": "Se un giocatore gioca 3 Cavalieri e ottiene 'Il Più Grande Esercito', come fa un altro giocatore a sottrarglielo?",
+    "ground_truth": "Un altro giocatore deve giocare un numero STRETTAMENTE MAGGIORE di carte Cavaliere (ovvero almeno 4 Cavalieri) per sottrarre il titolo.",
+    "context_reference": "Manuale Catan - Il Più Grande Esercito",
+    "question_type": "Maggioranze / Sorpasso",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": 9,
+      "citazione": "If another player has more Knight cards in play, they immediately receive this tile.",
+      "nota": "«Almeno 4» vale finché il detentore ha 3 Cavalieri in gioco."
+    }
+  },
+  {
+    "id": "CAT-29",
+    "game": "Catan",
+    "category": "Costruzione",
+    "difficulty": "Easy",
+    "question": "Qual è il costo di costruzione di un insediamento e di una strada?",
+    "ground_truth": "Valgono corrette due risposte: che i documenti del gioco non riportano i costi di insediamento e strada, senza inventarli; oppure i costi veri: insediamento 1 Legno, 1 Argilla, 1 Grano e 1 Lana; strada 1 Legno e 1 Argilla. Sono sbagliati costi diversi.",
+    "context_reference": "Manuale Catan - Costi di Costruzione",
+    "question_type": "Fattuale / Costi",
+    "ground_truth_originale": "Un insediamento costa 1 Legno, 1 Argilla, 1 Grano e 1 Lana. Una strada costa 1 Legno e 1 Argilla.",
+    "fuori_dal_corpus": true,
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "fuori dal corpus",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": [
+        3,
+        8
+      ],
+      "citazione": "Roads, buildings (settlements and cities), and development cards each have different costs.",
+      "nota": "I costi compaiono solo come grafica nella tabella «BUILDING COSTS» (pp. 3, 8): il testo non indica le risorse richieste."
+    }
+  },
+  {
+    "id": "CAT-30",
+    "game": "Catan",
+    "category": "Out of Scope",
+    "difficulty": "Easy",
+    "question": "Come si muovono le Navi nel gioco base di Catan?",
+    "ground_truth": "Le Navi non sono presenti nel gioco base di Catan. Si tratta di un elemento dell'espansione 'I Marinai'.",
+    "context_reference": "Manuale Catan Base",
+    "question_type": "Out of Scope",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "fuori ambito: conferma",
+      "regolamento": "data/rulebook/catan_en_rulebook.pdf",
+      "pagina": 3,
+      "citazione": "2 dice 6 sea frame pieces 19 terrain hexes 18 number discs 16 cities (4x each color) 20 settlements (5x each color) 60 roads (15x each color)",
+      "nota": "Il testo conferma l'assenza delle navi, ma non nomina l'espansione «I Marinai» (Seafarers)."
+    }
+  },
+  {
+    "id": "CAR-01",
+    "game": "Carcassonne",
+    "category": "Punteggio / Fine Partita",
+    "difficulty": "Medium",
+    "question": "Quanto punteggio assegna una città incompleta a fine partita?",
+    "ground_truth": "A fine partita, ogni tessera e ogni stemma presente in una città incompleta vale esattamente 1 punto (invece dei 2 punti per tessera/stemma assegnati a partita in corso).",
+    "context_reference": "Manuale Carcassonne - Calcolo Punteggio Finale",
+    "question_type": "Fattuale / Calcolo",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 1,
+      "citazione": "guadagna 1 punto per ogni tratto di strada o parte di città. Gli stemmi nelle parti di città valgono 1 punto ciascuno.",
+      "nota": "Il testo aggiunge che con più seguaci vale lo stesso criterio di maggioranza delle città complete."
+    }
+  },
+  {
+    "id": "CAR-02",
+    "game": "Carcassonne",
+    "category": "Piazzamento Meeple",
+    "difficulty": "Medium",
+    "question": "Posso riprendere in mano un Meeple già piazzato prima che la struttura sia completata?",
+    "ground_truth": "No. Un Meeple piazzato su una tessera rimane bloccato lì fino a quando la relativa struttura (strada, città, monastero) non viene completamente chiusa e valutata.",
+    "context_reference": "Manuale Carcassonne - Regole dei Meeple",
+    "question_type": "Negativa / Restrizione",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 2,
+      "citazione": "Sebbene un seguace non possa essere richiamato, essi ritornano ai giocatori quando si segnano i punti di monasteri, strade e città.",
+      "nota": "I contadini invece non tornano mai durante la partita, e i seguaci su strutture incomplete restano fino al conteggio finale."
+    }
+  },
+  {
+    "id": "CAR-03",
+    "game": "Carcassonne",
+    "category": "Monastero",
+    "difficulty": "Easy",
+    "question": "Quando si considera completato un Monastero e quanti punti dà?",
+    "ground_truth": "Un monastero si considera completato quando la tessera del monastero è completamente circondata da altre 8 tessere (3x3). A quel punto assegna 9 punti totali e il Meeple torna al proprietario.",
+    "context_reference": "Manuale Carcassonne - Il Monastero",
+    "question_type": "Fattuale / Procedurale",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 2,
+      "citazione": "Un monastero è completo quando la tessera su cui si trova è completamente circondata da altre tessere. [...] guadagna 9 punti (1 punto per ogni tessera).",
+      "nota": "Il testo non scrive «8 tessere» ma lo implica (9 punti, 1 per ogni tessera); il ritorno del seguace è a pagina 2."
+    }
+  },
+  {
+    "id": "CAR-04",
+    "game": "Carcassonne",
+    "category": "Contadini / Campi",
+    "difficulty": "Hard",
+    "question": "Se due campi separati contenenti ciascuno un contadino vengono uniti da un piazzamento successivo, chi prende i punti a fine partita?",
+    "ground_truth": "Il giocatore che possiede il maggior numero di contadini in quel campo unico risultante prende tutti i punti. In caso di parità, tutti i giocatori a pari merito ricevono i punti pieni del campo.",
+    "context_reference": "Manuale Carcassonne - Punteggio dei Campi",
+    "question_type": "Maggioranze / Caso Limite",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 1,
+      "citazione": "se vi sono più contadini il proprietario è il giocatore che ha la maggioranza dei contadini. In caso di parità entrambi i giocatori si considerano proprietari del podere.",
+      "nota": "Regola dei contadini della prima edizione: il podere vale 3 punti per ogni città completa confinante e ogni giocatore conta la stessa città una sola volta."
+    }
+  },
+  {
+    "id": "CAR-05",
+    "game": "Carcassonne",
+    "category": "Piazzamento Tessere",
+    "difficulty": "Hard",
+    "question": "Cosa succede se un giocatore pesca una tessera che non può collocare legalmente da nessuna parte sulla mappa?",
+    "ground_truth": "Nel raro caso in cui la tessera non possa essere piazzata legalmente (tutti i giocatori devono essere d'accordo), il giocatore di turno la scarta dal gioco rimettendola nella scatola e ne pesca un'altra.",
+    "context_reference": "Manuale Carcassonne - Regole di Piazzamento",
+    "question_type": "Caso Limite",
+    "ground_truth_originale": "La tessera viene mostrata agli altri giocatori, scartata definitivamente dal gioco (messa fuori dalla scatola), e il giocatore ne pesca subito un'altra per sostituirla.",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 2,
+      "citazione": "non sia possibile piazzare legalmente una tessera (tutti i giocatori devono essere d’accordo), il giocatore di turno la scarta dal gioco (nella scatola) e ne pesca un’altra.",
+      "nota": "La GT scrive «messa fuori dalla scatola» mentre il testo dice «nella scatola», e omette la condizione dell'accordo di tutti i giocatori."
+    }
+  },
+  {
+    "id": "CAR-06",
+    "game": "Carcassonne",
+    "category": "Strade",
+    "difficulty": "Easy",
+    "question": "Una strada aperta assegna punti durante la partita?",
+    "ground_truth": "No. Le strade (come le città e i monasteri) assegnano punti durante la partita solo nel momento in cui vengono completamente chiuse a entrambe le estremità.",
+    "context_reference": "Manuale Carcassonne - Le Strade",
+    "question_type": "Fattuale",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 2,
+      "citazione": "Se un monastero, una strada o una città viene completata col piazzamento di una tessera, si assegnano i suoi punti.",
+      "nota": "Nel conteggio finale le strade incomplete valgono comunque 1 punto per tessera (pagina 1)."
+    }
+  },
+  {
+    "id": "CAR-07",
+    "game": "Carcassonne",
+    "category": "Out of Scope",
+    "difficulty": "Medium",
+    "question": "Come funziona l'azione di Muovere il Drago nel gioco base?",
+    "ground_truth": "Il Drago non è presente nel gioco base di Carcassonne. Si tratta di una meccanica dell'espansione 'Principessa e Drago'.",
+    "context_reference": "Manuale Carcassonne Base",
+    "question_type": "Out of Scope",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "fuori ambito: conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 1,
+      "citazione": "72 tessere paesaggio (inclusa una tessera di partenza col dorso nero) che raffigurano città, strade, campi e monasteri. •12 tessere fiume (espansione del gioco) •40 seguaci in 5 colori",
+      "nota": "Il drago non compare nel testo; il nome dell'espansione citato dalla GT non è verificabile dal regolamento, che include solo l'espansione dei Fiumi."
+    }
+  },
+  {
+    "id": "CAR-08",
+    "game": "Carcassonne",
+    "category": "Punteggio Strade",
+    "difficulty": "Easy",
+    "question": "Quanti punti vale ogni tessera di una strada completata durante la partita e a fine partita?",
+    "ground_truth": "Ogni tessera che compone una strada completata assegna 1 punto vittoria, sia durante la partita sia a fine partita.",
+    "context_reference": "Manuale Carcassonne - Punteggio Strade",
+    "question_type": "Fattuale / Punteggio",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 2,
+      "citazione": "Il giocatore che ha un ladro su una strada completata segna un punto per ogni segmento di cui è composta la strada (contate il numero di tessere).",
+      "nota": "A fine partita si contano le strade incomplete (1 punto per tratto, pagina 1): una strada completata è già stata contata al momento del completamento."
+    }
+  },
+  {
+    "id": "CAR-09",
+    "game": "Carcassonne",
+    "category": "Piazza Meeple",
+    "difficulty": "Medium",
+    "question": "Posso piazzare un Meeple su una tessera diversa da quella appena posizionata nel turno corrente?",
+    "ground_truth": "No. Puoi piazzare un Meeple soltanto sulla tessera che hai appena posizionato nel turno in corso.",
+    "context_reference": "Manuale Carcassonne - Sequenza del Turno",
+    "question_type": "Restrizione / Timing",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 2,
+      "citazione": "Il seguace può essere posto solo sulla tessera appena giocata.",
+      "nota": null
+    }
+  },
+  {
+    "id": "CAR-10",
+    "game": "Carcassonne",
+    "category": "Piazzamento Meeple",
+    "difficulty": "Easy",
+    "question": "È obbligatorio piazzare un Meeple ogni volta che si posiziona una tessera?",
+    "ground_truth": "No, piazzare un Meeple è un'azione opzionale. Puoi decidere di posizionare la tessera senza mettere alcun Meeple.",
+    "context_reference": "Manuale Carcassonne - Sequenza del Turno",
+    "question_type": "Procedurale",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 1,
+      "citazione": "2. può (se vuole) schierare uno dei suoi 7 seguaci sulla tessera che ha appena piazzato;",
+      "nota": null
+    }
+  },
+  {
+    "id": "CAR-11",
+    "game": "Carcassonne",
+    "category": "Stemmi / Città",
+    "difficulty": "Medium",
+    "question": "Quanto vale uno stemma (scudo) situato all'interno di una città completata durante la partita?",
+    "ground_truth": "Uno stemma all'interno di una città completata vale 2 punti vittoria aggiuntivi (pari al valore di una tessera città).",
+    "context_reference": "Manuale Carcassonne - Punteggio Città",
+    "question_type": "Fattuale / Punteggio",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 2,
+      "citazione": "Ogni stemma su un segmento di città fa guadagnare un bonus di 2 punti extra.",
+      "nota": "Eccezione nel testo: in una città completata di sole 2 tessere ogni stemma vale 1 punto (vedi CAR-12)."
+    }
+  },
+  {
+    "id": "CAR-12",
+    "game": "Carcassonne",
+    "category": "Città Piccole",
+    "difficulty": "Easy",
+    "question": "Quanti punti dà una città completata formata da solo 2 tessere (la cosiddetta 'città a pallone')?",
+    "ground_truth": "Assegna 4 punti vittoria (2 tessere x 2 punti ciascuna). Nelle edizioni moderne non esiste più la penalità che la limitava a 2 punti.",
+    "context_reference": "Manuale Carcassonne - Regole Moderne Città",
+    "question_type": "Fattuale / Punteggio",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "tenuta dall'utente in contrasto con il regolamento",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 2,
+      "citazione": "Unica eccezione: quando una città completata è costituita da sole 2 parti, il giocatore guadagna solo 2 punti (anzichè 4), più un punto per ogni stemma.",
+      "nota": "Il regolamento nel corpus (prima edizione italiana, p. 2) assegna solo 2 punti a una città completata di 2 tessere: un agente che segue il corpus risponde 2 punti."
+    }
+  },
+  {
+    "id": "CAR-13",
+    "game": "Carcassonne",
+    "category": "Contadini",
+    "difficulty": "Medium",
+    "question": "Come si posiziona un Meeple per farlo diventare un contadino?",
+    "ground_truth": "Dopo aver piazzato la tessera, si schiera il seguace su una parte di campo della tessera appena giocata: in quella posizione è un contadino. Non è consentito se quella parte di campo è collegata a un campo dove c'è già un contadino (di qualsiasi giocatore).",
+    "context_reference": "Manuale Carcassonne - Piazzamento Contadini",
+    "question_type": "Procedurale",
+    "ground_truth_originale": "Il Meeple deve essere piazzato sdraiato (coricato) sulla porzione di prato/campo della tessera appena giocata.",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 2,
+      "citazione": "Il seguace può essere posto solo sulla tessera appena giocata. [...] Contadino [...] in una parte di campo",
+      "nota": "Il testo non dice che il contadino va sdraiato (al più lo mostrano le illustrazioni), quindi la GT afferma più di quanto il regolamento contenga."
+    }
+  },
+  {
+    "id": "CAR-14",
+    "game": "Carcassonne",
+    "category": "Contadini",
+    "difficulty": "Medium",
+    "question": "Quando ritorna nella riserva del giocatore un Meeple piazzato come contadino?",
+    "ground_truth": "I contadini non tornano MAI in mano al giocatore durante la partita; rimangono nel campo fino al calcolo del punteggio finale a fine partita.",
+    "context_reference": "Manuale Carcassonne - Regole Contadini",
+    "question_type": "Restrizione / Meccanica",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 2,
+      "citazione": "I contadini rimangono per tutta la partita nei campi dove sono stati schierati e non vengono mai restituiti ai rispettivi giocatori!",
+      "nota": "Nel conteggio finale i contadini vengono rimossi man mano che si contano i poderi (pagina 1)."
+    }
+  },
+  {
+    "id": "CAR-15",
+    "game": "Carcassonne",
+    "category": "Città / Parità",
+    "difficulty": "Medium",
+    "question": "Se una città completata contiene 1 Meeple del Giocatore Rosso e 1 Meeple del Giocatore Blu, come vengono assegnati i punti?",
+    "ground_truth": "Entrambi i giocatori sono in parità per la maggioranza, quindi sia il Giocatore Rosso sia il Giocatore Blu ricevono l'intero ammontare dei punti della città.",
+    "context_reference": "Manuale Carcassonne - Risoluzione Parità",
+    "question_type": "Parità / Punteggio",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 2,
+      "citazione": "In caso 2 o più giocatori abbiano entrambi il maggior numero di ladri o di cavalieri, entrambi guadagnano il punteggio totale per la strada o la città.",
+      "nota": null
+    }
+  },
+  {
+    "id": "CAR-16",
+    "game": "Carcassonne",
+    "category": "Piazzamento Tessere",
+    "difficulty": "Easy",
+    "question": "È possibile piazzare una tessera toccando un'altra tessera solo in diagonale (angolo contro angolo)?",
+    "ground_truth": "No. Ogni nuova tessera posizionata deve confinare ortogonalmente (almeno con un lato intero) con una o più tessere già presenti sul tavolo.",
+    "context_reference": "Manuale Carcassonne - Piazzamento Tessere",
+    "question_type": "Negativa / Posizionamento",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 1,
+      "citazione": "deve essere adiacente ad almeno una tessera già sul tavolo (devono toccarsi lato con lato: non è sufficiente angolo con angolo).",
+      "nota": null
+    }
+  },
+  {
+    "id": "CAR-17",
+    "game": "Carcassonne",
+    "category": "Monastero / Fine Partita",
+    "difficulty": "Easy",
+    "question": "Quanti punti assegna un monastero non completato al termine della partita?",
+    "ground_truth": "Assegna 1 punto per la tessera monastero stessa più 1 punto per ciascuna delle tessere adiacenti posizionate attorno ad essa.",
+    "context_reference": "Manuale Carcassonne - Punteggio Finale Monasteri",
+    "question_type": "Punteggio Finale",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 1,
+      "citazione": "Per ogni monastero incompleto, il giocatore col monaco nel monastero guadagna 1 punto per la tessera monastero e un punto per ciascuna tessera che la circonda.",
+      "nota": null
+    }
+  },
+  {
+    "id": "CAR-18",
+    "game": "Carcassonne",
+    "category": "Riserva Meeple",
+    "difficulty": "Easy",
+    "question": "Quanti Meeple riceve ciascun giocatore all'inizio della partita e quanti ne usa per segnare i punti?",
+    "ground_truth": "Ogni giocatore riceve 8 Meeple del proprio colore: 7 vengono tenuti in riserva per essere piazzati sulla mappa, mentre 1 viene posizionato sul segnapunti.",
+    "context_reference": "Manuale Carcassonne - Setup",
+    "question_type": "Setup / Componenti",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 1,
+      "citazione": "Ogni giocatore prende gli 8 seguaci del suo colore, ne piazza uno nella casella grande all’inizio del percorso segnapunti e tiene gli altri 7 davanti a sé a sua disposizione.",
+      "nota": "Il testo chiama i Meeple «seguaci»."
+    }
+  },
+  {
+    "id": "CAR-19",
+    "game": "Carcassonne",
+    "category": "Campi / Confini",
+    "difficulty": "Hard",
+    "question": "Le strade interrompono i campi per il calcolo dei contadini?",
+    "ground_truth": "Sì, le strade fungono da confini fisici per i campi. Un campo si interrompe e viene diviso da qualsiasi strada o città incontri.",
+    "context_reference": "Manuale Carcassonne - Confini dei Campi",
+    "question_type": "Geometria / Regola Avanzata",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 2,
+      "citazione": "I poderi confinano con strade, città e con i bordi delle aree dove sono state piazzate le tessere. [...] La città e i tratti di strada separano i poderi uno dall’altro.",
+      "nota": "Il testo indica come confine dei poderi anche il bordo dell'area delle tessere piazzate."
+    }
+  },
+  {
+    "id": "CAR-20",
+    "game": "Carcassonne",
+    "category": "Piazzamento Tessere",
+    "difficulty": "Easy",
+    "question": "Se si chiude una città nello stesso turno in cui si posiziona la tessera e il Meeple, il Meeple torna subito disponibile?",
+    "ground_truth": "Sì. Se il piazzamento della tessera chiude la struttura, si calcolano immediatamente i punti e il Meeple torna subito nella riserva del giocatore nello stesso turno.",
+    "context_reference": "Manuale Carcassonne - Sequenza di Valutazione",
+    "question_type": "Timing / Riserva",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 2,
+      "citazione": "E’ possibile per un giocatore schierare un seguace , guadagnare i punti di una strada, città o monastero, e riprendersi il seguace nello stesso turno.",
+      "nota": "La categoria «Piazzamento Tessere» è impropria: la domanda riguarda il ritorno dei seguaci."
+    }
+  },
+  {
+    "id": "CAR-21",
+    "game": "Carcassonne",
+    "category": "Strade",
+    "difficulty": "Medium",
+    "question": "Cosa chiude o interrompe una strada?",
+    "ground_truth": "Una strada è completa quando entrambi i suoi estremi sono collegati a un incrocio, a una città o a un monastero; tra i due estremi può esserci un numero qualsiasi di tratti di strada.",
+    "context_reference": "Manuale Carcassonne - Definizione Strade",
+    "question_type": "Fattuale",
+    "ground_truth_originale": "Una strada si considera chiusa o interrotta quando incrocia un incrocio (rotonda/bivio), una città, un monastero o quando forma un anello chiuso su se stessa.",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 2,
+      "citazione": "Una strada è completa quando entrambi gli estremi sono connessi ad un incrocio, una città o un monastero.",
+      "nota": "Il caso dell'anello chiuso non è nel testo e «rotonda/bivio» non compare (il testo dice «incrocio»); la GT inoltre non dice che servono entrambi gli estremi."
+    }
+  },
+  {
+    "id": "CAR-22",
+    "game": "Carcassonne",
+    "category": "Fine Partita",
+    "difficulty": "Easy",
+    "question": "Quando termina esattamente una partita a Carcassonne?",
+    "ground_truth": "La partita termina immediatamente alla fine del turno in cui viene posizionata l'ultima tessera disponibile nella riserva.",
+    "context_reference": "Manuale Carcassonne - Fine Partita",
+    "question_type": "Condizione di Fine",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 1,
+      "citazione": "La partita finisce alla fine del turno in cui è piazzata l’ultima tessera. Segue il conteggio finale.",
+      "nota": null
+    }
+  },
+  {
+    "id": "CAR-23",
+    "game": "Carcassonne",
+    "category": "Piazzamento Meeple",
+    "difficulty": "Hard",
+    "question": "Posso piazzare 2 Meeple nello stesso turno sulla stessa tessera in due sezioni diverse (es. uno sulla strada e uno sulla città)?",
+    "ground_truth": "No. Puoi piazzare al massimo 1 Meeple per turno.",
+    "context_reference": "Manuale Carcassonne - Limite Piazzamento",
+    "question_type": "Negativa / Restrizione",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 2,
+      "citazione": "Può schierare solo un seguace per turno.",
+      "nota": null
+    }
+  },
+  {
+    "id": "CAR-24",
+    "game": "Carcassonne",
+    "category": "Abbazia / Monasteri",
+    "difficulty": "Medium",
+    "question": "Un Meeple piazzato su un monastero vale per il calcolo dei contadini nel prato circostante?",
+    "ground_truth": "No, il Meeple sul monastero conta unicamente per la valutazione del monastero stesso e non ha alcuna influenza sul prato.",
+    "context_reference": "Manuale Carcassonne - Distinzione Ruoli",
+    "question_type": "Interazione / Separazione Ruoli",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 1,
+      "citazione": "Ogni seguace può essere usato come cavaliere, ladro, contadino o monaco. [...] se vi sono più contadini il proprietario è il giocatore che ha la maggioranza dei contadini.",
+      "nota": "Non è scritto esplicitamente ma si deduce (la proprietà del podere dipende solo dai contadini, il seguace sul monastero è un monaco); la categoria «Abbazia» richiama l'abate, assente nel testo."
+    }
+  },
+  {
+    "id": "CAR-25",
+    "game": "Carcassonne",
+    "category": "Punteggio",
+    "difficulty": "Easy",
+    "question": "Cosa succede al punteggio se supero i 50 punti sul tracciato?",
+    "ground_truth": "Valgono corrette due risposte: che il regolamento non dice né quanto è lungo il percorso segnapunti né cosa fare superato il fondo (dice solo di far avanzare il segnapunti di tante caselle quanti sono i punti), senza inventare; oppure la regola vera: il segnapunti fa un secondo giro e si continua a sommare, tenendo conto dei 50 punti già fatti (per esempio capovolgendo una tessera). È sbagliata una regola diversa.",
+    "context_reference": "Manuale Carcassonne - Tracciato Punti",
+    "question_type": "Procedurale",
+    "ground_truth_originale": "Fai fare un secondo giro al tuo Meeple sul segnapunti e continui a sommare i punti (solitamente capovolgendo una tessera o segnando +50).",
+    "fuori_dal_corpus": true,
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "fuori dal corpus",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 2,
+      "citazione": "Il giocatore fa avanzare il suo segnapunti nel percorso di tante caselle quanti sono i punti guadagnati.",
+      "nota": "Il testo non indica la lunghezza del percorso segnapunti né come segnare i punti dopo un giro completo."
+    }
+  },
+  {
+    "id": "CAR-26",
+    "game": "Carcassonne",
+    "category": "Tessera Iniziale",
+    "difficulty": "Easy",
+    "question": "Come si riconosce la tessera iniziale del gioco base rispetto alle altre?",
+    "ground_truth": "La tessera di partenza è una delle 72 tessere paesaggio e si riconosce perché ha il dorso nero.",
+    "context_reference": "Manuale Carcassonne - Setup",
+    "question_type": "Componenti",
+    "ground_truth_originale": "La tessera iniziale ha il retro di colore scuro/nero per distinguersi dalle altre tessere che hanno il retro grigio chiaro.",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 1,
+      "citazione": "72 tessere paesaggio (inclusa una tessera di partenza col dorso nero)",
+      "nota": "Il colore del dorso delle altre tessere («grigio chiaro») non è indicato nel testo; con l'espansione Fiumi si inizia invece dalla tessera «sorgenti»."
+    }
+  },
+  {
+    "id": "CAR-27",
+    "game": "Carcassonne",
+    "category": "Piazzamento Tessere",
+    "difficulty": "Medium",
+    "question": "È consentito piazzare una tessera in modo che la figura della strada combaci con il prato di una tessera adiacente?",
+    "ground_truth": "No. Tutti i lati della tessera piazzata devono corrispondere perfettamente alle caratteristiche del terreno dei lati delle tessere adiacenti (prato con prato, strada con strada, città con città).",
+    "context_reference": "Manuale Carcassonne - Regole di Corrispondenza",
+    "question_type": "Negativa / Regola Posizionamento",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 1,
+      "citazione": "deve essere piazzata in modo che tutti i suoi campi, città e tratti di strada continuino i campi, città e tratti di strada di tutte le tessere confinanti",
+      "nota": null
+    }
+  },
+  {
+    "id": "CAR-28",
+    "game": "Carcassonne",
+    "category": "Contadini",
+    "difficulty": "Hard",
+    "question": "Una città non completata a fine partita assegna punti ai contadini nel campo adiacente?",
+    "ground_truth": "No. I contadini ricevono 3 punti SOLO per le città COMPLETATE che confinano con il loro campo.",
+    "context_reference": "Manuale Carcassonne - Punteggio Campi",
+    "question_type": "Restrizione / Punteggio",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 1,
+      "citazione": "Ogni podere rifornisce le città complete con cui confina. Le città incomplete non si considerano. Il proprietario del podere ottiene 3 punti per ogni città completa che rifornisce.",
+      "nota": "Refuso nella GT («che confina» per «che confinano»); i 3 punti vanno al proprietario del podere (maggioranza di contadini), non a ogni contadino."
+    }
+  },
+  {
+    "id": "CAR-29",
+    "game": "Carcassonne",
+    "category": "Out of Scope",
+    "difficulty": "Easy",
+    "question": "Come funziona la regola della 'Cattedrale' nel gioco base?",
+    "ground_truth": "Le Cattedrali non sono presenti nel gioco base di Carcassonne. Sono introdotte nella prima espansione 'Locande e Cattedrali'.",
+    "context_reference": "Manuale Carcassonne Base",
+    "question_type": "Out of Scope",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "fuori ambito: conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 1,
+      "citazione": "72 tessere paesaggio (inclusa una tessera di partenza col dorso nero) che raffigurano città, strade, campi e monasteri. •12 tessere fiume (espansione del gioco) •40 seguaci in 5 colori",
+      "nota": "Le cattedrali non compaiono nel testo; il nome dell'espansione citato dalla GT non è verificabile dal regolamento."
+    }
+  },
+  {
+    "id": "CAR-30",
+    "game": "Carcassonne",
+    "category": "Out of Scope",
+    "difficulty": "Easy",
+    "question": "Quante risorse commerciali (vino, stoffa, grano) si guadagnano chiudendo una città nel gioco base?",
+    "ground_truth": "Nessuna. Le merci di commercio non esistono nel gioco base, ma fanno parte dell'espansione 'Commercianti e Costruttori'.",
+    "context_reference": "Manuale Carcassonne Base",
+    "question_type": "Out of Scope",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "fuori ambito: conferma",
+      "regolamento": "data/rulebook/carcassone_rulebook.pdf",
+      "pagina": 1,
+      "citazione": "72 tessere paesaggio (inclusa una tessera di partenza col dorso nero) che raffigurano città, strade, campi e monasteri. •12 tessere fiume (espansione del gioco) •40 seguaci in 5 colori",
+      "nota": "Le merci non compaiono nel testo; il nome dell'espansione citato dalla GT non è verificabile dal regolamento."
+    }
+  },
+  {
+    "id": "TTR-01",
+    "game": "Ticket to Ride",
+    "category": "Biglietti Destinazione",
+    "difficulty": "Medium",
+    "question": "Cosa succede a fine partita se non completo uno dei Biglietti Destinazione che ho tenuto?",
+    "ground_truth": "Il valore in punti indicato su quel Biglietto Destinazione viene sottratto dal totale dei tuoi punti vittoria.",
+    "context_reference": "Manuale Ticket to Ride - Calcolo Punteggio",
+    "question_type": "Fattuale / Penalità",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride_rulebook.pdf",
+      "pagina": [
+        4
+      ],
+      "citazione": "Se non è riuscito a completare un percorso continuo tra quelle città, sottrae il valore di punti indicato sul Biglietto dal suo punteggio totale.",
+      "nota": "Refuso nella GT: «quel Biglietti Destinazione» va al singolare («quel Biglietto Destinazione»)."
+    }
+  },
+  {
+    "id": "TTR-02",
+    "game": "Ticket to Ride",
+    "category": "Carte Treno / Carte Scoperte",
+    "difficulty": "Easy",
+    "question": "Se scelgo di pescare una carta Locomotiva (Jolly) scoperta e visibile dalla griglia delle 5 carte scoperte, posso pescare una seconda carta nello stesso turno?",
+    "ground_truth": "No. Se prendi una Locomotiva scoperta dalla griglia delle 5 carte, quella conta come l'unica e sola carta che puoi pescare nel tuo turno.",
+    "context_reference": "Manuale Ticket to Ride - Pescare Carte Treno",
+    "question_type": "Eccezione / Limite",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride_rulebook.pdf",
+      "pagina": [
+        3
+      ],
+      "citazione": "Se una delle cinque cartea faccia in su è una Locomotiva, il giocatore che la pesca deve pescare solo una carta, anziché due.",
+      "nota": "La citazione riporta il refuso «cartea» così com'è nel testo estratto; il regolamento Europe (p. 4) formula la stessa regola in modo più esplicito."
+    }
+  },
+  {
+    "id": "TTR-03",
+    "game": "Ticket to Ride",
+    "category": "Carte Treno",
+    "difficulty": "Hard",
+    "question": "Cosa succede se tra le 5 carte Treno scoperte compaiono 3 carte Locomotiva (Jolly)?",
+    "ground_truth": "Tutte e 5 le carte scoperte vengono immediatamente scartate nella pila degli scarti e ne vengono scoperte 5 nuove dal mazzo di pesca.",
+    "context_reference": "Manuale Ticket to Ride - Reset Carte Scoperte",
+    "question_type": "Procedurale / Caso Limite",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride_rulebook.pdf",
+      "pagina": [
+        3
+      ],
+      "citazione": "tre delle cinque carte Treno a faccia in su risultano essere Locomotive, tutte e cinque le carte vengono immediatamente scartate e si scoprono a faccia in su cinque nuove carte",
+      "nota": null
+    }
+  },
+  {
+    "id": "TTR-04",
+    "game": "Ticket to Ride: Europe",
+    "category": "Stazioni (Edizione Europa)",
+    "difficulty": "Medium",
+    "question": "A cosa serve una Stazione e quanti punti vale se NON la utilizzo durante la partita?",
+    "ground_truth": "Una Stazione permette di sfruttare una linea di un avversario per connettere i propri biglietti destinazione. Ogni Stazione non costruita e tenuta in riserva a fine partita vale 4 punti vittoria aggiuntivi.",
+    "context_reference": "Manuale Ticket to Ride Europa - Le Stazioni",
+    "question_type": "Fattuale / Punteggio",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride-europe_rulebook.pdf",
+      "pagina": [
+        6,
+        7
+      ],
+      "citazione": "allows its owner to use one, and only one, of the routes belonging to another player […] For each Station a player does not use, four points are added",
+      "nota": "Il regolamento precisa che la linea avversaria utilizzabile è una e una sola e deve entrare nella città della Stazione; la GT lo dice in forma più generica."
+    }
+  },
+  {
+    "id": "TTR-05",
+    "game": "Ticket to Ride",
+    "category": "Occupazione Linee",
+    "difficulty": "Medium",
+    "question": "In partite a 2 o 3 giocatori, posso occupare entrambe le linee di una 'Doppia Linea'?",
+    "ground_truth": "No. In partite a 2 o 3 giocatori, quando uno dei due binari di una doppia linea viene occupato, l'altro binario diventa inutilizzabile per il resto della partita.",
+    "context_reference": "Manuale Ticket to Ride - Partite a 2/3 Giocatori",
+    "question_type": "Restrizione Scalabilità",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride_rulebook.pdf",
+      "pagina": [
+        3
+      ],
+      "citazione": "Nelle partite a due o a tre giocatori è possibile usare solo una delle Doppie Linee. […] l’altra linea sarà considerata chiusa e inaccessibile ai giocatori per il resto della partita.",
+      "nota": "Con qualsiasi numero di giocatori nessuno può reclamare entrambe le linee di una Doppia Linea; a 2–3 giocatori la seconda linea si chiude per tutti."
+    }
+  },
+  {
+    "id": "TTR-06",
+    "game": "Ticket to Ride: Europe",
+    "category": "Traghetti (Edizione Europa)",
+    "difficulty": "Easy",
+    "question": "Qual è il vincolo per occupare una linea Traghetto?",
+    "ground_truth": "Devi giocare una carta Locomotiva per ogni simbolo di Locomotiva presente sulla tratta e, per le caselle rimanenti, la normale serie di carte di uno stesso colore a scelta (i Traghetti sono tratte grigie). Esempio: Smyrna–Palermo richiede 2 Locomotive e 4 carte di un qualsiasi colore.",
+    "context_reference": "Manuale Ticket to Ride Europa - Traghetti",
+    "question_type": "Vincolo di Costo",
+    "ground_truth_originale": "Per occupare una linea Traghetto devi giocare obbligatoriamente almeno una carta Locomotiva (Jolly) per ciascun simbolo di locomotiva raffigurato sulla tratta, oltre alle carte del colore richiesto.",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/ticket-to-ride-europe_rulebook.pdf",
+      "pagina": [
+        5
+      ],
+      "citazione": "a player must play a Locomotive card for each Locomotive symbol on the Route, and the usual set of cards of the proper color for the remaining spaces",
+      "nota": "«Colore richiesto» è fuorviante: i Traghetti sono «special Gray Routes» e le carte colorate coprono solo le caselle senza simbolo, non si aggiungono alla lunghezza."
+    }
+  },
+  {
+    "id": "TTR-07",
+    "game": "Ticket to Ride",
+    "category": "Out of Scope",
+    "difficulty": "Easy",
+    "question": "Posso attaccare i treni di un altro giocatore per distruggere le sue linee?",
+    "ground_truth": "No. Ticket to Ride non ha meccaniche di combattimento o distruzione delle linee già costruite.",
+    "context_reference": "Manuale Ticket to Ride Base",
+    "question_type": "Out of Scope / Falsa Meccanica",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "fuori ambito: conferma",
+      "regolamento": "data/rulebook/ticket-to-ride_rulebook.pdf",
+      "pagina": [
+        3
+      ],
+      "citazione": "Un giocatore può prendere il controllo di qualsiasi linea libera sul tabellone.",
+      "nota": "Il regolamento consente di controllare solo linee libere e non prevede alcuna azione contro linee già occupate."
+    }
+  },
+  {
+    "id": "TTR-08",
+    "game": "Ticket to Ride",
+    "category": "Carte Treno / Mazzo coperto",
+    "difficulty": "Medium",
+    "question": "Se pesco una carta Locomotiva (Jolly) a caso coperta dalla cima del mazzo di pesca, posso pescare una seconda carta nello stesso turno?",
+    "ground_truth": "Sì. La restrizione di pescare una sola carta si applica unicamente quando la Locomotiva viene scelta a faccia in su dalla griglia delle 5 carte scoperte.",
+    "context_reference": "Manuale Ticket to Ride - Pesca dal Mazzo Coperto",
+    "question_type": "Eccezione / Timing",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride_rulebook.pdf",
+      "pagina": [
+        3
+      ],
+      "citazione": "pescare una Locomotiva dalla cima del mazzo pescando alla cieca, quella Locomotiva conta comunque come una singola carta, quindi il giocatore può ancora pescare un totale di due carte",
+      "nota": "La seconda carta non può essere una Locomotiva scoperta: esplicito nel regolamento Europe (p. 4), mentre il base lo dice solo per la carta sostitutiva."
+    }
+  },
+  {
+    "id": "TTR-09",
+    "game": "Ticket to Ride",
+    "category": "Biglietti Destinazione",
+    "difficulty": "Medium",
+    "question": "Quando scelgo di pescare nuovi Biglietti Destinazione, quanti ne devo tenere al minimo?",
+    "ground_truth": "Peschi 3 nuovi biglietti e devi tenerne obbligatoriamente almeno 1. Puoi decidere di tenerne 1, 2 o tutti e 3.",
+    "context_reference": "Manuale Ticket to Ride - Azione Biglietti",
+    "question_type": "Procedurale / Vincolo",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride_rulebook.pdf",
+      "pagina": [
+        3,
+        4
+      ],
+      "citazione": "Per farlo pesca tre nuove carte dalla cima del mazzo dei Biglietti Destinazione. Deve tenerne almeno una, ma può tenerne due o anche tutte e tre, se desidera.",
+      "nota": "Se nel mazzo restano meno di tre Biglietti si pescano solo quelli disponibili."
+    }
+  },
+  {
+    "id": "TTR-10",
+    "game": "Ticket to Ride",
+    "category": "Setup Iniziale",
+    "difficulty": "Easy",
+    "question": "Quanti Biglietti Destinazione vengono consegnati a ciascun giocatore a inizio partita e quanti deve tenerne almeno?",
+    "ground_truth": "Vengono consegnati 3 Biglietti Destinazione (o 4 nella versione Europa) e ogni giocatore deve tenerne obbligatoriamente almeno 2.",
+    "context_reference": "Manuale Ticket to Ride - Setup",
+    "question_type": "Setup",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride_rulebook.pdf",
+      "pagina": [
+        2
+      ],
+      "citazione": "Mescolate i Biglietti Destinazione e distribuitene tre a ogni giocatore […] Un giocatore deve tenerne almeno due, ma può tenerli anche tutti e tre, se desidera.",
+      "nota": "Il «4 nella versione Europa» corrisponde a 1 Biglietto Lungo + 3 Regolari della variante Classic (Europe p. 3), mentre le varianti Big Cities e Mega Europe ne distribuiscono di più (Europe p. 8)."
+    }
+  },
+  {
+    "id": "TTR-11",
+    "game": "Ticket to Ride",
+    "category": "Fine Partita",
+    "difficulty": "Medium",
+    "question": "Cosa scatena la fase di fine partita in Ticket to Ride?",
+    "ground_truth": "La fase finale scatta quando la riserva di vagoni di un giocatore scende a 2, 1 o 0 vagoni rimasti. A quel punto ogni giocatore (incluso chi ha scatenato la fine) gioca un ultimo turno finale.",
+    "context_reference": "Manuale Ticket to Ride - Condizione di Fine Partita",
+    "question_type": "Condizione di Fine",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride_rulebook.pdf",
+      "pagina": [
+        4
+      ],
+      "citazione": "la riserva di vagoni […] di un giocatore scende a due vagoni o meno alla fine del suo turno, ogni giocatore, incluso quello stesso giocatore, ha diritto a un turno finale.",
+      "nota": "Il base precisa che la condizione si verifica «alla fine del suo turno»; la formula «0, 1 o 2» è quella del regolamento Europe (p. 7)."
+    }
+  },
+  {
+    "id": "TTR-12",
+    "game": "Ticket to Ride",
+    "category": "Linee Grigie",
+    "difficulty": "Easy",
+    "question": "Come si occupa una linea di colore Grigio sulla mappa?",
+    "ground_truth": "Una linea grigia può essere occupata giocando un set di carte Treno di un qualsiasi colore a scelta del giocatore, purché siano tutte dello stesso colore e pari alla lunghezza della tratta.",
+    "context_reference": "Manuale Ticket to Ride - Tratte Grigie",
+    "question_type": "Fattuale / Regola Colore",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride_rulebook.pdf",
+      "pagina": [
+        3
+      ],
+      "citazione": "Le carte della serie devono essere dello stesso tipo. […] Alcune linee (quelle di colore Grigio) possono essere controllate usando una serie di carte di un colore qualsiasi.",
+      "nota": "Come per ogni linea, nella serie possono rientrare anche Locomotive."
+    }
+  },
+  {
+    "id": "TTR-13",
+    "game": "Ticket to Ride",
+    "category": "Locomotive",
+    "difficulty": "Easy",
+    "question": "Le carte Locomotiva (Jolly) possono essere usate in sostituzione di qualsiasi colore per occupare una linea?",
+    "ground_truth": "Sì, le carte Locomotiva fungono da Jolly e possono sostituire qualsiasi carta Treno di qualsiasi colore.",
+    "context_reference": "Manuale Ticket to Ride - Uso delle Locomotive",
+    "question_type": "Fattuale",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride_rulebook.pdf",
+      "pagina": [
+        3
+      ],
+      "citazione": "Le Locomotive sono carte multicolori e fungono da jolly che possono essere giocati assieme a qualsiasi serie di carte quando si controlla una linea.",
+      "nota": "Il testo aggiunge che si può controllare una linea anche usando solo Locomotive."
+    }
+  },
+  {
+    "id": "TTR-14",
+    "game": "Ticket to Ride",
+    "category": "Occupazione Linee",
+    "difficulty": "Medium",
+    "question": "Posso occupare solo una parte/metà di una tratta (es. piazzare 2 vagoni su una tratta lunga 4)?",
+    "ground_truth": "No. Quando occupi una linea devi pagare e piazzare i vagoni per l'INTERA lunghezza della tratta in un unico turno.",
+    "context_reference": "Manuale Ticket to Ride - Regole di Reclamo Linee",
+    "question_type": "Negativa / Restrizione",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride_rulebook.pdf",
+      "pagina": [
+        3
+      ],
+      "citazione": "deve giocare una serie di carte pari al numero di caselle della linea scelta. […] colloca uno dei suoi vagoni di plastica su ogni casella che compone quella linea.",
+      "nota": "Nel base la regola è implicita (carte pari alle caselle, un vagone su ogni casella); la formulazione esplicita «in its entirety during a single turn» è solo nel regolamento Europe (p. 4)."
+    }
+  },
+  {
+    "id": "TTR-15",
+    "game": "Ticket to Ride",
+    "category": "Bonus Finale",
+    "difficulty": "Easy",
+    "question": "A chi viene assegnato il bonus di 10 punti di fine partita?",
+    "ground_truth": "Il bonus di 10 punti (carta Percorso Continuo Più Lungo) va al giocatore con il percorso continuo di linee più lungo; in caso di parità ciascun giocatore a pari merito riceve i 10 punti.",
+    "context_reference": "Manuale Ticket to Ride - Bonus Finale",
+    "question_type": "Bonus / Punteggio",
+    "ground_truth_originale": "Nella versione USA va al giocatore che ha realizzato il percorso continuo di vagoni più lungo sulla mappa. Nella versione Europa va a chi ha completato il maggior numero di biglietti destinazione.",
+    "question_originale": "A chi viene assegnato il bonus di 10 punti 'Globetrotter' (o Percorso Più Lungo nella versione USA)?",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/ticket-to-ride_rulebook.pdf",
+      "pagina": [
+        4
+      ],
+      "citazione": "Il giocatore che ha il Percorso Continuo Più Lungo di linee riceve la speciale carta bonus e aggiunge 10 punti al suo punteggio.",
+      "nota": "La GT sbaglia anche sull'Europa, dove il bonus di 10 punti è l'European Express e premia anch'esso il percorso continuo più lungo (Europe p. 7), e «Globetrotter» non compare in nessuno dei due testi, quindi conviene riformulare la domanda."
+    }
+  },
+  {
+    "id": "TTR-16",
+    "game": "Ticket to Ride",
+    "category": "Mazzo Scarti",
+    "difficulty": "Medium",
+    "question": "Cosa succede se il mazzo di pesca delle carte Treno si esaurisce durante la partita?",
+    "ground_truth": "La pila degli scarti viene rimischiata immediatamente per formare un nuovo mazzo di pesca.",
+    "context_reference": "Manuale Ticket to Ride - Riciclo Mazzo",
+    "question_type": "Procedurale",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride_rulebook.pdf",
+      "pagina": [
+        3
+      ],
+      "citazione": "Quando il mazzo di pesca si esaurisce, si mescolano gli scarti e si compone un nuovo mazzo di pesca.",
+      "nota": "Il testo aggiunge che, se non restano né mazzo né scarti, non si possono pescare carte Treno e si deve controllare una linea o pescare Biglietti."
+    }
+  },
+  {
+    "id": "TTR-17",
+    "game": "Ticket to Ride",
+    "category": "Occupazione Linee",
+    "difficulty": "Hard",
+    "question": "Posso occupare una linea se non ho abbastanza vagoni fisici nella mia riserva, anche se ho tutte le carte necessarie?",
+    "ground_truth": "No. Per occupare una linea devi avere sia le carte richieste sia un numero sufficiente di pezzi vagone in plastica nella tua riserva.",
+    "context_reference": "Manuale Ticket to Ride - Requisiti di Reclamo",
+    "question_type": "Caso Limite",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride_rulebook.pdf",
+      "pagina": [
+        3
+      ],
+      "citazione": "Quando un giocatore prende il controllo di una linea, colloca uno dei suoi vagoni di plastica su ogni casella che compone quella linea.",
+      "nota": "Regola implicita: nessuno dei due testi la enuncia, ma entrambi richiedono di collocare un vagone su ogni casella della linea."
+    }
+  },
+  {
+    "id": "TTR-18",
+    "game": "Ticket to Ride: Europe",
+    "category": "Biglietti Destinazione",
+    "difficulty": "Medium",
+    "question": "Posso scartare o restituire i Biglietti Destinazione completati durante la partita?",
+    "ground_truth": "No. Tutti i biglietti tenuti rimangono segreti fino a fine partita e non possono mai essere scartati.",
+    "context_reference": "Manuale Ticket to Ride - Gestione Biglietti",
+    "question_type": "Negativa / Restrizione",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride-europe_rulebook.pdf",
+      "pagina": [
+        6
+      ],
+      "citazione": "Tickets drawn and not immediately discarded must be kept until the end of the game. They cannot be discarded during a later Ticket draw.",
+      "nota": "Il regolamento base non lo dice esplicitamente (solo che i Biglietti restano segreti e se ne può tenere un numero qualsiasi), per questo la domanda va posta sull'edizione Europe."
+    }
+  },
+  {
+    "id": "TTR-19",
+    "game": "Ticket to Ride: Europe",
+    "category": "Stazioni (Edizione Europa)",
+    "difficulty": "Hard",
+    "question": "Quanto costa costruire la prima, la seconda e la terza Stazione nel corso della partita?",
+    "ground_truth": "La prima stazione costa 1 carta Treno; la seconda costa 2 carte dello stesso colore; la terza costa 3 carte dello stesso colore.",
+    "context_reference": "Manuale Ticket to Ride Europa - Costo Stazioni",
+    "question_type": "Costi / Scalabilità",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride-europe_rulebook.pdf",
+      "pagina": [
+        4,
+        6
+      ],
+      "citazione": "To build their second Station, the player must discard a set of two cards of any one color; and to build their third, a set of three Train cards",
+      "nota": "Il testo aggiunge che qualsiasi carta può essere sostituita da Locomotive e che si costruisce al massimo una Stazione per turno."
+    }
+  },
+  {
+    "id": "TTR-20",
+    "game": "Ticket to Ride: Europe",
+    "category": "Stazioni (Edizione Europa)",
+    "difficulty": "Hard",
+    "question": "Posso costruire più di una Stazione nella stessa città?",
+    "ground_truth": "No. Ogni città può ospitare al massimo una sola Stazione in totale durante l'intera partita.",
+    "context_reference": "Manuale Ticket to Ride Europa - Limiti Stazioni",
+    "question_type": "Restrizione / Posizionamento",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride-europe_rulebook.pdf",
+      "pagina": [
+        4,
+        6
+      ],
+      "citazione": "Stations may be built on any unoccupied city, even if it currently has no claimed routes into it. Two Stations may never be built in the same city.",
+      "nota": null
+    }
+  },
+  {
+    "id": "TTR-21",
+    "game": "Ticket to Ride: Europe",
+    "category": "Tunnel (Edizione Europa)",
+    "difficulty": "Hard",
+    "question": "Se tento di occupare un Tunnel e non posso/voglio pagare le carte extra uscite dal mazzo, cosa succede alle mie carte originali?",
+    "ground_truth": "Riprendi in mano tutte le carte che avevi giocato per tentare l'azione. Non perdi alcuna carta e il tuo turno finisce.",
+    "context_reference": "Manuale Ticket to Ride Europa - Tunnel",
+    "question_type": "Procedurale / Esito",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride-europe_rulebook.pdf",
+      "pagina": [
+        5
+      ],
+      "citazione": "does not have enough additional Train Car cards […] (or does not wish to play them), they may take all their cards back in their hand, and their turn ends.",
+      "nota": "A fine turno le tre carte rivelate per il Tunnel vengono comunque scartate."
+    }
+  },
+  {
+    "id": "TTR-22",
+    "game": "Ticket to Ride: Europe",
+    "category": "Tunnel (Edizione Europa)",
+    "difficulty": "Hard",
+    "question": "Posso usare carte Locomotiva (Jolly) per pagare il costo aggiuntivo richiesto da un Tunnel?",
+    "ground_truth": "Sì, puoi pagare le carte extra richieste usando sia carte del colore corrispondente sia carte Locomotiva.",
+    "context_reference": "Manuale Ticket to Ride Europa - Pagamento Tunnel",
+    "question_type": "Fattuale / Opzioni",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride-europe_rulebook.pdf",
+      "pagina": [
+        5,
+        6
+      ],
+      "citazione": "the player must play an additional card of the same color from their hand (or a Locomotive).",
+      "nota": "Se il Tunnel è stato tentato solo con Locomotive, le carte extra devono essere Locomotive (Europe p. 6)."
+    }
+  },
+  {
+    "id": "TTR-23",
+    "game": "Ticket to Ride",
+    "category": "Carte Treno",
+    "difficulty": "Easy",
+    "question": "Quante carte Treno si pescano normalmente quando si sceglie l'azione 'Pescare Carte Treno' dal mazzo o dalla griglia?",
+    "ground_truth": "Si pescano 2 carte Treno per turno (a meno che non si prenda una Locomotiva scoperta dalla griglia).",
+    "context_reference": "Manuale Ticket to Ride - Pesca carte",
+    "question_type": "Procedurale",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride_rulebook.pdf",
+      "pagina": [
+        3
+      ],
+      "citazione": "Il giocatore può pescare due carte Treno. […] Se una delle cinque cartea faccia in su è una Locomotiva, il giocatore che la pesca deve pescare solo una carta, anziché due.",
+      "nota": null
+    }
+  },
+  {
+    "id": "TTR-24",
+    "game": "Ticket to Ride",
+    "category": "Biglietti Destinazione",
+    "difficulty": "Easy",
+    "question": "I biglietti destinazione tenuti dagli altri giocatori sono d'informazione pubblica durante la partita?",
+    "ground_truth": "No, i Biglietti Destinazione rimangono strettamente segreti fino alla conta dei punti finale.",
+    "context_reference": "Manuale Ticket to Ride - Informazioni Segrete",
+    "question_type": "Informazione Nascosta",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride_rulebook.pdf",
+      "pagina": [
+        2,
+        4
+      ],
+      "citazione": "I Biglietti Destinazione devono essere tenuti segreti agli occhi dei giocatori fino al calcolo finale del punteggio a fine partita.",
+      "nota": null
+    }
+  },
+  {
+    "id": "TTR-25",
+    "game": "Ticket to Ride",
+    "category": "Punteggio",
+    "difficulty": "Medium",
+    "question": "Quando si assegnano i punti vittoria per l'occupazione di una linea sulla mappa?",
+    "ground_truth": "I punti vittoria per la lunghezza della linea si calcolano e si avanzano immediatamente sul segnapunti nel momento stesso in cui la linea viene occupata.",
+    "context_reference": "Manuale Ticket to Ride - Tracciato Punti",
+    "question_type": "Timing / Punteggio",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride_rulebook.pdf",
+      "pagina": [
+        3,
+        4
+      ],
+      "citazione": "Quando un giocatore prende il controllo di una linea, segna i punti che riceve facendo avanzare il suo Segnapunti lungo la Tabella Punteggio.",
+      "nota": "Il regolamento Europe (p. 4) usa esplicitamente «immediately records their score»."
+    }
+  },
+  {
+    "id": "TTR-26",
+    "game": "Ticket to Ride",
+    "category": "Punteggio / Tratte",
+    "difficulty": "Medium",
+    "question": "Quanti punti vale una singola tratta occupata di lunghezza 6 vagoni?",
+    "ground_truth": "Una tratta di lunghezza 6 vale esattamente 15 punti vittoria.",
+    "context_reference": "Manuale Ticket to Ride - Tabella Punti Tratte",
+    "question_type": "Fattuale / Tabella Punti",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride_rulebook.pdf",
+      "pagina": [
+        4
+      ],
+      "citazione": "1 Lunghezza della linea Punti ottenuti 2 3 4 5 6 1 2 4 7 10 15",
+      "nota": "La tabella è estratta per colonne: lunghezze 1–6 e punti 1, 2, 4, 7, 10, 15; nel testo Europe la tabella non riporta valori leggibili."
+    }
+  },
+  {
+    "id": "TTR-27",
+    "game": "Ticket to Ride",
+    "category": "Punteggio / Tratte",
+    "difficulty": "Easy",
+    "question": "Quanti punti vale una tratta di lunghezza 1 vagone?",
+    "ground_truth": "Una tratta di lunghezza 1 vale esattamente 1 punto vittoria.",
+    "context_reference": "Manuale Ticket to Ride - Tabella Punti Tratte",
+    "question_type": "Fattuale / Tabella Punti",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride_rulebook.pdf",
+      "pagina": [
+        4
+      ],
+      "citazione": "1 Lunghezza della linea Punti ottenuti 2 3 4 5 6 1 2 4 7 10 15",
+      "nota": "La tabella è estratta per colonne: lunghezze 1–6 e punti 1, 2, 4, 7, 10, 15."
+    }
+  },
+  {
+    "id": "TTR-28",
+    "game": "Ticket to Ride: Europe",
+    "category": "Stazioni (Edizione Europa)",
+    "difficulty": "Medium",
+    "question": "Una Stazione ti permette di usare TUTTE le linee avversarie che entrano in quella città?",
+    "ground_truth": "No. A fine partita devi scegliere UNA SOLA linea di un avversario collegata a quella città da utilizzare per i tuoi biglietti.",
+    "context_reference": "Manuale Ticket to Ride Europa - Uso Stazioni",
+    "question_type": "Restrizione / Regola Stazione",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/ticket-to-ride-europe_rulebook.pdf",
+      "pagina": [
+        6,
+        7
+      ],
+      "citazione": "Each Station allows the player to use one (and only one) Route belonging to an opponent into that city for the purpose of completing Destination Tickets.",
+      "nota": "Il testo aggiunge che la stessa linea va usata per tutti i Biglietti che sfruttano quella Stazione (p. 6)."
+    }
+  },
+  {
+    "id": "TTR-29",
+    "game": "Ticket to Ride",
+    "category": "Out of Scope",
+    "difficulty": "Easy",
+    "question": "Come si pagano i pedaggi per passare sui binari degli altri giocatori nel gioco base?",
+    "ground_truth": "Non esistono pedaggi. Le linee occupate da un giocatore sono ad uso esclusivo di quel giocatore (salvo l'uso delle stazioni nella versione Europa).",
+    "context_reference": "Manuale Ticket to Ride Base",
+    "question_type": "Out of Scope",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "fuori ambito: conferma",
+      "regolamento": "data/rulebook/ticket-to-ride_rulebook.pdf",
+      "pagina": [
+        2
+      ],
+      "citazione": "Al suo turno, un giocatore deve eseguire una (e soltanto una) delle tre azioni seguenti",
+      "nota": "L'eccezione delle Stazioni citata nella GT è confermata dal regolamento Europe (p. 6), e nessuno dei due testi prevede pedaggi."
+    }
+  },
+  {
+    "id": "TTR-30",
+    "game": "Ticket to Ride",
+    "category": "Out of Scope",
+    "difficulty": "Easy",
+    "question": "Cosa succede se il mio treno esaurisce il carburante/carbone?",
+    "ground_truth": "In Ticket to Ride non esiste alcuna meccanica di gestione del carburante o del carbone.",
+    "context_reference": "Manuale Ticket to Ride Base",
+    "question_type": "Out of Scope",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "fuori ambito: conferma",
+      "regolamento": "data/rulebook/ticket-to-ride_rulebook.pdf",
+      "pagina": [
+        2
+      ],
+      "citazione": "Al suo turno, un giocatore deve eseguire una (e soltanto una) delle tre azioni seguenti",
+      "nota": null
+    }
+  },
+  {
+    "id": "GLO-01",
+    "game": "Gloomhaven",
+    "category": "Iniziativa / Carte Abilità",
+    "difficulty": "Easy",
+    "question": "Come si determina l'ordine di iniziativa tra i personaggi durante la fase di rivelazione delle carte?",
+    "ground_truth": "Ogni giocatore sceglie due carte e ne designa una come carta principale; alla rivelazione il suo numero di iniziativa determina il suo ordine nel round: agisce per primo chi ha il valore minore. In caso di parità tra giocatori si confronta la carta non principale di ciascuno; se la parità persiste, decidono i giocatori. Chi dichiara un riposo lungo ha iniziativa 99.",
+    "context_reference": "Manuale Gloomhaven - Iniziativa",
+    "question_type": "Procedurale",
+    "ground_truth_originale": "L'iniziativa individuale del personaggio per il turno è determinata dal valore numerico dell'iniziativa presente sulla carta 'principale' scelta tra le due selezionate per quel turno. Chi ha il valore più basso agisce per primo.",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": [
+        16,
+        18
+      ],
+      "citazione": "Se ci fosse una parità nell’iniziativa tra i giocatori, verificare la carta non principale di ogni giocatore per interrompere la parità.",
+      "nota": "Il ground truth omette lo spareggio tra giocatori e usa «turno» dove il regolamento dice «round»."
+    }
+  },
+  {
+    "id": "GLO-02",
+    "game": "Gloomhaven",
+    "category": "Attacchi / Vantaggio e Svantaggio",
+    "difficulty": "Hard",
+    "question": "Cosa succede se un attacco viene eseguito sia con Vantaggio che con Svantaggio nello stesso momento?",
+    "ground_truth": "Se un attacco accumula sia Vantaggio sia Svantaggio (indipendentemente dalle fonti), i due effetti si annullano a vicenda e l'attacco viene risolto normalmente girando una sola carta modificatore.",
+    "context_reference": "Manuale Gloomhaven - Advantage & Disadvantage",
+    "question_type": "Regola di Cancellazione",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": 21,
+      "citazione": "se un attacco ha casi sia di Vantaggio che di Svantaggio, questi si annullano a vicenda e l’attacco viene eseguito normalmente.",
+      "nota": "«Girando una sola carta» è un'inferenza da «eseguito normalmente», coerente con la pesca standard di p. 11."
+    }
+  },
+  {
+    "id": "GLO-03",
+    "game": "Gloomhaven",
+    "category": "Movimento / Ostacoli e Trappole",
+    "difficulty": "Medium",
+    "question": "Un personaggio con l'abilità 'Volo' (Flying) o 'Salto' (Jump) subisce danni se passa sopra una trappola?",
+    "ground_truth": "Con 'Volo' ignora totalmente la trappola. Con 'Salto' ignora la trappola negli esagoni intermedi, ma se il movimento termina ESATTAMENTE sull'esagono con la trappola, la trappola si attiva e ne subisce i danni.",
+    "context_reference": "Manuale Gloomhaven - Flying e Jump",
+    "question_type": "Eccezione / Movimento",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": [
+        14,
+        19
+      ],
+      "citazione": "l’ultimo esagono di un salto è sempre considerato come un movimento normale, e così deve osservare le regole del movimento normale di cui sopra.",
+      "nota": "Il regolamento chiama il tratto «Volare» (guida rapida: «Volo») e il movimento «Salto»."
+    }
+  },
+  {
+    "id": "GLO-04",
+    "game": "Gloomhaven",
+    "category": "Gestione Carte / Sfinimento (Exhaustion)",
+    "difficulty": "Hard",
+    "question": "Quando un personaggio viene considerato sfinito (Exhausted)?",
+    "ground_truth": "Un personaggio diventa esausto in uno di due modi: se scende sotto 1 punto ferita, oppure se all'inizio di un round non può giocare due carte dalla mano (ne ha una o nessuna) e non può neppure fare un riposo lungo (ha una o nessuna carta negli scarti). In entrambi i casi tutte le sue carte abilità vanno nelle carte perse, la figura esce dalla mappa e non partecipa più allo scenario.",
+    "context_reference": "Manuale Gloomhaven - Exhaustion",
+    "question_type": "Condizione di Sconfitta",
+    "ground_truth_originale": "Un personaggio diventa sfinito quando la sua salute (HP) scende a 0, OPPURE quando all'inizio del turno non ha almeno 2 carte in mano e non può eseguire un riposo breve/lungo per recuperarle.",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": [
+        17,
+        29
+      ],
+      "citazione": "Se, all’inizio di un round, un giocatore non può giocare due carte dalla propria mano (perché ha una carta o nessuna carta nella propria mano) e non può neppure riposare",
+      "nota": "Il regolamento usa «esausto»/«Esaurimento» (non «sfinito») e «round» (non «turno»); all'inizio del round l'unico riposo possibile è quello lungo, non il breve."
+    }
+  },
+  {
+    "id": "GLO-05",
+    "game": "Gloomhaven",
+    "category": "Attacchi a Distanza / Svantaggio in Mischia",
+    "difficulty": "Medium",
+    "question": "Cosa succede se un personaggio o un mostro esegue un attacco a distanza contro un nemico adiacente?",
+    "ground_truth": "L'attacco a distanza eseguito su un bersaglio nell'esagono adiacente subisce automaticamente Svantaggio.",
+    "context_reference": "Manuale Gloomhaven - Ranged Attacks in Melee",
+    "question_type": "Penalità Tattica",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": [
+        19,
+        21
+      ],
+      "citazione": "Qualsiasi attacco a distanza che mira un nemico adiacente ottiene uno Svantaggio contro quel bersaglio",
+      "nota": "Vale anche per i mostri, i cui attacchi funzionano esattamente come quelli dei personaggi (p. 33)."
+    }
+  },
+  {
+    "id": "GLO-06",
+    "game": "Gloomhaven",
+    "category": "Riposo Lungo (Long Rest)",
+    "difficulty": "Medium",
+    "question": "Quali benefici fornisce un Riposo Lungo rispetto a un Riposo Breve?",
+    "ground_truth": "Il riposo lungo si dichiara nella scelta delle carte e costituisce l'intero turno, con iniziativa 99. Il giocatore sceglie quale carta scartata perdere (nel breve è casuale) e riprende in mano le altre; esegue «Autocura 2» e ripristina tutte le carte oggetto spese. Le carte oggetto consumate non tornano con il riposo, ma solo con abilità specifiche.",
+    "context_reference": "Manuale Gloomhaven - Rest Mechanics",
+    "question_type": "Comparazione / Procedurale",
+    "ground_truth_originale": "Un Riposo Lungo si risolve all'iniziativa 99: permette di scegliere esattamente quale carta scartata perdere (invece che a caso), recupera 2 HP e ripristina tutti gli oggetti consumati.",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": [
+        8,
+        17
+      ],
+      "citazione": "Il personaggio che si sta riposando effettua anche un’azione di “Autocura 2” e ripristina tutte le sue carte oggetto spese.",
+      "nota": "Errore del ground truth: il riposo lungo ripristina gli oggetti «spesi», non quelli «consumati» (p. 8)."
+    }
+  },
+  {
+    "id": "GLO-07",
+    "game": "Gloomhaven",
+    "category": "Stati Alterati / Invisibilità",
+    "difficulty": "Hard",
+    "question": "Un mostro può attraversare un esagono occupato da un personaggio invisibile?",
+    "ground_truth": "No, con un movimento normale: i mostri trattano i personaggi invisibili esattamente come ostacoli (e in ogni caso le figure non attraversano i nemici); una figura invisibile non può essere focalizzata o mirata. Gli ostacoli però si attraversano con Volare o Saltare: un mostro con Volare può passare, purché termini in un esagono non occupato.",
+    "context_reference": "Manuale Gloomhaven - Condition: Invisible",
+    "question_type": "Interazione AI / Ostacolo",
+    "ground_truth_originale": "No. Un personaggio invisibile viene trattato dai nemici come un ostacolo insormontabile. I mostri non possono attraversare l'esagono né tracciare un percorso attraverso di esso.",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": [
+        14,
+        24
+      ],
+      "citazione": "I mostri trattano i personaggi invisibili esattamente come se fossero ostacoli.",
+      "nota": "«Ostacolo insormontabile» è eccessivo: per il regolamento gli ostacoli si attraversano con un movimento Volare o Saltare (p. 14)."
+    }
+  },
+  {
+    "id": "GLO-08",
+    "game": "Gloomhaven",
+    "category": "Out of Scope",
+    "difficulty": "Medium",
+    "question": "Quanti punti mana costa lanciare una palla di fuoco col Mago?",
+    "ground_truth": "In Gloomhaven non esiste una riserva di punti mana. Le magie e abilità si attivano giocando carte abilità ed eventualmente consumando elementi di energia elementale presenti nella riserva globale.",
+    "context_reference": "Manuale Gloomhaven - Elementi e Carte",
+    "question_type": "Out of Scope / Concetto Errato",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "fuori ambito: conferma",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": [
+        7,
+        25
+      ],
+      "citazione": "Giocare carte abilità è ciò che permette ad un personaggio di compiere azioni in uno scenario.",
+      "nota": "Il regolamento non ha una classe «Mago» (la più vicina è lo Spellweaver) e chiama la «riserva globale» Tavola delle Infusioni Elementari, dove consumare un elemento incrementa un'abilità, non la attiva."
+    }
+  },
+  {
+    "id": "GLO-09",
+    "game": "Gloomhaven",
+    "category": "Gestione Danno / Scartare Carte",
+    "difficulty": "Hard",
+    "question": "Posso evitare di subire un attacco mortale che azzererebbe i miei HP scartando carte dalla mano?",
+    "ground_truth": "Sì: ogni volta che un danno viene assegnato al personaggio, invece di subirlo può perdere una carta dalla mano oppure due carte dalla pila degli scarti (vanno nelle carte perse) per negare quel danno. Qualsiasi effetto aggiuntivo dell'attacco viene comunque applicato. Le due carte scelte per il round non possono essere perse a questo scopo.",
+    "context_reference": "Manuale Gloomhaven - Prevenzione Danno",
+    "question_type": "Meccanica di Sopravvivenza",
+    "ground_truth_originale": "Sì. Puoi annullare completamente una fonte di danno in arrivo perdendo 1 carta dalla tua mano OPPURE perdendo 2 carte dalla tua pila degli scarti.",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": 29,
+      "citazione": "Scegliere una carta da perdere dalla propria mano o due carte da perdere dalla sua pila degli scarti per negare il danno (qualsiasi effetto aggiuntivo dell’attacco viene ancora applicato).",
+      "nota": "La domanda dice «scartando», ma il regolamento parla di carte da «perdere» (pila delle carte perse)."
+    }
+  },
+  {
+    "id": "GLO-10",
+    "game": "Gloomhaven",
+    "category": "Riposo Breve (Short Rest)",
+    "difficulty": "Medium",
+    "question": "Come si risolve un Riposo Breve?",
+    "ground_truth": "Si effettua nella fase di riordino alla fine del round, solo con almeno due carte negli scarti: si mischiano gli scarti, una carta a caso va nelle carte perse e tutte le altre tornano in mano. Per tenere la carta estratta ci si può infliggere 1 danno e perderne un'altra a caso, una sola volta per riposo.",
+    "context_reference": "Manuale Gloomhaven - Short Rest",
+    "question_type": "Procedurale",
+    "ground_truth_originale": "Si esegue alla fine del turno: si rimischia la pila degli scarti e si perde 1 carta a caso da quella pila. Se non vuoi perdere quella specifica carta, puoi subire 1 danno per rimescolare e perderne un'altra a caso (ma devi tenere la seconda).",
+    "question_originale": "Come si risolve un Riposo Breve a fine turno?",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": 17,
+      "citazione": "durante la fase di riordino di un round, un giocatore può effettuare un riposo breve.",
+      "nota": "Domanda e ground truth dicono «fine turno» ma il riposo breve avviene nella fase di riordino a fine round; «devi tenere la seconda» è ambiguo (la seconda carta va persa) e manca il ritorno in mano delle altre carte."
+    }
+  },
+  {
+    "id": "GLO-11",
+    "game": "Gloomhaven",
+    "category": "IA Mostri / Bersaglio Prioritario",
+    "difficulty": "Hard",
+    "question": "Come sceglie il suo bersaglio prioritario (Focus) un mostro se due personaggi sono alla stessa distanza di movimento?",
+    "ground_truth": "Se più nemici sono raggiungibili con lo stesso numero di esagoni di movimento, decide la prossimità: è «più vicino» il nemico a meno esagoni dalla posizione attuale del mostro (senza contare attraverso le pareti). Solo se c'è ancora parità il mostro si focalizza su chi viene prima nell'ordine di iniziativa; le evocazioni prima del loro evocatore, chi è in riposo lungo per ultimo.",
+    "context_reference": "Manuale Gloomhaven - Monster Focus",
+    "question_type": "Intelligenza Artificiale / Parità",
+    "ground_truth_originale": "In caso di parità di distanza di movimento necessaria per attaccare, il mostro sceglie come Focus il personaggio con il valore di iniziativa più basso nel turno corrente.",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": [
+        30,
+        31
+      ],
+      "citazione": "la prossimità dall’attuale posizione del mostro (cioè il numero di esagoni che li distanziano, senza contare attraverso le pareti) è il fattore determinante per indicare il “più vicino”.",
+      "nota": "Il ground truth salta la prossimità come criterio intermedio, usa «turno» invece di «round» e limita l'obiettivo ai personaggi, mentre possono esserlo anche le figure evocate."
+    }
+  },
+  {
+    "id": "GLO-12",
+    "game": "Gloomhaven",
+    "category": "Elementi / Magia",
+    "difficulty": "Medium",
+    "question": "Se creo un elemento magico (es. Fuoco) durante la mia azione, posso consumarlo nello stesso identico turno?",
+    "ground_truth": "No. Gli elementi creati nel tuo turno avanzano nella colonna 'Forte' solo ALLA FINE del tuo turno. Quindi non possono essere consumati durante il turno in cui li hai generati.",
+    "context_reference": "Manuale Gloomhaven - Elementi Magici",
+    "question_type": "Timing / Elementi",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": [
+        24,
+        25
+      ],
+      "citazione": "non è possibile creare un elemento e consumarlo nello stesso turno, ma può essere consumato da chiunque con un turno posteriore nell’ordine di iniziativa dello stesso round.",
+      "nota": "Il regolamento parla di «infusioni elementari», non di «elemento magico»."
+    }
+  },
+  {
+    "id": "GLO-13",
+    "game": "Gloomhaven",
+    "category": "Stati Alterati / Stun & Poison",
+    "difficulty": "Medium",
+    "question": "Cosa fa lo stato alterato 'Poison' (Veleno) a chi lo subisce?",
+    "ground_truth": "Tutti i nemici aggiungono +1 di Attacco a tutti i loro attacchi che mirano la figura avvelenata (è un bonus all'attacco, prima della carta modificatore e dello scudo). Lo stato resta finché la figura non riceve una Guarigione, che rimuove il segnalino VELENO e non ha altri effetti.",
+    "context_reference": "Manuale Gloomhaven - Condition: Poison",
+    "question_type": "Fattuale / Stato Alterato",
+    "ground_truth_originale": "Un bersaglio avvelenato subisce +1 danno da ogni attacco successivo che riceve.",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": [
+        20,
+        23
+      ],
+      "citazione": "Se una figura è avvelenata, tutti i nemici aggiungono un +1 di Attacco a tutti i loro attacchi che mirano la figura.",
+      "nota": "Termini del regolamento: AVVELENATO / segnalino VELENO; il bonus è «+1 di Attacco», non «+1 danno», e il ground truth omette la rimozione tramite Guarigione."
+    }
+  },
+  {
+    "id": "GLO-14",
+    "game": "Gloomhaven",
+    "category": "Stati Alterati / Wound",
+    "difficulty": "Easy",
+    "question": "Quando subisce danni un personaggio o un mostro che soffre dello stato 'Wound' (Ferita)?",
+    "ground_truth": "Subisce 1 danno all'inizio di ciascuno dei suoi turni, finché lo stato non viene curato con un'azione di Cura (Heal).",
+    "context_reference": "Manuale Gloomhaven - Condition: Wound",
+    "question_type": "Fattuale / Stato Alterato",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": 23,
+      "citazione": "Se una figura è ferita, subisce un punto danno all’inizio di ogni suo turno.",
+      "nota": "Il regolamento usa «Guarigione» (non «Cura») e chiama lo stato FERITO; la Guarigione rimuove la FERITA e poi continua normalmente."
+    }
+  },
+  {
+    "id": "GLO-15",
+    "game": "Gloomhaven",
+    "category": "Stati Alterati / Disarm & Mute",
+    "difficulty": "Medium",
+    "question": "Un personaggio affetto da 'Disarm' (Disarmato) può eseguire un'azione di Movimento?",
+    "ground_truth": "Sì. 'Disarm' impedisce unicamente di eseguire azioni di Attacco. Tutte le altre azioni (Movimento, Cura, Evocazione, ecc.) rimangono consentite.",
+    "context_reference": "Manuale Gloomhaven - Condition: Disarm",
+    "question_type": "Restrizione / Stato Alterato",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": 23,
+      "citazione": "Se una figura è disarmata, non può eseguire nessuna abilità di attacco nel suo turno.",
+      "nota": "Il regolamento dice «abilità di attacco» e «Guarigione» (non «Cura»); DISARMATO si rimuove alla fine del turno successivo della figura."
+    }
+  },
+  {
+    "id": "GLO-16",
+    "game": "Gloomhaven",
+    "category": "Porte / Apertura Stanza",
+    "difficulty": "Hard",
+    "question": "Cosa succede immediatamente nell'ordine di iniziativa quando un personaggio apre una porta rivelando una nuova stanza?",
+    "ground_truth": "La stanza rivelata si popola subito (mostri, monete, tessere ambiente) secondo il Libro degli Scenari, e per ogni nuovo tipo di mostro si pesca una carta abilità. Finito il turno di chi ha aperto la porta, i tipi di mostro con iniziativa più bassa della sua agiscono subito (tra loro in ordine di iniziativa); gli altri al loro posto normale. Così tutti i mostri rivelati agiscono nel round in cui compaiono.",
+    "context_reference": "Manuale Gloomhaven - Rivelare Stanze",
+    "question_type": "Procedurale / Iniziativa",
+    "ground_truth_originale": "La nuova stanza viene allestita subito. Vengono girate le carte abilità per i nuovi tipi di mostri rivelati. I mostri agiscono nello stesso turno corrente se la loro iniziativa è superiore a quella del giocatore che ha agito, altrimenti agiranno nei loro turni normali.",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": 19,
+      "citazione": "che abbia un valore di iniziativa più basso del personaggio che ha rivelato la stanza (cioè, avrebbe dovuto agire prima nel round) deve immediatamente effettuare il proprio turno",
+      "nota": "Il ground truth inverte la regola: agiscono subito i tipi di mostro con iniziativa più BASSA, non superiore, e lo fanno alla fine del turno di chi ha aperto la porta."
+    }
+  },
+  {
+    "id": "GLO-17",
+    "game": "Gloomhaven",
+    "category": "Scudo (Shield)",
+    "difficulty": "Easy",
+    "question": "Come funziona l'effetto 'Shield' (Scudo)?",
+    "ground_truth": "Riduce il danno subito da ciascun attacco in arrivo di un valore pari al livello di Scudo attivo in quel momento.",
+    "context_reference": "Manuale Gloomhaven - Shield",
+    "question_type": "Fattuale / Danno",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": [
+        20,
+        26
+      ],
+      "citazione": "Un’abilità di bonus “Scudo X” dà al destinatario un bonus di difesa che riduce qualsiasi valore di attacco in arrivo di X.",
+      "nota": "Il regolamento aggiunge che più bonus Scudo si sommano e che lo scudo si applica solo ai danni causati da un attacco, dopo la carta modificatore."
+    }
+  },
+  {
+    "id": "GLO-18",
+    "game": "Gloomhaven",
+    "category": "Ripercussioni Danno / Retaliate",
+    "difficulty": "Medium",
+    "question": "L'effetto 'Retaliate' (Ritorsione) infligge danni se l'attaccante ha eseguito un attacco a distanza fuori dalla gittata del Retaliate?",
+    "ground_truth": "No. 'Retaliate' si attiva solo ed esclusivamente se l'attaccante si trova entro il raggio d'azione (gittata) specificato dall'abilità di Ritorsione.",
+    "context_reference": "Manuale Gloomhaven - Retaliate",
+    "question_type": "Gittata / Condizioni",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": 27,
+      "citazione": "Un bonus di reazione può essere accompagnato da un valore “Gittata Y”, che significa che il danno di reazione viene applicato a qualsiasi attaccante entro Y esagoni.",
+      "nota": "Il termine del regolamento è «Reazione», non «Ritorsione»; senza Gittata la Reazione colpisce solo chi attacca da un esagono adiacente."
+    }
+  },
+  {
+    "id": "GLO-19",
+    "game": "Gloomhaven",
+    "category": "Loot / Monete",
+    "difficulty": "Easy",
+    "question": "Raccogliere le monete o i tesori negli esagoni su cui si cammina durante un normale Movimento avviene automaticamente?",
+    "ground_truth": "No. Camminare sopra un esagono con un gettone moneta durante un movimento NON fa raccogliere la moneta. Occorre eseguire un'azione specifica di 'Loot' oppure terminare il proprio turno ESATTAMENTE su quell'esagono.",
+    "context_reference": "Manuale Gloomhaven - Raccogliere Bottino",
+    "question_type": "Procedurale / Bottino",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": 28,
+      "citazione": "un personaggio deve anche saccheggiare qualsiasi segnalino moneta o tessera tesoro presente nell’esagono che occupa alla fine del proprio turno.",
+      "nota": "Il regolamento non lo dice in modo esplicito ma prevede solo l'abilità «Saccheggio X» e il saccheggio di fine turno (obbligatorio); «Loot» è «Saccheggio»."
+    }
+  },
+  {
+    "id": "GLO-20",
+    "game": "Gloomhaven",
+    "category": "Punti Esperienza (XP)",
+    "difficulty": "Medium",
+    "question": "I punti esperienza (XP) segnati sulla carta giocata si ottengono anche se l'attacco associato manca o fallisce?",
+    "ground_truth": "Sì, ottieni gli XP indicati sulla carta per il semplice fatto di aver risolto l'azione, a meno che sulla carta non sia espressamente scritto che l'XP è vincolato al successo dell'attacco.",
+    "context_reference": "Manuale Gloomhaven - Guadagno XP",
+    "question_type": "Timing / Esperienza",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": [
+        22,
+        28
+      ],
+      "citazione": "Gli effetti d’attacco vengono applicati indipendentemente dal fatto che il corrispondente attacco causa danni. Questi effetti (eccetto l’ottenere esperienza) sono opzionali e possono essere omessi.",
+      "nota": "Il regolamento non parla di attacco «mancato» (l'equivalente è la carta modificatore «Nullo») e precisa che bisogna usare almeno una delle abilità della carta per ottenere l'esperienza."
+    }
+  },
+  {
+    "id": "GLO-21",
+    "game": "Gloomhaven",
+    "category": "Carte Perse (Burn / Loss Cards)",
+    "difficulty": "Easy",
+    "question": "Cosa indica il simbolo del 'Cestino/Fiamma' nell'angolo in basso a destra di un'azione sulla carta?",
+    "ground_truth": "Indica che, se si usa quell'azione, la carta va nella pila delle carte perse invece che negli scarti (se l'azione ha un effetto attivo, passa prima dall'area attiva). Le carte perse non tornano in mano con il riposo: durante lo scenario rientrano solo tramite una speciale azione di recupero.",
+    "context_reference": "Manuale Gloomhaven - Carte Perse",
+    "question_type": "Iconografia / Meccanica",
+    "ground_truth_originale": "Indica che dopo aver utilizzato quell'azione, la carta va collocata nella pila delle 'Carte Perse' (Loss Pile) invece che nella pila degli scarti normali per il resto dello scenario.",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": [
+        17,
+        28
+      ],
+      "citazione": "Le carte perse possono ritornare nella mano del giocatore durante uno scenario solamente utilizzando una azione speciale di recupero.",
+      "nota": "Il testo estratto non dà un nome all'icona (la guida rapida la chiama «Perso o Consumato»), quindi «Cestino/Fiamma» non è verificabile; «per il resto dello scenario» ignora le azioni di recupero."
+    }
+  },
+  {
+    "id": "GLO-22",
+    "game": "Gloomhaven",
+    "category": "Carte Azione Standard",
+    "difficulty": "Medium",
+    "question": "Posso ignorare il testo di una carta e usarla per eseguire un'azione generica?",
+    "ground_truth": "Sì: una qualsiasi carta giocata può essere usata come «Attacco 2» con la metà superiore oppure come «Movimento 2» con la metà inferiore. Usata così, la carta viene sempre scartata, indipendentemente da quanto è indicato su di essa (non va persa né nell'area attiva).",
+    "context_reference": "Manuale Gloomhaven - Azioni Base",
+    "question_type": "Regola Alternativa / Flessibilità",
+    "ground_truth_originale": "Sì. Qualsiasi metà superiore di una carta può essere usata come 'Attacco 2' generico e qualsiasi metà inferiore come 'Movimento 2' generico.",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": 18,
+      "citazione": "Se una carta viene usata in questo modo, viene sempre scartata, indipendentemente da quanto è indicato sulla carta.",
+      "nota": null
+    }
+  },
+  {
+    "id": "GLO-23",
+    "game": "Gloomhaven",
+    "category": "Mazzo Modificatori Attacco",
+    "difficulty": "Hard",
+    "question": "Cosa succede quando si rivela la carta modificatore 'x2' o 'Null/Miss' dal mazzo modificatori di attacco?",
+    "ground_truth": "Con «Nullo» l'attacco non infligge danno; con «2x» il valore di attacco raddoppia (la carta si applica dopo i bonus dell'attaccante e prima dello scudo del bersaglio). Entrambe hanno il simbolo «Mischiare»: alla fine del round in cui sono state pescate, si rimischiano tutti gli scarti di quel mazzo dei modificatori nel mazzo di pesca.",
+    "context_reference": "Manuale Gloomhaven - Mazzo Modificatori",
+    "question_type": "Procedurale / Reset",
+    "ground_truth_originale": "La carta applica subito il suo effetto al danno (raddoppia o annulla). A fine turno, l'intero mazzo modificatori di quel personaggio/fazione deve essere rimescolato includendo gli scarti.",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": [
+        11,
+        20,
+        34
+      ],
+      "citazione": "“2x” o “Nullo” è stata pescata da uno specifico mazzo dei modificatori durante il round, mischiare tutti gli scarti di qual mazzo nel corrispondente mazzo di pesca.",
+      "nota": "Il ground truth dice «a fine turno» ma il rimescolamento avviene a fine round; il regolamento usa «Nullo» (non «Null/Miss») e non conosce il termine «fazione» (i mostri usano un mazzo collettivo)."
+    }
+  },
+  {
+    "id": "GLO-24",
+    "game": "Gloomhaven",
+    "category": "Evocazioni (Summons)",
+    "difficulty": "Hard",
+    "question": "Un giocatore può controllare direttamente il movimento e l'attacco di un'evocazione (Summon)?",
+    "ground_truth": "No. Le figure evocate non sono controllate dal giocatore: agiscono automaticamente secondo le regole dei mostri, seguendo sempre la carta «Movimento +0, Attacco +0» e usando il mazzo dei modificatori del giocatore. Il loro turno avviene direttamente prima di quello dell'evocatore ed è separato; non agiscono nel round in cui vengono evocate.",
+    "context_reference": "Manuale Gloomhaven - Regole Evocazioni",
+    "question_type": "Autonomia AI / Evocazioni",
+    "ground_truth_originale": "No. Le evocazioni agiscono in autonomia all'inizio del turno del loro creatore, seguendo esattamente le stesse regole automatizzate dell'IA dei mostri.",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": 27,
+      "citazione": "Le figure evocate non sono controllate dal giocatore che le ha evocate, ma obbediscono invece in modo automatico secondo le regole dei mostri",
+      "nota": "Il turno dell'evocazione è separato e precede quello dell'evocatore, non avviene «all'inizio del turno» del creatore."
+    }
+  },
+  {
+    "id": "GLO-25",
+    "game": "Gloomhaven",
+    "category": "Push / Pull (Spinta e Trazione)",
+    "difficulty": "Medium",
+    "question": "È obbligatorio applicare l'intero ammontare di una spinta (Spinta X) se la eseguo su un nemico?",
+    "ground_truth": "No. Gli effetti d'attacco come SPINGERE e TIRARE sono opzionali e possono essere omessi. Il regolamento descrive SPINGERE X come lo spostamento del bersaglio di X esagoni, ciascuno più lontano dall'attaccante, che termina se non ci sono esagoni disponibili; non usa la formula «fino a X».",
+    "context_reference": "Manuale Gloomhaven - Spinta e Trazione",
+    "question_type": "Flessibilità / Effetto",
+    "ground_truth_originale": "No, Spinta e Trazione fino a X indicano un limite massimo. Puoi scegliere di spingere il bersaglio di un numero di esagoni compreso tra 0 e X.",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": [
+        18,
+        22
+      ],
+      "citazione": "Questi effetti (eccetto l’ottenere esperienza) sono opzionali e possono essere omessi.",
+      "nota": "Il regolamento usa SPINGERE/TIRARE (non «Spinta»/«Trazione») e non contiene «fino a X»: la facoltà di non spingere deriva dall'opzionalità degli effetti d'attacco."
+    }
+  },
+  {
+    "id": "GLO-26",
+    "game": "Gloomhaven",
+    "category": "Push (Spinta) / Trappole",
+    "difficulty": "Hard",
+    "question": "Posso spingere un nemico dentro un esagono contenente una trappola per fargliela attivare?",
+    "ground_truth": "Sì. Se una spinta costringe una figura a entrare in un esagono con una trappola, la trappola scatta immediatamente infliggendogli i relativi danni ed effetti.",
+    "context_reference": "Manuale Gloomhaven - Spinta su Trappole",
+    "question_type": "Interazione Tattica",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": [
+        14,
+        22
+      ],
+      "citazione": "Una trappola scatta quando una figura entra nel suo esagono con un movimento normale o forzato.",
+      "nota": "Refuso «si scatta» → «scatta»; le figure con Volare non sono influenzate dalle trappole nemmeno con il movimento forzato (p. 19)."
+    }
+  },
+  {
+    "id": "GLO-27",
+    "game": "Gloomhaven",
+    "category": "Oggetti (Items)",
+    "difficulty": "Easy",
+    "question": "Quante armi da mano può equipaggiare contemporaneamente un personaggio?",
+    "ground_truth": "Può equipaggiare fino a 2 oggetti con il simbolo 'Una Mano' (One Hand) OPPURE 1 solo oggetto con il simbolo 'Due Mani' (Two Hands).",
+    "context_reference": "Manuale Gloomhaven - Slot Equipaggiamento",
+    "question_type": "Setup / Limite Equipaggiamento",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "conferma",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": 8,
+      "citazione": "fino a due oggetti oppure un oggetto",
+      "nota": "Nel testo estratto le icone dei tipi sono perse, quindi Una Mano/Due Mani si ricava solo dall'ordine dell'elenco «Testa, Corpo, Gambe, Una Mano, Due Mani, Oggetto Piccolo»."
+    }
+  },
+  {
+    "id": "GLO-28",
+    "game": "Gloomhaven",
+    "category": "Oggetti / Uso nel Turno",
+    "difficulty": "Medium",
+    "question": "Posso usare un oggetto di tipo 'Pozione' durante il turno di un altro giocatore?",
+    "ground_truth": "Dipende dalla carta oggetto: il regolamento permette di usare gli oggetti in qualsiasi momento, entro i vincoli scritti sulla carta (che indica quando l'oggetto può essere usato), anche nel mezzo di un'abilità. Se l'oggetto influenza un attacco va usato prima di pescare la carta modificatore.",
+    "context_reference": "Manuale Gloomhaven - Uso Oggetti",
+    "question_type": "Negativa / Restrizione Timing",
+    "ground_truth_originale": "No. Gli oggetti possono essere usati unicamente durante il proprio turno di gioco.",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": [
+        8,
+        18,
+        29
+      ],
+      "citazione": "I personaggi possono usare oggetti in qualsiasi momento, entro i vincoli di quanto scritto sulla carta oggetto, anche nel mezzo di una abilità di una carta.",
+      "nota": "«Pozione» non compare nel regolamento: il momento d'uso è indicato su ciascuna carta oggetto."
+    }
+  },
+  {
+    "id": "GLO-29",
+    "game": "Gloomhaven",
+    "category": "Out of Scope",
+    "difficulty": "Easy",
+    "question": "Come si tirano i dadi a 20 facce (d20) per verificare i tiri salvezza in Gloomhaven?",
+    "ground_truth": "In Gloomhaven non si usano dadi. Tutti i risultati casuali e i modificatori si risolvono tramite la pesca di carte dai rispettivi mazzi modificatore.",
+    "context_reference": "Manuale Gloomhaven Base",
+    "question_type": "Out of Scope",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "fuori ambito: conferma",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": [
+        2,
+        11
+      ],
+      "citazione": "Ogni volta che viene eseguita un’abilità di Attacco, viene pescata separatamente una carta modificatore di attacco per ogni singolo bersaglio dell’attacco.",
+      "nota": "«Tutti i risultati casuali» è eccessivo (sono casuali anche le carte abilità dei mostri e altri mazzi), ma il contenuto e le regole non prevedono dadi né tiri salvezza."
+    }
+  },
+  {
+    "id": "GLO-30",
+    "game": "Gloomhaven",
+    "category": "Out of Scope",
+    "difficulty": "Easy",
+    "question": "Quanti punti albero abilità si guadagnano quando si sale di livello?",
+    "ground_truth": "In Gloomhaven non esistono punti né alberi delle abilità. Salendo di livello (solo in città) il personaggio aggiunge una nuova carta abilità della sua classe di livello uguale o inferiore al nuovo livello; inoltre può segnare una miglioria, che modifica il suo mazzo dei modificatori, e aumenta i punti ferita massimi.",
+    "context_reference": "Manuale Gloomhaven Base",
+    "question_type": "Out of Scope",
+    "ground_truth_originale": "In Gloomhaven non esistono alberi delle abilità. Quando si sale di livello si sceglie 1 nuova carta abilità tra le due disponibili per quel livello da aggiungere alla propria riserva complessiva.",
+    "verifica": {
+      "data": "2026-10-18",
+      "esito": "corretta con l'utente",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
+      "pagina": 45,
+      "citazione": "La carta scelta deve provenire dalla classe del personaggio ed avere un livello di carta uguale o inferiore al nuovo livello del personaggio.",
+      "nota": "«Tra le due disponibili per quel livello» non è nel regolamento, che ammette carte di livello uguale o inferiore e aggiunge miglioria e punti ferita."
+    }
+  }
+]

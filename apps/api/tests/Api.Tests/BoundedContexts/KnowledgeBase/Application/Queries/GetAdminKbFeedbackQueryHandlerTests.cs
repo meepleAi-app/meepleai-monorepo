@@ -43,7 +43,7 @@ public sealed class GetAdminKbFeedbackQueryHandlerTests
 
         // Act
         var result = await _sut.Handle(
-            new GetAdminKbFeedbackQuery(gameId, null, null, null, 1, 20),
+            new GetAdminKbFeedbackQuery(gameId, null, null, 1, 20),
             CancellationToken.None);
 
         // Assert
@@ -71,7 +71,7 @@ public sealed class GetAdminKbFeedbackQueryHandlerTests
 
         // Act
         var result = await _sut.Handle(
-            new GetAdminKbFeedbackQuery(gameId, null, null, null, 1, 20),
+            new GetAdminKbFeedbackQuery(gameId, null, null, 1, 20),
             CancellationToken.None);
 
         // Assert
@@ -101,7 +101,7 @@ public sealed class GetAdminKbFeedbackQueryHandlerTests
 
         // Act
         var result = await _sut.Handle(
-            new GetAdminKbFeedbackQuery(gameId, null, "not_helpful", null, 1, 20),
+            new GetAdminKbFeedbackQuery(gameId, null, "not_helpful", 1, 20),
             CancellationToken.None);
 
         // Assert
@@ -116,7 +116,7 @@ public sealed class GetAdminKbFeedbackQueryHandlerTests
     {
         _repo.ListAsync(Arg.Any<KbFeedbackFilter>(), 1, 20, Arg.Any<CancellationToken>()).Returns(new List<KbUserFeedback>());
 
-        await _sut.Handle(new GetAdminKbFeedbackQuery(null, version, null, null, 1, 20), CancellationToken.None);
+        await _sut.Handle(new GetAdminKbFeedbackQuery(null, version, null, 1, 20), CancellationToken.None);
 
         await _repo.Received(1).ListAsync(
             new KbFeedbackFilter(WithoutVersion: withoutVersion), 1, 20, Arg.Any<CancellationToken>());
@@ -128,7 +128,7 @@ public sealed class GetAdminKbFeedbackQueryHandlerTests
         var versionId = Guid.NewGuid();
         _repo.ListAsync(Arg.Any<KbFeedbackFilter>(), 1, 20, Arg.Any<CancellationToken>()).Returns(new List<KbUserFeedback>());
 
-        await _sut.Handle(new GetAdminKbFeedbackQuery(null, versionId.ToString(), null, null, 1, 20), CancellationToken.None);
+        await _sut.Handle(new GetAdminKbFeedbackQuery(null, versionId.ToString(), null, 1, 20), CancellationToken.None);
 
         await _repo.Received(1).ListAsync(
             new KbFeedbackFilter(ProfileVersionId: versionId), 1, 20, Arg.Any<CancellationToken>());
@@ -137,7 +137,7 @@ public sealed class GetAdminKbFeedbackQueryHandlerTests
     [Fact]
     public async Task Handle_VersionThatIsNeitherAnIdNorNone_IsABadRequest()
     {
-        var act = () => _sut.Handle(new GetAdminKbFeedbackQuery(null, "latest", null, null, 1, 20), CancellationToken.None);
+        var act = () => _sut.Handle(new GetAdminKbFeedbackQuery(null, "latest", null, 1, 20), CancellationToken.None);
 
         await act.Should().ThrowAsync<BadRequestException>();
         await _repo.DidNotReceiveWithAnyArgs().ListAsync(default!, default, default, default);
@@ -156,7 +156,7 @@ public sealed class GetAdminKbFeedbackQueryHandlerTests
         _repo.ListAsync(Arg.Any<KbFeedbackFilter>(), 1, 20, Arg.Any<CancellationToken>()).Returns(new List<KbUserFeedback> { feedback });
         _threads.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>()).Returns(new[] { thread });
 
-        var result = await _sut.Handle(new GetAdminKbFeedbackQuery(null, null, null, null, 1, 20), CancellationToken.None);
+        var result = await _sut.Handle(new GetAdminKbFeedbackQuery(null, null, null, 1, 20), CancellationToken.None);
 
         result.Items.Single().AnswerExcerpt.Should()
             .Be(new string('a', GetAdminKbFeedbackQueryHandler.AnswerExcerptLength) + "…");
@@ -173,7 +173,7 @@ public sealed class GetAdminKbFeedbackQueryHandlerTests
 
         // Act
         var result = await _sut.Handle(
-            new GetAdminKbFeedbackQuery(gameId, null, null, null, 1, 9999),
+            new GetAdminKbFeedbackQuery(gameId, null, null, 1, 9999),
             CancellationToken.None);
 
         // Assert
@@ -192,7 +192,7 @@ public sealed class GetAdminKbFeedbackQueryHandlerTests
 
         // Act
         var result = await _sut.Handle(
-            new GetAdminKbFeedbackQuery(gameId, null, null, null, -5, 20),
+            new GetAdminKbFeedbackQuery(gameId, null, null, -5, 20),
             CancellationToken.None);
 
         // Assert

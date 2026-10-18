@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
 import { MessageSquare, ThumbsDown, ThumbsUp } from 'lucide-react';
@@ -40,10 +40,13 @@ export function KbFeedbackPanel({ versions, games, version, onVersionChange }: P
   const [page, setPage] = useState(1);
 
   // #1665: a filter that changes while paged past page 1 used to leave `page` stale and surface an
-  // empty page. The version filter can also change from the summary, so reset on it too.
-  useEffect(() => {
+  // empty page. The version can also change from the summary, outside this panel: reset during the
+  // render that sees it, not in an effect, which would first fetch the new version on the old page.
+  const [versionOfPage, setVersionOfPage] = useState(version);
+  if (versionOfPage !== version) {
+    setVersionOfPage(version);
     setPage(1);
-  }, [version]);
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-kb-feedback', version, gameId, outcomeFilter, page],

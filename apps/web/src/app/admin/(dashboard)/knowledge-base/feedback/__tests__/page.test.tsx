@@ -73,6 +73,14 @@ describe('KbFeedbackPage', () => {
     expect(mockGetFeedback.mock.calls.at(-1)?.[0]).toMatchObject({ version: undefined });
   });
 
+  it('says so when the summary cannot be loaded, instead of a blank page', async () => {
+    mockGetSummary.mockRejectedValue(new Error('500'));
+
+    render(<KbFeedbackPage />, { wrapper: makeWrapper() });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/non è stato possibile/i);
+  });
+
   it('filters the list by the version clicked in the summary', async () => {
     const user = userEvent.setup();
     render(<KbFeedbackPage />, { wrapper: makeWrapper() });

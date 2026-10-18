@@ -88,13 +88,13 @@ internal sealed class GetAdminKbFeedbackQueryHandler
     private static KbFeedbackFilter ToFilter(GetAdminKbFeedbackQuery query)
     {
         if (query.Version is null)
-            return new KbFeedbackFilter(query.GameId, Outcome: query.OutcomeFilter, From: query.FromDate);
+            return new KbFeedbackFilter(query.GameId, Outcome: query.OutcomeFilter);
 
         if (string.Equals(query.Version, WithoutVersion, StringComparison.Ordinal))
-            return new KbFeedbackFilter(query.GameId, WithoutVersion: true, Outcome: query.OutcomeFilter, From: query.FromDate);
+            return new KbFeedbackFilter(query.GameId, WithoutVersion: true, Outcome: query.OutcomeFilter);
 
         if (Guid.TryParse(query.Version, out var versionId))
-            return new KbFeedbackFilter(query.GameId, versionId, Outcome: query.OutcomeFilter, From: query.FromDate);
+            return new KbFeedbackFilter(query.GameId, versionId, Outcome: query.OutcomeFilter);
 
         throw new BadRequestException(
             $"version must be the id of a profile version or '{WithoutVersion}', not '{query.Version}'.");

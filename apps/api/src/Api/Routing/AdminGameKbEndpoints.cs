@@ -67,19 +67,18 @@ internal static class AdminGameKbEndpoints
             .WithTags("Admin", "KnowledgeBase")
             .AddEndpointFilter<RequireAdminSessionFilter>();
 
-        // GET /api/v1/admin/kb/feedback?version={id|none}&gameId=&outcome=&from=&page=&pageSize=
+        // GET /api/v1/admin/kb/feedback?version={id|none}&gameId=&outcome=&page=&pageSize=
         feedback.MapGet("/", async (
             Guid? gameId,
             string? version,
             string? outcome,
-            DateTime? from,
             int? page,
             int? pageSize,
             IMediator mediator,
             CancellationToken ct) =>
         {
             var result = await mediator.Send(new GetAdminKbFeedbackQuery(
-                gameId, version, outcome, from,
+                gameId, version, outcome,
                 page ?? 1, pageSize ?? 20), ct).ConfigureAwait(false);
             return Results.Ok(result);
         })

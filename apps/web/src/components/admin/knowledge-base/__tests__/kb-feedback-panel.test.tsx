@@ -153,6 +153,12 @@ describe('KbFeedbackPanel — #1665 page reset on filter change', () => {
       expect(lastParams()?.version).toBe(V3);
       expect(lastParams()?.page).toBe(1);
     });
+    // Not even one request for the new version on the old page: it would flash an empty list.
+    const pagesAskedForV3 = mockGetAdminKbFeedback.mock.calls
+      .map(call => call[0] as Record<string, unknown>)
+      .filter(params => params.version === V3)
+      .map(params => params.page);
+    expect(pagesAskedForV3).toEqual([1]);
   });
 });
 

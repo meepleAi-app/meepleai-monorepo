@@ -26,6 +26,7 @@ internal sealed class KbUserFeedbackRepository : IKbUserFeedbackRepository
     {
         return await Filtered(filter)
             .OrderByDescending(f => f.CreatedAt)
+            .ThenByDescending(f => f.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(cancellationToken)
@@ -80,8 +81,6 @@ internal sealed class KbUserFeedbackRepository : IKbUserFeedbackRepository
             query = query.Where(f => f.ProfileVersionId == versionId);
         if (filter.Outcome is not null)
             query = query.Where(f => f.Outcome == filter.Outcome);
-        if (filter.From is { } from)
-            query = query.Where(f => f.CreatedAt >= from);
         return query;
     }
 }

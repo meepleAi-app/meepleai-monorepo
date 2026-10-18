@@ -6,13 +6,13 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries.GetAdminKbFeedba
 /// Query to retrieve paginated user feedback on KB responses (admin view).
 /// KB-08: Admin Feedback Review backend. #4469: il gioco non è più obbligatorio, e si filtra per
 /// versione del profilo: <see cref="Version"/> è l'id di una versione, <c>none</c> per i feedback senza
-/// versione, o nullo per tutti.
+/// versione, o nullo per tutti. Il filtro per data della rotta ritirata non c'è più: nessuno lo usava, e una
+/// data senza fuso orario arrivava a Npgsql come <c>Unspecified</c> contro una colonna <c>timestamptz</c>.
 /// </summary>
 internal sealed record GetAdminKbFeedbackQuery(
     Guid? GameId,
     string? Version,
     string? OutcomeFilter,
-    DateTime? FromDate,
     int Page,
     int PageSize) : IQuery<AdminKbFeedbackDto>;
 

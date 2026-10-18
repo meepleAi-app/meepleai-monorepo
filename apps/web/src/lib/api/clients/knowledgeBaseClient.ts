@@ -39,7 +39,6 @@ export interface AdminKbFeedbackParams {
   version?: string;
   gameId?: string;
   outcome?: 'helpful' | 'not_helpful';
-  from?: string;
   page?: number;
   pageSize?: number;
 }
@@ -174,7 +173,7 @@ export function createKnowledgeBaseClient({ httpClient }: CreateKnowledgeBaseCli
     /**
      * KB-08, #4469: admin feedback list, filtered by profile version, game and outcome — no game
      * UUID required.
-     * @param params Optional filters (version, gameId, outcome, date, pagination)
+     * @param params Optional filters (version, gameId, outcome, pagination)
      * @returns Paginated feedback items
      */
     async getAdminKbFeedback(params?: AdminKbFeedbackParams): Promise<AdminKbFeedback | null> {
@@ -182,7 +181,6 @@ export function createKnowledgeBaseClient({ httpClient }: CreateKnowledgeBaseCli
       if (params?.version) searchParams.set('version', params.version);
       if (params?.gameId) searchParams.set('gameId', params.gameId);
       if (params?.outcome) searchParams.set('outcome', params.outcome);
-      if (params?.from) searchParams.set('from', params.from);
       if (params?.page !== undefined) searchParams.set('page', String(params.page));
       if (params?.pageSize !== undefined) searchParams.set('pageSize', String(params.pageSize));
       const query = searchParams.toString() ? `?${searchParams.toString()}` : '';

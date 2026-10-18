@@ -7,8 +7,8 @@ internal interface IKbUserFeedbackRepository
     Task AddAsync(KbUserFeedback feedback, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// #4469: i feedback che passano il filtro, dal più recente. Prima il gioco era obbligatorio, e
-    /// l'admin doveva digitarne l'UUID.
+    /// #4469: i feedback che passano il filtro, dal più recente; a parità di data per id, così la pagina
+    /// è stabile. Prima il gioco era obbligatorio, e l'admin doveva digitarne l'UUID.
     /// </summary>
     Task<List<KbUserFeedback>> ListAsync(
         KbFeedbackFilter filter, int page, int pageSize, CancellationToken cancellationToken = default);
@@ -40,8 +40,7 @@ internal sealed record KbFeedbackFilter(
     Guid? GameId = null,
     Guid? ProfileVersionId = null,
     bool WithoutVersion = false,
-    string? Outcome = null,
-    DateTime? From = null);
+    string? Outcome = null);
 
 /// <summary>#4469: i feedback di una versione del profilo, o di nessuna.</summary>
 internal sealed record KbFeedbackVersionCount(Guid? ProfileVersionId, int Helpful, int NotHelpful);

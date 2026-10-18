@@ -1763,7 +1763,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "corretta con l'utente",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": [
         16,
         18
@@ -1784,7 +1784,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "conferma",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": 21,
       "citazione": "se un attacco ha casi sia di Vantaggio che di Svantaggio, questi si annullano a vicenda e l’attacco viene eseguito normalmente.",
       "nota": "«Girando una sola carta» è un'inferenza da «eseguito normalmente», coerente con la pesca standard di p. 11."
@@ -1802,7 +1802,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "conferma",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": [
         14,
         19
@@ -1824,7 +1824,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "corretta con l'utente",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": [
         17,
         29
@@ -1845,7 +1845,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "conferma",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": [
         19,
         21
@@ -1867,7 +1867,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "corretta con l'utente",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": [
         8,
         17
@@ -1889,7 +1889,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "corretta con l'utente",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": [
         14,
         24
@@ -1910,7 +1910,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "fuori ambito: conferma",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": [
         7,
         25
@@ -1932,7 +1932,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "corretta con l'utente",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": 29,
       "citazione": "Scegliere una carta da perdere dalla propria mano o due carte da perdere dalla sua pila degli scarti per negare il danno (qualsiasi effetto aggiuntivo dell’attacco viene ancora applicato).",
       "nota": "La domanda dice «scartando», ma il regolamento parla di carte da «perdere» (pila delle carte perse)."
@@ -1952,7 +1952,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "corretta con l'utente",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": 17,
       "citazione": "durante la fase di riordino di un round, un giocatore può effettuare un riposo breve.",
       "nota": "Domanda e ground truth dicono «fine turno» ma il riposo breve avviene nella fase di riordino a fine round; «devi tenere la seconda» è ambiguo (la seconda carta va persa) e manca il ritorno in mano delle altre carte."
@@ -1971,7 +1971,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "corretta con l'utente",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": [
         30,
         31
@@ -1992,7 +1992,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "conferma",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": [
         24,
         25
@@ -2014,7 +2014,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "corretta con l'utente",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": [
         20,
         23
@@ -2035,7 +2035,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "conferma",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": 23,
       "citazione": "Se una figura è ferita, subisce un punto danno all’inizio di ogni suo turno.",
       "nota": "Il regolamento usa «Guarigione» (non «Cura») e chiama lo stato FERITO; la Guarigione rimuove la FERITA e poi continua normalmente."
@@ -2053,7 +2053,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "conferma",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": 23,
       "citazione": "Se una figura è disarmata, non può eseguire nessuna abilità di attacco nel suo turno.",
       "nota": "Il regolamento dice «abilità di attacco» e «Guarigione» (non «Cura»); DISARMATO si rimuove alla fine del turno successivo della figura."
@@ -2072,7 +2072,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "corretta con l'utente",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": 19,
       "citazione": "che abbia un valore di iniziativa più basso del personaggio che ha rivelato la stanza (cioè, avrebbe dovuto agire prima nel round) deve immediatamente effettuare il proprio turno",
       "nota": "Il ground truth inverte la regola: agiscono subito i tipi di mostro con iniziativa più BASSA, non superiore, e lo fanno alla fine del turno di chi ha aperto la porta."
@@ -2090,7 +2090,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "conferma",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": [
         20,
         26
@@ -2111,7 +2111,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "conferma",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": 27,
       "citazione": "Un bonus di reazione può essere accompagnato da un valore “Gittata Y”, che significa che il danno di reazione viene applicato a qualsiasi attaccante entro Y esagoni.",
       "nota": "Il termine del regolamento è «Reazione», non «Ritorsione»; senza Gittata la Reazione colpisce solo chi attacca da un esagono adiacente."
@@ -2129,7 +2129,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "conferma",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": 28,
       "citazione": "un personaggio deve anche saccheggiare qualsiasi segnalino moneta o tessera tesoro presente nell’esagono che occupa alla fine del proprio turno.",
       "nota": "Il regolamento non lo dice in modo esplicito ma prevede solo l'abilità «Saccheggio X» e il saccheggio di fine turno (obbligatorio); «Loot» è «Saccheggio»."
@@ -2147,7 +2147,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "conferma",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": [
         22,
         28
@@ -2169,7 +2169,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "corretta con l'utente",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": [
         17,
         28
@@ -2191,7 +2191,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "corretta con l'utente",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": 18,
       "citazione": "Se una carta viene usata in questo modo, viene sempre scartata, indipendentemente da quanto è indicato sulla carta.",
       "nota": null
@@ -2210,7 +2210,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "corretta con l'utente",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": [
         11,
         20,
@@ -2233,7 +2233,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "corretta con l'utente",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": 27,
       "citazione": "Le figure evocate non sono controllate dal giocatore che le ha evocate, ma obbediscono invece in modo automatico secondo le regole dei mostri",
       "nota": "Il turno dell'evocazione è separato e precede quello dell'evocatore, non avviene «all'inizio del turno» del creatore."
@@ -2252,7 +2252,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "corretta con l'utente",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": [
         18,
         22
@@ -2273,7 +2273,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "conferma",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": [
         14,
         22
@@ -2294,7 +2294,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "conferma",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": 8,
       "citazione": "fino a due oggetti oppure un oggetto",
       "nota": "Nel testo estratto le icone dei tipi sono perse, quindi Una Mano/Due Mani si ricava solo dall'ordine dell'elenco «Testa, Corpo, Gambe, Una Mano, Due Mani, Oggetto Piccolo»."
@@ -2313,7 +2313,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "corretta con l'utente",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": [
         8,
         18,
@@ -2335,7 +2335,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "fuori ambito: conferma",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": [
         2,
         11
@@ -2357,7 +2357,7 @@
     "verifica": {
       "data": "2026-10-18",
       "esito": "corretta con l'utente",
-      "regolamento": "data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf",
+      "regolamento": "data/rulebook/gloomhaven-it_rulebook.pdf",
       "pagina": 45,
       "citazione": "La carta scelta deve provenire dalla classe del personaggio ed avere un livello di carta uguale o inferiore al nuovo livello del personaggio.",
       "nota": "«Tra le due disponibili per quel livello» non è nel regolamento, che ammette carte di livello uguale o inferiore e aggiunge miglioria e punti ferita."

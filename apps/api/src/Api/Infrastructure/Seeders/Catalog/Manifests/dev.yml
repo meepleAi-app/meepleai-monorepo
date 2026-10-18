@@ -1189,6 +1189,9 @@ catalog:
     - Hobby World
     - Korea Boardgames
     - MYBG Co., Ltd.
+    pdfBlobKey: rulebooks/v1/gloomhaven-it_rulebook.pdf
+    pdfSha256: 31cab5f7b553ef5acfb15659925c587c0860f97825e93761b498dc32efa19fe7
+    pdfVersion: '1.0'
   - title: Small World
     bggId: 40692
     language: en

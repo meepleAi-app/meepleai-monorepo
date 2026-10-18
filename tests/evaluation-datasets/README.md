@@ -44,7 +44,7 @@ lo dà un giudice LLM tarato (#4471), non le parole chiave: il set non ne ha.
   `CAR-12` tiene la regola delle edizioni recenti (4 punti), mentre il regolamento nel corpus, la prima
   edizione italiana, dice 2. Il motivo è in `verifica.nota`.
 - Gloomhaven è verificato sulla traduzione italiana del regolamento
-  (`data/rulebook/gloomhaven_regolamento_in_italiano_ver01.0.pdf`). Il PDF `gloomhaven_rulebook.pdf` del
+  (`gloomhaven-it_rulebook.pdf` nel bucket dei seed, `rulebooks/v1/`: come vuole `.gitignore`, i regolamenti stanno nello storage e non in git). Il PDF `gloomhaven_rulebook.pdf` del
   repository è una scansione senza testo, e non dà nulla all'agente.
 - Non porta UUID: l'id di un gioco cambia da un ambiente all'altro, e il caricamento lo risolve sul posto.
 - Per contare le domande per gioco: `jq 'group_by(.game) | map({(.[0].game): length}) | add' reference-questions-it.json`.

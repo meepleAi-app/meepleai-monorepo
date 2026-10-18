@@ -193,6 +193,31 @@ public sealed class KeywordSearchServiceTests
             .Should().Be("porto | 2 | 1 | l | insediamento");
     }
 
+    /// <summary>
+    /// #4479: cosa la lista dei caratteri ammessi tiene. Il trattino e il punto fra due lettere o cifre
+    /// restano, perché Postgres indicizza «5-6» e «3.5» come una parola sola; restano le lettere di
+    /// qualunque alfabeto, anche con l'accento scritto come carattere a parte; un'emoji separa.
+    /// </summary>
+    [Theory]
+    [InlineData("5-6 giocatori", "5-6 | giocatori")]
+    [InlineData("vale 3.5 punti.", "vale | 3.5 | punti")]
+    [InlineData("città costruita", "città | costruita")]
+    [InlineData("карта ход", "карта | ход")]
+    [InlineData("board 🎲 turn", "board | turn")]
+    public void BuildTsQuery_KeepsWhatPostgresReadsAsOneWord(string query, string expected)
+    {
+        KeywordSearchService.BuildTsQuery(query, phraseSearch: false, "simple").Should().Be(expected);
+    }
+
+    [Fact]
+    public void BuildTsQuery_ATrailingQuestionMark_NoLongerHidesTheLastWordFromTheSynonyms()
+    {
+        // #4479: «giocatori?» arrivava intero alla tabella dei sinonimi, che non lo riconosceva; ora il
+        // punto interrogativo separa, e l'ultima parola si espande come le altre.
+        KeywordSearchService.BuildTsQuery("Setup per giocatori?", phraseSearch: false, "italian")
+            .Should().Be("(Setup | preparazione | allestimento) | per | (giocatori | numero <-> giocatori)");
+    }
+
     [Fact]
     public void BuildTsQuery_EnglishNonPhrase_PlainOrJoin()
     {
@@ -325,7 +350,8 @@ public sealed class KeywordSearchServiceTests
     public void BuildTsQuery_GameNameFollowedByPunctuation_IsStillDropped()
     {
         // Il caso REALE, non quello comodo: ogni query canonica finisce con "?", quindi il token
-        // arriva come "Catan?" — SanitizeQuery toglie gli operatori tsquery ma NON la punteggiatura.
+        // arrivava come "Catan?": fino a #4479 SanitizeQuery lasciava passare la punteggiatura. Il test
+        // resta come guardia del filtro sul nome del gioco nelle query di produzione.
         // Confrontando i token grezzi il filtro falliva proprio sulle query di produzione, ed è
         // sfuggito ai primi test perché li avevo scritti senza punto interrogativo.
         var result = KeywordSearchService.BuildTsQuery(

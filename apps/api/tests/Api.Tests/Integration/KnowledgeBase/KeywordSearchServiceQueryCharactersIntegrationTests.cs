@@ -112,8 +112,10 @@ public sealed class KeywordSearchServiceQueryCharactersIntegrationTests : IAsync
     [Theory]
     [InlineData("carta:*")]
     [InlineData("turno:A")]
-    [InlineData(":")]
     [InlineData("porto <2> insediamento")]
+    [InlineData("carta - turno")]
+    // Fra virgolette la domanda passa dalla ricerca per frase, che unisce le parole con <->.
+    [InlineData("\"porto specializzato (2:1)\"")]
     public async Task SearchAsync_TsQuerySyntaxInTheQuestion_IsNotAnError(string question)
     {
         var (gameId, _) = await SeedGameWithChunkAsync("it", ItalianPortChunk);

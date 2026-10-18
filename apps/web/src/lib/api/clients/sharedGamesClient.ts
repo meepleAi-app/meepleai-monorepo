@@ -152,13 +152,17 @@ export interface WizardCreateGameResult {
 
 // ─── PDF Import Wizard v2 types ───────────────────────────────────────────────
 
+/**
+ * `GameMetadataDto` as the API serializes it (camelCase). The names are the backend's, not the
+ * form's: `useExtractMetadata` maps `year` and `playingTime` onto the wizard's fields (#4459).
+ */
 export interface WizardExtractedMetadata {
-  title: string;
-  yearPublished?: number | null;
+  title?: string | null;
+  year?: number | null;
   description?: string | null;
   minPlayers?: number | null;
   maxPlayers?: number | null;
-  playingTimeMinutes?: number | null;
+  playingTime?: number | null;
   minAge?: number | null;
   publishers?: string[] | null;
   designers?: string[] | null;
@@ -1329,13 +1333,15 @@ export function createSharedGamesClient({ httpClient }: CreateSharedGamesClientP
      * GET /api/v1/admin/shared-games/extract-metadata/{pdfId}
      */
     async extractMetadataByPdfId(pdfId: string): Promise<WizardExtractedMetadata | null> {
+      // #4459: the backend's names, and a null title — that is the empty result
+      // (`GameMetadataDto.CreateEmpty()`) whenever the extraction finds nothing.
       const MetadataSchema = z.object({
-        title: z.string(),
-        yearPublished: z.number().nullable().optional(),
+        title: z.string().nullable().optional(),
+        year: z.number().nullable().optional(),
         description: z.string().nullable().optional(),
         minPlayers: z.number().nullable().optional(),
         maxPlayers: z.number().nullable().optional(),
-        playingTimeMinutes: z.number().nullable().optional(),
+        playingTime: z.number().nullable().optional(),
         minAge: z.number().nullable().optional(),
         publishers: z.array(z.string()).nullable().optional(),
         designers: z.array(z.string()).nullable().optional(),

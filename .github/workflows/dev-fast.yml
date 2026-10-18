@@ -58,7 +58,7 @@ permissions:
 jobs:
   changes:
     name: Detect Changes
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       frontend: ${{ steps.filter.outputs.frontend }}
       backend: ${{ steps.filter.outputs.backend }}
@@ -175,7 +175,7 @@ jobs:
 
   frontend-static:
     name: Frontend Static (lint + typecheck)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 5
     needs: changes
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
@@ -262,7 +262,7 @@ jobs:
 
   frontend-tests:
     name: Frontend Tests (shard ${{ matrix.shard }}/4)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     # Issue #4117: raised 10 → 15 minutes. On the Dev Fast runs of 2026-10-14…16
     # the shard job took p50 7m20s, p90 8m56s, slowest green 9m12s — 92% of the
     # 10-min budget — and one shard was closed by the timeout at 10m12s (run
@@ -317,7 +317,7 @@ jobs:
     # Succeeds iff both upstream jobs succeeded, or both were legitimately
     # skipped because the PR did not touch frontend paths.
     name: Frontend Fast (lint + typecheck + unit)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 2
     needs: [changes, frontend-static, frontend-tests]
     if: ${{ always() }}
@@ -381,9 +381,9 @@ jobs:
 
   backend-fast:
     name: Backend Fast (build + unit)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     # Issue #1161: raised from 5 → 8 minutes. The Release `dotnet build` step
-    # alone takes ~4min on ubuntu-latest runners (confirmed on PR #1156 cancels);
+    # alone takes ~4min on ubuntu-26.04 runners (confirmed on PR #1156 cancels);
     # combined with setup (~30s) and the test step (~30s) the 5-min budget
     # leaves no headroom and the job is cancelled mid-test.
     # Issue #833 (PR #1271): raised 8 → 12 minutes after sustained wall-clock
@@ -444,7 +444,7 @@ jobs:
     # RENAME, ADD COLUMN NOT NULL without DEFAULT) unless an explicit
     # `-- safe: <rationale>` directive is present.
     name: Migration Safety Gate
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     # Budget: setup-dotnet (~2m) + dotnet-ef install (~3m on cold cache) +
     # setup-python (~30s) + parser self-test (~10s) + Release restore+build
     # (~4-5m) + Debug build triggered by dotnet ef (~4m) + script generation +
@@ -535,7 +535,7 @@ jobs:
     # now, and the check name says so — a job named after one runner is how the
     # gap stayed invisible the first time.
     name: Infra Scripts (bats + Pester)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     # Two measurements on PR #3677, back to back:
     #   run 1 — checkout 9m39s, bats  6s, total 9m49s
     #   run 2 — checkout   29s, bats  8s, total    39s
@@ -603,7 +603,7 @@ jobs:
 
       - name: Run bats suites
         # Version pinned so a bats major bump cannot silently change semantics.
-        # jq and bash are preinstalled on ubuntu-latest; both scripts need them.
+        # jq and bash are preinstalled on ubuntu-26.04; both scripts need them.
         # --print-output-on-failure surfaces the failing script's stderr in the
         # job log, so a red check is diagnosable without a local repro.
         run: npx --yes bats@1.13.0 --print-output-on-failure infra/scripts/tests/
@@ -616,7 +616,7 @@ jobs:
       - name: Run Pester suites
         # #3680. Version pinned for the same reason bats is: a Pester major bump
         # must not change what this gate means. `pwsh` is preinstalled on
-        # ubuntu-latest, and the suite is pure — it imports
+        # ubuntu-26.04, and the suite is pure — it imports
         # db-snapshot-common.psm1 and exercises pure functions, no DB, no Docker
         # — so the cost here is seconds, not minutes.
         #

@@ -36,7 +36,7 @@ permissions:
 jobs:
   validate-workflow-patterns:
     name: Validate pnpm Cache Patterns
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       # #3895: le label stanno sotto l'API Issues; senza questo il gate

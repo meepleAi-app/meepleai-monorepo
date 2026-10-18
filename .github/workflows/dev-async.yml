@@ -42,7 +42,7 @@ permissions:
 jobs:
   changes:
     name: Detect Changes
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       frontend: ${{ steps.filter.outputs.frontend }}
       backend: ${{ steps.filter.outputs.backend }}
@@ -82,7 +82,7 @@ jobs:
   # mancavano libgdiplus e i file secret, e non c'era sharding. Ora il percorso è lo stesso.
   backend-integration:
     name: Backend Integration (${{ matrix.shard.name }})
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     # Il job sta SOPRA il TestSessionTimeout perché qui build Release, apt-get e setup sono dentro
     # il job, mentre ci.yml scarica un artifact già costruito. Con job a 50 e sessione a 45 il job
     # moriva prima — ai test restavano ~44 min — e si tornava a un `cancelled`.

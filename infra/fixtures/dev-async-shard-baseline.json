@@ -208,6 +208,28 @@
         "Api.Tests.Integration.DocumentProcessing.S3BlobStorageIntegrationTests.StoreAsync_ValidFile_ReturnsSuccessWithFileId"
       ]
     },
+    "AuthIntegration": {
+      "_comment": [
+        "Staccato da KnowledgeBase con #4484: i test il cui nome completo contiene",
+        "Integration.Authentication, cioe' il namespace Api.Tests.Integration.Authentication e la classe",
+        "Api.Tests.Integration.AuthenticationGameManagementCrossContextTests. KnowledgeBase li esclude.",
+        "",
+        "MISURATI su un run completo: run 39150760674 (SHA 4ccbb0d15), job 117743860571, .trx",
+        "dell'artifact `integration-results-AuthIntegration` passato a shard-skip-assert.sh",
+        "--update-baseline: stessi conteggi, liste vuote. Nessun abort nell'output: 211 test, sessione di",
+        "20 minuti su un runner veloce, il 26% del TestSessionTimeout.",
+        "",
+        "Prima di quel run erano stati DERIVATI dalla voce di KnowledgeBase, ripartita come la ripartisce",
+        "il filtro: nessuno dei suoi nomi falliti o saltati sta sotto Integration.Authentication. Nello",
+        "stesso run KnowledgeBase e AuthIntegration hanno eseguito insieme i 1184 test che KnowledgeBase",
+        "eseguiva nel run di controllo 39147270667 sulla stessa base, senza un nome in comune e senza uno",
+        "in meno."
+      ],
+      "failed": 0,
+      "skipped": 0,
+      "failedTests": [],
+      "skippedTests": []
+    },
     "Catalog": {
       "_comment": [
         "Meta' dello shard che fino a #3742 si chiamava Games: i test il cui nome completo contiene",

@@ -60,11 +60,19 @@ fi
 ef_update() {
     ( cd ../apps/api/src/Api 2>/dev/null || cd apps/api/src/Api
       export CONNECTIONSTRINGS__POSTGRES="Host=localhost;Port=5432;Database=$PG_DB;Username=$PG_USER;Password=$PG_PASSWORD"
-      dotnet ef database update "$@" )
+      dotnet ef database update --no-build "$@" )
 }
 
 SNAPSHOT_HEAD=$(jq -r '.ef_migration_head // empty' "$META")
 [ -n "$SNAPSHOT_HEAD" ] || fail "ef_migration_head mancante in $META"
+
+# Una build sola, restore compreso, poi entrambi i tempi con --no-build. dotnet-ef 10
+# non fa piu' il restore implicito quando legge i metadati del progetto: su un checkout
+# appena clonato `dotnet ef database update` si fermava con NETSDK1004 prima di
+# «Build started» (gate RAG, run 39165075683). Con dotnet-ef 9 la build la faceva lui.
+log "build del progetto API (restore compreso)"
+( cd ../apps/api/src/Api 2>/dev/null || cd apps/api/src/Api
+  dotnet build --nologo -v quiet )
 
 # Step 1: Schema fino alla migration dello snapshot
 log "applico le migrations fino a quella dello snapshot: $SNAPSHOT_HEAD"
@@ -135,7 +143,7 @@ log "runtime-managed pgvector schema OK"
 # Dopo lo step 3b: su un deploy queste migrations trovano lo schema che il
 # runtime ha gia' creato, e qui deve essere lo stesso.
 log "applico le migrations successive allo snapshot, sui dati caricati"
-ef_update --no-build
+ef_update
 
 # Step 5: Smoke test
 log "smoke test: chunk count + orphans"

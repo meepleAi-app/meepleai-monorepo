@@ -37,16 +37,24 @@ internal sealed class RuleStructureGuardrail : IMechanicGuardrail
                 continue;
             }
 
-            EvaluateSection(section, items, normalizedSource, violations);
+            EvaluateItems(items.EnumerateArray().ToList(), i => $"$.{section}[{i}]", normalizedSource, violations);
+        }
+
+        // #4476: victory is a single object, not a list, but the parser reads its kind/priority/trigger
+        // all the same (MechanicOutputParser, primary claim anchored at "$.victory"). Without this an
+        // unbound exception or an unknown trigger name in victory reached the reviewer with no T5 flag.
+        // As a one-item list any declared override can only be the item itself, which the prompt forbids.
+        if (context.Root.TryGetProperty("victory", out var victory) && victory.ValueKind == JsonValueKind.Object)
+        {
+            EvaluateItems(new[] { victory }, _ => "$.victory", normalizedSource, violations);
         }
 
         return Task.FromResult<IReadOnlyList<MechanicValidationViolation>>(violations);
     }
 
-    private static void EvaluateSection(
-        string section, JsonElement items, string normalizedSource, List<MechanicValidationViolation> violations)
+    private static void EvaluateItems(
+        IReadOnlyList<JsonElement> list, Func<int, string> pathOf, string normalizedSource, List<MechanicValidationViolation> violations)
     {
-        var list = items.EnumerateArray().ToList();
         var kinds = list.Select(i => i.ValueKind != JsonValueKind.Object ? "rule" : ReadString(i, "kind")?.Trim().ToLowerInvariant() ?? "rule").ToList();
         var edges = new Dictionary<int, List<int>>();
 
@@ -59,7 +67,7 @@ internal sealed class RuleStructureGuardrail : IMechanicGuardrail
                 continue;
             }
 
-            var path = $"$.{section}[{i}]";
+            var path = pathOf(i);
             var targets = new List<int>();
 
             if (item.TryGetProperty("overrides", out var ov) && ov.ValueKind == JsonValueKind.Array)
@@ -119,7 +127,7 @@ internal sealed class RuleStructureGuardrail : IMechanicGuardrail
             // Anchored on an item (not the section) so CorrelateValidations can attach it to a claim:
             // the highest-index member is the one whose outgoing edge the parser drops.
             violations.Add(new MechanicValidationViolation("T5_override_cycle",
-                "The overrides graph of this section contains a cycle.", $"$.{section}[{cycleMember}]"));
+                "The overrides graph of this section contains a cycle.", pathOf(cycleMember.Value)));
         }
     }
 

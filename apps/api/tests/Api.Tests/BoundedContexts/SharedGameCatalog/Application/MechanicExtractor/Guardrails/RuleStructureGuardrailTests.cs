@@ -150,4 +150,41 @@ public sealed class RuleStructureGuardrailTests
         var v = await Sut.EvaluateAsync(ctx, CancellationToken.None);
         v.Should().ContainSingle(x => x.Rule == "T5_trigger_unknown" && x.Message!.Contains("fase lunare"));
     }
+
+    // #4476: victory is a single object, and the parser reads its kind/priority/trigger like any item.
+
+    [Fact]
+    public async Task VictoryExceptionWithoutTrigger_IsUnbound_OnThePrimaryAnchor()
+    {
+        const string json = """{"victory":{"primary":"vince chi ha piu' punti","kind":"exception","alternatives":["pareggio"],"citations":[{"pdf_page":4,"quote":"q"}]}}""";
+        var v = await Sut.EvaluateAsync(GuardrailTestContext.Ctx(json), CancellationToken.None);
+        v.Should().ContainSingle(x => x.Rule == "T5_exception_unbound" && x.Path == "$.victory");
+    }
+
+    [Fact]
+    public async Task VictoryTriggerNameAbsentFromSources_IsReported()
+    {
+        const string json = """{"victory":{"primary":"vince chi ha piu' punti","kind":"exception","trigger":{"phase":"fase lunare"},"citations":[{"pdf_page":4,"quote":"q"}]}}""";
+        var ctx = GuardrailTestContext.Ctx(json, new[] { Chunk("Durante la Fase Azione...") });
+        var v = await Sut.EvaluateAsync(ctx, CancellationToken.None);
+        v.Should().ContainSingle(x => x.Rule == "T5_trigger_unknown" && x.Path == "$.victory" && x.Message!.Contains("fase lunare"));
+        v.Should().NotContain(x => x.Rule == "T5_exception_unbound");
+    }
+
+    [Fact]
+    public async Task VictoryWithDeclaredOverrides_ReportsMissing_BecauseTheOnlyTargetIsItself()
+    {
+        const string json = """{"victory":{"primary":"vince chi ha piu' punti","overrides":[0],"citations":[{"pdf_page":4,"quote":"q"}]}}""";
+        var v = await Sut.EvaluateAsync(GuardrailTestContext.Ctx(json), CancellationToken.None);
+        v.Should().ContainSingle(x => x.Rule == "T5_override_missing" && x.Path == "$.victory");
+    }
+
+    [Fact]
+    public async Task VictoryRuleWithKnownTrigger_NoViolations()
+    {
+        const string json = """{"victory":{"primary":"vince chi ha piu' punti","trigger":{"phase":"fase azione"},"citations":[{"pdf_page":4,"quote":"q"}]}}""";
+        var ctx = GuardrailTestContext.Ctx(json, new[] { Chunk("Durante la Fase Azione...") });
+        var v = await Sut.EvaluateAsync(ctx, CancellationToken.None);
+        v.Should().BeEmpty();
+    }
 }

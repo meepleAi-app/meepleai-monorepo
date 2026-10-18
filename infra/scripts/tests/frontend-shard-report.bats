@@ -29,7 +29,7 @@ report() { # fixture, cartella annotazioni, budget
     [ "$status" -eq 0 ]
     [[ "$output" == *"Frontend Tests (shard 1/4): TIMEOUT — 10m 12s, 102% del budget di 10 min"* ]]
     [[ "$output" == *"NON e' un test fallito"* ]]
-    [[ "$output" == *"::error title=Frontend Tests (shard 1/4): timeout, non un test fallito::"* ]]
+    [[ "$output" == *"::error title=Frontend Tests (shard 1/4)%3A timeout%2C non un test fallito::"* ]]
     # Gli altri tre shard del run erano verdi, e restano tali.
     [ "$(grep -c ': success — ' <<<"$output")" -eq 3 ]
 }
@@ -42,7 +42,7 @@ report() { # fixture, cartella annotazioni, budget
     [ "$(grep -c "l'ha sostituito (concurrency)" <<<"$output")" -eq 3 ]
     [[ "$output" != *"TIMEOUT"* ]]
     [[ "$output" != *"::error"* ]]
-    [[ "$output" == *"::notice title=Frontend Tests (shard 2/4): sostituito::"* ]]
+    [[ "$output" == *"::notice title=Frontend Tests (shard 2/4)%3A sostituito::"* ]]
 }
 
 @test "la causa viene dalle annotazioni, non dalla durata: un sostituito vicino al budget resta sostituito" {
@@ -67,7 +67,7 @@ report() { # fixture, cartella annotazioni, budget
     report timeout "$NO_ANN" 10
     [ "$status" -eq 0 ]
     [[ "$output" == *"Frontend Tests (shard 1/4): PROBABILE TIMEOUT — 10m 12s"* ]]
-    [[ "$output" == *"::error title=Frontend Tests (shard 1/4): probabile timeout::"* ]]
+    [[ "$output" == *"::error title=Frontend Tests (shard 1/4)%3A probabile timeout::"* ]]
 }
 
 @test "senza annotazioni e sotto il budget, la causa resta non determinata e non accusa nessuno" {
@@ -84,6 +84,23 @@ report() { # fixture, cartella annotazioni, budget
     [[ "$output" == *"Frontend Tests (shard 3/4): FALLITO — 5m 41s"* ]]
     [[ "$output" == *"la causa e' nel suo log"* ]]
     [[ "$output" != *"TIMEOUT"* ]]
+}
+
+@test "i titoli delle annotazioni non contengono virgole, due punti o percentuali in chiaro" {
+    # Nei comandi di workflow una virgola in chiaro chiude la proprieta' title: nel run di prova
+    # 39079980679 il titolo «…: timeout, non un test fallito» e' arrivato come «…: timeout».
+    report timeout "$FIX/timeout.annotations" 10
+    [ "$status" -eq 0 ]
+    titles=$(grep -oE '^::(error|warning|notice) title=[^:]*::' <<<"$output" | sed -E 's/^::[a-z]+ title=//; s/::$//')
+    [ "$(wc -l <<<"$titles")" -eq 2 ]   # il timeout dello shard 1/4 e l'avviso sullo shard 4/4
+    # Niente `! grep`: in bats una pipeline negata non fa fallire il test.
+    stripped=$(sed 's/%[0-9A-F][0-9A-F]//g' <<<"$titles")
+    [[ "$stripped" != *","* ]]
+    [[ "$stripped" != *"%"* ]]
+    # E il messaggio non porta un % che GitHub leggerebbe come inizio di una codifica.
+    warn=$(grep -E '^::warning' <<<"$output" | sed 's/%[0-9A-F][0-9A-F]//g')
+    [ -n "$warn" ]
+    [[ "$warn" != *"%"* ]]
 }
 
 # ─── la quota del budget ─────────────────────────────────────────────────────────────────────────
@@ -115,7 +132,7 @@ report() { # fixture, cartella annotazioni, budget
 @test "all'80% esatto avvisa (fixture costruita: 8m 00s su 10 min)" {
     report soglia-80 "$NO_ANN" 10
     [ "$status" -eq 0 ]
-    [[ "$output" == *"::warning title=Frontend Tests: margine sotto il 20%::Frontend Tests (shard 1/2) ha usato il 80%"* ]]
+    [[ "$output" == *"::warning title=Frontend Tests%3A margine sotto il 20%25::Frontend Tests (shard 1/2) ha usato il 80%25"* ]]
 }
 
 @test "sotto l'80% non avvisa (fixture costruita: 7m 59s su 10 min sono il 79%)" {
@@ -128,7 +145,7 @@ report() { # fixture, cartella annotazioni, budget
 @test "un verde al 91% avvisa anche se il run ha un timeout altrove: e' il caso del run 38772184870" {
     report timeout "$FIX/timeout.annotations" 10
     [ "$status" -eq 0 ]
-    [[ "$output" == *"::warning title=Frontend Tests: margine sotto il 20%::Frontend Tests (shard 4/4) ha usato il 91%"* ]]
+    [[ "$output" == *"::warning title=Frontend Tests%3A margine sotto il 20%25::Frontend Tests (shard 4/4) ha usato il 91%25"* ]]
 }
 
 @test "con GITHUB_STEP_SUMMARY scrive la tabella, con la riga del timeout" {

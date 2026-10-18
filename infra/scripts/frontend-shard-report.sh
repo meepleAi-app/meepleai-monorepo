@@ -99,6 +99,26 @@ expected=$(printf '%s\n' "$rows" | wc -l | tr -d ' ')
 
 fmt() { printf '%dm %02ds' $(($1 / 60)) $(($1 % 60)); }
 
+# Comandi di workflow (`::error title=…::messaggio`): nel messaggio vanno codificati %, \r e \n; nelle
+# proprieta' anche : e , — una virgola in chiaro chiude il titolo. Visto nel primo run di prova
+# (39079980679), dove «…: timeout, non un test fallito» e' arrivato come «…: timeout».
+esc_data() {
+  local s=${1//'%'/%25}
+  s=${s//$'\r'/%0D}
+  s=${s//$'\n'/%0A}
+  printf '%s' "$s"
+}
+esc_prop() {
+  local s
+  s=$(esc_data "$1")
+  s=${s//:/%3A}
+  s=${s//,/%2C}
+  printf '%s' "$s"
+}
+annotate() { # livello, titolo, messaggio
+  printf '::%s title=%s::%s\n' "$1" "$(esc_prop "$2")" "$(esc_data "$3")"
+}
+
 # Causa di un `cancelled`, dalle annotazioni del job: timeout | sostituito | altro:<messaggio> | ignota
 cause_of() {
   local f="$ANN_DIR/$1.json" msgs first
@@ -140,6 +160,7 @@ while IFS=$'\t' read -r id name conclusion dur; do
     cell_dur="—"
     cell_pct="—"
   fi
+  ann_level=""
 
   case "$conclusion" in
     success)
@@ -161,12 +182,16 @@ while IFS=$'\t' read -r id name conclusion dur; do
           label="TIMEOUT"
           timeouts=$((timeouts + 1))
           line="$name: TIMEOUT — $timing. Ha esaurito timeout-minutes: NON e' un test fallito."
-          echo "::error title=${name}: timeout, non un test fallito::Lo shard ha esaurito il budget di ${BUDGET_MIN} min (timeout-minutes in dev-fast.yml) ed e' stato chiuso come «cancelled», che gh pr checks mostra come «fail». Non e' il diff: un test rotto conclude «failure». Se gli altri shard sono verdi, rilancia il run; se succede spesso, il budget va rivisto (#4117)."
+          ann_level=error
+          ann_title="${name}: timeout, non un test fallito"
+          ann_msg="Lo shard ha esaurito il budget di ${BUDGET_MIN} min (timeout-minutes in dev-fast.yml) ed e' stato chiuso come «cancelled», che gh pr checks mostra come «fail». Non e' il diff: un test rotto conclude «failure». Se gli altri shard sono verdi, rilancia il run; se succede spesso, il budget va rivisto (#4117)."
           ;;
         sostituito)
           label="sostituito"
           line="$name: annullato — $timing. Un run piu' recente dello stesso ramo o PR l'ha sostituito (concurrency): non e' un esito del codice."
-          echo "::notice title=${name}: sostituito::Annullato da un run piu' recente dello stesso ramo o PR (cancel-in-progress). Conta l'esito di quel run."
+          ann_level=notice
+          ann_title="${name}: sostituito"
+          ann_msg="Annullato da un run piu' recente dello stesso ramo o PR (cancel-in-progress). Conta l'esito di quel run."
           ;;
         altro:*)
           label="annullato"
@@ -178,7 +203,9 @@ while IFS=$'\t' read -r id name conclusion dur; do
             label="probabile timeout"
             timeouts=$((timeouts + 1))
             line="$name: PROBABILE TIMEOUT — $timing. Le annotazioni non sono leggibili, ma la durata ha raggiunto il budget: non e' un test fallito."
-            echo "::error title=${name}: probabile timeout::Annotazioni del job non leggibili, ma la durata ha raggiunto il budget di ${BUDGET_MIN} min. Un test rotto conclude «failure», non «cancelled» (#4117)."
+            ann_level=error
+            ann_title="${name}: probabile timeout"
+            ann_msg="Annotazioni del job non leggibili, ma la durata ha raggiunto il budget di ${BUDGET_MIN} min. Un test rotto conclude «failure», non «cancelled» (#4117)."
           else
             label="annullato"
             line="$name: annullato — $timing. Causa non determinata: annotazioni del job non leggibili, e la durata e' sotto il budget."
@@ -193,6 +220,7 @@ while IFS=$'\t' read -r id name conclusion dur; do
   esac
 
   echo "$line"
+  if [ -n "$ann_level" ]; then annotate "$ann_level" "$ann_title" "$ann_msg"; fi
   summary_rows+="| ${short} | ${label} | ${cell_dur} | ${cell_pct} |"$'\n'
   reported=$((reported + 1))
 done <<<"$rows"
@@ -207,7 +235,8 @@ fi
 if [ "$slowest_pct" -ge 0 ]; then
   echo "Shard verde piu' lento: ${slowest_name}, $(fmt "$slowest_s") = ${slowest_pct}% del budget di ${BUDGET_MIN} min (avviso dall'${WARN_PERCENT}%)."
   if [ "$slowest_pct" -ge "$WARN_PERCENT" ]; then
-    echo "::warning title=Frontend Tests: margine sotto il $((100 - WARN_PERCENT))%::${slowest_name} ha usato il ${slowest_pct}% del budget di ${BUDGET_MIN} min ed e' passato. Con il runner carico la stessa suite dura 2-3 minuti in piu' per shard (#4117): al 100% lo shard viene chiuso come «cancelled». Il budget va rivisto, o il costo per file ridotto, prima che succeda."
+    annotate warning "Frontend Tests: margine sotto il $((100 - WARN_PERCENT))%" \
+      "${slowest_name} ha usato il ${slowest_pct}% del budget di ${BUDGET_MIN} min ed e' passato. Con il runner carico la stessa suite dura 2-3 minuti in piu' per shard (#4117): al 100% lo shard viene chiuso come «cancelled». Il budget va rivisto, o il costo per file ridotto, prima che succeda."
   fi
 fi
 

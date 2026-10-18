@@ -1,6 +1,7 @@
 using System.Globalization;
-using System.Text.Json;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Filters;
+using MediatR;
 
 namespace Api.Routing;
 
@@ -16,66 +17,10 @@ internal static class AdminEmbeddingEndpoints
             .WithTags("Admin", "Embedding")
             .AddEndpointFilter<RequireAdminSessionFilter>();
 
-        // GET /api/v1/admin/embedding/info - Service info + health
-        embeddingGroup.MapGet("/info", async (
-            IHttpClientFactory httpClientFactory,
-            ILogger<Program> logger,
-            CancellationToken ct) =>
-        {
-            try
-            {
-                var client = httpClientFactory.CreateClient("EmbeddingService");
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                cts.CancelAfter(TimeSpan.FromSeconds(5));
-
-                var healthResponse = await client.GetAsync("/health", cts.Token).ConfigureAwait(false);
-
-                if (!healthResponse.IsSuccessStatusCode)
-                {
-                    return Results.Ok(new
-                    {
-                        status = "unhealthy",
-                        model = (string?)null,
-                        device = (string?)null,
-                        supportedLanguages = Array.Empty<string>(),
-                        dimension = 0,
-                        maxInputChars = 0,
-                        maxBatchSize = 0,
-                    });
-                }
-
-                var json = await healthResponse.Content.ReadAsStringAsync(cts.Token).ConfigureAwait(false);
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-
-                return Results.Ok(new
-                {
-                    status = root.TryGetProperty("status", out var s) ? s.GetString() : "unknown",
-                    model = root.TryGetProperty("model", out var m) ? m.GetString() : null,
-                    device = root.TryGetProperty("device", out var d) ? d.GetString() : null,
-                    supportedLanguages = root.TryGetProperty("supported_languages", out var langs)
-                        ? langs.EnumerateArray().Select(l => l.GetString() ?? "").ToArray()
-                        : Array.Empty<string>(),
-                    dimension = 1024,
-                    maxInputChars = 4096,
-                    maxBatchSize = 100,
-                });
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Failed to get embedding service info");
-                return Results.Ok(new
-                {
-                    status = "unavailable",
-                    model = (string?)null,
-                    device = (string?)null,
-                    supportedLanguages = Array.Empty<string>(),
-                    dimension = 0,
-                    maxInputChars = 0,
-                    maxBatchSize = 0,
-                });
-            }
-        });
+        // GET /api/v1/admin/embedding/info - Service info + health. #4446: through a query, so the
+        // dimension is the API's and not a number written here.
+        embeddingGroup.MapGet("/info", async (IMediator mediator, CancellationToken ct) =>
+            Results.Ok(await mediator.Send(new GetEmbeddingServiceInfoQuery(), ct).ConfigureAwait(false)));
 
         // GET /api/v1/admin/embedding/metrics - Prometheus metrics parsed to JSON
         embeddingGroup.MapGet("/metrics", async (

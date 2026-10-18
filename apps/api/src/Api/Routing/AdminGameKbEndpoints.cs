@@ -12,7 +12,7 @@ namespace Api.Routing;
 /// Admin endpoints for per-game KB document management.
 /// KB-01: List indexed documents for a game.
 /// KB-02: Remove a document from a game's KB.
-/// KB-08: Paginated feedback review per-game.
+/// KB-08: Paginated feedback review; #4469 per profile version, without a game UUID.
 /// #4169: the per-game KB settings override (KB-10) is gone: it was saved, never read by the
 /// answer path. Retrieval settings belong to the agent profile (ADR-095).
 /// KB-GAMES: Overview dashboard with KB status per game.
@@ -61,23 +61,38 @@ internal static class AdminGameKbEndpoints
         .WithName("RemoveDocumentFromKb")
         .WithSummary("Rimuove un documento dalla KB di un gioco (admin)");
 
-        // KB-08: GET /api/v1/admin/kb/games/{gameId}/feedback
-        g.MapGet("/{gameId:guid}/feedback", async (
-            Guid gameId,
+        // KB-08, #4469: i feedback si leggono senza l'UUID del gioco, per versione del profilo. La rotta per
+        // gioco GET /admin/kb/games/{gameId}/feedback è ritirata (EndpointContractTests.RetiredRoutes).
+        var feedback = group.MapGroup("/admin/kb/feedback")
+            .WithTags("Admin", "KnowledgeBase")
+            .AddEndpointFilter<RequireAdminSessionFilter>();
+
+        // GET /api/v1/admin/kb/feedback?version={id|none}&gameId=&outcome=&page=&pageSize=
+        feedback.MapGet("/", async (
+            Guid? gameId,
+            string? version,
             string? outcome,
-            DateTime? from,
             int? page,
             int? pageSize,
             IMediator mediator,
             CancellationToken ct) =>
         {
             var result = await mediator.Send(new GetAdminKbFeedbackQuery(
-                gameId, outcome, from,
+                gameId, version, outcome,
                 page ?? 1, pageSize ?? 20), ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
         .WithName("GetAdminKbFeedback")
-        .WithSummary("Lista feedback utenti su risposte KB per-gioco (admin)");
+        .WithSummary("Feedback utenti sulle risposte KB, per versione del profilo e per gioco (admin)");
+
+        // GET /api/v1/admin/kb/feedback/summary
+        feedback.MapGet("/summary", async (IMediator mediator, CancellationToken ct) =>
+        {
+            var result = await mediator.Send(new GetAdminKbFeedbackSummaryQuery(), ct).ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GetAdminKbFeedbackSummary")
+        .WithSummary("Feedback utili e non utili per versione del profilo, e i giochi con feedback (admin)");
 
         return group;
     }

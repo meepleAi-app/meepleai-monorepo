@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import { useQuery } from '@tanstack/react-query';
 import { MessageSquare, ThumbsDown, ThumbsUp } from 'lucide-react';
@@ -14,38 +14,97 @@ import {
   SelectValue,
 } from '@/components/ui/overlays/select';
 import { api } from '@/lib/api';
+import type {
+  AdminKbFeedbackGame,
+  AdminKbFeedbackVersion,
+} from '@/lib/api/schemas/knowledge-base.schemas';
+
+import { versionKey, versionLabel } from './kb-feedback-version-summary';
 
 interface Props {
-  gameId: string;
+  /** Le versioni con feedback, dal riepilogo (#4469). */
+  versions: AdminKbFeedbackVersion[];
+  /** I giochi con feedback, per sceglierli per nome invece che per UUID (#4469). */
+  games: AdminKbFeedbackGame[];
+  /** La versione filtrata, con la chiave di {@link versionKey}; null per tutte. */
+  version: string | null;
+  onVersionChange: (key: string | null) => void;
 }
 
-const OUTCOME_ALL = 'all';
+const ALL = 'all';
+const PAGE_SIZE = 20;
 
-export function KbFeedbackPanel({ gameId }: Props) {
-  const [outcomeFilter, setOutcomeFilter] = useState<string>(OUTCOME_ALL);
+export function KbFeedbackPanel({ versions, games, version, onVersionChange }: Props) {
+  const [gameId, setGameId] = useState<string>(ALL);
+  const [outcomeFilter, setOutcomeFilter] = useState<string>(ALL);
   const [page, setPage] = useState(1);
 
-  // #1665: changing the gameId prop while paged past page 1 used to leave
-  // `page` stale and surface an empty page. Reset whenever gameId changes.
-  useEffect(() => {
+  // #1665: a filter that changes while paged past page 1 used to leave `page` stale and surface an
+  // empty page. The version can also change from the summary, outside this panel: reset during the
+  // render that sees it, not in an effect, which would first fetch the new version on the old page.
+  const [versionOfPage, setVersionOfPage] = useState(version);
+  if (versionOfPage !== version) {
+    setVersionOfPage(version);
     setPage(1);
-  }, [gameId]);
+  }
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin-kb-feedback', gameId, outcomeFilter, page],
+    queryKey: ['admin-kb-feedback', version, gameId, outcomeFilter, page],
     queryFn: () =>
-      api.knowledgeBase.getAdminKbFeedback(gameId, {
-        outcome:
-          outcomeFilter === OUTCOME_ALL ? undefined : (outcomeFilter as 'helpful' | 'not_helpful'),
+      api.knowledgeBase.getAdminKbFeedback({
+        version: version ?? undefined,
+        gameId: gameId === ALL ? undefined : gameId,
+        outcome: outcomeFilter === ALL ? undefined : (outcomeFilter as 'helpful' | 'not_helpful'),
         page,
-        pageSize: 20,
+        pageSize: PAGE_SIZE,
       }),
   });
 
   return (
     <section className="rounded-[10px] border border-border/60 bg-card overflow-hidden">
-      {/* Panel header: filter + meta */}
-      <div className="flex items-center gap-2.5 border-b border-border/60 bg-background px-3.5 py-2.5">
+      {/* Panel header: filters + meta */}
+      <div className="flex flex-wrap items-center gap-2.5 border-b border-border/60 bg-background px-3.5 py-2.5">
+        <Select
+          value={version ?? ALL}
+          onValueChange={value => onVersionChange(value === ALL ? null : value)}
+        >
+          <SelectTrigger
+            aria-label="Versione del profilo"
+            className="h-7 w-40 text-[11px] font-quicksand font-bold bg-card border-border/60"
+          >
+            <SelectValue placeholder="Tutte le versioni" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>Tutte le versioni</SelectItem>
+            {versions.map(v => (
+              <SelectItem key={versionKey(v)} value={versionKey(v)}>
+                {versionLabel(v)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={gameId}
+          onValueChange={value => {
+            setGameId(value);
+            setPage(1);
+          }}
+        >
+          <SelectTrigger
+            aria-label="Gioco"
+            className="h-7 w-48 text-[11px] font-quicksand font-bold bg-card border-border/60"
+          >
+            <SelectValue placeholder="Tutti i giochi" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>Tutti i giochi</SelectItem>
+            {games.map(g => (
+              <SelectItem key={g.gameId} value={g.gameId}>
+                {g.gameName ?? `Gioco ${g.gameId.slice(0, 8)}…`}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Select
           value={outcomeFilter}
           onValueChange={value => {
@@ -54,18 +113,21 @@ export function KbFeedbackPanel({ gameId }: Props) {
             setPage(1);
           }}
         >
-          <SelectTrigger className="h-7 w-36 text-[11px] font-quicksand font-bold bg-card border-border/60">
+          <SelectTrigger
+            aria-label="Esito"
+            className="h-7 w-36 text-[11px] font-quicksand font-bold bg-card border-border/60"
+          >
             <SelectValue placeholder="Tutti" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={OUTCOME_ALL}>Tutti</SelectItem>
+            <SelectItem value={ALL}>Tutti</SelectItem>
             <SelectItem value="helpful">Utili</SelectItem>
             <SelectItem value="not_helpful">Non utili</SelectItem>
           </SelectContent>
         </Select>
         {data && (
           <span className="font-mono text-[10px] text-muted-foreground ml-auto">
-            {data.total} feedback totali
+            {data.total} feedback
           </span>
         )}
       </div>
@@ -77,7 +139,7 @@ export function KbFeedbackPanel({ gameId }: Props) {
 
         {/* Feedback list */}
         {data?.items.map(item => (
-          <div
+          <article
             key={item.id}
             className={`flex items-start gap-3 rounded-lg border p-3 bg-background ${
               item.outcome === 'helpful' ? 'border-entity-toolkit/30' : 'border-entity-event/30'
@@ -104,15 +166,24 @@ export function KbFeedbackPanel({ gameId }: Props) {
                 >
                   {item.outcome === 'helpful' ? 'Utile' : 'Non utile'}
                 </Badge>
-                {/* Message ID */}
+                {/* Game */}
+                <span className="font-quicksand text-[12px] font-bold text-foreground">
+                  {item.gameName ?? `Gioco ${item.gameId.slice(0, 8)}…`}
+                </span>
+                {/* Profile version */}
                 <span className="font-mono text-[10.5px] font-bold text-entity-kb bg-background border border-border/60 rounded px-1.5 py-px">
-                  msg: {item.messageId.slice(0, 8)}&hellip;
+                  {versionLabel(item)}
                 </span>
                 {/* Date */}
                 <span className="font-mono text-[10px] text-muted-foreground">
                   {new Date(item.createdAt).toLocaleDateString('it-IT')}
                 </span>
               </div>
+
+              {/* The answer being judged */}
+              <p className="text-[12.5px] text-muted-foreground leading-relaxed mb-1">
+                {item.answerExcerpt ?? 'Risposta non più disponibile'}
+              </p>
 
               {/* Optional comment */}
               {item.comment && (
@@ -128,7 +199,7 @@ export function KbFeedbackPanel({ gameId }: Props) {
                 </p>
               )}
             </div>
-          </div>
+          </article>
         ))}
 
         {/* Empty state */}
@@ -139,7 +210,7 @@ export function KbFeedbackPanel({ gameId }: Props) {
         )}
 
         {/* Pagination */}
-        {data && data.total > 20 && (
+        {data && data.total > PAGE_SIZE && (
           <div className="flex items-center justify-center gap-2 pt-2 border-t border-border/60 mt-2">
             <button
               type="button"
@@ -153,7 +224,7 @@ export function KbFeedbackPanel({ gameId }: Props) {
             <button
               type="button"
               className="rounded-md border border-border/60 bg-card px-2 py-1 text-[11px] font-quicksand font-bold hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              disabled={page * 20 >= data.total}
+              disabled={page * PAGE_SIZE >= data.total}
               onClick={() => setPage(p => p + 1)}
             >
               Succ &rarr;

@@ -37,6 +37,20 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
         return threadEntity != null ? MapToDomain(threadEntity) : null;
     }
 
+    public async Task<IReadOnlyList<ChatThread>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+        if (ids.Count == 0)
+            return [];
+
+        var threadEntities = await DbContext.ChatThreads
+            .AsNoTracking()
+            .Where(t => ids.Contains(t.Id))
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+
+        return threadEntities.Select(MapToDomain).ToList();
+    }
+
     public async Task<IReadOnlyList<ChatThread>> GetAllAsync(CancellationToken cancellationToken = default)
     {
         var threadEntities = await DbContext.ChatThreads

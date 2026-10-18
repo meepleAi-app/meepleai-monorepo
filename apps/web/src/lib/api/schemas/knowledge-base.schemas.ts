@@ -127,18 +127,25 @@ export const AdminGameKbDocumentsSchema = z.object({
 export type AdminGameKbDocuments = z.infer<typeof AdminGameKbDocumentsSchema>;
 
 /**
- * Admin feedback list for a game's KB.
- * Returned by GET /api/v1/admin/kb/games/{gameId}/feedback
+ * Admin feedback list (KB-08).
+ * Returned by GET /api/v1/admin/kb/feedback. #4469: filtrata per versione del profilo e per gioco,
+ * senza UUID digitato a mano; ogni voce dice il gioco, la versione e l'inizio della risposta valutata.
+ * L'API scrive i campi nulli come `null`: un feedback senza commento faceva fallire lo schema, che
+ * accettava solo una stringa o l'assenza.
  */
 export const AdminKbFeedbackItemSchema = z.object({
   id: z.string(),
   userId: z.string(),
   gameId: z.string(),
+  gameName: z.string().nullable(),
   chatSessionId: z.string(),
   messageId: z.string(),
+  profileVersionId: z.string().nullable(),
+  versionNumber: z.number().int().nullable(),
   outcome: z.string(),
-  comment: z.string().optional(),
+  comment: z.string().nullable(),
   createdAt: z.string(),
+  answerExcerpt: z.string().nullable(),
 });
 
 export const AdminKbFeedbackSchema = z.object({
@@ -147,3 +154,32 @@ export const AdminKbFeedbackSchema = z.object({
 });
 
 export type AdminKbFeedback = z.infer<typeof AdminKbFeedbackSchema>;
+export type AdminKbFeedbackItem = z.infer<typeof AdminKbFeedbackItemSchema>;
+
+/**
+ * #4469 (ADR-095 fetta 7a): utili e non utili per versione del profilo, e i giochi con feedback.
+ * Returned by GET /api/v1/admin/kb/feedback/summary. La voce con `profileVersionId` nullo raccoglie
+ * i feedback senza versione.
+ */
+export const AdminKbFeedbackVersionSchema = z.object({
+  profileVersionId: z.string().nullable(),
+  versionNumber: z.number().int().nullable(),
+  status: z.string().nullable(),
+  publishedAt: z.string().nullable(),
+  helpful: z.number().int().nonnegative(),
+  notHelpful: z.number().int().nonnegative(),
+});
+
+export const AdminKbFeedbackGameSchema = z.object({
+  gameId: z.string(),
+  gameName: z.string().nullable(),
+});
+
+export const AdminKbFeedbackSummarySchema = z.object({
+  versions: z.array(AdminKbFeedbackVersionSchema),
+  games: z.array(AdminKbFeedbackGameSchema),
+});
+
+export type AdminKbFeedbackVersion = z.infer<typeof AdminKbFeedbackVersionSchema>;
+export type AdminKbFeedbackGame = z.infer<typeof AdminKbFeedbackGameSchema>;
+export type AdminKbFeedbackSummary = z.infer<typeof AdminKbFeedbackSummarySchema>;

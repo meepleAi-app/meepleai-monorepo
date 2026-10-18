@@ -142,7 +142,7 @@ internal sealed class FileSize : ValueObject
     /// Large files (&gt; 10 MB) require special handling: chunked uploads, dedicated processing queues,
     /// and potentially rate limiting to prevent resource exhaustion.
     /// Threshold set at 10 MB based on infrastructure capacity and typical board game PDF sizes.
-    /// Files exceeding MaxFileSizeBytes (50 MB) are rejected at validation layer.
+    /// Files over the PDF size limit (<c>PdfProcessing:MaxFileSizeBytes</c>) are rejected at validation layer.
     /// </remarks>
     /// <example>
     /// <code>

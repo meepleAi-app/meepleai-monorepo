@@ -985,7 +985,6 @@ app.MapChatAnalyticsEndpoints();         // Issue #3714: Chat analytics dashboar
 app.MapModelPerformanceEndpoints();      // Issue #3716: Model performance dashboard
 v1Api.MapRateLimitAdminEndpoints();    // Issue #2738: Rate limit admin management
 v1Api.MapSessionLimitsConfigEndpoints(); // Issue #3070: Session limits config
-v1Api.MapPdfUploadLimitsConfigEndpoints(); // Issue #3072: PDF upload limits config
 v1Api.MapPdfTierUploadLimitsConfigEndpoints(); // Issue #3333: PDF tier upload limits config (bulk)
 v1Api.MapAdminTierEndpoints();         // E2-1: Admin tier CRUD
 v1Api.MapSessionInviteEndpoints();     // E3-1: Session invite flow

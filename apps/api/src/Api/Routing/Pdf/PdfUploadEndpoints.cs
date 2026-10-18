@@ -18,6 +18,7 @@ internal static class PdfUploadEndpoints
     public static void Map(RouteGroupBuilder group)
     {
         MapStandardUploadEndpoint(group);
+        MapUploadLimitsEndpoint(group); // #4449: the limits the upload zones read
         MapPrivatePdfUploadEndpoint(group); // Issue #3479: Private PDF Upload
         MapChunkedUploadEndpoints(group);
         MapBggExtractionEndpoint(group); // ISSUE-2513: BGG games extraction from PDF
@@ -28,7 +29,22 @@ internal static class PdfUploadEndpoints
     {
         group.MapPost("/ingest/pdf", HandleStandardUpload)
              .DisableAntiforgery() // Ensure we can post files
-             .WithMetadata(new RequestSizeLimitAttribute(104_857_600)); // 100 MB for large rulebooks
+             .WithPdfUploadBodyLimit(group);
+    }
+
+    /// <summary>
+    /// #4449: GET /ingest/pdf/limits — the PDF upload limits for the calling user. The web's upload
+    /// zones read the size limit from here instead of carrying their own constants.
+    /// </summary>
+    private static void MapUploadLimitsEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/ingest/pdf/limits", HandleGetUploadLimits)
+             .RequireSession()
+             .WithName("GetPdfUploadLimits")
+             .WithSummary("PDF upload limits for the current user")
+             .WithDescription("The effective PDF size limit (the smaller of the technical limit and the user's plan) and the number of concurrent chunked uploads.")
+             .Produces<UploadLimitsDto>(StatusCodes.Status200OK)
+             .Produces(StatusCodes.Status401Unauthorized);
     }
 
     /// <summary>
@@ -39,6 +55,7 @@ internal static class PdfUploadEndpoints
     {
         group.MapPost("/users/{userId:guid}/library/entries/{entryId:guid}/pdf", HandlePrivatePdfUpload)
              .DisableAntiforgery()
+             .WithPdfUploadBodyLimit(group)
              .RequireSession()
              .WithName("UploadPrivatePdf")
              .WithSummary("Upload a private PDF for a library entry")
@@ -139,6 +156,18 @@ internal static class PdfUploadEndpoints
         .Produces(400)
         .Produces(401)
         .Produces(404);
+    }
+
+    private static async Task<IResult> HandleGetUploadLimits(
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var (authenticated, session, error) = context.TryGetActiveSession();
+        if (!authenticated) return error!;
+
+        var limits = await mediator.Send(new GetUploadLimitsQuery(session!.Principal!.Subject.Id), ct).ConfigureAwait(false);
+        return Results.Ok(limits);
     }
 
     private static async Task<IResult> HandleStandardUpload(

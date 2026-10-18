@@ -1,5 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using FluentValidation;
+using Microsoft.Extensions.Options;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Validators;
 
@@ -10,10 +12,12 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Validators;
 /// </summary>
 internal sealed class InitChunkedUploadCommandValidator : AbstractValidator<InitChunkedUploadCommand>
 {
-    private const long MaxFileSizeBytes = 200 * 1024 * 1024; // 200 MB
-
-    public InitChunkedUploadCommandValidator()
+    public InitChunkedUploadCommandValidator(IOptions<PdfProcessingOptions> pdfOptions)
     {
+        ArgumentNullException.ThrowIfNull(pdfOptions);
+        // #4449: the single PDF size limit (PdfProcessing:MaxFileSizeBytes), not a number of its own.
+        var maxFileSizeBytes = pdfOptions.Value.MaxFileSizeBytes;
+
         RuleFor(x => x.UserId)
             .NotEmpty()
             .WithMessage("UserId is required.");
@@ -26,8 +30,8 @@ internal sealed class InitChunkedUploadCommandValidator : AbstractValidator<Init
         RuleFor(x => x.TotalFileSize)
             .GreaterThan(0)
             .WithMessage("TotalFileSize must be greater than zero.")
-            .LessThanOrEqualTo(MaxFileSizeBytes)
-            .WithMessage("TotalFileSize cannot exceed 200 MB.");
+            .LessThanOrEqualTo(maxFileSizeBytes)
+            .WithMessage($"TotalFileSize cannot exceed {PdfSizeLimit.Describe(maxFileSizeBytes)}.");
 
         RuleFor(x => x)
             .Must(x => x.GameId.HasValue || x.PrivateGameId.HasValue)

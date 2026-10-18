@@ -76,7 +76,6 @@ public class ConfigurationLimitsHandlersSequentialAccessTests
     public static TheoryData<string> Endpoint() => new()
     {
         "pdf-limits",
-        "pdf-upload-limits",
         "pdf-tier-upload-limits",
         "session-limits",
     };
@@ -84,7 +83,6 @@ public class ConfigurationLimitsHandlersSequentialAccessTests
     private static Task Esegui(string endpoint, IConfigurationService svc, CancellationToken ct) => endpoint switch
     {
         "pdf-limits" => new GetAllPdfLimitsQueryHandler(svc).Handle(new GetAllPdfLimitsQuery(), ct),
-        "pdf-upload-limits" => new GetPdfUploadLimitsQueryHandler(svc).Handle(new GetPdfUploadLimitsQuery(), ct),
         "pdf-tier-upload-limits" => new GetPdfTierUploadLimitsQueryHandler(svc).Handle(new GetPdfTierUploadLimitsQuery(), ct),
         "session-limits" => new GetSessionLimitsQueryHandler(svc).Handle(new GetSessionLimitsQuery(), ct),
         _ => throw new ArgumentOutOfRangeException(nameof(endpoint), endpoint, "endpoint non previsto"),

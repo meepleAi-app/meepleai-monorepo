@@ -1,8 +1,10 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.SharedGameCatalog.Application.Validators;
 using Api.Tests.Constants;
 using FluentValidation.TestHelper;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -20,7 +22,7 @@ public class UploadPdfForGameExtractionCommandValidatorTests
 
     public UploadPdfForGameExtractionCommandValidatorTests()
     {
-        _validator = new UploadPdfForGameExtractionCommandValidator();
+        _validator = new UploadPdfForGameExtractionCommandValidator(Options.Create(new PdfProcessingOptions()));
     }
 
     #region UserId Validation
@@ -95,7 +97,7 @@ public class UploadPdfForGameExtractionCommandValidatorTests
     {
         // Arrange
         var command = new UploadPdfForGameExtractionCommand(
-            CreateMockPdfFormFile("test.pdf", 52_428_801), // 50MB + 1 byte
+            CreateMockPdfFormFile("test.pdf", 104_857_601), // the single limit (#4449) + 1 byte
             Guid.NewGuid());
 
         // Act
@@ -103,13 +105,13 @@ public class UploadPdfForGameExtractionCommandValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.File!.Length)
-            .WithErrorMessage("PDF file size cannot exceed 50 MB.");
+            .WithErrorMessage("PDF file size cannot exceed 100 MB.");
     }
 
     [Theory]
     [InlineData(1024)]
     [InlineData(1_048_576)] // 1 MB
-    [InlineData(52_428_800)] // Exactly 50 MB
+    [InlineData(104_857_600)] // Exactly the single limit (#4449)
     public void Validate_WithValidFileSize_PassesValidation(long fileSize)
     {
         // Arrange

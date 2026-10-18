@@ -13,6 +13,12 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// </summary>
 internal class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUploadCommand, InitChunkedUploadResult>
 {
+    /// <summary>
+    /// How many chunked uploads one user may have open at once. Read by <c>GetUploadLimitsQuery</c>
+    /// so the web shows this number instead of a copy of it (#4449).
+    /// </summary>
+    internal const int MaxActiveSessionsPerUser = 3;
+
     private readonly IChunkedUploadSessionRepository _sessionRepository;
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<InitChunkedUploadCommandHandler> _logger;
@@ -96,9 +102,9 @@ internal class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUplo
                 );
             }
 
-            // Check for existing active sessions for this user (limit to 3 concurrent uploads)
+            // Check for existing active sessions for this user (at most MaxActiveSessionsPerUser at once)
             var activeSessions = await _sessionRepository.FindActiveByUserIdAsync(request.UserId, cancellationToken).ConfigureAwait(false);
-            if (activeSessions.Count >= 3)
+            if (activeSessions.Count >= MaxActiveSessionsPerUser)
             {
                 return new InitChunkedUploadResult(
                     Success: false,
@@ -106,7 +112,7 @@ internal class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUplo
                     TotalChunks: 0,
                     ChunkSizeBytes: 0,
                     ExpiresAt: null,
-                    ErrorMessage: "Maximum concurrent uploads (3) reached. Complete or cancel existing uploads first."
+                    ErrorMessage: $"Maximum concurrent uploads ({MaxActiveSessionsPerUser}) reached. Complete or cancel existing uploads first."
                 );
             }
 

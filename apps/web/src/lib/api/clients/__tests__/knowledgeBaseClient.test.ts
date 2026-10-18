@@ -158,4 +158,31 @@ describe('KnowledgeBaseClient - Issue #5311', () => {
       await expect(client.resetRagConfig()).rejects.toThrow('Server error');
     });
   });
+
+  // #4470 (ADR-095 fetta 7b): le domande di riferimento, in sola lettura nella sezione Qualità.
+  describe('getAdminReferenceQuestions', () => {
+    it('asks for every question when no filter is given', async () => {
+      vi.mocked(mockHttpClient.get).mockResolvedValue({ items: [], games: [] });
+
+      const client = createKnowledgeBaseClient({ httpClient: mockHttpClient });
+      await client.getAdminReferenceQuestions();
+
+      expect(mockHttpClient.get).toHaveBeenCalledWith(
+        '/api/v1/admin/kb/reference-questions',
+        expect.any(Object)
+      );
+    });
+
+    it('passes the game and the gate, including inGate=false', async () => {
+      vi.mocked(mockHttpClient.get).mockResolvedValue({ items: [], games: [] });
+
+      const client = createKnowledgeBaseClient({ httpClient: mockHttpClient });
+      await client.getAdminReferenceQuestions({ gameId: 'g-1', inGate: false });
+
+      expect(mockHttpClient.get).toHaveBeenCalledWith(
+        '/api/v1/admin/kb/reference-questions?gameId=g-1&inGate=false',
+        expect.any(Object)
+      );
+    });
+  });
 });

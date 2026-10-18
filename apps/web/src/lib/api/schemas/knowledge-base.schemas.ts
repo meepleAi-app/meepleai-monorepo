@@ -183,3 +183,37 @@ export const AdminKbFeedbackSummarySchema = z.object({
 export type AdminKbFeedbackVersion = z.infer<typeof AdminKbFeedbackVersionSchema>;
 export type AdminKbFeedbackGame = z.infer<typeof AdminKbFeedbackGameSchema>;
 export type AdminKbFeedbackSummary = z.infer<typeof AdminKbFeedbackSummarySchema>;
+
+/**
+ * #4470 (ADR-095 fetta 7b, D8): le domande di riferimento dell'agente, in sola lettura.
+ * Returned by GET /api/v1/admin/kb/reference-questions. `gameName` è null se il gioco non è più nel
+ * catalogo; `games` elenca i giochi con domande, senza filtri, per scegliere il gioco per nome.
+ */
+export const AdminReferenceQuestionSchema = z.object({
+  code: z.string(),
+  gameId: z.string(),
+  gameName: z.string().nullable(),
+  question: z.string(),
+  expectedAnswer: z.string(),
+  category: z.string(),
+  difficulty: z.string(),
+  questionType: z.string(),
+  sourceReference: z.string(),
+  outOfCorpus: z.boolean(),
+  inGate: z.boolean(),
+});
+
+export const AdminReferenceQuestionGameSchema = z.object({
+  gameId: z.string(),
+  gameName: z.string().nullable(),
+  questionCount: z.number().int().nonnegative(),
+});
+
+export const AdminReferenceQuestionsSchema = z.object({
+  items: z.array(AdminReferenceQuestionSchema),
+  games: z.array(AdminReferenceQuestionGameSchema),
+});
+
+export type AdminReferenceQuestion = z.infer<typeof AdminReferenceQuestionSchema>;
+export type AdminReferenceQuestionGame = z.infer<typeof AdminReferenceQuestionGameSchema>;
+export type AdminReferenceQuestions = z.infer<typeof AdminReferenceQuestionsSchema>;

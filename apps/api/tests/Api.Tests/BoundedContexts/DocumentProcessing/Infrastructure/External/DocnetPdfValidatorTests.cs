@@ -1,8 +1,10 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 using Api.Tests.Constants;
@@ -30,7 +32,6 @@ public sealed class DocnetPdfValidatorTests : IDisposable
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["Pdf:MaxFileSizeMb"] = "50",
                 ["Pdf:MinPageCount"] = "1",
                 ["Pdf:MaxPageCount"] = "500",
                 ["Pdf:MinVersion"] = "1.0",
@@ -40,7 +41,12 @@ public sealed class DocnetPdfValidatorTests : IDisposable
             .Build();
 
         _domainService = new PdfValidationDomainService(configuration);
-        _validator = new DocnetPdfValidator(_mockLogger.Object, _domainService);
+        // #4449: the size limit comes from PdfProcessingOptions. 50 MB here, below the real 100, keeps
+        // the over-limit buffers of these tests at 51 MB.
+        _validator = new DocnetPdfValidator(
+            _mockLogger.Object,
+            _domainService,
+            Options.Create(new PdfProcessingOptions { MaxFileSizeBytes = 50L * 1024 * 1024 }));
     }
     [Fact]
     public async Task ValidateAsync_NullStream_ReturnsFailure()

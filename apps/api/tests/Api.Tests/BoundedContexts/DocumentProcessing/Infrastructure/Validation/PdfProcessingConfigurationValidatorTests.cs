@@ -167,8 +167,7 @@ public class PdfProcessingConfigurationValidatorTests
     [Theory]
     [InlineData(1024)] // 1 KB - minimum
     [InlineData(1048576)] // 1 MB
-    [InlineData(104857600)] // 100 MB - default
-    [InlineData(524288000)] // 500 MB - maximum
+    [InlineData(104857600)] // 100 MB - default and maximum (#4449: the extraction service's limit)
     public void Validate_ValidFileSizes_ReturnsSuccess(long fileSize)
     {
         // Arrange
@@ -189,7 +188,8 @@ public class PdfProcessingConfigurationValidatorTests
     [InlineData(1023)] // Below 1 KB
     [InlineData(0)]
     [InlineData(-1024)]
-    [InlineData(524288001)] // Above 500 MB
+    [InlineData(104857601)] // #4449: one byte above the extraction service's limit
+    [InlineData(524288000)] // 500 MB, the old maximum: accepted at upload, refused by extraction
     [InlineData(1073741824)] // 1 GB
     public void Validate_InvalidFileSizes_ReturnsFail(long fileSize)
     {

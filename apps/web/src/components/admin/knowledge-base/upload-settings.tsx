@@ -4,6 +4,8 @@
 import { InfoIcon, CpuIcon, LanguagesIcon, ScissorsIcon } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
+import { usePdfUploadLimits } from '@/hooks/queries/usePdfUploadLimits';
+import { formatSizeLimit } from '@/lib/format/file-size';
 
 /**
  * UploadSettings - Informational display of current processing configuration.
@@ -12,13 +14,18 @@ import { Badge } from '@/components/ui/badge';
  * This component displays the current values for admin reference.
  */
 export function UploadSettings() {
+  // #4449: the size limit is the backend's. The rest of this panel is still hand-written: #4446.
+  const { data: uploadLimits } = usePdfUploadLimits();
+
   return (
     <div className="bg-card/70 dark:bg-zinc-800/70 backdrop-blur-md rounded-xl p-6 border border-border/50 dark:border-zinc-700/50">
       <div className="flex items-center gap-2 mb-6">
         <h2 className="font-quicksand text-xl font-bold text-foreground dark:text-zinc-100">
           Processing Settings
         </h2>
-        <Badge variant="outline" className="text-xs">Read-only</Badge>
+        <Badge variant="outline" className="text-xs">
+          Read-only
+        </Badge>
       </div>
 
       <div className="space-y-5">
@@ -51,9 +58,7 @@ export function UploadSettings() {
         <div className="space-y-1.5">
           <div className="flex items-center gap-2">
             <ScissorsIcon className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm font-medium text-foreground dark:text-zinc-300">
-              Chunking
-            </span>
+            <span className="text-sm font-medium text-foreground dark:text-zinc-300">Chunking</span>
           </div>
           <div className="ml-6 grid grid-cols-2 gap-2">
             <div>
@@ -82,7 +87,7 @@ export function UploadSettings() {
               { code: 'de', label: 'German' },
               { code: 'fr', label: 'French' },
               { code: 'es', label: 'Spanish' },
-            ].map((lang) => (
+            ].map(lang => (
               <Badge key={lang.code} variant="secondary" className="text-xs">
                 {lang.label}
               </Badge>
@@ -96,15 +101,25 @@ export function UploadSettings() {
             Pipeline Steps
           </span>
           <div className="ml-0 flex items-center gap-1 text-xs text-muted-foreground">
-            <Badge variant="outline" className="text-xs">Upload</Badge>
+            <Badge variant="outline" className="text-xs">
+              Upload
+            </Badge>
             <span>→</span>
-            <Badge variant="outline" className="text-xs">Extract</Badge>
+            <Badge variant="outline" className="text-xs">
+              Extract
+            </Badge>
             <span>→</span>
-            <Badge variant="outline" className="text-xs">Chunk</Badge>
+            <Badge variant="outline" className="text-xs">
+              Chunk
+            </Badge>
             <span>→</span>
-            <Badge variant="outline" className="text-xs">Embed</Badge>
+            <Badge variant="outline" className="text-xs">
+              Embed
+            </Badge>
             <span>→</span>
-            <Badge variant="outline" className="text-xs">Index</Badge>
+            <Badge variant="outline" className="text-xs">
+              Index
+            </Badge>
           </div>
         </div>
 
@@ -116,7 +131,9 @@ export function UploadSettings() {
           <div className="ml-0 grid grid-cols-2 gap-2 text-sm">
             <div>
               <p className="text-xs text-muted-foreground">Max File Size</p>
-              <p className="text-foreground dark:text-zinc-100">500 MB</p>
+              <p className="text-foreground dark:text-zinc-100">
+                {uploadLimits ? formatSizeLimit(uploadLimits.maxFileSizeBytes) : '—'}
+              </p>
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Chunked Upload</p>

@@ -1,11 +1,16 @@
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using FluentValidation;
+using Microsoft.Extensions.Options;
 
 namespace Api.BoundedContexts.SystemConfiguration.Application.Commands.Tier;
 
 internal sealed class CreateTierDefinitionCommandValidator : AbstractValidator<CreateTierDefinitionCommand>
 {
-    public CreateTierDefinitionCommandValidator()
+    public CreateTierDefinitionCommandValidator(IOptions<PdfProcessingOptions> pdfOptions)
     {
+        ArgumentNullException.ThrowIfNull(pdfOptions);
+        var maxFileSizeBytes = pdfOptions.Value.MaxFileSizeBytes;
+
         RuleFor(x => x.Name)
             .NotEmpty()
             .WithMessage("Name is required")
@@ -27,6 +32,13 @@ internal sealed class CreateTierDefinitionCommandValidator : AbstractValidator<C
         RuleFor(x => x.Limits!.MaxLibraryGames)
             .GreaterThanOrEqualTo(1)
             .WithMessage("MaxLibraryGames must be at least 1")
+            .When(x => x.Limits is not null);
+
+        // #4449: a plan's PDF size is a commercial cap under the technical limit, not a second
+        // limit above it. A larger value would promise uploads that every upload path refuses.
+        RuleFor(x => x.Limits!.MaxPdfSizeBytes)
+            .LessThanOrEqualTo(maxFileSizeBytes)
+            .WithMessage($"MaxPdfSizeBytes must not exceed the PDF size limit ({maxFileSizeBytes} bytes, {PdfSizeLimit.Describe(maxFileSizeBytes)})")
             .When(x => x.Limits is not null);
 
         RuleFor(x => x.LlmModelTier)

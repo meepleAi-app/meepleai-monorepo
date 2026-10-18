@@ -556,7 +556,10 @@ public class EnhancedPdfProcessingOrchestratorTests
         // Assert - Should reject (default is 100 MB)
         result.Success.Should().BeFalse();
         result.ErrorMessage.Should().Contain("exceeds maximum");
-        result.ErrorMessage.Should().Contain("115"); // Should show actual size (115343360 bytes = 110 MB = 115.3 in decimal MB)
+        // Should show actual size: 115343360 bytes = 110.0 MB. #4449: in binary megabytes, like the limit
+        // ("100 MB" = 104 857 600 bytes) — it was 115.3, decimal, next to a limit counted in binary.
+        result.ErrorMessage.Should().Contain("110.0");
+        result.ErrorMessage.Should().Contain("100 MB");
     }
     /// <summary>
     /// Fake PDF extractor for testing orchestrator logic without real HTTP calls

@@ -101,9 +101,13 @@ public record TierLimits
         3, 3, 50L * 1024 * 1024, 20, 30, 6, 5, false, 1, 5, raptorRebuildEnabled: false,
         maxGamebookTranslationsPerMonth: 50);
 
-    /// <summary>Premium tier defaults.</summary>
+    /// <summary>
+    /// Premium tier defaults. #4449: the PDF size is 100 MB, the technical limit — a plan's PDF size is
+    /// a commercial cap under it, and the plan editor refuses values above it. It was 200 MB, which no
+    /// upload path ever accepted.
+    /// </summary>
     public static TierLimits PremiumTier => Create(
-        15, 15, 200L * 1024 * 1024, 200, 150, 12, 20, true, 5, 50, raptorRebuildEnabled: true,
+        15, 15, 100L * 1024 * 1024, 200, 150, 12, 20, true, 5, 50, raptorRebuildEnabled: true,
         maxGamebookTranslationsPerMonth: 500);
 
     /// <summary>

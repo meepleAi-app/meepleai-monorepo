@@ -9,7 +9,6 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 internal class PdfProcessingConfigurationValidator : IValidateOptions<PdfProcessingOptions>
 {
     private const long MinFileSizeBytes = 1024; // 1 KB
-    private const long MaxFileSizeBytes = 524288000; // 500 MB
     private const int MinCharsPerPageLowerBound = 100;
 
     public ValidateOptionsResult Validate(string? name, PdfProcessingOptions options)
@@ -40,11 +39,12 @@ internal class PdfProcessingConfigurationValidator : IValidateOptions<PdfProcess
                 $"Quality.MinCharsPerPage must be ≥{MinCharsPerPageLowerBound}, got {options.Quality.MinCharsPerPage}");
         }
 
-        // Validate file size limits
-        if (options.MaxFileSizeBytes < MinFileSizeBytes || options.MaxFileSizeBytes > MaxFileSizeBytes)
+        // Validate file size limits. #4449: the ceiling is the extraction service's, not 500 MB — a
+        // larger value would accept at upload PDFs that extraction then refuses.
+        if (options.MaxFileSizeBytes < MinFileSizeBytes || options.MaxFileSizeBytes > PdfSizeLimit.ExtractionServiceMaxBytes)
         {
             return ValidateOptionsResult.Fail(
-                $"MaxFileSizeBytes must be between {MinFileSizeBytes} (1KB) and {MaxFileSizeBytes} (500MB), got {options.MaxFileSizeBytes}");
+                $"MaxFileSizeBytes must be between {MinFileSizeBytes} (1KB) and {PdfSizeLimit.ExtractionServiceMaxBytes} ({PdfSizeLimit.Describe(PdfSizeLimit.ExtractionServiceMaxBytes)}, the extraction service's limit), got {options.MaxFileSizeBytes}");
         }
 
         // BGAI-087: Validate large PDF threshold

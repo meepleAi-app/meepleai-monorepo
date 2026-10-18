@@ -22,6 +22,12 @@ vi.mock('@/lib/api', () => ({
 }));
 
 // Mock RagReadyIndicator (complex component with polling)
+// #4449: PdfUploadZone reads the size limit from the backend.
+vi.mock(
+  '@/hooks/queries/usePdfUploadLimits',
+  () => import('@/__tests__/utils/pdf-upload-limits-mock')
+);
+
 vi.mock('@/components/pdf/RagReadyIndicator', () => ({
   RagReadyIndicator: ({
     gameId,

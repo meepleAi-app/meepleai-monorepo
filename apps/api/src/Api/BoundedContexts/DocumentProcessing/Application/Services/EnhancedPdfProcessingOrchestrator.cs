@@ -401,9 +401,9 @@ internal class EnhancedPdfProcessingOrchestrator
     /// </summary>
     private bool ValidateFileSize(Stream pdfStream, string requestId, out string? errorMessage)
     {
-        var maxSize = _configuration.GetValue<long>(
-            "PdfProcessing:MaxFileSizeBytes",
-            104857600); // 100 MB default
+        // #4449: the single PDF limit. The key is the one PdfProcessingOptions binds; its fallback is the
+        // options' own default, not a second copy of the number written here.
+        var maxSize = _configuration.GetValue("PdfProcessing:MaxFileSizeBytes", _options.MaxFileSizeBytes);
 
         if (pdfStream.CanSeek && pdfStream.Length > maxSize)
         {
@@ -411,7 +411,9 @@ internal class EnhancedPdfProcessingOrchestrator
                 "[{RequestId}] PDF size {Size} bytes exceeds maximum {Max} bytes - rejecting",
                 requestId, pdfStream.Length, maxSize);
 
-            errorMessage = $"PDF size ({pdfStream.Length / 1_000_000:F1} MB) exceeds maximum allowed ({maxSize / 1_000_000} MB)";
+            errorMessage = string.Create(
+                System.Globalization.CultureInfo.InvariantCulture,
+                $"PDF size ({pdfStream.Length / (1024.0 * 1024.0):F1} MB) exceeds maximum allowed ({PdfSizeLimit.Describe(maxSize)})");
             return false;
         }
 

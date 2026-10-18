@@ -1,8 +1,10 @@
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.SystemConfiguration.Application.Commands.Tier;
 using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Tests.Constants;
 using FluentAssertions;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SystemConfiguration.Unit.Tier;
@@ -27,7 +29,7 @@ public sealed class TierDefinitionCommandValidatorsTests
         var command = new CreateTierDefinitionCommand(
             "silver", "Silver", LimitsWithLibrary(maxLibraryGames), "free");
 
-        var result = new CreateTierDefinitionCommandValidator().Validate(command);
+        var result = new CreateTierDefinitionCommandValidator(Options.Create(new PdfProcessingOptions())).Validate(command);
 
         result.IsValid.Should().BeFalse();
         result.Errors.Should().ContainSingle(e => e.PropertyName == "Limits.MaxLibraryGames");
@@ -41,7 +43,7 @@ public sealed class TierDefinitionCommandValidatorsTests
         var command = new UpdateTierDefinitionCommand(
             "free", null, LimitsWithLibrary(maxLibraryGames), null, null);
 
-        var result = new UpdateTierDefinitionCommandValidator().Validate(command);
+        var result = new UpdateTierDefinitionCommandValidator(Options.Create(new PdfProcessingOptions())).Validate(command);
 
         result.IsValid.Should().BeFalse();
         result.Errors.Should().ContainSingle(e => e.PropertyName == "Limits.MaxLibraryGames");
@@ -52,7 +54,7 @@ public sealed class TierDefinitionCommandValidatorsTests
     {
         var command = new CreateTierDefinitionCommand("silver", "Silver", LimitsWithLibrary(1), "free");
 
-        new CreateTierDefinitionCommandValidator().Validate(command).IsValid.Should().BeTrue();
+        new CreateTierDefinitionCommandValidator(Options.Create(new PdfProcessingOptions())).Validate(command).IsValid.Should().BeTrue();
     }
 
     [Fact]
@@ -60,6 +62,54 @@ public sealed class TierDefinitionCommandValidatorsTests
     {
         var command = new UpdateTierDefinitionCommand("free", null, null, "standard", null);
 
-        new UpdateTierDefinitionCommandValidator().Validate(command).IsValid.Should().BeTrue();
+        new UpdateTierDefinitionCommandValidator(Options.Create(new PdfProcessingOptions())).Validate(command).IsValid.Should().BeTrue();
+    }
+
+    // #4449: a plan's PDF size is a commercial cap under the single PDF limit, never above it.
+    private static readonly IOptions<PdfProcessingOptions> PdfLimit = Options.Create(new PdfProcessingOptions());
+
+    private static TierLimitsDto LimitsWithPdfSize(long maxPdfSizeBytes) =>
+        TierLimitsDto.FromValueObject(TierLimits.FreeTier) with { MaxPdfSizeBytes = maxPdfSizeBytes };
+
+    [Fact]
+    public void Create_RejectsAPdfSizeAboveThePdfLimit_NamingTheField()
+    {
+        var command = new CreateTierDefinitionCommand(
+            "gold", "Gold", LimitsWithPdfSize(PdfLimit.Value.MaxFileSizeBytes + 1), "free");
+
+        var result = new CreateTierDefinitionCommandValidator(PdfLimit).Validate(command);
+
+        result.Errors.Should().ContainSingle(e => e.PropertyName == "Limits.MaxPdfSizeBytes")
+            .Which.ErrorMessage.Should().Contain("100 MB");
+    }
+
+    [Fact]
+    public void Update_RejectsAPdfSizeAboveThePdfLimit_NamingTheField()
+    {
+        var command = new UpdateTierDefinitionCommand(
+            "premium", null, LimitsWithPdfSize(200L * 1024 * 1024), null, null);
+
+        var result = new UpdateTierDefinitionCommandValidator(PdfLimit).Validate(command);
+
+        result.Errors.Should().ContainSingle(e => e.PropertyName == "Limits.MaxPdfSizeBytes");
+    }
+
+    [Fact]
+    public void Update_AcceptsAPdfSizeAtThePdfLimit()
+    {
+        var command = new UpdateTierDefinitionCommand(
+            "premium", null, LimitsWithPdfSize(PdfLimit.Value.MaxFileSizeBytes), null, null);
+
+        new UpdateTierDefinitionCommandValidator(PdfLimit).Validate(command).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void TheSeededPlans_AreValidUnderThePdfLimit()
+    {
+        // The premium default was 200 MB: a seeded plan the editor would then refuse to save.
+        foreach (var limits in new[] { TierLimits.FreeTier, TierLimits.NormalTier, TierLimits.PremiumTier })
+        {
+            limits.MaxPdfSizeBytes.Should().BeLessThanOrEqualTo(PdfLimit.Value.MaxFileSizeBytes);
+        }
     }
 }

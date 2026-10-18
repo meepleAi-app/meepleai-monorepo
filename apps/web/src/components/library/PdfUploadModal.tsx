@@ -3,7 +3,7 @@
  *
  * Modal for uploading custom PDF rulebook for a game with:
  * - Drag & drop area
- * - File input (PDF only, max 50MB)
+ * - File input (PDF only, within the backend's size limit — #4449)
  * - PDF preview before upload (Issue #2616)
  * - Progress bar during upload
  * - Replace with Standard PDF button
@@ -31,11 +31,11 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
+import { usePdfUploadLimits } from '@/hooks/queries/usePdfUploadLimits';
 import { api } from '@/lib/api';
+import { formatSizeLimit } from '@/lib/format/file-size';
 
 // Validation constants (Issue #2616, #4133)
-const MAX_FILE_SIZE_MB = 50;
-const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 
 type UploadStep = 'select' | 'preview' | 'uploading';
 
@@ -60,6 +60,9 @@ export function PdfUploadModal({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isValidating, setIsValidating] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  // #4449: the backend's size limit for this user, not a constant of this component.
+  const { data: uploadLimits } = usePdfUploadLimits();
+  const maxSizeBytes = uploadLimits?.maxFileSizeBytes;
 
   // Reset state when modal opens/closes
   useEffect(() => {
@@ -75,26 +78,29 @@ export function PdfUploadModal({
   }, [isOpen]);
 
   // Synchronous file validation (type, size, empty)
-  const validateFileSync = useCallback((selectedFile: File): string[] => {
-    const errors: string[] = [];
+  const validateFileSync = useCallback(
+    (selectedFile: File): string[] => {
+      const errors: string[] = [];
 
-    // Check file type
-    if (selectedFile.type !== 'application/pdf') {
-      errors.push('Il file deve essere in formato PDF');
-    }
+      // Check file type
+      if (selectedFile.type !== 'application/pdf') {
+        errors.push('Il file deve essere in formato PDF');
+      }
 
-    // Check file size (max 50MB - Issue #2616)
-    if (selectedFile.size > MAX_FILE_SIZE_BYTES) {
-      errors.push(`Il file è troppo grande (max ${MAX_FILE_SIZE_MB}MB)`);
-    }
+      // Check file size (Issue #2616; #4449: the backend's limit)
+      if (maxSizeBytes !== undefined && selectedFile.size > maxSizeBytes) {
+        errors.push(`Il file è troppo grande (max ${formatSizeLimit(maxSizeBytes)})`);
+      }
 
-    // Check if file is not empty
-    if (selectedFile.size === 0) {
-      errors.push('Il file è vuoto');
-    }
+      // Check if file is not empty
+      if (selectedFile.size === 0) {
+        errors.push('Il file è vuoto');
+      }
 
-    return errors;
-  }, []);
+      return errors;
+    },
+    [maxSizeBytes]
+  );
 
   const handleFileChange = useCallback(
     async (e: ChangeEvent<HTMLInputElement>) => {
@@ -242,7 +248,9 @@ export function PdfUploadModal({
                   data-testid="pdf-file-input"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Formato: PDF • Dimensione massima: {MAX_FILE_SIZE_MB}MB
+                  Formato: PDF
+                  {maxSizeBytes !== undefined &&
+                    ` • Dimensione massima: ${formatSizeLimit(maxSizeBytes)}`}
                 </p>
 
                 {/* Validating State */}

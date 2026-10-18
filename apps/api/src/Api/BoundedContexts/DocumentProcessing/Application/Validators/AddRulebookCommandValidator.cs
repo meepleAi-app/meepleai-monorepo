@@ -1,5 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using FluentValidation;
+using Microsoft.Extensions.Options;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Validators;
 
@@ -9,8 +11,12 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Validators;
 /// </summary>
 internal sealed class AddRulebookCommandValidator : AbstractValidator<AddRulebookCommand>
 {
-    public AddRulebookCommandValidator()
+    public AddRulebookCommandValidator(IOptions<PdfProcessingOptions> pdfOptions)
     {
+        ArgumentNullException.ThrowIfNull(pdfOptions);
+        // #4449: the single PDF size limit (PdfProcessing:MaxFileSizeBytes), not a number of its own.
+        var maxFileSizeBytes = pdfOptions.Value.MaxFileSizeBytes;
+
         RuleFor(x => x.GameId)
             .NotEmpty()
             .WithMessage("GameId is required.");
@@ -27,7 +33,9 @@ internal sealed class AddRulebookCommandValidator : AbstractValidator<AddRuleboo
         {
             RuleFor(x => x.File.Length)
                 .GreaterThan(0)
-                .WithMessage("File must not be empty.");
+                .WithMessage("File must not be empty.")
+                .LessThanOrEqualTo(maxFileSizeBytes)
+                .WithMessage($"File size cannot exceed {PdfSizeLimit.Describe(maxFileSizeBytes)}.");
 
             RuleFor(x => x.File.ContentType)
                 .Equal("application/pdf")

@@ -9,7 +9,6 @@ namespace Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
 internal sealed class CustomPdfMetadata : ValueObject
 {
     private const long MinFileSizeBytes = 1;
-    private const long MaxFileSizeBytes = 100_000_000; // 100 MB limit
     private const int MaxFileNameLength = 255;
 
     /// <summary>
@@ -45,8 +44,12 @@ internal sealed class CustomPdfMetadata : ValueObject
             throw new ArgumentException("URL cannot be empty", nameof(url));
         if (!IsValidPdfUrl(url, out var errorMessage))
             throw new ArgumentException(errorMessage, nameof(url));
-        if (fileSizeBytes < MinFileSizeBytes || fileSizeBytes > MaxFileSizeBytes)
-            throw new ArgumentOutOfRangeException(nameof(fileSizeBytes), $"File size must be between {MinFileSizeBytes} and {MaxFileSizeBytes} bytes");
+        // #4449: no upper bound here. The PDF size limit is configuration (PdfProcessing:MaxFileSizeBytes),
+        // checked by UploadCustomGamePdfCommandValidator when the PDF is registered. As an invariant it
+        // would also run when a stored row is read back (CreateWithTimestamp), and lowering the limit
+        // would then make existing library entries fail to load.
+        if (fileSizeBytes < MinFileSizeBytes)
+            throw new ArgumentOutOfRangeException(nameof(fileSizeBytes), $"File size must be at least {MinFileSizeBytes} byte");
         if (string.IsNullOrWhiteSpace(originalFileName))
             throw new ArgumentException("Original file name cannot be empty", nameof(originalFileName));
         if (originalFileName.Length > MaxFileNameLength)

@@ -2,7 +2,7 @@
  * Game Import Wizard Store — 5-step PDF direct import flow
  *
  * Steps:
- * 1. Title + PDF: creates the draft game, then uploads the PDF for it (chunked, up to 150MB)
+ * 1. Title + PDF: creates the draft game, then uploads the PDF for it (chunked, within the backend's PDF limit)
  *    → { gameId, pdfDocumentId }. #4401: the game comes first — the upload needs one.
  * 2. Review metadata (LLM-extracted) + cover image picker + live MeepleCard preview
  * 3. Preview & Confirm (read-only MeepleCard)

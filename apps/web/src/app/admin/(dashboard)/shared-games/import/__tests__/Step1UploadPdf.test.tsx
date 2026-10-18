@@ -10,6 +10,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { resetPdfUploadLimit, setPdfUploadLimit } from '@/__tests__/utils/pdf-upload-limits-mock';
 import { useGameImportWizardStore } from '@/stores/useGameImportWizardStore';
 
 import { Step1UploadPdf } from '../steps/Step1UploadPdf';
@@ -24,6 +25,12 @@ vi.mock('@/lib/api', () => ({
     },
   },
 }));
+
+// #4449: the size limit is the backend's, read through usePdfUploadLimits.
+vi.mock(
+  '@/hooks/queries/usePdfUploadLimits',
+  () => import('@/__tests__/utils/pdf-upload-limits-mock')
+);
 
 vi.mock('@/components/layout', () => ({
   toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() },
@@ -41,7 +48,39 @@ async function chooseTitleAndFile(user: ReturnType<typeof userEvent.setup>, titl
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetPdfUploadLimit();
   useGameImportWizardStore.setState({ importTitle: '', importGameId: null, uploadedPdf: null });
+});
+
+describe('Step1UploadPdf size limit (#4449)', () => {
+  function pdfFileOfSize(bytes: number): File {
+    const file = pdfFile();
+    Object.defineProperty(file, 'size', { value: bytes });
+    return file;
+  }
+
+  it('refuses a 150 MB PDF before uploading it, naming the backend limit', async () => {
+    const user = userEvent.setup();
+    render(<Step1UploadPdf />);
+
+    await user.type(screen.getByLabelText('Titolo del gioco'), 'Catan');
+    await user.upload(screen.getByLabelText('Select PDF File'), pdfFileOfSize(150 * 1024 * 1024));
+
+    expect(await screen.findByText(/exceeds maximum allowed \(100 MB\)/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /upload pdf/i })).toBeDisabled();
+    expect(mockStartGameImport).not.toHaveBeenCalled();
+    expect(mockWizardChunkedUpload).not.toHaveBeenCalled();
+  });
+
+  it('uses the limit the backend gives, not one of its own', async () => {
+    setPdfUploadLimit(20 * 1024 * 1024);
+    const user = userEvent.setup();
+    render(<Step1UploadPdf />);
+
+    await user.upload(screen.getByLabelText('Select PDF File'), pdfFileOfSize(21 * 1024 * 1024));
+
+    expect(await screen.findByText(/exceeds maximum allowed \(20 MB\)/)).toBeInTheDocument();
+  });
 });
 
 describe('Step1UploadPdf (#4401)', () => {

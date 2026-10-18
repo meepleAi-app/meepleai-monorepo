@@ -16,9 +16,11 @@ import {
 } from '@/components/ui/overlays/select';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
+import { usePdfUploadLimits } from '@/hooks/queries/usePdfUploadLimits';
 import { useChunkedUpload } from '@/hooks/useChunkedUpload';
 import { ApiError } from '@/lib/api';
 import { categorizeError, type CategorizedError, extractCorrelationId } from '@/lib/errorUtils';
+import { formatSizeLimit } from '@/lib/format/file-size';
 import { logger } from '@/lib/logger';
 import { retryWithBackoff, isRetryableError } from '@/lib/retryUtils';
 
@@ -42,7 +44,6 @@ interface PdfUploadFormProps {
 }
 
 // Validation constants
-const MAX_PDF_SIZE_BYTES = 104857600; // 100 MB
 const ALLOWED_MIME_TYPES = ['application/pdf'];
 const PDF_MAGIC_BYTES = '%PDF-';
 
@@ -51,8 +52,12 @@ interface ValidationResult {
   errors: Record<string, string>;
 }
 
-// Client-side PDF validation helper
-async function validatePdfFile(file: File): Promise<ValidationResult> {
+// Client-side PDF validation helper. #4449: the size limit is the backend's for this user; while it
+// is not known the backend's 400 is the check.
+async function validatePdfFile(
+  file: File,
+  maxSizeBytes: number | undefined
+): Promise<ValidationResult> {
   const errors: Record<string, string> = {};
 
   // MIME type check
@@ -61,10 +66,9 @@ async function validatePdfFile(file: File): Promise<ValidationResult> {
   }
 
   // Size check
-  if (file.size > MAX_PDF_SIZE_BYTES) {
+  if (maxSizeBytes !== undefined && file.size > maxSizeBytes) {
     const sizeMB = (file.size / 1024 / 1024).toFixed(1);
-    const maxMB = (MAX_PDF_SIZE_BYTES / 1024 / 1024).toFixed(0);
-    errors.size = `File size (${sizeMB} MB) exceeds maximum allowed (${maxMB} MB)`;
+    errors.size = `File size (${sizeMB} MB) exceeds maximum allowed (${formatSizeLimit(maxSizeBytes)})`;
   }
 
   if (file.size === 0) {
@@ -135,6 +139,9 @@ export function PdfUploadForm({
     reset: resetChunkedUpload,
   } = useChunkedUpload(API_BASE);
 
+  const { data: uploadLimits } = usePdfUploadLimits();
+  const maxSizeBytes = uploadLimits?.maxFileSizeBytes;
+
   // Determine if current file needs chunked upload
   const needsChunkedUpload = file ? shouldUseChunkedUpload(file) : false;
 
@@ -153,7 +160,7 @@ export function PdfUploadForm({
     resetChunkedUpload();
 
     try {
-      const validation = await validatePdfFile(selectedFile);
+      const validation = await validatePdfFile(selectedFile, maxSizeBytes);
 
       if (!validation.isValid) {
         setValidationErrors(validation.errors);

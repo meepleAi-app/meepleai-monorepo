@@ -194,7 +194,7 @@ public sealed class TierLimitsTests
 
         limits.MaxPrivateGames.Should().Be(15);
         limits.MaxPdfUploadsPerMonth.Should().Be(15);
-        limits.MaxPdfSizeBytes.Should().Be(200L * 1024 * 1024);
+        limits.MaxPdfSizeBytes.Should().Be(100L * 1024 * 1024); // #4449: the single PDF limit, not above it
         limits.MaxAgentQueriesPerDay.Should().Be(200);
         limits.MaxSessionQueries.Should().Be(150);
         limits.MaxSessionPlayers.Should().Be(12);

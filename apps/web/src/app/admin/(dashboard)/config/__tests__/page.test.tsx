@@ -2,7 +2,6 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('../GeneralTab', () => ({ GeneralTab: () => <div data-testid="general-tab" /> }));
-vi.mock('../LimitsTab', () => ({ LimitsTab: () => <div data-testid="limits-tab" /> }));
 vi.mock('../FeatureFlagsWrapper', () => ({
   FeatureFlagsWrapper: () => <div data-testid="flags-tab" />,
 }));
@@ -23,12 +22,12 @@ describe('AdminConfigPage', () => {
     expect(screen.getByTestId('general-tab')).toBeInTheDocument();
   });
 
-  it('renders limits tab when tab=limits', async () => {
+  it('falls back to the general tab for the removed limits tab (#4449)', async () => {
     const page = await AdminConfigPage({
       searchParams: Promise.resolve({ tab: 'limits' }),
     });
     render(page);
-    expect(screen.getByTestId('limits-tab')).toBeInTheDocument();
+    expect(screen.getByTestId('general-tab')).toBeInTheDocument();
   });
 
   it('renders flags tab when tab=flags', async () => {

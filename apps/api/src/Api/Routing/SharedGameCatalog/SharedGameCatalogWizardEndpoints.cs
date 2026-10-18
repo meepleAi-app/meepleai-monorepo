@@ -25,6 +25,7 @@ internal static class SharedGameCatalogWizardEndpoints
         // Step 1: Upload PDF for temporary storage (no processing)
         group.MapPost("/admin/shared-games/wizard/upload-pdf", HandleWizardUploadPdf)
             .DisableAntiforgery() // Required for multipart/form-data file uploads
+            .WithPdfUploadBodyLimit(group)
             .RequireAuthorization("AdminOnlyPolicy")
             .RequireRateLimiting("SharedGamesAdmin")
             .WithName("SharedGamesWizardUploadPdf")
@@ -87,6 +88,7 @@ internal static class SharedGameCatalogWizardEndpoints
         // RAG Wizard: Single upload + process
         group.MapPost("/admin/shared-games/{id:guid}/rag", HandleAddRagToSharedGame)
             .DisableAntiforgery() // Required for multipart/form-data file uploads
+            .WithPdfUploadBodyLimit(group)
             .RequireAuthorization("AdminOnlyPolicy")
             .RequireRateLimiting("SharedGamesAdmin")
             .WithName("AddRagToSharedGame")

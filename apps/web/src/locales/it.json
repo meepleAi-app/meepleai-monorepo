@@ -2071,7 +2071,7 @@
             "title": "Nessun PDF indicizzato",
             "description": "Carica il primo documento PDF per indicizzare le regole di {gameTitle} e abilitare il RAG chat con l'AI agent.",
             "ctaLabel": "Carica primo documento",
-            "supportedFormats": "Formati supportati: PDF · Max 200 MB per file"
+            "supportedFormats": "Formati supportati: PDF"
           },
           "pdfRow": {
             "openCta": "Apri dettaglio",

@@ -4,7 +4,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { formatFileSize } from '../file-size';
+import { formatFileSize, formatSizeLimit } from '../file-size';
 
 describe('formatFileSize', () => {
   it('returns "0 B" for zero bytes', () => {
@@ -44,5 +44,15 @@ describe('formatFileSize', () => {
   it('treats negative input defensively as "0 B"', () => {
     expect(formatFileSize(-1)).toBe('0 B');
     expect(formatFileSize(-1_000_000)).toBe('0 B');
+  });
+});
+
+describe('formatSizeLimit (#4449)', () => {
+  it('shows the single PDF limit as the backend messages do', () => {
+    expect(formatSizeLimit(104_857_600)).toBe('100 MB');
+  });
+
+  it('shows a plan cap in whole megabytes', () => {
+    expect(formatSizeLimit(50 * 1024 * 1024)).toBe('50 MB');
   });
 });

@@ -31,3 +31,11 @@ export function formatFileSize(bytes: number): string {
   if (bytes < GB) return `${(bytes / MB).toFixed(1)} MB`;
   return `${(bytes / GB).toFixed(1)} GB`;
 }
+
+/**
+ * formatSizeLimit — #4449: a size limit as upload messages show it, in whole megabytes.
+ * 104 857 600 → "100 MB". It matches the backend's messages, which divide by 1024 twice.
+ */
+export function formatSizeLimit(bytes: number): string {
+  return `${Math.floor(bytes / MB)} MB`;
+}

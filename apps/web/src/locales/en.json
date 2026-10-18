@@ -2064,7 +2064,7 @@
             "title": "No PDFs indexed yet",
             "description": "Upload the first PDF document to index the rules of {gameTitle} and enable AI agent RAG chat.",
             "ctaLabel": "Upload first document",
-            "supportedFormats": "Supported formats: PDF · Max 200 MB per file"
+            "supportedFormats": "Supported formats: PDF"
           },
           "pdfRow": {
             "openCta": "Open detail",

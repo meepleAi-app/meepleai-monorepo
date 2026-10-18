@@ -1,5 +1,7 @@
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using FluentValidation;
+using Microsoft.Extensions.Options;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Validators;
 
@@ -10,12 +12,15 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Validators;
 /// </summary>
 internal sealed class UploadPdfForGameExtractionCommandValidator : AbstractValidator<UploadPdfForGameExtractionCommand>
 {
-    private const long MaxFileSizeBytes = 52_428_800; // 50 MB
     private const string AllowedContentType = "application/pdf";
     private const string AllowedExtension = ".pdf";
 
-    public UploadPdfForGameExtractionCommandValidator()
+    public UploadPdfForGameExtractionCommandValidator(IOptions<PdfProcessingOptions> pdfOptions)
     {
+        ArgumentNullException.ThrowIfNull(pdfOptions);
+        // #4449: the single PDF size limit (PdfProcessing:MaxFileSizeBytes), not a number of its own.
+        var maxFileSizeBytes = pdfOptions.Value.MaxFileSizeBytes;
+
         RuleFor(x => x.UserId)
             .NotEmpty()
             .WithMessage("User ID is required.");
@@ -29,8 +34,8 @@ internal sealed class UploadPdfForGameExtractionCommandValidator : AbstractValid
             RuleFor(x => x.File!.Length)
                 .GreaterThan(0)
                 .WithMessage("PDF file cannot be empty.")
-                .LessThanOrEqualTo(MaxFileSizeBytes)
-                .WithMessage($"PDF file size cannot exceed {MaxFileSizeBytes / 1024 / 1024} MB.");
+                .LessThanOrEqualTo(maxFileSizeBytes)
+                .WithMessage($"PDF file size cannot exceed {PdfSizeLimit.Describe(maxFileSizeBytes)}.");
 
             RuleFor(x => x.File!.ContentType)
                 .Equal(AllowedContentType)

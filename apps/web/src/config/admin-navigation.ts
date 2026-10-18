@@ -315,11 +315,6 @@ export const ADMIN_NAVIGATION: AdminNavSection[] = [
         label: 'PDF Tier Limits',
         icon: FileIcon,
       },
-      {
-        href: '/admin/configuration/pdf-upload-limits',
-        label: 'PDF Upload Limits',
-        icon: FileIcon,
-      },
     ],
   },
   {

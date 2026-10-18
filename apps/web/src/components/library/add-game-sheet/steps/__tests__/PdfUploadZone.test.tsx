@@ -4,20 +4,24 @@
  */
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { resetPdfUploadLimit, setPdfUploadLimit } from '@/__tests__/utils/pdf-upload-limits-mock';
 
 import { PdfUploadZone } from '../PdfUploadZone';
+
+// #4449: the size limit is the backend's, read through usePdfUploadLimits.
+vi.mock(
+  '@/hooks/queries/usePdfUploadLimits',
+  () => import('@/__tests__/utils/pdf-upload-limits-mock')
+);
 
 const mockOnUpload = vi.fn();
 const mockOnUploadComplete = vi.fn();
 
 function renderZone(props = {}) {
   return render(
-    <PdfUploadZone
-      onUpload={mockOnUpload}
-      onUploadComplete={mockOnUploadComplete}
-      {...props}
-    />,
+    <PdfUploadZone onUpload={mockOnUpload} onUploadComplete={mockOnUploadComplete} {...props} />
   );
 }
 
@@ -26,6 +30,8 @@ function createPdfFile(name = 'test.pdf', size = 1024) {
 }
 
 describe('PdfUploadZone', () => {
+  beforeEach(() => resetPdfUploadLimit());
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -40,7 +46,7 @@ describe('PdfUploadZone', () => {
 
   it('renders file size limit info', () => {
     renderZone();
-    expect(screen.getByText('PDF fino a 50 MB')).toBeInTheDocument();
+    expect(screen.getByText('PDF fino a 100 MB')).toBeInTheDocument();
   });
 
   // --- File selection ---
@@ -67,17 +73,30 @@ describe('PdfUploadZone', () => {
     expect(screen.getByText('Seleziona un file PDF valido.')).toBeInTheDocument();
   });
 
-  it('rejects files over 50MB', () => {
+  it('rejects files over the limit the backend gives, naming it (#4449)', () => {
+    setPdfUploadLimit(20 * 1024 * 1024);
     renderZone();
 
     const input = screen.getByTestId('pdf-file-input');
-    // Create a file that reports > 50MB
+    // Create a file that reports more than the limit
     const bigFile = new File(['x'], 'big.pdf', { type: 'application/pdf' });
     Object.defineProperty(bigFile, 'size', { value: 60 * 1024 * 1024 });
     fireEvent.change(input, { target: { files: [bigFile] } });
 
     expect(screen.getByTestId('pdf-upload-error')).toBeInTheDocument();
-    expect(screen.getByText('Il file non deve superare i 50 MB.')).toBeInTheDocument();
+    expect(screen.getByText('Il file non deve superare i 20 MB.')).toBeInTheDocument();
+  });
+
+  it('accepts a 60 MB file under the single 100 MB limit (it refused it at 50)', () => {
+    renderZone();
+
+    const input = screen.getByTestId('pdf-file-input');
+    const file = new File(['x'], 'big.pdf', { type: 'application/pdf' });
+    Object.defineProperty(file, 'size', { value: 60 * 1024 * 1024 });
+    fireEvent.change(input, { target: { files: [file] } });
+
+    expect(screen.queryByTestId('pdf-upload-error')).not.toBeInTheDocument();
+    expect(screen.getByText('big.pdf')).toBeInTheDocument();
   });
 
   it('clears file when remove button clicked', () => {

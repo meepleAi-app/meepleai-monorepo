@@ -29,7 +29,6 @@ internal sealed class UploadSharedGamePdfCommandHandler
     private readonly IMediator _mediator;
     private readonly ILogger<UploadSharedGamePdfCommandHandler> _logger;
 
-    private const long MaxFileSizeBytes = 500L * 1024 * 1024; // 500 MB
     private static readonly HashSet<string> AllowedContentTypes =
         new(StringComparer.Ordinal) { "application/pdf" };
 
@@ -144,12 +143,7 @@ internal sealed class UploadSharedGamePdfCommandHandler
         if (file == null || file.Length == 0)
             throw new ArgumentException("No file provided. Please select a PDF file to upload.", nameof(file));
 
-        if (file.Length > MaxFileSizeBytes)
-        {
-            var sizeMB = file.Length / 1024.0 / 1024.0;
-            throw new ArgumentException(
-                $"File is too large ({sizeMB:F1}MB). Maximum size for admin upload is 500MB.", nameof(file));
-        }
+        // The size limit is UploadSharedGamePdfCommandValidator's: the single PDF limit (#4449).
 
         if (!AllowedContentTypes.Contains(file.ContentType))
             throw new ArgumentException($"Invalid file type ({file.ContentType}). Only PDF files are allowed.", nameof(file));

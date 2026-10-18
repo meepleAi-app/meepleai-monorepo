@@ -93,7 +93,7 @@ const MESSAGES: Record<string, string> = {
   'pages.library.gameDetail.kb.empty.title': 'Nessun PDF indicizzato',
   'pages.library.gameDetail.kb.empty.description': 'Carica il primo documento PDF per {gameTitle}.',
   'pages.library.gameDetail.kb.empty.ctaLabel': 'Carica primo documento',
-  'pages.library.gameDetail.kb.empty.supportedFormats': 'Formati: PDF, max 200 MB',
+  'pages.library.gameDetail.kb.empty.supportedFormats': 'Formati: PDF',
   'pages.library.gameDetail.kb.header.titleSuffix': 'Knowledge Base',
   'pages.library.gameDetail.kb.header.uploadCta': '+ Carica PDF',
   'pages.library.gameDetail.kb.header.reindexAllCta': 'Re-index all',

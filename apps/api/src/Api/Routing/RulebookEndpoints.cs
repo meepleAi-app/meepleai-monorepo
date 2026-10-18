@@ -25,7 +25,7 @@ internal static class RulebookEndpoints
     {
         group.MapPost("/games/{gameId:guid}/rulebook", HandleUploadRulebook)
              .DisableAntiforgery()
-             .WithMetadata(new RequestSizeLimitAttribute(104_857_600)) // 100 MB
+             .WithPdfUploadBodyLimit(group)
              .RequireAuthorization()
              .WithTags("Rulebook")
              .WithName("UploadRulebook")

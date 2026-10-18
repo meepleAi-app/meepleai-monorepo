@@ -143,7 +143,9 @@ log "runtime-managed pgvector schema OK"
 # Dopo lo step 3b: su un deploy queste migrations trovano lo schema che il
 # runtime ha gia' creato, e qui deve essere lo stesso.
 log "applico le migrations successive allo snapshot, sui dati caricati"
-ef_update
+ef_update || fail "una migration successiva allo snapshot e' fallita sui dati caricati: il DB e' a meta'.
+Corretta la migration, ricomincia da un DB vuoto: make dev-from-snapshot-force (azzera il volume postgres).
+Oppure make seed-index, per uno snapshot allineato al working tree."
 
 # Step 5: Smoke test
 log "smoke test: chunk count + orphans"

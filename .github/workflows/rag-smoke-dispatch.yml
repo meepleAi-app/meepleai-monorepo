@@ -134,9 +134,10 @@ jobs:
           EOF
           chmod 600 secrets/storage.secret
 
-      # snapshot-restore.sh applies the working-tree schema via `dotnet ef database
-      # update` on the host before pg_restore --data-only, so the consume flow needs
-      # the .NET SDK + dotnet-ef tool present (#2480).
+      # snapshot-restore.sh builds the API project and applies the schema via `dotnet
+      # ef database update` on the host, in two phases around pg_restore --data-only
+      # (#4489: up to the snapshot's migration before the data, the rest after), so
+      # the consume flow needs the .NET SDK + dotnet-ef tool present (#2480).
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:

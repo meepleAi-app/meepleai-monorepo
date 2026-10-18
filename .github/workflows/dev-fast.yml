@@ -547,7 +547,7 @@ jobs:
     # how this suite stopped being read. 20m, same as migration-safety.
     #
     # Sparse-checking out only infra/ would cut this to seconds but was
-    # rejected: snapshot-verify.sh reads apps/api/... at lines 37 and 106 with
+    # rejected: snapshot-verify.sh reads apps/api/... (the EF migrations and dev.yml) with
     # `2>/dev/null` fallbacks, so a partial tree would silently empty those
     # values and the checks would stop asserting without failing.
     timeout-minutes: 20

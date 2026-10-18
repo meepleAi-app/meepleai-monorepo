@@ -109,7 +109,7 @@ Lo script `snapshot-verify.sh` blocca il restore con un exit code distinto per o
 |---|---|---|
 | `0` | Tutto compatibile | procedi con restore |
 | `1` | `.latest` o `.meta.json` mancante | `make seed-index` per rigenerare |
-| `2` | La migration dello snapshot non è fra quelle del working tree: snapshot più nuovo del checkout, o di un altro branch | `git pull`, o `git checkout` del commit compatibile, oppure `make seed-index` per rigenerare |
+| `2` | La migration dello snapshot non è fra quelle del working tree (snapshot più nuovo del checkout, o di un altro branch); oppure, con un sidecar che elenca le migrations del bake (`ef_migrations`, dai bake di #4489), lo snapshot ne ha una che il working tree non ha, o il working tree ne ha una con data **anteriore** allo snapshot ma assente dal bake: nel ripristino girerebbe prima dei dati, su tabelle vuote | `git pull`, o `git checkout` del commit compatibile, oppure `make seed-index` per rigenerare |
 | `3` | Embedding model del working tree ≠ snapshot | allinea `infra/secrets/embedding.secret` oppure rigenera |
 | `4` | Embedding dimension mismatch | idem come exit 3 |
 | `5` | `seed_table_schema_version` del sidecar ≠ `infra/seed-schema.version` (#2126 D9) | `make seed-index` — una tabella seedata è stata rinominata/ristrutturata dopo il bake |
@@ -119,7 +119,7 @@ Lo script `snapshot-verify.sh` blocca il restore con un exit code distinto per o
 
 Warning non bloccanti:
 
-- **Snapshot più vecchio del working tree** (#4489): la migration dello snapshot è fra quelle del working tree, che ne ha di successive. Non blocca: `snapshot-restore.sh` porta lo schema alla migration del bake, carica i dati e solo dopo applica le successive, che così girano sui dati dello snapshot come su un deploy. Il warning elenca quelle che verranno applicate. Fino al 2026-10-18 la regola era l'uguaglianza, e con il bake completo una volta a settimana ogni migration mergiata fermava il gate RAG su tutti i branch fino al bake successivo.
+- **Snapshot più vecchio del working tree** (#4489): la migration dello snapshot è fra quelle del working tree, che ne ha di successive. Non blocca: `snapshot-restore.sh` porta lo schema alla migration del bake, carica i dati e solo dopo applica le successive, che così girano sui dati dello snapshot come su un deploy. Il warning elenca quelle che verranno applicate e la data del bake. Un sidecar di prima di #4489 non elenca le migrations del bake: in quel caso un secondo warning avverte che le migrations con data anteriore allo snapshot, arrivate dopo il bake, non si possono riconoscere. Fino al 2026-10-18 la regola era l'uguaglianza, e con il bake completo una volta a settimana ogni migration mergiata fermava il gate RAG su tutti i branch fino al bake successivo.
 - `dev.yml` sha256 diverso dallo snapshot → eventuali giochi aggiunti dopo il bake NON sono indicizzati
 - `failed_pdf_ids` non vuoto → lo snapshot contiene N PDF che sono falliti durante il bake (contabilizzati nel sidecar)
 
@@ -141,6 +141,7 @@ Esempio: `meepleai_seed_20260410T143022Z_sentence-transformers_all-MiniLM-L6-v2_
 {
   "schema_version": "20260401_AddSearchVector",
   "ef_migration_head": "20260401_AddSearchVector",
+  "ef_migrations": ["20260301_Init", "20260401_AddSearchVector"],
   "seed_table_schema_version": 1,
   "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
   "embedding_dim": 384,

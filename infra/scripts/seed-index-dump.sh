@@ -84,6 +84,7 @@ log "raccolgo stats per sidecar"
 STATS_JSON=$(docker exec meepleai-postgres psql -U "$PG_USER" -d "$PG_DB" -At -c "
 SELECT json_build_object(
   'ef_migration_head', (SELECT \"MigrationId\" FROM \"__EFMigrationsHistory\" ORDER BY \"MigrationId\" DESC LIMIT 1),
+  'ef_migrations',     COALESCE((SELECT json_agg(\"MigrationId\" ORDER BY \"MigrationId\") FROM \"__EFMigrationsHistory\"), '[]'::json),
   'pdf_count',         (SELECT COUNT(*) FROM pdf_documents WHERE processing_state IN ('Ready','Completed')),
   'chunk_count',       (SELECT COUNT(*) FROM text_chunks),
   'embedding_count',   (SELECT COUNT(*) FROM pgvector_embeddings),
@@ -105,6 +106,10 @@ for f in infra/seed-schema.version ../infra/seed-schema.version seed-schema.vers
     [ -f "$f" ] && { SEED_SCHEMA_VERSION=$(tr -d '[:space:]' <"$f"); break; }
 done
 
+# ef_migrations (#4489): tutte le migrations del bake, non solo la piu' recente.
+# snapshot-verify.sh le confronta con quelle del working tree per trovare quelle
+# arrivate dopo il bake con una data anteriore: nel ripristino girerebbero su
+# tabelle vuote, prima del caricamento dei dati.
 jq -n \
     --argjson stats "$STATS_JSON" \
     --arg model "$EMBEDDING_MODEL" \
@@ -117,6 +122,7 @@ jq -n \
     '{
        schema_version: $stats.ef_migration_head,
        ef_migration_head: $stats.ef_migration_head,
+       ef_migrations: $stats.ef_migrations,
        seed_table_schema_version: $seed_schema,
        embedding_model: $model,
        embedding_dim: $dim,

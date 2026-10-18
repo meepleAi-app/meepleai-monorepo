@@ -12,7 +12,7 @@ setup() {
     export SEED_INDEX_OUT_DIR="$TMPDIR"
 
     # snapshot-verify.sh resolves infra/seed-schema.version RELATIVE TO CWD
-    # (lines 126-131: infra/… → ../infra/… → seed-schema.version) and falls back
+    # (its seed-schema.version lookup: infra/… → ../infra/… → seed-schema.version) and falls back
     # to 0 in silence when none matches. Run from infra/scripts/ the counter is
     # unreachable, and "exit 5 on seed-table schema-version drift" then fails in
     # the dangerous direction: expected 0 == current 0, the branch is never
@@ -93,6 +93,7 @@ sync_seed_schema_version() {
     set_expected_env
     run bash "$SCRIPT_DIR/snapshot-verify.sh"
     [ "$status" -eq 2 ]
+    [[ "$output" == *"snapshot disallineato con le migrations del working tree"* ]]
 }
 
 # #4489: con l'uguaglianza ogni migration mergiata dopo il bake settimanale
@@ -115,6 +116,8 @@ sync_seed_schema_version() {
     # La migration del bake e quelle prima sono gia' nello snapshot.
     [[ "$output" != *"[verify]   20260401_AddSearchVector"* ]]
     [[ "$output" != *"[verify]   20260301_Init"* ]]
+    # meta-good e' un sidecar di prima di #4489, senza l'elenco delle migrations.
+    [[ "$output" == *"non elenca le migrations del bake"* ]]
 }
 
 # Il caso che l'uguaglianza proteggeva davvero: uno snapshot che il working tree
@@ -155,4 +158,109 @@ sync_seed_schema_version() {
     echo "nonexistent_snapshot" > "$TMPDIR/.latest"
     run bash "$SCRIPT_DIR/snapshot-verify.sh"
     [ "$status" -eq 1 ]
+}
+
+# Uno snapshot di un altro branch con una migration che il working tree non ha,
+# anche se la sua data e' anteriore all'ultima del working tree: un controllo
+# basato solo sull'ordine (head dello snapshot <= head del working tree) lo
+# lascerebbe passare.
+@test "exit 2 when an unknown snapshot migration sorts before the working tree head" {
+    install_fixture meta-good
+    sync_seed_schema_version
+    set_expected_env
+    unset EXPECTED_EF_HEAD
+    export EXPECTED_EF_MIGRATIONS=$'20260301_Init\n20260320_Before\n20260420_AddLatest'
+    patch_meta '.ef_migration_head = "20260310_OtherBranch"'
+    run bash "$SCRIPT_DIR/snapshot-verify.sh"
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"non e' fra quelle del working tree"* ]]
+}
+
+# Senza EXPECTED_EF_HEAD la head del working tree e' l'ultima migration in ordine,
+# qualunque sia l'ordine in cui arrivano: in produzione l'elenco viene da find.
+@test "the working tree head is the latest migration whatever the input order" {
+    install_fixture meta-good
+    sync_seed_schema_version
+    set_expected_env
+    unset EXPECTED_EF_HEAD
+    export EXPECTED_EF_MIGRATIONS=$'20260420_AddLatest\n20260301_Init\n20260401_AddSearchVector'
+    run bash "$SCRIPT_DIR/snapshot-verify.sh"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"dei dati 1 migration"* ]]
+    [[ "$output" == *"[verify]   20260420_AddLatest"* ]]
+
+    patch_meta '.ef_migration_head = "20260420_AddLatest"'
+    run bash "$SCRIPT_DIR/snapshot-verify.sh"
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"snapshot piu' vecchio"* ]]
+}
+
+# Dai bake di #4489 il sidecar elenca tutte le migrations del bake: quelle da
+# applicare sono la differenza fra i due elenchi, e manca l'avviso sul controllo
+# impossibile.
+@test "with the bake's migration list the pending ones are the set difference" {
+    install_fixture meta-good
+    sync_seed_schema_version
+    set_expected_env
+    export EXPECTED_EF_MIGRATIONS=$'20260301_Init\n20260401_AddSearchVector\n20260410_AddLater\n20260420_AddLatest'
+    export EXPECTED_EF_HEAD="20260420_AddLatest"
+    patch_meta '.ef_migrations = ["20260301_Init", "20260401_AddSearchVector"]'
+    run bash "$SCRIPT_DIR/snapshot-verify.sh"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"dei dati 2 migration"* ]]
+    [[ "$output" == *"[verify]   20260410_AddLater"* ]]
+    [[ "$output" == *"[verify]   20260420_AddLatest"* ]]
+    [[ "$output" != *"non elenca le migrations del bake"* ]]
+}
+
+@test "without the bake's migration list a warning says the late-migration check is impossible" {
+    install_fixture meta-good
+    sync_seed_schema_version
+    set_expected_env
+    export EXPECTED_EF_MIGRATIONS=$'20260301_Init\n20260401_AddSearchVector\n20260420_AddLatest'
+    export EXPECTED_EF_HEAD="20260420_AddLatest"
+    run bash "$SCRIPT_DIR/snapshot-verify.sh"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"non elenca le migrations del bake"* ]]
+}
+
+# Il caso trovato dalla review di #4491: una migration arrivata nel working tree
+# dopo il bake, ma con una data anteriore a quella dello snapshot (un branch
+# mergiato dopo). Nel ripristino cadrebbe nel primo tempo, su tabelle vuote.
+@test "exit 2 on a working tree migration older than the snapshot but missing from the bake" {
+    install_fixture meta-good
+    sync_seed_schema_version
+    set_expected_env
+    export EXPECTED_EF_MIGRATIONS=$'20260301_Init\n20260315_FromABranch\n20260401_AddSearchVector\n20260420_AddLatest'
+    export EXPECTED_EF_HEAD="20260420_AddLatest"
+    patch_meta '.ef_migrations = ["20260301_Init", "20260401_AddSearchVector"]'
+    run bash "$SCRIPT_DIR/snapshot-verify.sh"
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"data ANTERIORE"* ]]
+    [[ "$output" == *"  20260315_FromABranch"* ]]
+    [[ "$output" != *"  20260420_AddLatest"$'\n'* ]]
+}
+
+# Lo stesso difetto c'era gia' con le head uguali, e l'uguaglianza lo lasciava passare.
+@test "exit 2 on a late migration also when the heads are equal" {
+    install_fixture meta-good
+    sync_seed_schema_version
+    set_expected_env
+    export EXPECTED_EF_MIGRATIONS=$'20260301_Init\n20260315_FromABranch\n20260401_AddSearchVector'
+    patch_meta '.ef_migrations = ["20260301_Init", "20260401_AddSearchVector"]'
+    run bash "$SCRIPT_DIR/snapshot-verify.sh"
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"  20260315_FromABranch"* ]]
+}
+
+@test "exit 2 when the bake has a migration the working tree lacks" {
+    install_fixture meta-good
+    sync_seed_schema_version
+    set_expected_env
+    export EXPECTED_EF_MIGRATIONS=$'20260301_Init\n20260401_AddSearchVector'
+    patch_meta '.ef_migrations = ["20260301_Init", "20260305_OtherBranch", "20260401_AddSearchVector"]'
+    run bash "$SCRIPT_DIR/snapshot-verify.sh"
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"migrations che il working tree non ha"* ]]
+    [[ "$output" == *"  20260305_OtherBranch"* ]]
 }

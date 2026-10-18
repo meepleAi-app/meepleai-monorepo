@@ -15,6 +15,8 @@ import { Spinner } from '@/components/loading';
 import { Button } from '@/components/ui/primitives/button';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { Label } from '@/components/ui/primitives/label';
+import { usePdfUploadLimits } from '@/hooks/queries/usePdfUploadLimits';
+import { formatSizeLimit } from '@/lib/format/file-size';
 import { cn } from '@/lib/utils';
 
 interface PdfUploadStepProps {
@@ -51,19 +53,24 @@ export function PdfUploadStep({
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
+  // #4449: the backend's size limit for this user, not a constant of this component.
+  const { data: uploadLimits } = usePdfUploadLimits();
+  const maxSizeBytes = uploadLimits?.maxFileSizeBytes;
 
-  const handleFileSelect = useCallback((selectedFile: File) => {
-    if (selectedFile.type !== 'application/pdf') {
-      toast.error('Seleziona un file PDF');
-      return;
-    }
-    if (selectedFile.size > 50 * 1024 * 1024) {
-      // 50MB limit
-      toast.error('Il file deve essere inferiore a 50MB');
-      return;
-    }
-    setFile(selectedFile);
-  }, []);
+  const handleFileSelect = useCallback(
+    (selectedFile: File) => {
+      if (selectedFile.type !== 'application/pdf') {
+        toast.error('Seleziona un file PDF');
+        return;
+      }
+      if (maxSizeBytes !== undefined && selectedFile.size > maxSizeBytes) {
+        toast.error(`Il file supera il limite di ${formatSizeLimit(maxSizeBytes)}`);
+        return;
+      }
+      setFile(selectedFile);
+    },
+    [maxSizeBytes]
+  );
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -225,7 +232,9 @@ export function PdfUploadStep({
             <p className="font-medium text-foreground text-sm">
               Trascina qui il PDF o clicca per selezionare
             </p>
-            <p className="text-xs text-muted-foreground">PDF fino a 50MB</p>
+            <p className="text-xs text-muted-foreground">
+              {maxSizeBytes !== undefined ? `PDF fino a ${formatSizeLimit(maxSizeBytes)}` : 'PDF'}
+            </p>
           </div>
         )}
       </div>

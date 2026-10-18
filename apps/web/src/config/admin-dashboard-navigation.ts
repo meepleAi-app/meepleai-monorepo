@@ -489,11 +489,6 @@ export const DASHBOARD_SECTIONS: DashboardSection[] = [
         activePattern: /^\/admin\/config(\?tab=general)?$/,
       },
       {
-        href: '/admin/config?tab=limits',
-        label: 'Limits',
-        icon: GaugeIcon,
-      },
-      {
         href: '/admin/config?tab=flags',
         label: 'Feature Flags',
         icon: FlagIcon,

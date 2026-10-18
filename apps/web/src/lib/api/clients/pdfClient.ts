@@ -5,6 +5,8 @@
  * Covers: PDF processing progress, cancellation, download
  */
 
+import { z } from 'zod';
+
 import { getApiBase, type HttpClient } from '../core/httpClient';
 import {
   ProcessingProgressSchema,
@@ -19,6 +21,18 @@ import {
   type IndexerVersionList,
 } from '../schemas/indexer-versions.schemas';
 
+/**
+ * #4449: GET /api/v1/ingest/pdf/limits — the PDF upload limits for the current user.
+ * `maxFileSizeBytes` is their effective limit: the smaller of the single technical limit
+ * (PdfProcessing:MaxFileSizeBytes) and their plan's PDF size.
+ */
+export const PdfUploadLimitsSchema = z.object({
+  maxFileSizeBytes: z.number().int().positive(),
+  maxConcurrentChunkedUploads: z.number().int().positive(),
+});
+
+export type PdfUploadLimits = z.infer<typeof PdfUploadLimitsSchema>;
+
 export interface CreatePdfClientParams {
   httpClient: HttpClient;
 }
@@ -28,6 +42,16 @@ export interface CreatePdfClientParams {
  */
 export function createPdfClient({ httpClient }: CreatePdfClientParams) {
   return {
+    // ========== Upload limits (#4449) ==========
+
+    /**
+     * The PDF upload limits for the current user. Upload zones read the size limit from here
+     * instead of carrying their own constant (they had 50, 150 and 500 MB).
+     */
+    async getUploadLimits(): Promise<PdfUploadLimits | null> {
+      return httpClient.get('/api/v1/ingest/pdf/limits', PdfUploadLimitsSchema);
+    },
+
     // ========== PDF Processing ==========
 
     /**

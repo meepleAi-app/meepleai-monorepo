@@ -18,8 +18,10 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
+import { usePdfUploadLimits } from '@/hooks/queries/usePdfUploadLimits';
 import { useApiClient } from '@/lib/api/context';
 import { useGameSearch } from '@/lib/domain-hooks/useGameSearch';
+import { formatSizeLimit } from '@/lib/format/file-size';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -33,7 +35,6 @@ interface FileUploadState {
 
 const MAX_SINGLE_UPLOAD_SIZE = 10 * 1024 * 1024; // 10MB threshold for chunked upload
 const ACCEPTED_TYPES = ['application/pdf'];
-const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 const MAX_CONCURRENT_UPLOADS = 3;
 
 // ── Component ──────────────────────────────────────────────────────────
@@ -43,6 +44,10 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const preSelectedRef = useRef(false);
+  // #4449: the size limit is the backend's, read for this user — it was a 500 MB constant here
+  // while the backend accepted 100.
+  const { data: uploadLimits } = usePdfUploadLimits();
+  const maxFileSize = uploadLimits?.maxFileSizeBytes;
 
   // Game search state
   const [gameQuery, setGameQuery] = useState('');
@@ -79,15 +84,18 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
 
   // ── Validation ──────────────────────────────────────────────────────
 
-  const validateFile = useCallback((file: File): string | null => {
-    if (!ACCEPTED_TYPES.includes(file.type) && !file.name.toLowerCase().endsWith('.pdf')) {
-      return 'Only PDF files are supported';
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      return `File too large (max ${MAX_FILE_SIZE / (1024 * 1024)}MB)`;
-    }
-    return null;
-  }, []);
+  const validateFile = useCallback(
+    (file: File): string | null => {
+      if (!ACCEPTED_TYPES.includes(file.type) && !file.name.toLowerCase().endsWith('.pdf')) {
+        return 'Only PDF files are supported';
+      }
+      if (maxFileSize !== undefined && file.size > maxFileSize) {
+        return `File too large (max ${formatSizeLimit(maxFileSize)})`;
+      }
+      return null;
+    },
+    [maxFileSize]
+  );
 
   // ── Upload Logic ────────────────────────────────────────────────────
 
@@ -413,7 +421,7 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
               <FileTextIcon className="w-4 h-4" />
               <span>Solo PDF</span>
             </div>
-            <span>Max 500MB per file</span>
+            {maxFileSize !== undefined && <span>Max {formatSizeLimit(maxFileSize)} per file</span>}
           </div>
         </div>
       </div>

@@ -16,6 +16,8 @@ import { FileText, Loader2, SkipForward } from 'lucide-react';
 import { PdfProcessingStatus } from '@/components/library/PdfProcessingStatus';
 import { CopyrightDisclaimerModal } from '@/components/pdf/CopyrightDisclaimerModal';
 import { Button } from '@/components/ui/primitives/button';
+import { usePdfUploadLimits } from '@/hooks/queries/usePdfUploadLimits';
+import { formatSizeLimit } from '@/lib/format/file-size';
 
 // ============================================================================
 // Types
@@ -30,8 +32,6 @@ interface UploadRulesStepProps {
 }
 
 type UploadPhase = 'prompt' | 'disclaimer' | 'upload' | 'uploading' | 'processing';
-
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 // ============================================================================
 // Component
@@ -51,6 +51,9 @@ export function UploadRulesStep({
   const xhrRef = useRef<XMLHttpRequest | null>(null);
 
   const effectiveGameId = gameId ?? privateGameId ?? null;
+  // #4449: the backend's size limit for this user, not a constant of this component.
+  const { data: uploadLimits } = usePdfUploadLimits();
+  const maxSizeBytes = uploadLimits?.maxFileSizeBytes;
 
   const handleDisclaimerAccept = useCallback(() => {
     setPhase('upload');
@@ -70,8 +73,8 @@ export function UploadRulesStep({
         setUploadError('Solo file PDF sono supportati.');
         return;
       }
-      if (file.size > MAX_FILE_SIZE) {
-        setUploadError('Il file supera il limite di 50MB.');
+      if (maxSizeBytes !== undefined && file.size > maxSizeBytes) {
+        setUploadError(`Il file supera il limite di ${formatSizeLimit(maxSizeBytes)}.`);
         return;
       }
 
@@ -120,7 +123,7 @@ export function UploadRulesStep({
       xhr.withCredentials = true;
       xhr.send(formData);
     },
-    [effectiveGameId]
+    [effectiveGameId, maxSizeBytes]
   );
 
   return (
@@ -172,7 +175,11 @@ export function UploadRulesStep({
           >
             <FileText className="h-8 w-8 text-muted-foreground mb-2" aria-hidden="true" />
             <span className="text-sm font-medium">Seleziona il PDF del regolamento</span>
-            <span className="text-xs text-muted-foreground mt-1">Max 50MB</span>
+            {maxSizeBytes !== undefined && (
+              <span className="text-xs text-muted-foreground mt-1">
+                Max {formatSizeLimit(maxSizeBytes)}
+              </span>
+            )}
             <input
               id="pdf-upload-input"
               type="file"

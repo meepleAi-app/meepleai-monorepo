@@ -10,15 +10,12 @@ import {
   PagedResultSchema,
   ConfigurationValidationResultSchema,
   ConfigurationExportDtoSchema,
-  PdfUploadLimitsDtoSchema,
   PdfTierUploadLimitsDtoSchema,
   type SystemConfigurationDto,
   type PagedResult,
   type ConfigurationHistoryDto,
   type ConfigurationValidationResult,
   type ConfigurationExportDto,
-  type PdfUploadLimitsDto,
-  type UpdatePdfUploadLimitsRequest,
   type PdfTierUploadLimitsDto,
   type UpdatePdfTierUploadLimitsRequest,
 } from '../schemas';
@@ -306,46 +303,6 @@ export function createConfigClient({ httpClient }: CreateConfigClientParams) {
 
       if (!response) {
         return [];
-      }
-
-      return response;
-    },
-
-    // ========== PDF Upload Limits (Issue #3078) ==========
-
-    /**
-     * Get current PDF upload limits configuration
-     * @returns Current limits for PDF uploads
-     */
-    async getPdfUploadLimits(): Promise<PdfUploadLimitsDto> {
-      const response = await httpClient.get(
-        '/api/v1/admin/system/pdf-upload-limits',
-        PdfUploadLimitsDtoSchema
-      );
-
-      if (!response) {
-        throw new Error('Failed to fetch PDF upload limits');
-      }
-
-      return response;
-    },
-
-    /**
-     * Update PDF upload limits configuration
-     * @param request Updated PDF upload limits
-     * @returns Updated limits configuration
-     */
-    async updatePdfUploadLimits(
-      request: UpdatePdfUploadLimitsRequest
-    ): Promise<PdfUploadLimitsDto> {
-      const response = await httpClient.put(
-        '/api/v1/admin/system/pdf-upload-limits',
-        request,
-        PdfUploadLimitsDtoSchema
-      );
-
-      if (!response) {
-        throw new Error('Failed to update PDF upload limits');
       }
 
       return response;

@@ -2,7 +2,7 @@
  * PdfUploadSheet Component
  *
  * Bottom sheet variant of PDF upload for mobile game detail page.
- * Validates PDF only, max 50MB, calls actual upload API.
+ * Validates PDF only, within the backend's size limit (#4449), calls actual upload API.
  */
 
 'use client';
@@ -14,10 +14,9 @@ import { FileText, Upload, Loader2 } from 'lucide-react';
 import { toast } from '@/components/layout/Toast';
 import { GradientButton } from '@/components/ui/buttons/GradientButton';
 import { BottomSheet } from '@/components/ui/overlays/BottomSheet';
+import { usePdfUploadLimits } from '@/hooks/queries/usePdfUploadLimits';
 import { api } from '@/lib/api';
-
-const MAX_FILE_SIZE_MB = 50;
-const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+import { formatSizeLimit } from '@/lib/format/file-size';
 
 export interface PdfUploadSheetProps {
   open: boolean;
@@ -32,6 +31,9 @@ export function PdfUploadSheet({ open, onOpenChange, gameId, onUploaded }: PdfUp
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // #4449: the backend's size limit for this user, not a constant of this component.
+  const { data: uploadLimits } = usePdfUploadLimits();
+  const maxSizeBytes = uploadLimits?.maxFileSizeBytes;
 
   const reset = useCallback(() => {
     setFile(null);
@@ -48,32 +50,35 @@ export function PdfUploadSheet({ open, onOpenChange, gameId, onUploaded }: PdfUp
     [onOpenChange, reset]
   );
 
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0];
-    if (!selected) return;
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const selected = e.target.files?.[0];
+      if (!selected) return;
 
-    setError(null);
+      setError(null);
 
-    if (selected.type !== 'application/pdf') {
-      setError('Il file deve essere in formato PDF');
-      setFile(null);
-      return;
-    }
+      if (selected.type !== 'application/pdf') {
+        setError('Il file deve essere in formato PDF');
+        setFile(null);
+        return;
+      }
 
-    if (selected.size > MAX_FILE_SIZE_BYTES) {
-      setError(`Il file è troppo grande (max ${MAX_FILE_SIZE_MB}MB)`);
-      setFile(null);
-      return;
-    }
+      if (maxSizeBytes !== undefined && selected.size > maxSizeBytes) {
+        setError(`Il file è troppo grande (max ${formatSizeLimit(maxSizeBytes)})`);
+        setFile(null);
+        return;
+      }
 
-    if (selected.size === 0) {
-      setError('Il file è vuoto');
-      setFile(null);
-      return;
-    }
+      if (selected.size === 0) {
+        setError('Il file è vuoto');
+        setFile(null);
+        return;
+      }
 
-    setFile(selected);
-  }, []);
+      setFile(selected);
+    },
+    [maxSizeBytes]
+  );
 
   const handleUpload = useCallback(async () => {
     if (!file) return;
@@ -136,12 +141,8 @@ export function PdfUploadSheet({ open, onOpenChange, gameId, onUploaded }: PdfUp
             <div className="flex items-center gap-3 rounded-lg bg-card/5 p-3">
               <FileText className="h-5 w-5 shrink-0 text-purple-400" />
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-[var(--text)]">
-                  {file.name}
-                </p>
-                <p className="text-xs text-[var(--text-sec)]">
-                  {formatSize(file.size)}
-                </p>
+                <p className="truncate text-sm font-medium text-[var(--text)]">{file.name}</p>
+                <p className="text-xs text-[var(--text-sec)]">{formatSize(file.size)}</p>
               </div>
             </div>
 
@@ -188,7 +189,8 @@ export function PdfUploadSheet({ open, onOpenChange, gameId, onUploaded }: PdfUp
 
         {/* Info text */}
         <p className="text-center text-xs text-[var(--text-muted)]">
-          Formato: PDF &bull; Max {MAX_FILE_SIZE_MB}MB
+          Formato: PDF
+          {maxSizeBytes !== undefined && <> &bull; Max {formatSizeLimit(maxSizeBytes)}</>}
         </p>
       </div>
     </BottomSheet>

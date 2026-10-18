@@ -5,12 +5,13 @@
  * Issue #5052 — Admin Config Migration
  *
  * Canonical entry for all system configuration admin pages.
- * Tabs: general · limits · flags · rate-limits
+ * Tabs: general · flags · rate-limits · banner
+ * #4449: the Limits tab is gone — its PDF upload limits had no reader on any upload path.
  */
 
 import { Suspense } from 'react';
 
-import { Settings, Gauge, Flag, ShieldCheck, Megaphone } from 'lucide-react';
+import { Settings, Flag, ShieldCheck, Megaphone } from 'lucide-react';
 
 import { AdminHubTabBar, type HubTab } from '@/components/admin/layout/AdminHubTabBar';
 import { AdminTabPersistence } from '@/components/admin/layout/AdminTabPersistence';
@@ -18,7 +19,6 @@ import { StatusBannerAdmin } from '@/components/features/status-banner';
 
 import { FeatureFlagsWrapper } from './FeatureFlagsWrapper';
 import { GeneralTab } from './GeneralTab';
-import { LimitsTab } from './LimitsTab';
 import { RateLimitsTab } from './RateLimitsTab';
 
 interface AdminConfigPageProps {
@@ -27,7 +27,6 @@ interface AdminConfigPageProps {
 
 const TABS: readonly HubTab[] = [
   { id: 'general', label: 'General', href: '/admin/config?tab=general', icon: <Settings /> },
-  { id: 'limits', label: 'Limits', href: '/admin/config?tab=limits', icon: <Gauge /> },
   { id: 'flags', label: 'Feature Flags', href: '/admin/config?tab=flags', icon: <Flag /> },
   {
     id: 'rate-limits',
@@ -61,12 +60,6 @@ function renderTabContent(tab: TabId) {
           <GeneralTab />
         </Suspense>
       );
-    case 'limits':
-      return (
-        <Suspense fallback={<TabSkeleton />}>
-          <LimitsTab />
-        </Suspense>
-      );
     case 'flags':
       return (
         <Suspense fallback={<TabSkeleton />}>
@@ -92,7 +85,10 @@ function renderTabContent(tab: TabId) {
 
 export default async function AdminConfigPage({ searchParams }: AdminConfigPageProps) {
   const params = await searchParams;
-  const tab = (params.tab ?? 'general') as TabId;
+  // An unknown tab falls back to General. #4449 removed the Limits tab: a link to it, or the tab
+  // remembered by AdminTabPersistence, would otherwise open an empty page.
+  const requested = params.tab ?? 'general';
+  const tab: TabId = TABS.some(t => t.id === requested) ? (requested as TabId) : 'general';
 
   return (
     <div className="space-y-5">

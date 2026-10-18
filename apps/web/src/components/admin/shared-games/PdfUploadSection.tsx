@@ -5,7 +5,7 @@
  * Features:
  * - Drag-and-drop file selection
  * - Upload progress tracking
- * - File validation (PDF, 50MB limit)
+ * - File validation (PDF, the backend's size limit — #4449)
  * - Links uploaded PDF to SharedGame
  * - Live processing status polling after upload (Issue #5196)
  */
@@ -36,7 +36,9 @@ import {
   SelectValue,
 } from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
+import { usePdfUploadLimits } from '@/hooks/queries/usePdfUploadLimits';
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
+import { formatSizeLimit } from '@/lib/format/file-size';
 
 // ========== Types ==========
 
@@ -141,24 +143,32 @@ export function PdfUploadSection({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [polledPdfs, processingDoc?.id, gameId]);
 
+  // #4449: the backend's size limit for this user, not a constant of this component.
+  const { data: uploadLimits } = usePdfUploadLimits();
+  const maxSizeBytes = uploadLimits?.maxFileSizeBytes;
+
   // Validate file selection
-  const validateFile = useCallback((selectedFile: File): boolean => {
-    setError(null);
+  const validateFile = useCallback(
+    (selectedFile: File): boolean => {
+      setError(null);
 
-    if (selectedFile.type !== 'application/pdf') {
-      setError('Il file deve essere un PDF');
-      toast.error('Il file deve essere un PDF');
-      return false;
-    }
+      if (selectedFile.type !== 'application/pdf') {
+        setError('Il file deve essere un PDF');
+        toast.error('Il file deve essere un PDF');
+        return false;
+      }
 
-    if (selectedFile.size > 50 * 1024 * 1024) {
-      setError('Il file deve essere inferiore a 50MB');
-      toast.error('Il file deve essere inferiore a 50MB');
-      return false;
-    }
+      if (maxSizeBytes !== undefined && selectedFile.size > maxSizeBytes) {
+        const message = `Il file supera il limite di ${formatSizeLimit(maxSizeBytes)}`;
+        setError(message);
+        toast.error(message);
+        return false;
+      }
 
-    return true;
-  }, []);
+      return true;
+    },
+    [maxSizeBytes]
+  );
 
   // Handle file selection
   const handleFileSelect = useCallback(
@@ -474,7 +484,11 @@ export function PdfUploadSection({
                 <div className="space-y-2">
                   <FileUp className="h-10 w-10 mx-auto text-muted-foreground" />
                   <p className="font-medium">Trascina un PDF o clicca per selezionare</p>
-                  <p className="text-sm text-muted-foreground">PDF fino a 50MB</p>
+                  <p className="text-sm text-muted-foreground">
+                    {maxSizeBytes !== undefined
+                      ? `PDF fino a ${formatSizeLimit(maxSizeBytes)}`
+                      : 'PDF'}
+                  </p>
                 </div>
               )}
             </div>

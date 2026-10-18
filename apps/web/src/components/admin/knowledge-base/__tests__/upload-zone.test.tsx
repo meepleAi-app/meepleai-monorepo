@@ -7,7 +7,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { resetPdfUploadLimit, setPdfUploadLimit } from '@/__tests__/utils/pdf-upload-limits-mock';
+
 import { UploadZone } from '../upload-zone';
+
+// #4449: the size limit is the backend's, read through usePdfUploadLimits.
+vi.mock(
+  '@/hooks/queries/usePdfUploadLimits',
+  () => import('@/__tests__/utils/pdf-upload-limits-mock')
+);
 
 const GAME_ID = 'game-4442';
 const CHUNKED_SIZE = 11 * 1024 * 1024; // sopra la soglia di 10 MB del caricamento a pezzi
@@ -65,6 +73,7 @@ async function chooseFile(container: HTMLElement, file: File) {
 describe('UploadZone', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetPdfUploadLimit();
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({ id: GAME_ID, title: 'Catan' }),
@@ -82,6 +91,19 @@ describe('UploadZone', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it('rifiuta un file oltre il limite dato dal backend, prima di caricarlo (#4449)', async () => {
+    // 20 MB: nessuna costante del componente vale tanto (era 500 MB).
+    setPdfUploadLimit(20 * 1024 * 1024);
+    const { container } = renderZone();
+
+    await chooseFile(container, pdfFile('big.pdf', 21 * 1024 * 1024));
+
+    await waitFor(() => expect(container.textContent).toContain('File too large (max 20 MB)'));
+    expect(container.textContent).toContain('Max 20 MB per file');
+    expect(pdfApi.initChunkedUpload).not.toHaveBeenCalled();
+    expect(pdfApi.uploadPdf).not.toHaveBeenCalled();
   });
 
   it('caricamento a pezzi: non riaccoda il documento, lo ha già accodato il backend', async () => {

@@ -38,6 +38,29 @@ describe('createPdfClient', () => {
     vi.clearAllMocks();
   });
 
+  describe('getUploadLimits (#4449)', () => {
+    it('reads GET /api/v1/ingest/pdf/limits with a schema that accepts the backend body', async () => {
+      mockHttpClient.get.mockResolvedValue(null);
+
+      await pdfClient.getUploadLimits();
+
+      expect(mockHttpClient.get).toHaveBeenCalledWith(
+        '/api/v1/ingest/pdf/limits',
+        expect.any(Object)
+      );
+      const schema = mockHttpClient.get.mock.calls[0]?.[1] as {
+        safeParse: (x: unknown) => { success: boolean };
+      };
+      // The body GetUploadLimitsQueryHandler returns, as the API serializes it.
+      expect(
+        schema.safeParse({ maxFileSizeBytes: 104_857_600, maxConcurrentChunkedUploads: 3 }).success
+      ).toBe(true);
+      expect(
+        schema.safeParse({ maxFileSizeBytes: 0, maxConcurrentChunkedUploads: 3 }).success
+      ).toBe(false);
+    });
+  });
+
   describe('getImageRegions', () => {
     it('fetches and unwraps image regions', async () => {
       const regions = [{ page: 4, x: 0.1, y: 0.5, width: 0.8, height: 0.3, elementType: 'Image' }];

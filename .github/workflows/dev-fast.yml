@@ -169,6 +169,9 @@ jobs:
   # typecheck stay in a separate fast job (no benefit from parallelism).
   # The frontend-fast aggregator job below preserves the branch-protection
   # required check name "Frontend Fast (lint + typecheck + unit)".
+  # The ~7.5min above was true at #1115 and is not kept current here: since
+  # #4117 the aggregator prints, on every run, how much of the budget each
+  # shard used.
 
   frontend-static:
     name: Frontend Static (lint + typecheck)
@@ -260,7 +263,24 @@ jobs:
   frontend-tests:
     name: Frontend Tests (shard ${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Issue #4117: raised 10 → 15 minutes. On the Dev Fast runs of 2026-10-14…16
+    # the shard job took p50 7m20s, p90 8m56s, slowest green 9m12s — 92% of the
+    # 10-min budget — and one shard was closed by the timeout at 10m12s (run
+    # 38772184870). The same SHA moves by 2+ minutes per shard with runner load
+    # (run 37657470219: slowest shard 8m17s on an idle CI, cut at 10m18s on a
+    # saturated one), so 10 left no headroom on a busy day. A shard cut by the
+    # budget concludes `cancelled`, which `gh pr checks` shows as `fail`.
+    # Why not the alternatives: ~70% of the Vitest cost is per-file overhead
+    # (jsdom environment + vitest.setup.tsx) and the 25 slowest files are ~3% of
+    # it, so moving slow files buys nothing; a 5th shard pays checkout + install
+    # again and would be the third reshard (3 → 4 → 5) of a suite that refills
+    # any absolute number. 15 min puts the slowest green shard measured above at
+    # ~61% of the budget, ~6 min headroom.
+    # The ratio is not left to this comment: the frontend-fast aggregator prints
+    # each shard's share of the budget on every run and warns from 80%
+    # (infra/scripts/frontend-shard-report.sh). The anchor hands it this same
+    # value — change it here only.
+    timeout-minutes: &frontend-tests-budget 15
     needs: changes
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     strategy:
@@ -301,8 +321,20 @@ jobs:
     timeout-minutes: 2
     needs: [changes, frontend-static, frontend-tests]
     if: ${{ always() }}
+    # #4117: the shard report reads this run's jobs and the annotations of the
+    # cancelled ones — the only place where GitHub says whether a `cancelled`
+    # shard ran out of budget or was replaced by a newer run — and fetches its
+    # script at this run's SHA through the contents API, so the job still needs
+    # no checkout (whose duration swings by minutes on this repo).
+    permissions:
+      actions: read
+      checks: read
+      contents: read
     steps:
       - name: Verify upstream results
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUDGET_MINUTES: *frontend-tests-budget
         run: |
           STATIC="${{ needs.frontend-static.result }}"
           TESTS="${{ needs.frontend-tests.result }}"
@@ -316,12 +348,33 @@ jobs:
             echo "No frontend changes on PR — aggregator passes (upstream legitimately skipped)."
             exit 0
           fi
+          # #4117: which shard, why, and how much of the budget it used. Only
+          # informational — whatever happens in here, the verdict below depends
+          # on the needs results alone, as before.
+          shard_report() {
+            local dir id
+            dir=$(mktemp -d)
+            gh api "repos/$GITHUB_REPOSITORY/contents/infra/scripts/frontend-shard-report.sh?ref=$GITHUB_SHA" \
+              -H "Accept: application/vnd.github.raw" > "$dir/report.sh" || return 1
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100" \
+              > "$dir/jobs.json" || return 1
+            mkdir "$dir/annotations"
+            for id in $(jq -r '.jobs[] | select(.conclusion == "cancelled") | .id' "$dir/jobs.json"); do
+              gh api "repos/$GITHUB_REPOSITORY/check-runs/$id/annotations" > "$dir/annotations/$id.json" \
+                || rm -f "$dir/annotations/$id.json"
+            done
+            bash "$dir/report.sh" --jobs "$dir/jobs.json" --annotations "$dir/annotations" \
+              --budget-minutes "$BUDGET_MINUTES"
+          }
+          if [[ "$TESTS" != "skipped" ]]; then
+            shard_report || echo "::warning::shard report unavailable (see the lines above); the verdict below does not depend on it"
+          fi
           if [[ "$STATIC" != "success" ]]; then
             echo "frontend-static did not succeed (result=$STATIC)"
             exit 1
           fi
           if [[ "$TESTS" != "success" ]]; then
-            echo "frontend-tests did not succeed across all shards (result=$TESTS)"
+            echo "frontend-tests did not succeed across all shards (result=$TESTS) — which shard, and whether it was a timeout rather than a failure, is in the shard report above"
             exit 1
           fi
           echo "All frontend checks passed."

@@ -59,8 +59,10 @@ teardown() {
 
 @test "il file cifrato non contiene nessun valore in chiaro" {
     bash "$SCRIPT" encrypt database
-    ! grep -q 'a@b=c#d' "$SOPS_DIR/database.secret.enc"
-    ! grep -q 'meepleai' "$SOPS_DIR/database.secret.enc"
+    # Non `! grep -q`: in bats una riga negata che non e' l'ultima del test non lo fa fallire mai.
+    # Scritte cosi', queste due righe non hanno verificato nulla fino a #4117.
+    [ "$(grep -c 'a@b=c#d' "$SOPS_DIR/database.secret.enc")" -eq 0 ]
+    [ "$(grep -c 'meepleai' "$SOPS_DIR/database.secret.enc")" -eq 0 ]
     run bash "$SCRIPT" check
     [ "$status" -eq 0 ]
 }
@@ -95,7 +97,7 @@ teardown() {
     echo 'POSTGRES_USER=modificato_in_locale' >> "$SECRETS_DIR/database.secret"
     run bash "$SCRIPT" decrypt --force database
     [ "$status" -eq 0 ]
-    ! grep -q 'modificato_in_locale' "$SECRETS_DIR/database.secret"
+    [ "$(grep -c 'modificato_in_locale' "$SECRETS_DIR/database.secret")" -eq 0 ]
     grep -q 'modificato_in_locale' "$SECRETS_DIR/database.secret.bak"
 }
 

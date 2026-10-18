@@ -39,12 +39,6 @@ internal static class UserLibraryCoreEndpoints
         MapGetGameInLibraryStatusEndpoint(group);
         MapBatchCheckGamesInLibraryEndpoint(group);
 
-        // Agent configuration endpoints
-        MapGetGameAgentConfigEndpoint(group);
-        MapUpdateAgentConfigEndpoint(group);
-        MapSaveAgentConfigEndpoint(group);
-        MapCreateGameAgentEndpoint(group);
-
         // Library sharing endpoints
         MapCreateLibraryShareLinkEndpoint(group);
         MapGetLibraryShareLinkEndpoint(group);
@@ -87,6 +81,7 @@ internal static class UserLibraryCoreEndpoints
             [FromQuery] string? search,
             [FromQuery] bool? favoritesOnly,
             [FromQuery] string[]? stateFilter,
+            [FromQuery] bool? hasKb,
             [FromQuery] string? sortBy,
             [FromQuery] bool? sortDescending,
             IMediator mediator,
@@ -108,6 +103,7 @@ internal static class UserLibraryCoreEndpoints
                 PageSize: pageSize ?? 20,
                 FavoritesOnly: favoritesOnly,
                 StateFilter: stateFilter,
+                HasKb: hasKb,
                 SortBy: sortBy ?? "addedAt",
                 Descending: sortDescending ?? true
             );
@@ -119,8 +115,7 @@ internal static class UserLibraryCoreEndpoints
         .Produces<PaginatedLibraryResponseDto>(200)
         .WithTags("Library")
         .WithSummary("Get user's game library")
-        .WithDescription("Returns paginated list of games in user's library. Supports filtering by favorites, state (Nuovo/InPrestito/Wishlist/Owned), and sorting by addedAt, title, or favorite status.")
-        .WithOpenApi();
+        .WithDescription("Returns paginated list of games in user's library. Supports filtering by favorites, state (Nuovo/InPrestito/Wishlist/Owned), KB availability (hasKb: at least one completed PDF), and sorting by addedAt, title, or favorite status.");
     }
 
     private static void MapGetLibraryStatsEndpoint(RouteGroupBuilder group)
@@ -147,8 +142,7 @@ internal static class UserLibraryCoreEndpoints
         .Produces<UserLibraryStatsDto>(200)
         .WithTags("Library")
         .WithSummary("Get library statistics")
-        .WithDescription("Returns statistics about user's library including total games, favorites count, and date range.")
-        .WithOpenApi();
+        .WithDescription("Returns statistics about user's library including total games, favorites count, and date range.");
     }
 
     private static void MapGetLibraryQuotaEndpoint(RouteGroupBuilder group)
@@ -175,8 +169,7 @@ internal static class UserLibraryCoreEndpoints
         .Produces<LibraryQuotaDto>(200)
         .WithTags("Library")
         .WithSummary("Get library quota")
-        .WithDescription("Returns quota information for user's library including games in library, max allowed, remaining slots, and tier.")
-        .WithOpenApi();
+        .WithDescription("Returns quota information for user's library including games in library, max allowed, remaining slots, and tier.");
     }
 
     private static void MapGetLibraryActivityEndpoint(RouteGroupBuilder group)
@@ -208,8 +201,7 @@ internal static class UserLibraryCoreEndpoints
         .Produces(401)
         .WithTags("Library")
         .WithSummary("Get library activity feed")
-        .WithDescription("Returns recent activity events (added/state-changed) for the user's library. Limit clamped to 1–50 (default 20). Issue #642 — Wave B.3 followup.")
-        .WithOpenApi();
+        .WithDescription("Returns recent activity events (added/state-changed) for the user's library. Limit clamped to 1–50 (default 20). Issue #642 — Wave B.3 followup.");
     }
 
     private static void MapAddGameToLibraryEndpoint(RouteGroupBuilder group)
@@ -252,8 +244,7 @@ internal static class UserLibraryCoreEndpoints
         .Produces(409)
         .WithTags("Library")
         .WithSummary("Add game to library")
-        .WithDescription("Adds a game to user's library with optional notes and favorite status. Returns 409 if game already in library.")
-        .WithOpenApi();
+        .WithDescription("Adds a game to user's library with optional notes and favorite status. Returns 409 if game already in library.");
     }
 
     private static void MapRemoveGameFromLibraryEndpoint(RouteGroupBuilder group)
@@ -290,8 +281,7 @@ internal static class UserLibraryCoreEndpoints
         .Produces(404)
         .WithTags("Library")
         .WithSummary("Remove game from library")
-        .WithDescription("Removes a game from user's library. Returns 404 if game not in library.")
-        .WithOpenApi();
+        .WithDescription("Removes a game from user's library. Returns 404 if game not in library.");
     }
 
     private static void MapUpdateLibraryEntryEndpoint(RouteGroupBuilder group)
@@ -356,8 +346,7 @@ internal static class UserLibraryCoreEndpoints
         .Produces(409)
         .WithTags("Library")
         .WithSummary("Update library entry")
-        .WithDescription("Updates notes, favorite status, and/or game state (Nuovo/InPrestito/Wishlist/Owned) for a game in user's library. Returns 404 if game not in library, 409 for invalid state transitions.")
-        .WithOpenApi();
+        .WithDescription("Updates notes, favorite status, and/or game state (Nuovo/InPrestito/Wishlist/Owned) for a game in user's library. Returns 404 if game not in library, 409 for invalid state transitions.");
     }
 
     private static void MapGetGameInLibraryStatusEndpoint(RouteGroupBuilder group)
@@ -386,8 +375,7 @@ internal static class UserLibraryCoreEndpoints
         .Produces(401)
         .WithTags("Library")
         .WithSummary("Check if game is in library with associated data")
-        .WithDescription("Returns whether a game is in user's library, favorite status, and detailed counts of associated data (agent config, PDFs, chat sessions, game sessions, checklists, labels). Used by collection quick actions to display Add/Remove buttons and pre-removal warnings.")
-        .WithOpenApi();
+        .WithDescription("Returns whether a game is in user's library, favorite status, and detailed counts of associated data (agent config, PDFs, chat sessions, game sessions, checklists, labels). Used by collection quick actions to display Add/Remove buttons and pre-removal warnings.");
     }
 
     private static void MapBatchCheckGamesInLibraryEndpoint(RouteGroupBuilder group)
@@ -431,186 +419,19 @@ internal static class UserLibraryCoreEndpoints
         .Produces(401)
         .WithTags("Library")
         .WithSummary("Batch check library status for multiple games")
-        .WithDescription("Checks library status for multiple games in a single request. Accepts comma-separated game IDs (max 100). Returns dictionary keyed by game ID. Optimized for game grid rendering to eliminate N+1 API calls.")
-        .WithOpenApi();
+        .WithDescription("Checks library status for multiple games in a single request. Accepts comma-separated game IDs (max 100). Returns dictionary keyed by game ID. Optimized for game grid rendering to eliminate N+1 API calls.");
     }
 
-    private static void MapGetGameAgentConfigEndpoint(RouteGroupBuilder group)
-    {
-        group.MapGet("/library/games/{gameId:guid}/agent-config", async (
-            Guid gameId,
-            IMediator mediator,
-            HttpContext context,
-            CancellationToken ct) =>
-        {
-            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
-            if (!authenticated) return error!;
-
-            if (!TryGetUserId(context, session, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
-            var query = new GetGameAgentConfigQuery(userId, gameId);
-            var result = await mediator.Send(query, ct).ConfigureAwait(false);
-
-            return Results.Ok(result);
-        })
-        .RequireAuthenticatedUser()
-        .Produces<AgentConfigDto?>(200)
-        .Produces(401)
-        .WithTags("Library")
-        .WithSummary("Get AI agent configuration")
-        .WithDescription("Returns the custom AI agent configuration for a game in user's library. Returns null if no custom configuration exists (defaults should be used).")
-        .WithOpenApi();
-    }
-
-    private static void MapUpdateAgentConfigEndpoint(RouteGroupBuilder group)
-    {
-        group.MapPut("/library/games/{gameId:guid}/agent-config", async (
-            Guid gameId,
-            [FromBody] AgentConfigDto agentConfig,
-            IMediator mediator,
-            HttpContext context,
-            CancellationToken ct) =>
-        {
-            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
-            if (!authenticated) return error!;
-
-            if (!TryGetUserId(context, session, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
-            var command = new ConfigureGameAgentCommand(userId, gameId, agentConfig);
-
-            try
-            {
-                var result = await mediator.Send(command, ct).ConfigureAwait(false);
-                return Results.Ok(result);
-            }
-            catch (DomainException ex) when (ex.Message.Contains("not found"))
-            {
-                return Results.NotFound(new { error = ex.Message });
-            }
-        })
-        .RequireAuthenticatedUser()
-        .Produces<UserLibraryEntryDto>(200)
-        .Produces(401)
-        .Produces(404)
-        .WithTags("Library")
-        .WithSummary("Update AI agent configuration")
-        .WithDescription("Updates the custom AI agent configuration for a game in user's library. Replaces any existing configuration.")
-        .WithOpenApi();
-    }
-
-    /// <summary>
-    /// Maps POST endpoint for saving simplified agent configuration (Issue #3212).
-    /// </summary>
-    private static void MapSaveAgentConfigEndpoint(RouteGroupBuilder group)
-    {
-        group.MapPost("/library/games/{gameId:guid}/agent-config", async (
-            Guid gameId,
-            [FromBody] SaveAgentConfigRequest request,
-            IMediator mediator,
-            HttpContext context,
-            CancellationToken ct) =>
-        {
-            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
-            if (!authenticated) return error!;
-
-            if (!TryGetUserId(context, session, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
-            var command = new SaveAgentConfigCommand(
-                userId,
-                gameId,
-                request.AgentDefinitionId,
-                request.ModelName,
-                request.CostEstimate
-            );
-
-            try
-            {
-                var result = await mediator.Send(command, ct).ConfigureAwait(false);
-                return Results.Ok(result);
-            }
-            catch (NotFoundException ex)
-            {
-                return Results.NotFound(new { error = ex.Message });
-            }
-            catch (ConflictException ex)
-            {
-                return Results.Conflict(new { error = ex.Message });
-            }
-        })
-        .RequireAuthenticatedUser()
-        .Produces<SaveAgentConfigResponse>(200)
-        .Produces<ProblemDetails>(400)
-        .Produces<ProblemDetails>(401)
-        .Produces<ProblemDetails>(404)
-        .Produces<ProblemDetails>(409)
-        .WithName("SaveAgentConfig")
-        .WithDescription("Save simplified agent configuration for a game (Issue #3212)")
-        .WithOpenApi();
-    }
-
-    /// <summary>
-    /// Maps POST endpoint for creating game agent with custom typology and strategy (Issue #5).
-    /// </summary>
-    private static void MapCreateGameAgentEndpoint(RouteGroupBuilder group)
-    {
-        group.MapPost("/library/games/{gameId:guid}/agent", async (
-            Guid gameId,
-            [FromBody] CreateGameAgentRequest request,
-            IMediator mediator,
-            HttpContext context,
-            CancellationToken ct) =>
-        {
-            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
-            if (!authenticated) return error!;
-
-            if (!TryGetUserId(context, session, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
-            var command = new CreateGameAgentCommand(
-                GameId: gameId,
-                AgentDefinitionId: request.AgentDefinitionId,
-                StrategyName: request.StrategyName,
-                StrategyParameters: request.StrategyParameters,
-                UserId: userId,
-                UserTier: session?.Principal?.Subject?.Tier ?? "Free",
-                UserRole: session?.Principal?.Subject?.Role ?? "User"
-            );
-
-            try
-            {
-                var result = await mediator.Send(command, ct).ConfigureAwait(false);
-                return Results.Ok(result);
-            }
-            catch (NotFoundException ex)
-            {
-                return Results.NotFound(new { error = ex.Message });
-            }
-            catch (ConflictException ex)
-            {
-                return Results.Conflict(new { error = ex.Message });
-            }
-        })
-        .RequireAuthenticatedUser()
-        .Produces<CreateGameAgentResult>(200)
-        .Produces<ProblemDetails>(400)
-        .Produces<ProblemDetails>(401)
-        .Produces<ProblemDetails>(404)
-        .Produces<ProblemDetails>(409)
-        .WithName("CreateGameAgent")
-        .WithDescription("Create agent for game with custom typology and strategy (Issue #5)")
-        .WithOpenApi();
-    }
+    // Issue #4138: four per-game agent routes stood here.
+    //   GET/PUT/POST /library/games/{gameId}/agent-config read and wrote an AgentConfiguration
+    //   (model, temperature, personality, detail level, notes) on the user's library entry;
+    //   POST /library/games/{gameId}/agent built a CreateGameAgentCommand that wrote the same thing.
+    // Measured before removing them: NOTHING on the answer path reads that configuration -
+    // Personality / DetailLevel / PersonalNotes have zero references outside UserLibrary, its DTOs
+    // and the /games/{id}/agents projection, and AskQuestionQueryHandler, StreamQaQueryHandler,
+    // RagPromptAssemblyService and PlaygroundChatCommandHandler never touch CustomAgentConfig.
+    // So the routes let a user tune an agent that could not change a single answer. With one
+    // system agent (ADR-094) they are retired; EndpointContractTests.RetiredRoutes keeps them off.
 
     private static void MapCreateLibraryShareLinkEndpoint(RouteGroupBuilder group)
     {
@@ -651,8 +472,7 @@ internal static class UserLibraryCoreEndpoints
         .Produces(401)
         .WithTags("Library", "Sharing")
         .WithSummary("Create library share link")
-        .WithDescription("Creates a new share link for user's library. Revokes any existing active link. Max 10 per day.")
-        .WithOpenApi();
+        .WithDescription("Creates a new share link for user's library. Revokes any existing active link. Max 10 per day.");
     }
 
     private static void MapGetLibraryShareLinkEndpoint(RouteGroupBuilder group)
@@ -685,8 +505,7 @@ internal static class UserLibraryCoreEndpoints
         .Produces(401)
         .WithTags("Library", "Sharing")
         .WithSummary("Get active library share link")
-        .WithDescription("Returns the user's active library share link, or null if none exists.")
-        .WithOpenApi();
+        .WithDescription("Returns the user's active library share link, or null if none exists.");
     }
 
     private static void MapUpdateLibraryShareLinkEndpoint(RouteGroupBuilder group)
@@ -735,8 +554,7 @@ internal static class UserLibraryCoreEndpoints
         .Produces(404)
         .WithTags("Library", "Sharing")
         .WithSummary("Update library share link")
-        .WithDescription("Updates settings for an existing library share link.")
-        .WithOpenApi();
+        .WithDescription("Updates settings for an existing library share link.");
     }
 
     private static void MapRevokeLibraryShareLinkEndpoint(RouteGroupBuilder group)
@@ -773,8 +591,7 @@ internal static class UserLibraryCoreEndpoints
         .Produces(404)
         .WithTags("Library", "Sharing")
         .WithSummary("Revoke library share link")
-        .WithDescription("Revokes (deletes) a library share link. The link will return 404 after revocation.")
-        .WithOpenApi();
+        .WithDescription("Revokes (deletes) a library share link. The link will return 404 after revocation.");
     }
 
     private static void MapGetSharedLibraryEndpoint(RouteGroupBuilder group)
@@ -799,8 +616,7 @@ internal static class UserLibraryCoreEndpoints
         .Produces(404)
         .WithTags("Library", "Sharing", "Public")
         .WithSummary("Get shared library (public)")
-        .WithDescription("Returns a publicly shared library. No authentication required.")
-        .WithOpenApi();
+        .WithDescription("Returns a publicly shared library. No authentication required.");
     }
 
     private static void MapGetGameDetailEndpoint(RouteGroupBuilder group)
@@ -837,8 +653,7 @@ internal static class UserLibraryCoreEndpoints
         .Produces(404)
         .WithTags("Library", "Games")
         .WithSummary("Get game detail")
-        .WithDescription("Returns complete game detail with stats, sessions, and checklist for game in user's library.")
-        .WithOpenApi();
+        .WithDescription("Returns complete game detail with stats, sessions, and checklist for game in user's library.");
     }
 
     private static void MapRecordGameSessionEndpoint(RouteGroupBuilder group)
@@ -883,8 +698,7 @@ internal static class UserLibraryCoreEndpoints
         .Produces(404)
         .WithTags("Library", "Games", "Sessions")
         .WithSummary("Record game session")
-        .WithDescription("Records a new gameplay session with automatic stats updates.")
-        .WithOpenApi();
+        .WithDescription("Records a new gameplay session with automatic stats updates.");
     }
 
     private static void MapSendLoanReminderEndpoint(RouteGroupBuilder group)
@@ -927,8 +741,7 @@ internal static class UserLibraryCoreEndpoints
         .Produces(409)
         .WithTags("Library", "Games", "Notifications")
         .WithSummary("Send loan reminder")
-        .WithDescription("Sends notification reminder about loaned game. Rate limited to 1 per 24h. Game must be in InPrestito state.")
-        .WithOpenApi();
+        .WithDescription("Sends notification reminder about loaned game. Rate limited to 1 per 24h. Game must be in InPrestito state.");
     }
 
     /// <summary>
@@ -974,7 +787,6 @@ internal static class UserLibraryCoreEndpoints
         .Produces(409)
         .WithTags("Library", "Ownership")
         .WithSummary("Declare ownership of a game")
-        .WithDescription("Explicitly declares ownership of a game in the library, granting RAG access to the game's knowledge base. Idempotent.")
-        .WithOpenApi();
+        .WithDescription("Explicitly declares ownership of a game in the library, granting RAG access to the game's knowledge base. Idempotent.");
     }
 }

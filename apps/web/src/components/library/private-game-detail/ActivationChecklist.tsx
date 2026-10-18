@@ -7,14 +7,27 @@ import { Button } from '@/components/ui/primitives/button';
 import { ActivationStep } from './ActivationStep';
 
 export type PdfStatus = 'none' | 'uploading' | 'processing' | 'ready' | 'failed';
-export type AgentStatus = 'none' | 'creating' | 'ready';
 
+/**
+ * Issue #4138: the third step, "Agente AI pronto", is gone along with the
+ * `agentStatus` / `onCreateAgent` props.
+ *
+ * Three reasons, and the first alone was enough:
+ *   1. It could never complete. The host sent `agentType: 'TutorAgent'`, which
+ *      `AgentType.Parse` rejects, so `createUserAgent` always answered 400 and
+ *      the failure was swallowed back into `'none'`.
+ *   2. It duplicated the backend. `AutoCreateAgentOnPdfReadyHandler` already
+ *      links an agent to the private game on `VectorDocumentReadyIntegrationEvent`.
+ *   3. With one system-wide agent there is nothing per-game to wait for. What
+ *      gates a useful answer is the knowledge base, which step 2 already tracks
+ *      — `pdfStatus === 'ready'` means `processingState` is Ready or Indexed.
+ *
+ * `canStartGame` is unchanged: it never depended on the agent step.
+ */
 interface ActivationChecklistProps {
   gameAdded: boolean;
   pdfStatus: PdfStatus;
-  agentStatus: AgentStatus;
   onUploadPdf: () => void;
-  onCreateAgent: () => void;
   onStartGame: () => void;
   onTryQuestion?: () => void;
   children?: React.ReactNode;
@@ -23,15 +36,12 @@ interface ActivationChecklistProps {
 export function ActivationChecklist({
   gameAdded,
   pdfStatus,
-  agentStatus,
   onUploadPdf,
-  onCreateAgent,
   onStartGame,
   onTryQuestion,
   children,
 }: ActivationChecklistProps) {
   const pdfReady = pdfStatus === 'ready';
-  const agentReady = agentStatus === 'ready';
   const canStartGame = gameAdded && pdfReady;
 
   return (
@@ -48,7 +58,7 @@ export function ActivationChecklist({
 
       <ActivationStep
         stepNumber={2}
-        title="Carica il regolamento (PDF)"
+        title="Knowledge base pronta"
         completed={pdfReady}
         collapsed={pdfReady}
         testId="step-pdf"
@@ -74,41 +84,25 @@ export function ActivationChecklist({
         )}
       </ActivationStep>
 
-      <ActivationStep
-        stepNumber={3}
-        title="Agente AI pronto"
-        completed={agentReady}
-        collapsed={agentReady}
-        disabled={!pdfReady}
-        testId="step-agent"
-      >
-        {pdfReady && agentStatus === 'none' && (
-          <Button variant="outline" size="sm" onClick={onCreateAgent}>
-            Crea agente
-          </Button>
-        )}
-        {agentStatus === 'creating' && (
-          <p className="text-sm text-muted-foreground">Creazione in corso...</p>
-        )}
-        {agentReady && onTryQuestion && (
-          <button
-            type="button"
-            className="text-sm text-primary hover:underline"
-            onClick={onTryQuestion}
-          >
-            Prova una domanda &rarr;
-          </button>
-        )}
-      </ActivationStep>
+      {/* Outside the steps on purpose: `ActivationStep` hides its children once
+          `collapsed`, and step 2 collapses the moment it completes — so a CTA
+          nested in it would be invisible exactly when it becomes relevant. */}
+      {pdfReady && onTryQuestion && (
+        <button
+          type="button"
+          className="text-sm text-primary hover:underline"
+          onClick={onTryQuestion}
+        >
+          Prova una domanda &rarr;
+        </button>
+      )}
 
       <Button className="w-full mt-4" size="lg" disabled={!canStartGame} onClick={onStartGame}>
         <Gamepad2 className="mr-2 h-5 w-5" />
         Inizia Partita
       </Button>
       {!canStartGame && (
-        <p className="text-xs text-center text-muted-foreground">
-          Completa almeno i primi 2 step per iniziare
-        </p>
+        <p className="text-xs text-center text-muted-foreground">Completa i 2 step per iniziare</p>
       )}
     </div>
   );

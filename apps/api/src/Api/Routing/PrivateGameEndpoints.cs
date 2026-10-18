@@ -25,8 +25,8 @@ internal static class PrivateGameEndpoints
         MapGetPrivateGameEndpoint(group);
         MapUpdatePrivateGameEndpoint(group);
         MapDeletePrivateGameEndpoint(group);
-        MapLinkAgentEndpoint(group); // Issue #4228
-        MapUnlinkAgentEndpoint(group); // Issue #4228
+        // Issue #4138: link-agent / unlink-agent (Issue #4228) are retired — one system agent
+        // for every game (ADR-094). EndpointContractTests.RetiredRoutes keeps them off.
         MapKnowledgeBaseStatusEndpoint(group); // Issue #3664
 
         return group;
@@ -71,12 +71,8 @@ internal static class PrivateGameEndpoints
         .RequireAuthorization()
         .WithName("GetPrivateGamesList")
         .WithTags("PrivateGames")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "List private games";
-            operation.Description = "Returns a paginated list of the user's private games with optional search and sorting.";
-            return operation;
-        })
+        .WithSummary("List private games")
+        .WithDescription("Returns a paginated list of the user's private games with optional search and sorting.")
         .Produces<PaginatedPrivateGamesResponseDto>()
         .Produces(StatusCodes.Status401Unauthorized);
     }
@@ -122,13 +118,9 @@ internal static class PrivateGameEndpoints
         .RequireAuthorization()
         .WithName("AddPrivateGame")
         .WithTags("PrivateGames")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Add a private game";
-            operation.Description = "Add a game to your private library. Supports both manual entry and BoardGameGeek import. " +
-                "Auto-redirects to shared catalog if BGG ID already exists there.";
-            return operation;
-        })
+        .WithSummary("Add a private game")
+        .WithDescription("Add a game to your private library. Supports both manual entry and BoardGameGeek import. " +
+            "Auto-redirects to shared catalog if BGG ID already exists there.")
         .ProducesValidationProblem()
         .Produces<Api.BoundedContexts.UserLibrary.Application.DTOs.PrivateGameDto>(StatusCodes.Status201Created)
         .Produces<ProblemDetails>(StatusCodes.Status409Conflict)
@@ -166,12 +158,8 @@ internal static class PrivateGameEndpoints
         .RequireAuthorization()
         .WithName("GetPrivateGame")
         .WithTags("PrivateGames")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Get a private game";
-            operation.Description = "Retrieve a private game by ID. You can only access your own private games.";
-            return operation;
-        })
+        .WithSummary("Get a private game")
+        .WithDescription("Retrieve a private game by ID. You can only access your own private games.")
         .Produces<Api.BoundedContexts.UserLibrary.Application.DTOs.PrivateGameDto>()
         .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
         .Produces<ProblemDetails>(StatusCodes.Status403Forbidden);
@@ -217,12 +205,8 @@ internal static class PrivateGameEndpoints
         .RequireAuthorization()
         .WithName("UpdatePrivateGame")
         .WithTags("PrivateGames")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Update a private game";
-            operation.Description = "Update a private game's information. You can only update your own private games.";
-            return operation;
-        })
+        .WithSummary("Update a private game")
+        .WithDescription("Update a private game's information. You can only update your own private games.")
         .ProducesValidationProblem()
         .Produces<Api.BoundedContexts.UserLibrary.Application.DTOs.PrivateGameDto>()
         .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
@@ -260,130 +244,12 @@ internal static class PrivateGameEndpoints
         .RequireAuthorization()
         .WithName("DeletePrivateGame")
         .WithTags("PrivateGames")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Delete a private game";
-            operation.Description = "Soft-delete a private game. You can only delete your own private games.";
-            return operation;
-        })
+        .WithSummary("Delete a private game")
+        .WithDescription("Delete a private game. Its chats, uploaded documents and index are permanently " +
+            "removed; the game itself is soft-deleted. You can only delete your own private games.")
         .Produces(StatusCodes.Status204NoContent)
         .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
         .Produces<ProblemDetails>(StatusCodes.Status403Forbidden);
-    }
-
-    /// <summary>
-    /// POST /api/v1/private-games/{id}/link-agent/{agentId} - Link AI agent to private game
-    /// Issue #4228: SharedGame and PrivateGame → AgentDefinition relationship
-    /// </summary>
-    private static void MapLinkAgentEndpoint(RouteGroupBuilder group)
-    {
-        group.MapPost("/private-games/{id:guid}/link-agent/{agentId:guid}", async (
-            Guid id,
-            Guid agentId,
-            IMediator mediator,
-            HttpContext context,
-            CancellationToken ct) =>
-        {
-            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
-            if (!authenticated) return error!;
-
-            if (!TryGetUserId(context, session, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
-            var command = new LinkAgentToPrivateGameCommand(id, agentId, userId);
-
-            try
-            {
-                await mediator.Send(command, ct).ConfigureAwait(false);
-                return Results.NoContent();
-            }
-            catch (NotFoundException)
-            {
-                return Results.NotFound();
-            }
-            catch (InvalidOperationException ex)
-            {
-                // Agent already linked
-                return Results.Conflict(new { error = ex.Message });
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                // Not the owner
-                return Results.Problem(ex.Message, statusCode: StatusCodes.Status403Forbidden);
-            }
-        })
-        .RequireAuthorization()
-        .WithName("LinkAgentToPrivateGame")
-        .WithTags("PrivateGames")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Link AI agent to private game";
-            operation.Description = "Links an AI agent definition to your private game for personalized assistance.";
-            return operation;
-        })
-        .Produces(StatusCodes.Status204NoContent)
-        .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
-        .Produces<ProblemDetails>(StatusCodes.Status403Forbidden)
-        .Produces<ProblemDetails>(StatusCodes.Status409Conflict);
-    }
-
-    /// <summary>
-    /// DELETE /api/v1/private-games/{id}/unlink-agent - Unlink AI agent from private game
-    /// Issue #4228: SharedGame and PrivateGame → AgentDefinition relationship
-    /// </summary>
-    private static void MapUnlinkAgentEndpoint(RouteGroupBuilder group)
-    {
-        group.MapDelete("/private-games/{id:guid}/unlink-agent", async (
-            Guid id,
-            IMediator mediator,
-            HttpContext context,
-            CancellationToken ct) =>
-        {
-            var (authenticated, session, error) = context.TryGetAuthenticatedUser();
-            if (!authenticated) return error!;
-
-            if (!TryGetUserId(context, session, out var userId))
-            {
-                return Results.Unauthorized();
-            }
-
-            var command = new UnlinkAgentFromPrivateGameCommand(id, userId);
-
-            try
-            {
-                await mediator.Send(command, ct).ConfigureAwait(false);
-                return Results.NoContent();
-            }
-            catch (NotFoundException)
-            {
-                return Results.NotFound();
-            }
-            catch (InvalidOperationException ex)
-            {
-                // No agent linked
-                return Results.Conflict(new { error = ex.Message });
-            }
-            catch (UnauthorizedAccessException ex)
-            {
-                // Not the owner
-                return Results.Problem(ex.Message, statusCode: StatusCodes.Status403Forbidden);
-            }
-        })
-        .RequireAuthorization()
-        .WithName("UnlinkAgentFromPrivateGame")
-        .WithTags("PrivateGames")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Unlink AI agent from private game";
-            operation.Description = "Removes the AI agent link from your private game.";
-            return operation;
-        })
-        .Produces(StatusCodes.Status204NoContent)
-        .Produces<ProblemDetails>(StatusCodes.Status404NotFound)
-        .Produces<ProblemDetails>(StatusCodes.Status403Forbidden)
-        .Produces<ProblemDetails>(StatusCodes.Status409Conflict);
     }
 
     /// <summary>
@@ -401,10 +267,18 @@ internal static class PrivateGameEndpoints
             var (authenticated, session, error) = context.TryGetAuthenticatedUser();
             if (!authenticated) return error!;
 
-            if (!TryGetUserId(context, session, out _))
+            // Issue #4137: the user id used to be discarded here (`out _`), so this
+            // endpoint authenticated and then authorized nothing: any logged-in user
+            // could read the KB status of any private game by id. It is now threaded
+            // into the query, which the handler authorizes.
+            if (!TryGetUserId(context, session, out var userId))
                 return Results.Unauthorized();
 
-            var query = new GetKnowledgeBaseStatusQuery(id, IsPrivateGame: true);
+            var query = new GetKnowledgeBaseStatusQuery(
+                id,
+                userId,
+                session?.Principal?.EffectiveActor.Role ?? "User",
+                IsPrivateGame: true);
             var result = await mediator.Send(query, ct).ConfigureAwait(false);
             return result is null ? Results.NotFound() : Results.Ok(result);
         })

@@ -41,12 +41,8 @@ internal static class PdfUploadEndpoints
              .DisableAntiforgery()
              .RequireSession()
              .WithName("UploadPrivatePdf")
-             .WithOpenApi(operation =>
-             {
-                 operation.Summary = "Upload a private PDF for a library entry";
-                 operation.Description = "Uploads a private PDF file and associates it with a user's library entry. The PDF will be processed and indexed in a private namespace.";
-                 return operation;
-             });
+             .WithSummary("Upload a private PDF for a library entry")
+             .WithDescription("Uploads a private PDF file and associates it with a user's library entry. The PDF will be processed and indexed in a private namespace.");
     }
 
     private static void MapChunkedUploadEndpoints(RouteGroupBuilder group)
@@ -193,12 +189,9 @@ internal static class PdfUploadEndpoints
         }
 
         var userId = session!.Principal!.Subject.Id;
+        // #4443 R2: passed through as received. The validator rejects anything but normal|urgent (400),
+        // the handler rejects a user below Editor (403) — it used to be dropped here in silence.
         var priority = context.Request.Query["priority"].FirstOrDefault();
-        // Bug fix: Only allow priority override for admin users to prevent privilege escalation
-        if (priority != null && !string.Equals(session.Principal!.EffectiveActor.Role, "Admin", StringComparison.OrdinalIgnoreCase))
-        {
-            priority = null;
-        }
         var result = await mediator.Send(new UploadPdfCommand(gameId, metadata, privateGameId, userId, file!, Priority: priority), ct).ConfigureAwait(false);
 
         if (result.ExistingKb != null)
@@ -246,7 +239,9 @@ internal static class PdfUploadEndpoints
                 statusCode: 403);
         }
 
-        var (authenticated, session, error) = context.TryGetActiveSession();
+        // #4395: admin and editor only. Every web caller is an admin page, and a chunked PDF now reaches
+        // retrieval for its game: with a plain session any user could add content to any catalogue game.
+        var (authenticated, session, error) = context.RequireAdminOrEditorSession();
         if (!authenticated) return error!;
 
         var userId = session!.Principal!.Subject.Id;
@@ -280,14 +275,16 @@ internal static class PdfUploadEndpoints
         ILogger<Program> logger,
         CancellationToken ct)
     {
-        var (authenticated, session, error) = context.TryGetActiveSession();
+        // #4395: admin and editor only. Every web caller is an admin page, and a chunked PDF now reaches
+        // retrieval for its game: with a plain session any user could add content to any catalogue game.
+        var (authenticated, session, error) = context.RequireAdminOrEditorSession();
         if (!authenticated) return error!;
 
         var userId = session!.Principal!.Subject.Id;
 
         logger.LogInformation("User {UserId} completing chunked upload session {SessionId}", userId, request.SessionId);
 
-        var command = new CompleteChunkedUploadCommand(request.SessionId, userId);
+        var command = new CompleteChunkedUploadCommand(request.SessionId, userId, request.Priority);
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
         if (!result.Success)
@@ -313,7 +310,9 @@ internal static class PdfUploadEndpoints
         IMediator mediator,
                 CancellationToken ct)
     {
-        var (authenticated, session, error) = context.TryGetActiveSession();
+        // #4395: admin and editor only. Every web caller is an admin page, and a chunked PDF now reaches
+        // retrieval for its game: with a plain session any user could add content to any catalogue game.
+        var (authenticated, session, error) = context.RequireAdminOrEditorSession();
         if (!authenticated) return error!;
 
         var userId = session!.Principal!.Subject.Id;
@@ -335,7 +334,9 @@ internal static class PdfUploadEndpoints
         ILogger<Program> logger,
         CancellationToken ct)
     {
-        var (authenticated, session, error) = context.TryGetActiveSession();
+        // #4395: admin and editor only. Every web caller is an admin page, and a chunked PDF now reaches
+        // retrieval for its game: with a plain session any user could add content to any catalogue game.
+        var (authenticated, session, error) = context.RequireAdminOrEditorSession();
         if (!authenticated) return error!;
 
         var userId = session!.Principal!.Subject.Id;

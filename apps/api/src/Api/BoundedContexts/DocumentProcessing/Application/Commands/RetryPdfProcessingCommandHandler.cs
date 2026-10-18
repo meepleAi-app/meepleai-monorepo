@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.BoundedContexts.DocumentProcessing.Domain.Exceptions;
 using Api.Middleware.Exceptions;
 using Api.Observability;
 using Api.SharedKernel.Application.Interfaces;
@@ -81,6 +82,17 @@ internal sealed class RetryPdfProcessingCommandHandler
                 _logger.LogInformation(
                     ex,
                     "PDF {PdfId} already has an active job; the retry will reprocess via that job",
+                    command.PdfId);
+            }
+            catch (ProcessingQueueFullException ex)
+            {
+                // #4443: this used to be caught above and logged as «already has an active job». It is
+                // not: no job exists, and the document stays Pending until a recovery picks it up
+                // (StalePdfRecoveryService at startup, the admin process-pending). Behaviour is
+                // unchanged; the log now says what happened.
+                _logger.LogWarning(
+                    ex,
+                    "Processing queue full: PDF {PdfId} was reset to Pending but not enqueued",
                     command.PdfId);
             }
 

@@ -3,13 +3,21 @@
  * Issue #4364: SSE streaming in ChatThreadView
  *
  * Refactored as a thin wrapper over useSseStreamFsm (#1704 Phase B).
- * Handles SSE connection to POST /api/v1/agents/{agentId}/chat
+ * Handles the SSE connection to POST /api/v1/agents/qa/stream.
+ * Issue #4139: the previous target, /api/v1/agents/{agentId}/chat, was never mounted.
  * Parses RagStreamingEvent format (numeric StreamingEventType enum)
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { toast } from 'sonner';
+
+import {
+  readTierLimit,
+  TIER_LIMIT_EXCEEDED,
+  tierLimitMessage,
+  type TierLimit,
+} from '@/lib/tier-limit';
 
 import { useSseStreamFsm, type SseStreamFsmConfig } from './useSseStreamFsm';
 
@@ -78,12 +86,19 @@ const DEBUG_STEP_NAMES: Record<number, string> = {
 };
 
 export type ConnectionStatus =
-  | 'idle'
-  | 'connecting'
-  | 'connected'
-  | 'reconnecting'
-  | 'disconnected'
-  | 'error';
+  'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'error';
+
+/**
+ * #4244: una fonte della risposta, come la manda l'evento `Citations` (lo `Snippet` del backend).
+ * `source` è `PDF:<id del PDF>`.
+ */
+export interface StreamCitation {
+  text: string;
+  source: string;
+  page: number;
+  line: number;
+  score: number;
+}
 
 export interface AgentChatStreamState {
   /** Current streaming status text */
@@ -92,10 +107,17 @@ export interface AgentChatStreamState {
   currentAnswer: string;
   /** Follow-up questions from the agent */
   followUpQuestions: string[];
+  /** #4244: le fonti della risposta in corso, dall'evento `Citations` */
+  citations: StreamCitation[];
   /** Whether currently streaming */
   isStreaming: boolean;
   /** Error message if any */
   error: string | null;
+  /**
+   * #4168 (5g-b): la domanda è stata fermata dalla quota del piano. I numeri e il link, per chi
+   * mostra l'avviso; `error` porta comunque la frase, per chi mostra solo testo.
+   */
+  tierLimit: TierLimit | null;
   /** Chat thread ID returned by backend */
   chatThreadId: string | null;
   /** Token count from complete event */
@@ -134,6 +156,7 @@ export interface AgentChatStreamCallbacks {
       totalTokens: number;
       chatThreadId: string | null;
       followUpQuestions: string[];
+      citations: StreamCitation[];
     }
   ) => void;
   onError?: (error: string) => void;
@@ -141,7 +164,15 @@ export interface AgentChatStreamCallbacks {
 
 /** Input for a single chat message stream */
 export interface AgentChatInput {
-  agentId: string;
+  /**
+   * Issue #4139: was `agentId`. The stream talks to POST /api/v1/agents/qa/stream,
+   * which scopes retrieval by GAME - there is one system-wide agent, so an agent id
+   * carries no information the endpoint can use. The previous URL,
+   * /api/v1/agents/{agentId}/chat, was never mounted by the backend: enumerating
+   * every route under /agents turns up no such path, so every surface built on this
+   * hook was posting to a 404.
+   */
+  gameId: string;
   message: string;
   chatThreadId?: string;
   proxyGameContext?: ProxyGameContext;
@@ -158,7 +189,9 @@ const INITIAL_STATE: AgentChatInternalState = {
   statusMessage: null,
   currentAnswer: '',
   followUpQuestions: [],
+  citations: [],
   isStreaming: false,
+  tierLimit: null,
   chatThreadId: null,
   totalTokens: 0,
   debugSteps: [],
@@ -199,19 +232,21 @@ async function* agentChatTransport(
     url = '/api/chat-proxy';
     body = {
       message: input.message,
-      agentId: input.agentId,
       threadId: input.chatThreadId,
       gameContext: input.proxyGameContext,
     };
   } else {
+    // Issue #4139: the real endpoint. AiEndpoints.cs:146 maps POST /agents/qa/stream
+    // to StreamQaQuery, whose request DTO (QaRequest) takes gameId + query + chatId.
+    // It already emits exactly the wire format this hook parses - `data: {json}`
+    // carrying RagStreamingEvent, with the numeric StreamingEventType this file
+    // switches on - so only the URL and the body were ever wrong, never the event
+    // contract.
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
-    url = `${baseUrl}/api/v1/agents/${input.agentId}/chat`;
-    body = { message: input.message };
+    url = `${baseUrl}/api/v1/agents/qa/stream`;
+    body = { gameId: input.gameId, query: input.message };
     if (input.chatThreadId) {
-      body.chatThreadId = input.chatThreadId;
-    }
-    if (input.gameSessionId) {
-      body.gameSessionId = input.gameSessionId;
+      body.chatId = input.chatThreadId;
     }
   }
 
@@ -301,6 +336,9 @@ function agentChatEventReducer(
       // Synthetic event: set connecting state before fetch begins
       return {
         ...state,
+        // #4244: arriva a ogni tentativo, e un retry non riporta lo stato all'inizio. Le fonti di un
+        // tentativo caduto non sono della risposta che arriverà.
+        citations: [],
         isStreaming: true,
         statusMessage: 'Connecting...',
         connectionStatus: 'connecting',
@@ -327,7 +365,15 @@ function agentChatEventReducer(
       };
     }
 
-    case StreamingEventType.Citations:
+    case StreamingEventType.Citations: {
+      // #4244: arriva prima dei token. Ignorarlo lasciava la risposta senza fonti.
+      const data = event.data as { citations?: unknown };
+      return {
+        ...state,
+        citations: Array.isArray(data?.citations) ? (data.citations as StreamCitation[]) : [],
+      };
+    }
+
     case StreamingEventType.Outline:
     case StreamingEventType.ScriptChunk:
     case StreamingEventType.SetupStep: {
@@ -360,10 +406,23 @@ function agentChatEventReducer(
     case StreamingEventType.Error: {
       const data = event.data as { errorMessage?: string; errorCode?: string };
       let errorMsg: string;
+      let tierLimit: TierLimit | null = null;
       if (data?.errorCode === 'rate_limited') {
         errorMsg = 'Hai raggiunto il limite di messaggi. Riprova tra qualche minuto.';
       } else if (data?.errorCode === 'provider_unavailable') {
         errorMsg = 'Il servizio AI è temporaneamente non disponibile. Riprova tra poco.';
+      } else if (data?.errorCode === 'AI_BUDGET_DAILY_EXHAUSTED') {
+        // #4166 (ADR-095 D6): il gateway ha fermato la chiamata al tetto di spesa del giorno
+        errorMsg =
+          'Il servizio AI è in pausa fino a domani: è stato raggiunto il budget di spesa del giorno.';
+      } else if (data?.errorCode === 'AI_BUDGET_MONTHLY_EXHAUSTED') {
+        errorMsg =
+          'Il servizio AI è in pausa fino al mese prossimo: è stato raggiunto il budget di spesa del mese.';
+      } else if (data?.errorCode === TIER_LIMIT_EXCEEDED) {
+        // #4168 (5g-b): la quota del piano. Il messaggio del backend è tecnico; qui la
+        // spiegazione, con i numeri del piano e l'ora in cui il conteggio riparte.
+        tierLimit = readTierLimit(event.data);
+        errorMsg = tierLimitMessage(tierLimit);
       } else {
         errorMsg = data?.errorMessage ?? 'Si è verificato un errore. Riprova.';
       }
@@ -373,6 +432,7 @@ function agentChatEventReducer(
         ...state,
         // We store the error message in a special field; the wrapper will pick it up
         _sseError: errorMsg,
+        tierLimit,
         isStreaming: false,
         statusMessage: null,
         connectionStatus: 'error',
@@ -468,7 +528,7 @@ type AgentChatErrorShape = { kind: 'connection' | 'other'; message: string };
 export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks): {
   state: AgentChatStreamState;
   sendMessage: (
-    agentId: string,
+    gameId: string,
     message: string,
     chatThreadId?: string,
     proxyGameContext?: ProxyGameContext,
@@ -539,7 +599,9 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks): {
     statusMessage: stateWithExtras.statusMessage,
     currentAnswer: stateWithExtras.currentAnswer,
     followUpQuestions: stateWithExtras.followUpQuestions,
+    citations: stateWithExtras.citations,
     isStreaming: stateWithExtras.isStreaming,
+    tierLimit: stateWithExtras.tierLimit,
     chatThreadId: stateWithExtras.chatThreadId,
     totalTokens: stateWithExtras.totalTokens,
     debugSteps: stateWithExtras.debugSteps,
@@ -563,6 +625,7 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks): {
         totalTokens: merged.totalTokens,
         chatThreadId: merged.chatThreadId,
         followUpQuestions: merged.followUpQuestions,
+        citations: merged.citations,
       });
     }
   });
@@ -591,29 +654,39 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks): {
   }, [stop]);
 
   // ── Public API ────────────────────────────────────────────────────────────
+  //
+  // #4333: le tre funzioni devono restare LE STESSE da un render all'altro. Chi usa l'hook le mette
+  // nelle dipendenze di un effetto e chiama `stopStreaming` dal cleanup ("ferma lo stream quando la
+  // vista se ne va"): una funzione nuova a ogni render fa girare quel cleanup a ogni render, e il
+  // primo render dopo l'invio fermava lo stream prima ancora della richiesta. Non è un'ottimizzazione:
+  // togliere `useCallback` qui spegne la chat nel pannello a scomparsa e in quella incorporata.
+  // `ask`, `stop` e `baseReset` sono già stabili (useSseStreamFsm).
 
-  const sendMessage = (
-    agentId: string,
-    message: string,
-    chatThreadId?: string,
-    proxyGameContext?: ProxyGameContext,
-    gameSessionId?: string
-  ): void => {
-    currentAnswerRef.current = ''; // reset M-4 guard for new stream
-    ask({ agentId, message, chatThreadId, proxyGameContext, gameSessionId });
-  };
+  const sendMessage = useCallback(
+    (
+      gameId: string,
+      message: string,
+      chatThreadId?: string,
+      proxyGameContext?: ProxyGameContext,
+      gameSessionId?: string
+    ): void => {
+      currentAnswerRef.current = ''; // reset M-4 guard for new stream
+      ask({ gameId, message, chatThreadId, proxyGameContext, gameSessionId });
+    },
+    [ask]
+  );
 
-  const stopStreaming = (): void => {
+  const stopStreaming = useCallback((): void => {
     stop();
     // reset() instead of stop() so state resets to INITIAL (isStreaming: false, connectionStatus: 'idle')
     // matching original stopStreaming behavior (lines 168-182)
     baseReset();
-  };
+  }, [stop, baseReset]);
 
-  const reset = (): void => {
+  const reset = useCallback((): void => {
     currentAnswerRef.current = '';
     baseReset();
-  };
+  }, [baseReset]);
 
   return { state: merged, sendMessage, stopStreaming, reset };
 }

@@ -1,9 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Queries.GameKbStatus;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.RemoveDocumentFromKb;
-using Api.BoundedContexts.KnowledgeBase.Application.Commands.SetGameKbSettings;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetAdminGameKbDocuments;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetAdminKbFeedback;
-using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetGameKbSettings;
 using Api.Filters;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -14,8 +12,9 @@ namespace Api.Routing;
 /// Admin endpoints for per-game KB document management.
 /// KB-01: List indexed documents for a game.
 /// KB-02: Remove a document from a game's KB.
-/// KB-08: Paginated feedback review per-game.
-/// KB-10: Get/set per-game KB settings overrides.
+/// KB-08: Paginated feedback review; #4469 per profile version, without a game UUID.
+/// #4169: the per-game KB settings override (KB-10) is gone: it was saved, never read by the
+/// answer path. Retrieval settings belong to the agent profile (ADR-095).
 /// KB-GAMES: Overview dashboard with KB status per game.
 /// </summary>
 internal static class AdminGameKbEndpoints
@@ -62,51 +61,39 @@ internal static class AdminGameKbEndpoints
         .WithName("RemoveDocumentFromKb")
         .WithSummary("Rimuove un documento dalla KB di un gioco (admin)");
 
-        // KB-08: GET /api/v1/admin/kb/games/{gameId}/feedback
-        g.MapGet("/{gameId:guid}/feedback", async (
-            Guid gameId,
+        // KB-08, #4469: i feedback si leggono senza l'UUID del gioco, per versione del profilo. La rotta per
+        // gioco GET /admin/kb/games/{gameId}/feedback è ritirata (EndpointContractTests.RetiredRoutes).
+        var feedback = group.MapGroup("/admin/kb/feedback")
+            .WithTags("Admin", "KnowledgeBase")
+            .AddEndpointFilter<RequireAdminSessionFilter>();
+
+        // GET /api/v1/admin/kb/feedback?version={id|none}&gameId=&outcome=&page=&pageSize=
+        feedback.MapGet("/", async (
+            Guid? gameId,
+            string? version,
             string? outcome,
-            DateTime? from,
             int? page,
             int? pageSize,
             IMediator mediator,
             CancellationToken ct) =>
         {
             var result = await mediator.Send(new GetAdminKbFeedbackQuery(
-                gameId, outcome, from,
+                gameId, version, outcome,
                 page ?? 1, pageSize ?? 20), ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
         .WithName("GetAdminKbFeedback")
-        .WithSummary("Lista feedback utenti su risposte KB per-gioco (admin)");
+        .WithSummary("Feedback utenti sulle risposte KB, per versione del profilo e per gioco (admin)");
 
-        // KB-10: GET /api/v1/admin/kb/games/{gameId}/settings
-        g.MapGet("/{gameId:guid}/settings", async (Guid gameId, IMediator mediator, CancellationToken ct) =>
+        // GET /api/v1/admin/kb/feedback/summary
+        feedback.MapGet("/summary", async (IMediator mediator, CancellationToken ct) =>
         {
-            var result = await mediator.Send(new GetGameKbSettingsQuery(gameId), ct).ConfigureAwait(false);
+            var result = await mediator.Send(new GetAdminKbFeedbackSummaryQuery(), ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
-        .WithName("GetGameKbSettings")
-        .WithSummary("Impostazioni KB override per un gioco (admin)");
-
-        // KB-10: PUT /api/v1/admin/kb/games/{gameId}/settings
-        g.MapPut("/{gameId:guid}/settings", async (
-            Guid gameId,
-            [FromBody] SetGameKbSettingsRequest req,
-            IMediator mediator,
-            CancellationToken ct) =>
-        {
-            await mediator.Send(new SetGameKbSettingsCommand(
-                gameId, req.MaxChunks, req.ChunkSize, req.CacheEnabled, req.Language), ct)
-                .ConfigureAwait(false);
-            return Results.NoContent();
-        })
-        .WithName("SetGameKbSettings")
-        .WithSummary("Imposta override impostazioni KB per-gioco (admin)");
+        .WithName("GetAdminKbFeedbackSummary")
+        .WithSummary("Feedback utili e non utili per versione del profilo, e i giochi con feedback (admin)");
 
         return group;
     }
 }
-
-internal sealed record SetGameKbSettingsRequest(
-    int? MaxChunks, int? ChunkSize, bool? CacheEnabled, string? Language);

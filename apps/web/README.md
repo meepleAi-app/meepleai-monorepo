@@ -52,7 +52,7 @@ apps/web/
 
 ### Prerequisites
 
-- Node.js 20+ (LTS)
+- Node.js 24 (LTS) — the exact major is pinned in `.nvmrc`
 - pnpm 9+
 - Backend API running (http://localhost:8080)
 

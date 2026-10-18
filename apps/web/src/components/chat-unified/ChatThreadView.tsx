@@ -20,7 +20,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { AgentSelector, type AgentType, AGENT_NAMES } from '@/components/agent/AgentSelector';
-import { AgentSettingsDrawer } from '@/components/agent/settings';
 import { useAuth } from '@/components/auth/AuthProvider';
 import {
   collectCitations,
@@ -30,7 +29,7 @@ import {
 } from '@/components/chat/shared';
 import { PageViewerPanel } from '@/components/chat/viewer/PageViewerPanel';
 import { buildWelcomeMessage, getWelcomeFollowUpQuestions } from '@/config/agent-welcome';
-import { useAgentChatStream, type ProxyGameContext } from '@/hooks/useAgentChatStream';
+import { useAgentChatStream } from '@/hooks/useAgentChatStream';
 import { useVoiceInput } from '@/hooks/useVoiceInput';
 import { useVoiceOutput } from '@/hooks/useVoiceOutput';
 import { api } from '@/lib/api';
@@ -40,6 +39,7 @@ import {
   type InlineCitationMatch,
   type ContinuationData,
 } from '@/lib/api/clients/chatClient';
+import type { OwnershipResult } from '@/lib/api/schemas/ownership.schemas';
 import { cn } from '@/lib/utils';
 import { useVoicePreferencesStore } from '@/stores/voice/store';
 import { isAdminOrAbove, isEditorOrAbove } from '@/types/auth';
@@ -51,6 +51,14 @@ import { ChatMessageList, type ChatMessageItem } from './ChatMessageList';
 import { ChatThreadHeader } from './ChatThreadHeader';
 import { DebugStepCard } from './DebugStepCard';
 import { DebugSummaryBar } from './DebugSummaryBar';
+import { qaStreamErrorMessage } from './qaStreamErrors';
+import { RAG_OWNERSHIP_REQUIRED, RagOwnershipRequiredNotice } from './RagOwnershipRequiredNotice';
+import {
+  TIER_LIMIT_EXCEEDED,
+  TierLimitRegion,
+  readTierLimit,
+  type TierLimit,
+} from './TierLimitNotice';
 import { VoiceTranscriptOverlay } from './VoiceTranscriptOverlay';
 
 // ============================================================================
@@ -103,12 +111,22 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'chat' | 'debug'>('chat');
 
-  const [settingsOpen, setSettingsOpen] = useState(false);
   const [showAgentConfirm, setShowAgentConfirm] = useState(false);
   const [pendingAgent, setPendingAgent] = useState<AgentType | null>(null);
 
   // Derived state for info panel
   const [game, setGame] = useState<{ id: string; title: string } | null>(null);
+
+  // #4155: il pannello del diniego del cancello RAG, che offre la dichiarazione di possesso;
+  // e l'avviso per un gioco posseduto ma senza manuale caricato.
+  const [ownershipDenied, setOwnershipDenied] = useState(false);
+  const [noManualNotice, setNoManualNotice] = useState(false);
+  // #4168 (5g-b): la domanda fermata dalla quota del piano.
+  const [tierLimit, setTierLimit] = useState<TierLimit | null>(null);
+  // La domanda da rinviare la legge un ref, non la closure del callback: se l'utente manda
+  // un'altra domanda mentre la dichiarazione è in volo, il nuovo invio la azzera e la
+  // dichiarazione, quando arriva, non rimanda quella vecchia sopra la nuova.
+  const deniedQuestionRef = useRef<string | null>(null);
 
   // Page viewer panel state (Task 9: Side Panel Citation Viewer)
   const [viewerState, setViewerState] = useState<{ pdfId: string; pageNumber: number } | null>(
@@ -162,7 +180,13 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   }, [voiceState, isSpeaking, stopListening, startListening, stopSpeaking]);
 
   // SSE Streaming (Issue #4364)
-  const { state: streamState, sendMessage: sendViaSSE } = useAgentChatStream({
+  // Issue #4139: `sendMessage` is no longer destructured from this hook. Its only
+  // caller here was the branch that posted to /api/v1/agents/{agentId}/chat, a
+  // route the backend never mounted; this surface's working path streams through
+  // `qaStream` in chatClient instead. `state` is still read for rendering, so the
+  // two implementations are duplicate streaming to consolidate - not a change to
+  // make inside a fix whose subject is the dead URL.
+  const { state: streamState } = useAgentChatStream({
     onComplete: (answer, metadata) => {
       const assistantMessage: ChatMessageItem = {
         id: `assistant-${Date.now()}`,
@@ -204,6 +228,13 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   // (invariant: tests/ChatThreadView.invariants.test.tsx).
   useEffect(() => {
     abortCurrent();
+    // La pagina non rimonta la vista cambiando thread: gli avvisi nati da una domanda del
+    // thread di prima non devono restare su questo. Quello del possesso offrirebbe la
+    // dichiarazione per il gioco di QUESTO thread, che nessuno ha negato.
+    deniedQuestionRef.current = null;
+    setOwnershipDenied(false);
+    setNoManualNotice(false);
+    setTierLimit(null);
     async function loadThread() {
       setIsLoading(true);
       setError(null);
@@ -238,10 +269,11 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         let gameName: string | null = null;
         if (threadData.gameId) {
           try {
-            const games = await api.games.getAll();
-            const found = (games.games ?? []).find(
-              (g: { id: string }) => g.id === threadData.gameId
-            );
+            // #4158: by id, not by scanning a list — the list is one page of the catalog.
+            // #4244: a private game is not in the catalog, and `/games/{id}` answers 404 for it.
+            const found = threadData.privateGameId
+              ? await api.library.getPrivateGame(threadData.privateGameId)
+              : await api.games.getById(threadData.gameId);
             if (found) {
               gameName = found.title;
               setGame({
@@ -318,7 +350,201 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
     [messages, thread?.gameId, beginAbort, patchMessageById]
   );
 
-  // Send message - SSE streaming when agentId available, REST fallback otherwise
+  // QA stream path (#415): a question on the thread's game, answered via RAG QA streaming.
+  // Priority: gameId check FIRST because POST /agents/{id}/chat does not exist
+  // in the backend — the correct SSE endpoint is POST /agents/qa/stream which
+  // takes gameId+query and internally selects the right agent/strategy.
+  // #4155: `persistUserMessage` is false when resending a question after an ownership
+  // declaration — that question is already in the thread.
+  const runQaStream = useCallback(
+    async (question: string, persistUserMessage: boolean) => {
+      if (!thread?.gameId) return;
+
+      const assistantMsgId = `assistant-${Date.now()}`;
+      const assistantMessage: ChatMessageItem = {
+        id: assistantMsgId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date().toISOString(),
+      };
+      appendMessage(assistantMessage);
+
+      const abortController = beginAbort();
+      let finalAnswer = '';
+      let citations: unknown[] = [];
+      let followUpQuestions: string[] = [];
+      // #4168: la versione del profilo e la lingua della risposta, salvate col messaggio
+      let profileVersionId: string | null = null;
+      let answerLanguage: string | null = null;
+
+      try {
+        // Save user message via REST first
+        if (persistUserMessage) {
+          await api.chat.addMessage(threadId, {
+            content: question,
+            role: 'user',
+          });
+        }
+
+        // Stream AI response via QA endpoint
+        for await (const event of qaStream(
+          {
+            gameId: thread.gameId,
+            query: question,
+            chatId: threadId,
+            responseStyle: 'concise',
+          },
+          abortController.signal
+        )) {
+          switch (event.type) {
+            case QA_EVENT_TYPES.INLINE_CITATION: {
+              const data = event.data as { citations: InlineCitationMatch[] };
+              if (data.citations) {
+                patchMessageById(assistantMsgId, { inlineCitations: data.citations });
+              }
+              break;
+            }
+            case QA_EVENT_TYPES.CONTINUATION_AVAILABLE: {
+              const data = event.data as ContinuationData;
+              if (data.continuationToken) {
+                patchMessageById(assistantMsgId, {
+                  continuationToken: data.continuationToken,
+                });
+              }
+              break;
+            }
+            case QA_EVENT_TYPES.CITATIONS: {
+              const data = event.data as {
+                citations?: Array<{
+                  text: string;
+                  source: string;
+                  page: number;
+                  line: number;
+                  score: number;
+                }>;
+              };
+              if (data.citations) {
+                patchMessageById(assistantMsgId, { snippets: data.citations });
+              }
+              break;
+            }
+            case 7: {
+              // Token
+              const token =
+                typeof event.data === 'string'
+                  ? event.data
+                  : ((event.data as { token?: string })?.token ?? '');
+              if (token) {
+                finalAnswer += token;
+                patchMessageById(assistantMsgId, { content: finalAnswer });
+              }
+              break;
+            }
+            case 4: {
+              // Complete
+              const data = event.data as {
+                answer?: string;
+                snippets?: unknown[];
+                totalTokens?: number;
+                followUpQuestions?: string[];
+                profileVersionId?: string | null;
+                language?: string | null;
+              };
+              if (data.answer) finalAnswer = data.answer;
+              citations = data.snippets ?? [];
+              followUpQuestions = data.followUpQuestions ?? [];
+              profileVersionId = data.profileVersionId ?? null;
+              answerLanguage = data.language ?? null;
+              break;
+            }
+            case 5: {
+              // Error — BE sends `{ errorMessage, errorCode }` (StreamingErrorEvent).
+              // Read both names defensively. #1814.
+              const data = event.data as {
+                errorMessage?: string;
+                errorCode?: string;
+                message?: string;
+              };
+              if (data?.errorCode === RAG_OWNERSHIP_REQUIRED) {
+                // #4155: not a failure — the RAG gate wants an ownership declaration.
+                // The empty assistant bubble goes; the question stays, to be resent.
+                removeMessageById(assistantMsgId);
+                deniedQuestionRef.current = question;
+                setOwnershipDenied(true);
+              } else if (data?.errorCode === TIER_LIMIT_EXCEEDED) {
+                // #4168 (5g-b): nemmeno questo è un guasto — per oggi le domande del piano sono
+                // finite. La bolla vuota dell'assistente se ne va; la domanda resta nel thread.
+                removeMessageById(assistantMsgId);
+                setTierLimit(readTierLimit(data));
+              } else {
+                // #4168: i codici del gateway e della pipeline in italiano. Su un'interruzione il
+                // testo parziale resta nella bolla ma non viene salvato: si esce prima di addMessage.
+                setError(
+                  qaStreamErrorMessage(data?.errorCode, data?.errorMessage ?? data?.message)
+                );
+              }
+              abortController.abort();
+              return;
+            }
+            case 0: // StateUpdate — ignore for now
+            default:
+              break;
+          }
+        }
+
+        // Update assistant message with final data (citations + followUpQuestions)
+        patchMessageById(assistantMsgId, {
+          content: finalAnswer,
+          citations: citations as import('@/types').Citation[],
+          followUpQuestions,
+        });
+
+        // Persist assistant message to backend
+        if (finalAnswer) {
+          const saved = await api.chat.addMessage(threadId, {
+            content: finalAnswer,
+            role: 'assistant',
+            profileVersionId,
+            language: answerLanguage,
+          });
+          // #4168: la bolla prende l'id che il backend ha dato alla risposta. Il feedback parte con
+          // quello: con l'id provvisorio il backend non trova la risposta da valutare.
+          const savedId = saved?.messages
+            ?.filter(m => m.role === 'assistant')
+            .at(-1)?.backendMessageId;
+          if (savedId) {
+            patchMessageById(assistantMsgId, { id: savedId });
+          }
+        }
+
+        // TTS: auto-speak response when last message was voice-initiated
+        if (voicePrefs.ttsEnabled && lastMessageWasVoiceRef.current && finalAnswer) {
+          speak(finalAnswer);
+          lastMessageWasVoiceRef.current = false;
+        }
+      } catch (err) {
+        if ((err as Error).name !== 'AbortError') {
+          setError("Errore nell'invio del messaggio");
+          // Remove optimistic assistant message on error
+          removeMessageById(assistantMsgId);
+        }
+      } finally {
+        setIsSending(false);
+      }
+    },
+    [
+      threadId,
+      thread?.gameId,
+      voicePrefs.ttsEnabled,
+      speak,
+      appendMessage,
+      patchMessageById,
+      removeMessageById,
+      beginAbort,
+    ]
+  );
+
+  // Send message - QA stream when the thread has a game, REST fallback otherwise
   const handleSendMessage = useCallback(
     async (content?: string) => {
       const messageContent = content || inputValue.trim();
@@ -327,6 +553,10 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       setIsSending(true);
       setInputValue('');
       setError(null);
+      deniedQuestionRef.current = null;
+      setOwnershipDenied(false);
+      setNoManualNotice(false);
+      setTierLimit(null);
 
       // Optimistic UI: add user message
       const userMessage: ChatMessageItem = {
@@ -337,159 +567,18 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       };
       appendMessage(userMessage);
 
-      // QA stream path: game context available → use RAG QA streaming (#415)
-      // Priority: gameId check FIRST because POST /agents/{id}/chat does not exist
-      // in the backend — the correct SSE endpoint is POST /agents/qa/stream which
-      // takes gameId+query and internally selects the right agent/strategy.
       if (thread?.gameId) {
-        const assistantMsgId = `assistant-${Date.now()}`;
-        const assistantMessage: ChatMessageItem = {
-          id: assistantMsgId,
-          role: 'assistant',
-          content: '',
-          timestamp: new Date().toISOString(),
-        };
-        appendMessage(assistantMessage);
-
-        const abortController = beginAbort();
-        let finalAnswer = '';
-        let citations: unknown[] = [];
-        let followUpQuestions: string[] = [];
-
-        try {
-          // Save user message via REST first
-          await api.chat.addMessage(threadId, {
-            content: messageContent,
-            role: 'user',
-          });
-
-          // Stream AI response via QA endpoint
-          for await (const event of qaStream(
-            {
-              gameId: thread.gameId,
-              query: messageContent,
-              chatId: threadId,
-              responseStyle: 'concise',
-            },
-            abortController.signal
-          )) {
-            switch (event.type) {
-              case QA_EVENT_TYPES.INLINE_CITATION: {
-                const data = event.data as { citations: InlineCitationMatch[] };
-                if (data.citations) {
-                  patchMessageById(assistantMsgId, { inlineCitations: data.citations });
-                }
-                break;
-              }
-              case QA_EVENT_TYPES.CONTINUATION_AVAILABLE: {
-                const data = event.data as ContinuationData;
-                if (data.continuationToken) {
-                  patchMessageById(assistantMsgId, {
-                    continuationToken: data.continuationToken,
-                  });
-                }
-                break;
-              }
-              case QA_EVENT_TYPES.CITATIONS: {
-                const data = event.data as {
-                  citations?: Array<{
-                    text: string;
-                    source: string;
-                    page: number;
-                    line: number;
-                    score: number;
-                  }>;
-                };
-                if (data.citations) {
-                  patchMessageById(assistantMsgId, { snippets: data.citations });
-                }
-                break;
-              }
-              case 7: {
-                // Token
-                const token =
-                  typeof event.data === 'string'
-                    ? event.data
-                    : ((event.data as { token?: string })?.token ?? '');
-                if (token) {
-                  finalAnswer += token;
-                  patchMessageById(assistantMsgId, { content: finalAnswer });
-                }
-                break;
-              }
-              case 4: {
-                // Complete
-                const data = event.data as {
-                  answer?: string;
-                  snippets?: unknown[];
-                  totalTokens?: number;
-                  followUpQuestions?: string[];
-                };
-                if (data.answer) finalAnswer = data.answer;
-                citations = data.snippets ?? [];
-                followUpQuestions = data.followUpQuestions ?? [];
-                break;
-              }
-              case 5: {
-                // Error — BE sends `{ errorMessage, errorCode }` (StreamingErrorEvent).
-                // Read both names defensively. #1814.
-                const data = event.data as {
-                  errorMessage?: string;
-                  errorCode?: string;
-                  message?: string;
-                };
-                setError(data?.errorMessage ?? data?.message ?? 'Errore nella risposta AI');
-                abortController.abort();
-                return;
-              }
-              case 0: // StateUpdate — ignore for now
-              default:
-                break;
-            }
-          }
-
-          // Update assistant message with final data (citations + followUpQuestions)
-          patchMessageById(assistantMsgId, {
-            content: finalAnswer,
-            citations: citations as import('@/types').Citation[],
-            followUpQuestions,
-          });
-
-          // Persist assistant message to backend
-          if (finalAnswer) {
-            await api.chat.addMessage(threadId, {
-              content: finalAnswer,
-              role: 'assistant',
-            });
-          }
-
-          // TTS: auto-speak response when last message was voice-initiated
-          if (voicePrefs.ttsEnabled && lastMessageWasVoiceRef.current && finalAnswer) {
-            speak(finalAnswer);
-            lastMessageWasVoiceRef.current = false;
-          }
-        } catch (err) {
-          if ((err as Error).name !== 'AbortError') {
-            setError("Errore nell'invio del messaggio");
-            // Remove optimistic assistant message on error
-            removeMessageById(assistantMsgId);
-          }
-        } finally {
-          setIsSending(false);
-        }
+        await runQaStream(messageContent, true);
         return;
       }
 
-      // SSE agent path: for future per-agent chat endpoints (POST /agents/{id}/chat)
-      // Currently no backend route exists — kept as fallback for when it's implemented.
-      if (thread?.agentId && !thread?.gameId) {
-        const proxyCtx: ProxyGameContext | undefined =
-          game && thread.agentTypology
-            ? { gameName: game.title, agentTypology: thread.agentTypology }
-            : undefined;
-        sendViaSSE(thread.agentId, messageContent, threadId, proxyCtx);
-        return;
-      }
+      // Issue #4139: a branch stood here for "future per-agent chat endpoints
+      // (POST /agents/{id}/chat)", kept as a fallback "for when it's implemented" —
+      // so the dead route was known and left in place. It was reached only when a
+      // thread had an agentId and NO gameId, and in that state it could only 404:
+      // with no game there is nothing to scope retrieval by, so /agents/qa/stream
+      // cannot serve it either. A thread without a game now falls through to the
+      // REST fallback below, which is the honest behaviour.
 
       // REST fallback: no game context and no agent — just save message
       try {
@@ -499,14 +588,12 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         });
 
         if (response?.messages) {
-          const mapped: ChatMessageItem[] = response.messages.map(
-            (m): ChatMessageItem => ({
-              id: m.backendMessageId ?? `msg-${Date.now()}-${Math.random()}`,
-              role: m.role as 'user' | 'assistant',
-              content: m.content,
-              timestamp: m.timestamp,
-            })
-          );
+          const mapped: ChatMessageItem[] = response.messages.map((m): ChatMessageItem => ({
+            id: m.backendMessageId ?? `msg-${Date.now()}-${Math.random()}`,
+            role: m.role as 'user' | 'assistant',
+            content: m.content,
+            timestamp: m.timestamp,
+          }));
           replaceMessagesInHook(mapped);
         }
       } catch {
@@ -521,19 +608,32 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       inputValue,
       isSending,
       threadId,
-      thread?.agentId,
-      thread?.agentTypology,
       thread?.gameId,
-      game,
-      sendViaSSE,
-      voicePrefs.ttsEnabled,
-      speak,
+      runQaStream,
       replaceMessagesInHook,
       appendMessage,
-      patchMessageById,
       removeMessageById,
-      beginAbort,
     ]
+  );
+
+  // #4155: ownership declared from the denial notice. With a manual indexed, the denied
+  // question goes out again; without one there is nothing to cite, so the chat says so
+  // instead of resending a question that cannot get a sourced answer.
+  const handleOwnershipDeclared = useCallback(
+    (result: OwnershipResult) => {
+      const deniedQuestion = deniedQuestionRef.current;
+      deniedQuestionRef.current = null;
+      setOwnershipDenied(false);
+      if (result.kbCardCount === 0) {
+        setNoManualNotice(true);
+        return;
+      }
+      if (!deniedQuestion) return;
+      setIsSending(true);
+      setError(null);
+      void runQaStream(deniedQuestion, false);
+    },
+    [runQaStream]
   );
 
   // Keep ref in sync for voice onTranscript callback
@@ -655,7 +755,6 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
             : undefined
         }
         onTitleChange={handleTitleChange}
-        onSettings={thread?.agentId ? () => setSettingsOpen(true) : undefined}
         onDelete={handleDelete}
       />
 
@@ -725,6 +824,25 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           className="mx-4 mt-2 p-2 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 rounded-lg text-xs border border-red-200 dark:border-red-500/20"
         >
           {error}
+        </div>
+      )}
+
+      {/* #4155: denial by the RAG gate — explain it and offer the ownership declaration */}
+      {ownershipDenied && thread?.gameId && (
+        <RagOwnershipRequiredNotice
+          gameId={thread.gameId}
+          gameName={game?.title}
+          onOwnershipDeclared={handleOwnershipDeclared}
+        />
+      )}
+      {/* #4168 (5g-b): la quota del piano — quante domande, quando riparte, dove sono i piani */}
+      <TierLimitRegion limit={tierLimit} className="mx-4 mt-2" />
+      {noManualNotice && (
+        <div
+          data-testid="rag-no-manual"
+          className="mx-4 mt-2 rounded-lg border border-border bg-muted p-3 text-sm text-muted-foreground"
+        >
+          {`Possesso dichiarato, ma per ${game?.title ?? 'questo gioco'} non c'è ancora un manuale caricato: finché non ne viene caricato uno, le risposte non potranno citare il regolamento.`}
         </div>
       )}
 
@@ -869,20 +987,8 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           />
         </div>
 
-        {/* Agent Settings Drawer */}
-        {thread?.agentId && (
-          <AgentSettingsDrawer
-            isOpen={settingsOpen}
-            onClose={() => setSettingsOpen(false)}
-            agentId={thread.agentId}
-            agentName={
-              thread.agentTypology
-                ? AGENT_NAMES[(thread.agentTypology as AgentType) ?? 'auto']
-                : undefined
-            }
-            userTier={user ? 'premium' : 'free'}
-          />
-        )}
+        {/* Issue #4138: an Agent Settings Drawer stood here. It wrote model/temperature onto the
+            system agent, i.e. for every user; configuring the agent is admin-only (ADR-094). */}
 
         {/* Page Viewer Panel (right side, conditionally shown) */}
         {viewerState && (

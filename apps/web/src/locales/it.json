@@ -735,7 +735,7 @@
     "editGame": "Modifica Gioco",
     "editDescription": "Aggiorna i dettagli di \"{title}\".",
     "deleteGame": "Elimina Gioco",
-    "deleteConfirm": "Sei sicuro di voler eliminare \"{title}\"? Questa azione non può essere annullata.",
+    "deleteConfirm": "Sei sicuro di voler eliminare \"{title}\"? Verranno eliminati per sempre anche le chat e i documenti caricati per questo gioco. Questa azione non può essere annullata.",
     "deleting": "Eliminazione...",
     "saving": "Salvataggio...",
     "saveChanges": "Salva Modifiche",
@@ -2201,7 +2201,10 @@
           "emptyManualCta": "Aggiungi manualmente",
           "blockedMessage": "Hai già «{gameTitle}» in libreria.",
           "blockedCta": "Vai alla scheda",
-          "blockedDismiss": "Chiudi"
+          "blockedDismiss": "Chiudi",
+          "ownsCopyLabel": "Possiedo una copia del gioco che aggiungo",
+          "ownsCopyHint": "Serve perché l'assistente possa consultarne il manuale: i regolamenti sono protetti da copyright, e li leggiamo solo per chi possiede il gioco.",
+          "toastOwnershipError": "«{gameName}» è in libreria, ma la dichiarazione di possesso non è riuscita: puoi rifarla dalla chat."
         }
       },
       "catalogPagination": {
@@ -2343,6 +2346,24 @@
         "loading": "Salvataggio in corso…",
         "toast": {
           "saved": "{count} interessi salvati!"
+        }
+      },
+      "firstGame": {
+        "intro": "Cerca un gioco da tavolo da aggiungere alla tua libreria. Potrai aggiungerne altri in seguito.",
+        "searchPlaceholder": "es. Catan, Wingspan, Ticket to Ride…",
+        "ownsCopy": {
+          "label": "Ho una copia di questo gioco",
+          "hint": "Permette all'assistente di leggere il regolamento: i regolamenti sono protetti da diritto d'autore, e li leggiamo solo per chi possiede il gioco."
+        },
+        "add": "Aggiungi alla libreria",
+        "adding": "Aggiunta in corso…",
+        "skip": "Salta per ora",
+        "toast": {
+          "added": "{title} è nella tua libreria!",
+          "ownershipFailed": "{title} è nella tua libreria, ma la dichiarazione di possesso non è riuscita: puoi farla dalla chat."
+        },
+        "error": {
+          "addFailed": "Impossibile aggiungere il gioco alla libreria."
         }
       }
     },
@@ -2799,51 +2820,6 @@
       },
       "batchNote": "Mostrati i primi {n} risultati."
     },
-    "setup": {
-      "title": "Guida Setup Gioco",
-      "subtitle": "Genera una guida passo-passo per preparare la partita, con riferimenti al regolamento.",
-      "selectGame": "Seleziona Gioco",
-      "gameLabel": "Gioco:",
-      "selectGamePlaceholder": "Seleziona un gioco...",
-      "generateButton": "Genera Guida Setup",
-      "generating": "Generazione...",
-      "generateForGameAria": "Genera guida di setup per il gioco selezionato",
-      "errors": {
-        "noGameSelected": "Seleziona prima un gioco.",
-        "loadGames": "Errore nel caricamento dei giochi.",
-        "generateGuide": "Errore nella generazione della guida di setup. Riprova.",
-        "retry": "Riprova"
-      },
-      "loading": {
-        "title": "Generazione della guida di setup...",
-        "subtitle": "Potrebbe richiedere alcuni istanti mentre recuperiamo le istruzioni migliori dal regolamento."
-      },
-      "estimatedTime": "Tempo stimato di setup: {minutes} minuti",
-      "resetProgress": "Reimposta Progresso",
-      "resetConfirm": "Sei sicuro di voler reimpostare tutti i progressi?",
-      "progress": "Progresso: {done} / {total} passaggi",
-      "complete": {
-        "title": "Setup Completato!",
-        "body": "Il tuo gioco è pronto per giocare. Buon divertimento!"
-      },
-      "aiConfidence": "Confidenza AI: {percent}%",
-      "empty": {
-        "title": "Nessuna Guida di Setup",
-        "description": "Seleziona un gioco e clicca \"Genera Guida Setup\" per iniziare con istruzioni passo-passo."
-      },
-      "optional": "OPZIONALE",
-      "references": "Riferimenti",
-      "viewReferences": "{n, plural, one {Visualizza # riferimento} other {Visualizza # riferimenti}}",
-      "citation": {
-        "docLabel": "Doc {id}",
-        "pageLabel": "Pagina {n}",
-        "noPage": "Nessuna pagina"
-      },
-      "step": {
-        "markComplete": "Segna come completato",
-        "markIncomplete": "Segna come da completare"
-      }
-    },
     "sessions": {
       "metadata": {
         "title": "Le mie partite — MeepleAI",
@@ -3241,7 +3217,7 @@
         "faqs": "FAQ",
         "sessions": "Partite",
         "stats": "Statistiche",
-        "agents": "Agenti",
+        "chat": "Chat AI",
         "documents": "Documenti"
       },
       "kpi": {
@@ -3299,16 +3275,6 @@
         "winLabel": "Vittoria",
         "lossLabel": "Sconfitta",
         "newSession": "+ Nuova partita"
-      },
-      "agents": {
-        "title": "Agenti AI",
-        "subtitle": "Agenti collegati a questo gioco.",
-        "empty": "Nessun agente disponibile.",
-        "emptySubtitle": "Crea un agente AI per chattare sulle regole di questo gioco.",
-        "createCta": "+ Crea agente",
-        "openAriaLabel": "Apri agente {name}",
-        "indexedLabel": "{count, plural, =0 {0 KB} =1 {1 KB} other {# KB}}",
-        "invocationsLabel": "{count} invocazioni"
       },
       "documents": {
         "title": "Documenti indicizzati",
@@ -3373,6 +3339,12 @@
         "deleteConfirmMessage": "Questa regola della casa verrà eliminata definitivamente.",
         "deleteConfirm": "Elimina",
         "empty": "Nessuna regola della casa. Aggiungine una per personalizzare le regole del gioco."
+      },
+      "ownership": {
+        "message": "Per far consultare il manuale di {gameTitle} all'assistente, dichiara di possederne una copia: i regolamenti sono protetti da copyright, e li leggiamo solo per chi possiede il gioco.",
+        "cta": "Dichiara di possedere {gameTitle}",
+        "declared": "Possesso dichiarato: l'assistente può consultare il manuale di {gameTitle}.",
+        "declaredNoManual": "Possesso dichiarato. Per {gameTitle} non c'è ancora un manuale caricato: finché non ne viene caricato uno, le risposte non potranno citare il regolamento."
       }
     },
     "sharedGames": {
@@ -3709,6 +3681,19 @@
           "columns": {
             "player": "Giocatore"
           }
+        },
+        "rounds": {
+          "roundLabel": "Round {round}",
+          "previousRound": "Round precedente",
+          "nextRound": "Round successivo",
+          "currentRound": "Torna al round in corso",
+          "player": "Giocatore",
+          "total": "Totale",
+          "noDimensions": "Questa partita non ha dimensioni di punteggio.",
+          "noPlayers": "Nessun giocatore segna punti in questa partita.",
+          "cellAriaTemplate": "{dimension} di {player}, round {round}",
+          "saveError": "Punteggio non salvato: riprova.",
+          "notAnInteger": "Il punteggio deve essere un numero intero."
         }
       },
       "actionLog": {
@@ -3741,9 +3726,6 @@
         "degradedPolling": "Aggiornamenti ogni 5s — clicca per riprovare in tempo reale",
         "failed": "Sessione affollata o errore — riprova tra 60s",
         "manualRetryLabel": "Riprova connessione"
-      },
-      "a11y": {
-        "viewLabel": "Vista sessione live"
       },
       "rightColumn": {
         "tabsAriaLabel": "Pannelli sessione",
@@ -4050,6 +4032,75 @@
           "toolEraserLabel": "Gomma",
           "toolCircleLabel": "Cerchio",
           "placeholderLabel": "Area disegno condivisa"
+        }
+      },
+      "assistant": {
+        "title": "Assistente",
+        "hostOnly": "Solo l'host parla con l'assistente.",
+        "loading": "Carico l'assistente…",
+        "loadError": "Non riesco a leggere l'assistente. Riprova tra poco.",
+        "unavailable": {
+          "assistant_disabled": "L'assistente non è attivo.",
+          "assistant_model_without_tools": "L'assistente non è disponibile: il modello configurato non sa usare gli strumenti.",
+          "session_state_invalid": "La partita è conclusa: l'assistente non risponde più.",
+          "other": "L'assistente non è disponibile."
+        },
+        "empty": "Dimmi un punteggio o chiedimi a chi tocca: io propongo, tu confermi.",
+        "inputLabel": "Domanda all'assistente",
+        "placeholder": "Es. «Marco fa 5 punti»",
+        "send": "Invia",
+        "you": "Tu",
+        "tool": {
+          "start": "Ci penso…",
+          "stato_partita": "Leggo la partita…",
+          "proponi_punteggio": "Preparo un punteggio…",
+          "proponi_turno": "Preparo il passaggio di turno…",
+          "cerca_regole": "Cerco nelle regole…",
+          "other": "Ci lavoro…"
+        },
+        "turnError": {
+          "budget_paused": "L'assistente è in pausa: il tetto di spesa è stato raggiunto.",
+          "turn_timeout": "L'assistente non ha fatto in tempo a rispondere. Riprova.",
+          "assistant_disabled": "L'assistente non è attivo.",
+          "assistant_model_without_tools": "L'assistente non è disponibile: il modello configurato non sa usare gli strumenti.",
+          "session_state_invalid": "La partita è conclusa: l'assistente non risponde più.",
+          "other": "L'assistente non è disponibile in questo momento. Riprova, o segna a mano."
+        },
+        "card": {
+          "score": "{points} {dimension} a {player}, round {round}",
+          "resulting": "Totale dopo la conferma: {value}",
+          "advanceTurn": "Passare il turno al giocatore successivo",
+          "confirm": "Conferma",
+          "correct": "Correggi",
+          "correctLabel": "Punti corretti",
+          "applyCorrection": "Conferma con correzione",
+          "cancel": "Annulla",
+          "reject": "Rifiuta",
+          "busy": "Un'altra conferma è in corso.",
+          "status": {
+            "Pending": "Da confermare",
+            "Applying": "In applicazione",
+            "Accepted": "Confermata",
+            "Edited": "Confermata con correzione",
+            "Failed": "Non applicata",
+            "Rejected": "Rifiutata",
+            "Expired": "Scaduta",
+            "Stale": "Superata: la partita è cambiata",
+            "other": "Chiusa"
+          },
+          "failure": {
+            "session_state_invalid": "La partita non accetta più questa scrittura.",
+            "proposal_not_applicable": "La proposta non vale più per questa partita.",
+            "session_state_unavailable": "Non sono riuscito a leggere la partita.",
+            "other": "Non è stato scritto nulla."
+          },
+          "error": {
+            "proposal_stale": "La partita è cambiata dalla proposta: non è stato scritto nulla.",
+            "proposal_not_pending": "La proposta era già chiusa.",
+            "session_state_invalid": "La partita non accetta più questa scrittura.",
+            "proposal_not_applicable": "La proposta non vale più per questa partita.",
+            "other": "Non sono riuscito ad applicare la proposta. Riprova."
+          }
         }
       }
     },
@@ -4745,7 +4796,9 @@
       "libraryEmpty": "La tua libreria è vuota. Aggiungi giochi per consigliarli.",
       "selectGame": "Seleziona {name}",
       "deselectGame": "Deseleziona {name}",
-      "limitWarning": "Massimo {max} giochi per serata."
+      "limitWarning": "Massimo {max} giochi per serata.",
+      "searchLabel": "Cerca nella tua libreria",
+      "searchEmpty": "Nessun gioco della tua libreria corrisponde a «{query}»."
     },
     "preview": {
       "title": "Anteprima invito",

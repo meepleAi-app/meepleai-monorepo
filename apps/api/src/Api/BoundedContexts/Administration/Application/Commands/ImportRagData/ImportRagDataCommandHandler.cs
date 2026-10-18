@@ -6,7 +6,6 @@ using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Pgvector;
 
 namespace Api.BoundedContexts.Administration.Application.Commands.ImportRagData;
 
@@ -220,7 +219,10 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
 
                 _db.VectorDocuments.Add(vectorDocument);
 
-                // g. Create TextChunkEntity for each chunk
+                // g. Create TextChunkEntity for each chunk.
+                // #4384: kept by ChunkIndex so each imported pgvector row can point at its chunk.
+                var textChunksByIndex = new Dictionary<int, TextChunkEntity>();
+                var ambiguousIndexes = new HashSet<int>();
                 foreach (var chunk in chunks)
                 {
                     var textChunk = new TextChunkEntity
@@ -236,6 +238,21 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                     };
 
                     _db.TextChunks.Add(textChunk);
+                    if (!textChunksByIndex.TryAdd(chunk.ChunkIndex, textChunk))
+                    {
+                        // Ambiguous: two chunks on one index. No embedding links to either of them.
+                        ambiguousIndexes.Add(chunk.ChunkIndex);
+                    }
+                }
+
+                foreach (var index in ambiguousIndexes)
+                {
+                    textChunksByIndex.Remove(index);
+                }
+
+                if (ambiguousIndexes.Count > 0)
+                {
+                    warnings.Add($"Document {entry.PdfDocumentId}: {ambiguousIndexes.Count} chunk index(es) appear more than once in chunks.parquet — their embeddings are imported without a link to a chunk");
                 }
 
                 // h/i. Embeddings: import or mark for re-embed
@@ -248,23 +265,34 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                     {
                         var embeddings = await RagParquetSerializer.DeserializeEmbeddingsAsync(embeddingsBytes).ConfigureAwait(false);
 
+                        var unlinked = 0;
                         foreach (var embedding in embeddings)
                         {
-                            var pgEmbedding = new PgVectorEmbeddingEntity
+                            var link = textChunksByIndex.TryGetValue(embedding.ChunkIndex, out var textChunk)
+                                ? TextChunkLink.From(textChunk)
+                                : null;
+                            if (link is null)
                             {
-                                Id = Guid.NewGuid(),
-                                VectorDocumentId = vectorDocumentId,
-                                GameId = game.Id,
-                                TextContent = embedding.TextContent,
-                                Vector = new Vector(embedding.Vector),
-                                Model = embedding.Model,
-                                ChunkIndex = embedding.ChunkIndex,
-                                PageNumber = embedding.PageNumber ?? 0,
-                                Lang = docInfo.Language,
-                                CreatedAt = DateTimeOffset.UtcNow,
-                            };
+                                unlinked++;
+                            }
+
+                            var pgEmbedding = PgVectorEmbeddingEntity.ForChunk(
+                                vectorDocumentId: vectorDocumentId,
+                                gameId: game.Id,
+                                chunkIndex: embedding.ChunkIndex,
+                                textContent: embedding.TextContent,
+                                vector: embedding.Vector,
+                                model: embedding.Model,
+                                pageNumber: embedding.PageNumber ?? 0,
+                                lang: docInfo.Language,
+                                sourceChunk: link);
 
                             _db.PgVectorEmbeddings.Add(pgEmbedding);
+                        }
+
+                        if (unlinked > 0)
+                        {
+                            warnings.Add($"Document {entry.PdfDocumentId}: {unlinked} embedding(s) have no unambiguous chunk with the same index — imported without a link (no heading boost, no citation location)");
                         }
                     }
                     else

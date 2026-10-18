@@ -31,7 +31,10 @@ internal sealed class VectorDocumentReadyNotificationHandler
     {
         var userId = evt.UploadedByUserId;
         var fileName = evt.FileName;
-        var agentLink = NotificationRoutes.LibraryAgent(evt.GameId);
+        // #4244: a private game has its own page; `/library/{id}` resolves catalogue games only.
+        var agentLink = evt.PrivateGameId is { } privateGameId
+            ? NotificationRoutes.PrivateGame(privateGameId)
+            : NotificationRoutes.LibraryGameChat(evt.GameId);
         var chunkCount = evt.ChunkCount;
 
         await _dispatcher.DispatchAsync(new NotificationMessage

@@ -33,7 +33,8 @@ internal static class KnowledgeBaseMappers
             EmbeddingModel = "nomic-embed-text", // Default model
             EmbeddingDimensions = 768, // Default dimensions
             Metadata = domain.Metadata, // Map metadata field
-            SharedGameId = domain.SharedGameId // Issue #5185: cross-BC reference
+            SharedGameId = domain.SharedGameId, // Issue #5185: cross-BC reference
+            PrivateGameId = domain.PrivateGameId // Issue #4244
         };
     }
 
@@ -55,7 +56,8 @@ internal static class KnowledgeBaseMappers
             indexedAt: entity.IndexedAt ?? DateTime.UtcNow,
             sharedGameId: entity.SharedGameId, // Issue #5185
             metadata: entity.Metadata,
-            totalCharacters: entity.TotalCharacters);
+            totalCharacters: entity.TotalCharacters,
+            privateGameId: entity.PrivateGameId); // Issue #4244
     }
 
     /// <summary>
@@ -65,7 +67,8 @@ internal static class KnowledgeBaseMappers
         this HybridSearchResult result,
         int rank)
     {
-        // Parse PdfDocumentId as the VectorDocumentId (they are the same in this context)
+        // #4288: the PDF id goes into VectorDocumentId here. The two are NOT the same id —
+        // vector_documents.Id is a Guid of its own — so this field does not identify the passage.
         var vectorDocId = Guid.Parse(result.PdfDocumentId);
         var pageNum = result.PageNumber ?? 1; // Default to page 1 if null
         var score = (double)result.HybridScore; // Use HybridScore as relevance
@@ -93,7 +96,10 @@ internal static class KnowledgeBaseMappers
         var score = Math.Clamp((double)result.RelevanceScore, 0.0, 1.0);
         return new Domain.Entities.SearchResult(
             id: Guid.NewGuid(),
-            vectorDocumentId: pdfDocId,          // same convention the HybridSearchResult mapper uses
+            // #4288: NOT the vector document id — the keyword arm reads text_chunks and has no vector
+            // document. It puts the PDF id here, while the vector arm puts vector_documents.Id: a
+            // caller that needs the passage's identity reads TextChunkId, or PdfDocumentId + ChunkIndex.
+            vectorDocumentId: pdfDocId,
             textContent: result.Content,
             pageNumber: result.PageNumber ?? 1,
             relevanceScore: new Confidence(score),
@@ -101,8 +107,16 @@ internal static class KnowledgeBaseMappers
             searchMethod: "keyword",
             pdfDocumentId: pdfDocId,
             chunkIndex: result.ChunkIndex,
+            textChunkId: Guid.TryParse(result.ChunkId, out var textChunkId) ? textChunkId : null,
             roleTags: result.RoleTags,
-            heading: result.Heading); // #3270
+            heading: result.Heading, // #3270
+            signals: new RetrievalSignals(
+                HybridScore: result.RelevanceScore,
+                // #4168 (5e-c-2): il ts_rank_cd GREZZO, che supera 1 e che relevanceScore schiaccia in [0,1]:
+                // la fusione fra giochi normalizza i punteggi lessicali grezzi di giochi diversi.
+                KeywordScore: result.RelevanceScore,
+                KeywordRank: rank,
+                MatchedTerms: result.MatchedTerms));
     }
 
     /// <summary>

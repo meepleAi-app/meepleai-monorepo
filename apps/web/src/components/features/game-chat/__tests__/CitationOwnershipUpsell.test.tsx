@@ -14,16 +14,24 @@ describe('CitationOwnershipUpsell', () => {
     expect(screen.getByText(/carica.*tua copia/i)).toBeInTheDocument();
   });
 
-  it('renders CTA with gameId in href when provided', () => {
+  // #4257: /upload era riservata ad Admin ed Editor (e ora e' dismessa). Chi vede questa
+  // card e' un utente normale: il suo PDF lo carica dalla pagina KB del gioco in libreria.
+  it('la CTA porta alla pagina KB del gioco in libreria', () => {
     render(<CitationOwnershipUpsell gameId="wingspan" />);
     const cta = screen.getByRole('link', { name: /carica.*pdf/i });
-    expect(cta).toHaveAttribute('href', '/upload?gameId=wingspan');
+    expect(cta).toHaveAttribute('href', '/library/wingspan/kb');
   });
 
-  it('renders CTA without gameId param when missing', () => {
+  it('senza gioco la CTA porta alla libreria', () => {
     render(<CitationOwnershipUpsell />);
     const cta = screen.getByRole('link', { name: /carica.*pdf/i });
-    expect(cta).toHaveAttribute('href', '/upload');
+    expect(cta).toHaveAttribute('href', '/library');
+  });
+
+  it("codifica l'id del gioco nel percorso", () => {
+    render(<CitationOwnershipUpsell gameId="a/b c" />);
+    const cta = screen.getByRole('link', { name: /carica.*pdf/i });
+    expect(cta).toHaveAttribute('href', '/library/a%2Fb%20c/kb');
   });
 
   it('renders anti-duplication footnote', () => {

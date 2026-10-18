@@ -14,11 +14,10 @@
  * 3. Role-based authorization (admin-only pages)
  * 4. Profile update functionality
  * 5. Password change functionality
- * 6. Logout flow
- * 7. **NEW Week 3**: 2FA flows (enable, disable, backup codes)
- * 8. **NEW Week 3**: Session management (multiple devices, revoke)
- * 9. **NEW Week 3**: OAuth complete journeys
- * 10. **NEW Week 3**: API key management flows
+ * 6. **NEW Week 3**: 2FA flows (enable, disable, backup codes)
+ * 7. **NEW Week 3**: Session management (multiple devices, revoke)
+ * 8. **NEW Week 3**: OAuth complete journeys
+ * 9. **NEW Week 3**: API key management flows
  *
  * Real APIs Used:
  * - GET /api/v1/games (games list)
@@ -85,48 +84,9 @@ test.describe('Authentication Flows', () => {
     const pageContent = await page.content();
     expect(pageContent.toLowerCase()).toMatch(/invalid|error|failed|incorrect/);
   });
-
-  test('should logout successfully and redirect to home', async ({ page }) => {
-    const authHelper = new AuthHelper(page);
-
-    // Use real authentication for protected route access
-    await authHelper.setupRealSession('admin');
-    await authHelper.mockLogoutEndpoint();
-
-    // Navigate to a protected page first
-    await page.goto('/upload');
-
-    // Find and click logout button
-    const logoutButton = page
-      .locator('button:has-text("Logout"), button:has-text("Log out"), a:has-text("Logout")')
-      .first();
-
-    if (await logoutButton.isVisible({ timeout: 2000 })) {
-      await logoutButton.click();
-
-      // Should redirect to home or login
-      await expect(page).toHaveURL(/\/(login|)$/, { timeout: 3000 });
-    }
-  });
 });
 
 test.describe('SSR Auth Protection', () => {
-  test('should redirect unauthenticated users from /upload to /login', async ({ page }) => {
-    const authHelper = new AuthHelper(page);
-
-    await authHelper.mockUnauthenticatedSession();
-
-    // Attempt to access protected route
-    await page.goto('/upload');
-
-    // Should redirect to login
-    await authHelper.verifyRedirectToLogin();
-    expect(page.url()).toContain('/login');
-
-    // Should preserve return URL
-    expect(page.url()).toContain('from=');
-  });
-
   test('should redirect unauthenticated users from /editor to /login', async ({ page }) => {
     const authHelper = new AuthHelper(page);
 
@@ -147,30 +107,6 @@ test.describe('SSR Auth Protection', () => {
     // Should redirect to login
     await authHelper.verifyRedirectToLogin();
     expect(page.url()).toContain('/login');
-  });
-
-  test('should allow authenticated admin to access /upload', async ({ page }) => {
-    const authHelper = new AuthHelper(page);
-
-    // Use real authentication - middleware validates session server-side
-    await authHelper.setupRealSession('admin');
-
-    await page.goto('/upload');
-
-    // Should stay on /upload page (real session passes middleware validation)
-    await expect(page).toHaveURL(/\/upload/, { timeout: 5000 });
-  });
-
-  test('should allow authenticated editor to access /upload', async ({ page }) => {
-    const authHelper = new AuthHelper(page);
-
-    // Use real authentication - middleware validates session server-side
-    await authHelper.setupRealSession('editor');
-
-    await page.goto('/upload');
-
-    // Should stay on /upload page (real session passes middleware validation)
-    await expect(page).toHaveURL(/\/upload/, { timeout: 5000 });
   });
 
   test('should allow authenticated editor to access /editor', async ({ page }) => {

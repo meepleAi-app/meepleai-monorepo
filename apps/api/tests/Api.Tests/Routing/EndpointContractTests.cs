@@ -61,9 +61,6 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
 
         // Library
         yield return ["GET", "/api/v1/library"];
-        yield return ["GET", "/api/v1/library/games/00000000-0000-0000-0000-000000000001/agent-config"];
-        yield return ["PUT", "/api/v1/library/games/00000000-0000-0000-0000-000000000001/agent-config"];
-        yield return ["POST", "/api/v1/library/games/00000000-0000-0000-0000-000000000001/agent-config"];
 
         // PDF / ingest
         yield return ["GET", "/api/v1/pdfs/00000000-0000-0000-0000-000000000001/progress"];
@@ -102,7 +99,6 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
         yield return ["GET", "/api/v1/game-nights"];
 
         // Agent Slots (Issue #417)
-        yield return ["GET", "/api/v1/user/agent-slots"];
 
         // Agents (Issues #641/#647/#648/#650/#654/#655/#657/#658/#659 — handlers all implemented)
         yield return ["GET", "/api/v1/agents"];                                                                 // #641 Wave B.2
@@ -111,10 +107,6 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
         yield return ["GET", "/api/v1/agents/00000000-0000-0000-0000-000000000001/configuration"];              // #657 Phase γ.4
         yield return ["GET", "/api/v1/agents/recent?limit=10"];                                                 // #650 Phase γ.3
         yield return ["GET", "/api/v1/agent-typologies"];                                                       // typology listing
-        yield return ["POST", "/api/v1/agents/user"];                                                            // #654 Phase β.2
-        yield return ["POST", "/api/v1/agents/create-with-setup"];                                               // #655 Phase β.3
-        yield return ["POST", "/api/v1/agents/quick-create"];                                                    // #659 Phase δ.1
-        yield return ["PATCH", "/api/v1/agents/00000000-0000-0000-0000-000000000001/configuration"];              // #658 Phase γ.4
 
         // Contact (public, no auth)
         yield return ["POST", "/api/v1/contact"];
@@ -133,6 +125,72 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
         // PATCH /configuration in Issue #658 — left here to detect if a regression ever
         // re-introduces it under the old path.
         yield return ["PUT", "/api/v1/agents/00000000-0000-0000-0000-000000000001/configure", "configure agent (legacy path)"];
+    }
+
+    // -----------------------------------------------------------------------
+    // Retired routes — REMOVED BY DECISION, not "not yet built".
+    // Expected status: 404 or 405.
+    //
+    // Deliberately a third category rather than rows in PendingBackendRoutes:
+    // "pending" reads as an invitation to implement, and these must not come
+    // back. Issue #4138 — one system agent, configured by the admin and used by
+    // everyone, so there is no user-facing agent creation to serve.
+    // -----------------------------------------------------------------------
+    public static IEnumerable<object[]> RetiredRoutes()
+    {
+        yield return ["GET", "/api/v1/admin/kb/games/00000000-0000-0000-0000-000000000001/feedback", "#4469 — per-game feedback list behind a hand-typed game UUID; GET /admin/kb/feedback filters by version and game"];
+        yield return ["POST", "/api/v1/agents/user", "#4138 — user agent creation"];
+        yield return ["POST", "/api/v1/agents/create-with-setup", "#4138 — creation + library add + thread"];
+        yield return ["POST", "/api/v1/agents/quick-create", "#4138 — 1-click Tutor creation"];
+        yield return ["PUT", "/api/v1/agents/00000000-0000-0000-0000-000000000001/user", "#4138 — user-owned agent update"];
+        yield return ["POST", "/api/v1/library/games/00000000-0000-0000-0000-000000000001/agent", "#4138 — per-game agent configuration (nothing on the answer path read it)"];
+        yield return ["GET", "/api/v1/library/games/00000000-0000-0000-0000-000000000001/agent-config", "#4138 — per-game agent config read"];
+        yield return ["PUT", "/api/v1/library/games/00000000-0000-0000-0000-000000000001/agent-config", "#4138 — per-game agent config write"];
+        yield return ["POST", "/api/v1/library/games/00000000-0000-0000-0000-000000000001/agent-config", "#4138 — per-game agent config from the setup modal"];
+        yield return ["GET", "/api/v1/user/agent-slots", "#4138 — per-user agent slot quota"];
+        yield return ["PATCH", "/api/v1/agents/00000000-0000-0000-0000-000000000001/configuration", "#4138 — any user rewrote the shared agent's model; admins use PUT /admin/agent-definitions/{id}"];
+        yield return ["DELETE", "/api/v1/agents/00000000-0000-0000-0000-000000000001", "#4138 — user-owned agent soft delete, with no ownership check"];
+        yield return ["POST", "/api/v1/agents/00000000-0000-0000-0000-000000000001/restore", "#4138 — user-owned agent restore, with no ownership check"];
+        yield return ["POST", "/api/v1/agents/00000000-0000-0000-0000-000000000001/start-testing", "#4138 — any user moved any agent's lifecycle; admin route kept"];
+        yield return ["POST", "/api/v1/agents/00000000-0000-0000-0000-000000000001/publish", "#4138 — any user published any agent; admin route kept"];
+        yield return ["POST", "/api/v1/agents/00000000-0000-0000-0000-000000000001/unpublish", "#4138 — any user could switch the system agent off; admin route kept"];
+        yield return ["POST", "/api/v1/private-games/00000000-0000-0000-0000-000000000001/link-agent/00000000-0000-0000-0000-000000000001", "#4138 — per-game agent link on a private game"];
+        yield return ["DELETE", "/api/v1/private-games/00000000-0000-0000-0000-000000000001/unlink-agent", "#4138 — per-game agent unlink on a private game"];
+        yield return ["GET", "/api/v1/admin/kb/games/00000000-0000-0000-0000-000000000001/settings", "#4169 — per-game KB settings override: saved, never read by the answer path"];
+        yield return ["PUT", "/api/v1/admin/kb/games/00000000-0000-0000-0000-000000000001/settings", "#4169 — per-game KB settings override: saved (with mismatched field names), never read"];
+        yield return ["GET", "/api/v1/admin/budget", "#4169 — AppBudget: a second budget the LLM gateway never applied; the caps live in /admin/llm/config"];
+        yield return ["PUT", "/api/v1/admin/budget", "#4169 — AppBudget: a second budget the LLM gateway never applied"];
+        yield return ["GET", "/api/v1/admin/config/chat-history-limits", "#4212 — ChatHistory:*TierLimit keys: saved, never read by the runtime"];
+        yield return ["PUT", "/api/v1/admin/config/chat-history-limits", "#4212 — ChatHistory:*TierLimit keys: saved, never read by the runtime"];
+        yield return ["GET", "/api/v1/admin/config/game-library-limits", "#4212 — GameLibrary:*TierLimit keys: the quota read other keys; the limit is now the plan's MaxLibraryGames"];
+        yield return ["PUT", "/api/v1/admin/config/game-library-limits", "#4212 — GameLibrary:*TierLimit keys: the quota read other keys; the limit is now the plan's MaxLibraryGames"];
+        yield return ["GET", "/api/v1/users/00000000-0000-0000-0000-000000000001/chat-sessions/limit", "#4212 — chat session tier limit: it governed chat_sessions, which no page creates"];
+        yield return ["GET", "/api/v1/admin/resources/tokens", "#4212 — token tiers and credits (Administration): a second per-user plan that never blocked a request; the plan is TierDefinition"];
+        yield return ["GET", "/api/v1/admin/resources/tokens/consumption", "#4212 — token tiers and credits (Administration): a second per-user plan that never blocked a request; the plan is TierDefinition"];
+        yield return ["GET", "/api/v1/admin/resources/tokens/tiers", "#4212 — token tiers and credits (Administration): a second per-user plan that never blocked a request; the plan is TierDefinition"];
+        yield return ["GET", "/api/v1/admin/resources/tokens/top-consumers", "#4212 — token tiers and credits (Administration): a second per-user plan that never blocked a request; the plan is TierDefinition"];
+        yield return ["PUT", "/api/v1/admin/resources/tokens/tiers/free", "#4212 — token tiers and credits (Administration): a second per-user plan that never blocked a request; the plan is TierDefinition"];
+        yield return ["POST", "/api/v1/admin/resources/tokens/add-credits", "#4212 — token tiers and credits (Administration): a second per-user plan that never blocked a request; the plan is TierDefinition"];
+        yield return ["GET", "/api/v1/budget/user/00000000-0000-0000-0000-000000000001", "#4212 — token tiers and credits (Administration): a second per-user plan that never blocked a request; the plan is TierDefinition"];        yield return ["POST", "/api/v1/live-sessions/00000000-0000-0000-0000-000000000001/scores/parse", "#4448 (A7) — dictated score parsing: replaced by the in-game assistant, no page mounted its only caller (ScoreAssistant)"];
+        yield return ["POST", "/api/v1/live-sessions/00000000-0000-0000-0000-000000000001/scores/confirm", "#4448 (A7) — confirmation of a dictated score: same flow as scores/parse; host ratification of a guest proposal stays on scores/proposals/confirm"];
+        yield return ["POST", "/api/v1/game-sessions/00000000-0000-0000-0000-000000000001/agent/chat", "#4448 (A7) — legacy in-game agent chat (ChatWithSessionAgent): replaced by the in-game assistant; no page mounted its consumers since #4156 D5"];
+    }
+
+    [Theory]
+    [MemberData(nameof(RetiredRoutes))]
+    public async Task RetiredRoute_ShouldStayUnmounted(string method, string url, string reason)
+    {
+        var request = new HttpRequestMessage(new HttpMethod(method), url);
+        if (method is "POST" or "PUT" or "PATCH")
+            request.Content = new StringContent("{}", System.Text.Encoding.UTF8, "application/json");
+
+        var response = await _client.SendAsync(request);
+
+        Assert.True(
+            response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.MethodNotAllowed,
+            $"Route {method} {url} answers {(int)response.StatusCode} {response.StatusCode}. " +
+            $"It was retired ({reason}) and must not be re-mounted. If the decision changed, " +
+            "amend the ADR for #4138 first, then move this row to KnownRoutes.");
     }
 
     [Theory]

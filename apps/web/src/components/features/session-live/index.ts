@@ -12,7 +12,6 @@
  *
  * Interactions sub-PR (Issue #750) adds:
  *   - SessionToolsRail: tool grid (Player+Host only)
- *   - LiveAgentChat: chat panel with visibility toggle
  *   - LiveSessionNotes: notes panel with add form
  *   - RightColumnTabs: desktop tablist (tools/chat/notes) with keyboard nav
  *   - ConnectionLostBanner: SSE connection state indicator
@@ -28,12 +27,6 @@ export type {
   ActionLogTimelineLabels,
   ActionLogTimelineProps,
 } from '@/components/features/session-live/ActionLogTimeline';
-
-export { ChatAgentPanel } from '@/components/features/session-live/ChatAgentPanel';
-export type {
-  ChatAgentPanelLabels,
-  ChatAgentPanelProps,
-} from '@/components/features/session-live/ChatAgentPanel';
 
 export { DesktopBody } from '@/components/features/session-live/DesktopBody';
 export type { DesktopBodyProps } from '@/components/features/session-live/DesktopBody';
@@ -118,13 +111,6 @@ export type {
   EndgameDialogProps,
   FinalScoreEntry,
 } from '@/components/features/session-live/EndgameDialog';
-
-export { LiveAgentChat } from '@/components/features/session-live/LiveAgentChat';
-export type {
-  ChatMessage,
-  LiveAgentChatLabels,
-  LiveAgentChatProps,
-} from '@/components/features/session-live/LiveAgentChat';
 
 export { LiveSessionNotes } from '@/components/features/session-live/LiveSessionNotes';
 export type {

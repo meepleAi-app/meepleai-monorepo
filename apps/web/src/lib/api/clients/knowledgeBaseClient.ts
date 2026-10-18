@@ -14,18 +14,18 @@ import {
   UserGameKbStatusSchema,
   AdminGameKbDocumentsSchema,
   AdminKbFeedbackSchema,
-  GameKbSettingsSchema,
+  AdminKbFeedbackSummarySchema,
   type KnowledgeBaseStatus,
   type RagConfigResponse,
   type UserGameKbStatus,
   type AdminGameKbDocuments,
   type AdminKbFeedback,
-  type GameKbSettings,
+  type AdminKbFeedbackSummary,
 } from '../schemas/knowledge-base.schemas';
 
 // ========== KB Management DTOs ==========
 
-export type { UserGameKbStatus, AdminGameKbDocuments, AdminKbFeedback, GameKbSettings };
+export type { UserGameKbStatus, AdminGameKbDocuments, AdminKbFeedback, AdminKbFeedbackSummary };
 
 export interface SubmitKbFeedbackBody {
   chatSessionId: string;
@@ -35,13 +35,13 @@ export interface SubmitKbFeedbackBody {
 }
 
 export interface AdminKbFeedbackParams {
+  /** #4469: l'id di una versione del profilo, o 'none' per i feedback senza versione. */
+  version?: string;
+  gameId?: string;
   outcome?: 'helpful' | 'not_helpful';
-  from?: string;
   page?: number;
   pageSize?: number;
 }
-
-export type GameKbSettingsPayload = Omit<GameKbSettings, 'gameId'>;
 
 import type { HttpClient } from '../core/httpClient';
 
@@ -171,54 +171,28 @@ export function createKnowledgeBaseClient({ httpClient }: CreateKnowledgeBaseCli
     },
 
     /**
-     * KB-08: Get admin feedback list for a game's KB
-     * @param gameId Game ID (GUID format)
-     * @param params Optional filters (outcome, date range, pagination)
+     * KB-08, #4469: admin feedback list, filtered by profile version, game and outcome — no game
+     * UUID required.
+     * @param params Optional filters (version, gameId, outcome, pagination)
      * @returns Paginated feedback items
      */
-    async getAdminKbFeedback(
-      gameId: string,
-      params?: AdminKbFeedbackParams
-    ): Promise<AdminKbFeedback | null> {
+    async getAdminKbFeedback(params?: AdminKbFeedbackParams): Promise<AdminKbFeedback | null> {
       const searchParams = new URLSearchParams();
+      if (params?.version) searchParams.set('version', params.version);
+      if (params?.gameId) searchParams.set('gameId', params.gameId);
       if (params?.outcome) searchParams.set('outcome', params.outcome);
-      if (params?.from) searchParams.set('from', params.from);
       if (params?.page !== undefined) searchParams.set('page', String(params.page));
       if (params?.pageSize !== undefined) searchParams.set('pageSize', String(params.pageSize));
       const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
-      return httpClient.get(
-        `/api/v1/admin/kb/games/${encodeURIComponent(gameId)}/feedback${query}`,
-        AdminKbFeedbackSchema
-      );
+      return httpClient.get(`/api/v1/admin/kb/feedback${query}`, AdminKbFeedbackSchema);
     },
 
     /**
-     * KB-10: Get per-game KB settings (admin)
-     * @param gameId Game ID (GUID format)
-     * @returns Current KB settings overrides
+     * #4469 (ADR-095 fetta 7a): helpful / not helpful per profile version, and the games with
+     * feedback.
      */
-    async getGameKbSettings(gameId: string): Promise<GameKbSettings | null> {
-      return httpClient.get(
-        `/api/v1/admin/kb/games/${encodeURIComponent(gameId)}/settings`,
-        GameKbSettingsSchema
-      );
-    },
-
-    /**
-     * KB-10: Update per-game KB settings (admin)
-     * @param gameId Game ID (GUID format)
-     * @param settings Settings overrides to apply
-     * @returns Updated KB settings
-     */
-    async setGameKbSettings(
-      gameId: string,
-      settings: GameKbSettingsPayload
-    ): Promise<GameKbSettings> {
-      return httpClient.put(
-        `/api/v1/admin/kb/games/${encodeURIComponent(gameId)}/settings`,
-        settings,
-        GameKbSettingsSchema
-      );
+    async getAdminKbFeedbackSummary(): Promise<AdminKbFeedbackSummary | null> {
+      return httpClient.get('/api/v1/admin/kb/feedback/summary', AdminKbFeedbackSummarySchema);
     },
 
     /**

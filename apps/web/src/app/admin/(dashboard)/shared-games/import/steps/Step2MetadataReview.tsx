@@ -11,22 +11,28 @@
 
 import { useEffect, type JSX } from 'react';
 
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Info, Loader2 } from 'lucide-react';
 
 import { MeepleCard } from '@/components/ui/data-display/meeple-card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/feedback/alert';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
-import { useExtractMetadata } from '@/hooks/queries/useExtractMetadata';
+import { isEmptyExtraction, useExtractMetadata } from '@/hooks/queries/useExtractMetadata';
 import { useMetadataToMeepleCard } from '@/hooks/useMetadataToMeepleCard';
 import { useGameImportWizardStore, type GameMetadata } from '@/stores/useGameImportWizardStore';
 
 import { CoverImagePicker } from '../components/CoverImagePicker';
 
 export function Step2MetadataReview(): JSX.Element {
-  const { uploadedPdf, reviewedMetadata, coverImage, setReviewedMetadata, setCoverImage } =
-    useGameImportWizardStore();
+  const {
+    importTitle,
+    uploadedPdf,
+    reviewedMetadata,
+    coverImage,
+    setReviewedMetadata,
+    setCoverImage,
+  } = useGameImportWizardStore();
 
   const pdfId = uploadedPdf?.pdfDocumentId ?? null;
 
@@ -34,24 +40,32 @@ export function Step2MetadataReview(): JSX.Element {
     data: extractedMetadata,
     isLoading,
     isError,
-    error,
   } = useExtractMetadata(pdfId, {
     enabled: !!pdfId && !reviewedMetadata,
   });
 
-  // Auto-populate from extraction when it arrives
+  // Auto-populate from extraction when it arrives. The title the admin typed at step 1 wins over
+  // the extracted one (#4401): a rulebook's first page is often not the game's name. When the
+  // extraction fails the admin fills the form by hand, still starting from that title (#4459).
   useEffect(() => {
-    if (extractedMetadata && !reviewedMetadata) {
-      setReviewedMetadata(extractedMetadata);
+    if (reviewedMetadata) return;
+    if (extractedMetadata) {
+      setReviewedMetadata({
+        ...extractedMetadata,
+        title: importTitle.trim() || extractedMetadata.title,
+      });
+    } else if (isError) {
+      setReviewedMetadata({ title: importTitle.trim() });
     }
-  }, [extractedMetadata, reviewedMetadata, setReviewedMetadata]);
+  }, [extractedMetadata, isError, reviewedMetadata, importTitle, setReviewedMetadata]);
 
   const meepleCardProps = useMetadataToMeepleCard(reviewedMetadata, coverImage);
 
   const current = reviewedMetadata ?? extractedMetadata ?? null;
+  const nothingExtracted = !!extractedMetadata && isEmptyExtraction(extractedMetadata);
 
   const updateField = <K extends keyof GameMetadata>(key: K, value: GameMetadata[K]) => {
-    const updated: GameMetadata = { ...(current ?? { title: '' }), [key]: value };
+    const updated: GameMetadata = { ...(current ?? { title: importTitle }), [key]: value };
     setReviewedMetadata(updated);
   };
 
@@ -76,19 +90,32 @@ export function Step2MetadataReview(): JSX.Element {
         </div>
       )}
 
-      {/* Extraction failed — empty form, user compiles manually */}
+      {/* Extraction failed — user compiles manually. The technical cause stays out of the page:
+          it told the admin "Schema validation failed" for what was an empty result (#4459). */}
       {isError && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Estrazione non disponibile</AlertTitle>
           <AlertDescription className="text-sm">
-            {error?.message ?? 'Impossibile estrarre i metadati. Compila manualmente il form.'}
+            Impossibile estrarre i metadati. Compila manualmente il form.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Extraction succeeded but found nothing — not an error (#4459) */}
+      {nothingExtracted && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertTitle>Nessun dato estratto</AlertTitle>
+          <AlertDescription className="text-sm">
+            L&apos;estrazione automatica non ha trovato metadati in questo PDF. Compila il form a
+            mano.
           </AlertDescription>
         </Alert>
       )}
 
       {/* Confidence hint */}
-      {current?.confidenceScore != null && (
+      {current?.confidenceScore != null && !nothingExtracted && (
         <p className="text-xs text-muted-foreground">
           Confidenza estrazione: {Math.round(current.confidenceScore * 100)}% — verifica e correggi
           se necessario.
@@ -238,7 +265,9 @@ export function Step2MetadataReview(): JSX.Element {
 
           {/* Description */}
           <div className="space-y-1">
-            <Label htmlFor="meta-description">Descrizione</Label>
+            <Label htmlFor="meta-description">
+              Descrizione <span className="text-destructive">*</span>
+            </Label>
             <Textarea
               id="meta-description"
               rows={4}

@@ -53,6 +53,8 @@ internal class LogAiRequestCommandHandler : ICommandHandler<LogAiRequestCommand>
                 UserAgent = command.UserAgent,
                 Model = command.Model,
                 FinishReason = command.FinishReason,
+                ProfileVersionId = command.ProfileVersionId,
+                Language = command.Language,
                 CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
                 // AI-11: Store quality scores if provided
                 RagConfidence = command.QualityScores?.RagConfidence,

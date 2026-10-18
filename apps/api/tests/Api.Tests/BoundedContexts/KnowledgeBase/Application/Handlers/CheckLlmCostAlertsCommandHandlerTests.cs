@@ -27,10 +27,15 @@ public class CheckLlmCostAlertsCommandHandlerTests
         _mockAlertingService = new Mock<IAlertingService>();
         var mockLogger = new Mock<ILogger<LlmCostAlertService>>();
 
+        var configProvider = new Mock<Api.BoundedContexts.SystemConfiguration.Application.Services.ILlmSystemConfigProvider>();
+        configProvider.Setup(p => p.GetBudgetPolicyAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Api.BoundedContexts.SystemConfiguration.Application.Services.LlmBudgetPolicy(100m, 3000m, 80, 30, 20));
+
         _alertService = new LlmCostAlertService(
             _mockCostLogRepository.Object,
             _mockAlertingService.Object,
-            mockLogger.Object);
+            mockLogger.Object,
+            configProvider.Object);
 
         _handler = new CheckLlmCostAlertsCommandHandler(_alertService);
     }
@@ -96,13 +101,13 @@ public class CheckLlmCostAlertsCommandHandlerTests
     [Fact]
     public async Task Handle_WeeklyCostExceedsThreshold_SendsWeeklyAlert()
     {
-        // $501 weekly cost — exceeds the $500 threshold; daily returns 0 to isolate the weekly path
+        // $701 weekly cost — exceeds the weekly threshold (7 × the 100 $ daily cap); daily returns 0 to isolate the weekly path
         _mockCostLogRepository
             .Setup(r => r.GetDailyCostAsync(It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(0m);
         _mockCostLogRepository
             .Setup(r => r.GetTotalCostAsync(It.IsAny<DateOnly>(), It.IsAny<DateOnly>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(501m);
+            .ReturnsAsync(701m);
 
         var result = await _handler.Handle(new CheckLlmCostAlertsCommand(), TestContext.Current.CancellationToken);
 

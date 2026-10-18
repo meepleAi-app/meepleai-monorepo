@@ -12,6 +12,8 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useAgentChatStream } from '@/hooks/useAgentChatStream';
 import { cn } from '@/lib/utils';
 
+import { TierLimitRegion } from './TierLimitNotice';
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -26,9 +28,15 @@ interface ChatMessage {
 export interface EmbeddedChatViewProps {
   /** Chat thread ID */
   threadId: string;
-  /** Agent ID for SSE streaming */
-  agentId: string;
-  /** Game ID for context */
+  /**
+   * Game ID — the scope of the stream.
+   *
+   * Issue #4139: this component used to take an `agentId` for SSE streaming and
+   * accept `gameId` only to ignore it (`gameId: _gameId`). The agent id fed
+   * /api/v1/agents/{agentId}/chat, a route the backend never mounted; the stream
+   * now posts to /agents/qa/stream, which is scoped by game — so the prop that was
+   * already here is the one that was needed.
+   */
   gameId: string;
   /** Game name for ProxyGameContext */
   gameName?: string;
@@ -38,12 +46,7 @@ export interface EmbeddedChatViewProps {
 // Component
 // ============================================================================
 
-export function EmbeddedChatView({
-  threadId,
-  agentId,
-  gameId: _gameId,
-  gameName,
-}: EmbeddedChatViewProps) {
+export function EmbeddedChatView({ threadId, gameId, gameName }: EmbeddedChatViewProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
@@ -96,20 +99,23 @@ export function EmbeddedChatView({
 
       // Send via SSE
       sendViaSSE(
-        agentId,
+        gameId,
         content,
         threadId,
         { gameName: gameName ?? '', agentTypology: '' },
         undefined
       );
     },
-    [inputValue, agentId, threadId, gameName, sendViaSSE]
+    [inputValue, gameId, threadId, gameName, sendViaSSE]
   );
 
   return (
     <div className="flex flex-col h-full" data-testid="embedded-chat-view">
+      {/* #4168 (5g-b): la quota del piano non è un guasto — l'avviso, non il banner d'errore. */}
+      <TierLimitRegion limit={streamState.tierLimit ?? null} className="mx-3 mt-2" />
+
       {/* Error banner */}
-      {streamState.error && (
+      {streamState.error && !streamState.tierLimit && (
         <div
           role="alert"
           className="mx-3 mt-2 p-2 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 rounded-lg text-xs border border-red-200 dark:border-red-500/20"

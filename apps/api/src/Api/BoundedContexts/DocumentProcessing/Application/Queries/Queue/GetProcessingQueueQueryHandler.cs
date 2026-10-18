@@ -73,10 +73,12 @@ internal class GetProcessingQueueQueryHandler : IQueryHandler<GetProcessingQueue
         // Total count for pagination
         var total = await dbQuery.CountAsync(cancellationToken).ConfigureAwait(false);
 
-        // Sort: active jobs first (Queued/Processing by priority), then completed/failed by date
+        // Sort: active jobs first, then by priority DESCENDING — the order PdfProcessingQuartzJob picks
+        // them in (#4443 R5: ascending put a priority-10 upload below the priority-0 jobs, off the
+        // first page of the panel). Same priority: newest first.
         var jobs = await dbQuery
             .OrderByDescending(j => j.Status == "Queued" || j.Status == "Processing" ? 1 : 0)
-            .ThenBy(j => j.Priority)
+            .ThenByDescending(j => j.Priority)
             .ThenByDescending(j => j.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)

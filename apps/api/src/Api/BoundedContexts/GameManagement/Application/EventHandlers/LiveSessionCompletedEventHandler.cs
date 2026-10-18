@@ -47,17 +47,20 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
             {
                 playRecord.AddPlayer(playerSnapshot.UserId, playerSnapshot.DisplayName, _timeProvider);
 
-                // Map round scores for this player
-                var playerScores = domainEvent.Scores
-                    .Where(s => s.PlayerId == playerSnapshot.PlayerId)
-                    .ToList();
-
                 var recordPlayer = playRecord.Players.First(p =>
                     string.Equals(p.DisplayName, playerSnapshot.DisplayName, StringComparison.Ordinal));
 
-                foreach (var score in playerScores)
+                // #4156: one score per dimension, the total over the rounds. A play record keeps a
+                // single value per player and dimension, so recording each round of the live session
+                // replaced the previous one and the record carried the last round, not the total.
+                var totals = domainEvent.Scores
+                    .Where(s => s.PlayerId == playerSnapshot.PlayerId)
+                    .GroupBy(s => s.Dimension, StringComparer.OrdinalIgnoreCase);
+
+                foreach (var dimension in totals)
                 {
-                    var recordScore = new RecordScore(score.Dimension, score.Value, score.Unit);
+                    var unit = dimension.Select(s => s.Unit).FirstOrDefault(u => !string.IsNullOrWhiteSpace(u));
+                    var recordScore = new RecordScore(dimension.First().Dimension, dimension.Sum(s => s.Value), unit);
                     playRecord.RecordScore(recordPlayer.Id, recordScore, _timeProvider);
                 }
             }
@@ -110,6 +113,8 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
 
     private PlayRecord CreatePlayRecordFromEvent(LiveSessionCompletedEvent domainEvent)
     {
+        var scoringConfig = ScoringConfigOf(domainEvent);
+
         // Issue #1938 / CF-2: propagate EventId so the resulting PlayRecord row carries the
         // source event id and the UNIQUE partial index blocks duplicate inserts on retry/replay.
         if (domainEvent.GameId.HasValue)
@@ -123,7 +128,8 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
                 visibility: domainEvent.Visibility,
                 timeProvider: _timeProvider,
                 groupId: domainEvent.GroupId,
-                sourceEventId: domainEvent.EventId);
+                sourceEventId: domainEvent.EventId,
+                scoringConfig: scoringConfig);
         }
 
         return PlayRecord.CreateFreeForm(
@@ -132,10 +138,35 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
             userId: domainEvent.CreatedByUserId,
             sessionDate: domainEvent.SessionDate,
             visibility: domainEvent.Visibility,
-            scoringConfig: SessionScoringConfig.CreateDefault(),
+            scoringConfig: scoringConfig,
             timeProvider: _timeProvider,
             groupId: domainEvent.GroupId,
             sourceEventId: domainEvent.EventId);
+    }
+
+    /// <summary>
+    /// The scoring config of the play record: the dimensions the live session scored, with their
+    /// units (#4156). The default config enables only "points", so a live session scored on any
+    /// other dimension — «Punti» is the wizard's default — made recording its scores throw, and the
+    /// handler swallowed it: the play record was never written. Without scores, the default.
+    /// </summary>
+    private static SessionScoringConfig ScoringConfigOf(LiveSessionCompletedEvent domainEvent)
+    {
+        var dimensions = domainEvent.Scores
+            .GroupBy(s => s.Dimension, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        if (dimensions.Count == 0)
+            return SessionScoringConfig.CreateDefault();
+
+        var units = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var dimension in dimensions)
+        {
+            var unit = dimension.Select(s => s.Unit).FirstOrDefault(u => !string.IsNullOrWhiteSpace(u));
+            if (unit != null)
+                units[dimension.First().Dimension] = unit;
+        }
+
+        return new SessionScoringConfig(dimensions.Select(d => d.First().Dimension), units);
     }
 
     protected override Dictionary<string, object?>? GetAuditMetadata(LiveSessionCompletedEvent domainEvent)

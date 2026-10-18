@@ -1,0 +1,12 @@
+# ADR-099 (#4427): destinatari dei segreti cifrati in infra/secrets/sops/.
+#
+# La chiave qui sotto è PUBBLICA: serve a cifrare. La privata, che serve a decifrare, sta solo sulla
+# macchina del committente (%AppData%\sops\age\keys.txt) e nelle sue due copie di riserva.
+#
+# Per aggiungere un destinatario (un'altra macchina, una pipeline, un giorno Azure Key Vault) si
+# aggiunge qui e si esegue `sops updatekeys` su ogni file cifrato: i valori non cambiano.
+#
+# La regex accetta / e \ perché su Windows sops.exe riceve i percorsi convertiti da Git Bash.
+creation_rules:
+  - path_regex: (^|[/\\])infra[/\\]secrets[/\\]sops[/\\][^/\\]+\.secret\.enc$
+    age: age19mdks6u9zhv9rp5k3gyh7300ltqnfl6n7mhtvhwzfvhj4gh6pavqnwa0rq

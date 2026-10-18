@@ -25,7 +25,8 @@ namespace Api.BoundedContexts.GameManagement.Infrastructure.Services;
 ///         in-memory WidgetStateUpdated events. Id null.</item>
 /// </list>
 /// When <c>TrackingSessionId == null</c> (legacy / free-form session), sources 2+3 still run;
-/// only the companion pump is skipped.
+/// only the companion pump is skipped. <see cref="BroadcastAsync"/> then publishes on the live
+/// channel (source 2), so the session's own events still reach the stream, without replay (#4114).
 /// Issue #2561 SP2 T3 / Issue #2579 fan-in.
 /// </summary>
 internal sealed class LiveSessionStreamGateway : ILiveSessionStreamGateway
@@ -63,15 +64,11 @@ internal sealed class LiveSessionStreamGateway : ILiveSessionStreamGateway
             return;
         }
 
-        var companionId = session.TrackingSessionId;
-
-        if (companionId is null)
-        {
-            _logger.LogDebug(
-                "BroadcastAsync: live session {LiveSessionId} has no TrackingSessionId (legacy or free-form) — skipping publish",
-                liveSessionId);
-            return;
-        }
+        // #4114: without a companion (legacy or free-form session) the event goes on the live
+        // channel, which SubscribeAsync reads through its toolkit pump. It used to be dropped, so
+        // score, pause, resume and endgame never reached the stream of a free-form session. That
+        // pump drops the envelope id, so these events are not replayed on reconnection.
+        var channelId = session.TrackingSessionId ?? liveSessionId;
 
         // Id placeholder — PublishEnvelopeAsync assigns the final monotonic id internally.
         var envelope = new SseEventEnvelope
@@ -82,7 +79,7 @@ internal sealed class LiveSessionStreamGateway : ILiveSessionStreamGateway
         };
 
         await _broadcast
-            .PublishEnvelopeAsync(companionId.Value, envelope, default, ct)
+            .PublishEnvelopeAsync(channelId, envelope, default, ct)
             .ConfigureAwait(false);
     }
 

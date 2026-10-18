@@ -36,8 +36,7 @@ internal static class DocumentCollectionEndpoints
     private static void MapGameScopedEndpoints(RouteGroupBuilder group)
     {
         var gameCollectionGroup = group.MapGroup("/games/{gameId:guid}/document-collections")
-            .WithTags("DocumentCollections")
-            .WithOpenApi();
+            .WithTags("DocumentCollections");
 
         MapCreateCollectionEndpoint(gameCollectionGroup);
         MapGetCollectionByGameEndpoint(gameCollectionGroup);
@@ -170,8 +169,7 @@ internal static class DocumentCollectionEndpoints
     {
         // Get all collections by user ID (admin/separate group)
         var userCollectionGroup = group.MapGroup("/document-collections/by-user")
-            .WithTags("DocumentCollections")
-            .WithOpenApi();
+            .WithTags("DocumentCollections");
 
         userCollectionGroup.MapGet("/{userId:guid}", async (
             Guid userId,
@@ -211,8 +209,7 @@ internal static class DocumentCollectionEndpoints
     private static void MapContentEndpoints(RouteGroupBuilder group)
     {
         var collectionGroup = group.MapGroup("/games/{gameId:guid}/document-collections")
-            .WithTags("DocumentCollections")
-            .WithOpenApi();
+            .WithTags("DocumentCollections");
 
         MapAddDocumentToCollectionEndpoint(collectionGroup);
         MapRemoveDocumentFromCollectionEndpoint(collectionGroup);

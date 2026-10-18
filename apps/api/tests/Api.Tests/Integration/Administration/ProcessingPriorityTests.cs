@@ -178,7 +178,7 @@ public sealed class ProcessingPriorityTests : IAsyncLifetime
         var result = await handler.Handle(command, TestCancellationToken);
 
         // Assert: result DTO
-        result.Status.Should().Be("processing");
+        result.Status.Should().Be("queued");
         result.Priority.Should().Be("Admin");
 
         // Assert: DB state is persisted (re-read from DB, not tracked entity)
@@ -268,7 +268,7 @@ public sealed class ProcessingPriorityTests : IAsyncLifetime
         var result = await handler.Handle(command, TestCancellationToken);
 
         // Assert: SharedGameId was resolved and priority was set
-        result.Status.Should().Be("processing");
+        result.Status.Should().Be("queued");
 
         _dbContext!.ChangeTracker.Clear();
         var pdf = await _dbContext.PdfDocuments.FindAsync([pdfId], TestCancellationToken);

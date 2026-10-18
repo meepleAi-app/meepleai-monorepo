@@ -128,16 +128,14 @@ export function GameRulesTab({ gameId, documents = [], isLoading = false }: Game
   // Group documents by processing state
   const readyDocuments = documents.filter(
     doc =>
-      (doc.processingState ?? doc.processingStatus).toLowerCase() === 'ready' ||
-      (doc.processingState ?? doc.processingStatus).toLowerCase() === 'completed'
+      doc.processingState.toLowerCase() === 'ready' ||
+      doc.processingState.toLowerCase() === 'completed'
   );
   const activeDocuments = documents.filter(doc => {
-    const state = (doc.processingState ?? doc.processingStatus).toLowerCase();
+    const state = doc.processingState.toLowerCase();
     return ACTIVE_STATES.some(s => s.toLowerCase() === state) || state === 'pending';
   });
-  const failedDocuments = documents.filter(
-    doc => (doc.processingState ?? doc.processingStatus).toLowerCase() === 'failed'
-  );
+  const failedDocuments = documents.filter(doc => doc.processingState.toLowerCase() === 'failed');
 
   if (documents.length === 0) {
     return (
@@ -185,11 +183,11 @@ export function GameRulesTab({ gameId, documents = [], isLoading = false }: Game
                   className="flex items-center justify-between p-4 border border-border/50 dark:border-border/30 rounded-lg hover:bg-muted/50 dark:hover:bg-muted/30 transition-colors"
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    {getProcessingStateIcon(doc.processingState ?? doc.processingStatus)}
+                    {getProcessingStateIcon(doc.processingState)}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="font-medium truncate">{doc.fileName}</p>
-                        {getProcessingStateBadge(doc.processingState ?? doc.processingStatus)}
+                        {getProcessingStateBadge(doc.processingState)}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
                         <span>{formatFileSize(doc.fileSizeBytes)}</span>
@@ -236,7 +234,7 @@ export function GameRulesTab({ gameId, documents = [], isLoading = false }: Game
           <CardContent>
             <div className="space-y-2">
               {activeDocuments.map(doc => {
-                const state = doc.processingState ?? doc.processingStatus;
+                const state = doc.processingState;
                 return (
                   <div
                     key={doc.id}

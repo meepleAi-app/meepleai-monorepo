@@ -257,6 +257,32 @@ Then   [Fact(Skip = "DIFETTO: #4016 — …")]
   Da qui il terzo codice d'uscita — `2` = non misurabile — per non confondere «non ho potuto
   misurare» con «ho misurato una regressione»: con un solo codice Games resterebbe rosso per sempre
   per una ragione che non è un salto, e chi legge imparerebbe a ignorare il segnale.
+  **Aggiunta del 2026-10-13 (#4298): i nomi, e il colore del job.** Il gate esisteva e non era un
+  segnale: `dev-async` era rosso per qualunque fallimento, compresi quelli in baseline, quindi
+  «i FALLIMENTI sono aumentati: 2 -> 9» veniva scritto a ogni run su un job già rosso. Sette test
+  sono rimasti così dal 2026-10-05 al 2026-10-12 (#4280). Ora il passo dei test conserva il codice
+  d'uscita senza far fallire il job, e il colore lo decide il confronto: verde entro la baseline,
+  rosso se qualcosa è cambiato o se la sessione è troncata.
+  Un verde deciso sui soli conteggi avrebbe aperto un buco che col job sempre rosso non costava
+  nulla: un fallimento dichiarato che guarisce e uno nuovo che compare lasciano il numero uguale.
+  Per questo la baseline porta anche `failedTests` e `skippedTests` (come `classe.test`: nel
+  `.trx` il nome del metodo da solo ricorre in classi diverse) e un test fuori lista è un errore
+  anche a conteggio invariato. Prova nei casi `bats` «nomi: …», e sui `.trx` veri: sostituendo un
+  nome dichiarato di Core, a conteggio invariato, lo script esce 1 nominando il test.
+  **Aggiunta del 2026-10-13 (#3742): lo shard che non entrava nel limite.** Reso leggibile il
+  colore, la troncatura di Games è diventata il rosso più frequente: tre run su sette in un giorno,
+  a selezione invariata. Non era un test lento. Lo shard gira in due modi a seconda del runner — sui
+  lenti ogni test dura circa il 45% in più dal primo minuto — e la sua durata è quella della catena
+  seriale più lunga: `Integration-GroupC`, con le classi di `SharedGameCatalog` e di
+  `GameManagement`, occupava il runner da sola dal ventesimo minuto alla fine. `dev-async.yml`
+  divide ora `Games` in `Catalog` e `GamesAdmin` lungo quel confine, su due runner, senza spostare
+  alcuna classe di collection; `ci.yml` resta a tre shard con la stessa selezione (#4329).
+  Due cose restano dopo la correzione, perché il margine si consuma di nuovo con la crescita della
+  suite: `shard-session-budget.sh` scrive a ogni run quanta parte del `TestSessionTimeout` ha usato
+  la sessione e avvisa oltre l'80%, e `integration-shard-matrix.bats` verifica che la matrice non
+  possa perdere test in silenzio — i token esclusi da `Core` sono esattamente quelli selezionati
+  dagli altri shard, i due workflow selezionano lo stesso insieme, ogni shard ha la sua voce nella
+  baseline.
 - [x] **A3** — **verificato con un drill distruttivo**, 2026-10-03. Le due suite di #3978
   (`S3BlobStorageIntegrationTests`, `CoverR2ConventionIntegrationTests`) contro l'immagine MinIO
   puntata a un tag inesistente:

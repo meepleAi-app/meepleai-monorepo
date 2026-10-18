@@ -57,8 +57,9 @@ public class RebuildRaptorCommandHandlerTests
         var command = new RebuildRaptorCommand(GameId: gameId, UserId: userId, UserRole: "User");
 
         // Act & Assert — access is checked FIRST, so the tier gate is never consulted.
-        await Assert.ThrowsAsync<ForbiddenException>(
+        var denied = await Assert.ThrowsAsync<RagOwnershipRequiredException>(
             () => handler.Handle(command, TestContext.Current.CancellationToken));
+        Assert.Equal(gameId, denied.GameId);
 
         ragAccess.Verify(
             s => s.CanAccessRagAsync(userId, gameId, It.IsAny<UserRole>(), It.IsAny<CancellationToken>()),

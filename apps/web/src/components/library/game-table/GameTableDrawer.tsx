@@ -102,7 +102,7 @@ function DrawerContentRenderer({ content }: { content: DrawerContent }) {
     case 'chat':
       return content.threadId ? (
         <Suspense fallback={<Skeleton className="h-64 w-full bg-card/10 rounded" />}>
-          <EmbeddedChatView threadId={content.threadId} agentId={content.agentId} gameId="" />
+          <EmbeddedChatView threadId={content.threadId} gameId={content.gameId} />
         </Suspense>
       ) : (
         <div className="text-[#8b949e] text-sm text-center py-6">

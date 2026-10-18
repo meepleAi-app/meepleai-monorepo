@@ -33,8 +33,6 @@ const MOCK_USER_DETAIL = {
   lastSeenAt: '2026-03-14T08:00:00Z',
   isTwoFactorEnabled: false,
   tier: 'Free',
-  tokenUsage: 500,
-  tokenLimit: 10000,
 };
 
 const MOCK_ROLE_HISTORY = [

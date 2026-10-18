@@ -161,10 +161,6 @@ export function createAdminContentClient(http: HttpClient) {
       return response.template;
     },
 
-    async deletePrompt(promptId: string): Promise<void> {
-      await http.delete(`/api/v1/admin/prompts/${promptId}`);
-    },
-
     async activatePromptVersion(
       promptId: string,
       versionId: string

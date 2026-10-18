@@ -126,7 +126,7 @@ docker run --rm \
     -e REDIS_URL=meepleai-redis:6379 \
     -e "ConnectionStrings__Postgres=Host=meepleai-postgres;Port=5432;Database=meepleai_test;Username=meeple;Password=meeplepass;Maximum Pool Size=100" \
     -e OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 \
-    mcr.microsoft.com/dotnet/sdk:9.0 \
+    mcr.microsoft.com/dotnet/sdk:10.0 \
     bash -c "
         echo 'Installing dependencies...'
         apt-get update -qq && apt-get install -y -qq libgdiplus bc > /dev/null 2>&1

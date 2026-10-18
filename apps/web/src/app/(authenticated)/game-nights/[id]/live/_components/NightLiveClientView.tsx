@@ -57,12 +57,8 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
     router.push(`/game-nights/${nightId}`);
   }, [router, nightId]);
 
-  const handleJumpToSession = useCallback(
-    (sessionId: string) => {
-      router.push(`/sessions/${sessionId}`);
-    },
-    [router]
-  );
+  // #4156 (D7): the games of a night are SessionTracking sessions, with no LiveGameSession and so
+  // no page under /sessions/{id}: their page is this night page. No "jump to session" is offered.
 
   const handleLogin = useCallback(() => {
     router.push('/login');
@@ -159,7 +155,6 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
 
   // Published → the read-only live hub + the organizer's interactive start CTA (WS1).
   const nextGame = vm.nextGame;
-  const liveSessionId = vm.currentGame?.sessionId ?? null;
   // DEC-10: hidden when a game is already live (status==='live') — you can only start the
   // next game when the current one is over. The 409 modal is the backstop for races.
   const showStartCta = vm.isViewerOrganizer && nextGame !== null && vm.status !== 'live';
@@ -217,7 +212,6 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
         diaryGames={diary.diaryGames}
         diaryPlayers={diary.diaryPlayers}
         onBack={handleBack}
-        onJumpToSession={handleJumpToSession}
       />
 
       {showStartCta && nextGame ? (
@@ -279,11 +273,7 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
         onConfirm={handleCompleteConfirm}
       />
 
-      <BlockedLiveSessionModal
-        open={blockedModalOpen}
-        onClose={() => setBlockedModalOpen(false)}
-        onJumpToLive={liveSessionId ? () => handleJumpToSession(liveSessionId) : undefined}
-      />
+      <BlockedLiveSessionModal open={blockedModalOpen} onClose={() => setBlockedModalOpen(false)} />
     </>
   );
 }

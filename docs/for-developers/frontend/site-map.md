@@ -104,7 +104,7 @@ La protezione è una **difesa a due livelli**:
 | Livello | Meccanismo | Comportamento |
 |---|---|---|
 | **Layer 1 — edge/server** | `apps/web/src/proxy.ts` (`config.matcher` = tutto tranne `api`/`_next`/asset statici) | Valida il **session cookie** `meepleai_session` server-side chiamando `/api/v1/auth/me` (cache 2 min, timeout 5s). Poi: (a) **unauth su route protetta** → `redirect('/login?from=<path>')`; (b) **non-admin su route admin** → `redirect('/')`; (c) auth su `/login`\|`/register` → redirect a `/library` (o `/admin`); (d) home autenticata → `/library`\|`/admin`. Aggiunge gli header di sicurezza (CSP, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin`, …). |
-| **Layer 2 — client** | `RequireRole` (`components/auth/RequireRole.tsx`) | `getCurrentUser()` → se non-auth `router.replace('/login?from=<path>')`; se ruolo errato `router.replace('/')`; spinner **"Verifica autorizzazioni..."** durante il check. Usato dal layout `admin` e da singole pagine (es. `/dashboard`, `/upload` con `['Admin','Editor']`). |
+| **Layer 2 — client** | `RequireRole` (`components/auth/RequireRole.tsx`) | `getCurrentUser()` → se non-auth `router.replace('/login?from=<path>')`; se ruolo errato `router.replace('/')`; spinner **"Verifica autorizzazioni..."** durante il check. Usato dal layout `admin` e da singole pagine (es. `/dashboard`, `/editor` con `['Admin','Editor']`). |
 | Gruppo `admin` | `admin/(dashboard)/layout.tsx` | Oltre al Layer 1 (redirect non-admin): (a) server legge il cookie `meepleai_view_mode`; se `'user'` → `redirect('/')`; (b) client `RequireRole allowedRoles={['Admin']}`. |
 | Navbar | `filterNavItemsByRole` | filtra le voci (vedi §4) — non protegge la route, solo la sua *visibilità* nel menu. |
 
@@ -918,7 +918,6 @@ _Route-group: `(authenticated)` · 9 pagine_
 | `/dashboard` | DesktopShell (`(authenticated)` → UserShellClient → DesktopShell); `DashboardClient` (`<main>` + Hero + HubPageContainer + CascadeDrawerHost) | `RequireRole ['User','Editor','Admin']` (superadmin bypassa); `dynamic='force-dynamic'` | loading · error · empty · default |
 | `/discover` | DesktopShell; page rende `<Suspense fallback={null}><DiscoverHub/></Suspense>` (HubLayout `showSearch=false`) | Nessuna esplicita (delega a `(authenticated)`); `Suspense` per `useSearchParams()` | skeleton · loading/error/empty per riga · disabled · default |
 | `/onboarding` | DesktopShell; modal a schermo `WizardModal` (Radix Dialog centrato) | Nessun RequireRole; gate `useAuth` (redirect `/library` se `onboardingCompleted`) | loading · null/redirect · wizard aperto |
-| `/setup` | DesktopShell; `<main min-h-dvh>` proprio con header sticky (no PageContainer condiviso) | Self-guard `api.auth.getMe()` → schermata "Accesso richiesto" (no redirect auto) | unauthorized · loading · empty · success · error |
 | `/versions` | DesktopShell + HubPageContainer; `Suspense` attorno a `VersionHistoryContent` | Self-guard `getMe()` + `?gameId=` obbligatorio; ripristino gated a `admin/superadmin/editor` | unauthorized · missing-gameId · loading · success · error |
 | `/notifications` | DesktopShell + SettingsPageContainer (`py-8`); legge `useNotificationStore` | Nessuna esplicita (delega a `(authenticated)`) | loading · error · empty · default |
 | `/notifications/preferences` | DesktopShell + SettingsPageContainer (`py-8`) | Nessuna esplicita; `dynamic='force-dynamic'` | loading · error · default |
@@ -953,10 +952,6 @@ _Route-group: `(authenticated)` · 9 pagine_
   - `/onboarding -> /library` (`router.replace` on onComplete → `api.auth.completeOnboarding(false)` + refreshUser + toast; al termine del wizard)
   - `/onboarding -> /library` (`router.replace` on onCancel dopo conferma "Cancel Wizard"; utente conferma)
   - `/onboarding -> /library` (`router.replace` useEffect page; se `!loading && user.onboardingCompleted`)
-- **`/setup`**
-  - `/setup -> /` (Link "<- Back to Home" / "Vai al Login" schermata accesso richiesto; solo se `!authUser`)
-  - `/setup -> /` (Link "Home" header sticky; sempre, utente autenticato)
-  - `/setup -> modal:CitationModal` (bottone "View N Reference(s)" su step; solo se `step.references.length>0`, NON cambia route)
 - **`/versions`**
   - `/versions -> /editor?gameId={gameId}` (Link "Editor" header; solo vista principale, `authUser && gameId`)
   - `/versions -> /` (Link "Home" + "Torna alla home"; varie schermate di errore)
@@ -1001,25 +996,10 @@ _Route-group: `(authenticated)` · 9 pagine_
 ##### `/onboarding`
 - **Page gate (useAuth)**: loading→spinner Loader2 full-screen; `!user || user.onboardingCompleted`→`return null`; altrimenti monta OnboardingGenericWizard; `refreshUser()` chiamato on mount — `apps/web/src/app/(authenticated)/onboarding/page.tsx`
 - **Step 1 InterestsStep**: validate gate = `interestsCompleted` (da onComplete/onSkip); `optional=true` → Skip disponibile — `apps/web/src/app/(authenticated)/onboarding/OnboardingGenericWizard.tsx`
-- **Step 2 FirstGameStep**: validate gate = `firstGameCompleted` (onComplete/onSkip/onGameAdded); `optional=true`; usa catalogo interno `api.games.getAll` (NON BoardGameGeek, ToS #1903) — `apps/web/src/app/(authenticated)/onboarding/OnboardingGenericWizard.tsx`
+- **Step 2 FirstGameStep**: validate gate = `firstGameCompleted` (onComplete/onSkip/onGameAdded); `optional=true`; cerca nel catalogo pubblico col `GamePicker` canonico, `source="catalog"` (NON BoardGameGeek, ToS #1903; #4227) — `apps/web/src/app/(authenticated)/onboarding/OnboardingGenericWizard.tsx`
 - **Step 3 InviteFriendComingSoonStep**: placeholder skip-only, `optional=true` (nessun validate); testo coming-soon — `apps/web/src/app/(authenticated)/onboarding/InviteFriendComingSoonStep.tsx`
 - **WizardModal controlli**: indicatore "Step X of N"; Back nascosto sul primo step (`isFirst`→`<span/>`); Skip solo se `currentStep.optional && !isLast`; Next label "Complete" sull'ultimo step (disabled durante `isValidating`); lista errori `role='alert'` se `errors.length>0`; Cancel apre dialog conferma annidato (overlay `z-[70]`/content `z-[71]`) — `apps/web/src/components/ui/wizard-modal/wizard-modal.tsx`
 - **Titolo Step 1**: "Ciao {userName}, scegli i tuoi interessi" se `userName` presente (`user.displayName` trimmed), altrimenti "Scegli i tuoi interessi" — `apps/web/src/app/(authenticated)/onboarding/OnboardingGenericWizard.tsx`
-
-##### `/setup`
-- **Schermata "Accesso richiesto"**: mostrata se `!authUser` (`api.auth.getMe()` fallito/null); sostituisce l'intera UI con 2 link a `/` — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **select gioco**: disabled se `isLoadingGames || isLoadingGuide`; auto-seleziona il primo gioco se disponibile e nessuno selezionato — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **bottone "Generate Setup Guide"**: disabled se `!selectedGameId || isLoadingGuide`; label "Generating…" durante `isLoadingGuide` — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **Banner errore**: solo se `errorMessage` non vuoto — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **Card loading guida**: solo se `isLoadingGuide` — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **Contenuto guida (progress + steps)**: solo se `setupGuide && !isLoadingGuide` — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **Empty state "🎲 No Setup Guide Yet"**: se `!setupGuide && !isLoadingGuide && !errorMessage` — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **Bottone "Reset Progress"**: disabled se `completedSteps.size===0`; su click `confirm()` — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **Messaggio "🎉 Setup Complete"**: solo se `progressPercentage===100` (`role=status` aria-live) — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **AI Confidence**: solo se `setupGuide.confidence !== null` — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **Bottone references (SetupStepCard)**: solo se `step.references.length>0`; label pluralizzata (Reference/References) — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **Badge OPTIONAL**: solo se `step.isOptional` — `apps/web/src/app/(authenticated)/setup/page.tsx`
-- **CitationModal**: montato solo se `selectedStepReferences !== null`; overlay `z-[1000]`, chiude su backdrop o bottone x — `apps/web/src/app/(authenticated)/setup/page.tsx`
 
 ##### `/versions`
 - **Schermata login-required**: se `!authUser` (`getMe()` null): h1 + "Devi effettuare l'accesso" + link `/` — `apps/web/src/app/(authenticated)/versions/page.tsx`
@@ -1095,11 +1075,8 @@ _Route-group: `(authenticated)` · 9 pagine_
 | OnboardingGenericWizard | `apps/web/src/app/(authenticated)/onboarding/OnboardingGenericWizard.tsx` | Orchestratore 3-step su WizardModal; redirect `/library` on complete/cancel |
 | WizardModal | `apps/web/src/components/ui/wizard-modal/wizard-modal.tsx` | Primitiva modal multi-step (Radix Dialog) con Skip/Back/Next/Cancel |
 | InterestsStep | `apps/web/src/components/onboarding/InterestsStep.tsx` | Step 1: selezione categorie board game |
-| FirstGameStep | `apps/web/src/components/onboarding/FirstGameStep.tsx` | Step 2: aggiunta primo gioco dal catalogo interno |
+| FirstGameStep | `apps/web/src/components/onboarding/FirstGameStep.tsx` | Step 2: aggiunta primo gioco dal catalogo pubblico, col `GamePicker` canonico (#4227) |
 | InviteFriendComingSoonStep | `apps/web/src/app/(authenticated)/onboarding/InviteFriendComingSoonStep.tsx` | Step 3 placeholder coming-soon skip-only |
-| SetupPage | `apps/web/src/app/(authenticated)/setup/page.tsx` | Pagina inline: auth self-check, selezione gioco, generazione guida, tracking step locale |
-| SetupStepCard | `apps/web/src/app/(authenticated)/setup/page.tsx` | Card step con checkbox + badge OPTIONAL + references |
-| CitationModal | `apps/web/src/app/(authenticated)/setup/page.tsx` | Modal snippet/citazioni rulebook (overlay `z-[1000]`) |
 | VersionHistoryContent | `apps/web/src/app/(authenticated)/versions/page.tsx` | Inner: auth self-check, load history/diff/timeline, restore versione |
 | VersionTimeline | `apps/web/src/components/versioning/VersionTimeline.tsx` | Vista timeline versioni con onVersionClick |
 | DiffViewerEnhanced | `apps/web/src/components/diff/DiffViewerEnhanced.tsx` | Viewer diff side-by-side tra due versioni |
@@ -1128,7 +1105,7 @@ flowchart LR
   prof["/profile"] -->|"'Achievements' (tab overview)"| ach["/profile/achievements"]
 ```
 
-> Gli altri edge di `/dashboard`, `/discover`, `/onboarding`, `/setup`, `/versions` puntano tutti **fuori** dal cluster (`/library`, `/game-nights`, `/games`, `/players`, `/sessions`, `/editor`, `/`) o aprono drawer/modal/sheet senza cambio di route.
+> Gli altri edge di `/dashboard`, `/discover`, `/onboarding`, `/versions` puntano tutti **fuori** dal cluster (`/library`, `/game-nights`, `/games`, `/players`, `/sessions`, `/editor`, `/`) o aprono drawer/modal/sheet senza cambio di route.
 
 ### Libreria personale, giochi privati, wishlist, play & toolbox
 _Route-group: `(authenticated)` · 16 pagine_
@@ -1958,7 +1935,7 @@ _Route-group: `(authenticated)` · 8 pagine_
 - Fixture (`VISUAL_TEST_FIXTURE_SESSION[_AS_HOST|_AS_SPECTATOR|_PAUSED]`): solo `IS_VISUAL_TEST_BUILD`; `?fixture=host|spectator|paused|default`; disabilita `useLiveSession`+SSE+diary+agentLaunch+SignalR — `apps/web/src/lib/session-live/session-live-visual-test-fixture.ts`
 - `useSessionLiveStream` (SSE) + `useLiveSessionDiary`: enabled solo se `!IS_VISUAL_TEST_BUILD && sessionId!=null && sessionQuery.isSuccess && data!=null` — `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/SessionLiveView.tsx`
 - `ConnectionLostBanner`: mostrato solo se `!IS_VISUAL_TEST_BUILD && connectionState ∈ {reconnecting,degraded-polling,failed}`; `onManualRetry` solo se `connectionState!=='reconnecting'` — `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/SessionLiveView.tsx`
-- `ScoreTabContent`: `viewerRole==='Host' && scoringType!==null` → `PolymorphicScoreEditor` mutabile (`useUpdateSessionScores`, debounce 500ms, optimistic, matrice 5-errori 403/429+countdown30s/400/5xx/network, disabled se `isRateLimited||isPending`); altrimenti `scoringPanelData!=null` → `ScoringPanelRenderer` read-only; altrimenti placeholder `aria-live` — `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/ScoreTabContent.tsx`
+- `ScoreTabContent` (#4156): editor giocatore × dimensione × round su `RoundScores` della live; round predefinito derivato dall'indice di turno, modificabile; celle scrivibili solo se `viewerRole==='Host'` e stato `InProgress`/`Paused` (`useRecordRoundScore`: `POST`/`PUT /live-sessions/{id}/scores`, una scrittura alla volta); altrimenti sola lettura; senza sessione, dimensioni o giocatori → placeholder `scoring-panel-empty` — `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/ScoreTabContent.tsx`
 - `LiveTopBar` onEndgame ("Termina"): passato solo se `hasRequiredRole(viewerRole,'Host')`; altrimenti CTA assente — `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/SessionLiveView.tsx`
 - `PlayerRosterLive` onAddPlayer: passato solo se Host; altrimenti roster read-only — `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/SessionLiveView.tsx`
 - Desktop `DesktopBody` (2-col 60/40) vs Mobile `MobileBody` (bottom-sheet): desktop LEFT 60% ChatAgentPanel+ActionLogTimeline, RIGHT 40% RightColumnTabs (da `?tab`); mobile mainContent + `MobileBottomSheetDrawer` (`?msheet`, contenuto `?mtab`) — `apps/web/src/app/(authenticated)/sessions/[id]/live/_components/SessionLiveView.tsx`
@@ -2142,7 +2119,7 @@ _Route-group: `(authenticated)` · 11 pagine_
 - SessionCreateForm `isSubmitting`: disabilita il wizard quando `createRecord.isPending || isSaving` (`isSaving` copre l'intera sequenza post-create) — `apps/web/src/app/(authenticated)/play-records/new/page.tsx`
 - Layout mobile vs desktop: `useMediaQuery(max-width:768px)` → single-column; altrimenti split 8fr form + 4fr LivePreview (aside sticky classifica bozza) — `apps/web/src/components/play-records/SessionCreateForm.tsx`
 - DraftAutosaveIndicator + restore draft: attivo solo `mode==='create'`; ripristina draft localStorage al mount se nessun `initialValues` (prefill ha precedenza); clamp step 0..STEP_COUNT-1 — `apps/web/src/components/play-records/SessionCreateForm.tsx`
-- Step1 gameType radio (catalog/freeform): `catalog` → GameCombobox; `freeform` → Input testo libero; hint se `catalog && !watch('gameId')` — `apps/web/src/components/play-records/SessionCreateForm.tsx`
+- Step1 gameType radio (catalog/freeform): `catalog` → `GamePicker` canonico (libreria a campo vuoto, poi catalogo; #4250); `freeform` → Input testo libero; hint se `catalog && !watch('gameId')` — `apps/web/src/components/play-records/SessionCreateForm.tsx`
 - Action bar Avanti vs Salva: `currentStep < STEP_COUNT-1` → Button `type=button` 'Avanti' (valida STEP_FIELDS + gameName step0); altrimenti Button `type=submit` 'Salva'; Cancel solo step 0 && onCancel; Back solo `step>0` — `apps/web/src/components/play-records/SessionCreateForm.tsx`
 - Premature-submit guard: `handleFormSubmit` fa `nextStep()` invece di creare se `currentStep < STEP_COUNT-1` (evita record vuoto 'Planned' su re-render async) — `apps/web/src/components/play-records/SessionCreateForm.tsx`
 - Step3 winner badge inline: 🏆 sul player con punteggio massimo (`winnerIdx`, solo se `p.score !== ''`) — `apps/web/src/components/play-records/SessionCreateForm.tsx`
@@ -2241,7 +2218,7 @@ _Route-group: `(authenticated)` · 11 pagine_
 | RecordCardList / RecordCardGrid | `apps/web/src/components/play-records/index/RecordCardList.tsx` · `.../RecordCardGrid.tsx` | Card (button → detail), OutcomeBadge, resume/launch condizionali |
 | NewPlayRecordSheet | `apps/web/src/components/play-records/NewPlayRecordSheet.tsx` | Bottom-sheet 3-step create (gioco/giocatori/riepilogo) → detail |
 | SessionCreateForm | `apps/web/src/components/play-records/SessionCreateForm.tsx` | Wizard 3-step responsive create/edit + draft autosave + K5 gate + LivePreview |
-| GameCombobox | `apps/web/src/components/play-records/GameCombobox.tsx` | Picker gioco da libreria/catalogo |
+| GamePicker | `apps/web/src/components/features/game-picker/GamePicker.tsx` | Selettore di gioco canonico: libreria, catalogo o entrambi. Ha sostituito `GameCombobox` nei form delle partite (#4250) |
 | DraftAutosaveIndicator | `apps/web/src/components/play-records/DraftAutosaveIndicator.tsx` | Indicatore salvataggio bozza (solo create) |
 | StatisticsView | `apps/web/src/components/play-records/StatisticsView.tsx` | Corpo stats condiviso (inline `?tab=stats` + route standalone) |
 | StatsHero / MostPlayedBar / WinByGameBar / TrendChart | `apps/web/src/components/play-records/stats/*` | KPI 4-col · top 5 giochi · win-rate per gioco · trend (recharts) |
@@ -2642,7 +2619,7 @@ _Route-group: `(authenticated)` · 10 pagine_
 | `/knowledge-base/global` | `(authenticated)` → UserShell → DesktopShell; thin Suspense (fallback null) → KbGlobaleView (URL SSOT) | Nessuna; Suspense richiesto perché KbGlobaleView usa `useSearchParams()` | home (loading/empty-no-CTA/error/list) · results (loading/empty/error/list/loadingMore) · viewer overlay (ready-only) · ask drawer (idle/streaming/completed/empty/error) · editor overlay (owned-only) |
 | `/gamebook` | `(authenticated)` → UserShell → DesktopShell; thin Suspense (fallback PageFallback) → GamebookIndexView; HubPageContainer | Nessuna; metadata title 'I tuoi manuali \| MeepleAI' | loading · error · empty · default · quota-soft · quota-hard · fixture-override (dev/E2E) |
 | `/gamebook/upload` | `(authenticated)` → UserShell → DesktopShell; thin Suspense (fallback null) → GamebookUploadView; DetailPageContainer | Nessuna guardia di pagina; `showBggIntegration = isAdminOrAbove && !isAdminLoading` (BGG admin-only) | 14-cell FSM: step1-default/searching/no-results/bgg-loading · step2-ready/capturing/low-light/failed/denied · step3-progress/partial/complete/offline/cancel-modal · wizard-cancelled · fixture-mode |
-| `/upload` | `(authenticated)` → UserShell → DesktopShell; page client wrapper RequireRole → UploadClient (lazy `next/dynamic`); DetailPageContainer | RequireRole `['Admin','Editor']` (+superadmin inherit) client-side; `!auth`→`/login?from=`, ruolo insufficiente→`/`; Layer 1 `proxy.ts` edge (`/upload` ∈ PROTECTED_ROUTES) + Layer 2 RequireRole client + backend 403 | auth-check · unauthorized→redirect · dynamic-loading · authLoading · step upload/parse/review/publish · error (upload/wizard) |
+| `/upload` | Nessuna pagina: redirect di `next.config.js` verso `/admin/knowledge-base/upload`, con la query (#4257). Era il wizard RuleSpec di Admin ed Editor | La destinazione è solo Admin (layout `admin`) | — |
 | `/n8n` | `(authenticated)` → UserShell → DesktopShell; HubPageContainer | NESSUNA guardia client-side (no RequireRole) benché chiami endpoint admin `/admin/n8n`; autorizzazione delegata al backend (403→stato error) | loading · error · empty · list (config cards) · form (create/edit) |
 | `/pipeline-builder` | `(authenticated)` → UserShell → DesktopShell; server component Suspense (fallback PipelineBuilderSkeleton) → PipelineBuilder; `h-[calc(100vh-4rem)]` | Nessuna; metadata title 'Pipeline Builder \| MeepleAI' | skeleton · default-pipeline-created · node-selected (config) · edge-selected (config) · nessuna-selezione (placeholder) · test-tab · pannelli collassati/espansi |
 
@@ -2677,12 +2654,7 @@ _Route-group: `(authenticated)` · 10 pagine_
   - `/gamebook/upload` -> `?q=<query>` (handleQueryChange / handleCreateNew / handleAddPrivate, `router.replace`; ricerca o azioni NoResults)
   - `/gamebook/upload` -> `/gamebook` (handleCancelConfirm; annulla wizard, abort upload + CANCEL reducer + stop camera)
 - **`/upload`**
-  - `/upload` -> `/login?from=<path>` (RequireRole `router.replace`; non autenticato o eccezione in getCurrentUser())
-  - `/upload` -> `/` (RequireRole `router.replace`; autenticato ma ruolo non Admin/Editor/superadmin)
-  - `/upload` -> `/` (Link '← Back to Home'; sempre, header UploadClient)
-  - `/upload` -> `/admin/knowledge-base/queue?flow=embedding&gameId=&gameName=&documentId=` (Link 'Vai alla Queue →', step publish; `isAdminOrAbove && confirmedGameId`)
-  - `/upload` -> `/editor?gameId=<id>` (Link 'Edit in RuleSpec Editor', step publish; `gameId = ruleSpec.gameId ?? confirmedGameId ?? ''`)
-  - `/upload` -> `window.open(pdf.logUrl, _blank)` (PdfTable onOpenLog; `pdf.logUrl` presente)
+  - `/upload` -> `/admin/knowledge-base/upload` (redirect `next.config.js`, query conservata; pagina dismessa con #4257)
 - **`/n8n`**
   - `/n8n` -> `/` (Link 'Back to Home'; sempre header, anche stato error)
 - **`/pipeline-builder`**
@@ -2752,18 +2724,7 @@ _Route-group: `(authenticated)` · 10 pagine_
 - useBggSearch — `enabled` solo se `!isFixtureMode && tabParam==='bgg'`; endpoint `/api/v1/bgg/search` gated RequireAuthenticatedUser + rate-limit 60/h; adapter `title=name`, `publisher=null` in v1. `apps/web/src/hooks/queries/`
 
 ##### `/upload`
-- Spinner 'Verifica autorizzazioni...' — mostrato mentre `loading===true` nel check RequireRole (getCurrentUser in corso). `apps/web/src/components/auth/RequireRole.tsx`
-- Fallback 'Caricamento upload...' — mostrato dopo che RequireRole passa e prima che il chunk lazy di UploadClient idrati (`loading` callback di `next/dynamic`). `apps/web/src/app/(authenticated)/upload/page.tsx`
-- Spinner 'Loading...' — quando `authLoading` (useAuthUser) dentro UploadClient, dopo idratazione del chunk. `apps/web/src/app/(authenticated)/upload/upload-client.tsx`
-- WizardSteps indicator — sempre visibile; steps upload/parse/review/publish; `currentStep = wizardState.currentStep`. `apps/web/src/components/wizard/WizardSteps.tsx`
-- ErrorDisplay (uploadError) — mostrato se `uploadError != null`; `onRetry` solo se `uploadError.canRetry`. `apps/web/src/app/(authenticated)/upload/upload-client.tsx`
-- Card errore `wizardState.error` — mostrato se `wizardState.error && !uploadError`. `apps/web/src/app/(authenticated)/upload/upload-client.tsx`
-- Step 1 Upload — 'Confirm Game Selection' solo se `selectedGameId && !confirmedGameId`; area upload solo se `confirmedGameId && confirmedGame` trovato. `apps/web/src/app/(authenticated)/upload/upload-client.tsx`
-- Upload Mode toggle — `single`→PdfUploadForm + MultiFileUpload + PdfTable; `collection`→MultiDocumentCollectionUpload (onSuccess ritorna a single). `apps/web/src/app/(authenticated)/upload/upload-client.tsx`
-- Step 2 Parse — ProcessingProgress mostrato solo se `showProcessingProgress && wizardState.documentId` (gated `NEXT_PUBLIC_ENABLE_PROGRESS_UI`); Parse disabilitato finché `parsing || processingStatus!=='completed'`, auto-advance su completamento; 'Start Over'→resetWizard (no route nav). `apps/web/src/app/(authenticated)/upload/upload-client.tsx`
-- Step 3 Review — solo se `currentStep==='review' && ruleSpec`; atoms editabili (text/section/page/line) + Add Rule/Delete; '← Back'→SET_STEP parse, 'Cancel'→resetWizard (transizioni wizard, no route nav). `apps/web/src/app/(authenticated)/upload/upload-client.tsx`
-- Step 4 Publish — UploadProgressTracker solo se `enableProcessingProgress && documentId`; 'Vai alla Queue →' solo se `isAdminOrAbove && confirmedGameId` (admin-only); 'Import Another PDF'→resetWizard (no route nav), 'Edit in RuleSpec Editor'→Link `/editor?gameId` (route nav). `apps/web/src/app/(authenticated)/upload/upload-client.tsx`
-- PdfTable — stati loading/error (`pdfsError`) + `retryingPdfId` per riga; `onOpenLog` apre `pdf.logUrl` in nuova tab. `apps/web/src/components/upload/`
+- Nessuno stato: la pagina è dismessa (#4257) e la rotta è un redirect verso `/admin/knowledge-base/upload`.
 
 ##### `/n8n`
 - h1 'Loading...' — quando `loading` (fetchConfigs in corso). `apps/web/src/app/(authenticated)/n8n/page.tsx`
@@ -2816,10 +2777,8 @@ _Route-group: `(authenticated)` · 10 pagine_
 | useBggSearch / usePhotoBatchUpload / usePhotoBatchStatus | `apps/web/src/hooks/queries/` + `apps/web/src/lib/gamebook/hooks/` | Ricerca BGG (admin) / mutation upload batch / polling stato batch |
 | useAdminRole | `apps/web/src/hooks/useAdminRole.ts` | Gate BGG integration + gate 'Vai alla Queue' (isAdminOrAbove/isLoading) |
 | RequireRole | `apps/web/src/components/auth/RequireRole.tsx` | Guardia client-side ruolo (Admin/Editor +superadmin), redirect `/login?from` o `/` |
-| UploadClient | `apps/web/src/app/(authenticated)/upload/upload-client.tsx` | Wizard 4-step lazy (upload/parse/review/publish); handlePublish `PUT /api/v1/games/{id}/rulespec` |
-| GamePicker | `apps/web/src/components/game/GamePicker.tsx` | Selettore/creazione gioco |
-| PdfUploadForm / MultiFileUpload / PdfTable / MultiDocumentCollectionUpload | `apps/web/src/components/pdf/` · `apps/web/src/components/upload/` · `apps/web/src/components/documents/` | Upload singolo/multiplo + tabella PDF (retry/log) + modalità collezione |
-| WizardSteps | `apps/web/src/components/wizard/WizardSteps.tsx` | Indicatore step wizard upload |
+| PdfUploadForm | `apps/web/src/components/pdf/` | Upload singolo. `MultiFileUpload`, `PdfTable` e `MultiDocumentCollectionUpload` servivano solo al wizard `/upload` e sono stati tolti con #4257 |
+| WizardSteps | `apps/web/src/components/wizard/WizardSteps.tsx` | Indicatore step dei wizard (serata, setup, import del catalogo) |
 | N8nWorkflowManagement | `apps/web/src/app/(authenticated)/n8n/page.tsx` | Pagina intera CRUD config n8n via fetch diretto a `/admin/n8n` (no client mediator) |
 | PipelineBuilder | `apps/web/src/components/pipeline-builder/PipelineBuilder.tsx` | Layout 3-pannelli resizable (palette/canvas/config-test) |
 | PluginPalette / PipelineCanvas / NodeConfigPanel / EdgeConfigPanel / PipelinePreview / PipelineToolbar | `apps/web/src/components/pipeline-builder/` | Palette plugin / canvas drag-drop / config nodo / config edge / anteprima-test / toolbar (no route nav) |
@@ -2843,7 +2802,7 @@ flowchart LR
   KBGLOBAL -->|"overlay/drawer deep-link (docId / ask=1 / edit=1)"| KBGLOBAL
 ```
 
-_Le route `/knowledge-base`, `/upload`, `/n8n`, `/pipeline-builder` non hanno edge di navigazione interni al cluster: reindirizzano o linkano solo a surface esterne (`/library`, `/login`, `/`, `/editor`, `/admin/...`, `/library/[gameId]/play`) oppure operano interamente intra-pagina (pipeline-builder)._
+_Le route `/knowledge-base`, `/n8n`, `/pipeline-builder` non hanno edge di navigazione interni al cluster: reindirizzano o linkano solo a surface esterne (`/library`, `/login`, `/`, `/editor`, `/admin/...`, `/library/[gameId]/play`) oppure operano interamente intra-pagina (pipeline-builder)._
 
 
 ## Chat — `(chat)`
@@ -3036,7 +2995,7 @@ _Route-group: `admin` · 10 pagine_
   - `-> /admin/analytics?tab=<saved>` (AdminTabPersistence `router.replace` da localStorage `admin-tab-analytics`; solo se no `?tab` && saved≠default 'overview')
 - **`/admin/business`**
   - `-> /admin/business?range=7d|30d|90d|1y` (range `<select>` onChange → `router.replace`)
-  - `-> modal:SetBudgetDialog` ('Imposta budget')
+  - `-> /admin/ai?tab=config` (link 'AI → Budget' nell'intestazione e nella scheda «Tetti AI»; #4169: non c'è più 'Imposta budget')
   - `-> /api/v1/admin/business/usage?period=30` (`<a href>` 'Usage'; endpoint API legacy, non route client)
 - **`/admin/ai`**
   - `-> /admin/ai?tab=<agents|typologies|definitions|lab|prompts|models|requests|rag|config>` (AdminHubTabBar, 9 tab)
@@ -3098,8 +3057,7 @@ _Route-group: `admin` · 10 pagine_
 
 ##### `/admin/business`
 - **range**: da `?range` via `costBreakdownRangeSchema.safeParse`; invalido/assente → default '30d'; passato a CostStackedArea + FeatureCostTable — `apps/web/src/app/admin/(dashboard)/business/page.tsx`
-- **BudgetKpiStrip**: `aria-busy` skeleton mentre isLoading; `budget===null` → 4 placeholder tratteggiati ('—' + tooltip 'Clicca + Imposta budget'); loaded → 4 KPI (Spesa oggi[entity-agent, sparkline solo se ≥2 punti] / Spesa mese[entity-event, progress bar monthPct] / Budget residuo[entity-toolkit] / Proiezione fine mese[entity-chat, emerald se ≤limit else rose]) — `apps/web/src/components/admin/business/BudgetKpiStrip.tsx`
-- **SetBudgetDialog**: controllato da `setBudgetOpen`; pre-popolato da budget esistente (edit) else default (amount ''/alert 80/critical 95); titolo/CTA 'Modifica…/Aggiorna' se budget esiste else 'Imposta…/Imposta'; submit disabled se `!isValid` (amount>0, alert 1-99, critical>alert && ≤100) o `isUpserting`; hint rose se `!isValid && amount`; invia `xmin (budget?.xmin ?? null)` → 409 ConflictException → toast error 'Salvataggio budget fallito' — `apps/web/src/components/admin/business/SetBudgetDialog.tsx`
+- **CostKpiStrip** (#4169): `aria-busy` skeleton mentre il registro carica; registro assente → riquadro 'Spesa non disponibile'; loaded → Spesa oggi[entity-agent, sparkline se ≥2 punti] / Spesa mese[entity-event] / Proiezione fine mese[entity-chat, lineare] dal registro dei costi (`useCostBreakdown('30d')`), più «Tetti AI»[entity-toolkit] con il tetto mensile del gateway (`useLlmSystemConfig`) e il link ad AI → Budget — `apps/web/src/components/admin/business/CostKpiStrip.tsx`
 
 ##### `/admin/ai`
 - **Active tab**: `tab = (await searchParams).tab ?? 'agents'`; switch 9-way (agents/typologies/definitions/lab/prompts/models/requests/rag/config→LlmConfigTab; default null) — `apps/web/src/app/admin/(dashboard)/ai/page.tsx`
@@ -3158,10 +3116,9 @@ _Route-group: `admin` · 10 pagine_
 | AuditLogTab | `apps/web/src/app/admin/(dashboard)/analytics/AuditLogTab.tsx` | Re-export di Operations AuditTab |
 | ApiKeysTab | `apps/web/src/app/admin/(dashboard)/analytics/ApiKeysTab.tsx` | Tabella API keys + export CSV |
 | ChartsSection | `apps/web/src/components/admin/charts/ChartsSection.tsx` | Grafici usage (in OverviewTab) |
-| BudgetPage | `apps/web/src/app/admin/(dashboard)/business/page.tsx` | Hero (range + Imposta budget + Usage) + widget; range in URL |
-| BudgetKpiStrip | `apps/web/src/components/admin/business/BudgetKpiStrip.tsx` | 4 KPI (`useBudget` + `useCostBreakdown('30d')`) |
-| SetBudgetDialog | `apps/web/src/components/admin/business/SetBudgetDialog.tsx` | Upsert AppBudget (xmin optimistic concurrency) |
-| CostStackedArea / BudgetGauge / CostSimulator / FeatureCostTable | `apps/web/src/components/admin/business/*` | Widget costo (chart / gauge / simulator / drill per feature) |
+| BudgetPage | `apps/web/src/app/admin/(dashboard)/business/page.tsx` | «Costs»: hero (range + Usage + link AI → Budget) + widget; range in URL. #4169: via AppBudget |
+| CostKpiStrip | `apps/web/src/components/admin/business/CostKpiStrip.tsx` | 4 KPI (`useCostBreakdown('30d')` + `useLlmSystemConfig`) |
+| CostStackedArea / CostSimulator / FeatureCostTable | `apps/web/src/components/admin/business/*` | Widget costo (chart / simulator, confrontato col tetto mensile del gateway / drill per feature) |
 | AdminAiPage | `apps/web/src/app/admin/(dashboard)/ai/page.tsx` | Hub server async, dispatcher 9-tab (default 'agents') |
 | AdminAiLayout / AiTopBand | `apps/web/src/app/admin/(dashboard)/ai/layout.tsx` · `apps/web/src/components/admin/ai/AiTopBand.tsx` | Wrapper px-6 + header sticky (h1 + AiCrumbs + AiTopActions null #1722) |
 | RequestsTab | `apps/web/src/app/admin/(dashboard)/ai/RequestsTab.tsx` | Log richieste + AiTrendChart + drill (query-param `range`+`queryId`) |
@@ -3209,7 +3166,7 @@ _Route-group: `admin` · 12 pagine_
 | `/admin/agents/models` | AdminShell (dark) — Server Component `redirect()`, nessun chrome | Server: `redirect()` in render (precede RequireRole). Eredita comunque layout guard, ma il `redirect()` domina | redirect |
 | `/admin/agents/strategy` | AdminShell (dark) — Server Component `redirect()` | Server: `redirect()` immediato. Layout guard ereditato ma dominato | redirect |
 | `/admin/agents/templates` | AdminShell (dark) via `(dashboard)/layout.tsx` | Eredita layout (cookie view_mode + `RequireRole(['Admin'])`) | loading (Skeleton grid 3) · unavailable/404 · empty · success (review-grid) · acting (approve/reject) |
-| `/admin/agents/usage` | AdminShell (dark) via `(dashboard)/layout.tsx` | Eredita layout (cookie view_mode + `RequireRole(['Admin'])`) | success (tabbed) · loading · unavailable/404 · error (non-404) · empty (token-balance) |
+| `/admin/agents/usage` | AdminShell (dark) via `(dashboard)/layout.tsx` | Eredita layout (cookie view_mode + `RequireRole(['Admin'])`) | success (tabbed) · loading · unavailable/404 · error (non-404) |
 | `/admin/agents/analytics` | AdminShell (dark) via `(dashboard)/layout.tsx` | Eredita layout (cookie view_mode + `RequireRole(['Admin'])`) | success (tabbed) · loading · unavailable/404 · error (Riprova) · empty · trends-placeholder |
 | `/admin/agents/infrastructure` | AdminShell (dark) via `(dashboard)/layout.tsx` | Eredita layout (cookie view_mode + `RequireRole(['Admin'])`) + fine-grained `useAdminRole()` → `isSuperAdmin` per gating azioni | success · loading · error (API unreachable + Retry) · detail-open · restart-modal-open · superadmin-gated |
 | `/admin/agents/inspector` | AdminShell (dark) via `(dashboard)/layout.tsx` | Eredita layout (cookie view_mode + `RequireRole(['Admin'])`) | loading (10 Skeleton rows) · empty · success · detail-loading · no-trace · auto-refresh ON/OFF |
@@ -3284,14 +3241,13 @@ _Route-group: `admin` · 12 pagine_
 - React Query retry: disabilitato su `isNotFoundError`, altrimenti fino a 3 — `admin/(dashboard)/agents/templates/page.tsx`
 
 ##### `/admin/agents/usage`
-- Tabs default: `defaultTab` da `?tab=` (openrouter|token-balance|chat-log); default 'openrouter'. **NON validato**: `?tab` invalido apre tab body vuoto. Stato interno, non scrive URL — `admin/(dashboard)/agents/usage/page.tsx`
+- Tabs default: `defaultTab` da `?tab=` (openrouter|chat-log); default 'openrouter'. Validato: un `?tab` che non nomina una tab ricade su 'openrouter' (#4212, che ha tolto la tab token-balance). Stato interno, non scrive URL — `admin/(dashboard)/agents/usage/page.tsx`
 - Label 'Aggiornato ...': mostrato solo quando `dataUpdatedAt>0` (formatDistanceToNow, locale it) — `admin/(dashboard)/agents/usage/page.tsx`
 - Refresh button: disabled quando `statusLoading`; icona spin quando `statusLoading` — `admin/(dashboard)/agents/usage/page.tsx`
 - EmptyFeatureState (OpenRouter tab): mostrato quando `isNotFoundError(error)` — `admin/(dashboard)/agents/usage/page.tsx`
 - Error banner `role=alert`: mostrato quando `isError && !isNotFoundError(error)` — `admin/(dashboard)/agents/usage/page.tsx`
 - CostBreakdownPanel + RequestTimelineChart: dynamic import `ssr:false` con placeholder `animate-pulse` (h-48); period toggle interno (timeline 24h/7d/30d default 24h, cost 1d/7d/30d default 7d) — `admin/(dashboard)/agents/usage/page.tsx`
 - KpiCards / RateLimitGauge / FreeQuotaIndicator / RecentRequestsTable: ricevono `isLoading` dalle query (refetchInterval 30-60s); RecentRequestsTable filtrata da `requestFilters` (source/model/successOnly/page/pageSize) — `admin/(dashboard)/agents/usage/page.tsx`
-- TokenBalanceTab (tab token-balance): balance/tier/consumers loading → pulse; dati vuoti → 'No ... data available'; `projectedDaysUntilDepletion` mostrato solo se `!==null`; polling 60s — `admin/(dashboard)/agents/usage/token-balance-tab.tsx`
 - ChatHistoryFilters + ChatHistoryTable (tab chat-log): avvolti in Suspense con fallback `animate-pulse` (h-28 / h-600px) — `admin/(dashboard)/agents/usage/page.tsx`
 - React Query retry (status): disabilitato su `isNotFoundError`, altrimenti fino a 3 — `admin/(dashboard)/agents/usage/page.tsx`
 
@@ -3368,7 +3324,6 @@ _Route-group: `admin` · 12 pagine_
 | RecentRequestsTable | `apps/web/src/components/admin/usage/RecentRequestsTable.tsx` | Tabella richieste recenti con filtri |
 | CostBreakdownPanel | `apps/web/src/components/admin/usage/CostBreakdownPanel.tsx` | Breakdown costi (dynamic ssr:false) |
 | RequestTimelineChart | `apps/web/src/components/admin/usage/RequestTimelineChart.tsx` | Timeline richieste (dynamic ssr:false) |
-| TokenBalanceTab | `apps/web/src/app/admin/(dashboard)/agents/usage/token-balance-tab.tsx` | Saldo token, uso per tier, top consumatori (polling 60s) |
 | ChatHistoryFilters / ChatHistoryTable | `apps/web/src/components/admin/agents/chat-history-{filters,table}.tsx` | Filtri + tabella log chat (Suspense) |
 | MetricsKpiCards | `apps/web/src/components/admin/agents/MetricsKpiCards.tsx` | KPI metriche agenti (analytics) |
 | UsageChart / CostBreakdownChart | `apps/web/src/components/admin/agents/{UsageChart,CostBreakdownChart}.tsx` | Utilizzo nel tempo / costi per modello |
@@ -4606,7 +4561,7 @@ _`/admin/users/roles` e `/admin/notifications/compose` non hanno edge di navigaz
 - UserHeader status badge: 'Suspended' (destructive) se `user.isSuspended`, altrimenti 'Active' (verde).
 - Badge ruolo: colore via `getRoleBadgeClass(normalizeRole)` → admin/superadmin=rosso, editor/creator=viola, altrimenti blu.
 - Tab content: `overview`→OverviewTab (Info Account + Utilizzo + LibraryStatsCard); `role`→ChangeRoleCard + RoleHistoryTable; `activity`→UserAuditLogTable.
-- OverviewTab barra token: width `min(100,(tokenUsage??0)/(tokenLimit??10000)*100)%`; tier Badge default 'Free'; ultimo accesso 'Mai' se `!lastSeenAt`; 2FA Sì/No.
+- OverviewTab: tier Badge default 'Free' (la barra dei token è uscita con #4212: mostrava sempre 0 su 10.000); ultimo accesso 'Mai' se `!lastSeenAt`; 2FA Sì/No.
 - LibraryStatsCard: `getUserLibraryStats`+`getUserBadges`; fallback `0` / `'—'` (avgSessionDuration).
 - ChangeRoleCard Button 'Change Role': disabled a meno di `canSubmit` (`newRole && newRole!==currentRole` normalizzato) e non `changeRoleMutation.isPending`; opzione ruolo corrente disabilitata con '(current)'; apre AlertDialog (mostra reason se presente).
 - ChangeRoleCard messaggi: errore rosso (AlertCircle) se `isError`; 'Role changed successfully.' verde se `isSuccess`.
@@ -4933,7 +4888,7 @@ _Sono elencati i **74 componenti condivisi** (usati in ≥2 route). I componenti
 | EmptyFeatureState | `apps/web/src/components/admin/EmptyFeatureState.tsx` | 5 | `/admin/agents/config`, `/admin/agents/templates`, `/admin/agents/usage`, `/admin/agents/analytics`, `/admin/config/n8n` |
 | HeroGradient | `apps/web/src/components/ui/hero-gradient/hero-gradient.tsx` | 4 | `/about`, `/how-it-works`, `/pricing`, `/cookie-settings` |
 | LegalPageLayout | `apps/web/src/components/legal/LegalPageLayout.tsx` | 4 | `/terms`, `/privacy`, `/cookies`, `/legal/takedown` |
-| RequireRole | `apps/web/src/components/auth/RequireRole.tsx` | 4 | `/dashboard`, `/game-nights`, `/editor`, `/upload` |
+| RequireRole | `apps/web/src/components/auth/RequireRole.tsx` | 3 | `/dashboard`, `/game-nights`, `/editor` |
 | usePlayerStatistics | `apps/web/src/hooks/queries/usePlayersFromRecords.ts` | 4 | `/players`, `/players/[id]`, `/players/[id]/games`, `/players/[id]/stats` |
 | AuthLayout | `apps/web/src/components/layouts/AuthLayout.tsx` | 3 | `/setup-account`, `/verification-success`, `/invitation-expired` |
 | StructuredData + learningResourceSchema | `apps/web/src/components/legal/StructuredData` | 3 | `/how-it-works/game-comprehension`, `/terms`, `/privacy` |
@@ -5021,7 +4976,7 @@ _Documento generato il 2026-07-15 · workflow `wf_94e3ee0b-a9a` (66 agenti: 22 f
 | Fonte | Route/superfici coperte | In site-map | Note |
 |---|---|---|---|
 | `admin-mockups/claude-design-handoff/2026-06-04/` (prototipo React desktop) | dashboard, discover, agents, library, sessions, game-nights (+detail/live/wizard), game, auth | ✅ 13/13 | Fonte del redesign **Asse A/B/C/D** già shippato. `screen-dashboard.jsx` = prototipo dashboard priority-driven (Asse-C #1898). |
-| `admin-mockups/claude-design-handoff/2026-06-30-sp6/` (librogame) | librogame play (`setup`/`chat`/reader/glossary/quota/session-end) | ⚠️ partial | Superficie del *play* di un librogame, **non** la route `/setup` generica. `glossary-editor`, `quota-credits`, `session-end` senza match univoco. |
+| `admin-mockups/claude-design-handoff/2026-06-30-sp6/` (librogame) | librogame play (`setup`/`chat`/reader/glossary/quota/session-end) | ⚠️ partial | Superficie del *play* di un librogame, **non** la vecchia route `/setup` generica, tolta con #4206. `glossary-editor`, `quota-credits`, `session-end` senza match univoco. |
 | `admin-mockups/claude-design-handoff/2026-07-15-sp8-mobile/` + `sp9-gamenight-mobile/` | viste mobile dashboard/game-nights/detail | ⚠️ partial | Ridisegni mobile-specifici (touch-target ≥44px, CTA RSVP 52px) non riflessi nel site-map. |
 | `admin-mockups/design_handoff_admin/admin/` (SP5 admin, 31 mockup) | console admin (users, content, monitor, llm, knowledge-base, …) | ✅ 24 · ⚠️ 5 · ❌ 2 | Vedi §11.2 (route morte) e §11.3 (path divergenti). |
 | `admin-mockups/standalone/` + `mockup-meeplecard/` | MeepleCard variants, `dashboard-new-user` (empty-state), poster | component-showcase | Mostrano componenti, non route. `meeple-card-real-app--chat-card` rilevante per il rendering entità chat. |
@@ -5069,7 +5024,6 @@ Documenti di handoff datati 2026-05-24, superati dallo stato corrente del codice
 ### 11.6 Annotazioni per route
 
 - **`/dashboard`** — il redesign vivo deriva da `admin-mockups/claude-design-handoff/2026-06-04/js/screen-dashboard.jsx` (Asse-C priority-driven #1898). Il mockup `admin-mockups/design_files/sp4-dashboard` è **obsoleto** (Pre-Stage-3, #2114) e in via di rimozione: non usarlo come riferimento. Restano attivi e distinti: `dashboard-new-user.html` (empty-state) e `sp9-dashboard-game-night-mobile.dc.html` (mobile).
-- **`/setup`** — route generica "Game Setup Guide" (AI). **Da non confondere** con il `setup-wizard`/`setup-chat` di `2026-06-30-sp6`, che è il *play* di un librogame (Tab "Setup"). Redesign SP6 valido e disgiunto (PR #3036).
 - **`/private-games/[id]`** — in **deprecazione** (redirect → `/library/private/:id`). I brief `briefs/SP5-admin-tools.md` e `design_handoff_admin/admin/sp5-private-games.html` descrivono una publish-checklist/index oggi inesistente sulla route reale: resi **moot** dalla deprecazione (nota di riconciliazione).
 - **`/library/[gameId]/play/[campaignId]/translate`** — drift 61.5% vs `translate-gap-report.md` (vedi §11.4). Verificare gli 8 stati mancanti prima di considerare la route completa.
 - **`/profile` (tab settings)** — issue **#1608 P0**: verificare che il tab `settings` sia raggiungibile via UI (wizard 2FA), vedi §11.4.

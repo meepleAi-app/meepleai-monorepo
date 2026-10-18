@@ -14,9 +14,9 @@ internal interface IChatThreadRepository : IRepository<ChatThread, Guid>
     Task<IReadOnlyList<ChatThread>> FindByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Finds threads by game ID.
+    /// #4469: i thread con questi id, in una sola query. Un id che non esiste non ha voce nel risultato.
     /// </summary>
-    Task<IReadOnlyList<ChatThread>> FindByGameIdAsync(Guid gameId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<ChatThread>> GetByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Finds threads by user ID and game ID.
@@ -29,6 +29,12 @@ internal interface IChatThreadRepository : IRepository<ChatThread, Guid>
     /// Issue #904: SG3 — cascade ChatThread.CloseThread() on agent soft-delete.
     /// </summary>
     Task<IReadOnlyList<ChatThread>> FindActiveByAgentIdAsync(Guid agentId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Il thread dell'assistente in partita di una sessione live (#4276), o <c>null</c> al primo turno.
+    /// Se due primi turni concorrenti ne hanno creati due, vale il più vecchio.
+    /// </summary>
+    Task<ChatThread?> FindByLiveSessionIdAsync(Guid liveSessionId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Finds recent threads (ordered by last message).

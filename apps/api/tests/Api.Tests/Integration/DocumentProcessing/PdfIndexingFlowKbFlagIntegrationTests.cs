@@ -93,10 +93,20 @@ public sealed class PdfIndexingFlowKbFlagIntegrationTests : IAsyncLifetime
 
         _redis = await ConnectionMultiplexer.ConnectAsync(_fixture.RedisConnectionString);
         services.AddSingleton<IConnectionMultiplexer>(_redis);
+        // #4339: un gestore degli eventi di stato del PDF chiede la cache semantica (da #3982). Senza,
+        // la pubblicazione fallisce e la pipeline finisce con "Invalid operation" per una ragione
+        // che non è quella che questo test prova.
+        services.AddSingleton(Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.ISemanticResponseCache>());
+        // La query dello stato della KB, che il test legge, controlla l'accesso: qui il caricatore la vede.
+        services.AddSingleton(Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.IRagAccessService>(r =>
+            r.CanAccessRagAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Api.Infrastructure.Entities.UserRole>(), It.IsAny<CancellationToken>())
+            == Task.FromResult(true)));
 
         // Real repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
+        // #4443 R1: the upload background task claims the document before working on it.
+        services.AddScoped<Api.BoundedContexts.DocumentProcessing.Application.Services.IPdfClaimService, Api.BoundedContexts.DocumentProcessing.Infrastructure.Services.RelationalPdfClaimService>();
 
         // Real handler under test
         services.AddScoped<UploadPdfCommandHandler>();
@@ -481,8 +491,13 @@ public sealed class PdfIndexingFlowKbFlagIntegrationTests : IAsyncLifetime
         // is my agent's KB?" once indexing finishes. Sub #1 Block D wires the real ChunkCount
         // from the VectorDocument row.
         var kbStatus = await mediator.Send(
+            // Issue #4137: the query carries the caller identity and the handler
+            // authorizes it. Admin here, so the assertion stays about the chunk count
+            // rather than about access.
             new Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKnowledgeBaseStatusQuery(
                 GameId: testGame.Id,
+                RequestingUserId: Guid.NewGuid(),
+                RequestingUserRole: "Admin",
                 IsPrivateGame: false),
             TestCancellationToken);
         kbStatus.Should().NotBeNull();
@@ -525,10 +540,11 @@ public sealed class PdfIndexingFlowKbFlagIntegrationTests : IAsyncLifetime
         var pdfStateChangedCount = outboxRows.Count(
             e => string.Equals(e.EventType, pdfStateChangedAlias, StringComparison.Ordinal)
                  && e.PayloadJson.Contains(pdfIdString, StringComparison.Ordinal));
-        pdfStateChangedCount.Should().Be(6,
-            "pipeline must raise PdfStateChangedEvent for EVERY state transition " +
-            "(Pending→Uploading + Uploading→Extracting + Extracting→Chunking + " +
-            "Chunking→Embedding + Embedding→Indexing + Indexing→Ready). " +
+        pdfStateChangedCount.Should().Be(4,
+            "pipeline must raise PdfStateChangedEvent for EVERY transition it makes through the domain " +
+            "(Extracting→Chunking + Chunking→Embedding + Embedding→Indexing + Indexing→Ready). " +
+            "Pending→Extracting is the atomic claim (#4443 R1): a raw UPDATE, published in-process, " +
+            "not through the outbox — the same as the queue pipeline. " +
             "If this counts 1, the bridge-save shortcut from PR #2295 has regressed.");
 
         var kbDocIndexedCount = outboxRows.Count(

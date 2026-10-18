@@ -66,14 +66,6 @@ public interface IAgentDefinitionRepository
     Task<AgentDefinition?> GetByIdIgnoreDeletedAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Counts the number of non-deleted agent definitions created by a specific user (via CreatedByUserId or GameId chain).
-    /// Since AgentDefinition does not store a CreatedByUserId, we count by GameId ownership from the private games table.
-    /// Used for quota enforcement in CreateUserAgentCommand.
-    /// Issue #904: SG3 — agent slot quota.
-    /// </summary>
-    Task<int> CountActiveByGameIdsAsync(IReadOnlyList<Guid> gameIds, CancellationToken cancellationToken = default);
-
-    /// <summary>
     /// Returns the agent definitions whose KbCardIds explicitly contains the given document id.
     /// Uses Postgres JSONB containment (kb_card_ids @>); soft-deleted agents are excluded.
     /// Returns an empty list when documentId is Guid.Empty.

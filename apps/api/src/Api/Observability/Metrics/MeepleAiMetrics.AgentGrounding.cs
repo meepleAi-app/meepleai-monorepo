@@ -15,7 +15,7 @@ internal static partial class MeepleAiMetrics
     // (cited) answer from a silently ungrounded one, and none carried the input path.
     //
     // Two producers, one contract (mirrors the #3388 GroundingStatus wire contract):
-    //   - text  -> ChatWithSessionAgentCommandHandler (KnowledgeBase, RAG, retrieval_profile=live_session)
+    //   - text  -> the legacy session-agent chat (KnowledgeBase), retired by #4448 (A7): no producer today
     //   - image -> AskSessionAgentCommandHandler       (SessionTracking). Since #3390 Slice 2 this path
     //              can be grounded too: retrieval_profile=live_session when the grounded RAG query ran
     //              (flag rag.live-image-retrieval), or none when it fell back to multimodal-only.

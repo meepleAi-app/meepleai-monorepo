@@ -67,7 +67,10 @@ internal sealed class VectorDocumentIndexedEventHandler : DomainEventHandlerBase
         await _mediator.Publish(new VectorDocumentReadyIntegrationEvent
         {
             DocumentId = domainEvent.DocumentId,
-            GameId = domainEvent.GameId,
+            // #4244: the PDF is the source of truth for a private game — the domain event may
+            // come from a caller that only knew the shared game.
+            GameId = pdfDoc.PrivateGameId ?? domainEvent.GameId,
+            PrivateGameId = pdfDoc.PrivateGameId,
             ChunkCount = domainEvent.ChunkCount,
             PdfDocumentId = pdfDoc.Id,
             UploadedByUserId = pdfDoc.UploadedByUserId,

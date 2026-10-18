@@ -18,7 +18,7 @@
  *   - useSessionLiveStream NOT called in IS_VISUAL_TEST_BUILD mode
  *   - Dialog state from URL: ?dialog=pause mounts PauseOverlay, ?dialog=endgame mounts EndgameDialog
  *   - ConnectionLostBanner renders for reconnecting / degraded-polling / failed states
- *   - Mobile tab routing: chat tab renders LiveAgentChat, tools/widget tab renders ToolkitRenderer (G5c #2376)
+ *   - Mobile tab routing: tools/widget tab renders ToolkitRenderer (G5c #2376)
  *   - Desktop right column: RightColumnTabs mounted with correct activeTab
  *   - Desktop tab change calls router.replace with ?tab= param
  *   - Optimistic score update via liveStream events
@@ -29,7 +29,7 @@
  * Mocks: useSession, useSessionLiveStream, next/navigation, next-intl, session-live-visual-test-fixture.
  */
 
-import { fireEvent, render, screen, act } from '@testing-library/react';
+import { fireEvent, render, screen, act, waitFor, within } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactElement } from 'react';
@@ -37,7 +37,6 @@ import type { ReactElement } from 'react';
 import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
 import type { UseSessionLiveStreamResult } from '@/lib/session-live/use-session-live-stream';
 import { useLiveSessionStore } from '@/lib/stores/live-session-store';
-import type { ScoreDataByType } from '@/components/sessions/score-strategies/types';
 
 // ─── useSignalRSession mock (#2588 A4: dispute hydration via SignalR) ─────────
 // The hook connects to /hubs/game-state — mock it to a no-op so tests don't try
@@ -119,20 +118,13 @@ vi.mock('@/lib/session-live/use-session-live-stream', () => ({
   useSessionLiveStream: (args: unknown) => useSessionLiveStreamMock(args),
 }));
 
-// ─── useUpdateSessionScores mock (#2430 Block B+: avoid QueryClientProvider) ──
+// ─── useRecordRoundScore mock (#4156 fetta 2: avoid QueryClientProvider) ─────
 
-vi.mock('@/hooks/use-update-session-scores', async () => {
-  const actual = await vi.importActual<typeof import('@/hooks/use-update-session-scores')>(
-    '@/hooks/use-update-session-scores'
-  );
-  return {
-    ...actual,
-    useUpdateSessionScores: () => ({
-      mutate: vi.fn(),
-      isPending: false,
-    }),
-  };
-});
+const recordRoundScoreMock = vi.hoisted(() => vi.fn());
+
+vi.mock('@/hooks/queries/useRecordRoundScore', () => ({
+  useRecordRoundScore: () => ({ mutateAsync: recordRoundScoreMock, isPending: false }),
+}));
 
 // ─── sonner mock (#2430 Block B+: ScoreTabContent toasts) ─────────────────
 
@@ -143,35 +135,6 @@ vi.mock('sonner', () => ({
     success: vi.fn(),
     dismiss: vi.fn(),
   },
-}));
-
-// ─── useSessionAgentChat mock (#2500 Task 4: RAG agent wiring) ────────────
-// Hoisted globally so all describe blocks get a safe no-op default.
-// The RAG-specific describe block overrides the return value in its beforeEach.
-
-const useSessionAgentChatMock = vi.fn(() => ({
-  messages: [],
-  isLoading: false,
-  error: null,
-  streamingContent: '',
-  ask: vi.fn(),
-  stop: vi.fn(),
-}));
-
-vi.mock('@/lib/domain-hooks/useSessionAgentChat', () => ({
-  useSessionAgentChat: (...args: unknown[]) => useSessionAgentChatMock(...args),
-}));
-
-// ─── useSessionAgentLaunch mock (#2500 Task 4-FE: wire hook) ──────────────
-// Default: 'ready' with a valid agentSessionId so other describe blocks are unaffected.
-
-const useSessionAgentLaunchMock = vi.fn(() => ({
-  status: 'ready' as const,
-  agentSessionId: 'agent-session-uuid-0001',
-}));
-
-vi.mock('@/hooks/queries/useSessionAgentLaunch', () => ({
-  useSessionAgentLaunch: (...args: unknown[]) => useSessionAgentLaunchMock(...args),
 }));
 
 // ─── useCurrentUser mock (#2505: viewerRole derivation) ─────────────────────
@@ -281,13 +244,25 @@ vi.mock('@/lib/session-live/use-resolve-play-record', () => ({
 // must be initialised before the hoisted vi.mock runs.
 
 const getHistoryMock = vi.hoisted(() => vi.fn());
+const resumeSessionMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api', () => ({
   api: {
     playRecords: {
       getHistory: getHistoryMock,
     },
+    liveSessions: {
+      resumeSession: resumeSessionMock,
+    },
   },
+}));
+
+// ─── SessionAssistantPanel stub (#4238 A4) ────────────────────────────────────
+// The panel has its own tests; here only who gets it matters.
+vi.mock('@/components/features/session-live/assistant/SessionAssistantPanel', () => ({
+  SessionAssistantPanel: ({ sessionId }: { sessionId: string }) => (
+    <div data-slot="session-assistant-panel" data-session-id={sessionId} />
+  ),
 }));
 
 // ─── AddPlayerDialog mock (#2505: lazy import — suppress real render) ─────────
@@ -365,6 +340,18 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.scoring.playerCount':
     '{count, plural, =0 {Nessun giocatore} =1 {1 giocatore} other {# giocatori}}',
   'pages.sessionLive.scoring.loadingLabel': 'Caricamento punteggi…',
+  // #4156 fetta 2 — editor on RoundScores
+  'pages.sessionLive.scoring.rounds.roundLabel': 'Round {round}',
+  'pages.sessionLive.scoring.rounds.previousRound': 'Round precedente',
+  'pages.sessionLive.scoring.rounds.nextRound': 'Round successivo',
+  'pages.sessionLive.scoring.rounds.currentRound': 'Torna al round in corso',
+  'pages.sessionLive.scoring.rounds.player': 'Giocatore',
+  'pages.sessionLive.scoring.rounds.total': 'Totale',
+  'pages.sessionLive.scoring.rounds.noDimensions': 'Questa partita non ha dimensioni di punteggio.',
+  'pages.sessionLive.scoring.rounds.noPlayers': 'Nessun giocatore segna punti in questa partita.',
+  'pages.sessionLive.scoring.rounds.cellAriaTemplate': '{dimension} di {player}, round {round}',
+  'pages.sessionLive.scoring.rounds.saveError': 'Punteggio non salvato: riprova.',
+  'pages.sessionLive.scoring.rounds.notAnInteger': 'Il punteggio deve essere un numero intero.',
   // Block C #2389 T6 — nested polymorphic scoring keys (mirror locale catalog T5 additions).
   'pages.sessionLive.scoring.points.title': 'Punteggi',
   'pages.sessionLive.scoring.points.leaderLabel': 'in testa',
@@ -415,7 +402,6 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.connectionLost.degradedPolling': 'Aggiornamenti ogni 5s',
   'pages.sessionLive.connectionLost.failed': 'Sessione affollata o errore',
   'pages.sessionLive.connectionLost.manualRetryLabel': 'Riprova connessione',
-  'pages.sessionLive.a11y.viewLabel': 'Vista sessione live',
   // Interactions sub-PR labels
   'pages.sessionLive.rightColumn.tabsAriaLabel': 'Pannelli sessione',
   // G1 #2374 sess.46r canonical tab keys
@@ -758,12 +744,11 @@ describe('SessionLiveView (Wave D.2 Foundation)', () => {
 
   // ─── 3.8: URL state — mobile bottom-sheet (G1 #2374 T9 sess.46r) ────────
 
-  it('mobile renders mainContent = ChatAgentPanel + ActionLogTimeline (full-width, no bottom-nav)', () => {
+  it('mobile renders mainContent = ActionLogTimeline (full-width, no bottom-nav)', () => {
     const { container } = renderWithIntl(<SessionLiveView />);
-    // Main column should contain ChatAgentPanel + ActionLogTimeline (mirrors desktop LEFT)
+    // #4156 (D5): the legacy agent chat left the main column; the action log stays.
     const mobileBody = container.querySelector('[data-slot="mobile-body"]');
     expect(mobileBody).toBeInTheDocument();
-    expect(mobileBody?.querySelector('[data-slot="chat-agent-panel"]')).not.toBeNull();
     expect(mobileBody?.querySelector('[data-slot="action-log-timeline"]')).not.toBeNull();
     // NO legacy bottom-nav tabs
     expect(container.querySelector('[data-slot="mobile-body-tab"]')).toBeNull();
@@ -1095,15 +1080,9 @@ describe('SessionLiveView (Wave D.2 Interactions — Task 3)', () => {
     expect(root).toHaveAttribute('data-layout', '2col-60-40');
   });
 
-  it('T4.6: Cell 5 desktop renders ChatAgentPanel in LEFT mainColumn', () => {
-    const { container } = renderWithIntl(<SessionLiveView />);
-    // ChatAgentPanel data-slot stable per §5 frozen contract for #2375 G3
-    expect(container.querySelector('[data-slot="chat-agent-panel"]')).toBeInTheDocument();
-  });
-
   it('T4.7: Cell 5 desktop renders ActionLogTimeline stacked in LEFT mainColumn', () => {
     const { container } = renderWithIntl(<SessionLiveView />);
-    // ActionLogTimeline is rendered alongside ChatAgentPanel in mainColumn
+    // #4156 (D5): ActionLogTimeline is the whole LEFT mainColumn
     expect(container.querySelector('[data-slot="action-log-timeline"]')).toBeInTheDocument();
   });
 
@@ -1129,27 +1108,16 @@ describe('SessionLiveView (Wave D.2 Interactions — Task 3)', () => {
     expect(container.querySelector('[data-slot="live-session-notes"]')).toBeInTheDocument();
   });
 
-  it('T4.11: RIGHT tab=score renders ScoringPanelRenderer (G5a #2375)', () => {
-    // ?tab default → 'score'. ScoringPanelRenderer replaces LiveScoringPanel (#2421 wire-up).
-    // #2389 Block B: renderer is now gated on scoringType != null — seed the store
-    // first so the renderer mounts instead of the a11y placeholder.
-    useLiveSessionStore.getState().setScoringConfig({
-      scoringType: 'Points',
-      scoreData: { scores: [] },
-    });
+  it('T4.11: RIGHT tab=score is the Score tab — a session without dimensions says so (#4156)', () => {
+    // ?tab default → 'score'. MOCK_SESSION_DTO configures no scoring dimension.
     const { container } = renderWithIntl(<SessionLiveView />);
-    expect(container.querySelector('[data-slot="scoring-panel-renderer"]')).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="scoring-panel-empty"]')).toBeInTheDocument();
+    expect(
+      screen.getAllByText('Questa partita non ha dimensioni di punteggio.').length
+    ).toBeGreaterThan(0);
   });
 
   // ─── T3.3: Mobile drawer tab routing — Interactions panels (T9 sess.46r) ─
-
-  it('T3.3a: chat is always-visible in mobile main column (no longer a drawer tab)', () => {
-    // Post-T9: chat lives in the main column (ChatAgentPanel), not the drawer.
-    const { container } = renderWithIntl(<SessionLiveView />);
-    // LiveAgentChat is mounted as the body of ChatAgentPanel inside MobileBody main column.
-    const mobileBody = container.querySelector('[data-slot="mobile-body"]');
-    expect(mobileBody?.querySelector('[data-slot="live-agent-chat"]')).not.toBeNull();
-  });
 
   it('T3.3b: ?msheet=open + ?mtab=widget mounts ToolkitRenderer in drawer (G5c #2376)', () => {
     // G5c swap: ToolkitRenderer replaces SessionToolsRail in the mobile 'widget' tab.
@@ -1306,16 +1274,54 @@ describe('SessionLiveView (Wave D.2 Interactions — Task 3)', () => {
   });
 });
 
-// ─── #2375 G3 — accordion FSM URL SSOT ──────────────────────────────────────
+// ─── Block B (#2389) scoring wire-up tests ────────────────────────────────────
 
-describe('SessionLiveView (#2375 G3 — accordion FSM URL SSOT)', () => {
+describe('SessionLiveView — #4156 fetta 2: the Score tab scores on RoundScores', () => {
+  const HOST_ID = '55555555-5555-4555-8555-555555555555';
+  // Two scoring players and turn 3: the derived round (D6) is (3 − 1) / 2 + 1 = 2.
+  const SCORED_DTO = {
+    ...MOCK_SESSION_DTO,
+    currentTurnIndex: 3,
+    players: [
+      {
+        id: 'player-001',
+        displayName: 'Marco',
+        userId: HOST_ID,
+        color: 'blue',
+        role: 'Host',
+        totalScore: 10,
+        isActive: true,
+      },
+      {
+        id: 'player-002',
+        displayName: 'Anna',
+        userId: null,
+        color: 'red',
+        role: 'Player',
+        totalScore: 0,
+        isActive: true,
+      },
+    ],
+    roundScores: [
+      {
+        playerId: 'player-001',
+        round: 2,
+        dimension: 'punti',
+        value: 10,
+        unit: null,
+        recordedAt: '',
+      },
+    ],
+    scoringConfig: { enabledDimensions: ['punti'], dimensionUnits: {} },
+  } as unknown as LiveSessionDto;
+
   beforeEach(() => {
     vi.clearAllMocks();
     Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
     mockParamsId = 'session-abc-123';
     IS_VISUAL_TEST_BUILD_MOCK = false;
     useLiveSessionMock.mockReturnValue({
-      data: MOCK_SESSION_DTO,
+      data: SCORED_DTO,
       isLoading: false,
       isError: false,
       isSuccess: true,
@@ -1323,199 +1329,56 @@ describe('SessionLiveView (#2375 G3 — accordion FSM URL SSOT)', () => {
       refetch: vi.fn(),
     });
     useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+    recordRoundScoreMock.mockResolvedValue(undefined);
   });
 
-  it('G3-1: renders ChatAgentPanel expanded by default (no ?chat param)', () => {
+  it('opens on the derived round, with the cells and totals of the live session', () => {
     const { container } = renderWithIntl(<SessionLiveView />);
-    // Desktop ChatAgentPanel — no ?chat param → data-collapsed attribute absent (expanded).
-    const desktopBody = container.querySelector('[data-slot="desktop-body"]');
-    expect(desktopBody).toBeInTheDocument();
-    const panels = desktopBody?.querySelectorAll('[data-slot="chat-agent-panel"]');
-    expect(panels).toBeTruthy();
-    expect(panels!.length).toBeGreaterThanOrEqual(1);
-    // No data-collapsed="true" when expanded (attribute is absent per ChatAgentPanel contract).
-    expect(panels![0]).not.toHaveAttribute('data-collapsed', 'true');
+    const editor = container.querySelector('[data-slot="round-score-editor"]');
+    expect(editor).not.toBeNull();
+    expect(editor?.querySelector('[data-slot="round-score-round-label"]')?.textContent).toBe(
+      'Round 2'
+    );
+    expect(editor?.textContent).toContain('Marco');
+    expect(editor?.textContent).toContain('Anna');
   });
 
-  it('G3-2: ?chat=collapsed → desktop ChatAgentPanel has data-collapsed="true"', () => {
-    searchParamsMap['chat'] = 'collapsed';
+  it('a player reads the scores and has nothing to edit', () => {
+    useCurrentUserMock.mockReturnValue({ data: null });
     const { container } = renderWithIntl(<SessionLiveView />);
-    const desktopBody = container.querySelector('[data-slot="desktop-body"]');
-    expect(desktopBody).toBeInTheDocument();
-    const panels = desktopBody?.querySelectorAll('[data-slot="chat-agent-panel"]');
-    expect(panels).toBeTruthy();
-    expect(panels![0]).toHaveAttribute('data-collapsed', 'true');
+    expect(container.querySelector('[data-slot="round-score-editor"]')).not.toBeNull();
+    expect(container.querySelector('[data-slot="round-score-cell"]')).toBeNull();
   });
 
-  it('G3-3: ?mchat=collapsed → mobile ChatAgentPanel has data-collapsed="true"', () => {
-    searchParamsMap['mchat'] = 'collapsed';
-    const { container } = renderWithIntl(<SessionLiveView />);
-    const mobileBody = container.querySelector('[data-slot="mobile-body"]');
-    expect(mobileBody).toBeInTheDocument();
-    const panels = mobileBody?.querySelectorAll('[data-slot="chat-agent-panel"]');
-    expect(panels).toBeTruthy();
-    expect(panels!.length).toBeGreaterThanOrEqual(1);
-    expect(panels![0]).toHaveAttribute('data-collapsed', 'true');
-  });
-
-  it('G3-4: ?chat=collapsed&mchat=collapsed → both desktop and mobile ChatAgentPanel collapsed', () => {
-    searchParamsMap['chat'] = 'collapsed';
-    searchParamsMap['mchat'] = 'collapsed';
-    const { container } = renderWithIntl(<SessionLiveView />);
-    const desktopBody = container.querySelector('[data-slot="desktop-body"]');
-    const mobileBody = container.querySelector('[data-slot="mobile-body"]');
-    const desktopPanels = desktopBody?.querySelectorAll('[data-slot="chat-agent-panel"]');
-    const mobilePanels = mobileBody?.querySelectorAll('[data-slot="chat-agent-panel"]');
-    expect(desktopPanels![0]).toHaveAttribute('data-collapsed', 'true');
-    expect(mobilePanels![0]).toHaveAttribute('data-collapsed', 'true');
-  });
-
-  it('G3-5: clicking desktop ChatAgentPanel header calls router.replace with ?chat=collapsed', () => {
-    const { container } = renderWithIntl(<SessionLiveView />);
-    const desktopBody = container.querySelector('[data-slot="desktop-body"]');
-    // Header is a <button> (a11y) when onHeaderClick is provided (§5 contract).
-    const headerBtn = desktopBody?.querySelector(
-      '[data-slot="chat-agent-panel"] button[aria-expanded]'
-    ) as HTMLButtonElement | null;
-    expect(headerBtn).not.toBeNull();
-    fireEvent.click(headerBtn!);
-    expect(routerReplace).toHaveBeenCalled();
-    const callArg = routerReplace.mock.calls[0]?.[0] as string;
-    expect(callArg).toContain('chat=collapsed');
-  });
-
-  it('G3-6: clicking header when ?chat=collapsed calls router.replace WITHOUT chat param (toggle expand)', () => {
-    searchParamsMap['chat'] = 'collapsed';
-    const { container } = renderWithIntl(<SessionLiveView />);
-    const desktopBody = container.querySelector('[data-slot="desktop-body"]');
-    const headerBtn = desktopBody?.querySelector(
-      '[data-slot="chat-agent-panel"] button[aria-expanded]'
-    ) as HTMLButtonElement | null;
-    expect(headerBtn).not.toBeNull();
-    fireEvent.click(headerBtn!);
-    expect(routerReplace).toHaveBeenCalled();
-    const callArg = routerReplace.mock.calls[0]?.[0] as string;
-    // When expanding, 'chat' param is removed (null → deleted from query string).
-    expect(callArg).not.toContain('chat=collapsed');
-  });
-});
-
-// ─── Block B (#2389) scoring wire-up tests ────────────────────────────────────
-
-describe('SessionLiveView — Block B (#2389) scoring wire-up', () => {
-  beforeEach(() => {
-    // Default useSession + useSessionLiveStream returns for these tests.
-    useLiveSessionMock.mockReturnValue({
-      data: MOCK_SESSION_DTO,
-      isLoading: false,
-      isError: false,
-      isSuccess: true,
-      error: null,
-      refetch: vi.fn(),
+  it('the endgame dialog shows the live totals, with the player alone in the lead as the winner', async () => {
+    // Before #4156 the dialog read the polymorphic store, which nothing fed on the live path,
+    // and fell back to the adapted players with no winner at all.
+    searchParamsMap['dialog'] = 'endgame';
+    await act(async () => {
+      renderWithIntl(<SessionLiveView />);
     });
-    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+    await act(async () => {});
+    const scores = screen.getByRole('list', { name: 'Punteggi finali' });
+    const [first, second] = within(scores).getAllByRole('listitem');
+    expect(first).toHaveTextContent('Marco');
+    expect(first).toHaveTextContent('10');
+    expect(within(first!).getByText('Vincitore')).toBeInTheDocument();
+    expect(second).toHaveTextContent('Anna');
+    expect(within(second!).queryByText('Vincitore')).toBeNull();
   });
 
-  // ── REST hydration removed (ADR-083 Fase 1, #2501) ──────────────────────────
-  // The polymorphic scoring REST hydration (scoringType/scoreData/turnOrderType
-  // from GameSessionDto) was removed when the loader switched to the canonical
-  // LiveGameSession aggregate (LiveSessionDto, which is round-based and exposes
-  // no polymorphic fields). On the real funnel those fields were always
-  // undefined (empty GameSession shell) so the effects never ran in production.
-  // The store can still be populated directly (SignalR / explicit action) — the
-  // null-gate, placeholder and renderer-variant tests below exercise that path.
-  // Round-based scoring wiring from LiveSessionDto.roundScores/scoringConfig is
-  // deferred to Fase 2.
-
-  // ── Null gate + a11y placeholder (2) ────────────────────────────────────────
-
-  it('renders aria-live placeholder when scoringType is null', () => {
-    // Default beforeEach leaves store null; no DTO config either.
+  it('the host writes an empty cell as a new score of the live session', async () => {
+    useCurrentUserMock.mockReturnValue({ data: { id: HOST_ID } });
     renderWithIntl(<SessionLiveView />);
-
-    const placeholder = document.querySelector('[data-slot="scoring-panel-empty"]');
-    expect(placeholder).not.toBeNull();
-    expect(placeholder?.getAttribute('role')).toBe('status');
-    expect(placeholder?.getAttribute('aria-live')).toBe('polite');
-  });
-
-  it('placeholder shows the localized loading label text', () => {
-    renderWithIntl(<SessionLiveView />);
-    expect(screen.getByText('Caricamento punteggi…')).toBeInTheDocument();
-  });
-
-  // ── Variant mount via setScoringConfig action (4) ───────────────────────────
-
-  it('mounts Points renderer when scoringType=Points', () => {
-    renderWithIntl(<SessionLiveView />);
-    act(() => {
-      useLiveSessionStore.getState().setScoringConfig({
-        scoringType: 'Points',
-        scoreData: { scores: [{ playerId: 'player-001', points: 10 }] },
-      });
-    });
-    expect(document.querySelector('[data-slot="scoring-panel-points"]')).not.toBeNull();
-  });
-
-  it('mounts BinaryWin renderer when scoringType=BinaryWin', () => {
-    renderWithIntl(<SessionLiveView />);
-    act(() => {
-      useLiveSessionStore.getState().setScoringConfig({
-        scoringType: 'BinaryWin',
-        scoreData: { results: [{ playerId: 'player-001', isWinner: true }] },
-      });
-    });
-    expect(document.querySelector('[data-slot="scoring-panel-binary-win"]')).not.toBeNull();
-  });
-
-  it('mounts Ranking renderer when scoringType=Ranking', () => {
-    renderWithIntl(<SessionLiveView />);
-    act(() => {
-      useLiveSessionStore.getState().setScoringConfig({
-        scoringType: 'Ranking',
-        scoreData: { positions: [{ playerId: 'player-001', position: 1 }] },
-      });
-    });
-    expect(document.querySelector('[data-slot="scoring-panel-ranking"]')).not.toBeNull();
-  });
-
-  it('mounts Objectives renderer when scoringType=Objectives', () => {
-    renderWithIntl(<SessionLiveView />);
-    act(() => {
-      useLiveSessionStore.getState().setScoringConfig({
-        scoringType: 'Objectives',
-        scoreData: {
-          completedByPlayer: [{ playerId: 'player-001', objectives: [] }],
-        },
-      });
-    });
-    expect(document.querySelector('[data-slot="scoring-panel-objectives"]')).not.toBeNull();
-  });
-
-  // ── #2430 Block B+ smoke: ScoreTabContent mount ──────────────────────────
-
-  it('mounts ScoreTabContent inside score tab (any state)', () => {
-    const { container } = renderWithIntl(<SessionLiveView />);
-    // ScoreTabContent has no unique top-level data-slot; probe via children:
-    // it renders either the placeholder (when scoringType=null) or a renderer.
-    const hasMount =
-      container.querySelector('[data-slot="polymorphic-score-editor"]') ||
-      container.querySelector('[data-slot="scoring-panel-points"]') ||
-      container.querySelector('[data-slot="scoring-panel-empty"]');
-    expect(hasMount).not.toBeNull();
-  });
-
-  it('renders ScoringPanelRenderer (not editor) when viewerRole=Player', () => {
-    // Default fixture viewerRole is 'Player'.
-    act(() => {
-      useLiveSessionStore.getState().setScoringConfig({
-        scoringType: 'Points',
-        scoreData: { scores: [{ playerId: 'player-001', points: 10 }] },
-      });
-    });
-    const { container } = renderWithIntl(<SessionLiveView />);
-    expect(container.querySelector('[data-slot="polymorphic-score-editor"]')).toBeNull();
-    expect(container.querySelector('[data-slot="scoring-panel-points"]')).not.toBeNull();
+    const [cell] = screen.getAllByLabelText('punti di Anna, round 2');
+    fireEvent.change(cell!, { target: { value: '30' } });
+    fireEvent.blur(cell!);
+    await waitFor(() =>
+      expect(recordRoundScoreMock).toHaveBeenCalledWith({
+        request: { playerId: 'player-002', round: 2, dimension: 'punti', value: 30 },
+        correction: false,
+      })
+    );
   });
 });
 
@@ -1587,414 +1450,6 @@ describe('SessionLiveView — #2483 Task 4: TurnIndicatorRenderer from store', (
   // longer hydrated from the DTO loader (LiveSessionDto exposes no turnOrderType).
   // The store-seeded branch tests above cover the renderer; DTO→store wiring for
   // round-based turn metadata is deferred to Fase 2.
-});
-
-// ─── #2500 Task 4-FE — useSessionAgentLaunch wired into ChatAgentPanel ──────────
-// AC-CHAT-0: send goes through useSessionAgentChat (RAG path), not /chat social endpoint.
-// AC-CHAT-NULL: when agentSessionId absent → panel renders + status feedback visible.
-// R-FINDING-4/5/6: correct comments, status feedback messages, viewerId consistency.
-
-describe('SessionLiveView — #2500 Task 4-FE: RAG agent wiring via useSessionAgentLaunch', () => {
-  const agentAskMock = vi.fn();
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
-    mockParamsId = 'session-abc-123';
-    IS_VISUAL_TEST_BUILD_MOCK = false;
-    useLiveSessionMock.mockReturnValue({
-      data: { ...MOCK_SESSION_DTO, gameId: 'game-00000001' },
-      isLoading: false,
-      isError: false,
-      isSuccess: true,
-      error: null,
-      refetch: vi.fn(),
-    });
-    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
-    useSessionAgentLaunchMock.mockReturnValue({
-      status: 'ready' as const,
-      agentSessionId: 'agent-session-uuid-0001',
-    });
-    useSessionAgentChatMock.mockReturnValue({
-      messages: [],
-      isLoading: false,
-      error: null,
-      streamingContent: '',
-      ask: agentAskMock,
-      stop: vi.fn(),
-    });
-  });
-
-  it('RAG-1: renders ChatAgentPanel without crash when agentLaunch is ready', () => {
-    const { container } = renderWithIntl(<SessionLiveView />);
-    expect(container.querySelector('[data-slot="chat-agent-panel"]')).toBeInTheDocument();
-  });
-
-  it('RAG-2: AC-CHAT-NULL — renders ChatAgentPanel without crash when no-agent status', () => {
-    useSessionAgentLaunchMock.mockReturnValue({
-      status: 'no-agent' as const,
-      agentSessionId: '',
-    });
-    useSessionAgentChatMock.mockReturnValue({
-      messages: [],
-      isLoading: false,
-      error: null,
-      streamingContent: '',
-      ask: agentAskMock,
-      stop: vi.fn(),
-    });
-    expect(() => renderWithIntl(<SessionLiveView />)).not.toThrow();
-    const { container } = renderWithIntl(<SessionLiveView />);
-    expect(container.querySelector('[data-slot="chat-agent-panel"]')).toBeInTheDocument();
-  });
-
-  it('RAG-3: assistant citation is rendered in ChatAgentPanel (pag. N pattern)', () => {
-    useSessionAgentChatMock.mockReturnValue({
-      messages: [
-        {
-          id: 'msg-001',
-          role: 'assistant' as const,
-          content: 'Il regolamento dice…',
-          timestamp: new Date().toISOString(),
-          citations: [{ documentName: 'Reg', pages: [7], excerpt: 'x' }],
-        },
-      ],
-      isLoading: false,
-      error: null,
-      streamingContent: '',
-      ask: agentAskMock,
-      stop: vi.fn(),
-    });
-    const { container } = renderWithIntl(<SessionLiveView />);
-    // Citation card renders "pag. 7" (or page list) — asserting presence
-    expect(container.querySelector('[data-slot="chat-citations"]')).toBeInTheDocument();
-    expect(container.textContent).toMatch(/pag\.\s*7/i);
-  });
-
-  it('RAG-4: useSessionAgentChat is called with sessionId and agentSessionId from useSessionAgentLaunch', () => {
-    renderWithIntl(<SessionLiveView />);
-    expect(useSessionAgentChatMock).toHaveBeenCalledWith(
-      'session-abc-123',
-      'agent-session-uuid-0001',
-      {
-        persistHistory: true, // fixture=false in test → !fixture=true (R5 #2500)
-        gameContext: {
-          // I1 #2500: built from LiveSessionDto, not from useSessionStore
-          gameId: 'game-00000001',
-          gameTitle: 'Mage Knight',
-          players: ['Marco', 'Anna'],
-          currentTurn: 0,
-        },
-      }
-    );
-  });
-
-  it('RAG-5: AC-CHAT-NULL — useSessionAgentChat called with empty string when no-agent', () => {
-    useSessionAgentLaunchMock.mockReturnValue({
-      status: 'no-agent' as const,
-      agentSessionId: '',
-    });
-    useSessionAgentChatMock.mockReturnValue({
-      messages: [],
-      isLoading: false,
-      error: null,
-      streamingContent: '',
-      ask: agentAskMock,
-      stop: vi.fn(),
-    });
-    renderWithIntl(<SessionLiveView />);
-    // Hook called with empty agentSessionId guard (no-agent → no ready session)
-    // R5: persistHistory passed as third arg — fixture=false → !fixture=true
-    // I1 #2500: gameContext still injected from LiveSessionDto even when no-agent
-    expect(useSessionAgentChatMock).toHaveBeenCalledWith('session-abc-123', '', {
-      persistHistory: true,
-      gameContext: {
-        gameId: 'game-00000001',
-        gameTitle: 'Mage Knight',
-        players: ['Marco', 'Anna'],
-        currentTurn: 0,
-      },
-    });
-  });
-
-  it('RAG-6: useSessionAgentLaunch called with sessionId, gameId, and !fixture', () => {
-    renderWithIntl(<SessionLiveView />);
-    expect(useSessionAgentLaunchMock).toHaveBeenCalledWith(
-      'session-abc-123',
-      'game-00000001',
-      true // enabled = !fixture = !false
-    );
-  });
-
-  it('RAG-7: useSessionAgentLaunch disabled in fixture mode (IS_VISUAL_TEST_BUILD)', () => {
-    IS_VISUAL_TEST_BUILD_MOCK = true;
-    renderWithIntl(<SessionLiveView />);
-    expect(useSessionAgentLaunchMock).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.anything(),
-      false // enabled = !fixture = !true
-    );
-  });
-
-  // R-FINDING-5: feedback messages for non-ready status
-  it('RAG-8: launching status — shows launching feedback message in chat', () => {
-    useSessionAgentLaunchMock.mockReturnValue({
-      status: 'launching' as const,
-      agentSessionId: '',
-    });
-    const { container } = renderWithIntl(<SessionLiveView />);
-    // Launching message appears in the chat messages list
-    expect(container.textContent).toMatch(/Avvio/i);
-  });
-
-  it('RAG-9: no-agent status — shows no-agent feedback message in chat', () => {
-    useSessionAgentLaunchMock.mockReturnValue({
-      status: 'no-agent' as const,
-      agentSessionId: '',
-    });
-    const { container } = renderWithIntl(<SessionLiveView />);
-    expect(container.textContent).toMatch(/Nessun assistente/i);
-  });
-
-  it('RAG-10: error status — shows error feedback message in chat', () => {
-    useSessionAgentLaunchMock.mockReturnValue({
-      status: 'error' as const,
-      agentSessionId: '',
-    });
-    const { container } = renderWithIntl(<SessionLiveView />);
-    expect(container.textContent).toMatch(/Impossibile avviare/i);
-  });
-
-  // R-FINDING-6: viewerId consistency — no magic-string 'user' fallback
-  it('RAG-11: user messages use viewerId from activeSession (not magic-string fallback)', () => {
-    // When activeSession.viewerId is '', messages should have senderId='' not 'user'
-    useSessionAgentChatMock.mockReturnValue({
-      messages: [
-        {
-          id: 'msg-user-1',
-          role: 'user' as const,
-          content: 'Domanda utente',
-          timestamp: new Date().toISOString(),
-          citations: undefined,
-        },
-      ],
-      isLoading: false,
-      error: null,
-      streamingContent: '',
-      ask: agentAskMock,
-      stop: vi.fn(),
-    });
-    // If viewerId is '' (activeSession default) and senderId is '', the message
-    // is own (isOwn=true) — no sender name label. The test checks no 'user' magic string
-    // by verifying the mapped senderId matches viewerId (both ''). Since both are '',
-    // isOwn=true, and the <span senderName> should NOT appear (only shown when !isOwn).
-    const { container } = renderWithIntl(<SessionLiveView />);
-    // The message content should be present
-    expect(container.textContent).toContain('Domanda utente');
-  });
-
-  // ─── AC-CHAT-3: vincolo critico — disclaimer NOT su messaggi di sistema di stato ───
-
-  it('RAG-12 (AC-CHAT-3 critical): system status message (no-agent) NON mostra il disclaimer non-grounded', () => {
-    // Un messaggio di SISTEMA (iniettato da SessionLiveView per status no-agent)
-    // non deve mostrare il disclaimer non-grounded, anche se è assistant senza citazioni.
-    useSessionAgentLaunchMock.mockReturnValue({
-      status: 'no-agent' as const,
-      agentSessionId: '',
-    });
-    useSessionAgentChatMock.mockReturnValue({
-      messages: [], // nessun messaggio dal hook — il messaggio viene iniettato da SessionLiveView
-      isLoading: false,
-      error: null,
-      streamingContent: '',
-      ask: agentAskMock,
-      stop: vi.fn(),
-    });
-    const { container } = renderWithIntl(<SessionLiveView />);
-    // Il messaggio di stato è presente nel DOM
-    expect(container.textContent).toMatch(/Nessun assistente/i);
-    // Il disclaimer non-grounded NON deve apparire sui messaggi di sistema
-    expect(
-      container.querySelector('[data-slot="chat-nongrounded-disclaimer"]')
-    ).not.toBeInTheDocument();
-  });
-
-  it('RAG-12b (AC-CHAT-3 critical): system status message (error) NON mostra il disclaimer non-grounded', () => {
-    useSessionAgentLaunchMock.mockReturnValue({
-      status: 'error' as const,
-      agentSessionId: '',
-    });
-    useSessionAgentChatMock.mockReturnValue({
-      messages: [],
-      isLoading: false,
-      error: null,
-      streamingContent: '',
-      ask: agentAskMock,
-      stop: vi.fn(),
-    });
-    const { container } = renderWithIntl(<SessionLiveView />);
-    expect(container.textContent).toMatch(/Impossibile avviare/i);
-    expect(
-      container.querySelector('[data-slot="chat-nongrounded-disclaimer"]')
-    ).not.toBeInTheDocument();
-  });
-
-  it('RAG-13 (AC-CHAT-3): vera risposta RAG senza citazioni (isNonGrounded:true) MOSTRA il disclaimer', () => {
-    // Il hook produce un messaggio assistant con isNonGrounded:true (vera risposta RAG, 0 citazioni)
-    useSessionAgentChatMock.mockReturnValue({
-      messages: [
-        {
-          id: 'msg-ng-rag',
-          role: 'assistant' as const,
-          content: 'Risposta RAG senza fonti.',
-          timestamp: new Date().toISOString(),
-          citations: undefined,
-          isNonGrounded: true,
-        },
-      ],
-      isLoading: false,
-      error: null,
-      streamingContent: '',
-      ask: agentAskMock,
-      stop: vi.fn(),
-    });
-    const { container } = renderWithIntl(<SessionLiveView />);
-    // Il disclaimer deve essere presente
-    expect(
-      container.querySelector('[data-slot="chat-nongrounded-disclaimer"]')
-    ).toBeInTheDocument();
-  });
-});
-
-// ─── #2588 A3 — dual-path send handler (images → /ask-agent, text → RAG) ────────
-// Asserts the SessionLiveView.handleAgentSendMessage routing:
-//   - text-only send → agentChat.ask() (RAG SSE) and NOT fetch /ask-agent
-//   - image send     → multipart POST /chat/ask-agent and NOT agentChat.ask()
-
-describe('SessionLiveView — #2588 A3: dual-path image/text send handler', () => {
-  const agentAskMock = vi.fn();
-  let fetchMock: ReturnType<typeof vi.fn>;
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
-    mockParamsId = 'session-abc-123';
-    IS_VISUAL_TEST_BUILD_MOCK = false;
-    useLiveSessionMock.mockReturnValue({
-      data: { ...MOCK_SESSION_DTO, gameId: 'game-00000001' },
-      isLoading: false,
-      isError: false,
-      isSuccess: true,
-      error: null,
-      refetch: vi.fn(),
-    });
-    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
-    useSessionAgentLaunchMock.mockReturnValue({
-      status: 'ready' as const,
-      agentSessionId: 'agent-session-uuid-0001',
-    });
-    useSessionAgentChatMock.mockReturnValue({
-      messages: [],
-      isLoading: false,
-      error: null,
-      streamingContent: '',
-      ask: agentAskMock,
-      stop: vi.fn(),
-    });
-    fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ answer: 'Risposta immagine.', confidence: 0.9 }),
-    });
-    vi.stubGlobal('fetch', fetchMock);
-    // crypto.randomUUID is used for optimistic message ids on the image path.
-    if (typeof globalThis.crypto?.randomUUID !== 'function') {
-      vi.stubGlobal('crypto', {
-        ...globalThis.crypto,
-        randomUUID: () => `uuid-${Math.random().toString(36).slice(2)}`,
-      });
-    }
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it('A3-1: text-only send calls agentChat.ask() and does NOT POST /ask-agent', async () => {
-    renderWithIntl(<SessionLiveView />);
-    // The desktop ChatAgentPanel mounts LiveAgentChat with the text input.
-    const input = screen.getAllByRole('textbox', { name: 'Scrivi un messaggio' })[0];
-    const sendBtn = screen.getAllByRole('button', { name: 'Invia messaggio' })[0];
-
-    fireEvent.change(input, { target: { value: 'Spiega la regola' } });
-    await act(async () => {
-      fireEvent.click(sendBtn);
-    });
-
-    expect(agentAskMock).toHaveBeenCalledWith('Spiega la regola');
-    // No multipart /ask-agent fetch for text-only sends.
-    const askAgentCalls = fetchMock.mock.calls.filter(c =>
-      String(c[0]).includes('/chat/ask-agent')
-    );
-    expect(askAgentCalls).toHaveLength(0);
-  });
-
-  it('A3-2: image send POSTs multipart /ask-agent and does NOT call agentChat.ask()', async () => {
-    renderWithIntl(<SessionLiveView />);
-
-    // Attach an image via the hidden file input in LiveAgentChat.
-    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    expect(fileInput).not.toBeNull();
-
-    const file = new File(['x'], 'board.jpg', { type: 'image/jpeg' });
-    await act(async () => {
-      fireEvent.change(fileInput, { target: { files: [file] } });
-    });
-
-    const sendBtn = screen.getAllByRole('button', { name: 'Invia messaggio' })[0];
-    await act(async () => {
-      fireEvent.click(sendBtn);
-    });
-
-    // RAG path NOT taken for image sends.
-    expect(agentAskMock).not.toHaveBeenCalled();
-    // Multipart POST to /ask-agent issued.
-    const askAgentCalls = fetchMock.mock.calls.filter(c =>
-      String(c[0]).includes('/game-sessions/session-abc-123/chat/ask-agent')
-    );
-    expect(askAgentCalls).toHaveLength(1);
-    const [, init] = askAgentCalls[0];
-    expect((init as RequestInit).method).toBe('POST');
-    expect((init as RequestInit).body).toBeInstanceOf(FormData);
-  });
-
-  it('A3-3 (Task 3 #3388): image response groundingStatus="Ungrounded" flags the agent message non-grounded', async () => {
-    fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ answer: 'Risposta immagine.', groundingStatus: 'Ungrounded' }),
-    });
-    vi.stubGlobal('fetch', fetchMock);
-
-    const { container } = renderWithIntl(<SessionLiveView />);
-
-    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-    expect(fileInput).not.toBeNull();
-
-    const file = new File(['x'], 'board.jpg', { type: 'image/jpeg' });
-    await act(async () => {
-      fireEvent.change(fileInput, { target: { files: [file] } });
-    });
-
-    const sendBtn = screen.getAllByRole('button', { name: 'Invia messaggio' })[0];
-    await act(async () => {
-      fireEvent.click(sendBtn);
-    });
-
-    expect(
-      container.querySelector('[data-slot="chat-nongrounded-disclaimer"]')
-    ).toBeInTheDocument();
-  });
 });
 
 // ─── #2505 — viewerRole derivation + AddPlayerDialog wiring ──────────────────
@@ -2752,5 +2207,180 @@ describe('SessionLiveView — Catan flavor tab (#2787)', () => {
     renderWithIntl(<SessionLiveView />);
     // FlavorRenderer lazy-loads CatanLiveFlavor (<section aria-label> → role region).
     expect(await screen.findByRole('region', { name: 'Pannello Catan' })).toBeInTheDocument();
+  });
+});
+
+// ─── #4156 — la ripresa passa da /live-sessions ──────────────────────────────
+
+describe('SessionLiveView — #4156: resume goes through the live session', () => {
+  const HOST_ID = 'user-55555555-5555-5555-5555-555555555555';
+
+  const PAUSED_DTO_WITH_HOST = {
+    ...MOCK_SESSION_DTO,
+    status: 'Paused',
+    players: [
+      {
+        id: 'player-001',
+        displayName: 'Marco',
+        userId: HOST_ID,
+        color: 'Blue',
+        role: 'Host',
+        totalScore: 0,
+        isActive: true,
+      },
+    ],
+  } as unknown as LiveSessionDto;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    searchParamsMap['dialog'] = 'pause';
+    mockParamsId = 'session-abc-123';
+    IS_VISUAL_TEST_BUILD_MOCK = false;
+    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+    useCurrentUserMock.mockReturnValue({ data: { id: HOST_ID } });
+    useLiveSessionMock.mockReturnValue({
+      data: PAUSED_DTO_WITH_HOST,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+    });
+  });
+
+  it('the host resumes the live session of the route id', async () => {
+    // L'id della rotta è quello di una LiveGameSession. Prima la ripresa chiamava
+    // /game-sessions/{id}/resume (SessionTracking), riceveva 404 e chiudeva comunque il pannello.
+    resumeSessionMock.mockResolvedValue(undefined);
+    let container: HTMLElement;
+    await act(async () => {
+      container = renderWithIntl(<SessionLiveView />).container;
+    });
+    await act(async () => {});
+
+    const overlay = container!.querySelector('[data-slot="pause-overlay"]') as HTMLElement;
+    expect(overlay).not.toBeNull();
+    await act(async () => {
+      fireEvent.click(within(overlay).getByRole('button', { name: 'Riprendi' }));
+    });
+
+    expect(resumeSessionMock).toHaveBeenCalledWith('session-abc-123');
+  });
+
+  it('keeps the pause panel open when the resume fails', async () => {
+    resumeSessionMock.mockRejectedValue(new Error('409'));
+    let container: HTMLElement;
+    await act(async () => {
+      container = renderWithIntl(<SessionLiveView />).container;
+    });
+    await act(async () => {});
+
+    const overlay = container!.querySelector('[data-slot="pause-overlay"]') as HTMLElement;
+    await act(async () => {
+      fireEvent.click(within(overlay).getByRole('button', { name: 'Riprendi' }));
+    });
+
+    expect(resumeSessionMock).toHaveBeenCalledTimes(1);
+    expect(routerReplace).not.toHaveBeenCalledWith(
+      expect.not.stringContaining('dialog=pause'),
+      expect.anything()
+    );
+  });
+});
+
+// ─── #4156 (D5) — l'agente di sessione vecchio non è più in /live ─────────────
+
+describe('SessionLiveView — #4156 (D5): no legacy session agent on /live', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    mockParamsId = 'session-abc-123';
+    IS_VISUAL_TEST_BUILD_MOCK = false;
+    useLiveSessionMock.mockReturnValue({
+      data: MOCK_SESSION_DTO,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+  });
+
+  it('mounts no agent chat, on desktop or on mobile', () => {
+    // L'agente vecchio lanciava una sessione agente su /game-sessions/{id}: con l'id di una live
+    // falliva sulla chiave esterna (23503). L'assistente in partita arriva con A4 di #4238.
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.querySelector('[data-slot="mobile-body"]')).not.toBeNull();
+    expect(container.querySelector('[data-slot="chat-agent-panel"]')).toBeNull();
+    expect(container.querySelector('[data-slot="live-agent-chat"]')).toBeNull();
+    expect(container.querySelector('[data-slot="action-log-timeline"]')).not.toBeNull();
+  });
+});
+
+// ─── #4238 A4 (#4373) — the in-game assistant panel ──────────────────────────
+
+describe('SessionLiveView — #4373: only the owner of the session gets the assistant panel', () => {
+  const OWNER_ID = '44444444-4444-4444-4444-444444444444';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    mockParamsId = 'session-abc-123';
+    IS_VISUAL_TEST_BUILD_MOCK = false;
+    useLiveSessionMock.mockReturnValue({
+      data: MOCK_SESSION_DTO,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+  });
+
+  const panels = (container: HTMLElement) =>
+    container.querySelectorAll('[data-slot="session-assistant-panel"]');
+
+  it('the owner of the session gets the panel, even when no player is linked to them', () => {
+    // The server checks CreatedByUserId: an owner who is not at the table still asks.
+    expect(MOCK_SESSION_DTO.createdByUserId).toBe(OWNER_ID);
+    expect(MOCK_SESSION_DTO.players.some(p => p.userId === OWNER_ID)).toBe(false);
+    useCurrentUserMock.mockReturnValue({ data: { id: OWNER_ID } });
+
+    const { container } = renderWithIntl(<SessionLiveView />);
+
+    expect(panels(container).length).toBeGreaterThan(0);
+    expect(panels(container)[0]).toHaveAttribute('data-session-id', 'session-abc-123');
+  });
+
+  it('a host player who is not the owner does not get it', () => {
+    const notOwner = '99999999-9999-4999-8999-999999999999';
+    useLiveSessionMock.mockReturnValue({
+      data: {
+        ...MOCK_SESSION_DTO,
+        players: MOCK_SESSION_DTO.players.map((p, i) =>
+          i === 0 ? { ...p, userId: notOwner, role: 'Host' } : p
+        ),
+      } as LiveSessionDto,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useCurrentUserMock.mockReturnValue({ data: { id: notOwner } });
+
+    const { container } = renderWithIntl(<SessionLiveView />);
+
+    expect(panels(container)).toHaveLength(0);
+  });
+
+  it('without a signed-in user nobody gets it', () => {
+    useCurrentUserMock.mockReturnValue({ data: null });
+
+    const { container } = renderWithIntl(<SessionLiveView />);
+
+    expect(panels(container)).toHaveLength(0);
   });
 });

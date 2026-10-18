@@ -7,9 +7,14 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// <summary>
 /// Command to complete a chunked upload session and process the assembled PDF.
 /// </summary>
+/// <remarks>
+/// <c>Priority</c>: "normal" | "urgent" | null (normal) — the processing job's priority (#4443 R2). The
+/// chunked routes are admin and editor only, so no role check is needed here.
+/// </remarks>
 internal record CompleteChunkedUploadCommand(
     Guid SessionId,
-    Guid UserId
+    Guid UserId,
+    string? Priority = null
 ) : ICommand<CompleteChunkedUploadResult>;
 
 /// <summary>

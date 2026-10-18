@@ -172,9 +172,6 @@ internal static class KnowledgeBaseServiceExtensions
         // ISSUE-972: BGAI-030 - Hallucination Detection (forbidden keywords, multilingual)
         services.AddSingleton<IHallucinationDetectionService, HallucinationDetectionService>();
 
-        // ISSUE-974: BGAI-032 - Multi-Model Consensus Validation (GPT-4 + Claude)
-        services.AddSingleton<IMultiModelValidationService, MultiModelValidationService>();
-
         // ISSUE-981: BGAI-039 - Validation Accuracy Baseline Measurement
         services.AddScoped<ValidationAccuracyTrackingService>();
 
@@ -195,9 +192,6 @@ internal static class KnowledgeBaseServiceExtensions
         // Issue #3435: Strategy-Model mapping service (Singleton - uses IServiceScopeFactory for DB access)
         services.AddSingleton<IStrategyModelMappingService, StrategyModelMappingService>();
 
-        // ISSUE-1725: Model override service for budget-aware downgrading
-        services.AddSingleton<ILlmModelOverrideService, LlmModelOverrideService>();
-
         // ISSUE-1725: Analytics domain services for cost optimization
         // Use Scoped because they depend on scoped repositories (ILlmCostLogRepository)
         services.AddScoped<IQueryEfficiencyAnalyzer, QueryEfficiencyAnalyzer>();
@@ -207,6 +201,11 @@ internal static class KnowledgeBaseServiceExtensions
 
         // ISSUE-960: Cost Tracking (from main)
         // Domain Services - Cost Calculator and Alerting
+        // #4164 (ADR-095): il listino viene dal catalogo modelli, in un'istantanea caricata
+        // all'avvio (hosted service) e ricaricata in background.
+        services.AddSingleton<CatalogModelPriceList>();
+        services.AddSingleton<IModelPriceList>(sp => sp.GetRequiredService<CatalogModelPriceList>());
+        services.AddHostedService(sp => sp.GetRequiredService<CatalogModelPriceList>());
         services.AddSingleton<ILlmCostCalculator, LlmCostCalculator>();
         services.AddScoped<LlmCostAlertService>(); // Scoped - uses IAlertingService
 
@@ -238,7 +237,18 @@ internal static class KnowledgeBaseServiceExtensions
 
         // Application Services - Hybrid LLM Service (Scoped - may use request context)
         // Issue #5487/#5489: Delegates to ILlmProviderSelector, ICircuitBreakerRegistry, ILlmCostService
+        // #4164 (ADR-095 fetta 1b): l'utente della richiesta, per attribuire il costo delle chiamate
+        // che non passano un User. Singleton: legge IHttpContextAccessor, che è già per richiesta.
+        services.AddSingleton<ILlmCallerAccessor, SessionLlmCallerAccessor>();
+        // #4166 (ADR-095 fetta 3): il tetto di spesa prima di ogni chiamata. Singleton: tiene in
+        // memoria le riserve delle chiamate in corso, che devono valere per tutte le richieste.
+        services.AddSingleton<LlmBudgetGate>();
+        services.AddSingleton<ILlmBudgetGate>(sp => sp.GetRequiredService<LlmBudgetGate>());
+        services.AddSingleton<ILlmBudgetStatus>(sp => sp.GetRequiredService<LlmBudgetGate>());
+        services.AddSingleton<IAgentReserveModelProvider, PublishedProfileReserveModelProvider>();
         services.AddScoped<ILlmService, HybridLlmService>();
+        // ADR-097: la catena M.E.AI dell'assistente in partita, sopra il gateway.
+        services.AddSessionAssistant();
         services.AddScoped<HybridLlmService>(sp => (HybridLlmService)sp.GetRequiredService<ILlmService>());
 
         // ISSUE-962 (BGAI-020): Provider Health Check Service (Singleton - background service)
@@ -443,6 +453,9 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IStrategyPatternRepository, StrategyPatternRepository>();
         services.AddScoped<IPlaygroundTestScenarioRepository, PlaygroundTestScenarioRepository>(); // Issue #4396: Playground test scenarios
         services.AddScoped<IAbTestSessionRepository, AbTestSessionRepository>(); // Issue #5491: A/B test sessions
+        services.AddScoped<IAgentProfileRepository, AgentProfileRepository>(); // Issue #4167 / ADR-095: versioned system agent profile
+        services.AddScoped<IAgentProfileModelCatalogReader, CatalogAgentProfileModels>(); // #4169 (6c): prezzi e tool calling alla pubblicazione
+        services.AddScoped<IAssistantProposalRepository, AssistantProposalRepository>(); // #4275: proposte dell'assistente in partita
         services.AddScoped<IRagExecutionRepository, RagExecutionRepository>(); // Issue #4458: RAG execution history
         services.AddScoped<IRagUserConfigRepository, RagUserConfigRepository>(); // Issue #5311: Per-user RAG config persistence
         services.AddScoped<IAdminRagStrategyRepository, AdminRagStrategyRepository>(); // Issue #5314: Admin strategy CRUD
@@ -462,6 +475,21 @@ internal static class KnowledgeBaseServiceExtensions
     {
         // Application - Handlers (Scoped - uses Scoped dependencies)
         services.AddScoped<SearchQueryHandler>();
+        // #4168 (ADR-095 D3): la pipeline di risposta unica e la versione pubblicata del profilo,
+        // letta una volta per richiesta.
+        services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.IPublishedAgentProfileReader,
+            Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.PublishedAgentProfileReader>();
+        services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerRetrieval>();
+        // #4410 (E1): recupero e citazioni con tier, per la pipeline e per cerca_regole dell'assistente.
+        services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.ITieredPassageSearch,
+            Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.TieredPassageSearch>();
+        // #4168 (5g-a): accesso — e, con la 5g-b, quota — in un passo solo per i tre percorsi di risposta.
+        services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.IAnswerPreconditions,
+            Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPreconditions>();
+        services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.ICrossGameAnswerFlow,
+            Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.CrossGameAnswerFlow>();
+        services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.IAnswerPipeline,
+            Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipeline>();
         services.AddScoped<AskQuestionQueryHandler>();
 
         // ISSUE-2473: Game state parsing for Player Mode AI suggestions
@@ -485,9 +513,6 @@ internal static class KnowledgeBaseServiceExtensions
         // Issue #5510: PII detection and redaction for OpenRouter-bound prompts
         services.AddOptions<PiiDetectorOptions>();
         services.AddSingleton<IPiiDetector, PiiDetector>();
-
-        // E4-1: Degraded agent service — BGG-only mode when no KB cards are available
-        services.AddScoped<IDegradedAgentService, DegradedAgentService>();
 
         // Ownership/RAG access: cascading access check (admin → public → ownership)
         services.AddScoped<IRagAccessService, RagAccessService>();
@@ -527,10 +552,6 @@ internal static class KnowledgeBaseServiceExtensions
 
         // Phase 2 Task 2.5: House rule matcher — cross-BC read from AgentMemory, heuristic word-overlap
         services.AddScoped<IHouseRuleMatcher, HeuristicHouseRuleMatcher>();
-
-        // Phase 2 Task 2.3b: Pricing engine — NullPricingEngine stub (always allows).
-        // PHASE 3 REPLACE with CreditBasedPricingEngine in Phase 3 Task 3.2.
-        services.AddScoped<IPricingEngine, NullPricingEngine>();
 
         // Phase D (2026-05-19 multi-book gamebook plan): rule-based + LLM-fallback
         // role classifier for ingestion-time text_chunks.role_tags population.

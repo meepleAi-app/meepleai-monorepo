@@ -81,6 +81,114 @@ describe('useAgentChatStream', () => {
     vi.restoreAllMocks();
   });
 
+  // ─── Issue #4139: the request target ──────────────────────────────────────
+  //
+  // These are the tests the issue asked for, and they exist because a mocked
+  // `fetch` resolves against ANY string: the hook posted to
+  // /api/v1/agents/{agentId}/chat for its whole life and every test here stayed
+  // green, because none of them looked at the URL. What is asserted is therefore
+  // the requested path itself.
+  //
+  // The list below is the set of paths the backend actually mounts under
+  // /agents. Re-derive it with:
+  //
+  //   grep -rn 'Map\(Post\|Get\|Put\|Delete\)("/agents' apps/api/src/Api --include=*.cs
+  //
+  // If this list and the hook disagree, the hook is wrong — that is the whole
+  // point of keeping it here.
+  describe('request target (#4139)', () => {
+    const MOUNTED_AGENT_POST_ROUTES = [
+      '/api/v1/agents/qa',
+      '/api/v1/agents/qa/stream',
+      '/api/v1/agents/explain',
+      '/api/v1/agents/explain/stream',
+      '/api/v1/agents/setup',
+      '/api/v1/agents/feedback',
+      '/api/v1/agents/player-mode/suggest',
+      '/api/v1/agents/user',
+      '/api/v1/agents/create-with-setup',
+      '/api/v1/agents/quick-create',
+    ];
+
+    function captureRequest() {
+      const stream = createSSEStream([sseEvent(EventType.Complete, { totalTokens: 1 })]);
+      fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+      return () => {
+        expect(fetchMock).toHaveBeenCalled();
+        const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+        return { url, body: JSON.parse(String(init.body)) as Record<string, unknown> };
+      };
+    }
+
+    it('posts to a path the backend actually mounts', async () => {
+      const read = captureRequest();
+      const { result } = renderHook(() => useAgentChatStream());
+
+      await act(async () => {
+        result.current.sendMessage('game-1', 'Quante azioni per turno?');
+      });
+
+      const { url } = read();
+      const path = new URL(url, 'http://localhost').pathname;
+      expect(MOUNTED_AGENT_POST_ROUTES).toContain(path);
+    });
+
+    it('posts to /api/v1/agents/qa/stream specifically', async () => {
+      const read = captureRequest();
+      const { result } = renderHook(() => useAgentChatStream());
+
+      await act(async () => {
+        result.current.sendMessage('game-1', 'Quante azioni per turno?');
+      });
+
+      expect(new URL(read().url, 'http://localhost').pathname).toBe('/api/v1/agents/qa/stream');
+    });
+
+    // The route that was there before. Asserted as an absence so a revert is red.
+    it('never posts to the unmounted /agents/{id}/chat', async () => {
+      const read = captureRequest();
+      const { result } = renderHook(() => useAgentChatStream());
+
+      await act(async () => {
+        result.current.sendMessage('game-1', 'Quante azioni per turno?');
+      });
+
+      expect(read().url).not.toMatch(/\/agents\/[^/]+\/chat$/);
+    });
+
+    // QaRequest (the endpoint's DTO) reads gameId + query + chatId. A body shaped
+    // for the old route would be accepted by a mock and rejected by the server.
+    it('sends the body shape QaRequest expects', async () => {
+      const read = captureRequest();
+      const { result } = renderHook(() => useAgentChatStream());
+
+      await act(async () => {
+        result.current.sendMessage('game-1', 'Quante azioni per turno?', 'thread-9');
+      });
+
+      const { body } = read();
+      expect(body).toMatchObject({
+        gameId: 'game-1',
+        query: 'Quante azioni per turno?',
+        chatId: 'thread-9',
+      });
+      expect(body).not.toHaveProperty('message');
+      expect(body).not.toHaveProperty('agentId');
+      expect(body).not.toHaveProperty('chatThreadId');
+    });
+
+    it('omits chatId when no thread is given', async () => {
+      const read = captureRequest();
+      const { result } = renderHook(() => useAgentChatStream());
+
+      await act(async () => {
+        result.current.sendMessage('game-1', 'Domanda senza thread');
+      });
+
+      expect(read().body).not.toHaveProperty('chatId');
+    });
+  });
+
   it('initializes with default state', () => {
     const { result } = renderHook(() => useAgentChatStream());
 
@@ -88,8 +196,10 @@ describe('useAgentChatStream', () => {
       statusMessage: null,
       currentAnswer: '',
       followUpQuestions: [],
+      citations: [],
       isStreaming: false,
       error: null,
+      tierLimit: null,
       chatThreadId: null,
       totalTokens: 0,
       debugSteps: [],
@@ -282,20 +392,27 @@ describe('useAgentChatStream', () => {
     expect(result.current.state.isStreaming).toBe(false);
   });
 
-  it('includes chatThreadId in request body when provided', async () => {
+  // Issue #4139: this asserted the body of the unmounted /agents/{id}/chat route
+  // ({ message, chatThreadId }). The target is now /agents/qa/stream, whose DTO
+  // (QaRequest) reads gameId + query + chatId.
+  it('includes chatId in request body when a thread is provided', async () => {
     const stream = createSSEStream([sseEvent(EventType.Complete, { totalTokens: 0 })]);
     fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
 
     const { result } = renderHook(() => useAgentChatStream());
 
     await act(async () => {
-      result.current.sendMessage('agent-1', 'Hello', 'existing-thread');
+      result.current.sendMessage('game-1', 'Hello', 'existing-thread');
       await new Promise(resolve => setTimeout(resolve, 50));
     });
 
     const fetchCall = fetchMock.mock.calls[0];
     const requestBody = JSON.parse(fetchCall[1].body);
-    expect(requestBody).toEqual({ message: 'Hello', chatThreadId: 'existing-thread' });
+    expect(requestBody).toEqual({
+      gameId: 'game-1',
+      query: 'Hello',
+      chatId: 'existing-thread',
+    });
   });
 
   it('ignores heartbeat events silently', async () => {
@@ -603,6 +720,254 @@ describe('useAgentChatStream', () => {
     );
   });
 
+  // #4166 (ADR-095 D6): il gateway ferma la chiamata al tetto di spesa e lo dice, in italiano
+  it.each([
+    [
+      'AI_BUDGET_DAILY_EXHAUSTED',
+      'Il servizio AI è in pausa fino a domani: è stato raggiunto il budget di spesa del giorno.',
+    ],
+    [
+      'AI_BUDGET_MONTHLY_EXHAUSTED',
+      'Il servizio AI è in pausa fino al mese prossimo: è stato raggiunto il budget di spesa del mese.',
+    ],
+  ])('shows the Italian budget message for errorCode %s', async (errorCode, expected) => {
+    const events = [
+      sseEvent(EventType.Error, {
+        errorMessage: "The AI service is paused: today's AI budget has been reached.",
+        errorCode,
+      }),
+    ];
+
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const onError = vi.fn();
+    const { result } = renderHook(() => useAgentChatStream({ onError }));
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.state.error).toBe(expected);
+    expect(onError).toHaveBeenCalledWith(expected);
+  });
+
+  /**
+   * #4168 (5g-b): la domanda fermata dalla quota del piano. Il backend manda un messaggio tecnico
+   * («Tier limit exceeded: AgentQuery (3/3)»): il pannello mostra la spiegazione, con i numeri del
+   * piano e l'ora in cui il conteggio riparte.
+   */
+  it('explains the plan quota for errorCode TIER_LIMIT_EXCEEDED', async () => {
+    const events = [
+      sseEvent(EventType.Error, {
+        errorMessage: 'Tier limit exceeded: AgentQuery (3/3)',
+        errorCode: 'TIER_LIMIT_EXCEEDED',
+        limitType: 'AgentQuery',
+        current: 3,
+        max: 3,
+        upgradeUrl: '/pricing',
+      }),
+    ];
+
+    const stream = createSSEStream(events);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const onError = vi.fn();
+    const { result } = renderHook(() => useAgentChatStream({ onError }));
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    const explained =
+      /^Hai usato tutte le domande di oggi previste dal tuo piano \(3 su 3\)\. Il conteggio riparte alle \d{2}:\d{2} \(mezzanotte UTC\)\.$/;
+    expect(result.current.state.error).toMatch(explained);
+    expect(onError).toHaveBeenCalledWith(expect.stringMatching(explained));
+    // Chi sa mostrare l'avviso con il link trova i numeri accanto alla frase.
+    expect(result.current.state.tierLimit).toEqual({ current: 3, max: 3, upgradeUrl: '/pricing' });
+  });
+
+  it('carries no plan quota for another error', async () => {
+    const stream = createSSEStream([
+      sseEvent(EventType.Error, { errorMessage: 'Agent not found', errorCode: 'AGENT_NOT_FOUND' }),
+    ]);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+    const { result } = renderHook(() => useAgentChatStream());
+
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.state.error).toBe('Agent not found');
+    expect(result.current.state.tierLimit).toBeNull();
+  });
+
+  /** L'avviso riguarda la domanda appena fermata: con la successiva se ne va. */
+  // #4244 (consegna D): le fonti arrivano in un evento a parte, prima dei token. Chi mostra la
+  // risposta le riceve insieme a lei, e la domanda dopo riparte senza.
+  it('hands the sources of the answer to onComplete, and forgets them with the next question', async () => {
+    const coup = {
+      text: 'Deal two to each player.',
+      source: 'PDF:pdf-coup',
+      page: 1,
+      line: 0,
+      score: 0.9,
+    };
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      body: createSSEStream([
+        sseEvent(EventType.Citations, { citations: [coup] }),
+        sseEvent(EventType.Token, { token: 'Due carte.' }),
+        sseEvent(EventType.Complete, { totalTokens: 2 }),
+      ]),
+    });
+    const onComplete = vi.fn();
+    const { result } = renderHook(() => useAgentChatStream({ onComplete }));
+
+    await act(async () => {
+      result.current.sendMessage('game-1', 'Quante carte?');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(onComplete).toHaveBeenLastCalledWith(
+      'Due carte.',
+      expect.objectContaining({ citations: [coup] })
+    );
+    expect(result.current.state.citations).toEqual([coup]);
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      body: createSSEStream([
+        sseEvent(EventType.Token, { token: 'Due monete.' }),
+        sseEvent(EventType.Complete, { totalTokens: 2 }),
+      ]),
+    });
+    await act(async () => {
+      result.current.sendMessage('game-1', 'E le monete?');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(onComplete).toHaveBeenLastCalledWith(
+      'Due monete.',
+      expect.objectContaining({ citations: [] })
+    );
+  });
+
+  // #4244: lo stream cade dopo le fonti e prima dei token, l'hook riprova, e il secondo tentativo
+  // risponde senza fonti (per esempio una risposta servita senza recupero). Le fonti del tentativo
+  // caduto non sono di questa risposta.
+  it('does not hand the sources of a dropped attempt to the answer of the retry', async () => {
+    vi.useFakeTimers();
+    try {
+      const encoder = new TextEncoder();
+      let sent = false;
+      const dropsAfterTheSources = new ReadableStream<Uint8Array>({
+        pull(controller) {
+          if (!sent) {
+            sent = true;
+            controller.enqueue(
+              encoder.encode(
+                sseEvent(EventType.Citations, {
+                  citations: [{ text: 'x', source: 'PDF:pdf-coup', page: 1, line: 0, score: 0.9 }],
+                })
+              )
+            );
+          } else {
+            controller.error(new TypeError('network error'));
+          }
+        },
+      });
+      fetchMock
+        .mockResolvedValueOnce({ ok: true, body: dropsAfterTheSources })
+        .mockResolvedValueOnce({
+          ok: true,
+          body: createSSEStream([
+            sseEvent(EventType.Token, { token: 'Due carte.' }),
+            sseEvent(EventType.Complete, { totalTokens: 2 }),
+          ]),
+        });
+      const onComplete = vi.fn();
+      const { result } = renderHook(() => useAgentChatStream({ onComplete }));
+
+      act(() => {
+        result.current.sendMessage('game-1', 'Quante carte?');
+      });
+      await vi.runAllTimersAsync();
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(onComplete).toHaveBeenCalledWith(
+        'Due carte.',
+        expect.objectContaining({ citations: [] })
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // Un evento malformato non deve far cadere chi rende le fonti: si scarta.
+  it('drops sources that are not a list', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      body: createSSEStream([
+        sseEvent(EventType.Citations, { citations: 'PDF:pdf-coup' }),
+        sseEvent(EventType.Token, { token: 'Due carte.' }),
+        sseEvent(EventType.Complete, { totalTokens: 2 }),
+      ]),
+    });
+    const onComplete = vi.fn();
+    const { result } = renderHook(() => useAgentChatStream({ onComplete }));
+
+    await act(async () => {
+      result.current.sendMessage('game-1', 'Quante carte?');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(onComplete).toHaveBeenCalledWith(
+      'Due carte.',
+      expect.objectContaining({ citations: [] })
+    );
+  });
+
+  it('forgets the plan quota with the next question', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      body: createSSEStream([
+        sseEvent(EventType.Error, {
+          errorMessage: 'Tier limit exceeded: AgentQuery (3/3)',
+          errorCode: 'TIER_LIMIT_EXCEEDED',
+          current: 3,
+          max: 3,
+          upgradeUrl: '/pricing',
+        }),
+      ]),
+    });
+    const { result } = renderHook(() => useAgentChatStream());
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'Hi');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+    expect(result.current.state.tierLimit).not.toBeNull();
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      body: createSSEStream([
+        sseEvent(EventType.Token, { token: 'Cinque carte.' }),
+        sseEvent(EventType.Complete, { totalTokens: 3 }),
+      ]),
+    });
+    await act(async () => {
+      result.current.sendMessage('agent-1', 'E adesso?');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.state.tierLimit).toBeNull();
+    expect(result.current.state.error).toBeNull();
+  });
+
   it('shows Italian provider_unavailable message for errorCode provider_unavailable', async () => {
     const events = [
       sseEvent(EventType.Error, {
@@ -728,5 +1093,69 @@ describe('useAgentChatStream', () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(result.current.state.error).not.toBeNull();
     vi.useRealTimers();
+  });
+
+  /**
+   * #4333: chi usa l'hook mette queste funzioni nelle dipendenze di un effetto, e ne chiama una
+   * (`stopStreaming`) dal cleanup. Se cambiano a ogni render, il cleanup gira a ogni render e ferma
+   * lo stream appena partito.
+   */
+  describe('the functions it returns (#4333)', () => {
+    it('stay the same from one render to the next', () => {
+      const { result, rerender } = renderHook(() => useAgentChatStream());
+      const first = result.current;
+
+      rerender();
+
+      expect(result.current.sendMessage).toBe(first.sendMessage);
+      expect(result.current.stopStreaming).toBe(first.stopStreaming);
+      expect(result.current.reset).toBe(first.reset);
+    });
+
+    it('stay the same while a stream changes the state', async () => {
+      const stream = createSSEStream([
+        sseEvent(EventType.Token, { token: 'partial' }),
+        sseEvent(EventType.Complete, { totalTokens: 1 }),
+      ]);
+      fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+
+      const { result } = renderHook(() => useAgentChatStream());
+      const first = result.current;
+
+      await act(async () => {
+        result.current.sendMessage('game-1', 'Hi');
+        await new Promise(resolve => setTimeout(resolve, 50));
+      });
+
+      // Lo stato è cambiato davvero: senza questo, il confronto sotto non direbbe niente.
+      expect(result.current.state.currentAnswer).toBe('partial');
+      expect(result.current.sendMessage).toBe(first.sendMessage);
+      expect(result.current.stopStreaming).toBe(first.stopStreaming);
+      expect(result.current.reset).toBe(first.reset);
+    });
+
+    /** Chi ha in mano la funzione di un render passato ferma comunque lo stream di adesso. */
+    it('stopStreaming taken from an earlier render still stops the stream in flight', async () => {
+      let signal: AbortSignal | null | undefined;
+      fetchMock.mockImplementationOnce(async (_url: unknown, init?: RequestInit) => {
+        signal = init?.signal;
+        return { ok: true, body: new ReadableStream<Uint8Array>({ start() {} }) };
+      });
+
+      const { result } = renderHook(() => useAgentChatStream());
+      const stopFromTheFirstRender = result.current.stopStreaming;
+
+      await act(async () => {
+        result.current.sendMessage('game-1', 'Hi');
+        await new Promise(resolve => setTimeout(resolve, 20));
+      });
+      expect(signal?.aborted).toBe(false);
+      expect(result.current.state.isStreaming).toBe(true);
+
+      act(() => stopFromTheFirstRender());
+
+      expect(signal?.aborted).toBe(true);
+      expect(result.current.state.isStreaming).toBe(false);
+    });
   });
 });

@@ -17,7 +17,19 @@ internal record SearchResultDto(
     // pre-coordinate corpus. Parsed to CitationRegion + Full-gated at the StreamQa handler boundary.
     string? BoundingBoxesJson = null,
     int? CharStart = null,
-    int? CharEnd = null
+    int? CharEnd = null,
+    // #4168 (5e-c-2): l'identità del chunk e i segnali grezzi della fusione. Li legge la ricerca fra
+    // giochi, che fonde di nuovo sopra questo recupero e ne scrive il dump di taratura.
+    string? PdfDocumentId = null,
+    int ChunkIndex = 0,
+    float? HybridScore = null,
+    float? VectorScore = null,
+    float? KeywordScore = null,
+    string? Language = null,
+    IReadOnlyList<string>? MatchedTerms = null,
+    // #4288: l'id del text_chunks del passaggio. VectorDocumentId non lo identifica: il braccio
+    // vettoriale ci mette l'id del documento vettoriale, quello lessicale l'id del PDF.
+    Guid? TextChunkId = null
 )
 {
     /// <summary>
@@ -36,7 +48,15 @@ internal record SearchResultDto(
             SearchMethod: searchResult.SearchMethod,
             BoundingBoxesJson: searchResult.BoundingBoxesJson,
             CharStart: searchResult.CharStart,
-            CharEnd: searchResult.CharEnd
+            CharEnd: searchResult.CharEnd,
+            PdfDocumentId: searchResult.PdfDocumentId.ToString(),
+            ChunkIndex: searchResult.ChunkIndex,
+            HybridScore: searchResult.Signals.HybridScore,
+            VectorScore: searchResult.Signals.VectorScore,
+            KeywordScore: searchResult.Signals.KeywordScore,
+            Language: searchResult.Signals.Language,
+            MatchedTerms: searchResult.Signals.MatchedTerms,
+            TextChunkId: searchResult.TextChunkId
         );
     }
 };
@@ -53,7 +73,11 @@ internal record QaResponseDto(
     bool IsLowQuality,
     IReadOnlyList<CitationDto> Citations,
     RagValidationResultDto? ValidationResult = null,
-    string? ErrorCode = null
+    string? ErrorCode = null,
+    // #4168 (ADR-095 D2): la versione del profilo e la lingua di una risposta generata; null quando
+    // la risposta non viene dal modello (documenti in elaborazione, nessun contesto).
+    Guid? ProfileVersionId = null,
+    string? Language = null
 );
 
 /// <summary>

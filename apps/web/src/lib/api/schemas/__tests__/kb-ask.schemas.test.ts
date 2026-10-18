@@ -139,3 +139,80 @@ describe('KbAskEventSchema (discriminated union on numeric type)', () => {
     expect(() => KbAskEventSchema.parse({ type: 99, data: {} })).toThrow();
   });
 });
+
+describe('KbAskEventSchema — il filo vero del backend (#4168)', () => {
+  it('maps a per-game citation, stripping the PDF: prefix from the docId', () => {
+    const parsed = KbAskEventSchema.parse({
+      type: 1,
+      data: {
+        citations: [{ text: 'rules text', source: 'PDF:doc-123', page: 3, line: 0, score: 0.8 }],
+      },
+    });
+    expect(parsed).toEqual({
+      type: 1,
+      data: {
+        citations: [
+          { docId: 'doc-123', source: 'PDF:doc-123', page: 3, snippet: 'rules text', score: 0.8 },
+        ],
+      },
+    });
+  });
+
+  it('maps an error without a code to a generic code instead of dropping it', () => {
+    const parsed = KbAskEventSchema.parse({
+      type: 5,
+      data: { errorMessage: 'boom', errorCode: null },
+    });
+    expect(parsed).toEqual({ type: 5, data: { message: 'boom', code: 'UNKNOWN' } });
+  });
+
+  it('ignores the gameId of an ownership denial', () => {
+    const parsed = KbAskEventSchema.parse({
+      type: 5,
+      data: {
+        errorMessage: 'Dichiara il possesso.',
+        errorCode: 'RAG_OWNERSHIP_REQUIRED',
+        gameId: 'g-1',
+      },
+    });
+    expect(parsed.data).toEqual({
+      message: 'Dichiara il possesso.',
+      code: 'RAG_OWNERSHIP_REQUIRED',
+    });
+  });
+
+  /**
+   * #4168 (5g-b): la domanda fermata dalla quota del piano porta i numeri e il link ai piani,
+   * con gli stessi nomi del 403 tier_limit_exceeded. Il pannello li mostra: lo schema non li butta.
+   */
+  it('keeps what the backend says about the plan quota', () => {
+    const parsed = KbAskEventSchema.parse({
+      type: 5,
+      data: {
+        errorMessage: 'Tier limit exceeded: AgentQuery (3/3)',
+        errorCode: 'TIER_LIMIT_EXCEEDED',
+        limitType: 'AgentQuery',
+        current: 3,
+        max: 3,
+        upgradeUrl: '/pricing',
+      },
+    });
+
+    expect(parsed.data).toEqual({
+      message: 'Tier limit exceeded: AgentQuery (3/3)',
+      code: 'TIER_LIMIT_EXCEEDED',
+      tierLimit: { current: 3, max: 3, upgradeUrl: '/pricing' },
+    });
+  });
+
+  /** Solo per quel codice: gli altri errori restano com'erano, senza un campo in più. */
+  it('does not attach the plan quota to another error', () => {
+    const parsed = KbAskEventSchema.parse({
+      type: 5,
+      data: { errorMessage: 'boom', errorCode: 'RETRIEVAL_FAILED', current: 3, max: 3 },
+    });
+
+    expect(parsed.data).toEqual({ message: 'boom', code: 'RETRIEVAL_FAILED' });
+    expect(parsed.data).not.toHaveProperty('tierLimit');
+  });
+});

@@ -21,9 +21,16 @@ internal sealed record VectorDocumentReadyIntegrationEvent : IIntegrationEvent
     public required Guid DocumentId { get; init; }
 
     /// <summary>
-    /// The ID of the game associated with the vector document.
+    /// The ID of the game associated with the vector document: a game of the shared catalogue, or
+    /// a private game (then <see cref="PrivateGameId"/> carries the same id).
     /// </summary>
     public required Guid GameId { get; init; }
+
+    /// <summary>
+    /// Issue #4244: set when the document belongs to a private game. A consumer that links to the
+    /// game needs it — the page of a private game is not the page of a catalogue game.
+    /// </summary>
+    public Guid? PrivateGameId { get; init; }
 
     /// <summary>
     /// Number of chunks created during indexing.

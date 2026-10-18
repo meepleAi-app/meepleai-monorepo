@@ -7,6 +7,7 @@ using Api.Extensions;
 using Api.Models;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel;
 using System.Globalization;
 
 // Issue #3338: AI Token Usage Tracking per User
@@ -187,16 +188,7 @@ internal static class AnalyticsEndpoints
         .WithSummary("Admin Dashboard Overview Statistics")
         .Produces<DashboardStatsDto>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status401Unauthorized)
-        .Produces(StatusCodes.Status403Forbidden)
-        .WithOpenApi(operation =>
-        {
-            operation.Parameters[0].Description = "Start date for filtering (optional, defaults to 'days' ago from now)";
-            operation.Parameters[1].Description = "End date for filtering (optional, defaults to now)";
-            operation.Parameters[2].Description = "Number of days to look back (default: 30, used if fromDate/toDate not specified)";
-            operation.Parameters[3].Description = "Filter by specific game ID (optional)";
-            operation.Parameters[4].Description = "Filter by user role: 'admin', 'user', or 'editor' (optional)";
-            return operation;
-        });
+        .Produces(StatusCodes.Status403Forbidden);
 
         // Issue #4198: Lightweight overview stats for StatsOverview component
         group.MapGet("/admin/overview-stats", HandleGetOverviewStats)
@@ -388,11 +380,11 @@ internal static class AnalyticsEndpoints
     private static async Task<IResult> HandleGetDashboardStats(
         HttpContext context,
         IMediator mediator,
-        DateTime? fromDate = null,
-        DateTime? toDate = null,
-        int days = 30,
-        string? gameId = null,
-        string? roleFilter = null,
+        [Description("Start date for filtering (optional, defaults to 'days' ago from now)")] DateTime? fromDate = null,
+        [Description("End date for filtering (optional, defaults to now)")] DateTime? toDate = null,
+        [Description("Number of days to look back (default: 30, used if fromDate/toDate not specified)")] int days = 30,
+        [Description("Filter by specific game ID (optional)")] string? gameId = null,
+        [Description("Filter by user role: 'admin', 'user', or 'editor' (optional)")] string? roleFilter = null,
         CancellationToken ct = default)
     {
         var (authorized, _, error) = context.RequireAdminSession();

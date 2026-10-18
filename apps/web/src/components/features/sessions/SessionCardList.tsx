@@ -86,6 +86,8 @@ export function SessionCardList({
     <button
       type="button"
       onClick={() => onClick(item)}
+      // #4156 (D4): without a LiveGameSession the session has no page to open.
+      disabled={item.liveSessionId == null}
       aria-label={ariaLabel}
       data-slot="session-card-list"
       data-item-id={item.id}
@@ -94,7 +96,9 @@ export function SessionCardList({
         'flex items-stretch gap-0 overflow-hidden rounded-xl border border-border bg-card',
         'border-l-[3px]',
         isAbandoned ? 'border-l-entity-session/60 border-border/70' : 'border-l-entity-session',
-        'cursor-pointer transition-shadow hover:shadow-md',
+        item.liveSessionId == null
+          ? 'cursor-default'
+          : 'cursor-pointer transition-shadow hover:shadow-md',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         isInProgress && 'mai-pulse',
         className

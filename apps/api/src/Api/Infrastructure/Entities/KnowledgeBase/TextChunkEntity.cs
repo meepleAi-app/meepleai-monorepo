@@ -21,6 +21,14 @@ public class TextChunkEntity
     /// </summary>
     public Guid? SharedGameId { get; set; }
 
+    /// <summary>
+    /// Issue #4244: il gioco PRIVATO del PDF da cui viene il passaggio, quando il PDF è di un gioco
+    /// privato. In quel caso <see cref="GameId"/> resta null: quella colonna è una chiave esterna
+    /// verso <c>shared_games</c>, e scriverci l'id di un gioco privato faceva fallire il salvataggio
+    /// (<c>FK_text_chunks_shared_games_GameId</c>). La ricerca lessicale filtra su una delle due.
+    /// </summary>
+    public Guid? PrivateGameId { get; set; }
+
     // DDD-PHASE2: Converted to Guid for domain alignment
     public Guid PdfDocumentId { get; set; }
     public string Content { get; set; } = default!;
@@ -55,7 +63,7 @@ public class TextChunkEntity
     /// #2311 BE-1 — denormalized counter of distinct assistant messages that cited this chunk.
     /// Forward-looking metric (start-from-0 per DEC-D2): incremented post-SaveChanges by
     /// <see cref="Api.BoundedContexts.KnowledgeBase.Application.Commands.IncrementChunkUsageCountsCommand"/>
-    /// inside <see cref="Api.BoundedContexts.KnowledgeBase.Application.Commands.ChatWithSessionAgentCommandHandler"/>.
+    /// once sent by the legacy in-game agent chat, retired by #4448 (A7): with no sender today, it does not grow.
     /// Surfaced via <see cref="Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunks.KbChunkSummaryDto.UsedInChats"/>.
     /// </summary>
     public int UsageCount { get; set; }

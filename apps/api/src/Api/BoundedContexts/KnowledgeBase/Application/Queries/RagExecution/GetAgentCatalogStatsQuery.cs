@@ -51,7 +51,6 @@ internal sealed record AgentCatalogAgentStats
     public required Guid AgentDefinitionId { get; init; }
     public required string Name { get; init; }
     public required string? Description { get; init; }
-    public required string Type { get; init; }
     public required bool IsActive { get; init; }
     public required string? Model { get; init; }
     public required string? Provider { get; init; }
@@ -138,7 +137,6 @@ internal sealed class GetAgentCatalogStatsQueryHandler
                 AgentDefinitionId = stat.AgentDefinitionId,
                 Name = definition?.Name ?? stat.AgentName ?? "Unknown",
                 Description = definition?.Description,
-                Type = definition?.Type.Value ?? "Custom",
                 IsActive = definition?.IsActive ?? false,
                 Model = stat.Model,
                 Provider = stat.Provider,
@@ -174,7 +172,6 @@ internal sealed class GetAgentCatalogStatsQueryHandler
                 AgentDefinitionId = def.Id,
                 Name = def.Name,
                 Description = def.Description,
-                Type = def.Type.Value,
                 IsActive = def.IsActive,
                 Model = def.Config.Model,
                 Provider = null,

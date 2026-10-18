@@ -63,8 +63,7 @@ internal static class UserLibraryCollectionEndpoints
         .Produces(401)
         .WithTags("Collections")
         .WithSummary("Check collection status")
-        .WithDescription("Returns whether an entity is in user's collection with associated data counts. Issue #4263.")
-        .WithOpenApi();
+        .WithDescription("Returns whether an entity is in user's collection with associated data counts. Issue #4263.");
     }
 
     private static void MapAddToCollectionEndpoint(RouteGroupBuilder group)
@@ -122,8 +121,7 @@ internal static class UserLibraryCollectionEndpoints
         .Produces(409)
         .WithTags("Collections")
         .WithSummary("Add entity to collection")
-        .WithDescription("Adds an entity to user's collection with optional favorite status and notes. Returns 409 if already in collection. Issue #4263.")
-        .WithOpenApi();
+        .WithDescription("Adds an entity to user's collection with optional favorite status and notes. Returns 409 if already in collection. Issue #4263.");
     }
 
     private static void MapRemoveFromCollectionEndpoint(RouteGroupBuilder group)
@@ -172,8 +170,7 @@ internal static class UserLibraryCollectionEndpoints
         .Produces(404)
         .WithTags("Collections")
         .WithSummary("Remove entity from collection")
-        .WithDescription("Removes an entity from user's collection. Returns 404 if not in collection. Issue #4263.")
-        .WithOpenApi();
+        .WithDescription("Removes an entity from user's collection. Returns 404 if not in collection. Issue #4263.");
     }
 
     private static void MapBulkAddToCollectionEndpoint(RouteGroupBuilder group)
@@ -216,8 +213,7 @@ internal static class UserLibraryCollectionEndpoints
         .Produces(401)
         .WithTags("Collections", "Bulk")
         .WithSummary("Bulk add entities to collection")
-        .WithDescription("Adds multiple entities to user's collection. Uses partial success pattern. Max 50 entities. Issue #4268.")
-        .WithOpenApi();
+        .WithDescription("Adds multiple entities to user's collection. Uses partial success pattern. Max 50 entities. Issue #4268.");
     }
 
     private static void MapBulkRemoveFromCollectionEndpoint(RouteGroupBuilder group)
@@ -258,8 +254,7 @@ internal static class UserLibraryCollectionEndpoints
         .Produces(401)
         .WithTags("Collections", "Bulk")
         .WithSummary("Bulk remove entities from collection")
-        .WithDescription("Removes multiple entities from user's collection. Uses partial success pattern. Max 50 entities. Issue #4268.")
-        .WithOpenApi();
+        .WithDescription("Removes multiple entities from user's collection. Uses partial success pattern. Max 50 entities. Issue #4268.");
     }
 
     private static void MapBulkGetCollectionAssociatedDataEndpoint(RouteGroupBuilder group)
@@ -300,7 +295,6 @@ internal static class UserLibraryCollectionEndpoints
         .Produces(401)
         .WithTags("Collections", "Bulk")
         .WithSummary("Get bulk associated data")
-        .WithDescription("Returns aggregated counts of associated data for multiple collection entries. Used for bulk removal warnings. Issue #4268.")
-        .WithOpenApi();
+        .WithDescription("Returns aggregated counts of associated data for multiple collection entries. Used for bulk removal warnings. Issue #4268.");
     }
 }

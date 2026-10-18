@@ -29,7 +29,9 @@ internal class PrivateGameEntityConfiguration : IEntityTypeConfiguration<Private
         builder.Property(e => e.BggId)
             .HasColumnName("bgg_id");
 
-        builder.Property(e => e.AgentDefinitionId)
+        // Issue #4138 (expand): retired, kept as a nullable shadow property — read and written by
+        // no code; a later delivery drops the column and its FK.
+        builder.Property<Guid?>(PrivateGameEntity.RetiredAgentDefinitionId)
             .HasColumnName("agent_definition_id");
 
         builder.Property(e => e.Title)
@@ -143,10 +145,10 @@ internal class PrivateGameEntityConfiguration : IEntityTypeConfiguration<Private
             .HasForeignKey(e => e.PrivateGameId)
             .OnDelete(DeleteBehavior.SetNull);
 
-        // Issue #4228: Agent linking relationship
+        // Issue #4228: Agent linking relationship (retired by #4138, FK kept until the contract step)
         builder.HasOne<AgentDefinition>()
             .WithMany()
-            .HasForeignKey(e => e.AgentDefinitionId)
+            .HasForeignKey(PrivateGameEntity.RetiredAgentDefinitionId)
             .OnDelete(DeleteBehavior.SetNull);
     }
 }

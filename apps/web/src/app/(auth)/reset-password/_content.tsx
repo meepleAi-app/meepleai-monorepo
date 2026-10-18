@@ -17,6 +17,7 @@ import { useEffect, useState, type FormEvent, type JSX } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { useAuth } from '@/components/auth/AuthProvider';
 import { AuthCard } from '@/components/ui/auth-card';
 import { Btn } from '@/components/ui/btn';
 import { InputField } from '@/components/ui/input-field';
@@ -78,6 +79,7 @@ export function ResetPasswordPageContent({
   token = null,
 }: ResetPasswordPageContentProps): JSX.Element | null {
   const router = useRouter();
+  const { refreshUser } = useAuth();
   const { t } = useTranslation();
 
   const mode: 'request' | 'reset' = token ? 'reset' : 'request';
@@ -202,6 +204,9 @@ export function ResetPasswordPageContent({
         });
         if (loginResponse.user && !loginResponse.requiresTwoFactor) {
           setAuthUser(loginResponse.user);
+          // #4190: AuthProvider ha letto l'utente da anonimo al montaggio, e verso /chat si naviga
+          // lato client: senza questo, /chat partiva con user nullo e le liste delle chat vuote.
+          await refreshUser();
           setTimeout(() => {
             void router.push('/chat');
           }, 2000);

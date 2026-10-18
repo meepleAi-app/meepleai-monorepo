@@ -1,18 +1,8 @@
 /**
  * Budget API Client
- * Handles user credit budgets and admin budget overview
+ * Admin budget overview. Issue #4212: the per-user credit budget (GET /budget/user/{id}) is
+ * retired with the token-tier system it read.
  */
-
-export interface UserBudgetDto {
-  creditsRemaining: number;
-  dailyLimit: number;
-  weeklyLimit: number;
-  dailyResetIn: string;
-  weeklyResetIn: string;
-  isBlocked: boolean;
-  dailyCreditsUsed: number;
-  weeklyCreditsUsed: number;
-}
 
 export interface AdminBudgetOverviewDto {
   openRouterBalanceEuros: number;
@@ -22,26 +12,6 @@ export interface AdminBudgetOverviewDto {
   weeklyBudgetUsd: number;
   dailyUsagePercent: number;
   weeklyUsagePercent: number;
-}
-
-/**
- * Get user's credit budget status
- * Self-access only: users can only view their own budget
- */
-export async function getUserBudget(userId: string): Promise<UserBudgetDto> {
-  const response = await fetch(`/api/v1/budget/user/${userId}`, {
-    method: 'GET',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch user budget: ${response.statusText}`);
-  }
-
-  return response.json();
 }
 
 /**

@@ -234,6 +234,39 @@ public sealed class PdfProcessingQuartzJobTests
     }
 
     /// <summary>
+    /// #4443 R4: a document that was not pending belongs to someone else (an upload's background task,
+    /// the admin unblock, recovery at startup) or already finished. The job did nothing, which is not an
+    /// error: it used to end <c>Failed</c>, and the queue reported a failure for a document that reached
+    /// <c>Ready</c>.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4443")]
+    public async Task Execute_DocumentNotClaimed_JobIsCancelled_WithTheReason()
+    {
+        var job = await RunJobWithOutcomeAsync(PdfPipelineOutcome.SkippedNotClaimed);
+
+        Assert.Equal(nameof(JobStatus.Cancelled), job.Status);
+        Assert.Equal(PdfProcessingQuartzJob.NotClaimedReason, job.ErrorMessage);
+        Assert.NotNull(job.CompletedAt);
+    }
+
+    /// <summary>
+    /// The cancellation must stay narrow: when the pipeline did own the document and stopped, the job
+    /// is still a failure.
+    /// </summary>
+    [Theory]
+    [Trait("Issue", "4443")]
+    [InlineData(PdfPipelineOutcome.DocumentMissing)]
+    [InlineData(PdfPipelineOutcome.AbortedConcurrency)]
+    [InlineData(PdfPipelineOutcome.Failed)]
+    internal async Task Execute_PipelineOwnedTheDocumentButDidNotFinish_JobIsFailed(PdfPipelineOutcome outcome)
+    {
+        var job = await RunJobWithOutcomeAsync(outcome);
+
+        Assert.Equal(nameof(JobStatus.Failed), job.Status);
+    }
+
+    /// <summary>
     /// The guard must stay narrow: a genuinely processed document still completes normally.
     /// Without this, "never mark Completed" would trivially satisfy the test above.
     /// </summary>

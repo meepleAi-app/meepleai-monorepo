@@ -22,6 +22,13 @@ internal sealed class CreateTierDefinitionCommandValidator : AbstractValidator<C
             .NotNull()
             .WithMessage("Limits is required");
 
+        // #4212: a client that omits the field sends 0. Named here so the caller learns which
+        // field is wrong; the domain would reject it too, but as a 400 that names nothing.
+        RuleFor(x => x.Limits!.MaxLibraryGames)
+            .GreaterThanOrEqualTo(1)
+            .WithMessage("MaxLibraryGames must be at least 1")
+            .When(x => x.Limits is not null);
+
         RuleFor(x => x.LlmModelTier)
             .NotEmpty()
             .WithMessage("LlmModelTier is required")

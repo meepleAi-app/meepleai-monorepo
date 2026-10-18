@@ -103,7 +103,16 @@ prod-down: ## Stop production
 secrets-setup: ## Generate placeholder secrets from .example files
 	pwsh -File secrets/setup-secrets.ps1
 
-secrets-sync: ## Sync secrets from staging server (requires SSH access)
+secrets-sync: ## Decrypt infra/secrets/sops/*.secret.enc into *.secret (SOPS + age, #4427)
+	bash scripts/secrets-sops.sh decrypt
+
+secrets-encrypt: ## Encrypt changed local *.secret into infra/secrets/sops/ (commit the result)
+	bash scripts/secrets-sops.sh encrypt
+
+secrets-status: ## Show which secrets are aligned, local-only, encrypted-only or different
+	bash scripts/secrets-sops.sh status
+
+secrets-pull-staging: ## Copy *.secret FROM the staging server (old flow, needs SSH; staging is down since 2026-10)
 	bash scripts/sync-secrets.sh
 
 # === Database Seeds ===
@@ -529,7 +538,7 @@ eval-merge-labels: ## Merge a human-reviewed LabelingReview into a dataset and p
         tunnel tunnel-stop tunnel-status integration-check integration \
         integration-down work work-stop smoke smoke-staging smoke-pg-readback staging staging-minimal staging-with-tutor staging-tutor-down staging-core staging-down prod prod-down \
         alpha alpha-core alpha-down \
-        secrets-setup secrets-sync \
+        secrets-setup secrets-sync secrets-encrypt secrets-status secrets-pull-staging \
         snapshot restore-staging restore-local seed-games \
         logs logging logging-down logs-ui ps build clean help \
         ci ci-fe ci-be-unit ci-be-integration ci-be-e2e ci-all test-no-docker \

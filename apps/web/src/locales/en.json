@@ -2194,7 +2194,10 @@
           "emptyManualCta": "Add manually",
           "blockedMessage": "You already have \"{gameTitle}\" in your library.",
           "blockedCta": "Go to game page",
-          "blockedDismiss": "Dismiss"
+          "blockedDismiss": "Dismiss",
+          "ownsCopyLabel": "I own a copy of the game I add",
+          "ownsCopyHint": "It lets the assistant read the rulebook: rulebooks are copyrighted, and we only read them for players who own the game.",
+          "toastOwnershipError": "\"{gameName}\" is in your library, but the ownership declaration failed: you can declare it again from the chat."
         }
       },
       "catalogPagination": {
@@ -2336,6 +2339,24 @@
         "loading": "Saving…",
         "toast": {
           "saved": "{count} interests saved!"
+        }
+      },
+      "firstGame": {
+        "intro": "Search for a board game to add to your library. You can always add more later.",
+        "searchPlaceholder": "e.g. Catan, Wingspan, Ticket to Ride…",
+        "ownsCopy": {
+          "label": "I own a copy of this game",
+          "hint": "It lets the assistant read the rulebook: rulebooks are copyrighted, and we only read them for players who own the game."
+        },
+        "add": "Add to Library",
+        "adding": "Adding…",
+        "skip": "Skip for now",
+        "toast": {
+          "added": "{title} added to your library!",
+          "ownershipFailed": "{title} is in your library, but the ownership declaration failed: you can declare it from the chat."
+        },
+        "error": {
+          "addFailed": "Failed to add game to library."
         }
       }
     },
@@ -2792,51 +2813,6 @@
       },
       "batchNote": "Showing the first {n} results."
     },
-    "setup": {
-      "title": "Game Setup Guide",
-      "subtitle": "Generate a step-by-step guide to prepare the game, with references to the rulebook.",
-      "selectGame": "Select Game",
-      "gameLabel": "Game:",
-      "selectGamePlaceholder": "Select a game...",
-      "generateButton": "Generate Setup Guide",
-      "generating": "Generating...",
-      "generateForGameAria": "Generate setup guide for selected game",
-      "errors": {
-        "noGameSelected": "Please select a game first.",
-        "loadGames": "Error loading games.",
-        "generateGuide": "Error generating setup guide. Please try again.",
-        "retry": "Retry"
-      },
-      "loading": {
-        "title": "Generating your setup guide...",
-        "subtitle": "This may take a few moments while we retrieve the best instructions from the rulebook."
-      },
-      "estimatedTime": "Estimated setup time: {minutes} minutes",
-      "resetProgress": "Reset Progress",
-      "resetConfirm": "Are you sure you want to reset all progress?",
-      "progress": "Progress: {done} / {total} steps",
-      "complete": {
-        "title": "Setup Complete!",
-        "body": "Your game is ready to play. Have fun!"
-      },
-      "aiConfidence": "AI Confidence: {percent}%",
-      "empty": {
-        "title": "No Setup Guide Yet",
-        "description": "Select a game and click \"Generate Setup Guide\" to get started with step-by-step instructions."
-      },
-      "optional": "OPTIONAL",
-      "references": "References",
-      "viewReferences": "{n, plural, one {View # reference} other {View # references}}",
-      "citation": {
-        "docLabel": "Doc {id}",
-        "pageLabel": "Page {n}",
-        "noPage": "No page"
-      },
-      "step": {
-        "markComplete": "Mark as complete",
-        "markIncomplete": "Mark as incomplete"
-      }
-    },
     "sessions": {
       "metadata": {
         "title": "My sessions — MeepleAI",
@@ -3234,7 +3210,7 @@
         "faqs": "FAQ",
         "sessions": "Sessions",
         "stats": "Stats",
-        "agents": "Agents",
+        "chat": "AI Chat",
         "documents": "Documents"
       },
       "kpi": {
@@ -3292,16 +3268,6 @@
         "winLabel": "Win",
         "lossLabel": "Loss",
         "newSession": "+ New session"
-      },
-      "agents": {
-        "title": "AI agents",
-        "subtitle": "Agents linked to this game.",
-        "empty": "No agents available.",
-        "emptySubtitle": "Create an AI agent to chat about this game's rules.",
-        "createCta": "+ Create agent",
-        "openAriaLabel": "Open agent {name}",
-        "indexedLabel": "{count, plural, =0 {0 KB} =1 {1 KB} other {# KB}}",
-        "invocationsLabel": "{count} invocations"
       },
       "documents": {
         "title": "Indexed documents",
@@ -3366,6 +3332,12 @@
         "deleteConfirmMessage": "This house rule will be permanently deleted.",
         "deleteConfirm": "Delete",
         "empty": "No house rules yet. Add one to customize the game's rules."
+      },
+      "ownership": {
+        "message": "To let the assistant read the {gameTitle} rulebook, declare that you own a copy: rulebooks are copyrighted, and we only read them for players who own the game.",
+        "cta": "Declare you own {gameTitle}",
+        "declared": "Ownership declared: the assistant can now read the {gameTitle} rulebook.",
+        "declaredNoManual": "Ownership declared. There is no rulebook uploaded for {gameTitle} yet: until one is, answers cannot cite the rules."
       }
     },
     "sharedGames": {
@@ -3645,6 +3617,19 @@
           "columns": {
             "player": "Player"
           }
+        },
+        "rounds": {
+          "roundLabel": "Round {round}",
+          "previousRound": "Previous round",
+          "nextRound": "Next round",
+          "currentRound": "Back to the current round",
+          "player": "Player",
+          "total": "Total",
+          "noDimensions": "This game has no scoring dimensions.",
+          "noPlayers": "No player is scoring in this game.",
+          "cellAriaTemplate": "{dimension} for {player}, round {round}",
+          "saveError": "Score not saved: try again.",
+          "notAnInteger": "The score must be a whole number."
         }
       },
       "actionLog": {
@@ -3677,9 +3662,6 @@
         "degradedPolling": "Updates every 5s — click to retry real-time",
         "failed": "Session is busy or there was an error — try again in 60s",
         "manualRetryLabel": "Retry connection"
-      },
-      "a11y": {
-        "viewLabel": "Live session view"
       },
       "rightColumn": {
         "tabsAriaLabel": "Session panels",
@@ -3987,6 +3969,75 @@
           "toolCircleLabel": "Circle",
           "placeholderLabel": "Shared drawing area"
         }
+      },
+      "assistant": {
+        "title": "Assistant",
+        "hostOnly": "Only the host talks to the assistant.",
+        "loading": "Loading the assistant…",
+        "loadError": "I cannot read the assistant. Try again shortly.",
+        "unavailable": {
+          "assistant_disabled": "The assistant is not enabled.",
+          "assistant_model_without_tools": "The assistant is unavailable: the configured model cannot use tools.",
+          "session_state_invalid": "The game is over: the assistant no longer answers.",
+          "other": "The assistant is unavailable."
+        },
+        "empty": "Tell me a score or ask whose turn it is: I propose, you confirm.",
+        "inputLabel": "Question for the assistant",
+        "placeholder": "E.g. “Marco scores 5”",
+        "send": "Send",
+        "you": "You",
+        "tool": {
+          "start": "Thinking…",
+          "stato_partita": "Reading the game…",
+          "proponi_punteggio": "Preparing a score…",
+          "proponi_turno": "Preparing the turn change…",
+          "cerca_regole": "Searching the rules…",
+          "other": "Working on it…"
+        },
+        "turnError": {
+          "budget_paused": "The assistant is paused: the spending cap has been reached.",
+          "turn_timeout": "The assistant could not answer in time. Try again.",
+          "assistant_disabled": "The assistant is not enabled.",
+          "assistant_model_without_tools": "The assistant is unavailable: the configured model cannot use tools.",
+          "session_state_invalid": "The game is over: the assistant no longer answers.",
+          "other": "The assistant is not available right now. Try again, or record it by hand."
+        },
+        "card": {
+          "score": "{points} {dimension} to {player}, round {round}",
+          "resulting": "Total after confirming: {value}",
+          "advanceTurn": "Pass the turn to the next player",
+          "confirm": "Confirm",
+          "correct": "Correct",
+          "correctLabel": "Corrected points",
+          "applyCorrection": "Confirm with correction",
+          "cancel": "Cancel",
+          "reject": "Reject",
+          "busy": "Another confirmation is in progress.",
+          "status": {
+            "Pending": "To confirm",
+            "Applying": "Applying",
+            "Accepted": "Confirmed",
+            "Edited": "Confirmed with a correction",
+            "Failed": "Not applied",
+            "Rejected": "Rejected",
+            "Expired": "Expired",
+            "Stale": "Outdated: the game changed",
+            "other": "Closed"
+          },
+          "failure": {
+            "session_state_invalid": "The game no longer accepts this write.",
+            "proposal_not_applicable": "The proposal no longer applies to this game.",
+            "session_state_unavailable": "I could not read the game.",
+            "other": "Nothing was written."
+          },
+          "error": {
+            "proposal_stale": "The game changed since the proposal: nothing was written.",
+            "proposal_not_pending": "The proposal was already closed.",
+            "session_state_invalid": "The game no longer accepts this write.",
+            "proposal_not_applicable": "The proposal no longer applies to this game.",
+            "other": "I could not apply the proposal. Try again."
+          }
+        }
       }
     },
     "sessionSummary": {
@@ -4102,7 +4153,7 @@
     "editGame": "Edit Game",
     "editDescription": "Update the details of \"{title}\".",
     "deleteGame": "Delete Game",
-    "deleteConfirm": "Are you sure you want to delete \"{title}\"? This action cannot be undone.",
+    "deleteConfirm": "Are you sure you want to delete \"{title}\"? The chats and the documents uploaded for this game will be permanently deleted too. This action cannot be undone.",
     "deleting": "Deleting...",
     "saving": "Saving...",
     "saveChanges": "Save Changes",
@@ -4733,7 +4784,9 @@
       "libraryEmpty": "Your library is empty. Add games to suggest them.",
       "selectGame": "Select {name}",
       "deselectGame": "Deselect {name}",
-      "limitWarning": "Maximum {max} games per night."
+      "limitWarning": "Maximum {max} games per night.",
+      "searchLabel": "Search your library",
+      "searchEmpty": "No game in your library matches “{query}”."
     },
     "preview": {
       "title": "Invitation preview",

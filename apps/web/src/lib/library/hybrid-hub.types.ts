@@ -35,7 +35,8 @@ export interface HybridHubItemBase {
   readonly title: string;
   readonly subtitle?: string;
   readonly updatedAt: string;
-  readonly href: string;
+  /** `null` when the entity has no detail page: a GameSession without a live (#4156 D4). */
+  readonly href: string | null;
 }
 
 export interface GameHubItem extends HybridHubItemBase {
@@ -52,8 +53,8 @@ export interface GameHubItem extends HybridHubItemBase {
 export interface AgentHubItem extends HybridHubItemBase {
   readonly entity: 'agent';
   readonly gameName?: string;
-  /** Maps from `AgentDto.type` (renamed to avoid the reserved-word feel of `type`). */
-  readonly agentType: string;
+  // Issue #4154: `agentType` (da `AgentDto.type`) e` uscito con il campo: #4147 lo ha tolto dal
+  // backend e nessun componente lo leggeva.
   readonly isActive: boolean;
   /**
    * #4081 — agente di sistema, non dell'utente. La libreria personale include deliberatamente

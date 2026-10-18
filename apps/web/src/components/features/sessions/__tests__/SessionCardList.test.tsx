@@ -35,6 +35,7 @@ const LABELS: SessionCardListLabels = {
 
 const COMPLETED_ITEM: SessionListItem = {
   id: 'session-1',
+  liveSessionId: 'live-session-1',
   gameName: 'Wingspan',
   date: '23 apr 2026',
   when: '2 giorni fa',
@@ -52,6 +53,7 @@ const COMPLETED_ITEM: SessionListItem = {
 
 const INPROGRESS_ITEM: SessionListItem = {
   id: 'session-2',
+  liveSessionId: 'live-session-2',
   gameName: 'Brass',
   date: 'oggi · live',
   when: 'in corso',
@@ -66,6 +68,7 @@ const INPROGRESS_ITEM: SessionListItem = {
 
 const ABANDONED_ITEM: SessionListItem = {
   id: 'session-3',
+  liveSessionId: 'live-session-3',
   gameName: 'Catan',
   date: '5 apr 2026',
   when: '3 sett fa',
@@ -112,6 +115,21 @@ describe('SessionCardList', () => {
     const card = document.querySelector('[data-slot="session-card-list"]') as HTMLButtonElement;
     fireEvent.click(card);
     expect(onClick).toHaveBeenCalledWith(COMPLETED_ITEM);
+  });
+
+  it('#4156 (D4): is disabled when the session has no live session to open', () => {
+    const onClick = vi.fn();
+    render(
+      <SessionCardList
+        item={{ ...COMPLETED_ITEM, liveSessionId: null }}
+        onClick={onClick}
+        labels={LABELS}
+      />
+    );
+    const card = document.querySelector('[data-slot="session-card-list"]') as HTMLButtonElement;
+    expect(card).toBeDisabled();
+    fireEvent.click(card);
+    expect(onClick).not.toHaveBeenCalled();
   });
 
   it('aria-label uses openSessionAriaTemplate with gameName substitution', () => {

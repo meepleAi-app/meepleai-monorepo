@@ -1,40 +1,31 @@
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Domain.Services;
-using Api.Services;
+using Api.SharedKernel.Services;
 using AuthRole = Api.SharedKernel.Domain.ValueObjects.Role;
 
 namespace Api.BoundedContexts.UserLibrary.Infrastructure.Services;
 
 /// <summary>
 /// Database-based implementation of game library quota service.
-/// Tracks total games in library with tier-based limits.
+/// Tracks total games in library against the limit of the user's plan
+/// (<c>TierLimits.MaxLibraryGames</c>, edited at <c>/admin/config/tiers</c>; issue #4212).
 /// </summary>
 internal sealed class GameLibraryQuotaService : IGameLibraryQuotaService
 {
-    /// <summary>
-    /// Default game limits for each tier.
-    /// </summary>
-    private static class DefaultLimits
-    {
-        public const int FreeMaxGames = 5;
-        public const int NormalMaxGames = 20;
-        public const int PremiumMaxGames = 50;
-    }
-
     private readonly IUserLibraryRepository _libraryRepository;
-    private readonly IConfigurationService _configService;
+    private readonly ITierEnforcementService _tiers;
     private readonly ILogger<GameLibraryQuotaService> _logger;
 
     public GameLibraryQuotaService(
         IUserLibraryRepository libraryRepository,
-        IConfigurationService configService,
+        ITierEnforcementService tiers,
         ILogger<GameLibraryQuotaService> logger)
     {
         ArgumentNullException.ThrowIfNull(libraryRepository);
         _libraryRepository = libraryRepository;
-        ArgumentNullException.ThrowIfNull(configService);
-        _configService = configService;
+        ArgumentNullException.ThrowIfNull(tiers);
+        _tiers = tiers;
         ArgumentNullException.ThrowIfNull(logger);
         _logger = logger;
     }
@@ -54,7 +45,7 @@ internal sealed class GameLibraryQuotaService : IGameLibraryQuotaService
             return LibraryQuotaResult.Unlimited();
         }
 
-        var maxGames = await GetLimitForTierAsync(userTier).ConfigureAwait(false);
+        var maxGames = await GetPlanLimitAsync(userId, cancellationToken).ConfigureAwait(false);
         var currentCount = await _libraryRepository.GetUserLibraryCountAsync(userId, cancellationToken).ConfigureAwait(false);
 
         // Check if user has reached the limit
@@ -96,7 +87,7 @@ internal sealed class GameLibraryQuotaService : IGameLibraryQuotaService
             };
         }
 
-        var maxGames = await GetLimitForTierAsync(userTier).ConfigureAwait(false);
+        var maxGames = await GetPlanLimitAsync(userId, cancellationToken).ConfigureAwait(false);
         var currentCount = await _libraryRepository.GetUserLibraryCountAsync(userId, cancellationToken).ConfigureAwait(false);
         var remaining = Math.Max(0, maxGames - currentCount);
 
@@ -109,25 +100,14 @@ internal sealed class GameLibraryQuotaService : IGameLibraryQuotaService
         };
     }
 
-    private async Task<int> GetLimitForTierAsync(UserTier tier)
+    /// <summary>
+    /// The library limit of the user's plan. The plan resolution (contributors as premium, a
+    /// missing plan falling back to free) is <see cref="ITierEnforcementService"/>'s, the same
+    /// for every limit of the plan.
+    /// </summary>
+    private async Task<int> GetPlanLimitAsync(Guid userId, CancellationToken cancellationToken)
     {
-        var configKey = $"LibraryLimits:{tier.Value}:MaxGames";
-
-        // Get from configuration service (with fallback to defaults)
-        var configuredLimit = await _configService.GetValueAsync<int?>(configKey, defaultValue: null).ConfigureAwait(false);
-
-        if (configuredLimit.HasValue)
-        {
-            return configuredLimit.Value;
-        }
-
-        // Return default limits
-        return tier.Value switch
-        {
-            "free" => DefaultLimits.FreeMaxGames,
-            "normal" => DefaultLimits.NormalMaxGames,
-            "premium" => DefaultLimits.PremiumMaxGames,
-            _ => DefaultLimits.FreeMaxGames // Default to Free tier limits for unknown tiers
-        };
+        var limits = await _tiers.GetLimitsAsync(userId, cancellationToken).ConfigureAwait(false);
+        return limits.MaxLibraryGames;
     }
 }

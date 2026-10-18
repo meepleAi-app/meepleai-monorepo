@@ -2,7 +2,8 @@
  * Game Import Wizard Store — 5-step PDF direct import flow
  *
  * Steps:
- * 1. Upload PDF (chunked, up to 150MB) → { pdfDocumentId }
+ * 1. Title + PDF: creates the draft game, then uploads the PDF for it (chunked, up to 150MB)
+ *    → { gameId, pdfDocumentId }. #4401: the game comes first — the upload needs one.
  * 2. Review metadata (LLM-extracted) + cover image picker + live MeepleCard preview
  * 3. Preview & Confirm (read-only MeepleCard)
  * 4. Creation progress (ImportGameFromPdfCommand saga)
@@ -39,11 +40,15 @@ export interface GameMetadata {
   confidenceScore?: number;
 }
 
-export type CoverImageMode = 'placeholder' | 'pdf-page' | 'upload';
+/**
+ * #4413: no 'upload' mode. An image from the admin's disk had no server path — the manual cover takes
+ * a URL with a license, in the cover editor — so the wizard offered a choice it then dropped.
+ */
+export type CoverImageMode = 'placeholder' | 'pdf-page';
 
 export interface CoverImageSelection {
   mode: CoverImageMode;
-  /** URL of the selected image (blob URL for uploads, API URL for pdf-page, null for placeholder) */
+  /** Preview of the selected page (a blob: URL of this tab, never sent to the server), null for placeholder */
   imageUrl: string | null;
   /** Page number selected (only for mode=pdf-page) */
   pdfPageNumber?: number;
@@ -52,7 +57,7 @@ export interface CoverImageSelection {
 export interface ImportResult {
   gameId: string;
   pdfDocumentId: string;
-  indexingStatus: 'pending' | 'failed';
+  indexingStatus: 'ready' | 'pending' | 'failed';
   warning?: string;
 }
 
@@ -73,6 +78,10 @@ export interface GameImportWizardState {
   currentStep: WizardStep;
 
   // Step 1
+  /** The title typed at step 1; the draft game is created with it. */
+  importTitle: string;
+  /** The draft game created at step 1 (#4401). A retried upload reuses it. */
+  importGameId: string | null;
   uploadedPdf: UploadedPdf | null;
 
   // Step 2
@@ -85,6 +94,11 @@ export interface GameImportWizardState {
   importResult: ImportResult | null;
 
   // Step 5
+  /**
+   * The PDF page applied as the game's cover (#4413). The cover is applied at step 5, once the PDF
+   * is ready: rendering it while the upload still processes the PDF would make the processing fail.
+   */
+  coverAppliedPage: number | null;
   ragTestHistory: RagTestMessage[];
   isIndexingReady: boolean;
 
@@ -100,6 +114,8 @@ export interface GameImportWizardState {
   canGoBack: () => boolean;
 
   // Step 1 actions
+  setImportTitle: (title: string) => void;
+  setImportGameId: (gameId: string) => void;
   setUploadedPdf: (pdf: UploadedPdf) => void;
 
   // Step 2 actions
@@ -110,6 +126,7 @@ export interface GameImportWizardState {
   executeImport: () => Promise<void>;
 
   // Step 5 actions
+  setCoverAppliedPage: (page: number) => void;
   setIndexingReady: (ready: boolean) => void;
   addRagMessage: (question: string) => string;
   updateRagMessage: (id: string, update: Partial<RagTestMessage>) => void;
@@ -129,10 +146,13 @@ export interface GameImportWizardState {
 
 const initialState = {
   currentStep: 1 as WizardStep,
+  importTitle: '',
+  importGameId: null as string | null,
   uploadedPdf: null,
   reviewedMetadata: null,
   coverImage: { mode: 'placeholder' as CoverImageMode, imageUrl: null },
   importResult: null,
+  coverAppliedPage: null as number | null,
   ragTestHistory: [] as RagTestMessage[],
   isIndexingReady: false,
   isProcessing: false,
@@ -176,7 +196,12 @@ export const useGameImportWizardStore = create<GameImportWizardState>()(
             case 1:
               return uploadedPdf !== null;
             case 2:
-              return reviewedMetadata !== null && !!reviewedMetadata.title?.trim();
+              // The game's description is required (domain rule): without it step 4 is refused.
+              return (
+                reviewedMetadata !== null &&
+                !!reviewedMetadata.title?.trim() &&
+                !!reviewedMetadata.description?.trim()
+              );
             case 3:
               return reviewedMetadata !== null;
             case 4:
@@ -197,8 +222,21 @@ export const useGameImportWizardStore = create<GameImportWizardState>()(
 
         // ── Step 1 ─────────────────────────────────────────────────────────
 
+        setImportTitle: title => set({ importTitle: title }),
+
+        setImportGameId: gameId => set({ importGameId: gameId }),
+
         setUploadedPdf: pdf => {
-          set({ uploadedPdf: pdf, extractedMetadata: null, error: null });
+          // #4459: reviewed metadata belong to the PDF they were extracted from. Step 2 extracts
+          // only while reviewedMetadata is null, so keeping them for a different PDF would leave
+          // the new one never extracted and the form showing the old PDF's data.
+          const samePdf = get().uploadedPdf?.pdfDocumentId === pdf.pdfDocumentId;
+          set({
+            uploadedPdf: pdf,
+            extractedMetadata: null,
+            error: null,
+            ...(samePdf ? {} : { reviewedMetadata: null }),
+          });
         },
 
         // ── Step 2 ─────────────────────────────────────────────────────────
@@ -214,9 +252,9 @@ export const useGameImportWizardStore = create<GameImportWizardState>()(
         // ── Step 4: Import saga ────────────────────────────────────────────
 
         executeImport: async () => {
-          const { uploadedPdf, reviewedMetadata, coverImage } = get();
+          const { importGameId, uploadedPdf, reviewedMetadata } = get();
 
-          if (!uploadedPdf) {
+          if (!importGameId || !uploadedPdf) {
             set({ error: 'Nessun PDF caricato' });
             return;
           }
@@ -229,6 +267,7 @@ export const useGameImportWizardStore = create<GameImportWizardState>()(
 
           try {
             const result = await api.sharedGames.importGameFromPdf({
+              gameId: importGameId,
               title: reviewedMetadata.title,
               pdfDocumentId: uploadedPdf.pdfDocumentId,
               yearPublished: reviewedMetadata.yearPublished,
@@ -237,7 +276,6 @@ export const useGameImportWizardStore = create<GameImportWizardState>()(
               maxPlayers: reviewedMetadata.maxPlayers,
               playingTimeMinutes: reviewedMetadata.playingTimeMinutes,
               minAge: reviewedMetadata.minAge,
-              coverImageUrl: coverImage.mode !== 'placeholder' ? coverImage.imageUrl : null,
               publishers: reviewedMetadata.publishers,
               designers: reviewedMetadata.designers,
               categories: reviewedMetadata.categories,
@@ -265,6 +303,8 @@ export const useGameImportWizardStore = create<GameImportWizardState>()(
         },
 
         // ── Step 5 ─────────────────────────────────────────────────────────
+
+        setCoverAppliedPage: page => set({ coverAppliedPage: page }),
 
         setIndexingReady: ready => set({ isIndexingReady: ready }),
 
@@ -298,17 +338,18 @@ export const useGameImportWizardStore = create<GameImportWizardState>()(
       }),
       {
         name: 'game-import-wizard-v2',
-        version: 2,
+        // 3 (#4401): the draft game id joined the state. A version-2 state holds an upload with no
+        // game — which the API never accepted — so it is dropped rather than migrated.
+        version: 3,
         partialize: state => ({
           currentStep: state.currentStep,
+          importTitle: state.importTitle,
+          importGameId: state.importGameId,
           uploadedPdf: state.uploadedPdf,
           reviewedMetadata: state.reviewedMetadata,
-          // Sanitize blob: URLs — they are session-scoped and invalid after reload.
-          // Upload mode loses its preview; other modes (none/pdfPage) are URL-safe.
-          coverImage:
-            state.coverImage?.mode === 'upload'
-              ? { ...state.coverImage, imageUrl: null }
-              : state.coverImage,
+          // The page preview is a blob: URL of this tab, dead after a reload: keep the page only.
+          coverImage: { ...state.coverImage, imageUrl: null },
+          coverAppliedPage: state.coverAppliedPage,
         }),
       }
     ),

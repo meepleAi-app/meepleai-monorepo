@@ -1,4 +1,5 @@
-using Api.BoundedContexts.DocumentProcessing.Application.Services;
+using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure;
@@ -25,8 +26,6 @@ internal sealed class UploadSharedGamePdfCommandHandler
     private readonly MeepleAiDbContext _db;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IBlobStorageService _blobStorageService;
-    private readonly IPdfProcessingPipelineService _processingPipeline;
-    private readonly IBackgroundTaskService _backgroundTaskService;
     private readonly IMediator _mediator;
     private readonly ILogger<UploadSharedGamePdfCommandHandler> _logger;
 
@@ -39,8 +38,6 @@ internal sealed class UploadSharedGamePdfCommandHandler
         MeepleAiDbContext db,
         IUnitOfWork unitOfWork,
         IBlobStorageService blobStorageService,
-        IPdfProcessingPipelineService processingPipeline,
-        IBackgroundTaskService backgroundTaskService,
         IMediator mediator,
         ILogger<UploadSharedGamePdfCommandHandler> logger)
     {
@@ -48,8 +45,6 @@ internal sealed class UploadSharedGamePdfCommandHandler
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
-        _processingPipeline = processingPipeline ?? throw new ArgumentNullException(nameof(processingPipeline));
-        _backgroundTaskService = backgroundTaskService ?? throw new ArgumentNullException(nameof(backgroundTaskService));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -128,15 +123,14 @@ internal sealed class UploadSharedGamePdfCommandHandler
                 command.AdminUserId),
             cancellationToken).ConfigureAwait(false);
 
-        // 7. Enqueue PDF processing in background
-        var pdfDocId = pdfDocumentId;
-        var filePath = storageResult.FilePath!;
-        var adminId = command.AdminUserId;
-        _backgroundTaskService.Execute(async () =>
-        {
-            await _processingPipeline.ProcessAsync(pdfDocId, filePath, adminId, CancellationToken.None)
-                .ConfigureAwait(false);
-        });
+        // 7. Hand the processing to the queue (#4443 R2, decision A: the queue is the only owner of an
+        // admin upload). This used to run the pipeline in a background task, with a pipeline resolved
+        // from the request scope that the end of the request disposes. The cap is skipped, as for
+        // every interactive admin upload (#4442, decision 1a).
+        var jobId = await _mediator.Send(
+            new EnqueuePdfCommand(pdfDocumentId, command.AdminUserId, (int)ProcessingPriority.Normal, BypassQueueCap: true),
+            cancellationToken).ConfigureAwait(false);
+        _logger.LogInformation("Shared game PDF {PdfDocumentId} queued as job {JobId}", pdfDocumentId, jobId);
 
         _logger.LogInformation(
             "Shared game PDF upload complete: PdfDocumentId={PdfDocumentId}, SharedGameDocumentId={SharedGameDocumentId}",

@@ -61,7 +61,6 @@ internal sealed class GetLinkedAgentQueryHandler
             Id = agentDef.Id,
             Name = agentDef.Name,
             Description = agentDef.Description,
-            Type = agentDef.Type.Value,
             Config = new AgentConfigDto
             {
                 Model = agentDef.Config.Model,

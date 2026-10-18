@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExtractor;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
@@ -39,12 +40,6 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
     // a redeploy when the wired default is unavailable (e.g. DeepSeek credit exhausted → 402).
     // Still overridable per-request via ProviderOverride/ModelOverride (#2926).
 
-    // Conservative DeepSeek list pricing as of 2026-04 (project_deepseek_llm memory).
-    // Runtime cost is captured per-section from the actual LlmCompletionResult, so any drift
-    // affects only the planning estimate — the hard cap still bites based on real spend.
-    private const decimal DefaultInputCostPerMillion = 0.14m;
-    private const decimal DefaultOutputCostPerMillion = 0.28m;
-
     // Hard ceiling on retrieved context shipped into the pipeline. DeepSeek-chat tolerates
     // ~64K context; we stay under that with room for prompt + completion. Conversion: ~4
     // chars per token — good enough for a planning budget.
@@ -75,6 +70,7 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
     private readonly IMechanicPromptProvider _promptProvider;
     private readonly MechanicExtractorLlmOptions _llmOptions;
     private readonly IAnalysisCostEstimator _costEstimator;
+    private readonly ILlmCostCalculator _costCalculator;
     private readonly IBackgroundTaskService _backgroundTaskService;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly TimeProvider _timeProvider;
@@ -89,6 +85,7 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
         IMechanicPromptProvider promptProvider,
         IOptions<MechanicExtractorLlmOptions> llmOptions,
         IAnalysisCostEstimator costEstimator,
+        ILlmCostCalculator costCalculator,
         IBackgroundTaskService backgroundTaskService,
         IServiceScopeFactory scopeFactory,
         TimeProvider timeProvider,
@@ -102,6 +99,7 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
         _promptProvider = promptProvider ?? throw new ArgumentNullException(nameof(promptProvider));
         _llmOptions = llmOptions?.Value ?? throw new ArgumentNullException(nameof(llmOptions));
         _costEstimator = costEstimator ?? throw new ArgumentNullException(nameof(costEstimator));
+        _costCalculator = costCalculator ?? throw new ArgumentNullException(nameof(costCalculator));
         _backgroundTaskService = backgroundTaskService ?? throw new ArgumentNullException(nameof(backgroundTaskService));
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
@@ -194,14 +192,18 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
         // 5. Cost projection (T8). Token count uses a 4-char/token heuristic consistent with
         //    the estimator's calibration in AnalysisCostEstimator.
         var retrievedPromptTokens = retrievalContext.Length / 4;
+        // #4164: prezzi dal catalogo modelli, lo stesso listino del costo reale delle chiamate.
+        var (inputCostPerMillion, outputCostPerMillion) =
+            await MechanicExtractorPricing.ResolveAsync(_costCalculator, effectiveProvider, effectiveModel, cancellationToken)
+                .ConfigureAwait(false);
         var estimate = _costEstimator.Estimate(new AnalysisCostEstimateInput(
             PromptVersion: promptVersion,
             Provider: effectiveProvider,
             Model: effectiveModel,
             Sections: AllSections,
             TotalRetrievedPromptTokens: retrievedPromptTokens,
-            InputCostPerMillionTokens: DefaultInputCostPerMillion,
-            OutputCostPerMillionTokens: DefaultOutputCostPerMillion));
+            InputCostPerMillionTokens: inputCostPerMillion,
+            OutputCostPerMillionTokens: outputCostPerMillion));
 
         var hasOverride = request.CostCapOverride is not null;
         var effectiveCostCap = hasOverride ? request.CostCapOverride!.NewCapUsd : request.CostCapUsd;

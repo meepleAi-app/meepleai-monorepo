@@ -7,10 +7,9 @@ import { cleanupOnboardingTest } from '../helpers/onboarding-cleanup';
 import { env } from '../helpers/onboarding-environment';
 import { AdminUsersPage } from '../pages/admin/AdminUsersPage';
 import { AuditLogPage } from '../pages/admin/AuditLogPage';
-import { AgentChatPage } from '../pages/agent/AgentChatPage';
-import { AgentCreationPage } from '../pages/agent/AgentCreationPage';
 import { AcceptInvitePage } from '../pages/auth/AcceptInvitePage';
 import { LoginPage } from '../pages/auth/LoginPage';
+import { GameChatPage } from '../pages/game/GameChatPage';
 import { LibraryPage } from '../pages/library/LibraryPage';
 
 const timestamp = Date.now();
@@ -39,7 +38,6 @@ test.describe('Admin-User Onboarding Flow @flow @critical @slow', () => {
       try {
         await cleanupOnboardingTest(state.adminPage.request, {
           testUserId: state.testUserId,
-          agentId: state.agentId,
         });
       } catch (e) {
         console.warn('Cleanup failed (orphaned test data may remain):', e);
@@ -342,52 +340,27 @@ test.describe('Admin-User Onboarding Flow @flow @critical @slow', () => {
     });
   });
 
-  // ── Test 6: User Creates Agent ───────────────────────────────
-  test('6. User creates agent for the game', async () => {
-    if (!state.userPage || !state.gameTitle)
-      test.skip(true, state.failureReason ?? 'Requires test 5 to pass');
-    if (!state.pdfReady)
-      test.skip(true, state.failureReason ?? 'PDF not processed — agent creation requires KB');
-    const page = state.userPage!;
-    const agentPage = new AgentCreationPage(page);
-
-    await test.step('Open agent creation', async () => {
-      await agentPage.goto();
-      // Dismiss cookie consent
-      await dismissCookieConsent(page, '[T6]');
-      // Screenshot to debug
-      await page.screenshot({ path: 'test-results/debug-t6-agents-page.png', fullPage: true });
-      await agentPage.openCreationSheet();
-    });
-
-    await test.step('Configure agent', async () => {
-      await agentPage.selectGame(state.gameTitle!);
-      await agentPage.selectStrategy('Tutor');
-      await agentPage.selectFreeTier();
-    });
-
-    await test.step('Submit and capture IDs', async () => {
-      const result = await agentPage.submitCreation();
-      state.agentId = result.agentId;
-      state.gameSessionId = result.gameSessionId;
-
-      expect(state.agentId).toBeTruthy();
-    });
-
-    await test.step('Wait for agent ready', async () => {
-      await agentPage.waitForAgentReady(env.timeouts.agentReady);
-    });
-  });
+  // ── Test 6 (ritirato) ────────────────────────────────────────
+  // Issue #4138: "6. User creates agent for the game" stood here. It drove
+  // AgentCreationPage against `/agents`, a page deleted with the user-facing
+  // agents section: one system agent, configured by the admin and used by
+  // everyone, so there is nothing for a user to create. The onboarding step it
+  // mirrored is now "Carica un regolamento", already exercised by test 5.
 
   // ── Test 7: User Chats with Agent ────────────────────────────
-  test('7. User asks agent about game scope and turn', async () => {
-    if (!state.userPage || !state.agentId)
-      test.skip(true, state.failureReason ?? 'Requires test 6 to pass');
+  test('7. User asks about game scope and turn', async () => {
+    // Issue #4138: this required `state.agentId` from the retired test 6. The
+    // question is scoped to the GAME now, so the prerequisite is the game plus a
+    // processed PDF — without an indexed rulebook there is nothing to ground on.
+    if (!state.userPage || !state.gameId)
+      test.skip(true, state.failureReason ?? 'Requires test 5 to pass');
+    if (!state.pdfReady)
+      test.skip(true, state.failureReason ?? 'PDF not processed — a grounded answer needs the KB');
     const page = state.userPage!;
-    const chatPage = new AgentChatPage(page);
+    const chatPage = new GameChatPage(page, state.gameId!);
 
-    await test.step('Open chat with agent', async () => {
-      await chatPage.navigateToChat(state.agentId!);
+    await test.step('Open the game chat', async () => {
+      await chatPage.goto();
     });
 
     await test.step('Send question and wait for response', async () => {

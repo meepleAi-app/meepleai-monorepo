@@ -1,8 +1,8 @@
 /**
  * Week 3 Critical Path E2E Tests - Issue #2307 (SIMPLIFIED)
  *
- * 6 high-value E2E tests covering critical user journeys:
- * - Auth flows (login, session expiration, logout)
+ * High-value E2E tests covering critical user journeys:
+ * - Auth flows (login, logout)
  * - RAG workflows (chat interaction, citations, multi-turn)
  *
  * Test Strategy:
@@ -68,35 +68,6 @@ test.describe('Week 3 Critical Paths - Auth Flows', () => {
     // Verify we're authenticated (cookie set or redirected)
     const currentUrl = page.url();
     expect(currentUrl).not.toContain('/login');
-  });
-
-  test('should handle session expiration with redirect to login', async ({ page }) => {
-    const authHelper = new AuthHelper(page);
-
-    // Setup: Start authenticated
-    await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
-
-    // Navigate to home (public page, but check auth status)
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
-
-    // Simulate session expiration
-    await page.context().clearCookies();
-    await page.unroute(`${apiBase}/api/v1/auth/me`);
-    await page.route(`${apiBase}/api/v1/auth/me`, async route => {
-      await route.fulfill({
-        status: 401,
-        contentType: 'application/json',
-        body: JSON.stringify({ error: 'Unauthorized' }),
-      });
-    });
-
-    // Action: Navigate to protected route (triggers auth check)
-    await page.goto('/upload');
-
-    // Assertion: Should redirect to login
-    await page.waitForURL(url => url.pathname.includes('/login'), { timeout: 5000 });
-    expect(page.url()).toContain('/login');
   });
 
   test('should logout successfully', async ({ page }) => {

@@ -97,6 +97,7 @@ internal static class LiveSessionEndpoints
             .RequireLiveSessionParticipant()
             .Produces<Guid>(201)
             .Produces(400)
+            .Produces(403) // #4398: only the session host adds players
             .Produces(404)
             .WithTags("LiveSessions")
             .WithSummary("Add a player to the session");
@@ -213,25 +214,6 @@ internal static class LiveSessionEndpoints
             .WithTags("LiveSessions")
             .WithSummary("Update the live game-state (#3025 L1)");
 
-        group.MapPost("/live-sessions/{sessionId}/scores/parse", HandleParseScore)
-            .RequireAuthenticatedUser()
-            .RequireLiveSessionParticipant()
-            .Produces<ScoreParseResultDto>(200)
-            .Produces(400)
-            .Produces(404)
-            .WithTags("LiveSessions")
-            .WithSummary("Parse a natural language message for score data")
-            .WithDescription("Parses a message and optionally auto-records the score if confidence is high enough.");
-
-        group.MapPost("/live-sessions/{sessionId}/scores/confirm", HandleConfirmScore)
-            .RequireAuthenticatedUser()
-            .RequireLiveSessionParticipant()
-            .Produces(204)
-            .Produces(400)
-            .Produces(404)
-            .WithTags("LiveSessions")
-            .WithSummary("Confirm and record a previously parsed score");
-
         group.MapPost("/live-sessions/{sessionId}/save-complete", HandleSaveComplete)
             .RequireAuthenticatedUser()
             .RequireLiveSessionParticipant()
@@ -249,6 +231,7 @@ internal static class LiveSessionEndpoints
             .Produces(400)
             .Produces(404)
             .Produces(401)
+            .Produces(403) // #4206: RAG_OWNERSHIP_REQUIRED, il cancello della guida alla preparazione
             .WithTags("LiveSessions")
             .WithSummary("Generate setup checklist from game rulebook via RAG")
             .WithDescription("Generates a player-count-specific setup checklist by querying the game's PDF rulebook through the KnowledgeBase RAG pipeline.");
@@ -469,7 +452,8 @@ internal static class LiveSessionEndpoints
             .WithSummary("Native SSE stream for live session events")
             .WithDescription(
                 "Server-Sent Events stream for real-time live session updates via ILiveSessionStreamGateway. " +
-                "Returns X-Warning-Code: stream-not-linked when session has no companion (TrackingSessionId null). " +
+                "Returns X-Warning-Code: stream-not-linked when session has no companion (TrackingSessionId null): " +
+                "the session's own events still arrive, on the live channel, but are not replayed on reconnection. " +
                 "Issue #2561 SP2 T4.");
 
         return group;
@@ -559,15 +543,19 @@ internal static class LiveSessionEndpoints
         Guid sessionId,
         [FromBody] AddPlayerRequest request,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
+        // #4398: il filtro della rotta controlla la partecipazione; che chi chiede sia il proprietario lo controlla
+        // l'handler.
         var command = new AddPlayerToLiveSessionCommand(
             sessionId,
             request.DisplayName,
             request.Color,
             request.UserId,
             request.Role,
-            request.AvatarUrl);
+            request.AvatarUrl,
+            RequestedByUserId: httpContext.User.GetUserId());
 
         var playerId = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.Created($"/api/v1/live-sessions/{sessionId}/players/{playerId}", playerId);
@@ -692,42 +680,6 @@ internal static class LiveSessionEndpoints
         return Results.NoContent();
     }
 
-    private static async Task<IResult> HandleParseScore(
-        Guid sessionId,
-        [FromBody] ParseScoreRequest request,
-        [FromServices] IMediator mediator,
-        CancellationToken cancellationToken)
-    {
-        var command = new ParseAndRecordScoreCommand
-        {
-            SessionId = sessionId,
-            Message = request.Message,
-            AutoRecord = request.AutoRecord
-        };
-
-        var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
-        return Results.Ok(result);
-    }
-
-    private static async Task<IResult> HandleConfirmScore(
-        Guid sessionId,
-        [FromBody] ConfirmScoreRequest request,
-        [FromServices] IMediator mediator,
-        CancellationToken cancellationToken)
-    {
-        var command = new ConfirmScoreCommand
-        {
-            SessionId = sessionId,
-            PlayerId = request.PlayerId,
-            Dimension = request.Dimension,
-            Value = request.Value,
-            Round = request.Round
-        };
-
-        await mediator.Send(command, cancellationToken).ConfigureAwait(false);
-        return Results.NoContent();
-    }
-
     private static async Task<IResult> HandleSaveComplete(
         Guid sessionId,
         [FromServices] IMediator mediator,
@@ -742,10 +694,20 @@ internal static class LiveSessionEndpoints
         Guid sessionId,
         [FromBody] GenerateSetupChecklistRequest request,
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken)
     {
+        // #4234: passa chi chiede, che deve essere un partecipante. La guida alla preparazione legge
+        // la KB del gioco, e il cancello RAG valuta l'accesso dell'host della sessione.
+        var (authenticated, session, error) = httpContext.TryGetActiveSession();
+        if (!authenticated) return error!;
+
         var checklist = await mediator.Send(
-            new GenerateSetupChecklistCommand(sessionId, request.PlayerCount), cancellationToken).ConfigureAwait(false);
+            new GenerateSetupChecklistCommand(
+                sessionId,
+                request.PlayerCount,
+                session!.Principal!.Subject.Id),
+            cancellationToken).ConfigureAwait(false);
         return Results.Ok(checklist);
     }
 
@@ -1056,7 +1018,8 @@ internal static class LiveSessionEndpoints
         //
         // EnsureCompanionCommand returns the post-ensure TrackingSessionId:
         //   non-null → session is now linked (pre-existing OR just created on this subscribe)
-        //   null     → free-form session; genuinely unlinked; stream will be empty.
+        //   null     → free-form session; genuinely unlinked: no companion events, and the session's
+        //              own events arrive on the live channel without replay (#4114).
         // We use this POST-ensure value for the warning header to avoid emitting a stale
         // "stream-not-linked" on the exact subscribe that just fixed the session (final-review fix).
         bool isLinkedAfterEnsure;
@@ -1079,7 +1042,8 @@ internal static class LiveSessionEndpoints
         httpContext.Response.Headers.Append("Connection", "keep-alive");
         httpContext.Response.Headers.Append("X-Accel-Buffering", "no");
 
-        // Warn caller when session has no companion: stream will be empty (gateway yields nothing).
+        // Warn caller when session has no companion: no companion events, and no replay of the
+        // session's own events, which the gateway publishes on the live channel (#4114).
         // The connection stays open with heartbeats so the client can reconnect after SP0 is provisioned.
         // Uses the POST-ensure value so a lazy-created companion on this subscribe does NOT trigger the warning.
         if (!isLinkedAfterEnsure)
@@ -1120,7 +1084,8 @@ internal static class LiveSessionEndpoints
 
         try
         {
-            // gateway.SubscribeAsync returns an empty stream when HasCompanion == false.
+            // Without a companion the gateway still reads the live channels (toolkit, widgets, and the
+            // session's own events since #4114); only the companion pump is skipped.
             await foreach (var evt in gateway
                 .SubscribeAsync(sessionId, userId, lastEventId, ct)
                 .ConfigureAwait(false)
@@ -1216,10 +1181,6 @@ internal static class LiveSessionEndpoints
         SnapshotTrigger TriggerType,
         string? Description = null,
         Guid? CreatedByPlayerId = null);
-
-    private sealed record ParseScoreRequest(string Message, bool AutoRecord = true);
-
-    private sealed record ConfirmScoreRequest(Guid PlayerId, string Dimension, int Value, int Round);
 
     private sealed record GenerateSetupChecklistRequest(int PlayerCount);
 

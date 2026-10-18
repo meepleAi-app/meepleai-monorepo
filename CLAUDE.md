@@ -13,16 +13,18 @@
 | Start Dev (core) | `make dev-core` | `infra/` |
 | Dev from Snapshot | `make dev-from-snapshot` | `infra/` — [guide](./docs/for-developers/workflows/snapshot-seed-workflow.md) |
 | Bake Snapshot | `make seed-index` | `infra/` — raro, indicizza tutti i PDF |
-| Integration | `make tunnel && make integration` | `infra/` — **Git Bash only (Windows)** |
-| Deploy Staging | `make staging` | `infra/` (on server) |
+| Integration | `make tunnel && make integration` | `infra/` — **Git Bash only (Windows)** — ⏸ sospeso, vedi sotto |
+| Deploy Staging | `make staging` | `infra/` (on server) — ⏸ sospeso, vedi sotto |
 | Game Reset (#1320) | `make game-reset-help` | `infra/` — [spec](./docs/for-developers/specs/2026-05-19-game-entity-reset.md) |
-| Setup Secrets | `make secrets-setup && make secrets-sync` | `infra/` |
+| Setup Secrets | `make secrets-setup && make secrets-sync` | `infra/` — decifra i segreti del repo, serve la chiave age ([ADR-099](./docs/for-claude/architecture/adr/adr-099-secrets-sops-age-in-repo.md)) |
 | Stop / Logs | `make dev-down` / `make logs s=api` | `infra/` |
 | All commands | `make help` | `infra/` |
 | Start API (no Docker) | `dotnet run` | `apps/api/src/Api/` |
 | Start Web (no Docker) | `pnpm dev` | `apps/web/` |
 | Migration | `dotnet ef migrations add Name` | `apps/api/src/Api/` |
 | API Docs | http://localhost:8080/scalar/v1 | Browser |
+
+> ⏸ **Nessun server staging dal 2026-10-15** ([#4428](https://github.com/meepleAi-app/meepleai-monorepo/issues/4428)). `make staging` e `make tunnel && make integration` hanno bisogno di quell'host e oggi non funzionano. I segreti non ne dipendono più: sono cifrati nel repository e `make secrets-sync` li decifra con la chiave age (ADR-099). I workflow `deploy-staging.yml` e `title-health-staging.yml` sono **disattivati**, non rimossi: al ritorno di un server, prima di `gh workflow enable <file>`, fissa la chiave host al posto di `StrictHostKeyChecking=no` (vedi #4428). Un «verifica su staging» in una DoD va scritto sotto condizione, non come arretrato.
 
 ### Windows Notes
 
@@ -35,7 +37,7 @@ Controlled at runtime via admin toggle (`/admin/config` → General → Registra
 
 ## Stack
 
-**Backend** (.NET 9): ASP.NET Minimal APIs + MediatR | PostgreSQL 16 + EF Core (pgvector) + Redis | FluentValidation | xUnit + Testcontainers
+**Backend** (.NET 10): ASP.NET Minimal APIs + MediatR | PostgreSQL 16 + EF Core (pgvector) + Redis | FluentValidation | xUnit + Testcontainers
 
 **Frontend** (Next.js 16): App Router + React 19 | Tailwind 4 + shadcn/ui | Zustand + React Query | Vitest + Playwright
 
@@ -113,14 +115,18 @@ cd ../../infra && make dev        # All services (make dev-core = no AI/monitori
 
 ### Secret Management
 
-`.secret` files in `infra/secrets/` — single flat directory. Staging is source of truth.
+`.secret` files in `infra/secrets/` — single flat directory, gitignored. **Source of truth: the encrypted copies in `infra/secrets/sops/<name>.secret.enc`** (SOPS + age, [ADR-099](./docs/for-claude/architecture/adr/adr-099-secrets-sops-age-in-repo.md)). Staging no longer is.
 
 | Command | Purpose |
 |---------|---------|
 | `make secrets-setup` | Generate placeholders from `.example` templates |
-| `make secrets-sync` | Pull real values from staging (requires SSH) |
+| `make secrets-sync` | Decrypt `sops/*.secret.enc` into `*.secret`. Refuses to overwrite a local file that differs (`secrets-sops.sh decrypt --force <name>`); replaces placeholders |
+| `make secrets-encrypt` | Encrypt the local `*.secret` that changed into `sops/` — then **commit** the `.secret.enc` |
+| `make secrets-status` | Aligned / different / local-only / encrypted-only, per secret |
 
-**Rule**: Never commit `.secret` files. Only `.secret.example` templates are committed.
+Needs `sops` and `age` (`winget install FiloSottile.age SecretsOPerationS.SOPS`) and the age private key at `%AppData%\sops\age\keys.txt` (Linux: `~/.config/sops/age/keys.txt`, or `SOPS_AGE_KEY_FILE`). The key is the one critical secret: two copies (password manager + offline), never in the repo. If it leaks, **rotate the secrets** — a new key alone does not protect values already in git history.
+
+**Rule**: Never commit plaintext `.secret` files — the pre-commit hook and `dev-fast` reject them, and reject any non-encrypted value under `infra/secrets/sops/`. Only `.secret.example` templates and `.secret.enc` files are committed. CI keeps using placeholders: it has no key.
 
 **S3 Storage**: Factory pattern via `STORAGE_PROVIDER` env var (`local` default, `s3` for R2/AWS/MinIO). Config in `infra/secrets/storage.secret` — see [Operations Manual](./docs/for-developers/operations/operations-manual.md).
 
@@ -242,7 +248,7 @@ pnpm typecheck && pnpm lint       # Quality
 
 ```
 apps/
-├── api/src/Api/          # .NET 9: BoundedContexts/, Routing/, Infrastructure/
+├── api/src/Api/          # .NET 10: BoundedContexts/, Routing/, Infrastructure/
 ├── web/                  # Next.js: src/app/, components/, lib/, __tests__/
 ├── embedding-service/    # Python: embeddings
 ├── reranker-service/     # Python: reranking
@@ -261,7 +267,8 @@ tests/                    # Api.Tests, k6, api-smoke, llm-eval, fixtures — see
 | DB connection | `docker compose logs postgres && dotnet ef database update` |
 | Build fails (FE) | `rm -rf .next && pnpm build` |
 | Build fails (BE) | `dotnet clean && dotnet build` |
-| Testhost blocking | `tasklist \| grep testhost` → `taskkill //PID <PID> //F` |
+| Testhost blocking | `powershell -File tools/cleanup/cleanup-test-processes.ps1 -TestHostOnly` (this checkout's testhost only), or `taskkill //PID <PID> //F` after reading its command line. **Never by image name**: it aborts other sessions' test runs (#4310) |
+| Hooks not running in a worktree, or running another checkout's copy | `git config --get core.hooksPath` must print `.husky` (relative: each worktree runs its own hooks). `pnpm install` in `apps/web` sets it; by hand: `git config core.hooksPath .husky`. **Never `npx husky`**: it repoints git at `.husky/_`, which exists in one checkout only (#4316) — [CONTRIBUTING § Git hooks](./CONTRIBUTING.md#git-hooks) |
 | Port conflict | `netstat -ano \| findstr :8080` → `taskkill /PID <PID> /F` |
 | Snapshot drift | `make seed-index` (rigenera) or `make dev` (fallback) — [workflow](./docs/for-developers/workflows/snapshot-seed-workflow.md#compat-gate--exit-codes) |
 | Full ops reference | [operations-manual.md](./docs/for-developers/operations/operations-manual.md) |
@@ -270,7 +277,15 @@ tests/                    # Api.Tests, k6, api-smoke, llm-eval, fixtures — see
 
 **Baseline currently clean** (0 known failures on `main-dev`). Resolved-triage history (#1349 → #1422 → #1887 → #2270 → #2266): [claude-md-history.md](./docs/for-claude/claude-md-history.md#known-flaky-tests--resolved-history).
 
-**Intermittenti noti**: `AdvancedFilterPanel > Reset Button > resets draft filters to defaults when clicked` — un solo fallimento osservato in CI (shard 3/4 di [#4129](https://github.com/meepleAi-app/meepleai-monorepo/pull/4129), `AssertionError` su `mockOnApplyFilters`), verde al rerun sullo stesso SHA e verde in isolamento. Nessuna issue aperta: una sola occorrenza non basta a caratterizzarlo, e il dettaglio dell'asserzione è andato perso perché il rerun **sovrascrive il log del job** — salvalo su file prima di rilanciare. (#3711 chiusa.)
+**Intermittenti noti**: nessuno. `AdvancedFilterPanel > Reset Button` è rimasto qui senza una causa finché il dettaglio dell'asserzione mancava: alla prima occorrenza (shard 3/4 di [#4129](https://github.com/meepleAi-app/meepleai-monorepo/pull/4129)) il rerun aveva **sovrascritto il log del job**. Alla seconda (#4318) il log salvato prima di rilanciare ha dato lo scarto, e la causa era nel test ([#4324](https://github.com/meepleAi-app/meepleai-monorepo/issues/4324)): aspettava che «Resetta» fosse *nel documento* e lo premeva mentre era ancora `disabled`, quindi il clic cadeva nel vuoto. Due regole che restano: **salva il log su file prima di rilanciare**; e prima di un clic aspetta lo stato che ti serve (`toBeEnabled`), non la presenza (`toBeInTheDocument`). (#3711 chiusa.)
+
+⚠️ **Dal 2026-10-19 al 2026-11-19 i runner cambiano immagine un po' alla volta** ([#4465](https://github.com/meepleAi-app/meepleai-monorepo/issues/4465), [actions/runner-images#14748](https://github.com/actions/runner-images/issues/14748)): `ubuntu-latest` passa da Ubuntu 24.04 a 26.04, e in questa finestra lo stesso workflow può girare su un'immagine in un run e sull'altra nel successivo. Un job rosso che torna verde al rerun sullo stesso SHA può aver cambiato immagine: controllalo prima di classificarlo come flaky.
+
+```bash
+gh run view --job <job_id> --log | grep -A1 -m1 'Image: '   # Image: ubuntu-26.04 / Version: …
+```
+
+Non `grep -m2 -E 'Image: |Version: '`: la prima riga `Version:` del log è quella dell'agente di provisioning, non dell'immagine. La prova di #4465 (stesso `main-dev` sulle due immagini: `dev-fast`, `dev-async`, `security-scan`, `prometheus-rules-gate` ed E2E con Docker Compose e Chromium) non ha trovato differenze, né negli esiti né nei nomi dei test falliti. Un difetto che compare solo su 26.04 è quindi nuovo: aprilo come issue con il confronto delle due immagini. Per riportare un job su 24.04 mentre lo si corregge: `runs-on: ubuntu-24.04`, con un commento che nomina la issue. Dopo il 2026-11-19 questo paragrafo si toglie.
 
 🔴 **Un `ReferenceError: window is not defined` in fondo a uno shard NON è per forza flakiness dell'harness, e per mesi l'abbiamo trattato come tale.** Il sintomo è sempre lo stesso — job rosso, **zero test falliti**, `Errors 1 error`, un blocco `Unhandled Rejection` — ma le cause sono almeno tre, e la terza stava nel codice di produzione:
 
@@ -282,10 +297,11 @@ tests/                    # Api.Tests, k6, api-smoke, llm-eval, fixtures — see
 
 Lo stack nominava file, riga e componente. La regola «0 assertion rosse ⇒ non è una regressione del tuo diff» resta valida come **classificazione**, ma non autorizza a non leggerlo.
 
-⚠️ Due trappole che questo caso ha messo in chiaro, e che valgono per ogni fix di questa forma:
+⚠️ Le trappole che questo caso ha messo in chiaro, e che valgono per ogni fix di questa forma:
 
 - **Il sintomo di shard non è riproducibile in isolamento.** Serve che lo smantellamento di jsdom cada nella finestra fra lo smontaggio dell'albero e la risoluzione della promise. Ciò che si dimostra in locale è il **contratto** — un test rosso prima del fix — non il sintomo. E riprodurre in locale il comando esatto della CI (`pnpm exec vitest run --shard 3/4`) **non** riproduce lo shard della CI: produce un suo falso positivo, perché condivide il processo fra i file (osservato: un test diverso da quello rosso in CI, entrambi verdi in isolamento).
 - **Un doppio senza stato non esercita il difetto.** Il test di regressione di PR #2428 ricreava lo scenario corretto e non poteva vederlo: `onClose` era un `vi.fn()` nudo, quindi nessun update React partiva, e le asserzioni erano su `console.error` e `unhandledrejection` — nessuna delle due scatta mentre `window` esiste, perché React 19 non avvisa più su setState dopo unmount. Asserisci il **contratto osservabile sul doppio**, e in **entrambe** le direzioni: che il callback non parta dopo l'unmount, e che parta a componente montato. Senza la seconda, la guardia può rompere in silenzio gli host che contano su quel callback.
+- **Contare le letture di `window.event` non è contare i `setState`.** Dove il setter è stato locale e non c'è un doppio su cui asserire (il login, [#4300](https://github.com/meepleAi-app/meepleai-monorepo/pull/4300)), il rilevatore possibile è un getter su `window.event` installato dopo lo smontaggio. Ma React lo legge anche per conto suo — nel compito dello scheduler che svuota gli effetti passivi di un commit avvenuto a pagina ancora **montata** — e la prima stesura, che asseriva «zero letture», è uscita rossa su un diff che il login non lo toccava (shard 1/4 di [#4304](https://github.com/meepleAi-app/meepleai-monorepo/pull/4304)). Vanno contate solo le letture con il codice dell'app nello stack, e il rilevatore si tiene onesto con due test suoi, uno per direzione: la forma è `watchReadsOfWindowEvent` in `login/__tests__/_content.test.tsx`. Il criterio ha un limite misurato: non vede un setter passato direttamente a qualcosa che nessuna funzione dell'app attende (`void promise.then(setX)`, `setTimeout(setX)`), e lì darebbe un verde per niente. Il commit a ridosso dello smontaggio lo produceva il test stesso, con un `fireEvent.submit` in aggiunta all'invio automatico del campo: un evento sintetico in più del necessario apre un flusso asincrono che nessuna asserzione aspetta.
 
 La stessa forma — callback prop invocato entro poche righe dopo un `await`, senza guardia di mount — ricorre in parecchi altri componenti: censimento e criterio di intervento in [#4134](https://github.com/meepleAi-app/meepleai-monorepo/issues/4134). Non vanno cambiati preventivamente: si correggono su avvistamento.
 
@@ -298,6 +314,10 @@ Prima di rilassare la soglia — o di allargare l'attesa — di un test di timin
 In [#3711](https://github.com/meepleAi-app/meepleai-monorepo/issues/3711) la stessa domanda ha avuto risposta opposta, e vale come precedente: `SubscribeAsync` è un `IAsyncEnumerable` **lazy**, quindi `pool.TryAdd` non gira all'invocazione ma alla prima `MoveNextAsync` del consumer — un istante deciso dal thread pool, che il `Task.Delay(50)` del test provava a indovinare. Il servizio era corretto (la consegna è garantita solo dopo la registrazione; il resto lo copre Last-Event-ID + replay), quindi il fix è stato **sincronizzare** sullo stato osservabile (`GetConnectionCount`) invece di attendere. Regola pratica: davanti a un'attesa fissa in un test, cerca prima l'osservabile su cui sincronizzarti — allargare il delay è la sconfitta, non il fix.
 
 🔴 **Terzo precedente, e risponde alla domanda che gli altri due lasciano aperta: cosa fare quando il «perché» è già stabilito e il margine è già stato allargato una volta.** [#3601](https://github.com/meepleAi-app/meepleai-monorepo/issues/3601) (`T3-AC-2`, timeout per chunk dello streaming) era stata chiusa il 2026-08-07 portando il margine da 120 ms a 975 per chunk — 40× la deadline invece di 2,5× — e il commento nel test dichiarava onestamente il limite: «*does not make it impossible, the deadline is still real wall-clock*». È tornata rossa il 2026-10-04. **Il carico contro cui quel test gareggiava era la suite stessa**, cresciuta da 21.365 a 23.680 test nel frattempo: un margine assoluto compra tempo in proporzione inversa alla crescita della suite, quindi la ricomparsa non era sfortuna ma la scadenza della mitigazione, e ogni PR che aggiunge test unit l'avvicinava. Il fix è stato rendere la deadline **virtuale** (`TimeProvider` iniettato nell'handler, `CancellationTokenSource(delay, timeProvider)` + `CancelAfter`; contratto del framework fissato in `CancellationTokenSourceTimeProviderContractTests`, perché se cambiasse la deadline tornerebbe al wall-clock in silenzio). Da ~4 s di sonno reale a 234 ms per la classe. ⚠️ Un test con orologio finto può passare **per niente**: la prima stesura restava verde anche perturbando l'handler, perché non asseriva che il caso si verificasse — serve l'asserzione che il tempo virtuale accumulato ha davvero superato una deadline. Verifica sempre per perturbazione, non per «passa».
+
+🔴 **Quarto precedente: la soglia misura una prestazione vera, e l'orologio finto non si applica.** [#4274](https://github.com/meepleAi-app/meepleai-monorepo/issues/4274): `PiiDetectorTests.Scan_LargeTextPerformance` asseriva `ScanDuration < 50 ms` su **una** scansione, la prima del test. Soglia già allargata da 5 a 50 ms in `cdb49d4f5`, di nuovo rossa su #4269. Qui non c'è una deadline del prodotto da rendere virtuale: la cosa sotto test *è* il tempo reale. Il difetto stava nel **campione**: la prima scansione del processo costa 12–21 ms, a regime 0,13 (Release, macchina di sviluppo), quindi il test misurava soprattutto l'avvio a freddo, in gara col resto della suite. Il fix è lo **stimatore**, non la soglia: una chiamata di riscaldamento fuori dalla misura, poi il **minimo** di più campioni (`TestHelpers/BestDuration`, contratto in `BestDurationTests`). Il minimo è una proprietà del codice — nessuno stallo lo abbassa, e un codice diventato lento è lento su ogni campione: perturbando `Scan` con 60 ms fissi falliscono entrambi i test. La soglia è rimasta 50. ⚠️ Non spostare un test così in `Category=Performance` per toglierlo dal gate: nessun workflow la esegue (`grep -rn "Category=Performance" .github/workflows/` → 0), quindi sparirebbe in silenzio. ⚠️ Lo sforamento **non** si è riprodotto in locale saturando la CPU con processi esterni: la diagnosi poggia sulla distribuzione misurata, non su una riproduzione. E di quanto avesse sforato in CI non lo sa nessuno: il gate girava con il solo `--verbosity quiet`, che di un rosso lascia la riga `[FAIL]` — ora ha `--logger "console;verbosity=minimal"`.
+
+🔴 **Quinto precedente: un «intermittente» che colpisce sempre lo stesso test non è casuale — guarda la posizione.** [#4298](https://github.com/meepleAi-app/meepleai-monorepo/issues/4298): `Probe_Provider401_Returns200WithUnauthorized` riceveva `timeout` al posto di `unauthorized` nella maggior parte dei run dello shard Games, ed era dichiarato in baseline come intermittente (#3887 era stata chiusa per un'altra causa). Nei `.trx` era **sempre il primo della sua classe** a partire e l'unico rosso: i fratelli che fanno la stessa chiamata passavano tutti. La causa non stava nel test né nel prodotto: alla **prima richiesta del processo** WireMock.Net carica ogni assembly della cartella dei binari per cercare i suoi plugin (150 assembly dentro quella sola richiesta; un Kestrel nudo nello stesso processo risponde in 33 ms), e sul runner quel caricamento supera i 5 secondi dopo i quali la sonda rinuncia. Il fix non allarga nulla: `TestHelpers/WarmWireMockServer` fa avvenire quello scambio **prima** che parta l'orologio del codice sotto esame, `WireMockWarmStartArchitectureTests` vieta l'avvio diretto, e la durata si rilegge nel log dello shard (`grep wiremock-first-exchange`). ⚠️ Prima di chiamare intermittente un rosso, ordina per `startTime` i risultati della sua classe nel `.trx`: se è sempre il primo, sta pagando un costo di processo che nessuna soglia del test descrive. ⚠️ In locale quel costo è variato da 1,3 s a oltre 15 s fra un run e l'altro senza cambiare codice: un run in cui il test passa non lo scagiona, e infatti in CI passava in una minoranza dei run.
 
 **Policy**: PRs MUST NOT grow the unit-test fail count above baseline (zero). Future regressions: fix the root cause OR skip with `[Fact(Skip = "#<issue>")]` / `[Theory(Skip = "#<issue>")]` and add a row here in the same PR.
 
@@ -333,7 +353,7 @@ Spec: [`2026-10-02-test-dependency-tiers-and-observable-skips.md`](./docs/for-de
 
 **🔴 Nav rule (#1977 + #2158)**: `AppTopBar` is the **single source-of-truth for primary desktop navigation** (5-id `TOP_BAR_NAV_IDS` in `apps/web/src/config/navigation.ts` + Altro overflow). The persistent desktop `MainSidebar` was rolled back/deleted — `MainSidebar` now mounts ONLY inside the mobile hamburger `SideDrawer` (`<lg`). Do NOT re-introduce a persistent desktop sidebar.
 
-**Live-session scoring** (epic #2354): polymorphic ScoreType (Points/BinaryWin/Objectives/Ranking) is the current pattern; write scores via `useUpdateSessionScores`, never the store directly (ESLint `local/no-store-scores-direct` = **error**). Shipped-implementation diaries (Asse A–D, Session-live G1/G5a): [claude-md-history.md](./docs/for-claude/claude-md-history.md#gamenight--session-asse-ad--shipped-implementation-diaries).
+**Live-session scoring** (#4156, [ADR-089](./docs/for-claude/architecture/adr/adr-089-session-scoring-ssot.md)): the live page scores on `LiveGameSession.RoundScores` — `ScoreTabContent` is an editor player × dimension × round, with the dimensions of the session's `ScoringConfig` and the round derived from the turn index (`(CurrentTurnIndex − 1) / n + 1`), which the host can change. Writes go through `useRecordRoundScore` (`POST /api/v1/live-sessions/{id}/scores`, `PUT` for a correction), one at a time; totals are the backend's `totalScore`. The polymorphic ScoreType (Points/BinaryWin/Objectives/Ranking) is **retired from the live path** and stays with historical play-records — do not re-wire it there. Never write the store directly (ESLint `local/no-store-scores-direct` = **error**). Shipped-implementation diaries (Asse A–D, Session-live G1/G5a): [claude-md-history.md](./docs/for-claude/claude-md-history.md#gamenight--session-asse-ad--shipped-implementation-diaries).
 
 **🔴 SSOT sessione + scoring** ([ADR-089](./docs/for-claude/architecture/adr/adr-089-session-scoring-ssot.md), #3395): tre aggregati (`GameSession` = lifecycle/quota/history · `LiveGameSession` = runtime in-play + **scoring in-play SSOT** round-based · `SessionTracking.Session` = companion chat/note/media). I link `TrackingSessionId`/`CorrelatedGameSessionId` (Saga, ADR-083) portano **solo id** per lifecycle/quota/companion — **NON** sincronizzano lo scoring: `RoundScores` ↔ `ScoreData`/`ScoreEntry` non si parlano e non vanno ponticellati. Scegli l'SSOT per contesto, non riconciliare i modelli.
 
@@ -344,13 +364,13 @@ Spec: [`2026-10-02-test-dependency-tiers-and-observable-skips.md`](./docs/for-de
 | #2567 | Endpoint flow: DTOs → Queries → Commands → Validators → Handlers → Routing |
 | #2568 | Exceptions: `ConflictException` (409), `NotFoundException` (404) — never `InvalidOperationException` (500) |
 | #2565 | DI: register both `IService` interface and implementation |
-| #2593 | Kill testhost before running tests; use culture-independent `$"{val*100:0}%"` |
+| #2593 | Before running tests, kill only **your own** stale testhost: `tools/cleanup/cleanup-test-processes.ps1 -TestHostOnly` is scoped to this checkout (#4310). Never `taskkill //IM testhost.exe` or `Get-Process testhost \| Stop-Process`: other checkouts on this machine have test runs in progress. Use culture-independent `$"{val*100:0}%"` |
 | #2600 | OAuth: defensive validation + InMemory transaction + manual rollback |
 | #2620 | FK constraints: seed dependent entities first; HybridCache needs `IHybridCacheService` for event handlers |
 | [ADR-062](./docs/for-claude/architecture/adr/adr-062-config-environment-field-semantics.md) | Config `Environment` field: default to `"All"` for global keys; per-env per-row only when value diverges by design |
 | [ADR-060](./docs/for-claude/architecture/adr/adr-060-live-session-persistence.md) | LiveSession is EF-backed. Command handlers calling `_sessionRepository.AddAsync`/`UpdateAsync` MUST also `await _unitOfWork.SaveChangesAsync(ct)`. Domain events dispatch post-SaveChanges. Optimistic concurrency via Postgres `xmin` (#2097 → #2305); same on `game_night_playlists`, `mechanic_drafts` (#2306) |
 | [ADR-078](./docs/for-claude/architecture/adr/adr-078-auto-issue-noise-thresholds.md) | Every `.github/workflows/*-monitor.yml` (cron calling GH Issues Search API) MUST declare `concurrency: group: monitor-<type>-${{ github.ref }}` to stay under the 1k req/h rate limit (advisory) |
-| [ADR-090](./docs/for-claude/architecture/adr/adr-090-in-session-grounded-answer-ownership.md) | In-session grounded answer: `KnowledgeBase` OWNS it; `SessionTracking` consumes via `IMediator` (never inject KB services), public DTO boundary. The #3390 grounded pipeline is duplicated across `AskGroundedSessionQueryHandler` + `ChatWithSessionAgentCommandHandler` — a correctness/copyright fix must touch both until consolidated on a shared KB service (where Slice 4 enhancements wire) |
+| [ADR-090](./docs/for-claude/architecture/adr/adr-090-in-session-grounded-answer-ownership.md) | In-session grounded answer: `KnowledgeBase` OWNS it; `SessionTracking` consumes via `IMediator` (never inject KB services), public DTO boundary. The copyright finalize is shared in `IGroundedAnswerService.FinalizeAsync`, used by `AskGroundedSessionQueryHandler` and the in-game assistant turn; the legacy `ChatWithSessionAgentCommandHandler`, which duplicated the #3390 pipeline, was retired by #4448 (A7) |
 | #3737 | 🔴 **`FuseGlobally`: un segnale assente che vale `0` è LOAD-BEARING** — rende la fusione *congiuntiva* (serve evidenza da entrambi i bracci) e tiene giù i match lessicali generici, cioè il difetto di #3735. Non rimuoverlo. I pesi `0.7/0.3` sono tarati contro una query codificata `passage:`: se si corregge il prefisso e5, la taratura **non regge più** e le due cose vanno misurate insieme. Non tarare a mente — 3 ipotesi ragionate con test unit verdi, 3 bocciature del gate (10/11 → 8/11 → 5/11) a ~45 min l'una. Usa l'artifact `rag-fusion-tuning-<run_id>` del gate |
 | #3740 | 🔴 **Una colonna assente dalla proiezione non si manifesta come `null` se l'entità ha un default non-null.** Le tre SELECT di lettura di `PgVectorStoreAdapter` omettevano `lang` mentre `Embedding.Language` porta l'inizializzatore `= "en"`: ogni candidato arrivava `"en"` qualunque fosse la lingua vera del chunk. Da lì l'inferenza sbagliata che il corpus del gate fosse monolingua (è **9840 en / 943 it / 107 de**), e il no-op byte-identico della correzione per lingua #3743. **Corretto**: le tre SELECT proiettano `lang`, e la lingua per candidato arriva fino al campo `l` del dump `[RAG-TUNE]`. Nessun consumatore la leggeva ancora sul percorso di ricerca, quindi il fix è abilitante, non un cambio di comportamento. Corpora comunque distinti per granularità: gate 10.890 chunk (Docnet) vs staging 56.367 (heading-aware). Storia: [audit](./docs/for-developers/audits/2026-08-17-e5-prefix-and-cross-lingual-retrieval-audit.md) |
 | #4032 | 🔴 **`backend-e2e-tests.yml` non gira sulle PR verso `main-dev`**: il trigger è `pull_request` verso `main`/`main-staging`. Una PR che modifica le suite E2E può essere mergiata con tutti i check verdi **senza che un solo test E2E sia girato**. Per osservarle: `gh workflow run backend-e2e-tests.yml --ref <branch>` (~16 min) — **e un run di CONTROLLO su `main-dev` intatto**, perché il gate porta fallimenti preesistenti invisibili da oltre un mese (ultimo verde: una PR di release del 2026-08-26) e senza il controllo la tua PR sembra la causa di tutto. Confronta i **tre** conteggi, non solo `Failed`: un `Passed` che scende sono test che non girano più — è così che si è visto che tre test passati erano diventati salti in #4023. Gli insiemi di **nomi** falliti (`comm -13`/`comm -23`) sono una prova più forte dei conteggi |

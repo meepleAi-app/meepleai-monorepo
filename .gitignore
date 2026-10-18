@@ -53,6 +53,8 @@ infra/traefik/certs/*.*
 # Exclude actual secret files but keep templates
 infra/secrets/*.secret
 !infra/secrets/*.secret.example
+# #4427: copia in chiaro che `secrets-sops.sh decrypt --force` lascia prima di sovrascrivere
+infra/secrets/*.secret.bak
 
 # Production secrets (separate management)
 infra/secrets/prod/*.secret
@@ -247,6 +249,8 @@ tools/bgg-fetcher/logs/
 tests/llm-eval/ocr-validation/results.json
 tests/llm-eval/ocr-validation/manuals/*
 !tests/llm-eval/ocr-validation/manuals/.gitkeep
+# Spike dell'assistente in partita: risultati grezzi (l'esito va nella spec)
+tests/llm-eval/session-assistant/results/
 
 # Golden set contractor CSV uploads (before JSONL conversion)
 tests/llm-eval/golden-set/*.csv

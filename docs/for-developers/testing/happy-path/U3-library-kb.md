@@ -12,12 +12,12 @@
   - PDF regola reale per l'upload: `azul-regole-ita.pdf` (source `azul_rulebook.pdf` in `infra/scripts/seed-sp4/data/rulebook/`).
 - **Utenti**:
   - `marco@meepleai.test` (premium, verificato) — persona utente-standard (ruolo `User`).
-  - **admin** (da `infra/secrets/admin.secret`) — richiesto per gli scenari `/upload` (route riservata a ruoli `Admin`/`Editor`, vedi nota ⚠️ sotto).
+  - **admin** (da `infra/secrets/admin.secret`) — non più richiesto per l'upload: dopo #4257 gli scenari di upload (U3-05, U3-24) li esegue `marco` dal KB hub del gioco.
 - **Marcatore dati Flow**: ogni entità creata usa `HP-TEST-2026-07-10` nel nome/titolo.
 
 > ⚠️ **Nota di scoping route** (allineata a `_coverage-map.md`): `library/[gameId]/agent` è in **U4** (chat RAG); `library/[gameId]/{toolbox,toolkit,play/**}` sono in **U7** (toolkit/gamebook play). Questo catalogo copre le 18 route U3 elencate nella matrice sotto.
 
-> ⚠️ **Nota ambientale — `/upload` è Admin/Editor-only**: `upload/page.tsx` avvolge `UploadClient` in `RequireRole allowedRoles={['Admin', 'Editor']}`. `marco` è ruolo `User` → **non** può usare `/upload`. L'upload "utente-standard" avviene invece via **private game** (`/library/private/add` step PDF, che usa il campo `privateGameId`). Lo scenario di upload-catalogo (U3-05) usa quindi l'account **admin**.
+> ⚠️ **Nota ambientale — `/upload` è dismessa (#4257)**: era il wizard RuleSpec di Admin ed Editor; ora la rotta reindirizza ad `/admin/knowledge-base/upload` (solo Admin). L'upload "utente-standard" di un PDF per un gioco del catalogo avviene dal **KB hub del gioco** (`/library/[gameId]/kb` → «+ Carica PDF» → modale «Carica PDF Personalizzato»), lo stesso modale che aprono le card della libreria. Per un gioco privato resta `/library/private/add` (step PDF, campo `privateGameId`).
 
 > ⚠️ **Nota ambientale — indicizzazione PDF lenta**: `POST /ingest/pdf` avvia una pipeline asincrona (estrazione → chunking → embedding → indexing) che richiede **minuti** su un PDF reale. L'osservabile di successo è il documento che raggiunge lo stato **`Ready`/indexed** (badge o polling), non l'istante di upload. Gli scenari che lo richiedono dichiarano un'attesa esplicita; se la pipeline eccede il tempo ragionevole di esecuzione, marcare `⚠️ blocked-env` (non fail) e usare i PDF già indicizzati dal seed per gli scenari a valle.
 
@@ -36,7 +36,7 @@
 | `(authenticated)/library/[gameId]` | Smoke | **U3-10** | `GameDetailDesktop` 5 tab / `LibroGameDetailView` |
 | `(authenticated)/library/[gameId]/kb` | Smoke | **U3-11**, **U3-24** (delete PDF via ActionsMenu→DeleteDialog) | `KbHubContent` — KB status + lista PDF + delete PDF (owner-scoped) |
 | `(authenticated)/private-games/[id]` | Smoke | **U3-12** | `PrivateGameDetailClient` — header + sezione PDF |
-| `(authenticated)/upload` | Flow | **U3-05**, **U3-24** (upload leg del ciclo KB CRUD) | PDF Import Wizard (Admin/Editor); upload → indexing (nessun delete PDF qui) |
+| `(authenticated)/upload` | — | — (dismessa con #4257: redirect ad `/admin/knowledge-base/upload`) | L'upload di U3-05 e U3-24 passa dal KB hub `(authenticated)/library/[gameId]/kb` |
 | `(authenticated)/knowledge-base` | Smoke | **U3-13** | Redirect → `/library` |
 | `(authenticated)/knowledge-base/global` | Flow | **U3-14** | `KbGlobaleView` — ricerca KB globale |
 | `(authenticated)/knowledge-base/[id]` | Smoke | **U3-15** | KB detail split-view (chunks + preview) |
@@ -120,21 +120,21 @@ Scenario U3-04 [Flow]: Aggiungo un gioco alla wishlist dalla dialog
   Utente: marco
 ```
 
-### U3-05 — Upload PDF regole e indicizzazione (flow, admin)
+### U3-05 — Upload PDF regole e indicizzazione (flow)
 
 ```gherkin
-Scenario U3-05 [Flow]: Carico un rulebook PDF e lo vedo raggiungere lo stato indicizzato
-  Given sono loggato come admin (la route /upload richiede ruolo Admin/Editor)
+Scenario U3-05 [Flow]: Carico un rulebook PDF dal KB hub del gioco e lo vedo raggiungere lo stato indicizzato
+  Given sono loggato come marco e "Azul" è nella mia libreria
     And ho a disposizione il file reale azul-regole-ita.pdf (seed rulebook)
-  When apro /upload
-    And vedo l'heading "PDF Import Wizard" con lo step indicator (1.Upload → 2.Parse → 3.Review → 4.Publish)
-    And nello step 1 seleziono un gioco esistente nel GamePicker (es. "Azul") e clicco "Confirm Game Selection"
-    And nel PdfUploadForm carico azul-regole-ita.pdf
-  Then l'upload parte (barra/percentuale di caricamento) e al termine il documento compare nella PdfTable
-    And attendo che l'indicizzazione asincrona progredisca fino allo stato terminale "Ready"
-  Osservabile ✅: heading "PDF Import Wizard" + wizard step + riga PDF nella PdfTable + il documento raggiunge stato Ready (POST /api/v1/ingest/pdf → polling processingState=Ready). Se l'indicizzazione supera il tempo ragionevole → ⚠️ blocked-env
-  Route: (authenticated)/upload
-  Utente: admin
+  When apro /library/{azulId}/kb
+    And clicco «+ Carica PDF» (oppure «Carica primo documento» se il gioco non ha ancora PDF)
+    And nel modale «Carica PDF Personalizzato» scelgo azul-regole-ita.pdf, clicco «Anteprima» e poi «Conferma Upload»
+  Then l'upload parte (barra di caricamento) e al termine compare il toast di successo e il modale si chiude
+    And il documento compare nell'elenco del KB hub senza ricaricare la pagina, con stato «Indexing»
+    And attendo che l'indicizzazione asincrona progredisca fino allo stato terminale «Ready»
+  Osservabile ✅: modale «Carica PDF Personalizzato» + riga del PDF nell'elenco del KB hub + il documento raggiunge stato Ready (POST /api/v1/ingest/pdf → 200 con documentId). Se l'indicizzazione supera il tempo ragionevole → ⚠️ blocked-env. Un PDF identico già caricato viene rifiutato (409): usare un file non ancora indicizzato
+  Route: (authenticated)/library/[gameId]/kb
+  Utente: marco
 ```
 
 ### U3-06 — Private games list (smoke)
@@ -376,7 +376,7 @@ Scenario U3-20 [Smoke]: La pagina di caricamento manuale gamebook carica (FSM st
 > | **Private game** | ✅ wizard | ✅ dialog | ✅ dialog | `PrivateGamesClient.tsx`: card action ✏️ Edit (`PUT /private-games/{id}`), 🗑️ Delete → `AlertDialog` conferma (`DELETE /private-games/{id}`, soft-delete). CRUD completo su `/library/private`. |
 > | **Library entry** | ✅ drawer | ⚠️ **assente in UI raggiungibile** | ✅ bulk-select | Remove via selezione multipla su tab "games" del `LibraryHub` → `BulkSelectionBar` "Archivia" → conferma (`DELETE /library/games/{id}`). Edit (note/preferito/stato → `PATCH /library/games/{id}`) **esiste nei componenti** (`EditNotesModal`, `FavoriteToggle`, `GameActionsModal`) ma la loro unica superficie di montaggio (`GameTableZoneTools`) è **orfana** dopo la migrazione S4 → `GameDetailDesktop` (5 tab): non raggiungibile da una route U3 primaria. Non inventato: annotato assente. |
 > | **Wishlist** | ✅ dialog | ❌ **assente in UI** | ✅ card action | `MeepleWishlistCard`: 🗑️ Remove (`DELETE /wishlist/{id}`). Edit: la card espone la prop `onUpdate` (✏️) ma `wishlist/page.tsx` **non la passa** → nessun dialog di modifica cablato. Endpoint `PUT /wishlist/{id}` esiste ma non ha superficie UI. Non inventato: annotato assente. |
-> | **KB/PDF doc** | ✅ upload | ❌ **assente in UI** | ✅ solo KB hub gioco | Delete PDF **solo** sul KB hub del gioco `/library/[gameId]/kb` → riga "Open" → `ActionsMenu` → "Delete" → `DeleteDialog` conferma (`DELETE /api/v1/pdf/{id}`, endpoint **owner-scoped**). **Assente** su: wizard `/upload` (`PdfTable` ha solo Log/Retry), dettaglio `/knowledge-base/[id]` (`KbHeader` è stub → `null`), sezione PDF di `/private-games/[id]` (solo upload). Rename/metadata-edit di un KB doc: nessuna UI. |
+> | **KB/PDF doc** | ✅ upload | ❌ **assente in UI** | ✅ solo KB hub gioco | Delete PDF **solo** sul KB hub del gioco `/library/[gameId]/kb` → riga "Open" → `ActionsMenu` → "Delete" → `DeleteDialog` conferma (`DELETE /api/v1/pdf/{id}`, endpoint **owner-scoped**). **Assente** su: dettaglio `/knowledge-base/[id]` (`KbHeader` è stub → `null`), sezione PDF di `/private-games/[id]` (solo upload). Rename/metadata-edit di un KB doc: nessuna UI. |
 
 ### U3-21 — Ciclo CRUD gioco privato: crea → edita → elimina (flow)
 
@@ -437,22 +437,22 @@ Scenario U3-23 [Flow]: Aggiungo un gioco alla wishlist e poi lo rimuovo, con ver
   Dati creati: entry wishlist (rimossa a fine ciclo — additiva)
 ```
 
-### U3-24 — Ciclo KB/PDF doc: upload → indicizzazione → elimina (flow, admin)
+### U3-24 — Ciclo KB/PDF doc: upload → indicizzazione → elimina (flow)
 
 ```gherkin
 Scenario U3-24 [Flow]: Carico un rulebook PDF marcato e poi lo elimino dal KB hub del gioco, con verifica di persistenza
-  Given sono loggato come admin (la route /upload richiede ruolo Admin/Editor)
+  Given sono loggato come marco e "Azul" è nella mia libreria
     And ho a disposizione il file reale azul-regole-ita.pdf (seed rulebook) da caricare come documento HP-TEST aggiuntivo
-  When apro /upload, nello step 1 seleziono il gioco "Azul" e confermo, poi nel PdfUploadForm carico azul-regole-ita.pdf
-  Then l'upload parte e il documento compare nella PdfTable (POST /api/v1/ingest/pdf)
-    And attendo che l'indicizzazione asincrona raggiunga lo stato terminale "Ready" (se eccede il tempo ragionevole → ⚠️ blocked-env)
-    And dopo reload, aprendo /library/{azulId}/kb, il PDF appena caricato è elencato tra i documenti del gioco (persistito)
-  When sul KB hub /library/{azulId}/kb, sulla riga del PDF HP-TEST clicco "Open" → nell'ActionsMenu scelgo "Delete" → nel DeleteDialog confermo il pulsante distruttivo
+  When apro /library/{azulId}/kb, clicco «+ Carica PDF» e nel modale «Carica PDF Personalizzato» carico azul-regole-ita.pdf («Anteprima» → «Conferma Upload»)
+  Then l'upload parte e il documento compare nell'elenco del KB hub (POST /api/v1/ingest/pdf)
+    And attendo che l'indicizzazione asincrona raggiunga lo stato terminale «Ready» (se eccede il tempo ragionevole → ⚠️ blocked-env)
+    And dopo reload di /library/{azulId}/kb il PDF appena caricato è ancora elencato tra i documenti del gioco (persistito)
+  When sulla riga del PDF HP-TEST clicco "Open" → nell'ActionsMenu scelgo "Delete" → nel DeleteDialog confermo il pulsante distruttivo
   Then il PDF sparisce dalla lista documenti del KB hub (DELETE /api/v1/pdf/{pdfId})
     And dopo reload di /library/{azulId}/kb il PDF eliminato resta assente
-  Osservabile ✅: PDF presente in PdfTable/KB hub post-upload+reload (stato Ready) · assente dal KB hub post-delete+reload · nessun errore. (Note: l'upload catalogo è Admin/Editor-only → persona admin; il delete PDF è un endpoint owner-scoped disponibile solo sul KB hub del gioco. Si elimina il documento HP-TEST appena caricato, mai un PDF seed preesistente)
-  Route: (authenticated)/upload → (authenticated)/library/[gameId]/kb
-  Utente: admin
+  Osservabile ✅: PDF presente nel KB hub post-upload+reload (stato Ready) · assente dal KB hub post-delete+reload · nessun errore. (Note: upload e delete sono entrambi sul KB hub del gioco; il delete è un endpoint owner-scoped. Si elimina il documento HP-TEST appena caricato, mai un PDF seed preesistente)
+  Route: (authenticated)/library/[gameId]/kb
+  Utente: marco
   Dati creati: documento KB HP-TEST su "Azul" (eliminato a fine ciclo)
 ```
 
@@ -488,7 +488,7 @@ Scenario U3-25 [Flow]: Un gioco privato creato tramite il wizard 3-step è elimi
   - `knowledge-base` è redirect a `/library` → **Smoke (redirect)** (U3-13). `kb/[id]` redirect (U3-17).
 - **Dati marcati**: entità create dai Flow usano `HP-TEST-2026-07-10` (U3-07 gioco privato; wishlist/library additivi in U3-02/U3-04; toolkit HP-TEST opzionale in U3-09; cicli CRUD U3-21…U3-25 tutti su dati HP-TEST creati dallo scenario). ✅
 - **Delete solo su dati HP-TEST**: ogni `Delete` (U3-21/U3-22/U3-23/U3-24/U3-25) opera esclusivamente sull'entità creata dallo scenario stesso, mai su dati seed condivisi (in U3-24 si elimina il PDF HP-TEST appena caricato, non un rulebook seed). ✅
-- **Vincoli ambientali dichiarati**: `/upload` Admin/Editor-only (U3-05/U3-24 usano admin); indicizzazione PDF lenta → `blocked-env` se eccede (U3-05/U3-24); share link pubblico come precondizione (U3-18). ✅
+- **Vincoli ambientali dichiarati**: `/upload` dismessa con #4257 (U3-05/U3-24 usano `marco` sul KB hub del gioco); indicizzazione PDF lenta → `blocked-env` se eccede (U3-05/U3-24); share link pubblico come precondizione (U3-18). ✅
 - **Endpoint tracciati** (da `apps/web/src/lib/api/**`): add-library `POST /api/v1/library/games/{id}`, **remove-library** `DELETE /api/v1/library/games/{id}`; wishlist `POST /api/v1/wishlist`, **remove-wishlist** `DELETE /api/v1/wishlist/{id}`; upload `POST /api/v1/ingest/pdf`, **delete-pdf** `DELETE /api/v1/pdf/{id}` (owner, solo KB hub); private games `POST/GET /api/v1/private-games`, **edit** `PUT /api/v1/private-games/{id}`, **delete** `DELETE /api/v1/private-games/{id}` (soft); library-entry edit `PATCH /api/v1/library/games/{id}` (esiste, superficie UI orfana); KB globale `POST /api/v1/knowledge-base/search/global`; KB detail `GET /api/v1/kb-docs/{id}(+/chunks)`; shared library `GET /api/v1/library/shared/{token}`; game KB `GET /api/v1/games/{id}/knowledge-base` + `/api/v1/library/games/{id}/pdfs`. ✅
 
 **Totale U3: 25 scenari** — Flow: 11 (U3-02, U3-04, U3-05, U3-07, U3-09, U3-14, U3-21, U3-22, U3-23, U3-24, U3-25) · Smoke: 14 (U3-01, U3-03, U3-06, U3-08, U3-10, U3-11, U3-12, U3-13, U3-15, U3-16, U3-17, U3-18, U3-19, U3-20; i due hub con doppia natura U3-01/U3-03 restano smoke). Cicli CRUD con verifica di persistenza (reload): 5 (U3-21…U3-25), che coprono **Delete per 4 entità gestibili** (private game, library entry, wishlist, KB/PDF doc).

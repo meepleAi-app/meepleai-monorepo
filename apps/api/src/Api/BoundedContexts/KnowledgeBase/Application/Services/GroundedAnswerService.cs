@@ -20,11 +20,12 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services;
 ///   - grounding derived from the citation count (#3388 invariant);
 ///   - confidence.
 ///
-/// Before this service the block was duplicated across <c>ChatWithSessionAgentCommandHandler</c> (SSE text)
-/// and <c>AskGroundedSessionQueryHandler</c> (one-shot image) — the Slice-2 review found a copyright
-/// fail-open/fail-closed defect that had to be fixed in one copy only. Consolidating removes that drift
-/// (ADR-090). The two handlers keep their own GENERATION shape (stream vs one-shot) and orchestration
-/// (thread/broadcast/persistence); they call <see cref="FinalizeAsync"/> for the shared computation.
+/// Before this service the block was duplicated across the legacy session-agent chat (SSE text) and
+/// <c>AskGroundedSessionQueryHandler</c> (one-shot image) — the Slice-2 review found a copyright
+/// fail-open/fail-closed defect that had to be fixed in one copy only. Consolidating removed that drift
+/// (ADR-090). The legacy chat was retired by #4448 (A7); the callers today are
+/// <c>AskGroundedSessionQueryHandler</c> and the in-game assistant's turn (<c>AssistantTurnRunner</c>),
+/// each with its own generation shape and orchestration.
 /// </summary>
 internal sealed class GroundedAnswerService : IGroundedAnswerService
 {

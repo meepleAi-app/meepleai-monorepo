@@ -78,16 +78,19 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
      * @param gameId Game ID to associate the PDF with
      * @param file PDF file to upload
      * @param onProgress Optional progress callback (0-100) via XMLHttpRequest
+     * @param options.priority Processing priority (#4443): admin and editor only, a user gets 403.
+     *   An admin upload is queued by the backend with it — do not enqueue it again.
      * @returns Upload result with documentId and fileName
      */
     async uploadPdf(
       gameId: string,
       file: File,
       onProgress?: (percent: number) => void,
-      options?: { isPrivateGame?: boolean }
+      options?: { isPrivateGame?: boolean; priority?: 'normal' | 'urgent' }
     ): Promise<{ documentId: string; fileName: string }> {
       const baseUrl = getApiBase();
-      const url = `${baseUrl}/api/v1/ingest/pdf`;
+      const query = options?.priority ? `?priority=${options.priority}` : '';
+      const url = `${baseUrl}/api/v1/ingest/pdf${query}`;
 
       return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -206,15 +209,17 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
      * Complete a chunked upload session, assembling all chunks.
      * POST /api/v1/ingest/pdf/chunked/complete
      * @param sessionId Chunked upload session ID
+     * @param priority Processing priority of the job the backend creates (#4443)
      */
     async completeChunkedUpload(
-      sessionId: string
+      sessionId: string,
+      priority?: 'normal' | 'urgent'
     ): Promise<{ success: boolean; documentId: string; fileName: string }> {
       const result = await httpClient.post<{
         success: boolean;
         documentId: string;
         fileName: string;
-      }>('/api/v1/ingest/pdf/chunked/complete', { sessionId });
+      }>('/api/v1/ingest/pdf/chunked/complete', priority ? { sessionId, priority } : { sessionId });
       return result ?? { success: false, documentId: '', fileName: '' };
     },
 

@@ -86,7 +86,6 @@ import { RetrievedChunkCard } from '@/components/admin/sandbox/RetrievedChunkCar
 import { SandboxChat } from '@/components/admin/sandbox/SandboxChat';
 import { ServiceHealthMatrix } from '@/components/admin/ServiceHealthMatrix';
 import { AdminSharedGameCardContainer } from '@/components/admin/shared-games/AdminSharedGameCardContainer';
-import { AgentBuilderModal } from '@/components/admin/shared-games/AgentBuilderModal';
 import { BggSearchPanel } from '@/components/admin/shared-games/BggSearchPanel';
 import { GameCatalogGrid } from '@/components/admin/shared-games/game-catalog-grid';
 import { GameForm } from '@/components/admin/shared-games/GameForm';
@@ -94,7 +93,6 @@ import { GameStatusBadge } from '@/components/admin/shared-games/GameStatusBadge
 import { PdfDocumentList } from '@/components/admin/shared-games/PdfDocumentList';
 import { PdfIndexingStatus } from '@/components/admin/shared-games/PdfIndexingStatus';
 import { PdfUploadSection } from '@/components/admin/shared-games/PdfUploadSection';
-import { AgentSetupPanel } from '@/components/admin/shared-games/rag-setup/AgentSetupPanel';
 import { InlineChatPanel } from '@/components/admin/shared-games/rag-setup/InlineChatPanel';
 import { RagReadinessIndicator } from '@/components/admin/shared-games/rag-setup/RagReadinessIndicator';
 import { StatCard as AdminStatCard } from '@/components/admin/StatCard';
@@ -450,7 +448,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
 
   // Admin — Shared Games
   'admin-shared-game-card-container': AdminSharedGameCardContainer,
-  'agent-builder-modal': AgentBuilderModal,
   'bgg-search-panel': BggSearchPanel,
   'game-catalog-grid': GameCatalogGrid,
   'game-form': GameForm,
@@ -460,7 +457,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
   'pdf-upload-section': PdfUploadSection,
   'rag-readiness-indicator': RagReadinessIndicator,
   'inline-chat-panel': InlineChatPanel,
-  'agent-setup-panel': AgentSetupPanel,
 
   // Admin — Users
   'permissions-matrix': PermissionsMatrix,

@@ -5,15 +5,11 @@
  * Tests: All 22 client methods with success/error scenarios
  */
 
-import {
-  createGamesClient,
-  type CreateGameRequest,
-  type GameFilters,
-  type GameSortOptions,
-} from '../gamesClient';
+import { createGamesClient, type CreateGameRequest } from '../gamesClient';
 import type { HttpClient } from '../../core/httpClient';
 import type {
   Game,
+  PaginatedGamesResponse,
   AgentDto,
   RuleSpec,
   GameSessionDto,
@@ -39,257 +35,90 @@ describe('gamesClient - Comprehensive (Issue #2309)', () => {
   });
 
   // ========== getAll Tests ==========
+  // Issue #4158: search, page e pageSize vanno al server. Il client non filtra, non ordina e non
+  // pagina più una pagina già ricevuta: così vedeva solo i primi 20 giochi del catalogo.
   describe('getAll', () => {
-    const mockGames: Game[] = [
-      {
-        id: 'game-1',
-        title: 'Chess',
-        publisher: 'Classic Games',
-        yearPublished: 1475,
-        minPlayers: 2,
-        maxPlayers: 2,
-        minPlayTimeMinutes: 30,
-        maxPlayTimeMinutes: 60,
-        bggId: 171,
-        iconUrl: null,
-        imageUrl: null,
-        createdAt: '2024-01-01',
-      },
-      {
-        id: 'game-2',
-        title: 'Catan',
-        publisher: 'Kosmos',
-        yearPublished: 1995,
-        minPlayers: 3,
-        maxPlayers: 4,
-        minPlayTimeMinutes: 60,
-        maxPlayTimeMinutes: 120,
-        bggId: 13,
-        iconUrl: null,
-        imageUrl: null,
-        createdAt: '2024-01-02',
-      },
-      {
-        id: 'game-3',
-        title: 'Monopoly',
-        publisher: 'Hasbro',
-        yearPublished: 1935,
-        minPlayers: 2,
-        maxPlayers: 6,
-        minPlayTimeMinutes: 60,
-        maxPlayTimeMinutes: 180,
-        bggId: 1406,
-        iconUrl: null,
-        imageUrl: null,
-        createdAt: '2024-01-03',
-      },
-    ];
+    const serverPage: PaginatedGamesResponse = {
+      games: [
+        {
+          id: 'game-1',
+          title: 'Dominion',
+          publisher: 'Rio Grande',
+          yearPublished: 2008,
+          minPlayers: 2,
+          maxPlayers: 4,
+          minPlayTimeMinutes: 30,
+          maxPlayTimeMinutes: 30,
+          bggId: 36218,
+          iconUrl: null,
+          imageUrl: null,
+          createdAt: '2024-01-01',
+        },
+      ],
+      total: 165,
+      page: 2,
+      pageSize: 24,
+      totalPages: 7,
+    };
 
-    // Helper to create mock paginated response
-    const createMockPaginatedResponse = (games: Game[]) => ({
-      games,
-      total: games.length,
-      page: 1,
-      pageSize: 20,
-      totalPages: Math.ceil(games.length / 20),
+    it('sends search, page and pageSize to the server', async () => {
+      mockHttpClient.get.mockResolvedValueOnce(serverPage);
+
+      await gamesClient.getAll({ search: 'Dominion' }, 2, 24);
+
+      expect(mockHttpClient.get).toHaveBeenCalledWith(
+        '/api/v1/games?search=Dominion&page=2&pageSize=24',
+        expect.anything()
+      );
     });
 
-    it('should fetch all games without filters', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
+    it('sends the default page and pageSize when none are given', async () => {
+      mockHttpClient.get.mockResolvedValueOnce(serverPage);
 
-      const result = await gamesClient.getAll();
+      await gamesClient.getAll();
 
-      expect(mockHttpClient.get).toHaveBeenCalledWith('/api/v1/games', expect.anything());
-      expect(result.games).toHaveLength(3);
-      expect(result.total).toBe(3);
-      expect(result.page).toBe(1);
-      expect(result.pageSize).toBe(20);
-      expect(result.totalPages).toBe(1);
+      expect(mockHttpClient.get).toHaveBeenCalledWith(
+        '/api/v1/games?page=1&pageSize=20',
+        expect.anything()
+      );
     });
 
-    it('should filter by search term (title)', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
+    it('omits a blank search and encodes a multi-word one', async () => {
+      mockHttpClient.get.mockResolvedValue(serverPage);
 
-      const result = await gamesClient.getAll({ search: 'chess' });
+      await gamesClient.getAll({ search: '   ' });
+      await gamesClient.getAll({ search: 'Ticket to Ride' });
 
-      expect(result.games).toHaveLength(1);
-      expect(result.games[0].title).toBe('Chess');
+      expect(mockHttpClient.get).toHaveBeenNthCalledWith(
+        1,
+        '/api/v1/games?page=1&pageSize=20',
+        expect.anything()
+      );
+      expect(mockHttpClient.get).toHaveBeenNthCalledWith(
+        2,
+        '/api/v1/games?search=Ticket+to+Ride&page=1&pageSize=20',
+        expect.anything()
+      );
     });
 
-    it('should filter by search term (publisher)', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
+    it('returns the server page as is, total included', async () => {
+      mockHttpClient.get.mockResolvedValueOnce(serverPage);
 
-      const result = await gamesClient.getAll({ search: 'kosmos' });
+      const result = await gamesClient.getAll({ search: 'Dominion' }, 2, 24);
 
-      expect(result.games).toHaveLength(1);
-      expect(result.games[0].title).toBe('Catan');
+      // Nessun ri-filtraggio lato client: il totale è quello del catalogo, non della pagina.
+      expect(result).toEqual(serverPage);
     });
 
-    it('should filter by minPlayers', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
-
-      const result = await gamesClient.getAll({ minPlayers: 3 });
-
-      // Should return games with maxPlayers >= 3
-      expect(result.games).toHaveLength(2); // Catan (3-4), Monopoly (2-6)
-    });
-
-    it('should filter by maxPlayers', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
-
-      const result = await gamesClient.getAll({ maxPlayers: 3 });
-
-      // Should return games with minPlayers <= 3
-      expect(result.games).toHaveLength(3); // All games
-    });
-
-    it('should filter by minPlayTime', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
-
-      const result = await gamesClient.getAll({ minPlayTime: 60 });
-
-      // Games with maxPlayTime >= 60
-      expect(result.games).toHaveLength(3); // All have maxPlayTime >= 60
-    });
-
-    it('should filter by maxPlayTime', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
-
-      const result = await gamesClient.getAll({ maxPlayTime: 90 });
-
-      // Games with minPlayTime <= 90
-      expect(result.games).toHaveLength(3);
-    });
-
-    it('should filter by yearFrom', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
-
-      const result = await gamesClient.getAll({ yearFrom: 1990 });
-
-      expect(result.games).toHaveLength(1); // Only Catan (1995)
-      expect(result.games[0].title).toBe('Catan');
-    });
-
-    it('should filter by yearTo', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
-
-      const result = await gamesClient.getAll({ yearTo: 1950 });
-
-      expect(result.games).toHaveLength(2); // Chess (1475), Monopoly (1935)
-    });
-
-    it('should filter by bggOnly', async () => {
-      const gamesWithNoBgg = [...mockGames, { ...mockGames[0], id: 'game-4', bggId: null }];
-      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(gamesWithNoBgg));
-
-      const result = await gamesClient.getAll({ bggOnly: true });
-
-      expect(result.games).toHaveLength(3); // All with bggId
-      expect(result.games.every(g => g.bggId !== null)).toBe(true);
-    });
-
-    it('should apply multiple filters simultaneously', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
-
-      const result = await gamesClient.getAll({
-        minPlayers: 2,
-        maxPlayers: 4,
-        yearFrom: 1990,
-      });
-
-      expect(result.games).toHaveLength(1); // Only Catan matches all filters
-      expect(result.games[0].title).toBe('Catan');
-    });
-
-    it('should sort by title ascending', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
-
-      const result = await gamesClient.getAll(undefined, { field: 'title', direction: 'asc' });
-
-      expect(result.games[0].title).toBe('Catan');
-      expect(result.games[1].title).toBe('Chess');
-      expect(result.games[2].title).toBe('Monopoly');
-    });
-
-    it('should sort by title descending', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
-
-      const result = await gamesClient.getAll(undefined, { field: 'title', direction: 'desc' });
-
-      expect(result.games[0].title).toBe('Monopoly');
-      expect(result.games[1].title).toBe('Chess');
-      expect(result.games[2].title).toBe('Catan');
-    });
-
-    it('should sort by yearPublished ascending', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
-
-      const result = await gamesClient.getAll(undefined, {
-        field: 'yearPublished',
-        direction: 'asc',
-      });
-
-      expect(result.games[0].yearPublished).toBe(1475); // Chess
-      expect(result.games[1].yearPublished).toBe(1935); // Monopoly
-      expect(result.games[2].yearPublished).toBe(1995); // Catan
-    });
-
-    it('should handle null values in sorting', async () => {
-      const gamesWithNulls = [...mockGames, { ...mockGames[0], id: 'game-4', yearPublished: null }];
-      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(gamesWithNulls));
-
-      const result = await gamesClient.getAll(undefined, {
-        field: 'yearPublished',
-        direction: 'asc',
-      });
-
-      // Null should be pushed to end
-      expect(result.games[result.games.length - 1].yearPublished).toBeNull();
-    });
-
-    it('should paginate results correctly', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
-
-      const result = await gamesClient.getAll(undefined, undefined, 1, 2);
-
-      expect(result.games).toHaveLength(2);
-      expect(result.page).toBe(1);
-      expect(result.pageSize).toBe(2);
-      expect(result.total).toBe(3);
-      expect(result.totalPages).toBe(2);
-    });
-
-    it('should handle page 2 pagination', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse(mockGames));
-
-      const result = await gamesClient.getAll(undefined, undefined, 2, 2);
-
-      expect(result.games).toHaveLength(1);
-      expect(result.games[0].title).toBe('Monopoly');
-      expect(result.page).toBe(2);
-    });
-
-    it('should handle empty results', async () => {
-      mockHttpClient.get.mockResolvedValueOnce(createMockPaginatedResponse([]));
-
-      const result = await gamesClient.getAll();
-
-      expect(result.games).toEqual([]);
-      expect(result.total).toBe(0);
-      expect(result.totalPages).toBe(0);
-    });
-
-    it('should handle null response', async () => {
+    it('returns an empty page when the server answers null', async () => {
       mockHttpClient.get.mockResolvedValueOnce(null);
 
-      const result = await gamesClient.getAll();
+      const result = await gamesClient.getAll(undefined, 3, 10);
 
-      expect(result.games).toEqual([]);
-      expect(result.total).toBe(0);
+      expect(result).toEqual({ games: [], total: 0, page: 3, pageSize: 10, totalPages: 0 });
     });
   });
 
-  // ========== getById Tests ==========
   describe('getById', () => {
     it('should fetch game by ID successfully', async () => {
       const mockGame: Game = {

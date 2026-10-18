@@ -151,9 +151,9 @@ public sealed class AskQuestionQueryHandlerIntentRoutingTests
                 It.IsAny<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>>(),
                 It.IsAny<int>(),
                 It.IsAny<GameBookRole>(),
-                It.IsAny<IReadOnlyList<string>?>()))
-            .Callback<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>, List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>, int, GameBookRole, IReadOnlyList<string>?>(
-                (v, k, rk, rh, qt) => capturedRoleHint = rh)
+                It.IsAny<IReadOnlyList<string>?>(), It.IsAny<float>(), It.IsAny<float>()))
+            .Callback<List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>, List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>, int, GameBookRole, IReadOnlyList<string>?, float, float>(
+                (v, k, rk, rh, qt, _, _) => capturedRoleHint = rh)
             .Returns(new List<Api.BoundedContexts.KnowledgeBase.Domain.Entities.SearchResult>());
 
         var ragAccessMock = new Mock<IRagAccessService>();
@@ -181,34 +181,25 @@ public sealed class AskQuestionQueryHandlerIntentRoutingTests
 
         var qaTrackerMock = new Mock<IRagQualityTracker>();
 
-        var pricingMock = new Mock<IPricingEngine>();
-        pricingMock
-            .Setup(p => p.ConsumeQuotaAsync(It.IsAny<Guid?>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
-        var routingMonitorMock = new Mock<IOptionsMonitor<LlmQueryComplexityRoutingOptions>>();
-        routingMonitorMock.Setup(m => m.CurrentValue).Returns(new LlmQueryComplexityRoutingOptions());
-
         var handler = new AskQuestionQueryHandler(
-            searchHandler,
-            CreatePassthroughReranker(),
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Retrieval(
+                searchHandler, CreatePassthroughReranker(), intentClassifier),
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.ProfileReader(),
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.UncertainLanguageDetection(),
             new QualityTrackingDomainService(),
             new ChatContextDomainService(),
             new Mock<IChatThreadRepository>().Object,
             pdfRepoMock.Object,
             new Mock<ILlmService>().Object,
-            new Mock<IPromptTemplateService>().Object,
             new Mock<IRagValidationPipelineService>().Object,
-            ragAccessMock.Object,
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Preconditions(ragAccessMock.Object),
             qaTrackerMock.Object,
             new QueryComplexityAnalyzer(),
             new Mock<ISemanticResponseCache>().Object,
             new Mock<IEmbeddingService>().Object,
             new Mock<IHouseRuleMatcher>().Object,
-            pricingMock.Object,
             new Mock<IGenericTranslationService>().Object,
             intentClassifier,
-            routingMonitorMock.Object,
             Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
             Mock.Of<Api.Services.IFeatureFlagService>(),
             new Mock<ILogger<AskQuestionQueryHandler>>().Object);

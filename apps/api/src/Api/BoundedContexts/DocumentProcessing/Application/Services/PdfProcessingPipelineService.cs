@@ -507,6 +507,15 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             await TryMarkFailedAsync(pdfDocumentId, ex.Message, category).ConfigureAwait(false);
             return PdfPipelineOutcome.Failed;
         }
+        catch (PdfEmbeddingFailedException ex)
+        {
+            // #4443: the embedding service failed or answered badly. Service, as the upload's background
+            // task records it: transient, so RetryFailedPdfsJob retries it. This pipeline left the
+            // category NULL, and since ADR-100 it processes every admin upload.
+            _logger.LogError(ex, "[PdfPipeline] Embedding failed for PDF {PdfId}", pdfId);
+            await TryMarkFailedAsync(pdfDocumentId, ex.Message, ErrorCategory.Service).ConfigureAwait(false);
+            return PdfPipelineOutcome.Failed;
+        }
         catch (PdfStorageObjectMissingException ex)
         {
             // #3846: the object is not at the key FilePath records. Retrying cannot conjure it back,
@@ -892,19 +901,30 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             _logger.LogInformation("[PdfPipeline] Embedding batch {Current}/{Total} ({Count} texts)",
                 batchIndex + 1, batchCount, batchTexts.Count);
 
-            var batchResult = await _embeddingService
-                .GenerateEmbeddingsAsync(batchTexts, cancellationToken)
-                .ConfigureAwait(false);
+            EmbeddingResult batchResult;
+            try
+            {
+                batchResult = await _embeddingService
+                    .GenerateEmbeddingsAsync(batchTexts, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+#pragma warning disable CA1031 // Rethrown as the embedding failure it is
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                // An unreachable service throws instead of returning a failed result: same failure.
+                throw new PdfEmbeddingFailedException($"Embedding batch {batchIndex + 1}/{batchCount} failed: {ex.Message}", ex);
+            }
+#pragma warning restore CA1031
 
             if (!batchResult.Success)
             {
-                throw new InvalidOperationException(
+                throw new PdfEmbeddingFailedException(
                     $"Embedding batch {batchIndex + 1}/{batchCount} failed: {batchResult.ErrorMessage}");
             }
 
             if (batchResult.Embeddings == null || batchResult.Embeddings.Count != batchTexts.Count)
             {
-                throw new InvalidOperationException(
+                throw new PdfEmbeddingFailedException(
                     $"Embedding batch {batchIndex + 1} returned {batchResult.Embeddings?.Count ?? 0} vectors for {batchTexts.Count} texts");
             }
 
@@ -914,7 +934,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 if (embedding == null || embedding.Length == 0
                     || Array.Exists(embedding, v => float.IsNaN(v) || float.IsInfinity(v)))
                 {
-                    throw new InvalidOperationException(
+                    throw new PdfEmbeddingFailedException(
                         $"Invalid embedding vector detected in batch {batchIndex + 1}");
                 }
             }
@@ -929,7 +949,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
         if (allEmbeddings.Count != chunks.Count)
         {
-            throw new InvalidOperationException(
+            throw new PdfEmbeddingFailedException(
                 $"Total embeddings {allEmbeddings.Count} != total chunks {chunks.Count}");
         }
 
@@ -1073,16 +1093,15 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             _db.TextChunks.RemoveRange(existingChunks);
         }
 
-        // text_chunks.GameId is FK to games.Id (NOT shared_games.id) — see PdfGameIdResolver.
-        var resolvedGameId = await PdfGameIdResolver.ResolveAsync(_db, pdfDoc, cancellationToken)
-            .ConfigureAwait(false);
-
+        // #4244: text_chunks.GameId is an FK to shared_games, so it only ever carries the shared
+        // game; a private game goes in its own column.
         var textChunkEntities = chunks
             .Select((chunk, index) => new TextChunkEntity
             {
                 Id = chunk.Id == Guid.Empty ? Guid.NewGuid() : chunk.Id,
-                GameId = resolvedGameId,
+                GameId = pdfDoc.SharedGameId,
                 SharedGameId = pdfDoc.SharedGameId,
+                PrivateGameId = pdfDoc.PrivateGameId,
                 PdfDocumentId = pdfDoc.Id,
                 Content = chunk.Text,
                 ChunkIndex = index,
@@ -1219,8 +1238,22 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         }
     }
 
+    /// <summary>
+    /// #4442: records the stage the document was in when it failed, as the upload path already does
+    /// (<c>UploadPdfCommandHandler</c>). Informational: the admin KB document shows it; retries do not
+    /// resume from it.
+    /// </summary>
+    private static void RecordFailedAtState(PdfDocumentEntity pdfDoc)
+    {
+        if (!string.Equals(pdfDoc.ProcessingState, nameof(PdfProcessingState.Failed), StringComparison.Ordinal))
+        {
+            pdfDoc.FailedAtState = pdfDoc.ProcessingState;
+        }
+    }
+
     private async Task MarkFailedAsync(PdfDocumentEntity pdfDoc, string errorMessage)
     {
+        RecordFailedAtState(pdfDoc);
         // Issue #4215: Use Failed state
         pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
         pdfDoc.ProcessingError = errorMessage;
@@ -1267,6 +1300,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             if (pdfDoc != null
                 && !string.Equals(pdfDoc.ProcessingState, nameof(PdfProcessingState.Ready), StringComparison.Ordinal))
             {
+                RecordFailedAtState(pdfDoc);
                 // Issue #4215: Use Failed state
                 pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
                 pdfDoc.ProcessingError = errorMessage.Length > 500

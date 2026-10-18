@@ -23,6 +23,8 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 ///   4. EF delete: remove PdfDocument; cascade removes TextChunks + VectorDocument.
 ///   5. Blob: delete physical file (best-effort).
 ///   6. Cache: invalidate AI response cache (best-effort).
+///   7. Cache: invalidate what the hybrid cache still holds of the document — the uploader's
+///      «my documents» list, the document, its chunks (best-effort).
 ///
 /// Issue #1653: F3-FU-4 — Admin delete KB document action.
 /// </summary>
@@ -34,6 +36,7 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
     private readonly IBlobStorageService _blobStorageService;
     private readonly IAiResponseCacheService _cacheService;
     private readonly Api.BoundedContexts.KnowledgeBase.Application.Services.ISemanticResponseCache _semanticCache;
+    private readonly IHybridCacheService _hybridCache;
     private readonly IMediator? _mediator;
     private readonly ILogger<DeleteKbDocumentCommandHandler> _logger;
 
@@ -44,6 +47,7 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
         IBlobStorageService blobStorageService,
         IAiResponseCacheService cacheService,
         Api.BoundedContexts.KnowledgeBase.Application.Services.ISemanticResponseCache semanticCache,
+        IHybridCacheService hybridCache,
         ILogger<DeleteKbDocumentCommandHandler> logger,
         IMediator? mediator = null)
     {
@@ -53,6 +57,7 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
         _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
         _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
         _semanticCache = semanticCache ?? throw new ArgumentNullException(nameof(semanticCache));
+        _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _mediator = mediator;
     }
@@ -106,6 +111,7 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
         // 4. EF delete — cascade removes TextChunks + VectorDocument
         var storageGameId = (doc.PrivateGameId ?? doc.SharedGameId)?.ToString() ?? string.Empty;
         var coverR2Key = doc.CoverR2Key;
+        var uploadedByUserId = doc.UploadedByUserId;
 
         _db.PdfDocuments.Remove(doc);
         try
@@ -145,6 +151,15 @@ internal sealed class DeleteKbDocumentCommandHandler : ICommandHandler<DeleteKbD
 
         // 6. Cache — best-effort AI response cache invalidation
         await InvalidateCacheSafelyAsync(storageGameId, "KB doc deletion", cancellationToken).ConfigureAwait(false);
+
+        // 7. Cache — l'elenco di chi l'aveva caricato, il documento, i suoi passaggi.
+        // ⚠️ Questo comando è [AtomicAudit]: qui siamo ancora dentro la transazione, e il commit
+        // arriva dopo. Una lettura che cade fra questa riga e il commit rimette in cache il
+        // documento. Chi invia il comando e ha un punto dopo il commit può ripetere
+        // l'invalidazione lì: la pulizia di un gioco privato lo fa.
+        await DeletedKbDocumentCaches
+            .InvalidateSafelyAsync(_hybridCache, _logger, uploadedByUserId, id, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     /// <summary>

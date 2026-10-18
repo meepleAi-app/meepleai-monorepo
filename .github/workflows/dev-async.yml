@@ -108,14 +108,34 @@ jobs:
     strategy:
       fail-fast: false  # uno shard rosso non deve nascondere l'esito degli altri
       matrix:
-        # Stessa ripartizione di ci.yml, deliberatamente: se i due gate misurassero insiemi diversi,
+        # Stessa SELEZIONE di ci.yml, deliberatamente: se i due gate misurassero insiemi diversi,
         # un test potrebbe non essere eseguito da nessuno dei due — il difetto di #3622 su un altro
-        # asse. Misurati 2950 test totali (esclusioni incluse): 910 / 1123 / 929.
+        # asse. La ripartizione invece qui e' piu' fine (#3742): cio' che ci.yml chiama `Games` e'
+        # diviso in `Catalog` e `GamesAdmin`.
+        #
+        # Perche' divisa, e perche' li'. Uno shard dura quanto la sua catena seriale piu' lunga:
+        # xUnit mette in parallelo le collection e in serie i test dentro una collection. In `Games`
+        # la collection Integration-GroupC, con le classi di SharedGameCatalog e di GameManagement,
+        # occupava il runner da sola dal ventesimo minuto alla fine: 59 minuti su un runner veloce,
+        # e oltre i 75 del TestSessionTimeout su uno lento, dove ogni test dura circa il 45% in piu'
+        # (tre run troncati su sette il 2026-10-13). Dividere lungo il confine fra i due contesti
+        # spezza quella catena su due runner, senza spostare alcuna classe di collection: nessun
+        # test comincia a girare in parallelo con uno con cui prima era in serie.
+        #
+        # `GamesAdmin` esclude SharedGameCatalog perche' i filtri sono per nome: una classe col nome
+        # di entrambi i contesti girerebbe in tutti e due gli shard.
+        #
+        # 🔴 Le due meta' di questa regola non si tengono da sole. Togliere un token da uno shard
+        # lasciandolo escluso da `Core` fa sparire quei test da OGNI shard, e nessun job cambia
+        # colore. Lo verifica infra/scripts/tests/integration-shard-matrix.bats, insieme
+        # all'uguaglianza con ci.yml e alla presenza di ogni shard nella baseline.
         shard:
           - name: "KnowledgeBase"
             filter_extra: "&(FullyQualifiedName~KnowledgeBase|FullyQualifiedName~DocumentProcessing|FullyQualifiedName~Authentication)"
-          - name: "Games"
-            filter_extra: "&(FullyQualifiedName~SharedGameCatalog|FullyQualifiedName~GameManagement|FullyQualifiedName~Administration)"
+          - name: "Catalog"
+            filter_extra: "&(FullyQualifiedName~SharedGameCatalog)"
+          - name: "GamesAdmin"
+            filter_extra: "&(FullyQualifiedName~GameManagement|FullyQualifiedName~Administration)&FullyQualifiedName!~SharedGameCatalog"
           - name: "Core"
             filter_extra: "&FullyQualifiedName!~KnowledgeBase&FullyQualifiedName!~DocumentProcessing&FullyQualifiedName!~Authentication&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
 
@@ -164,7 +184,7 @@ jobs:
 
       - uses: ./.github/actions/setup-backend
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
           working-directory: apps/api
           cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
 
@@ -192,7 +212,18 @@ jobs:
           printf 'ADMIN_EMAIL=admin@test.local\nADMIN_PASSWORD=CiTestPassword123!\nADMIN_DISPLAY_NAME=CI Admin\nINITIAL_ADMIN_EMAIL=admin@test.local\nINITIAL_ADMIN_DISPLAY_NAME=CI Admin\n' > infra/secrets/admin.secret
           printf 'EMBEDDING_SERVICE_URL=http://localhost:8000\n' > infra/secrets/embedding-service.secret
 
+      # #4298 — questo passo ESEGUE i test e NON decide il colore del job.
+      #
+      # Prima lo decideva: bastava un test fallito, compresi quelli dichiarati nella baseline, e il
+      # job era rosso. Il confronto con la baseline girava dopo e scriveva «i FALLIMENTI sono
+      # aumentati: 2 -> 9», ma su un job gia' rosso quell'errore non cambiava nulla che qualcuno
+      # guardi. Sette test sono rimasti rossi oltre la baseline dal 2026-10-05 al 2026-10-12 cosi'
+      # (#4280): il segnale c'era, a ogni run, e non era un segnale.
+      #
+      # Ora il passo conserva il codice d'uscita di `dotnet test` e lo passa al passo di guardia,
+      # che e' l'unico a decidere: verde entro la baseline, rosso quando qualcosa e' cambiato.
       - name: Integration tests
+        id: tests
         working-directory: apps/api
         env:
           # MaxPoolSize=2 + ClearAllPools() nel teardown: evita l'accumulo contro max_connections.
@@ -212,9 +243,13 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: testpass
         run: |
-          # `set -o pipefail` è obbligatorio: senza, l'exit code che arriva a GitHub è quello di
-          # `tee` (sempre 0) e un `Test Run Aborted.` passerebbe per successo.
-          set -o pipefail
+          # 🔴 Il codice d'uscita va CATTURATO, non lasciato alla pipeline. Senza `pipefail` lo
+          # stato di `dotnet test | tee` e' quello di `tee`, sempre 0: e' giusto cosi', perche' qui
+          # il passo non deve fallire — ma allora `${PIPESTATUS[0]}`, letto subito dopo, e' l'unico
+          # posto dove il codice di `dotnet test` esiste ancora. Il passo di guardia lo confronta
+          # col .trx: un'uscita diversa da 0 senza falliti nel .trx, o un codice che non e' ne' 0
+          # ne' 1, fa fallire il job. `set +e` perche' il default di Actions e' `bash -e`.
+          set +e
           # Target esplicito del .csproj (PR #1505): `dotnet test` sulla solution invocherebbe anche
           # Api.Analyzers.Tests.dll, che non ha test Category=Integration, e vstest tratta il
           # no-match su un assembly non vuoto come exit 1.
@@ -232,19 +267,31 @@ jobs:
             --logger "console;verbosity=minimal" \
             --blame-hang-timeout 5min \
             2>&1 | tee "integration-${{ matrix.shard.name }}.log"
+          rc=${PIPESTATUS[0]}
+          set -e
+          echo "dotnet_test_rc=${rc}" >> "$GITHUB_OUTPUT"
+          echo "dotnet test e' uscito con ${rc}. L'esito del job lo decide il passo di guardia."
 
-      # #3632/#3742 — il verde va misurato, non dichiarato, e il troncamento va NOMINATO.
+      # #3632/#3742/#4298 — il verde va misurato, non dichiarato; il troncamento va NOMINATO; e il
+      # colore del job lo decide QUESTO passo.
       #
-      # `Aborting test run: test run timeout` esce già 134 e fa fallire lo step, quindi questo guard
-      # non introduce un rosso nuovo: rende distinguibile «la selezione non è stata misurata per
-      # intero» da «alcuni test sono falliti». Sono due fatti diversi e finora erano lo stesso colore.
+      # Il job e' verde quando tutte queste cose sono vere, e rosso se ne manca una:
+      #   - i test sono partiti e hanno lasciato log e .trx, con almeno cento eseguiti;
+      #   - la sessione NON e' stata troncata dal TestSessionTimeout (una selezione misurata a meta'
+      #     non e' verde: e' non misurata);
+      #   - falliti e saltati sono quelli dichiarati nella baseline, PER NOME — un conteggio uguale
+      #     con un test diverso dentro e' una regressione;
+      #   - il codice d'uscita di `dotnet test` e' coerente col .trx.
+      # Quindi «rosso» vuol dire «e' cambiato qualcosa, oppure non ho potuto misurare», e non piu'
+      # «c'e' almeno un fallimento, come sempre».
       #
       # `!cancelled()` e non `always()`: su una cancellazione non c'è niente da misurare.
-      - name: 'Guard: la selezione e stata misurata per intero (#3742)'
+      - name: 'Gate: misurato per intero ed entro la baseline (#3742, #4298)'
         if: ${{ !cancelled() }}
         working-directory: apps/api
         env:
           SHARD: ${{ matrix.shard.name }}
+          DOTNET_TEST_RC: ${{ steps.tests.outputs.dotnet_test_rc }}
         run: |
           set -uo pipefail
           status=0
@@ -342,12 +389,12 @@ jobs:
             case "$assert_rc" in
               0) assert_label="entro la baseline ✓" ;;
               2) assert_label="⚠️ NON MISURABILE — run troncata, confronto non eseguito (#3742)" ;;
-              *) assert_label="❌ REGRESSIONE dei conteggi" ; status=1 ;;
+              *) assert_label="❌ FUORI dalla baseline" ; status=1 ;;
             esac
 
             {
               echo
-              echo "<details><summary>Conteggi contro la baseline (#4024): ${assert_label}</summary>"
+              echo "<details><summary>Confronto con la baseline, per nome (#4024, #4298): ${assert_label}</summary>"
               echo
               echo '```'
               cat /tmp/shard-assert.out
@@ -357,6 +404,7 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
           fi
 
+          truncated=false
           if grep -qa 'Aborting test run: test run timeout' "$log"; then
             echo "::error::Shard ${SHARD} TRONCATO: il TestSessionTimeout e scattato. La selezione NON e stata misurata per intero: i conteggi qui sopra sono parziali e non confrontabili con la baseline dei fallimenti (#3633). Il guard e' di #3742."
             {
@@ -364,7 +412,81 @@ jobs:
               echo "> ⚠️ **Shard troncato** — sessione abortita sul TestSessionTimeout. Conteggi parziali."
             } >> "$GITHUB_STEP_SUMMARY"
             status=1
+            truncated=true
           fi
+
+          # #3742 — quanta parte del TestSessionTimeout ha usato la sessione. La troncatura non
+          # arriva all'improvviso: lo shard Games e' stato per settimane a pochi minuti dal limite,
+          # verde sui runner veloci, e nessun numero lo diceva finche' un runner lento non lo ha
+          # superato. Lo script riporta la quota a ogni run e avvisa oltre l'80%; non decide il
+          # colore del job, che resta al confronto con la baseline e alla guardia qui sopra.
+          #
+          # Lo script assente e' un errore e non un avviso, per la stessa ragione del comparatore:
+          # un percorso sbagliato qui produrrebbe un riepilogo senza la riga, che si legge come
+          # «tutto a posto». Un .trx da cui la durata non si ricava e' invece solo un avviso: il
+          # margine non e' misurabile, ma la selezione lo e' stata.
+          budget="${GITHUB_WORKSPACE}/infra/scripts/shard-session-budget.sh"
+          if [ ! -f "$budget" ]; then
+            echo "::error::script del margine non trovato in $budget — il percorso e' sbagliato, non e' un problema dei tempi"
+            status=1
+          elif [ ${#trx_files[@]} -gt 0 ]; then
+            set +e
+            bash "$budget" \
+              --shard "${SHARD}" \
+              --trx "${trx_files[0]}" \
+              --runsettings "${GITHUB_WORKSPACE}/apps/api/tests/Api.Tests/integration.runsettings" > /tmp/shard-budget.out 2>&1
+            budget_rc=$?
+            set -e
+            cat /tmp/shard-budget.out
+            if [ "$budget_rc" -ne 0 ]; then
+              echo "::warning::Shard ${SHARD}: il margine sul TestSessionTimeout non e' calcolabile (vedi la riga sopra)."
+            fi
+            {
+              echo
+              if [ "$budget_rc" -eq 0 ]; then
+                echo "**Margine (#3742):** $(grep -v '^::' /tmp/shard-budget.out | head -1)"
+              else
+                echo "**Margine (#3742):** non calcolabile."
+              fi
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          # #4298 — il codice d'uscita di `dotnet test`. Da quando il passo dei test non fa piu'
+          # fallire il job da solo, questo controllo impedisce di far passare per verde cio' che il
+          # .trx non racconta: un host dei test crashato, un'uscita anomala, un passo che non ha
+          # lasciato il codice. I test FALLITI non c'entrano: quelli li ha gia' giudicati, per
+          # nome, il confronto con la baseline qui sopra.
+          rc="${DOTNET_TEST_RC:-}"
+          trx_failed=""
+          if [ ${#trx_files[@]} -gt 0 ]; then
+            trx_failed=$(sed -n 's/.*<Counters[^>]* failed="\([0-9]\{1,\}\)".*/\1/p' "${trx_files[0]}" | head -1)
+          fi
+          if ! [[ "$rc" =~ ^[0-9]+$ ]]; then
+            echo "::error::Shard ${SHARD}: il passo dei test non ha lasciato un codice d'uscita (\"${rc}\"). Senza, non si sa se dotnet test e' arrivato in fondo."
+            status=1
+          elif [ "$rc" -ne 0 ] && [ "$rc" -ne 1 ]; then
+            echo "::error::Shard ${SHARD}: dotnet test e' uscito con ${rc}, che non e' ne' «tutto verde» (0) ne' «alcuni test falliti» (1): host dei test crashato, sessione abortita o altro. Va letto il log."
+            status=1
+          elif [ "$rc" -eq 1 ] && [ "${trx_failed}" = "0" ] && [ "$truncated" = false ]; then
+            # `truncated`: su una sessione abortita dal TestSessionTimeout `dotnet test` esce 1
+            # senza test falliti, ed e' la troncatura stessa — gia' segnalata qui sopra, e gia'
+            # rossa. Ripeterla come «qualcosa e' fallito fuori dai test» manda chi legge a cercare
+            # una fixture rotta che non c'e' (run 38425039410, shard Games).
+            echo "::error::Shard ${SHARD}: dotnet test e' uscito con 1 ma il .trx non ha test falliti. Qualcosa e' fallito FUORI dai test (discovery, fixture, logger) e il confronto con la baseline non lo vede."
+            status=1
+          elif [ "$rc" -eq 0 ] && [ -n "${trx_failed}" ] && [ "${trx_failed}" != "0" ]; then
+            echo "::error::Shard ${SHARD}: dotnet test e' uscito con 0 ma il .trx ha ${trx_failed} falliti. Le due fonti si contraddicono."
+            status=1
+          fi
+
+          {
+            echo
+            if [ "$status" -eq 0 ]; then
+              echo "**Esito del gate: ✅ verde** — selezione misurata per intero, falliti e saltati sono quelli dichiarati."
+            else
+              echo "**Esito del gate: ❌ rosso** — qualcosa e' cambiato rispetto alla baseline, oppure la misura non e' completa. Gli errori sono qui sopra."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
 
           exit $status
 

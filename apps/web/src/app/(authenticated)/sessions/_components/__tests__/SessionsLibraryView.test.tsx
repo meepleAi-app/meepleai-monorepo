@@ -126,6 +126,7 @@ const SESSIONS_3: PaginatedSessionsResponse = {
   sessions: [
     {
       id: 'session-001',
+      liveSessionId: 'live-001',
       gameId: 'game-brass',
       status: 'InProgress',
       startedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
@@ -142,6 +143,7 @@ const SESSIONS_3: PaginatedSessionsResponse = {
     },
     {
       id: 'session-002',
+      liveSessionId: 'live-002',
       gameId: 'game-wingspan',
       status: 'Completed',
       startedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
@@ -157,6 +159,8 @@ const SESSIONS_3: PaginatedSessionsResponse = {
     },
     {
       id: 'session-003',
+      // #4156 (D4): a GameSession without a correlated live has no detail page.
+      liveSessionId: null,
       gameId: 'game-azul',
       status: 'Abandoned',
       startedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
@@ -339,21 +343,32 @@ describe('SessionsLibraryView (Wave D.1)', () => {
 
   // ─── Card click navigation ──────────────────────────────────────────────
 
-  it('clicking a list card calls router.push with /sessions/{id}', () => {
+  it('clicking a list card calls router.push with /sessions/{liveSessionId}', () => {
     const { container } = renderWithIntl(<SessionsLibraryView />);
     const cards = container.querySelectorAll('[data-slot="session-card-list"]');
     expect(cards.length).toBeGreaterThan(0);
     fireEvent.click(cards[0]!);
-    expect(routerPush).toHaveBeenCalledWith('/sessions/session-001');
+    expect(routerPush).toHaveBeenCalledWith('/sessions/live-001');
   });
 
-  it('clicking a grid card calls router.push with /sessions/{id}', () => {
+  it('clicking a grid card calls router.push with /sessions/{liveSessionId}', () => {
     searchParamsMap['view'] = 'grid';
     const { container } = renderWithIntl(<SessionsLibraryView />);
     const cards = container.querySelectorAll('[data-slot="session-card-grid"]');
     expect(cards.length).toBeGreaterThan(0);
     fireEvent.click(cards[0]!);
-    expect(routerPush).toHaveBeenCalledWith('/sessions/session-001');
+    expect(routerPush).toHaveBeenCalledWith('/sessions/live-001');
+  });
+
+  it('#4156 (D4): a session without a live session has a disabled card and does not navigate', () => {
+    const { container } = renderWithIntl(<SessionsLibraryView />);
+    const card = container.querySelector(
+      '[data-slot="session-card-list"][data-item-id="session-003"]'
+    ) as HTMLButtonElement;
+    expect(card).toBeInTheDocument();
+    expect(card).toBeDisabled();
+    fireEvent.click(card);
+    expect(routerPush).not.toHaveBeenCalled();
   });
 
   // ─── New session CTA ────────────────────────────────────────────────────

@@ -1,665 +1,283 @@
 /**
- * ScoreTabContent unit/integration tests — Issue #2430 Block B+ (T6).
+ * ScoreTabContent — the Score tab on `RoundScores` (#4156 fetta 2, ADR-089).
  *
- * 28 cases across 8 groups: role gating, role transition, null gate,
- * REST hydration, variant editor mount, debounce+mutation, error
- * handling, optimistic UI.
+ * Executable examples of the issue: a score on the current round, a correction, a score on a
+ * future round. Plus the derived round (D6), who may write, and what is never written.
  */
 
-import { render, screen, act, cleanup } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { IntlProvider } from 'react-intl';
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactElement } from 'react';
 
+import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
+
 import { ScoreTabContent } from '../ScoreTabContent';
-import { useLiveSessionStore } from '@/lib/stores/live-session-store';
-import type { ScoreDataByType, ScoreType } from '@/components/sessions/score-strategies/types';
-import { UpdateSessionScoresError } from '@/hooks/use-update-session-scores';
 
-// ─── sonner mock ───────────────────────────────────────────────────────────
+const toastErrorMock = vi.hoisted(() => vi.fn());
+vi.mock('sonner', () => ({ toast: { error: toastErrorMock } }));
 
-const toastErrorMock = vi.fn();
-const toastWarningMock = vi.fn();
-const toastSuccessMock = vi.fn();
-vi.mock('sonner', () => ({
-  toast: {
-    error: (msg: string, opts?: unknown) => toastErrorMock(msg, opts),
-    warning: (msg: string, opts?: unknown) => toastWarningMock(msg, opts),
-    success: (msg: string, opts?: unknown) => toastSuccessMock(msg, opts),
-    dismiss: vi.fn(),
-  },
+const recordMock = vi.hoisted(() => vi.fn());
+vi.mock('@/hooks/queries/useRecordRoundScore', () => ({
+  useRecordRoundScore: () => ({ mutateAsync: recordMock, isPending: false }),
 }));
-
-// ─── useUpdateSessionScores mock ───────────────────────────────────────────
-
-interface MockMutationHandlers {
-  mutate: ReturnType<typeof vi.fn>;
-  isPending: boolean;
-}
-
-let mockMutation: MockMutationHandlers;
-
-vi.mock('@/hooks/use-update-session-scores', async () => {
-  const actual = await vi.importActual<typeof import('@/hooks/use-update-session-scores')>(
-    '@/hooks/use-update-session-scores'
-  );
-  return {
-    ...actual,
-    useUpdateSessionScores: () => mockMutation,
-  };
-});
-
-// ─── PolymorphicScoreEditor mock (data-slot probe) ─────────────────────────
-
-vi.mock('@/components/sessions', () => ({
-  PolymorphicScoreEditor: ({
-    scoringType,
-    players,
-    initialData,
-    availableObjectives,
-    onChange,
-    disabled,
-  }: {
-    scoringType: ScoreType;
-    players: ReadonlyArray<{ id: string; displayName: string }>;
-    initialData?: unknown;
-    availableObjectives?: readonly string[];
-    onChange: (payload: { scoringType: ScoreType; data: unknown }) => void;
-    disabled?: boolean;
-  }) => (
-    <div
-      data-slot="polymorphic-score-editor"
-      data-scoring-type={scoringType}
-      data-disabled={disabled ? 'true' : 'false'}
-      data-player-count={players.length}
-      data-objectives-count={availableObjectives?.length ?? 0}
-    >
-      <button
-        type="button"
-        data-slot="trigger-change"
-        onClick={() =>
-          onChange({
-            scoringType,
-            data:
-              scoringType === 'Points'
-                ? { scores: [{ playerId: 'p1', points: 99 }] }
-                : scoringType === 'BinaryWin'
-                  ? { results: [{ playerId: 'p1', isWinner: true }] }
-                  : scoringType === 'Ranking'
-                    ? { positions: [{ playerId: 'p1', position: 1 }] }
-                    : { completedByPlayer: [{ playerId: 'p1', objectives: ['Vittoria'] }] },
-          })
-        }
-      >
-        edit
-      </button>
-      <span data-slot="initial-data">{JSON.stringify(initialData ?? null)}</span>
-    </div>
-  ),
-}));
-
-// ─── i18n MESSAGES subset ──────────────────────────────────────────────────
 
 const MESSAGES: Record<string, string> = {
   'pages.sessionLive.scoring.loadingLabel': 'Caricamento punteggi…',
-  'pages.sessionLive.scoring.forbiddenToast':
-    "Permesso negato: solo l'host può modificare i punteggi",
-  'pages.sessionLive.scoring.rateLimitedTemplate': 'Limite raggiunto, riprova tra {seconds}s',
-  'pages.sessionLive.scoring.rateLimitedToast':
-    'Hai aggiornato i punteggi troppo velocemente. Aspetta {seconds}s.',
-  'pages.sessionLive.scoring.validationFailedTemplate': 'Validazione fallita: {message}',
-  'pages.sessionLive.scoring.serverErrorToast': 'Errore server, riprova',
-  'pages.sessionLive.scoring.networkErrorToast': 'Connessione persa, riprova',
-  'pages.sessionLive.scoring.retryCta': 'Riprova',
-  // Renderer labels (passed through but minimal for tests)
-  'pages.sessionLive.scoring.title': 'Punteggi',
-  'pages.sessionLive.scoring.scoreAriaTemplate': 'Punteggio di {name}',
-  'pages.sessionLive.scoring.leaderBadgeLabel': 'in testa',
-  'pages.sessionLive.scoring.rankingHeading': 'Posizioni',
-  'pages.sessionLive.scoring.rankAriaTemplate': 'Posizione di {name}',
-  'pages.sessionLive.scoring.firstPlaceBadgeLabel': 'primo posto',
-  'pages.sessionLive.scoring.binaryWinHeading': 'Esito',
-  'pages.sessionLive.scoring.binaryWinInProgress': 'Partita in corso',
-  'pages.sessionLive.scoring.winLabel': 'Vince',
-  'pages.sessionLive.scoring.loseLabel': 'Perde',
-  'pages.sessionLive.scoring.outcomeAriaTemplate': '{name}: {result}',
-  'pages.sessionLive.scoring.objectivesHeading': 'Obiettivi',
-  'pages.sessionLive.scoring.completedAriaTemplate': 'Completati da {name}',
-  'pages.sessionLive.scoring.doneAriaTemplate': '{label} (completato)',
-  'pages.sessionLive.scoring.pendingAriaTemplate': '{label} (non completato)',
+  'pages.sessionLive.scoring.rounds.roundLabel': 'Round {round}',
+  'pages.sessionLive.scoring.rounds.previousRound': 'Round precedente',
+  'pages.sessionLive.scoring.rounds.nextRound': 'Round successivo',
+  'pages.sessionLive.scoring.rounds.currentRound': 'Torna al round in corso',
+  'pages.sessionLive.scoring.rounds.player': 'Giocatore',
+  'pages.sessionLive.scoring.rounds.total': 'Totale',
+  'pages.sessionLive.scoring.rounds.noDimensions': 'Nessuna dimensione',
+  'pages.sessionLive.scoring.rounds.noPlayers': 'Nessun giocatore',
+  'pages.sessionLive.scoring.rounds.cellAriaTemplate': '{dimension} di {player}, round {round}',
+  'pages.sessionLive.scoring.rounds.saveError': 'Punteggio non salvato',
+  'pages.sessionLive.scoring.rounds.notAnInteger': 'Numero intero',
 };
 
-const RENDERER_LABELS = {
-  points: {
-    heading: 'Punteggi',
-    scoreAriaTemplate: 'Punteggio di {name}',
-    leaderBadgeLabel: 'in testa',
-  },
-  ranking: {
-    heading: 'Posizioni',
-    rankAriaTemplate: 'Posizione di {name}',
-    firstPlaceBadgeLabel: 'primo posto',
-  },
-  binaryWin: {
-    heading: 'Esito',
-    inProgressLabel: 'Partita in corso',
-    winLabel: 'Vince',
-    loseLabel: 'Perde',
-    outcomeAriaTemplate: '{name}: {result}',
-  },
-  objectives: {
-    heading: 'Obiettivi',
-    completedAriaTemplate: 'Completati da {name}',
-    doneAriaTemplate: '{label} (completato)',
-    pendingAriaTemplate: '{label} (non completato)',
-  },
-} as const;
-
-const PLAYERS = [
-  { id: 'p1', name: 'Marco' },
-  { id: 'p2', name: 'Anna' },
-] as const;
-
-function renderTC(
-  props: Partial<React.ComponentProps<typeof ScoreTabContent>> = {}
-): ReturnType<typeof render> {
-  return render(
-    <IntlProvider locale="it" messages={MESSAGES}>
-      <ScoreTabContent
-        sessionId={props.sessionId ?? 's1'}
-        viewerRole={props.viewerRole ?? 'Host'}
-        viewerId={props.viewerId ?? 'u1'}
-        players={props.players ?? PLAYERS}
-        labels={props.labels ?? RENDERER_LABELS}
-        className={props.className}
-      />
-    </IntlProvider>
-  );
+function player(id: string, name: string, totalScore = 0, overrides: Record<string, unknown> = {}) {
+  return {
+    id,
+    userId: null,
+    displayName: name,
+    avatarUrl: null,
+    color: 'Red',
+    role: 'Player',
+    teamId: null,
+    totalScore,
+    currentRank: 1,
+    joinedAt: '2026-10-14T10:00:00Z',
+    isActive: true,
+    ...overrides,
+  };
 }
 
-// ─── Global test setup ─────────────────────────────────────────────────────
+function session(overrides: Record<string, unknown> = {}): LiveSessionDto {
+  return {
+    id: 'live-1',
+    status: 'InProgress',
+    // 2 players, turn 3 → derived round 2.
+    currentTurnIndex: 3,
+    players: [player('marco', 'Marco', 10), player('giulia', 'Giulia', 0)],
+    roundScores: [
+      { playerId: 'marco', round: 2, dimension: 'punti', value: 10, unit: null, recordedAt: '' },
+    ],
+    scoringConfig: { enabledDimensions: ['punti'], dimensionUnits: {} },
+    ...overrides,
+  } as unknown as LiveSessionDto;
+}
 
-beforeEach(() => {
-  vi.useFakeTimers();
-  toastErrorMock.mockClear();
-  toastWarningMock.mockClear();
-  toastSuccessMock.mockClear();
-  useLiveSessionStore.getState().reset();
-  mockMutation = {
-    mutate: vi.fn(),
-    isPending: false,
-  };
-});
+function renderTab(
+  live: LiveSessionDto | null | undefined,
+  viewerRole: 'Host' | 'Player' | 'Spectator' = 'Host'
+): ReturnType<typeof render> {
+  const ui: ReactElement = (
+    <IntlProvider locale="it" messages={MESSAGES}>
+      <ScoreTabContent sessionId="live-1" session={live} viewerRole={viewerRole} />
+    </IntlProvider>
+  );
+  return render(ui);
+}
 
-afterEach(() => {
-  cleanup();
-  vi.useRealTimers();
-});
+function write(label: string, value: string) {
+  const cell = screen.getByLabelText(label);
+  fireEvent.change(cell, { target: { value } });
+  fireEvent.blur(cell);
+}
 
-// ─── Group 1: Role gating ───────────────────────────────────────────────────
-
-describe('ScoreTabContent — role gating', () => {
+describe('ScoreTabContent — #4156 fetta 2', () => {
   beforeEach(() => {
-    useLiveSessionStore.getState().setScoringConfig({
-      scoringType: 'Points',
-      scoreData: { scores: [{ playerId: 'p1', points: 10 }] },
-    });
+    vi.clearAllMocks();
+    recordMock.mockResolvedValue(undefined);
   });
 
-  it('Host + scoringType=Points → editor mounted', () => {
-    renderTC({ viewerRole: 'Host' });
-    expect(document.querySelector('[data-slot="polymorphic-score-editor"]')).not.toBeNull();
-    expect(document.querySelector('[data-slot="scoring-panel-points"]')).toBeNull();
-  });
-
-  it('Player + scoringType=Points → renderer mounted (read-only)', () => {
-    renderTC({ viewerRole: 'Player' });
-    expect(document.querySelector('[data-slot="polymorphic-score-editor"]')).toBeNull();
-    expect(document.querySelector('[data-slot="scoring-panel-points"]')).not.toBeNull();
-  });
-
-  it('Spectator + scoringType=Points → renderer mounted (read-only)', () => {
-    renderTC({ viewerRole: 'Spectator' });
-    expect(document.querySelector('[data-slot="polymorphic-score-editor"]')).toBeNull();
-    expect(document.querySelector('[data-slot="scoring-panel-points"]')).not.toBeNull();
-  });
-});
-
-// ─── Group 2: Role transition ───────────────────────────────────────────────
-
-describe('ScoreTabContent — role transition', () => {
-  it('viewerRole Host → Player mid-session → editor unmounts, pending debounce flushes', () => {
-    useLiveSessionStore.getState().setScoringConfig({
-      scoringType: 'Points',
-      scoreData: { scores: [{ playerId: 'p1', points: 10 }] },
+  describe('what the tab shows', () => {
+    it('waits for the live session', () => {
+      renderTab(undefined);
+      expect(screen.getByRole('status')).toHaveTextContent('Caricamento punteggi…');
     });
-    const { rerender } = renderTC({ viewerRole: 'Host' });
 
-    // Trigger an edit (debounce pending)
-    const editor = document.querySelector('[data-slot="trigger-change"]');
-    expect(editor).not.toBeNull();
-    act(() => {
-      (editor as HTMLButtonElement).click();
+    it('says so when the game has no scoring dimension, or nobody scores', () => {
+      const { unmount } = renderTab(
+        session({ scoringConfig: { enabledDimensions: [], dimensionUnits: {} } })
+      );
+      expect(screen.getByRole('status')).toHaveTextContent('Nessuna dimensione');
+      unmount();
+      renderTab(session({ players: [player('ospite', 'Ospite', 0, { role: 'Spectator' })] }));
+      expect(screen.getByRole('status')).toHaveTextContent('Nessun giocatore');
     });
-    expect(mockMutation.mutate).not.toHaveBeenCalled(); // 500ms debounce pending
 
-    // Role flips to Player → flush effect cleanup fires (viewerRole dep change)
-    rerender(
-      <IntlProvider locale="it" messages={MESSAGES}>
-        <ScoreTabContent
-          sessionId="s1"
-          viewerRole="Player"
-          viewerId="u1"
-          players={PLAYERS}
-          labels={RENDERER_LABELS}
-        />
-      </IntlProvider>
-    );
-
-    expect(document.querySelector('[data-slot="polymorphic-score-editor"]')).toBeNull();
-    expect(document.querySelector('[data-slot="scoring-panel-points"]')).not.toBeNull();
-    expect(mockMutation.mutate).toHaveBeenCalledTimes(1);
-    expect(mockMutation.mutate).toHaveBeenCalledWith(
-      expect.objectContaining({ scoringType: 'Points' }),
-      expect.anything()
-    );
-  });
-});
-
-// ─── Group 3: Null gate ─────────────────────────────────────────────────────
-
-describe('ScoreTabContent — null gate', () => {
-  it('scoringType null + Host → a11y placeholder (NOT editor)', () => {
-    renderTC({ viewerRole: 'Host' });
-    expect(document.querySelector('[data-slot="polymorphic-score-editor"]')).toBeNull();
-    expect(document.querySelector('[data-slot="scoring-panel-empty"]')).not.toBeNull();
-    expect(document.querySelector('[data-slot="scoring-panel-empty"]')?.getAttribute('role')).toBe(
-      'status'
-    );
-  });
-
-  it('scoringType null + Player → a11y placeholder', () => {
-    renderTC({ viewerRole: 'Player' });
-    expect(document.querySelector('[data-slot="scoring-panel-empty"]')).not.toBeNull();
-    expect(screen.getByText('Caricamento punteggi…')).toBeInTheDocument();
-  });
-});
-
-// ─── Group 4: REST hydration ────────────────────────────────────────────────
-
-describe('ScoreTabContent — REST hydration', () => {
-  it('does not overwrite SignalR-hydrated store (race guard)', () => {
-    act(() => {
-      useLiveSessionStore.getState().setScoringConfig({
-        scoringType: 'Points',
-        scoreData: { scores: [{ playerId: 'p1', points: 99 }] },
-      });
-    });
-    renderTC({ viewerRole: 'Host' });
-    expect(useLiveSessionStore.getState().scoreData).toEqual({
-      scores: [{ playerId: 'p1', points: 99 }],
-    });
-  });
-
-  it('mounts without throwing when scoringType is null and no hydration source', () => {
-    expect(() => renderTC({ viewerRole: 'Host' })).not.toThrow();
-    expect(useLiveSessionStore.getState().scoringType).toBeNull();
-  });
-});
-
-// ─── Group 5: Variant editor mount ──────────────────────────────────────────
-
-describe('ScoreTabContent — variant editor mount (Host)', () => {
-  it('Points: editor receives correct scoringType prop', () => {
-    useLiveSessionStore.getState().setScoringConfig({
-      scoringType: 'Points',
-      scoreData: { scores: [{ playerId: 'p1', points: 10 }] },
-    });
-    renderTC({ viewerRole: 'Host' });
-    expect(
-      document
-        .querySelector('[data-slot="polymorphic-score-editor"]')
-        ?.getAttribute('data-scoring-type')
-    ).toBe('Points');
-  });
-
-  it('BinaryWin: editor receives correct scoringType prop', () => {
-    useLiveSessionStore.getState().setScoringConfig({
-      scoringType: 'BinaryWin',
-      scoreData: { results: [{ playerId: 'p1', isWinner: false }] },
-    });
-    renderTC({ viewerRole: 'Host' });
-    expect(
-      document
-        .querySelector('[data-slot="polymorphic-score-editor"]')
-        ?.getAttribute('data-scoring-type')
-    ).toBe('BinaryWin');
-  });
-
-  it('Ranking: editor receives correct scoringType prop', () => {
-    useLiveSessionStore.getState().setScoringConfig({
-      scoringType: 'Ranking',
-      scoreData: { positions: [{ playerId: 'p1', position: 1 }] },
-    });
-    renderTC({ viewerRole: 'Host' });
-    expect(
-      document
-        .querySelector('[data-slot="polymorphic-score-editor"]')
-        ?.getAttribute('data-scoring-type')
-    ).toBe('Ranking');
-  });
-
-  it('Objectives: editor receives availableObjectives prop (length > 0)', () => {
-    useLiveSessionStore.getState().setScoringConfig({
-      scoringType: 'Objectives',
-      scoreData: { completedByPlayer: [{ playerId: 'p1', objectives: [] }] },
-    });
-    renderTC({ viewerRole: 'Host' });
-    const editor = document.querySelector('[data-slot="polymorphic-score-editor"]');
-    expect(editor?.getAttribute('data-scoring-type')).toBe('Objectives');
-    expect(Number(editor?.getAttribute('data-objectives-count'))).toBeGreaterThan(0);
-  });
-});
-
-// ─── Group 6: Debounce + mutation ───────────────────────────────────────────
-
-describe('ScoreTabContent — debounce + mutation', () => {
-  beforeEach(() => {
-    useLiveSessionStore.getState().setScoringConfig({
-      scoringType: 'Points',
-      scoreData: { scores: [{ playerId: 'p1', points: 0 }] },
-    });
-  });
-
-  it('single edit → 500ms debounce → mutate called once with correct payload', () => {
-    renderTC({ viewerRole: 'Host' });
-    act(() => {
-      (document.querySelector('[data-slot="trigger-change"]') as HTMLButtonElement).click();
-    });
-    expect(mockMutation.mutate).not.toHaveBeenCalled();
-
-    act(() => {
-      vi.advanceTimersByTime(500);
-    });
-    expect(mockMutation.mutate).toHaveBeenCalledTimes(1);
-    expect(mockMutation.mutate).toHaveBeenCalledWith(
-      {
-        sessionId: 's1',
-        scoringType: 'Points',
-        scoreData: { scores: [{ playerId: 'p1', points: 99 }] },
-      },
-      expect.anything()
-    );
-  });
-
-  it('rapid edits (3 in 100ms) → only last fires after debounce', () => {
-    renderTC({ viewerRole: 'Host' });
-    act(() => {
-      const trigger = document.querySelector('[data-slot="trigger-change"]') as HTMLButtonElement;
-      trigger.click();
-      vi.advanceTimersByTime(30);
-      trigger.click();
-      vi.advanceTimersByTime(30);
-      trigger.click();
-    });
-    expect(mockMutation.mutate).not.toHaveBeenCalled();
-
-    act(() => {
-      vi.advanceTimersByTime(500);
-    });
-    expect(mockMutation.mutate).toHaveBeenCalledTimes(1);
-  });
-
-  it('unmount mid-debounce → flush() called, mutation fires immediately', () => {
-    const { unmount } = renderTC({ viewerRole: 'Host' });
-    act(() => {
-      (document.querySelector('[data-slot="trigger-change"]') as HTMLButtonElement).click();
-    });
-    expect(mockMutation.mutate).not.toHaveBeenCalled();
-
-    unmount();
-
-    expect(mockMutation.mutate).toHaveBeenCalledTimes(1);
-  });
-
-  it('mutation receives sessionId from props', () => {
-    renderTC({ viewerRole: 'Host', sessionId: 'custom-session-id' });
-    act(() => {
-      (document.querySelector('[data-slot="trigger-change"]') as HTMLButtonElement).click();
-      vi.advanceTimersByTime(500);
-    });
-    expect(mockMutation.mutate).toHaveBeenCalledWith(
-      expect.objectContaining({ sessionId: 'custom-session-id' }),
-      expect.anything()
-    );
-  });
-
-  it('SignalR overwrite after mutation → editor receives canonical store data', () => {
-    renderTC({ viewerRole: 'Host' });
-    act(() => {
-      (document.querySelector('[data-slot="trigger-change"]') as HTMLButtonElement).click();
-      vi.advanceTimersByTime(500);
-    });
-    expect(mockMutation.mutate).toHaveBeenCalledTimes(1);
-
-    // Simulate SignalR broadcast post-mutation
-    act(() => {
-      useLiveSessionStore.getState().setScoringConfig({
-        scoringType: 'Points',
-        scoreData: { scores: [{ playerId: 'p1', points: 99 }] },
-      });
-    });
-    const initialDataNode = document.querySelector('[data-slot="initial-data"]');
-    expect(initialDataNode?.textContent).toContain('99');
-  });
-});
-
-// ─── Group 7: Error handling ────────────────────────────────────────────────
-
-describe('ScoreTabContent — error handling', () => {
-  beforeEach(() => {
-    useLiveSessionStore.getState().setScoringConfig({
-      scoringType: 'Points',
-      scoreData: { scores: [{ playerId: 'p1', points: 0 }] },
-    });
-  });
-
-  function triggerEditAndFlushDebounce(): void {
-    act(() => {
-      (document.querySelector('[data-slot="trigger-change"]') as HTMLButtonElement).click();
-      vi.advanceTimersByTime(500);
-    });
-  }
-
-  function getOnErrorFromMockMutation(): (err: unknown) => void {
-    const calls = mockMutation.mutate.mock.calls;
-    expect(calls.length).toBeGreaterThan(0);
-    const lastCall = calls[calls.length - 1];
-    const options = lastCall[1] as { onError?: (err: unknown) => void } | undefined;
-    if (!options?.onError) {
-      throw new Error('mutate not called with onError option');
-    }
-    return options.onError;
-  }
-
-  it('403 → toast forbidden + editor disabled (via mutation isPending flow OR explicit freeze)', () => {
-    renderTC({ viewerRole: 'Host' });
-    triggerEditAndFlushDebounce();
-    const onError = getOnErrorFromMockMutation();
-    act(() => {
-      onError(new UpdateSessionScoresError('Forbidden', 'forbidden', 403));
-    });
-    expect(toastErrorMock).toHaveBeenCalledWith(
-      expect.stringContaining('Permesso negato'),
-      expect.objectContaining({ id: 'score-403' })
-    );
-  });
-
-  it('429 → toast warning + setRateLimitedUntil set in store', () => {
-    renderTC({ viewerRole: 'Host' });
-    triggerEditAndFlushDebounce();
-    const onError = getOnErrorFromMockMutation();
-    act(() => {
-      onError(new UpdateSessionScoresError('Too many', 'server', 429));
-    });
-    expect(toastWarningMock).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.objectContaining({ id: 'score-429' })
-    );
-    expect(useLiveSessionStore.getState().rateLimitedUntil).not.toBeNull();
-    expect(useLiveSessionStore.getState().rateLimitedUntil).toBeGreaterThan(Date.now());
-  });
-
-  it('429 countdown — editor disabled while rateLimitedUntil is in the future', () => {
-    act(() => {
-      useLiveSessionStore.getState().setRateLimitedUntil(Date.now() + 5000);
-    });
-    renderTC({ viewerRole: 'Host' });
-    expect(
-      document
-        .querySelector('[data-slot="polymorphic-score-editor"]')
-        ?.getAttribute('data-disabled')
-    ).toBe('true');
-  });
-
-  it('429 countdown reaches 0 → rateLimitedUntil cleared', () => {
-    act(() => {
-      useLiveSessionStore.getState().setRateLimitedUntil(Date.now() + 1000);
-    });
-    renderTC({ viewerRole: 'Host' });
-    expect(
-      document
-        .querySelector('[data-slot="polymorphic-score-editor"]')
-        ?.getAttribute('data-disabled')
-    ).toBe('true');
-    act(() => {
-      vi.advanceTimersByTime(2000);
-    });
-    expect(useLiveSessionStore.getState().rateLimitedUntil).toBeNull();
-  });
-
-  it('5xx server error → toast with retry button (action defined)', () => {
-    renderTC({ viewerRole: 'Host' });
-    triggerEditAndFlushDebounce();
-    const onError = getOnErrorFromMockMutation();
-    act(() => {
-      onError(new UpdateSessionScoresError('Server', 'server', 500));
-    });
-    expect(toastErrorMock).toHaveBeenCalledWith(
-      expect.stringContaining('Errore server'),
-      expect.objectContaining({
-        id: 'score-5xx',
-        action: expect.objectContaining({
-          label: expect.any(String),
-          onClick: expect.any(Function),
+    it('lists the scoring players with the cells of the round and the backend totals', () => {
+      renderTab(
+        session({
+          players: [
+            player('marco', 'Marco', 10),
+            player('giulia', 'Giulia', 0),
+            player('ospite', 'Ospite', 0, { role: 'Spectator' }),
+          ],
         }),
-      })
-    );
-  });
-
-  it('retry button click → re-invokes mutate with last payload', () => {
-    renderTC({ viewerRole: 'Host' });
-    triggerEditAndFlushDebounce();
-    const firstCallArgs = mockMutation.mutate.mock.calls[0][0];
-    const onError = getOnErrorFromMockMutation();
-    act(() => {
-      onError(new UpdateSessionScoresError('Server', 'server', 500));
+        'Player'
+      );
+      const rows = screen.getAllByRole('row').slice(1);
+      expect(rows.map(row => row.querySelector('th')?.textContent)).toEqual(['Marco', 'Giulia']);
+      expect(rows[0]).toHaveTextContent('10');
+      expect(rows[1]).toHaveTextContent('—');
     });
-    const toastCall = toastErrorMock.mock.calls.find(c => c[1]?.id === 'score-5xx');
-    const onClick = (toastCall?.[1] as { action: { onClick: () => void } }).action.onClick;
-    act(() => {
-      onClick();
-    });
-    expect(mockMutation.mutate).toHaveBeenCalledTimes(2);
-    expect(mockMutation.mutate.mock.calls[1][0]).toEqual(firstCallArgs);
-  });
 
-  it('network error (TypeError) → toast with retry button', () => {
-    renderTC({ viewerRole: 'Host' });
-    triggerEditAndFlushDebounce();
-    const onError = getOnErrorFromMockMutation();
-    act(() => {
-      onError(new TypeError('Failed to fetch'));
-    });
-    expect(toastErrorMock).toHaveBeenCalledWith(
-      expect.stringContaining('Connessione persa'),
-      expect.objectContaining({ id: 'score-network' })
-    );
-  });
-
-  it('400 validation error → toast with details, editor remains enabled', () => {
-    renderTC({ viewerRole: 'Host' });
-    triggerEditAndFlushDebounce();
-    const onError = getOnErrorFromMockMutation();
-    act(() => {
-      onError(new UpdateSessionScoresError('Bad', 'validation', 400, { field: 'scores' }));
-    });
-    expect(toastErrorMock).toHaveBeenCalledWith(
-      expect.stringContaining('Validazione fallita'),
-      expect.objectContaining({ id: 'score-400' })
-    );
-    expect(
-      document
-        .querySelector('[data-slot="polymorphic-score-editor"]')
-        ?.getAttribute('data-disabled')
-    ).toBe('false');
-  });
-});
-
-// ─── Group 8: Optimistic UI ─────────────────────────────────────────────────
-
-describe('ScoreTabContent — optimistic UI', () => {
-  beforeEach(() => {
-    useLiveSessionStore.getState().setScoringConfig({
-      scoringType: 'Points',
-      scoreData: { scores: [{ playerId: 'p1', points: 0 }] },
+    it('shows the dimension unit in the column header', () => {
+      renderTab(
+        session({
+          scoringConfig: { enabledDimensions: ['oro'], dimensionUnits: { oro: 'monete' } },
+        })
+      );
+      expect(screen.getByRole('columnheader', { name: 'oro (monete)' })).toBeInTheDocument();
     });
   });
 
-  it('typing → localScoreOverride reflected in editor initialData immediately', () => {
-    renderTC({ viewerRole: 'Host' });
-    const before = document.querySelector('[data-slot="initial-data"]')?.textContent;
-    expect(before).toContain('"points":0');
-
-    act(() => {
-      (document.querySelector('[data-slot="trigger-change"]') as HTMLButtonElement).click();
+  describe('the round — derived (D6), changeable', () => {
+    it('opens on the derived round of the game', () => {
+      renderTab(session({ currentTurnIndex: 5 })); // 2 players → (5 − 1) / 2 + 1 = 3
+      expect(screen.getByText('Round 3')).toBeInTheDocument();
     });
-    const after = document.querySelector('[data-slot="initial-data"]')?.textContent;
-    expect(after).toContain('"points":99');
+
+    it('is round 1 before the start', () => {
+      renderTab(session({ currentTurnIndex: 0 }));
+      expect(screen.getByText('Round 1')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Round precedente' })).toBeDisabled();
+    });
+
+    it('moves to another round and back to the current one', () => {
+      renderTab(session());
+      fireEvent.click(screen.getByRole('button', { name: 'Round successivo' }));
+      expect(screen.getByText('Round 3')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Torna al round in corso' }));
+      expect(screen.getByText('Round 2')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Torna al round in corso' })).toBeNull();
+    });
   });
 
-  it('mutation success → localScoreOverride cleared, falls back to store', () => {
-    renderTC({ viewerRole: 'Host' });
-    act(() => {
-      (document.querySelector('[data-slot="trigger-change"]') as HTMLButtonElement).click();
-      vi.advanceTimersByTime(500);
+  describe('who writes', () => {
+    it('the other players read, without inputs', () => {
+      renderTab(session(), 'Player');
+      expect(screen.queryByRole('spinbutton')).toBeNull();
     });
-    const calls = mockMutation.mutate.mock.calls;
-    const options = calls[0][1] as { onSuccess?: () => void };
-    act(() => {
-      options.onSuccess?.();
-      useLiveSessionStore.getState().setScoringConfig({
-        scoringType: 'Points',
-        scoreData: { scores: [{ playerId: 'p1', points: 99 }] },
-      });
+
+    it('nobody writes before the start or after the end', () => {
+      const { unmount } = renderTab(session({ status: 'Created' }));
+      expect(screen.queryByRole('spinbutton')).toBeNull();
+      unmount();
+      renderTab(session({ status: 'Completed' }));
+      expect(screen.queryByRole('spinbutton')).toBeNull();
     });
-    expect(document.querySelector('[data-slot="initial-data"]')?.textContent).toContain(
-      '"points":99'
-    );
+
+    it('the host writes while the game is paused too', () => {
+      renderTab(session({ status: 'Paused' }));
+      expect(screen.getAllByRole('spinbutton').length).toBeGreaterThan(0);
+    });
   });
 
-  it('mutation error → localScoreOverride cleared (rollback to store)', () => {
-    renderTC({ viewerRole: 'Host' });
-    act(() => {
-      (document.querySelector('[data-slot="trigger-change"]') as HTMLButtonElement).click();
-      vi.advanceTimersByTime(500);
+  describe('executable examples', () => {
+    it('a score on the current round is a new cell (POST)', async () => {
+      renderTab(session());
+      write('punti di Giulia, round 2', '30');
+      await waitFor(() =>
+        expect(recordMock).toHaveBeenCalledWith({
+          request: { playerId: 'giulia', round: 2, dimension: 'punti', value: 30 },
+          correction: false,
+        })
+      );
     });
-    const options = mockMutation.mutate.mock.calls[0][1] as { onError?: (err: unknown) => void };
-    act(() => {
-      options.onError?.(new UpdateSessionScoresError('Forbidden', 'forbidden', 403));
+
+    it('a correction rewrites a cell that has a value (PUT)', async () => {
+      renderTab(session());
+      write('punti di Marco, round 2', '12');
+      await waitFor(() =>
+        expect(recordMock).toHaveBeenCalledWith({
+          request: { playerId: 'marco', round: 2, dimension: 'punti', value: 12 },
+          correction: true,
+        })
+      );
     });
-    expect(document.querySelector('[data-slot="initial-data"]')?.textContent).toContain(
-      '"points":0'
-    );
+
+    it('a score on a future round is a new cell of that round', async () => {
+      renderTab(session());
+      fireEvent.click(screen.getByRole('button', { name: 'Round successivo' }));
+      write('punti di Marco, round 3', '5');
+      await waitFor(() =>
+        expect(recordMock).toHaveBeenCalledWith({
+          request: { playerId: 'marco', round: 3, dimension: 'punti', value: 5 },
+          correction: false,
+        })
+      );
+    });
+
+    it('sends the unit of the dimension', async () => {
+      renderTab(
+        session({
+          scoringConfig: { enabledDimensions: ['oro'], dimensionUnits: { oro: 'monete' } },
+        })
+      );
+      write('oro di Giulia, round 2', '7');
+      await waitFor(() =>
+        expect(recordMock).toHaveBeenCalledWith({
+          request: { playerId: 'giulia', round: 2, dimension: 'oro', value: 7, unit: 'monete' },
+          correction: false,
+        })
+      );
+    });
+
+    it('Enter writes the cell', async () => {
+      renderTab(session());
+      const cell = screen.getByLabelText('punti di Giulia, round 2');
+      cell.focus();
+      fireEvent.change(cell, { target: { value: '4' } });
+      fireEvent.keyDown(cell, { key: 'Enter' });
+      await waitFor(() => expect(recordMock).toHaveBeenCalledTimes(1));
+    });
+  });
+
+  describe('what is never written', () => {
+    it('an unchanged or emptied cell', async () => {
+      renderTab(session());
+      write('punti di Marco, round 2', '10');
+      write('punti di Giulia, round 2', '');
+      // Give the write queue a turn: nothing must have been sent.
+      await Promise.resolve();
+      expect(recordMock).not.toHaveBeenCalled();
+    });
+
+    it('a value that is not a whole number, with a message', async () => {
+      renderTab(session());
+      write('punti di Giulia, round 2', '2.5');
+      await Promise.resolve();
+      expect(recordMock).not.toHaveBeenCalled();
+      expect(toastErrorMock).toHaveBeenCalledWith('Numero intero', expect.anything());
+    });
+  });
+
+  describe('writes', () => {
+    it('go one at a time: the second starts when the first is done', async () => {
+      let finishFirst: () => void = () => undefined;
+      recordMock.mockImplementationOnce(
+        () => new Promise<void>(resolve => (finishFirst = resolve))
+      );
+      renderTab(session());
+      write('punti di Giulia, round 2', '30');
+      write('punti di Marco, round 2', '12');
+      await waitFor(() => expect(recordMock).toHaveBeenCalledTimes(1));
+      finishFirst();
+      await waitFor(() => expect(recordMock).toHaveBeenCalledTimes(2));
+    });
+
+    it('a failed write says so', async () => {
+      recordMock.mockRejectedValueOnce(new Error('409'));
+      renderTab(session());
+      write('punti di Giulia, round 2', '30');
+      await waitFor(() =>
+        expect(toastErrorMock).toHaveBeenCalledWith('Punteggio non salvato', expect.anything())
+      );
+    });
   });
 });

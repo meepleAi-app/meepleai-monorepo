@@ -100,7 +100,7 @@ jobs:
       - name: Setup Backend
         uses: ./.github/actions/setup-backend
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
           working-directory: apps/api
           # #3632: senza questo, `cache-version` resta al default 'v1' mentre i job che consumano
           # l'artifact passano `vars.CACHE_VERSION`. Al primo uso di quella repo variable il job che
@@ -172,7 +172,6 @@ jobs:
       - name: Setup Frontend
         uses: ./.github/actions/setup-frontend
         with:
-          node-version: '20'
           pnpm-version: '10'
           working-directory: apps/web
           frozen-lockfile: 'true'
@@ -220,7 +219,6 @@ jobs:
       - name: Setup Frontend
         uses: ./.github/actions/setup-frontend
         with:
-          node-version: '20'
           pnpm-version: '10'
           working-directory: apps/web
           frozen-lockfile: 'true'
@@ -281,7 +279,6 @@ jobs:
       - name: Setup Frontend
         uses: ./.github/actions/setup-frontend
         with:
-          node-version: '20'
           pnpm-version: '10'
           working-directory: apps/web
           frozen-lockfile: 'true'
@@ -502,7 +499,6 @@ jobs:
       - name: Setup Frontend
         uses: ./.github/actions/setup-frontend
         with:
-          node-version: '20'
           pnpm-version: '10'
           working-directory: apps/web
           frozen-lockfile: 'true'
@@ -536,7 +532,6 @@ jobs:
       - name: Setup Frontend
         uses: ./.github/actions/setup-frontend
         with:
-          node-version: '20'
           pnpm-version: '10'
           working-directory: apps/web
           frozen-lockfile: 'true'
@@ -590,7 +585,7 @@ jobs:
       - name: Setup Backend (restore + NuGet cache — #3632)
         uses: ./.github/actions/setup-backend
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
           working-directory: apps/api
           cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
 
@@ -783,7 +778,7 @@ jobs:
       - name: Setup Backend (restore + NuGet cache — #3632)
         uses: ./.github/actions/setup-backend
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
           working-directory: apps/api
           cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
 
@@ -1107,7 +1102,7 @@ jobs:
       - name: Setup Backend (restore NuGet for EF design-time tools)
         uses: ./.github/actions/setup-backend
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
           working-directory: apps/api
 
       - name: Download backend artifact
@@ -1126,7 +1121,7 @@ jobs:
 
       - name: Install EF Core Tools
         run: |
-          dotnet tool install --global dotnet-ef
+          dotnet tool install --global dotnet-ef --version 10.*
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
       - name: Run Database Migrations
@@ -1285,7 +1280,6 @@ jobs:
       - name: Setup Frontend
         uses: ./.github/actions/setup-frontend
         with:
-          node-version: '20'
           pnpm-version: '10'
           working-directory: apps/web
           frozen-lockfile: 'true'

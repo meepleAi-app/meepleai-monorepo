@@ -22,6 +22,29 @@ on:
       - '.github/actions/**'
       - 'infra/scripts/**'
       - 'infra/seed-schema.version'
+      # #4298: la baseline degli shard di dev-async, che shard-skip-assert.bats legge dal
+      # repository (vedi il filtro `infra` più sotto).
+      - 'infra/fixtures/dev-async-shard-baseline.json'
+      # #3742: le due matrici degli shard di integrazione, che integration-shard-matrix.bats legge
+      # da questi file (vedi il filtro `infra` più sotto). Senza queste righe una PR che cambia solo
+      # la ripartizione non avvierebbe il gate che ne verifica la forma.
+      - '.github/workflows/dev-async.yml'
+      - '.github/workflows/ci.yml'
+      # #4310: gli script di pulizia e l'hook di pre-push che li chiama, che due suite sotto
+      # infra/scripts/tests/ esaminano da qui (vedi il filtro `infra` più sotto). Senza queste due
+      # righe una PR che tocca solo l'hook non avvierebbe nemmeno il workflow.
+      # #4316: tutta la cartella degli hook, non il solo pre-push: install-git-hooks.bats controlla
+      # che ognuno sia eseguibile nell'indice, e un hook nuovo aggiunto da Windows entra come 100644.
+      - 'tools/cleanup/**'
+      - '.husky/**'
+      # #4427: i segreti cifrati e i destinatari age. Senza queste righe una PR che aggiunge un file
+      # cifrato non avvierebbe il controllo che ne rifiuta i valori in chiaro.
+      - 'infra/secrets/sops/**'
+      - '.sops.yaml'
+      # #4256: il prompt misurato e il set di scenari dell'assistente, che due classi di test unit
+      # del backend leggono dal repository (vedi il filtro `backend` più sotto).
+      - 'tests/llm-eval/session-assistant/prompts/**'
+      - 'tests/llm-eval/session-assistant/scenarios.json'
   workflow_dispatch:
 
 concurrency:
@@ -63,6 +86,15 @@ jobs:
               - '.github/actions/setup-playwright/**'
             backend:
               - 'apps/api/**'
+              # #4138: FrontendModelRoutingMirrorTests (backend unit) confronta questo file con
+              # LlmModelRouting. Senza questa riga una PR solo frontend che lo cambia non lo
+              # farebbe girare, e la deriva che il test esiste per fermare passerebbe.
+              - 'apps/web/src/lib/llm-model-routing.ts'
+              # #4256: DefaultPrompts_AreTheMeasuredOnes confronta il prompt del codice con il file
+              # misurato, e due test validano scenarios.json. Senza queste righe una PR che cambia solo
+              # quei file non li farebbe girare: si potrebbe misurare un prompt e spedirne un altro.
+              - 'tests/llm-eval/session-assistant/prompts/**'
+              - 'tests/llm-eval/session-assistant/scenarios.json'
               - 'global.json'
               - '.github/workflows/dev-fast.yml'
               - '.github/actions/setup-backend/**'
@@ -91,8 +123,43 @@ jobs:
               # ones, so a PR editing infra/fixtures/ would boot a gate that
               # cannot observe the change. infra/seed-schema.version IS here —
               # snapshot-verify.bats reads the live counter.
+              #
+              # #4298: one fixture IS read from the repo. shard-skip-assert.bats
+              # checks the committed dev-async-shard-baseline.json (runId,
+              # capturedAt; one entry per shard is checked by
+              # integration-shard-matrix.bats), so a PR that rewrites only that
+              # file changed something this gate observes and did not wake it.
+              # Listed by name, not as infra/fixtures/**, for the reason above.
+              #
+              # #4310: two suites under infra/scripts/tests/ examine files that live
+              # elsewhere - the cleanup rules in tools/cleanup/ and the pre-push hook
+              # that calls them. Without these two lines a PR that edits only the hook
+              # or the scripts would not wake the gate that pins them.
+              #
+              # #4316: install-git-hooks.bats examines three more things that live
+              # elsewhere - every hook under .husky/ (index mode, shebang), the
+              # installer, and the `prepare` script of apps/web/package.json, which it
+              # runs as written. package.json is listed whole because a path filter
+              # cannot see one key: a dependency bump wakes this gate too, and the
+              # suites cost seconds.
               - 'infra/scripts/**'
               - 'infra/seed-schema.version'
+              - 'infra/fixtures/dev-async-shard-baseline.json'
+              # #3742: two more suites read files that live elsewhere.
+              # integration-shard-matrix.bats reads the shard matrices of both
+              # workflows: a PR that drops a token from one shard and leaves it
+              # excluded from Core makes those tests run nowhere, and only this
+              # gate can see it before the merge. shard-session-budget.bats reads
+              # the TestSessionTimeout from the real runsettings.
+              - '.github/workflows/dev-async.yml'
+              - '.github/workflows/ci.yml'
+              - 'apps/api/tests/Api.Tests/integration.runsettings'
+              - 'tools/cleanup/**'
+              - '.husky/**'
+              - 'infra/secrets/sops/**'
+              - '.sops.yaml'
+              - 'apps/web/scripts/install-git-hooks.mjs'
+              - 'apps/web/package.json'
               - '.github/workflows/dev-fast.yml'
 
   # Sharding strategy (incident #1115): the apps/web Vitest suite runs >15min
@@ -102,6 +169,9 @@ jobs:
   # typecheck stay in a separate fast job (no benefit from parallelism).
   # The frontend-fast aggregator job below preserves the branch-protection
   # required check name "Frontend Fast (lint + typecheck + unit)".
+  # The ~7.5min above was true at #1115 and is not kept current here: since
+  # #4117 the aggregator prints, on every run, how much of the budget each
+  # shard used.
 
   frontend-static:
     name: Frontend Static (lint + typecheck)
@@ -124,7 +194,6 @@ jobs:
 
       - uses: ./.github/actions/setup-frontend
         with:
-          node-version: '20'
           pnpm-version: '10'
           working-directory: apps/web
           frozen-lockfile: 'true'
@@ -155,13 +224,63 @@ jobs:
       - name: Orphan Playwright specs gate (#4092)
         run: pnpm lint:orphan-specs
 
+      # Fratello del gate sopra, e chiude il difetto gemello: una spec che vive nella radice
+      # giusta ma cerca un `data-testid` che il codice di produzione non dichiara. Non e'
+      # «da aggiustare»: non e' eseguibile per costruzione. Non rompe il build, non rompe il
+      # lint, e il gate E2E non gira sulle PR verso `main-dev` — quindi resta invisibile. Tre
+      # istanze sono emerse A MANO in due giorni per vie indipendenti (#4106, #4105, #4110): la
+      # misura dice che erano campioni, non casi. Il piu' grosso, `game-card`, e' una vittima
+      # della migrazione GameCard -> MeepleCard dichiarata in CLAUDE.md.
+      #
+      # E' un CRICCHETTO, non un gate a zero: la baseline all'introduzione e' troppo ampia
+      # perche' un bloccante a zero sia introducibile. Blocca il peggioramento — una spec nuova
+      # deve essere a zero, una esistente non deve crescere — e il percorso verso zero sta
+      # nella baseline committata, file per file. Accusa solo cio' che puo' dimostrare: un id
+      # coperto da una dichiarazione dinamica (`data-testid={`${x}-apply`}`) e' classificato
+      # indimostrabile, non orfano.
+      - name: Orphan data-testid gate (#4120)
+        run: pnpm lint:orphan-testids
+
+      # Gate #4127, e chiude il difetto che quello sopra non vede: un test le cui UNICHE
+      # asserzioni stanno dentro un `if (await x.isVisible())` non ha un esito «non
+      # applicabile» — ha un VERDE. Se l'elemento non c'e' il corpo non gira, il test passa, e
+      # un `console.log` nell'else fa sembrare un salto legittimo per mancanza di dati.
+      #
+      # Il caso che l'ha motivato: `e2e/pdf-viewer-modal.spec.ts`, 14 test su 18 in questo
+      # stato, con il condizionale SEMPRE falso perche' cercava un `citation-list` che esiste
+      # in un'altra feature. Nessuna delle sue 18 prove poteva fallire. E' peggio di un rosso:
+      # un rosso si vede, questi si contano fra i passati.
+      #
+      # Non accusa chi condiziona legittimamente: se un solo `expect` sta FUORI dal blocco, il
+      # test non e' contato. E' cio' che evita i falsi positivi su UI davvero opzionale.
+      # Cricchetto come sopra, con baseline per file.
+      - name: Blind E2E tests gate (#4127)
+        run: pnpm lint:blind-tests
+
       - name: Typecheck
         run: pnpm typecheck
 
   frontend-tests:
     name: Frontend Tests (shard ${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Issue #4117: raised 10 → 15 minutes. On the Dev Fast runs of 2026-10-14…16
+    # the shard job took p50 7m20s, p90 8m56s, slowest green 9m12s — 92% of the
+    # 10-min budget — and one shard was closed by the timeout at 10m12s (run
+    # 38772184870). The same SHA moves by 2+ minutes per shard with runner load
+    # (run 37657470219: slowest shard 8m17s on an idle CI, cut at 10m18s on a
+    # saturated one), so 10 left no headroom on a busy day. A shard cut by the
+    # budget concludes `cancelled`, which `gh pr checks` shows as `fail`.
+    # Why not the alternatives: ~70% of the Vitest cost is per-file overhead
+    # (jsdom environment + vitest.setup.tsx) and the 25 slowest files are ~3% of
+    # it, so moving slow files buys nothing; a 5th shard pays checkout + install
+    # again and would be the third reshard (3 → 4 → 5) of a suite that refills
+    # any absolute number. 15 min puts the slowest green shard measured above at
+    # ~61% of the budget, ~6 min headroom.
+    # The ratio is not left to this comment: the frontend-fast aggregator prints
+    # each shard's share of the budget on every run and warns from 80%
+    # (infra/scripts/frontend-shard-report.sh). The anchor hands it this same
+    # value — change it here only.
+    timeout-minutes: &frontend-tests-budget 15
     needs: changes
     if: needs.changes.outputs.frontend == 'true' || github.event_name == 'workflow_dispatch'
     strategy:
@@ -182,7 +301,6 @@ jobs:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-frontend
         with:
-          node-version: '20'
           pnpm-version: '10'
           working-directory: apps/web
           frozen-lockfile: 'true'
@@ -203,8 +321,20 @@ jobs:
     timeout-minutes: 2
     needs: [changes, frontend-static, frontend-tests]
     if: ${{ always() }}
+    # #4117: the shard report reads this run's jobs and the annotations of the
+    # cancelled ones — the only place where GitHub says whether a `cancelled`
+    # shard ran out of budget or was replaced by a newer run — and fetches its
+    # script at this run's SHA through the contents API, so the job still needs
+    # no checkout (whose duration swings by minutes on this repo).
+    permissions:
+      actions: read
+      checks: read
+      contents: read
     steps:
       - name: Verify upstream results
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUDGET_MINUTES: *frontend-tests-budget
         run: |
           STATIC="${{ needs.frontend-static.result }}"
           TESTS="${{ needs.frontend-tests.result }}"
@@ -218,12 +348,33 @@ jobs:
             echo "No frontend changes on PR — aggregator passes (upstream legitimately skipped)."
             exit 0
           fi
+          # #4117: which shard, why, and how much of the budget it used. Only
+          # informational — whatever happens in here, the verdict below depends
+          # on the needs results alone, as before.
+          shard_report() {
+            local dir id
+            dir=$(mktemp -d)
+            gh api "repos/$GITHUB_REPOSITORY/contents/infra/scripts/frontend-shard-report.sh?ref=$GITHUB_SHA" \
+              -H "Accept: application/vnd.github.raw" > "$dir/report.sh" || return 1
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100" \
+              > "$dir/jobs.json" || return 1
+            mkdir "$dir/annotations"
+            for id in $(jq -r '.jobs[] | select(.conclusion == "cancelled") | .id' "$dir/jobs.json"); do
+              gh api "repos/$GITHUB_REPOSITORY/check-runs/$id/annotations" > "$dir/annotations/$id.json" \
+                || rm -f "$dir/annotations/$id.json"
+            done
+            bash "$dir/report.sh" --jobs "$dir/jobs.json" --annotations "$dir/annotations" \
+              --budget-minutes "$BUDGET_MINUTES"
+          }
+          if [[ "$TESTS" != "skipped" ]]; then
+            shard_report || echo "::warning::shard report unavailable (see the lines above); the verdict below does not depend on it"
+          fi
           if [[ "$STATIC" != "success" ]]; then
             echo "frontend-static did not succeed (result=$STATIC)"
             exit 1
           fi
           if [[ "$TESTS" != "success" ]]; then
-            echo "frontend-tests did not succeed across all shards (result=$TESTS)"
+            echo "frontend-tests did not succeed across all shards (result=$TESTS) — which shard, and whether it was a timeout rather than a failure, is in the shard report above"
             exit 1
           fi
           echo "All frontend checks passed."
@@ -256,7 +407,7 @@ jobs:
         run: bash infra/scripts/lint-deps-imagesharp.sh
       - uses: ./.github/actions/setup-backend
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
           working-directory: apps/api
           cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
 
@@ -274,10 +425,17 @@ jobs:
       # ciò che è esplicitamente marcato come lento o infra-dipendente. Le categorie escluse sono
       # pinnate da TestCategoryGateArchitectureTests, che fallisce se ne compare una nuova — senza
       # quel guard la deny-list tornerebbe incompleta al primo `Category` inedito.
+      #
+      # #4274: il logger esplicito. Con il solo `--verbosity quiet` di un test rosso resta la riga
+      # `[FAIL]` e nient'altro: né il messaggio dell'asserzione né il valore trovato. Quel dettaglio
+      # non si recupera dopo — un rerun sostituisce il log — e senza non si distingue una soglia
+      # sforata di poco da una regressione. `minimal` stampa messaggio e stack dei soli rossi e una
+      # riga per ogni salto; i test superati restano fuori dal log.
       - name: Unit tests (everything not explicitly slow/infra — #3622)
         working-directory: apps/api/tests/Api.Tests
         run: |
           dotnet test --no-build --configuration Release --verbosity quiet \
+            --logger "console;verbosity=minimal" \
             --filter "Category!=Integration&Category!=E2E&Category!=Performance&Category!=Manual&Category!=Slow"
 
   migration-safety:
@@ -304,7 +462,7 @@ jobs:
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Install dotnet-ef tool
         run: |
@@ -313,7 +471,7 @@ jobs:
             echo "dotnet-ef already installed -- using existing version:"
             dotnet tool list --global | grep '^dotnet-ef'
           else
-            dotnet tool install --global dotnet-ef --version 9.*
+            dotnet tool install --global dotnet-ef --version 10.*
           fi
           echo "$HOME/.dotnet/tools" >> "$GITHUB_PATH"
 
@@ -419,12 +577,41 @@ jobs:
             exit 1
           fi
 
+      - name: Install age and sops (secrets-sops.bats, #4427)
+        # secrets-sops.bats runs the REAL tools: a stub would only prove the script calls a
+        # command, not that the round-trip keeps every value. The suite treats a missing tool as
+        # an error under CI, so this step is what makes it run — removing it turns the suite red,
+        # not silently skipped. Versions and SHA-256 are pinned: sops' hash is the one in its
+        # official checksums.txt; age publishes no checksum file (only .proof), so its hash is the
+        # one of the v1.3.2 release asset, taken on 2026-10-16.
+        env:
+          AGE_VERSION: v1.3.2
+          AGE_SHA256: cbe24006683f8eb669266162894b9a522a1af52f2665fbc63a4bb032ed26ac10
+          SOPS_VERSION: v3.13.3
+          SOPS_SHA256: e5bec3346a873ae91d871550f3e698c1aad962aff462a080e40f25fde17fef6b
+        run: |
+          set -euo pipefail
+          tmp=$(mktemp -d)
+          curl -fsSLo "$tmp/age.tgz" "https://github.com/FiloSottile/age/releases/download/${AGE_VERSION}/age-${AGE_VERSION}-linux-amd64.tar.gz"
+          echo "${AGE_SHA256}  $tmp/age.tgz" | sha256sum -c -
+          tar -xzf "$tmp/age.tgz" -C "$tmp"
+          sudo install -m 0755 "$tmp/age/age" "$tmp/age/age-keygen" /usr/local/bin/
+          curl -fsSLo "$tmp/sops" "https://github.com/getsops/sops/releases/download/${SOPS_VERSION}/sops-${SOPS_VERSION}.linux.amd64"
+          echo "${SOPS_SHA256}  $tmp/sops" | sha256sum -c -
+          sudo install -m 0755 "$tmp/sops" /usr/local/bin/sops
+          age --version && sops --version
+
       - name: Run bats suites
         # Version pinned so a bats major bump cannot silently change semantics.
         # jq and bash are preinstalled on ubuntu-latest; both scripts need them.
         # --print-output-on-failure surfaces the failing script's stderr in the
         # job log, so a red check is diagnosable without a local repro.
         run: npx --yes bats@1.13.0 --print-output-on-failure infra/scripts/tests/
+
+      - name: Encrypted secrets hold no plaintext (#4427)
+        # The pre-commit hook checks the same thing, but hooks can be skipped. This needs no key:
+        # it reads only the shape of each file (sops metadata present, every value ENC[...]).
+        run: bash infra/scripts/secrets-sops.sh check
 
       - name: Run Pester suites
         # #3680. Version pinned for the same reason bats is: a Pester major bump

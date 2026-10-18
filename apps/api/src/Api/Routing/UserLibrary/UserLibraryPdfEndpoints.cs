@@ -63,8 +63,7 @@ internal static class UserLibraryPdfEndpoints
         .Produces(404)
         .WithTags("Library")
         .WithSummary("Upload custom PDF")
-        .WithDescription("Uploads a custom PDF rulebook for a game in user's library. Overrides the SharedGame's default PDF.")
-        .WithOpenApi();
+        .WithDescription("Uploads a custom PDF rulebook for a game in user's library. Overrides the SharedGame's default PDF.");
     }
 
     private static void MapGetGamePdfsEndpoint(RouteGroupBuilder group)
@@ -94,8 +93,7 @@ internal static class UserLibraryPdfEndpoints
         .Produces(401)
         .WithTags("Library", "PDF")
         .WithSummary("Get game PDFs")
-        .WithDescription("Returns all PDFs associated with a game in user's library (custom uploads + shared catalog). Issue #3152.")
-        .WithOpenApi();
+        .WithDescription("Returns all PDFs associated with a game in user's library (custom uploads + shared catalog). Issue #3152.");
     }
 
     /// <summary>
@@ -130,7 +128,6 @@ internal static class UserLibraryPdfEndpoints
         .Produces(404)
         .WithTags("Library", "PDF")
         .WithSummary("Get PDF indexing status")
-        .WithDescription("Returns the PDF processing/indexing status for a game. Poll every 3s until status=indexed|failed. Issue #4943.")
-        .WithOpenApi();
+        .WithDescription("Returns the PDF processing/indexing status for a game. Poll every 3s until status=indexed|failed. Issue #4943.");
     }
 }

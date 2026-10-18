@@ -26,11 +26,9 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Handlers;
 public sealed class PlaygroundChatCommandHandlerTests
 {
     private readonly Mock<IAgentDefinitionRepository> _mockAgentDefinitionRepository;
-    private readonly Mock<ILlmClient> _mockLlmClient;
-    private readonly LlmProviderFactory _llmProviderFactory;
+    private readonly Mock<ILlmService> _mockLlmService;
     private readonly Mock<IHybridSearchService> _mockHybridSearchService;
     private readonly Mock<ILlmCostCalculator> _mockCostCalculator;
-    private readonly Mock<ILlmCostLogRepository> _mockCostLogRepository;
     private readonly Mock<IRagExecutionRepository> _mockRagExecutionRepository;
     private readonly Mock<ICrossEncoderReranker> _mockReranker;
     private readonly Mock<ILogger<PlaygroundChatCommandHandler>> _mockLogger;
@@ -39,17 +37,11 @@ public sealed class PlaygroundChatCommandHandlerTests
     public PlaygroundChatCommandHandlerTests()
     {
         _mockAgentDefinitionRepository = new Mock<IAgentDefinitionRepository>();
-        _mockLlmClient = new Mock<ILlmClient>();
-        _mockLlmClient.Setup(c => c.ProviderName).Returns("TestProvider");
-        _mockLlmClient.Setup(c => c.SupportsModel(It.IsAny<string>())).Returns(true);
-
-        _llmProviderFactory = new LlmProviderFactory(
-            new[] { _mockLlmClient.Object },
-            new Mock<ILogger<LlmProviderFactory>>().Object);
+        // #4166: il Playground chiama il gateway, non più i client tramite LlmProviderFactory.
+        _mockLlmService = new Mock<ILlmService>();
 
         _mockHybridSearchService = new Mock<IHybridSearchService>();
         _mockCostCalculator = new Mock<ILlmCostCalculator>();
-        _mockCostLogRepository = new Mock<ILlmCostLogRepository>();
         _mockRagExecutionRepository = new Mock<IRagExecutionRepository>();
         _mockReranker = new Mock<ICrossEncoderReranker>();
         SetupPassthroughReranker(_mockReranker);
@@ -62,10 +54,9 @@ public sealed class PlaygroundChatCommandHandlerTests
 
         _handler = new PlaygroundChatCommandHandler(
             _mockAgentDefinitionRepository.Object,
-            _llmProviderFactory,
+            _mockLlmService.Object,
             _mockHybridSearchService.Object,
             _mockCostCalculator.Object,
-            _mockCostLogRepository.Object,
             _mockRagExecutionRepository.Object,
             _mockReranker.Object,
             _mockLogger.Object
@@ -225,7 +216,12 @@ public sealed class PlaygroundChatCommandHandlerTests
             .Setup(r => r.GetByIdAsync(agentDefId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(agentDef);
 
-        SetupLlmClientStream(new[] { new StreamChunk("Response text here") });
+        // #4166: il nome del provider arriva dal chunk finale del gateway (il costo della chiamata)
+        SetupLlmClientStream(new[]
+        {
+            new StreamChunk("Response text here"),
+            new StreamChunk(null, new LlmUsage(10, 5, 15), new LlmCost { InputCost = 0m, OutputCost = 0m, ModelId = "gpt-4", Provider = "TestProvider" }, true),
+        });
 
         // Act
         var events = new List<RagStreamingEvent>();
@@ -347,11 +343,12 @@ public sealed class PlaygroundChatCommandHandlerTests
         }
 
         // Assert - verify the system prompt from AgentDefinition was passed to LLM client
-        _mockLlmClient.Verify(c => c.GenerateCompletionStreamAsync(
+        _mockLlmService.Verify(c => c.GenerateCompletionStreamWithModelAsync(
             "gpt-4",
             "You are a chess expert. Only discuss chess.",
             "Tell me about chess",
-            It.Is<double>(d => Math.Abs(d - 0.7) < 0.01),
+            RequestSource.AdminOperation,
+            It.Is<double?>(d => d.HasValue && Math.Abs(d.Value - 0.7) < 0.01),
             2048,
             It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -377,11 +374,12 @@ public sealed class PlaygroundChatCommandHandlerTests
         }
 
         // Assert - fallback prompt should contain the agent name
-        _mockLlmClient.Verify(c => c.GenerateCompletionStreamAsync(
+        _mockLlmService.Verify(c => c.GenerateCompletionStreamWithModelAsync(
             "gpt-4",
             It.Is<string>(p => p.Contains("Bare Agent", StringComparison.OrdinalIgnoreCase)),
             "Hello",
-            It.Is<double>(d => Math.Abs(d - 0.7) < 0.01),
+            RequestSource.AdminOperation,
+            It.Is<double?>(d => d.HasValue && Math.Abs(d.Value - 0.7) < 0.01),
             2048,
             It.IsAny<CancellationToken>()), Times.Once);
     }
@@ -444,13 +442,14 @@ public sealed class PlaygroundChatCommandHandlerTests
 
         // Assert - handler has no ChatThreadRepository dependency, so nothing persisted
         // Validated by verifying the LLM client was called once
-        _mockLlmClient.Verify(
-            c => c.GenerateCompletionStreamAsync(
+        _mockLlmService.Verify(
+            c => c.GenerateCompletionStreamWithModelAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<double>(),
-                It.IsAny<int>(),
+                It.IsAny<RequestSource>(),
+                It.IsAny<double?>(),
+                It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -614,15 +613,16 @@ public sealed class PlaygroundChatCommandHandlerTests
 
     private void SetupLlmClientStream(StreamChunk[] chunks)
     {
-        _mockLlmClient
-            .Setup(c => c.GenerateCompletionStreamAsync(
+        _mockLlmService
+            .Setup(c => c.GenerateCompletionStreamWithModelAsync(
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
-                It.IsAny<double>(),
-                It.IsAny<int>(),
+                It.IsAny<RequestSource>(),
+                It.IsAny<double?>(),
+                It.IsAny<int?>(),
                 It.IsAny<CancellationToken>()))
-            .Returns(ToAsyncEnumerable(chunks));
+            .Returns(() => ToAsyncEnumerable(chunks));
     }
 
     private static AgentDefinitionEntity CreateActiveAgentDefinition(
@@ -637,7 +637,6 @@ public sealed class PlaygroundChatCommandHandlerTests
         var agent = AgentDefinitionEntity.Create(
             name: name,
             description: $"Test agent: {name}",
-            type: AgentType.Custom("rag", "RAG-based assistant"),
             config: AgentDefinitionConfig.Create("gpt-4", 2048, 0.7f),
             prompts: prompts);
         agent.Activate(); // Create() defaults to inactive; activate for "active" helper
@@ -649,7 +648,6 @@ public sealed class PlaygroundChatCommandHandlerTests
         var agentDef = AgentDefinitionEntity.Create(
             name: name,
             description: $"Inactive test agent: {name}",
-            type: AgentType.Custom("rag", "RAG-based assistant"),
             config: AgentDefinitionConfig.Create("gpt-4", 2048, 0.7f));
 
         // Create() sets IsActive=false by default, so agent is already inactive.

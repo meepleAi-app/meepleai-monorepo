@@ -13,6 +13,7 @@ using Api.Infrastructure.BackgroundServices;
 using Api.Infrastructure.Configuration;
 using Api.Infrastructure.Seeders;
 using Api.Infrastructure.Seeders.Catalog;
+using Api.Infrastructure.Seeders.Cleanup;
 using Api.Infrastructure.Seeders.Core;
 using Api.Infrastructure.Seeders.LivedIn;
 using Api.Infrastructure.Seeders.MechanicValidation;
@@ -62,18 +63,14 @@ internal static class AdministrationServiceExtensions
         // Service call logging repository
         services.AddScoped<IServiceCallLogRepository, ServiceCallLogRepository>();
 
-        // Issue #3692: Token Management repositories + OpenRouter API
-        services.AddScoped<ITokenTierRepository, TokenTierRepository>();
-        services.AddScoped<IUserTokenUsageRepository, UserTokenUsageRepository>();
-        services.AddScoped<ITokenTrackingService, TokenTrackingService>(); // Issue #3786: Token tracking service
+        // OpenRouter API. Issue #4212: the token-tier repositories and tracking service that
+        // stood here are retired; they fed a per-user plan that never blocked a request.
         services.AddHttpClient<IOpenRouterService, OpenRouterService>()
             .AddPolicyHandler(GetRetryPolicy())
             .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
                 "OpenRouter", sp.GetService<ICircuitBreakerStateTracker>()));
 
-        // Budget Display System: Credit-based budget services
-        services.AddScoped<ICreditConversionService, CreditConversionService>();
-        services.AddScoped<IUserBudgetService, UserBudgetService>();
+        // Budget display: OpenRouter balance and cost logs for the admin.
         services.AddScoped<IAdminBudgetService, AdminBudgetService>();
 
         // Issue #3693: Batch Job System repositories
@@ -197,6 +194,8 @@ internal static class AdministrationServiceExtensions
 
         // Epic #318: Layered seeding system
         services.AddScoped<ISeedLayer, CoreSeedLayer>();
+        // #4244 (C2): i giochi privati cancellati che hanno ancora del contenuto. Non dipende dal catalogo.
+        services.AddScoped<ISeedLayer, DeletedPrivateGameContentCleanupLayer>();
         services.AddScoped<ISeedLayer, CatalogSeedLayer>();
         services.AddScoped<ISeedLayer, LivedInSeedLayer>();
         // ADR-051 Sprint 1 / Task 40: MechanicValidation golden seed (Catan ~40 claims + ~15 BGG tags)

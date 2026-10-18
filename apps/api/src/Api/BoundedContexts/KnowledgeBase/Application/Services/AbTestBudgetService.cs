@@ -77,7 +77,7 @@ internal sealed class AbTestBudgetService : IAbTestBudgetService
         {
             var db = _redis.GetDatabase();
             var value = await db.StringGetAsync(GetDailyBudgetKey()).ConfigureAwait(false);
-            return value.HasValue && decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var spend) ? spend : 0m;
+            return value.HasValue && decimal.TryParse((string?)value, NumberStyles.Number, CultureInfo.InvariantCulture, out var spend) ? spend : 0m;
         }
         catch (Exception ex)
         {
@@ -122,7 +122,7 @@ internal sealed class AbTestBudgetService : IAbTestBudgetService
         {
             var db = _redis.GetDatabase();
             var value = await db.StringGetAsync(GetRateLimitKey(userId)).ConfigureAwait(false);
-            return value.HasValue && int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var count) ? count : 0;
+            return value.HasValue && int.TryParse((string?)value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var count) ? count : 0;
         }
         catch (Exception ex)
         {

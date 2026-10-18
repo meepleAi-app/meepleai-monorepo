@@ -425,7 +425,6 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
                 PdfThisMonth: 0, PdfThisMonthMax: 3,
                 AgentQueriesToday: 0, AgentQueriesTodayMax: 20,
                 SessionQueries: 30, SessionQueriesMax: 30,
-                Agents: 0, AgentsMax: 1,
                 PhotosThisSession: 0, PhotosThisSessionMax: 5,
                 SessionSaveEnabled: false,
                 CatalogProposalsThisWeek: 0, CatalogProposalsThisWeekMax: 1));

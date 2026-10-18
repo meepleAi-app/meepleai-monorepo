@@ -24,8 +24,7 @@ internal static class AlertConfigurationEndpoints
             return Results.Ok(configurations);
         })
         .WithName("GetAllAlertConfigurations")
-        .WithSummary("Get all alert configurations")
-        .WithOpenApi();
+        .WithSummary("Get all alert configurations");
 
         // GET /api/v1/admin/alert-configuration/{category}
         group.MapGet("/{category}", async (string category, IMediator mediator, CancellationToken ct) =>
@@ -41,8 +40,7 @@ internal static class AlertConfigurationEndpoints
             }
         })
         .WithName("GetAlertConfigurationByCategory")
-        .WithSummary("Get alert configuration by category")
-        .WithOpenApi();
+        .WithSummary("Get alert configuration by category");
 
         // PUT /api/v1/admin/alert-configuration
         group.MapPut("/", async (
@@ -67,8 +65,7 @@ internal static class AlertConfigurationEndpoints
                 : Results.BadRequest(new { message = "Failed to update configuration" });
         })
         .WithName("UpdateAlertConfiguration")
-        .WithSummary("Update or create alert configuration")
-        .WithOpenApi();
+        .WithSummary("Update or create alert configuration");
     }
 }
 

@@ -72,10 +72,9 @@ const defaultProps = {
 };
 
 function initializeWithGame(game: typeof mockCatalogGame | typeof mockCustomGame) {
-  useAddGameWizardStore.getState().initialize(
-    { type: 'fromGameCard', sharedGameId: game.gameId },
-    game,
-  );
+  useAddGameWizardStore
+    .getState()
+    .initialize({ type: 'fromGameCard', sharedGameId: game.gameId }, game);
 }
 
 describe('GameInfoStep', () => {
@@ -148,8 +147,9 @@ describe('GameInfoStep', () => {
       expect(mockApi.library.addGame).toHaveBeenCalledWith('bgg-456');
     });
 
+    // #4286: lo stato di successo arriva dopo la RISPOSTA, non dopo la chiamata: lo si aspetta.
+    expect(await screen.findByTestId('success-state')).toBeInTheDocument();
     expect(mockApi.library.updatePrivateGame).not.toHaveBeenCalled();
-    expect(screen.getByTestId('success-state')).toBeInTheDocument();
   });
 
   it('enables fields for custom source', () => {
@@ -224,8 +224,8 @@ describe('GameInfoStep', () => {
       expect(mockApi.library.addGame).toHaveBeenCalledWith('game-abc');
     });
 
-    // Should show success state
-    expect(screen.getByTestId('success-state')).toBeInTheDocument();
+    // Should show success state (#4286: atteso, compare alla risposta e non alla chiamata)
+    expect(await screen.findByTestId('success-state')).toBeInTheDocument();
     expect(defaultProps.onSuccess).toHaveBeenCalledWith('entry-new');
   });
 
@@ -246,12 +246,13 @@ describe('GameInfoStep', () => {
           title: 'My Custom Game',
           minPlayers: 2,
           maxPlayers: 6,
-        }),
+        })
       );
       expect(mockApi.library.addGame).toHaveBeenCalledWith('private-123');
     });
 
-    expect(screen.getByTestId('success-state')).toBeInTheDocument();
+    // #4286: atteso, compare alla risposta e non alla chiamata
+    expect(await screen.findByTestId('success-state')).toBeInTheDocument();
   });
 
   // --- Error handling ---

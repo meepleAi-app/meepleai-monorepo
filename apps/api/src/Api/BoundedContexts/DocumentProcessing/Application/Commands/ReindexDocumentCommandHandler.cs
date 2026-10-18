@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.BoundedContexts.DocumentProcessing.Domain.Exceptions;
 using Api.Middleware.Exceptions;
 using Api.Observability;
 using Api.SharedKernel.Application.Interfaces;
@@ -139,9 +140,10 @@ internal sealed class ReindexDocumentCommandHandler : ICommandHandler<ReindexDoc
                 throw new ConflictException(
                     $"Document {command.PdfId} was modified by another concurrent operation; please retry.");
             }
-            catch (ConflictException ex)
+            catch (Exception ex) when (ex is ConflictException or ProcessingQueueFullException)
             {
-                // Queue full, or an active job already exists for this PDF. The transaction rolls
+                // Queue full (ProcessingQueueFullException, 429 since #4443), or an active job already
+                // exists for this PDF (ConflictException, 409). The transaction rolls
                 // back, so the destructive reset is undone — the document stays in its pre-reindex
                 // state with its chunks intact (no strand). Surface a retryable 409 instead of the
                 // old phantom success. In the BulkReindexReadyCommandHandler fan-out this is caught

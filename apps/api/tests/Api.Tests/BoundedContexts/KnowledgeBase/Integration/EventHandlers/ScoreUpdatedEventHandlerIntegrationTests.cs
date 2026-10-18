@@ -284,7 +284,6 @@ public sealed class ScoreUpdatedEventHandlerIntegrationTests : IAsyncLifetime
         var agentDefinition = AgentDefinition.Create(
             name: $"Test Agent {Guid.NewGuid():N}",
             description: "Seeded for integration test",
-            type: AgentType.RagAgent,
             config: AgentDefinitionConfig.Create(model: "test-model", maxTokens: 1024, temperature: 0.7f));
         _dbContext.AgentDefinitions.Add(agentDefinition);
 

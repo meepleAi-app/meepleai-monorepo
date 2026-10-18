@@ -42,10 +42,6 @@ export {
   MOCK_RESUME_CONTEXT,
   MOCK_BGG_SEARCH_RESULTS,
   MOCK_IMPORT_BGG_RESPONSE,
-  MOCK_SCORE_PARSE_RECORDED,
-  MOCK_SCORE_PARSE_NEEDS_CONFIRM,
-  MOCK_SCORE_PARSE_AMBIGUOUS,
-  MOCK_SCORE_PARSE_UNRECOGNIZED,
   MOCK_DISPUTE_RESPONSE,
   MOCK_NOTIFICATION_AGENT_READY,
 } from './helpers/SessionHelper';
@@ -64,9 +60,6 @@ export { ChatPage } from './chat/ChatPage';
 
 // Pages - Games
 export { GamePage } from './game/GamePage';
-
-// Pages - Upload/PDF
-export { UploadPage } from './upload/UploadPage';
 
 // Pages - Home
 export { HomePage } from './home/HomePage';

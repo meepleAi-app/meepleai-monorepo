@@ -13,13 +13,11 @@ export interface DashboardStatsRowProps {
   stats: {
     games: DashboardStatState;
     sessions: DashboardStatState;
-    agents: DashboardStatState;
     events: DashboardStatState;
   };
   onRetry: Partial<{
     games: () => void;
     sessions: () => void;
-    agents: () => void;
     events: () => void;
   }>;
 }
@@ -27,7 +25,6 @@ export interface DashboardStatsRowProps {
 const STAT_ENTRIES = [
   { key: 'games' as const, entity: 'game' as const, label: 'Giochi', href: '/library' },
   { key: 'sessions' as const, entity: 'session' as const, label: 'Sessioni', href: '/sessions' },
-  { key: 'agents' as const, entity: 'agent' as const, label: 'Agenti', href: '/agents' },
   { key: 'events' as const, entity: 'event' as const, label: 'Eventi', href: '/game-nights' },
 ];
 

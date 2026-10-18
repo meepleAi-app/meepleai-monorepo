@@ -18,14 +18,12 @@ internal record GameInLibraryStatusDto(
 /// Used to display warning information before removal.
 /// Issue #4259: Collection Quick Actions for MeepleCard
 /// </summary>
-/// <param name="HasCustomAgent">Whether the library entry has a custom AI agent configuration.</param>
 /// <param name="HasPrivatePdf">Whether the library entry has a private PDF uploaded.</param>
 /// <param name="ChatSessionsCount">Number of chat sessions associated with this game's agent.</param>
 /// <param name="GameSessionsCount">Number of recorded game sessions (play history).</param>
 /// <param name="ChecklistItemsCount">Number of setup checklist items.</param>
 /// <param name="LabelsCount">Number of custom labels assigned to this game.</param>
 internal record AssociatedDataDto(
-    bool HasCustomAgent,
     bool HasPrivatePdf,
     int ChatSessionsCount,
     int GameSessionsCount,

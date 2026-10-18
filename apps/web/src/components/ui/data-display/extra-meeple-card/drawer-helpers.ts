@@ -20,7 +20,6 @@ export function mapRawToPdfDocumentDto(raw: Record<string, unknown>): PdfDocumen
     fileName: String(raw.fileName ?? raw.name ?? ''),
     filePath: String(raw.filePath ?? ''),
     fileSizeBytes: Number(raw.fileSizeBytes ?? 0),
-    processingStatus: String(raw.processingStatus ?? 'Pending'),
     uploadedAt: String(raw.uploadedAt ?? new Date().toISOString()),
     processedAt: raw.processedAt != null ? String(raw.processedAt) : null,
     pageCount: raw.pageCount != null ? Number(raw.pageCount) : null,
@@ -36,13 +35,8 @@ export function mapRawToPdfDocumentDto(raw: Record<string, unknown>): PdfDocumen
     processingError: raw.processingError != null ? String(raw.processingError) : null,
     documentCategory:
       (raw.documentCategory as
-        | 'Rulebook'
-        | 'Expansion'
-        | 'Errata'
-        | 'QuickStart'
-        | 'Reference'
-        | 'PlayerAid'
-        | 'Other') ?? 'Rulebook',
+        'Rulebook' | 'Expansion' | 'Errata' | 'QuickStart' | 'Reference' | 'PlayerAid' | 'Other') ??
+      'Rulebook',
     baseDocumentId: raw.baseDocumentId != null ? String(raw.baseDocumentId) : null,
     isActiveForRag: Boolean(raw.isActiveForRag ?? true),
     hasAcceptedDisclaimer: Boolean(raw.hasAcceptedDisclaimer ?? false),

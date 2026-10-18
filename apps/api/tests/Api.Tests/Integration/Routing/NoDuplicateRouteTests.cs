@@ -89,19 +89,15 @@ public sealed class NoDuplicateRouteTests
     }
 
     /// <summary>
-    /// Pins the #3840 decision: the two live-scoring confirmations are separate routes.
+    /// Pins the #3840 decision, as it stands after #4448: the host ratifying another player's
+    /// proposal lives on <c>/scores/proposals/confirm</c> and broadcasts over SignalR.
     ///
-    /// <c>/scores/confirm</c> confirms a reading produced by the assistant — any session
-    /// participant may call it. <c>/scores/proposals/confirm</c> is the host ratifying
-    /// another player's proposal, and it broadcasts over SignalR. They were registered on
-    /// the same template, so both answered 500; merging them back would restore that.
-    ///
-    /// The generic guard above only catches the duplicate. Without this test, deleting
-    /// either registration outright would also be "no duplicates" — and silently drop one
-    /// of the two flows.
+    /// <c>/scores/confirm</c> used to confirm a dictated score reading; #4448 (A7) retired it with
+    /// the dictated-score flow, and <c>EndpointContractTests.RetiredRoutes</c> keeps it unmounted.
+    /// Moving the ratification back onto <c>/scores/confirm</c> would undo #3840 under a retired path.
     /// </summary>
     [Fact]
-    public void BothLiveScoringConfirmations_AreRegisteredExactlyOnce()
+    public void TheHostRatification_IsRegisteredExactlyOnce()
     {
         var dataSource = _factory.Services.GetRequiredService<EndpointDataSource>();
 
@@ -112,10 +108,6 @@ public sealed class NoDuplicateRouteTests
             .Where(e => e.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods.Contains("POST") == true)
             .Select(e => (e.RoutePattern.RawText ?? string.Empty).TrimStart('/'))
             .ToList();
-
-        postTemplates.Should().ContainSingle(
-            t => string.Equals(t, "api/v1/live-sessions/{sessionId}/scores/confirm", StringComparison.OrdinalIgnoreCase),
-            "the participant-facing confirmation (ConfirmScoreCommand) must stay reachable exactly once");
 
         postTemplates.Should().ContainSingle(
             t => string.Equals(t, "api/v1/live-sessions/{sessionId}/scores/proposals/confirm", StringComparison.OrdinalIgnoreCase),

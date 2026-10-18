@@ -168,7 +168,7 @@ internal static class IntegrationServiceCollectionBuilder
         tierMock.Setup(t => t.GetLimitsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(TierLimits.Unlimited);
         tierMock.Setup(t => t.GetUsageAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new UsageSnapshot(0, 100, 0, 100, 0, 100, 0, 100, 0, 100, 0, 100, true, 0, 100));
+            .ReturnsAsync(new UsageSnapshot(0, 100, 0, 100, 0, 100, 0, 100, 0, 100, true, 0, 100));
         services.AddScoped<ITierEnforcementService>(_ => tierMock.Object);
 
         // TimeProvider — required by handlers like SubmitValidationFeedbackCommandHandler

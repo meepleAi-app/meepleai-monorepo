@@ -33,7 +33,6 @@ public sealed class CreateAgentDefinitionCommandValidatorKbCardsTests
         new CreateAgentDefinitionCommand(
             Name: "TestAgent",
             Description: "Test",
-            Type: "RAG",
             Model: "anthropic/claude-3.5-haiku",
             MaxTokens: 2048,
             Temperature: 0.7f,

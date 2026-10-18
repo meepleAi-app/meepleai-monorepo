@@ -45,6 +45,10 @@ import {
   LiveSessionDiaryEntryDtoSchema,
   type LiveSessionDiaryEntryDto,
   type AddDiaryEntryRequest,
+  AssistantProposalDtoSchema,
+  SessionAssistantPanelDtoSchema,
+  type AssistantProposalDto,
+  type SessionAssistantPanelDto,
 } from '../schemas/live-sessions.schemas';
 import {
   SessionSaveResultSchema,
@@ -52,12 +56,6 @@ import {
   type SessionSaveResult,
   type SessionResumeContext,
 } from '../schemas/save-resume.schemas';
-import {
-  ScoreParseResultSchema,
-  type ScoreParseResult,
-  type ParseScoreRequest,
-  type ConfirmScoreRequest,
-} from '../schemas/score-tracking.schemas';
 
 import type { HttpClient } from '../core/httpClient';
 
@@ -198,13 +196,27 @@ export interface LiveSessionsClient {
    */
   getDisputes(sessionId: string): Promise<RuleDisputeDto[]>;
 
-  // ========== AI Score Tracking (Issue #121) ==========
+  // ========== In-game assistant (#4238 A4) ==========
 
-  /** Parse a natural language message for score data, optionally auto-record */
-  parseScore(sessionId: string, request: ParseScoreRequest): Promise<ScoreParseResult>;
+  /**
+   * Host only (#4372). Whether the assistant answers (and, if not, the code the turn would
+   * return), the conversation and the proposals: what the panel shows on mount and on reload.
+   * `language` is the UI language: it picks the prompt, so it decides availability too.
+   */
+  getAssistant(sessionId: string, language?: string): Promise<SessionAssistantPanelDto>;
 
-  /** Confirm and record a previously parsed score */
-  confirmScore(sessionId: string, request: ConfirmScoreRequest): Promise<void>;
+  /**
+   * Host only. Applies a proposal, optionally with the host's correction of the points. A second
+   * call returns the current state; a closed proposal answers 409 with its code.
+   */
+  confirmAssistantProposal(
+    sessionId: string,
+    proposalId: string,
+    points?: number
+  ): Promise<AssistantProposalDto>;
+
+  /** Host only. Rejects a proposal; a second call returns it already rejected. */
+  rejectAssistantProposal(sessionId: string, proposalId: string): Promise<AssistantProposalDto>;
 
   // ========== Enhanced Save/Resume (Issue #122) ==========
 
@@ -354,6 +366,30 @@ export function createLiveSessionsClient({
       return z.array(LiveSessionDiaryEntryDtoSchema).parse(response ?? []);
     },
 
+    async getAssistant(sessionId, language) {
+      const query = language ? `?language=${encodeURIComponent(language)}` : '';
+      const response = await httpClient.get<unknown>(
+        `${BASE}/${encodeURIComponent(sessionId)}/assistant${query}`
+      );
+      if (!response) throw new Error('Session not found');
+      return SessionAssistantPanelDtoSchema.parse(response);
+    },
+
+    async confirmAssistantProposal(sessionId, proposalId, points) {
+      const response = await httpClient.post<unknown>(
+        `${BASE}/${encodeURIComponent(sessionId)}/assistant/proposals/${encodeURIComponent(proposalId)}/confirm`,
+        points === undefined ? {} : { points }
+      );
+      return AssistantProposalDtoSchema.parse(response);
+    },
+
+    async rejectAssistantProposal(sessionId, proposalId) {
+      const response = await httpClient.post<unknown>(
+        `${BASE}/${encodeURIComponent(sessionId)}/assistant/proposals/${encodeURIComponent(proposalId)}/reject`
+      );
+      return AssistantProposalDtoSchema.parse(response);
+    },
+
     async getDisputes(sessionId) {
       const response = await httpClient.get<unknown>(
         `${BASE}/${encodeURIComponent(sessionId)}/disputes`
@@ -492,21 +528,6 @@ export function createLiveSessionsClient({
 
     async updateNotes(sessionId, request) {
       await httpClient.put(`${BASE}/${encodeURIComponent(sessionId)}/notes`, request);
-    },
-
-    // ========== AI Score Tracking (Issue #121) ==========
-
-    async parseScore(sessionId, request) {
-      const response = await httpClient.post<ScoreParseResult>(
-        `${BASE}/${encodeURIComponent(sessionId)}/scores/parse`,
-        request
-      );
-      if (!response) throw new Error('Parse score failed');
-      return ScoreParseResultSchema.parse(response);
-    },
-
-    async confirmScore(sessionId, request) {
-      await httpClient.post(`${BASE}/${encodeURIComponent(sessionId)}/scores/confirm`, request);
     },
 
     // ========== Enhanced Save/Resume (Issue #122) ==========

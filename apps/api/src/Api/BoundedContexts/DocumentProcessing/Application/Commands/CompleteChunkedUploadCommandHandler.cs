@@ -1,41 +1,41 @@
+using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
-using Api.BoundedContexts.DocumentProcessing.Application.Services.Chunking;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
-using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.EntityRelationships.Application.Commands;
 using Api.BoundedContexts.EntityRelationships.Domain.Enums;
 using Api.BoundedContexts.EntityRelationships.Domain.Exceptions;
-using Api.BoundedContexts.KnowledgeBase.Application.Services;
-using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Security;
 using Api.Models;
-using Api.Observability;
 using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System.Diagnostics;
 using System.Security.Cryptography;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
 /// <summary>
 /// Handler for CompleteChunkedUploadCommand.
-/// Assembles chunks into a complete file and triggers PDF processing.
+/// Assembles chunks into a complete file, stores it and hands the document to the processing queue.
 /// </summary>
 internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChunkedUploadCommand, CompleteChunkedUploadResult>
 {
     private static readonly string UploadTempBasePath = Path.Combine(Path.GetTempPath(), "meepleai_uploads");
+
+    /// <summary>
+    /// The job priority without an explicit one: the admin upload panel's «Normale» (<c>PRIORITY_NORMAL</c>
+    /// in queue-api.ts). «Urgente» is 30 (#4443 R2, <see cref="UploadPdfCommandHandler.ToJobPriority"/>).
+    /// </summary>
+    internal const int InteractiveUploadPriority = (int)ProcessingPriority.Normal;
 
     private readonly IChunkedUploadSessionRepository _sessionRepository;
     private readonly MeepleAiDbContext _dbContext;
@@ -43,9 +43,6 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
     private readonly IBackgroundTaskService _backgroundTaskService;
     private readonly ILogger<CompleteChunkedUploadCommandHandler> _logger;
     private readonly TimeProvider _timeProvider;
-    private readonly IServiceScopeFactory _scopeFactory;
-    private readonly IPdfTextExtractor _pdfTextExtractor;
-    private readonly IPdfTableExtractor _tableExtractor;
     private readonly IMediator _mediator;
     private readonly IPdfDeduplicationService _pdfDeduplicationService;
 
@@ -55,9 +52,6 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         IBlobStorageService blobStorageService,
         IBackgroundTaskService backgroundTaskService,
         ILogger<CompleteChunkedUploadCommandHandler> logger,
-        IServiceScopeFactory scopeFactory,
-        IPdfTextExtractor pdfTextExtractor,
-        IPdfTableExtractor tableExtractor,
         IMediator mediator,
         IPdfDeduplicationService pdfDeduplicationService,
         TimeProvider? timeProvider = null)
@@ -67,9 +61,6 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
         _backgroundTaskService = backgroundTaskService ?? throw new ArgumentNullException(nameof(backgroundTaskService));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
-        _pdfTextExtractor = pdfTextExtractor ?? throw new ArgumentNullException(nameof(pdfTextExtractor));
-        _tableExtractor = tableExtractor ?? throw new ArgumentNullException(nameof(tableExtractor));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _pdfDeduplicationService = pdfDeduplicationService ?? throw new ArgumentNullException(nameof(pdfDeduplicationService));
         _timeProvider = timeProvider ?? TimeProvider.System;
@@ -166,9 +157,9 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 }
             }
 
-            // Create PDF document record and trigger background processing
-            var pdfDocId = await CreatePdfRecordAndTriggerProcessingAsync(
-                session, storageResult!, sanitizedFileName!, request.SessionId.ToString(), cancellationToken, contentHash).ConfigureAwait(false);
+            // Create the PDF document record and hand it to the processing queue
+            var pdfDocId = await CreatePdfRecordAndEnqueueAsync(
+                session, storageResult!, sanitizedFileName!, request.SessionId.ToString(), request.Priority, cancellationToken, contentHash).ConfigureAwait(false);
 
             return new CompleteChunkedUploadResult(
                 Success: true,
@@ -320,13 +311,24 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
     }
 
     /// <summary>
-    /// Creates PDF document record, marks session as completed, and triggers background processing.
+    /// Creates the PDF document record, marks the session as completed and hands the document to the
+    /// processing queue — record and job commit together, or not at all.
     /// </summary>
-    private async Task<Guid> CreatePdfRecordAndTriggerProcessingAsync(
+    /// <remarks>
+    /// #4442: this used to process the PDF itself with a copy of the pipeline that opened
+    /// <see cref="BlobStorageResult.FilePath"/> as a local file. With S3 storage that value is the object
+    /// key, so every chunked upload ended <c>Failed</c>. The queue pipeline
+    /// (<see cref="Services.PdfProcessingPipelineService"/>) reads the file through
+    /// <see cref="IBlobStorageService"/> and does more than the copy did (translation, cover, role tags).
+    /// The chunked endpoints are admin/editor only, so the job bypasses the queue cap: an interactive
+    /// upload is not refused because a bulk reindex filled the queue.
+    /// </remarks>
+    private async Task<Guid> CreatePdfRecordAndEnqueueAsync(
         ChunkedUploadSession session,
         BlobStorageResult storageResult,
         string sanitizedFileName,
         string sessionId,
+        string? priority,
         CancellationToken cancellationToken,
         string? contentHash = null)
     {
@@ -335,6 +337,10 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         {
             Id = Guid.Parse(storageResult.FileId!),
             PrivateGameId = session.PrivateGameId,
+            // #4395: retrieval finds the documents of a catalogue game by SharedGameId. Without it a
+            // PDF uploaded in chunks for a shared game was tied to the game only by the EntityLink
+            // below, and invisible to both retrieval arms.
+            SharedGameId = session.PrivateGameId is null ? session.GameId : null,
             FileName = sanitizedFileName,
             FilePath = storageResult.FilePath!,
             FileSizeBytes = storageResult.FileSizeBytes,
@@ -349,10 +355,44 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         // Mark session as completed
         session.MarkAsCompleted();
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
-        await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // The production Npgsql context uses a retrying execution strategy, which forbids
+        // user-initiated transactions unless they run inside the strategy's executed delegate
+        // (same pattern as ReindexDocumentCommandHandler).
+        var strategy = _dbContext.Database.CreateExecutionStrategy();
+        try
+        {
+            await strategy.ExecuteAsync(async () =>
+            {
+                using var transaction = await _dbContext.Database
+                    .BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+
+                // Not acceptAllChangesOnSuccess: false — EnqueuePdfCommandHandler saves again on this same
+                // context, and a record still in the Added state would be inserted twice (23505). If a
+                // transient failure makes the strategy re-run the delegate, the record is not written
+                // again and the enqueue no longer finds it (NotFoundException; the job's foreign key would
+                // refuse it anyway): the upload fails and the stored object is removed below.
+                await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+                // EnqueuePdfCommandHandler saves on the shared DbContext under this ambient transaction,
+                // so the job commits together with the record.
+                await _mediator.Send(
+                    new EnqueuePdfCommand(pdfDoc.Id, session.UserId, UploadPdfCommandHandler.ToJobPriority(priority), BypassQueueCap: true),
+                    cancellationToken).ConfigureAwait(false);
+
+                await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+            }).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Nothing committed: the stored object would be an orphan. Best effort, like the dedup path.
+            // CancellationToken.None: a cancelled request must not leave the object behind as well.
+            await DeleteStoredObjectSafelyAsync(storageResult, session, CancellationToken.None).ConfigureAwait(false);
+            throw;
+        }
 
         _logger.LogInformation(
-            "Chunked upload {SessionId} completed. Document {DocumentId} created.",
+            "Chunked upload {SessionId} completed. Document {DocumentId} created and enqueued for processing.",
             sessionId, pdfDoc.Id);
 
         // Issue #5187: Auto-create EntityLink Game → KbCard for PDF-KB association (shared games only)
@@ -368,12 +408,33 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
                 await CleanupTempDirectoryAsync(tempDirToClean).ConfigureAwait(false);
             });
 
-        // Trigger background processing (same as regular upload)
-        _backgroundTaskService.ExecuteWithCancellation(
-            storageResult.FileId!,
-            (cancellationToken) => TriggerPdfProcessingAsync(storageResult.FileId!, storageResult.FilePath!, cancellationToken));
-
         return pdfDoc.Id;
+    }
+
+    private async Task DeleteStoredObjectSafelyAsync(
+        BlobStorageResult storageResult,
+        ChunkedUploadSession session,
+        CancellationToken cancellationToken)
+    {
+        if (storageResult.FileId is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await _blobStorageService.DeleteAsync(storageResult.FileId, BlobCategory.Pdf,
+                (session.PrivateGameId ?? session.GameId)?.ToString() ?? string.Empty, cancellationToken)
+                .ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+        // CLEANUP PATTERN: the caller is already failing; a cleanup error must not hide the cause.
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to delete orphaned blob {FileId} after a failed chunked upload completion",
+                storageResult.FileId);
+        }
+#pragma warning restore CA1031
     }
 
     /// <summary>
@@ -451,561 +512,6 @@ internal class CompleteChunkedUploadCommandHandler : ICommandHandler<CompleteChu
         }
 #pragma warning restore CA1031
         return Task.CompletedTask;
-    }
-
-    /// <summary>
-    /// Triggers asynchronous PDF processing after chunked upload completion.
-    /// Orchestrates extraction, chunking, embedding generation, and indexing.
-    /// </summary>
-    internal async Task TriggerPdfProcessingAsync(string pdfId, string filePath, CancellationToken cancellationToken)
-    {
-        using var scope = _scopeFactory.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var startTime = _timeProvider.GetUtcNow().UtcDateTime;
-
-        try
-        {
-            // Validate PDF document
-            if (!Guid.TryParse(pdfId, out var pdfGuid))
-            {
-                _logger.LogError("Invalid PDF ID format {PdfId}", pdfId);
-                return;
-            }
-
-            // AsTracking required: DbContext default is NoTracking (PERF-06), and FindAsync
-            // does not override the per-DbContext default — the entity would otherwise be
-            // returned untracked and every ProcessingState/extraction write below would be
-            // silently dropped at SaveChangesAsync (#3288). Mirrors the sibling
-            // UploadPdfCommandHandler.Processing.cs. The catch-all HandleProcessingFailureAsync
-            // reuses this same db scope, so its FindAsync resolves the now-tracked instance.
-            var pdfDoc = await db.PdfDocuments
-                .AsTracking()
-                .FirstOrDefaultAsync(p => p.Id == pdfGuid, cancellationToken)
-                .ConfigureAwait(false);
-            if (pdfDoc == null)
-            {
-                _logger.LogError("PDF document {PdfId} not found for processing", pdfId);
-                return;
-            }
-
-            _logger.LogInformation("Starting PDF processing for chunked upload: {PdfId}", pdfId);
-
-            // Step 1: Extract PDF text and structured content
-            var (extractSuccess, fullText, totalPages, structuredElements) = await ExtractPdfTextAsync(
-                pdfId, filePath, pdfDoc, db, scope, cancellationToken).ConfigureAwait(false);
-            if (!extractSuccess) return;
-
-            // Step 2: Chunk text for embedding
-            var allDocumentChunks = await ChunkTextContentAsync(
-                pdfId, fullText!, pdfDoc, structuredElements, scope).ConfigureAwait(false);
-
-            // Guard: zero usable chunks → mark Failed. Mirrors PdfProcessingPipelineService
-            // (the non-chunked Quartz path) which fails on chunks.Count == 0. Without this,
-            // embedding/index become no-ops and the PDF would reach Ready with no indexed
-            // content — an unusable RAG state and an asymmetry with the other pipeline.
-            if (allDocumentChunks.Count == 0)
-            {
-                _logger.LogWarning("No usable chunks produced for chunked upload {PdfId}, marking as failed", pdfId);
-                pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
-                pdfDoc.ProcessingError = "Text extraction produced no usable chunks";
-                pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                try
-                {
-                    await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                }
-                catch (DbUpdateConcurrencyException ex)
-                {
-                    MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                        nameof(CompleteChunkedUploadCommandHandler),
-                        MeepleAiMetrics.PdfConcurrencyCategories.B);
-                    _logger.LogWarning(ex,
-                        "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                        pdfId, nameof(CompleteChunkedUploadCommandHandler));
-                }
-                return;
-            }
-
-            // Step 3: Generate embeddings
-            var (embeddingsSuccess, embeddings) = await GenerateEmbeddingsAsync(
-                pdfId, allDocumentChunks, pdfDoc, db, scope, cancellationToken).ConfigureAwait(false);
-            if (!embeddingsSuccess) return;
-
-            // Step 4: Index in vector store and save to PostgreSQL
-            await IndexAndStoreChunksAsync(
-                pdfId, pdfGuid, allDocumentChunks, embeddings!, pdfDoc, fullText!, db, scope, cancellationToken).ConfigureAwait(false);
-
-            // Mark as completed
-            pdfDoc.ProcessingState = nameof(PdfProcessingState.Ready);
-            pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-            // #3425 / #3269 (SP3): stamp the current indexer version on the completed fresh ingest
-            // (mirrors PdfProcessingPipelineService, the Quartz path). Null-coalescing so an explicit
-            // reindex-chosen version survives; IndexerVersion == null then means only true
-            // pre-versioning legacy, keeping the bulk re-index selector from redundantly re-processing
-            // fresh docs. pdfDoc is tracked (AsTracking at load), so this write persists.
-            pdfDoc.IndexerVersion ??= IndexerVersionRegistry.Current.Version;
-            try
-            {
-                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                    nameof(CompleteChunkedUploadCommandHandler),
-                    MeepleAiMetrics.PdfConcurrencyCategories.B);
-                _logger.LogWarning(ex,
-                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                    pdfId, nameof(CompleteChunkedUploadCommandHandler));
-                return; // CRITICAL: do not throw — background task must see success
-            }
-
-            var totalTime = (_timeProvider.GetUtcNow().UtcDateTime - startTime).TotalSeconds;
-            _logger.LogInformation(
-                "PDF processing completed for chunked upload {PdfId}: {TotalPages} pages, {ChunkCount} chunks, {TotalSeconds}s",
-                pdfId, totalPages, allDocumentChunks.Count, totalTime);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-#pragma warning disable S125 // Sections of code should not be commented out
-        // BACKGROUND PROCESSING PATTERN: PDF processing failure recovery
-        // Catches all exceptions during PDF text extraction, chunking, and embedding generation.
-        // Delegates to HandleProcessingFailureAsync to update PDF status as "failed" in DB.
-        // Background processing must handle errors gracefully without propagating to command handler.
-#pragma warning restore S125
-        catch (Exception ex)
-        {
-            await HandleProcessingFailureAsync(pdfId, db, ex, cancellationToken).ConfigureAwait(false);
-        }
-#pragma warning restore CA1031
-    }
-
-    /// <summary>
-    /// Extracts text and structured content from PDF file.
-    /// </summary>
-    private async Task<(bool success, string? fullText, int totalPages, IReadOnlyList<ExtractedElement>? structuredElements)> ExtractPdfTextAsync(
-        string pdfId,
-        string filePath,
-        PdfDocumentEntity pdfDoc,
-        MeepleAiDbContext db,
-        IServiceScope scope,
-        CancellationToken cancellationToken)
-    {
-        var extractionStopwatch = Stopwatch.StartNew();
-        var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        await using (fileStream.ConfigureAwait(false))
-        {
-            var extractResult = await _pdfTextExtractor.ExtractPagedTextAsync(fileStream, enableOcrFallback: true, cancellationToken).ConfigureAwait(false);
-            extractionStopwatch.Stop();
-
-            _logger.LogDebug("Extraction completed in {ElapsedMs}ms for {PdfId}", extractionStopwatch.ElapsedMilliseconds, pdfId);
-
-            if (!extractResult.Success)
-            {
-                pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
-                pdfDoc.ProcessingError = extractResult.ErrorMessage;
-                pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                try
-                {
-                    await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                }
-                catch (DbUpdateConcurrencyException ex)
-                {
-                    MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                        nameof(CompleteChunkedUploadCommandHandler),
-                        MeepleAiMetrics.PdfConcurrencyCategories.B);
-                    _logger.LogWarning(ex,
-                        "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                        pdfId, nameof(CompleteChunkedUploadCommandHandler));
-                    return (false, null, 0, null);
-                }
-                _logger.LogError("Text extraction failed for {PdfId}: {Error}", pdfId, extractResult.ErrorMessage);
-                return (false, null, 0, null);
-            }
-
-            var fullText = string.Join("\n\n", extractResult.PageChunks
-                .Where(pc => !pc.IsEmpty)
-                .Select(pc => pc.Text));
-
-            pdfDoc.ExtractedText = fullText;
-            pdfDoc.StructuredElementsJson = extractResult.StructuredElements is null
-                ? null
-                : System.Text.Json.JsonSerializer.Serialize(extractResult.StructuredElements);
-            pdfDoc.PageCount = extractResult.TotalPages;
-            pdfDoc.CharacterCount = extractResult.TotalCharacters;
-            // pdfDoc is tracked (loaded with .AsTracking() at the top of TriggerPdfProcessingAsync,
-            // #3288), so these scalar writes are picked up by change detection — no manual Update()
-            // needed. The previous db.Update() workaround was a partial patch for the NoTracking
-            // silent no-op and is now redundant given the root-cause fix.
-            try
-            {
-                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                    nameof(CompleteChunkedUploadCommandHandler),
-                    MeepleAiMetrics.PdfConcurrencyCategories.B);
-                _logger.LogWarning(ex,
-                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                    pdfId, nameof(CompleteChunkedUploadCommandHandler));
-                return (true, fullText, extractResult.TotalPages, extractResult.StructuredElements);
-            }
-
-            // Extract structured content (tables, diagrams)
-            await ExtractStructuredContentAsync(filePath, pdfDoc, db, scope, cancellationToken).ConfigureAwait(false);
-
-            return (true, fullText, extractResult.TotalPages, extractResult.StructuredElements);
-        }
-    }
-
-    /// <summary>
-    /// Extracts structured content (tables, diagrams, atomic rules) from PDF.
-    /// </summary>
-    private async Task ExtractStructuredContentAsync(
-        string filePath,
-        PdfDocumentEntity pdfDoc,
-        MeepleAiDbContext db,
-        IServiceScope scope,
-        CancellationToken cancellationToken)
-    {
-        var tableExtractor = scope.ServiceProvider.GetService<IPdfTableExtractor>() ?? _tableExtractor;
-        if (tableExtractor == null) return;
-
-        var structuredResult = await tableExtractor.ExtractStructuredContentAsync(filePath, cancellationToken).ConfigureAwait(false);
-        if (!structuredResult.Success) return;
-
-        pdfDoc.ExtractedTables = System.Text.Json.JsonSerializer.Serialize(structuredResult.Tables);
-        pdfDoc.ExtractedDiagrams = System.Text.Json.JsonSerializer.Serialize(
-            structuredResult.Diagrams.Select(d => new
-            {
-                d.PageNumber,
-                d.DiagramType,
-                d.Description,
-                d.Width,
-                d.Height
-            }));
-        pdfDoc.AtomicRules = System.Text.Json.JsonSerializer.Serialize(structuredResult.AtomicRules);
-        pdfDoc.TableCount = structuredResult.TableCount;
-        pdfDoc.DiagramCount = structuredResult.DiagramCount;
-        pdfDoc.AtomicRuleCount = structuredResult.AtomicRuleCount;
-        try
-        {
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                nameof(CompleteChunkedUploadCommandHandler),
-                MeepleAiMetrics.PdfConcurrencyCategories.B);
-            _logger.LogWarning(ex,
-                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                pdfDoc.Id, nameof(CompleteChunkedUploadCommandHandler));
-        }
-    }
-
-    /// <summary>
-    /// Chunks extracted text into document chunks for embedding.
-    /// </summary>
-    private async Task<List<DocumentChunkInput>> ChunkTextContentAsync(
-        string pdfId,
-        string fullText,
-        PdfDocumentEntity pdfDoc,
-        IReadOnlyList<ExtractedElement>? structuredElements,
-        IServiceScope scope)
-    {
-        var chunkingStopwatch = Stopwatch.StartNew();
-        var chunkingService = scope.ServiceProvider.GetRequiredService<ITextChunkingService>();
-        const int chunkSize = 512;
-        const int chunkOverlap = 50;
-
-        // Issue #3281: heading-aware production when AdvancedChunkingService is available in scope.
-        var advancedChunking = scope.ServiceProvider.GetService<IAdvancedChunkingService>();
-        List<DocumentChunkInput> allDocumentChunks;
-        if (advancedChunking != null)
-        {
-            var hierarchical = await HeadingAwareChunker.BuildAsync(
-                structuredElements,
-                fullText,
-                pdfDoc.Id,
-                pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId,
-                advancedChunking,
-                CancellationToken.None).ConfigureAwait(false);
-            allDocumentChunks = HeadingAwareChunkAdapter.ToChunkInputs(hierarchical);
-        }
-        else
-        {
-            allDocumentChunks = chunkingService.PrepareForEmbedding(fullText, chunkSize, chunkOverlap)
-                ?.Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
-                .Select(chunk => new DocumentChunkInput
-                {
-                    Text = chunk.Text,
-                    Page = chunk.Page,
-                    CharStart = chunk.CharStart,
-                    CharEnd = chunk.CharEnd
-                })
-                .ToList()
-                ?? new List<DocumentChunkInput>();
-        }
-
-        allDocumentChunks = allDocumentChunks
-            .Where(chunk => chunk != null && !string.IsNullOrWhiteSpace(chunk.Text))
-            .ToList();
-
-        chunkingStopwatch.Stop();
-        _logger.LogDebug("Chunking completed in {ElapsedMs}ms, {ChunkCount} chunks for {PdfId}",
-            chunkingStopwatch.ElapsedMilliseconds, allDocumentChunks.Count, pdfId);
-
-        return await Task.FromResult(allDocumentChunks).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Generates embeddings for document chunks.
-    /// </summary>
-    private async Task<(bool success, List<float[]>? embeddings)> GenerateEmbeddingsAsync(
-        string pdfId,
-        List<DocumentChunkInput> allDocumentChunks,
-        PdfDocumentEntity pdfDoc,
-        MeepleAiDbContext db,
-        IServiceScope scope,
-        CancellationToken cancellationToken)
-    {
-        var embeddingStopwatch = Stopwatch.StartNew();
-        var embeddingService = scope.ServiceProvider.GetRequiredService<IEmbeddingService>();
-        var texts = allDocumentChunks.Select(c => HeadingAwareChunkAdapter.CapForEmbedding(c.Text)).ToList();
-        var embeddingResult = await embeddingService.GenerateEmbeddingsAsync(texts).ConfigureAwait(false);
-        embeddingStopwatch.Stop();
-
-        if (!embeddingResult.Success)
-        {
-            pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
-            pdfDoc.ProcessingError = embeddingResult.ErrorMessage;
-            pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-            try
-            {
-                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                    nameof(CompleteChunkedUploadCommandHandler),
-                    MeepleAiMetrics.PdfConcurrencyCategories.B);
-                _logger.LogWarning(ex,
-                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                    pdfId, nameof(CompleteChunkedUploadCommandHandler));
-                return (false, null);
-            }
-            _logger.LogError("Embedding generation failed for {PdfId}: {Error}", pdfId, embeddingResult.ErrorMessage);
-            return (false, null);
-        }
-
-        var embeddings = embeddingResult.Embeddings ?? new List<float[]>();
-
-        if (embeddings.Count != allDocumentChunks.Count)
-        {
-            var mismatchMessage = $"Embedding service returned {embeddings.Count} vectors for {allDocumentChunks.Count} chunks";
-            _logger.LogWarning("Embedding count mismatch for PDF {PdfId}: {Message}", pdfId, mismatchMessage);
-            pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
-            pdfDoc.ProcessingError = mismatchMessage;
-            pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-            try
-            {
-                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            }
-            catch (DbUpdateConcurrencyException ex)
-            {
-                MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                    nameof(CompleteChunkedUploadCommandHandler),
-                    MeepleAiMetrics.PdfConcurrencyCategories.B);
-                _logger.LogWarning(ex,
-                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                    pdfId, nameof(CompleteChunkedUploadCommandHandler));
-                return (false, null);
-            }
-            return (false, null);
-        }
-
-        return (true, embeddings);
-    }
-
-    /// <summary>
-    /// Indexes document chunks in pgvector and saves text chunks to PostgreSQL for hybrid search.
-    /// </summary>
-    private async Task IndexAndStoreChunksAsync(
-        string pdfId,
-        Guid pdfGuid,
-        List<DocumentChunkInput> allDocumentChunks,
-        List<float[]> embeddings,
-        PdfDocumentEntity pdfDoc,
-        string fullText,
-        MeepleAiDbContext db,
-        IServiceScope scope,
-        CancellationToken cancellationToken)
-    {
-
-        // Update vector document with chunk count (no pgvector indexing)
-        await UpdateOrCreateVectorDocumentAsync(pdfGuid, pdfDoc, fullText, allDocumentChunks.Count, db, scope, _logger, cancellationToken).ConfigureAwait(false);
-
-        // Save text chunks to PostgreSQL for hybrid search (FTS)
-        await SaveTextChunksForHybridSearchAsync(pdfGuid, pdfDoc, allDocumentChunks, db, scope, cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Updates or creates VectorDocument entity after successful indexing.
-    /// Delegates to <see cref="IPdfIndexingPipeline"/> (#2244 / epic #2242) so the
-    /// VectorDocumentIndexedEvent fires structurally. This is the 5th call site
-    /// historically not enumerated in OP #2242 — chunked uploads of >5MB PDFs
-    /// were silently bypassing the projection too.
-    /// </summary>
-    private static async Task UpdateOrCreateVectorDocumentAsync(
-        Guid pdfGuid,
-        PdfDocumentEntity pdfDoc,
-        string fullText,
-        int indexedCount,
-        MeepleAiDbContext db,
-        IServiceScope scope,
-        ILogger logger,
-        CancellationToken cancellationToken)
-    {
-        // Pre-pipeline guard: IPdfIndexingPipeline.IndexAsync throws
-        // ArgumentOutOfRangeException on chunkCount <= 0 (see PdfIndexingPipeline.cs:51).
-        // This path can land here with indexedCount == 0 if extraction succeeded but
-        // every chunk was filtered out (whitespace-only, post-translation drop, etc.).
-        // PdfProcessingPipelineService already guards upstream with `if (chunks.Count == 0)`;
-        // mirror it here so the exception path doesn't trigger and the PDF gets marked
-        // failed with a clear diagnostic instead of being swallowed by the outer general catch.
-        if (indexedCount <= 0)
-        {
-            logger.LogWarning(
-                "ChunkedUpload PDF {PdfId}: no chunks produced from extracted text ({CharCount} chars) — skipping VectorDocument upsert",
-                pdfGuid, fullText.Length);
-            return;
-        }
-
-        var pipeline = scope.ServiceProvider.GetRequiredService<IPdfIndexingPipeline>();
-        await pipeline.IndexAsync(
-            pdfDocumentId: pdfGuid,
-            gameId: pdfDoc.SharedGameId,
-            sharedGameId: pdfDoc.SharedGameId,
-            chunkCount: indexedCount,
-            totalCharacters: fullText.Length,
-            language: string.IsNullOrWhiteSpace(pdfDoc.Language) ? "en" : pdfDoc.Language,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Saves text chunks to PostgreSQL for hybrid search with FTS.
-    /// </summary>
-    private async Task SaveTextChunksForHybridSearchAsync(
-        Guid pdfGuid,
-        PdfDocumentEntity pdfDoc,
-        List<DocumentChunkInput> allDocumentChunks,
-        MeepleAiDbContext db,
-        IServiceScope scope,
-        CancellationToken cancellationToken)
-    {
-        // Delete existing chunks
-        var existingChunks = await db.TextChunks
-            .Where(tc => tc.PdfDocumentId == pdfGuid)
-            .ToListAsync(cancellationToken).ConfigureAwait(false);
-        if (existingChunks.Count > 0)
-        {
-            db.TextChunks.RemoveRange(existingChunks);
-        }
-
-        // Create new text chunk entities
-        var textChunkEntities = allDocumentChunks
-            .Select((chunk, index) => new TextChunkEntity
-            {
-                Id = chunk.Id == Guid.Empty ? Guid.NewGuid() : chunk.Id,
-                GameId = pdfDoc.SharedGameId,
-                PdfDocumentId = pdfGuid,
-                ChunkIndex = index,
-                PageNumber = chunk.Page,
-                Content = chunk.Text,
-                CharacterCount = chunk.Text.Length,
-                CreatedAt = _timeProvider.GetUtcNow().UtcDateTime,
-                // Issue #730: persist chunk hierarchy fields from chunking pipeline
-                Heading = chunk.Heading,
-                Level = chunk.Level,
-                ParentChunkId = chunk.ParentChunkId,
-                ElementType = chunk.ElementType,
-                // SP-A (#3405): persist char offsets for citation grounding
-                CharStart = chunk.CharStart,
-                CharEnd = chunk.CharEnd,
-                // SP-B (#3406): persist the normalized region for citation grounding
-                BoundingBoxesJson = ChunkBoundingBoxJson.Serialize(chunk.BBox, chunk.Page)
-            })
-            .ToList();
-
-        // Phase D4: classify chunks by GameBookRole before persistence so
-        // text_chunks.role_tags is populated on insert. Resolved from the local
-        // async scope (background task lifetime != original HTTP request scope).
-        var roleClassifier = scope.ServiceProvider
-            .GetService<Api.BoundedContexts.KnowledgeBase.Application.Services.IRoleClassifierService>();
-        await TextChunkRoleClassifier.AssignRoleTagsAsync(
-            roleClassifier, textChunkEntities, allDocumentChunks, _logger, cancellationToken)
-            .ConfigureAwait(false);
-
-        db.TextChunks.AddRange(textChunkEntities);
-        try
-        {
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                nameof(CompleteChunkedUploadCommandHandler),
-                MeepleAiMetrics.PdfConcurrencyCategories.B);
-            _logger.LogWarning(ex,
-                "Concurrency conflict on TextChunks for PDF {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                pdfGuid, nameof(CompleteChunkedUploadCommandHandler));
-        }
-    }
-
-    /// <summary>
-    /// Handles PDF processing failure with consistent error logging and status update.
-    /// </summary>
-    private async Task HandleProcessingFailureAsync(
-        string pdfId,
-        MeepleAiDbContext db,
-        Exception ex,
-        CancellationToken cancellationToken)
-    {
-        _logger.LogError(ex, "Failed to process PDF {PdfId}", pdfId);
-
-        try
-        {
-            if (Guid.TryParse(pdfId, out var pdfGuid))
-            {
-                var pdfDoc = await db.PdfDocuments.FindAsync(new object[] { pdfGuid }, cancellationToken).ConfigureAwait(false);
-                if (pdfDoc != null)
-                {
-                    pdfDoc.ProcessingState = nameof(PdfProcessingState.Failed);
-                    pdfDoc.ProcessingError = ex.Message;
-                    pdfDoc.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
-                    await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                }
-            }
-        }
-        catch (DbUpdateConcurrencyException concEx)
-        {
-            MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                nameof(CompleteChunkedUploadCommandHandler),
-                MeepleAiMetrics.PdfConcurrencyCategories.B);
-            _logger.LogWarning(concEx,
-                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                pdfId, nameof(CompleteChunkedUploadCommandHandler));
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-#pragma warning disable S125 // Sections of code should not be commented out
-        // ERROR RECOVERY PATTERN: Nested error handling during failure recovery
-        // Catches exceptions when attempting to update PDF status to "failed" after processing error.
-        // If status update fails (DB unavailable, etc.), only logs error - nothing more can be done.
-        // Prevents cascading failures in error handling path.
-#pragma warning restore S125
-        catch (Exception saveEx)
-        {
-            _logger.LogError(saveEx, "Failed to update PDF status after processing error for {PdfId}", pdfId);
-        }
-#pragma warning restore CA1031
     }
 
     /// <summary>

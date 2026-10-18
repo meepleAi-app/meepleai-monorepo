@@ -35,8 +35,33 @@ internal record OpenAiChatMessage
     [JsonPropertyName("role")]
     public string Role { get; init; } = string.Empty;
 
+    // Con tool_calls il provider manda "content": null; i chiamanti usano già «?? string.Empty».
     [JsonPropertyName("content")]
     public string Content { get; init; } = string.Empty;
+
+    [JsonPropertyName("tool_calls")]
+    public List<OpenAiToolCall>? ToolCalls { get; init; }
+}
+
+internal record OpenAiToolCall
+{
+    [JsonPropertyName("id")]
+    public string Id { get; init; } = string.Empty;
+
+    [JsonPropertyName("type")]
+    public string Type { get; init; } = "function";
+
+    [JsonPropertyName("function")]
+    public OpenAiToolFunction? Function { get; init; }
+}
+
+internal record OpenAiToolFunction
+{
+    [JsonPropertyName("name")]
+    public string Name { get; init; } = string.Empty;
+
+    [JsonPropertyName("arguments")]
+    public string Arguments { get; init; } = "{}";
 }
 
 internal record OpenAiChatUsage

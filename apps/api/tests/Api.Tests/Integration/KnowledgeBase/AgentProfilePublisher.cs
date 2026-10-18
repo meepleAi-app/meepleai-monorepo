@@ -1,0 +1,54 @@
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.Infrastructure;
+using Api.Tests.BoundedContexts.KnowledgeBase.Domain.Entities;
+using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace Api.Tests.Integration.KnowledgeBase;
+
+/// <summary>
+/// Pubblica una versione nuova del profilo dell'agente, come farà l'admin: una bozza ricavata da
+/// quella pubblicata, poi la pubblicazione.
+/// </summary>
+internal static class AgentProfilePublisher
+{
+    public static async Task PublishAsync(
+        IServiceProvider services, Func<AgentProfileContent, AgentProfileContent> change, CancellationToken ct)
+    {
+        using var scope = services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var profile = await scope.ServiceProvider.GetRequiredService<IAgentProfileRepository>().GetAsync(ct);
+        profile.Should().NotBeNull("le migrazioni pubblicano la prima versione del profilo");
+        profile!.CreateDraft(change(profile.Published.Content));
+        // I modelli di prova dei test non sono nel catalogo: qui si osserva l'effetto di un campo, non D5.
+        // Per lo stesso motivo il modello principale si dichiara con tool calling: dal #4238 la versione
+        // pubblicata dalle migrazioni ha l'assistente abilitato, e la bozza ricavata da lei lo conserva.
+        var draft = profile.Draft!.Content;
+        profile.PublishDraft(AgentProfileTests.PricingTheModelsOf(
+            draft, new HashSet<string>(StringComparer.Ordinal) { draft.PrimaryModelId }));
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Lo stesso contenuto, con altri pesi della fusione.</summary>
+    public static AgentProfileContent WithFusionWeights(AgentProfileContent c, decimal vectorWeight, decimal keywordWeight) =>
+        AgentProfileContent.Create(
+            c.Name,
+            c.Description,
+            c.Persona,
+            c.PrimaryModelId,
+            c.FallbackModelId,
+            c.Temperature,
+            c.MaxResponseTokens,
+            c.CitationStyle,
+            c.SystemPrompts,
+            c.FallbackLanguage,
+            c.CandidatePoolSize,
+            c.FinalTopK,
+            c.MinScore,
+            vectorWeight,
+            keywordWeight,
+            c.RerankerEnabled,
+            c.AllowedCategories.ToList(),
+            c.SessionAssistant);
+}

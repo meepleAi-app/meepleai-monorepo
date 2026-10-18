@@ -32,7 +32,8 @@ internal class TokenTierEntityConfiguration : IEntityTypeConfiguration<TokenTier
             limits.Property(l => l.MessagesPerDay).IsRequired();
             limits.Property(l => l.MaxCollectionSize).IsRequired();
             limits.Property(l => l.MaxPdfUploadsPerMonth).IsRequired();
-            limits.Property(l => l.MaxAgentsCreated).IsRequired();
+            // Issue #4138: MaxAgentsCreated is a retired shadow property, configured with its
+            // column and default in TokenTierConfiguration (the two configurations merge).
         });
 
         // Complex type: TierPricing (owned entity)

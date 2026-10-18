@@ -242,23 +242,17 @@ export default function PrivateGamesClient() {
 
   return (
     <div className="container mx-auto py-4 space-y-4">
-      {/* Journey Progress Banner — pass the most recently created private game so Steps 2-5 evaluate.
-          Sort by createdAt desc (independent of the user's display sort order) so the banner always
-          tracks the game the user most recently added, not whichever game is first in the current
-          display sort (Issue #5217).
-          agentDefinitionId is passed explicitly (even when null) so JourneyProgress skips the
-          shared-catalog /games/{id}/agents call that 404s for private game UUIDs. */}
+      {/* Journey Progress Banner — pass the most recently created private game so the later steps
+          evaluate. Sort by createdAt desc (independent of the user's display sort order) so the
+          banner always tracks the game the user most recently added, not whichever game is first in
+          the current display sort (Issue #5217).
+          Issue #4138: `agentDefinitionId` non serve piu` — il passo "crea agente" e' uscito. */}
       {(() => {
         const recentGame =
           games.length > 0
             ? [...games].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0]
             : undefined;
-        return (
-          <JourneyProgress
-            gameId={recentGame?.id}
-            agentDefinitionId={recentGame ? (recentGame.agentDefinitionId ?? null) : undefined}
-          />
-        );
+        return <JourneyProgress gameId={recentGame?.id} />;
       })()}
 
       {/* Compact header — subtitle + add button */}

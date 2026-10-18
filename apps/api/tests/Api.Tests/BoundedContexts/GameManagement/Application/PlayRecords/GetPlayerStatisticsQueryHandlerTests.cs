@@ -393,13 +393,11 @@ public class GetPlayerStatisticsQueryHandlerTests : IDisposable
         var agentA = AgentDefinition.Create(
             "Mago di Wingspan",
             "Wingspan tutor",
-            AgentType.RagAgent,
             AgentDefinitionConfig.Create("gpt-4", 2048, 0.7f));
 
         var agentB = AgentDefinition.Create(
             "Mago di Catan",
             "Catan tutor",
-            AgentType.RagAgent,
             AgentDefinitionConfig.Create("gpt-4", 2048, 0.7f));
 
         _context.AgentDefinitions.AddRange(agentA, agentB);

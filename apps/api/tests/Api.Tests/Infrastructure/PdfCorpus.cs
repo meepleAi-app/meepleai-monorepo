@@ -9,7 +9,7 @@ namespace Api.Tests.Infrastructure;
 /// della forma <c>../../../../data/rulebook/&lt;file&gt;.pdf</c>, e una risalita a <b>conteggio
 /// fisso</b> non può essere corretta: dipende da quanti livelli separano la working directory dei
 /// test dalla radice. Misurato, i test girano in
-/// <c>apps/api/tests/Api.Tests/bin/Debug/net9.0</c>, dove quattro livelli su portano a
+/// <c>apps/api/tests/Api.Tests/bin/Debug/net10.0</c>, dove quattro livelli su portano a
 /// <c>apps/api/tests/</c> — che non contiene <c>data/</c>. La radice sta <b>sette</b> livelli su.
 /// </para>
 /// <para>

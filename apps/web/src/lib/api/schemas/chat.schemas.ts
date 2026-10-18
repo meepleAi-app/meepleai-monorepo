@@ -31,24 +31,38 @@ export type ChatMessageResponse = z.infer<typeof ChatMessageResponseSchema>;
 
 // ========== Chat Threads ==========
 
-export const ChatThreadMessageDtoSchema = z.object({
-  content: z.string().min(1),
-  role: z.string().min(1),
-  timestamp: z.string().datetime({ offset: true }),
-  backendMessageId: z.string().uuid().optional(),
-  endpoint: z.string().optional(),
-  gameId: GameIdString.optional(),
-  // Note: Keep in sync with FEEDBACK_OUTCOMES in @/lib/constants/feedback
-  feedback: z.enum(['helpful', 'not-helpful', 'incorrect']).nullable().optional(),
-  // Populated by BE on assistant messages; null on user messages. R1 — Task 5-FE #2500.
-  citationsJson: z.string().nullable().optional(),
-});
+export const ChatThreadMessageDtoSchema = z
+  .object({
+    // #4168: l'id che il backend manda (ChatMessageDto.Id); vedi la trasformazione sotto.
+    id: z.string().uuid().optional(),
+    content: z.string().min(1),
+    role: z.string().min(1),
+    timestamp: z.string().datetime({ offset: true }),
+    backendMessageId: z.string().uuid().optional(),
+    endpoint: z.string().optional(),
+    gameId: GameIdString.optional(),
+    // Note: Keep in sync with FEEDBACK_OUTCOMES in @/lib/constants/feedback
+    feedback: z.enum(['helpful', 'not-helpful', 'incorrect']).nullable().optional(),
+    // Populated by BE on assistant messages; null on user messages. R1 — Task 5-FE #2500.
+    citationsJson: z.string().nullable().optional(),
+  })
+  // #4168: i consumatori leggono l'id del messaggio salvato come `backendMessageId`, che il backend
+  // non manda: lo manda come `id`. Senza questa riga l'id si perdeva nel parsing, ogni consumatore
+  // ricadeva su un id inventato e il feedback partiva con quello.
+  .transform(({ id, ...message }) => ({
+    ...message,
+    backendMessageId: message.backendMessageId ?? id,
+  }));
 
 export type ChatThreadMessageDto = z.infer<typeof ChatThreadMessageDtoSchema>;
 
 export const ChatThreadDtoSchema = z.object({
   id: z.string().uuid(),
+  // Il gioco del thread, del catalogo o privato che sia.
   gameId: GameIdString.nullable(),
+  // #4244: lo stesso id quando il gioco è privato. Serve a chi deve chiederne i dati, perché le
+  // rotte dei giochi del catalogo non conoscono i giochi privati.
+  privateGameId: GameIdString.nullable().optional(),
   agentId: z.string().uuid().nullable().optional(),
   agentType: z.string().nullable().optional(),
   title: z.string().nullable(),

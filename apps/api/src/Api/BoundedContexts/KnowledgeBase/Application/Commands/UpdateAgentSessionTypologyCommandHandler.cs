@@ -46,8 +46,9 @@ internal sealed class UpdateAgentSessionDefinitionCommandHandler : IRequestHandl
             .GetByIdAsync(request.AgentSessionId, cancellationToken)
             .ConfigureAwait(false);
 
-        if (agentSession == null)
-            throw new NotFoundException("AgentSession", request.AgentSessionId.ToString());
+        // #4282: solo chi ha avviato la sessione agente, e dalla sessione di gioco a cui appartiene.
+        agentSession = AgentSessionAccess.EnsureOwnedBy(
+            agentSession, request.AgentSessionId, request.GameSessionId, request.UserId);
 
         var definition = await _definitionRepository
             .GetByIdAsync(request.NewAgentDefinitionId, cancellationToken)

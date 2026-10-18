@@ -32,7 +32,13 @@ public sealed class TokenTierConfiguration : IEntityTypeConfiguration<TokenTier>
             limits.Property(l => l.MessagesPerDay).HasColumnName("messages_per_day").IsRequired();
             limits.Property(l => l.MaxCollectionSize).HasColumnName("max_collection_size").IsRequired();
             limits.Property(l => l.MaxPdfUploadsPerMonth).HasColumnName("max_pdf_uploads_per_month").IsRequired();
-            limits.Property(l => l.MaxAgentsCreated).HasColumnName("max_agents_created").IsRequired();
+            // Issue #4138 (expand): MaxAgentsCreated is retired. The column stays as a shadow property
+            // until a later delivery drops it. It is an int NOT NULL: making it nullable (as for
+            // the retired string columns) would let new rows hold NULL, and the previous code
+            // version — which maps a non-nullable int — would throw reading them after a rollback.
+            // Measured: EF writes the shadow int as 0 on INSERT, so NOT NULL holds and the model
+            // matches the snapshot — no migration (TierRetiredMaxAgentsColumnsTests).
+            limits.Property<int>("MaxAgentsCreated").HasColumnName("max_agents_created").IsRequired();
             limits.Property(l => l.DailyCreditsLimit).HasColumnName("daily_credits_limit").HasColumnType("decimal(18,2)").IsRequired();
             limits.Property(l => l.WeeklyCreditsLimit).HasColumnName("weekly_credits_limit").HasColumnType("decimal(18,2)").IsRequired();
         });

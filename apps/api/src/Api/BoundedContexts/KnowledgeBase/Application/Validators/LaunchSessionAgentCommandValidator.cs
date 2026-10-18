@@ -8,7 +8,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Validators;
 /// <summary>
 /// Validator for LaunchSessionAgentCommand.
 /// Issue #3184 (AGT-010): Session-Based Agent Lifecycle.
-/// Issue #2500: Added semantic validations — V1 exists, V2 active, V3 game-match, V4 JSON safe-parse.
+/// Issue #2500: Added semantic validations — V1 exists, V2 active, V4 JSON safe-parse.
+/// Issue #4154: V3 (game-match) tolta e AgentDefinitionId opzionale (ADR-094: un solo agente di sistema).
 /// All FluentValidation failures produce HTTP 422 (validation_error) per codebase convention.
 /// </summary>
 internal sealed class LaunchSessionAgentCommandValidator : AbstractValidator<LaunchSessionAgentCommand>
@@ -20,8 +21,11 @@ internal sealed class LaunchSessionAgentCommandValidator : AbstractValidator<Lau
         RuleFor(x => x.GameSessionId)
             .NotEqual(Guid.Empty).WithMessage("GameSessionId is required");
 
+        // Issue #4154: opzionale (assente = agente di sistema, risolto dall'handler); se c'e`,
+        // non puo` essere vuoto.
         RuleFor(x => x.AgentDefinitionId)
-            .NotEqual(Guid.Empty).WithMessage("AgentDefinitionId is required");
+            .NotEqual(Guid.Empty).WithMessage("AgentDefinitionId, when provided, cannot be empty")
+            .When(x => x.AgentDefinitionId.HasValue);
 
         RuleFor(x => x.UserId)
             .NotEqual(Guid.Empty).WithMessage("UserId is required");
@@ -52,18 +56,21 @@ internal sealed class LaunchSessionAgentCommandValidator : AbstractValidator<Lau
             .WithMessage("InitialGameStateJson is not a valid game state.")
             .When(x => !string.IsNullOrWhiteSpace(x.InitialGameStateJson));
 
-        // V1 / V2 / V3 — consolidated into ONE async rule with a SINGLE DB query (I2 fix).
-        // Previously three separate RuleFor rules each called GetByIdAsync → 3 queries + 3 errors
-        // for a missing definition.  Now: one query, fail-fast on first problem with a targeted message.
+        // V1 / V2 — consolidated into ONE async rule with a SINGLE DB query (I2 fix).
         // CustomAsync gives access to ValidationContext<T> so we can name the property explicitly.
+        //
+        // Issue #4154: la regola V3 («l'agente deve appartenere al gioco») e` stata tolta. Con ADR-094
+        // l'agente e` uno solo, di sistema, con GameId nullo: V3 lo bocciava per QUALUNQUE gioco, e
+        // l'assistente in sessione non poteva partire. L'ambito del recupero e` un parametro della
+        // domanda, non dell'agente.
         RuleFor(x => x)
             .CustomAsync(async (command, ctx, ct) =>
             {
-                if (command.AgentDefinitionId == Guid.Empty)
-                    return; // gated below via When; also checked separately by NotEqual rule
+                if (command.AgentDefinitionId is not { } agentDefinitionId || agentDefinitionId == Guid.Empty)
+                    return; // assente: ci pensa l'handler; vuoto: lo segnala la regola NotEqual
 
                 var definition = await agentDefinitionRepository
-                    .GetByIdAsync(command.AgentDefinitionId, ct)
+                    .GetByIdAsync(agentDefinitionId, ct)
                     .ConfigureAwait(false);
 
                 // V1 — exists
@@ -77,15 +84,7 @@ internal sealed class LaunchSessionAgentCommandValidator : AbstractValidator<Lau
                 if (!definition.IsActive)
                 {
                     ctx.AddFailure("AgentDefinitionId", "AgentDefinition is not active.");
-                    return;
                 }
-
-                // V3 — game-match
-                if (definition.GameId != command.GameId)
-                {
-                    ctx.AddFailure("AgentDefinitionId", "AgentDefinition does not belong to the specified game.");
-                }
-            })
-            .When(x => x.AgentDefinitionId != Guid.Empty);
+            });
     }
 }

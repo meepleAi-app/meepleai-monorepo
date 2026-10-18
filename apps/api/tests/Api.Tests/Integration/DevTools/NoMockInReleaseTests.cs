@@ -21,7 +21,7 @@ public class NoMockInReleaseTests
         var candidate = Path.Combine(
             AppContext.BaseDirectory,
             "..", "..", "..", "..", "..",
-            "src", "Api", "bin", "Release", "net9.0", "Api.dll");
+            "src", "Api", "bin", "Release", "net10.0", "Api.dll");
 
         Assert.True(File.Exists(candidate), $"Release Api.dll not found at {candidate}");
 

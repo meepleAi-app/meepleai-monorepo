@@ -26,6 +26,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
+import { useAuthUser } from '@/components/auth/AuthProvider';
 import {
   AcceptedSuccessShell,
   DeclinedShell,
@@ -35,7 +36,6 @@ import {
   SessionMetaGrid,
   type SessionMetaItem,
 } from '@/components/ui/invites';
-import { useAuthUser } from '@/hooks/useAuthUser';
 import { useGameNightInvitation } from '@/hooks/useGameNightInvitation';
 import { useRespondToInvitation } from '@/hooks/useRespondToInvitation';
 import { useTranslation } from '@/hooks/useTranslation';

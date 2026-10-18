@@ -84,6 +84,7 @@ public sealed class SearchQueryHandlerTests
         var query = new SearchQuery(
             GameId: TestGameId,
             Query: TestQuery,
+            Access: SearchAccess.AlreadyChecked,
             TopK: 5,
             MinScore: 0.55,
             SearchMode: "vector",
@@ -163,6 +164,7 @@ public sealed class SearchQueryHandlerTests
         var query = new SearchQuery(
             GameId: TestGameId,
             Query: TestQuery,
+            Access: SearchAccess.AlreadyChecked,
             TopK: 5,
             MinScore: 0.55,
             SearchMode: "vector",
@@ -230,6 +232,7 @@ public sealed class SearchQueryHandlerTests
         var query = new SearchQuery(
             GameId: TestGameId,
             Query: TestQuery,
+            Access: SearchAccess.AlreadyChecked,
             TopK: 5,
             MinScore: 0.55,
             SearchMode: "vector",
@@ -243,6 +246,112 @@ public sealed class SearchQueryHandlerTests
         embeddingServiceMock.Verify(
             s => s.GenerateEmbeddingAsync(TestQuery, TestLanguage, It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    // ─── #4294: chi manda la ricerca dichiara chi chiede ───
+
+    /// <summary>
+    /// Il cancello RAG per un utente che non può interrogare il gioco: nessun embedding, nessuna
+    /// ricerca. Prima di #4294 bastava omettere l'utente dalla query perché questo controllo non
+    /// avvenisse.
+    /// </summary>
+    [Fact]
+    public async Task Handle_ForAUserWhoMayNotQueryTheGame_Refuses_BeforeSearching()
+    {
+        var userId = Guid.NewGuid();
+        var embeddingServiceMock = new Mock<IEmbeddingService>();
+        var embeddingRepositoryMock = new Mock<IEmbeddingRepository>();
+        var ragAccessMock = new Mock<IRagAccessService>();
+        ragAccessMock
+            .Setup(r => r.CanAccessRagAsync(userId, TestGameId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        var handler = CreateHandler(embeddingRepositoryMock.Object, embeddingServiceMock.Object, ragAccessMock.Object);
+
+        var act = () => handler.Handle(
+            new SearchQuery(
+                GameId: TestGameId,
+                Query: TestQuery,
+                Access: SearchAccess.OfUser(userId, "User")),
+            TestCancellationToken);
+
+        (await act.Should().ThrowAsync<Api.Middleware.Exceptions.RagOwnershipRequiredException>())
+            .Which.GameId.Should().Be(TestGameId);
+        embeddingServiceMock.VerifyNoOtherCalls();
+        embeddingRepositoryMock.VerifyNoOtherCalls();
+    }
+
+    /// <summary>Il ruolo arriva al cancello: un amministratore non viene trattato da utente.</summary>
+    [Fact]
+    public async Task Handle_ForAUser_AsksTheGateWithTheirRole()
+    {
+        var userId = Guid.NewGuid();
+        var ragAccessMock = new Mock<IRagAccessService>();
+        ragAccessMock
+            .Setup(r => r.CanAccessRagAsync(userId, TestGameId, UserRole.Admin, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var handler = CreateHandler(
+            EmptyEmbeddingRepositoryMock().Object, EmbeddingServiceReturningAVector().Object, ragAccessMock.Object);
+
+        await handler.Handle(
+            new SearchQuery(
+                GameId: TestGameId,
+                Query: TestQuery,
+                Access: SearchAccess.OfUser(userId, "Admin"),
+                SearchMode: "vector"),
+            TestCancellationToken);
+
+        ragAccessMock.Verify(
+            r => r.CanAccessRagAsync(userId, TestGameId, UserRole.Admin, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// Il mittente che ha già passato il cancello lo dichiara, e qui non si controlla due volte.
+    /// È l'unico modo di non essere controllati: un valore, non un'omissione.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenTheSenderHasAlreadyPassedTheGate_DoesNotCheckAgain()
+    {
+        var ragAccessMock = new Mock<IRagAccessService>();
+
+        var handler = CreateHandler(
+            EmptyEmbeddingRepositoryMock().Object, EmbeddingServiceReturningAVector().Object, ragAccessMock.Object);
+
+        await handler.Handle(
+            new SearchQuery(
+                GameId: TestGameId,
+                Query: TestQuery,
+                Access: SearchAccess.AlreadyChecked,
+                SearchMode: "vector"),
+            TestCancellationToken);
+
+        ragAccessMock.VerifyNoOtherCalls();
+    }
+
+    private static Mock<IEmbeddingService> EmbeddingServiceReturningAVector()
+    {
+        var mock = new Mock<IEmbeddingService>();
+        mock
+            .Setup(s => s.GenerateEmbeddingAsync(TestQuery, TestLanguage, It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(new List<float[]> { new[] { 0.1f, 0.2f, 0.3f } }));
+        return mock;
+    }
+
+    private static Mock<IEmbeddingRepository> EmptyEmbeddingRepositoryMock()
+    {
+        var mock = new Mock<IEmbeddingRepository>();
+        mock
+            .Setup(r => r.SearchByVectorWithScoresAsync(
+                It.IsAny<Guid>(),
+                It.IsAny<Vector>(),
+                It.IsAny<int>(),
+                It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<ScoredEmbedding>)new List<ScoredEmbedding>());
+        return mock;
     }
 
     private static SearchQueryHandler CreateHandler(
@@ -313,6 +422,179 @@ public sealed class SearchQueryHandlerTests
         sr.RelevanceScore.Value.Should().BeApproximately(0.22, 1e-6); // raw ts_rank_cd
         sr.SearchMethod.Should().Be("keyword");
     }
+
+    /// <summary>
+    /// #4168 (5e-c-2): il ts_rank_cd supera 1. relevanceScore lo schiaccia (è un Confidence), i
+    /// segnali lo tengono grezzo: la ricerca fra giochi normalizza i punteggi grezzi di giochi diversi.
+    /// </summary>
+    [Fact]
+    public void ToDomainSearchResult_FromKeyword_KeepsTheRawScoreAboveOneInTheSignals()
+    {
+        var kr = new KeywordSearchResult
+        {
+            ChunkId = "c",
+            Content = "text",
+            PdfDocumentId = Guid.NewGuid().ToString(),
+            GameId = Guid.NewGuid(),
+            ChunkIndex = 0,
+            RelevanceScore = 2.25f,
+            MatchedTerms = new List<string> { "setup" },
+        };
+
+        var sr = kr.ToDomainSearchResult(3);
+
+        sr.RelevanceScore.Value.Should().Be(1.0);
+        sr.Signals.KeywordScore.Should().Be(2.25f);
+        sr.Signals.KeywordRank.Should().Be(3);
+        sr.Signals.MatchedTerms.Should().Equal("setup");
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // #4168 (5e-c-2): il recupero porta i segnali grezzi, per chi fonde di nuovo fra giochi
+    // ─────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Hybrid_TheResultsCarryTheChunkIdentityAndTheRawScoresOfBothArms()
+    {
+        var pdfId = Guid.NewGuid();
+        var embedding = new Embedding(
+            id: Guid.NewGuid(),
+            vectorDocumentId: Guid.NewGuid(),
+            textContent: "Setup: each player draws two cards.",
+            vector: new Vector(new float[] { 0.1f, 0.2f, 0.3f }),
+            model: "test-model",
+            chunkIndex: 7,
+            pageNumber: 3,
+            language: "it",
+            pdfDocumentId: pdfId);
+        var embeddingRepository = new Mock<IEmbeddingRepository>();
+        embeddingRepository
+            .Setup(r => r.SearchByVectorWithScoresAsync(
+                It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<ScoredEmbedding>)new List<ScoredEmbedding> { new(embedding, 0.81) });
+        var keyword = KeywordSearchReturning(new KeywordSearchResult
+        {
+            ChunkId = $"{pdfId}_7",
+            Content = "Setup: each player draws two cards.",
+            PdfDocumentId = pdfId.ToString(),
+            GameId = TestGameId,
+            ChunkIndex = 7,
+            PageNumber = 3,
+            RelevanceScore = 2.25f,
+            MatchedTerms = new List<string> { "setup" },
+        });
+        var handler = CreateHandler(embeddingRepository.Object, EmbeddingServiceReturningAVector().Object, keyword.Object);
+
+        var result = await handler.Handle(HybridQuery(), TestCancellationToken);
+
+        var dto = result.Should().ContainSingle().Subject;
+        dto.PdfDocumentId.Should().Be(pdfId.ToString());
+        dto.ChunkIndex.Should().Be(7);
+        dto.VectorScore.Should().BeApproximately(0.81f, 1e-6f);
+        dto.KeywordScore.Should().Be(2.25f, "il ts_rank_cd grezzo, non schiacciato in [0,1]");
+        dto.Language.Should().Be("it");
+        dto.MatchedTerms.Should().Equal("setup");
+        dto.HybridScore.Should().BeGreaterThan(0f, "il punteggio della fusione per gioco");
+        dto.RelevanceScore.Should().BeApproximately(0.81, 1e-6, "relevanceScore resta il coseno (#2712)");
+    }
+
+    [Fact]
+    public async Task Keyword_ReturnsTheKeywordArm_WithoutAnEmbedding()
+    {
+        var embeddingService = new Mock<IEmbeddingService>(MockBehavior.Strict);
+        var keyword = KeywordSearchReturning(new KeywordSearchResult
+        {
+            ChunkId = "c",
+            Content = "Setup rules.",
+            PdfDocumentId = Guid.NewGuid().ToString(),
+            GameId = TestGameId,
+            ChunkIndex = 2,
+            RelevanceScore = 0.4f,
+        });
+        var handler = CreateHandler(EmptyEmbeddingRepositoryMock().Object, embeddingService.Object, keyword.Object);
+
+        var result = await handler.Handle(HybridQuery() with { SearchMode = "keyword" }, TestCancellationToken);
+
+        var dto = result.Should().ContainSingle().Subject;
+        dto.SearchMethod.Should().Be("keyword");
+        dto.KeywordScore.Should().Be(0.4f);
+        dto.VectorScore.Should().BeNull();
+        embeddingService.VerifyNoOtherCalls();
+    }
+
+    /// <summary>
+    /// #4168 (5e-c-2): la ricerca fra giochi passa ora da qui, e la riga per gioco del dump di
+    /// taratura deve continuare a uscire: è quella che mostra i candidati rifiutati dal gioco.
+    /// </summary>
+    [Fact]
+    public async Task Hybrid_WithDebugLogging_EmitsThePerGameTuningLine()
+    {
+        var pdfId = Guid.NewGuid();
+        var embedding = new Embedding(
+            id: Guid.NewGuid(), vectorDocumentId: Guid.NewGuid(), textContent: "Setup text.",
+            vector: new Vector(new float[] { 0.1f, 0.2f, 0.3f }), model: "test-model",
+            chunkIndex: 1, pageNumber: 1, language: "en", pdfDocumentId: pdfId);
+        var embeddingRepository = new Mock<IEmbeddingRepository>();
+        embeddingRepository
+            .Setup(r => r.SearchByVectorWithScoresAsync(
+                It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(),
+                It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<ScoredEmbedding>)new List<ScoredEmbedding> { new(embedding, 0.77) });
+        var logger = new Mock<ILogger<SearchQueryHandler>>();
+        logger.Setup(l => l.IsEnabled(It.IsAny<LogLevel>())).Returns(true);
+        var handler = new SearchQueryHandler(
+            embeddingRepository.Object,
+            new VectorSearchDomainService(),
+            new RrfFusionDomainService(),
+            EmbeddingServiceReturningAVector().Object,
+            CreateEmptyKeywordSearchServiceMock().Object,
+            new Mock<IRagAccessService>().Object,
+            logger.Object);
+
+        await handler.Handle(HybridQuery(), TestCancellationToken);
+
+        var line = logger.Invocations
+            .Where(i => i.Method.Name == nameof(ILogger.Log) && i.Arguments[0] is LogLevel.Debug)
+            .Select(i => i.Arguments[2]?.ToString() ?? string.Empty)
+            .SingleOrDefault(s => s.StartsWith(HybridSearchService.PerGameTuningLogPrefix, StringComparison.Ordinal));
+        line.Should().NotBeNull("la riga per gioco del dump di taratura esce anche da questo percorso");
+        line.Should().Contain($"\"d\":\"{pdfId}\"").And.Contain("\"i\":1").And.Contain("\"v\":0.77")
+            .And.Contain("\"l\":\"en\"").And.Contain("\"s\":");
+    }
+
+    private static SearchQuery HybridQuery() => new(
+        GameId: TestGameId,
+        Query: TestQuery,
+        Access: SearchAccess.AlreadyChecked,
+        TopK: 5,
+        MinScore: 0.0,
+        SearchMode: "hybrid",
+        Language: TestLanguage);
+
+    private static Mock<IKeywordSearchService> KeywordSearchReturning(params KeywordSearchResult[] results)
+    {
+        var mock = CreateEmptyKeywordSearchServiceMock();
+        mock
+            .Setup(k => k.SearchAsync(
+                It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<bool>(),
+                It.IsAny<List<string>?>(), It.IsAny<string>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(results.ToList());
+        return mock;
+    }
+
+    private static SearchQueryHandler CreateHandler(
+        IEmbeddingRepository embeddingRepository,
+        IEmbeddingService embeddingService,
+        IKeywordSearchService keywordSearchService) =>
+        new(
+            embeddingRepository,
+            new VectorSearchDomainService(),
+            new RrfFusionDomainService(),
+            embeddingService,
+            keywordSearchService,
+            new Mock<IRagAccessService>().Object,
+            new Mock<ILogger<SearchQueryHandler>>().Object);
 
     // ─────────────────────────────────────────────────────────────────────────
     // Issue #3270 (Task 6): primary /agents/qa path — raw keyword arm + role hint reach
@@ -390,6 +672,7 @@ public sealed class SearchQueryHandlerTests
         var query = new SearchQuery(
             GameId: gameId,
             Query: TestQuery,
+            Access: SearchAccess.AlreadyChecked,
             TopK: 5,
             MinScore: 0.0,
             SearchMode: "hybrid",
@@ -481,11 +764,12 @@ public sealed class SearchQueryHandlerTests
         var query = new SearchQuery(
             GameId: gameId,
             Query: TestQuery,
+            Access: SearchAccess.AlreadyChecked,
             TopK: 5,
             MinScore: 0.0,
             SearchMode: "hybrid",
             Language: TestLanguage,
-            DocumentIds: new List<Guid> { inScopePdf });
+            PdfDocumentIds: new List<Guid> { inScopePdf });
 
         // Act
         var result = await handler.Handle(query, TestCancellationToken);

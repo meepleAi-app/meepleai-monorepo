@@ -5,13 +5,13 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { useAuth } from '@/components/auth/AuthProvider';
 import { buildOAuthUrl } from '@/components/auth/oauth-url';
 import { RegisterForm, type RegisterSubmitPayload } from '@/components/auth/RegisterForm';
 import { RequestAccessForm } from '@/components/auth/RequestAccessForm';
 import { AuthCard } from '@/components/ui/auth-card';
 import { Divider } from '@/components/ui/divider';
 import { OAuthButton } from '@/components/ui/oauth-buttons';
-import { useAuth } from '@/hooks/useAuth';
 import { useTranslation } from '@/hooks/useTranslation';
 import { trackSignUp } from '@/lib/analytics/flywheel-events';
 import { useApiClient } from '@/lib/api/context';
@@ -41,6 +41,8 @@ export interface RegisterPageContentProps {
 export function RegisterPageContent({ oauthDisabled = false }: RegisterPageContentProps) {
   const router = useRouter();
   const { t } = useTranslation();
+  // #4190: AuthProvider, non l'hook omonimo di @/hooks/useAuth, che teneva l'utente in uno stato
+  // suo e lasciava AuthProvider fermo all'anonimo letto al montaggio di /register.
   const { register } = useAuth();
   const api = useApiClient();
 

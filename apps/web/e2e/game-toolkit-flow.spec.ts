@@ -34,7 +34,7 @@
  * ## Cosa è stato eliminato
  *
  *   - `should show Toolkit button on game cards` e `should navigate to game toolkit landing
- *     from card`: cercavano `[data-testid="game-card"]`, che ha **0 occorrenze** in `src`, e
+ *     from card`: cercavano `[data-testid="meeple-card"][data-entity="game"]`, che ha **0 occorrenze** in `src`, e
  *     un link `Toolkit` sulle schede di `/library` — che rende `LibraryHub`, non la
  *     `game-table` dove quel link esiste. L'ingresso al toolkit oggi è dalla scheda del gioco.
  *
@@ -156,11 +156,13 @@ test.describe('Game-Specific Toolkit', () => {
     await expect(page).toHaveURL(new RegExp(`/library/${game.gameId}/toolkit/[0-9a-f-]{36}$`), {
       timeout: 30_000,
     });
-    // Nessuna asserzione sul CONTENUTO della pagina della sessione: #4114 fa sì che
-    // «SSE connection failed» lo sostituisca, e non deterministicamente — questa riga era
-    // `getByText('Participants')` e alternava verde e rosso fra due run sullo stesso codice.
-    // Il soggetto del test è che la sessione PARTE e la URL avanza, cioè ciò che #4107,
-    // #4112 e #4113 hanno sbloccato; il resto appartiene al test saltato qui sotto.
+    // Il contenuto della pagina della sessione. Prima di #4114 «SSE connection failed» lo
+    // sostituiva, e non deterministicamente: questa asserzione alternava verde e rosso fra due
+    // run sullo stesso codice ed era stata tolta. Ora un errore di sincronizzazione compare in
+    // un banner accanto al contenuto.
+    await expect(page.getByRole('heading', { name: 'Participants' })).toBeVisible({
+      timeout: 15_000,
+    });
   });
 
   /**
@@ -176,25 +178,17 @@ test.describe('Game-Specific Toolkit', () => {
    * il suo FK bloccava la cancellazione dello `shared_games`.
    */
   /**
-   * SALTATO per #4114, trovato da questo stesso test.
+   * Riattivato con #4114, che questo stesso test aveva trovato.
    *
-   * La pagina della sessione sostituisce il proprio contenuto con «SSE connection failed»:
-   * `useSessionSync` apre `GET /api/v1/game-sessions/<id>/stream` passandogli l'id di una
-   * **live session**, e quell'endpoint appartiene a un altro aggregato — 404 misurato, mentre
-   * `/live-sessions/<id>/stream` risponde 200.
+   * La pagina della sessione sostituiva il proprio contenuto con «SSE connection failed»:
+   * `useSessionSync` apriva `GET /api/v1/game-sessions/<id>/stream` con l'id di una **live
+   * session** (404). Ora apre lo stream della live, e un errore di sincronizzazione compare in un
+   * banner accanto al contenuto invece di sostituirlo.
    *
-   * Non corretto qui perché quale dei due stream serva a questa pagina è una decisione di
-   * progetto (ADR-089: «scegli l'SSOT per contesto, non riconciliare i modelli»), e cambiare
-   * la URL farebbe aprire la connessione anche se poi nessun evento venisse riconosciuto.
-   *
-   * Il `Finalize` esiste e funziona: è la pagina che non arriva a renderlo.
+   * `Finalize` torna alla scheda del gioco appena la chiusura riesce: prima la navigazione
+   * dipendeva dall'evento `session:endgame` dello stream.
    */
   test('should finalize and return to game detail page', async ({ page }) => {
-    test.skip(
-      true,
-      'DIFETTO: #4114 — la pagina della sessione mostra «SSE connection failed» e non rende il contenuto: useSessionSync chiama /game-sessions con un id di live session (404)'
-    );
-
     await page.getByPlaceholder('Player 1').fill('Winner');
     await page.getByRole('button', { name: /Add Player/i }).click();
     await page.getByPlaceholder('Player 2').fill('Second');

@@ -78,15 +78,14 @@ describe('GameDetailAgentsList (Wave C.1) — discriminated union', () => {
     expect(retry).toHaveBeenCalledTimes(1);
   });
 
-  it('renders empty state with create CTA for kind="empty"', () => {
-    const ctaCreate = vi.fn();
-    const state: AgentsState = { kind: 'empty', ctaCreate };
+  // Issue #4138: the empty state no longer carries a create CTA. Asserted as an
+  // absence on the empty state itself, so reintroducing the button fails here.
+  it('renders empty state without a create CTA for kind="empty"', () => {
+    const state: AgentsState = { kind: 'empty' };
     render(<GameDetailAgentsList state={state} labels={labels} />);
 
     expect(screen.getByText('Nessun agente')).toBeInTheDocument();
-    const createBtn = screen.getByRole('button', { name: '+ Crea' });
-    fireEvent.click(createBtn);
-    expect(ctaCreate).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: '+ Crea' })).not.toBeInTheDocument();
   });
 
   it('renders agent rows for kind="success"', () => {

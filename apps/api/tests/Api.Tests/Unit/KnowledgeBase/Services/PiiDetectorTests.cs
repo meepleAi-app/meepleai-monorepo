@@ -1,6 +1,7 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Services;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -281,33 +282,40 @@ public class PiiDetectorTests
 
     #region Performance
 
+    // #4274: these two asserted on ONE scan, the first of the test. That sample also pays
+    // the cold start of the four regexes and competes with the rest of the suite for the
+    // runner, so the threshold raced the suite: widened from 5 ms to 50 in cdb49d4f5, red
+    // again on #4269. The fastest of several scans is a property of the code instead.
+    private const double ScanBudgetMs = 50;
+
+    private const string ScanBudgetReason =
+        "the fastest of several PII scans should stay under the budget; if this fails the " +
+        "scan itself became slow, because no single stalled sample can cause it (#4274)";
+
+    private double FastestScanMs(string text) =>
+        BestDuration.Of(() => _detector.Scan(text).ScanDuration).TotalMilliseconds;
+
     [Fact]
-    public void Scan_PerformanceUnder5ms()
+    public void Scan_ShortPromptPerformance()
     {
         // Generate a realistic prompt with some PII
         var text = string.Concat(Enumerable.Repeat(
             "What are the rules for Catan? My email is mario@test.com. ", 20));
 
-        var result = _detector.Scan(text);
-
-        result.ScanDuration.TotalMilliseconds.Should().BeLessThan(50,
-            "PII scan should complete in under 50ms in CI environments");
+        FastestScanMs(text).Should().BeLessThan(ScanBudgetMs, ScanBudgetReason);
     }
 
     [Fact]
     public void Scan_LargeTextPerformance()
     {
-        // ~10KB of text with scattered PII
+        // ~8KB of text with scattered PII
         var text = string.Concat(Enumerable.Repeat(
             "The player rolls dice and moves. Contact support@game.com for help. " +
             "Italian players can use CF RSSMRA85T10H501Z for verification. " +
             "Call +39 06 1234 5678 for assistance. ", 50));
 
-        var result = _detector.Scan(text);
-
-        result.ScanDuration.TotalMilliseconds.Should().BeLessThan(50,
-            "PII scan should complete in under 50ms in CI environments");
-        result.ContainsPii.Should().BeTrue();
+        _detector.Scan(text).ContainsPii.Should().BeTrue();
+        FastestScanMs(text).Should().BeLessThan(ScanBudgetMs, ScanBudgetReason);
     }
 
     #endregion

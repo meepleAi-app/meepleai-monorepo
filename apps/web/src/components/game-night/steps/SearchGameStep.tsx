@@ -5,7 +5,7 @@
  *
  * Issue #2089: Refactored to use the unified <GamePicker> shared component.
  *   - Replaces Enter-only handleSearch (was: B3.1) with debounced search via GamePicker.
- *   - Replaces silent catch{} (was: B3.2) with toast.error feedback via GamePicker.
+ *   - Replaces silent catch{} (was: B3.2) with an error on the page, with a retry, via GamePicker.
  *   - Source: 'both' (library + catalog) — was previously catalog-only (B3.3) which
  *     missed games already in the user's library.
  *

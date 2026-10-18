@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
@@ -59,6 +60,10 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
     private string? _testDataDirectory;
     private InlineBackgroundTaskService? _inlineBgService;
 
+    /// <summary>#4443 R1: holds the background task at its first read of the aggregate.</summary>
+    private readonly BackgroundTaskGate _gate = new();
+    private Mock<IPdfTextExtractor>? _extractorMock;
+
     /// <summary>
     /// Issue #3846: when true the blob double reports a successful <c>StoreAsync</c> but keeps
     /// nothing, reproducing an object that never reached the bucket (or was removed out of band).
@@ -88,9 +93,18 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
 
         _redis = await ConnectionMultiplexer.ConnectAsync(_fixture.RedisConnectionString);
         services.AddSingleton<IConnectionMultiplexer>(_redis);
+        // #4339: un gestore degli eventi di stato del PDF chiede la cache semantica (da #3982). Senza,
+        // la pubblicazione fallisce e la pipeline finisce con "Invalid operation" per una ragione
+        // che non è quella che questo test prova.
+        services.AddSingleton(Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.ISemanticResponseCache>());
 
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
+        services.AddScoped<PdfDocumentRepository>();
+        services.AddScoped<IPdfDocumentRepository>(sp =>
+            new GatedPdfDocumentRepository(sp.GetRequiredService<PdfDocumentRepository>(), _gate));
+        services.AddScoped<IPdfClaimService, RelationalPdfClaimService>();
+        // #4443 R2: an admin or editor upload goes to the queue.
+        services.AddScoped<IProcessingJobRepository, ProcessingJobRepository>();
 
         services.AddScoped<UploadPdfCommandHandler>();
 
@@ -137,6 +151,7 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
                     new("Place 3 tiles on the board.", 1, "NarrativeText")
                 }));
         services.AddSingleton<IPdfTextExtractor>(extractorMock.Object);
+        _extractorMock = extractorMock;
 
         var tableExtractorMock = new Mock<IPdfTableExtractor>();
         tableExtractorMock
@@ -433,6 +448,42 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
     }
 
     /// <summary>
+    /// #4339: the upload page follows the progress (GET /pdfs/{id}/progress) and waits for
+    /// Completed. Finalization wrote Completed and THEN moved the PDF to Ready through the
+    /// repository, whose MapToPersistence omits the progress column and rewrites the whole row:
+    /// the progress came back null, and the page stayed at "Indexing 80%" forever.
+    /// </summary>
+    [Fact(Timeout = 90000)]
+    public async Task ProcessPdfAsync_UploadPathReachesReady_LeavesTheProgressAtCompleted()
+    {
+        var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
+        var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
+        var command = new Api.BoundedContexts.DocumentProcessing.Application.Commands.UploadPdfCommand(
+            GameId: testGame.Id.ToString(),
+            Metadata: null,
+            PrivateGameId: null,
+            UserId: testUser.Id,
+            File: CreateMockFormFile("progress-completed.pdf", CreateValidPdfBytes(1024)));
+
+        var result = await handler.Handle(command, TestCancellationToken);
+        await _inlineBgService!.WaitForAllAsync();
+
+        result.Success.Should().BeTrue();
+        var pdfDocId = Guid.Parse(result.Document!.Id.ToString());
+        var persisted = await _dbContext.PdfDocuments
+            .AsNoTracking()
+            .FirstAsync(p => p.Id == pdfDocId, TestCancellationToken);
+        persisted.ProcessingState.Should().Be(
+            nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Ready),
+            $"the test needs the pipeline to reach Ready. ProcessingError='{persisted.ProcessingError}'.");
+
+        persisted.ProcessingProgressJson.Should().NotBeNull("the page reads the progress to know the PDF is done");
+        var progress = System.Text.Json.JsonSerializer.Deserialize<Api.Models.ProcessingProgress>(persisted.ProcessingProgressJson!);
+        progress!.CurrentStep.Should().Be(Api.Models.ProcessingStep.Completed);
+    }
+
+    /// <summary>
     /// Issue #3846, second (silent) half: the structured-content extractor takes a FILE PATH. Under S3
     /// the pipeline handed it the persisted <c>FilePath</c>, which is a bucket key — the adapter's
     /// <c>File.Exists</c> failed, it returned a failure result, and the caller dropped it with
@@ -507,6 +558,272 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
     }
 
     /// <summary>
+    /// #4443 R1: an upload's background task and another owner (the queue worker, the admin
+    /// process-pending, recovery at startup — all start with <see cref="IPdfClaimService"/>) must not
+    /// both work on the same document. The task used to check «Pending» and then write
+    /// <c>Uploading</c> in a separate step: an owner that claimed the document in between left it
+    /// with an aggregate in <c>Extracting</c>, the transition threw, and the task marked
+    /// <c>Failed</c> a document someone else was processing.
+    /// </summary>
+    /// <remarks>
+    /// The gate holds the background task at its first read of the aggregate — between the check
+    /// and the write in the old code, after its own claim and extraction in the new one — and the
+    /// other owner claims while it waits. The assertion is the contract, not the gate's position:
+    /// exactly one of the two did the work, and the document did not end <c>Failed</c>.
+    /// </remarks>
+    [Fact(Timeout = 90000)]
+    [Trait("Issue", "4443")]
+    public async Task BackgroundTask_AndAnotherClaimant_OnlyOneOfThemOwnsTheDocument()
+    {
+        var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
+        var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
+        var command = new Api.BoundedContexts.DocumentProcessing.Application.Commands.UploadPdfCommand(
+            GameId: testGame.Id.ToString(),
+            Metadata: null,
+            PrivateGameId: null,
+            UserId: testUser.Id,
+            File: CreateMockFormFile("two-owners.pdf", CreateValidPdfBytes(1024)));
+
+        _gate.Arm();
+        var result = await handler.Handle(command, TestCancellationToken);
+        result.Success.Should().BeTrue(result.Message);
+        var pdfId = result.Document!.Id;
+
+        await _gate.Reached.WaitAsync(TimeSpan.FromSeconds(30), TestCancellationToken);
+        bool claimedByTheOther;
+        using (var scope = _serviceProvider.CreateScope())
+        {
+            claimedByTheOther = await new RelationalPdfClaimService(scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>())
+                .TryClaimPendingAsync(pdfId, TestCancellationToken);
+        }
+
+        _gate.Release();
+        await _inlineBgService!.WaitForAllAsync();
+
+        var extractionsByTheTask = _extractorMock!.Invocations.Count(i => i.Method.Name.StartsWith("Extract", StringComparison.Ordinal));
+        var persisted = await _dbContext.PdfDocuments.AsNoTracking().FirstAsync(p => p.Id == pdfId, TestCancellationToken);
+        ((claimedByTheOther ? 1 : 0) + extractionsByTheTask).Should().Be(1,
+            $"exactly one owner works on the document (other claimed: {claimedByTheOther}, extractions by the task: {extractionsByTheTask})");
+        persisted.ProcessingState.Should().NotBe(
+            nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Failed),
+            $"the loser must leave the document to its owner. ProcessingError='{persisted.ProcessingError}'");
+    }
+
+    // ── #4443 R2: who processes an upload ──────────────────────────────────────────────────────
+
+    /// <summary>
+    /// An admin or editor upload is processed by the queue, its only owner (decision A): a job with the
+    /// priority received, no background task. The panel used to get a background task here AND enqueue
+    /// the same PDF itself, and the job ended Failed («SkippedNotClaimed») while the task worked.
+    /// </summary>
+    [Fact(Timeout = 90000)]
+    [Trait("Issue", "4443")]
+    public async Task AdminUpload_IsQueuedWithTheReceivedPriority_AndNoBackgroundTaskRuns()
+    {
+        var admin = await SeedUserAsync("Admin");
+
+        var result = await UploadAsAsync(admin, "admin-urgent.pdf", priority: "urgent");
+
+        result.Success.Should().BeTrue(result.Message);
+        result.ProcessingJobId.Should().NotBeNull();
+        _inlineBgService!.Started.Should().Be(0, "the queue owns the processing; no background task");
+        var jobs = await JobsForAsync(result.Document!.Id);
+        jobs.Should().ContainSingle();
+        jobs[0].Id.Should().Be(result.ProcessingJobId!.Value);
+        jobs[0].Status.Should().Be(nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.JobStatus.Queued));
+        jobs[0].Priority.Should().Be((int)Api.BoundedContexts.DocumentProcessing.Domain.Enums.ProcessingPriority.Urgent);
+        (await StateOfAsync(result.Document.Id)).Should().Be("Pending", "the worker has not picked it up yet");
+    }
+
+    [Fact(Timeout = 90000)]
+    [Trait("Issue", "4443")]
+    public async Task EditorUpload_WithoutPriority_IsQueuedAtNormal()
+    {
+        var editor = await SeedUserAsync("Editor");
+
+        var result = await UploadAsAsync(editor, "editor-normal.pdf", priority: null);
+
+        result.Success.Should().BeTrue(result.Message);
+        _inlineBgService!.Started.Should().Be(0);
+        var jobs = await JobsForAsync(result.Document!.Id);
+        jobs.Should().ContainSingle().Which.Priority.Should().Be((int)Api.BoundedContexts.DocumentProcessing.Domain.Enums.ProcessingPriority.Normal);
+    }
+
+    /// <summary>The priority is an admin control: a user who sends one gets a 403 (it used to be dropped in silence).</summary>
+    [Fact(Timeout = 90000)]
+    [Trait("Issue", "4443")]
+    public async Task UserUpload_WithAPriority_IsForbidden_AndStoresNothing()
+    {
+        var user = await _dbContext!.Users.FirstAsync(u => u.Role == "User", TestCancellationToken);
+
+        var act = () => UploadAsAsync(user, "user-urgent.pdf", priority: "urgent");
+
+        await act.Should().ThrowAsync<Api.Middleware.Exceptions.ForbiddenException>();
+        (await _dbContext.PdfDocuments.AsNoTracking().CountAsync(p => p.FileName == "user-urgent.pdf", TestCancellationToken)).Should().Be(0);
+    }
+
+    /// <summary>
+    /// An interactive admin upload skips the queue cap (decision 1a): a bulk reindex filling the queue must
+    /// not refuse it.
+    /// </summary>
+    [Fact(Timeout = 90000)]
+    [Trait("Issue", "4443")]
+    public async Task AdminUpload_WithAFullQueue_IsStillQueued()
+    {
+        var admin = await SeedUserAsync("Admin");
+        await FillTheQueueAsync(admin.Id);
+
+        var result = await UploadAsAsync(admin, "admin-full-queue.pdf", priority: null);
+
+        result.Success.Should().BeTrue(result.Message);
+        (await JobsForAsync(result.Document!.Id)).Should().ContainSingle();
+    }
+
+    /// <summary>A user's upload is still processed by its background task — with no job beside it.</summary>
+    [Fact(Timeout = 90000)]
+    [Trait("Issue", "4443")]
+    public async Task UserUpload_IsProcessedByTheBackgroundTask_WithNoJob()
+    {
+        var user = await _dbContext!.Users.FirstAsync(u => u.Role == "User", TestCancellationToken);
+
+        var result = await UploadAsAsync(user, "user-normal.pdf", priority: null);
+        await _inlineBgService!.WaitForAllAsync();
+
+        result.Success.Should().BeTrue(result.Message);
+        result.ProcessingJobId.Should().BeNull();
+        _inlineBgService.Started.Should().Be(1);
+        (await JobsForAsync(result.Document!.Id)).Should().BeEmpty();
+        (await StateOfAsync(result.Document.Id)).Should().Be("Ready");
+    }
+
+    private async Task<UserEntity> SeedUserAsync(string role)
+    {
+        var user = new UserEntity
+        {
+            Id = Guid.NewGuid(),
+            Email = $"{role.ToLowerInvariant()}-{Guid.NewGuid():N}@test.com",
+            DisplayName = $"{role} #4443",
+            Role = role,
+            Tier = "Free",
+            CreatedAt = DateTime.UtcNow
+        };
+        _dbContext!.Users.Add(user);
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        return user;
+    }
+
+    private async Task<Api.BoundedContexts.DocumentProcessing.Application.DTOs.PdfUploadResult> UploadAsAsync(
+        UserEntity user, string fileName, string? priority)
+    {
+        using var scope = _serviceProvider!.CreateScope();
+        var handler = scope.ServiceProvider.GetRequiredService<UploadPdfCommandHandler>();
+        var game = await _dbContext!.SharedGames.AsNoTracking().FirstAsync(TestCancellationToken);
+        // Distinct bytes per upload: the content-hash dedup would otherwise return the first document.
+        var bytes = CreateValidPdfBytes(1024);
+        System.Text.Encoding.ASCII.GetBytes(fileName).CopyTo(bytes, 16);
+        return await handler.Handle(
+            new Api.BoundedContexts.DocumentProcessing.Application.Commands.UploadPdfCommand(
+                GameId: game.Id.ToString(),
+                Metadata: null,
+                PrivateGameId: null,
+                UserId: user.Id,
+                File: CreateMockFormFile(fileName, bytes),
+                Priority: priority),
+            TestCancellationToken);
+    }
+
+    private async Task<List<Api.Infrastructure.Entities.DocumentProcessing.ProcessingJobEntity>> JobsForAsync(Guid pdfId) =>
+        await _dbContext!.ProcessingJobs.AsNoTracking().Where(j => j.PdfDocumentId == pdfId).ToListAsync(TestCancellationToken);
+
+    private async Task<string> StateOfAsync(Guid pdfId) =>
+        await _dbContext!.PdfDocuments.AsNoTracking().Where(p => p.Id == pdfId).Select(p => p.ProcessingState).FirstAsync(TestCancellationToken);
+
+    private async Task FillTheQueueAsync(Guid userId)
+    {
+        var game = await _dbContext!.SharedGames.AsNoTracking().FirstAsync(TestCancellationToken);
+        for (var i = 0; i < Api.BoundedContexts.DocumentProcessing.Domain.Entities.ProcessingJob.MaxQueueSize; i++)
+        {
+            var pdfId = Guid.NewGuid();
+            _dbContext.PdfDocuments.Add(new PdfDocumentEntity
+            {
+                Id = pdfId,
+                SharedGameId = game.Id,
+                FileName = $"filler-{i}.pdf",
+                FilePath = $"pdfs/{game.Id}/{pdfId:N}_filler-{i}.pdf",
+                FileSizeBytes = 1,
+                ContentType = "application/pdf",
+                UploadedByUserId = userId,
+                UploadedAt = DateTime.UtcNow,
+            });
+            _dbContext.ProcessingJobs.Add(new Api.Infrastructure.Entities.DocumentProcessing.ProcessingJobEntity
+            {
+                Id = Guid.NewGuid(),
+                PdfDocumentId = pdfId,
+                UserId = userId,
+                Status = "Queued",
+                Priority = 0,
+                CreatedAt = DateTimeOffset.UtcNow,
+                MaxRetries = 3,
+            });
+        }
+
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        _dbContext.ChangeTracker.Clear();
+    }
+
+    /// <summary>Holds the first <c>GetByIdAsync</c> made inside a background task, once, while armed.</summary>
+    internal sealed class BackgroundTaskGate
+    {
+        public static readonly AsyncLocal<bool> InBackgroundTask = new();
+
+        private readonly TaskCompletionSource _reached = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private int _armed;
+
+        public Task Reached => _reached.Task;
+
+        public void Arm() => Interlocked.Exchange(ref _armed, 1);
+
+        public void Release() => _release.TrySetResult();
+
+        public async Task HoldIfArmedAsync(CancellationToken ct)
+        {
+            if (!InBackgroundTask.Value || Interlocked.Exchange(ref _armed, 0) == 0)
+            {
+                return;
+            }
+
+            _reached.TrySetResult();
+            await _release.Task.WaitAsync(ct);
+        }
+    }
+
+    /// <summary>Delegates everything; <see cref="GetByIdAsync"/> passes through the gate first.</summary>
+    internal sealed class GatedPdfDocumentRepository(IPdfDocumentRepository inner, BackgroundTaskGate gate) : IPdfDocumentRepository
+    {
+        public async Task<Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
+        {
+            await gate.HoldIfArmedAsync(cancellationToken);
+            return await inner.GetByIdAsync(id, cancellationToken);
+        }
+
+        public Task<IReadOnlyList<Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument>> GetAllAsync(CancellationToken cancellationToken = default) => inner.GetAllAsync(cancellationToken);
+        public Task AddAsync(Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument entity, CancellationToken cancellationToken = default) => inner.AddAsync(entity, cancellationToken);
+        public Task UpdateAsync(Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument entity, CancellationToken cancellationToken = default) => inner.UpdateAsync(entity, cancellationToken);
+        public Task DeleteAsync(Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument entity, CancellationToken cancellationToken = default) => inner.DeleteAsync(entity, cancellationToken);
+        public Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default) => inner.ExistsAsync(id, cancellationToken);
+        public Task<IReadOnlyList<Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument>> FindByGameIdAsync(Guid gameId, CancellationToken cancellationToken = default) => inner.FindByGameIdAsync(gameId, cancellationToken);
+        public Task<IReadOnlyList<Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument>> FindByPrivateGameIdAsync(Guid privateGameId, CancellationToken cancellationToken = default) => inner.FindByPrivateGameIdAsync(privateGameId, cancellationToken);
+        public Task<IReadOnlyList<Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument>> FindByStateAsync(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState state, CancellationToken cancellationToken = default) => inner.FindByStateAsync(state, cancellationToken);
+        public Task<IReadOnlyList<Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default) => inner.GetByIdsAsync(ids, cancellationToken);
+        public Task<IReadOnlyList<Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument>> FindByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) => inner.FindByUserIdAsync(userId, cancellationToken);
+        public Task<bool> ExistsByContentHashAsync(string contentHash, Guid? gameId, Guid? privateGameId, CancellationToken cancellationToken = default) => inner.ExistsByContentHashAsync(contentHash, gameId, privateGameId, cancellationToken);
+        public Task<Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument?> FindByContentHashAsync(string contentHash, CancellationToken cancellationToken = default) => inner.FindByContentHashAsync(contentHash, cancellationToken);
+        public Task<Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument?> FindByContentHashForUserAsync(string contentHash, Guid userId, CancellationToken cancellationToken = default) => inner.FindByContentHashForUserAsync(contentHash, userId, cancellationToken);
+    }
+
+    /// <summary>
     /// Test-only IBackgroundTaskService that runs the queued task synchronously
     /// while still letting the caller await all in-flight tasks before assertions.
     /// Mirrors UploadPdfHeadingAwareIntegrationTests.InlineBackgroundTaskService.
@@ -514,6 +831,9 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
     internal sealed class InlineBackgroundTaskService : IBackgroundTaskService
     {
         private readonly List<Task> _running = new();
+
+        /// <summary>How many background tasks were started (#4443 R2: none for a queued upload).</summary>
+        public int Started { get { lock (_gate) { return _running.Count; } } }
         private readonly Lock _gate = new();
 
         public void Execute(Func<Task> task)
@@ -530,7 +850,12 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
             ArgumentNullException.ThrowIfNull(taskFactory);
             lock (_gate)
             {
-                _running.Add(Task.Run(() => taskFactory(CancellationToken.None)));
+                _running.Add(Task.Run(() =>
+                {
+                    // #4443: lets BackgroundTaskGate hold the background task and nothing else.
+                    BackgroundTaskGate.InBackgroundTask.Value = true;
+                    return taskFactory(CancellationToken.None);
+                }));
             }
         }
 

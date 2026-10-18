@@ -279,6 +279,14 @@ tests/                    # Api.Tests, k6, api-smoke, llm-eval, fixtures — see
 
 **Intermittenti noti**: nessuno. `AdvancedFilterPanel > Reset Button` è rimasto qui senza una causa finché il dettaglio dell'asserzione mancava: alla prima occorrenza (shard 3/4 di [#4129](https://github.com/meepleAi-app/meepleai-monorepo/pull/4129)) il rerun aveva **sovrascritto il log del job**. Alla seconda (#4318) il log salvato prima di rilanciare ha dato lo scarto, e la causa era nel test ([#4324](https://github.com/meepleAi-app/meepleai-monorepo/issues/4324)): aspettava che «Resetta» fosse *nel documento* e lo premeva mentre era ancora `disabled`, quindi il clic cadeva nel vuoto. Due regole che restano: **salva il log su file prima di rilanciare**; e prima di un clic aspetta lo stato che ti serve (`toBeEnabled`), non la presenza (`toBeInTheDocument`). (#3711 chiusa.)
 
+⚠️ **Dal 2026-10-19 al 2026-11-19 i runner cambiano immagine un po' alla volta** ([#4465](https://github.com/meepleAi-app/meepleai-monorepo/issues/4465), [actions/runner-images#14748](https://github.com/actions/runner-images/issues/14748)): `ubuntu-latest` passa da Ubuntu 24.04 a 26.04, e in questa finestra lo stesso workflow può girare su un'immagine in un run e sull'altra nel successivo. Un job rosso che torna verde al rerun sullo stesso SHA può aver cambiato immagine: controllalo prima di classificarlo come flaky.
+
+```bash
+gh run view --job <job_id> --log | grep -A1 -m1 'Image: '   # Image: ubuntu-26.04 / Version: …
+```
+
+Non `grep -m2 -E 'Image: |Version: '`: la prima riga `Version:` del log è quella dell'agente di provisioning, non dell'immagine. La prova di #4465 (stesso `main-dev` sulle due immagini: `dev-fast`, `dev-async`, `security-scan`, `prometheus-rules-gate` ed E2E con Docker Compose e Chromium) non ha trovato differenze, né negli esiti né nei nomi dei test falliti. Un difetto che compare solo su 26.04 è quindi nuovo: aprilo come issue con il confronto delle due immagini. Per riportare un job su 24.04 mentre lo si corregge: `runs-on: ubuntu-24.04`, con un commento che nomina la issue. Dopo il 2026-11-19 questo paragrafo si toglie.
+
 🔴 **Un `ReferenceError: window is not defined` in fondo a uno shard NON è per forza flakiness dell'harness, e per mesi l'abbiamo trattato come tale.** Il sintomo è sempre lo stesso — job rosso, **zero test falliti**, `Errors 1 error`, un blocco `Unhandled Rejection` — ma le cause sono almeno tre, e la terza stava nel codice di produzione:
 
 | stack | causa | esito |

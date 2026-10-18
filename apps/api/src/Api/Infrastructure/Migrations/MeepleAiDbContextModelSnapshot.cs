@@ -2688,6 +2688,90 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("rag_executions", "knowledge_base");
                 });
 
+            modelBuilder.Entity("Api.BoundedContexts.KnowledgeBase.Domain.Entities.ReferenceQuestion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("category");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Difficulty")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("difficulty");
+
+                    b.Property<string>("ExpectedAnswer")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("expected_answer");
+
+                    b.Property<bool>("InGate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("in_gate");
+
+                    b.Property<bool>("OutOfCorpus")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("out_of_corpus");
+
+                    b.Property<string>("Question")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("question");
+
+                    b.Property<string>("QuestionType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("question_type");
+
+                    b.Property<Guid>("SharedGameId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("shared_game_id");
+
+                    b.Property<string>("SourceReference")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("source_reference");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("IX_reference_questions_code");
+
+                    b.HasIndex("SharedGameId")
+                        .HasDatabaseName("IX_reference_questions_shared_game_id");
+
+                    b.ToTable("reference_questions", "knowledge_base");
+                });
+
             modelBuilder.Entity("Api.BoundedContexts.SecurityAudit.Infrastructure.Entities.AuditLogEntity", b =>
                 {
                     b.Property<Guid>("Id")

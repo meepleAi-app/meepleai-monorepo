@@ -227,7 +227,16 @@ export const useGameImportWizardStore = create<GameImportWizardState>()(
         setImportGameId: gameId => set({ importGameId: gameId }),
 
         setUploadedPdf: pdf => {
-          set({ uploadedPdf: pdf, extractedMetadata: null, error: null });
+          // #4459: reviewed metadata belong to the PDF they were extracted from. Step 2 extracts
+          // only while reviewedMetadata is null, so keeping them for a different PDF would leave
+          // the new one never extracted and the form showing the old PDF's data.
+          const samePdf = get().uploadedPdf?.pdfDocumentId === pdf.pdfDocumentId;
+          set({
+            uploadedPdf: pdf,
+            extractedMetadata: null,
+            error: null,
+            ...(samePdf ? {} : { reviewedMetadata: null }),
+          });
         },
 
         // ── Step 2 ─────────────────────────────────────────────────────────

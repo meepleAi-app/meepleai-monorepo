@@ -303,6 +303,40 @@ describe('useGameImportWizardStore', () => {
       expect(result.current.error).toBeNull();
     });
 
+    // #4459: step 2 extracts only while reviewedMetadata is null. Metadata kept from the previous
+    // PDF would leave the new one never extracted, and the form showing the old PDF's data.
+    it('setUploadedPdf with a different PDF clears the metadata reviewed for the previous one', () => {
+      const { result } = renderHook(() => useGameImportWizardStore());
+
+      act(() => {
+        result.current.setUploadedPdf(mockUploadedPdf);
+        result.current.setReviewedMetadata(mockMetadata);
+      });
+      act(() => {
+        result.current.setUploadedPdf({
+          pdfDocumentId: 'pdf-456',
+          id: 'pdf-456',
+          fileName: 'other.pdf',
+        });
+      });
+
+      expect(result.current.reviewedMetadata).toBeNull();
+    });
+
+    it('setUploadedPdf with the same PDF keeps the reviewed metadata', () => {
+      const { result } = renderHook(() => useGameImportWizardStore());
+
+      act(() => {
+        result.current.setUploadedPdf(mockUploadedPdf);
+        result.current.setReviewedMetadata(mockMetadata);
+      });
+      act(() => {
+        result.current.setUploadedPdf({ ...mockUploadedPdf });
+      });
+
+      expect(result.current.reviewedMetadata).toEqual(mockMetadata);
+    });
+
     it('setReviewedMetadata updates reviewedMetadata and extractedMetadata (legacy)', () => {
       const { result } = renderHook(() => useGameImportWizardStore());
 

@@ -56,7 +56,7 @@ Cosa fa:
 1. `snapshot-fetch.sh` — cache-first (`SNAPSHOT_FILE` env > cache locale > download da bucket via `latest.txt`)
 2. `snapshot-verify.sh` — compat gate (vedi sotto)
 3. `docker compose up -d postgres` + wait healthy
-4. `snapshot-restore.sh` — `dotnet ef database update` (schema) poi `pg_restore --data-only --disable-triggers` (dati), smoke test finale
+4. `snapshot-restore.sh` — le migrations fino a quella dello snapshot (schema del bake), poi `pg_restore --data-only --disable-triggers` (dati), poi le migrations successive sui dati caricati (#4489), smoke test finale
 5. `SKIP_CATALOG_SEED=true docker compose ... up -d` — avvia resto dello stack saltando il seed runtime
 
 Se qualcosa fallisce, il messaggio di errore ti dice esattamente cosa fare. **Fallback sempre disponibile**: `make dev`.
@@ -109,7 +109,7 @@ Lo script `snapshot-verify.sh` blocca il restore con un exit code distinto per o
 |---|---|---|
 | `0` | Tutto compatibile | procedi con restore |
 | `1` | `.latest` o `.meta.json` mancante | `make seed-index` per rigenerare |
-| `2` | EF migration head del working tree ≠ snapshot | `git checkout` del commit compatibile, oppure `make seed-index` per rigenerare |
+| `2` | La migration dello snapshot non è fra quelle del working tree (snapshot più nuovo del checkout, o di un altro branch); oppure, con un sidecar che elenca le migrations del bake (`ef_migrations`, dai bake di #4489), lo snapshot ne ha una che il working tree non ha, o il working tree ne ha una con data **anteriore** allo snapshot ma assente dal bake: nel ripristino girerebbe prima dei dati, su tabelle vuote | `git pull`, o `git checkout` del commit compatibile, oppure `make seed-index` per rigenerare |
 | `3` | Embedding model del working tree ≠ snapshot | allinea `infra/secrets/embedding.secret` oppure rigenera |
 | `4` | Embedding dimension mismatch | idem come exit 3 |
 | `5` | `seed_table_schema_version` del sidecar ≠ `infra/seed-schema.version` (#2126 D9) | `make seed-index` — una tabella seedata è stata rinominata/ristrutturata dopo il bake |
@@ -118,6 +118,8 @@ Lo script `snapshot-verify.sh` blocca il restore con un exit code distinto per o
 | `124` | Timeout del bake (`seed-index-wait.sh`) | aumenta `SEED_INDEX_TIMEOUT` o investiga perché i job non progrediscono |
 
 Warning non bloccanti:
+
+- **Snapshot più vecchio del working tree** (#4489): la migration dello snapshot è fra quelle del working tree, che ne ha di successive. Non blocca: `snapshot-restore.sh` porta lo schema alla migration del bake, carica i dati e solo dopo applica le successive, che così girano sui dati dello snapshot come su un deploy. Il warning elenca quelle che verranno applicate e la data del bake. Un sidecar di prima di #4489 non elenca le migrations del bake: in quel caso un secondo warning avverte che le migrations con data anteriore allo snapshot, arrivate dopo il bake, non si possono riconoscere. Fino al 2026-10-18 la regola era l'uguaglianza, e con il bake completo una volta a settimana ogni migration mergiata fermava il gate RAG su tutti i branch fino al bake successivo.
 - `dev.yml` sha256 diverso dallo snapshot → eventuali giochi aggiunti dopo il bake NON sono indicizzati
 - `failed_pdf_ids` non vuoto → lo snapshot contiene N PDF che sono falliti durante il bake (contabilizzati nel sidecar)
 
@@ -139,6 +141,7 @@ Esempio: `meepleai_seed_20260410T143022Z_sentence-transformers_all-MiniLM-L6-v2_
 {
   "schema_version": "20260401_AddSearchVector",
   "ef_migration_head": "20260401_AddSearchVector",
+  "ef_migrations": ["20260301_Init", "20260401_AddSearchVector"],
   "seed_table_schema_version": 1,
   "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
   "embedding_dim": 384,
@@ -182,7 +185,7 @@ Lo snapshot contiene **solo stato DB**. I PDF blob files vivono già idempotente
 
 ### Esclusione `__EFMigrationsHistory`
 
-`pg_dump --exclude-table-data='__EFMigrationsHistory'` è intenzionale. Al restore si applica prima `dotnet ef database update` sul DB vuoto (scrive schema + history del working tree), poi `pg_restore --data-only` carica i dati. Questo garantisce che snapshot e working tree condividano sempre lo stesso schema.
+`pg_dump --exclude-table-data='__EFMigrationsHistory'` è intenzionale. Al restore si applica prima `dotnet ef database update <ef_migration_head>` sul DB vuoto (schema e history fino alla migration del bake), poi `pg_restore --data-only` carica i dati, poi `dotnet ef database update` applica le migrations successive (#4489). Lo schema finale è quello del working tree, e i dati sono passati dalle stesse migrations che avrebbero incontrato su un deploy.
 
 ## Layout `data/snapshots/`
 
@@ -274,6 +277,15 @@ migration lands, the smoke bake runs automatically and, if `publish=true`, moves
 Developers who run `make dev-from-snapshot` before the bake completes will be
 blocked by `snapshot-verify.sh` exit code `2` (migration drift) and prompted to
 wait for the workflow or run a local bake.
+
+> **Rivisto il 2026-10-18 (#4489).** Due cose qui sopra non valevano più. Il
+> bake CI pubblica solo su `workflow_dispatch` con `publish=true`: sul push gira
+> e basta, quindi `latest.txt` si muove con il bake completo settimanale o a mano.
+> E lo snapshot più vecchio del working tree non blocca più: `snapshot-verify.sh`
+> lo lascia passare con un warning, e `snapshot-restore.sh` applica le migrations
+> successive sui dati caricati. L'exit `2` resta per lo snapshot che il working
+> tree non conosce. Il requisito vale ora per il **corpus** (un bake vecchio non
+> ha i PDF aggiunti dopo) e per l'età (R-SNAP-FRESH-02), non per lo schema.
 
 ### R-SNAP-FRESH-02 — Age SLO (formalized)
 

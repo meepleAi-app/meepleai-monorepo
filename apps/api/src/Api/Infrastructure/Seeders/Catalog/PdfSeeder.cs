@@ -269,9 +269,10 @@ internal static class PdfSeeder
     /// Repair mode (#2666): re-uploads a PDF blob that is missing from the runtime bucket
     /// (typically after a DB-only snapshot restore) using the EXISTING pdf id. A
     /// <see cref="PdfProcessingState.Ready"/> record only gets its new FilePath and size: its index
-    /// is intact (#4445). Any other record is reset to <see cref="PdfProcessingState.Pending"/> and
-    /// gets a ProcessingJob — unless it already has an active one (#4445) — so the RAG pipeline
-    /// reprocesses it (extract → chunk → embed → index → Ready).
+    /// is intact (#4445). A record with an active job belongs to that job and gets no second one
+    /// (#4445): only a Failed record goes back to Pending, so the queued job can claim it. Any other
+    /// record is reset to <see cref="PdfProcessingState.Pending"/> and gets a ProcessingJob, so the
+    /// RAG pipeline reprocesses it (extract → chunk → embed → index → Ready).
     ///
     /// Uses <paramref name="existingId"/> for BOTH the storage bucket key and the DB record so
     /// the persisted FilePath (pdfs/{existingId}/...) keeps matching what the database already
@@ -346,29 +347,30 @@ internal static class PdfSeeder
             return true;
         }
 
-        // Not Ready (#2666: typically Failed with "PDF file not found in blob storage"): reset to
-        // Pending, clearing every error field left over from the previous run, so the pipeline
-        // reprocesses it cleanly.
-        pdfEntity.ProcessingState = nameof(PdfProcessingState.Pending);
-        pdfEntity.ProcessingError = null;
-        pdfEntity.ErrorCategory = null;
-        pdfEntity.FailedAtState = null;
-        pdfEntity.RetryCount = 0;
-        await db.SaveChangesAsync(ct).ConfigureAwait(false);
-
-        // #4445: a document that already has a job in the queue gets no second one — the worker
-        // takes the oldest first, and the second found the document already processed. The
-        // existing job processes the document now that it is Pending again.
+        // #4445: a document that already has a job in the queue belongs to that job, and gets no
+        // second one — the worker took the oldest first, and the second found the document already
+        // processed. A Failed document goes back to Pending so the queued job can claim it; one
+        // half way through the pipeline is left to the job that is running it.
         if (await HasActiveProcessingJobAsync(db, existingId, ct).ConfigureAwait(false))
         {
+            var wasFailed = string.Equals(
+                pdfEntity.ProcessingState, nameof(PdfProcessingState.Failed), StringComparison.Ordinal);
+            if (wasFailed)
+            {
+                ResetToPending(pdfEntity);
+            }
+
+            await db.SaveChangesAsync(ct).ConfigureAwait(false);
             logger.LogInformation(
-                "PdfSeeder: repaired: re-uploaded missing blob for '{FileName}' (pdfId {Id}, {Size} bytes) and reset to Pending; its queued job will process it",
-                fileName, existingId, result.FileSizeBytes);
+                "PdfSeeder: repaired: re-uploaded missing blob for '{FileName}' (pdfId {Id}, {Size} bytes); state {State}, left to its active job",
+                fileName, existingId, result.FileSizeBytes, pdfEntity.ProcessingState);
             return true;
         }
 
-        // Re-enqueue a Queued ProcessingJob (+5 steps) identical to the new-record flow so
-        // PdfProcessingQuartzJob picks the repaired PDF up again.
+        // Not Ready and no job (#2666: typically Failed with "PDF file not found in blob storage"):
+        // reset to Pending and enqueue a Queued ProcessingJob (+5 steps) identical to the new-record
+        // flow, in one save, so PdfProcessingQuartzJob picks the repaired PDF up again.
+        ResetToPending(pdfEntity);
         var jobEntity = EnqueueProcessingJob(db, existingId, systemUserId);
         await db.SaveChangesAsync(ct).ConfigureAwait(false);
 
@@ -376,6 +378,19 @@ internal static class PdfSeeder
             "PdfSeeder: repaired: re-uploaded missing blob for '{FileName}' (pdfId {Id}, JobId={JobId}, {Size} bytes) and reset to Pending",
             fileName, existingId, jobEntity.Id, result.FileSizeBytes);
         return true;
+    }
+
+    /// <summary>
+    /// Puts a record back to <see cref="PdfProcessingState.Pending"/>, clearing every error field
+    /// left over from the previous run so the pipeline reprocesses it cleanly.
+    /// </summary>
+    private static void ResetToPending(PdfDocumentEntity pdfEntity)
+    {
+        pdfEntity.ProcessingState = nameof(PdfProcessingState.Pending);
+        pdfEntity.ProcessingError = null;
+        pdfEntity.ErrorCategory = null;
+        pdfEntity.FailedAtState = null;
+        pdfEntity.RetryCount = 0;
     }
 
     /// <summary>

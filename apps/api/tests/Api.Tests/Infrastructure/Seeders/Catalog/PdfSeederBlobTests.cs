@@ -564,6 +564,32 @@ public sealed class PdfSeederBlobTests
         db.ProcessingJobs.Select(j => j.Id).Should().Equal(existingJob.Id);
     }
 
+    // A record half way through the pipeline belongs to the job running it: the repair puts the
+    // file back but does not rewind the state under the worker (found in review).
+    [Fact]
+    public async Task SeedAsync_ExistingHash_BlobMissing_DocumentMidPipeline_IsLeftToItsRunningJob()
+    {
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var existingId = Guid.NewGuid();
+        ArrangeBlobMissingInRuntimeButInSeed();
+
+        using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        SeedExistingDocument(db, gameId, userId, existingId, nameof(PdfProcessingState.Embedding));
+        var runningJob = PdfSeeder.EnqueueProcessingJob(db, existingId, userId);
+        runningJob.Status = nameof(JobStatus.Processing);
+        await db.SaveChangesAsync();
+
+        await PdfSeeder.SeedAsync(db, CreateManifest(CreateBlobEntry(pdfSha256: "samehash")),
+            new Dictionary<int, Guid> { { 174430, gameId } }, userId,
+            _primaryBlob.Object, _seedBlob.Object, _logger.Object, CancellationToken.None);
+
+        var doc = db.PdfDocuments.Single(p => p.Id == existingId);
+        doc.ProcessingState.Should().Be(nameof(PdfProcessingState.Embedding));
+        doc.FilePath.Should().Be("pdfs/repaired/newfile_gloomhaven.pdf");
+        db.ProcessingJobs.Select(j => j.Id).Should().Equal(runningJob.Id);
+    }
+
     [Fact]
     public async Task SeedAsync_ExistingHash_BlobMissing_DocumentWithOnlyATerminalJob_GetsANewJob()
     {

@@ -35,8 +35,9 @@ lo dà un giudice LLM tarato (#4471), non le parole chiave: il set non ne ha.
   - `verifica`: esito, regolamento, pagina e citazione del testo che sostiene la risposta attesa;
   - `ground_truth_originale` e `question_originale`, dove la risposta o la domanda è stata corretta;
   - `fuori_dal_corpus`: la domanda chiede ciò che i documenti non contengono (per esempio i costi di
-    Catan, che nel regolamento sono solo una grafica). La risposta attesa è che i documenti non lo
-    riportano: la domanda misura se l'agente inventa.
+    Catan, che nel regolamento sono solo una grafica). La risposta attesa ne accetta due: che i
+    documenti non lo riportano, oppure la regola vera; è sbagliata solo una regola falsa (criterio 6 di
+    `misure/criteri-giudizio.md`). La domanda misura se l'agente inventa.
 - `game` è il gioco del catalogo su cui la domanda va posta: le domande su Stazioni, Traghetti e Tunnel
   sono di «Ticket to Ride: Europe», che ha il suo regolamento.
 - Ogni risposta attesa è stata confrontata con il testo del regolamento che l'agente legge, non con la

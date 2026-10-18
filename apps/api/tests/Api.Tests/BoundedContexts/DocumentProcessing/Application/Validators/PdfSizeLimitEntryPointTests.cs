@@ -26,7 +26,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Validators;
 /// up to 500 MB, the user library's custom PDF counted 100 MB as 100 000 000 bytes. Each entry point
 /// here builds a command that is valid in every other respect, so the only error left is the size.
 /// The standard <c>/ingest/pdf</c> upload checks the size in its handler, not in a validator: it is
-/// covered live (100 MiB accepted, one byte more refused with 400) in the PR.
+/// covered by <c>UploadPdfCommandHandlerSizeLimitTests</c>.
 /// </remarks>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "DocumentProcessing")]

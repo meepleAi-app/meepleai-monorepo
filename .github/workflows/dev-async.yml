@@ -111,7 +111,7 @@ jobs:
         # Stessa SELEZIONE di ci.yml, deliberatamente: se i due gate misurassero insiemi diversi,
         # un test potrebbe non essere eseguito da nessuno dei due — il difetto di #3622 su un altro
         # asse. La ripartizione invece qui e' piu' fine (#3742): cio' che ci.yml chiama `Games` e'
-        # diviso in `Catalog` e `GamesAdmin`.
+        # diviso in `Catalog` e `GamesAdmin`, e da `KnowledgeBase` e' staccato `AuthIntegration`.
         #
         # Perche' divisa, e perche' li'. Uno shard dura quanto la sua catena seriale piu' lunga:
         # xUnit mette in parallelo le collection e in serie i test dentro una collection. In `Games`
@@ -125,13 +125,27 @@ jobs:
         # `GamesAdmin` esclude SharedGameCatalog perche' i filtri sono per nome: una classe col nome
         # di entrambi i contesti girerebbe in tutti e due gli shard.
         #
+        # Stessa regola, seconda volta (#4484). In `KnowledgeBase` la catena che fa la sessione e'
+        # Integration-GroupB, quasi tutta Authentication: 48 minuti su un runner veloce, 73-75 su
+        # uno lento (troncato il 2026-10-18). Spostare il token `Authentication` intero non basta,
+        # perche' la catena resterebbe intera su un altro runner (68 minuti sul lento). La si spezza
+        # lungo il namespace: `AuthIntegration` prende Api.Tests.Integration.Authentication.*, e
+        # `KnowledgeBase` tiene il token largo `Authentication` meno quello. Cosi' una classe nuova
+        # di Authentication fuori da quel namespace finisce comunque in uno shard. Il token ha un
+        # punto apposta: un nome di metodo non puo' contenerlo, quindi seleziona solo per namespace
+        # (`FullyQualifiedName~` confronta anche il nome del metodo). `Core` non cambia: escludere
+        # `Authentication` esclude gia' anche `Integration.Authentication`.
+        # Previsioni e misure: commento del 2026-10-18 in #3742.
+        #
         # 🔴 Le due meta' di questa regola non si tengono da sole. Togliere un token da uno shard
         # lasciandolo escluso da `Core` fa sparire quei test da OGNI shard, e nessun job cambia
         # colore. Lo verifica infra/scripts/tests/integration-shard-matrix.bats, insieme
         # all'uguaglianza con ci.yml e alla presenza di ogni shard nella baseline.
         shard:
           - name: "KnowledgeBase"
-            filter_extra: "&(FullyQualifiedName~KnowledgeBase|FullyQualifiedName~DocumentProcessing|FullyQualifiedName~Authentication)"
+            filter_extra: "&(FullyQualifiedName~KnowledgeBase|FullyQualifiedName~DocumentProcessing|FullyQualifiedName~Authentication)&FullyQualifiedName!~Integration.Authentication"
+          - name: "AuthIntegration"
+            filter_extra: "&(FullyQualifiedName~Integration.Authentication)"
           - name: "Catalog"
             filter_extra: "&(FullyQualifiedName~SharedGameCatalog)"
           - name: "GamesAdmin"

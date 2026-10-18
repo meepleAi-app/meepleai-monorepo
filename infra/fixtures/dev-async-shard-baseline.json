@@ -208,6 +208,22 @@
         "Api.Tests.Integration.DocumentProcessing.S3BlobStorageIntegrationTests.StoreAsync_ValidFile_ReturnsSuccessWithFileId"
       ]
     },
+    "AuthIntegration": {
+      "_comment": [
+        "Staccato da KnowledgeBase con #4484: i test il cui nome completo contiene",
+        "Integration.Authentication, cioe' il namespace Api.Tests.Integration.Authentication e la classe",
+        "Api.Tests.Integration.AuthenticationGameManagementCrossContextTests. KnowledgeBase li esclude.",
+        "",
+        "DERIVATI dalla voce di KnowledgeBase, ripartita come la ripartisce il filtro: nessuno dei suoi",
+        "nomi falliti o saltati sta sotto Integration.Authentication. Confermato sui .trx dello shard",
+        "KnowledgeBase del 2026-10-18: nei run 39121624613 e 39140357250 quei 211 test sono tutti Passed.",
+        "Da misurare sul primo run completo dello shard, come Catalog e GamesAdmin."
+      ],
+      "failed": 0,
+      "skipped": 0,
+      "failedTests": [],
+      "skippedTests": []
+    },
     "Catalog": {
       "_comment": [
         "Meta' dello shard che fino a #3742 si chiamava Games: i test il cui nome completo contiene",

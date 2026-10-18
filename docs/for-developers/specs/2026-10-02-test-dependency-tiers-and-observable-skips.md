@@ -283,6 +283,15 @@ Then   [Fact(Skip = "DIFETTO: #4016 — …")]
   possa perdere test in silenzio — i token esclusi da `Core` sono esattamente quelli selezionati
   dagli altri shard, i due workflow selezionano lo stesso insieme, ogni shard ha la sua voce nella
   baseline.
+  **Aggiunta del 2026-10-18 (#4484): seconda volta, con `KnowledgeBase`.** L'avviso dell'80% ha
+  fatto il suo lavoro: `KnowledgeBase` è passato da 48 minuti su un runner veloce a 73-75 su uno
+  lento, con un run troncato. La catena che fa la sessione è `Integration-GroupB`, quasi tutta
+  `Authentication`. Spostare quel token intero su un altro runner lascia la catena intera, quindi la
+  divisione è dentro il token: `AuthIntegration` prende `Integration.Authentication` e
+  `KnowledgeBase` lo esclude. `Core` non cambia, perché escludendo `Authentication` esclude già il
+  token più stretto. Per questo il bats confronta ora i token **massimali**, cioè quelli che non
+  contengono un altro token dello stesso insieme. Misure e alternative scartate stanno nel
+  commento del 2026-10-18 in #3742.
 - [x] **A3** — **verificato con un drill distruttivo**, 2026-10-03. Le due suite di #3978
   (`S3BlobStorageIntegrationTests`, `CoverR2ConventionIntegrationTests`) contro l'immagine MinIO
   puntata a un tag inesistente:

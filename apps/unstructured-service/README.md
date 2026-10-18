@@ -120,7 +120,7 @@ language: ita | eng | ... (default: ita)
 
 **Error Responses**:
 - `400`: Invalid request
-- `413`: File too large (>50MB)
+- `413`: File too large (> `MAX_FILE_SIZE`, 100 MiB)
 - `415`: Unsupported media type (not PDF)
 - `422`: Unprocessable PDF (corrupted/encrypted)
 - `500`: Internal server error
@@ -151,7 +151,7 @@ Environment variables (see `.env.example`):
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `LOG_LEVEL` | `INFO` | Logging level (DEBUG, INFO, WARNING, ERROR) |
-| `MAX_FILE_SIZE` | `52428800` | Max file size in bytes (50MB) |
+| `MAX_FILE_SIZE` | `104857600` | Max file size in bytes (100 MiB, the API's single PDF limit — #4449) |
 | `TIMEOUT` | `30` | Extraction timeout in seconds |
 | `UNSTRUCTURED_STRATEGY` | `fast` | Extraction strategy (fast or hi_res) |
 | `LANGUAGE` | `ita` | Default document language |

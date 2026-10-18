@@ -4,7 +4,7 @@
  * Admin Game Import Wizard - Client Component
  *
  * 5-step PDF-direct import flow:
- * 1. Upload PDF (chunked, ≤150 MB)
+ * 1. Upload PDF (chunked, within the backend's PDF limit)
  * 2. Review LLM-extracted metadata + cover image + live MeepleCard preview
  * 3. Preview & Confirm (read-only)
  * 4. Saga progress (ImportGameFromPdfCommand)

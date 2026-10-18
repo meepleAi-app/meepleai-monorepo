@@ -1,9 +1,11 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 
@@ -23,12 +25,16 @@ internal class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUplo
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILogger<InitChunkedUploadCommandHandler> _logger;
     private readonly string _uploadTempBasePath;
+    private readonly long _maxFileSizeBytes;
 
     public InitChunkedUploadCommandHandler(
         IChunkedUploadSessionRepository sessionRepository,
         MeepleAiDbContext dbContext,
-        ILogger<InitChunkedUploadCommandHandler> logger)
+        ILogger<InitChunkedUploadCommandHandler> logger,
+        IOptions<PdfProcessingOptions> pdfOptions)
     {
+        ArgumentNullException.ThrowIfNull(pdfOptions);
+        _maxFileSizeBytes = pdfOptions.Value.MaxFileSizeBytes;
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -57,9 +63,9 @@ internal class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUplo
                 );
             }
 
-            // Validate file size (max 500 MB for now)
-            const long maxFileSizeBytes = 500L * 1024 * 1024;
-            if (request.TotalFileSize > maxFileSizeBytes)
+            // #4449: the single PDF limit. InitChunkedUploadCommandValidator refuses first; this is the
+            // handler's own guard, and it used to be a 500 MB number of its own.
+            if (request.TotalFileSize > _maxFileSizeBytes)
             {
                 return new InitChunkedUploadResult(
                     Success: false,
@@ -67,7 +73,7 @@ internal class InitChunkedUploadCommandHandler : ICommandHandler<InitChunkedUplo
                     TotalChunks: 0,
                     ChunkSizeBytes: 0,
                     ExpiresAt: null,
-                    ErrorMessage: $"File size exceeds maximum allowed ({maxFileSizeBytes / (1024 * 1024)} MB)"
+                    ErrorMessage: $"File size exceeds maximum allowed ({PdfSizeLimit.Describe(_maxFileSizeBytes)})"
                 );
             }
 

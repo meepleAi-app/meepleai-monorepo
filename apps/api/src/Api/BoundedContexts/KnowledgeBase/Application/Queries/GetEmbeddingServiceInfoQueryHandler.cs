@@ -88,7 +88,9 @@ internal sealed class GetEmbeddingServiceInfoQueryHandler
 
             var json = await response.Content.ReadAsStringAsync(requestToken).ConfigureAwait(false);
             using var doc = JsonDocument.Parse(json);
-            return doc.RootElement.TryGetProperty("max_text_chars", out var max) && max.TryGetInt32(out var value)
+            // A limit that is not a positive integer is no limit the pages can show.
+            return doc.RootElement.TryGetProperty("max_text_chars", out var max)
+                && max.TryGetInt32(out var value) && value > 0
                 ? value
                 : null;
         }

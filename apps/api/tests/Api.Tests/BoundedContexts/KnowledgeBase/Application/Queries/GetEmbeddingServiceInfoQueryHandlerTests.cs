@@ -65,6 +65,27 @@ public sealed class GetEmbeddingServiceInfoQueryHandlerTests
     }
 
     [Fact]
+    public async Task HealthThatIsNotJson_IsUnavailable()
+    {
+        var info = await HandleAsync(new StubHandler()
+            .Answer("/health", HttpStatusCode.OK, "<html>proxy error</html>"));
+
+        info.Status.Should().Be("unavailable");
+        info.Dimension.Should().Be(768);
+    }
+
+    [Fact]
+    public async Task ZeroInputLimit_IsUnknownRatherThanZero()
+    {
+        var info = await HandleAsync(new StubHandler()
+            .Answer("/health", HttpStatusCode.OK, HealthyBody)
+            .Answer("/config", HttpStatusCode.OK, """{"max_text_chars":0}"""));
+
+        info.Status.Should().Be("healthy");
+        info.MaxInputChars.Should().BeNull();
+    }
+
+    [Fact]
     public async Task ServiceWithoutConfig_LeavesOnlyTheInputLimitUnknown()
     {
         var info = await HandleAsync(new StubHandler()

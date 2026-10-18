@@ -1,4 +1,4 @@
-# Phases Section (v1.0.0)
+# Phases Section (v1.2.0)
 
 Extract the **turn-level or round-level phases** in the order they occur in a typical turn.
 
@@ -12,6 +12,10 @@ Extract the **turn-level or round-level phases** in the order they occur in a ty
       "description": "string (Italiano, reformulated, ≤240 chars)",
       "order": 1,
       "isOptional": false,
+      "kind": "rule|exception|clarification|example (optional, default rule)",
+      "priority": "base|expansion|card|scenario (optional, default base)",
+      "overrides": [0],
+      "trigger": {"phase": "string (optional)", "action": "string (optional)", "component": "string (optional)"},
       "citations": [
         {
           "pdf_page": 8,

@@ -430,7 +430,14 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
     /// and eligible for publication into a user-facing <see cref="MechanicCard"/>. It does NOT create
     /// the card — publishing the card surface is a separate, explicit admin act (AD-2, #527), tracked
     /// by <see cref="PublishedCardId"/>. Approving multiple analyses does not publish any of them.
+    /// <para>
+    /// Every claim's structure must also satisfy the override-graph invariants (spec 2026-10-08 §2):
+    /// the published card is the contract of the rule validator, and claims built by the parser never
+    /// went through <see cref="SetClaimStructure"/>.
+    /// </para>
     /// </remarks>
+    /// <exception cref="InvalidMechanicAnalysisStateException">The status does not allow the transition, or a
+    /// claim's structure violates an invariant (the message names the first offending claim).</exception>
     public void Approve(Guid reviewerId, DateTime utcNow)
     {
         if (reviewerId == Guid.Empty)
@@ -452,6 +459,15 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
                 $"Cannot approve MechanicAnalysis {Id}: not all claims are Approved " +
                 $"(Pending={_claims.Count(c => c.Status == MechanicClaimStatus.Pending)}, " +
                 $"Rejected={_claims.Count(c => c.Status == MechanicClaimStatus.Rejected)}).");
+        }
+
+        foreach (var claim in _claims)
+        {
+            if (FindStructureViolation(claim.Id, CurrentStructureOf(claim)) is { } violation)
+            {
+                throw InvalidMechanicAnalysisStateException.ForInvalidClaimStructure(
+                    Id, Status, "approve", claim.Id, violation);
+            }
         }
 
         var previous = Status;
@@ -611,13 +627,43 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Approves a single claim, optionally capturing a review note (#526 AC-6).
-    /// Valid only while the analysis is InReview.
+    /// Approves a single claim, optionally capturing a review note (#526 AC-6) and optionally applying a
+    /// reviewer-supplied structure in the same step. Valid only while the analysis is InReview.
     /// </summary>
-    public void ApproveClaim(Guid claimId, Guid reviewerId, DateTime utcNow, string? note = null)
+    /// <remarks>
+    /// The structure that will be in effect after the call — <paramref name="structure"/> when supplied,
+    /// otherwise the claim's current one — must satisfy the override-graph invariants (spec 2026-10-08 §2):
+    /// claims built by the parser never went through <see cref="SetClaimStructure"/>, so this is where their
+    /// structure is checked. Validation runs before any mutation, so a violation leaves the claim untouched.
+    /// Supplying the structure here (rather than calling <see cref="SetClaimStructure"/> afterwards) lets a
+    /// Rejected claim be approved and corrected in one call, and lets a reviewer fix an invalid proposal.
+    /// </remarks>
+    /// <exception cref="ArgumentException">The resulting structure violates an invariant.</exception>
+    public void ApproveClaim(
+        Guid claimId,
+        Guid reviewerId,
+        DateTime utcNow,
+        string? note = null,
+        MechanicClaimStructure? structure = null)
     {
         var claim = RequireClaimUnderReview(claimId, "approve claim");
+        ValidateStructureInGraph(claimId, structure ?? CurrentStructureOf(claim));
         claim.Approve(reviewerId, utcNow, note);
+        if (structure is not null)
+        {
+            claim.ApplyStructure(Detached(structure));
+        }
+    }
+
+    /// <summary>
+    /// True when the claim's CURRENT structure satisfies the override-graph invariants (spec 2026-10-08 §2).
+    /// Lets the bulk approve skip invalid claims instead of failing the whole batch.
+    /// </summary>
+    public bool HasValidClaimStructure(Guid claimId)
+    {
+        var claim = _claims.FirstOrDefault(c => c.Id == claimId)
+            ?? throw new InvalidOperationException($"Claim {claimId} does not belong to analysis {Id}.");
+        return FindStructureViolation(claimId, CurrentStructureOf(claim)) is null;
     }
 
     /// <summary>
@@ -627,6 +673,126 @@ public sealed class MechanicAnalysis : AggregateRoot<Guid>
     {
         var claim = RequireClaimUnderReview(claimId, "reject claim");
         claim.Reject(reviewerId, note, utcNow);
+    }
+
+    /// <summary>
+    /// Sets Kind/Priority/Overrides/Trigger on one claim (spec 2026-10-08 §2). Allowed while the claim
+    /// is Pending or Approved (the card changes only at the next publish). Validates the override
+    /// graph of the whole analysis: same-analysis targets, no self/Example edges, acyclic.
+    /// </summary>
+    public void SetClaimStructure(Guid claimId, MechanicClaimStructure structure)
+    {
+        ArgumentNullException.ThrowIfNull(structure);
+        var claim = _claims.FirstOrDefault(c => c.Id == claimId)
+            ?? throw new InvalidOperationException($"Claim {claimId} does not belong to analysis {Id}.");
+
+        if (claim.Status == MechanicClaimStatus.Rejected)
+        {
+            throw new InvalidOperationException($"Claim {claimId} is Rejected; structure cannot be changed.");
+        }
+
+        ValidateStructureInGraph(claimId, structure);
+        claim.ApplyStructure(Detached(structure));
+    }
+
+    private static MechanicClaimStructure CurrentStructureOf(MechanicClaim claim) =>
+        new(claim.Kind, claim.Priority, claim.Overrides, claim.Trigger);
+
+    // De-duplicated COPY of the overrides: ApplyStructure clears the claim's list before adding, so a
+    // structure built on a claim's own Overrides view must not be read after the clear.
+    private static MechanicClaimStructure Detached(MechanicClaimStructure structure) =>
+        structure with { Overrides = structure.Overrides.Distinct().ToList() };
+
+    /// <summary>
+    /// Throws when <paramref name="structure"/>, applied to <paramref name="claimId"/>, would violate an
+    /// override-graph invariant (spec 2026-10-08 §2). Shared by <see cref="SetClaimStructure"/>,
+    /// <see cref="ApproveClaim"/> and, through <see cref="FindStructureViolation"/>, by <see cref="Approve"/>
+    /// and <see cref="HasValidClaimStructure"/>.
+    /// </summary>
+    /// <exception cref="ArgumentException">The structure violates an invariant (parameter name <c>structure</c>).</exception>
+    private void ValidateStructureInGraph(Guid claimId, MechanicClaimStructure structure)
+    {
+        if (FindStructureViolation(claimId, structure) is { } violation)
+        {
+            throw new ArgumentException(violation, nameof(structure));
+        }
+    }
+
+    /// <summary>
+    /// Returns the first invariant <paramref name="structure"/> would violate on <paramref name="claimId"/> —
+    /// self override, target outside the analysis, Example in an edge (either end), unbound Exception, cycle on
+    /// the graph as it WOULD be after the change — or <c>null</c> when it is valid.
+    /// </summary>
+    private string? FindStructureViolation(Guid claimId, MechanicClaimStructure structure)
+    {
+        var overrides = structure.Overrides.Distinct().ToList();
+        if (overrides.Contains(claimId))
+        {
+            return "A claim cannot override itself.";
+        }
+
+        foreach (var target in overrides)
+        {
+            var t = _claims.FirstOrDefault(c => c.Id == target);
+            if (t is null)
+            {
+                return $"Override target {target} is not a claim of the same analysis.";
+            }
+
+            if (t.Kind == MechanicClaimKind.Example)
+            {
+                return "An Example claim cannot be overridden.";
+            }
+        }
+
+        if (structure.Kind == MechanicClaimKind.Example)
+        {
+            if (overrides.Count > 0)
+            {
+                return "An Example claim cannot override other claims.";
+            }
+
+            if (_claims.Any(c => c.Id != claimId && c.Overrides.Contains(claimId)))
+            {
+                return "An Example claim cannot be the target of an override.";
+            }
+        }
+
+        if (structure.Kind == MechanicClaimKind.Exception && overrides.Count == 0 && structure.Trigger is null)
+        {
+            return "An Exception claim needs at least one Overrides target or a Trigger.";
+        }
+
+        var edges = _claims.ToDictionary(c => c.Id, c => c.Id == claimId ? (IReadOnlyList<Guid>)overrides : c.Overrides);
+        return HasCycle(edges) ? "Overrides would create a cycle." : null;
+    }
+
+    private static bool HasCycle(IReadOnlyDictionary<Guid, IReadOnlyList<Guid>> edges)
+    {
+        var visiting = new HashSet<Guid>();
+        var done = new HashSet<Guid>();
+        bool Visit(Guid n)
+        {
+            if (done.Contains(n))
+            {
+                return false;
+            }
+            if (!visiting.Add(n))
+            {
+                return true;
+            }
+            if (edges.TryGetValue(n, out var next))
+            {
+                foreach (var m in next)
+                {
+                    if (Visit(m)) { return true; }
+                }
+            }
+            visiting.Remove(n);
+            done.Add(n);
+            return false;
+        }
+        return edges.Keys.Any(Visit);
     }
 
     // === Suppression (T5 kill-switch) ===

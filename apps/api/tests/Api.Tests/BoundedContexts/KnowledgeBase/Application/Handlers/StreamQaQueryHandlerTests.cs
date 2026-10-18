@@ -8,6 +8,7 @@ using Api.SharedKernel.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
@@ -1861,6 +1862,86 @@ public class StreamQaQueryHandlerTests
         _llmServiceMock.Verify(
             x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    // ─── #4476: il flag dell'ordinamento v3 deve arrivare al renderer anche sulla pipeline unica ───
+    // StreamQa costruisce il blocco in AnswerPipeline dal #4219: il merge di main-dev aveva lasciato il
+    // flag solo nel vecchio handler, quindi sulla pipeline l'ordinamento v3 non si accendeva mai.
+
+    private static PublishedMechanicCardDto CardWithV3SetupClaims(Guid gameId)
+    {
+        var ruleId = Guid.NewGuid();
+        PublishedMechanicCardClaimDto Claim(Guid id, string text, MechanicClaimKind kind, MechanicRulePriority priority, params Guid[] overrides) =>
+            new(id, text, new[] { new PublishedMechanicCardCitationDto(Guid.NewGuid(), 1, "q") }, kind, priority, overrides, null);
+
+        return new(
+            CardId: Guid.NewGuid(), SharedGameId: gameId, Title: "T", Version: 1, PublishedAt: DateTime.UtcNow,
+            GameName: "Terraforming Mars", Publisher: null, Language: "it",
+            Sections: new[]
+            {
+                new PublishedMechanicCardSectionDto("Setup", new[]
+                {
+                    Claim(ruleId, "A generale", MechanicClaimKind.Rule, MechanicRulePriority.Base),
+                    Claim(Guid.NewGuid(), "B eccezione", MechanicClaimKind.Exception, MechanicRulePriority.Card, ruleId),
+                    Claim(Guid.NewGuid(), "E esempio", MechanicClaimKind.Example, MechanicRulePriority.Base),
+                }),
+            },
+            SourceAnalysisId: Guid.NewGuid(), PublicationYear: null, DocumentName: null);
+    }
+
+    private async Task<string?> CaptureStreamPromptWithV3CardAsync(bool v3Ordering)
+    {
+        var gameId = Guid.NewGuid();
+        var query = new StreamQaQuery(gameId.ToString(), "Setup per 3 giocatori", ThreadId: null,
+            DocumentIds: null, ResponseStyle: null, ContinuationContext: null, UserId: Guid.NewGuid(), UserRole: "User");
+
+        SetupHappyPathMocks(gameId.ToString(), query.Query);
+        ForceEmptyRetrieval();
+        _intentClassifierMock.Setup(x => x.ClassifyIntent(It.IsAny<string>()))
+            .Returns(GameBookRole.Tutorial | GameBookRole.Setup);
+
+        string? capturedUserPrompt = null;
+        _llmServiceMock
+            .Setup(x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<LlmAnswerRequest, CancellationToken>((request, _) => capturedUserPrompt = request.UserPrompt)
+            .Returns(StreamTokensAsync(new[] { "Ok." }));
+
+        var provider = new Mock<IMechanicCardProvider>();
+        provider.Setup(p => p.GetActiveCardAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CardWithV3SetupClaims(gameId));
+        var flag = new Mock<IFeatureFlagService>();
+        flag.Setup(f => f.IsEnabledAsync(FeatureFlagConstants.MechanicCardInjectionKey, It.IsAny<UserRole?>()))
+            .ReturnsAsync(true);
+        flag.Setup(f => f.IsEnabledAsync(FeatureFlagConstants.MechanicClaimsV3OrderingKey, It.IsAny<UserRole?>()))
+            .ReturnsAsync(v3Ordering);
+
+        var handler = CreateHandlerWith(CreatePermissiveRagAccessServiceMock(), provider.Object, flag.Object);
+        await foreach (var _ in handler.Handle(query, TestContext.Current.CancellationToken))
+        {
+        }
+
+        return capturedUserPrompt;
+    }
+
+    [Fact]
+    public async Task Handle_V3OrderingFlagOn_OrdersClaimsAndLabelsExceptions()
+    {
+        var prompt = await CaptureStreamPromptWithV3CardAsync(v3Ordering: true);
+
+        prompt.Should().NotBeNull();
+        prompt.Should().Contain("[V1] B eccezione [Page 1] (Eccezione a [V2])");
+        prompt.Should().Contain("[V2] A generale [Page 1]");
+        prompt.Should().NotContain("E esempio");
+    }
+
+    [Fact]
+    public async Task Handle_V3OrderingFlagOff_KeepsArrivalOrder()
+    {
+        var prompt = await CaptureStreamPromptWithV3CardAsync(v3Ordering: false);
+
+        prompt.Should().NotBeNull();
+        prompt.Should().Contain("[V1] A generale [Page 1]\n[V2] B eccezione [Page 1]\n[V3] E esempio [Page 1]");
+        prompt.Should().NotContain("Eccezione a");
     }
 
     private void SetupHappyPathMocks(string gameId, string userQuery)

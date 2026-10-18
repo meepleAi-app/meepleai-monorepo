@@ -39,6 +39,7 @@ import {
   MECHANIC_SECTION_LABELS,
   MechanicClaimStatus,
   type MechanicClaimDto,
+  type MechanicClaimStructureDto,
   type MechanicClaimValidationDto,
 } from '@/lib/api/schemas/mechanic-analyses.schemas';
 
@@ -94,6 +95,10 @@ export const GUARDRAIL_DESCRIPTIONS: Record<string, { label: string; desc: strin
   T4: {
     label: 'T4 · Pagina/substring',
     desc: 'La pagina citata deve esistere nel PDF e la quote deve essere un estratto reale di quella pagina.',
+  },
+  T5: {
+    label: 'T5 · Struttura',
+    desc: 'Kind/Priority/Overrides/Trigger coerenti: ordinali validi, nessun ciclo, eccezioni legate a una regola o a un trigger.',
   },
 };
 
@@ -239,9 +244,24 @@ export function ClaimsSection({
     queryClient.invalidateQueries({ queryKey: ['mechanic-analysis', analysisId] });
   };
 
+  const approveSiblings = useMemo(
+    () =>
+      approveTarget
+        ? claims.filter(c => c.id !== approveTarget.id).map(c => ({ id: c.id, text: c.text }))
+        : [],
+    [claims, approveTarget]
+  );
+
   const approveMutation = useMutation({
-    mutationFn: ({ claimId, note }: { claimId: string; note?: string }) =>
-      adminClient.approveMechanicClaim(analysisId, claimId, note || undefined),
+    mutationFn: ({
+      claimId,
+      note,
+      structure,
+    }: {
+      claimId: string;
+      note?: string;
+      structure?: MechanicClaimStructureDto;
+    }) => adminClient.approveMechanicClaim(analysisId, claimId, note || undefined, structure),
     onMutate: ({ claimId }) => setPendingClaimId(claimId),
     onSuccess: () => {
       setActionError(null);
@@ -461,13 +481,15 @@ export function ClaimsSection({
         onOpenChange={open => {
           if (!open) setApproveTarget(null);
         }}
-        onConfirm={note => {
+        onConfirm={(note, structure) => {
           if (!approveTarget) return;
-          approveMutation.mutate({ claimId: approveTarget.id, note });
+          approveMutation.mutate({ claimId: approveTarget.id, note, structure });
         }}
         isPending={approveMutation.isPending}
         claimPreview={approveTarget ? truncate(approveTarget.text, 120) : undefined}
         validations={approveTarget?.validations}
+        claim={approveTarget ?? undefined}
+        siblings={approveSiblings}
       />
 
       <RejectClaimDialog
@@ -612,6 +634,11 @@ function ClaimRow({
   // Approved → no actions (idempotent re-approve adds noise without value).
   const canApprove = isActionable && canActPerStatus && !isPending;
   const canReject = isActionable && status === MechanicClaimStatus.Pending && !isPending;
+  const triggerSummary = claim.trigger
+    ? [claim.trigger.phase, claim.trigger.action, claim.trigger.component]
+        .filter(part => part && part.trim() !== '')
+        .join(' / ')
+    : '';
   const isLongText = claim.text.length > LONG_CLAIM_THRESHOLD;
   const clampClass = isLongText && !textExpanded ? 'line-clamp-3' : '';
 
@@ -622,6 +649,19 @@ function ClaimRow({
           <p className={`break-words ${clampClass}`.trim()} data-testid={`claim-text-${claim.id}`}>
             {claim.text}
           </p>
+          <div
+            className="mt-1 flex flex-wrap items-center gap-1"
+            data-testid={`claim-structure-${claim.id}`}
+          >
+            <Badge variant="outline">{claim.kind}</Badge>
+            <Badge variant="outline">{claim.priority}</Badge>
+            {triggerSummary && (
+              <span className="text-xs text-muted-foreground">quando: {triggerSummary}</span>
+            )}
+            {claim.overrides.length > 0 && (
+              <span className="text-xs">sovrascrive {claim.overrides.length} claim</span>
+            )}
+          </div>
           {isLongText && (
             <button
               type="button"

@@ -108,6 +108,8 @@ internal static class SharedGameCatalogServiceExtensions
         // T2 long-verbatim, T3b grounding) — evaluated cheapest-first / fail-fast by the orchestrator.
         services.AddScoped<IMechanicGuardrail, QuoteCapGuardrail>();
         services.AddScoped<IMechanicGuardrail, CitationPresenceGuardrail>();
+        // T5 (claims v3 structure) is advisory: flags claims, never fails the section nor retries.
+        services.AddScoped<IMechanicGuardrail, RuleStructureGuardrail>();
         services.AddScoped<IMechanicGuardrail, PageSubstringGuardrail>();
         services.AddScoped<IMechanicGuardrail, RejectionSamplingGuardrail>();
         services.AddScoped<IMechanicGuardrail, GroundingGuardrail>();

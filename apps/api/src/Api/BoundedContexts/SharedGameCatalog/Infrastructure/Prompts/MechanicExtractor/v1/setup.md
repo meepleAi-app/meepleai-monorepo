@@ -1,4 +1,4 @@
-# Setup Section (v1.1.0)
+# Setup Section (v1.2.0)
 
 Extract the **one-time pre-game setup steps** players perform BEFORE play begins.
 
@@ -11,6 +11,10 @@ Extract the **one-time pre-game setup steps** players perform BEFORE play begins
       "description": "string (Italiano, reformulated setup step, ≤240 chars)",
       "order": 1,
       "playerCountNote": "string (optional, Italiano — how the step changes with player count)",
+      "kind": "rule|exception|clarification|example (optional, default rule)",
+      "priority": "base|expansion|card|scenario (optional, default base)",
+      "overrides": [0],
+      "trigger": {"phase": "string (optional)", "action": "string (optional)", "component": "string (optional)"},
       "citations": [
         {
           "pdf_page": 3,

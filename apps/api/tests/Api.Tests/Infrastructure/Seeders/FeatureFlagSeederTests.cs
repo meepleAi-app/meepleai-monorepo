@@ -170,6 +170,25 @@ public sealed class FeatureFlagSeederTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SeedFeatureFlagsAsync_MechanicClaimsV3OrderingOffForAllTiers()
+    {
+        // Spec 2026-10-08 §9: the v3 ordering of Verified Rules ships dark, same shape as rag.mechanic-card-injection.
+        var logger = new Mock<Microsoft.Extensions.Logging.ILogger>();
+
+        await FeatureFlagSeeder.SeedFeatureFlagsAsync(
+            _dbContext!, TestUserId, logger.Object, TestCancellationToken);
+
+        var key = Api.Services.FeatureFlagConstants.MechanicClaimsV3OrderingKey;
+        var flags = await _dbContext!.Set<SystemConfigurationEntity>()
+            .Where(c => c.Category == "FeatureFlags" && c.Key.StartsWith(key))
+            .ToListAsync(TestCancellationToken);
+
+        flags.Select(f => f.Key).Should().BeEquivalentTo(
+            key, $"{key}.Tier.free", $"{key}.Tier.normal", $"{key}.Tier.premium");
+        flags.Should().OnlyContain(f => f.Value == "false");
+    }
+
+    [Fact]
     public async Task SeedFeatureFlagsAsync_AllFlagsHaveCorrectCategory()
     {
         // Arrange

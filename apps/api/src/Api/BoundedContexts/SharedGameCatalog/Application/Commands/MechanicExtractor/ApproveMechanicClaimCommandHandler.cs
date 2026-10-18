@@ -24,6 +24,13 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExt
 /// 409 mapping: parent not <c>InReview</c> → <see cref="InvalidMechanicAnalysisStateException"/>;
 /// optimistic concurrency on parent <c>xmin</c> → <see cref="DbUpdateConcurrencyException"/>.
 /// </para>
+/// <para>
+/// The structure in effect after the approval — the command's <c>Structure</c> when present, otherwise
+/// the claim's current one (claims built by the parser never went through <c>SetClaimStructure</c>) —
+/// must satisfy the override-graph invariants: a violation → 400 (<see cref="BadRequestException"/>),
+/// nothing saved. A supplied structure is applied with the approval, so a Rejected claim can be
+/// approved and edited in one call.
+/// </para>
 /// </remarks>
 internal sealed class ApproveMechanicClaimCommandHandler
     : ICommandHandler<ApproveMechanicClaimCommand, MechanicClaimDto>
@@ -71,13 +78,21 @@ internal sealed class ApproveMechanicClaimCommandHandler
 
         var utcNow = _timeProvider.GetUtcNow().UtcDateTime;
 
+        // The supplied structure (or, without one, the claim's current structure) is validated against
+        // the override graph BEFORE the approval, then applied together with it: a previously Rejected
+        // claim can be approved and corrected in one call, and a reviewer can fix an invalid proposal.
+        // Nothing is persisted until SaveChanges, so a 400/409 here leaves no partial state.
         try
         {
-            analysis.ApproveClaim(request.ClaimId, request.ReviewerId, utcNow, request.Note);
+            analysis.ApproveClaim(request.ClaimId, request.ReviewerId, utcNow, request.Note, request.Structure?.ToDomain());
         }
         catch (InvalidMechanicAnalysisStateException ex)
         {
             throw new ConflictException(ex.Message, ex);
+        }
+        catch (ArgumentException ex)
+        {
+            throw new BadRequestException(ex.Message, ex);
         }
 
         _analysisRepository.Update(analysis);
@@ -107,30 +122,6 @@ internal sealed class ApproveMechanicClaimCommandHandler
             analysis.Id,
             request.ReviewerId);
 
-        return ToDto(claim, analysis.Id);
+        return MechanicClaimDtoMapper.FromDomain(claim, analysis.Id);
     }
-
-    private static MechanicClaimDto ToDto(
-        Domain.Entities.MechanicClaim claim,
-        Guid analysisId) =>
-        new(
-            Id: claim.Id,
-            AnalysisId: analysisId,
-            Section: claim.Section,
-            Text: claim.Text,
-            DisplayOrder: claim.DisplayOrder,
-            Status: claim.Status,
-            ReviewedBy: claim.ReviewedBy,
-            ReviewedAt: claim.ReviewedAt,
-            RejectionNote: claim.RejectionNote,
-            ReviewNote: claim.ReviewNote,
-            Citations: claim.Citations
-                .OrderBy(c => c.DisplayOrder)
-                .Select(c => new MechanicCitationDto(
-                    Id: c.Id,
-                    PdfPage: c.PdfPage,
-                    Quote: c.Quote,
-                    DisplayOrder: c.DisplayOrder))
-                .ToList(),
-            Validations: MechanicClaimValidations.FromDomain(claim));
 }

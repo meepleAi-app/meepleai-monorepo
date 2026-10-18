@@ -63,6 +63,21 @@ internal sealed class MechanicOutputValidator : IMechanicOutputValidator
                 Violations: violations,
                 ClaimScores: detailed.ClaimScores));
 
+            if (violations.Count > 0 && guardrail.IsAdvisory)
+            {
+                // Advisory (T5): recorded as a fail outcome and counted, but the chain continues and
+                // the section stays valid (no fail-fast, no retry).
+                foreach (var v in violations)
+                {
+                    MeepleAiMetrics.MechanicValidatorViolations.Add(1, new System.Diagnostics.TagList
+                    {
+                        { "rule", v.Rule }
+                    });
+                }
+
+                continue;
+            }
+
             if (violations.Count > 0)
             {
                 foreach (var v in violations)

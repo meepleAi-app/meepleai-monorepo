@@ -34,6 +34,18 @@ public class MechanicClaimEntity
     /// </summary>
     public List<MechanicClaimValidation>? Validations { get; set; }
 
+    /// <summary>0=Rule, 1=Exception, 2=Clarification, 3=Example (spec 2026-10-08 §2).</summary>
+    public int Kind { get; set; }
+
+    /// <summary>0=Base, 1=Expansion, 2=Card, 3=Scenario.</summary>
+    public int Priority { get; set; }
+
+    /// <summary>Ids of overridden claims (same analysis). jsonb; null = none.</summary>
+    public List<Guid>? Overrides { get; set; }
+
+    /// <summary>Trigger VO as jsonb; null = always applies.</summary>
+    public MechanicTrigger? Trigger { get; set; }
+
     // === Navigation ===
     public MechanicAnalysisEntity Analysis { get; set; } = default!;
     public ICollection<MechanicCitationEntity> Citations { get; set; } = new List<MechanicCitationEntity>();

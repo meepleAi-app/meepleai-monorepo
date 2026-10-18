@@ -322,7 +322,7 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
             publishedCardId: entity.PublishedCardId);
     }
 
-    private static MechanicClaim MapClaimToDomain(MechanicClaimEntity entity)
+    internal static MechanicClaim MapClaimToDomain(MechanicClaimEntity entity)
     {
         var citations = entity.Citations.Select(MapCitationToDomain).ToList();
 
@@ -338,7 +338,11 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
             rejectionNote: entity.RejectionNote,
             citations: citations,
             reviewNote: entity.ReviewNote,
-            validations: entity.Validations);
+            validations: entity.Validations,
+            kind: (MechanicClaimKind)entity.Kind,
+            priority: (MechanicRulePriority)entity.Priority,
+            overrides: entity.Overrides,
+            trigger: entity.Trigger);
     }
 
     private static MechanicCitation MapCitationToDomain(MechanicCitationEntity entity)
@@ -393,7 +397,7 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
         };
     }
 
-    private static MechanicClaimEntity MapClaimToEntity(MechanicClaim claim)
+    internal static MechanicClaimEntity MapClaimToEntity(MechanicClaim claim)
     {
         return new MechanicClaimEntity
         {
@@ -410,6 +414,10 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
             Validations = claim.Validations.Count == 0
                 ? null
                 : claim.Validations.ToList(),
+            Kind = (int)claim.Kind,
+            Priority = (int)claim.Priority,
+            Overrides = claim.Overrides.Count == 0 ? null : claim.Overrides.ToList(),
+            Trigger = claim.Trigger,
             Citations = claim.Citations.Select(MapCitationToEntity).ToList()
         };
     }

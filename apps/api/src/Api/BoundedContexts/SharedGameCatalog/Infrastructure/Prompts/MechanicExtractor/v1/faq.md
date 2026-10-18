@@ -1,4 +1,4 @@
-# FAQ Section (v1.0.0)
+# FAQ Section (v1.2.0)
 
 Produce **5-10 frequently asked questions** about the rules, answered strictly from the retrieved chunks.
 
@@ -10,6 +10,10 @@ Produce **5-10 frequently asked questions** about the rules, answered strictly f
     {
       "question": "string (Italiano, ≤200 chars)",
       "answer": "string (Italiano, reformulated, ≤500 chars)",
+      "kind": "rule|exception|clarification|example (optional, default rule)",
+      "priority": "base|expansion|card|scenario (optional, default base)",
+      "overrides": [0],
+      "trigger": {"phase": "string (optional)", "action": "string (optional)", "component": "string (optional)"},
       "citations": [
         {
           "pdf_page": 4,

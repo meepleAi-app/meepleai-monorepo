@@ -27,6 +27,10 @@ const claim = {
   reviewedAt: null,
   rejectionNote: null,
   reviewNote: null,
+  kind: 'Rule',
+  priority: 'Base',
+  overrides: [],
+  trigger: null,
   validations: [],
   citations: [],
 };
@@ -47,7 +51,14 @@ describe('ClaimsSection approve with note', () => {
       target: { value: 'matches p.4' },
     });
     fireEvent.click(screen.getByTestId('approve-claim-confirm'));
-    await waitFor(() => expect(mockApprove).toHaveBeenCalledWith('a', 'd1', 'matches p.4'));
+    await waitFor(() =>
+      expect(mockApprove).toHaveBeenCalledWith('a', 'd1', 'matches p.4', {
+        kind: 'Rule',
+        priority: 'Base',
+        overrides: [],
+        trigger: null,
+      })
+    );
   });
 
   it('allows confirming with no note (note is optional)', async () => {
@@ -57,12 +68,48 @@ describe('ClaimsSection approve with note', () => {
     fireEvent.click(await screen.findByTestId('claim-approve-d1'));
     expect(screen.getByTestId('approve-claim-confirm')).not.toBeDisabled();
     fireEvent.click(screen.getByTestId('approve-claim-confirm'));
-    await waitFor(() => expect(mockApprove).toHaveBeenCalledWith('a', 'd1', undefined));
+    await waitFor(() =>
+      expect(mockApprove).toHaveBeenCalledWith('a', 'd1', undefined, {
+        kind: 'Rule',
+        priority: 'Base',
+        overrides: [],
+        trigger: null,
+      })
+    );
   });
 
   it('renders the reviewNote in a green block after refetch', async () => {
     mockGetClaims.mockResolvedValue([{ ...claim, status: 1, reviewNote: 'matches p.4' }]);
     render(<ClaimsSection analysisId="a" />, { wrapper: Wrapper });
     expect(await screen.findByTestId('claim-review-note-d1')).toHaveTextContent('matches p.4');
+  });
+
+  it('sends an edited kind on approve', async () => {
+    mockGetClaims.mockResolvedValue([claim]);
+    mockApprove.mockResolvedValue({ ...claim, status: 1 });
+    render(<ClaimsSection analysisId="a" />, { wrapper: Wrapper });
+    fireEvent.click(await screen.findByTestId('claim-approve-d1'));
+    fireEvent.change(screen.getByLabelText('Kind'), { target: { value: 'Exception' } });
+    fireEvent.click(screen.getByTestId('approve-claim-confirm'));
+    await waitFor(() =>
+      expect(mockApprove).toHaveBeenCalledWith(
+        'a',
+        'd1',
+        undefined,
+        expect.objectContaining({ kind: 'Exception' })
+      )
+    );
+  });
+
+  it('shows the second claim own kind after cancelling an edit on the first', async () => {
+    const claimB = { ...claim, id: 'd2', text: 'u', displayOrder: 1, kind: 'Clarification' };
+    mockGetClaims.mockResolvedValue([claim, claimB]);
+    render(<ClaimsSection analysisId="a" />, { wrapper: Wrapper });
+    fireEvent.click(await screen.findByTestId('claim-approve-d1'));
+    fireEvent.change(screen.getByLabelText('Kind'), { target: { value: 'Example' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByLabelText('Kind')).not.toBeInTheDocument());
+    fireEvent.click(screen.getByTestId('claim-approve-d2'));
+    expect(screen.getByLabelText('Kind')).toHaveValue('Clarification');
   });
 });

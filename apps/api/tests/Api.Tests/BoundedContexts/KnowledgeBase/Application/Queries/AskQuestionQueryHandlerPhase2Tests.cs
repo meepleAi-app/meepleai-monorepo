@@ -8,6 +8,7 @@ using Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
@@ -1180,6 +1181,73 @@ public class AskQuestionQueryHandlerPhase2Tests
         _mockLlmService.Verify(
             s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()),
             Times.Never);
+    }
+
+    // #4476: il flag dell'ordinamento v3 deve arrivare al renderer anche dalla domanda singola.
+
+    private static PublishedMechanicCardDto CardWithV3SetupClaims(Guid gameId)
+    {
+        var ruleId = Guid.NewGuid();
+        PublishedMechanicCardClaimDto Claim(Guid id, string text, MechanicClaimKind kind, MechanicRulePriority priority, params Guid[] overrides) =>
+            new(id, text, new[] { new PublishedMechanicCardCitationDto(Guid.NewGuid(), 1, "q") }, kind, priority, overrides, null);
+
+        return new(
+            CardId: Guid.NewGuid(), SharedGameId: gameId, Title: "T", Version: 1, PublishedAt: DateTime.UtcNow,
+            GameName: "Terraforming Mars", Publisher: null, Language: "it",
+            Sections: new[]
+            {
+                new PublishedMechanicCardSectionDto("Setup", new[]
+                {
+                    Claim(ruleId, "A generale", MechanicClaimKind.Rule, MechanicRulePriority.Base),
+                    Claim(Guid.NewGuid(), "B eccezione", MechanicClaimKind.Exception, MechanicRulePriority.Card, ruleId),
+                    Claim(Guid.NewGuid(), "E esempio", MechanicClaimKind.Example, MechanicRulePriority.Base),
+                }),
+            },
+            SourceAnalysisId: Guid.NewGuid(), PublicationYear: null, DocumentName: null);
+    }
+
+    private async Task<string> CapturePromptWithV3CardAsync(bool v3Ordering)
+    {
+        var gameId = Guid.NewGuid();
+        SetupSuccessfulLlm(out var capturedPrompts);
+
+        var providerMock = new Mock<IMechanicCardProvider>();
+        providerMock
+            .Setup(p => p.GetActiveCardAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CardWithV3SetupClaims(gameId));
+        var flagMock = new Mock<IFeatureFlagService>();
+        flagMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlagConstants.MechanicCardInjectionKey, It.IsAny<UserRole?>()))
+            .ReturnsAsync(true);
+        flagMock
+            .Setup(f => f.IsEnabledAsync(FeatureFlagConstants.MechanicClaimsV3OrderingKey, It.IsAny<UserRole?>()))
+            .ReturnsAsync(v3Ordering);
+
+        var handler = BuildHandler(mechanicCardProvider: providerMock.Object, featureFlags: flagMock.Object);
+        var query = new AskQuestionQuery(GameId: gameId, Question: "Setup per 3 giocatori", UserId: Guid.NewGuid(), UserRole: "User");
+        await handler.Handle(query, TestContext.Current.CancellationToken);
+
+        capturedPrompts.Should().ContainSingle();
+        return capturedPrompts[0];
+    }
+
+    [Fact]
+    public async Task Handle_V3OrderingFlagOn_OrdersClaimsAndLabelsExceptions()
+    {
+        var prompt = await CapturePromptWithV3CardAsync(v3Ordering: true);
+
+        prompt.Should().Contain("[V1] B eccezione [Page 1] (Eccezione a [V2])");
+        prompt.Should().Contain("[V2] A generale [Page 1]");
+        prompt.Should().NotContain("E esempio");
+    }
+
+    [Fact]
+    public async Task Handle_V3OrderingFlagOff_KeepsArrivalOrder()
+    {
+        var prompt = await CapturePromptWithV3CardAsync(v3Ordering: false);
+
+        prompt.Should().Contain("[V1] A generale [Page 1]\n[V2] B eccezione [Page 1]\n[V3] E esempio [Page 1]");
+        prompt.Should().NotContain("Eccezione a");
     }
 
     private AskQuestionQueryHandler BuildHandler(

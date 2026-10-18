@@ -27,6 +27,10 @@ const base = {
   reviewedAt: null,
   rejectionNote: null,
   reviewNote: null,
+  kind: 'Rule',
+  priority: 'Base',
+  overrides: [],
+  trigger: null,
   citations: [{ id: 'c', pdfPage: 1, quote: 'q', displayOrder: 0 }],
 };
 const claims = [

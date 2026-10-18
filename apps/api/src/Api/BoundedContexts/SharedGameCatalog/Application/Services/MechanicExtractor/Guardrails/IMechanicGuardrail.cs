@@ -45,6 +45,13 @@ public interface IMechanicGuardrail
     /// <summary>Lower runs first (cheapest-first). T1=10, T3a=15, T4=20, T2=30, T3b=40.</summary>
     int Order { get; }
 
+    /// <summary>
+    /// Advisory guardrails (T5) flag claims for the reviewer but never fail-fast, never make the
+    /// section invalid and never trigger a retry. Their violations still surface as a <c>fail</c>
+    /// rule outcome. Default: blocking.
+    /// </summary>
+    bool IsAdvisory => false;
+
     Task<IReadOnlyList<MechanicValidationViolation>> EvaluateAsync(
         MechanicGuardrailContext context,
         CancellationToken cancellationToken);

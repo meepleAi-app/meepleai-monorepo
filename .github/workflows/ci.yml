@@ -713,9 +713,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # KnowledgeBase cede a Games i test col nome di entrambi (#4488): le esclusioni sono
+        # precedenze, spiegate sopra la matrice di dev-async.yml, e infra/scripts/tests/
+        # integration-shard-matrix.bats verifica doppi e cicli in entrambi i workflow.
         shard:
           - name: "KnowledgeBase"
-            filter_extra: "&(FullyQualifiedName~KnowledgeBase|FullyQualifiedName~DocumentProcessing|FullyQualifiedName~Authentication)"
+            filter_extra: "&(FullyQualifiedName~KnowledgeBase|FullyQualifiedName~DocumentProcessing|FullyQualifiedName~Authentication)&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
             coverage_file: "integration-coverage-shard1.xml"
           - name: "Games"
             filter_extra: "&(FullyQualifiedName~SharedGameCatalog|FullyQualifiedName~GameManagement|FullyQualifiedName~Administration)"

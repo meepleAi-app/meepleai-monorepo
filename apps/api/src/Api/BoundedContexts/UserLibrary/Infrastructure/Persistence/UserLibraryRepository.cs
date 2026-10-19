@@ -321,8 +321,43 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         CollectDomainEvents(entry);
 
         var entity = MapToPersistence(entry);
+        DetachSavedCopy(entity.Id);
         DbContext.UserLibraryEntries.Update(entity);
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// #4253: stacca la copia della stessa voce che questo contesto traccia ancora da una scrittura
+    /// precedente, se quella scrittura è già salvata.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <see cref="UpdateAsync"/> costruisce ogni volta un'istanza nuova e la passa a
+    /// <c>DbSet.Update</c>. Dopo <c>SaveChanges</c> quell'istanza resta tracciata, quindi una
+    /// seconda scrittura sulla stessa voce nello stesso contesto — <c>PATCH
+    /// /library/games/{id}</c> con <c>newState</c> manda due comandi nella stessa richiesta —
+    /// falliva con <see cref="InvalidOperationException"/> («already being tracked»), cioè un 500.
+    /// </para>
+    /// <para>
+    /// Una copia <see cref="EntityState.Unchanged"/> non porta nulla che il database non abbia già:
+    /// staccarla è sicuro, e la scrittura nuova passa dallo stesso percorso di un contesto pulito,
+    /// con il token <c>xmin</c> che l'aggregato ha letto. Una copia con modifiche pendenti invece
+    /// resta dov'è: staccarla le perderebbe senza traccia, e il conflitto di EF è il segnale giusto.
+    /// </para>
+    /// </remarks>
+    private void DetachSavedCopy(Guid entryId)
+    {
+        var tracked = DbContext.UserLibraryEntries.Local.FirstOrDefault(e => e.Id == entryId);
+        if (tracked is null)
+        {
+            return;
+        }
+
+        var trackedEntry = DbContext.Entry(tracked);
+        if (trackedEntry.State == EntityState.Unchanged)
+        {
+            trackedEntry.State = EntityState.Detached;
+        }
     }
 
     public Task DeleteAsync(UserLibraryEntry entry, CancellationToken cancellationToken = default)

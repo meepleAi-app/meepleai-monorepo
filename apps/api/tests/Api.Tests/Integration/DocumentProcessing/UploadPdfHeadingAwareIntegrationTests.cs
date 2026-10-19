@@ -60,6 +60,10 @@ public sealed class UploadPdfHeadingAwareIntegrationTests : IAsyncLifetime
     private string? _testDataDirectory;
     private InlineBackgroundTaskService? _inlineBgService;
 
+    // #4390: gira dentro la classificazione dei ruoli, che il caricamento chiama dopo aver creato il
+    // documento vettoriale e prima di salvare passaggi ed embedding.
+    private Func<Task>? _whileThePassagesAreBeingWritten;
+
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     public UploadPdfHeadingAwareIntegrationTests(SharedTestcontainersFixture fixture)
@@ -170,8 +174,16 @@ public sealed class UploadPdfHeadingAwareIntegrationTests : IAsyncLifetime
         var roleClassifierMock = new Mock<Api.BoundedContexts.KnowledgeBase.Application.Services.IRoleClassifierService>();
         roleClassifierMock
             .Setup(c => c.ClassifyAsync(It.IsAny<IReadOnlyList<ChunkInput>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((IReadOnlyList<ChunkInput> inputs, CancellationToken _) =>
-                inputs.Select((_, i) => i % 2 == 0 ? GameBookRole.Setup : GameBookRole.RulesReference).ToList());
+            .Returns(async (IReadOnlyList<ChunkInput> inputs, CancellationToken _) =>
+            {
+                if (_whileThePassagesAreBeingWritten is { } hook)
+                {
+                    await hook();
+                }
+
+                return (IReadOnlyList<GameBookRole>)inputs
+                    .Select((_, i) => i % 2 == 0 ? GameBookRole.Setup : GameBookRole.RulesReference).ToList();
+            });
         services.AddSingleton(roleClassifierMock.Object);
 
         var blobStorageMock = new Mock<IBlobStorageService>();
@@ -219,7 +231,16 @@ public sealed class UploadPdfHeadingAwareIntegrationTests : IAsyncLifetime
 
         services.AddSingleton(Mock.Of<Api.BoundedContexts.DocumentProcessing.Application.Services.IProcessingMetricsService>());
 
-        services.AddScoped(_ => Mock.Of<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IVectorDocumentRepository>());
+        // #4390: il repository vero, così VectorDocumentIndexedEventHandler trova il documento vettoriale e
+        // la compensazione (VectorDocumentReadyStateHandler) parte. Con un Mock.Of il gestore registrava
+        // «VectorDocument not found» e si fermava: nessun test di caricamento qui esercitava la compensazione.
+        services.AddScoped<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IVectorDocumentRepository,
+            Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence.VectorDocumentRepository>();
+        // Da lì l'evento d'integrazione raggiunge anche SharedGameIndexingAdminNotificationHandler, che
+        // chiede il repository dei giochi: senza, la pubblicazione fallisce e il caricamento finisce
+        // Failed con «Invalid operation».
+        services.AddScoped<Api.BoundedContexts.SharedGameCatalog.Domain.Repositories.ISharedGameRepository,
+            Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories.SharedGameRepository>();
 
         services.AddScoped<Api.BoundedContexts.KnowledgeBase.Application.Services.IPdfIndexingPipeline,
             Api.BoundedContexts.KnowledgeBase.Application.Services.PdfIndexingPipeline>();
@@ -468,6 +489,78 @@ public sealed class UploadPdfHeadingAwareIntegrationTests : IAsyncLifetime
             row.RoleTags.Should().Be((int)chunk.RoleTags).And.NotBe(0, "il classificatore ha dato un ruolo a ogni passaggio");
         }
     }
+
+    /// <summary>
+    /// #4390: il caricamento crea il documento vettoriale (<c>IPdfIndexingPipeline.IndexAsync</c>) prima di
+    /// salvare passaggi ed embedding, e l'evento che ne segue fa partire la compensazione, che porta il PDF a
+    /// <c>Ready</c>. Chi aspetta <c>Ready</c> non deve trovarlo finché l'indice è vuoto: in quella finestra
+    /// una domanda riceve <c>NO_RESULTS</c>. Lo stato si legge da dentro la finestra, con un'altra
+    /// connessione, mentre la pipeline è ferma nella classificazione dei ruoli.
+    /// </summary>
+    [Fact(Timeout = 90000)]
+    [Trait("Issue", "4390")]
+    public async Task Upload_IsNotReady_WhileItsPassagesAndEmbeddingsAreStillBeingWritten()
+    {
+        // Arrange
+        var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
+        var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
+        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
+
+        string? stateInTheWindow = null;
+        int vectorDocumentsInTheWindow = -1;
+        int embeddingsInTheWindow = -1;
+        Exception? windowReadError = null;
+        _whileThePassagesAreBeingWritten = async () =>
+        {
+            try
+            {
+                await using var scope = _serviceProvider!.CreateAsyncScope();
+                var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+                // Database isolato per test: il PDF è uno solo.
+                stateInTheWindow = await db.PdfDocuments.AsNoTracking()
+                    .Select(p => p.ProcessingState).SingleAsync(TestCancellationToken);
+                vectorDocumentsInTheWindow = await db.VectorDocuments.AsNoTracking().CountAsync(TestCancellationToken);
+                embeddingsInTheWindow = await db.PgVectorEmbeddings.AsNoTracking().CountAsync(TestCancellationToken);
+            }
+            catch (Exception ex)
+            {
+                // Il classificatore inghiotte le eccezioni: l'errore si riporta all'asserzione.
+                windowReadError = ex;
+            }
+        };
+
+        var command = new Api.BoundedContexts.DocumentProcessing.Application.Commands.UploadPdfCommand(
+            GameId: testGame.Id.ToString(),
+            Metadata: null,
+            PrivateGameId: null,
+            UserId: testUser.Id,
+            File: CreateMockFormFile("ready-window.pdf", CreateValidPdfBytes(1024)));
+
+        // Act
+        var result = await handler.Handle(command, TestCancellationToken);
+        // Un Ready prematuro fa fallire la finalizzazione («Cannot transition from Ready state»): l'errore
+        // si asserisce dopo lo stato, così il rosso dice cosa è stato letto nella finestra.
+        var backgroundError = await Record.ExceptionAsync(() => _inlineBgService!.WaitForAllAsync());
+
+        // Assert: la finestra è stata raggiunta, dopo il documento vettoriale e prima di ogni embedding.
+        result.Success.Should().BeTrue();
+        windowReadError.Should().BeNull();
+        vectorDocumentsInTheWindow.Should().Be(1, "il documento vettoriale, e il suo evento, vengono prima dei passaggi");
+        embeddingsInTheWindow.Should().Be(0, "la finestra precede la scrittura degli embedding");
+
+        stateInTheWindow.Should().Be(
+            nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Indexing),
+            "un PDF senza embedding non è pronto, anche se il suo documento vettoriale esiste");
+        backgroundError.Should().BeNull();
+
+        // ...e la pipeline lo porta comunque a Ready da sé, a indice scritto.
+        var pdfDoc = await _dbContext.PdfDocuments.AsNoTracking().SingleAsync(TestCancellationToken);
+        pdfDoc.ProcessingState.Should().Be(
+            nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Ready),
+            $"ProcessingError='{pdfDoc.ProcessingError}'");
+        (await _dbContext.PgVectorEmbeddings.AsNoTracking().CountAsync(TestCancellationToken)).Should().BePositive();
+    }
+
 
     /// <summary>
     /// Test-only IBackgroundTaskService that runs the queued task synchronously

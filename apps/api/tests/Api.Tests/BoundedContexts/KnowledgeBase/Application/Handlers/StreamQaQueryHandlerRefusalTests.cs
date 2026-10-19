@@ -22,7 +22,7 @@ public partial class StreamQaQueryHandlerTests
 
     private void TheQuestionIsIn(string language) =>
         _languageDetectionMock
-            .Setup(x => x.Detect(It.IsAny<string>()))
+            .Setup(x => x.Detect(It.IsAny<string>(), It.IsAny<string?>()))
             .Returns(new LanguageDetection(language, IsConfident: true));
 
     private static List<string> TokensOf(IEnumerable<RagStreamingEvent> events) =>

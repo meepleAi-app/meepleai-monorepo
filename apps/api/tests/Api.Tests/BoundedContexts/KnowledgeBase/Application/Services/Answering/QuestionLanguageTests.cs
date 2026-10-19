@@ -1,5 +1,5 @@
-using System.Text.Json;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
+using Api.Infrastructure.Seeders.ReferenceQuestions;
 using Api.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -14,9 +14,10 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering
 /// <c>Accept-Language: it</c>, erano state rilevate «con sicurezza» come spagnole o francesi, e la
 /// risposta era arrivata in quella lingua.
 /// <para>
-/// Le domande italiane sono quelle del set di riferimento dell'utente, lette dal file del repository
-/// (<c>tests/evaluation-datasets/reference-questions-it.json</c>): una domanda aggiunta al set entra
-/// da sola in questi test. Le domande nelle altre lingue sono scritte qui, sugli stessi temi.
+/// Le domande italiane sono quelle del set di riferimento dell'utente, lette con il lettore del seeder
+/// (<see cref="ReferenceQuestionSet.LoadEmbedded"/>, la risorsa incorporata dell'API): una domanda
+/// aggiunta al set entra da sola in questi test. Le domande nelle altre lingue sono scritte qui, sugli
+/// stessi temi.
 /// </para>
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
@@ -44,17 +45,15 @@ public sealed class QuestionLanguageTests
 
     private static List<(string Id, string Question)> LoadReferenceQuestions()
     {
-        var path = Path.Combine(FindEvaluationDatasets(), "reference-questions-it.json");
-        using var document = JsonDocument.Parse(File.ReadAllText(path));
-
-        var questions = document.RootElement.EnumerateArray()
-            .Select(item => (item.GetProperty("id").GetString()!, item.GetProperty("question").GetString()!))
+        // Lo stesso lettore del seeder: una risorsa mancante o un set malformato fanno fallire qui.
+        var questions = ReferenceQuestionSet.LoadEmbedded()
+            .Select(question => (question.Code, question.Question))
             .ToList();
 
-        // Un file vuoto o spostato non deve passare per un set tutto verde.
+        // Un set vuoto non deve passare per un set tutto verde.
         if (questions.Count == 0)
         {
-            throw new InvalidOperationException($"Nessuna domanda in {path}.");
+            throw new InvalidOperationException($"Nessuna domanda in {ReferenceQuestionSet.ResourceName}.");
         }
 
         return questions;
@@ -249,20 +248,5 @@ public sealed class QuestionLanguageTests
             loadCharacterProfile: () => throw new InvalidOperationException("profilo rotto"));
 
         build.Should().Throw<InvalidOperationException>().WithMessage("profilo rotto");
-    }
-
-    private static string FindEvaluationDatasets()
-    {
-        // Come EvaluationSeedDatasetTests: si risale dalla cartella dei binari alla radice del
-        // repository. Il file resta uno solo: copiarlo come fixture lo farebbe divergere dal set.
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !Directory.Exists(Path.Combine(directory.FullName, "tests", "evaluation-datasets")))
-        {
-            directory = directory.Parent;
-        }
-
-        return directory is not null
-            ? Path.Combine(directory.FullName, "tests", "evaluation-datasets")
-            : throw new InvalidOperationException("Cartella tests/evaluation-datasets non trovata risalendo da " + AppContext.BaseDirectory);
     }
 }

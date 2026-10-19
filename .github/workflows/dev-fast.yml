@@ -45,9 +45,6 @@ on:
       # del backend leggono dal repository (vedi il filtro `backend` più sotto).
       - 'tests/llm-eval/session-assistant/prompts/**'
       - 'tests/llm-eval/session-assistant/scenarios.json'
-      # #4480: le domande di riferimento, che QuestionLanguageTests (backend unit) legge dal
-      # repository: ogni domanda del set deve avere risposta in italiano.
-      - 'tests/evaluation-datasets/reference-questions-it.json'
   workflow_dispatch:
 
 concurrency:
@@ -98,9 +95,6 @@ jobs:
               # quei file non li farebbe girare: si potrebbe misurare un prompt e spedirne un altro.
               - 'tests/llm-eval/session-assistant/prompts/**'
               - 'tests/llm-eval/session-assistant/scenarios.json'
-              # #4480: QuestionLanguageTests legge il set di domande di riferimento. Senza questa riga
-              # una PR che aggiunge una domanda non controllerebbe in che lingua avrà risposta.
-              - 'tests/evaluation-datasets/reference-questions-it.json'
               - 'global.json'
               - '.github/workflows/dev-fast.yml'
               - '.github/actions/setup-backend/**'

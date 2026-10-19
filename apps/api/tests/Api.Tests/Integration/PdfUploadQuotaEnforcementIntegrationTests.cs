@@ -75,33 +75,55 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         _databaseName = $"test_quota_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        // Use SharedTestcontainersFixture Redis (no separate container needed!)
-        var redisConnectionString = _fixture.RedisConnectionString;
+        // Se da qui in poi qualcosa lancia, xUnit NON chiama DisposeAsync: il database isolato, la
+        // connessione Redis e il service provider resterebbero. Succede davvero: il Timeout del test
+        // copre anche InitializeAsync; allo scadere xUnit passa al test successivo e qui la lettura
+        // del token del test lancia (ObjectDisposedException, osservato in #4528).
+        try
+        {
+            // Use SharedTestcontainersFixture Redis (no separate container needed!)
+            var redisConnectionString = _fixture.RedisConnectionString;
 
-        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
+            var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
-        // Register Redis
-        _redis = await ConnectionMultiplexer.ConnectAsync(redisConnectionString);
-        services.AddSingleton<IConnectionMultiplexer>(_redis);
+            // Register Redis
+            _redis = await ConnectionMultiplexer.ConnectAsync(redisConnectionString);
+            services.AddSingleton<IConnectionMultiplexer>(_redis);
 
-        // Register repositories
-        services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
+            // Register repositories
+            services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
 
-        // Register configuration service mock
-        var configServiceMock = new Mock<IConfigurationService>();
-        configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>()!, It.IsAny<int?>(), It.IsAny<string?>()))
-            .ReturnsAsync((int?)null); // Use default limits
-        services.AddSingleton<IConfigurationService>(configServiceMock.Object);
+            // Register configuration service mock
+            var configServiceMock = new Mock<IConfigurationService>();
+            configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>()!, It.IsAny<int?>(), It.IsAny<string?>()))
+                .ReturnsAsync((int?)null); // Use default limits
+            services.AddSingleton<IConfigurationService>(configServiceMock.Object);
 
-        // Register quota service
-        services.AddScoped<IPdfUploadQuotaService, PdfUploadQuotaService>();
+            // Register quota service
+            services.AddScoped<IPdfUploadQuotaService, PdfUploadQuotaService>();
 
-        _serviceProvider = services.BuildServiceProvider();
-        _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
-        _quotaService = _serviceProvider.GetRequiredService<IPdfUploadQuotaService>();
+            _serviceProvider = services.BuildServiceProvider();
+            _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
+            _quotaService = _serviceProvider.GetRequiredService<IPdfUploadQuotaService>();
 
-        await _dbContext.Database.MigrateAsync(TestCancellationToken);
+            await _dbContext.Database.MigrateAsync(TestCancellationToken);
+        }
+        catch
+        {
+            // DisposeAsync regge lo stato parziale: ogni campo è controllato, la lista utenti è
+            // vuota, e il drop del database non usa il token del test (cancellato o già smaltito).
+            try
+            {
+                await DisposeAsync();
+            }
+            catch
+            {
+                // L'eccezione da riportare è quella dell'inizializzazione.
+            }
+
+            throw;
+        }
     }
 
     public async ValueTask DisposeAsync()

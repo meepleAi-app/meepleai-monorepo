@@ -293,10 +293,10 @@ function DetailPanel({ node, onClose }: DetailPanelProps) {
 
   const Icon = node.icon;
   const categoryColors = {
-    input: 'bg-gray-500/10 text-gray-600',
-    layer: 'bg-blue-500/10 text-blue-600',
-    service: 'bg-purple-500/10 text-purple-600',
-    storage: 'bg-orange-500/10 text-orange-600',
+    input: 'bg-muted text-foreground',
+    layer: 'bg-blue-500/10 text-blue-600 dark:text-blue-300',
+    service: 'bg-purple-500/10 text-purple-600 dark:text-purple-300',
+    storage: 'bg-orange-500/10 text-orange-600 dark:text-orange-300',
   };
 
   return (

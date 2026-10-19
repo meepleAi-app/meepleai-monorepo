@@ -114,7 +114,7 @@ const iconVariantStyles: Record<string, string> = {
  * Badge styling per variant
  */
 const badgeVariantStyles: Record<string, string> = {
-  default: 'bg-muted-foreground',
+  default: 'bg-muted-foreground text-background',
   primary: 'bg-blue-500',
   warning: 'bg-yellow-500',
   danger: 'bg-red-500',

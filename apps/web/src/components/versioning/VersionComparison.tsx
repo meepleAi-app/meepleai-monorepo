@@ -41,7 +41,7 @@ function DiffSummaryBadges({ summary }: { summary: DiffSummary }): React.JSX.Ele
         </Badge>
       )}
       {summary.deleted > 0 && (
-        <Badge variant="default" className="bg-red-600 hover:bg-red-700">
+        <Badge variant="default" className="bg-red-600 text-white hover:bg-red-700">
           <Minus className="h-3 w-3 mr-1" />
           {summary.deleted} Deleted
         </Badge>

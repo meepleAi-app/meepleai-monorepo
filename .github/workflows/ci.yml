@@ -287,6 +287,11 @@ jobs:
         run: pnpm lint
         # Note: package.json lint script has --max-warnings=15 for security false positives
 
+      # Issue #4533 — i test delle regole ESLint locali. Il gate che conta e' in dev-fast.yml (PR
+      # verso main-dev); qui copre le PR che arrivano a main/main-staging senza passare da main-dev.
+      - name: ESLint local rules tests (#4533)
+        run: pnpm test:eslint-rules
+
       # DS-17 Phase 1 (mockup state naming, #2071): hard gate on the
       # canonical `<base>-state-NN-<label>.{html,jsx}` pattern. Cheap (regex
       # over admin-mockups/**/*.{html,jsx} only) — runs before the heavier

@@ -2,7 +2,8 @@
  * Tests for ESLint custom rule: no-hardcoded-hex
  *
  * Issue #572: V2 Phase 0 — guards v2 component code against hex/rgb/hsl
- * literals. Run with `pnpm test:eslint-rules` (or directly via vitest).
+ * literals. Run with `pnpm test:eslint-rules` (all rule tests, via `node --test`; Vitest
+ * does not collect `.js` tests).
  */
 const { RuleTester } = require('eslint');
 const rule = require('./no-hardcoded-hex.js');

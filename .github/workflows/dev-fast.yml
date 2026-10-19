@@ -202,6 +202,14 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      # Issue #4533 — i test delle regole ESLint locali (`eslint-rules/*.test.js`, `node:test` +
+      # `RuleTester`). Prima di qui non li eseguiva nessuno: Vitest raccoglie solo `.ts`/`.tsx`, e
+      # lo script eseguiva un solo file. Una modifica che rompeva una regola passava la CI.
+      # Lo script elenca i file e li passa a `node --test` per nome; zero file e' un errore, perche'
+      # `node --test "<glob>"` senza corrispondenze esce con 0. Il log stampa i file e «tests N».
+      - name: ESLint local rules tests (#4533)
+        run: pnpm test:eslint-rules
+
       # Issue #4058 — react-pdf/pdfjs-dist fuori dal grafo valutato dal render server.
       #
       # Qui e NON solo in ci.yml, e la ragione e' che il gate altrimenti sarebbe tardivo:

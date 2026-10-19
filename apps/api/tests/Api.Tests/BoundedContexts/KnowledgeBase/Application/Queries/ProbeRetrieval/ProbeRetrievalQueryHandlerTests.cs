@@ -37,7 +37,7 @@ public sealed class ProbeRetrievalQueryHandlerTests
     public ProbeRetrievalQueryHandlerTests()
     {
         // Come per una domanda corta: il rilevatore non è sicuro, e decide l'Accept-Language.
-        _detector.Setup(d => d.Detect(It.IsAny<string>())).Returns(new LanguageDetection("en", IsConfident: false));
+        _detector.Setup(d => d.Detect(It.IsAny<string>(), It.IsAny<string?>())).Returns(new LanguageDetection("en", IsConfident: false));
         _detector.Setup(d => d.IsSupportedLanguage(It.IsAny<string?>()))
             .Returns<string?>(l => l is "en" or "it" or "de" or "fr" or "es");
     }
@@ -155,7 +155,7 @@ public sealed class ProbeRetrievalQueryHandlerTests
     [Fact]
     public async Task Handle_WhenTheQuestionSaysItsLanguage_TheDetectionWins_AsInTheChat()
     {
-        _detector.Setup(d => d.Detect(It.IsAny<string>())).Returns(new LanguageDetection("it", IsConfident: true));
+        _detector.Setup(d => d.Detect(It.IsAny<string>(), It.IsAny<string?>())).Returns(new LanguageDetection("it", IsConfident: true));
         var search = new FusedSearchStub(FusedSearchStub.Chunks(3));
 
         var probe = await Handler(search, ProbeProfiles.With())

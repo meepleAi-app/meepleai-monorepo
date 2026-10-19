@@ -24,7 +24,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
-using StackExchange.Redis;
 using Xunit;
 using AuthRole = Api.SharedKernel.Domain.ValueObjects.Role;
 
@@ -47,15 +46,20 @@ namespace Api.Tests.Integration;
 /// 6. Random timing cancellation (stress test)
 /// </summary>
 /// <remarks>
-/// Issue #3102: These tests use SharedTestcontainersFixture which conflicts with CI service containers.
-/// In CI, the PostgreSQL service container on port 5432 can interfere with Testcontainers-managed databases,
-/// causing "terminating connection due to administrator command" errors (PostgreSQL 57P01).
-/// Tests are skipped in CI to avoid flaky behavior.
+/// <para>In CI gira nello shard <c>Core</c>, come gli altri <c>Category=Integration</c> (#4522).
+/// Prima di #4522 era escluso per nome da <c>ci.yml</c> e <c>dev-async.yml</c> (#3102), e non girava
+/// in nessun workflow.</para>
+/// <para><b>Postgres:</b> ogni istanza crea un database suo (<c>test_uploadcancel_&lt;guid&gt;</c>) e lo
+/// cancella in <c>DisposeAsync</c>. Con <c>TEST_POSTGRES_CONNSTRING</c> impostata, come in CI, la
+/// fixture usa solo il server: il database condiviso <c>meepleai_test</c> non viene toccato.</para>
+/// <para><b>Redis:</b> nessuno. Il gestore e i servizi che registra qui non lo usano (le dipendenze
+/// che lo userebbero, quota e tier, sono doppi). Prima la classe si collegava al Redis della fixture
+/// solo per farci <c>FLUSHDB</c> a ogni test: in CI quel Redis è il service container condiviso da
+/// tutto lo shard, e il flush cancellava lo stato degli altri test in parallelo (#4522).</para>
 /// </remarks>
 [Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Issue", "2031")]
-[Trait("SkipInCI", "Testcontainers conflict with service containers")]
 public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;
@@ -63,7 +67,6 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     private string _databaseName = string.Empty;
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
-    private IConnectionMultiplexer? _redis;
     private string? _testDataDirectory;
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
@@ -75,7 +78,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        // Issue #2031: Use SharedTestcontainersFixture for both PostgreSQL AND Redis to prevent Docker hijack
+        // Issue #2031: Postgres dalla SharedTestcontainersFixture, per evitare il Docker hijack. Niente Redis (#4522).
         // PR2 fix: per-instance unique database name. The previous fixed name "test_uploadcancel"
         // caused `55006: database is being accessed by other users` when xUnit parallel test methods
         // raced on DROP DATABASE inside CreateIsolatedDatabaseAsync.
@@ -85,17 +88,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         _testDataDirectory = Path.Combine(Path.GetTempPath(), "meepleai-midphase-test-" + Guid.NewGuid());
         Directory.CreateDirectory(_testDataDirectory);
 
-        // Use SharedTestcontainersFixture Redis (no separate container needed!)
-        var redisConnectionString = _fixture.RedisConnectionString;
-
         var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
-
-        _redis = await ConnectionMultiplexer.ConnectAsync(redisConnectionString);
-        services.AddSingleton<IConnectionMultiplexer>(_redis);
-
-        // FIX: Clear Redis state before each test to prevent interference
-        var db = _redis.GetDatabase();
-        await db.ExecuteAsync("FLUSHDB");
 
         // Register repositories
         services.AddScoped<IUserRepository, UserRepository>();
@@ -122,66 +115,37 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
 
     public async ValueTask DisposeAsync()
     {
-        if (_testDataDirectory != null && Directory.Exists(_testDataDirectory))
+        try
         {
-            try
+            if (_testDataDirectory != null && Directory.Exists(_testDataDirectory))
             {
-                await Task.Delay(TestConstants.Timing.SmallDelay);
-                Directory.Delete(_testDataDirectory, true);
+                try
+                {
+                    await Task.Delay(TestConstants.Timing.SmallDelay);
+                    Directory.Delete(_testDataDirectory, true);
+                }
+                catch (IOException ex)
+                {
+                    Console.WriteLine($"Warning: Failed to clean temp directory: {ex.Message}");
+                }
             }
-            catch (IOException ex)
-            {
-                Console.WriteLine($"Warning: Failed to clean temp directory: {ex.Message}");
-            }
+
+            if (_dbContext != null) await _dbContext.DisposeAsync();
+
+            if (_serviceProvider is IAsyncDisposable asyncDisposable)
+                await asyncDisposable.DisposeAsync();
+            else
+                (_serviceProvider as IDisposable)?.Dispose();
         }
-
-        if (_dbContext != null) await _dbContext.DisposeAsync();
-
-        // FIX: Clear Redis state before disposing to prevent interference with next tests
-        if (_redis != null)
+        finally
         {
-            try
-            {
-                var db = _redis.GetDatabase();
-                await db.ExecuteAsync("FLUSHDB");
-            }
-            catch
-            {
-                // Ignore cleanup errors
-            }
-        }
-
-        _redis?.Dispose();
-
-        if (_serviceProvider is IAsyncDisposable asyncDisposable)
-            await asyncDisposable.DisposeAsync();
-        else
-            (_serviceProvider as IDisposable)?.Dispose();
-
-        // Issue #2031: Use SharedTestcontainersFixture for PostgreSQL cleanup
-        if (!string.IsNullOrEmpty(_databaseName))
-        {
-            try
+            // #4522: nel finally, perché in CI il server Postgres è condiviso dallo shard e un
+            // database rimasto lì resta fino alla fine del job. DropIsolatedDatabaseAsync non lancia.
+            if (!string.IsNullOrEmpty(_databaseName))
             {
                 await _fixture.DropIsolatedDatabaseAsync(_databaseName);
             }
-            catch
-            {
-                // Ignore cleanup errors
-            }
         }
-
-        // Issue #2031: No separate Redis container to dispose (using SharedTestcontainersFixture)
-    }
-
-    /// <summary>
-    /// Clears all Redis state to ensure test isolation.
-    /// MUST be called at the start of each test to prevent interference from previous tests.
-    /// </summary>
-    private async Task CleanRedisStateAsync()
-    {
-        var db = _redis!.GetDatabase();
-        await db.ExecuteAsync("FLUSHDB");
     }
 
     private void RegisterDefaultMockServices(IServiceCollection services)
@@ -297,9 +261,6 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     [Fact(Timeout = 90000)]
     public async Task UploadPdf_WhenCancelledMidDatabaseOperation_RollsBackCompletely()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
@@ -341,19 +302,22 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     [Fact(Timeout = 90000)]
     public async Task UploadPdf_WhenCancelledMidBlobWrite_CleansUpPartialData()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Override blob storage with mid-write cancellation mock using SharedTestcontainersFixture
 
         var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
-        // Mock blob storage that delays then throws
+        // #4522: il test cancella quando il gestore è DENTRO la scrittura del blob, non dopo un ritardo
+        // fisso. Col ritardo di 100 ms di prima era rosso 2 run su 3 in locale: a freddo la prima query
+        // del gestore (la ricerca per hash del contenuto) dura di più, la cancellazione cadeva lì, e il
+        // test vedeva l'OperationCanceledException della query invece del TaskCanceledException della
+        // scrittura. Misurava un'altra fase.
+        var blobWriteStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var midWriteBlob = new Mock<IBlobStorageService>();
         midWriteBlob.Setup(b => b.StoreAsync(It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<BlobCategory>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(async (Stream stream, string fileName, BlobCategory category, string resourceKey, CancellationToken ct) =>
             {
-                await Task.Delay(TestConstants.Timing.LargeDelay, ct); // Will throw TaskCanceledException
+                blobWriteStarted.TrySetResult();
+                await Task.Delay(Timeout.InfiniteTimeSpan, ct); // la scrittura finisce solo con la cancellazione: TaskCanceledException
                 return new BlobStorageResult(false, null, null, 0, "Never reached");
             });
         services.AddSingleton<IBlobStorageService>(midWriteBlob.Object);
@@ -382,10 +346,17 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
             UserId: testUser.Id,
             File: formFile);
 
-        using var cts = PdfUploadTestHelpers.CreateDelayedCancellation(100); // Cancel mid-write
+        using var cts = new CancellationTokenSource();
 
-        // Act & Assert
-        var act = async () => await handler.Handle(command, cts.Token);
+        // Act - cancellazione a scrittura in corso
+        var handleTask = handler.Handle(command, cts.Token);
+        var first = await Task.WhenAny(blobWriteStarted.Task, handleTask)
+            .WaitAsync(TimeSpan.FromSeconds(60), TestCancellationToken);
+        first.Should().BeSameAs(blobWriteStarted.Task, "the handler must reach the blob write before the test cancels it");
+        await cts.CancelAsync();
+
+        // Assert
+        var act = async () => await handleTask;
         await act.Should().ThrowAsync<TaskCanceledException>();
 
         // Verify cleanup
@@ -402,9 +373,6 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     [Fact(Skip = "DIFETTO: #1684 follow-up: test asserts handler returns a result on cancellation, but the production code (correctly) propagates OperationCanceledException through SaveChangesAsync. Once the upstream DI mocks were fixed (#1684), cancellation now reaches the handler and surfaces TaskCanceledException — exposing this brittle assertion. Tracked as follow-up: rewrite the test to expect cancellation OR assert resource-release without requiring a non-null return.", Timeout = 90000)]
     public async Task UploadPdf_WhenCancelledMidTextExtraction_ReleasesResources()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Mock extractor that delays during processing
         var services = new ServiceCollection();
         services.AddLogging(builder => builder.AddConsole().SetMinimumLevel(LogLevel.Warning));
@@ -465,9 +433,6 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     [Fact(Timeout = 90000)]
     public async Task UploadPdf_WhenCancelledMidEmbeddingBatch_StopsGracefully()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
@@ -509,9 +474,6 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     [Fact(Timeout = 90000)]
     public async Task UploadPdf_WhenCancelledMidVectorStore_MaintainsConsistency()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
@@ -552,9 +514,6 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     [Fact(Timeout = 90000)]
     public async Task UploadPdf_WhenCancelledAtRandomStage_AlwaysCleansUp()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
@@ -615,9 +574,6 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     [Fact(Timeout = 90_000)]
     public async Task UploadPdf_WhenCancelledAtMultipleStages_MaintainsDatabaseConsistency()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Test cancellation at 5 different stages
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
         var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);

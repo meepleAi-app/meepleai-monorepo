@@ -87,7 +87,7 @@ test('no-hardcoded-color-utility', () => {
       // text-gray-* + border-zinc-*
       {
         code: `const x = <div className="text-gray-700 border-zinc-200" />;`,
-        errors: [{ messageId: 'hardcoded' }, { messageId: 'hardcoded' }],
+        errors: [{ messageId: 'hardcoded' }], // PERTURBAZIONE #4533: da revertire
       },
       // Template literal
       {

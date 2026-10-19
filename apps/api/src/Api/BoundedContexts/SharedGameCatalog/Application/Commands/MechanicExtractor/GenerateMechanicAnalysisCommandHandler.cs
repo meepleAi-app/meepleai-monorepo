@@ -8,6 +8,7 @@ using Api.Infrastructure;
 using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +24,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExt
 /// <list type="number">
 /// <item><description>Verify <c>SharedGame</c> exists → <see cref="NotFoundException"/> otherwise.</description></item>
 /// <item><description>Verify the PDF is linked to the game via <c>shared_game_documents</c> → <see cref="NotFoundException"/> otherwise.</description></item>
-/// <item><description>T7 idempotency: if a non-<c>Rejected</c> analysis already exists for (SharedGameId, PdfDocumentId, PromptVersion), short-circuit and return its state with <c>IsExistingAnalysis=true</c>.</description></item>
+/// <item><description>T7 idempotency: if a non-<c>Rejected</c> analysis already exists for (SharedGameId, PdfDocumentId, PromptVersion), short-circuit and return its state with <c>IsExistingAnalysis=true</c> — or, with <c>ForceRegenerate</c>, throw <see cref="ConflictException"/> (HTTP 409, #4144): the unique index admits no second row for the tuple.</description></item>
 /// <item><description>Project cost via <see cref="IAnalysisCostEstimator"/>. If the projection exceeds the submitted cap and no override is provided, throw <see cref="ConflictException"/> (HTTP 409).</description></item>
 /// <item><description>Create the aggregate in <c>Draft</c>, optionally applying <c>OverrideCostCap</c> for auditable cap raises (B3=A), and persist via <c>IUnitOfWork.SaveChangesAsync</c>.</description></item>
 /// </list>
@@ -75,6 +76,7 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly TimeProvider _timeProvider;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IDomainEventCollector _eventCollector;
     private readonly ILogger<GenerateMechanicAnalysisCommandHandler> _logger;
 
     public GenerateMechanicAnalysisCommandHandler(
@@ -90,6 +92,7 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
         IServiceScopeFactory scopeFactory,
         TimeProvider timeProvider,
         IUnitOfWork unitOfWork,
+        IDomainEventCollector eventCollector,
         ILogger<GenerateMechanicAnalysisCommandHandler> logger)
     {
         _analysisRepository = analysisRepository ?? throw new ArgumentNullException(nameof(analysisRepository));
@@ -104,6 +107,7 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _eventCollector = eventCollector ?? throw new ArgumentNullException(nameof(eventCollector));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -147,34 +151,39 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
                 resourceId: $"{request.SharedGameId}/{request.PdfDocumentId}");
         }
 
-        // 3. T7 idempotency — return the existing non-rejected analysis unchanged. Skipped when
-        //    ForceRegenerate is set (#539), so a re-run with a different model creates a new row
-        //    instead of short-circuiting to the prior analysis for the same (game, pdf, prompt).
-        if (!request.ForceRegenerate)
+        // 3. T7 idempotency — one non-Rejected analysis per (game, pdf, prompt): the filtered unique
+        //    index ux_mechanic_analyses_shared_game_pdf_prompt (status <> Rejected) admits no second
+        //    row. Without ForceRegenerate the existing analysis is returned unchanged. With it (the
+        //    "Regenerate" action, #539) there is nothing to return and nothing that can be inserted:
+        //    409 telling the admin what to do (#4144 — it used to reach the INSERT and fail 23505 → 500).
+        var existing = await _analysisRepository
+            .FindByPromptVersionAsync(request.SharedGameId, request.PdfDocumentId, promptVersion, cancellationToken)
+            .ConfigureAwait(false);
+        if (existing is not null)
         {
-            var existing = await _analysisRepository
-                .FindByPromptVersionAsync(request.SharedGameId, request.PdfDocumentId, promptVersion, cancellationToken)
-                .ConfigureAwait(false);
-            if (existing is not null)
+            if (request.ForceRegenerate)
             {
-                _logger.LogInformation(
-                    "Mechanic analysis idempotent short-circuit: existing {ExistingId} for (SharedGame={SharedGame}, Pdf={Pdf}, PromptVersion={Version}, Status={Status}).",
-                    existing.Id,
-                    request.SharedGameId,
-                    request.PdfDocumentId,
-                    promptVersion,
-                    existing.Status);
-
-                return BuildResponse(
-                    existing.Id,
-                    existing.Status,
-                    promptVersion,
-                    effectiveCostCap: existing.CostCapUsd,
-                    estimatedCost: 0m,
-                    projectedTotalTokens: 0,
-                    costCapOverrideApplied: existing.CostCapOverrideBy is not null,
-                    isExisting: true);
+                throw MechanicAnalysisPromptSlot.Occupied(
+                    PromptSlotWrite.Regenerate, existing.Id, existing.Status, existing.CreatedAt, promptVersion);
             }
+
+            _logger.LogInformation(
+                "Mechanic analysis idempotent short-circuit: existing {ExistingId} for (SharedGame={SharedGame}, Pdf={Pdf}, PromptVersion={Version}, Status={Status}).",
+                existing.Id,
+                request.SharedGameId,
+                request.PdfDocumentId,
+                promptVersion,
+                existing.Status);
+
+            return BuildResponse(
+                existing.Id,
+                existing.Status,
+                promptVersion,
+                effectiveCostCap: existing.CostCapUsd,
+                estimatedCost: 0m,
+                projectedTotalTokens: 0,
+                costCapOverrideApplied: existing.CostCapOverrideBy is not null,
+                isExisting: true);
         }
 
         // 4. Load retrieval context. M1.2 ships the same bundled rulebook content to every
@@ -252,16 +261,35 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
         {
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
-        catch (DbUpdateConcurrencyException ex)
+        catch (DbUpdateException ex) when (ex is DbUpdateConcurrencyException || MechanicAnalysisPromptSlot.IsTaken(ex))
         {
-            // Extremely narrow window: concurrent admin submitted the same (game, pdf, version).
-            // Re-query and short-circuit to the winner.
+            // Narrow window: a concurrent admin request inserted the same (game, pdf, version) after
+            // step 3. Postgres reports it as 23505 on the unique index — a plain DbUpdateException, NOT
+            // a DbUpdateConcurrencyException, so the original catch never saw it (#4144). Re-query and
+            // short-circuit to the winner, exactly as if this request had arrived a moment later.
+            //
+            // The failed save leaves the losing analysis Added in the change tracker, together with the
+            // event-log/outbox rows materialized for its domain events, and leaves those events queued in
+            // the collector (it drains only after a successful save). This handler also runs inside other
+            // handlers' scopes (Requeue sends it via IMediator): any later SaveChanges in the same scope
+            // would retry the losing INSERT and re-materialize the outbox rows. Drop both first. (Pending
+            // changes of a calling handler would have gone down with the same failed save; today's
+            // callers — the endpoint and Requeue — have none.)
+            _dbContext.ChangeTracker.Clear();
+            _eventCollector.Clear();
+
             var winner = await _analysisRepository
                 .FindByPromptVersionAsync(request.SharedGameId, request.PdfDocumentId, promptVersion, cancellationToken)
                 .ConfigureAwait(false);
 
             if (winner is not null)
             {
+                if (request.ForceRegenerate)
+                {
+                    throw MechanicAnalysisPromptSlot.Occupied(
+                        PromptSlotWrite.Regenerate, winner.Id, winner.Status, winner.CreatedAt, promptVersion, ex);
+                }
+
                 _logger.LogInformation(
                     ex,
                     "Mechanic analysis create lost race; returning concurrent winner {WinnerId}.", winner.Id);

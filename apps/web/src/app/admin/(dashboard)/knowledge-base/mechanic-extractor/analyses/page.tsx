@@ -283,6 +283,8 @@ export default function MechanicAnalysesPage() {
 
   // #539 follow-up: regenerate the CURRENT analysis (same game+PDF) with a chosen engine.
   // Reuses the generate endpoint with forceRegenerate=true (skips idempotency → new analysis).
+  // #4144: while a non-Rejected analysis holds the (game, PDF, prompt) slot the server answers 409
+  // with what to do; onError shows that message (ConflictError carries the body's `message`).
   const regenerateMutation = useMutation({
     mutationFn: async () => {
       if (!status) throw new Error('No analysis loaded to regenerate');
@@ -537,8 +539,8 @@ export default function MechanicAnalysesPage() {
                   className="mt-0.5 h-4 w-4 rounded border-border"
                   data-testid="force-regen-checkbox"
                 />
-                Rigenera con un nuovo modello (ignora l&apos;idempotenza: crea una nuova analisi
-                anche se ne esiste già una per questo gioco/PDF).
+                Rigenera con un nuovo modello (non riusa l&apos;analisi esistente per questo
+                gioco/PDF: quella col prompt corrente va prima rifiutata).
               </label>
             </div>
 
@@ -882,7 +884,7 @@ export default function MechanicAnalysesPage() {
                   variant="outline"
                   onClick={() => regenerateMutation.mutate()}
                   disabled={regenerateMutation.isPending}
-                  title="Riesegue l'intera pipeline (9 sezioni) sullo stesso PDF con il motore selezionato e crea una nuova analisi (forceRegenerate)."
+                  title="Riesegue l'intera pipeline (9 sezioni) sullo stesso PDF con il motore selezionato e crea una nuova analisi (forceRegenerate). Un'analisi col prompt corrente deve prima essere rifiutata."
                 >
                   {regenerateMutation.isPending ? (
                     <Loader2Icon className="mr-1 h-4 w-4 animate-spin" />

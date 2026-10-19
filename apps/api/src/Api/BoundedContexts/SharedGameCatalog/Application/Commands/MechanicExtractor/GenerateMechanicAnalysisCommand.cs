@@ -23,8 +23,11 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExt
 /// <param name="ModelOverride">#539: optional LLM model override. Routing is by model name
 ///   (<c>ILlmClient.SupportsModel</c>), so this alone selects the provider; null → DeepSeek default.</param>
 /// <param name="ProviderOverride">#539: optional provider label recorded for telemetry (e.g. "OpenRouter").</param>
-/// <param name="ForceRegenerate">#539: when true, skips the T7 idempotency short-circuit so a re-run
-///   with a different model creates a new analysis instead of returning the existing one.</param>
+/// <param name="ForceRegenerate">#539: when true, an existing analysis for the same (game, pdf, prompt) is
+///   NOT returned by the T7 idempotency short-circuit. The filtered unique index admits a single
+///   non-Rejected analysis per tuple, so a new one can only be created once the existing one is Rejected:
+///   otherwise the handler answers 409 saying what to do (#4144). With no such analysis it behaves like a
+///   normal run.</param>
 internal record GenerateMechanicAnalysisCommand(
     Guid SharedGameId,
     Guid PdfDocumentId,
@@ -36,8 +39,8 @@ internal record GenerateMechanicAnalysisCommand(
     // ProviderOverride only labels telemetry. Null → the ADR-007 DeepSeek defaults in the handler.
     string? ModelOverride = null,
     string? ProviderOverride = null,
-    // #539: bypass the T7 idempotency short-circuit so a re-run (e.g. with a different model)
-    // creates a NEW analysis instead of returning the existing one for the same (game, pdf, prompt).
+    // #539: do not return the existing analysis for the same (game, pdf, prompt). #4144: if a
+    // non-Rejected one exists the unique index forbids a second row, so the answer is 409, not a new run.
     bool ForceRegenerate = false) : ICommand<MechanicAnalysisGenerationResponseDto>;
 
 /// <summary>

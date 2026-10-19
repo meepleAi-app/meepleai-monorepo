@@ -166,17 +166,21 @@ public sealed class UserLibraryE2ETests : E2ETestBase
         var statusPayload = new { newState = "Owned" };
         var response = await Client.PatchAsJsonAsync($"/api/v1/library/games/{_testGameId}", statusPayload);
 
-        // Assert - Skip if endpoint has missing dependencies in test environment
+        // Assert
         // #4023: un 500 e un difetto del prodotto, non l assenza di un servizio. Se un
         // prerequisito manca davvero, si accerta in testa al test con
         // E2EServiceProbe.SkipUnlessHealthyAsync — non si deduce da questa risposta.
-        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
-            "UpdateGameStatus ha risposto 500: " + await DescribeResponseAsync(response));
-        response.StatusCode.Should().BeOneOf(
-            HttpStatusCode.OK,
-            HttpStatusCode.NoContent,
-            HttpStatusCode.BadRequest,
-            HttpStatusCode.NotFound);
+        // #4253: la rotta manda due comandi nella stessa richiesta; il secondo falliva con
+        // «already being tracked» e la risposta era 500. Il gioco e' appena stato aggiunto
+        // (stato Nuovo) e Nuovo -> Owned e' una transizione valida, quindi l'unico esito
+        // corretto e' 200 con lo stato nuovo nel corpo: 400 e 404 qui sarebbero difetti.
+        response.StatusCode.Should().Be(HttpStatusCode.OK,
+            "UpdateGameStatus deve riuscire: " + await DescribeResponseAsync(response));
+
+        var updated = await response.Content.ReadFromJsonAsync<UpdatedEntryResponse>();
+        updated.Should().NotBeNull();
+        updated!.CurrentState.Should().Be("Owned",
+            "il corpo e' riletto dal database dopo il cambio di stato: deve riportare Owned");
     }
 
     #endregion
@@ -383,6 +387,8 @@ public sealed class UserLibraryE2ETests : E2ETestBase
         bool IsFavorite,
         string Status,
         DateTime AddedAt);
+
+    private sealed record UpdatedEntryResponse(string CurrentState);
 
     private sealed record LibraryStatsResponse(
         int TotalGames,

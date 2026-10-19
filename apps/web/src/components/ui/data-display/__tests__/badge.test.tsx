@@ -13,6 +13,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import * as legacy from '@/components/ui/badge';
+import { backgroundClasses } from '@/test-utils/background-classes';
 
 import * as canonical from '../badge';
 
@@ -46,4 +47,83 @@ describe('Badge (#4513)', () => {
     expect(badge).toHaveClass('text-foreground', 'border-border/50');
     expect(badge.className).not.toMatch(PALETTE_COLOR);
   });
+});
+
+/**
+ * #4539 — il fondo passato dal consumatore vince in ogni tema e al passaggio del mouse.
+ *
+ * Le varianti piene davano il fondo con classi a modificatore (`dark:bg-primary/90`,
+ * `hover:bg-primary/80`, `dark:hover:bg-primary`). tailwind-merge le lascia accanto a un
+ * `bg-green-600` del consumatore, perché per lui un modificatore diverso è un altro gruppo, e
+ * in CSS vincono per specificità: la shell admin, sempre scura, mostrava il fondo della variante.
+ */
+describe('Badge: fondo del consumatore (#4539)', () => {
+  const FILLED = ['default', 'secondary', 'destructive'] as const;
+
+  it.each(FILLED)('%s: in tema scuro resta solo il fondo del consumatore', variant => {
+    render(
+      <div data-admin-shell data-theme="dark" className="dark">
+        <canonical.Badge variant={variant} className="bg-green-600 text-white">
+          Pronto
+        </canonical.Badge>
+      </div>
+    );
+
+    expect(backgroundClasses(screen.getByText('Pronto'))).toEqual(['bg-green-600']);
+  });
+
+  it.each(FILLED)('%s: al passaggio del mouse resta solo il fondo del consumatore', variant => {
+    render(
+      <div data-theme="dark" className="dark">
+        <canonical.Badge variant={variant} className="bg-green-600 hover:bg-green-700">
+          Pronto
+        </canonical.Badge>
+      </div>
+    );
+
+    expect(backgroundClasses(screen.getByText('Pronto'))).toEqual([
+      'bg-green-600',
+      'hover:bg-green-700',
+    ]);
+  });
+
+  it.each(FILLED)(
+    '%s: un fondo con la sua coppia dark: perde anche lo hover della variante',
+    variant => {
+      render(
+        <canonical.Badge
+          variant={variant}
+          className="bg-green-100 text-green-800 dark:bg-green-900/30"
+        >
+          Pronto
+        </canonical.Badge>
+      );
+
+      expect(backgroundClasses(screen.getByText('Pronto'))).toEqual([
+        'bg-green-100',
+        'dark:bg-green-900/30',
+      ]);
+    }
+  );
+
+  it.each([
+    ['default', 'bg-primary/(--badge-fill)'],
+    ['secondary', 'bg-secondary/(--badge-fill)'],
+    ['destructive', 'bg-destructive/(--badge-fill)'],
+  ] as const)(
+    '%s senza fondo del consumatore: le opacità di prima, ora sulla variabile',
+    (variant, fill) => {
+      render(<canonical.Badge variant={variant}>Stato</canonical.Badge>);
+
+      const badge = screen.getByText('Stato');
+      // Prima: bg-<token> · hover:bg-<token>/80 · dark:bg-<token>/90 · dark:hover:bg-<token>.
+      expect(backgroundClasses(badge)).toEqual([fill]);
+      expect(badge).toHaveClass(
+        '[--badge-fill:100%]',
+        'hover:[--badge-fill:80%]',
+        'dark:[--badge-fill:90%]',
+        'dark:hover:[--badge-fill:100%]'
+      );
+    }
+  );
 });

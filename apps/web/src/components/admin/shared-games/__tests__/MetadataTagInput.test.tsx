@@ -1,6 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi } from 'vitest';
+
+import { backgroundClasses } from '@/test-utils/background-classes';
+
 import { MetadataTagInput } from '../MetadataTagInput';
 
 describe('MetadataTagInput', () => {
@@ -36,6 +39,25 @@ describe('MetadataTagInput', () => {
     const input = screen.getByPlaceholderText(/add/i);
     await userEvent.type(input, 'economic{Enter}');
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  // #4539: «Nuovo gioco» in admin (sempre scura) passa colorClass="bg-purple-100 text-purple-800"
+  // e simili. Il chip è un Badge `secondary`: il suo dark:bg-secondary/90 copriva il viola.
+  it('il colorClass del chiamante resta l’unico fondo del chip in tema scuro (#4539)', () => {
+    render(
+      <div data-admin-shell data-theme="dark" className="dark">
+        <MetadataTagInput
+          label="Categories"
+          tags={['Economic']}
+          onChange={vi.fn()}
+          colorClass="bg-purple-100 text-purple-800"
+        />
+      </div>
+    );
+
+    const chip = screen.getByText('Economic').parentElement as HTMLElement;
+    expect(chip).toHaveClass('text-purple-800');
+    expect(backgroundClasses(chip)).toEqual(['bg-purple-100']);
   });
 
   it('respects maxTags limit', () => {

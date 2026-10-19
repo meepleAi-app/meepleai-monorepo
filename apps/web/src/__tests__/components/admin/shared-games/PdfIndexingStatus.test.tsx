@@ -16,6 +16,7 @@ import {
   PdfIndexingStatus,
   type PdfIndexingStatusData,
 } from '@/components/admin/shared-games/PdfIndexingStatus';
+import { backgroundClasses } from '@/test-utils/background-classes';
 
 // ============================================================================
 // Mock Data
@@ -181,6 +182,23 @@ describe('PdfIndexingStatus', () => {
       await waitFor(() => {
         expect(screen.getByText('RAG Ready')).toBeInTheDocument();
       });
+    });
+
+    // #4539: la console admin è sempre scura. Il verde del badge deve restare l'unico fondo,
+    // senza il dark:bg-primary/90 né il dark:hover:bg-primary della variante accanto.
+    it.each([
+      ['compatta', true],
+      ['completa', false],
+    ])('in modalità %s «RAG Ready» tiene solo il suo verde (#4539)', async (_mode, compact) => {
+      mockFetchResponse = mockStatusIndexed;
+      renderWithProviders(
+        <div data-admin-shell data-theme="dark" className="dark">
+          <PdfIndexingStatus {...defaultProps} compact={compact} />
+        </div>
+      );
+
+      const badge = await screen.findByText('RAG Ready');
+      expect(backgroundClasses(badge)).toEqual(['bg-green-600', 'hover:bg-green-700']);
     });
 
     it('should render error badge when failed', async () => {

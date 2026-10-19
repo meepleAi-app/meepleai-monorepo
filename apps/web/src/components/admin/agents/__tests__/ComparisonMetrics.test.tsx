@@ -6,6 +6,8 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 
+import { backgroundClasses } from '@/test-utils/background-classes';
+
 import { ComparisonMetrics } from '../ComparisonMetrics';
 
 const mockStrategies = [
@@ -213,5 +215,22 @@ describe('ComparisonMetrics', () => {
     );
 
     expect(screen.getByText(/3 configurations/)).toBeInTheDocument();
+  });
+
+  // #4539: la console admin è sempre scura. Il giallo del vincitore deve restare l'unico fondo,
+  // senza il dark:bg-primary/90 né lo hover della variante accanto.
+  it('il badge del vincitore tiene solo il suo giallo in tema scuro (#4539)', () => {
+    const { container } = render(
+      <div data-admin-shell data-theme="dark" className="dark">
+        <ComparisonMetrics results={mockResults} strategies={mockStrategies} models={mockModels} />
+      </div>
+    );
+
+    const winnerBadges = Array.from(container.querySelectorAll('.bg-yellow-500'));
+    // il riquadro «Overall Winner» e la prima riga della tabella
+    expect(winnerBadges).toHaveLength(2);
+    for (const badge of winnerBadges) {
+      expect(backgroundClasses(badge)).toEqual(['bg-yellow-500']);
+    }
   });
 });

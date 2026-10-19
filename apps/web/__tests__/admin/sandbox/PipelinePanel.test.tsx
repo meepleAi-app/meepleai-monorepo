@@ -132,15 +132,16 @@ describe('PipelineStepCard', () => {
 
   // #4513: with the canonical Badge `secondary` is green and `default` is the primary orange. The
   // overview paints a completed step emerald and a running one amber: the badge says the same.
+  // #4539: the variant fill is `bg-<token>/(--badge-fill)`, its opacity driven by a variable.
   it('paints a completed step green and a running one with the primary colour', () => {
     const { unmount } = render(
       <PipelineStepCard step={{ step: 'extraction', status: 'completed', durationMs: 10 }} />
     );
-    expect(screen.getByText('Completato')).toHaveClass('bg-secondary');
+    expect(screen.getByText('Completato')).toHaveClass('bg-secondary/(--badge-fill)');
     unmount();
 
     render(<PipelineStepCard step={{ step: 'extraction', status: 'in_progress' }} />);
-    expect(screen.getByText('In corso')).toHaveClass('bg-primary');
+    expect(screen.getByText('In corso')).toHaveClass('bg-primary/(--badge-fill)');
   });
 
   it('shows error state with message', async () => {

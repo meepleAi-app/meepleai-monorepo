@@ -6,6 +6,7 @@ using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -104,6 +105,29 @@ public sealed class AdminReferenceQuestionsEndpointsTests
         Codes(outOfGate).Should().Equal("CAT-01");
         europe.RootElement.GetProperty("games").GetArrayLength().Should().Be(2,
             "i giochi servono a scegliere il filtro: non si restringono con il filtro");
+    }
+
+    [Fact]
+    public async Task AQuestionWhoseGameWasSoftDeleted_StillShowsTheGameTitle()
+    {
+        // Il seeder non risolve più un gioco cancellato in modo logico, ma le domande già caricate restano
+        // legate a lui: l'admin deve poter capire di quale gioco sono (review di #4495).
+        using (var scope = _hostFixture.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            await db.SharedGames.IgnoreQueryFilters()
+                .Where(g => g.Id == _europe)
+                .ExecuteUpdateAsync(s => s.SetProperty(g => g.IsDeleted, true), Ct);
+        }
+
+        using var body = await OkJsonAsync(await SendAsync(Route, _adminToken));
+
+        body.RootElement.GetProperty("items").EnumerateArray()
+            .Single(i => i.GetProperty("code").GetString() == "TTR-18")
+            .GetProperty("gameName").GetString().Should().Be("Ticket to Ride: Europe");
+        body.RootElement.GetProperty("games").EnumerateArray()
+            .Single(g => g.GetProperty("gameId").GetGuid() == _europe)
+            .GetProperty("gameName").GetString().Should().Be("Ticket to Ride: Europe");
     }
 
     [Fact]

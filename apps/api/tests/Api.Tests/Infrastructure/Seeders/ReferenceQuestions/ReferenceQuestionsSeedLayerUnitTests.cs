@@ -30,6 +30,34 @@ public sealed class ReferenceQuestionsSeedLayerUnitTests
         logger.At(LogLevel.Information).Should().ContainSingle().Which.Should().Contain("SKIP_REFERENCE_QUESTIONS_SEED");
     }
 
+    [Theory]
+    [InlineData("", false)]
+    [InlineData("yes", true)]
+    [InlineData("1", true)]
+    public async Task ASkipFlagThatIsNotABoolean_DoesNotThrow_AndTheLayerRuns(string value, bool warns)
+    {
+        // Review di #4495: GetValue<bool> lanciava fuori dal try su un valore non booleano, e
+        // l'orchestratore avrebbe saltato le layer successive.
+        var logger = new CapturingLogger();
+        var setRead = false;
+        var layer = new ReferenceQuestionsSeedLayer(() =>
+        {
+            setRead = true;
+            return [];
+        });
+
+        var seed = () => layer.SeedAsync(
+            Context(logger, new Dictionary<string, string?> { ["SKIP_REFERENCE_QUESTIONS_SEED"] = value }),
+            TestContext.Current.CancellationToken);
+
+        await seed.Should().NotThrowAsync();
+        setRead.Should().BeTrue("solo «true» salta la layer");
+        if (warns)
+            logger.At(LogLevel.Warning).Should().ContainSingle().Which.Should().Contain("SKIP_REFERENCE_QUESTIONS_SEED");
+        else
+            logger.At(LogLevel.Warning).Should().BeEmpty();
+    }
+
     [Fact]
     public async Task AnInvalidSet_IsLoggedAsAnError_InsteadOfStoppingTheLayersAfterIt()
     {

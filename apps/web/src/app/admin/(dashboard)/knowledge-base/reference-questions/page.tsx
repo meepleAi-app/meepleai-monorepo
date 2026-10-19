@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import type { JSX } from 'react';
 
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
@@ -36,7 +37,7 @@ function inGateFilter(gate: string): boolean | undefined {
  * #4470 (ADR-095 fetta 7b, D8): le domande di riferimento con cui si valuta l'agente, in sola lettura.
  * Il set lo scrive l'utente, il seed lo carica; qui si leggono, per gioco e per gate di pubblicazione.
  */
-export default function ReferenceQuestionsPage() {
+export default function ReferenceQuestionsPage(): JSX.Element {
   const [gameId, setGameId] = useState<string>(ALL);
   const [gate, setGate] = useState<string>(ALL);
 
@@ -125,7 +126,7 @@ function GameFilter({
   games: AdminReferenceQuestionGame[];
   value: string;
   onChange: (value: string) => void;
-}) {
+}): JSX.Element {
   return (
     <Select value={value} onValueChange={onChange}>
       <SelectTrigger
@@ -146,7 +147,7 @@ function GameFilter({
   );
 }
 
-function ReferenceQuestionCard({ item }: { item: AdminReferenceQuestion }) {
+function ReferenceQuestionCard({ item }: { item: AdminReferenceQuestion }): JSX.Element {
   const labelId = `reference-question-${item.code}`;
 
   return (

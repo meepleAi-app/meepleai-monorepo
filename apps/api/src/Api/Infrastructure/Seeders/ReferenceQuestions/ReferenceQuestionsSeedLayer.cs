@@ -51,11 +51,21 @@ internal sealed class ReferenceQuestionsSeedLayer : ISeedLayer
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var config = context.Services.GetService<IConfiguration>();
-        if (config?.GetValue<bool>(SkipFlag) == true)
+        // Non GetValue<bool>: lancia su un valore non booleano («», «yes», «1»), e qui siamo fuori dal try.
+        // Solo «true» salta la layer; un altro valore non vuoto lo dice nel log, e la layer gira.
+        var skipValue = context.Services.GetService<IConfiguration>()?[SkipFlag];
+        var isBoolean = bool.TryParse(skipValue, out var skip);
+        if (isBoolean && skip)
         {
             context.Logger.LogInformation("ReferenceQuestionsSeedLayer: {SkipFlag}=true, skipping", SkipFlag);
             return;
+        }
+
+        if (!isBoolean && !string.IsNullOrWhiteSpace(skipValue))
+        {
+            context.Logger.LogWarning(
+                "ReferenceQuestionsSeedLayer: {SkipFlag}='{Value}' is not true/false; the layer runs",
+                SkipFlag, skipValue);
         }
 
         try

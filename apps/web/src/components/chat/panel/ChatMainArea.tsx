@@ -18,6 +18,8 @@ export interface ChatMessage {
   timestamp: string;
   /** #4244: le fonti della risposta; ciascuna apre il PDF alla pagina citata. */
   citations?: StreamCitation[];
+  /** #4335: la risposta si è fermata prima della fine. Il testo è quello arrivato: non è completo. */
+  interrupted?: boolean;
 }
 
 /** Il pannello mostra tutte le fonti: nessuna è già citata nel testo. */
@@ -93,6 +95,7 @@ export function ChatMainArea({
                 content={msg.content}
                 authorName={msg.authorName}
                 timestamp={msg.timestamp}
+                interrupted={msg.interrupted}
                 sources={
                   msg.citations && msg.citations.length > 0 ? (
                     <CitationBlock snippets={msg.citations} excludeIndices={NO_EXCLUSIONS} />
@@ -106,6 +109,7 @@ export function ChatMainArea({
       <TierLimitRegion limit={tierLimit} className="mx-6 mb-3" />
       {error && !tierLimit && (
         <div
+          role="alert"
           data-testid="chat-stream-error"
           className="mx-6 mb-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 font-nunito text-sm text-red-700"
         >

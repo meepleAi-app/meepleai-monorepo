@@ -113,6 +113,34 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
     internal void SetXmin(uint xmin) => Xmin = xmin;
 
     /// <summary>
+    /// Marcatore delle righe seminate dai test E2E (#1929): lo scrive solo
+    /// <c>SeedTestLibraryGameCommandHandler</c> all'inserimento, e <c>CleanupTestEntitiesCommand</c>
+    /// cancella per quel valore. Come <see cref="Xmin"/>, l'aggregato non lo interpreta: lo
+    /// trasporta, perché <c>UpdateAsync</c> persiste un grafo detached e una colonna che il mapper
+    /// non scrive viene salvata a <c>NULL</c> — la pulizia E2E non avrebbe più trovato la riga (#4499).
+    /// </summary>
+    public string? TestRunId { get; private set; }
+
+    /// <summary>
+    /// Carica il marcatore letto dalla riga. Chiamato solo dal mapper del repository.
+    /// </summary>
+    internal void SetTestRunId(string? testRunId) => TestRunId = testRunId;
+
+    /// <summary>
+    /// Rimette nell'aggregato i figli letti dal database (#4505). Chiamato solo dal mapper del
+    /// repository: non solleva eventi e non ricalcola le statistiche, che la riga radice porta già.
+    /// </summary>
+    internal void RestoreChildren(
+        IEnumerable<GameSession> sessions,
+        IEnumerable<GameChecklist> checklist,
+        IEnumerable<UserGameLabel> labels)
+    {
+        _sessions.AddRange(sessions);
+        _checklist.AddRange(checklist);
+        _labels.AddRange(labels);
+    }
+
+    /// <summary>
     /// Private constructor for EF Core.
     /// </summary>
 #pragma warning disable CS8618

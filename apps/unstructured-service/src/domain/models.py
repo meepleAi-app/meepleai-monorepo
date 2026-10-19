@@ -73,7 +73,7 @@ class PdfDocument:
 
     file_path: Path
     file_size: int
-    language: str = "ita"
+    language: str = "eng+ita+deu"
 
     def validate(self) -> None:
         """Validate PDF document"""

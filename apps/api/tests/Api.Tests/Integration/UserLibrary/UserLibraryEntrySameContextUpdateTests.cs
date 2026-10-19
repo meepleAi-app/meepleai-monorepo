@@ -95,10 +95,34 @@ public sealed class UserLibraryEntrySameContextUpdateTests : IAsyncLifetime
         return (userId, gameId, entryId);
     }
 
+    /// <summary>
+    /// Un'etichetta dell'utente assegnata alla voce (#4505). <c>GetByUserAndGameAsync</c> carica le
+    /// etichette e <c>UpdateAsync</c> le riattacca, in entrambe le scritture della rotta PATCH: la
+    /// seconda non deve trovare conflitti nel contesto né toccare la riga.
+    /// </summary>
+    private async Task<(Guid AssignmentId, DateTime AssignedAt)> AssignLabelAsync(Guid userId, Guid entryId)
+    {
+        var label = new GameLabelEntity { Id = Guid.NewGuid(), Name = "Da rigiocare", Color = "#3366ff", UserId = userId };
+        // Alla precisione di Postgres (microsecondi), nel passato: una riscrittura non coincide per caso.
+        var assignedAt = new DateTime(2025, 3, 3, 10, 0, 0, DateTimeKind.Utc).AddTicks(1_111_110);
+        var assignment = new UserGameLabelEntity
+        {
+            Id = Guid.NewGuid(),
+            UserLibraryEntryId = entryId,
+            LabelId = label.Id,
+            AssignedAt = assignedAt,
+        };
+        _dbContext.GameLabels.Add(label);
+        _dbContext.UserGameLabels.Add(assignment);
+        await _dbContext.SaveChangesAsync();
+        return (assignment.Id, assignedAt);
+    }
+
     [Fact]
     public async Task SecondUpdate_InSameContext_AfterSave_PersistsBothWrites()
     {
         var (userId, gameId, entryId) = await SeedEntryAsync();
+        var (assignmentId, assignedAt) = await AssignLabelAsync(userId, entryId);
 
         await using var context = _fixture.CreateDbContext(_connectionString);
         var repository = CreateRepository(context);
@@ -128,6 +152,11 @@ public sealed class UserLibraryEntrySameContextUpdateTests : IAsyncLifetime
         var persisted = await verification.UserLibraryEntries.FirstAsync(e => e.Id == entryId);
         persisted.CurrentState.Should().Be((int)GameStateType.Owned, "la prima scrittura non va persa");
         persisted.IsFavorite.Should().BeTrue("la seconda scrittura deve arrivare al database");
+
+        // #4505: l'assegnazione letta da entrambe le scritture resta com'era.
+        var assignment = await verification.UserGameLabels.AsNoTracking().SingleAsync(l => l.UserLibraryEntryId == entryId);
+        assignment.Id.Should().Be(assignmentId);
+        assignment.AssignedAt.Should().Be(assignedAt);
     }
 
     [Fact]

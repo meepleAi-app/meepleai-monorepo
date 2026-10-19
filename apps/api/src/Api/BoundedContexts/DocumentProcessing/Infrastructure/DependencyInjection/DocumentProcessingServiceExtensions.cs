@@ -112,6 +112,10 @@ internal static class DocumentProcessingServiceExtensions
         // non-Unstructured providers (the extractor that reads it simply isn't constructed).
         services.AddScoped<IExtractionStrategySelector, ExtractionStrategySelector>();
 
+        // #4435: same pattern for the document's language — the pipeline sets it per PDF, the
+        // same-scope UnstructuredPdfTextExtractor sends it (or the configured default set).
+        services.AddScoped<IExtractionLanguageSelector, ExtractionLanguageSelector>();
+
         // #3435 (SP1): register the hi_res region extractor + IRawHiResExtractor unconditionally
         // (the seed-batch handler injects it under every provider — see method doc).
         RegisterImageRegionHiResExtractor(services, configuration);

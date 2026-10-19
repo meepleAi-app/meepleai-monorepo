@@ -31,19 +31,25 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install only RUNTIME system dependencies (no gcc/g++/build-essential)
+# OCR languages (#4435): tesseract-ocr pulls in eng (and osd); ita and deu are added here. They must
+# cover the API's PdfProcessing:Extractor:Unstructured:Language set (default eng+ita+deu): Tesseract
+# asked for a single language it has no data for fails the whole OCR ("couldn't load any languages").
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libmagic-dev \
     poppler-utils \
     tesseract-ocr \
     tesseract-ocr-ita \
+    tesseract-ocr-deu \
     libgl1 \
     libglib2.0-0 \
     curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Set Tesseract data directory
-ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/4.00/tessdata
+# Set Tesseract data directory. Debian bookworm and trixie (Tesseract 5) install the packs under
+# 5/tessdata; the old 4.00 path did not exist and Tesseract 5.5 ignored it with a warning (#4435).
+# Check after a deploy: `docker exec meepleai-unstructured tesseract --list-langs` → eng, ita, deu.
+ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
 
 # Create non-root user for security
 RUN groupadd -r unstructured && useradd -r -g unstructured -m -d /home/unstructured unstructured

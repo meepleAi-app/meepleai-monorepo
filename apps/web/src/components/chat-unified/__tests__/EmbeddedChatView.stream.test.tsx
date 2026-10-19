@@ -91,4 +91,44 @@ describe("EmbeddedChatView — lo stream, con l'hook vero (#4333)", () => {
 
     expect(wire.signal()?.aborted).toBe(true);
   });
+
+  /**
+   * #4335: la risposta si chiude senza `Complete` né `Error`. Prima il campo restava disattivato
+   * (`disabled={streamState.isStreaming}`) e la bolla «In scrittura...» restava lì, per sempre.
+   */
+  it('says the answer was interrupted, keeps what arrived, and takes the next question', async () => {
+    const first = steppedFetch([sseEvent(TOKEN, { token: 'Cinque ' })]);
+    globalThis.fetch = first.fetch;
+
+    render(<EmbeddedChatView threadId="thread-1" gameId="game-1" />);
+    ask('Quante carte?');
+    await waitFor(() => expect(first.calls()).toBe(1));
+    for (let i = 0; i < first.steps; i++) await deliver(first.next);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'La risposta si è interrotta prima della fine'
+    );
+    expect(screen.queryByTestId('message-streaming')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('message-assistant').map(n => n.textContent)).toEqual([
+      expect.stringContaining('Cinque'),
+    ]);
+    expect(screen.getByTestId('message-interrupted')).toHaveTextContent('Risposta interrotta');
+    // Review di #4509: un testo che passa AA in entrambi i temi (rapporti nel corpo della PR).
+    expect(screen.getByTestId('message-interrupted')).toHaveClass('text-foreground');
+    expect(screen.getByTestId('embedded-chat-input')).not.toBeDisabled();
+
+    const second = steppedFetch([
+      sseEvent(TOKEN, { token: 'Cinque carte.' }),
+      sseEvent(COMPLETE, { totalTokens: 2 }),
+    ]);
+    globalThis.fetch = second.fetch;
+    ask('Quante carte, di preciso?');
+    await waitFor(() => expect(second.calls()).toBe(1));
+    for (let i = 0; i < second.steps; i++) await deliver(second.next);
+
+    await waitFor(() => expect(screen.getAllByTestId('message-assistant')).toHaveLength(2));
+    expect(screen.getAllByTestId('message-assistant')[1]).toHaveTextContent('Cinque carte.');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('message-interrupted')).toHaveLength(1);
+  });
 });

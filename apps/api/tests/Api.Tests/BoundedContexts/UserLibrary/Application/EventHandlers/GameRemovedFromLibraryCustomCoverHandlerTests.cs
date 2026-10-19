@@ -1,5 +1,6 @@
 using Api.BoundedContexts.UserLibrary.Application.EventHandlers;
 using Api.BoundedContexts.UserLibrary.Domain.Events;
+using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Services.Pdf;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -13,10 +14,11 @@ namespace Api.Tests.BoundedContexts.UserLibrary.Application.EventHandlers;
 public sealed class GameRemovedFromLibraryCustomCoverHandlerTests
 {
     private readonly Mock<IBlobStorageService> _blob = new();
+    private readonly Mock<IUserLibraryRepository> _libraryRepo = new();
     private readonly Mock<ILogger<GameRemovedFromLibraryCustomCoverHandler>> _logger = new();
 
     private GameRemovedFromLibraryCustomCoverHandler Handler() =>
-        new(_blob.Object, _logger.Object);
+        new(_blob.Object, _libraryRepo.Object, _logger.Object);
 
     private static GameRemovedFromLibraryEvent MakeEvent(string? coverKey = null)
         => new(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), coverKey);
@@ -42,6 +44,28 @@ public sealed class GameRemovedFromLibraryCustomCoverHandlerTests
         _blob.Verify(b => b.DeleteRawKeyAsync(
             expectedObjectKey,
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // ── T4-1b (#4499) ────────────────────────────────────────────────────────
+    [Fact]
+    public async Task Handle_KeyStillUsedByAnEntry_DoesNotDelete()
+    {
+        // Arrange — the game was added again and got a new cover before the outbox delivered
+        // the removal: the deterministic key is the same, and the object is the new cover.
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var resourceKey = $"user-covers/{userId}/{gameId}/cover";
+        _libraryRepo
+            .Setup(r => r.IsCustomCoverKeyInUseAsync(resourceKey, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // Act
+        await Handler().Handle(new GameRemovedFromLibraryEvent(Guid.NewGuid(), userId, gameId, resourceKey), default);
+
+        // Assert
+        _blob.Verify(
+            b => b.DeleteRawKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     // ── T4-2 ─────────────────────────────────────────────────────────────────

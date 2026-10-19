@@ -842,19 +842,18 @@ internal partial class UploadPdfCommandHandler
             return;
         }
 
-        // #4339: Completed goes AFTER the Ready transition. The transition persists through
-        // IPdfDocumentRepository.UpdateAsync, whose MapToPersistence has no progress column and
-        // rewrites the whole row: a Completed written before it came back null, and the upload page,
-        // which waits for Completed on GET /pdfs/{id}/progress, stayed at "Indexing" forever.
-        // CancellationToken.None for the same reason as the persist below: the PDF is Ready.
+        // #4339: Completed goes AFTER the Ready transition. Written before it, the repository's
+        // UpdateAsync nulled it until #4347, and the upload page, which waits for Completed on
+        // GET /pdfs/{id}/progress, stayed at "Indexing" forever. The order still matters: the transition
+        // can lose a concurrency conflict (the return above), and a Completed for a PDF that is not Ready
+        // would be a lie. CancellationToken.None for the same reason as the persist below: the PDF is Ready.
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Completed, totalPages, totalPages, startTime, null, CancellationToken.None).ConfigureAwait(false);
 
-        // Issue #3281 / pre-existing AsNoTracking bug: the pipeline's working pdfDoc is AsNoTracking
-        // and state transitions route through IPdfDocumentRepository (MapToPersistence omits + clobbers
-        // ExtractedText/StructuredElementsJson/content columns), so extraction output written during
-        // ExtractPdfContentAsync/ExtractStructuredContentAsync never persists. Re-persist it here on a
-        // freshly TRACKED entity AFTER the final Ready transition (mirrors ExtractPdfTextCommandHandler),
-        // so no later repository transition can clobber it. Needed for re-index parity: IndexPdf reads
+        // Issue #3281 / pre-existing AsNoTracking bug: the pipeline's working pdfDoc is AsNoTracking,
+        // so extraction output written during ExtractPdfContentAsync/ExtractStructuredContentAsync never
+        // persists. Re-persist it here on a freshly TRACKED entity AFTER the final Ready transition
+        // (mirrors ExtractPdfTextCommandHandler). Until #4347 the repository transitions also nulled
+        // these columns; they no longer do. Needed for re-index parity: IndexPdf reads
         // StructuredElementsJson and requires non-null ExtractedText.
         // 🟡 Use CancellationToken.None (NOT cancellationToken): the PDF is already Ready+indexed at
         // this point, so this persist MUST complete regardless of pipeline cancellation. Mirrors

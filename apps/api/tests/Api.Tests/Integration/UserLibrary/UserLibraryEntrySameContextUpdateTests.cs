@@ -149,7 +149,50 @@ public sealed class UserLibraryEntrySameContextUpdateTests : IAsyncLifetime
 
         var update = async () => await repository.UpdateAsync(second);
 
+        // GUARDIA, non test del difetto: passa anche senza la correzione di #4253, perché il
+        // codice vecchio solleva questo stesso conflitto. Diventa rossa se il distacco diventa
+        // incondizionato, cioè se una copia con modifiche pendenti viene staccata in silenzio.
         await update.Should().ThrowAsync<InvalidOperationException>(
-            "una copia tracciata con modifiche pendenti non si stacca: il conflitto resta visibile");
+                "una copia tracciata con modifiche pendenti non si stacca: il conflitto resta visibile")
+            .WithMessage("*already being tracked*");
+    }
+
+    [Fact]
+    public async Task SecondUpdate_InSameContext_FromStaleRead_IsRejectedByXmin()
+    {
+        var (userId, gameId, entryId) = await SeedEntryAsync();
+
+        await using var context = _fixture.CreateDbContext(_connectionString);
+        var repository = CreateRepository(context);
+
+        // Due letture della stessa voce PRIMA di qualunque scrittura: entrambe portano lo stesso
+        // xmin. Dopo il salvataggio di `a`, quello di `b` non corrisponde più a nessuna tupla viva.
+        var a = await repository.GetByUserAndGameAsync(userId, gameId);
+        var b = await repository.GetByUserAndGameAsync(userId, gameId);
+
+        a!.ChangeState(GameState.Owned());
+        await repository.UpdateAsync(a);
+        await context.SaveChangesAsync();
+
+        b!.SetFavorite(true);
+
+        var staleWrite = async () =>
+        {
+            await repository.UpdateAsync(b);
+            await context.SaveChangesAsync();
+        };
+
+        // Il distacco di DetachSavedCopy è sicuro solo perché la scrittura nuova porta l'xmin che
+        // l'aggregato ha letto: una lettura vecchia deve fallire sul token, non sovrascrivere.
+        // Tipo ESATTO: il codice prima di #4253 qui sollevava InvalidOperationException
+        // («already being tracked») già in UpdateAsync, che questo test non deve accettare.
+        await staleWrite.Should().ThrowExactlyAsync<DbUpdateConcurrencyException>(
+            "una scrittura da una lettura superata deve essere rifiutata dal token xmin, "
+            + "anche dopo che la copia salvata è stata staccata");
+
+        await using var verification = _fixture.CreateDbContext(_connectionString);
+        var persisted = await verification.UserLibraryEntries.FirstAsync(e => e.Id == entryId);
+        persisted.CurrentState.Should().Be((int)GameStateType.Owned, "la scrittura di `a` resta");
+        persisted.IsFavorite.Should().BeFalse("la scrittura superata di `b` non deve arrivare al database");
     }
 }

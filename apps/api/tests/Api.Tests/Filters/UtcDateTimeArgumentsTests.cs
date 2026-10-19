@@ -70,6 +70,29 @@ public sealed class UtcDateTimeArgumentsTests
         result.Should().Be(instant, "a Local value already names an instant: converting must not move it");
     }
 
+    // #4519 — un DateTimeOffset con un offset diverso da zero nomina un istante: va portato a offset
+    // zero senza spostarlo, perché Npgsql rifiuta ogni altro offset su timestamptz.
+    [Fact]
+    public void AsUtc_DateTimeOffsetWithOffset_KeepsTheInstantAtOffsetZero()
+    {
+        var value = new DateTimeOffset(2026, 1, 1, 10, 0, 0, TimeSpan.FromHours(1));
+
+        var result = UtcDateTimeArguments.AsUtc(value);
+
+        result.Offset.Should().Be(TimeSpan.Zero);
+        result.UtcDateTime.Should().Be(new DateTime(2026, 1, 1, 9, 0, 0, DateTimeKind.Utc));
+        result.Should().Be(value, "DateTimeOffset equality compares instants: converting must not move it");
+    }
+
+    [Fact]
+    public void AsUtc_DateTimeOffsetAtOffsetZero_IsUnchanged()
+    {
+        var value = new DateTimeOffset(2026, 1, 1, 10, 0, 0, TimeSpan.Zero);
+
+        UtcDateTimeArguments.AsUtc(value).Should().Be(value);
+        UtcDateTimeArguments.AsUtc(value).Offset.Should().Be(TimeSpan.Zero);
+    }
+
     // ── L'inventario degli argomenti ────────────────────────────────────────────
 
     private sealed record WindowRecord(DateTime? From = null, DateTime? To = null, int Page = 1);
@@ -77,6 +100,8 @@ public sealed class UtcDateTimeArgumentsTests
     // Un [AsParameters] di tipo valore: il getter del contesto ne restituisce una copia inscatolata,
     // quindi la normalizzazione arriva all'handler solo se il filtro riscrive l'argomento.
     private readonly record struct WindowStruct(DateTime? From = null);
+
+    private sealed record OffsetWindow(DateTimeOffset? From = null, int Page = 1);
 
     private sealed class GetOnlyWindow
     {
@@ -93,6 +118,12 @@ public sealed class UtcDateTimeArgumentsTests
     private static void HandlerWithGetOnlySurrogate([AsParameters] GetOnlyWindow window) { }
 
     private static void HandlerWithArray(DateTime[] days) { }
+
+    private static void HandlerWithOffsets(DateTimeOffset? from, DateTimeOffset to) { }
+
+    private static void HandlerWithOffsetSurrogate([AsParameters] OffsetWindow window) { }
+
+    private static void HandlerWithOffsetArray(DateTimeOffset[] moments) { }
 
     private static void HandlerWithoutDates(int page, string? search) { }
 #pragma warning restore IDE0060, S1172
@@ -143,6 +174,29 @@ public sealed class UtcDateTimeArgumentsTests
     }
 
     [Fact]
+    public void FindSites_DateTimeOffsetArgumentsAndProperties_AreFoundAndNormalized()
+    {
+        UtcDateTimeArguments.FindSites(Method(nameof(HandlerWithOffsets))).Should().BeEquivalentTo(new[]
+        {
+            new DateTimeArgumentSite("from", null, IsNormalized: true),
+            new DateTimeArgumentSite("to", null, IsNormalized: true),
+        });
+
+        UtcDateTimeArguments.FindSites(Method(nameof(HandlerWithOffsetSurrogate))).Should().BeEquivalentTo(new[]
+        {
+            new DateTimeArgumentSite("window", "From", IsNormalized: true),
+        });
+    }
+
+    [Fact]
+    public void FindSites_DateTimeOffsetArray_IsReportedAsNotNormalized()
+    {
+        var sites = UtcDateTimeArguments.FindSites(Method(nameof(HandlerWithOffsetArray)));
+
+        sites.Should().ContainSingle().Which.Should().Be(new DateTimeArgumentSite("moments", null, IsNormalized: false));
+    }
+
+    [Fact]
     public void CreateFilter_HandlerWithoutDates_ReturnsNextUnchanged()
     {
         EndpointFilterDelegate next = _ => ValueTask.FromResult<object?>(null);
@@ -177,6 +231,8 @@ public sealed class UtcDateTimeArgumentsTests
         group.MapGet("/required", ([FromQuery] DateTime at) => Describe(at));
         group.MapGet("/surrogate", ([AsParameters] WindowRecord window) => Describe(window.From));
         group.MapGet("/struct-surrogate", ([AsParameters] WindowStruct window) => Describe(window.From));
+        group.MapGet("/offset", (DateTimeOffset? at) => DescribeOffset(at));
+        group.MapGet("/offset-surrogate", ([AsParameters] OffsetWindow window) => DescribeOffset(window.From));
         group.MapGet("/plain", (int page) => page.ToString(System.Globalization.CultureInfo.InvariantCulture));
 
         await app.StartAsync();
@@ -185,6 +241,9 @@ public sealed class UtcDateTimeArgumentsTests
 
     private static string Describe(DateTime? value) =>
         value is null ? "null" : $"{value.Value.Kind}|{value.Value:O}";
+
+    private static string DescribeOffset(DateTimeOffset? value) =>
+        value is null ? "null" : value.Value.ToString("O", System.Globalization.CultureInfo.InvariantCulture);
 
     private static async Task<(HttpStatusCode Status, string Body)> GetAsync(WebApplication app, string pathAndQuery)
     {
@@ -236,6 +295,42 @@ public sealed class UtcDateTimeArgumentsTests
         status.Should().Be(HttpStatusCode.BadRequest, "the filter runs after binding: it never sees a non-date");
     }
 
+    /// <summary>
+    /// #4519 — un <see cref="DateTimeOffset"/> in query con offset diverso da zero arriva all'handler a
+    /// offset zero, stesso istante. Senza offset il binding lo legge già a offset zero con lo stesso
+    /// orologio (la regola di #4063): resta com'è.
+    /// </summary>
+    [Theory]
+    [InlineData("/probe/offset?at=2026-01-01T10:00:00%2B01:00", "2026-01-01T09:00:00.0000000+00:00")]
+    [InlineData("/probe/offset?at=2026-01-01T10:00:00-05:00", "2026-01-01T15:00:00.0000000+00:00")]
+    [InlineData("/probe/offset-surrogate?from=2026-01-01T10:00:00%2B01:00", "2026-01-01T09:00:00.0000000+00:00")]
+    [InlineData("/probe/offset?at=2026-01-01T10:00:00", "2026-01-01T10:00:00.0000000+00:00")]
+    [InlineData("/probe/offset?at=2026-01-01", "2026-01-01T00:00:00.0000000+00:00")]
+    [InlineData("/probe/offset?at=2026-01-01T10:00:00Z", "2026-01-01T10:00:00.0000000+00:00")]
+    [InlineData("/probe/offset", "null")]
+    public async Task WithTheConvention_DateTimeOffset_ReachesTheHandlerAtOffsetZero(string pathAndQuery, string expected)
+    {
+        await using var app = await StartAppAsync(withConvention: true);
+
+        var (status, body) = await GetAsync(app, pathAndQuery);
+
+        status.Should().Be(HttpStatusCode.OK);
+        body.Should().Be(expected);
+    }
+
+    [Fact]
+    public async Task WithoutTheConvention_DateTimeOffsetKeepsTheOffsetOfTheQuery()
+    {
+        await using var app = await StartAppAsync(withConvention: false);
+
+        var (status, body) = await GetAsync(app, "/probe/offset?at=2026-01-01T10:00:00%2B01:00");
+
+        status.Should().Be(HttpStatusCode.OK);
+        body.Should().Be("2026-01-01T10:00:00.0000000+01:00",
+            "the binding keeps the offset written in the query, and Npgsql rejects it on timestamptz (#4519); " +
+            "if the framework changes, the DateTimeOffset branch of the filter must be re-examined");
+    }
+
     [Fact]
     public async Task WithoutTheConvention_BindingYieldsUnspecified()
     {
@@ -255,7 +350,7 @@ public sealed class UtcDateTimeArgumentsTests
 
         var endpoints = app.Services.GetRequiredService<EndpointDataSource>().Endpoints.OfType<RouteEndpoint>().ToList();
 
-        endpoints.Should().HaveCount(5);
+        endpoints.Should().HaveCount(7);
         endpoints.Should().OnlyContain(e => e.Metadata.GetMetadata<UtcDateTimeArgumentsMetadata>() != null,
             "the marker is what the inventory test reads to know an endpoint goes through the filter");
     }

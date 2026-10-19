@@ -34,8 +34,11 @@ namespace Api.Filters;
 /// <para>
 /// <b>Cosa copre.</b> Ogni argomento dell'handler di tipo <see cref="DateTime"/> o
 /// <c>DateTime?</c> (query, route, header), e le proprietà <see cref="DateTime"/> scrivibili di un
-/// argomento <c>[AsParameters]</c>. <b>Cosa non copre</b>: le date dentro un corpo JSON (sono
-/// proprietà di un DTO, non argomenti) e le collezioni di date. Un argomento che il filtro non sa
+/// argomento <c>[AsParameters]</c>. Dal #4519 anche <see cref="DateTimeOffset"/> e
+/// <c>DateTimeOffset?</c>, nelle stesse posizioni: un offset diverso da zero viene portato a zero,
+/// stesso istante (vedi <see cref="AsUtc(DateTimeOffset)"/>). <b>Cosa non copre</b>: le date dentro un
+/// corpo JSON, che sono proprietà di un DTO e non argomenti — le portano a UTC i convertitori di
+/// <c>UtcDateTimeJson</c> (#4519), con la stessa regola — e le collezioni di date. Un argomento che il filtro non sa
 /// normalizzare — un array, una proprietà senza setter — non viene ignorato in silenzio:
 /// <see cref="FindSites"/> lo riporta con <c>IsNormalized = false</c>, e il test d'inventario
 /// <c>QueryDateWithoutOffsetIntegrationTests</c> fallisce.
@@ -75,6 +78,15 @@ internal static class UtcDateTimeArguments
         DateTimeKind.Local => value.ToUniversalTime(),
         _ => value,
     };
+
+    /// <summary>
+    /// #4519 — la regola su un <see cref="DateTimeOffset"/>: un offset diverso da zero viene portato a
+    /// zero senza spostare l'istante. Npgsql rifiuta ogni altro offset su <c>timestamp with time
+    /// zone</c>. Senza offset il binding lo legge già a offset zero con lo stesso orologio, quindi la
+    /// regola di #4063 vale anche qui senza altro lavoro.
+    /// </summary>
+    internal static DateTimeOffset AsUtc(DateTimeOffset value) =>
+        value.Offset == TimeSpan.Zero ? value : value.ToUniversalTime();
 
     internal static EndpointFilterDelegate CreateFilter(
         EndpointFilterFactoryContext context,
@@ -193,9 +205,9 @@ internal sealed class DateTimeArgumentPlan
     {
         foreach (var index in _direct)
         {
-            if (arguments[index] is DateTime value && value.Kind != DateTimeKind.Utc)
+            if (Normalize(arguments[index]) is { } normalized)
             {
-                arguments[index] = UtcDateTimeArguments.AsUtc(value);
+                arguments[index] = normalized;
             }
         }
 
@@ -210,9 +222,9 @@ internal sealed class DateTimeArgumentPlan
             var changed = false;
             foreach (var property in properties)
             {
-                if (property.GetValue(surrogate) is DateTime value && value.Kind != DateTimeKind.Utc)
+                if (Normalize(property.GetValue(surrogate)) is { } normalized)
                 {
-                    property.SetValue(surrogate, UtcDateTimeArguments.AsUtc(value));
+                    property.SetValue(surrogate, normalized);
                     changed = true;
                 }
             }
@@ -226,7 +238,21 @@ internal sealed class DateTimeArgumentPlan
         }
     }
 
-    private static bool IsDateTime(Type type) => type == typeof(DateTime) || type == typeof(DateTime?);
+    /// <summary>Il valore normalizzato, o <c>null</c> se è già a posto (o non è una data).</summary>
+    private static object? Normalize(object? value) => value switch
+    {
+        DateTime dateTime when dateTime.Kind != DateTimeKind.Utc => UtcDateTimeArguments.AsUtc(dateTime),
+        DateTimeOffset offset when offset.Offset != TimeSpan.Zero => UtcDateTimeArguments.AsUtc(offset),
+        _ => null,
+    };
+
+    /// <summary>
+    /// I tipi che il filtro normalizza: <see cref="DateTime"/> (#4063) e <see cref="DateTimeOffset"/>
+    /// (#4519), con i loro nullable.
+    /// </summary>
+    private static bool IsDateTime(Type type) =>
+        type == typeof(DateTime) || type == typeof(DateTime?)
+        || type == typeof(DateTimeOffset) || type == typeof(DateTimeOffset?);
 
     private static bool IsDateTimeCollection(Type type) =>
         type.IsArray && type.GetElementType() is { } element && IsDateTime(element);

@@ -490,6 +490,12 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     // Serialize enums as strings (e.g., "UserRegistered" instead of 0)
     // Required for frontend schema validation (zod expects string enum values)
     options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+
+    // #4519: a date in a request body arrives in UTC — without an offset the written clock is UTC
+    // (the rule of #4063 for the query string), with an offset it is moved to UTC without shifting
+    // the instant. Otherwise Npgsql rejects it on timestamptz and the request answers 500. Writing is
+    // unchanged; the OpenAPI schema is kept identical by UtcDateTimeJson.ConfigureOpenApi.
+    Api.Infrastructure.Serialization.UtcDateTimeJson.AddConverters(options.SerializerOptions);
 });
 
 builder.Services.AddCors(options =>

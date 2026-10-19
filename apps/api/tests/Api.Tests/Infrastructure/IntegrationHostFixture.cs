@@ -92,6 +92,12 @@ public abstract class IntegrationHostFixture : IAsyncLifetime
         _databaseName = $"{databasePrefix}_{Guid.NewGuid():N}";
     }
 
+    /// <summary>
+    /// Chiavi di configurazione aggiuntive per l'host, oltre a quelle di default. Lo stesso aggancio di
+    /// <see cref="SharedHostPerTestDatabaseFixture"/>; passa a <c>IntegrationWebApplicationFactory.Create</c>.
+    /// </summary>
+    protected virtual Dictionary<string, string?>? ExtraConfiguration => null;
+
     // Il tempo speso qui NON viene attribuito da xUnit ad alcun test: nel .trx non esiste. Senza
     // strumentazione, convertire le classi farebbe uscire dalla misura il costo dominante del gate
     // (79% del tempo) lasciandolo sul runner — la stessa forma di difetto da cui nasce #3742.
@@ -132,7 +138,7 @@ public abstract class IntegrationHostFixture : IAsyncLifetime
             await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(connectionString);
             afterDb = Stopwatch.GetTimestamp();
 
-            Factory = IntegrationWebApplicationFactory.Create(connectionString);
+            Factory = IntegrationWebApplicationFactory.Create(connectionString, extraConfig: ExtraConfiguration);
 
             // `WithWebHostBuilder` e' PIGRO: l'host si costruisce al primo accesso a `.Services`.
             // Senza questa riga il tempo dell'host finirebbe nel campo `migrate=` e la

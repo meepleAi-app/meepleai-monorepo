@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using Api.BoundedContexts.KnowledgeBase.Application.Models;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.Models;
 using Api.Observability;
-using Api.SharedKernel.Domain.Enums;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using CitationDto = Api.Models.CitationDto;
@@ -135,8 +135,8 @@ internal sealed class GroundedAnswerService : IGroundedAnswerService
             CharStart: c.CopyrightTier == CopyrightTier.Full ? c.CharStart : null,
             CharEnd: c.CopyrightTier == CopyrightTier.Full ? c.CharEnd : null)).ToList();
 
-        // 4. Grounding from citation count (#3388) + confidence.
-        var grounding = citationDtos.Count > 0 ? GroundingStatus.Grounded : GroundingStatus.Ungrounded;
+        // 4. Grounding from citation count (#3388), never on a refusal (#4481) + confidence.
+        var grounding = AnswerGrounding.Of(finalText, citationDtos.Count);
         var confidence = RagPromptAssemblyService.ComputeConfidence(resolvedCitations.ToList(), finalText);
 
         return new GroundedAnswer(finalText, finalCitations, citationDtos, grounding, confidence, leakMatchCount);

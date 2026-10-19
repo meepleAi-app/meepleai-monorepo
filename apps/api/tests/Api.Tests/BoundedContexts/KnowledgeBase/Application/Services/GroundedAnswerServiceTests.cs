@@ -93,6 +93,21 @@ public sealed class GroundedAnswerServiceTests
     }
 
     [Fact]
+    public async Task Finalize_TheRefusal_WithCitations_IsUngrounded()
+    {
+        // #4481: la stessa regola della chat — una rinuncia non è ancorata, anche con le fonti.
+        var svc = BuildService();
+
+        var result = await svc.FinalizeAsync(
+            "Questa informazione non è disponibile nel regolamento fornito.",
+            new List<ChunkCitation> { Cite(CopyrightTier.Full) },
+            "Si può?", "it", CancellationToken.None);
+
+        result.GroundingStatus.Should().Be(GroundingStatus.Ungrounded);
+        result.CitationDtos.Should().ContainSingle("the sources found are still shown");
+    }
+
+    [Fact]
     public async Task Finalize_NoCitations_Ungrounded()
     {
         var svc = BuildService();

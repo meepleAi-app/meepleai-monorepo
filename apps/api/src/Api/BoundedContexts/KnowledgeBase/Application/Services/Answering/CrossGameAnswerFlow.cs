@@ -166,6 +166,9 @@ internal sealed class CrossGameAnswerFlow : ICrossGameAnswerFlow
 
         LlmUsage? usage = null;
         var tokenCount = 0;
+        // #3850: lo stesso prompt del profilo, quindi la stessa rinuncia in inglese: esce nella lingua
+        // della risposta, come nella chat su un gioco.
+        var answerText = new RefusalStreamLocalizer(language);
         await foreach (var chunk in _llmService.GenerateAnswerStreamAsync(answerRequest, cancellationToken).ConfigureAwait(false))
         {
             if (cancellationToken.IsCancellationRequested)
@@ -175,6 +178,8 @@ internal sealed class CrossGameAnswerFlow : ICrossGameAnswerFlow
 
             // Un rifiuto del gateway, nessun modello disponibile, o una risposta interrotta dopo il
             // primo token: il motivo, e niente Complete che la direbbe finita.
+            // #3850: ciò che il localizzatore tratteneva non esce. È sempre un inizio della frase
+            // inglese della rinuncia, quindi non c'è niente da recuperare.
             if (chunk.ErrorCode is not null)
             {
                 yield return CreateEvent(StreamingEventType.Error,
@@ -191,8 +196,18 @@ internal sealed class CrossGameAnswerFlow : ICrossGameAnswerFlow
             if (!string.IsNullOrEmpty(chunk.Content))
             {
                 tokenCount++;
-                yield return CreateEvent(StreamingEventType.Token, new StreamingToken(chunk.Content));
+                var visible = answerText.Push(chunk.Content);
+                if (visible.Length > 0)
+                {
+                    yield return CreateEvent(StreamingEventType.Token, new StreamingToken(visible));
+                }
             }
+        }
+
+        var heldBack = answerText.Complete();
+        if (heldBack.Length > 0)
+        {
+            yield return CreateEvent(StreamingEventType.Token, new StreamingToken(heldBack));
         }
 
         // La risposta è stata consegnata: si conta una volta, prima di Complete. Non una risposta
@@ -211,7 +226,7 @@ internal sealed class CrossGameAnswerFlow : ICrossGameAnswerFlow
                 confidence: null,
                 ProfileVersionId: profile.VersionId,
                 Language: language,
-                GroundingStatus: snippets.Count > 0 ? "Grounded" : "Ungrounded"));
+                GroundingStatus: AnswerGrounding.WireOf(answerText.Delivered, snippets.Count)));
 
         _logger.LogInformation(
             "[CrossGameAsk] Complete for user {UserId} with agent profile v{ProfileVersion}, language {Language}, tokens: {Tokens}",

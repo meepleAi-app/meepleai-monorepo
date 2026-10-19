@@ -519,6 +519,70 @@ public sealed class CrossGameStreamQaQueryHandlerTests
             Arg.Any<CancellationToken>());
     }
 
+    // ── #3850, #4481: la rinuncia del modello nella lingua della risposta ─────
+
+    [Fact]
+    public async Task ItalianQuestion_TheEnglishRefusal_ReachesTheUserInItalian_AndIsUngrounded()
+    {
+        SetupTwoAccessibleGames();
+        SetupSearchResults();
+        SetupLlmStream("This information is not available in the provided rulebook.");
+
+        var events = await CollectEventsAsync(
+            CreateSut(), new CrossGameStreamQaQuery("Si può?", UserId, UserRole.User, AgentLanguage: "it"));
+
+        var tokens = events.Where(e => e.Type == StreamingEventType.Token)
+            .Select(e => ((StreamingToken)e.Data!).token).ToList();
+        string.Concat(tokens).Trim().Should().Be("Questa informazione non è disponibile nel regolamento fornito.");
+        tokens.Should().NotContain(t => t.Contains("rulebook", StringComparison.OrdinalIgnoreCase));
+        var complete = (StreamingComplete)events.Single(e => e.Type == StreamingEventType.Complete).Data!;
+        complete.GroundingStatus.Should().Be("Ungrounded");
+    }
+
+    [Fact]
+    public async Task ItalianQuestion_AnAnswer_IsGrounded()
+    {
+        SetupTwoAccessibleGames();
+        SetupSearchResults();
+        SetupLlmStream("Sì, puoi [1].");
+
+        var events = await CollectEventsAsync(
+            CreateSut(), new CrossGameStreamQaQuery("Si può?", UserId, UserRole.User, AgentLanguage: "it"));
+
+        var complete = (StreamingComplete)events.Single(e => e.Type == StreamingEventType.Complete).Data!;
+        complete.GroundingStatus.Should().Be("Grounded");
+    }
+
+    [Fact]
+    public async Task AnInterruptedStream_DropsWhatWasHeld_WhichIsOnlyTheStartOfTheEnglishSentence()
+    {
+        // Review di #4494: il trattenuto non esce dopo AI_STREAM_INTERRUPTED; è solo l'inizio della frase.
+        SetupTwoAccessibleGames();
+        SetupSearchResults();
+        _llmService
+            .GenerateAnswerStreamAsync(Arg.Any<LlmAnswerRequest>(), Arg.Any<CancellationToken>())
+            .Returns(InterruptedInTheMiddleOfTheRefusal());
+
+        var events = await CollectEventsAsync(
+            CreateSut(), new CrossGameStreamQaQuery("Si può?", UserId, UserRole.User, AgentLanguage: "it"));
+
+        events.Where(e => e.Type == StreamingEventType.Token)
+            .Select(e => ((StreamingToken)e.Data!).token).Should().Equal("Sì [1]. ");
+        ((StreamingError)events.Single(e => e.Type == StreamingEventType.Error).Data!).errorCode
+            .Should().Be(LlmAnswerErrorCodes.StreamInterrupted);
+        events.Should().NotContain(e => e.Type == StreamingEventType.Complete);
+    }
+
+    private static async IAsyncEnumerable<StreamChunk> InterruptedInTheMiddleOfTheRefusal()
+    {
+        await Task.Yield();
+        yield return new StreamChunk("Sì [1]. ");
+        yield return new StreamChunk("This");
+        yield return new StreamChunk(" information");
+        yield return new StreamChunk(null, IsFinal: true,
+            ErrorCode: LlmAnswerErrorCodes.StreamInterrupted, ErrorMessage: "The answer was interrupted before it was complete.");
+    }
+
     // ── Private helpers ─────────────────────────────────────────────────────
 
     private void SetupTwoAccessibleGames() =>

@@ -79,6 +79,9 @@ public sealed class AdminPipelineHealthSendSerializationTests
         /// <summary>Called after each send has finished, with how many have finished so far.</summary>
         public Action<int>? AfterEachSend { get; init; }
 
+        /// <summary>A query this mediator fails, the way a send fails when the database is down.</summary>
+        public Type? FailOn { get; init; }
+
         public async Task<TResponse> Send<TResponse>(
             IRequest<TResponse> request, CancellationToken cancellationToken = default)
         {
@@ -103,6 +106,11 @@ public sealed class AdminPipelineHealthSendSerializationTests
             try
             {
                 await Task.Delay(Hold, cancellationToken).ConfigureAwait(false);
+                if (request.GetType() == FailOn)
+                {
+                    throw new InvalidOperationException($"{name} failed: the database is down");
+                }
+
                 return (TResponse)Respond(request);
             }
             finally
@@ -236,6 +244,55 @@ public sealed class AdminPipelineHealthSendSerializationTests
         mediator.Sends.Should().HaveCount(4);
         snapshot.EmbeddingMetrics.Should().Be(released,
             "the read that was still pending during the four sends is the one the snapshot carries");
+    }
+
+    /// <summary>
+    /// A reader that answers only when its token is cancelled — then it ends Canceled, as the real
+    /// reader does when its caller gives up.
+    /// </summary>
+    private sealed class NeverAnsweringMetricsReader : IEmbeddingServiceMetricsReader
+    {
+        public CancellationToken Token { get; private set; }
+
+        public Task<EmbeddingServiceMetricsDto>? Pending { get; private set; }
+
+        public Task<EmbeddingServiceMetricsDto> ReadAsync(CancellationToken cancellationToken)
+        {
+            Token = cancellationToken;
+            Pending = WaitForCancellationAsync(cancellationToken);
+            return Pending;
+        }
+
+        private static async Task<EmbeddingServiceMetricsDto> WaitForCancellationAsync(CancellationToken ct)
+        {
+            await Task.Delay(Timeout.Infinite, ct).ConfigureAwait(false);
+            return EmbeddingServiceMetricsDto.Unavailable;
+        }
+    }
+
+    /// <summary>
+    /// #4512 review: when one of the four sends fails — the database is down — the endpoint answers
+    /// 500 at once. The metrics read started before it must not outlive the request: left running,
+    /// it would keep the GET to <c>/metrics</c> open for up to its 5 s timeout and log a warning after
+    /// the 500 had gone out. The handler cancels it; the read ends Canceled, which is not an
+    /// unobserved exception.
+    /// </summary>
+    [Fact]
+    public async Task FailedSend_CancelsTheMetricsReadInsteadOfLeavingItRunning()
+    {
+        var mediator = new RecordingMediator { FailOn = typeof(GetPdfStorageHealthQuery) };
+        var reader = new NeverAnsweringMetricsReader();
+
+        var act = () => new GetPipelineHealthSnapshotQueryHandler(mediator, reader)
+            .Handle(new GetPipelineHealthSnapshotQuery(), TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*database is down*");
+        reader.Token.IsCancellationRequested.Should().BeTrue(
+            "the read must be cancelled when the handler gives up, not left to its own timeout");
+        var pending = reader.Pending!;
+        await FluentActions.Awaiting(() => pending.WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken))
+            .Should().ThrowAsync<OperationCanceledException>();
+        pending.IsCanceled.Should().BeTrue("a cancelled read ends Canceled, not Faulted");
     }
 
     /// <summary>

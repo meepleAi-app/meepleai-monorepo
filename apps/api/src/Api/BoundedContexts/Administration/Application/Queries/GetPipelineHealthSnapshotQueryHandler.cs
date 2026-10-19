@@ -67,21 +67,37 @@ internal sealed class GetPipelineHealthSnapshotQueryHandler
         // gets a context of its own — measured in HealthCheckScopePerCheckContractTests, and visible
         // in the log of the request that answered 500, where every health check completed normally.
         // Do not "fix" those three checks on the strength of this endpoint's 500.
-        var embeddingMetricsTask = _embeddingMetrics.ReadAsync(cancellationToken);
+        //
+        // #4512 review: the read has a token of its own. If a send fails first — the database is
+        // down — the handler cancels it on the way out instead of leaving the GET to /metrics open
+        // for up to its timeout, logging a warning after the 500 has gone. The reader propagates
+        // its caller's cancellation, so the read ends Canceled: no unobserved exception.
+        using var embeddingMetricsCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        var embeddingMetricsTask = _embeddingMetrics.ReadAsync(embeddingMetricsCts.Token);
 
-        var allHealth = await _mediator.Send(new GetServiceHealthStatusesQuery(), cancellationToken).ConfigureAwait(false);
-        var stepMetrics = await _mediator.Send(new GetStepDurationStatsQuery(), cancellationToken).ConfigureAwait(false);
-        var storageHealth = await _mediator.Send(new GetPdfStorageHealthQuery(), cancellationToken).ConfigureAwait(false);
-        var queueResult = await _mediator.Send(new GetProcessingQueueQuery(
-            StatusFilter: null,
-            SearchText: null,
-            FromDate: null,
-            ToDate: null,
-            Page: 1,
-            PageSize: 10), cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var allHealth = await _mediator.Send(new GetServiceHealthStatusesQuery(), cancellationToken).ConfigureAwait(false);
+            var stepMetrics = await _mediator.Send(new GetStepDurationStatsQuery(), cancellationToken).ConfigureAwait(false);
+            var storageHealth = await _mediator.Send(new GetPdfStorageHealthQuery(), cancellationToken).ConfigureAwait(false);
+            var queueResult = await _mediator.Send(new GetProcessingQueueQuery(
+                StatusFilter: null,
+                SearchText: null,
+                FromDate: null,
+                ToDate: null,
+                Page: 1,
+                PageSize: 10), cancellationToken).ConfigureAwait(false);
 
-        var embeddingMetrics = await embeddingMetricsTask.ConfigureAwait(false);
+            var embeddingMetrics = await embeddingMetricsTask.ConfigureAwait(false);
 
-        return new PipelineHealthSnapshot(allHealth, stepMetrics, storageHealth, queueResult, embeddingMetrics);
+            return new PipelineHealthSnapshot(allHealth, stepMetrics, storageHealth, queueResult, embeddingMetrics);
+        }
+        finally
+        {
+            if (!embeddingMetricsTask.IsCompleted)
+            {
+                await embeddingMetricsCts.CancelAsync().ConfigureAwait(false);
+            }
+        }
     }
 }

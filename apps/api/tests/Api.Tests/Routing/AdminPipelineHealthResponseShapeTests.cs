@@ -25,7 +25,8 @@ namespace Api.Tests.Routing;
 /// from the endpoint into <see cref="GetPipelineHealthSnapshotQueryHandler"/>; the endpoint now
 /// builds the answer from the snapshot. The web reads that answer as <c>PipelineHealthResponse</c>
 /// (<c>apps/web/src/lib/api/clients/admin/adminAiClient.ts</c>), so it must not change: the same
-/// inputs — four query results and one Prometheus body — must give the JSON <c>main-dev</c> gave.
+/// inputs — four query results and one Prometheus body, answered with 200 and with 503 — must give
+/// the JSON <c>main-dev</c> gave.
 /// The inputs reach every branch that shapes the answer: a degraded and a slow stage, a job of each
 /// status, a job without timestamps, and an average that rounds (1001 / 8 = 125.125 → 125.12).
 /// </summary>
@@ -55,7 +56,7 @@ public sealed class AdminPipelineHealthResponseShapeTests
     /// inputs below — captured by running the old endpoint, not written by hand. Only
     /// <c>checkedAt</c> is masked: it is the clock.
     /// </summary>
-    private const string Golden = """
+    private const string GoldenWithMetrics = """
         {
           "stages": [
             {
@@ -157,6 +158,112 @@ public sealed class AdminPipelineHealthResponseShapeTests
         }
         """;
 
+    /// <summary>
+    /// The same, captured the same way, when <c>/metrics</c> answers 503: the Embed stage reports
+    /// zeros. Only those three numbers differ from <see cref="GoldenWithMetrics"/>.
+    /// </summary>
+    private const string GoldenServiceDown = """
+        {
+          "stages": [
+            {
+              "name": "Ingest",
+              "status": "warning",
+              "metrics": {
+                "activeJobs": 1,
+                "queuedJobs": 1,
+                "failedJobs": 1
+              }
+            },
+            {
+              "name": "Extract",
+              "status": "warning",
+              "metrics": {
+                "avgDurationMs": "12500",
+                "p95Ms": "45000",
+                "sampleSize": 10
+              }
+            },
+            {
+              "name": "Chunk",
+              "status": "healthy",
+              "metrics": {
+                "avgDurationMs": "1250",
+                "p95Ms": "2500",
+                "sampleSize": 7
+              }
+            },
+            {
+              "name": "Embed",
+              "status": "warning",
+              "metrics": {
+                "serviceHealth": "Degraded",
+                "requestsTotal": 0,
+                "avgDurationMs": 0,
+                "failureRate": 0
+              }
+            },
+            {
+              "name": "Index",
+              "status": "healthy",
+              "metrics": {
+                "vectorCount": 42,
+                "isAvailable": true
+              }
+            },
+            {
+              "name": "Retrieve",
+              "status": "healthy",
+              "metrics": {
+                "vectorStoreHealth": "Healthy"
+              }
+            },
+            {
+              "name": "Generate",
+              "status": "healthy",
+              "metrics": {
+                "note": "LLM service via OpenRouter"
+              }
+            }
+          ],
+          "summary": {
+            "healthyCount": 4,
+            "warningCount": 3,
+            "errorCount": 0
+          },
+          "recentActivity": [
+            {
+              "jobId": "00000000-0000-0000-0000-000000000003",
+              "fileName": "rules-3.pdf",
+              "status": "Failed",
+              "completedAt": "2026-10-19T11:57:30\u002B00:00",
+              "durationMs": 30000
+            },
+            {
+              "jobId": "00000000-0000-0000-0000-000000000004",
+              "fileName": "rules-4.pdf",
+              "status": "Completed",
+              "completedAt": "2026-10-19T11:57:30\u002B00:00",
+              "durationMs": 90000
+            },
+            {
+              "jobId": "00000000-0000-0000-0000-000000000005",
+              "fileName": "rules-5.pdf",
+              "status": "Completed",
+              "completedAt": null,
+              "durationMs": null
+            }
+          ],
+          "distribution": {
+            "totalDocuments": 3,
+            "totalChunks": 42,
+            "vectorCount": 42,
+            "totalFiles": 3,
+            "storageSizeFormatted": "1 KB"
+          },
+          "checkedAt": "\u003CcheckedAt\u003E"
+        }
+        """;
+
     private static readonly JsonSerializerOptions ApiJson = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -164,15 +271,26 @@ public sealed class AdminPipelineHealthResponseShapeTests
     };
 
     [Fact]
-    public async Task ResponseShape_IsTheOneMainDevAnswered()
+    public Task ResponseShape_IsTheOneMainDevAnswered() =>
+        AssertAnswersAsync(HttpStatusCode.OK, GoldenWithMetrics);
+
+    /// <summary>
+    /// #4512 review: the web reads this answer only through a TypeScript type, with no schema, so a
+    /// change in what the service-down case answers would reach the page unnoticed.
+    /// </summary>
+    [Fact]
+    public Task ResponseShape_WhenTheEmbeddingServiceAnswersAnError_IsTheOneMainDevAnswered() =>
+        AssertAnswersAsync(HttpStatusCode.ServiceUnavailable, GoldenServiceDown);
+
+    private static async Task AssertAnswersAsync(HttpStatusCode metricsStatus, string golden)
     {
         var result = await AdminPipelineEndpoints.GetPipelineHealth(
-            new CannedMediator(),
+            new CannedMediator(metricsStatus),
             TestContext.Current.CancellationToken);
 
         // Line by line: FluentAssertions cannot render the mismatch of two long JSON strings.
         Normalize(result).Split('\n').Should().Equal(
-            JsonNode.Parse(Golden)!.ToJsonString(Indented).Split('\n'),
+            JsonNode.Parse(golden)!.ToJsonString(Indented).Split('\n'),
             "the endpoint now sends one query instead of four, and the JSON it answers must not change");
     }
 
@@ -208,14 +326,14 @@ public sealed class AdminPipelineHealthResponseShapeTests
     /// its four sends and the real reader over a Prometheus body — and the four sends with the
     /// canned results.
     /// </summary>
-    private sealed class CannedMediator : IMediator
+    private sealed class CannedMediator(HttpStatusCode metricsStatus = HttpStatusCode.OK) : IMediator
     {
         public async Task<TResponse> Send<TResponse>(IRequest<TResponse> request, CancellationToken cancellationToken = default)
         {
             if (request is GetPipelineHealthSnapshotQuery snapshotQuery)
             {
                 var reader = new EmbeddingServiceMetricsReader(
-                    new PrometheusFactory(), TimeProvider.System, NullLogger<EmbeddingServiceMetricsReader>.Instance);
+                    new PrometheusFactory(metricsStatus), TimeProvider.System, NullLogger<EmbeddingServiceMetricsReader>.Instance);
                 object snapshot = await new GetPipelineHealthSnapshotQueryHandler(this, reader)
                     .Handle(snapshotQuery, cancellationToken)
                     .ConfigureAwait(false);
@@ -278,16 +396,20 @@ public sealed class AdminPipelineHealthResponseShapeTests
             => throw new NotSupportedException();
     }
 
-    private sealed class PrometheusFactory : IHttpClientFactory
+    /// <summary>
+    /// The embedding service's <c>/metrics</c>: the Prometheus body, with the given status. With an
+    /// error status the body is the same, so only the status can be what turns the metrics to zeros.
+    /// </summary>
+    private sealed class PrometheusFactory(HttpStatusCode status) : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) =>
-            new(new Answer()) { BaseAddress = new Uri("http://embedding-service:8000") };
+            new(new Answer(status)) { BaseAddress = new Uri("http://embedding-service:8000") };
 
-        private sealed class Answer : HttpMessageHandler
+        private sealed class Answer(HttpStatusCode status) : HttpMessageHandler
         {
             protected override Task<HttpResponseMessage> SendAsync(
                 HttpRequestMessage request, CancellationToken cancellationToken)
-                => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                => Task.FromResult(new HttpResponseMessage(status)
                 {
                     Content = new StringContent(MetricsBody),
                 });

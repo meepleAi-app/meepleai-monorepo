@@ -81,38 +81,54 @@ dotnet test --filter "FullyQualifiedName~HttpBehaviorTests"
 dotnet test --filter "FullyQualifiedName~FrontendSdk" --logger "console;verbosity=detailed"
 ```
 
+### In CI
+
+Sono `Category=Integration` e girano negli shard di `dev-async.yml` e `ci.yml` come gli altri
+(#4518): `AuthenticationFlowTests` nello shard `KnowledgeBase` (il filtro è per nome), le altre
+classi in `Core`. Con `TEST_POSTGRES_CONNSTRING` impostata la factory non avvia un container: crea
+un database proprio (`frontend_sdk_<guid>`) su quel server e lo cancella alla fine, senza toccare il
+database condiviso.
+
+Due cose da sapere se scrivi un test qui:
+
+- il client va creato con `BaseAddress = FrontendSdkTestFactory.HttpsBaseAddress`, perché il cookie
+  di sessione è `secure` e su `http://` non torna indietro: il login riesce, la richiesta dopo è 401;
+- l'isolamento fra test lo dà `await _factory.ResetDatabaseAsync()` in `InitializeAsync`.
+
 ## Test Patterns
 
 ### Basic Test Structure
 
 ```csharp
 [Collection(nameof(FrontendSdkTestCollection))]
+[Trait("Category", TestCategories.Integration)]
 public class YourTests : IAsyncLifetime
 {
     private readonly FrontendSdkTestFactory _factory;
     private HttpClient _client = null!;
-    private MeepleAiDbContext _dbContext = null!;
 
     public YourTests(FrontendSdkTestFactory factory)
     {
         _factory = factory;
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
-        _client = _factory.CreateClient();
-        _dbContext = _factory.Services.CreateScope()
-            .ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        _client = _factory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = FrontendSdkTestFactory.HttpsBaseAddress, // cookie di sessione `secure`
+            AllowAutoRedirect = false,
+            HandleCookies = true
+        });
 
         // Reset database for test isolation
-        await ResetDatabaseAsync();
+        await _factory.ResetDatabaseAsync();
     }
 
-    public Task DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _client?.Dispose();
-        _dbContext?.Dispose();
-        return Task.CompletedTask;
+        return ValueTask.CompletedTask;
     }
 
     [Fact]

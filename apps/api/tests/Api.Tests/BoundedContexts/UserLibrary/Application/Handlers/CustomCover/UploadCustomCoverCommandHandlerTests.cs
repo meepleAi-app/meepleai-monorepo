@@ -1,4 +1,5 @@
 using Api.BoundedContexts.UserLibrary.Application.Commands.CustomCover;
+using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Middleware.Exceptions;
@@ -6,6 +7,7 @@ using Api.Services.Pdf;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -23,6 +25,7 @@ public sealed class UploadCustomCoverCommandHandlerTests
     private readonly Mock<IUserLibraryRepository> _mockLibraryRepo = new();
     private readonly Mock<IBlobStorageService> _mockBlobStorage = new();
     private readonly Mock<IUnitOfWork> _mockUnitOfWork = new();
+    private readonly Mock<HybridCache> _mockCache = new();
     private readonly Mock<ILogger<UploadCustomCoverCommandHandler>> _mockLogger = new();
     private readonly UploadCustomCoverCommandHandler _handler;
 
@@ -32,6 +35,7 @@ public sealed class UploadCustomCoverCommandHandlerTests
             _mockLibraryRepo.Object,
             _mockBlobStorage.Object,
             _mockUnitOfWork.Object,
+            _mockCache.Object,
             _mockLogger.Object);
     }
 
@@ -118,11 +122,13 @@ public sealed class UploadCustomCoverCommandHandlerTests
     }
 
     // -------------------------------------------------------
-    // T2-3: replace flow — raw-key delete of the old cover before the raw-key write.
+    // T2-3 (#4499): replace flow. The key is deterministic, so the old cover and the new one
+    // are the SAME object: the write overwrites it. Deleting it first lost the old cover
+    // whenever the write then failed, while the DB still pointed at it.
     // -------------------------------------------------------
 
     [Fact]
-    public async Task Handle_ReplaceExistingCover_DeletesOldBeforeUploadingNew()
+    public async Task Handle_ReplaceExistingCover_SameKey_OverwritesWithoutDeleting()
     {
         // Arrange
         var userId = Guid.NewGuid();
@@ -139,10 +145,6 @@ public sealed class UploadCustomCoverCommandHandlerTests
             .ReturnsAsync(entry);
 
         _mockBlobStorage
-            .Setup(b => b.DeleteRawKeyAsync(physicalKey, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
-        _mockBlobStorage
             .Setup(b => b.StoreRawKeyAsync(physicalKey, It.IsAny<Stream>(), "image/webp", It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
@@ -155,12 +157,101 @@ public sealed class UploadCustomCoverCommandHandlerTests
         // Act
         await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-        // Assert: delete before store (both via the raw-key path; ordering guaranteed by sequential await)
-        _mockBlobStorage.Verify(
-            b => b.DeleteRawKeyAsync(physicalKey, It.IsAny<CancellationToken>()),
-            Times.Once);
+        // Assert: one write over the same object, no delete
         _mockBlobStorage.Verify(
             b => b.StoreRawKeyAsync(physicalKey, It.IsAny<Stream>(), "image/webp", It.IsAny<CancellationToken>()),
+            Times.Once);
+        _mockBlobStorage.Verify(
+            b => b.DeleteRawKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ReplaceExistingCover_SameKey_WriteFails_KeepsTheOldCover()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var entry = CreateEntry(userId, gameId);
+        var key = $"user-covers/{userId}/{gameId}/cover";
+        entry.SetCustomCoverR2Key(key);
+
+        _mockLibraryRepo
+            .Setup(r => r.GetByUserAndGameAsync(userId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entry);
+
+        _mockBlobStorage
+            .Setup(b => b.StoreRawKeyAsync(It.IsAny<string>(), It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+
+        // Act
+        var act = () => _handler.Handle(CreateCommand(userId, gameId), TestContext.Current.CancellationToken);
+
+        // Assert
+        await act.Should().ThrowAsync<ExternalServiceException>();
+        _mockBlobStorage.Verify(
+            b => b.DeleteRawKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "the old cover is the object the DB still points at: deleting it before a failed write loses it");
+        entry.CustomCoverR2Key.Should().Be(key);
+    }
+
+    [Fact]
+    public async Task Handle_ReplaceCoverStoredUnderAnotherKey_DeletesTheOldOneOnlyAfterTheWrite()
+    {
+        // Arrange: a key in a format other than the current CoverKeyBuilder.ForUser one.
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var entry = CreateEntry(userId, gameId);
+        const string legacyKey = "user-covers/legacy-layout/cover";
+        entry.SetCustomCoverR2Key(legacyKey);
+
+        _mockLibraryRepo
+            .Setup(r => r.GetByUserAndGameAsync(userId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entry);
+
+        var calls = new List<string>();
+        _mockBlobStorage
+            .Setup(b => b.StoreRawKeyAsync(It.IsAny<string>(), It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback((string k, Stream _, string _, CancellationToken _) => calls.Add($"store {k}"))
+            .ReturnsAsync(true);
+        _mockBlobStorage
+            .Setup(b => b.DeleteRawKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback((string k, CancellationToken _) => calls.Add($"delete {k}"))
+            .ReturnsAsync(true);
+
+        // Act
+        await _handler.Handle(CreateCommand(userId, gameId), TestContext.Current.CancellationToken);
+
+        // Assert
+        calls.Should().Equal(
+            $"store user-covers/{userId}/{gameId}/cover.webp",
+            $"delete {legacyKey}.webp");
+        entry.CustomCoverR2Key.Should().Be($"user-covers/{userId}/{gameId}/cover");
+    }
+
+    [Fact]
+    public async Task Handle_HappyPath_EvictsTheCachedGameDetail()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var entry = CreateEntry(userId, gameId);
+
+        _mockLibraryRepo
+            .Setup(r => r.GetByUserAndGameAsync(userId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entry);
+        _mockBlobStorage
+            .Setup(b => b.StoreRawKeyAsync(It.IsAny<string>(), It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // Act
+        await _handler.Handle(CreateCommand(userId, gameId), TestContext.Current.CancellationToken);
+
+        // Assert: the detail (GET /library/games/{gameId}) is cached for 5 minutes; without the
+        // eviction it keeps answering with the key it had before the upload.
+        _mockCache.Verify(
+            c => c.RemoveAsync(GetGameDetailQueryHandler.BuildCacheKey(userId, gameId), It.IsAny<CancellationToken>()),
             Times.Once);
     }
 

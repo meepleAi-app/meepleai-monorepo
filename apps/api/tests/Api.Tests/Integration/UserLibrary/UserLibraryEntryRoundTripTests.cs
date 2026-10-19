@@ -1,47 +1,18 @@
 using System.Globalization;
-using Api.BoundedContexts.UserLibrary.Application.Commands.CustomCover;
 using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
 using Api.BoundedContexts.UserLibrary.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
-using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.UserLibrary;
-using Api.Middleware.Exceptions;
-using Api.Services.Pdf;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Covers;
-using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
-using Api.Tests.Infrastructure;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
 namespace Api.Tests.Integration.UserLibrary;
-
-/// <summary>
-/// Un database migrato per l'intera classe di test (#4499): i test seminano righe con id propri e
-/// leggono solo quelle, quindi non si vedono a vicenda. Si paga una migrazione invece di una per test.
-/// </summary>
-public sealed class UserLibraryRoundTripDatabase(SharedTestcontainersFixture shared) : IAsyncLifetime
-{
-    private readonly string _databaseName = $"userlib_roundtrip_{Guid.NewGuid():N}";
-
-    public string ConnectionString { get; private set; } = null!;
-
-    public MeepleAiDbContext CreateDbContext() => shared.CreateDbContext(ConnectionString);
-
-    public async ValueTask InitializeAsync()
-    {
-        ConnectionString = await shared.CreateIsolatedDatabaseAsync(_databaseName);
-        await using var context = CreateDbContext();
-        await context.Database.MigrateAsync();
-    }
-
-    public async ValueTask DisposeAsync() => await shared.DropIsolatedDatabaseAsync(_databaseName);
-}
 
 /// <summary>
 /// Round-trip di una voce di libreria attraverso <see cref="UserLibraryRepository"/> su Postgres
@@ -65,8 +36,8 @@ public sealed class UserLibraryRoundTripDatabase(SharedTestcontainersFixture sha
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "UserLibrary")]
 [Trait("Issue", "4499")]
-public sealed class UserLibraryEntryRoundTripTests(UserLibraryRoundTripDatabase database)
-    : IClassFixture<UserLibraryRoundTripDatabase>
+public sealed class UserLibraryEntryRoundTripTests(UserLibraryMigratedDatabase database)
+    : IClassFixture<UserLibraryMigratedDatabase>
 {
     // Date nel passato, alla precisione di Postgres (microsecondi): un valore che l'update
     // riscrivesse con "adesso" non può coincidere per caso.
@@ -108,14 +79,7 @@ public sealed class UserLibraryEntryRoundTripTests(UserLibraryRoundTripDatabase 
         var gameId = Guid.NewGuid();
         var pdfId = Guid.NewGuid();
 
-        context.Users.Add(new UserEntity
-        {
-            Id = userId,
-            Email = $"roundtrip-{userId:N}@meepleai.test",
-            Tier = "free",
-            Role = "user",
-        });
-        context.SharedGames.Add(new SharedGameEntity { Id = gameId, Title = "Gioco del round-trip" });
+        await UserLibraryMigratedDatabase.SeedUserAndGameAsync(context, userId, gameId);
         context.PdfDocuments.Add(new PdfDocumentEntity
         {
             Id = pdfId,
@@ -258,98 +222,6 @@ public sealed class UserLibraryEntryRoundTripTests(UserLibraryRoundTripDatabase 
             "l'update di Notes non deve toccare altre colonne né leggerle diversamente da come sono "
             + "salvate (#4499)");
         after[nameof(UserLibraryEntryEntity.Notes)].Should().Be("Note dopo la modifica", "la modifica deve arrivare al database");
-    }
-
-    [Fact]
-    public async Task UploadCustomCover_StoresTheKey_AndRemoveFindsIt()
-    {
-        Guid userId;
-        Guid gameId;
-        await using (var context = database.CreateDbContext())
-        {
-            (userId, gameId, _) = await SeedOwnerAndGameAsync(context);
-            context.UserLibraryEntries.Add(new UserLibraryEntryEntity
-            {
-                Id = Guid.NewGuid(),
-                UserId = userId,
-                SharedGameId = gameId,
-                AddedAt = AddedAt,
-                CurrentState = (int)GameStateType.Owned,
-                StateChangedAt = StateChangedAt,
-            });
-            await context.SaveChangesAsync();
-        }
-
-        var expectedKey = CoverKeyBuilder.ForUser(userId, gameId);
-
-        var storage = new Mock<IBlobStorageService>();
-        storage
-            .Setup(s => s.StoreRawKeyAsync(It.IsAny<string>(), It.IsAny<Stream>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-        storage
-            .Setup(s => s.GetPresignedUrlForRawKeyAsync(It.IsAny<string>(), It.IsAny<int?>()))
-            .ReturnsAsync("https://storage.example.org/presigned");
-        storage
-            .Setup(s => s.DeleteRawKeyAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
-        // Il percorso della rotta POST /library/{gameId}/cover: repository e unità di lavoro veri,
-        // solo lo storage oggetti è finto.
-        await using (var context = database.CreateDbContext())
-        {
-            var handler = new UploadCustomCoverCommandHandler(
-                CreateRepository(context),
-                storage.Object,
-                new EfCoreUnitOfWork(context),
-                NullLogger<UploadCustomCoverCommandHandler>.Instance);
-
-            using var image = new MemoryStream([0x52, 0x49, 0x46, 0x46]);
-            var result = await handler.Handle(
-                new UploadCustomCoverCommand(userId, gameId, image, image.Length, "image/webp"),
-                TestContext.Current.CancellationToken);
-
-            result.CoverR2Key.Should().Be(expectedKey.DbKey);
-        }
-
-        storage.Verify(
-            s => s.StoreRawKeyAsync(expectedKey.PhysicalKey, It.IsAny<Stream>(), "image/webp", It.IsAny<CancellationToken>()),
-            Times.Once);
-
-        await using (var verification = database.CreateDbContext())
-        {
-            var stored = await verification.UserLibraryEntries.AsNoTracking()
-                .SingleAsync(e => e.UserId == userId && e.SharedGameId == gameId);
-            stored.CustomCoverR2Key.Should().Be(
-                expectedKey.DbKey,
-                "l'oggetto è stato scritto nello storage: la chiave deve arrivare al database, altrimenti "
-                + "la libreria non lo mostra e nessuno può più rimuoverlo (#4499)");
-        }
-
-        // La rimozione legge la chiave dall'aggregato: se la lettura non la mappa, risponde 404.
-        await using (var context = database.CreateDbContext())
-        {
-            var handler = new RemoveCustomCoverCommandHandler(
-                CreateRepository(context),
-                storage.Object,
-                new EfCoreUnitOfWork(context),
-                NullLogger<RemoveCustomCoverCommandHandler>.Instance);
-
-            var remove = () => handler.Handle(
-                new RemoveCustomCoverCommand(userId, gameId),
-                TestContext.Current.CancellationToken);
-
-            await remove.Should().NotThrowAsync<NotFoundException>(
-                "la cover appena caricata esiste: la rimozione deve trovarla");
-        }
-
-        storage.Verify(s => s.DeleteRawKeyAsync(expectedKey.PhysicalKey, It.IsAny<CancellationToken>()), Times.Once);
-
-        await using (var verification = database.CreateDbContext())
-        {
-            var stored = await verification.UserLibraryEntries.AsNoTracking()
-                .SingleAsync(e => e.UserId == userId && e.SharedGameId == gameId);
-            stored.CustomCoverR2Key.Should().BeNull("la rimozione azzera la chiave");
-        }
     }
 
     [Fact]

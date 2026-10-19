@@ -164,6 +164,16 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             .ConfigureAwait(false);
     }
 
+    public async Task<bool> IsCustomCoverKeyInUseAsync(string customCoverR2Key, CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(customCoverR2Key);
+
+        return await DbContext.UserLibraryEntries
+            .AsNoTracking()
+            .AnyAsync(e => e.CustomCoverR2Key == customCoverR2Key, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task<(DateTime? Oldest, DateTime? Newest)> GetLibraryDateRangeAsync(
         Guid userId,
         CancellationToken cancellationToken = default)
@@ -477,7 +487,9 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         }
 
         // #4499: senza questa riga l'aggregato non conosceva la cover personalizzata — la
-        // rimozione rispondeva 404 e il dettaglio del gioco non la vedeva.
+        // rimozione rispondeva 404 e il campo customCoverR2Key del dettaglio era sempre null.
+        // Questa riga dà all'aggregato la chiave salvata; che il dettaglio la mostri subito
+        // dipende anche dalla sua cache, che gli handler della cover invalidano.
         entry.SetCustomCoverR2Key(entity.CustomCoverR2Key);
 
         // #4499: colonna che il dominio trasporta e basta (vedi UserLibraryEntry.TestRunId).

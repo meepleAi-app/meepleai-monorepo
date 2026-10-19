@@ -74,6 +74,15 @@ internal interface IUserLibraryRepository : IRepository<UserLibraryEntry, Guid>
     Task<bool> IsGameInLibraryAsync(Guid userId, Guid gameId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Whether any library entry still references this custom cover key (#4499).
+    /// The key is deterministic per user and game, so a game removed and added again
+    /// gets the same key: the deferred blob cleanup asks this before deleting.
+    /// </summary>
+    /// <param name="customCoverR2Key">The suffix-free DB key of the custom cover</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    Task<bool> IsCustomCoverKeyInUseAsync(string customCoverR2Key, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets the oldest and newest added dates for a user's library.
     /// </summary>
     /// <param name="userId">The user ID</param>

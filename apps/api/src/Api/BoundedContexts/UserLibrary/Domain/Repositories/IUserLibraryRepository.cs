@@ -8,6 +8,28 @@ namespace Api.BoundedContexts.UserLibrary.Domain.Repositories;
 /// Repository interface for UserLibraryEntry aggregate.
 /// Extends IRepository with library-specific queries.
 /// </summary>
+/// <remarks>
+/// <para>
+/// Child collections and the read they need (#4505). <c>UpdateAsync</c> saves the children against
+/// what the read loaded: a new child is inserted, a child that was read is updated only where it
+/// changed, a child that was read and removed is deleted. The rows of a collection the read did not
+/// load are left untouched, so a collection that was not read is empty in the aggregate, not in the
+/// database. <c>UpdateAsync</c> refuses an aggregate with children that no read produced.
+/// </para>
+/// <list type="bullet">
+/// <item><c>AddLabel</c>, <c>RemoveLabel</c>, <c>ClearLabels</c>: <see cref="GetByUserAndGameAsync"/> or
+/// <see cref="GetUserGameWithStatsAsync"/>. Both load the assigned labels, which the duplicate check and
+/// the removal need.</item>
+/// <item><c>RecordGameSession</c>: any read. The new session is added, and the statistics are updated
+/// from the stored row, not from the sessions.</item>
+/// <item><c>RemoveGameSession</c> and changes to a session: <see cref="GetUserGameWithStatsAsync"/>.
+/// Removal recomputes the statistics from the loaded sessions, and a session that was not read
+/// cannot be found.</item>
+/// <item><c>AddChecklistItem</c>, <c>RemoveChecklistItem</c>, <c>ResetChecklist</c> and changes to an
+/// item: <see cref="GetUserGameWithStatsAsync"/>. Order and reordering are computed on the loaded
+/// items: from a read without the checklist, <c>AddChecklistItem</c> would start again from 0.</item>
+/// </list>
+/// </remarks>
 internal interface IUserLibraryRepository : IRepository<UserLibraryEntry, Guid>
 {
     /// <summary>

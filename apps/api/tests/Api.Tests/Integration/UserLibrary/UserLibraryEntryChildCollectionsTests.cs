@@ -178,6 +178,7 @@ public sealed class UserLibraryEntryChildCollectionsTests(UserLibraryMigratedDat
         {
             Loader.WithStats => await repository.GetUserGameWithStatsAsync(seeded.UserId, seeded.GameId),
             Loader.ByUserAndGame => await repository.GetByUserAndGameAsync(seeded.UserId, seeded.GameId),
+            Loader.ById => await repository.GetByIdAsync(seeded.EntryId),
             _ => throw new ArgumentOutOfRangeException(nameof(loader)),
         };
         aggregate.Should().NotBeNull();
@@ -194,6 +195,9 @@ public sealed class UserLibraryEntryChildCollectionsTests(UserLibraryMigratedDat
 
         /// <summary><c>GetByUserAndGameAsync</c>: le sole etichette (è la lettura degli handler).</summary>
         ByUserAndGame,
+
+        /// <summary><c>GetByIdAsync</c>: nessun figlio.</summary>
+        ById,
     }
 
     private static string Lines(IEnumerable<string> problems) => string.Join(Environment.NewLine, problems);
@@ -203,6 +207,7 @@ public sealed class UserLibraryEntryChildCollectionsTests(UserLibraryMigratedDat
     [Theory]
     [InlineData(Loader.WithStats)]
     [InlineData(Loader.ByUserAndGame)]
+    [InlineData(Loader.ById)]
     public async Task UpdateOfTheRootOnly_LeavesEveryChildRowAsStored(Loader loader)
     {
         var seeded = await SeedAsync();
@@ -233,6 +238,7 @@ public sealed class UserLibraryEntryChildCollectionsTests(UserLibraryMigratedDat
     [Theory]
     [InlineData(Loader.WithStats)]
     [InlineData(Loader.ByUserAndGame)]
+    [InlineData(Loader.ById)]
     public async Task NewSession_IsInserted(Loader loader)
     {
         var seeded = await SeedAsync();
@@ -386,6 +392,7 @@ public sealed class UserLibraryEntryChildCollectionsTests(UserLibraryMigratedDat
     [Theory]
     [InlineData(Loader.WithStats)]
     [InlineData(Loader.ByUserAndGame)]
+    [InlineData(Loader.ById)]
     public async Task NewLabel_IsInserted(Loader loader)
     {
         var seeded = await SeedAsync();
@@ -412,6 +419,69 @@ public sealed class UserLibraryEntryChildCollectionsTests(UserLibraryMigratedDat
         var after = await ReadChildrenAsync(seeded.EntryId);
         after.Labels.Values.Select(l => l[nameof(UserGameLabelEntity.LabelId)])
             .Should().BeEquivalentTo([seeded.SecondLabelId]);
+    }
+
+    // ─── Un aggregato che nessuna lettura ha prodotto ──────────────────────────────────────
+
+    /// <summary>
+    /// Il repository sa quali figli esistono solo per gli aggregati che ha letto. Uno costruito a
+    /// mano, con figli, non dice quali siano già salvati: trattarli tutti come nuovi darebbe
+    /// INSERT di righe che magari esistono. Meglio fermarsi subito, con un messaggio che dice perché.
+    /// </summary>
+    [Fact]
+    public async Task UpdateOfAnAggregateNoReadProduced_WithChildren_IsRefused()
+    {
+        var seeded = await SeedAsync();
+
+        await using var context = database.CreateDbContext();
+        var repository = CreateRepository(context);
+        var handmade = new UserLibraryEntry(seeded.EntryId, seeded.UserId, seeded.GameId);
+        handmade.AddLabel(seeded.FirstLabelId); // già assegnata nel database
+
+        var update = () => repository.UpdateAsync(handmade);
+
+        await update.Should().ThrowAsync<InvalidOperationException>().WithMessage("*#4505*");
+    }
+
+    // ─── Un figlio che il contesto traccia già ─────────────────────────────────────────────
+
+    /// <summary>
+    /// Il contesto traccia già le assegnazioni, senza la loro radice (qui una lettura tracciata
+    /// delle righe nella stessa richiesta). <c>UpdateAsync</c> deve riusare l'istanza tracciata:
+    /// attaccarne una seconda copia con la stessa chiave fallirebbe con «already being tracked».
+    /// Sulla rotta PATCH questo caso non si presenta, perché staccare la copia salvata della radice
+    /// stacca anche i suoi figli: lì lo guarda
+    /// <c>UserLibraryEntrySameContextUpdateTests.SecondUpdate_InSameContext_AfterSave_PersistsBothWrites</c>.
+    /// </summary>
+    [Fact]
+    public async Task ChildAlreadyTrackedWithoutItsRoot_IsReused()
+    {
+        var seeded = await SeedAsync();
+        var before = await ReadChildrenAsync(seeded.EntryId);
+
+        await using (var context = database.CreateDbContext())
+        {
+            var tracked = await context.UserGameLabels.AsTracking()
+                .Where(l => l.UserLibraryEntryId == seeded.EntryId)
+                .ToListAsync();
+            tracked.Should().HaveCount(2);
+
+            var repository = CreateRepository(context);
+            var aggregate = await repository.GetByUserAndGameAsync(seeded.UserId, seeded.GameId);
+            aggregate!.RemoveLabel(seeded.SecondLabelId);
+
+            var write = async () =>
+            {
+                await repository.UpdateAsync(aggregate);
+                await context.SaveChangesAsync();
+            };
+            await write.Should().NotThrowAsync("un figlio già tracciato si riusa, non si attacca due volte");
+        }
+
+        var after = await ReadChildrenAsync(seeded.EntryId);
+        after.Labels.Values.Select(l => l[nameof(UserGameLabelEntity.LabelId)]).Should().BeEquivalentTo([seeded.FirstLabelId]);
+        Lines(Differences(before.Labels.Where(l => after.Labels.ContainsKey(l.Key)).ToDictionary(l => l.Key, l => l.Value), after.Labels))
+            .Should().BeEmpty("l'assegnazione rimasta resta com'era");
     }
 
     // ─── Rimozione della voce ──────────────────────────────────────────────────────────────

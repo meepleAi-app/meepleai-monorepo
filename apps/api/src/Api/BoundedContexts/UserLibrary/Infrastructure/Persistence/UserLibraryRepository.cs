@@ -352,7 +352,22 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         DetachSavedCopy(entity.Id);
         DbContext.UserLibraryEntries.Update(entity);
 
-        var read = ChildrenReadBy.TryGetValue(entry, out var stored) ? stored : StoredChildren.NothingRead;
+        if (!ChildrenReadBy.TryGetValue(entry, out var read))
+        {
+            // Ogni lettura di questo repository registra l'aggregato che produce: uno che manca non
+            // viene da una lettura. Con dei figli non si può sapere quali siano già salvati, e
+            // trattarli tutti come nuovi darebbe INSERT di righe che magari esistono.
+            if (sessions.Count + checklist.Count + labels.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Issue #4505: library entry {entry.Id} was not produced by a read of this repository "
+                    + "and carries child rows, so their saved state is unknown. Read it with "
+                    + "GetByUserAndGameAsync or GetUserGameWithStatsAsync before updating it.");
+            }
+
+            read = StoredChildren.NothingRead;
+        }
+
         ReconcileChildren(sessions, read.Sessions, s => s.Id, SessionColumnsOutsideTheDomain);
         ReconcileChildren(checklist, read.Checklist, c => c.Id, []);
         ReconcileChildren(labels, read.Labels, l => l.Id, []);
@@ -401,6 +416,10 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
     /// un aggregato letto da un'istanza e salvato da un'altra resta corretto. Tiene gli aggregati
     /// per riferimento debole: la voce sparisce con l'aggregato.
     /// </para>
+    /// <para>
+    /// Ogni lettura registra l'aggregato che produce, anche senza figli. Uno che manca non viene da
+    /// una lettura: se porta figli, <see cref="UpdateAsync"/> si ferma con un'eccezione.
+    /// </para>
     /// </remarks>
     private static readonly ConditionalWeakTable<UserLibraryEntry, StoredChildren> ChildrenReadBy = new();
 
@@ -416,9 +435,14 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
     /// <remarks>
     /// Un figlio che la lettura non aveva è nato nel dominio: <c>Added</c>. Uno letto e ancora
     /// presente parte dai valori letti e riceve quelli del dominio, così EF scrive solo le colonne
-    /// cambiate — nessuna, nessun UPDATE. Uno letto e tolto dal dominio è <c>Deleted</c>. I figli
-    /// non hanno un token di concorrenza: le scritture concorrenti sulla stessa voce le serializza
-    /// lo <c>xmin</c> della radice, che <see cref="UpdateAsync"/> aggiorna sempre.
+    /// cambiate — nessuna, nessun UPDATE. Uno letto e tolto dal dominio è <c>Deleted</c>.
+    /// <para>
+    /// I figli non hanno un token di concorrenza. Una scrittura da una lettura superata fallisce
+    /// comunque per intero, perché l'UPDATE della radice controlla <c>xmin</c> nella stessa
+    /// transazione. Ma non sempre per quel motivo: EF inserisce i figli prima di aggiornare la
+    /// radice, quindi un'etichetta assegnata due volte in concorrenza colpisce prima l'indice unico
+    /// (23505). <c>AddLabelToGameCommandHandler</c> lo traduce in 409.
+    /// </para>
     /// </remarks>
     private void ReconcileChildren<TChild>(
         IReadOnlyList<TChild> current,
@@ -465,9 +489,14 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
 
     /// <summary>
     /// La riga figlia nel change tracker, con i valori letti come originali. Se il contesto la
-    /// traccia già, da una scrittura precedente nella stessa richiesta (#4253), usa quella:
-    /// attaccarne una seconda con la stessa chiave fallirebbe.
+    /// traccia già usa quella: attaccarne una seconda con la stessa chiave fallirebbe.
     /// </summary>
+    /// <remarks>
+    /// Sulla rotta PATCH con <c>newState</c> (#4253) non succede: <see cref="DetachSavedCopy"/>
+    /// stacca la copia salvata della radice, ed EF stacca con lei i figli che traccia (misurato).
+    /// Il ramo serve a un figlio tracciato senza la sua radice, per esempio da una lettura tracciata
+    /// nella stessa richiesta.
+    /// </remarks>
     private EntityEntry<TChild> TrackAsStored<TChild>(TChild row, Guid id)
         where TChild : class
     {
@@ -654,10 +683,8 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
         // #4499: colonna che il dominio trasporta e basta (vedi UserLibraryEntry.TestRunId).
         entry.SetTestRunId(entity.TestRunId);
 
-        if (read != ChildrenRead.None)
-        {
-            RestoreChildren(entry, entity, read);
-        }
+        // Anche senza figli: UpdateAsync riconosce così un aggregato che nessuna lettura ha prodotto.
+        RestoreChildren(entry, entity, read);
 
         // Clear domain events that were raised during construction
         // (we don't want to re-raise events for existing entities)
@@ -688,10 +715,12 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
                 c.Id, c.UserLibraryEntryId, c.Description, c.DisplayOrder, c.IsCompleted, c.AdditionalInfo, c.CreatedAt, c.UpdatedAt)),
             (labels ?? []).Select(l => UserGameLabel.Reconstitute(l.Id, l.UserLibraryEntryId, l.LabelId, l.AssignedAt)));
 
-        ChildrenReadBy.AddOrUpdate(entry, new StoredChildren(
-            sessions?.ToDictionary(s => s.Id),
-            checklist?.ToDictionary(c => c.Id),
-            labels?.ToDictionary(l => l.Id)));
+        ChildrenReadBy.AddOrUpdate(entry, read == ChildrenRead.None
+            ? StoredChildren.NothingRead
+            : new StoredChildren(
+                sessions?.ToDictionary(s => s.Id),
+                checklist?.ToDictionary(c => c.Id),
+                labels?.ToDictionary(l => l.Id)));
     }
 
     /// <summary>

@@ -389,7 +389,8 @@ public sealed class UserLibraryE2ETests : E2ETestBase
 
         // Assert
         // #4505: la sessione nuova finiva Modified invece di Added — un UPDATE di una riga che non
-        // esiste, DbUpdateConcurrencyException e 500.
+        // esiste, DbUpdateConcurrencyException, che il middleware traduce in 409 concurrent_edit:
+        // a ogni tentativo, non per una scrittura concorrente.
         response.StatusCode.Should().Be(HttpStatusCode.Created,
             "registrare una partita deve riuscire: " + await DescribeResponseAsync(response));
 

@@ -103,8 +103,10 @@ internal sealed class UnstructuredExtractorHealthProbe : IPdfExtractorHealthProb
         // OWNERSHIP TRANSFER: MultipartFormDataContent takes ownership of added content and disposes them when it is disposed
         var streamContent = new StreamContent(new MemoryStream(ProbePdfBytes));
         var strategyContent = new StringContent("fast");
-        // #4435: the configured default set — what a document of unknown language gets — instead of
-        // the old literal "ita", so the probe posts the value the pipeline actually sends.
+        // #4435: the configured set — what a document of unknown language gets — instead of the old
+        // literal "ita". This does NOT check that the service can OCR those languages: the probe runs in
+        // fast, where no OCR happens, and the service ignores a missing pack there. The installed packs
+        // are checked after a deploy with `tesseract --list-langs` in the container (see the Dockerfile).
         var languageContent = new StringContent(
             UnstructuredLanguageResolver.Resolve(document: null, _unstructuredOptions));
 #pragma warning restore CA2000

@@ -9,9 +9,22 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 /// Precedence: the document's <c>language_override</c>; then its detected <c>Language</c>, when
 /// <c>language_confidence</c> is strictly above <see cref="UnstructuredOptions.LanguageConfidenceThreshold"/>;
 /// otherwise the configured set <see cref="UnstructuredOptions.Language"/> (<c>eng+ita+deu</c> by default).
-/// A document language whose Tesseract code is not in that set also gets the whole set: the set declares
-/// what the service can read, and Tesseract asked for a single language it has no data for loads nothing
-/// and fails the OCR.
+/// </para>
+/// <para>
+/// The document language is never sent alone (review of #4515): it goes FIRST, followed by the rest of the
+/// set — <c>ita+eng+deu</c> for an Italian document. Tesseract uses the first as its primary model and
+/// tries the others word by word when the primary reads badly. A single language would be a bet on the
+/// detector, which reads only the first 2000 characters: an Italian rulebook with English credits up front
+/// is detected "en", and with <c>eng</c> alone every Italian page would be read with the English model.
+/// A document language whose Tesseract code is not in the set gets the set unchanged: the set declares
+/// what the service can read.
+/// </para>
+/// <para>
+/// What the threshold does today: <c>LanguageDetector</c>'s confidence is the share of letters in the
+/// dominant script, ~1 for any Latin text, so on a detected row it almost never filters. It separates
+/// "never detected" (null — the row's <c>Language</c> is then the entity default <c>"en"</c>) and "no
+/// text" (<c>"unknown"</c>, 0) from a real detection, so that a non-detection does not reorder the set.
+/// It is kept configurable for a detector that reports a confidence in the language itself.
 /// </para>
 /// <para>
 /// Wire format: Tesseract codes joined by <c>+</c>, in one string. The service passes it as
@@ -70,9 +83,15 @@ internal static class UnstructuredLanguageResolver
         }
 
         var documentCode = ToTesseractCode(PickDocumentLanguage(document, options.LanguageConfidenceThreshold));
-        return documentCode is not null && configured.Contains(documentCode, StringComparer.Ordinal)
-            ? documentCode
-            : string.Join(Separator, configured);
+        if (documentCode is null || !configured.Contains(documentCode, StringComparer.Ordinal))
+        {
+            return string.Join(Separator, configured);
+        }
+
+        // The document's language first (Tesseract's primary model), then the rest of the set.
+        return string.Join(
+            Separator,
+            configured.Where(code => !string.Equals(code, documentCode, StringComparison.Ordinal)).Prepend(documentCode));
     }
 
     /// <summary>Maps an ISO 639-1 code (case and region insensitive) to its Tesseract code, or null.</summary>
@@ -114,8 +133,9 @@ internal static class UnstructuredLanguageResolver
             return null;
         }
 
-        // The override is a human's statement about the document: when present it alone decides, even
-        // if it cannot be honoured (not in the set) — falling back to the detection would contradict it.
+        // The override is a human's statement about the document: when present it alone decides which
+        // language goes first, even if it cannot be honoured (not in the set) — falling back to the
+        // detection would contradict it.
         if (!string.IsNullOrWhiteSpace(document.LanguageOverride))
         {
             return document.LanguageOverride;

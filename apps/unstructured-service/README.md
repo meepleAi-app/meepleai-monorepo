@@ -9,7 +9,7 @@ FastAPI microservice for PDF text extraction using the Unstructured library (Apa
 ## Features
 
 - ✅ **Semantic Chunking**: Text chunks optimized for RAG workflows
-- ✅ **Italian Language**: Native support via tesseract-ocr-ita
+- ✅ **OCR languages**: English, Italian and German (tesseract-ocr-eng/-ita/-deu)
 - ✅ **Quality Scoring**: 4-metric quality assessment (0.0-1.0)
 - ✅ **Table Detection**: Automatic table structure inference
 - ✅ **Fast Performance**: <2s for 20-page PDFs (fast strategy)
@@ -27,7 +27,7 @@ FastAPI microservice for PDF text extraction using the Unstructured library (Apa
 pip install -r requirements.txt
 
 # Install system dependencies (Ubuntu/Debian)
-sudo apt-get install tesseract-ocr tesseract-ocr-ita poppler-utils libmagic-dev
+sudo apt-get install tesseract-ocr tesseract-ocr-ita tesseract-ocr-deu poppler-utils libmagic-dev
 
 # Run development server
 uvicorn src.main:app --reload --port 8001
@@ -49,7 +49,7 @@ docker build -t meepleai-unstructured:latest .
 docker run -p 8001:8001 \
   -e LOG_LEVEL=INFO \
   -e UNSTRUCTURED_STRATEGY=fast \
-  -e LANGUAGE=ita \
+  -e LANGUAGE=eng+ita+deu \
   meepleai-unstructured:latest
 
 # Check health
@@ -85,8 +85,9 @@ Content-Type: multipart/form-data
 
 file: <binary PDF file>
 strategy: fast | hi_res (default: fast)
-language: Tesseract codes joined by '+', e.g. eng+ita+deu or deu (default: ita;
-          the API always sends it: the document's language, else its configured set — #4435)
+language: Tesseract codes joined by '+', the first is the primary, e.g. ita+eng+deu
+          (default: LANGUAGE; the API always sends it: the document's language first, then
+          the rest of its configured set — #4435)
 ```
 
 **Response** (200 OK):
@@ -106,7 +107,7 @@ language: Tesseract codes joined by '+', e.g. eng+ita+deu or deu (default: ita;
   "metadata": {
     "extraction_duration_ms": 1250,
     "strategy_used": "fast",
-    "language": "ita",
+    "language": "ita+eng+deu",
     "detected_tables": 3,
     "detected_structures": ["Title", "Paragraph", "Table"],
     "quality_breakdown": {
@@ -155,7 +156,7 @@ Environment variables (see `.env.example`):
 | `MAX_FILE_SIZE` | `104857600` | Max file size in bytes (100 MiB, the API's single PDF limit — #4449) |
 | `TIMEOUT` | `30` | Extraction timeout in seconds |
 | `UNSTRUCTURED_STRATEGY` | `fast` | Extraction strategy (fast or hi_res) |
-| `LANGUAGE` | `ita` | Default document language |
+| `LANGUAGE` | `eng+ita+deu` | OCR languages when a request omits `language` (Tesseract codes joined by `+`) |
 | `CHUNK_MAX_CHARACTERS` | `2000` | Max characters per chunk |
 | `CHUNK_OVERLAP` | `200` | Character overlap between chunks |
 | `QUALITY_THRESHOLD` | `0.80` | Minimum quality score threshold |
@@ -252,7 +253,7 @@ pytest -m integration
 ```bash
 # Check Tesseract installation
 tesseract --list-langs
-# Should include: eng, ita
+# Should include: eng, ita, deu
 
 # Check Unstructured library
 python -c "from unstructured.partition.pdf import partition_pdf; print('OK')"

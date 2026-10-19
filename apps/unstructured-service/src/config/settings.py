@@ -20,7 +20,9 @@ class Settings(BaseSettings):
 
     # Unstructured Configuration
     unstructured_strategy: Literal["fast", "hi_res"] = "fast"
-    language: str = "ita"
+    # #4435: OCR languages, Tesseract codes joined by '+'. Used when a request omits the field
+    # (the API always sends it). NB: the env var is LANGUAGE, also a gettext locale variable.
+    language: str = "eng+ita+deu"
 
     # Chunking Configuration
     chunk_max_characters: int = 2000

@@ -108,7 +108,7 @@ public sealed class ExtractionLanguageSelectorRegistrationTests
 
         await extractor.ExtractPagedTextAsync(Pdf(), cancellationToken: TestContext.Current.CancellationToken);
 
-        sent.Should().Be("deu");
+        sent.Should().Be("deu+eng+ita");
     }
 
     [Theory]

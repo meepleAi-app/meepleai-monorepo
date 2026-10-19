@@ -46,8 +46,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Set Tesseract data directory
-ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/4.00/tessdata
+# Set Tesseract data directory. Debian bookworm and trixie (Tesseract 5) install the packs under
+# 5/tessdata; the old 4.00 path did not exist and Tesseract 5.5 ignored it with a warning (#4435).
+# Check after a deploy: `docker exec meepleai-unstructured tesseract --list-langs` → eng, ita, deu.
+ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
 
 # Create non-root user for security
 RUN groupadd -r unstructured && useradd -r -g unstructured -m -d /home/unstructured unstructured

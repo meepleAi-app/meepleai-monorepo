@@ -289,7 +289,7 @@ public class UnstructuredPdfTextExtractorTests
 
     [Fact]
     [Trait("Issue", "4435")]
-    public async Task ExtractPagedTextAsync_LanguageOverrideDe_SendsDeu()
+    public async Task ExtractPagedTextAsync_LanguageOverrideDe_SendsDeuFirst()
     {
         var selector = new ExtractionLanguageSelector
         {
@@ -300,7 +300,7 @@ public class UnstructuredPdfTextExtractorTests
 
         await extractor.ExtractPagedTextAsync(CreateTestPdfStream(), cancellationToken: TestCancellationToken);
 
-        fields["language"].Should().Be("deu");
+        fields["language"].Should().Be("deu+eng+ita");
     }
 
     [Theory]
@@ -338,14 +338,14 @@ public class UnstructuredPdfTextExtractorTests
 
     [Theory]
     [Trait("Issue", "4435")]
-    [InlineData(0.95, "eng")]
+    [InlineData(0.95, "ita+eng+deu")]
     [InlineData(0.50, "eng+ita+deu")]
     public async Task ExtractPagedTextAsync_DetectedLanguage_UsedOnlyAboveConfiguredThreshold(
         double confidence, string expected)
     {
         var selector = new ExtractionLanguageSelector
         {
-            Current = new DocumentLanguageHint(LanguageOverride: null, DetectedLanguage: "en", DetectedConfidence: confidence)
+            Current = new DocumentLanguageHint(LanguageOverride: null, DetectedLanguage: "it", DetectedConfidence: confidence)
         };
         var (extractor, fields) = CreateExtractorCapturingFields(
             selector, new Dictionary<string, string?> { [LanguageKey] = "eng+ita+deu", [ThresholdKey] = "0.8" });
@@ -359,17 +359,18 @@ public class UnstructuredPdfTextExtractorTests
     [Trait("Issue", "4435")]
     public async Task ExtractRawHiResAsync_SendsTheDocumentLanguage_OnTheHiResPass()
     {
-        // The hi_res region pass (#3435) is where OCR runs: an English rulebook must be read as eng.
+        // The hi_res region pass (#3435) is where OCR runs: an Italian rulebook is read with ita as the
+        // primary model, the rest of the set behind it.
         var (extractor, fields) = CreateExtractorCapturingFields(
             languageSelector: null, new Dictionary<string, string?> { [LanguageKey] = "eng+ita+deu" });
 
         await extractor.ExtractRawHiResAsync(
             CreateTestPdfStream(),
-            new DocumentLanguageHint(LanguageOverride: null, DetectedLanguage: "en", DetectedConfidence: 0.97),
+            new DocumentLanguageHint(LanguageOverride: null, DetectedLanguage: "it", DetectedConfidence: 0.97),
             TestCancellationToken);
 
         fields["strategy"].Should().Be("hi_res");
-        fields["language"].Should().Be("eng");
+        fields["language"].Should().Be("ita+eng+deu");
     }
 
     [Fact]

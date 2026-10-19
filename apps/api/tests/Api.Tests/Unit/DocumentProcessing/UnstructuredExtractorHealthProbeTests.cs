@@ -170,9 +170,9 @@ public sealed class UnstructuredExtractorHealthProbeTests
     }
 
     /// <summary>
-    /// #4435: the probe posted the literal <c>"ita"</c>. It now sends the configured default set, the
-    /// same value a document without a known language would get — so the probe exercises the wire
-    /// value the pipeline actually sends.
+    /// #4435: the probe posted the literal <c>"ita"</c>. It now sends the configured set, the same value
+    /// a document without a known language gets. It runs in fast (no OCR), so it does not prove the
+    /// service has those language packs installed.
     /// </summary>
     [Theory]
     [Trait("Issue", "4435")]

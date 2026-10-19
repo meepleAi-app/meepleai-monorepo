@@ -138,8 +138,8 @@ async def extract_pdf(
         default="fast", description="Extraction strategy"
     ),
     language: str = Form(
-        default="ita",
-        description="OCR languages: Tesseract codes joined by '+' (e.g. 'eng+ita+deu' or 'deu')",
+        default=settings.language,
+        description="OCR languages: Tesseract codes joined by '+', the first is the primary (e.g. 'ita+eng+deu')",
     ),
 ):
     """
@@ -148,7 +148,7 @@ async def extract_pdf(
     Args:
         file: PDF file (multipart/form-data)
         strategy: Extraction strategy (fast or hi_res)
-        language: OCR languages, Tesseract codes joined by '+' (unstructured splits on '+')
+        language: OCR languages, Tesseract codes joined by '+' (the adapter splits them)
 
     Returns:
         PdfExtractionResponse with text, chunks, and quality score

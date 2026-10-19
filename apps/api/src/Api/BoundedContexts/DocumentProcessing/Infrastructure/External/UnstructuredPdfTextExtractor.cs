@@ -24,7 +24,7 @@ internal interface IRawHiResExtractor
     /// </summary>
     /// <param name="pdfStream">The PDF.</param>
     /// <param name="language">What is known about the PDF's language (#4435). hi_res is where OCR runs,
-    /// so this decides the language Tesseract reads the page in; null → the configured default set.</param>
+    /// so this decides which language Tesseract tries first; null → the configured set as is.</param>
     /// <param name="cancellationToken">Cancellation.</param>
     Task<string?> ExtractRawHiResAsync(
         Stream pdfStream,
@@ -189,8 +189,8 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor, IRawHiResExtrac
         // (inert-on-corpus) selector.
         var strategyContent = new StringContent(
             (strategyOverride ?? _strategySelector?.Current ?? ExtractionStrategy.Fast).ToWireString());
-        // #4435: the language comes from the document (override → confident detection), else the
-        // configured multilingual default — never the old hard-coded "ita". It drives Tesseract OCR,
+        // #4435: the configured set, with the document's language (override → confident detection) moved
+        // first when known — never the old hard-coded "ita". It drives Tesseract OCR,
         // which runs only in hi_res: in fast the embedded text is read as is, and the value only labels
         // element metadata the service does not return. The service logs it on every request.
         var languageContent = new StringContent(

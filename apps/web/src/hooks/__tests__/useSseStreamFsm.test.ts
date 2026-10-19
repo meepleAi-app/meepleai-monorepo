@@ -415,6 +415,48 @@ describe('useSseStreamFsm — a stream that ends without its terminal event (#43
     expect(errorMapper).not.toHaveBeenCalled();
   });
 
+  /**
+   * Review di #4509: dopo `Complete` il backend tiene aperta la connessione per le domande
+   * successive. Se la rete cade lì, la risposta era già chiusa: non è un errore della risposta.
+   */
+  it('ignores an error thrown after the terminal event', async () => {
+    const errorMapper = vi.fn(mapper);
+    const transport = (): AsyncGenerator<TestEvent> =>
+      (async function* () {
+        yield { type: 'token', value: 'Cinque' } as TestEvent;
+        yield { type: 'done' } as TestEvent;
+        throw new TypeError('network error');
+      })();
+
+    const { result } = renderHook(() =>
+      useSseStreamFsm<string, TestEvent, TestState, Mapped>({
+        transport,
+        initialState: { tokens: [], done: false },
+        eventReducer: reducer,
+        errorMapper,
+        isTerminalEvent: e => e.type === 'done',
+        retryPolicy: { maxRetries: 0, backoffMs: [], retryableErrorKinds: [] },
+      })
+    );
+
+    act(() => {
+      result.current.ask('q');
+    });
+    await waitFor(() => {
+      expect(result.current.state.done).toBe(true);
+    });
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(errorMapper).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Il nuovo tentativo riparte dallo stato accumulato (vedi `retryPolicy` nell'automa): qui il
+   * primo tentativo non ha ridotto nessun evento, ed è l'unico caso in cui ritentare è sicuro.
+   */
   it('retries an interruption when the consumer maps it to a retryable kind', async () => {
     vi.useFakeTimers();
     let attempt = 0;

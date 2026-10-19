@@ -192,7 +192,17 @@ export interface AgentChatInput {
 }
 
 /** Internal state shape (base hook owns retryCount + error separately) */
-type AgentChatInternalState = Omit<AgentChatStreamState, 'retryCount' | 'error'>;
+type AgentChatInternalState = Omit<AgentChatStreamState, 'retryCount' | 'error'> & {
+  /**
+   * Review of #4509: `Complete` arrived — the answer is whole and delivered. The backend keeps the
+   * connection open after it for the follow-up questions; nothing that happens there (an `Error`
+   * event included) makes the answer fail. Internal: not part of the public state.
+   */
+  completed: boolean;
+};
+
+/** Generic message when the backend gives neither a known code nor a message. */
+const GENERIC_ERROR_MESSAGE = 'Si è verificato un errore. Riprova.';
 
 /** Parsed SSE event shape */
 type AgentChatEvent = { type: number; data: unknown; timestamp?: string };
@@ -211,6 +221,7 @@ const INITIAL_STATE: AgentChatInternalState = {
   strategyTier: null,
   executionId: null,
   connectionStatus: 'idle',
+  completed: false,
 };
 
 // ─── Transport ────────────────────────────────────────────────────────────────
@@ -412,10 +423,16 @@ function agentChatEventReducer(
         statusMessage: null,
         connectionStatus: 'idle',
         retryCount: 0,
+        completed: true,
       } as AgentChatInternalState;
     }
 
     case StreamingEventType.Error: {
+      // Review of #4509: after Complete the answer is whole and already handed to onComplete. An
+      // Error now (the follow-up questions failing) would mark it failed and hand it over again
+      // through onError, as an interrupted answer.
+      if (state.completed) return state;
+
       const data = event.data as { errorMessage?: string; errorCode?: string };
       let errorMsg: string;
       let tierLimit: TierLimit | null = null;
@@ -423,20 +440,20 @@ function agentChatEventReducer(
         errorMsg = 'Hai raggiunto il limite di messaggi. Riprova tra qualche minuto.';
       } else if (data?.errorCode === 'provider_unavailable') {
         errorMsg = 'Il servizio AI è temporaneamente non disponibile. Riprova tra poco.';
-      } else if (data?.errorCode === 'AI_BUDGET_DAILY_EXHAUSTED') {
-        // #4166 (ADR-095 D6): il gateway ha fermato la chiamata al tetto di spesa del giorno
-        errorMsg =
-          'Il servizio AI è in pausa fino a domani: è stato raggiunto il budget di spesa del giorno.';
-      } else if (data?.errorCode === 'AI_BUDGET_MONTHLY_EXHAUSTED') {
-        errorMsg =
-          'Il servizio AI è in pausa fino al mese prossimo: è stato raggiunto il budget di spesa del mese.';
       } else if (data?.errorCode === TIER_LIMIT_EXCEEDED) {
         // #4168 (5g-b): la quota del piano. Il messaggio del backend è tecnico; qui la
         // spiegazione, con i numeri del piano e l'ora in cui il conteggio riparte.
         tierLimit = readTierLimit(event.data);
         errorMsg = tierLimitMessage(tierLimit);
       } else {
-        errorMsg = data?.errorMessage ?? 'Si è verificato un errore. Riprova.';
+        // I codici del gateway e della pipeline in italiano, dalla stessa tabella della chat
+        // principale: il tetto di spesa (#4166, ADR-095 D6), il provider non disponibile, lo stream
+        // interrotto (review di #4509), ... Per un codice che non conosce resta il messaggio del
+        // backend.
+        errorMsg = qaStreamErrorMessage(
+          data?.errorCode,
+          data?.errorMessage ?? GENERIC_ERROR_MESSAGE
+        );
       }
       // Store error in internal state so the wrapper can fire onError callback
       // and merge into state.error
@@ -606,7 +623,7 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks): {
         const canRetry =
           raw instanceof TypeError || (raw instanceof Error && /HTTP \d/.test(raw.message));
 
-        let message = 'Si è verificato un errore. Riprova.';
+        let message = GENERIC_ERROR_MESSAGE;
         if (raw instanceof Error) {
           message = raw.message;
         }

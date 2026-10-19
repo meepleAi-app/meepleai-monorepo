@@ -1318,6 +1318,90 @@ describe('useAgentChatStream', () => {
       });
       expect(onComplete).not.toHaveBeenCalled();
     });
+
+    /**
+     * Review di #4509: dopo `Complete` il backend tiene aperta la connessione per generare le domande
+     * successive (fino a 10 s). Se la rete cade lì, la risposta era già completa e consegnata:
+     * trattarla da interrotta la consegnava una seconda volta, segnata «Risposta interrotta».
+     */
+    it('leaves a complete answer alone when the connection drops after Complete', async () => {
+      const wire = steppedFetch([
+        sseEvent(EventType.Token, { token: 'Cinque tessere.' }),
+        sseEvent(EventType.Complete, { totalTokens: 2 }),
+        new TypeError('network error'),
+      ]);
+      globalThis.fetch = wire.fetch;
+      const onComplete = vi.fn();
+      const onError = vi.fn();
+      const { result } = renderHook(() => useAgentChatStream({ onComplete, onError }));
+
+      act(() => result.current.sendMessage('azul', 'Quante tessere?'));
+      await vi.waitFor(() => expect(wire.calls()).toBe(1));
+      await runToTheEnd(wire);
+
+      expect(onComplete).toHaveBeenCalledTimes(1);
+      expect(onComplete).toHaveBeenCalledWith('Cinque tessere.', expect.anything());
+      expect(onError).not.toHaveBeenCalled();
+      expect(result.current.state.error).toBeNull();
+      expect(result.current.state.isStreaming).toBe(false);
+      expect(result.current.state.connectionStatus).toBe('idle');
+      expect(wire.calls()).toBe(1);
+    });
+
+    /** Lo stesso per un `Error` che arriva dopo `Complete`: la risposta resta quella consegnata. */
+    it('leaves a complete answer alone when an Error event follows Complete', async () => {
+      const wire = steppedFetch([
+        sseEvent(EventType.Token, { token: 'Cinque tessere.' }),
+        sseEvent(EventType.Complete, { totalTokens: 2 }),
+        sseEvent(EventType.Error, {
+          errorMessage: 'Follow-up generation failed',
+          errorCode: 'SOMETHING_ELSE',
+        }),
+      ]);
+      globalThis.fetch = wire.fetch;
+      const onComplete = vi.fn();
+      const onError = vi.fn();
+      const { result } = renderHook(() => useAgentChatStream({ onComplete, onError }));
+
+      act(() => result.current.sendMessage('azul', 'Quante tessere?'));
+      await vi.waitFor(() => expect(wire.calls()).toBe(1));
+      await runToTheEnd(wire);
+
+      expect(onComplete).toHaveBeenCalledTimes(1);
+      expect(onError).not.toHaveBeenCalled();
+      expect(result.current.state.error).toBeNull();
+      expect(result.current.state.connectionStatus).toBe('idle');
+    });
+  });
+
+  /**
+   * Review di #4509: i codici che il backend manda in un evento `Error` e che la chat principale
+   * traduce già (`qaStreamErrors`) arrivavano qui col messaggio grezzo del backend, in inglese.
+   */
+  it.each([
+    [
+      'AI_STREAM_INTERRUPTED',
+      'La risposta si è interrotta prima della fine, quindi non è completa. Riprova a chiedere.',
+    ],
+    [
+      'AI_PROVIDER_UNAVAILABLE',
+      'Il servizio AI è temporaneamente non disponibile. Riprova tra qualche minuto.',
+    ],
+  ])('shows the Italian message for errorCode %s', async (errorCode, expected) => {
+    const stream = createSSEStream([
+      sseEvent(EventType.Error, { errorMessage: 'The LLM stream was interrupted.', errorCode }),
+    ]);
+    fetchMock.mockResolvedValueOnce({ ok: true, body: stream });
+    const onError = vi.fn();
+    const { result } = renderHook(() => useAgentChatStream({ onError }));
+
+    await act(async () => {
+      result.current.sendMessage('azul', 'Quante tessere?');
+      await new Promise(resolve => setTimeout(resolve, 50));
+    });
+
+    expect(result.current.state.error).toBe(expected);
+    expect(onError).toHaveBeenCalledWith(expected, NOTHING_ARRIVED);
   });
 
   /**

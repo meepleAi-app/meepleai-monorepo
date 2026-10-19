@@ -280,6 +280,35 @@ describe("ChatSlideOverPanel — lo stream, con l'hook vero (#4333)", () => {
   });
 
   /**
+   * Review di #4509: dopo `Complete` il backend tiene aperta la connessione per le domande
+   * successive. Se la rete cade lì, la risposta era già consegnata: niente seconda bolla con lo
+   * stesso testo segnata «Risposta interrotta», niente avviso.
+   */
+  it('shows a complete answer once when the connection drops after Complete', async () => {
+    const wire = steppedFetch([
+      sseEvent(TOKEN, { token: 'Cinque tessere.' }),
+      sseEvent(COMPLETE, { totalTokens: 2 }),
+      new TypeError('network error'),
+    ]);
+    globalThis.fetch = wire.fetch;
+    useChatPanelStore.getState().open(AZUL);
+
+    render(<ChatSlideOverPanel />);
+    ask('Quante tessere?');
+    await waitFor(() => expect(wire.calls()).toBe(1));
+    for (let i = 0; i < wire.steps; i++) await deliver(wire.next);
+
+    await waitFor(() => expect(answers()).toHaveLength(1));
+    // Lascia passare il giro in cui l'errore di rete arriva dopo la risposta.
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 20));
+    });
+    expect(answers()).toEqual([expect.stringContaining('Cinque tessere.')]);
+    expect(screen.queryByTestId('chat-message-interrupted')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  /**
    * #4335, deciso insieme: un `Error` che arriva dopo qualche parola. La parte scritta spariva
    * (`onComplete` non scatta): ora resta, segnata come incompleta, accanto al motivo.
    */

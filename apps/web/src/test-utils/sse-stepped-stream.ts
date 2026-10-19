@@ -11,6 +11,13 @@ export function sseEvent(type: number, data: unknown): string {
   return `data: ${JSON.stringify({ type, data, timestamp: new Date().toISOString() })}\n\n`;
 }
 
+/**
+ * Un passo dello stream: un evento com'è sul filo, oppure un errore. Un errore fa fallire la
+ * lettura in corso, come la rete che cade a metà (`reader.read()` lancia), e chiude lo stream:
+ * i passi dopo non arrivano più.
+ */
+export type SseStep = string | Error;
+
 export interface SteppedStream {
   readonly body: ReadableStream<Uint8Array>;
   /**
@@ -21,7 +28,7 @@ export interface SteppedStream {
   next(): void;
 }
 
-export function steppedStream(events: string[], signal?: AbortSignal | null): SteppedStream {
+export function steppedStream(events: SseStep[], signal?: AbortSignal | null): SteppedStream {
   const encoder = new TextEncoder();
   let permits = 0;
   let index = 0;
@@ -55,8 +62,13 @@ export function steppedStream(events: string[], signal?: AbortSignal | null): St
         controller.close();
         return;
       }
-      controller.enqueue(encoder.encode(events[index]));
+      const step = events[index];
       index++;
+      if (step instanceof Error) {
+        controller.error(step);
+        return;
+      }
+      controller.enqueue(encoder.encode(step));
     },
   });
 
@@ -78,12 +90,15 @@ export interface SteppedFetch {
   signal(): AbortSignal | null;
   /** Autorizza la prossima consegna dell'ultima chiamata: un evento, o la chiusura. */
   next(): void;
-  /** Quante consegne servono per arrivare in fondo: gli eventi, più la chiusura. */
+  /**
+   * Quante consegne servono per arrivare in fondo: gli eventi, più la chiusura. Dopo un errore la
+   * chiusura non c'è, e le consegne in più non fanno niente.
+   */
   readonly steps: number;
 }
 
 /** Una `fetch` che risponde con uno stream a passi, e ricorda il segnale di interruzione. */
-export function steppedFetch(events: string[]): SteppedFetch {
+export function steppedFetch(events: SseStep[]): SteppedFetch {
   let count = 0;
   let lastSignal: AbortSignal | null = null;
   let stream: SteppedStream | null = null;

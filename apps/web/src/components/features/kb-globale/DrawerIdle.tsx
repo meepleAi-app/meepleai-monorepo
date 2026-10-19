@@ -58,10 +58,12 @@ export function DrawerIdle({
           placeholder={labels.placeholder}
           className="flex-1 bg-transparent border-none outline-none font-body text-sm text-foreground"
         />
+        {/* #4525: white on bg-entity-kb is 1.88:1 in the dark theme, where the KB colour is light.
+            There the ink is the page background: 9.26:1 (5.15:1 white in the light theme). */}
         <button
           type="submit"
           aria-label={labels.sendLabel}
-          className="w-8 h-8 rounded-sm bg-entity-kb text-white text-sm"
+          className="w-8 h-8 rounded-sm bg-entity-kb text-white dark:text-background text-sm"
         >
           ↑
         </button>

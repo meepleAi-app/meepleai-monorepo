@@ -62,10 +62,12 @@ export function CitationPill({
         className
       )}
     >
+      {/* #4525: white on bg-entity-kb is 1.88:1 in the dark theme; there the ink is the page
+          background (9.26:1). */}
       <span
         className={cn(
           'inline-flex items-center justify-center',
-          'w-3.5 h-3.5 rounded-full bg-entity-kb text-white text-[9px]'
+          'w-3.5 h-3.5 rounded-full bg-entity-kb text-white dark:text-background text-[9px]'
         )}
       >
         {n}

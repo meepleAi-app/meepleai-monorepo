@@ -34,11 +34,19 @@ namespace Api.Tests.Integration;
 /// Integration tests for PDF upload quota enforcement.
 /// Tests the complete quota system: tracking, limits, tier-based quotas, admin bypass.
 /// Uses SharedTestcontainersFixture for optimized performance and Docker hijack prevention (Issue #2031).
-///
-/// Note: Tests run sequentially (via [Collection] attribute) to avoid Redis state
-/// conflicts between tests. Redis state persists within a single container lifecycle,
-/// so parallel execution could cause unpredictable quota counts.
 /// </summary>
+/// <remarks>
+/// <para><b>Redis:</b> è quello della fixture. In CI è il service container dello shard
+/// (<c>TEST_REDIS_CONNSTRING</c>), condiviso con le collection che girano in parallelo; in locale
+/// può essere il Redis dello stack di sviluppo (<c>make ci-be-integration-fast</c>). Per questo i
+/// test non fanno mai <c>FLUSHDB</c> (#4528): cancellava le chiavi degli altri test.</para>
+/// <para>Il flush non serviva: le chiavi di <see cref="PdfUploadQuotaService"/> sono per utente
+/// (<c>pdf:upload:daily:{userId}:…</c>, <c>pdf:upload:weekly:{userId}:…</c>,
+/// <c>pdf:quota:reservation:{userId}:…</c>, <c>pdf:upload:game:{userId}:…</c>) e ogni test crea i suoi
+/// utenti con <c>Guid.NewGuid()</c>, quindi nessun test legge i contatori di un altro.
+/// <c>DisposeAsync</c> cancella solo le chiavi degli utenti creati dal test: alcuni test le scrivono
+/// senza TTL, e su un Redis che non muore col job resterebbero per sempre.</para>
+/// </remarks>
 [Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Issue", "2031")]
@@ -51,6 +59,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     private IServiceProvider? _serviceProvider;
     private IConnectionMultiplexer? _redis;
     private IPdfUploadQuotaService? _quotaService;
+    private readonly List<Guid> _createdUserIds = [];
 
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
@@ -66,49 +75,65 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         _databaseName = $"test_quota_{Guid.NewGuid():N}";
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        // Use SharedTestcontainersFixture Redis (no separate container needed!)
-        var redisConnectionString = _fixture.RedisConnectionString;
+        // Se da qui in poi qualcosa lancia, xUnit NON chiama DisposeAsync: il database isolato, la
+        // connessione Redis e il service provider resterebbero. Succede davvero: il Timeout del test
+        // copre anche InitializeAsync; allo scadere xUnit passa al test successivo e qui la lettura
+        // del token del test lancia (ObjectDisposedException, osservato in #4528).
+        try
+        {
+            // Use SharedTestcontainersFixture Redis (no separate container needed!)
+            var redisConnectionString = _fixture.RedisConnectionString;
 
-        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
+            var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
 
-        // Register Redis
-        _redis = await ConnectionMultiplexer.ConnectAsync(redisConnectionString);
-        services.AddSingleton<IConnectionMultiplexer>(_redis);
+            // Register Redis
+            _redis = await ConnectionMultiplexer.ConnectAsync(redisConnectionString);
+            services.AddSingleton<IConnectionMultiplexer>(_redis);
 
-        // FIX: Clear Redis state before each test to prevent interference
-        // from previous tests (quota counts persist in Redis across test runs)
-        var db = _redis.GetDatabase();
-        await db.ExecuteAsync("FLUSHDB");
+            // Register repositories
+            services.AddScoped<IUserRepository, UserRepository>();
+            services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
 
-        // Register repositories
-        services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
+            // Register configuration service mock
+            var configServiceMock = new Mock<IConfigurationService>();
+            configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>()!, It.IsAny<int?>(), It.IsAny<string?>()))
+                .ReturnsAsync((int?)null); // Use default limits
+            services.AddSingleton<IConfigurationService>(configServiceMock.Object);
 
-        // Register configuration service mock
-        var configServiceMock = new Mock<IConfigurationService>();
-        configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>()!, It.IsAny<int?>(), It.IsAny<string?>()))
-            .ReturnsAsync((int?)null); // Use default limits
-        services.AddSingleton<IConfigurationService>(configServiceMock.Object);
+            // Register quota service
+            services.AddScoped<IPdfUploadQuotaService, PdfUploadQuotaService>();
 
-        // Register quota service
-        services.AddScoped<IPdfUploadQuotaService, PdfUploadQuotaService>();
+            _serviceProvider = services.BuildServiceProvider();
+            _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
+            _quotaService = _serviceProvider.GetRequiredService<IPdfUploadQuotaService>();
 
-        _serviceProvider = services.BuildServiceProvider();
-        _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
-        _quotaService = _serviceProvider.GetRequiredService<IPdfUploadQuotaService>();
+            await _dbContext.Database.MigrateAsync(TestCancellationToken);
+        }
+        catch
+        {
+            // DisposeAsync regge lo stato parziale: ogni campo è controllato, la lista utenti è
+            // vuota, e il drop del database non usa il token del test (cancellato o già smaltito).
+            try
+            {
+                await DisposeAsync();
+            }
+            catch
+            {
+                // L'eccezione da riportare è quella dell'inizializzazione.
+            }
 
-        await _dbContext.Database.MigrateAsync(TestCancellationToken);
+            throw;
+        }
     }
 
     public async ValueTask DisposeAsync()
     {
-        // FIX: Clear Redis state BEFORE disposing to prevent interference with next tests
-        if (_redis != null)
+        // #4528: solo le chiavi degli utenti creati da questo test, mai l'intero database Redis.
+        foreach (var userId in _createdUserIds)
         {
             try
             {
-                var db = _redis.GetDatabase();
-                await db.ExecuteAsync("FLUSHDB");
+                await _fixture.FlushRedisByPrefixAsync($"pdf:*:{userId}:*");
             }
             catch
             {
@@ -156,6 +181,7 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
 
         await userRepo.AddAsync(user, TestCancellationToken);
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
+        _createdUserIds.Add(user.Id);
 
         return user;
     }
@@ -168,16 +194,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     private async Task IncrementUploadAsync(Guid userId)
     {
         await _quotaService!.IncrementUploadCountAsync(userId, TestCancellationToken);
-    }
-
-    /// <summary>
-    /// Clears all Redis state to ensure test isolation.
-    /// MUST be called at the start of each test to prevent interference from previous tests.
-    /// </summary>
-    private async Task CleanRedisStateAsync()
-    {
-        var db = _redis!.GetDatabase();
-        await db.ExecuteAsync("FLUSHDB");
     }
 
     private static string GetWeekKey(DateTime date)
@@ -208,9 +224,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 90_000)]
     public async Task FreeTier_FiveUploadsInDay_SixthUploadDenied()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Create free tier user
         var user = await CreateUserAsync(UserTier.Free);
 
@@ -245,9 +258,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 90_000)]
     public async Task FreeTier_TwentyUploadsInWeek_TwentyFirstUploadDenied()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Create free tier user
         var user = await CreateUserAsync(UserTier.Free);
 
@@ -276,9 +286,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 90_000)]
     public async Task NormalTier_TwentyUploadsInDay_AllAllowed()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Create normal tier user
         var user = await CreateUserAsync(UserTier.Normal);
 
@@ -313,9 +320,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 90_000)]
     public async Task NormalTier_HundredUploadsInWeek_AllAllowed()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Create normal tier user
         var user = await CreateUserAsync(UserTier.Normal);
 
@@ -347,9 +351,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 90_000)]
     public async Task PremiumTier_HundredUploadsInDay_AllAllowed()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Create premium tier user
         var user = await CreateUserAsync(UserTier.Premium);
 
@@ -380,9 +381,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 90_000)]
     public async Task AdminUser_UnlimitedUploads_NoQuotaCheck()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Create admin user (tier doesn't matter for admin)
         var user = await CreateUserAsync(UserTier.Free, AuthRole.Admin);
 
@@ -414,9 +412,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 90_000)]
     public async Task EditorUser_UnlimitedUploads_NoQuotaCheck()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Create editor user
         var user = await CreateUserAsync(UserTier.Normal, AuthRole.Editor);
 
@@ -445,9 +440,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 90_000)]
     public async Task UserUpgrade_FreeToPremium_QuotaLimitIncreases()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Create free tier user and upload 5 PDFs (at limit)
         var user = await CreateUserAsync(UserTier.Free);
 
@@ -482,9 +474,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 90_000)]
     public async Task UserDowngrade_PremiumToFree_QuotaLimitDecreases()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Create premium tier user and upload 10 PDFs
         var user = await CreateUserAsync(UserTier.Premium);
 
@@ -518,9 +507,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 90_000)]
     public async Task MultipleUsers_QuotaTrackedIndependently()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Create 3 users with different tiers
         var user1 = await CreateUserAsync(UserTier.Free);
         var user2 = await CreateUserAsync(UserTier.Normal);
@@ -555,9 +541,6 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
     [Fact(Timeout = 90_000)]
     public async Task QuotaTracking_PersistsInRedis_AcrossServiceInstances()
     {
-        // FIX: Clear Redis state to prevent interference from previous tests
-        await CleanRedisStateAsync();
-
         // Arrange - Create user and upload 3 PDFs with first service instance
         var user = await CreateUserAsync(UserTier.Free);
 

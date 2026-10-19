@@ -852,13 +852,15 @@ jobs:
 
       # Esclusioni per nome (#3102), le stesse di dev-async.yml (lo controlla
       # infra/scripts/tests/integration-shard-matrix.bats). Dove gira ciascun test escluso:
-      # - UploadPdfMidPhaseCancellationTests: Category=Integration, quindi in NESSUN workflow —
-      #   backend-e2e-tests.yml esegue solo Category=E2E. Da riportare in un gate: #4522.
       # - ArbitroAgent: oggi è ArbitroAgentE2ETests, Category=E2E. La selezione
       #   Category=Integration lo esclude già; gira in backend-e2e-tests.yml.
-      # I test FrontendSdk erano esclusi qui con la stessa motivazione, e non giravano da nessuna
-      # parte. #4518: la loro fixture ora lavora su un database proprio anche con
-      # TEST_POSTGRES_CONNSTRING, e girano negli shard come gli altri Category=Integration.
+      # Due gruppi di test erano esclusi qui con la motivazione di #3102 («conflitto con i service
+      # container»), e non giravano da nessuna parte: backend-e2e-tests.yml esegue solo Category=E2E.
+      # Ora girano negli shard come gli altri Category=Integration, su un database proprio anche con
+      # TEST_POSTGRES_CONNSTRING:
+      # - i test FrontendSdk (#4518);
+      # - UploadPdfMidPhaseCancellationTests (#4522), nello shard Core. Faceva FLUSHDB sul Redis
+      #   della fixture, che qui è il service container condiviso dallo shard: ora non usa Redis.
       - name: Run Integration Tests
         # PR #1505 (2026-05-25): raised from 30→45 minutes. The GameRef
         # fixture-drift cleanup unblocked ~150 previously-failing tests so
@@ -910,7 +912,7 @@ jobs:
           # is a runtime profiler attached to the dotnet test process.
           dotnet-coverage collect \
             "dotnet test tests/Api.Tests/Api.Tests.csproj \
-              --filter \"Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~ArbitroAgent${{ matrix.shard.filter_extra }}\" \
+              --filter \"Category=Integration&FullyQualifiedName!~ArbitroAgent${{ matrix.shard.filter_extra }}\" \
               --settings tests/Api.Tests/integration.runsettings \
               --logger \"console;verbosity=minimal\" \
               --no-build \

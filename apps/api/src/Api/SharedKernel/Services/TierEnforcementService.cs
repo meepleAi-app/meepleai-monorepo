@@ -3,6 +3,7 @@ using Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.UserLibrary;
+using Api.SharedKernel.Utilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -15,7 +16,7 @@ namespace Api.SharedKernel.Services;
 /// D3: Game Night Flow - tier enforcement with Redis atomic counters.
 ///
 /// Redis key pattern: tier:usage:{userId}:{action}:{date-bucket}
-/// Date buckets: daily (yyyy-MM-dd), monthly (yyyy-MM), weekly (yyyy-Www)
+/// Date buckets: daily (yyyy-MM-dd), monthly (yyyy-MM), weekly ISO 8601 (yyyy-Www, see <see cref="IsoWeekKey"/>)
 /// </summary>
 internal sealed class TierEnforcementService : ITierEnforcementService
 {
@@ -276,7 +277,7 @@ internal sealed class TierEnforcementService : ITierEnforcementService
             => UtcNow.ToString("yyyy-MM", CultureInfo.InvariantCulture),
 
         TierAction.ProposeToSharedCatalog
-            => GetWeekBucket(),
+            => IsoWeekKey.For(UtcNow),
 
         TierAction.UploadSessionPhoto
             => UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
@@ -284,14 +285,6 @@ internal sealed class TierEnforcementService : ITierEnforcementService
         // Count-based actions don't use date buckets, but we still need a key
         _ => UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
     };
-
-    private string GetWeekBucket()
-    {
-        var now = UtcNow;
-        var cal = CultureInfo.InvariantCulture.Calendar;
-        var week = cal.GetWeekOfYear(now, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
-        return $"{now.Year}-W{week:D2}";
-    }
 
     private static TimeSpan GetTtlForAction(TierAction action) => action switch
     {

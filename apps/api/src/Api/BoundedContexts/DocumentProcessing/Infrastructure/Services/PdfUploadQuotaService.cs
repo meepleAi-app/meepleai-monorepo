@@ -1,6 +1,7 @@
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.Services;
+using Api.SharedKernel.Utilities;
 using StackExchange.Redis;
 using System.Globalization;
 using AuthRole = Api.SharedKernel.Domain.ValueObjects.Role;
@@ -134,7 +135,7 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
             var now = _timeProvider.GetUtcNow().UtcDateTime;
 
             var dailyKey = $"pdf:upload:daily:{userId}:{GetDateKey(now)}";
-            var weeklyKey = $"pdf:upload:weekly:{userId}:{GetWeekKey(now)}";
+            var weeklyKey = $"pdf:upload:weekly:{userId}:{IsoWeekKey.For(now)}";
 
             var dailyTtl = TimeSpan.FromHours(25); // 24h + 1h buffer
             var weeklyTtl = TimeSpan.FromDays(8); // 7 days + 1 day buffer
@@ -302,7 +303,7 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
             var now = _timeProvider.GetUtcNow().UtcDateTime;
 
             var dailyKey = $"pdf:upload:daily:{userId}:{GetDateKey(now)}";
-            var weeklyKey = $"pdf:upload:weekly:{userId}:{GetWeekKey(now)}";
+            var weeklyKey = $"pdf:upload:weekly:{userId}:{IsoWeekKey.For(now)}";
 
             var script = @"
                 local key = KEYS[1]
@@ -416,7 +417,7 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
         var dailyKey = $"pdf:upload:daily:{userId}:{GetDateKey(now)}";
-        var weeklyKey = $"pdf:upload:weekly:{userId}:{GetWeekKey(now)}";
+        var weeklyKey = $"pdf:upload:weekly:{userId}:{IsoWeekKey.For(now)}";
 
         var dailyValue = await db.StringGetAsync(dailyKey).ConfigureAwait(false);
         var weeklyValue = await db.StringGetAsync(weeklyKey).ConfigureAwait(false);
@@ -442,47 +443,6 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
     {
         // Format: yyyy-MM-dd (e.g., 2025-11-22)
         return date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
-    }
-
-    private static string GetWeekKey(DateTime date)
-    {
-        // ISO 8601 week-numbering year calculation
-        // See: https://en.wikipedia.org/wiki/ISO_week_date
-        // Week 1 is the first week with at least 4 days in the new year (contains Thursday)
-
-        var calendar = System.Globalization.CultureInfo.InvariantCulture.Calendar;
-        var weekRule = System.Globalization.CalendarWeekRule.FirstFourDayWeek;
-        var firstDayOfWeek = DayOfWeek.Monday;
-
-        var week = calendar.GetWeekOfYear(date, weekRule, firstDayOfWeek);
-        int year = date.Year;
-
-        // ISO 8601 year transitions:
-        // 1. Early January (week >= 52): belongs to previous year's last week
-        if (date.Month == 1 && week >= 52)
-        {
-            year = date.Year - 1;
-        }
-        // 2. Late December with week 1: GetWeekOfYear already calculated it as week 1 of next year
-        else if (date.Month == 12 && week == 1)
-        {
-            year = date.Year + 1;
-        }
-        // 3. Late December (Dec 29-31) on Mon-Wed: might be week 1 of next year
-        //    GetWeekOfYear returns week 53, but ISO 8601 says it's actually week 1 of next year
-        else if (date.Month == 12 && date.Day >= 29)
-        {
-            // Check if this is actually week 1 of next year
-            // If Dec 29-31 falls on Mon-Wed, it's week 1 of next year
-            var dayOfWeek = date.DayOfWeek;
-            if (dayOfWeek >= DayOfWeek.Monday && dayOfWeek <= DayOfWeek.Wednesday)
-            {
-                year = date.Year + 1;
-                week = 1;
-            }
-        }
-
-        return $"{year}-W{week:D2}";
     }
 
     private static DateTime GetNextDailyReset(DateTime now)

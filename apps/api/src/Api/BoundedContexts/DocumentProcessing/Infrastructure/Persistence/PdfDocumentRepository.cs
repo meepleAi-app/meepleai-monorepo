@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+using Api.BoundedContexts.DocumentProcessing.Domain.Events;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -11,6 +12,40 @@ namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 
 internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
 {
+    /// <summary>
+    /// #4347: le colonne della riga che l'aggregato non porta, e che <see cref="MapToPersistence"/> quindi
+    /// non scrive. <see cref="UpdateAsync"/> le esclude dall'UPDATE: prima le salvava al default della
+    /// classe, cioè cancellava avanzamento, testo estratto, versione dell'indicizzatore, priorità e licenza
+    /// a ogni transizione di stato e a ogni cambio di metadati.
+    /// <para>
+    /// Una colonna nuova dell'entità va o nel mapper o qui: <c>PdfDocumentRepositoryUnownedColumnsTests</c>
+    /// fallisce con il suo nome finché non è in uno dei due.
+    /// </para>
+    /// </summary>
+    internal static readonly IReadOnlyList<string> ColumnsNotOwnedByTheAggregate =
+    [
+        // Contenuto estratto, scritto dalle pipeline sull'entità.
+        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.ExtractedText),
+        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.CharacterCount),
+        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.StructuredElementsJson),
+        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.ExtractedTables),
+        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.ExtractedDiagrams),
+        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.AtomicRules),
+        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.TableCount),
+        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.DiagramCount),
+        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.AtomicRuleCount),
+        // Avanzamento del giro di elaborazione (vedi UpdateAsync per il nuovo tentativo).
+        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.ProcessingProgressJson),
+        // Provenienza dell'indice e lavori che seguono la prima elaborazione.
+        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.IndexerVersion),
+        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.ImageRegionsSeededAt),
+        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.ImageRegionSeedAttempts),
+        // Caricamento e coda.
+        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.ProcessingPriority),
+        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.BatchId),
+        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.Metadata),
+    ];
+
     public PdfDocumentRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)
     {
@@ -123,6 +158,11 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
 
     public Task UpdateAsync(PdfDocument document, CancellationToken cancellationToken = default)
     {
+        // Letto prima di CollectDomainEvents, che svuota gli eventi dell'aggregato.
+        var startsANewRun = document.DomainEvents
+            .OfType<PdfStateChangedEvent>()
+            .Any(e => e.NewState == PdfProcessingState.Pending);
+
         CollectDomainEvents(document);
         var entity = MapToPersistence(document);
 
@@ -133,7 +173,24 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
         if (tracked != null)
             tracked.State = EntityState.Detached;
 
-        DbContext.PdfDocuments.Update(entity);
+        var entry = DbContext.PdfDocuments.Update(entity);
+
+        // #4347: Update() segna come modificate tutte le colonne, comprese quelle che il mapper lascia al
+        // default. Quelle restano come sono nella riga. Nell'entità che resta nel contesto però valgono il
+        // default: chi la rilegge tracciata nello stesso contesto le sovrascriva, non le usi.
+        foreach (var column in ColumnsNotOwnedByTheAggregate)
+        {
+            entry.Property(column).IsModified = false;
+        }
+
+        // Il nuovo tentativo (Retry: Failed → Pending) apre un giro che la coda elabora senza scrivere
+        // l'avanzamento. Quello Failed del giro precedente farebbe smettere il client di interrogare al primo
+        // colpo: il giro nuovo parte senza avanzamento, come faceva prima l'azzeramento.
+        if (startsANewRun)
+        {
+            entry.Property(e => e.ProcessingProgressJson).IsModified = true;
+        }
+
         return Task.CompletedTask;
     }
 
@@ -272,7 +329,9 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             // che non viene riletto qui va perduto o azzerato al primo salvataggio. Per il token
             // l'effetto è peggiore: resterebbe 0, e `WHERE xmin = 0` non corrisponde mai a una
             // riga reale, quindi OGNI update fallirebbe con DbUpdateConcurrencyException.
-            xminVersion: entity.Xmin
+            xminVersion: entity.Xmin,
+            // #4347: il cast conserva anche un valore fuori dall'enum, così la riscrittura non lo cambia.
+            licenseType: (LicenseType)entity.LicenseType
         );
     }
 
@@ -335,7 +394,8 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
             // `WHERE xmin = 0` colpendo 0 righe — cioè un DbUpdateConcurrencyException su ogni
             // scrittura, anche senza concorrenza. Con il valore letto in MapToDomain il confronto
             // è quello giusto: passa se la riga non è cambiata, fallisce con 409 se lo è.
-            Xmin = domain.XminVersion
+            Xmin = domain.XminVersion,
+            LicenseType = (int)domain.LicenseType // #4347
         };
     }
 }

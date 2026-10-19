@@ -98,6 +98,9 @@ internal static class KnowledgeBaseServiceExtensions
         services.AddScoped<IExpansionGameResolver, Infrastructure.Services.ExpansionGameResolver>(); // Issue #5588: Expansion priority in RAG search
         services.AddScoped<ITextChunkSearchService, Infrastructure.Services.TextChunkSearchService>(); // Phase 2: PostgreSQL FTS + adjacent chunk retrieval
         services.AddSingleton<IModelConfigurationService, ModelConfigurationService>(); // Issue #3377: Models tier endpoint
+        // #4512: embedding /metrics read. Singleton on purpose: it holds no request state, and the
+        // pipeline health runs it alongside sends that use the request's DbContext.
+        services.AddSingleton<IEmbeddingServiceMetricsReader, EmbeddingServiceMetricsReader>();
         // Issue #3436: Tier-Strategy Access Validation Service
         // Scoped - uses ITierStrategyAccessRepository which depends on DbContext
         services.AddScoped<ITierStrategyAccessService, TierStrategyAccessService>();

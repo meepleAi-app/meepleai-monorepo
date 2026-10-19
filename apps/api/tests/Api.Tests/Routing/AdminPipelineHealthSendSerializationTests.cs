@@ -5,11 +5,11 @@ using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries.Queue;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
-using Api.Routing;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
 using MediatR;
-using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace Api.Tests.Routing;
@@ -45,6 +45,12 @@ namespace Api.Tests.Routing;
 /// version fail. Verified by perturbation: restoring the <c>Task.WhenAll</c> version turns this
 /// test red with "A second operation was started on this context instance".
 /// </para>
+///
+/// <para>
+/// #4512: the four sends moved from the endpoint into <see cref="GetPipelineHealthSnapshotQueryHandler"/>,
+/// so the endpoint could send one query and stop reading the embedding metrics with its own
+/// <c>IHttpClientFactory</c>. The invariant moved with them and is asserted where it now lives.
+/// </para>
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "Administration")]
@@ -63,11 +69,15 @@ public sealed class AdminPipelineHealthSendSerializationTests
         private readonly object _gate = new();
         private readonly List<string> _sends = new();
         private string? _inFlight;
+        private int _completed;
 
         public IReadOnlyList<string> Sends
         {
             get { lock (_gate) { return _sends.ToList(); } }
         }
+
+        /// <summary>Called after each send has finished, with how many have finished so far.</summary>
+        public Action<int>? AfterEachSend { get; init; }
 
         public async Task<TResponse> Send<TResponse>(
             IRequest<TResponse> request, CancellationToken cancellationToken = default)
@@ -97,7 +107,14 @@ public sealed class AdminPipelineHealthSendSerializationTests
             }
             finally
             {
-                lock (_gate) { _inFlight = null; }
+                int completed;
+                lock (_gate)
+                {
+                    _inFlight = null;
+                    completed = ++_completed;
+                }
+
+                AfterEachSend?.Invoke(completed);
             }
         }
 
@@ -146,19 +163,26 @@ public sealed class AdminPipelineHealthSendSerializationTests
     }
 
     /// <summary>
-    /// The embedding /metrics scrape is allowed to stay concurrent, so it has to be satisfiable
-    /// without a server: a handler that always fails exercises the endpoint's catch path.
+    /// The embedding /metrics read is not a send: it goes through
+    /// <see cref="IEmbeddingServiceMetricsReader"/>, outside the MediatR pipeline. This one holds its
+    /// answer until it is released, and remembers how many sends had started when it was called.
     /// </summary>
-    private sealed class UnreachableHttpClientFactory : IHttpClientFactory
+    private sealed class HeldMetricsReader : IEmbeddingServiceMetricsReader
     {
-        public HttpClient CreateClient(string name) =>
-            new(new FailingHandler()) { BaseAddress = new Uri("http://embedding.invalid") };
+        private readonly TaskCompletionSource<EmbeddingServiceMetricsDto> _answer =
+            new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly Func<int> _sendsSoFar;
 
-        private sealed class FailingHandler : HttpMessageHandler
+        public HeldMetricsReader(Func<int> sendsSoFar) => _sendsSoFar = sendsSoFar;
+
+        public int? SendsWhenCalled { get; private set; }
+
+        public void Release(EmbeddingServiceMetricsDto metrics) => _answer.TrySetResult(metrics);
+
+        public Task<EmbeddingServiceMetricsDto> ReadAsync(CancellationToken cancellationToken)
         {
-            protected override Task<HttpResponseMessage> SendAsync(
-                HttpRequestMessage request, CancellationToken cancellationToken)
-                => Task.FromException<HttpResponseMessage>(new HttpRequestException("no embedding service in a unit test"));
+            SendsWhenCalled = _sendsSoFar();
+            return _answer.Task;
         }
     }
 
@@ -166,17 +190,52 @@ public sealed class AdminPipelineHealthSendSerializationTests
     public async Task SendsOneQueryAtATime()
     {
         var mediator = new RecordingMediator();
+        var reader = new HeldMetricsReader(() => mediator.Sends.Count);
+        reader.Release(EmbeddingServiceMetricsDto.Unavailable);
 
-        var result = await AdminPipelineEndpoints.GetPipelineHealth(
-            new UnreachableHttpClientFactory(),
-            mediator,
-            NullLogger<Program>.Instance,
+        var snapshot = await new GetPipelineHealthSnapshotQueryHandler(mediator, reader).Handle(
+            new GetPipelineHealthSnapshotQuery(),
             TestContext.Current.CancellationToken);
 
-        result.Should().NotBeNull(
-            "the endpoint must answer 200 with all four queries served one at a time");
+        snapshot.Should().NotBeNull(
+            "the handler must answer with all four queries served one at a time");
         mediator.Sends.Should().HaveCount(4,
             "each of the four queries must be sent exactly once — no retry, none dropped");
+    }
+
+    /// <summary>
+    /// #4512: making the metrics read a fifth send would have serialized it behind the other four,
+    /// and with the embedding service down the endpoint would wait for its timeout on top of the
+    /// queries. The read starts before the first send and is still unanswered when the fourth
+    /// finishes: the reader is released only then. A handler that waited for the read before
+    /// sending would never release it — hence the 30 s guard, which bounds a hang and measures
+    /// nothing. No clock is read.
+    /// </summary>
+    [Fact]
+    public async Task ReadsEmbeddingMetricsWhileTheQueriesRunOneAtATime()
+    {
+        var released = new EmbeddingServiceMetricsDto(7, 1, 70.0, 700.0, 10.0, 14.29);
+        HeldMetricsReader? reader = null;
+        var mediator = new RecordingMediator
+        {
+            AfterEachSend = completed =>
+            {
+                if (completed == 4)
+                {
+                    reader!.Release(released);
+                }
+            },
+        };
+        reader = new HeldMetricsReader(() => mediator.Sends.Count);
+
+        var snapshot = await new GetPipelineHealthSnapshotQueryHandler(mediator, reader)
+            .Handle(new GetPipelineHealthSnapshotQuery(), TestContext.Current.CancellationToken)
+            .WaitAsync(TimeSpan.FromSeconds(30), TestContext.Current.CancellationToken);
+
+        reader.SendsWhenCalled.Should().Be(0, "the metrics read starts before the first query is sent");
+        mediator.Sends.Should().HaveCount(4);
+        snapshot.EmbeddingMetrics.Should().Be(released,
+            "the read that was still pending during the four sends is the one the snapshot carries");
     }
 
     /// <summary>

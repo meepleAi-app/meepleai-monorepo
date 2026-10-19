@@ -421,16 +421,12 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             entry.MarkAsFavorite();
         }
 
-        // Reconstruct GameState from database
+        // Reconstruct GameState from database. #4499: con la data di cambio salvata — le factory
+        // (GameState.Owned(...) e le altre) la mettevano a "adesso", e ogni update la riscriveva.
         var stateType = (GameStateType)entity.CurrentState;
-        var gameState = stateType switch
-        {
-            GameStateType.Nuovo => GameState.Nuovo(entity.StateNotes),
-            GameStateType.InPrestito => GameState.InPrestito(entity.StateNotes),
-            GameStateType.Wishlist => GameState.Wishlist(entity.StateNotes),
-            GameStateType.Owned => GameState.Owned(entity.StateNotes),
-            _ => GameState.Nuovo()
-        };
+        var gameState = Enum.IsDefined(stateType)
+            ? GameState.Reconstitute(stateType, entity.StateChangedAt, entity.StateNotes)
+            : GameState.Nuovo();
 
         // Override CurrentState using reflection
         var currentStateProp = typeof(UserLibraryEntry).GetProperty("CurrentState");
@@ -479,6 +475,13 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             var ownershipDeclaredAtProp = typeof(UserLibraryEntry).GetProperty("OwnershipDeclaredAt");
             ownershipDeclaredAtProp?.SetValue(entry, entity.OwnershipDeclaredAt.Value);
         }
+
+        // #4499: senza questa riga l'aggregato non conosceva la cover personalizzata — la
+        // rimozione rispondeva 404 e il dettaglio del gioco non la vedeva.
+        entry.SetCustomCoverR2Key(entity.CustomCoverR2Key);
+
+        // #4499: colonna che il dominio trasporta e basta (vedi UserLibraryEntry.TestRunId).
+        entry.SetTestRunId(entity.TestRunId);
 
         // Clear domain events that were raised during construction
         // (we don't want to re-raise events for existing entities)
@@ -588,6 +591,10 @@ internal class UserLibraryRepository : RepositoryBase, IUserLibraryRepository
             CustomPdfOriginalFileName = domainEntity.CustomPdfMetadata?.OriginalFileName,
             PrivatePdfId = domainEntity.PrivatePdfId,
             OwnershipDeclaredAt = domainEntity.OwnershipDeclaredAt,
+            // #4499: omessa, ogni update scriveva custom_cover_r2_key = NULL, upload compreso.
+            CustomCoverR2Key = domainEntity.CustomCoverR2Key,
+            // #4499: omessa, ogni update azzerava test_run_id e la pulizia E2E perdeva la riga.
+            TestRunId = domainEntity.TestRunId,
 
             // Game state
             CurrentState = (int)domainEntity.CurrentState.Value,

@@ -159,7 +159,8 @@ public class UserLibraryEntryEntity
 
     /// <summary>
     /// Issue #1824 (umbrella #1821 L3) — user-uploaded custom cover image for
-    /// this game. Stored in R2 at <c>covers/user/{UserId}/{GameId}/cover.webp</c>.
+    /// this game. The column holds the suffix-free key <c>user-covers/{UserId}/{GameId}/cover</c>;
+    /// the R2 object is <c>user-covers/{UserId}/{GameId}/cover.webp</c> (<c>CoverKeyBuilder.ForUser</c>).
     /// Has highest priority in the FE cover-resolution chain (overrides
     /// PDF-derived cover from L4 and Wikidata from L2).
     /// Nullable; when null the chain falls through to L4 → L2 → L1.

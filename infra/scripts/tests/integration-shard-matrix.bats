@@ -115,6 +115,23 @@ maximal() {
 
 # ─── i due gate misurano lo stesso insieme ───────────────────────────────────────────────────────
 
+@test "dev-async e ci.yml applicano lo stesso filtro di base" {
+    # Il filtro di base e' la parte che precede `${{ matrix.shard.filter_extra }}` nel comando
+    # `dotnet test`: la selezione per categoria e le esclusioni per nome, uguali per tutti gli shard.
+    # I confronti sotto guardano solo `filter_extra`, quindi un'esclusione tolta da un workflow e
+    # lasciata nell'altro passerebbe senza che niente cambi colore (#4518: FrontendSdk era escluso
+    # da entrambi e non girava da nessuna parte; toglierlo da uno solo avrebbe fatto misurare ai
+    # due gate insiemi diversi, il difetto di #3622).
+    base_filter() {
+        grep -oE 'Category=Integration[^$"\\]*\$\{\{ matrix\.shard\.filter_extra' "$1" \
+            | sed 's/\${{ matrix\.shard\.filter_extra$//' | LC_ALL=C sort -u
+    }
+    dev="$(base_filter "$DEV_ASYNC")"
+    [ -n "$dev" ]
+    [ "$(printf '%s\n' "$dev" | wc -l)" -eq 1 ]
+    [ "$dev" = "$(base_filter "$CI")" ]
+}
+
 @test "dev-async e ci.yml selezionano gli stessi test: stessi token, stesso Core" {
     # dev-async puo' avere una ripartizione piu' fine di ci.yml (#3742 divide Games in due, #4484
     # stacca AuthIntegration da KnowledgeBase), ma l'unione dev'essere la stessa: un test che un solo

@@ -31,11 +31,15 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install only RUNTIME system dependencies (no gcc/g++/build-essential)
+# OCR languages (#4435): tesseract-ocr pulls in eng (and osd); ita and deu are added here. They must
+# cover the API's PdfProcessing:Extractor:Unstructured:Language set (default eng+ita+deu): Tesseract
+# asked for a single language it has no data for fails the whole OCR ("couldn't load any languages").
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libmagic-dev \
     poppler-utils \
     tesseract-ocr \
     tesseract-ocr-ita \
+    tesseract-ocr-deu \
     libgl1 \
     libglib2.0-0 \
     curl \

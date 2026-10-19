@@ -64,8 +64,32 @@ internal class UnstructuredOptions
     public string ApiUrl { get; set; } = "http://unstructured-service:8001";
     public int TimeoutSeconds { get; set; } = 35;
     public int MaxRetries { get; set; } = 3;
+    /// <summary>#4435: the multilingual default — the corpus is mostly English, then Italian and German.</summary>
+    public const string DefaultLanguage = "eng+ita+deu";
+
+    /// <summary>
+    /// #4435: see <see cref="LanguageConfidenceThreshold"/>. <c>LanguageDetector</c>'s confidence is the
+    /// share of letters in the dominant script: a Latin-script rulebook scores close to 1. Above 0.8 at
+    /// least four letters in five belong to the detected script; below it the text is mixed, short or
+    /// garbled, and the label is not worth trusting. Never-detected rows (null) and empty text ("unknown",
+    /// 0) fall below any threshold.
+    /// </summary>
+    public const double DefaultLanguageConfidenceThreshold = 0.8;
+
     public string Strategy { get; set; } = "fast";
-    public string Language { get; set; } = "ita";
+
+    /// <summary>
+    /// #4435: the languages sent to the service when the document's own language is not known or not
+    /// trusted, as Tesseract codes joined by <c>+</c>. It also declares what the service can read: a
+    /// document language outside this set gets the whole set (see <c>UnstructuredLanguageResolver</c>).
+    /// </summary>
+    public string Language { get; set; } = DefaultLanguage;
+
+    /// <summary>
+    /// #4435: the detected <c>Language</c> of a document is sent only when its <c>language_confidence</c>
+    /// is strictly above this value (0–1). 1 disables detection; 0 trusts any non-zero detection.
+    /// </summary>
+    public double LanguageConfidenceThreshold { get; set; } = DefaultLanguageConfidenceThreshold;
 }
 
 /// <summary>

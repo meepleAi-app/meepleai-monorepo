@@ -380,6 +380,50 @@ public class PdfProcessingConfigurationValidatorTests
         result.Succeeded.Should().BeFalse();
         result.FailureMessage.Should().Contain("Extractor.SmolDocling.MaxRetries must be between 0 and 10");
     }
+
+    [Theory]
+    [Trait("Issue", "4435")]
+    [InlineData(-0.1)]
+    [InlineData(1.1)]
+    public void Validate_InvalidUnstructuredLanguageConfidenceThreshold_ReturnsFail(double threshold)
+    {
+        var options = CreateValidOptions();
+        options.Extractor.Unstructured.LanguageConfidenceThreshold = threshold;
+
+        var result = _validator.Validate(null, options);
+
+        result.Succeeded.Should().BeFalse();
+        result.FailureMessage.Should().Contain("Extractor.Unstructured.LanguageConfidenceThreshold must be between 0.0 and 1.0");
+    }
+
+    [Theory]
+    [Trait("Issue", "4435")]
+    [InlineData(0.0)]
+    [InlineData(1.0)]
+    public void Validate_BoundaryUnstructuredLanguageConfidenceThreshold_ReturnsSuccess(double threshold)
+    {
+        var options = CreateValidOptions();
+        options.Extractor.Unstructured.LanguageConfidenceThreshold = threshold;
+
+        _validator.Validate(null, options).Succeeded.Should().BeTrue();
+    }
+
+    [Theory]
+    [Trait("Issue", "4435")]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(" + ")]
+    public void Validate_BlankUnstructuredLanguage_ReturnsFail(string language)
+    {
+        var options = CreateValidOptions();
+        options.Extractor.Unstructured.Language = language;
+
+        var result = _validator.Validate(null, options);
+
+        result.Succeeded.Should().BeFalse();
+        result.FailureMessage.Should().Contain("Extractor.Unstructured.Language");
+    }
+
     private static PdfProcessingOptions CreateValidOptions()
     {
         return new PdfProcessingOptions

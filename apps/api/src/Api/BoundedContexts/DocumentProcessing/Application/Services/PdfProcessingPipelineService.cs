@@ -77,6 +77,11 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     // pre-#3419 test constructors compile unchanged; production DI always provides it.
     private readonly IExtractionStrategySelector? _extractionStrategySelector;
 
+    // #4435: scoped language holder — set per PDF before extraction so the same-scope
+    // UnstructuredPdfTextExtractor sends the document's language instead of a fixed one. Optional for
+    // the same reason as the strategy selector; production DI always provides it.
+    private readonly IExtractionLanguageSelector? _extractionLanguageSelector;
+
     public PdfProcessingPipelineService(
         MeepleAiDbContext db,
         IPdfClaimService pdfClaimService,
@@ -99,7 +104,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         IDomainEventCollector? eventCollector = null,
         IPdfCoverUploadPipeline? pdfCoverUploadPipeline = null,
         IAdvancedChunkingService? advancedChunking = null,
-        IExtractionStrategySelector? extractionStrategySelector = null)
+        IExtractionStrategySelector? extractionStrategySelector = null,
+        IExtractionLanguageSelector? extractionLanguageSelector = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _pdfClaimService = pdfClaimService ?? throw new ArgumentNullException(nameof(pdfClaimService));
@@ -126,6 +132,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         _pdfCoverUploadPipeline = pdfCoverUploadPipeline;
         _advancedChunking = advancedChunking;
         _extractionStrategySelector = extractionStrategySelector;
+        _extractionLanguageSelector = extractionLanguageSelector;
     }
 
     public async Task<PdfPipelineOutcome> ProcessAsync(
@@ -589,9 +596,32 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 }
             }
 
-            var extractResult = await _pdfTextExtractor
-                .ExtractPagedTextAsync(fileStream, enableOcrFallback: true, cancellationToken)
-                .ConfigureAwait(false);
+            // #4435: publish what the row knows about its language. Detection runs AFTER this call
+            // (ProcessAsync, on the extracted text), so on a first ingest the row still holds the entity
+            // default Language = "en" with LanguageConfidence = null, and the resolver treats it as
+            // unknown → the configured multilingual set. A re-process sees the previous detection and
+            // any admin override. Cleared in the finally so it cannot leak to a later extraction that
+            // shares this DI scope without setting it.
+            if (_extractionLanguageSelector is not null)
+            {
+                _extractionLanguageSelector.Current = new DocumentLanguageHint(
+                    pdfDoc.LanguageOverride, pdfDoc.Language, pdfDoc.LanguageConfidence);
+            }
+
+            PagedTextExtractionResult extractResult;
+            try
+            {
+                extractResult = await _pdfTextExtractor
+                    .ExtractPagedTextAsync(fileStream, enableOcrFallback: true, cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            finally
+            {
+                if (_extractionLanguageSelector is not null)
+                {
+                    _extractionLanguageSelector.Current = null;
+                }
+            }
 
             if (!extractResult.Success)
             {

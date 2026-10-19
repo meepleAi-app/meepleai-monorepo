@@ -3,10 +3,12 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using Moq.Protected;
 using Xunit;
@@ -206,6 +208,180 @@ public class UnstructuredPdfTextExtractorTests
         await extractor.ExtractTextAsync(CreateTestPdfStream(), cancellationToken: TestCancellationToken);
 
         capturedStrategy().Should().Be("fast");
+    }
+
+    /// <summary>
+    /// #4435: builds an extractor whose HTTP handler records every multipart form field posted to
+    /// the Unstructured service, on both the ingest client and the hi_res client. Options are bound
+    /// from the real configuration key, so a test proves the key is read, not just the POCO.
+    /// </summary>
+    private (UnstructuredPdfTextExtractor extractor, Dictionary<string, string> fields) CreateExtractorCapturingFields(
+        IExtractionLanguageSelector? languageSelector,
+        IReadOnlyDictionary<string, string?>? configuration)
+    {
+        var fields = new Dictionary<string, string>(StringComparer.Ordinal);
+        var httpClient = new HttpClient(_mockHttpMessageHandler.Object)
+        {
+            BaseAddress = new Uri("http://test-unstructured:8001")
+        };
+        var hiResClient = new HttpClient(_mockHttpMessageHandler.Object)
+        {
+            BaseAddress = new Uri("http://test-unstructured:8001")
+        };
+
+        _mockHttpClientFactory
+            .Setup(x => x.CreateClient("UnstructuredService"))
+            .Returns(httpClient);
+        _mockHttpClientFactory
+            .Setup(x => x.CreateClient(UnstructuredPdfTextExtractor.HiResClientName))
+            .Returns(hiResClient);
+
+        _mockHttpMessageHandler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Returns<HttpRequestMessage, CancellationToken>(async (req, ct) =>
+            {
+                if (req.Content is MultipartFormDataContent multipart)
+                {
+                    foreach (var part in multipart)
+                    {
+                        var name = part.Headers.ContentDisposition?.Name?.Trim('"');
+                        if (name is not null && !string.Equals(name, "file", StringComparison.Ordinal))
+                        {
+                            fields[name] = await part.ReadAsStringAsync(ct).ConfigureAwait(false);
+                        }
+                    }
+                }
+
+                return new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent(CreateSuccessResponse())
+                };
+            });
+
+        IOptions<PdfProcessingOptions>? options = null;
+        if (configuration is not null)
+        {
+            var bound = new PdfProcessingOptions();
+            new ConfigurationBuilder()
+                .AddInMemoryCollection(configuration)
+                .Build()
+                .GetSection("PdfProcessing")
+                .Bind(bound);
+            options = Options.Create(bound);
+        }
+
+        var extractor = new UnstructuredPdfTextExtractor(
+            _mockHttpClientFactory.Object,
+            _mockLogger.Object,
+            strategySelector: null,
+            languageSelector: languageSelector,
+            pdfOptions: options);
+        return (extractor, fields);
+    }
+
+    private const string LanguageKey = "PdfProcessing:Extractor:Unstructured:Language";
+    private const string ThresholdKey = "PdfProcessing:Extractor:Unstructured:LanguageConfidenceThreshold";
+
+    [Fact]
+    [Trait("Issue", "4435")]
+    public async Task ExtractPagedTextAsync_LanguageOverrideDe_SendsDeu()
+    {
+        var selector = new ExtractionLanguageSelector
+        {
+            Current = new DocumentLanguageHint(LanguageOverride: "de", DetectedLanguage: "en", DetectedConfidence: 0.99)
+        };
+        var (extractor, fields) = CreateExtractorCapturingFields(
+            selector, new Dictionary<string, string?> { [LanguageKey] = "eng+ita+deu" });
+
+        await extractor.ExtractPagedTextAsync(CreateTestPdfStream(), cancellationToken: TestCancellationToken);
+
+        fields["language"].Should().Be("deu");
+    }
+
+    [Theory]
+    [Trait("Issue", "4435")]
+    [InlineData("eng+ita+deu")]
+    [InlineData("eng+ita")]
+    [InlineData("eng")]
+    public async Task ExtractPagedTextAsync_DocumentWithoutLanguage_SendsConfiguredDefault(string configured)
+    {
+        // Un documento senza lingua nota (prima ingestione) invia il default di configurazione, e
+        // cambiare la chiave cambia ciò che si invia.
+        var selector = new ExtractionLanguageSelector
+        {
+            Current = new DocumentLanguageHint(LanguageOverride: null, DetectedLanguage: "en", DetectedConfidence: null)
+        };
+        var (extractor, fields) = CreateExtractorCapturingFields(
+            selector, new Dictionary<string, string?> { [LanguageKey] = configured });
+
+        await extractor.ExtractPagedTextAsync(CreateTestPdfStream(), cancellationToken: TestCancellationToken);
+
+        fields["language"].Should().Be(configured);
+    }
+
+    [Fact]
+    [Trait("Issue", "4435")]
+    public async Task ExtractTextAsync_NoSelectorNoOptions_SendsBuiltInMultilingualDefault_NotIta()
+    {
+        // DevTools/integration construction: no selector, no options → the built-in default set.
+        var (extractor, fields) = CreateExtractorCapturingFields(languageSelector: null, configuration: null);
+
+        await extractor.ExtractTextAsync(CreateTestPdfStream(), cancellationToken: TestCancellationToken);
+
+        fields["language"].Should().Be("eng+ita+deu");
+    }
+
+    [Theory]
+    [Trait("Issue", "4435")]
+    [InlineData(0.95, "eng")]
+    [InlineData(0.50, "eng+ita+deu")]
+    public async Task ExtractPagedTextAsync_DetectedLanguage_UsedOnlyAboveConfiguredThreshold(
+        double confidence, string expected)
+    {
+        var selector = new ExtractionLanguageSelector
+        {
+            Current = new DocumentLanguageHint(LanguageOverride: null, DetectedLanguage: "en", DetectedConfidence: confidence)
+        };
+        var (extractor, fields) = CreateExtractorCapturingFields(
+            selector, new Dictionary<string, string?> { [LanguageKey] = "eng+ita+deu", [ThresholdKey] = "0.8" });
+
+        await extractor.ExtractPagedTextAsync(CreateTestPdfStream(), cancellationToken: TestCancellationToken);
+
+        fields["language"].Should().Be(expected);
+    }
+
+    [Fact]
+    [Trait("Issue", "4435")]
+    public async Task ExtractRawHiResAsync_SendsTheDocumentLanguage_OnTheHiResPass()
+    {
+        // The hi_res region pass (#3435) is where OCR runs: an English rulebook must be read as eng.
+        var (extractor, fields) = CreateExtractorCapturingFields(
+            languageSelector: null, new Dictionary<string, string?> { [LanguageKey] = "eng+ita+deu" });
+
+        await extractor.ExtractRawHiResAsync(
+            CreateTestPdfStream(),
+            new DocumentLanguageHint(LanguageOverride: null, DetectedLanguage: "en", DetectedConfidence: 0.97),
+            TestCancellationToken);
+
+        fields["strategy"].Should().Be("hi_res");
+        fields["language"].Should().Be("eng");
+    }
+
+    [Fact]
+    [Trait("Issue", "4435")]
+    public async Task ExtractRawHiResAsync_NoDocumentLanguage_SendsConfiguredDefault()
+    {
+        var (extractor, fields) = CreateExtractorCapturingFields(
+            languageSelector: null, new Dictionary<string, string?> { [LanguageKey] = "eng+ita" });
+
+        await extractor.ExtractRawHiResAsync(CreateTestPdfStream(), language: null, TestCancellationToken);
+
+        fields["language"].Should().Be("eng+ita");
     }
 
     [Fact]

@@ -85,7 +85,8 @@ Content-Type: multipart/form-data
 
 file: <binary PDF file>
 strategy: fast | hi_res (default: fast)
-language: ita | eng | ... (default: ita)
+language: Tesseract codes joined by '+', e.g. eng+ita+deu or deu (default: ita;
+          the API always sends it: the document's language, else its configured set — #4435)
 ```
 
 **Response** (200 OK):
@@ -264,7 +265,7 @@ df -h /tmp
 
 - Check PDF quality (scanned images need OCR)
 - Try `hi_res` strategy for complex layouts
-- Verify Italian language pack installed
+- Verify the language packs the API sends are installed (`tesseract --list-langs`): eng, ita, deu
 - Check logs for extraction warnings
 
 ### Timeout errors

@@ -22,6 +22,8 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  /** #4335: la risposta si è fermata prima della fine. Il testo è quello arrivato: non è completo. */
+  interrupted?: boolean;
 }
 
 interface InlineChatPanelProps {
@@ -50,6 +52,21 @@ export function InlineChatPanel({ gameId, chatThreadId }: InlineChatPanelProps) 
       if (metadata.chatThreadId) {
         setThreadId(metadata.chatThreadId);
       }
+    },
+    // The reason is in the alert under the messages. #4335: the words that arrived before the end
+    // stay, marked as incomplete — the streaming bubble that showed them goes away with the stream.
+    onError: (_error, { partialAnswer }) => {
+      if (!partialAnswer) return;
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `assistant-${Date.now()}`,
+          role: 'assistant',
+          content: partialAnswer,
+          timestamp: new Date(),
+          interrupted: true,
+        },
+      ]);
     },
   });
 
@@ -135,6 +152,14 @@ export function InlineChatPanel({ gameId, chatThreadId }: InlineChatPanelProps) 
                 )}
               >
                 <p className="whitespace-pre-wrap">{msg.content}</p>
+                {msg.interrupted && (
+                  <p
+                    data-testid="inline-chat-interrupted"
+                    className="mt-1 text-xs italic text-muted-foreground"
+                  >
+                    Risposta interrotta: non è completa.
+                  </p>
+                )}
               </div>
               {msg.role === 'user' && (
                 <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
@@ -167,7 +192,10 @@ export function InlineChatPanel({ gameId, chatThreadId }: InlineChatPanelProps) 
 
           {/* Error message */}
           {state.error && (
-            <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-2 text-xs text-destructive">
+            <div
+              role="alert"
+              className="rounded-lg border border-destructive/20 bg-destructive/5 p-2 text-xs text-destructive"
+            >
               {state.error}
             </div>
           )}

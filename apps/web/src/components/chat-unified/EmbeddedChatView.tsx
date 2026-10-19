@@ -23,6 +23,8 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp?: string;
+  /** #4335: la risposta si è fermata prima della fine. Il testo è quello arrivato: non è completo. */
+  interrupted?: boolean;
 }
 
 export interface EmbeddedChatViewProps {
@@ -65,6 +67,21 @@ export function EmbeddedChatView({ threadId, gameId, gameName }: EmbeddedChatVie
         timestamp: new Date().toISOString(),
       };
       setMessages(prev => [...prev, assistantMessage]);
+    },
+    // The reason is in the alert above the messages. #4335: the words that arrived before the end
+    // stay, marked as incomplete — the streaming bubble that showed them goes away with the stream.
+    onError: (_error, { partialAnswer }) => {
+      if (!partialAnswer) return;
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `assistant-${crypto.randomUUID()}`,
+          role: 'assistant',
+          content: partialAnswer,
+          timestamp: new Date().toISOString(),
+          interrupted: true,
+        },
+      ]);
     },
   });
 
@@ -148,6 +165,14 @@ export function EmbeddedChatView({ threadId, gameId, gameName }: EmbeddedChatVie
             data-testid={`message-${msg.role}`}
           >
             <p className="text-sm whitespace-pre-wrap font-nunito">{msg.content}</p>
+            {msg.interrupted && (
+              <p
+                className="mt-1 text-[10px] italic text-muted-foreground"
+                data-testid="message-interrupted"
+              >
+                Risposta interrotta: non è completa.
+              </p>
+            )}
           </div>
         ))}
 

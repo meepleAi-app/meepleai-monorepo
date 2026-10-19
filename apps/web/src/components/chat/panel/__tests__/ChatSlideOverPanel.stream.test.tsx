@@ -48,6 +48,7 @@ import { ChatSlideOverPanel } from '../ChatSlideOverPanel';
 const STATE_UPDATE = 0;
 const CITATIONS = 1;
 const COMPLETE = 4;
+const ERROR = 5;
 const TOKEN = 7;
 
 const AZUL = { id: 'azul', name: 'Azul', year: 2017, pdfCount: 3, kbStatus: 'ready' as const };
@@ -213,5 +214,95 @@ describe("ChatSlideOverPanel — lo stream, con l'hook vero (#4333)", () => {
     unmount();
 
     expect(wire.signal()?.aborted).toBe(true);
+  });
+
+  /**
+   * #4335: la risposta si chiude senza `Complete` né `Error`. Prima la parte arrivata restava come
+   * anteprima «in corso» e `handleSend` rifiutava ogni domanda dopo, senza dire perché: se ne usciva
+   * solo con «Nuova chat», cambiando gioco o chiudendo il pannello.
+   */
+  describe('a stream that closes without Complete or Error (#4335)', () => {
+    const INTERRUPTED = 'La risposta si è interrotta prima della fine';
+
+    it('says the answer was interrupted, keeps what arrived, and takes the next question', async () => {
+      const first = steppedFetch([sseEvent(TOKEN, { token: 'Cinque ' })]);
+      globalThis.fetch = first.fetch;
+      useChatPanelStore.getState().open(AZUL);
+
+      render(<ChatSlideOverPanel />);
+      ask('Quante tessere?');
+      await waitFor(() => expect(first.calls()).toBe(1));
+      for (let i = 0; i < first.steps; i++) await deliver(first.next);
+
+      // L'utente legge che la risposta si è interrotta...
+      expect(await screen.findByRole('alert')).toHaveTextContent(INTERRUPTED);
+      // ...e la parte che aveva già letto resta, segnata come incompleta.
+      expect(answers()).toEqual([expect.stringContaining('Cinque')]);
+      expect(screen.getByTestId('chat-message-interrupted')).toHaveTextContent(
+        'Risposta interrotta'
+      );
+
+      // La domanda dopo parte.
+      const second = steppedFetch([
+        sseEvent(TOKEN, { token: 'Cinque tessere.' }),
+        sseEvent(COMPLETE, { totalTokens: 2 }),
+      ]);
+      globalThis.fetch = second.fetch;
+      ask('Quante tessere, di preciso?');
+      await waitFor(() => expect(second.calls()).toBe(1));
+      for (let i = 0; i < second.steps; i++) await deliver(second.next);
+
+      await waitFor(() => expect(answers()).toHaveLength(2));
+      expect(answers()[1]).toContain('Cinque tessere.');
+      // L'avviso era della risposta di prima, e solo quella resta segnata.
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(screen.getAllByTestId('chat-message-interrupted')).toHaveLength(1);
+    });
+
+    it('adds no empty answer when the stream closes before any word', async () => {
+      const first = steppedFetch([sseEvent(STATE_UPDATE, { message: 'Cerco nel manuale...' })]);
+      globalThis.fetch = first.fetch;
+      useChatPanelStore.getState().open(AZUL);
+
+      render(<ChatSlideOverPanel />);
+      ask('Quante tessere?');
+      await waitFor(() => expect(first.calls()).toBe(1));
+      for (let i = 0; i < first.steps; i++) await deliver(first.next);
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(INTERRUPTED);
+      expect(answers()).toEqual([]);
+
+      const second = steppedFetch([sseEvent(COMPLETE, { totalTokens: 0 })]);
+      globalThis.fetch = second.fetch;
+      ask('Quante tessere?');
+      await waitFor(() => expect(second.calls()).toBe(1));
+    });
+  });
+
+  /**
+   * #4335, deciso insieme: un `Error` che arriva dopo qualche parola. La parte scritta spariva
+   * (`onComplete` non scatta): ora resta, segnata come incompleta, accanto al motivo.
+   */
+  it('keeps the words that came before an Error event, marked as incomplete', async () => {
+    const wire = steppedFetch([
+      sseEvent(TOKEN, { token: 'Cinque ' }),
+      sseEvent(ERROR, {
+        errorMessage: 'Il servizio AI è temporaneamente non disponibile.',
+        errorCode: 'SOMETHING_ELSE',
+      }),
+    ]);
+    globalThis.fetch = wire.fetch;
+    useChatPanelStore.getState().open(AZUL);
+
+    render(<ChatSlideOverPanel />);
+    ask('Quante tessere?');
+    await waitFor(() => expect(wire.calls()).toBe(1));
+    for (let i = 0; i < wire.steps; i++) await deliver(wire.next);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Il servizio AI è temporaneamente non disponibile.'
+    );
+    expect(answers()).toEqual([expect.stringContaining('Cinque')]);
+    expect(screen.getByTestId('chat-message-interrupted')).toBeInTheDocument();
   });
 });

@@ -128,8 +128,23 @@ export function ChatSlideOverPanel() {
         setThreadId(metadata.chatThreadId);
       }
     },
-    onError: () => {
-      // stream.state.error is surfaced below; no further handling needed here
+    // stream.state.error is surfaced below, in the panel's alert. #4335: the words that arrived
+    // before the end stay, marked as incomplete — the user has already read them, and the preview
+    // that showed them goes away with the stream.
+    onError: (_error, { partialAnswer, citations }) => {
+      if (!partialAnswer) return;
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `assistant-${Date.now()}`,
+          role: 'assistant',
+          content: partialAnswer,
+          authorName: 'Agente',
+          timestamp: formatMessageTime(new Date().toISOString()),
+          citations,
+          interrupted: true,
+        },
+      ]);
     },
   });
 

@@ -25,6 +25,8 @@ const TABS: ReadonlyArray<KbTab> = [
   { label: 'RAG Pipeline', href: `${KB_BASE}/pipeline` },
   { label: 'Embedding', href: `${KB_BASE}/embedding` },
   { label: 'Feedback', href: `${KB_BASE}/feedback`, kind: 'feedback' },
+  // #4470 (ADR-095 fetta 7b): le domande di riferimento, in sola lettura, accanto al feedback.
+  { label: 'Domande di riferimento', href: `${KB_BASE}/reference-questions` },
   { label: 'Settings', href: `${KB_BASE}/settings` },
   { label: 'Snapshots', href: `${KB_BASE}/snapshots` },
 ];
@@ -42,9 +44,9 @@ function isActive(tabHref: string, pathname: string): boolean {
 }
 
 /**
- * KB sub-nav: 8 tab-link a route reali. La sezione attiva è derivata dal
- * pathname corrente (App Router). Vive dentro `knowledge-base/layout.tsx` e
- * wrappa Explorer + le 7 tool-page esistenti.
+ * KB sub-nav: tab-link a route reali, elencati in `TABS`. La sezione attiva è
+ * derivata dal pathname corrente (App Router). Vive dentro
+ * `knowledge-base/layout.tsx` e wrappa Explorer e le tool-page.
  *
  * Issue #1655: wired count badges on Processing Queue + Feedback tabs.
  */

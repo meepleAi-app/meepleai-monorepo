@@ -15,17 +15,25 @@ import {
   AdminGameKbDocumentsSchema,
   AdminKbFeedbackSchema,
   AdminKbFeedbackSummarySchema,
+  AdminReferenceQuestionsSchema,
   type KnowledgeBaseStatus,
   type RagConfigResponse,
   type UserGameKbStatus,
   type AdminGameKbDocuments,
   type AdminKbFeedback,
   type AdminKbFeedbackSummary,
+  type AdminReferenceQuestions,
 } from '../schemas/knowledge-base.schemas';
 
 // ========== KB Management DTOs ==========
 
-export type { UserGameKbStatus, AdminGameKbDocuments, AdminKbFeedback, AdminKbFeedbackSummary };
+export type {
+  UserGameKbStatus,
+  AdminGameKbDocuments,
+  AdminKbFeedback,
+  AdminKbFeedbackSummary,
+  AdminReferenceQuestions,
+};
 
 export interface SubmitKbFeedbackBody {
   chatSessionId: string;
@@ -41,6 +49,13 @@ export interface AdminKbFeedbackParams {
   outcome?: 'helpful' | 'not_helpful';
   page?: number;
   pageSize?: number;
+}
+
+/** #4470: filtri dell'elenco delle domande di riferimento. Ogni filtro assente lascia passare tutto. */
+export interface AdminReferenceQuestionsParams {
+  gameId?: string;
+  /** true: solo le domande del gate di pubblicazione; false: solo quelle fuori. */
+  inGate?: boolean;
 }
 
 import type { HttpClient } from '../core/httpClient';
@@ -193,6 +208,23 @@ export function createKnowledgeBaseClient({ httpClient }: CreateKnowledgeBaseCli
      */
     async getAdminKbFeedbackSummary(): Promise<AdminKbFeedbackSummary | null> {
       return httpClient.get('/api/v1/admin/kb/feedback/summary', AdminKbFeedbackSummarySchema);
+    },
+
+    /**
+     * #4470 (ADR-095 fetta 7b): the reference questions, read-only, with the games that have them.
+     * @param params Optional filters (game, publication gate)
+     */
+    async getAdminReferenceQuestions(
+      params?: AdminReferenceQuestionsParams
+    ): Promise<AdminReferenceQuestions | null> {
+      const searchParams = new URLSearchParams();
+      if (params?.gameId) searchParams.set('gameId', params.gameId);
+      if (params?.inGate !== undefined) searchParams.set('inGate', String(params.inGate));
+      const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+      return httpClient.get(
+        `/api/v1/admin/kb/reference-questions${query}`,
+        AdminReferenceQuestionsSchema
+      );
     },
 
     /**

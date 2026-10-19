@@ -2,6 +2,7 @@ using Api.BoundedContexts.Administration.Application.Queries.GameKbStatus;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.RemoveDocumentFromKb;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetAdminGameKbDocuments;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetAdminKbFeedback;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetAdminReferenceQuestions;
 using Api.Filters;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -16,6 +17,7 @@ namespace Api.Routing;
 /// #4169: the per-game KB settings override (KB-10) is gone: it was saved, never read by the
 /// answer path. Retrieval settings belong to the agent profile (ADR-095).
 /// KB-GAMES: Overview dashboard with KB status per game.
+/// #4470 (ADR-095 fetta 7b): reference questions, read-only, for the Quality section.
 /// </summary>
 internal static class AdminGameKbEndpoints
 {
@@ -93,6 +95,25 @@ internal static class AdminGameKbEndpoints
         })
         .WithName("GetAdminKbFeedbackSummary")
         .WithSummary("Feedback utili e non utili per versione del profilo, e i giochi con feedback (admin)");
+
+        // #4470 (ADR-095 fetta 7b, D8): le domande di riferimento, in sola lettura. Le scrive solo il seeder.
+        var referenceQuestions = group.MapGroup("/admin/kb/reference-questions")
+            .WithTags("Admin", "KnowledgeBase")
+            .AddEndpointFilter<RequireAdminSessionFilter>();
+
+        // GET /api/v1/admin/kb/reference-questions?gameId=&inGate=
+        referenceQuestions.MapGet("/", async (
+            Guid? gameId,
+            bool? inGate,
+            IMediator mediator,
+            CancellationToken ct) =>
+        {
+            var result = await mediator.Send(new GetAdminReferenceQuestionsQuery(gameId, inGate), ct)
+                .ConfigureAwait(false);
+            return Results.Ok(result);
+        })
+        .WithName("GetAdminReferenceQuestions")
+        .WithSummary("Domande di riferimento dell'agente, per gioco e per gate di pubblicazione (admin)");
 
         return group;
     }

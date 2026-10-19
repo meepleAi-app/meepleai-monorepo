@@ -21,7 +21,14 @@ and is the gate the in-session live path must pass before enhancements are wired
   Page-level, so stable across the #3427 re-index. A sample without it is not citation-graded.
 - `relevant_chunk_ids` are intentionally empty pending #3427 (recall labeling via the labeling-assist workflow).
 
-### `reference-questions-it.json` — domande di riferimento dell'agente (#4470)
+### Domande di riferimento dell'agente (#4470)
+
+Il file è `apps/api/src/Api/Infrastructure/Seeders/ReferenceQuestions/Data/reference-questions-it.json`,
+non più in questa cartella: è una risorsa dell'API, perché un seeder lo carica nella tabella
+`knowledge_base.reference_questions` (layer `ReferenceQuestions`, profilo Staging e Dev; si salta con
+`SKIP_REFERENCE_QUESTIONS_SEED=true`), e l'immagine dell'API copia solo `apps/api/src/Api` e `data/`.
+L'elenco in sola lettura è nella sezione Qualità dell'admin, «Domande di riferimento». Le misure restano
+qui, in `misure/`.
 
 Il set scritto dall'utente il 2026-10-18 per verificare l'agente: domande in italiano su Catan, Carcassonne,
 Ticket to Ride e Gloomhaven, con risposta attesa in testo libero. Serve a due cose (ADR-095 fetta 7, #4170):
@@ -38,6 +45,8 @@ lo dà un giudice LLM tarato (#4471), non le parole chiave: il set non ne ha.
     Catan, che nel regolamento sono solo una grafica). La risposta attesa ne accetta due: che i
     documenti non lo riportano, oppure la regola vera; è sbagliata solo una regola falsa (criterio 6 di
     `misure/criteri-giudizio.md`). La domanda misura se l'agente inventa.
+- `gate` (facoltativo, `true`/`false`): la domanda fa parte del gate di pubblicazione. Il sottoinsieme
+  lo approva l'utente; finché nessuna domanda lo porta, la colonna `in_gate` resta falsa ovunque.
 - `game` è il gioco del catalogo su cui la domanda va posta: le domande su Stazioni, Traghetti e Tunnel
   sono di «Ticket to Ride: Europe», che ha il suo regolamento.
 - Ogni risposta attesa è stata confrontata con il testo del regolamento che l'agente legge, non con la
@@ -47,8 +56,13 @@ lo dà un giudice LLM tarato (#4471), non le parole chiave: il set non ne ha.
 - Gloomhaven è verificato sulla traduzione italiana del regolamento
   (`gloomhaven-it_rulebook.pdf` nel bucket dei seed, `rulebooks/v1/`: come vuole `.gitignore`, i regolamenti stanno nello storage e non in git). Il PDF `gloomhaven_rulebook.pdf` del
   repository è una scansione senza testo, e non dà nulla all'agente.
-- Non porta UUID: l'id di un gioco cambia da un ambiente all'altro, e il caricamento lo risolve sul posto.
-- Per contare le domande per gioco: `jq 'group_by(.game) | map({(.[0].game): length}) | add' reference-questions-it.json`.
+- Non porta UUID: l'id di un gioco cambia da un ambiente all'altro, e il seeder lo risolve sul posto
+  per titolo esatto fra i giochi del catalogo non cancellati. Un gioco assente o con più righe dello stesso
+  titolo produce un errore nel log che lo nomina, e le sue domande non si caricano; le altre sì.
+- Il seeder aggiorna le righe per `id` (colonna `code`) e non cancella le domande tolte dal set: le
+  segnala nel log, perché una valutazione passata può riferirsi a quei codici.
+- Per contare le domande per gioco, dalla radice del repository:
+  `jq 'group_by(.game) | map({(.[0].game): length}) | add' apps/api/src/Api/Infrastructure/Seeders/ReferenceQuestions/Data/reference-questions-it.json`.
 
 ## Dataset Formats
 

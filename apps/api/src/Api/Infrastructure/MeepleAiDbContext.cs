@@ -341,6 +341,9 @@ public class MeepleAiDbContext : DbContext
     // KB-06: User feedback on KB chat responses
     public DbSet<BoundedContexts.KnowledgeBase.Domain.Entities.KbUserFeedback> KbUserFeedbacks => Set<BoundedContexts.KnowledgeBase.Domain.Entities.KbUserFeedback>();
 
+    // #4470 (ADR-095 fetta 7b): domande di riferimento dell'agente, caricate dal seeder
+    public DbSet<BoundedContexts.KnowledgeBase.Domain.Entities.ReferenceQuestion> ReferenceQuestions => Set<BoundedContexts.KnowledgeBase.Domain.Entities.ReferenceQuestion>();
+
     // Issue #1675: KbQuality bounded context (per-doc quality eval) — Task 2
     public DbSet<BoundedContexts.KbQuality.Domain.Evaluation.DocumentEvaluationRun> DocumentEvaluationRuns => Set<BoundedContexts.KbQuality.Domain.Evaluation.DocumentEvaluationRun>();
     public DbSet<BoundedContexts.KbQuality.Domain.Budget.KbQualityBudgetCounter> KbQualityBudgetCounters => Set<BoundedContexts.KbQuality.Domain.Budget.KbQualityBudgetCounter>();

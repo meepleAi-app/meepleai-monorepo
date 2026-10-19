@@ -171,6 +171,9 @@
     <EmbeddedResource Include="BoundedContexts\SharedGameCatalog\Infrastructure\Prompts\MechanicExtractor\v1\*.md" />
     <!-- ADR-051 Sprint 1 / Task 40: MechanicValidation golden seed data -->
     <EmbeddedResource Include="Infrastructure\Seeders\MechanicValidation\Data\*.json" />
+    <!-- #4470 (ADR-095 fetta 7b): il set delle domande di riferimento. Sta qui e non in tests/,
+         perché l'immagine dell'API copia solo apps/api/src/Api e data/. -->
+    <EmbeddedResource Include="Infrastructure\Seeders\ReferenceQuestions\Data\*.json" />
 
     <!-- I7 (auth security fixes): common-password blocklist consumed by
          PasswordHash.Create via CommonPasswordBlocklist. Embedded so the

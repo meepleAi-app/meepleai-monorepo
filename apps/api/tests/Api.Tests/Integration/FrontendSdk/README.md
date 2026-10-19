@@ -43,17 +43,22 @@ The frontend SDK at `apps/web/src/lib/api/` already has **comprehensive unit tes
 
 **Gap filled by these tests**: Validation that the **API** actually returns the responses the SDK expects.
 
-## Test Results
+## Test per classe
 
-**Total Tests**: 56
-**Pass Rate**: 100% ✅
-**Execution Time**: ~40 seconds
+- `HttpBehaviorTests.cs`: HTTP methods, headers, concurrency
+- `AuthenticationFlowTests.cs`: register, login, sessions, API keys, security
+- `ErrorHandlingTests.cs`: 4xx/5xx errors, validation, security
+- `EdgeCaseTests.cs`: streaming, uploads, Unicode, rate limiting
+- `FrontendSdkTestFactoryTests.cs`: i contratti della factory (reset fra test su tutti gli schemi, client HTTPS di default)
 
-**Test Coverage by Class**:
-- `HttpBehaviorTests.cs`: 13 tests (HTTP methods, headers, concurrency)
-- `AuthenticationFlowTests.cs`: 15 tests (register, login, sessions, API keys, security)
-- `ErrorHandlingTests.cs`: 14 tests (4xx/5xx errors, validation, security)
-- `EdgeCaseTests.cs`: 14 tests (streaming, uploads, Unicode, rate limiting)
+Quanti sono, per classe (dalla radice del repo):
+
+```bash
+grep -cE '\[(Fact|Theory)' apps/api/tests/Api.Tests/Integration/FrontendSdk/*Tests.cs
+```
+
+Quanti ne passano lo dice l'ultimo run: in CI, il `.trx` degli shard `Core` e `KnowledgeBase` di
+`dev-async` (vedi «In CI» qui sotto).
 
 ## Test Structure
 
@@ -91,9 +96,13 @@ database condiviso.
 
 Due cose da sapere se scrivi un test qui:
 
-- il client va creato con `BaseAddress = FrontendSdkTestFactory.HttpsBaseAddress`, perché il cookie
-  di sessione è `secure` e su `http://` non torna indietro: il login riesce, la richiesta dopo è 401;
-- l'isolamento fra test lo dà `await _factory.ResetDatabaseAsync()` in `InitializeAsync`.
+- il client deve parlare HTTPS, perché il cookie di sessione è `secure` e su `http://` non torna
+  indietro: il login riesce, la richiesta dopo è 401. `_factory.CreateClient()` senza opzioni usa
+  già `FrontendSdkTestFactory.HttpsBaseAddress`; se passi le tue `WebApplicationFactoryClientOptions`
+  imposta `BaseAddress = FrontendSdkTestFactory.HttpsBaseAddress`, perché non la ereditano;
+- l'isolamento fra test lo dà `await _factory.ResetDatabaseAsync()` in `InitializeAsync`: svuota
+  le tabelle di tutti gli schemi utente, non solo di `public` (il modello ne usa altri, per esempio
+  `knowledge_base` e `SystemConfiguration`). Il contratto è in `FrontendSdkTestFactoryTests`.
 
 ## Test Patterns
 
@@ -176,10 +185,11 @@ public async Task Login_WithValid2FA_ReturnsSessionCookie()
 
 ## Performance
 
-- **TestServer startup**: ~500ms (shared across tests)
-- **Database reset**: ~15-30ms per test (Respawn pattern)
-- **Typical test**: ~50-100ms
-- **Full suite target**: <10 seconds for all tests
+- **Host e database**: si costruiscono una volta per collection (`ICollectionFixture`), quindi una
+  volta per shard di CI. Il costo lo paga il primo test che crea un client.
+- **Reset fra test**: `FrontendSdkTestFactory.ResetDatabaseAsync`, un solo batch di `DELETE` su
+  tutte le tabelle degli schemi utente con i trigger sospesi. Non è Respawn.
+- Le durate per test sono nel `.trx` di ogni run: non le riportiamo qui perché invecchiano.
 
 ## Future Enhancements
 

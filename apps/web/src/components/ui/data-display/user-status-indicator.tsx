@@ -10,7 +10,7 @@ const userStatusIndicatorVariants = cva('inline-flex items-center gap-2 text-sm'
   variants: {
     status: {
       Active: 'text-green-700 dark:text-green-400',
-      Inactive: 'text-gray-500 dark:text-gray-400',
+      Inactive: 'text-muted-foreground',
       Suspended: 'text-red-700 dark:text-red-400',
     },
   },
@@ -23,7 +23,7 @@ const dotVariants = cva('h-2 w-2 rounded-full', {
   variants: {
     status: {
       Active: 'bg-green-500',
-      Inactive: 'bg-gray-400',
+      Inactive: 'bg-muted-foreground',
       Suspended: 'bg-red-500 animate-pulse',
     },
   },

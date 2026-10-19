@@ -2,8 +2,10 @@
  * ESLint rule: no hardcoded Tailwind color utilities.
  *
  * Disallows Tailwind classes that hardcode neutral colors (white, black,
- * slate-*, gray-*, zinc-*, neutral-*, stone-*) in `className` props and
- * `clsx()`/`cn()`-style argument literals. Components must consume the
+ * slate-*, gray-*, zinc-*, neutral-*, stone-*) in `className` props,
+ * `clsx()`/`cn()`-style argument literals inside them, and the class strings
+ * passed to `cva()` (base, `variants` values, `compoundVariants` class —
+ * #4513). Components must consume the
  * semantic tokens introduced by the canonical token system
  * (`bg-background`, `bg-card`, `text-muted-foreground`, etc.) so that the
  * mockup palette flows through every surface.
@@ -91,7 +93,8 @@ const COLORED_BG_REGEX = new RegExp(
 );
 
 // Classes whose match should be SUPPRESSED if a colored bg is also present.
-const COLOR_ON_BG_EXEMPT = /^(?:bg|text|border|ring|divide|outline|caret|fill|stroke)-(?:white|black)$/;
+const COLOR_ON_BG_EXEMPT =
+  /^(?:bg|text|border|ring|divide|outline|caret|fill|stroke)-(?:white|black)$/;
 
 function findForbiddenMatches(value) {
   if (typeof value !== 'string' || value.length === 0) return [];
@@ -157,7 +160,63 @@ module.exports = {
       }
     }
 
+    // #4513 — class strings passed to cva(): the base argument (string,
+    // template literal or array of them), every value under `variants`, and
+    // the `class`/`className` of each `compoundVariants` entry. Other keys
+    // (`defaultVariants`, the variant selectors inside compoundVariants) hold
+    // variant names, not classes, and are not inspected. Before this, a
+    // primitive could hardcode `text-slate-900` in its cva() variants and
+    // pass the gate (the legacy Badge `outline` variant did).
+    function visitClassValue(node) {
+      if (!node) return;
+      if (node.type === 'ArrayExpression') {
+        for (const el of node.elements) visitClassValue(el);
+        return;
+      }
+      visitLiteralLike(node);
+    }
+
+    function propertyName(prop) {
+      if (prop.type !== 'Property') return null;
+      if (!prop.computed && prop.key.type === 'Identifier') return prop.key.name;
+      if (prop.key.type === 'Literal') return String(prop.key.value);
+      return null;
+    }
+
+    function visitCvaConfig(config) {
+      if (!config || config.type !== 'ObjectExpression') return;
+      for (const prop of config.properties) {
+        const name = propertyName(prop);
+        if (name === 'variants' && prop.value.type === 'ObjectExpression') {
+          for (const group of prop.value.properties) {
+            if (group.type !== 'Property' || group.value.type !== 'ObjectExpression') continue;
+            for (const option of group.value.properties) {
+              if (option.type === 'Property') visitClassValue(option.value);
+            }
+          }
+        }
+        if (name === 'compoundVariants' && prop.value.type === 'ArrayExpression') {
+          for (const entry of prop.value.elements) {
+            if (!entry || entry.type !== 'ObjectExpression') continue;
+            for (const field of entry.properties) {
+              const fieldName = propertyName(field);
+              if (fieldName === 'class' || fieldName === 'className') {
+                visitClassValue(field.value);
+              }
+            }
+          }
+        }
+      }
+    }
+
     return {
+      // const variants = cva('base …', { variants: { … } })
+      CallExpression(node) {
+        if (node.callee.type !== 'Identifier' || node.callee.name !== 'cva') return;
+        visitClassValue(node.arguments[0]);
+        visitCvaConfig(node.arguments[1]);
+      },
+
       // <div className="bg-white ..." />
       JSXAttribute(node) {
         if (!node.name || node.name.name !== 'className') return;

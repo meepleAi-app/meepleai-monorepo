@@ -152,6 +152,99 @@ public partial class StreamQaQueryHandlerTests
         error.errorMessage.Should().Be("Nel regolamento non ho trovato informazioni pertinenti.");
     }
 
+    /// <summary>I pezzi dati, poi la fine con il motivo «length»: la risposta è stata troncata.</summary>
+    private static async IAsyncEnumerable<StreamChunk> TruncatedStreamAsync(string[] tokens)
+    {
+        foreach (var token in tokens)
+        {
+            await Task.Yield();
+            yield return new StreamChunk(token);
+        }
+
+        yield return new StreamChunk(null, IsFinal: true, FinishReason: "length");
+    }
+
+    /// <summary>
+    /// Review di #4494: le posizioni delle citazioni in linea e la risposta parziale del token di
+    /// continuazione sono sul testo che il client ha ricevuto, cioè la concatenazione dei token.
+    /// </summary>
+    private async Task OffsetsAndPartialAnswer_AreOnTheTextTheClientReceived(string[] tokens)
+    {
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "Come funziona il brigante?", TestUserId, "User");
+        SetupHappyPathMocks(gameId, query.Query);
+        TheQuestionIsIn("it");
+        _llmServiceMock
+            .Setup(x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .Returns(TruncatedStreamAsync(tokens));
+
+        var events = await CollectEventsAsync(query);
+
+        var received = string.Concat(TokensOf(events));
+        received.Should().Contain(ItalianRefusal).And.NotContain("rulebook");
+
+        var inline = events.Single(e => e.Type == StreamingEventType.InlineCitation)
+            .Data.Should().BeOfType<StreamingInlineCitations>().Which.Citations;
+        inline.Should().NotBeEmpty();
+        foreach (var citation in inline)
+        {
+            received[citation.StartOffset..citation.EndOffset].Should().BeEquivalentTo("Sample rule text");
+        }
+
+        var continuation = events.Single(e => e.Type == StreamingEventType.ContinuationAvailable)
+            .Data.Should().BeOfType<StreamingContinuation>().Which;
+        var payload = System.Text.Json.JsonDocument.Parse(Convert.FromBase64String(continuation.ContinuationToken));
+        payload.RootElement.GetProperty("partialAnswer").GetString().Should().Be(received);
+    }
+
+    [Fact]
+    public async Task ARefusalInTail_InlineCitationsAndPartialAnswer_AreOnTheLocalizedText()
+    {
+        await OffsetsAndPartialAnswer_AreOnTheTextTheClientReceived(
+            ["- Sample rule text", " [Page 1].", "\n\n", .. EnglishRefusalInTokens]);
+    }
+
+    [Fact]
+    public async Task ARefusalBeforeACitedSentence_InlineCitationsPointAfterTheLocalizedText()
+    {
+        // La frase italiana è più lunga di quella inglese: sul testo grezzo la citazione dopo la
+        // rinuncia cadrebbe tre caratteri prima.
+        await OffsetsAndPartialAnswer_AreOnTheTextTheClientReceived(
+            ["Per il resto:", " This", " information is not available", " in the provided rulebook", ".", " Sample rule text", " [Page 1]."]);
+    }
+
+    private static async IAsyncEnumerable<StreamChunk> InterruptedInTheMiddleOfTheRefusalAsync()
+    {
+        await Task.Yield();
+        yield return new StreamChunk("Sì [Page 1]. ");
+        yield return new StreamChunk("This");
+        yield return new StreamChunk(" information");
+        yield return new StreamChunk(null, IsFinal: true,
+            ErrorCode: LlmAnswerErrorCodes.StreamInterrupted, ErrorMessage: "The answer was interrupted before it was complete.");
+    }
+
+    [Fact]
+    public async Task AnInterruptedStream_DropsWhatWasHeld_WhichIsOnlyTheStartOfTheEnglishSentence()
+    {
+        // Review di #4494: su AI_STREAM_INTERRUPTED lo stream finisce con l'errore e il trattenuto non
+        // esce. Il trattenuto è sempre l'inizio della frase inglese, e la chat non salva una risposta
+        // interrotta: non c'è niente da recuperare.
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "Posso scambiare?", TestUserId, "User");
+        SetupHappyPathMocks(gameId, query.Query);
+        TheQuestionIsIn("it");
+        _llmServiceMock
+            .Setup(x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .Returns(InterruptedInTheMiddleOfTheRefusalAsync());
+
+        var events = await CollectEventsAsync(query);
+
+        TokensOf(events).Should().Equal("Sì [Page 1]. ");
+        events.Single(e => e.Type == StreamingEventType.Error)
+            .Data.Should().BeOfType<StreamingError>().Which.errorCode.Should().Be(LlmAnswerErrorCodes.StreamInterrupted);
+        events.Should().NotContain(e => e.Type == StreamingEventType.Complete);
+    }
+
     [Fact]
     public async Task EnglishQuestion_TheRefusal_StaysEnglish_AndIsUngrounded()
     {

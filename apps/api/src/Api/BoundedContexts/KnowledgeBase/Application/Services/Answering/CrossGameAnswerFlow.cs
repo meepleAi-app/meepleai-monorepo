@@ -178,6 +178,8 @@ internal sealed class CrossGameAnswerFlow : ICrossGameAnswerFlow
 
             // Un rifiuto del gateway, nessun modello disponibile, o una risposta interrotta dopo il
             // primo token: il motivo, e niente Complete che la direbbe finita.
+            // #3850: ciò che il localizzatore tratteneva non esce. È sempre un inizio della frase
+            // inglese della rinuncia, quindi non c'è niente da recuperare.
             if (chunk.ErrorCode is not null)
             {
                 yield return CreateEvent(StreamingEventType.Error,

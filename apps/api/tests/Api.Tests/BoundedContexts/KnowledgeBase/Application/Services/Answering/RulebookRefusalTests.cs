@@ -122,7 +122,40 @@ public sealed class RulebookRefusalTests
     public void Localize_EveryOccurrence_WhateverTheCaseAndSpacing()
     {
         RulebookRefusal.Localize("this information is not  available in the provided rulebook. " + English, "it")
-            .Should().Be(Italian + " " + Italian);
+            .Should().Be("questa informazione non è disponibile nel regolamento fornito. " + Italian);
+    }
+
+    [Theory]
+    [InlineData("nel calcolo della Strada più Lunga: this information is not available in the provided rulebook.",
+        "nel calcolo della Strada più Lunga: questa informazione non è disponibile nel regolamento fornito.")]
+    [InlineData("Vale 2 PV, ma this information is not available in the provided rulebook.",
+        "Vale 2 PV, ma questa informazione non è disponibile nel regolamento fornito.")]
+    [InlineData("Vale 2 PV. This information is not available in the provided rulebook.",
+        "Vale 2 PV. Questa informazione non è disponibile nel regolamento fornito.")]
+    public void Localize_FollowsTheCaseOfTheFirstLetterTheModelWrote(string answer, string expected)
+    {
+        // Review di #4494: dopo «…più Lunga:» o «ma» la frase non comincia con la maiuscola.
+        RulebookRefusal.Localize(answer, "it").Should().Be(expected);
+    }
+
+    /// <summary>
+    /// Review di #4494: il riconoscimento vale finché il prompt del profilo chiede questa frase. Il
+    /// prompt della risposta sulle regole lo scrive solo la migrazione che crea il profilo; le
+    /// pubblicazioni successive copiano il contenuto della versione pubblicata e cambiano soltanto
+    /// la sezione dell'assistente in partita. Se qualcuno cambia la frase nel prompt, questo test lo dice.
+    /// </summary>
+    [Fact]
+    public void ModelSentence_IsTheSentenceThePublishedProfilePromptAsksFor()
+    {
+        var prompts = new Api.Infrastructure.Migrations.AddAgentProfile().UpOperations
+            .OfType<Microsoft.EntityFrameworkCore.Migrations.Operations.SqlOperation>()
+            .Select(o => o.Sql)
+            .Where(sql => sql.Contains("\"systemPrompts\"", StringComparison.Ordinal))
+            .ToList();
+
+        prompts.Should().ContainSingle();
+        prompts[0].Should().Contain($"respond EXACTLY with: '{RulebookRefusal.ModelSentence}'");
+        RulebookRefusal.IsRefusal(RulebookRefusal.ModelSentence).Should().BeTrue();
     }
 
     [Theory]

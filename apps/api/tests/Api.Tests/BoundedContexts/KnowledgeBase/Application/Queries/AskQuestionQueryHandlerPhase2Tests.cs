@@ -1518,6 +1518,31 @@ public class AskQuestionQueryHandlerPhase2Tests
     }
 
     [Fact]
+    public async Task Handle_ItalianQuestion_AnOldCachedAnswerWithTheEnglishRefusalInTail_IsServedInItalian()
+    {
+        // Review di #4494: le voci scritte prima della correzione portano la frase inglese in coda a
+        // una risposta parziale (la rinuncia intera non va in cache). Restano servibili per il TTL.
+        var gameId = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "unused");
+        _mockResponseCache
+            .Setup(c => c.TryGetAsync(It.IsAny<Guid>(), It.IsAny<SemanticCacheScope>(), It.IsAny<float[]>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new CachedRagResponse(
+                "- Il brigante ruba una carta [Page 1].\n\nThis information is not available in the provided rulebook.",
+                [new CachedCitation("Sample rulebook text", 1, Guid.NewGuid().ToString())],
+                "test-model",
+                DateTimeOffset.UtcNow));
+
+        var result = await BuildHandler().Handle(
+            new AskQuestionQuery(GameId: gameId, Question: "Si può?", Language: "it", UserId: Guid.NewGuid(), UserRole: "User"),
+            TestContext.Current.CancellationToken);
+
+        result.Answer.Should().Be("- Il brigante ruba una carta [Page 1].\n\n" + ItalianRefusal);
+        _mockLlmService.Verify(
+            s => s.GenerateAnswerAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()), Times.Never,
+            "the answer came from the cache");
+    }
+
+    [Fact]
     public async Task Handle_ItalianQuestion_WhenNoPassageIsFound_TheRefusalIsItalian()
     {
         var gameId = Guid.NewGuid();

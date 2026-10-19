@@ -355,6 +355,9 @@ internal sealed class AnswerPipeline : IAnswerPipeline
             // #4166 (ADR-095 D6): il gateway non ha fatto partire la chiamata (tetto di spesa, quota,
             // modello fuori catalogo). L'utente riceve il motivo invece di una risposta vuota, e
             // nulla finisce nella cache.
+            // #3850: anche su AI_STREAM_INTERRUPTED si esce senza Complete() del localizzatore, e ciò
+            // che tratteneva non esce. Va bene: il trattenuto è sempre un inizio della frase inglese
+            // della rinuncia, e una risposta interrotta la chat non la salva.
             if (chunk.ErrorCode is not null)
             {
                 yield return CreateEvent(StreamingEventType.Error,

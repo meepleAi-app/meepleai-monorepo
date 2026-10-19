@@ -286,7 +286,9 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
                             .ConfigureAwait(false);
                         await CountDeliveredAnswerAsync(quota, cancellationToken).ConfigureAwait(false);
                         return new QaResponseDto(
-                            Answer: cached.Answer,
+                            // #3850: le voci scritte prima della correzione possono portare la
+                            // rinuncia inglese in coda a una risposta parziale (come in AnswerPipeline).
+                            Answer: RulebookRefusal.Localize(cached.Answer, language),
                             Sources: [],
                             SearchConfidence: 0,
                             LlmConfidence: 0,

@@ -81,7 +81,7 @@ internal sealed class RefusalStreamLocalizer
                 break;
             }
 
-            output.Append(_replacement);
+            output.Append(CasedLike(text[position], _replacement!));
             cursor = end;
         }
 
@@ -89,4 +89,13 @@ internal sealed class RefusalStreamLocalizer
         _delivered.Append(released);
         return released;
     }
+
+    /// <summary>
+    /// La sostituzione con la prima lettera minuscola se il modello ha scritto la frase in minuscolo,
+    /// per esempio dopo due punti o dopo «ma»; altrimenti com'è.
+    /// </summary>
+    private static string CasedLike(char firstLetterWritten, string replacement) =>
+        char.IsLower(firstLetterWritten)
+            ? char.ToLowerInvariant(replacement[0]) + replacement[1..]
+            : replacement;
 }

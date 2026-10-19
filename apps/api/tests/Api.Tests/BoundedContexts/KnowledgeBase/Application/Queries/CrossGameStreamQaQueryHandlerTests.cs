@@ -553,6 +553,36 @@ public sealed class CrossGameStreamQaQueryHandlerTests
         complete.GroundingStatus.Should().Be("Grounded");
     }
 
+    [Fact]
+    public async Task AnInterruptedStream_DropsWhatWasHeld_WhichIsOnlyTheStartOfTheEnglishSentence()
+    {
+        // Review di #4494: il trattenuto non esce dopo AI_STREAM_INTERRUPTED; è solo l'inizio della frase.
+        SetupTwoAccessibleGames();
+        SetupSearchResults();
+        _llmService
+            .GenerateAnswerStreamAsync(Arg.Any<LlmAnswerRequest>(), Arg.Any<CancellationToken>())
+            .Returns(InterruptedInTheMiddleOfTheRefusal());
+
+        var events = await CollectEventsAsync(
+            CreateSut(), new CrossGameStreamQaQuery("Si può?", UserId, UserRole.User, AgentLanguage: "it"));
+
+        events.Where(e => e.Type == StreamingEventType.Token)
+            .Select(e => ((StreamingToken)e.Data!).token).Should().Equal("Sì [1]. ");
+        ((StreamingError)events.Single(e => e.Type == StreamingEventType.Error).Data!).errorCode
+            .Should().Be(LlmAnswerErrorCodes.StreamInterrupted);
+        events.Should().NotContain(e => e.Type == StreamingEventType.Complete);
+    }
+
+    private static async IAsyncEnumerable<StreamChunk> InterruptedInTheMiddleOfTheRefusal()
+    {
+        await Task.Yield();
+        yield return new StreamChunk("Sì [1]. ");
+        yield return new StreamChunk("This");
+        yield return new StreamChunk(" information");
+        yield return new StreamChunk(null, IsFinal: true,
+            ErrorCode: LlmAnswerErrorCodes.StreamInterrupted, ErrorMessage: "The answer was interrupted before it was complete.");
+    }
+
     // ── Private helpers ─────────────────────────────────────────────────────
 
     private void SetupTwoAccessibleGames() =>

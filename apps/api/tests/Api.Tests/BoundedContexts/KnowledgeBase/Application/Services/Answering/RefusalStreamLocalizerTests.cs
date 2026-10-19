@@ -82,6 +82,18 @@ public sealed class RefusalStreamLocalizerTests
     }
 
     [Fact]
+    public void TheRefusalInLowercaseAfterAColon_StaysLowercase()
+    {
+        var localizer = new RefusalStreamLocalizer("it");
+
+        var shown = Stream(localizer,
+            ["Nel calcolo della Strada più Lunga:", " this", " information is not available", " in the provided rulebook", "."]);
+
+        string.Concat(shown).Should()
+            .Be("Nel calcolo della Strada più Lunga: questa informazione non è disponibile nel regolamento fornito.");
+    }
+
+    [Fact]
     public void AnAnswerThatStartsLikeTheSentence_IsReleasedWhereItDiverges()
     {
         var localizer = new RefusalStreamLocalizer("it");

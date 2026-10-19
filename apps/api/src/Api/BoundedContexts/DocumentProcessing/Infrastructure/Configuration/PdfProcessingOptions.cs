@@ -64,8 +64,35 @@ internal class UnstructuredOptions
     public string ApiUrl { get; set; } = "http://unstructured-service:8001";
     public int TimeoutSeconds { get; set; } = 35;
     public int MaxRetries { get; set; } = 3;
+    /// <summary>#4435: the multilingual default — the corpus is mostly English, then Italian and German.</summary>
+    public const string DefaultLanguage = "eng+ita+deu";
+
+    /// <summary>
+    /// #4435: see <see cref="LanguageConfidenceThreshold"/>. <c>LanguageDetector</c>'s confidence is the
+    /// share of letters in the dominant script: a Latin-script rulebook scores close to 1, so today the
+    /// threshold almost never filters a real detection. What it does is keep never-detected rows (null)
+    /// and empty text ("unknown", 0) from reordering the set. Above 0.8 at least four letters in five
+    /// belong to the detected script; below it the text is mixed, short or garbled.
+    /// </summary>
+    public const double DefaultLanguageConfidenceThreshold = 0.8;
+
     public string Strategy { get; set; } = "fast";
-    public string Language { get; set; } = "ita";
+
+    /// <summary>
+    /// #4435: the languages sent to the service, as Tesseract codes joined by <c>+</c>. A known document
+    /// language goes first and the rest follow; with no usable document language the set is sent as is.
+    /// It also declares what the service can read: a document language outside this set is not moved
+    /// first (see <c>UnstructuredLanguageResolver</c>). Keep it in step with the packs in the service's
+    /// Dockerfile.
+    /// </summary>
+    public string Language { get; set; } = DefaultLanguage;
+
+    /// <summary>
+    /// #4435: the detected <c>Language</c> of a document is put first only when its
+    /// <c>language_confidence</c> is strictly above this value (0–1). 1 disables detection; 0 trusts any
+    /// non-zero detection.
+    /// </summary>
+    public double LanguageConfidenceThreshold { get; set; } = DefaultLanguageConfidenceThreshold;
 }
 
 /// <summary>

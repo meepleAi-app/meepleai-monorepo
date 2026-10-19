@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
@@ -148,7 +149,12 @@ internal static class DevToolsServiceCollectionExtensions
             {
                 var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
                 var logger = sp.GetRequiredService<ILogger<UnstructuredPdfTextExtractor>>();
-                var realExtractor = new UnstructuredPdfTextExtractor(httpClientFactory, logger);
+                // #4435: the document language and the configured default set, as in the real graph.
+                var realExtractor = new UnstructuredPdfTextExtractor(
+                    httpClientFactory,
+                    logger,
+                    languageSelector: sp.GetService<IExtractionLanguageSelector>(),
+                    pdfOptions: sp.GetService<IOptions<PdfProcessingOptions>>());
                 var mockExtractor = sp.GetRequiredService<MockUnstructuredPdfTextExtractor>();
                 var toggles = sp.GetRequiredService<IMockToggleReader>();
                 return MockAwareProxy<IPdfTextExtractor>.Create(realExtractor, mockExtractor, toggles, "unstructured");

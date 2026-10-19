@@ -3,6 +3,8 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
+using Microsoft.Extensions.Options;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Interface with supporting types
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
@@ -20,7 +22,14 @@ internal interface IRawHiResExtractor
     /// the raw response body (matching the wire shape ImageRegionExtractor expects), or null.
     /// Throws on HTTP failure/timeout — callers (batch runner) handle per-item failures.
     /// </summary>
-    Task<string?> ExtractRawHiResAsync(Stream pdfStream, CancellationToken cancellationToken = default);
+    /// <param name="pdfStream">The PDF.</param>
+    /// <param name="language">What is known about the PDF's language (#4435). hi_res is where OCR runs,
+    /// so this decides which language Tesseract tries first; null → the configured set as is.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    Task<string?> ExtractRawHiResAsync(
+        Stream pdfStream,
+        DocumentLanguageHint? language,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -36,18 +45,26 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor, IRawHiResExtrac
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<UnstructuredPdfTextExtractor> _logger;
     private readonly IExtractionStrategySelector? _strategySelector;
+    private readonly IExtractionLanguageSelector? _languageSelector;
+    private readonly UnstructuredOptions _unstructuredOptions;
     private readonly JsonSerializerOptions _jsonOptions;
 
     public UnstructuredPdfTextExtractor(
         IHttpClientFactory httpClientFactory,
         ILogger<UnstructuredPdfTextExtractor> logger,
-        IExtractionStrategySelector? strategySelector = null)
+        IExtractionStrategySelector? strategySelector = null,
+        IExtractionLanguageSelector? languageSelector = null,
+        IOptions<PdfProcessingOptions>? pdfOptions = null)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
         // DC-2 (#3419): optional so DevTools + integration tests can construct without the scoped
         // selector; production DI always injects it. Null → fall back to the historical "fast".
         _strategySelector = strategySelector;
+        // #4435: optional for the same reason. No selector → no document language → the configured
+        // default set; no options → the built-in default set (UnstructuredOptions.DefaultLanguage).
+        _languageSelector = languageSelector;
+        _unstructuredOptions = pdfOptions?.Value.Extractor.Unstructured ?? new UnstructuredOptions();
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
@@ -71,7 +88,7 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor, IRawHiResExtrac
                 requestId);
 
             // Step 1: Prepare multipart form data
-            using var content = PrepareMultipartContent(pdfStream);
+            using var content = PrepareMultipartContent(pdfStream, _languageSelector?.Current);
 
             // Step 2: Call Python service
             using var response = await CallUnstructuredServiceAsync(client, content, cancellationToken).ConfigureAwait(false);
@@ -151,7 +168,14 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor, IRawHiResExtrac
     /// <summary>
     /// Prepares multipart form data content for Unstructured API request.
     /// </summary>
-    private MultipartFormDataContent PrepareMultipartContent(Stream pdfStream, ExtractionStrategy? strategyOverride = null)
+    /// <param name="pdfStream">The PDF.</param>
+    /// <param name="documentLanguage">What is known about the document's language (#4435); null when
+    /// nothing is — the configured default set is sent.</param>
+    /// <param name="strategyOverride">Forces the strategy (the hi_res region pass, #3435).</param>
+    private MultipartFormDataContent PrepareMultipartContent(
+        Stream pdfStream,
+        DocumentLanguageHint? documentLanguage,
+        ExtractionStrategy? strategyOverride = null)
     {
         var content = new MultipartFormDataContent();
 #pragma warning disable CA2000 // Dispose objects before losing scope
@@ -165,7 +189,12 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor, IRawHiResExtrac
         // (inert-on-corpus) selector.
         var strategyContent = new StringContent(
             (strategyOverride ?? _strategySelector?.Current ?? ExtractionStrategy.Fast).ToWireString());
-        var languageContent = new StringContent("ita");
+        // #4435: the configured set, with the document's language (override → confident detection) moved
+        // first when known — never the old hard-coded "ita". It drives Tesseract OCR,
+        // which runs only in hi_res: in fast the embedded text is read as is, and the value only labels
+        // element metadata the service does not return. The service logs it on every request.
+        var languageContent = new StringContent(
+            UnstructuredLanguageResolver.Resolve(documentLanguage, _unstructuredOptions));
 #pragma warning restore CA2000
 
         streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
@@ -282,7 +311,7 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor, IRawHiResExtrac
 
         try
         {
-            using var content = PrepareMultipartContent(pdfStream);
+            using var content = PrepareMultipartContent(pdfStream, _languageSelector?.Current);
             using var response = await CallUnstructuredServiceAsync(client, content, cancellationToken).ConfigureAwait(false);
             var extractionResponse = await ParseExtractionResponseAsync(response, cancellationToken).ConfigureAwait(false);
             if (extractionResponse == null)
@@ -341,6 +370,7 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor, IRawHiResExtrac
     /// <inheritdoc />
     public async Task<string?> ExtractRawHiResAsync(
         Stream pdfStream,
+        DocumentLanguageHint? language,
         CancellationToken cancellationToken = default)
     {
         // Dedicated hi_res pass on the long-timeout client (#3435): forces strategy=hi_res
@@ -351,7 +381,7 @@ internal class UnstructuredPdfTextExtractor : IPdfTextExtractor, IRawHiResExtrac
         // to mark the item and continue (a swallowed "" would be indistinguishable from a
         // genuinely region-free PDF and would wrongly stamp the seed marker).
         var client = _httpClientFactory.CreateClient(HiResClientName);
-        using var content = PrepareMultipartContent(pdfStream, ExtractionStrategy.HiRes);
+        using var content = PrepareMultipartContent(pdfStream, language, ExtractionStrategy.HiRes);
         using var response = await CallUnstructuredServiceAsync(client, content, cancellationToken).ConfigureAwait(false);
         return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
     }

@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Microsoft.Extensions.Options;
 
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
@@ -79,6 +80,20 @@ internal class PdfProcessingConfigurationValidator : IValidateOptions<PdfProcess
         {
             return ValidateOptionsResult.Fail(
                 $"Extractor.Unstructured.MaxRetries must be between 0 and 10, got {options.Extractor.Unstructured.MaxRetries}");
+        }
+
+        // #4435: the language set and the confidence threshold are now read by the extractor.
+        if (UnstructuredLanguageResolver.ParseLanguageSet(options.Extractor.Unstructured.Language).Count == 0)
+        {
+            return ValidateOptionsResult.Fail(
+                $"Extractor.Unstructured.Language must list at least one language (e.g. \"{UnstructuredOptions.DefaultLanguage}\"), got '{options.Extractor.Unstructured.Language}'");
+        }
+
+        if (options.Extractor.Unstructured.LanguageConfidenceThreshold < 0.0 ||
+            options.Extractor.Unstructured.LanguageConfidenceThreshold > 1.0)
+        {
+            return ValidateOptionsResult.Fail(
+                $"Extractor.Unstructured.LanguageConfidenceThreshold must be between 0.0 and 1.0, got {options.Extractor.Unstructured.LanguageConfidenceThreshold}");
         }
 
         // Validate SmolDocling API URL

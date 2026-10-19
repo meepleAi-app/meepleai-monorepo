@@ -130,6 +130,19 @@ describe('PipelineStepCard', () => {
     expect(screen.getByText('Completato')).toBeInTheDocument();
   });
 
+  // #4513: with the canonical Badge `secondary` is green and `default` is the primary orange. The
+  // overview paints a completed step emerald and a running one amber: the badge says the same.
+  it('paints a completed step green and a running one with the primary colour', () => {
+    const { unmount } = render(
+      <PipelineStepCard step={{ step: 'extraction', status: 'completed', durationMs: 10 }} />
+    );
+    expect(screen.getByText('Completato')).toHaveClass('bg-secondary');
+    unmount();
+
+    render(<PipelineStepCard step={{ step: 'extraction', status: 'in_progress' }} />);
+    expect(screen.getByText('In corso')).toHaveClass('bg-primary');
+  });
+
   it('shows error state with message', async () => {
     const step: PipelineStepInfo = {
       step: 'embedding',
@@ -247,6 +260,39 @@ describe('PipelineDeepMetrics', () => {
 
     expect(screen.getByText('Nessuna metrica disponibile')).toBeInTheDocument();
   });
+
+  // #4513: the canonical Badge variant carries `dark:bg-primary/90`; tailwind-merge drops
+  // `bg-primary` for the badge's own colour but keeps that class (another modifier). In the
+  // always-dark admin shell every badge here turned orange. Each must bring its own dark background.
+  it.each([
+    { collectionStatus: 'green' as const, coverage: 95, empty: 0, duplicates: 0 },
+    { collectionStatus: 'yellow' as const, coverage: 80, empty: 3, duplicates: 2 },
+    { collectionStatus: 'red' as const, coverage: 40, empty: 3, duplicates: 2 },
+  ])(
+    'badges keep their own background in the dark shell ($collectionStatus)',
+    ({ collectionStatus, coverage, empty, duplicates }) => {
+      render(
+        <PipelineDeepMetrics
+          metrics={{
+            vectorStats: { vectorsCount: 1, memoryUsageBytes: 1, collectionStatus },
+            qualityIndicators: {
+              pageCoveragePercent: coverage,
+              emptyChunksCount: empty,
+              duplicateDetectionCount: duplicates,
+            },
+          }}
+        />
+      );
+
+      for (const id of ['collection-status', 'page-coverage', 'empty-chunks', 'duplicates']) {
+        const badge = screen.getByTestId(id);
+        expect(badge.className).not.toMatch(
+          /(?:^|\s)dark:bg-(?:primary|secondary|destructive)\/90(?=\s|$)/
+        );
+        expect(badge.className).toMatch(/(?:^|\s)dark:bg-/);
+      }
+    }
+  );
 });
 
 // ---------------------------------------------------------------------------

@@ -49,4 +49,30 @@ describe('GameNightSessionsList — #4156 (D7)', () => {
     render(<GameNightSessionsList sessions={SESSIONS} gameNightId="night-1" />);
     expect(hrefs().some(href => href?.startsWith('/sessions/'))).toBe(false);
   });
+
+  // #4513: the canonical Badge variant carries `dark:bg-primary/90`. tailwind-merge drops
+  // `bg-primary` for the status colour but keeps that class (another modifier), so with the dark
+  // theme every status turned orange. Each status must bring its own dark background.
+  it('each status badge keeps its own background with the dark theme', () => {
+    const sessions: GameNightActiveSession[] = [
+      ...SESSIONS,
+      { ...SESSIONS[0], id: 'tracking-3', status: 'pending' },
+      { ...SESSIONS[0], id: 'tracking-4', status: 'skipped' },
+      // A status the client does not know yet (newer API) falls back to «Sconosciuto».
+      {
+        ...SESSIONS[0],
+        id: 'tracking-5',
+        status: 'abandoned' as unknown as GameNightActiveSession['status'],
+      },
+    ];
+    render(<GameNightSessionsList sessions={sessions} gameNightId="night-1" />);
+
+    for (const label of ['Completata', 'In corso', 'In attesa', 'Saltata', 'Sconosciuto']) {
+      const badge = screen.getByText(label);
+      expect(badge.className).not.toMatch(
+        /(?:^|\s)dark:bg-(?:primary|secondary|destructive)\/90(?=\s|$)/
+      );
+      expect(badge.className).toMatch(/(?:^|\s)dark:bg-/);
+    }
+  });
 });

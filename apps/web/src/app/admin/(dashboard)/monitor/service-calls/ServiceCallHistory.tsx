@@ -82,7 +82,7 @@ function methodBadgeClass(method: string): string {
     case 'DELETE':
       return 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300';
     default:
-      return 'bg-muted text-muted-foreground';
+      return 'bg-muted text-muted-foreground dark:bg-muted';
   }
 }
 

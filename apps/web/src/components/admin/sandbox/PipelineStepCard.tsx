@@ -31,8 +31,9 @@ const STATUS_BADGE_VARIANT: Record<
   StepStatus,
   'default' | 'secondary' | 'destructive' | 'outline'
 > = {
-  completed: 'default',
-  in_progress: 'secondary',
+  // secondary is green, default the primary orange: same reading as PipelineOverview (#4513).
+  completed: 'secondary',
+  in_progress: 'default',
   failed: 'destructive',
   pending: 'outline',
 };

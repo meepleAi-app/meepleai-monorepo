@@ -41,9 +41,9 @@ function levelBadgeClass(level: string): string {
     case 'debug':
       return 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300';
     case 'verbose':
-      return 'bg-muted text-muted-foreground';
+      return 'bg-muted text-muted-foreground dark:bg-muted';
     default:
-      return 'bg-muted text-muted-foreground';
+      return 'bg-muted text-muted-foreground dark:bg-muted';
   }
 }
 

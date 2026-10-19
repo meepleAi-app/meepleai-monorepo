@@ -114,4 +114,27 @@ describe('UploadSettings (#4446)', () => {
     // Supported languages, Max File Size and Concurrent Sessions.
     expect(await screen.findAllByText('Not available')).toHaveLength(3);
   });
+
+  // #4513: the Badge these come from used to hardcode dark text with no background on its
+  // `outline` variant, unreadable inside the dark admin shell. jsdom applies no Tailwind CSS, so
+  // this checks the classes: text and border from the theme tokens, no fixed palette colour.
+  it('the Read-only and Pipeline Steps badges take their colours from the theme tokens', async () => {
+    answer(healthyInfo, { maxFileSizeBytes: 20 * MB, maxConcurrentChunkedUploads: 5 });
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: 0 } } });
+    render(
+      <div data-admin-shell data-theme="dark">
+        <QueryClientProvider client={client}>
+          <UploadSettings />
+        </QueryClientProvider>
+      </div>
+    );
+
+    await screen.findByText('test/embedder-small');
+    for (const label of ['Read-only', 'Upload', 'Extract', 'Chunk', 'Embed', 'Index']) {
+      const badge = screen.getByText(label);
+      expect(badge).toHaveClass('text-foreground');
+      expect(badge.className).not.toMatch(/(?:text|border)-slate-\d/);
+    }
+  });
 });

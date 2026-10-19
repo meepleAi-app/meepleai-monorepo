@@ -132,7 +132,7 @@ export function ClaimGuestGames() {
                   {guest.groupName && (
                     <Badge
                       variant="outline"
-                      className="ml-2 bg-purple-50 border-purple-200 text-purple-700 text-xs font-nunito"
+                      className="ml-2 bg-purple-50 border-purple-200 text-purple-700 dark:bg-purple-900/30 dark:border-purple-800 dark:text-purple-300 text-xs font-nunito"
                     >
                       {guest.groupName}
                     </Badge>

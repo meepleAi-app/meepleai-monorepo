@@ -28,33 +28,41 @@ interface StatusMeta {
   badgeClass: string;
 }
 
+// Every badgeClass brings its own dark pair (#4513): the Badge variant carries `dark:bg-primary/90`,
+// which tailwind-merge keeps next to a plain `bg-*` — with the dark theme every status was orange.
+// The neutral states use the theme tokens; `dark:bg-muted` is there only to beat that variant class.
+const NEUTRAL_BADGE = 'bg-muted text-foreground border-transparent dark:bg-muted';
+
 const STATUS_MAP: Record<string, StatusMeta> = {
   in_progress: {
     icon: Play,
     label: 'In corso',
-    badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    badgeClass:
+      'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800',
   },
   pending: {
     icon: Clock,
     label: 'In attesa',
-    badgeClass: 'bg-slate-100 text-slate-600 border-slate-200',
+    badgeClass: NEUTRAL_BADGE,
   },
   completed: {
     icon: CheckCircle2,
     label: 'Completata',
-    badgeClass: 'bg-blue-100 text-blue-800 border-blue-200',
+    badgeClass:
+      'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800',
   },
   skipped: {
     icon: Pause,
     label: 'Saltata',
-    badgeClass: 'bg-amber-100 text-amber-800 border-amber-200',
+    badgeClass:
+      'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800',
   },
 };
 
 const FALLBACK_STATUS: StatusMeta = {
   icon: Gamepad2,
   label: 'Sconosciuto',
-  badgeClass: 'bg-gray-100 text-gray-600 border-gray-200',
+  badgeClass: NEUTRAL_BADGE,
 };
 
 // ─── Component ──────────────────────────────────────────────────────────────

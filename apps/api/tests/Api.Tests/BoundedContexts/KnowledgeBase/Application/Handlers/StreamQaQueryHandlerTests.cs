@@ -113,7 +113,7 @@ public partial class StreamQaQueryHandlerTests
             .ReturnsAsync(new PublishedAgentProfile(Guid.NewGuid(), 2, SeedProfileContent()));
         _languageDetectionMock = new Mock<ILanguageDetectionService>();
         _languageDetectionMock
-            .Setup(x => x.Detect(It.IsAny<string>()))
+            .Setup(x => x.Detect(It.IsAny<string>(), It.IsAny<string?>()))
             .Returns(new LanguageDetection("en", IsConfident: true));
         _intentClassifierMock = new Mock<IIntentClassifierService>();
         _intentClassifierMock

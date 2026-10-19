@@ -21,12 +21,22 @@ internal interface ILanguageDetectionService
     Task<string> DetectLanguageAsync(string text);
 
     /// <summary>
-    /// #4168: la lingua del testo e se il rilevamento è sicuro. Non è sicuro quando il testo ha meno
-    /// di tre parole, quando nessuna lingua ha un punteggio significativo, o quando l'inglese vince
-    /// solo per lo spareggio: in quei casi <see cref="DetectLanguageAsync"/> risponde «en» per default,
-    /// e chi ha un'altra fonte (l'<c>Accept-Language</c> della richiesta) deve poterla preferire.
+    /// #4168: la lingua del testo e se il rilevamento è sicuro. Chi ha un'altra fonte (la lingua
+    /// dell'interfaccia) la preferisce a un rilevamento non sicuro.
+    /// <para>
+    /// #4480: «sicuro» vuol dire abbastanza da smentire la lingua che l'interfaccia chiede, ed è un
+    /// requisito alto: almeno tre parole, un margine netto sulla lingua da battere, e un secondo segnale
+    /// indipendente che indica la stessa lingua. Su un testo senza parole riconosciute la lingua è «en»,
+    /// come in <see cref="DetectLanguageAsync"/>, che restituisce sempre la stessa lingua di questo metodo.
+    /// </para>
     /// </summary>
-    LanguageDetection Detect(string text);
+    /// <param name="text">Il testo.</param>
+    /// <param name="languageToBeat">
+    /// La lingua che il rilevamento deve smentire per essere sicuro, cioè quella che l'interfaccia chiede.
+    /// Il margine si misura su di lei; se manca, o coincide con la lingua rilevata, sulla seconda per
+    /// punteggio.
+    /// </param>
+    LanguageDetection Detect(string text, string? languageToBeat = null);
 
     /// <summary>
     /// Check if a language code is supported by the system

@@ -6,11 +6,15 @@ import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api';
 import type { CircuitBreakerState } from '@/lib/api/schemas/admin/admin-circuit-breakers.schemas';
 
+// Each entry brings its own dark background (#4513): the Badge variant carries
+// `dark:bg-primary/90`, which tailwind-merge keeps next to a plain `bg-*`, and the admin shell is
+// always dark — without the `dark:` pair every state would render orange.
 const STATE_COLORS: Record<string, string> = {
-  Closed: 'bg-green-100 text-green-700',
-  Open: 'bg-red-100 text-red-700',
-  HalfOpen: 'bg-amber-100 text-amber-700',
+  Closed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+  Open: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+  HalfOpen: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
 };
+const UNKNOWN_STATE_COLOR = 'bg-muted text-muted-foreground dark:bg-muted';
 
 export function CircuitBreakerPanel() {
   const { data: states, isLoading } = useQuery({
@@ -43,9 +47,7 @@ export function CircuitBreakerPanel() {
           >
             <div className="flex items-center justify-between mb-2">
               <span className="font-medium text-sm">{cb.serviceName}</span>
-              <Badge className={STATE_COLORS[cb.state] ?? 'bg-muted text-muted-foreground'}>
-                {cb.state}
-              </Badge>
+              <Badge className={STATE_COLORS[cb.state] ?? UNKNOWN_STATE_COLOR}>{cb.state}</Badge>
             </div>
             <div className="text-xs text-muted-foreground space-y-0.5">
               <div>Trips: {cb.tripCount}</div>

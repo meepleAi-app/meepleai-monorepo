@@ -42,10 +42,16 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+// Each colour brings its own dark pair (#4513): the Badge variant carries `dark:bg-primary/90`,
+// which tailwind-merge keeps next to a plain `bg-*`, and the admin shell is always dark.
+const OK_BADGE = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300';
+const WARN_BADGE = 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300';
+const BAD_BADGE = 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+
 const COLLECTION_STATUS_CLASSES: Record<string, string> = {
-  green: 'bg-emerald-100 text-emerald-800',
-  yellow: 'bg-amber-100 text-amber-800',
-  red: 'bg-red-100 text-red-800',
+  green: OK_BADGE,
+  yellow: WARN_BADGE,
+  red: BAD_BADGE,
 };
 
 const COLLECTION_STATUS_LABEL: Record<string, string> = {
@@ -157,22 +163,17 @@ function QualityIndicatorsCard({ indicators }: { indicators: QualityIndicators }
           className={cn(
             'text-xs',
             indicators.pageCoveragePercent >= 90
-              ? 'bg-emerald-100 text-emerald-800'
+              ? OK_BADGE
               : indicators.pageCoveragePercent >= 70
-                ? 'bg-amber-100 text-amber-800'
-                : 'bg-red-100 text-red-800'
+                ? WARN_BADGE
+                : BAD_BADGE
           )}
         >
           Copertura pagine: {indicators.pageCoveragePercent}%
         </Badge>
         <Badge
           data-testid="empty-chunks"
-          className={cn(
-            'text-xs',
-            indicators.emptyChunksCount === 0
-              ? 'bg-emerald-100 text-emerald-800'
-              : 'bg-amber-100 text-amber-800'
-          )}
+          className={cn('text-xs', indicators.emptyChunksCount === 0 ? OK_BADGE : WARN_BADGE)}
         >
           Chunk vuoti: {indicators.emptyChunksCount}
         </Badge>
@@ -180,9 +181,7 @@ function QualityIndicatorsCard({ indicators }: { indicators: QualityIndicators }
           data-testid="duplicates"
           className={cn(
             'text-xs',
-            indicators.duplicateDetectionCount === 0
-              ? 'bg-emerald-100 text-emerald-800'
-              : 'bg-amber-100 text-amber-800'
+            indicators.duplicateDetectionCount === 0 ? OK_BADGE : WARN_BADGE
           )}
         >
           Duplicati: {indicators.duplicateDetectionCount}

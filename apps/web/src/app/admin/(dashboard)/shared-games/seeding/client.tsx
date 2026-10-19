@@ -75,22 +75,25 @@ const PAGE_SIZE = 25;
 // Badge helpers
 // ============================================================================
 
+// Solid status colours, the same in both themes. Each repeats its background under `dark:` (#4513):
+// the Badge variant carries `dark:bg-primary/90`, which tailwind-merge keeps next to a plain
+// `bg-*`, and the admin shell is always dark — without it every status rendered orange.
 function getStatusBadgeClass(status: number): string {
   switch (status) {
     case GAME_DATA_STATUS.Skeleton:
-      return 'border-transparent bg-red-500 text-white';
+      return 'border-transparent bg-red-500 text-white dark:bg-red-500';
     case GAME_DATA_STATUS.EnrichmentQueued:
-      return 'border-transparent bg-slate-400 text-white';
+      return 'border-transparent bg-muted-foreground text-background dark:bg-muted-foreground';
     case GAME_DATA_STATUS.Enriching:
-      return 'border-transparent bg-blue-500 text-white';
+      return 'border-transparent bg-blue-500 text-white dark:bg-blue-500';
     case GAME_DATA_STATUS.Enriched:
-      return 'border-transparent bg-yellow-400 text-black';
+      return 'border-transparent bg-yellow-400 text-black dark:bg-yellow-400';
     case GAME_DATA_STATUS.Complete:
-      return 'border-transparent bg-emerald-500 text-white';
+      return 'border-transparent bg-emerald-500 text-white dark:bg-emerald-500';
     case GAME_DATA_STATUS.Failed:
-      return 'border-transparent bg-orange-500 text-white';
+      return 'border-transparent bg-orange-500 text-white dark:bg-orange-500';
     default:
-      return 'border-transparent bg-slate-300 text-slate-800';
+      return 'border-transparent bg-muted text-foreground dark:bg-muted';
   }
 }
 

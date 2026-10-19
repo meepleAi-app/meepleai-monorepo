@@ -60,6 +60,14 @@
   "shards": {
     "Core": {
       "_comment": [
+        "#4522 — skipped 45 -> 46, DICHIARATO prima del run e poi MISURATO: run 39278261460 (SHA bdc654c),",
+        "job 118148182713 dello shard Core, .trx dell'artifact `integration-results-Core` passato a",
+        "shard-skip-assert.sh con --log: failed=2 skipped=46, entro la baseline, nessun abort.",
+        "  +1 UploadPdfMidPhaseCancellationTests.UploadPdf_WhenCancelledMidTextExtraction_ReleasesResources",
+        "Non e' un test che ha smesso di girare: non era mai girato. La classe era esclusa per nome dal",
+        "filtro di base (#3102); tolta l'esclusione cade in Core, e questo suo test, saltato con",
+        "DIFETTO da prima (follow-up di #1684), entra nel conteggio. Gli altri sei della classe passano.",
+        "",
         "MISURATI, non derivati: run 37281025300, job 111685659278, .trx scaricato dall'artifact",
         "`integration-results-Core` e passato a shard-skip-assert.sh --update-baseline. Nessun",
         "abort nel log del run (`grep -c 'Aborting test run: test run timeout'` -> 0) e la",
@@ -103,7 +111,7 @@
         "commit che toccano solo apps/web, e quel run risulta 'success' a vuoto."
       ],
       "failed": 2,
-      "skipped": 45,
+      "skipped": 46,
       "failedTests": [
         "Api.Tests.Integration.FinalValidation.Week12SimpleValidationTests.Concurrency_IsolatedTransactions_NoInterference",
         "Api.Tests.Integration.UploadPdfIntegrationTests.UploadPdf_WhenDatabaseDeadlock_RetriesAndHandlesGracefully"
@@ -153,7 +161,8 @@
         "Api.Tests.Integration.UnstructuredPdfExtractionIntegrationTests.ServiceTimeout_HandledGracefully",
         "Api.Tests.Integration.UnstructuredPdfExtractionIntegrationTests.SimpleItalianPdf_SuccessfulExtraction",
         "Api.Tests.Integration.UnstructuredPdfExtractionIntegrationTests.TableDetection_ExtractsStructuredData",
-        "Api.Tests.Integration.UploadPdfIntegrationTests.UploadPdf_WhenDatabaseConnectionClosed_HandlesFailureGracefully"
+        "Api.Tests.Integration.UploadPdfIntegrationTests.UploadPdf_WhenDatabaseConnectionClosed_HandlesFailureGracefully",
+        "Api.Tests.Integration.UploadPdfMidPhaseCancellationTests.UploadPdf_WhenCancelledMidTextExtraction_ReleasesResources"
       ]
     },
     "KnowledgeBase": {

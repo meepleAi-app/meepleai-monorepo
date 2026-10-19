@@ -286,10 +286,11 @@ jobs:
           # I test FrontendSdk (#4518) non hanno un token di shard: AuthenticationFlowTests cade in
           # KnowledgeBase per il nome, le altre classi in Core. Ciascuno dei due shard costruisce il
           # proprio host e il proprio database per quella collection: la fixture si paga due volte.
+          # UploadPdfMidPhaseCancellationTests, escluso anch'esso fino a #4522, cade in Core.
           #
           # NESSUN override di TestSessionTimeout: valgono i 75 min del runsettings condiviso (#3634).
           dotnet test tests/Api.Tests/Api.Tests.csproj \
-            --filter "Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~ArbitroAgent${{ matrix.shard.filter_extra }}" \
+            --filter "Category=Integration&FullyQualifiedName!~ArbitroAgent${{ matrix.shard.filter_extra }}" \
             --settings tests/Api.Tests/integration.runsettings \
             --no-build \
             --configuration Release \

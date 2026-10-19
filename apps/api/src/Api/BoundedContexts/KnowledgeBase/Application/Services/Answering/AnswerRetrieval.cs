@@ -1,3 +1,4 @@
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
@@ -48,6 +49,21 @@ internal sealed class AnswerRetrieval
         string language,
         CancellationToken cancellationToken)
     {
+        var retrieved = await RetrieveWithPoolAsync(request, profile, language, cancellationToken).ConfigureAwait(false);
+        return retrieved.FinalResults();
+    }
+
+    /// <summary>
+    /// #4482: lo stesso recupero di <see cref="RetrieveAsync"/>, mostrato per intero: il pool che va al
+    /// reranker, nell'ordine della fusione, e i passaggi finali come posizioni in quel pool. La sonda di
+    /// recupero lo restituisce così com'è; la risposta ne usa solo i finali.
+    /// </summary>
+    public async Task<RetrievedPassages> RetrieveWithPoolAsync(
+        AnswerRetrievalRequest request,
+        AgentProfileContent profile,
+        string language,
+        CancellationToken cancellationToken)
+    {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(profile);
 
@@ -55,13 +71,13 @@ internal sealed class AnswerRetrieval
         // chunks whose role_tags overlap. The classifier is rule-based, sync, and cheap (~µs).
         var queryRoleHint = _intentClassifier.ClassifyIntent(request.Question);
 
-        var searchResults = await _searchQueryHandler.Handle(
+        var search = await _searchQueryHandler.HandleWithOutcomeAsync(
             new SearchQuery(
                 GameId: request.GameId,
                 Query: request.Question,
                 // Whoever uses this class passes the RAG gate first: AnswerPipeline always, and
-                // AskQuestionQueryHandler whenever the question names a user. Its one sender
-                // without a user is the game wizard's auto-test, behind an admin route.
+                // AskQuestionQueryHandler whenever the question names a user. Its senders without a
+                // user sit behind admin routes: the game wizard's auto-test and the retrieval probe (#4482).
                 Access: SearchAccess.AlreadyChecked,
                 TopK: profile.CandidatePoolSize,
                 MinScore: (double)profile.MinScore,
@@ -75,18 +91,28 @@ internal sealed class AnswerRetrieval
                 KeywordWeight: (float)profile.KeywordWeight),
             cancellationToken).ConfigureAwait(false);
 
+        var searchResults = search.Results;
+        var noReranking = profile.RerankerEnabled ? RerankStatus.Skipped : RerankStatus.Disabled;
         if (searchResults is null || searchResults.Count == 0)
         {
             _logger.LogInformation("No results for the question in game {GameId}", request.GameId);
-            return [];
+            return new RetrievedPassages([], [], 0, queryRoleHint, noReranking, search.VectorArm);
         }
 
         var pool = searchResults.Take(profile.CandidatePoolSize).ToList();
-        return profile.RerankerEnabled
-            // Issue #2708: rerank the pool down to the final top-K (graceful degradation to raw top-K).
-            ? await SearchResultReranker.RerankAsync(
-                _reranker, request.Question, pool, profile.FinalTopK, _logger, cancellationToken).ConfigureAwait(false)
-            : pool.Take(profile.FinalTopK).ToList();
+        if (!profile.RerankerEnabled)
+        {
+            var firstOfPool = Enumerable.Range(0, Math.Min(profile.FinalTopK, pool.Count))
+                .Select(i => new RerankPick(i, null))
+                .ToList();
+            return new RetrievedPassages(pool, firstOfPool, searchResults.Count, queryRoleHint, RerankStatus.Disabled, search.VectorArm);
+        }
+
+        // Issue #2708: rerank the pool down to the final top-K (graceful degradation to raw top-K).
+        var reranked = await SearchResultReranker.RerankIndicesAsync(
+            _reranker, request.Question, pool, profile.FinalTopK, _logger, cancellationToken).ConfigureAwait(false);
+        return new RetrievedPassages(
+            pool, reranked.Picks, searchResults.Count, queryRoleHint, reranked.Status, search.VectorArm, reranked.Model);
     }
 
     /// <summary>
@@ -128,6 +154,31 @@ internal sealed class AnswerRetrieval
                 _reranker, question, pool, profile.FinalTopK, _logger, cancellationToken).ConfigureAwait(false)
             : pool.Take(profile.FinalTopK).ToList();
     }
+}
+
+/// <summary>
+/// #4482: un recupero per intero. <paramref name="Pool"/> sono i candidati dati al reranker, nell'ordine
+/// della fusione; <paramref name="Final"/> i passaggi scelti, come indici nel pool e nell'ordine finale,
+/// con il punteggio del cross-encoder quando c'è.
+/// </summary>
+/// <param name="Pool">I candidati prima del reranker: i primi <c>CandidatePoolSize</c> della fusione.</param>
+/// <param name="Final">I passaggi finali, come indici in <paramref name="Pool"/>.</param>
+/// <param name="FusedCount">Quanti candidati ha restituito la ricerca ibrida, prima del taglio al pool.</param>
+/// <param name="QueryRoleHint">I ruoli che il classificatore ha letto nella domanda, passati alla fusione.</param>
+/// <param name="Reranking">Come sono stati scelti i finali.</param>
+/// <param name="VectorArm">Com'è andato il braccio vettoriale: fallito, la ricerca è stata solo lessicale.</param>
+/// <param name="RerankerModel">Il modello che il servizio di reranking dice di aver usato, quando ha risposto.</param>
+internal sealed record RetrievedPassages(
+    IReadOnlyList<SearchResultDto> Pool,
+    IReadOnlyList<RerankPick> Final,
+    int FusedCount,
+    GameBookRole QueryRoleHint,
+    RerankStatus Reranking,
+    VectorArmOutcome VectorArm,
+    string? RerankerModel = null)
+{
+    /// <summary>I passaggi finali, nell'ordine: quelli che vanno nel prompt.</summary>
+    public List<SearchResultDto> FinalResults() => Final.Select(p => Pool[p.Index]).ToList();
 }
 
 /// <summary>Cosa cercare: il gioco, la domanda, ed eventualmente i documenti e il vettore già calcolato.</summary>

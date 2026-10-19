@@ -125,8 +125,10 @@ internal static class KnowledgeBaseMappers
     /// </summary>
     public static float[] ToFloatArray(this EmbeddingResult embeddingResult)
     {
+        // #4482: un tipo proprio, che deriva da InvalidOperationException come prima, perché chi vuole
+        // dire il motivo (la sonda di recupero, 503) lo distingua da un difetto qualunque.
         if (!embeddingResult.Success || embeddingResult.Embeddings.Count == 0)
-            throw new InvalidOperationException(
+            throw new Api.BoundedContexts.KnowledgeBase.Application.Services.EmbeddingUnavailableException(
                 $"Cannot extract embedding: {embeddingResult.ErrorMessage ?? "No embeddings generated"}");
 
         return embeddingResult.Embeddings[0];

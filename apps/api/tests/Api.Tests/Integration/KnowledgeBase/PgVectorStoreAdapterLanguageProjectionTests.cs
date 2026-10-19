@@ -125,7 +125,63 @@ public sealed class PgVectorStoreAdapterLanguageProjectionTests : IAsyncLifetime
         LanguageByText(results).Should().Equal(ExpectedLanguages);
     }
 
+    // #4482 (review di #4492): per un PDF non inglese l'indicizzazione salva anche la traduzione inglese
+    // dei chunk (is_translation). Stessa forma di difetto di lang: senza la colonna nella SELECT,
+    // Embedding.IsTranslation vale false per tutti, e la sonda di recupero non saprebbe dire quali
+    // candidati sono traduzioni.
+    [Fact]
+    public async Task SearchAsync_ProjectsTheTranslationFlag_PerChunk()
+    {
+        var results = await _adapter!.SearchAsync(
+            _gameId, QueryVector(), topK: 10, minScore: 0.0, pdfDocumentIds: null,
+            cancellationToken: TestCancellationToken);
+
+        TranslationByText(results).Should().Equal(ExpectedTranslations);
+    }
+
+    [Fact]
+    public async Task SearchWithScoresAsync_ProjectsTheTranslationFlag_PerChunk()
+    {
+        var results = await _adapter!.SearchWithScoresAsync(
+            _gameId, QueryVector(), topK: 10, minScore: 0.0, pdfDocumentIds: null,
+            cancellationToken: TestCancellationToken);
+
+        TranslationByText(results.Select(r => r.Embedding)).Should().Equal(ExpectedTranslations);
+    }
+
+    [Fact]
+    public async Task SearchByMultipleGameIdsAsync_ProjectsTheTranslationFlag_PerChunk()
+    {
+        var results = await _adapter!.SearchByMultipleGameIdsAsync(
+            new[] { _gameId }, QueryVector(), topK: 10, minScore: 0.0, pdfDocumentIds: null,
+            cancellationToken: TestCancellationToken);
+
+        TranslationByText(results).Should().Equal(ExpectedTranslations);
+    }
+
     // --- Helpers --------------------------------------------------------------
+
+    /// <summary>
+    /// Il chunk inglese è seminato come traduzione del chunk italiano (is_translation = true), come fa
+    /// l'indicizzazione di un PDF non inglese; gli altri due sono originali.
+    /// </summary>
+    private static SortedDictionary<string, bool> ExpectedTranslations => new()
+    {
+        ["Setup the board and place two settlements"] = true,
+        ["Prepara il tabellone e piazza due insediamenti"] = false,
+        ["Baue das Spielbrett auf und setze zwei Siedlungen"] = false
+    };
+
+    private static SortedDictionary<string, bool> TranslationByText(IEnumerable<Embedding> embeddings)
+    {
+        var byText = new SortedDictionary<string, bool>();
+        foreach (var e in embeddings)
+        {
+            byText[e.TextContent] = e.IsTranslation;
+        }
+
+        return byText;
+    }
 
     /// <summary>The three seeded chunks, keyed by text so assertions never depend on result order.</summary>
     private static SortedDictionary<string, string> ExpectedLanguages => new()
@@ -221,14 +277,14 @@ public sealed class PgVectorStoreAdapterLanguageProjectionTests : IAsyncLifetime
         var chunkIndex = 0;
         foreach (var (text, lang) in ExpectedLanguages)
         {
-            await InsertEmbeddingRawAsync(vectorDocId, sharedGame.Id, chunkIndex++, text, lang);
+            await InsertEmbeddingRawAsync(vectorDocId, sharedGame.Id, chunkIndex++, text, lang, ExpectedTranslations[text]);
         }
 
         return sharedGame.Id;
     }
 
     private async Task InsertEmbeddingRawAsync(
-        Guid vectorDocumentId, Guid gameId, int chunkIndex, string textContent, string lang)
+        Guid vectorDocumentId, Guid gameId, int chunkIndex, string textContent, string lang, bool isTranslation)
     {
         var conn = _dbContext!.Database.GetDbConnection();
         if (conn.State != System.Data.ConnectionState.Open)
@@ -241,7 +297,7 @@ public sealed class PgVectorStoreAdapterLanguageProjectionTests : IAsyncLifetime
                  chunk_index, page_number, created_at, lang, is_translation, role_tags)
             VALUES
                 (@id, @vdId, @gameId, @text, @vec, 'test-model',
-                 @chunkIndex, 1, NOW(), @lang, false, 0)
+                 @chunkIndex, 1, NOW(), @lang, @isTranslation, 0)
             """;
 
         cmd.Parameters.AddWithValue("@id", Guid.NewGuid());
@@ -251,6 +307,7 @@ public sealed class PgVectorStoreAdapterLanguageProjectionTests : IAsyncLifetime
         cmd.Parameters.AddWithValue("@vec", new Pgvector.Vector(MakeVector()));
         cmd.Parameters.AddWithValue("@chunkIndex", chunkIndex);
         cmd.Parameters.AddWithValue("@lang", lang);
+        cmd.Parameters.AddWithValue("@isTranslation", isTranslation);
 
         await cmd.ExecuteNonQueryAsync(TestCancellationToken);
     }

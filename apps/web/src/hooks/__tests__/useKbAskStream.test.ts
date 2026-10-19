@@ -1,11 +1,42 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
+import { sseEvent, steppedFetch, type SteppedFetch } from '@/test-utils/sse-stepped-stream';
 import { useKbAskStream } from '../useKbAskStream';
 import { kbAskClient } from '../../lib/api/clients/kbAskClient';
 import { KbAskEventSchema, type KbAskEvent } from '../../lib/api/schemas/kb-ask.schemas';
 
 async function* eventsAsAsyncGen(events: KbAskEvent[]): AsyncGenerator<KbAskEvent> {
   for (const e of events) yield e;
+}
+
+// ─── #4510: la rete finta a passi, col client vero ───────────────────────────
+// Fra un evento e l'altro l'hook rende, come nel browser. I tipi sono quelli di
+// `StreamingEventType` sul filo.
+
+const T = { StateUpdate: 0, Citations: 1, Complete: 4, Error: 5, Token: 7 } as const;
+
+const COMPLETE = {
+  totalTokens: 2,
+  promptTokens: 5,
+  completionTokens: 2,
+  estimatedReadingTimeMinutes: 0,
+  confidence: null,
+};
+
+/** La frase della chat per una risposta interrotta (`qaStreamErrors`, `AI_STREAM_INTERRUPTED`). */
+const INTERRUPTED =
+  'La risposta si è interrotta prima della fine, quindi non è completa. Riprova a chiedere.';
+
+/** Consegna un passo (un evento, la chiusura o un guasto) e lascia all'hook il tempo di rendere. */
+async function deliver(next: () => void) {
+  await act(async () => {
+    next();
+    await new Promise(resolve => setTimeout(resolve, 10));
+  });
+}
+
+async function runToTheEnd(wire: SteppedFetch) {
+  for (let i = 0; i < wire.steps; i++) await deliver(wire.next);
 }
 
 describe('useKbAskStream — initial state', () => {
@@ -24,17 +55,24 @@ describe('useKbAskStream — transitions', () => {
     vi.restoreAllMocks();
   });
 
+  /**
+   * #4510: lo stream resta aperto. Prima questo test usava uno stream che finiva dopo il primo
+   * evento, e fissava come «in corso» una risposta che si era già chiusa senza esito: proprio il
+   * difetto. Quella chiusura ora è un'interruzione (sotto, «a stream that closes…»).
+   */
   it('idle → streaming on ask()', async () => {
-    vi.spyOn(kbAskClient, 'askGlobal').mockImplementation(() =>
-      eventsAsAsyncGen([{ type: 0, data: { message: 'Ricerca…' } }])
-    );
+    const wire = steppedFetch([sseEvent(T.StateUpdate, { message: 'Ricerca…' })]);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(wire.fetch);
     const { result } = renderHook(() => useKbAskStream());
 
     act(() => {
       result.current.ask('scout abilities');
     });
+    await vi.waitFor(() => expect(wire.calls()).toBe(1));
+    await deliver(wire.next);
 
-    await waitFor(() => expect(result.current.state.status).toBe('streaming'));
+    expect(result.current.state.status).toBe('streaming');
+    expect(result.current.state.error).toBeNull();
   });
 
   it('accumulates tokens into partialText', async () => {
@@ -201,7 +239,13 @@ describe('useKbAskStream — transitions', () => {
     });
   });
 
-  it('Error event with LLM_STREAMING_FAILED + accumulated partial text maps to kind=partial', async () => {
+  /**
+   * #4510 (review): un `Error` dopo qualche parola è un'interruzione, qualunque sia il codice. Prima
+   * qui c'era il tipo `partial`, legato a `LLM_STREAMING_FAILED`: il backend quel codice non lo
+   * manda più, e ogni altro codice dopo le parole finiva come «Errore del server», che nel
+   * pannello nascondeva la risposta arrivata.
+   */
+  it('Error event with LLM_STREAMING_FAILED + accumulated partial text maps to kind=interrupted', async () => {
     vi.spyOn(kbAskClient, 'askGlobal').mockImplementation(() =>
       eventsAsAsyncGen([
         { type: 7, data: { token: 'La classe Scout inizia…' } },
@@ -214,7 +258,8 @@ describe('useKbAskStream — transitions', () => {
       result.current.ask('q');
     });
 
-    await waitFor(() => expect(result.current.state.error?.kind).toBe('partial'));
+    await waitFor(() => expect(result.current.state.error?.kind).toBe('interrupted'));
+    expect(result.current.state.error?.code).toBe('LLM_STREAMING_FAILED');
     expect(result.current.state.partialText).toBe('La classe Scout inizia…');
   });
 
@@ -231,21 +276,32 @@ describe('useKbAskStream — transitions', () => {
     await waitFor(() => expect(result.current.state.error?.kind).toBe('connection'));
   });
 
+  /** #4510: lo stream resta aperto finché l'utente lo ferma; fermarlo non è un'interruzione. */
   it('stop() aborts mid-stream and transitions to idle', async () => {
-    vi.spyOn(kbAskClient, 'askGlobal').mockImplementation(() =>
-      eventsAsAsyncGen([{ type: 7, data: { token: 'a' } }])
-    );
+    const wire = steppedFetch([
+      sseEvent(T.Token, { token: 'a' }),
+      sseEvent(T.Token, { token: 'b' }),
+    ]);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(wire.fetch);
     const { result } = renderHook(() => useKbAskStream());
 
     act(() => {
       result.current.ask('q');
     });
-    await waitFor(() => expect(result.current.state.status).toBe('streaming'));
+    await vi.waitFor(() => expect(wire.calls()).toBe(1));
+    await deliver(wire.next);
+    expect(result.current.state.status).toBe('streaming');
 
     act(() => {
       result.current.stop();
     });
-    await waitFor(() => expect(result.current.state.status).toBe('idle'));
+    // Fermata la richiesta, la lettura in corso fallisce con un AbortError, come con la fetch vera.
+    // L'automa lo riconosce come una fermata dell'utente (il ramo `catch` con il segnale fermato),
+    // non come un errore né come un'interruzione. Il passo dà all'automa il tempo di vederlo.
+    await deliver(wire.next);
+    expect(wire.signal()?.aborted).toBe(true);
+    expect(result.current.state.status).toBe('idle');
+    expect(result.current.state.error).toBeNull();
   });
 
   it('reset() returns to idle from completed', async () => {
@@ -323,6 +379,10 @@ describe('useKbAskStream — transitions', () => {
     await vi.runAllTimersAsync();
 
     expect(result.current.state.retryCount).toBeGreaterThanOrEqual(2);
+    // #4510: il tentativo è riuscito, quindi la risposta è completa e l'errore dei tentativi
+    // falliti non c'è più. Prima restava `status: 'error'`.
+    expect(result.current.state.status).toBe('completed');
+    expect(result.current.state.error).toBeNull();
     vi.useRealTimers();
   });
 
@@ -341,5 +401,517 @@ describe('useKbAskStream — transitions', () => {
     expect(result.current.state.retryCount).toBe(3);
     expect(result.current.state.error?.kind).toBe('connection');
     vi.useRealTimers();
+  });
+});
+
+/**
+ * #4510: la risposta si chiude senza `Complete` né `Error` — il backend o un proxy chiudono la
+ * connessione in modo pulito a metà. Prima lo stato restava `streaming`, senza errore: il pannello
+ * della knowledge base mostrava «in corso» per sempre. Stessa regola della chat (#4335, PR #4509).
+ */
+describe('useKbAskStream — a stream that closes without Complete or Error (#4510)', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('ends the answer as interrupted, and keeps what arrived', async () => {
+    const cite = { docId: 'd1', source: 'd1', page: 4, snippet: 'Cinque tessere.', score: 0.9 };
+    const wire = steppedFetch([
+      sseEvent(T.Citations, { citations: [cite] }),
+      sseEvent(T.Token, { token: 'La ' }),
+    ]);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(wire.fetch);
+    const { result } = renderHook(() => useKbAskStream());
+
+    act(() => result.current.ask('Quante tessere?'));
+    await vi.waitFor(() => expect(wire.calls()).toBe(1));
+    await runToTheEnd(wire);
+
+    expect(result.current.state.status).toBe('error');
+    expect(result.current.state.error).toEqual({ kind: 'interrupted', message: INTERRUPTED });
+    // La parte arrivata resta: la vista la mostra segnata come incompleta.
+    expect(result.current.state.partialText).toBe('La ');
+    expect(result.current.state.citations).toEqual([cite]);
+    // E non riparte da sola: la domanda la rifà l'utente, se vuole.
+    expect(wire.calls()).toBe(1);
+  });
+
+  it('says the same when it closes before any word of the answer', async () => {
+    const wire = steppedFetch([sseEvent(T.StateUpdate, { message: 'Ricerca…' })]);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(wire.fetch);
+    const { result } = renderHook(() => useKbAskStream());
+
+    act(() => result.current.ask('Quante tessere?'));
+    await vi.waitFor(() => expect(wire.calls()).toBe(1));
+    await runToTheEnd(wire);
+
+    expect(result.current.state.status).toBe('error');
+    expect(result.current.state.error).toEqual({ kind: 'interrupted', message: INTERRUPTED });
+    expect(result.current.state.partialText).toBe('');
+    expect(wire.calls()).toBe(1);
+  });
+
+  /** Il controllo: la chiusura che segue `Complete` è la fine normale. */
+  it('treats the close that follows Complete as the normal end', async () => {
+    const wire = steppedFetch([
+      sseEvent(T.Token, { token: 'Cinque tessere.' }),
+      sseEvent(T.Complete, COMPLETE),
+    ]);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(wire.fetch);
+    const { result } = renderHook(() => useKbAskStream());
+
+    act(() => result.current.ask('Quante tessere?'));
+    await vi.waitFor(() => expect(wire.calls()).toBe(1));
+    await runToTheEnd(wire);
+
+    expect(result.current.state.status).toBe('completed');
+    expect(result.current.state.error).toBeNull();
+    expect(result.current.state.partialText).toBe('Cinque tessere.');
+  });
+
+  /** Review di #4509: dopo l'evento conclusivo la risposta è chiusa. Un guasto lì non la rompe. */
+  it('leaves a complete answer alone when the connection drops after Complete', async () => {
+    const wire = steppedFetch([
+      sseEvent(T.Token, { token: 'Cinque tessere.' }),
+      sseEvent(T.Complete, COMPLETE),
+      new TypeError('network error'),
+    ]);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(wire.fetch);
+    const { result } = renderHook(() => useKbAskStream());
+
+    act(() => result.current.ask('Quante tessere?'));
+    await vi.waitFor(() => expect(wire.calls()).toBe(1));
+    await runToTheEnd(wire);
+
+    expect(result.current.state.status).toBe('completed');
+    expect(result.current.state.error).toBeNull();
+    expect(result.current.state.retryCount).toBe(0);
+    expect(result.current.state.partialText).toBe('Cinque tessere.');
+    expect(wire.calls()).toBe(1);
+  });
+
+  it('leaves a complete answer alone when an Error event follows Complete', async () => {
+    const wire = steppedFetch([
+      sseEvent(T.Token, { token: 'Cinque tessere.' }),
+      sseEvent(T.Complete, COMPLETE),
+      sseEvent(T.Error, {
+        errorMessage: 'An internal error occurred.',
+        errorCode: 'INTERNAL_ERROR',
+      }),
+    ]);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(wire.fetch);
+    const { result } = renderHook(() => useKbAskStream());
+
+    act(() => result.current.ask('Quante tessere?'));
+    await vi.waitFor(() => expect(wire.calls()).toBe(1));
+    await runToTheEnd(wire);
+
+    expect(result.current.state.status).toBe('completed');
+    expect(result.current.state.error).toBeNull();
+  });
+
+  /**
+   * Il backend dice da sé che la risposta si è interrotta (`AI_STREAM_INTERRUPTED`, dal gateway
+   * LLM dopo il primo token): per chi legge è la stessa cosa, con la stessa frase della chat.
+   */
+  it("reads the backend's own AI_STREAM_INTERRUPTED as the same interruption", async () => {
+    const wire = steppedFetch([
+      sseEvent(T.Token, { token: 'La ' }),
+      sseEvent(T.Error, {
+        errorMessage: 'The answer stopped before its end.',
+        errorCode: 'AI_STREAM_INTERRUPTED',
+      }),
+    ]);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(wire.fetch);
+    const { result } = renderHook(() => useKbAskStream());
+
+    act(() => result.current.ask('Quante tessere?'));
+    await vi.waitFor(() => expect(wire.calls()).toBe(1));
+    await runToTheEnd(wire);
+
+    expect(result.current.state.status).toBe('error');
+    expect(result.current.state.error).toEqual({
+      kind: 'interrupted',
+      message: INTERRUPTED,
+      code: 'AI_STREAM_INTERRUPTED',
+    });
+    expect(result.current.state.partialText).toBe('La ');
+  });
+
+  /**
+   * Review di #4524: un errore del backend dopo tutte le parole (es. `INTERNAL_ERROR`, dal `catch`
+   * dell'endpoint) era «Errore del server», e il pannello sostituiva la risposta arrivata col
+   * riquadro. Dopo qualche parola è un'interruzione, con il codice del backend.
+   */
+  it('reads any Error after some words as an interruption, keeping the code', async () => {
+    const wire = steppedFetch([
+      sseEvent(T.Token, { token: 'Ogni giocatore prende ' }),
+      sseEvent(T.Token, { token: 'cinque tessere.' }),
+      sseEvent(T.Error, {
+        errorMessage: 'An internal error occurred. See server logs for details.',
+        errorCode: 'INTERNAL_ERROR',
+      }),
+    ]);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(wire.fetch);
+    const { result } = renderHook(() => useKbAskStream());
+
+    act(() => result.current.ask('Quante tessere?'));
+    await vi.waitFor(() => expect(wire.calls()).toBe(1));
+    await runToTheEnd(wire);
+
+    expect(result.current.state.status).toBe('error');
+    expect(result.current.state.error).toEqual({
+      kind: 'interrupted',
+      message: INTERRUPTED,
+      code: 'INTERNAL_ERROR',
+    });
+    expect(result.current.state.partialText).toBe('Ogni giocatore prende cinque tessere.');
+  });
+
+  /** Il controllo: la quota del piano resta la quota, con i suoi numeri, anche dopo del testo. */
+  it('keeps the plan quota a server error with its numbers, even after some words', async () => {
+    const wire = steppedFetch([
+      sseEvent(T.Token, { token: 'La ' }),
+      sseEvent(T.Error, {
+        errorMessage: 'Tier limit exceeded: AgentQuery (3/3)',
+        errorCode: 'TIER_LIMIT_EXCEEDED',
+        current: 3,
+        max: 3,
+        upgradeUrl: '/pricing',
+      }),
+    ]);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(wire.fetch);
+    const { result } = renderHook(() => useKbAskStream());
+
+    act(() => result.current.ask('Quante tessere?'));
+    await vi.waitFor(() => expect(wire.calls()).toBe(1));
+    await runToTheEnd(wire);
+
+    expect(result.current.state.error).toEqual({
+      kind: 'server',
+      message: 'Tier limit exceeded: AgentQuery (3/3)',
+      code: 'TIER_LIMIT_EXCEEDED',
+      tierLimit: { current: 3, max: 3, upgradeUrl: '/pricing' },
+    });
+  });
+
+  /** Il controllo: senza parole, un errore del backend resta un errore del server. */
+  it('keeps an Error before any word a server error', async () => {
+    const wire = steppedFetch([
+      sseEvent(T.StateUpdate, { message: 'Ricerca…' }),
+      sseEvent(T.Error, {
+        errorMessage: 'An internal error occurred.',
+        errorCode: 'INTERNAL_ERROR',
+      }),
+    ]);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(wire.fetch);
+    const { result } = renderHook(() => useKbAskStream());
+
+    act(() => result.current.ask('Quante tessere?'));
+    await vi.waitFor(() => expect(wire.calls()).toBe(1));
+    await runToTheEnd(wire);
+
+    expect(result.current.state.error).toEqual({
+      kind: 'server',
+      message: 'An internal error occurred.',
+      code: 'INTERNAL_ERROR',
+    });
+  });
+});
+
+/**
+ * Review di #4524: il watchdog (30 s senza eventi) ferma la richiesta. Dopo qualche parola, per chi
+ * legge la risposta si è fermata prima della fine: è un'interruzione, e le parole restano. Prima
+ * era un `timeout`, che il pannello mostrava senza il testo arrivato.
+ */
+describe('useKbAskStream — the 30 s watchdog (#4510)', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('reads a timeout after some words as an interruption, and keeps them', async () => {
+    const wire = steppedFetch([
+      sseEvent(T.Token, { token: 'Ogni giocatore prende ' }),
+      sseEvent(T.Complete, COMPLETE),
+    ]);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(wire.fetch);
+    const { result } = renderHook(() => useKbAskStream());
+
+    act(() => result.current.ask('Quante tessere?'));
+    await vi.waitFor(() => expect(wire.calls()).toBe(1));
+    await deliver(wire.next);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000);
+    });
+
+    expect(wire.signal()?.aborted).toBe(true);
+    expect(result.current.state.status).toBe('error');
+    expect(result.current.state.error).toEqual({ kind: 'interrupted', message: INTERRUPTED });
+    expect(result.current.state.partialText).toBe('Ogni giocatore prende ');
+  });
+
+  /** Il controllo: senza parole resta un timeout. */
+  it('keeps a timeout before any word a timeout', async () => {
+    const wire = steppedFetch([
+      sseEvent(T.StateUpdate, { message: 'Ricerca…' }),
+      sseEvent(T.Complete, COMPLETE),
+    ]);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(wire.fetch);
+    const { result } = renderHook(() => useKbAskStream());
+
+    act(() => result.current.ask('Quante tessere?'));
+    await vi.waitFor(() => expect(wire.calls()).toBe(1));
+    await deliver(wire.next);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000);
+    });
+
+    expect(result.current.state.status).toBe('error');
+    expect(result.current.state.error?.kind).toBe('timeout');
+    expect(result.current.state.partialText).toBe('');
+  });
+});
+
+/**
+ * #4510: il nuovo tentativo riparte dallo stato accumulato dell'automa, non da zero. Misurato in
+ * PR #4509 con una sonda: un tentativo dopo un token raddoppiava il testo (`"La La "`), e a
+ * tentativo riuscito lo stato restava `status: 'error'`.
+ */
+describe('useKbAskStream — retries (#4510)', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('does not retry once words have arrived, so the text is not doubled', async () => {
+    const wire = steppedFetch([
+      sseEvent(T.Token, { token: 'La ' }),
+      new TypeError('network error'),
+    ]);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(wire.fetch);
+    const { result } = renderHook(() => useKbAskStream());
+
+    act(() => result.current.ask('Quante tessere?'));
+    await vi.waitFor(() => expect(wire.calls()).toBe(1));
+    await runToTheEnd(wire);
+    // Oltre il primo intervallo di attesa (1 s): se un tentativo fosse in coda, partirebbe qui.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1500);
+    });
+    // E, se fosse partito, gli diamo modo di consegnare.
+    await runToTheEnd(wire);
+
+    expect(result.current.state.partialText).toBe('La ');
+    expect(wire.calls()).toBe(1);
+    expect(result.current.state.status).toBe('error');
+    expect(result.current.state.error).toEqual({ kind: 'interrupted', message: INTERRUPTED });
+    expect(result.current.state.retryCount).toBe(0);
+  });
+
+  /** An `Error` event concludes the answer as much as `Complete`: nothing after it is retried. */
+  it('does not retry when the connection drops after an Error event', async () => {
+    const wire = steppedFetch([
+      sseEvent(T.Error, { errorMessage: 'RBAC failed', errorCode: 'RBAC_RESOLUTION_FAILED' }),
+      new TypeError('network error'),
+    ]);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(wire.fetch);
+    const { result } = renderHook(() => useKbAskStream());
+
+    act(() => result.current.ask('Quante tessere?'));
+    await vi.waitFor(() => expect(wire.calls()).toBe(1));
+    await runToTheEnd(wire);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1500);
+    });
+
+    expect(wire.calls()).toBe(1);
+    expect(result.current.state.retryCount).toBe(0);
+    expect(result.current.state.error?.code).toBe('RBAC_RESOLUTION_FAILED');
+  });
+
+  it('shows the connection error while the retry waits, and drops it once the retry answers', async () => {
+    const wire = steppedFetch([
+      sseEvent(T.StateUpdate, { message: 'Ricerca…' }),
+      sseEvent(T.Token, { token: 'Cinque tessere.' }),
+      sseEvent(T.Complete, COMPLETE),
+    ]);
+    let fetchCalls = 0;
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      fetchCalls++;
+      if (fetchCalls === 1) return Promise.reject(new TypeError('Failed to fetch'));
+      return wire.fetch(input, init);
+    });
+    const { result } = renderHook(() => useKbAskStream());
+
+    act(() => result.current.ask('Quante tessere?'));
+    // Il primo tentativo non si connette: il tentativo dopo è in attesa, e lo si dice.
+    await vi.waitFor(() => expect(result.current.state.retryCount).toBe(1));
+    expect(result.current.state.status).toBe('error');
+    expect(result.current.state.error?.kind).toBe('connection');
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+    await vi.waitFor(() => expect(wire.calls()).toBe(1));
+    // Il nuovo tentativo risponde: l'errore di prima non vale più.
+    await deliver(wire.next);
+    expect(result.current.state.status).toBe('streaming');
+    expect(result.current.state.error).toBeNull();
+
+    await deliver(wire.next);
+    await deliver(wire.next);
+    await deliver(wire.next);
+
+    expect(result.current.state.status).toBe('completed');
+    expect(result.current.state.error).toBeNull();
+    expect(result.current.state.partialText).toBe('Cinque tessere.');
+    expect(result.current.state.retryCount).toBe(1);
+  });
+});
+
+/**
+ * #4510: «Riprova a chiedere». La vista rifà la stessa domanda con `retry()`: prima il pannello
+ * mandava come domanda il testo parziale della risposta (o una domanda vuota).
+ */
+describe('useKbAskStream — retry() (#4510)', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('asks the same question again, from scratch', async () => {
+    const first = steppedFetch([sseEvent(T.Token, { token: 'La ' })]);
+    const second = steppedFetch([
+      sseEvent(T.Token, { token: 'Cinque tessere.' }),
+      sseEvent(T.Complete, COMPLETE),
+    ]);
+    const bodies: unknown[] = [];
+    let current: SteppedFetch = first;
+    vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+      bodies.push(JSON.parse(String(init?.body)));
+      return current.fetch(input, init);
+    });
+    const { result } = renderHook(() => useKbAskStream());
+
+    act(() => result.current.ask('Quante tessere?', { language: 'it' }));
+    await vi.waitFor(() => expect(first.calls()).toBe(1));
+    await runToTheEnd(first);
+    expect(result.current.state.error?.kind).toBe('interrupted');
+
+    current = second;
+    act(() => result.current.retry());
+    await vi.waitFor(() => expect(second.calls()).toBe(1));
+    // Riparte pulita: l'avviso era della risposta di prima.
+    expect(result.current.state.error).toBeNull();
+    await runToTheEnd(second);
+
+    expect(bodies).toEqual([
+      { query: 'Quante tessere?', language: 'it' },
+      { query: 'Quante tessere?', language: 'it' },
+    ]);
+    expect(result.current.state.status).toBe('completed');
+    expect(result.current.state.partialText).toBe('Cinque tessere.');
+  });
+
+  /** Review di #4524: prima di ogni domanda non c'è niente da rifare. */
+  it('does nothing before the first question', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    const { result } = renderHook(() => useKbAskStream());
+
+    act(() => result.current.retry());
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 20));
+    });
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(result.current.state.status).toBe('idle');
+    expect(result.current.state.error).toBeNull();
+  });
+
+  /**
+   * Review di #4524: «Chiedi di nuovo» mentre un tentativo automatico è in attesa riparte da capo
+   * (`retryCount` 0, tentativo 1) e toglie quello in attesa: una sola richiesta, e il testo una volta.
+   */
+  it('starts over while an automatic retry is waiting, without a second request', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const wire = steppedFetch([
+        sseEvent(T.Token, { token: 'Cinque tessere.' }),
+        sseEvent(T.Complete, COMPLETE),
+      ]);
+      let fetchCalls = 0;
+      vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+        fetchCalls++;
+        if (fetchCalls === 1) return Promise.reject(new TypeError('Failed to fetch'));
+        return wire.fetch(input, init);
+      });
+      const { result } = renderHook(() => useKbAskStream());
+
+      act(() => result.current.ask('Quante tessere?'));
+      await vi.waitFor(() => expect(result.current.state.retryCount).toBe(1));
+
+      act(() => result.current.retry());
+      await vi.waitFor(() => expect(wire.calls()).toBe(1));
+      expect(result.current.state.retryCount).toBe(0);
+      expect(result.current.state.error).toBeNull();
+      await runToTheEnd(wire);
+      // Oltre l'attesa del tentativo automatico: se fosse ancora in coda, partirebbe qui.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2000);
+      });
+      await runToTheEnd(wire);
+
+      expect(fetchCalls).toBe(2);
+      expect(result.current.state.status).toBe('completed');
+      expect(result.current.state.partialText).toBe('Cinque tessere.');
+      expect(result.current.state.retryCount).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  /**
+   * La domanda rifatta riparte da zero anche per le regole dei tentativi: le parole della risposta
+   * interrotta non ci sono più, quindi un errore di connessione prima della prima parola si ritenta.
+   */
+  it('forgets the words of the interrupted answer: a connection failure is retried again', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const first = steppedFetch([sseEvent(T.Token, { token: 'La ' })]);
+      let fetchCalls = 0;
+      vi.spyOn(globalThis, 'fetch').mockImplementation((input, init) => {
+        fetchCalls++;
+        if (fetchCalls === 1) return first.fetch(input, init);
+        return Promise.reject(new TypeError('Failed to fetch'));
+      });
+      const { result } = renderHook(() => useKbAskStream());
+
+      act(() => result.current.ask('Quante tessere?'));
+      await vi.waitFor(() => expect(first.calls()).toBe(1));
+      await runToTheEnd(first);
+      expect(result.current.state.error?.kind).toBe('interrupted');
+
+      act(() => result.current.retry());
+      await vi.waitFor(() => expect(result.current.state.retryCount).toBe(1));
+
+      expect(result.current.state.error?.kind).toBe('connection');
+      expect(result.current.state.partialText).toBe('');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

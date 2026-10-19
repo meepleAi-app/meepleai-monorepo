@@ -35,6 +35,7 @@ import { type JSX, useCallback, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+import { qaStreamErrorMessage } from '@/components/chat-unified/qaStreamErrors';
 import { FilterAccordion } from '@/components/features/kb-globale/FilterAccordion';
 import { HeroSearch } from '@/components/features/kb-globale/HeroSearch';
 import type { KbDocViewerCitation } from '@/components/features/kb-globale/KbDocViewerDesktop';
@@ -218,21 +219,26 @@ const LABELS = {
           body: 'Retry automatico in corso…',
           action: 'Riprova ora',
         },
+        // Review di #4524: dopo 30 s senza notizie la richiesta è già fermata, e il pulsante rifà la
+        // domanda. Prima diceva «Continua attesa», che non è quello che fa. (Con parole già arrivate
+        // non è un timeout ma un'interruzione, e le parole restano.)
         timeout: {
-          title: 'Risposta lenta',
-          body: 'Vuoi continuare ad aspettare?',
-          action: 'Continua attesa',
-          alt: 'Cancella',
-        },
-        partial: {
-          title: 'Risposta incompleta',
-          body: 'Lo stream si è interrotto.',
-          action: 'Ripeti query',
+          title: 'Nessuna risposta',
+          body: 'Non è arrivato niente per 30 secondi, quindi la domanda è stata fermata. Riprova a chiedere.',
+          action: 'Chiedi di nuovo',
+          alt: "Fai un'altra domanda",
         },
         server: {
           title: 'Errore del server',
           body: 'Riprova tra qualche istante.',
           action: 'Riprova',
+        },
+        // #4510: la risposta si è interrotta prima della fine. La frase è quella della chat.
+        interrupted: {
+          title: 'Risposta interrotta',
+          body: qaStreamErrorMessage('AI_STREAM_INTERRUPTED'),
+          action: 'Chiedi di nuovo',
+          alt: "Fai un'altra domanda",
         },
       },
     },
@@ -553,6 +559,7 @@ export function KbGlobaleView(): JSX.Element {
           onAsk={query => askStream.ask(query)}
           onStop={askStream.stop}
           onReset={askStream.reset}
+          onRetry={askStream.retry}
           onClose={closeDrawer}
           onEmptyCta={() => router.push('/library')}
           onCitationClick={openViewer}

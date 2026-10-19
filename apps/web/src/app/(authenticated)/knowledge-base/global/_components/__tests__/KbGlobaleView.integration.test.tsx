@@ -27,16 +27,17 @@
  */
 
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { type ReactNode } from 'react';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { server } from '@/__tests__/mocks/server';
 import { globalRequestCache } from '@/lib/api/core/requestCache';
 import type { KbAskEvent } from '@/lib/api/schemas/kb-ask.schemas';
+import { sseEvent, steppedFetch, type SteppedFetch } from '@/test-utils/sse-stepped-stream';
 
 // ─── API base (matches vitest.setup.tsx + handler convention) ────────────────
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
@@ -704,4 +705,141 @@ describe('Phase 2 — MSW integration S8..S11', () => {
 
     vi.restoreAllMocks();
   }, 8000);
+});
+
+/**
+ * #4510: la risposta del pannello «Ask the Meeple» si chiude senza `Complete` né `Error`. Pagina
+ * vera, hook vero, rete finta a passi: fra un evento e l'altro la vista rende, come nel browser.
+ * Prima il pannello restava su «STREAMING» per sempre, con il solo «Stop» come uscita.
+ */
+describe('KbGlobaleView — an answer that stops halfway (#4510)', () => {
+  const SUGGESTION = 'Come funziona il setup iniziale?';
+  const INTERRUPTED =
+    'La risposta si è interrotta prima della fine, quindi non è completa. Riprova a chiedere.';
+  const COMPLETE = {
+    totalTokens: 2,
+    promptTokens: 5,
+    completionTokens: 2,
+    estimatedReadingTimeMinutes: 0,
+    confidence: null,
+  };
+
+  /** Le domande partite verso `/ask/global`, nell'ordine, e la rete che risponde a ciascuna. */
+  let asked: unknown[];
+  let wires: SteppedFetch[];
+
+  /** Consegna un passo (un evento o la chiusura) e lascia alla pagina il tempo di rendere. */
+  async function deliver(wire: SteppedFetch) {
+    await act(async () => {
+      wire.next();
+      await new Promise(resolve => setTimeout(resolve, 10));
+    });
+  }
+
+  async function runToTheEnd(wire: SteppedFetch) {
+    for (let i = 0; i < wire.steps; i++) await deliver(wire);
+  }
+
+  /** Apre il pannello: ogni domanda a `/ask/global` prende la prossima rete dell'elenco. */
+  async function openDrawer(...answers: SteppedFetch[]) {
+    asked = [];
+    wires = answers;
+    server.use(
+      http.get(`${API_BASE}/api/v1/kb-docs`, () =>
+        HttpResponse.json({ items: [], total: 0, page: 1, pageSize: 20 })
+      )
+    );
+    const originalFetch = global.fetch;
+    vi.spyOn(global, 'fetch').mockImplementation(async (input, init) => {
+      const url = typeof input === 'string' ? input : (input as Request).url;
+      if (url.includes('/knowledge-base/ask/global')) {
+        const wire = wires[asked.length];
+        asked.push(JSON.parse(String(init?.body)));
+        return wire.fetch(input, init);
+      }
+      return originalFetch(input, init);
+    });
+
+    searchParamsMap = { ask: '1' };
+    render(<KbGlobaleView />, { wrapper: createWrapper() });
+    await waitFor(() => expect(screen.getByTestId('drawer-state-idle')).toBeInTheDocument());
+  }
+
+  beforeEach(() => {
+    searchParamsMap = {};
+    mockRouterPush.mockReset();
+    globalRequestCache.clear();
+  });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('says that the answer stopped, and keeps the words that arrived', async () => {
+    const first = steppedFetch([sseEvent(7, { token: 'Ogni giocatore prende ' })]);
+    await openDrawer(first);
+
+    await userEvent.click(screen.getByRole('button', { name: /setup iniziale/ }));
+    await waitFor(() => expect(first.calls()).toBe(1));
+    await runToTheEnd(first);
+
+    expect(screen.queryByTestId('drawer-state-streaming')).not.toBeInTheDocument();
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('Risposta interrotta');
+    expect(alert).toHaveTextContent(INTERRUPTED);
+    expect(screen.getByTestId('drawer-error-partial-text')).toHaveTextContent(
+      'Ogni giocatore prende'
+    );
+    expect(screen.getByText('Risposta interrotta: non è completa.')).toBeInTheDocument();
+    // Non riparte da sola.
+    expect(asked).toHaveLength(1);
+  });
+
+  it('asks the same question again', async () => {
+    const first = steppedFetch([sseEvent(7, { token: 'Ogni giocatore prende ' })]);
+    const second = steppedFetch([
+      sseEvent(7, { token: 'Ogni giocatore prende cinque tessere.' }),
+      sseEvent(4, COMPLETE),
+    ]);
+    await openDrawer(first, second);
+
+    await userEvent.click(screen.getByRole('button', { name: /setup iniziale/ }));
+    await waitFor(() => expect(first.calls()).toBe(1));
+    await runToTheEnd(first);
+
+    await userEvent.click(screen.getByRole('button', { name: /Chiedi di nuovo/ }));
+    await waitFor(() => expect(second.calls()).toBe(1));
+    await runToTheEnd(second);
+
+    // La stessa domanda, non il pezzo di risposta arrivato.
+    expect(asked).toEqual([{ query: SUGGESTION }, { query: SUGGESTION }]);
+    expect(screen.getByTestId('drawer-state-completed')).toHaveTextContent(
+      'Ogni giocatore prende cinque tessere.'
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('lets the user ask another question', async () => {
+    const first = steppedFetch([sseEvent(7, { token: 'Ogni giocatore prende ' })]);
+    const second = steppedFetch([
+      sseEvent(7, { token: 'Lo Scout muove di due.' }),
+      sseEvent(4, COMPLETE),
+    ]);
+    await openDrawer(first, second);
+
+    await userEvent.click(screen.getByRole('button', { name: /setup iniziale/ }));
+    await waitFor(() => expect(first.calls()).toBe(1));
+    await runToTheEnd(first);
+
+    await userEvent.click(screen.getByRole('button', { name: "Fai un'altra domanda" }));
+    expect(screen.getByTestId('drawer-state-idle')).toBeInTheDocument();
+    await userEvent.type(screen.getByPlaceholderText('Chiedi al Meeple…'), 'Come muove lo Scout?');
+    await userEvent.click(screen.getByRole('button', { name: 'Invia' }));
+    await waitFor(() => expect(second.calls()).toBe(1));
+    await runToTheEnd(second);
+
+    expect(asked).toEqual([{ query: SUGGESTION }, { query: 'Come muove lo Scout?' }]);
+    expect(screen.getByTestId('drawer-state-completed')).toHaveTextContent(
+      'Lo Scout muove di due.'
+    );
+  });
 });

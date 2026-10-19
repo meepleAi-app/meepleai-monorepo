@@ -37,6 +37,12 @@ const labels = {
     timeout: { title: 'Risposta lenta', body: '>30s', action: 'Continua attesa', alt: 'Cancella' },
     partial: { title: 'Risposta incompleta', body: 'Stream interrotto', action: 'Ripeti query' },
     server: { title: 'Errore del server', body: 'Riprova', action: 'Riprova' },
+    interrupted: {
+      title: 'Risposta interrotta',
+      body: 'La risposta si è interrotta prima della fine, quindi non è completa. Riprova a chiedere.',
+      action: 'Chiedi di nuovo',
+      alt: "Fai un'altra domanda",
+    },
   },
 };
 
@@ -50,6 +56,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
@@ -74,6 +81,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
@@ -103,6 +111,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
@@ -138,6 +147,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={onEmptyCta}
       />
@@ -161,6 +171,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
@@ -183,6 +194,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
@@ -206,6 +218,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
@@ -228,6 +241,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
@@ -236,6 +250,161 @@ describe('DrawerShell — FSM state rendering', () => {
     expect(screen.getByText(/RBAC_RESOLUTION_FAILED/)).toBeInTheDocument();
     // Un guasto si può riprovare.
     expect(screen.getByRole('button', { name: /Riprova/ })).toBeInTheDocument();
+  });
+
+  /**
+   * #4510: la risposta si è interrotta prima della fine. La parte arrivata resta, segnata come
+   * incompleta, e il riquadro dice perché, con la frase della chat. Testo piccolo su `bg-muted`:
+   * `text-foreground`, non `text-muted-foreground` (4,43:1 in tema scuro, sotto AA).
+   */
+  it('renders error[interrupted]: keeps the words that arrived, marked as incomplete, and says why', () => {
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'error',
+      partialText: 'La classe Scout inizia con',
+      error: { kind: 'interrupted', message: labels.error.interrupted.body },
+    };
+    render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+        onRetry={vi.fn()}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId('drawer-state-error-interrupted')).toBeInTheDocument();
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent('Risposta interrotta');
+    expect(alert).toHaveTextContent(
+      'La risposta si è interrotta prima della fine, quindi non è completa. Riprova a chiedere.'
+    );
+
+    const partial = screen.getByTestId('drawer-error-partial-text');
+    expect(partial).toHaveTextContent('La classe Scout inizia con');
+    expect(partial).toHaveClass('text-foreground');
+    expect(partial).not.toHaveClass('text-muted-foreground');
+    const mark = screen.getByText('Risposta interrotta: non è completa.');
+    expect(mark).toHaveClass('text-foreground');
+  });
+
+  it('renders error[interrupted] without words: only the reason', () => {
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'error',
+      error: { kind: 'interrupted', message: labels.error.interrupted.body },
+    };
+    render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+        onRetry={vi.fn()}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Risposta interrotta');
+    expect(screen.queryByTestId('drawer-error-partial-text')).not.toBeInTheDocument();
+  });
+
+  /**
+   * #4510: «Chiedi di nuovo» rifà la stessa domanda (`onRetry`). Prima il pulsante chiamava
+   * `onAsk(state.partialText)`: mandava come domanda il pezzo di risposta arrivato, o una domanda
+   * vuota, che il backend rifiuta.
+   */
+  it('asks the same question again through onRetry, not the partial answer through onAsk', async () => {
+    const onAsk = vi.fn();
+    const onRetry = vi.fn();
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'error',
+      partialText: 'La classe Scout inizia con',
+      error: { kind: 'interrupted', message: labels.error.interrupted.body },
+    };
+    render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={onAsk}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+        onRetry={onRetry}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /Chiedi di nuovo/ }));
+
+    expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(onAsk).not.toHaveBeenCalled();
+  });
+
+  it('lets the user leave an interrupted answer and ask another question', async () => {
+    const onReset = vi.fn();
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'error',
+      partialText: 'La classe Scout inizia con',
+      error: { kind: 'interrupted', message: labels.error.interrupted.body },
+    };
+    render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={onReset}
+        onRetry={vi.fn()}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: "Fai un'altra domanda" }));
+
+    expect(onReset).toHaveBeenCalledTimes(1);
+  });
+
+  /** Il riquadro d'errore, per ogni tipo: testo leggibile (AA) in entrambi i temi. */
+  it('writes the error title and body with text-foreground', () => {
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'error',
+      error: { kind: 'server', message: 'RBAC failed', code: 'RBAC_RESOLUTION_FAILED' },
+    };
+    render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+        onRetry={vi.fn()}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Errore del server')).toHaveClass('text-foreground');
+    expect(screen.getByText('Riprova', { selector: 'div' })).toHaveClass('text-foreground');
+    expect(screen.getByRole('button', { name: /Riprova/ })).toHaveClass(
+      'bg-primary',
+      'text-primary-foreground'
+    );
   });
 
   /**
@@ -262,6 +431,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
@@ -293,6 +463,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
@@ -328,6 +499,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={onReset}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
@@ -352,6 +524,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
@@ -373,6 +546,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={onClose}
         onEmptyCta={vi.fn()}
       />
@@ -391,6 +565,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={onAsk}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
@@ -410,6 +585,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={onStop}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
@@ -439,6 +615,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
@@ -472,6 +649,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
       />
@@ -513,6 +691,7 @@ describe('DrawerShell — FSM state rendering', () => {
         onAsk={vi.fn()}
         onStop={vi.fn()}
         onReset={vi.fn()}
+        onRetry={vi.fn()}
         onClose={vi.fn()}
         onEmptyCta={vi.fn()}
         onCitationClick={onCitationClick}

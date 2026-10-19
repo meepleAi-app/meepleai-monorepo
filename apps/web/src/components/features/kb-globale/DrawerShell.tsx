@@ -44,6 +44,8 @@ export interface DrawerShellProps {
   onAsk: (query: string) => void;
   onStop: () => void;
   onReset: () => void;
+  /** #4510: asks the last question again (`useKbAskStream.retry`), from the error state. */
+  onRetry: () => void;
   onClose: () => void;
   onEmptyCta: () => void;
   onCopy?: () => void;
@@ -59,6 +61,7 @@ export function DrawerShell({
   onAsk,
   onStop,
   onReset,
+  onRetry,
   onClose,
   onEmptyCta,
   onCopy,
@@ -143,11 +146,13 @@ export function DrawerShell({
           </button>
         </div>
       )}
+      {/* #4510: «Riprova» asks the same question again. It used to send the partial ANSWER as the
+          question (or an empty one, which the backend refuses with 422). */}
       {state.status === 'error' && state.error && !tierLimit && (
         <DrawerError
           error={state.error}
           partialText={state.partialText}
-          onRetry={() => onAsk(state.partialText || '')}
+          onRetry={onRetry}
           onCancel={onReset}
           labels={labels.error}
         />

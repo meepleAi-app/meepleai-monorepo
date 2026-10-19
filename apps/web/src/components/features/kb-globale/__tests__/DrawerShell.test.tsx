@@ -34,8 +34,12 @@ const labels = {
   },
   error: {
     connection: { title: 'Connessione persa', body: 'Retry automatico…', action: 'Riprova ora' },
-    timeout: { title: 'Risposta lenta', body: '>30s', action: 'Continua attesa', alt: 'Cancella' },
-    partial: { title: 'Risposta incompleta', body: 'Stream interrotto', action: 'Ripeti query' },
+    timeout: {
+      title: 'Nessuna risposta',
+      body: 'Nessuna risposta per 30 secondi.',
+      action: 'Chiedi di nuovo',
+      alt: "Fai un'altra domanda",
+    },
     server: { title: 'Errore del server', body: 'Riprova', action: 'Riprova' },
     interrupted: {
       title: 'Risposta interrotta',
@@ -180,7 +184,7 @@ describe('DrawerShell — FSM state rendering', () => {
     expect(screen.getByText(/connessione persa/i)).toBeInTheDocument();
   });
 
-  it('renders error[timeout]: continue + cancel actions', () => {
+  it('renders error[timeout]: ask again + ask another question', () => {
     const state: KbAskStreamState = {
       ...baseState,
       status: 'error',
@@ -200,31 +204,8 @@ describe('DrawerShell — FSM state rendering', () => {
       />
     );
     expect(screen.getByTestId('drawer-state-error-timeout')).toBeInTheDocument();
-    expect(screen.getByText(/cancella/i)).toBeInTheDocument();
-  });
-
-  it('renders error[partial]: shows accumulated partial text + [stream interrotto]', () => {
-    const state: KbAskStreamState = {
-      ...baseState,
-      status: 'error',
-      partialText: 'La classe Scout inizia con',
-      error: { kind: 'partial', message: 'LLM crashed' },
-    };
-    render(
-      <DrawerShell
-        state={state}
-        labels={labels}
-        suggestions={[]}
-        onAsk={vi.fn()}
-        onStop={vi.fn()}
-        onReset={vi.fn()}
-        onRetry={vi.fn()}
-        onClose={vi.fn()}
-        onEmptyCta={vi.fn()}
-      />
-    );
-    expect(screen.getByTestId('drawer-state-error-partial')).toBeInTheDocument();
-    expect(screen.getByText(/la classe scout inizia con/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Chiedi di nuovo/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: "Fai un'altra domanda" })).toBeInTheDocument();
   });
 
   it('renders error[server]: shows code', () => {
@@ -401,6 +382,9 @@ describe('DrawerShell — FSM state rendering', () => {
 
     expect(screen.getByText('Errore del server')).toHaveClass('text-foreground');
     expect(screen.getByText('Riprova', { selector: 'div' })).toHaveClass('text-foreground');
+    // Review di #4524: anche il codice. `text-muted-foreground` lì fa 4,52:1 in tema scuro, al limite.
+    expect(screen.getByText('RBAC_RESOLUTION_FAILED')).toHaveClass('text-foreground');
+    expect(screen.getByText('RBAC_RESOLUTION_FAILED')).not.toHaveClass('text-muted-foreground');
     expect(screen.getByRole('button', { name: /Riprova/ })).toHaveClass(
       'bg-primary',
       'text-primary-foreground'

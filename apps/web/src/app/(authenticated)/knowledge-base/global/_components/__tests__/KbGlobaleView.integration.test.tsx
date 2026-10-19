@@ -842,4 +842,68 @@ describe('KbGlobaleView — an answer that stops halfway (#4510)', () => {
       'Lo Scout muove di due.'
     );
   });
+
+  /**
+   * Review di #4524: un errore del backend dopo tutte le parole (es. `INTERNAL_ERROR`) era
+   * «Errore del server», e il riquadro prendeva il posto della risposta arrivata.
+   */
+  it('keeps the words when the backend reports an error after them', async () => {
+    const first = steppedFetch([
+      sseEvent(7, { token: 'Ogni giocatore prende cinque tessere.' }),
+      sseEvent(5, {
+        errorMessage: 'An internal error occurred. See server logs for details.',
+        errorCode: 'INTERNAL_ERROR',
+      }),
+    ]);
+    await openDrawer(first);
+
+    await userEvent.click(screen.getByRole('button', { name: /setup iniziale/ }));
+    await waitFor(() => expect(first.calls()).toBe(1));
+    await runToTheEnd(first);
+
+    expect(screen.getByTestId('drawer-error-partial-text')).toHaveTextContent(
+      'Ogni giocatore prende cinque tessere.'
+    );
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(INTERRUPTED);
+    expect(alert).toHaveTextContent('INTERNAL_ERROR');
+    expect(screen.queryByText('Errore del server')).not.toBeInTheDocument();
+  });
+
+  /**
+   * Review di #4524: dopo 30 s senza eventi la richiesta è fermata. Il pulsante diceva «Continua
+   * attesa», ma rifà la domanda: ora dice quello che fa.
+   */
+  it('says what the timeout button does, and does it', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const first = steppedFetch([sseEvent(0, { message: 'Ricerca…' }), sseEvent(4, COMPLETE)]);
+      const second = steppedFetch([
+        sseEvent(7, { token: 'Ogni giocatore prende cinque tessere.' }),
+        sseEvent(4, COMPLETE),
+      ]);
+      await openDrawer(first, second);
+
+      await userEvent.click(screen.getByRole('button', { name: /setup iniziale/ }));
+      await waitFor(() => expect(first.calls()).toBe(1));
+      await deliver(first);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(30_000);
+      });
+
+      const alert = screen.getByRole('alert');
+      expect(alert).toHaveTextContent('Nessuna risposta');
+      expect(screen.queryByRole('button', { name: /Continua attesa/ })).not.toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: /Chiedi di nuovo/ }));
+      await waitFor(() => expect(second.calls()).toBe(1));
+      await runToTheEnd(second);
+
+      expect(asked).toEqual([{ query: SUGGESTION }, { query: SUGGESTION }]);
+      expect(screen.getByTestId('drawer-state-completed')).toHaveTextContent(
+        'Ogni giocatore prende cinque tessere.'
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

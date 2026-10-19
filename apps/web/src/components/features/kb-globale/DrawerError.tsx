@@ -12,7 +12,6 @@ export interface DrawerErrorLabelsForKind {
 export interface DrawerErrorLabels {
   connection: DrawerErrorLabelsForKind;
   timeout: DrawerErrorLabelsForKind;
-  partial: DrawerErrorLabelsForKind;
   /** #4510: the answer stopped before its end. */
   interrupted: DrawerErrorLabelsForKind;
   server: DrawerErrorLabelsForKind;
@@ -38,11 +37,12 @@ export function DrawerError({
   const icons = {
     connection: '📡',
     timeout: '⏱️',
-    partial: '⚠',
     interrupted: '⚠',
     server: '⚙',
   } as const;
-  const keepsPartialText = error.kind === 'partial' || error.kind === 'interrupted';
+  // #4510: the words that arrived stay when the answer was interrupted. (The `partial` kind is gone:
+  // it was tied to `LLM_STREAMING_FAILED`, a code the backend no longer sends.)
+  const keepsPartialText = error.kind === 'interrupted';
   return (
     <div
       data-testid={`drawer-state-error-${error.kind}`}
@@ -77,9 +77,7 @@ export function DrawerError({
             <div className="text-xs text-foreground">{cfg.body}</div>
           </div>
         </div>
-        {error.code && (
-          <div className="font-mono text-[10px] text-muted-foreground">{error.code}</div>
-        )}
+        {error.code && <div className="font-mono text-[10px] text-foreground">{error.code}</div>}
         <div className="flex gap-2">
           <button
             type="button"

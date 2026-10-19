@@ -219,16 +219,14 @@ const LABELS = {
           body: 'Retry automatico in corso…',
           action: 'Riprova ora',
         },
+        // Review di #4524: dopo 30 s senza notizie la richiesta è già fermata, e il pulsante rifà la
+        // domanda. Prima diceva «Continua attesa», che non è quello che fa. (Con parole già arrivate
+        // non è un timeout ma un'interruzione, e le parole restano.)
         timeout: {
-          title: 'Risposta lenta',
-          body: 'Vuoi continuare ad aspettare?',
-          action: 'Continua attesa',
-          alt: 'Cancella',
-        },
-        partial: {
-          title: 'Risposta incompleta',
-          body: 'Lo stream si è interrotto.',
-          action: 'Ripeti query',
+          title: 'Nessuna risposta',
+          body: 'Non è arrivato niente per 30 secondi, quindi la domanda è stata fermata. Riprova a chiedere.',
+          action: 'Chiedi di nuovo',
+          alt: "Fai un'altra domanda",
         },
         server: {
           title: 'Errore del server',

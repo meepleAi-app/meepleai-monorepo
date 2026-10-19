@@ -6,12 +6,14 @@
  *
  * Error sub-kinds:
  *   - connection: fetch throw (TypeError) before any word of the answer
- *   - timeout: 30s without any event (TIMEOUT_MS)
- *   - partial: LLM_STREAMING_FAILED mid-stream (partialText preserved)
+ *   - timeout: 30s without any event (TIMEOUT_MS), before any word of the answer
  *   - interrupted (#4510): the answer stopped before its end — the stream closed without Complete
- *     or Error, an error was thrown after some words, or the backend said `AI_STREAM_INTERRUPTED`.
- *     partialText preserved (it may be empty); the message is the main chat's one.
- *   - server: RBAC_RESOLUTION_FAILED / RETRIEVAL_FAILED / PROMPT_ASSEMBLY_FAILED
+ *     or Error; after some words, an error thrown, the 30s watchdog, or any Error event but the plan
+ *     quota; or the backend said `AI_STREAM_INTERRUPTED`. partialText preserved (it may be empty);
+ *     the message is the main chat's one, the backend's code (if any) is kept.
+ *     It replaces `partial`, tied to `LLM_STREAMING_FAILED`, a code the backend no longer sends.
+ *   - server: an Error event before any word (RBAC_RESOLUTION_FAILED / RETRIEVAL_FAILED /
+ *     PROMPT_ASSEMBLY_FAILED / ...), the plan quota (TIER_LIMIT_EXCEEDED), or another thrown error
  *   - completed-empty: Complete arrives with totalTokens=0 and NO prior Citations
  *     (Adzic edge case — user has no accessible games)
  *
@@ -26,6 +28,7 @@
 import { useCallback, useMemo, useRef } from 'react';
 
 import { qaStreamErrorMessage } from '@/components/chat-unified/qaStreamErrors';
+import { TIER_LIMIT_EXCEEDED } from '@/lib/tier-limit';
 
 import { useSseStreamFsm, type SseStreamFsmConfig } from './useSseStreamFsm';
 import { kbAskClient } from '../lib/api/clients/kbAskClient';
@@ -38,7 +41,7 @@ import type {
 } from '../lib/api/schemas/kb-ask.schemas';
 
 export type KbAskStatus = 'idle' | 'streaming' | 'completed' | 'completed-empty' | 'error';
-export type KbAskErrorKind = 'connection' | 'timeout' | 'partial' | 'interrupted' | 'server';
+export type KbAskErrorKind = 'connection' | 'timeout' | 'interrupted' | 'server';
 
 export interface KbAskError {
   readonly kind: KbAskErrorKind;
@@ -105,12 +108,6 @@ const INITIAL_INTERNAL_STATE: KbInternalState = {
   attempt: 0,
 };
 
-const SERVER_ERROR_CODES = new Set([
-  'RBAC_RESOLUTION_FAILED',
-  'RETRIEVAL_FAILED',
-  'PROMPT_ASSEMBLY_FAILED',
-]);
-
 /** #4510: the backend's own code for an answer cut off after its first word (LLM gateway). */
 const AI_STREAM_INTERRUPTED = 'AI_STREAM_INTERRUPTED';
 
@@ -168,16 +165,18 @@ export function useKbAskStream(): UseKbAskStream {
       // IMPORTANT: also stash to pendingErrorRef so it's visible during retries.
       errorMapper: raw => {
         let mapped: KbAskError;
-        // Timeout sentinel injected by useSseStreamFsm watchdog
-        if (isFsmSentinel(raw, 'timeout')) {
-          mapped = { kind: 'timeout', message: 'No response in 30s' };
-        } else if (isFsmSentinel(raw, 'interrupted') || partialTextRef.current !== '') {
+        if (isFsmSentinel(raw, 'interrupted') || partialTextRef.current !== '') {
           // #4510: never retried. With words already on screen, the retry would start from the
           // accumulated state and append the answer again under them ("La La "). Without, the
           // connection did work and the server (or a proxy) closed it: not the failure to connect
           // the retry is for, and a silent resend is one more model call nobody asked for. Same
           // rule as the chat (#4335). The user asks again, with the reason in view.
+          // Review of #4524: the watchdog too, once words have arrived — for the user the answer
+          // stopped before its end, and the words stay (a `timeout` would hide them).
           mapped = { kind: 'interrupted', message: STREAM_INTERRUPTED_MESSAGE };
+        } else if (isFsmSentinel(raw, 'timeout')) {
+          // Timeout sentinel injected by useSseStreamFsm watchdog, before any word of the answer
+          mapped = { kind: 'timeout', message: 'No response in 30s' };
         } else if (raw instanceof TypeError) {
           // Network / connection error, before any word of the answer
           mapped = { kind: 'connection', message: raw.message };
@@ -310,25 +309,25 @@ function reduceKbEvent(
     case 5: {
       // SSE Error event — handled in reducer (not thrown, so won't go through errorMapper)
       const code = event.data.code;
-      if (code === AI_STREAM_INTERRUPTED) {
-        // #4510: the backend says the answer stopped after its first word. The same interruption
-        // as a stream that closes halfway, with the same sentence: the words stay, as incomplete.
+      // #4510: the backend says the answer stopped after its first word — or (review of #4524)
+      // any error comes after some words, e.g. `INTERNAL_ERROR` from the endpoint's `catch`. The
+      // same interruption as a stream that closes halfway, with the same sentence: the words stay,
+      // as incomplete, and the backend's code with them. Not the plan quota: it has its own notice.
+      if (
+        code === AI_STREAM_INTERRUPTED ||
+        (next.partialText !== '' && code !== TIER_LIMIT_EXCEEDED)
+      ) {
         return {
           ...next,
           status: 'error',
           error: { kind: 'interrupted', message: STREAM_INTERRUPTED_MESSAGE, code },
         };
       }
-      const kind: KbAskErrorKind = SERVER_ERROR_CODES.has(code)
-        ? 'server'
-        : code === 'LLM_STREAMING_FAILED' && next.partialText.length > 0
-          ? 'partial'
-          : 'server';
       return {
         ...next,
         status: 'error',
         error: {
-          kind,
+          kind: 'server',
           message: event.data.message,
           code,
           ...(event.data.tierLimit ? { tierLimit: event.data.tierLimit } : {}),

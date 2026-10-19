@@ -8,6 +8,7 @@ using Api.Infrastructure;
 using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.BoundedContexts.SharedGameCatalog.Application.Configuration;
 using Microsoft.EntityFrameworkCore;
@@ -75,6 +76,7 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly TimeProvider _timeProvider;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IDomainEventCollector _eventCollector;
     private readonly ILogger<GenerateMechanicAnalysisCommandHandler> _logger;
 
     public GenerateMechanicAnalysisCommandHandler(
@@ -90,6 +92,7 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
         IServiceScopeFactory scopeFactory,
         TimeProvider timeProvider,
         IUnitOfWork unitOfWork,
+        IDomainEventCollector eventCollector,
         ILogger<GenerateMechanicAnalysisCommandHandler> logger)
     {
         _analysisRepository = analysisRepository ?? throw new ArgumentNullException(nameof(analysisRepository));
@@ -104,6 +107,7 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
         _scopeFactory = scopeFactory ?? throw new ArgumentNullException(nameof(scopeFactory));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _eventCollector = eventCollector ?? throw new ArgumentNullException(nameof(eventCollector));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -159,7 +163,8 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
         {
             if (request.ForceRegenerate)
             {
-                throw RegenerateBlocked(existing.Id, existing.Status, promptVersion);
+                throw MechanicAnalysisPromptSlot.Occupied(
+                    PromptSlotWrite.Regenerate, existing.Id, existing.Status, existing.CreatedAt, promptVersion);
             }
 
             _logger.LogInformation(
@@ -256,12 +261,23 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
         {
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
-        catch (DbUpdateException ex) when (ex is DbUpdateConcurrencyException || IsPromptSlotTaken(ex))
+        catch (DbUpdateException ex) when (ex is DbUpdateConcurrencyException || MechanicAnalysisPromptSlot.IsTaken(ex))
         {
             // Narrow window: a concurrent admin request inserted the same (game, pdf, version) after
             // step 3. Postgres reports it as 23505 on the unique index — a plain DbUpdateException, NOT
             // a DbUpdateConcurrencyException, so the original catch never saw it (#4144). Re-query and
             // short-circuit to the winner, exactly as if this request had arrived a moment later.
+            //
+            // The failed save leaves the losing analysis Added in the change tracker, together with the
+            // event-log/outbox rows materialized for its domain events, and leaves those events queued in
+            // the collector (it drains only after a successful save). This handler also runs inside other
+            // handlers' scopes (Requeue sends it via IMediator): any later SaveChanges in the same scope
+            // would retry the losing INSERT and re-materialize the outbox rows. Drop both first. (Pending
+            // changes of a calling handler would have gone down with the same failed save; today's
+            // callers — the endpoint and Requeue — have none.)
+            _dbContext.ChangeTracker.Clear();
+            _eventCollector.Clear();
+
             var winner = await _analysisRepository
                 .FindByPromptVersionAsync(request.SharedGameId, request.PdfDocumentId, promptVersion, cancellationToken)
                 .ConfigureAwait(false);
@@ -270,7 +286,8 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
             {
                 if (request.ForceRegenerate)
                 {
-                    throw RegenerateBlocked(winner.Id, winner.Status, promptVersion, ex);
+                    throw MechanicAnalysisPromptSlot.Occupied(
+                        PromptSlotWrite.Regenerate, winner.Id, winner.Status, winner.CreatedAt, promptVersion, ex);
                 }
 
                 _logger.LogInformation(
@@ -363,56 +380,6 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
         }
 
         return builder.ToString();
-    }
-
-    /// <summary>
-    /// Name of the filtered unique index on (shared_game_id, pdf_document_id, prompt_version) with
-    /// <c>status &lt;&gt; 3</c> (see <c>MechanicAnalysisEntityConfiguration</c>). Postgres reports it as
-    /// the constraint name of a 23505.
-    /// </summary>
-    internal const string PromptSlotIndexName = "ux_mechanic_analyses_shared_game_pdf_prompt";
-
-    // Only THIS index: any other unique violation stays a 500, because it would be a different defect.
-    private static bool IsPromptSlotTaken(DbUpdateException ex) =>
-        ex.InnerException is Npgsql.PostgresException pg
-        && string.Equals(pg.SqlState, Npgsql.PostgresErrorCodes.UniqueViolation, StringComparison.Ordinal)
-        && string.Equals(pg.ConstraintName, PromptSlotIndexName, StringComparison.Ordinal);
-
-    /// <summary>
-    /// #4144: the 409 for "Regenerate" (<see cref="GenerateMechanicAnalysisCommand.ForceRegenerate"/>) when
-    /// a non-Rejected analysis already holds the (game, pdf, prompt) slot. The message says what to do,
-    /// which depends on where the existing analysis is in its lifecycle: only InReview and
-    /// PartiallyExtracted can be rejected by an admin; a Draft is still running; a Published one is final.
-    /// </summary>
-    private static ConflictException RegenerateBlocked(
-        Guid existingId,
-        MechanicAnalysisStatus status,
-        string promptVersion,
-        Exception? innerException = null)
-    {
-        var reason = status switch
-        {
-            MechanicAnalysisStatus.Draft =>
-                $"Un'analisi per questo PDF con il prompt {promptVersion} è ancora in generazione: "
-                + "aspetta che finisca e, se non risulta già rifiutata, rifiutala prima di rigenerare.",
-            MechanicAnalysisStatus.InReview =>
-                $"Esiste già un'analisi in revisione per questo PDF con il prompt {promptVersion}: "
-                + "rifiutala prima di rigenerare.",
-            MechanicAnalysisStatus.PartiallyExtracted =>
-                $"Esiste un'analisi parzialmente estratta per questo PDF con il prompt {promptVersion}: "
-                + "rifiutala prima di rigenerare.",
-            MechanicAnalysisStatus.Published =>
-                $"Esiste già un'analisi pubblicata per questo PDF con il prompt {promptVersion}: "
-                + "con lo stesso prompt non se ne può generare un'altra.",
-            _ =>
-                $"Esiste già un'analisi per questo PDF con il prompt {promptVersion} (stato {status}): "
-                + "non se ne può generare un'altra.",
-        };
-        var message = $"{reason} Analisi esistente: {existingId}.";
-
-        return innerException is null
-            ? new ConflictException(message)
-            : new ConflictException(message, innerException);
     }
 
     private static MechanicAnalysisGenerationResponseDto BuildResponse(

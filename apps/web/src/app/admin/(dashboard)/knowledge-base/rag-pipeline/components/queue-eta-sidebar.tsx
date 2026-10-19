@@ -19,59 +19,11 @@ import {
   useEmbeddingServiceInfo,
   useEmbeddingServiceMetrics,
 } from '@/hooks/queries/useEmbeddingService';
-import { apiClient } from '@/lib/api/client';
+import { api } from '@/lib/api';
+import type { PipelineStageStatus } from '@/lib/api/schemas/admin-knowledge-base.schemas';
 import { cn } from '@/lib/utils';
 
 import { useQueueConfig, updateQueueConfig, bulkReindexFailed } from '../../queue/lib/queue-api';
-
-// ── Types for sidebar API responses ────────────────────────────────────
-
-interface StepTiming {
-  step: string;
-  avgDurationSeconds: number;
-  sampleCount: number;
-}
-
-interface PipelineMetrics {
-  stepTimings: StepTiming[];
-  avgTotalSeconds: number;
-}
-
-interface StageHealth {
-  stage: string;
-  status: 'healthy' | 'degraded' | 'down';
-  message?: string;
-}
-
-interface PipelineHealth {
-  stages: StageHealth[];
-  overallStatus: 'healthy' | 'degraded' | 'down';
-}
-
-// ── Fetch helpers ──────────────────────────────────────────────────────
-
-async function fetchPipelineMetrics(): Promise<PipelineMetrics | null> {
-  try {
-    return await apiClient.get<PipelineMetrics>('/api/v1/admin/pipeline/metrics');
-  } catch {
-    return null;
-  }
-}
-
-async function fetchPipelineHealth(): Promise<PipelineHealth | null> {
-  try {
-    return await apiClient.get<PipelineHealth>('/api/v1/admin/pipeline/health');
-  } catch {
-    return null;
-  }
-}
-
-async function cleanupOrphans(): Promise<{ cleaned: number }> {
-  const result = await apiClient.post<{ cleaned: number }>(
-    '/api/v1/admin/pipeline/cleanup-orphans'
-  );
-  return result ?? { cleaned: 0 };
-}
 
 // ── Helper: format seconds ─────────────────────────────────────────────
 
@@ -83,10 +35,10 @@ function fmtDuration(seconds: number): string {
   return s > 0 ? `${m}m ${s}s` : `${m}m`;
 }
 
-const HEALTH_STYLES: Record<string, { dot: string; text: string }> = {
+const HEALTH_STYLES: Record<PipelineStageStatus, { dot: string; text: string }> = {
   healthy: { dot: 'bg-emerald-500', text: 'text-emerald-700 dark:text-emerald-400' },
-  degraded: { dot: 'bg-amber-500', text: 'text-amber-700 dark:text-amber-400' },
-  down: { dot: 'bg-red-500', text: 'text-red-700 dark:text-red-400' },
+  warning: { dot: 'bg-amber-500', text: 'text-amber-700 dark:text-amber-400' },
+  error: { dot: 'bg-red-500', text: 'text-red-700 dark:text-red-400' },
 };
 
 // ── Component ──────────────────────────────────────────────────────────
@@ -94,17 +46,19 @@ const HEALTH_STYLES: Record<string, { dot: string; text: string }> = {
 export function QueueETASidebar() {
   const queryClient = useQueryClient();
 
-  // Fetch sidebar data
-  const { data: metrics } = useQuery({
+  // #4511: timing, health and the orphan cleanup called three routes under `/admin/pipeline/` that
+  // the API does not have, with types of their own: the two GETs fell into a `catch` and showed
+  // nothing, and the cleanup button answered 404.
+  const { data: metrics, isError: metricsFailed } = useQuery({
     queryKey: ['admin', 'pipeline', 'metrics'],
-    queryFn: fetchPipelineMetrics,
+    queryFn: () => api.admin.getPdfMetrics(),
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
 
   const { data: health } = useQuery({
     queryKey: ['admin', 'pipeline', 'health'],
-    queryFn: fetchPipelineHealth,
+    queryFn: () => api.admin.getPipelineHealth(),
     staleTime: 30_000,
     refetchInterval: 60_000,
   });
@@ -125,7 +79,7 @@ export function QueueETASidebar() {
   });
 
   const cleanupMutation = useMutation({
-    mutationFn: cleanupOrphans,
+    mutationFn: () => api.admin.cleanupOrphans(),
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['admin', 'queue'] }),
   });
 
@@ -135,6 +89,9 @@ export function QueueETASidebar() {
   });
 
   const isPaused = queueConfig?.isPaused ?? false;
+
+  // Keyed by step, in the order the API records them; durations are in seconds.
+  const stepTimings = metrics ? Object.values(metrics.averages) : [];
 
   // Already a percentage, computed by the API from the service's counters.
   const failureRate = embeddingMetrics?.failureRate ?? 0;
@@ -150,25 +107,21 @@ export function QueueETASidebar() {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
-          {metrics?.stepTimings && metrics.stepTimings.length > 0 ? (
+          {stepTimings.length > 0 ? (
             <div className="space-y-2">
-              {metrics.stepTimings.map(step => (
+              {stepTimings.map(step => (
                 <div key={step.step} className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground truncate mr-2">{step.step}</span>
                   <span className="font-mono font-medium text-foreground shrink-0">
-                    {fmtDuration(step.avgDurationSeconds)}
+                    {fmtDuration(step.avgDuration)}
                   </span>
                 </div>
               ))}
-              <div className="border-t border-border/50 pt-2 mt-2 flex items-center justify-between text-xs font-medium">
-                <span className="text-muted-foreground">Total avg</span>
-                <span className="font-mono text-amber-700 dark:text-amber-400">
-                  {fmtDuration(metrics.avgTotalSeconds)}
-                </span>
-              </div>
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">No timing data yet</p>
+            <p className="text-xs text-muted-foreground">
+              {metricsFailed ? 'Timing data unavailable' : 'No timing data yet'}
+            </p>
           )}
         </CardContent>
       </Card>
@@ -185,11 +138,11 @@ export function QueueETASidebar() {
           {health?.stages && health.stages.length > 0 ? (
             <div className="space-y-2">
               {health.stages.map(stage => {
-                const style = HEALTH_STYLES[stage.status] ?? HEALTH_STYLES.down;
+                const style = HEALTH_STYLES[stage.status];
                 return (
-                  <div key={stage.stage} className="flex items-center gap-2 text-xs">
+                  <div key={stage.name} className="flex items-center gap-2 text-xs">
                     <span className={cn('h-2 w-2 rounded-full shrink-0', style.dot)} />
-                    <span className="text-muted-foreground truncate">{stage.stage}</span>
+                    <span className="text-muted-foreground truncate">{stage.name}</span>
                     <span className={cn('ml-auto capitalize shrink-0', style.text)}>
                       {stage.status}
                     </span>
@@ -290,6 +243,15 @@ export function QueueETASidebar() {
             <Trash2Icon className="h-3.5 w-3.5 mr-2" />
             {cleanupMutation.isPending ? 'Cleaning...' : 'Cleanup orphans'}
           </Button>
+          {/* Chunks only: CleanupOrphansCommandHandler always answers `orphanedVectors: 0`. */}
+          {cleanupMutation.isSuccess && (
+            <p className="text-xs text-muted-foreground px-1">
+              Removed {cleanupMutation.data.orphanedChunks} orphaned chunks
+            </p>
+          )}
+          {cleanupMutation.isError && (
+            <p className="text-xs text-red-600 dark:text-red-400 px-1">Cleanup failed</p>
+          )}
           <Button
             variant="outline"
             size="sm"

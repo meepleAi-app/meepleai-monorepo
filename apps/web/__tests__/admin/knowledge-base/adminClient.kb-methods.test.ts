@@ -15,6 +15,7 @@ import {
   ADMIN_KB_ROUTES,
 } from '@/lib/api/clients/adminClient';
 import type { HttpClient } from '@/lib/api/core/httpClient';
+import { CleanupOrphansResultSchema } from '@/lib/api/schemas/admin-knowledge-base.schemas';
 import { ERROR_MESSAGES } from '@/lib/errors/messages';
 
 const mockHttpClient: HttpClient = {
@@ -98,7 +99,8 @@ describe('AdminClient - Knowledge Base Methods (Issue #4784)', () => {
 
   describe('cleanupOrphans', () => {
     it('should POST to cleanup-orphans endpoint', async () => {
-      const mockResult = { affected: 5, message: '5 orphaned chunks removed' };
+      // #4511: CleanupOrphansResult; the `affected`/`message` this mocked was never sent.
+      const mockResult = { orphanedChunks: 5, orphanedVectors: 2 };
       vi.mocked(mockHttpClient.post).mockResolvedValue(mockResult);
 
       const result = await client.cleanupOrphans();
@@ -107,7 +109,7 @@ describe('AdminClient - Knowledge Base Methods (Issue #4784)', () => {
       expect(mockHttpClient.post).toHaveBeenCalledWith(
         ADMIN_PDF_ROUTES.cleanupOrphans,
         {},
-        expect.any(Object)
+        CleanupOrphansResultSchema
       );
     });
   });

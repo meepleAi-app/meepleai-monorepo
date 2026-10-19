@@ -153,6 +153,68 @@ export type VectorStats = z.infer<typeof VectorStatsSchema>;
 export type VectorSearchResultItem = z.infer<typeof VectorSearchResultItemSchema>;
 export type VectorSemanticSearchResult = z.infer<typeof VectorSemanticSearchResultSchema>;
 
+// ========== Orphan Cleanup (#4511) ==========
+
+/**
+ * POST /api/v1/admin/pdfs/maintenance/cleanup-orphans (CleanupOrphansResult). It was validated
+ * with MaintenanceResultSchema, whose `affected` and `message` this endpoint never sends: every
+ * field optional, so it passed with nothing in it. `orphanedVectors` is always 0 for now: the
+ * handler deletes chunks only.
+ */
+export const CleanupOrphansResultSchema = z.object({
+  orphanedChunks: z.number(),
+  orphanedVectors: z.number(),
+});
+
+export type CleanupOrphansResult = z.infer<typeof CleanupOrphansResultSchema>;
+
+// ========== Pipeline Health (#4511) ==========
+
+/** The three values AdminPipelineEndpoints writes; there is no `degraded` or `down`. */
+export const PipelineStageStatusSchema = z.enum(['healthy', 'warning', 'error']);
+
+export const PipelineStageSchema = z.object({
+  name: z.string(),
+  status: PipelineStageStatusSchema,
+  // Per stage and not uniform: `avgDurationMs` is a string on Extract and Chunk, a number on Embed.
+  metrics: z.record(z.string(), z.unknown()),
+});
+
+export const PipelineRecentActivitySchema = z.object({
+  jobId: z.string(),
+  fileName: z.string(),
+  status: z.string(),
+  completedAt: z.string().nullable(),
+  durationMs: z.number().nullable(),
+});
+
+export const PipelineDistributionSchema = z.object({
+  totalDocuments: z.number(),
+  totalChunks: z.number(),
+  vectorCount: z.number(),
+  totalFiles: z.number(),
+  storageSizeFormatted: z.string(),
+});
+
+/** GET /api/v1/admin/kb/pipeline/health. */
+export const PipelineHealthResponseSchema = z.object({
+  stages: z.array(PipelineStageSchema),
+  summary: z.object({
+    healthyCount: z.number(),
+    warningCount: z.number(),
+    errorCount: z.number(),
+  }),
+  recentActivity: z.array(PipelineRecentActivitySchema),
+  distribution: PipelineDistributionSchema,
+  checkedAt: z.string(),
+});
+
+export type PipelineStageStatus = z.infer<typeof PipelineStageStatusSchema>;
+export type PipelineStage = z.infer<typeof PipelineStageSchema>;
+export type PipelineRecentActivity = z.infer<typeof PipelineRecentActivitySchema>;
+export type PipelineDistribution = z.infer<typeof PipelineDistributionSchema>;
+export type PipelineHealthResponse = z.infer<typeof PipelineHealthResponseSchema>;
+
 // ========== Embedding Service Info (#4446) ==========
 
 /**

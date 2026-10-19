@@ -52,8 +52,16 @@ import {
   KbImportResultSchema,
   EmbeddingServiceInfoSchema,
   EmbeddingServiceMetricsSchema,
+  CleanupOrphansResultSchema,
+  PipelineHealthResponseSchema,
   type EmbeddingServiceInfo,
   type EmbeddingServiceMetrics,
+  type CleanupOrphansResult,
+  type PipelineStageStatus,
+  type PipelineStage,
+  type PipelineRecentActivity,
+  type PipelineDistribution,
+  type PipelineHealthResponse,
   type BulkDeleteResult,
   type ReindexResponse,
   type MaintenanceResult,
@@ -146,40 +154,13 @@ export type RagExecutionStatsResult = {
 
 // ========== Pipeline Health Types (Issue #4879) ==========
 
-export type PipelineStageStatus = 'healthy' | 'warning' | 'error';
-
-export type PipelineStage = {
-  name: string;
-  status: PipelineStageStatus;
-  metrics: Record<string, unknown>;
-};
-
-export type PipelineRecentActivity = {
-  jobId: string;
-  fileName: string;
-  status: string;
-  completedAt: string | null;
-  durationMs: number | null;
-};
-
-export type PipelineDistribution = {
-  totalDocuments: number;
-  totalChunks: number;
-  vectorCount: number;
-  totalFiles: number;
-  storageSizeFormatted: string;
-};
-
-export type PipelineHealthResponse = {
-  stages: PipelineStage[];
-  summary: {
-    healthyCount: number;
-    warningCount: number;
-    errorCount: number;
-  };
-  recentActivity: PipelineRecentActivity[];
-  distribution: PipelineDistribution;
-  checkedAt: string;
+// #4511: the schemas' (admin-knowledge-base.schemas), re-exported here.
+export type {
+  PipelineStageStatus,
+  PipelineStage,
+  PipelineRecentActivity,
+  PipelineDistribution,
+  PipelineHealthResponse,
 };
 
 // ========== Processing Metrics Types (Issue #4880) ==========
@@ -575,7 +556,7 @@ export function createAdminAiClient(http: HttpClient) {
     },
 
     async getPipelineHealth(): Promise<PipelineHealthResponse | null> {
-      return http.get<PipelineHealthResponse>(`/api/v1/admin/kb/pipeline/health`);
+      return http.get(`/api/v1/admin/kb/pipeline/health`, PipelineHealthResponseSchema);
     },
 
     async getProcessingQueue(params?: {
@@ -777,11 +758,11 @@ export function createAdminAiClient(http: HttpClient) {
       return http.post('/api/v1/admin/pdfs/maintenance/purge-stale', {}, MaintenanceResultSchema);
     },
 
-    async cleanupOrphans(): Promise<MaintenanceResult> {
+    async cleanupOrphans(): Promise<CleanupOrphansResult> {
       return http.post(
         '/api/v1/admin/pdfs/maintenance/cleanup-orphans',
         {},
-        MaintenanceResultSchema
+        CleanupOrphansResultSchema
       );
     },
 

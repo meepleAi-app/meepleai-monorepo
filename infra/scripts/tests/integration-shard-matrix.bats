@@ -98,10 +98,10 @@ maximal() {
     [ "$(excluded "$(filter_of "$CI" Core)")" = "$(selected_outside_core "$CI" | maximal)" ]
 }
 
-@test "dev-async: un token escluso da uno shard e' selezionato da un altro" {
-    # Uno shard puo' escludere un token per non eseguire due volte i test di un altro shard. Ma se
-    # nessuno lo seleziona, quei test non li prende nemmeno Core, che esclude i token degli altri.
-    all="$(selected_outside_core "$DEV_ASYNC")"
+# Uno shard puo' escludere un token per non eseguire due volte i test di un altro shard. Ma se
+# nessuno lo seleziona, quei test non li prende nemmeno Core, che esclude i token degli altri.
+excluded_tokens_are_selected_elsewhere() {
+    all="$(selected_outside_core "$1")"
     while IFS=$'\t' read -r name filter; do
         [ "$name" = "Core" ] && continue
         for token in $(excluded "$filter"); do
@@ -110,10 +110,37 @@ maximal() {
                 return 1
             }
         done
-    done < <(shards "$DEV_ASYNC")
+    done < <(shards "$1")
+}
+
+@test "dev-async: un token escluso da uno shard e' selezionato da un altro" {
+    excluded_tokens_are_selected_elsewhere "$DEV_ASYNC"
+}
+
+@test "ci.yml: un token escluso da uno shard e' selezionato da un altro" {
+    # Stessa regola sull'altro workflow (#4518). Le regole sotto confrontano i token SELEZIONATI e il
+    # filtro di Core, quindi un'esclusione aggiunta a uno shard di ci.yml soltanto non le tocca.
+    excluded_tokens_are_selected_elsewhere "$CI"
 }
 
 # ─── i due gate misurano lo stesso insieme ───────────────────────────────────────────────────────
+
+@test "dev-async e ci.yml applicano lo stesso filtro di base" {
+    # Il filtro di base e' la parte che precede `${{ matrix.shard.filter_extra }}` nel comando
+    # `dotnet test`: la selezione per categoria e le esclusioni per nome, uguali per tutti gli shard.
+    # I confronti sotto guardano solo `filter_extra`, quindi un'esclusione tolta da un workflow e
+    # lasciata nell'altro passerebbe senza che niente cambi colore (#4518: FrontendSdk era escluso
+    # da entrambi e non girava da nessuna parte; toglierlo da uno solo avrebbe fatto misurare ai
+    # due gate insiemi diversi, il difetto di #3622).
+    base_filter() {
+        grep -oE 'Category=Integration[^$"\\]*\$\{\{ matrix\.shard\.filter_extra' "$1" \
+            | sed 's/\${{ matrix\.shard\.filter_extra$//' | LC_ALL=C sort -u
+    }
+    dev="$(base_filter "$DEV_ASYNC")"
+    [ -n "$dev" ]
+    [ "$(printf '%s\n' "$dev" | wc -l)" -eq 1 ]
+    [ "$dev" = "$(base_filter "$CI")" ]
+}
 
 @test "dev-async e ci.yml selezionano gli stessi test: stessi token, stesso Core" {
     # dev-async puo' avere una ripartizione piu' fine di ci.yml (#3742 divide Games in due, #4484

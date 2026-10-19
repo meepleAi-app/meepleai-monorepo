@@ -42,12 +42,14 @@ const SEPARATORE_FRAMMENTI = /\[\s*(?:…|\.\.\.)\s*\]|…/u;
 export function normalizza(testo) {
   return String(testo ?? '')
     // Il trattino morbido non si vede, e un estrattore lo tiene dove l'altro no.
-    .replace(/­/gu, '')
+    .replace(/\u00AD/gu, '')
     // «re-\nsource» → «resource»: la parola spezzata a fine riga.
-    .replace(/(\p{L})[-‐‑]\s*[\r\n]+\s*(\p{L})/gu, '$1$2')
-    // «re- source»: lo stesso a capo, che l'estrattore ha già reso con uno spazio. Solo davanti a una
-    // minuscola: «Catan - The» o «pre- e post-» restano parole distinte.
-    .replace(/(\p{L})[-‐‑][ \t]+(\p{Ll})/gu, '$1$2')
+    .replace(/(\p{L})[-\u2010\u2011]\s*[\r\n]+\s*(\p{L})/gu, '$1$2')
+    // «re- source»: lo stesso a capo, che l'estrattore ha già reso con uno spazio. Solo con una lettera
+    // attaccata al trattino prima, e una minuscola dopo: «Catan - The» (spazio prima del trattino) e
+    // «Re- Source» (maiuscola dopo) restano parole distinte. Il prezzo: un trattino sospeso si unisce,
+    // «pre- e post-partita» diventa «pree post partita». Nei regolamenti è raro, e costa un trigramma.
+    .replace(/(\p{L})[-\u2010\u2011][ \t]+(\p{Ll})/gu, '$1$2')
     // «ﬁ» → «fi», «più» → «piu».
     .normalize('NFKD')
     .replace(/\p{M}+/gu, '')
@@ -176,21 +178,22 @@ export function cercaCitazione(citazione, chunk, opzioni = {}) {
       }
     });
 
+    // La coppia di chunk consecutivi che entra per prima nella lista: quella con il secondo chunk più in
+    // alto. Si cerca sempre, anche quando un chunk da solo basta: se la coppia entra prima di quel
+    // chunk, la posizione è la sua.
     let coppia = null;
-    if (posizione === null) {
-      // La coppia che entra per prima nella lista: quella con il secondo chunk più in alto.
-      for (let j = 1; j < deiChunk.length && coppia === null; j++) {
-        for (let i = 0; i < j; i++) {
-          if (!consecutivi(elementi[i], elementi[j])) {
-            continue;
-          }
-          const c = contenimento(frammento.ngrammi, deiChunk[i], deiChunk[j]);
-          if (c >= soglia) {
-            coppia = [i + 1, j + 1];
-            posizione = j + 1;
-            punteggio = c;
-            break;
-          }
+    const limite = posizione === null ? deiChunk.length : posizione - 1;
+    for (let j = 1; j < limite && coppia === null; j++) {
+      for (let i = 0; i < j; i++) {
+        if (!consecutivi(elementi[i], elementi[j])) {
+          continue;
+        }
+        const c = contenimento(frammento.ngrammi, deiChunk[i], deiChunk[j]);
+        if (c >= soglia) {
+          coppia = [i + 1, j + 1];
+          posizione = j + 1;
+          punteggio = c;
+          break;
         }
       }
     }

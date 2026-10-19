@@ -12,8 +12,9 @@ il reranker veri, e il recupero conta nelle metriche come quello della chat.
 ## Come si lancia
 
 Serve una sessione admin. Il valore del cookie `meepleai_session` va nella variabile d'ambiente
-`MEEPLEAI_ADMIN_COOKIE` (oppure l'header intero, `nome=valore`, se il cookie ha un altro nome). Il banco non
-lo stampa mai. Per esempio, con un login curl:
+`MEEPLEAI_ADMIN_COOKIE`. Il banco la legge come header intero solo se comincia con `meepleai_session=`;
+altrimenti è il valore del cookie, che può finire con `=`. Se il cookie ha un altro nome, si passa con
+`--cookie-nome`. Il banco non lo stampa mai. Per esempio, con un login curl:
 
 ```bash
 curl -s -c /tmp/jar -H 'content-type: application/json' \
@@ -42,19 +43,36 @@ node tests/evaluation-datasets/tools/recupero.mjs \
 - `--completo` mette nell'uscita la risposta intera della sonda, con il testo di tutti i chunk.
 - Senza `--out` l'esito JSON va sullo standard output; l'avanzamento e la tabella di riepilogo vanno sempre
   sullo standard error.
+- **Servizi finti.** La sonda dice quale modello di embedding e quale reranker hanno lavorato. Se uno dei due
+  comincia con `mock-` (gli strumenti di sviluppo dell'API), il banco si ferma con un errore: il recupero
+  di un servizio finto non dice nulla di quello vero.
 
 ## Cosa esce
 
 Per ogni domanda: la categoria, la lingua del regolamento, la lingua usata per cercare e da dove viene, la
-versione del profilo, come sono stati scelti i finali (`reranking`), e per `pool` e `finali`:
+versione del profilo, come sono stati scelti i finali (`reranking`), com'è andato il braccio vettoriale
+(`braccio_vettoriale`), i modelli di embedding e di reranking, e per `pool` e `finali`:
 
 - `trovata` e `posizione`: la più piccola K per cui tutta la citazione sta nei primi K chunk;
 - `parziale`: solo una parte dei frammenti della citazione (separati da `[…]`) è nella lista;
 - per ogni frammento, la posizione, il punteggio e il chunk più vicino anche sotto la soglia (`migliore`, con
-  pagina e testo), per rileggere a mano i casi mancati.
+  pagina, testo e se è una traduzione), per rileggere a mano i casi mancati;
+- `traduzione_nei_finali` e `pagine_tradotte_nei_finali`: la citazione non è nei finali, ma nei finali c'è
+  la traduzione inglese di chunk dello stesso PDF. Per un regolamento non inglese l'indicizzazione salva
+  anche la traduzione di ogni chunk, e la citazione, nella lingua del regolamento, non la riconosce: la
+  mancata può essere solo una traduzione. Se la pagina tradotta è la `pagina_attesa`, quasi certamente lo è.
 
-Il riepilogo conta, per gioco e per lingua del regolamento, le domande trovate nel pool e nei finali sul
-totale con citazione, separando tre categorie:
+Due esiti della sonda non sono una misura:
+
+- `braccio_vettoriale: "Failed"`: la query pgvector è fallita e la ricerca è stata solo lessicale. La
+  domanda conta fra gli **errori**, non fra le mancate.
+- `braccio_vettoriale: "Empty"`: nessun chunk sopra la soglia di coseno del profilo. È un esito vero del
+  recupero (fra lingue diverse i coseni scendono), quindi la domanda è misurata; il riepilogo lo conta a
+  parte (`vettoriale_vuoto`).
+
+Il riepilogo conta, per gioco e per lingua del regolamento, le domande trovate nel pool e nei finali sulle
+domande misurate (quelle con citazione, tolti gli errori), le mancate con una traduzione nei finali e i
+bracci vettoriali vuoti, separando tre categorie:
 
 - `in_ambito`: le domande sul regolamento, il dato che conta;
 - `fuori_ambito`: le domande «Out of Scope», che chiedono di un termine o una meccanica che il gioco non ha;
@@ -79,8 +97,9 @@ non cerca la stringa (`confronto.mjs`):
 3. conta quanti trigrammi di parole del frammento stanno nel chunk (il contenimento): il frammento è nel
    chunk se il contenimento arriva a **0,7**. Una citazione con meno di 3 parole usa sequenze lunghe quanto
    lei: le sue parole devono stare di seguito;
-4. se nessun chunk da solo basta, prova le coppie di chunk **consecutivi dello stesso PDF**: un passaggio
-   spezzato fra due chunk vale trovato, e la coppia è segnalata.
+4. prova anche le coppie di chunk **consecutivi dello stesso PDF**: un passaggio spezzato fra due chunk vale
+   trovato, e la coppia è segnalata. Se una coppia entra nella lista prima di un chunk che contiene il
+   frammento da solo, la posizione è quella della coppia.
 
 **Perché 0,7.** Calibrazione del 2026-10-18 sui regolamenti in `data/rulebook/` di Catan, Carcassonne,
 Ticket to Ride e Ticket to Ride: Europe (90 citazioni; il PDF italiano di Gloomhaven non è nel repository):
@@ -101,8 +120,8 @@ testo estratto con due estrattori (pdftotext e PyMuPDF), tagliato in finestre da
   citazione vera rispetto a 0,6. Per lo stesso motivo le coppie sono solo di chunk consecutivi: l'unione di
   due chunk qualsiasi somma due regole parallele e supera la soglia.
 
-La soglia si cambia con `--soglia`. I test del confronto:
+La soglia si cambia con `--soglia`. I test del confronto e del banco:
 
 ```bash
-node --test tests/evaluation-datasets/tools/confronto.test.mjs
+node --test tests/evaluation-datasets/tools/confronto.test.mjs tests/evaluation-datasets/tools/recupero.test.mjs
 ```

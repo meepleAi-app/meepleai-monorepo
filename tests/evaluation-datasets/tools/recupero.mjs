@@ -3,11 +3,15 @@
 // chunk che la chat recupera? Chiama la sonda di solo recupero dell'API
 // (POST /api/v1/admin/kb/retrieval-probe), che non chiama nessun modello linguistico.
 //
-// Uso e decisioni: README.md accanto.
+// Uso e decisioni: README.md accanto. Le parti che decidono senza la rete sono esportate e provate in
+// recupero.test.mjs.
 import { readFile, writeFile } from 'node:fs/promises';
+import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 
 import { cercaCitazione, linguaDelTesto, SOGLIA_PREDEFINITA } from './confronto.mjs';
+
+const COOKIE_PREDEFINITO = 'meepleai_session';
 
 const USO = `Uso:
   node tests/evaluation-datasets/tools/recupero.mjs --set <domande.json> [opzioni]
@@ -21,13 +25,12 @@ Opzioni:
   --id <id,id,...>         solo queste domande
   --accept-language <v>    l'Accept-Language della chat (predefinito: it)
   --soglia <0..1>          contenimento minimo dei trigrammi (predefinito: ${SOGLIA_PREDEFINITA})
+  --cookie-nome <nome>     il nome del cookie di sessione (predefinito: ${COOKIE_PREDEFINITO})
   --completo               mette nell'uscita la risposta intera della sonda, chunk compresi
   --out <file>             scrive l'esito JSON su file invece che sullo standard output
 
-La sessione admin si passa nella variabile d'ambiente MEEPLEAI_ADMIN_COOKIE: o il valore del cookie
-meepleai_session, o l'header intero «nome=valore». Non viene mai stampata.`;
-
-const COOKIE_PREDEFINITO = 'meepleai_session';
+La sessione admin si passa nella variabile d'ambiente MEEPLEAI_ADMIN_COOKIE: il valore del cookie, oppure
+l'header intero se comincia con «<nome del cookie>=». Non viene mai stampata.`;
 
 async function main() {
   const { values } = parseArgs({
@@ -39,6 +42,7 @@ async function main() {
       id: { type: 'string' },
       'accept-language': { type: 'string', default: 'it' },
       soglia: { type: 'string' },
+      'cookie-nome': { type: 'string', default: COOKIE_PREDEFINITO },
       completo: { type: 'boolean', default: false },
       out: { type: 'string' },
       help: { type: 'boolean', short: 'h', default: false },
@@ -60,7 +64,7 @@ async function main() {
     return 2;
   }
 
-  const cookie = cookieDallAmbiente();
+  const cookie = intestazioneCookie(process.env.MEEPLEAI_ADMIN_COOKIE, values['cookie-nome']);
   if (!cookie) {
     console.error('Manca la variabile d\'ambiente MEEPLEAI_ADMIN_COOKIE (la sessione admin).');
     return 2;
@@ -90,8 +94,12 @@ async function main() {
 
   const esiti = [];
   for (const domanda of conCitazione) {
-    const esito = await misura(domanda, idDi.get(domanda.game), linguaDi.get(domanda.game), {
-      chiama, soglia, acceptLanguage: values['accept-language'], completo: values.completo,
+    const esito = await misura(domanda, idDi.get(domanda.game), {
+      chiama,
+      soglia,
+      linguaRegolamento: linguaDi.get(domanda.game),
+      acceptLanguage: values['accept-language'],
+      completo: values.completo,
     });
     esiti.push(esito);
     console.error(riga(esito));
@@ -104,6 +112,7 @@ async function main() {
     soglia,
     accept_language: values['accept-language'],
     giochi: Object.fromEntries(idDi),
+    servizi: servizi(esiti),
     riepilogo: riepilogo(esiti),
     domande: esiti,
   };
@@ -120,12 +129,105 @@ async function main() {
   return 0;
 }
 
-function cookieDallAmbiente() {
-  const grezzo = process.env.MEEPLEAI_ADMIN_COOKIE?.trim();
+/**
+ * L'header Cookie dalla variabile d'ambiente. È già un header solo se comincia con «<nome>=»; altrimenti
+ * è il valore del cookie, che può finire con «=» (base64) e non va letto come «nome=valore».
+ * @param {string | undefined} valore
+ * @param {string} nome il nome del cookie di sessione
+ * @returns {string | null}
+ */
+export function intestazioneCookie(valore, nome = COOKIE_PREDEFINITO) {
+  const grezzo = valore?.trim();
   if (!grezzo) {
     return null;
   }
-  return grezzo.includes('=') ? grezzo : `${COOKIE_PREDEFINITO}=${grezzo}`;
+  return grezzo.startsWith(`${nome}=`) ? grezzo : `${nome}=${grezzo}`;
+}
+
+/**
+ * Un servizio finto (le implementazioni «mock-…» degli strumenti di sviluppo) dà un recupero che non ha
+ * niente a che fare con quello vero: il banco si ferma invece di misurarlo.
+ * @param {{ embeddingModel?: string | null, rerankerModel?: string | null }} sonda
+ */
+export function controllaServizi(sonda) {
+  const finti = [
+    ['embedding', sonda.embeddingModel],
+    ['reranker', sonda.rerankerModel],
+  ].filter(([, modello]) => typeof modello === 'string' && modello.trim().toLowerCase().startsWith('mock-'));
+  if (finti.length > 0) {
+    const err = new Error(
+      `Servizi finti sull'API: ${finti.map(([servizio, modello]) => `${servizio} «${modello}»`).join(', ')}. `
+      + 'La misura non direbbe nulla del recupero vero: si ferma qui.');
+    err.codice = 1;
+    throw err;
+  }
+}
+
+/**
+ * L'esito di una domanda dalla risposta della sonda.
+ * @param {object} domanda la domanda del set
+ * @param {object} sonda la risposta di POST /api/v1/admin/kb/retrieval-probe
+ * @param {{ soglia: number, linguaRegolamento: string, completo?: boolean }} opzioni
+ */
+export function valuta(domanda, sonda, { soglia, linguaRegolamento, completo = false }) {
+  const base = descrizione(domanda, linguaRegolamento);
+  const contesto = {
+    lingua_ricerca: sonda.language,
+    fonte_lingua: sonda.languageSource,
+    profilo: sonda.profileVersionId,
+    reranking: sonda.reranking,
+    braccio_vettoriale: sonda.vectorArm,
+    candidati_fusione: sonda.fusedCount,
+    ...(completo ? { sonda } : {}),
+  };
+
+  // La query pgvector è fallita e la ricerca ha proseguito solo lessicale: «non trovata» direbbe una
+  // cosa falsa sul recupero vero, quindi è un errore.
+  if (sonda.vectorArm === 'Failed') {
+    return { ...base, ...contesto, errore: 'braccio vettoriale fallito: la ricerca è stata solo lessicale' };
+  }
+
+  const comeChunk = (c) => ({ testo: c.text, documento: c.pdfDocumentId, indice: c.chunkIndex });
+  const nelPool = cercaCitazione(domanda.verifica.citazione, sonda.pool.map(comeChunk), { soglia });
+  const neiFinali = cercaCitazione(domanda.verifica.citazione, sonda.final.map(comeChunk), { soglia });
+
+  // Per un PDF non inglese i finali possono contenere la traduzione inglese del passaggio giusto, che la
+  // citazione (nella lingua del regolamento) non riconosce. Lo stesso PDF è quello dove la citazione sta
+  // nel pool, o dove ci arriva più vicino; se non si sa, qualunque PDF.
+  const pdf = pdfDelPassaggio(nelPool, sonda.pool);
+  const tradotti = neiFinali.trovata
+    ? []
+    : sonda.final.filter((c) => c.isTranslation === true && (pdf === null || c.pdfDocumentId === pdf));
+
+  return {
+    ...base,
+    ...contesto,
+    pool: { ...sintesi(nelPool, sonda.pool), dimensione: sonda.pool.length },
+    finali: { ...sintesi(neiFinali, sonda.final), dimensione: sonda.final.length },
+    traduzione_nei_finali: tradotti.length > 0,
+    pagine_tradotte_nei_finali: [...new Set(tradotti.map((c) => c.pageNumber))],
+  };
+}
+
+function descrizione(domanda, linguaRegolamento) {
+  return {
+    id: domanda.id,
+    gioco: domanda.game,
+    domanda: domanda.question,
+    categoria: categoria(domanda),
+    lingua_regolamento: linguaRegolamento,
+    citazione: domanda.verifica.citazione,
+    pagina_attesa: domanda.verifica.pagina ?? null,
+  };
+}
+
+/** Il PDF dove la citazione sta nel pool, o dove ci arriva più vicino; null se non ci arriva per niente. */
+function pdfDelPassaggio(esito, pool) {
+  const posizioni = esito.trovata
+    ? esito.frammenti.map((f) => f.posizione)
+    : [...esito.frammenti].sort((a, b) => b.migliore.punteggio - a.migliore.punteggio).map((f) => f.migliore.posizione);
+  const posizione = posizioni.find((p) => p != null);
+  return posizione ? (pool[posizione - 1]?.pdfDocumentId ?? null) : null;
 }
 
 function selezione(set, values) {
@@ -139,7 +241,7 @@ function selezione(set, values) {
 
 async function giochiDallApi(chiama) {
   const risposta = await chiama('/api/v1/admin/kb/vector-stats');
-  await fermatiSeNonAutorizzato(risposta);
+  fermatiSeNonAutorizzato(risposta);
   if (!risposta.ok) {
     throw new Error(`GET /api/v1/admin/kb/vector-stats: HTTP ${risposta.status}. Passa i giochi con --giochi.`);
   }
@@ -198,17 +300,7 @@ function lingueDeiRegolamenti(set) {
   return lingue;
 }
 
-async function misura(domanda, gameId, linguaRegolamento, { chiama, soglia, acceptLanguage, completo }) {
-  const base = {
-    id: domanda.id,
-    gioco: domanda.game,
-    domanda: domanda.question,
-    categoria: categoria(domanda),
-    lingua_regolamento: linguaRegolamento,
-    citazione: domanda.verifica.citazione,
-    pagina_attesa: domanda.verifica.pagina ?? null,
-  };
-
+async function misura(domanda, gameId, { chiama, soglia, linguaRegolamento, acceptLanguage, completo }) {
   let risposta;
   try {
     risposta = await chiama('/api/v1/admin/kb/retrieval-probe', {
@@ -217,28 +309,22 @@ async function misura(domanda, gameId, linguaRegolamento, { chiama, soglia, acce
       body: JSON.stringify({ gameId, question: domanda.question, acceptLanguage }),
     });
   } catch (errore) {
-    return { ...base, errore: `rete: ${errore.message}` };
+    return { ...descrizione(domanda, linguaRegolamento), errore: `rete: ${errore.message}` };
   }
-  await fermatiSeNonAutorizzato(risposta);
+  fermatiSeNonAutorizzato(risposta);
   if (!risposta.ok) {
-    return { ...base, errore: `HTTP ${risposta.status}: ${(await risposta.text()).slice(0, 300)}` };
+    return {
+      ...descrizione(domanda, linguaRegolamento),
+      errore: `HTTP ${risposta.status}: ${(await risposta.text()).slice(0, 300)}`,
+    };
   }
 
   const sonda = await risposta.json();
-  const comeChunk = (c) => ({ testo: c.text, documento: c.pdfDocumentId, indice: c.chunkIndex });
-  const nelPool = cercaCitazione(domanda.verifica.citazione, sonda.pool.map(comeChunk), { soglia });
-  const neiFinali = cercaCitazione(domanda.verifica.citazione, sonda.final.map(comeChunk), { soglia });
-
+  controllaServizi(sonda);
   return {
-    ...base,
-    lingua_ricerca: sonda.language,
-    fonte_lingua: sonda.languageSource,
-    profilo: sonda.profileVersionId,
-    reranking: sonda.reranking,
-    candidati_fusione: sonda.fusedCount,
-    pool: { ...sintesi(nelPool, sonda.pool), dimensione: sonda.pool.length },
-    finali: { ...sintesi(neiFinali, sonda.final), dimensione: sonda.final.length },
-    ...(completo ? { sonda } : {}),
+    ...valuta(domanda, sonda, { soglia, linguaRegolamento, completo }),
+    modello_embedding: sonda.embeddingModel,
+    modello_reranker: sonda.rerankerModel ?? null,
   };
 }
 
@@ -265,6 +351,7 @@ function sintesi(esito, lista) {
         migliore: {
           ...f.migliore,
           pagina: vicino?.pageNumber ?? null,
+          traduzione: vicino?.isTranslation ?? null,
           testo: vicino?.text ?? null,
         },
       };
@@ -272,8 +359,26 @@ function sintesi(esito, lista) {
   };
 }
 
-function riepilogo(esiti) {
-  const vuoto = () => ({ domande: 0, nel_pool: 0, nei_finali: 0, parziali_nel_pool: 0, errori: 0 });
+/** I modelli che hanno risposto nella misura: uno solo per servizio, se il servizio non è cambiato a metà. */
+function servizi(esiti) {
+  const distinti = (campo) => [...new Set(esiti.map((e) => e[campo]).filter((m) => m != null))];
+  return { embedding: distinti('modello_embedding'), reranker: distinti('modello_reranker') };
+}
+
+/**
+ * Il riepilogo per gioco e per lingua del regolamento, con tre categorie di domande. Una domanda con un
+ * errore (rete, HTTP, braccio vettoriale fallito) conta fra le domande ma non fra le misurate.
+ */
+export function riepilogo(esiti) {
+  const vuoto = () => ({
+    domande: 0,
+    nel_pool: 0,
+    nei_finali: 0,
+    parziali_nel_pool: 0,
+    mancate_con_traduzione_nei_finali: 0,
+    vettoriale_vuoto: 0,
+    errori: 0,
+  });
   const aggiungi = (conteggio, e) => {
     conteggio.domande++;
     if (e.errore) {
@@ -283,6 +388,8 @@ function riepilogo(esiti) {
     if (e.pool.trovata) conteggio.nel_pool++;
     if (e.finali.trovata) conteggio.nei_finali++;
     if (e.pool.parziale) conteggio.parziali_nel_pool++;
+    if (e.traduzione_nei_finali) conteggio.mancate_con_traduzione_nei_finali++;
+    if (e.braccio_vettoriale === 'Empty') conteggio.vettoriale_vuoto++;
   };
 
   const perGioco = {};
@@ -310,15 +417,23 @@ function riga(e) {
     return `${e.id.padEnd(7)} ERRORE ${e.errore}`;
   }
   const dove = (x) => (x.trovata ? `#${x.posizione}` : x.parziale ? 'parziale' : '-');
-  return `${e.id.padEnd(7)} pool ${dove(e.pool).padEnd(9)} finali ${dove(e.finali).padEnd(9)} ${e.reranking} ${e.lingua_ricerca}/${e.fonte_lingua}`;
+  const note = [
+    e.traduzione_nei_finali ? 'traduzione nei finali' : null,
+    e.braccio_vettoriale === 'Empty' ? 'vettoriale vuoto' : null,
+  ].filter(Boolean).join(', ');
+  return `${e.id.padEnd(7)} pool ${dove(e.pool).padEnd(9)} finali ${dove(e.finali).padEnd(9)} `
+    + `${e.reranking} ${e.lingua_ricerca}/${e.fonte_lingua}${note ? ` (${note})` : ''}`;
 }
 
 function tabella(r) {
   const righe = [
-    'gioco (regolamento)                 categoria          nel pool   nei finali  errori',
+    'gioco (regolamento)                 categoria          nel pool   nei finali  trad.finali  vett.vuoto  errori',
   ];
-  const cella = (c) =>
-    `${`${c.nel_pool}/${c.domande - c.errori}`.padEnd(10)} ${`${c.nei_finali}/${c.domande - c.errori}`.padEnd(11)} ${c.errori}`;
+  const cella = (c) => {
+    const misurate = c.domande - c.errori;
+    return `${`${c.nel_pool}/${misurate}`.padEnd(10)} ${`${c.nei_finali}/${misurate}`.padEnd(11)} `
+      + `${String(c.mancate_con_traduzione_nei_finali).padEnd(12)} ${String(c.vettoriale_vuoto).padEnd(11)} ${c.errori}`;
+  };
   for (const [nome, g] of Object.entries(r.per_gioco)) {
     for (const cat of ['in_ambito', 'fuori_ambito', 'fuori_dal_corpus']) {
       if (g[cat].domande > 0) {
@@ -334,14 +449,18 @@ function tabella(r) {
       }
     }
   }
-  righe.push('', `reranking: ${Object.entries(r.reranking).map(([k, v]) => `${k} ${v}`).join(', ')}`);
+  righe.push(
+    '',
+    'trad.finali: mancate nei finali, con la traduzione inglese di chunk dello stesso PDF nei finali.',
+    'vett.vuoto: il braccio vettoriale non ha trovato nessun chunk sopra la soglia di coseno.',
+    `reranking: ${Object.entries(r.reranking).map(([k, v]) => `${k} ${v}`).join(', ')}`);
   if (r.reranking.FellBack) {
     righe.push('ATTENZIONE: su alcune domande il reranker non ha lavorato (FellBack): i finali sono i primi della fusione.');
   }
   return righe.join('\n');
 }
 
-async function fermatiSeNonAutorizzato(risposta) {
+function fermatiSeNonAutorizzato(risposta) {
   if (risposta.status === 401 || risposta.status === 403) {
     const err = new Error(
       `HTTP ${risposta.status}: la sessione in MEEPLEAI_ADMIN_COOKIE non è valida o non è di un admin.`);
@@ -350,10 +469,13 @@ async function fermatiSeNonAutorizzato(risposta) {
   }
 }
 
-main().then(
-  (codice) => { process.exitCode = codice; },
-  (errore) => {
-    console.error(errore.message);
-    process.exitCode = errore.codice ?? 1;
-  },
-);
+// Gira solo quando è lanciato, non quando i test lo importano.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().then(
+    (codice) => { process.exitCode = codice; },
+    (errore) => {
+      console.error(errore.message);
+      process.exitCode = errore.codice ?? 1;
+    },
+  );
+}

@@ -127,6 +127,20 @@ internal sealed class UserLibraryEntry : AggregateRoot<Guid>
     internal void SetTestRunId(string? testRunId) => TestRunId = testRunId;
 
     /// <summary>
+    /// Rimette nell'aggregato i figli letti dal database (#4505). Chiamato solo dal mapper del
+    /// repository: non solleva eventi e non ricalcola le statistiche, che la riga radice porta già.
+    /// </summary>
+    internal void RestoreChildren(
+        IEnumerable<GameSession> sessions,
+        IEnumerable<GameChecklist> checklist,
+        IEnumerable<UserGameLabel> labels)
+    {
+        _sessions.AddRange(sessions);
+        _checklist.AddRange(checklist);
+        _labels.AddRange(labels);
+    }
+
+    /// <summary>
     /// Private constructor for EF Core.
     /// </summary>
 #pragma warning disable CS8618

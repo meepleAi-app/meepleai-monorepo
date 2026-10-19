@@ -109,6 +109,34 @@ internal sealed class GameChecklist : Entity<Guid>
     }
 
     /// <summary>
+    /// Ricostituisce una voce letta dal database, con il suo stato e le sue date (#4505).
+    /// </summary>
+    /// <remarks>
+    /// Solo per il repository. <see cref="Create"/> data la voce a "adesso", e segnarla completata
+    /// con <see cref="MarkAsCompleted"/> spostava anche <see cref="UpdatedAt"/>: ogni lettura le
+    /// cambiava entrambe.
+    /// </remarks>
+    internal static GameChecklist Reconstitute(
+        Guid id,
+        Guid userLibraryEntryId,
+        string description,
+        int displayOrder,
+        bool isCompleted,
+        string? additionalInfo,
+        DateTime createdAt,
+        DateTime? updatedAt) => new GameChecklist
+        {
+            Id = id,
+            UserLibraryEntryId = userLibraryEntryId,
+            Description = description,
+            DisplayOrder = displayOrder,
+            IsCompleted = isCompleted,
+            AdditionalInfo = additionalInfo,
+            CreatedAt = createdAt,
+            UpdatedAt = updatedAt,
+        };
+
+    /// <summary>
     /// Marks this step as completed.
     /// </summary>
     public void MarkAsCompleted()

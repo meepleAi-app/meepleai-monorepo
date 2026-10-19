@@ -1,8 +1,10 @@
 using Api.BoundedContexts.UserLibrary.Application.Commands.Labels;
+using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Api.BoundedContexts.UserLibrary.Application.Commands.Labels;
 
@@ -13,13 +15,16 @@ internal class RemoveLabelFromGameCommandHandler : ICommandHandler<RemoveLabelFr
 {
     private readonly IUserLibraryRepository _libraryRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly HybridCache _cache;
 
     public RemoveLabelFromGameCommandHandler(
         IUserLibraryRepository libraryRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        HybridCache cache)
     {
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
     }
 
     public async Task<bool> Handle(RemoveLabelFromGameCommand command, CancellationToken cancellationToken)
@@ -36,6 +41,10 @@ internal class RemoveLabelFromGameCommandHandler : ICommandHandler<RemoveLabelFr
 
         await _libraryRepository.UpdateAsync(entry, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // #4505: il dettaglio del gioco porta le etichette e resta in cache 5 minuti.
+        await _cache.RemoveAsync(GetGameDetailQueryHandler.BuildCacheKey(command.UserId, command.GameId), cancellationToken)
+            .ConfigureAwait(false);
 
         return true;
     }

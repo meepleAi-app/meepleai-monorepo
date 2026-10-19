@@ -438,6 +438,32 @@ jobs:
             --logger "console;verbosity=minimal" \
             --filter "Category!=Integration&Category!=E2E&Category!=Performance&Category!=Manual&Category!=Slow"
 
+      # #4519: alcuni rami dei convertitori di date (UtcDateTimeJson), del filtro UtcDateTimeArguments e
+      # dell'handler di suppress si vedono solo se il fuso dell'host NON è UTC: un DateTimeOffset senza
+      # offset, che System.Text.Json legge con l'offset del server; una data con offset vicino a MaxValue,
+      # che l'ora locale taglia; un DateTime Local. Il runner è in UTC, quindi lo step sopra li esegue
+      # senza poterli distinguere. Qui le stesse classi rigirano con un fuso fisso, +09:00 senza ora
+      # legale: la build è già fatta e il costo sono i secondi dei test. Due guardie: il test
+      # HostTimeZone_IsTheOneTheCiStepAsksFor fallisce se il fuso non viene applicato, e il conteggio
+      # sotto se il filtro non trova più le classi (dotnet test senza test esce 0).
+      - name: Date tests under a non-UTC time zone (#4519)
+        working-directory: apps/api/tests/Api.Tests
+        shell: bash
+        env:
+          TZ: Asia/Tokyo
+          EXPECTED_LOCAL_UTC_OFFSET: "09:00:00"
+        run: |
+          dotnet test --no-build --configuration Release --verbosity quiet \
+            --logger "console;verbosity=minimal" \
+            --logger "trx;LogFileName=tz-4519.trx" --results-directory "$RUNNER_TEMP/tz-4519" \
+            --filter "FullyQualifiedName~UtcDateTimeJsonConverterTests|FullyQualifiedName~UtcDateTimeArgumentsTests|FullyQualifiedName~SuppressMechanicAnalysisRequestedAtTests"
+          executed=$( (grep -o '<UnitTestResult ' "$RUNNER_TEMP/tz-4519/tz-4519.trx" 2>/dev/null || true) | wc -l)
+          echo "Date tests executed under TZ=$TZ: $executed"
+          if [ "$executed" -eq 0 ]; then
+            echo "::error:: no date test ran under a non-UTC time zone — the filter no longer matches; point it at the renamed classes"
+            exit 1
+          fi
+
   migration-safety:
     # Issue #1087: block PRs that introduce forbidden migration patterns per
     # rollback-runbook section 8.2 (DROP COLUMN, DROP TABLE, ALTER COLUMN TYPE,

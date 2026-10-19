@@ -52,11 +52,7 @@ const mockResults = [
 describe('ComparisonMetrics', () => {
   it('renders comparison summary title', () => {
     render(
-      <ComparisonMetrics
-        results={mockResults}
-        strategies={mockStrategies}
-        models={mockModels}
-      />
+      <ComparisonMetrics results={mockResults} strategies={mockStrategies} models={mockModels} />
     );
 
     expect(screen.getByText('Comparison Summary')).toBeInTheDocument();
@@ -64,11 +60,7 @@ describe('ComparisonMetrics', () => {
 
   it('shows correct number of configurations', () => {
     render(
-      <ComparisonMetrics
-        results={mockResults}
-        strategies={mockStrategies}
-        models={mockModels}
-      />
+      <ComparisonMetrics results={mockResults} strategies={mockStrategies} models={mockModels} />
     );
 
     expect(screen.getByText(/2 configurations/)).toBeInTheDocument();
@@ -76,11 +68,7 @@ describe('ComparisonMetrics', () => {
 
   it('identifies overall winner correctly', () => {
     render(
-      <ComparisonMetrics
-        results={mockResults}
-        strategies={mockStrategies}
-        models={mockModels}
-      />
+      <ComparisonMetrics results={mockResults} strategies={mockStrategies} models={mockModels} />
     );
 
     // PRECISE should win due to higher confidence
@@ -89,11 +77,7 @@ describe('ComparisonMetrics', () => {
 
   it('identifies fastest configuration', () => {
     render(
-      <ComparisonMetrics
-        results={mockResults}
-        strategies={mockStrategies}
-        models={mockModels}
-      />
+      <ComparisonMetrics results={mockResults} strategies={mockStrategies} models={mockModels} />
     );
 
     expect(screen.getByText('Fastest')).toBeInTheDocument();
@@ -103,11 +87,7 @@ describe('ComparisonMetrics', () => {
 
   it('identifies cheapest configuration', () => {
     render(
-      <ComparisonMetrics
-        results={mockResults}
-        strategies={mockStrategies}
-        models={mockModels}
-      />
+      <ComparisonMetrics results={mockResults} strategies={mockStrategies} models={mockModels} />
     );
 
     expect(screen.getByText('Cheapest')).toBeInTheDocument();
@@ -117,11 +97,7 @@ describe('ComparisonMetrics', () => {
 
   it('identifies most confident configuration', () => {
     render(
-      <ComparisonMetrics
-        results={mockResults}
-        strategies={mockStrategies}
-        models={mockModels}
-      />
+      <ComparisonMetrics results={mockResults} strategies={mockStrategies} models={mockModels} />
     );
 
     expect(screen.getByText('Most Confident')).toBeInTheDocument();
@@ -131,11 +107,7 @@ describe('ComparisonMetrics', () => {
 
   it('identifies configuration with most sources', () => {
     render(
-      <ComparisonMetrics
-        results={mockResults}
-        strategies={mockStrategies}
-        models={mockModels}
-      />
+      <ComparisonMetrics results={mockResults} strategies={mockStrategies} models={mockModels} />
     );
 
     expect(screen.getByText('Most Sources')).toBeInTheDocument();
@@ -144,11 +116,7 @@ describe('ComparisonMetrics', () => {
 
   it('renders comparison table with all results', () => {
     render(
-      <ComparisonMetrics
-        results={mockResults}
-        strategies={mockStrategies}
-        models={mockModels}
-      />
+      <ComparisonMetrics results={mockResults} strategies={mockStrategies} models={mockModels} />
     );
 
     // Strategy names appear in multiple places (category winners, table)
@@ -160,11 +128,7 @@ describe('ComparisonMetrics', () => {
 
   it('shows config labels A and B', () => {
     render(
-      <ComparisonMetrics
-        results={mockResults}
-        strategies={mockStrategies}
-        models={mockModels}
-      />
+      <ComparisonMetrics results={mockResults} strategies={mockStrategies} models={mockModels} />
     );
 
     expect(screen.getAllByText('A').length).toBeGreaterThan(0);
@@ -173,11 +137,7 @@ describe('ComparisonMetrics', () => {
 
   it('renders nothing when results is empty', () => {
     const { container } = render(
-      <ComparisonMetrics
-        results={[]}
-        strategies={mockStrategies}
-        models={mockModels}
-      />
+      <ComparisonMetrics results={[]} strategies={mockStrategies} models={mockModels} />
     );
 
     expect(container.firstChild).toBeNull();
@@ -185,11 +145,7 @@ describe('ComparisonMetrics', () => {
 
   it('shows trophy emoji for category winners in table', () => {
     render(
-      <ComparisonMetrics
-        results={mockResults}
-        strategies={mockStrategies}
-        models={mockModels}
-      />
+      <ComparisonMetrics results={mockResults} strategies={mockStrategies} models={mockModels} />
     );
 
     // Trophy emojis should be present for category winners
@@ -199,11 +155,7 @@ describe('ComparisonMetrics', () => {
 
   it('calculates and displays scores', () => {
     render(
-      <ComparisonMetrics
-        results={mockResults}
-        strategies={mockStrategies}
-        models={mockModels}
-      />
+      <ComparisonMetrics results={mockResults} strategies={mockStrategies} models={mockModels} />
     );
 
     // Scores should be displayed as percentages
@@ -213,11 +165,7 @@ describe('ComparisonMetrics', () => {
 
   it('sorts table by score descending', () => {
     render(
-      <ComparisonMetrics
-        results={mockResults}
-        strategies={mockStrategies}
-        models={mockModels}
-      />
+      <ComparisonMetrics results={mockResults} strategies={mockStrategies} models={mockModels} />
     );
 
     // Get all rows - should include header and data rows
@@ -261,11 +209,7 @@ describe('ComparisonMetrics', () => {
     ];
 
     render(
-      <ComparisonMetrics
-        results={threeResults}
-        strategies={mockStrategies}
-        models={mockModels}
-      />
+      <ComparisonMetrics results={threeResults} strategies={mockStrategies} models={mockModels} />
     );
 
     expect(screen.getByText(/3 configurations/)).toBeInTheDocument();

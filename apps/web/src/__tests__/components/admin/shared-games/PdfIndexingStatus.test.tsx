@@ -12,7 +12,10 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import { PdfIndexingStatus, type PdfIndexingStatusData } from '@/components/admin/shared-games/PdfIndexingStatus';
+import {
+  PdfIndexingStatus,
+  type PdfIndexingStatusData,
+} from '@/components/admin/shared-games/PdfIndexingStatus';
 
 // ============================================================================
 // Mock Data
@@ -104,11 +107,7 @@ function createTestQueryClient() {
 
 function renderWithProviders(component: React.ReactElement) {
   const queryClient = createTestQueryClient();
-  return render(
-    <QueryClientProvider client={queryClient}>
-      {component}
-    </QueryClientProvider>
-  );
+  return render(<QueryClientProvider client={queryClient}>{component}</QueryClientProvider>);
 }
 
 // ============================================================================

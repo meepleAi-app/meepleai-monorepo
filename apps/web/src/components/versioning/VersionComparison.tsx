@@ -195,9 +195,7 @@ export function VersionComparison({
         {/* Summary */}
         <div className="flex items-center justify-between flex-wrap gap-4 p-4 bg-muted/50 rounded-lg">
           <div>
-            <span className="text-sm font-medium">
-              {diff.summary.totalChanges} total changes
-            </span>
+            <span className="text-sm font-medium">{diff.summary.totalChanges} total changes</span>
           </div>
           <DiffSummaryBadges summary={diff.summary} />
         </div>
@@ -217,11 +215,7 @@ export function VersionComparison({
               </Button>
             ))}
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowUnchanged(!showUnchanged)}
-          >
+          <Button variant="ghost" size="sm" onClick={() => setShowUnchanged(!showUnchanged)}>
             {showUnchanged ? 'Hide' : 'Show'} Unchanged
           </Button>
         </div>

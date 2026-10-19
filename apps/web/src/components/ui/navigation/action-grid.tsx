@@ -44,12 +44,7 @@ import type { LucideIcon } from 'lucide-react';
  * Available gradient presets
  */
 export type GradientPreset =
-  | 'green-emerald'
-  | 'blue-indigo'
-  | 'amber-orange'
-  | 'red-rose'
-  | 'purple-violet'
-  | 'stone-stone';
+  'green-emerald' | 'blue-indigo' | 'amber-orange' | 'red-rose' | 'purple-violet' | 'stone-stone';
 
 /**
  * Action item configuration

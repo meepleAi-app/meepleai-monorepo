@@ -1,5 +1,6 @@
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.ProbeRetrieval;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking;
@@ -45,6 +46,7 @@ public sealed class ProbeRetrievalQueryHandlerTests
         FusedSearchStub search, AgentProfileContent profile, ICrossEncoderReranker? reranker = null) => new(
         ProfileReader(profile),
         _detector.Object,
+        search.Embedder.Object,
         AnswerPipelineTestDoubles.Retrieval(search.Handler, reranker ?? AnswerRetrievalTests.ReverseReranker()),
         NullLogger<ProbeRetrievalQueryHandler>.Instance);
 
@@ -188,7 +190,7 @@ public sealed class ProbeRetrievalQueryHandlerTests
         reader.Setup(r => r.GetAsync(It.IsAny<CancellationToken>())).ThrowsAsync(new AgentProfileNotPublishedException());
         var search = new FusedSearchStub(FusedSearchStub.Chunks(3));
         var handler = new ProbeRetrievalQueryHandler(
-            reader.Object, _detector.Object,
+            reader.Object, _detector.Object, search.Embedder.Object,
             AnswerPipelineTestDoubles.Retrieval(search.Handler, AnswerRetrievalTests.ReverseReranker()),
             NullLogger<ProbeRetrievalQueryHandler>.Instance);
 
@@ -198,5 +200,95 @@ public sealed class ProbeRetrievalQueryHandlerTests
         refused.StatusCode.Should().Be(503);
         refused.ErrorCode.Should().Be(AgentProfileNotPublishedException.Code);
         search.Fusion.VerifyNoOtherCalls();
+    }
+
+    // ─── Review di #4492 ─────────────────────────────────────────────────────
+
+    // Il braccio vettoriale che fallisce non ferma la ricerca ibrida: prosegue solo lessicale. La sonda
+    // lo dice, altrimenti una misura senza vettori si leggerebbe come «il passaggio non è stato trovato».
+    [Fact]
+    public async Task Handle_WhenTheVectorArmFails_SaysSo_AndStillReturnsTheLexicalPool()
+    {
+        var search = new FusedSearchStub(FusedSearchStub.Chunks(4)).VectorArmFails();
+
+        var probe = await Handler(search, ProbeProfiles.With(candidatePoolSize: 4, finalTopK: 2))
+            .Handle(new ProbeRetrievalQuery(Game, Question), Ct);
+
+        probe.VectorArm.Should().Be("Failed");
+        probe.Pool.Should().HaveCount(4);
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheVectorArmFindsNothingAboveTheThreshold_SaysItWasEmpty()
+    {
+        var search = new FusedSearchStub(FusedSearchStub.Chunks(4));
+
+        var probe = await Handler(search, ProbeProfiles.With(candidatePoolSize: 4, finalTopK: 2))
+            .Handle(new ProbeRetrievalQuery(Game, Question), Ct);
+
+        probe.VectorArm.Should().Be("Empty");
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheVectorArmFindsCandidates_SaysItHit()
+    {
+        var search = new FusedSearchStub(FusedSearchStub.Chunks(4))
+            .VectorArmReturns(FusedSearchStub.StoredEmbedding(0, "Sposta il brigante su un nuovo esagono."));
+
+        var probe = await Handler(search, ProbeProfiles.With(candidatePoolSize: 4, finalTopK: 2))
+            .Handle(new ProbeRetrievalQuery(Game, Question), Ct);
+
+        probe.VectorArm.Should().Be("Hit");
+    }
+
+    // Un servizio finto (mock-…) dà un recupero che non ha niente a che fare con quello vero: la sonda
+    // dice quali modelli hanno lavorato, e il banco si ferma se uno è finto.
+    [Fact]
+    public async Task Handle_ReportsTheEmbeddingAndTheRerankerModels()
+    {
+        var search = new FusedSearchStub(FusedSearchStub.Chunks(4));
+
+        var probe = await Handler(search, ProbeProfiles.With(candidatePoolSize: 4, finalTopK: 2))
+            .Handle(new ProbeRetrievalQuery(Game, Question), Ct);
+
+        probe.EmbeddingModel.Should().Be(FusedSearchStub.EmbeddingModel);
+        probe.RerankerModel.Should().Be("test-model");
+    }
+
+    // Per un PDF non inglese l'indicizzazione salva anche la traduzione inglese di ogni chunk. Dalla
+    // fusione vera fino alla risposta della sonda, ogni candidato dice se è una traduzione.
+    [Fact]
+    public async Task Handle_SaysWhichChunksAreTranslations()
+    {
+        var search = new FusedSearchStub(fused: null).VectorArmReturns(
+            FusedSearchStub.StoredEmbedding(3, "Sposta il brigante su un nuovo esagono."),
+            FusedSearchStub.StoredEmbedding(43, "Move the robber to a new hex.", isTranslation: true));
+
+        var probe = await Handler(search, ProbeProfiles.With(candidatePoolSize: 4, finalTopK: 2))
+            .Handle(new ProbeRetrievalQuery(Game, Question), Ct);
+
+        probe.Pool.ToDictionary(c => c.Text, c => c.IsTranslation).Should().BeEquivalentTo(new Dictionary<string, bool>
+        {
+            ["Sposta il brigante su un nuovo esagono."] = false,
+            ["Move the robber to a new hex."] = true,
+        });
+    }
+
+    // #2568: il servizio di embedding che non risponde non è un 500. La rotta lo dice con un 503 e un
+    // codice, come per il profilo non pubblicato.
+    [Fact]
+    public async Task Handle_WhenTheEmbeddingFails_Refuses503_WithACode()
+    {
+        var search = new FusedSearchStub(FusedSearchStub.Chunks(4));
+        search.Embedder
+            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingResult { Success = false, ErrorMessage = "embedding service unreachable" });
+
+        var act = () => Handler(search, ProbeProfiles.With(candidatePoolSize: 4, finalTopK: 2))
+            .Handle(new ProbeRetrievalQuery(Game, Question), Ct);
+
+        var refused = (await act.Should().ThrowAsync<HttpException>()).Which;
+        refused.StatusCode.Should().Be(503);
+        refused.ErrorCode.Should().Be(EmbeddingUnavailableException.Code);
     }
 }

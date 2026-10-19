@@ -220,7 +220,9 @@ internal static class AdminKnowledgeBaseEndpoints
         .WithDescription(
             "Runs the answer pipeline's retrieval for the question — language from the question and Accept-Language " +
             "(default \"it\"), the published agent profile, hybrid search, reranker — and returns the candidate pool " +
-            "before the reranker and the final passages, with full chunk text and scores. Calls the embedding and " +
+            "before the reranker and the final passages, with full chunk text, scores and the translation flag; " +
+            "says whether the vector arm hit, came back empty or failed, and which embedding and reranker models " +
+            "answered. 503 when the agent profile is not published or the embedding service fails. Calls the embedding and " +
             "reranker services, never a language model. #4482.")
         .Produces<RetrievalProbeDto>(StatusCodes.Status200OK);
 

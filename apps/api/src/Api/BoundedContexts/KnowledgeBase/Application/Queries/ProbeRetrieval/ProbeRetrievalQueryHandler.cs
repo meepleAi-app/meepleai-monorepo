@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 using Api.Middleware.Exceptions;
 using Api.Services;
@@ -34,17 +35,20 @@ internal sealed class ProbeRetrievalQueryHandler : IQueryHandler<ProbeRetrievalQ
 
     private readonly IPublishedAgentProfileReader _profileReader;
     private readonly ILanguageDetectionService _languageDetection;
+    private readonly IEmbeddingService _embeddingService;
     private readonly AnswerRetrieval _retrieval;
     private readonly ILogger<ProbeRetrievalQueryHandler> _logger;
 
     public ProbeRetrievalQueryHandler(
         IPublishedAgentProfileReader profileReader,
         ILanguageDetectionService languageDetection,
+        IEmbeddingService embeddingService,
         AnswerRetrieval retrieval,
         ILogger<ProbeRetrievalQueryHandler> logger)
     {
         _profileReader = profileReader ?? throw new ArgumentNullException(nameof(profileReader));
         _languageDetection = languageDetection ?? throw new ArgumentNullException(nameof(languageDetection));
+        _embeddingService = embeddingService ?? throw new ArgumentNullException(nameof(embeddingService));
         _retrieval = retrieval ?? throw new ArgumentNullException(nameof(retrieval));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -61,9 +65,21 @@ internal sealed class ProbeRetrievalQueryHandler : IQueryHandler<ProbeRetrievalQ
         var language = AnswerLanguageResolver.Resolve(_languageDetection, request.Question, acceptLanguage);
 
         var retrievalRequest = new AnswerRetrievalRequest(request.GameId, request.Question);
-        var retrieved = await _retrieval
-            .RetrieveWithPoolAsync(retrievalRequest, profile.Content, language.Language, cancellationToken)
-            .ConfigureAwait(false);
+        RetrievedPassages retrieved;
+        try
+        {
+            retrieved = await _retrieval
+                .RetrieveWithPoolAsync(retrievalRequest, profile.Content, language.Language, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (EmbeddingUnavailableException ex)
+        {
+            // #2568: un servizio esterno che non risponde non è un 500. Senza il vettore della domanda non
+            // c'è un recupero da mostrare.
+            _logger.LogWarning(ex, "Embedding service unavailable: the retrieval probe is refused");
+            throw new HttpException(
+                StatusCodes.Status503ServiceUnavailable, EmbeddingUnavailableException.Code, ex.Message, ex);
+        }
 
         var content = profile.Content;
         return new RetrievalProbeDto(
@@ -84,6 +100,9 @@ internal sealed class ProbeRetrievalQueryHandler : IQueryHandler<ProbeRetrievalQ
                 retrievalRequest.SearchMode,
                 retrieved.QueryRoleHint.ToString()),
             Reranking: retrieved.Reranking.ToString(),
+            VectorArm: retrieved.VectorArm.ToString(),
+            EmbeddingModel: _embeddingService.GetModelName(),
+            RerankerModel: retrieved.RerankerModel,
             FusedCount: retrieved.FusedCount,
             Pool: retrieved.Pool.Select((r, i) => Chunk(r, i + 1, poolPosition: null, rerankScore: null)).ToList(),
             Final: retrieved.Final
@@ -107,6 +126,7 @@ internal sealed class ProbeRetrievalQueryHandler : IQueryHandler<ProbeRetrievalQ
         RerankScore: rerankScore,
         SearchMethod: r.SearchMethod,
         MatchedTerms: r.MatchedTerms,
+        IsTranslation: r.IsTranslation,
         Text: r.TextContent);
 
     /// <summary>

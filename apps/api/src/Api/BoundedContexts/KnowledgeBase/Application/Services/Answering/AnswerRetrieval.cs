@@ -71,7 +71,7 @@ internal sealed class AnswerRetrieval
         // chunks whose role_tags overlap. The classifier is rule-based, sync, and cheap (~µs).
         var queryRoleHint = _intentClassifier.ClassifyIntent(request.Question);
 
-        var searchResults = await _searchQueryHandler.Handle(
+        var search = await _searchQueryHandler.HandleWithOutcomeAsync(
             new SearchQuery(
                 GameId: request.GameId,
                 Query: request.Question,
@@ -91,11 +91,12 @@ internal sealed class AnswerRetrieval
                 KeywordWeight: (float)profile.KeywordWeight),
             cancellationToken).ConfigureAwait(false);
 
+        var searchResults = search.Results;
         var noReranking = profile.RerankerEnabled ? RerankStatus.Skipped : RerankStatus.Disabled;
         if (searchResults is null || searchResults.Count == 0)
         {
             _logger.LogInformation("No results for the question in game {GameId}", request.GameId);
-            return new RetrievedPassages([], [], 0, queryRoleHint, noReranking);
+            return new RetrievedPassages([], [], 0, queryRoleHint, noReranking, search.VectorArm);
         }
 
         var pool = searchResults.Take(profile.CandidatePoolSize).ToList();
@@ -104,13 +105,14 @@ internal sealed class AnswerRetrieval
             var firstOfPool = Enumerable.Range(0, Math.Min(profile.FinalTopK, pool.Count))
                 .Select(i => new RerankPick(i, null))
                 .ToList();
-            return new RetrievedPassages(pool, firstOfPool, searchResults.Count, queryRoleHint, RerankStatus.Disabled);
+            return new RetrievedPassages(pool, firstOfPool, searchResults.Count, queryRoleHint, RerankStatus.Disabled, search.VectorArm);
         }
 
         // Issue #2708: rerank the pool down to the final top-K (graceful degradation to raw top-K).
         var reranked = await SearchResultReranker.RerankIndicesAsync(
             _reranker, request.Question, pool, profile.FinalTopK, _logger, cancellationToken).ConfigureAwait(false);
-        return new RetrievedPassages(pool, reranked.Picks, searchResults.Count, queryRoleHint, reranked.Status);
+        return new RetrievedPassages(
+            pool, reranked.Picks, searchResults.Count, queryRoleHint, reranked.Status, search.VectorArm, reranked.Model);
     }
 
     /// <summary>
@@ -164,12 +166,16 @@ internal sealed class AnswerRetrieval
 /// <param name="FusedCount">Quanti candidati ha restituito la ricerca ibrida, prima del taglio al pool.</param>
 /// <param name="QueryRoleHint">I ruoli che il classificatore ha letto nella domanda, passati alla fusione.</param>
 /// <param name="Reranking">Come sono stati scelti i finali.</param>
+/// <param name="VectorArm">Com'è andato il braccio vettoriale: fallito, la ricerca è stata solo lessicale.</param>
+/// <param name="RerankerModel">Il modello che il servizio di reranking dice di aver usato, quando ha risposto.</param>
 internal sealed record RetrievedPassages(
     IReadOnlyList<SearchResultDto> Pool,
     IReadOnlyList<RerankPick> Final,
     int FusedCount,
     GameBookRole QueryRoleHint,
-    RerankStatus Reranking)
+    RerankStatus Reranking,
+    VectorArmOutcome VectorArm,
+    string? RerankerModel = null)
 {
     /// <summary>I passaggi finali, nell'ordine: quelli che vanno nel prompt.</summary>
     public List<SearchResultDto> FinalResults() => Final.Select(p => Pool[p.Index]).ToList();

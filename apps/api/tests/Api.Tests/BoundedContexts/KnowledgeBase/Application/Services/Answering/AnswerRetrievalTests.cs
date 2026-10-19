@@ -27,20 +27,23 @@ public sealed class AnswerRetrievalTests
 
     private static AnswerRetrievalRequest Request => new(Game, Question);
 
+    // RetrieveAsync è ciò che legge la risposta: i suoi passaggi sono fissati per valore, con e senza
+    // reranker, e il recupero mostrato per intero deve dare gli stessi.
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task RetrieveWithPoolAsync_GivesTheSameFinalsAsRetrieveAsync(bool rerankerEnabled)
+    [InlineData(true, new[] { 20, 19, 18, 17, 16 })]
+    [InlineData(false, new[] { 1, 2, 3, 4, 5 })]
+    public async Task RetrieveAsync_AndRetrieveWithPoolAsync_GiveTheExpectedFinals(bool rerankerEnabled, int[] expectedChunks)
     {
         var profile = ProbeProfiles.With(candidatePoolSize: 20, finalTopK: 5, rerankerEnabled: rerankerEnabled);
         var retrieval = AnswerPipelineTestDoubles.Retrieval(
             new FusedSearchStub(FusedSearchStub.Chunks(30)).Handler, ReverseReranker());
+        var expected = expectedChunks.Select(n => $"chunk {n}").ToList();
 
         var finals = await retrieval.RetrieveAsync(Request, profile, "it", Ct);
         var traced = await retrieval.RetrieveWithPoolAsync(Request, profile, "it", Ct);
 
-        finals.Should().HaveCount(5);
-        traced.FinalResults().Select(r => r.TextContent).Should().Equal(finals.Select(r => r.TextContent));
+        finals.Select(r => r.TextContent).Should().Equal(expected);
+        traced.FinalResults().Select(r => r.TextContent).Should().Equal(expected);
     }
 
     [Fact]

@@ -153,8 +153,8 @@ internal static class SearchResultReranker
 
             // Defensive: a reranker that returns no mappable chunks must not blank the context.
             return picks.Count > 0
-                ? new RerankOutcome(picks, RerankStatus.Applied)
-                : new RerankOutcome(RawTopK(results.Count, topK), RerankStatus.FellBack);
+                ? new RerankOutcome(picks, RerankStatus.Applied, rerankResult.Model)
+                : new RerankOutcome(RawTopK(results.Count, topK), RerankStatus.FellBack, rerankResult.Model);
         }
         catch (Exception ex)
         {
@@ -200,9 +200,10 @@ internal static class SearchResultReranker
 
 /// <summary>
 /// #4482: what a reranking did — the candidates it kept, by index in the list it was given and in
-/// final order, and how it got there.
+/// final order, how it got there, and the model the reranker service says it used (null when the
+/// service was not called or did not answer).
 /// </summary>
-internal sealed record RerankOutcome(IReadOnlyList<RerankPick> Picks, RerankStatus Status);
+internal sealed record RerankOutcome(IReadOnlyList<RerankPick> Picks, RerankStatus Status, string? Model = null);
 
 /// <summary>
 /// #4482: one candidate kept by a reranking: its index in the list given to the reranker, and the

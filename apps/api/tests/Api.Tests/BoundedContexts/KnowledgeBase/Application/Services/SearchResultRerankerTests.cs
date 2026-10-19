@@ -324,6 +324,31 @@ public class SearchResultRerankerTests
         outcome.Picks.Should().Equal(new RerankPick(2, 1.0), new RerankPick(1, 0.9));
     }
 
+    // #4482 (review): la sonda dice quale modello ha riordinato, così un reranker finto (mock-…) non
+    // passa per quello vero.
+    [Fact]
+    public async Task RerankIndicesAsync_Applied_SaysWhichModelReranked()
+    {
+        var outcome = await SearchResultReranker.RerankIndicesAsync(
+            ReverseReranker().Object, "query", ThreeDtos(), topK: 2, _loggerMock.Object, CancellationToken.None);
+
+        outcome.Model.Should().Be("test-model");
+    }
+
+    [Fact]
+    public async Task RerankIndicesAsync_WhenRerankerThrows_HasNoModel()
+    {
+        var reranker = new Mock<ICrossEncoderReranker>();
+        reranker
+            .Setup(r => r.RerankAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<RerankChunk>>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("reranker service down"));
+
+        var outcome = await SearchResultReranker.RerankIndicesAsync(
+            reranker.Object, "query", ThreeDtos(), topK: 2, _loggerMock.Object, CancellationToken.None);
+
+        outcome.Model.Should().BeNull();
+    }
+
     [Fact]
     public async Task RerankIndicesAsync_WhenRerankerThrows_SaysItFellBack_AndKeepsTheRawTopK()
     {

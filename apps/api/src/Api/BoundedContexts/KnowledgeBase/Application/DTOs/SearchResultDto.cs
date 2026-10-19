@@ -29,7 +29,9 @@ internal record SearchResultDto(
     IReadOnlyList<string>? MatchedTerms = null,
     // #4288: l'id del text_chunks del passaggio. VectorDocumentId non lo identifica: il braccio
     // vettoriale ci mette l'id del documento vettoriale, quello lessicale l'id del PDF.
-    Guid? TextChunkId = null
+    Guid? TextChunkId = null,
+    // #4482: il chunk è la traduzione inglese di un chunk di un PDF non inglese.
+    bool IsTranslation = false
 )
 {
     /// <summary>
@@ -56,7 +58,8 @@ internal record SearchResultDto(
             KeywordScore: searchResult.Signals.KeywordScore,
             Language: searchResult.Signals.Language,
             MatchedTerms: searchResult.Signals.MatchedTerms,
-            TextChunkId: searchResult.TextChunkId
+            TextChunkId: searchResult.TextChunkId,
+            IsTranslation: searchResult.Signals.IsTranslation
         );
     }
 };

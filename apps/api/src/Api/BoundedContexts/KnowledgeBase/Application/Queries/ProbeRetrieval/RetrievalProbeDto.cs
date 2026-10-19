@@ -17,6 +17,13 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries.ProbeRetrieval;
 /// candidato), <c>FellBack</c> (il cross-encoder ha fallito: i primi della fusione) o <c>Disabled</c>
 /// (il profilo lo spegne). Su <c>FellBack</c> la misura non dice nulla del reranker.
 /// </param>
+/// <param name="VectorArm">
+/// Com'è andato il braccio vettoriale: <c>Hit</c> (ha trovato chunk sopra la soglia), <c>Empty</c> (nessuno
+/// sopra la soglia) o <c>Failed</c> (la query pgvector è fallita, e la ricerca è stata solo lessicale: la
+/// misura non dice nulla del recupero vero).
+/// </param>
+/// <param name="EmbeddingModel">Il modello di embedding del servizio che ha calcolato il vettore della domanda.</param>
+/// <param name="RerankerModel">Il modello che il servizio di reranking dice di aver usato; assente se non ha risposto.</param>
 /// <param name="FusedCount">Quanti candidati ha dato la ricerca ibrida prima del taglio al pool (fino al doppio del pool).</param>
 /// <param name="Pool">I candidati dati al reranker, nell'ordine della fusione.</param>
 /// <param name="Final">I passaggi che la chat metterebbe nel prompt, nell'ordine.</param>
@@ -30,6 +37,9 @@ internal sealed record RetrievalProbeDto(
     int ProfileVersionNumber,
     RetrievalProbeParametersDto Parameters,
     string Reranking,
+    string VectorArm,
+    string EmbeddingModel,
+    string? RerankerModel,
     int FusedCount,
     IReadOnlyList<RetrievalProbeChunkDto> Pool,
     IReadOnlyList<RetrievalProbeChunkDto> Final);
@@ -69,6 +79,10 @@ internal sealed record RetrievalProbeParametersDto(
 /// <param name="RerankScore">Solo nei finali scelti dal cross-encoder: il suo punteggio.</param>
 /// <param name="SearchMethod">Da quale ricerca viene.</param>
 /// <param name="MatchedTerms">I termini della domanda trovati dal braccio lessicale.</param>
+/// <param name="IsTranslation">
+/// Il chunk è la traduzione inglese di un chunk di un PDF non inglese, salvata dall'indicizzazione accanto
+/// all'originale. Le traduzioni stanno solo nel braccio vettoriale.
+/// </param>
 /// <param name="Text">Il testo intero del chunk.</param>
 internal sealed record RetrievalProbeChunkDto(
     int Position,
@@ -86,4 +100,5 @@ internal sealed record RetrievalProbeChunkDto(
     double? RerankScore,
     string? SearchMethod,
     IReadOnlyList<string>? MatchedTerms,
+    bool IsTranslation,
     string Text);

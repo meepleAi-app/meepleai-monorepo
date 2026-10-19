@@ -13,6 +13,7 @@ using Api.Observability;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 
+#pragma warning disable MA0048 // File name must match type name - the handler and the outcome it reports (#4482)
 namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 
 /// <summary>
@@ -48,6 +49,19 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
     }
 
     public async Task<List<SearchResultDto>> Handle(
+        SearchQuery query,
+        CancellationToken cancellationToken)
+    {
+        var outcome = await HandleWithOutcomeAsync(query, cancellationToken).ConfigureAwait(false);
+        return outcome.Results;
+    }
+
+    /// <summary>
+    /// #4482: la stessa ricerca di <see cref="Handle"/>, che dice anche com'è andato il braccio
+    /// vettoriale. La ricerca ibrida sopravvive a un guasto di pgvector proseguendo solo lessicale: chi
+    /// misura il recupero deve saperlo, perché un risultato senza vettori non dice nulla del recupero vero.
+    /// </summary>
+    public async Task<SearchOutcome> HandleWithOutcomeAsync(
         SearchQuery query,
         CancellationToken cancellationToken)
     {
@@ -117,13 +131,14 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         // Execute search based on mode
         _logger.LogDebug("[SearchQueryHandler] Step 2: Executing {SearchMode} search...", query.SearchMode);
         var sw2 = System.Diagnostics.Stopwatch.StartNew();
-        var searchResults = searchMode switch
+        var (searchResults, vectorArm) = searchMode switch
         {
-            "keyword" => await SearchKeywordArmAsync(
+            "keyword" => (await SearchKeywordArmAsync(
                 query.Query, query.GameId, query.TopK, pdfDocumentIds, cancellationToken).ConfigureAwait(false),
+                VectorArmOutcome.NotRun),
 
-            "vector" => await PerformVectorSearchAsync(
-                query.GameId, queryVector, query.TopK, query.MinScore, pdfDocumentIds, cancellationToken).ConfigureAwait(false),
+            "vector" => VectorOnly(await PerformVectorSearchAsync(
+                query.GameId, queryVector, query.TopK, query.MinScore, pdfDocumentIds, cancellationToken).ConfigureAwait(false)),
 
             // Phase D (D6): forward QueryRoleHint to the hybrid search re-ranker.
             "hybrid" => await PerformHybridSearchAsync(
@@ -131,7 +146,8 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
                 query.VectorWeight, query.KeywordWeight, cancellationToken).ConfigureAwait(false),
 
             _ => throw new ArgumentException($"Invalid search mode: {query.SearchMode}", nameof(query))
-        } ?? new List<Domain.Entities.SearchResult>();
+        };
+        searchResults ??= new List<Domain.Entities.SearchResult>();
         sw2.Stop();
         _logger.LogInformation("[SearchQueryHandler] Step 2 DONE: {SearchMode} search completed in {ElapsedMs}ms - {ResultCount} results",
             query.SearchMode, sw2.ElapsedMilliseconds, searchResults.Count);
@@ -143,8 +159,15 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
             "[SearchQueryHandler] COMPLETE - SearchQuery completed: Found {ResultCount} results",
             dtos.Count);
 
-        return dtos;
+        return new SearchOutcome(dtos, vectorArm);
     }
+
+    private static (List<Domain.Entities.SearchResult> Results, VectorArmOutcome VectorArm) VectorOnly(
+        List<Domain.Entities.SearchResult> results) =>
+        (results, ArmOutcome(results));
+
+    private static VectorArmOutcome ArmOutcome(IReadOnlyCollection<Domain.Entities.SearchResult> vectorResults) =>
+        vectorResults.Count > 0 ? VectorArmOutcome.Hit : VectorArmOutcome.Empty;
 
     private async Task<List<Domain.Entities.SearchResult>> PerformVectorSearchAsync(
         Guid gameId,
@@ -210,7 +233,8 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
                     HybridScore: (float)cosine,
                     VectorScore: (float)scored.Score,
                     VectorRank: index + 1,
-                    Language: scored.Embedding.Language)
+                    Language: scored.Embedding.Language,
+                    IsTranslation: scored.Embedding.IsTranslation)
             );
         }).ToList();
 
@@ -221,7 +245,7 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         return results;
     }
 
-    private async Task<List<Domain.Entities.SearchResult>> PerformHybridSearchAsync(
+    private async Task<(List<Domain.Entities.SearchResult> Results, VectorArmOutcome VectorArm)> PerformHybridSearchAsync(
         Guid gameId,
         Vector queryVector,
         string query,
@@ -238,10 +262,12 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
         // che ora passa da qui: altrimenti il gioco uscirebbe dal pool, lessicale compreso. L'esito
         // `failed` l'ha già contato PerformVectorSearchAsync (#3786).
         List<Domain.Entities.SearchResult> vectorResults;
+        VectorArmOutcome vectorArm;
         try
         {
             vectorResults = await PerformVectorSearchAsync(
                 gameId, queryVector, topK, minScore, documentIds, cancellationToken).ConfigureAwait(false);
+            vectorArm = ArmOutcome(vectorResults);
         }
 #pragma warning disable CA1031 // Degradazione: un guasto del braccio vettoriale non deve far cadere la ricerca
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
@@ -250,6 +276,7 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
                 "[SearchQueryHandler] Vector search failed, falling back to keyword-only for gameId={GameId}",
                 gameId);
             vectorResults = new List<Domain.Entities.SearchResult>();
+            vectorArm = VectorArmOutcome.Failed;
         }
 #pragma warning restore CA1031
 
@@ -289,7 +316,7 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
 
         LogPerGameArenaForTuning(query, gameId, ftsConfig, headingTerms, queryRoleHint, fused);
 
-        return fused;
+        return (fused, vectorArm);
     }
 
     /// <summary>
@@ -387,4 +414,23 @@ internal class SearchQueryHandler : IQueryHandler<SearchQuery, List<SearchResult
             Api.Services.HybridSearchService.PerGameTuningLogPrefix,
             JsonSerializer.Serialize(payload, PerGameTuningJsonOptions));
     }
+}
+
+/// <summary>#4482: una ricerca e com'è andato il suo braccio vettoriale.</summary>
+internal sealed record SearchOutcome(List<SearchResultDto> Results, VectorArmOutcome VectorArm);
+
+/// <summary>#4482: com'è andato il braccio vettoriale di una ricerca.</summary>
+internal enum VectorArmOutcome
+{
+    /// <summary>Ha trovato almeno un chunk sopra la soglia di coseno.</summary>
+    Hit,
+
+    /// <summary>Ha cercato e non ha trovato nessun chunk sopra la soglia: un esito legittimo.</summary>
+    Empty,
+
+    /// <summary>La query pgvector è fallita: la ricerca ibrida ha proseguito solo lessicale.</summary>
+    Failed,
+
+    /// <summary>Non c'era un braccio vettoriale: la ricerca era solo lessicale.</summary>
+    NotRun,
 }

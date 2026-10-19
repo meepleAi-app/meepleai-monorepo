@@ -25,8 +25,13 @@ internal sealed class FusedSearchStub
     public Mock<RrfFusionDomainService> Fusion { get; } = new();
     public SearchQueryHandler Handler { get; }
 
-    public FusedSearchStub(IReadOnlyList<SearchResult> fused)
+    /// <param name="fused">
+    /// La lista che la fusione restituisce. Null: la fusione vera, sopra ciò che i bracci restituiscono
+    /// (<see cref="VectorArmReturns"/>).
+    /// </param>
+    public FusedSearchStub(IReadOnlyList<SearchResult>? fused)
     {
+        Embedder.Setup(e => e.GetModelName()).Returns(EmbeddingModel);
         Embedder
             .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new EmbeddingResult { Success = true, Embeddings = new List<float[]> { new[] { 0.1f, 0.2f, 0.3f } } });
@@ -39,21 +44,61 @@ internal sealed class FusedSearchStub
                 It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<List<string>?>(),
                 It.IsAny<string>(), It.IsAny<double>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<KeywordSearchResult>());
-        Fusion
-            .Setup(f => f.FuseResults(
-                It.IsAny<List<SearchResult>>(), It.IsAny<List<SearchResult>>(), It.IsAny<int>(), It.IsAny<GameBookRole>(),
-                It.IsAny<IReadOnlyList<string>?>(), It.IsAny<float>(), It.IsAny<float>()))
-            .Returns(() => fused.ToList());
+        if (fused is not null)
+        {
+            IReadOnlyList<SearchResult> given = fused;
+            Fusion
+                .Setup(f => f.FuseResults(
+                    It.IsAny<List<SearchResult>>(), It.IsAny<List<SearchResult>>(), It.IsAny<int>(), It.IsAny<GameBookRole>(),
+                    It.IsAny<IReadOnlyList<string>?>(), It.IsAny<float>(), It.IsAny<float>()))
+                .Returns(() => given.ToList());
+        }
 
         Handler = new SearchQueryHandler(
             Embeddings.Object,
             new Mock<VectorSearchDomainService>().Object,
-            Fusion.Object,
+            fused is null ? new RrfFusionDomainService() : Fusion.Object,
             Embedder.Object,
             Keywords.Object,
             Mock.Of<IRagAccessService>(),
             NullLogger<SearchQueryHandler>.Instance);
     }
+
+    /// <summary>Il nome che l'embedding di prova dichiara.</summary>
+    public const string EmbeddingModel = "test-embedding";
+
+    /// <summary>Il braccio vettoriale restituisce questi chunk, con coseno 0,8.</summary>
+    public FusedSearchStub VectorArmReturns(params Embedding[] embeddings)
+    {
+        Embeddings
+            .Setup(e => e.SearchByVectorWithScoresAsync(
+                It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(embeddings.Select(e => new ScoredEmbedding(e, 0.8)).ToList());
+        return this;
+    }
+
+    /// <summary>La query pgvector del braccio vettoriale fallisce: la ricerca ibrida prosegue solo lessicale.</summary>
+    public FusedSearchStub VectorArmFails()
+    {
+        Embeddings
+            .Setup(e => e.SearchByVectorWithScoresAsync(
+                It.IsAny<Guid>(), It.IsAny<Vector>(), It.IsAny<int>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("pgvector down"));
+        return this;
+    }
+
+    /// <summary>Un embedding del PDF di prova, originale o traduzione.</summary>
+    public static Embedding StoredEmbedding(int chunkIndex, string text, bool isTranslation = false) => new(
+        id: Guid.NewGuid(),
+        vectorDocumentId: VectorDocumentId,
+        textContent: text,
+        vector: new Vector(new[] { 0.1f, 0.2f, 0.3f }),
+        model: EmbeddingModel,
+        chunkIndex: chunkIndex,
+        pageNumber: 4,
+        language: isTranslation ? "en" : "it",
+        isTranslation: isTranslation,
+        pdfDocumentId: PdfDocumentId);
 
     /// <summary>
     /// Il candidato numero <paramref name="n"/> (da 1): testo «chunk n», con l'identità del chunk e i

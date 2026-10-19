@@ -17,7 +17,10 @@ internal sealed record RetrievalSignals(
     int? VectorRank = null,
     int? KeywordRank = null,
     string? Language = null,
-    IReadOnlyList<string>? MatchedTerms = null)
+    IReadOnlyList<string>? MatchedTerms = null,
+    // #4482: il chunk è la traduzione inglese di un chunk di un PDF non inglese (pgvector_embeddings.is_translation).
+    // Le traduzioni stanno solo nel braccio vettoriale: un risultato lessicale non lo è mai.
+    bool IsTranslation = false)
 {
     /// <summary>Nessun segnale: un risultato costruito fuori dal recupero.</summary>
     public static readonly RetrievalSignals None = new();

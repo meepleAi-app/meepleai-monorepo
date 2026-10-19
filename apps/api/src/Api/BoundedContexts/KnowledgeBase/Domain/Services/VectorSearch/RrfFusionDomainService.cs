@@ -106,7 +106,9 @@ internal class RrfFusionDomainService
                         VectorRank: f.VectorRank,
                         KeywordRank: f.KeywordRank,
                         Language: fromVector?.Signals.Language,
-                        MatchedTerms: fromKeyword?.Signals.MatchedTerms));
+                        MatchedTerms: fromKeyword?.Signals.MatchedTerms,
+                        // #4482: le traduzioni stanno solo nel braccio vettoriale.
+                        IsTranslation: fromVector?.Signals.IsTranslation ?? false));
             })
             .ToList();
     }

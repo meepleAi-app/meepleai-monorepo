@@ -61,7 +61,8 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         var sql = $"""
             SELECT id, vector_document_id, text_content, model, chunk_index, page_number, role_tags,
                    1 - (vector <=> @queryVector) AS similarity,
-                   lang
+                   lang,
+                   is_translation
             FROM {TableName}
             WHERE game_id = @gameId
               AND 1 - (vector <=> @queryVector) >= @minScore
@@ -124,6 +125,8 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                         chunkIndex: chunkIndex,
                         pageNumber: Math.Max(1, pageNumber),
                         language: lang,
+                        // #4482 column 9: the English translation of a chunk of a non-English PDF.
+                        isTranslation: reader.GetBoolean(9),
                         roleTags: roleTags);
 
                     results.Add(embedding);
@@ -173,7 +176,8 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                    tc."Heading",
                    tc.char_start, tc.char_end, tc.bounding_boxes_json,
                    e.lang,
-                   e.source_chunk_id
+                   e.source_chunk_id,
+                   e.is_translation
             FROM {TableName} e
             JOIN vector_documents vd ON vd."Id" = e.vector_document_id
             LEFT JOIN text_chunks tc ON tc."Id" = e.source_chunk_id
@@ -263,6 +267,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                         pageNumber: Math.Max(1, pageNumber),
                         language: lang,
                         sourceChunkId: sourceChunkId,
+                        // #4482 Column 15: the English translation of a chunk of a non-English PDF. Like
+                        // lang (#3740), an unprojected column would read as the default (false) for all.
+                        isTranslation: reader.GetBoolean(15),
                         roleTags: roleTags,
                         pdfDocumentId: pdfDocumentId,
                         heading: heading,
@@ -303,7 +310,8 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         var sql = $"""
             SELECT id, vector_document_id, text_content, model, chunk_index, page_number, role_tags,
                    1 - (vector <=> @queryVector) AS similarity,
-                   lang
+                   lang,
+                   is_translation
             FROM {TableName}
             WHERE game_id = ANY(@gameIds)
               AND 1 - (vector <=> @queryVector) >= @minScore
@@ -362,6 +370,8 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
                         chunkIndex: chunkIndex,
                         pageNumber: Math.Max(1, pageNumber),
                         language: lang,
+                        // #4482 column 9: the English translation of a chunk of a non-English PDF.
+                        isTranslation: reader.GetBoolean(9),
                         roleTags: roleTags);
 
                     results.Add(embedding);

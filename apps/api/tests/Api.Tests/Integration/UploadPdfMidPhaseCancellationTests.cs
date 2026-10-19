@@ -346,14 +346,38 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
             UserId: testUser.Id,
             File: formFile);
 
-        using var cts = new CancellationTokenSource();
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(TestCancellationToken);
 
         // Act - cancellazione a scrittura in corso
         var handleTask = handler.Handle(command, cts.Token);
-        var first = await Task.WhenAny(blobWriteStarted.Task, handleTask)
-            .WaitAsync(TimeSpan.FromSeconds(60), TestCancellationToken);
-        first.Should().BeSameAs(blobWriteStarted.Task, "the handler must reach the blob write before the test cancels it");
-        await cts.CancelAsync();
+        try
+        {
+            var first = await Task.WhenAny(blobWriteStarted.Task, handleTask)
+                .WaitAsync(TimeSpan.FromSeconds(60), TestCancellationToken);
+            if (first == handleTask)
+            {
+                // Il gestore è uscito prima della scrittura: il test non può cancellarla lì. Il
+                // fallimento deve dire perché, non solo che non ci è arrivato.
+                string outcome;
+                try
+                {
+                    var result = await handleTask;
+                    outcome = $"returned Success={result.Success}, Message=\"{result.Message}\"";
+                }
+                catch (Exception ex)
+                {
+                    outcome = $"threw {ex}";
+                }
+
+                Assert.Fail($"The handler must reach the blob write before the test cancels it, but it ended first: {outcome}");
+            }
+        }
+        finally
+        {
+            // È la cancellazione del test, e va fatta anche se l'attesa scade o l'asserzione sopra
+            // fallisce: altrimenti il gestore resta appeso sul Delay infinito del doppio.
+            await cts.CancelAsync();
+        }
 
         // Assert
         var act = async () => await handleTask;

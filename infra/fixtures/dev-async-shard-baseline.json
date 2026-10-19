@@ -60,7 +60,9 @@
   "shards": {
     "Core": {
       "_comment": [
-        "#4522 — skipped 45 -> 46, DICHIARATO prima del run e poi confrontato col .trx (vedi la PR):",
+        "#4522 — skipped 45 -> 46, DICHIARATO prima del run e poi MISURATO: run 39278261460 (SHA bdc654c),",
+        "job 118148182713 dello shard Core, .trx dell'artifact `integration-results-Core` passato a",
+        "shard-skip-assert.sh con --log: failed=2 skipped=46, entro la baseline, nessun abort.",
         "  +1 UploadPdfMidPhaseCancellationTests.UploadPdf_WhenCancelledMidTextExtraction_ReleasesResources",
         "Non e' un test che ha smesso di girare: non era mai girato. La classe era esclusa per nome dal",
         "filtro di base (#3102); tolta l'esclusione cade in Core, e questo suo test, saltato con",

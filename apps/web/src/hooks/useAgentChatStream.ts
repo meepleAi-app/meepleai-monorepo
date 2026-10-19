@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { toast } from 'sonner';
 
+import { qaStreamErrorMessage } from '@/components/chat-unified/qaStreamErrors';
 import {
   readTierLimit,
   TIER_LIMIT_EXCEEDED,
@@ -159,7 +160,18 @@ export interface AgentChatStreamCallbacks {
       citations: StreamCitation[];
     }
   ) => void;
-  onError?: (error: string) => void;
+  /**
+   * The stream ended without an answer: an `Error` event, an error thrown after the last retry, or
+   * (#4335) a stream that closed without `Complete` or `Error`.
+   *
+   * `partialAnswer` is the text that arrived before the end ('' if none), with its sources. It is
+   * NOT a complete answer — `onComplete` does not fire for it — but the user has already read it:
+   * a view that keeps it should mark it as interrupted, as the main chat does (#4335).
+   */
+  onError?: (
+    error: string,
+    metadata: { partialAnswer: string; citations: StreamCitation[] }
+  ) => void;
 }
 
 /** Input for a single chat message stream */
@@ -523,7 +535,17 @@ function agentChatEventReducer(
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-type AgentChatErrorShape = { kind: 'connection' | 'other'; message: string };
+type AgentChatErrorShape = { kind: 'connection' | 'interrupted' | 'other'; message: string };
+
+/**
+ * #4335: the answer stopped before its end. The same sentence the main chat shows for the backend's
+ * own `AI_STREAM_INTERRUPTED`: for the user the two are the same thing.
+ */
+const STREAM_INTERRUPTED_MESSAGE = qaStreamErrorMessage('AI_STREAM_INTERRUPTED');
+
+function isInterruptedSentinel(raw: unknown): boolean {
+  return (raw as { __sseStreamFsmReason?: string } | null)?.__sseStreamFsmReason === 'interrupted';
+}
 
 export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks): {
   state: AgentChatStreamState;
@@ -559,12 +581,30 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks): {
         currentAnswerRef.current = next.currentAnswer;
         return next;
       },
+      // #4335: a response ends with Complete or Error. A stream that closes before either one was
+      // cut off — the FSM hands it to errorMapper as an interruption.
+      isTerminalEvent: e =>
+        e.type === StreamingEventType.Complete || e.type === StreamingEventType.Error,
       errorMapper: raw => {
-        // M-4: only mark as 'connection' (retryable) if no partial answer received yet.
-        // This preserves the original `!hasAnswer` guard (lines 491–521 of original).
-        const isConnectionError =
+        // #4335: never retried. With words already on screen a retry would start the answer over
+        // under them (the M-4 rule below). Without, the connection DID work and the server (or a
+        // proxy) closed it: not the failure to connect that the retry is for, and a silent resend
+        // is one more model call nobody asked for. The user asks again, with the reason in view.
+        if (isInterruptedSentinel(raw)) {
+          return { kind: 'interrupted', message: STREAM_INTERRUPTED_MESSAGE };
+        }
+
+        // M-4: never retry once a partial answer was received (the original `!hasAnswer` guard,
+        // lines 491–521 of original). #4335: an error thrown after some words is the connection
+        // dropping mid-answer — for the user, the same interruption, not the browser's raw
+        // "network error".
+        if (currentAnswerRef.current !== '') {
+          return { kind: 'interrupted', message: STREAM_INTERRUPTED_MESSAGE };
+        }
+
+        // Only a connection error, before any word of the answer, is retried.
+        const canRetry =
           raw instanceof TypeError || (raw instanceof Error && /HTTP \d/.test(raw.message));
-        const canRetry = isConnectionError && currentAnswerRef.current === '';
 
         let message = 'Si è verificato un errore. Riprova.';
         if (raw instanceof Error) {
@@ -592,15 +632,20 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks): {
   // The public `error` field is: SSE Error event message (from reducer) OR thrown error message
   const publicError: string | null = sseError ?? error?.message ?? null;
 
+  // #4335: the base hook sets `error` only when the stream is over for good — a thrown error after
+  // the last retry, or an interruption — and it does not touch the reducer's state, which still says
+  // "streaming". The stream is over: the view must let the user ask again.
+  const streamFailed = error !== null;
+
   // Build merged state: spread internal state, add base-hook retryCount and merged error.
   // _sseError is an internal implementation field — exclude it from the public shape.
   const stateWithExtras = state as AgentChatInternalState & { _sseError?: string };
   const merged: AgentChatStreamState = {
-    statusMessage: stateWithExtras.statusMessage,
+    statusMessage: streamFailed ? null : stateWithExtras.statusMessage,
     currentAnswer: stateWithExtras.currentAnswer,
     followUpQuestions: stateWithExtras.followUpQuestions,
     citations: stateWithExtras.citations,
-    isStreaming: stateWithExtras.isStreaming,
+    isStreaming: stateWithExtras.isStreaming && !streamFailed,
     tierLimit: stateWithExtras.tierLimit,
     chatThreadId: stateWithExtras.chatThreadId,
     totalTokens: stateWithExtras.totalTokens,
@@ -608,7 +653,7 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks): {
     modelDowngrade: stateWithExtras.modelDowngrade,
     strategyTier: stateWithExtras.strategyTier,
     executionId: stateWithExtras.executionId,
-    connectionStatus: stateWithExtras.connectionStatus,
+    connectionStatus: streamFailed ? 'error' : stateWithExtras.connectionStatus,
     retryCount,
     error: publicError,
   };
@@ -631,14 +676,18 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks): {
   });
 
   // ── onError callback ──────────────────────────────────────────────────────
-  // Fire when error becomes non-null (SSE Error event OR connection error after max retries).
-  // Matches original lines 400 (SSE error) and 531 (connection error).
+  // Fire when error becomes non-null (SSE Error event, connection error after max retries, or
+  // #4335 an interrupted stream). Matches original lines 400 (SSE error) and 531 (connection error).
+  // #4335: with the words that arrived before the end, so the view can keep them.
   useEffect(() => {
     const prevError = prevErrorRef.current;
     prevErrorRef.current = merged.error;
 
     if (merged.error !== null && prevError === null) {
-      callbacksRef.current?.onError?.(merged.error);
+      callbacksRef.current?.onError?.(merged.error, {
+        partialAnswer: merged.currentAnswer,
+        citations: merged.citations,
+      });
     }
   });
 

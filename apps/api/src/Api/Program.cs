@@ -711,6 +711,10 @@ using (var scope = app.Services.CreateScope())
     MeepleAiMetrics.RegisterImpersonationGauges(impersonationTracker);
 }
 
+// #4480: il rilevatore della lingua delle domande carica il profilo degli n-grammi nel costruttore.
+// Costruirlo all'avvio fa fallire subito un'immagine senza profilo, e la prima domanda non paga il caricamento.
+_ = app.Services.GetRequiredService<Api.Services.ILanguageDetectionService>();
+
 // Configure middleware pipeline
 app.ConfigureMiddlewarePipeline(forwardedHeadersEnabled);
 

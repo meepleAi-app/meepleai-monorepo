@@ -22,10 +22,11 @@ namespace Api.Services;
 /// quando ne indicano un'altra. Sulle frasi brevi il loro ordine è affidabile, ma lo scarto fra la
 /// prima lingua e la seconda è minimo e non dice quanto fidarsi.</item>
 /// </list>
-/// Il rilevamento è <i>sicuro</i> quando il testo ha almeno tre parole, la lingua rilevata stacca la
-/// seconda di almeno <see cref="MinConfidentMargin"/> punti e gli n-grammi indicano la stessa lingua.
-/// Il requisito è alto perché la sicurezza serve a una cosa sola: smentire la lingua che l'interfaccia
-/// chiede (<c>AnswerLanguageResolver</c>).
+/// Il rilevamento è <i>sicuro</i> quando il testo ha almeno tre parole, la lingua rilevata stacca di
+/// almeno <see cref="MinConfidentMargin"/> punti la lingua da battere, e gli n-grammi indicano la stessa
+/// lingua. La sicurezza serve a una cosa sola: smentire la lingua che l'interfaccia chiede
+/// (<c>AnswerLanguageResolver</c>), e la lingua da battere è proprio quella. Senza una lingua da battere,
+/// o quando coincide con la rilevata, è la seconda per punteggio.
 /// </para>
 /// </summary>
 internal class LanguageDetectionService : ILanguageDetectionService
@@ -39,8 +40,8 @@ internal class LanguageDetectionService : ILanguageDetectionService
     private const double MinScore = 0.5;
 
     /// <summary>
-    /// Di quanto la lingua rilevata deve staccare la seconda per un rilevamento sicuro: più di una parola
-    /// che l'altra non ha. Sulle domande in altre lingue di <c>QuestionLanguageTests</c> e su quelle
+    /// Di quanto la lingua rilevata deve staccare la lingua da battere per un rilevamento sicuro: più di
+    /// una parola che l'altra non ha. Sulle domande in altre lingue di <c>QuestionLanguageTests</c> e su quelle
     /// inglesi dei dataset di valutazione lo scarto più piccolo misurato è 2.
     /// </summary>
     private const double MinConfidentMargin = 1.5;
@@ -134,7 +135,7 @@ internal class LanguageDetectionService : ILanguageDetectionService
 
     // Lo stesso profilo di NTextCatLanguageDetectionService (SessionTracking), qui con le sole cinque
     // lingue del prodotto: l'ordine fra loro non cambia, perché la distanza di ogni modello dal testo
-    // non dipende dagli altri. Si carica alla prima richiesta, una volta per processo.
+    // non dipende dagli altri.
     private static readonly IReadOnlyDictionary<string, string> CharacterProfileLanguages =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -145,13 +146,31 @@ internal class LanguageDetectionService : ILanguageDetectionService
             ["spa"] = "es",
         };
 
-    private static readonly Lazy<RankedLanguageIdentifier> CharacterIdentifier = new(LoadCharacterIdentifier);
+    // Caricato una volta per processo: i test costruiscono un'istanza per caso. PublicationOnly non
+    // memorizza l'eccezione: un profilo che non si carica fallisce a ogni costruzione, non una volta
+    // sola per poi spegnere in silenzio la sicurezza di ogni domanda.
+    private static readonly Lazy<RankedLanguageIdentifier> SharedCharacterIdentifier =
+        new(LoadCharacterIdentifier, LazyThreadSafetyMode.PublicationOnly);
 
     private readonly ILogger<LanguageDetectionService> _logger;
+    private readonly RankedLanguageIdentifier _characterIdentifier;
 
     public LanguageDetectionService(ILogger<LanguageDetectionService> logger)
+        : this(logger, () => SharedCharacterIdentifier.Value)
     {
+    }
+
+    /// <summary>
+    /// Il profilo degli n-grammi si carica qui, non alla prima domanda: un profilo rotto ferma la
+    /// costruzione del servizio (all'avvio, vedi <c>Program.cs</c>) invece di lasciarlo girare senza
+    /// secondo segnale.
+    /// </summary>
+    internal LanguageDetectionService(
+        ILogger<LanguageDetectionService> logger, Func<RankedLanguageIdentifier> loadCharacterProfile)
+    {
+        ArgumentNullException.ThrowIfNull(loadCharacterProfile);
         _logger = logger;
+        _characterIdentifier = loadCharacterProfile();
 
         _logger.LogInformation("LanguageDetectionService initialized with 5 supported languages: {Languages}",
             string.Join(", ", SupportedLanguages));
@@ -208,7 +227,7 @@ internal class LanguageDetectionService : ILanguageDetectionService
     }
 
     /// <inheritdoc/>
-    public LanguageDetection Detect(string text)
+    public LanguageDetection Detect(string text, string? languageToBeat = null)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -217,7 +236,7 @@ internal class LanguageDetectionService : ILanguageDetectionService
 
         try
         {
-            var words = ReadWords(text);
+            var words = ReadWords(text, languageToBeat?.Trim().ToLowerInvariant());
             var confident = words.HasClearMargin && CharacterPatternsAgree(text, words.Language);
             return new LanguageDetection(words.Language, confident);
         }
@@ -232,10 +251,11 @@ internal class LanguageDetectionService : ILanguageDetectionService
     }
 
     /// <summary>
-    /// La lingua con il punteggio più alto, e se stacca la seconda di <see cref="MinConfidentMargin"/>.
+    /// La lingua con il punteggio più alto, e se stacca di <see cref="MinConfidentMargin"/> la lingua da
+    /// battere: <paramref name="languageToBeat"/> se è un'altra lingua supportata, altrimenti la seconda.
     /// Meno di <see cref="MinWords"/> parole, o nessun punteggio significativo: il default, senza margine.
     /// </summary>
-    private static WordReading ReadWords(string text)
+    private static WordReading ReadWords(string text, string? languageToBeat = null)
     {
         var lowercase = text.ToLowerInvariant();
         var words = WordRegex.Matches(lowercase).Select(match => match.Value).ToList();
@@ -259,8 +279,16 @@ internal class LanguageDetectionService : ILanguageDetectionService
             return new WordReading(DefaultLanguage, HasClearMargin: false);
         }
 
+        // #4480 (review): lo scarto conta sulla lingua che il rilevamento deve smentire. Una domanda
+        // italiana breve ha spesso parole anche francesi o spagnole («il», «si»), e sulla seconda
+        // lingua non arriva alla soglia; sull'inglese dell'interfaccia sì. Lo scarto sulla lingua da
+        // battere non è mai minore di quello sulla seconda.
+        var rivalIndex = ranked.FindIndex(
+            1, candidate => string.Equals(candidate.Language, languageToBeat, StringComparison.Ordinal));
+        var rivalScore = ranked[rivalIndex < 0 ? 1 : rivalIndex].Score;
+
         // I punteggi sono multipli di 0,5: la differenza è esatta in virgola mobile.
-        return new WordReading(best.Language, best.Score - ranked[1].Score >= MinConfidentMargin);
+        return new WordReading(best.Language, best.Score - rivalScore >= MinConfidentMargin);
     }
 
     /// <summary>Se gli n-grammi di caratteri indicano la stessa lingua delle parole.</summary>
@@ -268,7 +296,7 @@ internal class LanguageDetectionService : ILanguageDetectionService
     {
         try
         {
-            var best = CharacterIdentifier.Value.Identify(text).FirstOrDefault();
+            var best = _characterIdentifier.Identify(text).FirstOrDefault();
             return best is not null
                 && CharacterProfileLanguages.TryGetValue(best.Item1.Iso639_3, out var code)
                 && string.Equals(code, language, StringComparison.Ordinal);

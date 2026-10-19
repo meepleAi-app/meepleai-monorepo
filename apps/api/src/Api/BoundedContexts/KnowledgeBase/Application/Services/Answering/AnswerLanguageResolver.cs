@@ -17,9 +17,12 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 /// #4480: la sicurezza del rilevamento conta in un punto solo, quando la lingua rilevata è diversa da
 /// quella che l'interfaccia chiede: se coincidono, o se l'interfaccia non ne chiede nessuna, la risposta
 /// è nella lingua rilevata comunque. Per questo «sicuro» è un requisito alto
-/// (<see cref="ILanguageDetectionService.Detect"/>): con un rilevamento solo «probabile», domande
-/// italiane con <c>Accept-Language: it</c> avevano risposta in spagnolo o in francese. Una domanda
-/// chiaramente inglese con l'interfaccia in italiano ha ancora risposta in inglese.
+/// (<see cref="ILanguageDetectionService.Detect"/>), e il margine si misura proprio sulla lingua
+/// dell'interfaccia: è quella che il rilevamento deve smentire. Con un rilevamento solo «probabile»
+/// domande italiane con <c>Accept-Language: it</c> avevano risposta in spagnolo o in francese; misurando
+/// il margine sulla seconda lingua, domande italiane brevi con l'interfaccia in inglese («Quando si usa
+/// il Ladro?») avevano risposta in inglese. Una domanda chiaramente inglese con l'interfaccia in
+/// italiano ha ancora risposta in inglese.
 /// </para>
 /// </summary>
 internal static class AnswerLanguageResolver
@@ -29,12 +32,21 @@ internal static class AnswerLanguageResolver
     {
         ArgumentNullException.ThrowIfNull(detector);
 
-        var detection = detector.Detect(question ?? string.Empty);
+        // La lingua dell'interfaccia: quella chiesta dal client, altrimenti Accept-Language.
+        var asked = AskedLanguage(detector, acceptLanguage, requestedLanguage);
+
+        var detection = detector.Detect(question ?? string.Empty, asked?.Language);
         if (detection.IsConfident)
         {
             return new AnswerLanguage(detection.Language, AnswerLanguageSource.Detected);
         }
 
+        return asked ?? new AnswerLanguage(detection.Language, AnswerLanguageSource.DetectedUncertain);
+    }
+
+    private static AnswerLanguage? AskedLanguage(
+        ILanguageDetectionService detector, string? acceptLanguage, string? requestedLanguage)
+    {
         var requested = requestedLanguage?.Trim().ToLowerInvariant();
         if (requested is not null && detector.IsSupportedLanguage(requested))
         {
@@ -42,9 +54,7 @@ internal static class AnswerLanguageResolver
         }
 
         var preferred = FirstSupportedLanguage(detector, acceptLanguage);
-        return preferred is not null
-            ? new AnswerLanguage(preferred, AnswerLanguageSource.AcceptLanguage)
-            : new AnswerLanguage(detection.Language, AnswerLanguageSource.DetectedUncertain);
+        return preferred is not null ? new AnswerLanguage(preferred, AnswerLanguageSource.AcceptLanguage) : null;
     }
 
     /// <summary>

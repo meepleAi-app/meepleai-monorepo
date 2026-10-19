@@ -25,6 +25,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering
 public sealed class QuestionLanguageTests
 {
     private const string ItalianInterface = "it";
+    private const string EnglishInterface = "en-US,en;q=0.9";
 
     private readonly LanguageDetectionService _detector = new(NullLogger<LanguageDetectionService>.Instance);
 
@@ -32,22 +33,31 @@ public sealed class QuestionLanguageTests
 
     public static TheoryData<string, string> ReferenceQuestions()
     {
+        var data = new TheoryData<string, string>();
+        foreach (var (id, question) in LoadReferenceQuestions())
+        {
+            data.Add(id, question);
+        }
+
+        return data;
+    }
+
+    private static List<(string Id, string Question)> LoadReferenceQuestions()
+    {
         var path = Path.Combine(FindEvaluationDatasets(), "reference-questions-it.json");
         using var document = JsonDocument.Parse(File.ReadAllText(path));
 
-        var data = new TheoryData<string, string>();
-        foreach (var item in document.RootElement.EnumerateArray())
-        {
-            data.Add(item.GetProperty("id").GetString()!, item.GetProperty("question").GetString()!);
-        }
+        var questions = document.RootElement.EnumerateArray()
+            .Select(item => (item.GetProperty("id").GetString()!, item.GetProperty("question").GetString()!))
+            .ToList();
 
         // Un file vuoto o spostato non deve passare per un set tutto verde.
-        if (data.Count == 0)
+        if (questions.Count == 0)
         {
             throw new InvalidOperationException($"Nessuna domanda in {path}.");
         }
 
-        return data;
+        return questions;
     }
 
     [Theory]
@@ -66,6 +76,39 @@ public sealed class QuestionLanguageTests
         // segue allora la lingua rilevata anche se il rilevamento non è sicuro.
         _detector.Detect(question).Language
             .Should().Be("it", "{0} è in italiano: «{1}»", id, question);
+    }
+
+    /// <summary>
+    /// Le domande del set che con l'interfaccia in inglese hanno risposta in inglese: per loro il
+    /// rilevamento non è abbastanza netto da smentire l'interfaccia. Ogni voce è una decisione presa
+    /// guardando la domanda; una domanda nuova che non supera la soglia fa fallire il test, e va
+    /// aggiunta qui con il motivo, oppure va corretto il rilevatore.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, string> AnsweredInEnglishWithAnEnglishInterface =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            // Vuoto: con il margine misurato sull'inglese tutte le domande del set lo superano.
+            // Prima della review di #4480 (margine sulla seconda lingua) restavano in inglese
+            // CAR-21, GLO-06, GLO-10 e GLO-17.
+        };
+
+    [Theory]
+    [MemberData(nameof(ReferenceQuestions))]
+    public void AReferenceQuestion_WithAnEnglishInterface_IsAnsweredInItalian_UnlessListed(string id, string question)
+    {
+        var expected = AnsweredInEnglishWithAnEnglishInterface.ContainsKey(id) ? "en" : "it";
+
+        AnswerLanguageResolver.Resolve(_detector, question, EnglishInterface).Language
+            .Should().Be(expected, "{0} con l'interfaccia in inglese: «{1}»", id, question);
+    }
+
+    [Fact]
+    public void TheEnglishInterfaceExceptions_NameQuestionsOfTheSet()
+    {
+        var ids = LoadReferenceQuestions().Select(question => question.Id).ToHashSet(StringComparer.Ordinal);
+
+        AnsweredInEnglishWithAnEnglishInterface.Keys.Should().BeSubsetOf(ids,
+            "un'eccezione per una domanda tolta dal set non protegge più niente");
     }
 
     // ─── Domande brevi in altre lingue: non devono regredire ────────────────────
@@ -143,12 +186,40 @@ public sealed class QuestionLanguageTests
     }
 
     // ─── Quanto deve essere netto il rilevamento per smentire l'interfaccia ─────
+    //
+    // Lo scarto si misura sulla lingua che l'interfaccia chiede, cioè quella da smentire: una domanda
+    // italiana breve ha spesso parole anche francesi o spagnole («il», «si», «un»), ma quasi nessuna
+    // inglese, e con l'interfaccia in inglese l'italiano deve vincere.
+
+    [Theory]
+    [InlineData("Come funziona il Largest Army?")]
+    [InlineData("Quando si usa il Ladro?")]
+    [InlineData("Come si gioca il Monopolio?")]
+    [InlineData("Quante carte si pescano?")]
+    [InlineData("Posso usare il Brigante?")]
+    [InlineData("Una carta per turno?")]
+    public void AShortItalianQuestion_WinsOverAnEnglishInterface(string question)
+    {
+        AnswerLanguageResolver.Resolve(_detector, question, EnglishInterface)
+            .Should().Be(new AnswerLanguage("it", AnswerLanguageSource.Detected));
+    }
+
+    [Fact]
+    public void TheLanguageToBeat_IsTheRequestedOne_NotAcceptLanguage()
+    {
+        // «si» e «il» sono anche francesi: l'italiano stacca il francese di un punto e l'inglese di
+        // tre. La lingua da smentire è quella chiesta dal client, che vale più di Accept-Language.
+        AnswerLanguageResolver.Resolve(_detector, "Quando si usa il Ladro?", "it-IT", requestedLanguage: "en")
+            .Should().Be(new AnswerLanguage("it", AnswerLanguageSource.Detected));
+    }
 
     [Fact]
     public void AQuestionWithLittleToTellTheLanguagesApart_KeepsTheInterfaceLanguage()
     {
-        // «una», «carta» e «turno» sono anche spagnole: a separare l'italiano resta solo «per».
-        // Troppo poco per rispondere in un'altra lingua da quella che l'interfaccia chiede.
+        // «una», «carta» e «turno» sono anche spagnole: sullo spagnolo, la lingua da smentire,
+        // l'italiano ha in più soltanto «per». Troppo poco per rispondere in un'altra lingua da quella
+        // che l'interfaccia chiede. La stessa domanda con l'interfaccia in inglese ha risposta in
+        // italiano (sopra): lì le parole che la separano sono quattro contro una.
         AnswerLanguageResolver.Resolve(_detector, "Una carta per turno?", "es")
             .Should().Be(new AnswerLanguage("es", AnswerLanguageSource.AcceptLanguage));
     }
@@ -164,6 +235,20 @@ public sealed class QuestionLanguageTests
         _detector.Detect(text).IsConfident.Should().BeFalse();
         AnswerLanguageResolver.Resolve(_detector, text, ItalianInterface)
             .Should().Be(new AnswerLanguage("it", AnswerLanguageSource.AcceptLanguage));
+    }
+
+    // ─── Il profilo degli n-grammi ──────────────────────────────────────────────
+
+    [Fact]
+    public void ABrokenCharacterProfile_FailsWhenTheServiceIsBuilt_NotAtTheFirstQuestion()
+    {
+        // Un profilo che non si carica deve fermare l'avvio, non togliere in silenzio la sicurezza a
+        // ogni domanda (con un warning per domanda) per tutta la vita del processo.
+        var build = () => new LanguageDetectionService(
+            NullLogger<LanguageDetectionService>.Instance,
+            loadCharacterProfile: () => throw new InvalidOperationException("profilo rotto"));
+
+        build.Should().Throw<InvalidOperationException>().WithMessage("profilo rotto");
     }
 
     private static string FindEvaluationDatasets()

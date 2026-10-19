@@ -56,7 +56,7 @@ internal static class AnswerPipelineTestDoubles
     public static ILanguageDetectionService UncertainLanguageDetection()
     {
         var detector = new Mock<ILanguageDetectionService>();
-        detector.Setup(d => d.Detect(It.IsAny<string>())).Returns(new LanguageDetection("en", IsConfident: false));
+        detector.Setup(d => d.Detect(It.IsAny<string>(), It.IsAny<string?>())).Returns(new LanguageDetection("en", IsConfident: false));
         detector.Setup(d => d.IsSupportedLanguage(It.IsAny<string?>()))
             .Returns<string?>(l => l is "en" or "it" or "de" or "fr" or "es");
         return detector.Object;

@@ -151,7 +151,7 @@ export function ChatMessageBubble({
           {interrupted && (
             <p
               data-testid="chat-message-interrupted"
-              className="mt-2 border-t border-border pt-2 text-[0.72rem] font-semibold italic text-muted-foreground"
+              className="mt-2 border-t border-border pt-2 text-[0.72rem] font-semibold italic text-foreground"
             >
               Risposta interrotta: non è completa.
             </p>

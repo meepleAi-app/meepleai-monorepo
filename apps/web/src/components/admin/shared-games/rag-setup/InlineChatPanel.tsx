@@ -155,7 +155,7 @@ export function InlineChatPanel({ gameId, chatThreadId }: InlineChatPanelProps) 
                 {msg.interrupted && (
                   <p
                     data-testid="inline-chat-interrupted"
-                    className="mt-1 text-xs italic text-muted-foreground"
+                    className="mt-1 text-xs italic text-foreground"
                   >
                     Risposta interrotta: non è completa.
                   </p>

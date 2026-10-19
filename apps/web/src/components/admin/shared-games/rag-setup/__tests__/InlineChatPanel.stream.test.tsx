@@ -60,6 +60,9 @@ describe("InlineChatPanel — lo stream, con l'hook vero (#4335)", () => {
     );
     expect(screen.getByText('Cinque')).toBeInTheDocument();
     expect(screen.getByTestId('inline-chat-interrupted')).toHaveTextContent('Risposta interrotta');
+    // Review di #4509: `text-muted-foreground` su `bg-muted` è 4,43:1 in tema scuro, sotto AA.
+    // jsdom non calcola i colori: il rapporto è nel corpo della PR, qui si fissa il token.
+    expect(screen.getByTestId('inline-chat-interrupted')).toHaveClass('text-foreground');
     expect(screen.getByPlaceholderText(INPUT_PLACEHOLDER)).not.toBeDisabled();
 
     const second = steppedFetch([

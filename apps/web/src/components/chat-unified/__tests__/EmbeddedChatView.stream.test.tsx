@@ -113,6 +113,8 @@ describe("EmbeddedChatView — lo stream, con l'hook vero (#4333)", () => {
       expect.stringContaining('Cinque'),
     ]);
     expect(screen.getByTestId('message-interrupted')).toHaveTextContent('Risposta interrotta');
+    // Review di #4509: un testo che passa AA in entrambi i temi (rapporti nel corpo della PR).
+    expect(screen.getByTestId('message-interrupted')).toHaveClass('text-foreground');
     expect(screen.getByTestId('embedded-chat-input')).not.toBeDisabled();
 
     const second = steppedFetch([

@@ -241,6 +241,9 @@ describe("ChatSlideOverPanel — lo stream, con l'hook vero (#4333)", () => {
       expect(screen.getByTestId('chat-message-interrupted')).toHaveTextContent(
         'Risposta interrotta'
       );
+      // Review di #4509: `text-muted-foreground` restava sotto AA in tema scuro su certi sfondi.
+      // jsdom non calcola i colori: il rapporto è nel corpo della PR, qui si fissa il token.
+      expect(screen.getByTestId('chat-message-interrupted')).toHaveClass('text-foreground');
 
       // La domanda dopo parte.
       const second = steppedFetch([

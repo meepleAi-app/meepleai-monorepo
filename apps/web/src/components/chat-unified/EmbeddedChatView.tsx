@@ -167,7 +167,7 @@ export function EmbeddedChatView({ threadId, gameId, gameName }: EmbeddedChatVie
             <p className="text-sm whitespace-pre-wrap font-nunito">{msg.content}</p>
             {msg.interrupted && (
               <p
-                className="mt-1 text-[10px] italic text-muted-foreground"
+                className="mt-1 text-[10px] italic text-foreground"
                 data-testid="message-interrupted"
               >
                 Risposta interrotta: non è completa.

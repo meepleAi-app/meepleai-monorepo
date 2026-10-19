@@ -53,14 +53,26 @@ internal sealed class GameState : ValueObject
     /// Creates a new GameState value object.
     /// </summary>
     /// <param name="value">The game state type</param>
-    /// <param name="changedAt">Optional timestamp of state change</param>
+    /// <param name="changedAt">Timestamp of the state change: the factories pass "now", <see cref="Reconstitute"/> the stored one</param>
     /// <param name="stateNotes">Optional notes about the state</param>
-    private GameState(GameStateType value, DateTime? changedAt = null, string? stateNotes = null)
+    private GameState(GameStateType value, DateTime? changedAt, string? stateNotes)
     {
         Value = value;
-        ChangedAt = changedAt ?? DateTime.UtcNow;
+        ChangedAt = changedAt;
         StateNotes = stateNotes?.Trim();
     }
+
+    /// <summary>
+    /// Ricostituisce lo stato letto dal database, con la sua data di cambio (#4499).
+    /// </summary>
+    /// <remarks>
+    /// Solo per il repository. Le factory (<see cref="Owned"/> e le altre) datano lo stato a
+    /// "adesso", ed è giusto quando lo stato cambia davvero; usate per ricostruire una riga
+    /// spostavano la data dell'ultimo cambio a ogni lettura, e quindi a ogni update. Una data
+    /// assente nella riga resta assente: inventarla la renderebbe "adesso" a ogni lettura.
+    /// </remarks>
+    internal static GameState Reconstitute(GameStateType value, DateTime? changedAt, string? stateNotes)
+        => new(value, changedAt, stateNotes);
 
     /// <summary>
     /// Creates a Nuovo (new, unplayed) state.

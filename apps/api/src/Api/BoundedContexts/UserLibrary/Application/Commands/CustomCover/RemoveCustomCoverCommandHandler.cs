@@ -1,9 +1,11 @@
+using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Covers;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.UserLibrary.Application.Commands.CustomCover;
@@ -11,24 +13,27 @@ namespace Api.BoundedContexts.UserLibrary.Application.Commands.CustomCover;
 /// <summary>
 /// Handler for removing a user-custom cover image (L3).
 /// Issue #1824. Flow: validate gameId∈library -> verify cover exists ->
-/// best-effort R2 delete -> null DB field.
+/// best-effort R2 delete -> null DB field -> evict the cached game detail.
 /// </summary>
 internal sealed class RemoveCustomCoverCommandHandler : ICommandHandler<RemoveCustomCoverCommand>
 {
     private readonly IUserLibraryRepository _libraryRepository;
     private readonly IBlobStorageService _blobStorage;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly HybridCache _cache;
     private readonly ILogger<RemoveCustomCoverCommandHandler> _logger;
 
     public RemoveCustomCoverCommandHandler(
         IUserLibraryRepository libraryRepository,
         IBlobStorageService blobStorage,
         IUnitOfWork unitOfWork,
+        HybridCache cache,
         ILogger<RemoveCustomCoverCommandHandler> logger)
     {
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
         _blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -67,6 +72,11 @@ internal sealed class RemoveCustomCoverCommandHandler : ICommandHandler<RemoveCu
         entry.SetCustomCoverR2Key(null);
         await _libraryRepository.UpdateAsync(entry, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // #4499: the cached game detail (5 minutes) would keep offering «Rimuovi», and a second
+        // click would answer 404.
+        await _cache.RemoveAsync(GetGameDetailQueryHandler.BuildCacheKey(command.UserId, command.GameId), cancellationToken)
+            .ConfigureAwait(false);
 
         _logger.LogInformation(
             "Custom cover removed for game {GameId}, user {UserId}",

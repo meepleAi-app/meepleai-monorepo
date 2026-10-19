@@ -19,7 +19,7 @@ namespace Api.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.11")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "vector");
@@ -224,7 +224,8 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("total_tokens_used");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("PK_rag_executions");
 
                     b.HasIndex("ExecutedByUserId")
                         .HasDatabaseName("ix_rag_executions_executed_by_user_id");
@@ -2667,7 +2668,8 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("total_tokens");
 
-                    b.HasKey("Id");
+                    b.HasKey("Id")
+                        .HasName("PK_rag_executions");
 
                     b.HasIndex("AgentDefinitionId")
                         .HasDatabaseName("IX_rag_executions_agent_definition_id");
@@ -15083,7 +15085,7 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
-                    b.PrimitiveCollection<List<string>>("Interests")
+                    b.PrimitiveCollection<string>("Interests")
                         .HasColumnType("jsonb");
 
                     b.Property<DateTime?>("InvitationExpiresAt")
@@ -17114,37 +17116,32 @@ namespace Api.Infrastructure.Migrations
                 {
                     b.OwnsOne("Api.BoundedContexts.KbQuality.Domain.Evaluation.EvaluationMetrics", "Metrics", b1 =>
                         {
-                            b1.Property<Guid>("DocumentEvaluationRunId")
-                                .HasColumnType("uuid");
+                            b1.Property<Guid>("DocumentEvaluationRunId");
 
-                            b1.Property<decimal>("CostUsd")
-                                .HasColumnType("numeric");
+                            b1.Property<decimal>("CostUsd");
 
-                            b1.Property<int>("QualityBand")
-                                .HasColumnType("integer");
+                            b1.Property<int>("QualityBand");
 
-                            b1.Property<int>("QueryCount")
-                                .HasColumnType("integer");
+                            b1.Property<int>("QueryCount");
 
                             b1.HasKey("DocumentEvaluationRunId");
 
                             b1.ToTable("document_evaluation_runs");
 
-                            b1.ToJson("Metrics");
+                            b1
+                                .ToJson("Metrics")
+                                .HasColumnType("jsonb");
 
                             b1.WithOwner()
                                 .HasForeignKey("DocumentEvaluationRunId");
 
                             b1.OwnsOne("Api.BoundedContexts.KbQuality.Domain.Evaluation.LatencyMetrics", "Latency", b2 =>
                                 {
-                                    b2.Property<Guid>("EvaluationMetricsDocumentEvaluationRunId")
-                                        .HasColumnType("uuid");
+                                    b2.Property<Guid>("EvaluationMetricsDocumentEvaluationRunId");
 
-                                    b2.Property<TimeSpan>("P50")
-                                        .HasColumnType("interval");
+                                    b2.Property<TimeSpan>("P50");
 
-                                    b2.Property<TimeSpan>("P95")
-                                        .HasColumnType("interval");
+                                    b2.Property<TimeSpan>("P95");
 
                                     b2.HasKey("EvaluationMetricsDocumentEvaluationRunId");
 
@@ -17156,17 +17153,13 @@ namespace Api.Infrastructure.Migrations
 
                             b1.OwnsOne("Api.BoundedContexts.KbQuality.Domain.Evaluation.PrecisionMetrics", "Precision", b2 =>
                                 {
-                                    b2.Property<Guid>("EvaluationMetricsDocumentEvaluationRunId")
-                                        .HasColumnType("uuid");
+                                    b2.Property<Guid>("EvaluationMetricsDocumentEvaluationRunId");
 
-                                    b2.Property<double>("At1")
-                                        .HasColumnType("double precision");
+                                    b2.Property<double>("At1");
 
-                                    b2.Property<double>("At3")
-                                        .HasColumnType("double precision");
+                                    b2.Property<double>("At3");
 
-                                    b2.Property<double>("At5")
-                                        .HasColumnType("double precision");
+                                    b2.Property<double>("At5");
 
                                     b2.HasKey("EvaluationMetricsDocumentEvaluationRunId");
 
@@ -17178,11 +17171,9 @@ namespace Api.Infrastructure.Migrations
 
                             b1.OwnsOne("Api.BoundedContexts.KbQuality.Domain.Evaluation.RankingMetrics", "Ranking", b2 =>
                                 {
-                                    b2.Property<Guid>("EvaluationMetricsDocumentEvaluationRunId")
-                                        .HasColumnType("uuid");
+                                    b2.Property<Guid>("EvaluationMetricsDocumentEvaluationRunId");
 
-                                    b2.Property<double>("Mrr")
-                                        .HasColumnType("double precision");
+                                    b2.Property<double>("Mrr");
 
                                     b2.HasKey("EvaluationMetricsDocumentEvaluationRunId");
 

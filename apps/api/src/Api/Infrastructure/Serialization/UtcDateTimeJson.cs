@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 
@@ -34,7 +35,9 @@ internal static class UtcDateTimeJson
     /// convertitori: lo schema di un <see cref="DateTime"/> perdeva <c>"type"</c>, e anche
     /// <c>"format": "date-time"</c> quando il parametro del record ha un default (<c>= null</c>);
     /// quello di una <c>List&lt;DateTime&gt;</c> perdeva <c>"items"</c> intero, che non passa
-    /// nemmeno da un trasformatore e va quindi rifatto dal genitore.
+    /// nemmeno da un trasformatore e va quindi rifatto dal genitore. Un parametro nullable in query
+    /// resta <c>"string"</c> senza <c>"null"</c>, come nello schema di serie. Senza i convertitori nelle
+    /// opzioni la riparazione non fa nulla.
     /// I test che lo fissano sono <c>UtcDateTimeJsonConverterTests</c> (un documento di prova) e
     /// <c>BodyDateWithoutOffsetIntegrationTests</c> (il documento vero dell'API). Il documento lo
     /// leggono Scalar e lo script degli schemi zod del frontend (<c>pnpm generate:api</c>).
@@ -46,9 +49,23 @@ internal static class UtcDateTimeJson
         options.AddSchemaTransformer((schema, context, _) =>
         {
             var info = context.JsonTypeInfo;
+
+            // Ripara solo ciò che i convertitori rompono: senza di loro lo schema di serie resta
+            // intatto, ed è ciò che permette ai test di confrontare con il documento vero.
+            if (!UsesUtcConverters(info.Options))
+            {
+                return Task.CompletedTask;
+            }
+
             if (DateSchemaType(info.Type) is { } dateType)
             {
-                schema.Type = dateType;
+                // Un parametro nullable in query, route o header resta "string": lo schema di serie mette
+                // l'opzionalità nel parametro, non nel tipo. Una proprietà nullable (anche del corpo, che
+                // per ApiExplorer è a sua volta un parametro) ha ["null","string"].
+                var isNonBodyParameter = context.JsonPropertyInfo is null
+                    && context.ParameterDescription is { } parameter
+                    && parameter.Source != BindingSource.Body;
+                schema.Type = isNonBodyParameter ? dateType & ~JsonSchemaType.Null : dateType;
                 schema.Format ??= DateTimeFormat;
             }
             else if (info.ElementType is { } element && DateSchemaType(element) is { } elementType)
@@ -68,6 +85,9 @@ internal static class UtcDateTimeJson
     }
 
     private const string DateTimeFormat = "date-time";
+
+    private static bool UsesUtcConverters(JsonSerializerOptions options) =>
+        options.Converters.Any(c => c is UtcDateTimeJsonConverter or UtcDateTimeOffsetJsonConverter);
 
     private static OpenApiSchema DateSchema(JsonSchemaType type) => new() { Type = type, Format = DateTimeFormat };
 

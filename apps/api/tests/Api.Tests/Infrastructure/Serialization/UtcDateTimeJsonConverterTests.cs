@@ -46,6 +46,28 @@ public sealed class UtcDateTimeJsonConverterTests
 
     private static string Iso(DateTimeOffset value) => value.ToString("O", CultureInfo.InvariantCulture);
 
+    // ── Il fuso dell'host ───────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Il guard dello step di <c>dev-fast.yml</c> che rilancia queste classi con <c>TZ=Asia/Tokyo</c>
+    /// (#4519). Alcuni rami dei convertitori e del filtro si vedono solo se il fuso dell'host non è UTC;
+    /// se quel fuso non venisse applicato, lo step passerebbe senza distinguere nulla. Fuori dallo step
+    /// la variabile non c'è e qui non c'è niente da controllare.
+    /// </summary>
+    [Fact]
+    public void HostTimeZone_IsTheOneTheCiStepAsksFor()
+    {
+        var expected = Environment.GetEnvironmentVariable("EXPECTED_LOCAL_UTC_OFFSET");
+        if (string.IsNullOrEmpty(expected))
+        {
+            return;
+        }
+
+        TimeZoneInfo.Local.GetUtcOffset(new DateTime(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc))
+            .Should().Be(TimeSpan.Parse(expected, CultureInfo.InvariantCulture),
+                $"the step sets TZ to a non-UTC zone; the host reports «{TimeZoneInfo.Local.Id}»");
+    }
+
     // ── DateTime: lettura ───────────────────────────────────────────────────────
 
     [Theory]
@@ -116,6 +138,26 @@ public sealed class UtcDateTimeJsonConverterTests
         JsonSerializer.Serialize(toWrite, WithConverters).Should().Be(JsonSerializer.Serialize(toWrite, BuiltIn));
     }
 
+    /// <summary>
+    /// Un valore con offset vicino ai limiti di <see cref="DateTime"/>. System.Text.Json lo legge come
+    /// <see cref="DateTimeKind.Local"/> passando dall'ora del server, e lì il valore viene tagliato al
+    /// limite: riportarlo a UTC sposterebbe l'istante in silenzio. L'istante esatto lo dà l'offset scritto.
+    /// </summary>
+    /// <remarks>
+    /// Discrimina solo su un host con offset positivo (l'ora locale supera <see cref="DateTime.MaxValue"/>):
+    /// in CI lo garantisce lo step che rilancia queste classi con <c>TZ=Asia/Tokyo</c>.
+    /// </remarks>
+    [Theory]
+    [InlineData("9999-12-31T23:30:00+00:00", "9999-12-31T23:30:00.0000000Z")]
+    [InlineData("9999-12-31T20:00:00-03:00", "9999-12-31T23:00:00.0000000Z")]
+    public void Read_OffsetNearMaxValue_KeepsTheExactInstant(string written, string expected)
+    {
+        var value = JsonSerializer.Deserialize<DateTime>($"\"{written}\"", WithConverters);
+
+        value.Kind.Should().Be(DateTimeKind.Utc);
+        Iso(value).Should().Be(expected);
+    }
+
     // ── DateTimeOffset: lettura ─────────────────────────────────────────────────
 
     [Theory]
@@ -156,6 +198,14 @@ public sealed class UtcDateTimeJsonConverterTests
 
         JsonSerializer.Deserialize<OffsetBody>("""{"At":"2026-01-01","Maybe":null}""", WithConverters)!
             .Maybe.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("9999-12-31T23:30:00+00:00", "9999-12-31T23:30:00.0000000+00:00")]
+    [InlineData("9999-12-31T20:00:00-03:00", "9999-12-31T23:00:00.0000000+00:00")]
+    public void ReadOffset_OffsetNearMaxValue_KeepsTheExactInstant(string written, string expected)
+    {
+        Iso(JsonSerializer.Deserialize<DateTimeOffset>($"\"{written}\"", WithConverters)).Should().Be(expected);
     }
 
     // ── Gli errori restano quelli di serie ──────────────────────────────────────
@@ -250,8 +300,24 @@ public sealed class UtcDateTimeJsonConverterTests
         var fixedUp = await OpenApiDocumentAsync(withConverters: true, withSchemaFix: true);
 
         builtIn.Should().Contain("\"format\": \"date-time\"", "guard: the probe must produce date-time schemas at all");
+        builtIn.Should().Contain("\"name\": \"days\"", "guard: the query parameters must be in the document");
+        builtIn.Should().Contain("\"name\": \"day\"", "guard: the route parameter must be in the document");
         (fixedUp == builtIn).Should().BeTrue(
             "the converters must not change the OpenAPI document. Built-in:\n" + builtIn + "\nWith converters:\n" + fixedUp);
+    }
+
+    /// <summary>
+    /// La riparazione è inerte senza i convertitori: il documento resta quello di serie. È ciò che permette
+    /// al test d'integrazione <c>OpenApiDocument_IsTheSameWithoutTheConverters</c> di confrontare il
+    /// documento vero dell'API con quello di serie, e non con la riparazione applicata a schemi intatti.
+    /// </summary>
+    [Fact]
+    public async Task OpenApiDocument_SchemaFixWithoutConverters_ChangesNothing()
+    {
+        var builtIn = await OpenApiDocumentAsync(withConverters: false, withSchemaFix: false);
+        var fixOnly = await OpenApiDocumentAsync(withConverters: false, withSchemaFix: true);
+
+        (fixOnly == builtIn).Should().BeTrue("without the converters the schema fix must not touch anything");
     }
 
     /// <summary>
@@ -300,6 +366,11 @@ public sealed class UtcDateTimeJsonConverterTests
         app.MapPost("/probe", (OpenApiProbe body) => Results.Ok(body));
         app.MapGet("/probe/{id}", (int id) => Results.Ok(new OpenApiProbe(DateTime.UtcNow, null, DateTimeOffset.UtcNow, null, [], [], [], [], "x")))
             .Produces<OpenApiProbe>();
+
+        // I parametri data in query e in route: la forma più frequente nell'API. Anche i loro schemi
+        // vengono dalle opzioni JSON.
+        app.MapGet("/probe/query", (DateTime? from, DateTime to, DateTimeOffset? at, DateTime[]? days) => Results.Ok());
+        app.MapGet("/probe/day/{day}", (DateTime day, DateTimeOffset since) => Results.Ok());
         await app.StartAsync();
 
         using var client = app.GetTestClient();

@@ -27,8 +27,8 @@ internal sealed class SuppressMechanicAnalysisCommandValidator
         RuleFor(c => c.RequestSource)
             .IsInEnum().WithMessage("RequestSource must be a valid enum value (Email, Legal, Other).");
 
-        RuleFor(c => c.RequestedAt)
-            .Must(ts => !ts.HasValue || ts.Value.Kind == DateTimeKind.Utc || ts.Value.Kind == DateTimeKind.Unspecified)
-            .WithMessage("RequestedAt must be expressed in UTC.");
+        // #4519: no rule on RequestedAt's Kind. It used to reject Kind=Local because the handler
+        // re-labelled every value as UTC, which shifts a Local instant; the handler now converts it,
+        // and over HTTP a Local value no longer arrives at all (UtcDateTimeJson reads body dates as UTC).
     }
 }

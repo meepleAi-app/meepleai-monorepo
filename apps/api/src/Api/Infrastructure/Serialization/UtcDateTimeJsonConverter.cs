@@ -43,8 +43,20 @@ namespace Api.Infrastructure.Serialization;
 /// </remarks>
 internal sealed class UtcDateTimeJsonConverter : JsonConverter<DateTime>
 {
-    public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
-        UtcDateTimeArguments.AsUtc(reader.GetDateTime());
+    public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        // Senza designatore (Unspecified) o con 'Z' (Utc) il valore letto è già quello scritto.
+        if (reader.TryGetDateTime(out var value) && value.Kind != DateTimeKind.Local)
+        {
+            return UtcDateTimeArguments.AsUtc(value);
+        }
+
+        // Con un offset System.Text.Json restituisce Local, cioè passa dall'ora del server: vicino a
+        // MinValue/MaxValue il valore viene tagliato al limite e riportarlo a UTC sposterebbe l'istante
+        // in silenzio. L'istante esatto lo dà l'offset scritto. Su un valore che non è una data,
+        // GetDateTimeOffset lancia come farebbe il convertitore di serie.
+        return reader.GetDateTimeOffset().UtcDateTime;
+    }
 
     public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options) =>
         writer.WriteStringValue(value);

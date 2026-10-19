@@ -356,7 +356,10 @@ public sealed class BodyDateWithoutOffsetIntegrationTests
     /// </summary>
     /// <remarks>
     /// Costruisce un secondo host (la stessa configurazione, meno i convertitori): una volta sola, e
-    /// solo in questo test.
+    /// solo in questo test. In quell'host la riparazione degli schemi resta registrata ma è inerte,
+    /// perché agisce solo se i convertitori sono nelle opzioni (lo fissa
+    /// <c>UtcDateTimeJsonConverterTests.OpenApiDocument_SchemaFixWithoutConverters_ChangesNothing</c>):
+    /// il riferimento è quindi il documento di serie, compresi i parametri data di ogni endpoint.
     /// </remarks>
     [Fact]
     public async Task OpenApiDocument_IsTheSameWithoutTheConverters()

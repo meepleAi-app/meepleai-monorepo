@@ -132,20 +132,30 @@ jobs:
         # lungo il namespace: `AuthIntegration` prende Api.Tests.Integration.Authentication.*, e
         # `KnowledgeBase` tiene il token largo `Authentication` meno quello. Cosi' una classe nuova
         # di Authentication fuori da quel namespace finisce comunque in uno shard. Il token ha un
-        # punto apposta: un nome di metodo non puo' contenerlo, quindi seleziona solo per namespace
-        # (`FullyQualifiedName~` confronta anche il nome del metodo). `Core` non cambia: escludere
-        # `Authentication` esclude gia' anche `Integration.Authentication`.
+        # punto apposta: un nome di metodo non puo' contenerlo (`FullyQualifiedName~` confronta anche
+        # il nome del metodo). Prende pero' anche le classi di Api.Tests.Integration il cui nome
+        # comincia con `Authentication`. `Core` non cambia: escludere `Authentication` esclude gia'
+        # anche `Integration.Authentication`.
         # Previsioni e misure: commento del 2026-10-18 in #3742.
+        #
+        # Le esclusioni sono precedenze (#4488). Un test il cui nome contiene i token di due shard lo
+        # selezionano tutti e due: le classi cross-context con `GameManagement` nel nome, i test di
+        # SharedGameCatalog con `KnowledgeBase` nel nome del metodo. Lo shard che esclude il token
+        # cede il test a quello che lo seleziona. L'ordine e' Catalog, GamesAdmin, AuthIntegration,
+        # KnowledgeBase: un test con i token di due contesti resta nel contesto di gioco ed esce
+        # dallo shard con meno margine. Un ciclo di esclusioni (A cede a B e B ad A) farebbe sparire
+        # quei test da ogni shard.
         #
         # 🔴 Le due meta' di questa regola non si tengono da sole. Togliere un token da uno shard
         # lasciandolo escluso da `Core` fa sparire quei test da OGNI shard, e nessun job cambia
-        # colore. Lo verifica infra/scripts/tests/integration-shard-matrix.bats, insieme
-        # all'uguaglianza con ci.yml e alla presenza di ogni shard nella baseline.
+        # colore. Lo verifica infra/scripts/tests/integration-shard-matrix.bats, insieme ai doppi
+        # fra shard, ai cicli di esclusioni, all'uguaglianza con ci.yml e alla presenza di ogni shard
+        # nella baseline.
         shard:
           - name: "KnowledgeBase"
-            filter_extra: "&(FullyQualifiedName~KnowledgeBase|FullyQualifiedName~DocumentProcessing|FullyQualifiedName~Authentication)&FullyQualifiedName!~Integration.Authentication"
+            filter_extra: "&(FullyQualifiedName~KnowledgeBase|FullyQualifiedName~DocumentProcessing|FullyQualifiedName~Authentication)&FullyQualifiedName!~Integration.Authentication&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
           - name: "AuthIntegration"
-            filter_extra: "&(FullyQualifiedName~Integration.Authentication)"
+            filter_extra: "&(FullyQualifiedName~Integration.Authentication)&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
           - name: "Catalog"
             filter_extra: "&(FullyQualifiedName~SharedGameCatalog)"
           - name: "GamesAdmin"

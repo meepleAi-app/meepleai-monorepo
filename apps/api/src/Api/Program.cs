@@ -1,6 +1,7 @@
 using DotNetEnv;
 using Api.Configuration; // CHAT-02
 using Api.Extensions;
+using Api.Filters; // #4063: WithUtcDateTimeArguments
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Translation;
@@ -855,7 +856,10 @@ app.MapHealthChecks("/health/seed", new Microsoft.AspNetCore.Diagnostics.HealthC
 });
 
 // API-01: Create v1 API route group and map routing files
-var v1Api = app.MapGroup("/api/v1");
+// #4063: a DateTime argument without offset (`?from=2026-01-01`) is read as UTC for every endpoint
+// of the group. An endpoint mapped on `app` instead does not get it: QueryDateWithoutOffsetIntegrationTests
+// fails if such an endpoint takes a DateTime.
+var v1Api = app.MapGroup("/api/v1").WithUtcDateTimeArguments();
 
 // Authentication
 v1Api.MapAuthEndpoints();

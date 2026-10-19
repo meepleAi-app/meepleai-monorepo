@@ -549,80 +549,6 @@ public class PdfUploadQuotaServiceTests
             _service.GetQuotaInfoAsync(userId, userTier, userRole);
         await act.Should().ThrowAsync<RedisConnectionException>();
     }
-    [Theory]
-    [InlineData("2024-12-29", "2024-W52")] // Sunday Dec 29, 2024 - Week 52 of 2024
-    [InlineData("2024-12-30", "2025-W01")] // Monday Dec 30, 2024 - Week 1 of 2025 (ISO 8601)
-    [InlineData("2024-12-31", "2025-W01")] // Tuesday Dec 31, 2024 - Week 1 of 2025
-    [InlineData("2025-01-01", "2025-W01")] // Wednesday Jan 1, 2025 - Week 1 of 2025
-    [InlineData("2025-01-02", "2025-W01")] // Thursday Jan 2, 2025 - Week 1 of 2025
-    [InlineData("2025-01-03", "2025-W01")] // Friday Jan 3, 2025 - Week 1 of 2025
-    [InlineData("2025-12-29", "2026-W01")] // Monday Dec 29, 2025 - Week 1 of 2026 (ISO 8601)
-    [InlineData("2025-12-30", "2026-W01")] // Tuesday Dec 30, 2025 - Week 1 of 2026
-    [InlineData("2025-12-31", "2026-W01")] // Wednesday Dec 31, 2025 - Week 1 of 2026
-    [InlineData("2026-01-01", "2026-W01")] // Thursday Jan 1, 2026 - Week 1 of 2026
-    [InlineData("2026-01-02", "2026-W01")] // Friday Jan 2, 2026 - Week 1 of 2026
-    [InlineData("2026-01-03", "2026-W01")] // Saturday Jan 3, 2026 - Week 1 of 2026
-    [InlineData("2026-01-04", "2026-W01")] // Sunday Jan 4, 2026 - Week 1 of 2026
-    [InlineData("2027-01-01", "2026-W53")] // Friday Jan 1, 2027 - Week 53 of 2026 (edge case)
-    [InlineData("2027-01-02", "2026-W53")] // Saturday Jan 2, 2027 - Week 53 of 2026
-    [InlineData("2027-01-03", "2026-W53")] // Sunday Jan 3, 2027 - Week 53 of 2026
-    [InlineData("2027-01-04", "2027-W01")] // Monday Jan 4, 2027 - Week 1 of 2027
-    public async Task IncrementUploadCountAsync_ISO8601WeekEdgeCases_GeneratesCorrectWeekKey(
-        string dateString,
-        string expectedWeekKey)
-    {
-        // Arrange
-        var userId = Guid.NewGuid();
-        var testDate = DateTime.Parse(dateString + " 10:00:00", CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.AssumeUniversal);
-        var utcTestDate = DateTime.SpecifyKind(testDate, DateTimeKind.Utc);
-        _timeProvider.SetUtcNow(utcTestDate);
-
-        RedisKey[]? capturedDailyKeys = null;
-        RedisKey[]? capturedWeeklyKeys = null;
-
-        var callCount = 0;
-        _databaseMock.Setup(db => db.ScriptEvaluateAsync(
-                It.IsAny<string>(),
-                It.IsAny<RedisKey[]>(),
-                It.IsAny<RedisValue[]>(),
-                It.IsAny<CommandFlags>()))
-            .Callback<string, RedisKey[]?, RedisValue[]?, CommandFlags>((script, keys, values, flags) =>
-            {
-                if (callCount == 0)
-                {
-                    capturedDailyKeys = keys;
-                }
-                else
-                {
-                    capturedWeeklyKeys = keys;
-                }
-                callCount++;
-            })
-            .ReturnsAsync(RedisResult.Create(new RedisValue("1")));
-
-        // Act
-        await _service.IncrementUploadCountAsync(userId);
-
-        // Assert
-        // Debug: Verify GetDatabase was called
-        _redisMock.Verify(r => r.GetDatabase(It.IsAny<int>(), It.IsAny<object>()), Times.AtLeastOnce(), "GetDatabase should be called");
-
-        // Debug: Check if ScriptEvaluateAsync was called at all
-        callCount.Should().Be(2); // Should be 2 (daily + weekly)
-
-        capturedWeeklyKeys.Should().NotBeNull();
-        capturedWeeklyKeys.Should().ContainSingle();
-        var weeklyKeyString = capturedWeeklyKeys[0].ToString();
-
-        // Debug: Show actual vs expected
-        if (!weeklyKeyString.Contains(expectedWeekKey))
-        {
-            var actualWeek = weeklyKeyString.Split(':').LastOrDefault() ?? "UNKNOWN";
-            throw new Xunit.Sdk.XunitException($"Week key mismatch for {dateString}: expected {expectedWeekKey}, got {actualWeek}");
-        }
-
-        weeklyKeyString.Should().Contain(expectedWeekKey);
-    }
     [Fact]
     public async Task CheckQuotaAsync_DailyReset_CalculatesNextMidnight()
     {
@@ -1112,5 +1038,61 @@ public class PdfUploadQuotaServiceTests
         capturedKey.Should().NotBeNull();
         var keyString = capturedKey!.Value.ToString();
         keyString.Should().Be($"pdf:upload:game:{userId}:{gameId}");
+    }
+
+    // #4541: la chiave settimanale e' la settimana ISO 8601 (lunedi'-domenica, l'anno e' quello
+    // del giovedi'). Le date sono i confini d'anno: una chiave che cambia a meta' settimana azzera
+    // la quota settimanale. Valori scritti a mano e verificati con System.Globalization.ISOWeek.
+    // Il vecchio calcolo dava 2027-W01 il 29-30/12/2026, 2022-W01 il 29/12/2021, 2021-W01 il
+    // 29-30/12/2020. Il test che c'era prima copriva solo le date in cui il vecchio calcolo
+    // indovinava, e solo la scrittura.
+    [Theory]
+    [InlineData("2026-12-27T23:59:59Z", "2026-W52")] // domenica
+    [InlineData("2026-12-28T00:00:00Z", "2026-W53")] // lunedi': comincia la W53
+    [InlineData("2026-12-29T12:00:00Z", "2026-W53")] // martedi'
+    [InlineData("2026-12-30T12:00:00Z", "2026-W53")] // mercoledi'
+    [InlineData("2026-12-31T12:00:00Z", "2026-W53")] // giovedi'
+    [InlineData("2027-01-01T12:00:00Z", "2026-W53")] // venerdi'
+    [InlineData("2027-01-02T12:00:00Z", "2026-W53")] // sabato
+    [InlineData("2027-01-03T23:59:59Z", "2026-W53")] // domenica, ultimo secondo
+    [InlineData("2027-01-04T00:00:00Z", "2027-W01")] // lunedi': comincia la W01
+    [InlineData("2024-12-29T10:00:00Z", "2024-W52")] // domenica
+    [InlineData("2024-12-30T12:00:00Z", "2025-W01")] // lunedi' di dicembre gia' nell'anno dopo
+    [InlineData("2024-12-31T12:00:00Z", "2025-W01")]
+    [InlineData("2025-01-01T10:00:00Z", "2025-W01")]
+    [InlineData("2025-01-03T10:00:00Z", "2025-W01")]
+    [InlineData("2025-12-29T12:00:00Z", "2026-W01")]
+    [InlineData("2025-12-30T12:00:00Z", "2026-W01")]
+    [InlineData("2025-12-31T12:00:00Z", "2026-W01")]
+    [InlineData("2026-01-01T10:00:00Z", "2026-W01")]
+    [InlineData("2026-01-04T10:00:00Z", "2026-W01")] // domenica
+    [InlineData("2029-12-31T12:00:00Z", "2030-W01")]
+    [InlineData("2021-12-29T12:00:00Z", "2021-W52")] // mercoledi', 2021 ha 52 settimane
+    [InlineData("2020-12-29T12:00:00Z", "2020-W53")]
+    [InlineData("2020-12-30T12:00:00Z", "2020-W53")]
+    [InlineData("2025-11-22T10:00:00Z", "2025-W47")] // settimana qualsiasi
+    public async Task WeeklyKey_IsTheIsoWeek_WhenWrittenAndWhenRead(string utcNow, string isoWeek)
+    {
+        var userId = Guid.NewGuid();
+        _timeProvider.SetUtcNow(DateTimeOffset.Parse(utcNow, CultureInfo.InvariantCulture).UtcDateTime);
+        var weeklyKeys = new List<string>();
+        _databaseMock.Setup(db => db.ScriptEvaluateAsync(
+                It.IsAny<string>(), It.IsAny<RedisKey[]>(), It.IsAny<RedisValue[]>(), It.IsAny<CommandFlags>()))
+            .Callback<string, RedisKey[]?, RedisValue[]?, CommandFlags>((_, keys, _, _) =>
+                weeklyKeys.AddRange(keys!.Select(k => k.ToString()).Where(k => k.StartsWith("pdf:upload:weekly:", StringComparison.Ordinal))))
+            .ReturnsAsync(RedisResult.Create(new RedisValue("1")));
+        _databaseMock.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .Callback<RedisKey, CommandFlags>((key, _) =>
+            {
+                if (key.ToString().StartsWith("pdf:upload:weekly:", StringComparison.Ordinal))
+                    weeklyKeys.Add(key.ToString());
+            })
+            .ReturnsAsync(new RedisValue("1"));
+
+        await _service.IncrementUploadCountAsync(userId);
+        await _service.GetQuotaInfoAsync(userId, UserTier.Normal, AuthRole.User);
+
+        var expected = $"pdf:upload:weekly:{userId}:{isoWeek}";
+        weeklyKeys.Should().Equal(expected, expected);
     }
 }

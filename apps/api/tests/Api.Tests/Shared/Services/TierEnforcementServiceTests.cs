@@ -503,6 +503,48 @@ public sealed class TierEnforcementServiceTests : IDisposable
             It.IsAny<CommandFlags>()), Times.Once);
     }
 
+    // #4541: il bucket settimanale e' la settimana ISO 8601 (lunedi'-domenica, l'anno e' quello del
+    // giovedi'). Il vecchio calcolo univa l'anno di calendario al numero di settimana: il venerdi'
+    // 1/1/2027 dava 2027-W53 invece di 2026-W53, e il limite settimanale ripartiva da zero a meta'
+    // settimana. Valori scritti a mano e verificati con System.Globalization.ISOWeek.
+    [Theory]
+    [InlineData("2026-12-28T00:00:00Z", "2026-W53")] // lunedi'
+    [InlineData("2026-12-31T12:00:00Z", "2026-W53")] // giovedi'
+    [InlineData("2027-01-01T12:00:00Z", "2026-W53")] // venerdi': il vecchio calcolo dava 2027-W53
+    [InlineData("2027-01-03T23:59:59Z", "2026-W53")] // domenica, ultimo secondo
+    [InlineData("2027-01-04T00:00:00Z", "2027-W01")] // lunedi'
+    [InlineData("2024-12-30T12:00:00Z", "2025-W01")] // il vecchio calcolo dava 2024-W53
+    [InlineData("2024-12-31T12:00:00Z", "2025-W01")]
+    [InlineData("2025-12-29T12:00:00Z", "2026-W01")]
+    [InlineData("2025-12-31T12:00:00Z", "2026-W01")]
+    [InlineData("2029-12-31T12:00:00Z", "2030-W01")]
+    [InlineData("2021-12-29T12:00:00Z", "2021-W52")]
+    [InlineData("2022-01-01T12:00:00Z", "2021-W52")] // sabato: il vecchio calcolo dava 2022-W52
+    [InlineData("2025-11-22T10:00:00Z", "2025-W47")] // settimana qualsiasi
+    public async Task ProposeToSharedCatalog_WritesAndReadsTheIsoWeekBucket(string utcNow, string isoWeek)
+    {
+        var userId = Guid.NewGuid();
+        await SeedUser(userId, role: "user", tier: "free");
+        await SeedTierDefinition("free", TierLimits.FreeTier);
+        var time = new Microsoft.Extensions.Time.Testing.FakeTimeProvider(
+            DateTimeOffset.Parse(utcNow, System.Globalization.CultureInfo.InvariantCulture));
+        var sut = new TierEnforcementService(_mockRedis.Object, _dbContext, _memoryCache, _mockLogger.Object, time);
+        var read = new List<string>();
+        var written = new List<string>();
+        _mockDb.Setup(d => d.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .Callback<RedisKey, CommandFlags>((key, _) => read.Add(key.ToString()))
+            .ReturnsAsync((RedisValue)"0");
+        _mockDb.Setup(d => d.StringIncrementAsync(It.IsAny<RedisKey>(), It.IsAny<long>(), It.IsAny<CommandFlags>()))
+            .Callback<RedisKey, long, CommandFlags>((key, _, _) => written.Add(key.ToString()))
+            .ReturnsAsync(2);
+
+        await sut.CheckUsageAsync(userId, TierAction.ProposeToSharedCatalog);
+        await sut.RecordUsageAsync(userId, TierAction.ProposeToSharedCatalog);
+
+        read.Should().Equal($"tier:usage:{userId}:ProposeToSharedCatalog:{isoWeek}");
+        written.Should().Equal(read);
+    }
+
     [Fact]
     public async Task RecordUsageAsync_SetsExpiry_OnIncrement()
     {

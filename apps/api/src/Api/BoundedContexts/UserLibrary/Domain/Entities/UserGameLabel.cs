@@ -55,4 +55,17 @@ internal sealed class UserGameLabel : Entity<Guid>
     {
         return new UserGameLabel(Guid.NewGuid(), userLibraryEntryId, labelId);
     }
+
+    /// <summary>
+    /// Ricostituisce un'assegnazione letta dal database, con la sua data (#4505). Solo per il
+    /// repository: <see cref="Create"/> la data a "adesso".
+    /// </summary>
+    internal static UserGameLabel Reconstitute(Guid id, Guid userLibraryEntryId, Guid labelId, DateTime assignedAt)
+        => new UserGameLabel
+        {
+            Id = id,
+            UserLibraryEntryId = userLibraryEntryId,
+            LabelId = labelId,
+            AssignedAt = assignedAt,
+        };
 }

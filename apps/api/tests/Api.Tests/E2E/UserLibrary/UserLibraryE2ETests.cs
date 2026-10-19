@@ -371,7 +371,77 @@ public sealed class UserLibraryE2ETests : E2ETestBase
 
     #endregion
 
+    #region Sessions and Labels Tests (#4505)
+
+    [Fact]
+    public async Task RecordGameSession_IsSavedAndCountedInTheStatus()
+    {
+        // Arrange
+        var email = $"library_session_{Guid.NewGuid():N}@example.com";
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
+        SetSessionCookie(sessionToken);
+        await Client.PostAsJsonAsync($"/api/v1/library/games/{_testGameId}", new { });
+
+        // Act
+        var response = await Client.PostAsJsonAsync(
+            $"/api/v1/library/games/{_testGameId}/sessions",
+            new { playedAt = DateTime.UtcNow.AddHours(-2), durationMinutes = 45, didWin = true, players = "Anna, Bruno" });
+
+        // Assert
+        // #4505: la sessione nuova finiva Modified invece di Added — un UPDATE di una riga che non
+        // esiste, DbUpdateConcurrencyException e 500.
+        response.StatusCode.Should().Be(HttpStatusCode.Created,
+            "registrare una partita deve riuscire: " + await DescribeResponseAsync(response));
+
+        var status = await Client.GetFromJsonAsync<GameStatusWithDataResponse>($"/api/v1/library/games/{_testGameId}/status");
+        status!.AssociatedData!.GameSessionsCount.Should().Be(1, "la partita registrata è nel database");
+    }
+
+    [Fact]
+    public async Task AddAndRemoveLabel_AreSavedAndReadBack()
+    {
+        // Arrange
+        var email = $"library_label_{Guid.NewGuid():N}@example.com";
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
+        SetSessionCookie(sessionToken);
+        await Client.PostAsJsonAsync($"/api/v1/library/games/{_testGameId}", new { });
+
+        var created = await Client.PostAsJsonAsync("/api/v1/library/labels", new { name = "Da rigiocare", color = "#3366ff" });
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await DescribeResponseAsync(created));
+        var label = await created.Content.ReadFromJsonAsync<LabelResponse>();
+
+        // Act + Assert: aggiunta. #4505: la rotta rispondeva 200 con l'etichetta senza salvarla.
+        var added = await Client.PostAsync($"/api/v1/library/games/{_testGameId}/labels/{label!.Id}", content: null);
+        added.StatusCode.Should().Be(HttpStatusCode.OK, await DescribeResponseAsync(added));
+        (await GetGameLabelIdsAsync()).Should().BeEquivalentTo([label.Id], "l'etichetta aggiunta si rilegge");
+
+        var status = await Client.GetFromJsonAsync<GameStatusWithDataResponse>($"/api/v1/library/games/{_testGameId}/status");
+        status!.AssociatedData!.LabelsCount.Should().Be(1, "lo stato in libreria conta le etichette assegnate");
+
+        var addedAgain = await Client.PostAsync($"/api/v1/library/games/{_testGameId}/labels/{label.Id}", content: null);
+        addedAgain.StatusCode.Should().Be(HttpStatusCode.Conflict, await DescribeResponseAsync(addedAgain));
+
+        // Act + Assert: rimozione. #4505: la lettura non caricava le etichette, quindi 404.
+        var removed = await Client.DeleteAsync($"/api/v1/library/games/{_testGameId}/labels/{label.Id}");
+        removed.StatusCode.Should().Be(HttpStatusCode.NoContent, await DescribeResponseAsync(removed));
+        (await GetGameLabelIdsAsync()).Should().BeEmpty("l'etichetta tolta non si rilegge più");
+    }
+
+    private async Task<List<Guid>> GetGameLabelIdsAsync()
+    {
+        var labels = await Client.GetFromJsonAsync<List<LabelResponse>>($"/api/v1/library/games/{_testGameId}/labels");
+        return labels!.Select(l => l.Id).ToList();
+    }
+
+    #endregion
+
     #region Response DTOs
+
+    private sealed record LabelResponse(Guid Id, string Name, string Color);
+
+    private sealed record GameStatusWithDataResponse(bool InLibrary, AssociatedDataResponse? AssociatedData);
+
+    private sealed record AssociatedDataResponse(int GameSessionsCount, int ChecklistItemsCount, int LabelsCount);
 
     private sealed record LibraryResponse(
         List<LibraryItemDto> Items,

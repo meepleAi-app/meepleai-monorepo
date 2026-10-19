@@ -11,7 +11,9 @@ namespace Api.BoundedContexts.UserLibrary.Domain.Repositories;
 internal interface IUserLibraryRepository : IRepository<UserLibraryEntry, Guid>
 {
     /// <summary>
-    /// Gets a library entry by user and game ID.
+    /// Gets a library entry by user and game ID, with its assigned labels.
+    /// Sessions and checklist are not loaded: <c>UpdateAsync</c>
+    /// leaves the rows of a collection the read did not load untouched (#4505).
     /// </summary>
     /// <param name="userId">The user ID</param>
     /// <param name="gameId">The game ID</param>
@@ -94,7 +96,7 @@ internal interface IUserLibraryRepository : IRepository<UserLibraryEntry, Guid>
 
     /// <summary>
     /// Gets a user's game with full statistics and gameplay data.
-    /// Includes Sessions and Checklist navigation properties.
+    /// Includes Sessions, Checklist and Labels.
     /// </summary>
     /// <param name="userId">The user ID</param>
     /// <param name="gameId">The game ID</param>

@@ -23,7 +23,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExt
 /// <list type="number">
 /// <item><description>Verify <c>SharedGame</c> exists → <see cref="NotFoundException"/> otherwise.</description></item>
 /// <item><description>Verify the PDF is linked to the game via <c>shared_game_documents</c> → <see cref="NotFoundException"/> otherwise.</description></item>
-/// <item><description>T7 idempotency: if a non-<c>Rejected</c> analysis already exists for (SharedGameId, PdfDocumentId, PromptVersion), short-circuit and return its state with <c>IsExistingAnalysis=true</c>.</description></item>
+/// <item><description>T7 idempotency: if a non-<c>Rejected</c> analysis already exists for (SharedGameId, PdfDocumentId, PromptVersion), short-circuit and return its state with <c>IsExistingAnalysis=true</c> — or, with <c>ForceRegenerate</c>, throw <see cref="ConflictException"/> (HTTP 409, #4144): the unique index admits no second row for the tuple.</description></item>
 /// <item><description>Project cost via <see cref="IAnalysisCostEstimator"/>. If the projection exceeds the submitted cap and no override is provided, throw <see cref="ConflictException"/> (HTTP 409).</description></item>
 /// <item><description>Create the aggregate in <c>Draft</c>, optionally applying <c>OverrideCostCap</c> for auditable cap raises (B3=A), and persist via <c>IUnitOfWork.SaveChangesAsync</c>.</description></item>
 /// </list>
@@ -147,34 +147,38 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
                 resourceId: $"{request.SharedGameId}/{request.PdfDocumentId}");
         }
 
-        // 3. T7 idempotency — return the existing non-rejected analysis unchanged. Skipped when
-        //    ForceRegenerate is set (#539), so a re-run with a different model creates a new row
-        //    instead of short-circuiting to the prior analysis for the same (game, pdf, prompt).
-        if (!request.ForceRegenerate)
+        // 3. T7 idempotency — one non-Rejected analysis per (game, pdf, prompt): the filtered unique
+        //    index ux_mechanic_analyses_shared_game_pdf_prompt (status <> Rejected) admits no second
+        //    row. Without ForceRegenerate the existing analysis is returned unchanged. With it (the
+        //    "Regenerate" action, #539) there is nothing to return and nothing that can be inserted:
+        //    409 telling the admin what to do (#4144 — it used to reach the INSERT and fail 23505 → 500).
+        var existing = await _analysisRepository
+            .FindByPromptVersionAsync(request.SharedGameId, request.PdfDocumentId, promptVersion, cancellationToken)
+            .ConfigureAwait(false);
+        if (existing is not null)
         {
-            var existing = await _analysisRepository
-                .FindByPromptVersionAsync(request.SharedGameId, request.PdfDocumentId, promptVersion, cancellationToken)
-                .ConfigureAwait(false);
-            if (existing is not null)
+            if (request.ForceRegenerate)
             {
-                _logger.LogInformation(
-                    "Mechanic analysis idempotent short-circuit: existing {ExistingId} for (SharedGame={SharedGame}, Pdf={Pdf}, PromptVersion={Version}, Status={Status}).",
-                    existing.Id,
-                    request.SharedGameId,
-                    request.PdfDocumentId,
-                    promptVersion,
-                    existing.Status);
-
-                return BuildResponse(
-                    existing.Id,
-                    existing.Status,
-                    promptVersion,
-                    effectiveCostCap: existing.CostCapUsd,
-                    estimatedCost: 0m,
-                    projectedTotalTokens: 0,
-                    costCapOverrideApplied: existing.CostCapOverrideBy is not null,
-                    isExisting: true);
+                throw RegenerateBlocked(existing.Id, existing.Status, promptVersion);
             }
+
+            _logger.LogInformation(
+                "Mechanic analysis idempotent short-circuit: existing {ExistingId} for (SharedGame={SharedGame}, Pdf={Pdf}, PromptVersion={Version}, Status={Status}).",
+                existing.Id,
+                request.SharedGameId,
+                request.PdfDocumentId,
+                promptVersion,
+                existing.Status);
+
+            return BuildResponse(
+                existing.Id,
+                existing.Status,
+                promptVersion,
+                effectiveCostCap: existing.CostCapUsd,
+                estimatedCost: 0m,
+                projectedTotalTokens: 0,
+                costCapOverrideApplied: existing.CostCapOverrideBy is not null,
+                isExisting: true);
         }
 
         // 4. Load retrieval context. M1.2 ships the same bundled rulebook content to every
@@ -252,16 +256,23 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
         {
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
-        catch (DbUpdateConcurrencyException ex)
+        catch (DbUpdateException ex) when (ex is DbUpdateConcurrencyException || IsPromptSlotTaken(ex))
         {
-            // Extremely narrow window: concurrent admin submitted the same (game, pdf, version).
-            // Re-query and short-circuit to the winner.
+            // Narrow window: a concurrent admin request inserted the same (game, pdf, version) after
+            // step 3. Postgres reports it as 23505 on the unique index — a plain DbUpdateException, NOT
+            // a DbUpdateConcurrencyException, so the original catch never saw it (#4144). Re-query and
+            // short-circuit to the winner, exactly as if this request had arrived a moment later.
             var winner = await _analysisRepository
                 .FindByPromptVersionAsync(request.SharedGameId, request.PdfDocumentId, promptVersion, cancellationToken)
                 .ConfigureAwait(false);
 
             if (winner is not null)
             {
+                if (request.ForceRegenerate)
+                {
+                    throw RegenerateBlocked(winner.Id, winner.Status, promptVersion, ex);
+                }
+
                 _logger.LogInformation(
                     ex,
                     "Mechanic analysis create lost race; returning concurrent winner {WinnerId}.", winner.Id);
@@ -352,6 +363,56 @@ internal sealed class GenerateMechanicAnalysisCommandHandler
         }
 
         return builder.ToString();
+    }
+
+    /// <summary>
+    /// Name of the filtered unique index on (shared_game_id, pdf_document_id, prompt_version) with
+    /// <c>status &lt;&gt; 3</c> (see <c>MechanicAnalysisEntityConfiguration</c>). Postgres reports it as
+    /// the constraint name of a 23505.
+    /// </summary>
+    internal const string PromptSlotIndexName = "ux_mechanic_analyses_shared_game_pdf_prompt";
+
+    // Only THIS index: any other unique violation stays a 500, because it would be a different defect.
+    private static bool IsPromptSlotTaken(DbUpdateException ex) =>
+        ex.InnerException is Npgsql.PostgresException pg
+        && string.Equals(pg.SqlState, Npgsql.PostgresErrorCodes.UniqueViolation, StringComparison.Ordinal)
+        && string.Equals(pg.ConstraintName, PromptSlotIndexName, StringComparison.Ordinal);
+
+    /// <summary>
+    /// #4144: the 409 for "Regenerate" (<see cref="GenerateMechanicAnalysisCommand.ForceRegenerate"/>) when
+    /// a non-Rejected analysis already holds the (game, pdf, prompt) slot. The message says what to do,
+    /// which depends on where the existing analysis is in its lifecycle: only InReview and
+    /// PartiallyExtracted can be rejected by an admin; a Draft is still running; a Published one is final.
+    /// </summary>
+    private static ConflictException RegenerateBlocked(
+        Guid existingId,
+        MechanicAnalysisStatus status,
+        string promptVersion,
+        Exception? innerException = null)
+    {
+        var reason = status switch
+        {
+            MechanicAnalysisStatus.Draft =>
+                $"Un'analisi per questo PDF con il prompt {promptVersion} è ancora in generazione: "
+                + "aspetta che finisca e, se non risulta già rifiutata, rifiutala prima di rigenerare.",
+            MechanicAnalysisStatus.InReview =>
+                $"Esiste già un'analisi in revisione per questo PDF con il prompt {promptVersion}: "
+                + "rifiutala prima di rigenerare.",
+            MechanicAnalysisStatus.PartiallyExtracted =>
+                $"Esiste un'analisi parzialmente estratta per questo PDF con il prompt {promptVersion}: "
+                + "rifiutala prima di rigenerare.",
+            MechanicAnalysisStatus.Published =>
+                $"Esiste già un'analisi pubblicata per questo PDF con il prompt {promptVersion}: "
+                + "con lo stesso prompt non se ne può generare un'altra.",
+            _ =>
+                $"Esiste già un'analisi per questo PDF con il prompt {promptVersion} (stato {status}): "
+                + "non se ne può generare un'altra.",
+        };
+        var message = $"{reason} Analisi esistente: {existingId}.";
+
+        return innerException is null
+            ? new ConflictException(message)
+            : new ConflictException(message, innerException);
     }
 
     private static MechanicAnalysisGenerationResponseDto BuildResponse(

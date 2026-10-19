@@ -165,7 +165,9 @@ internal static class AdminMechanicAnalysesEndpoints
         .WithSummary("Enqueue AI mechanic analysis pipeline (async)")
         .WithDescription(
             "Creates a Draft MechanicAnalysis aggregate and schedules the six-section LLM pipeline " +
-            "to run in the background. Returns 202 Accepted with a StatusUrl for polling.");
+            "to run in the background. Returns 202 Accepted with a StatusUrl for polling. With " +
+            "forceRegenerate, 409 when a non-rejected analysis for the current prompt already exists " +
+            "for the same game and PDF (reject it first).");
 
         // POST /api/v1/admin/mechanic-analyses/requeue/{sharedGameId}
         // Re-runs the extraction for one game with the current prompt version, on the PDF of its active card.
@@ -473,6 +475,7 @@ internal sealed record GenerateMechanicAnalysisRequest(
     string? Model = null,
     string? Provider = null,
     // #539: force a fresh run (skip the idempotency short-circuit) — used by the "Regenerate" action.
+    // #4144: 409 when a non-rejected analysis for the current prompt already holds the slot.
     bool ForceRegenerate = false);
 
 /// <summary>

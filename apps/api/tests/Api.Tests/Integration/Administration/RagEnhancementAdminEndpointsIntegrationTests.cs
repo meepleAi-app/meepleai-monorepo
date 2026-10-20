@@ -18,8 +18,14 @@ namespace Api.Tests.Integration.Administration;
 /// <summary>
 /// Fixture della classe: host e database costruiti una volta sola (vedi <see cref="IntegrationHostFixture"/>).
 /// <para>
-/// Condividere il database è sicuro qui perché ogni test, prima di cominciare, azzera le righe (e la cache)
-/// delle funzioni che legge o scrive: <c>ResetAsync</c>.
+/// Condividere il database è sicuro qui perché ogni test, prima di cominciare, cancella le righe delle
+/// funzioni che legge o scrive: <c>ResetAsync</c>.
+/// </para>
+/// <para>
+/// Nessuna cache sta fra il servizio dei flag e il database: l'host di <see cref="IntegrationHostFixture"/>
+/// registra <c>TestHybridCacheService</c>, che esegue sempre la lettura e per cui <c>RemoveAsync</c> non fa niente.
+/// Questi test quindi non provano l'invalidazione della cache dopo la scrittura; la copre
+/// <c>FeatureFlagServiceCacheInvalidationTests</c>, che oggi vale per il solo percorso per tier.
 /// </para>
 /// </summary>
 public sealed class RagEnhancementAdminHostFixture(SharedTestcontainersFixture shared)
@@ -81,7 +87,7 @@ public sealed class RagEnhancementAdminEndpointsIntegrationTests
         row.CreatedByUserId.Should().Be(adminId,
             "the row is created by the admin who sent the POST. Before #4594 the endpoint passed no id, " +
             "the author was Guid.Empty and the request was rejected with 422");
-        (await IsEnabledAsync(RaptorRetrieval)).Should().BeTrue("the service reads the new state, not the cached \"no row\"");
+        (await IsEnabledAsync(RaptorRetrieval)).Should().BeTrue("the service reads the state the toggle just wrote");
     }
 
     [Fact]
@@ -145,7 +151,7 @@ public sealed class RagEnhancementAdminEndpointsIntegrationTests
         var row = (await RowsAsync(TierKey(AdaptiveRouting, "premium"))).Should().ContainSingle().Subject;
         row.Value.Should().Be("false");
         row.CreatedByUserId.Should().Be(adminId,
-            "this is the 422 of #4580: the tier toggle on a key with no row failed with \"CreatedByUserId is required\"");
+            "this is the 422 of #4594: the tier toggle on a key with no row failed with \"CreatedByUserId is required\"");
         (await IsEnabledForTierAsync(AdaptiveRouting, "premium")).Should().BeFalse();
         (await IsEnabledForTierAsync(AdaptiveRouting, "free")).Should().BeTrue("only the tier that was toggled changes");
         (await RowsAsync(TierKey(AdaptiveRouting, "free"))).Should().BeEmpty("no row is written for the other tiers");
@@ -232,7 +238,7 @@ public sealed class RagEnhancementAdminEndpointsIntegrationTests
 
         response.Status.Should().Be(HttpStatusCode.BadRequest, $"Body: {response.Body}");
         response.Body.Should().Contain("Unknown enhancement key");
-        (await RowsWithPrefixAsync(unknownKey)).Should().BeEmpty("a key outside the five RAG enhancements is never written");
+        (await RowsWithPrefixAsync(unknownKey)).Should().BeEmpty("a key outside FeatureFlagConstants.RagEnhancements is never written");
     }
 
     [Theory]
@@ -318,7 +324,7 @@ public sealed class RagEnhancementAdminEndpointsIntegrationTests
         await ResetAsync(FeatureFlagConstants.RagAuxModelKey);
         var (adminId, token) = await CreateSessionAsync(TestSessionHelper.CreateAdminSessionAsync);
 
-        // Nessuna sessione = tier Free. Senza righe ogni funzione è accesa per il tier: se ne spengono tre.
+        // Nessuna sessione = tier Free. Senza righe ogni funzione è accesa per il tier: si spengono AdaptiveRouting, RaptorRetrieval e GraphTraversal.
         foreach (var key in new[] { AdaptiveRouting, RaptorRetrieval, GraphTraversal })
         {
             (await ToggleAsync(TierPath(key, "free"), token)).Should().BeFalse("setup: on becomes off for the free tier");
@@ -363,8 +369,8 @@ public sealed class RagEnhancementAdminEndpointsIntegrationTests
     private static string TierKey(string key, string tier) => $"{key}.Tier.{tier}";
 
     /// <summary>
-    /// Azzera la funzione: cancella la riga globale e quelle per tier, e svuota la cache di lettura. Il database
-    /// e la cache sono dell'host, che vive quanto la classe: senza questo un test vedrebbe le righe di un altro.
+    /// Azzera la funzione: cancella la riga globale e quelle per tier. Il database è dell'host, che vive quanto
+    /// la classe: senza questo un test vedrebbe le righe di un altro. Non c'è una cache da svuotare (vedi la fixture).
     /// </summary>
     private async Task ResetAsync(string featureKey)
     {
@@ -373,13 +379,6 @@ public sealed class RagEnhancementAdminEndpointsIntegrationTests
         await db.SystemConfigurations
             .Where(c => c.Key == featureKey || c.Key.StartsWith(featureKey + ".Tier."))
             .ExecuteDeleteAsync();
-
-        var config = scope.ServiceProvider.GetRequiredService<IConfigurationService>();
-        await config.InvalidateAsync(featureKey);
-        foreach (var tier in UserTier.All)
-        {
-            await config.InvalidateAsync(TierKey(featureKey, tier));
-        }
     }
 
     /// <summary>Spedisce il POST, richiede 200 e restituisce <c>isNowEnabled</c> della risposta.</summary>
@@ -404,7 +403,7 @@ public sealed class RagEnhancementAdminEndpointsIntegrationTests
         return (response.StatusCode, await response.Content.ReadAsStringAsync());
     }
 
-    /// <summary>Accende un flag globale dal servizio, con l'id di un admin vero come autore (per chiavi fuori dall'elenco delle cinque).</summary>
+    /// <summary>Accende un flag globale dal servizio, con l'id di un admin vero come autore (per chiavi fuori da <c>FeatureFlagConstants.RagEnhancements</c>).</summary>
     private async Task EnableGlobalAsync(string key, Guid adminId)
     {
         using var scope = _factory.Services.CreateScope();
@@ -476,7 +475,5 @@ public sealed class RagEnhancementAdminEndpointsIntegrationTests
             CreatedByUserId = createdBy,
         });
         await db.SaveChangesAsync();
-
-        await scope.ServiceProvider.GetRequiredService<IConfigurationService>().InvalidateAsync(key);
     }
 }

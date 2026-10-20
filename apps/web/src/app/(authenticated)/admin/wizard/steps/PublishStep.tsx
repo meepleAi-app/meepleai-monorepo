@@ -109,9 +109,7 @@ export function PublishStep({
 
       {/* Game Summary */}
       <Card className="p-4 bg-muted space-y-3">
-        <h3 className="text-sm font-semibold text-foreground">
-          Riepilogo Gioco
-        </h3>
+        <h3 className="text-sm font-semibold text-foreground">Riepilogo Gioco</h3>
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <span className="text-muted-foreground">Nome Gioco:</span>{' '}
@@ -137,7 +135,10 @@ export function PublishStep({
         <Label htmlFor="approval-status" className="text-base font-medium">
           Stato di Approvazione *
         </Label>
-        <Select value={approvalStatus} onValueChange={(value: string) => setApprovalStatus(value as ApprovalStatus)}>
+        <Select
+          value={approvalStatus}
+          onValueChange={(value: string) => setApprovalStatus(value as ApprovalStatus)}
+        >
           <SelectTrigger id="approval-status" className="w-full">
             <SelectValue placeholder="Seleziona stato..." />
           </SelectTrigger>
@@ -169,8 +170,8 @@ export function PublishStep({
                 Attenzione: Pubblicazione Immediata
               </h4>
               <p className="text-sm text-amber-800 dark:text-amber-300">
-                Selezionando "Pubblicato", il gioco sara' immediatamente visibile nel catalogo pubblico.
-                Assicurati che il contenuto sia corretto e completo.
+                Selezionando "Pubblicato", il gioco sara' immediatamente visibile nel catalogo
+                pubblico. Assicurati che il contenuto sia corretto e completo.
               </p>
             </div>
           </div>
@@ -185,7 +186,7 @@ export function PublishStep({
         <Button
           onClick={() => setShowConfirmModal(true)}
           disabled={publishing}
-          className="min-w-40 bg-green-600 hover:bg-green-700"
+          className="min-w-40 bg-green-700 hover:bg-green-800 text-white"
         >
           {publishing ? (
             <>

@@ -88,7 +88,7 @@ export function AutoTestRunner({ onComplete, disabled }: AutoTestRunnerProps) {
         <Button
           onClick={runTests}
           disabled={disabled || isRunning}
-          className="bg-amber-500 hover:bg-amber-600 text-white"
+          className="bg-amber-700 hover:bg-amber-800 text-white"
           size="sm"
           data-testid="run-auto-test-button"
         >

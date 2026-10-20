@@ -330,7 +330,7 @@ export function GuestJoinView({ token }: GuestJoinViewProps) {
 
             <Button
               type="submit"
-              className="w-full bg-amber-500 hover:bg-amber-600 text-white font-quicksand font-semibold"
+              className="w-full bg-amber-700 hover:bg-amber-800 text-white font-quicksand font-semibold"
               disabled={isJoining || !inputName.trim()}
             >
               {isJoining ? (

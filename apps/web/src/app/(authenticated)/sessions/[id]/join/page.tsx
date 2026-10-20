@@ -142,7 +142,7 @@ export default function JoinSessionPage({ params }: JoinPageProps) {
 
             <Button
               type="submit"
-              className="w-full gap-2 bg-amber-600 hover:bg-amber-700 font-nunito"
+              className="w-full gap-2 bg-amber-700 hover:bg-amber-800 text-white font-nunito"
               disabled={!displayName.trim() || isJoining}
               data-testid="join-session-button"
             >

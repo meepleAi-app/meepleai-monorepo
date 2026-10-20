@@ -7,6 +7,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import { backgroundClasses } from '@/test-utils/background-classes';
+
 import { ResumePhotoReview, type ResumePhotoReviewProps } from '../ResumePhotoReview';
 import type { SessionAttachmentDto } from '../PhotoUploadModal';
 
@@ -187,6 +189,20 @@ describe('ResumePhotoReview', () => {
     render(<ResumePhotoReview {...defaultProps} isHost={true} />);
     expect(screen.getByTestId('resume-button')).toBeInTheDocument();
     expect(screen.getByText('Resume Game')).toBeInTheDocument();
+  });
+
+  it('Resume Game: verde -700 col testo bianco, in ogni tema (#4548)', () => {
+    render(
+      <div data-theme="dark" className="dark">
+        <ResumePhotoReview {...defaultProps} isHost={true} />
+      </div>
+    );
+
+    // `bg-emerald-600` col bianco era a 3,67:1 in entrambi i temi; il chiudi del lightbox, nello
+    // stesso componente, e' stato corretto in #4548. Stessa regola: tinta -700, hover -800.
+    const resume = screen.getByTestId('resume-button');
+    expect(backgroundClasses(resume)).toEqual(['bg-emerald-700', 'hover:bg-emerald-800']);
+    expect(resume).toHaveClass('text-white');
   });
 
   it('hides Resume Game button for non-host', () => {

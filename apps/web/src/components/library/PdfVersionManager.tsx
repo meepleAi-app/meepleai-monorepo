@@ -241,7 +241,7 @@ export function PdfVersionManager({ gameId, gameName }: PdfVersionManagerProps) 
           <Button
             size="sm"
             onClick={() => setShowUploadForm(true)}
-            className="bg-teal-600 hover:bg-teal-700"
+            className="bg-teal-700 hover:bg-teal-800 text-white"
             data-testid="add-version-button"
           >
             <Plus className="mr-1.5 h-4 w-4" />
@@ -386,7 +386,7 @@ export function PdfVersionManager({ gameId, gameName }: PdfVersionManagerProps) 
                           'h-7 rounded-full px-3 text-xs font-medium transition-colors',
                           pdf.isActiveForRag
                             ? 'bg-teal-500/20 text-teal-300 hover:bg-teal-500/30'
-                            : 'bg-card text-muted-foreground hover:bg-slate-600'
+                            : 'bg-card text-muted-foreground hover:bg-muted hover:text-foreground'
                         )}
                         aria-label={pdf.isActiveForRag ? 'Attivo' : 'Inattivo'}
                         data-testid={`rag-toggle-${pdf.id}`}
@@ -425,7 +425,7 @@ export function PdfVersionManager({ gameId, gameName }: PdfVersionManagerProps) 
             </Button>
             <Button
               onClick={() => void handleReplace()}
-              className="bg-amber-600 hover:bg-amber-700 text-white"
+              className="bg-amber-700 hover:bg-amber-800 text-white"
               disabled={toggleRagMutation.isPending}
               data-testid="replace-button"
             >

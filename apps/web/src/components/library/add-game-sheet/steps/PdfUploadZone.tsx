@@ -236,7 +236,7 @@ export function PdfUploadZone({
             void handleUpload();
           }}
           disabled={uploading || disabled}
-          className="w-full bg-teal-600 hover:bg-teal-700"
+          className="w-full bg-teal-700 hover:bg-teal-800 text-white"
           data-testid="pdf-upload-button"
         >
           <Upload className="mr-1.5 h-4 w-4" />

@@ -303,7 +303,7 @@ export function SandboxChat({ selectedMessageId, onSelectMessage }: SandboxChatP
           <Button
             data-testid="send-button"
             size="icon"
-            className="shrink-0 bg-amber-500 hover:bg-amber-600 text-white"
+            className="shrink-0 bg-amber-700 hover:bg-amber-800 text-white"
             onClick={handleSend}
             disabled={isDisabled || !input.trim() || streamState.isStreaming}
           >

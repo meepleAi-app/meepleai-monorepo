@@ -60,7 +60,7 @@ export function EmergencyBanner() {
           setDismissed(true);
           setLastDismissedCount(count);
         }}
-        className="h-6 w-6 p-0 text-white hover:text-red-200 hover:bg-red-700"
+        className="h-6 w-6 p-0 text-white hover:text-red-200 hover:bg-red-800"
         aria-label="Dismiss banner"
       >
         <X className="h-4 w-4" />

@@ -36,13 +36,7 @@ describe('ConfirmDialog', () => {
   });
 
   it('should render custom button text', () => {
-    render(
-      <ConfirmDialog
-        {...defaultProps}
-        confirmText="Delete"
-        cancelText="Keep"
-      />
-    );
+    render(<ConfirmDialog {...defaultProps} confirmText="Delete" cancelText="Keep" />);
 
     expect(screen.getByRole('button', { name: /delete/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /keep/i })).toBeInTheDocument();
@@ -123,12 +117,12 @@ describe('ConfirmDialog', () => {
     const { rerender } = render(<ConfirmDialog {...defaultProps} variant="default" />);
 
     const confirmButton = screen.getByRole('button', { name: /confirm/i });
-    expect(confirmButton).toHaveClass('bg-primary'); // Default variant
+    expect(confirmButton).toHaveClass('bg-primary/(--btn-fill)'); // Default variant
 
     rerender(<ConfirmDialog {...defaultProps} variant="destructive" />);
 
     const destructiveConfirmButton = screen.getByRole('button', { name: /confirm/i });
-    expect(destructiveConfirmButton).toHaveClass('bg-destructive'); // Destructive variant
+    expect(destructiveConfirmButton).toHaveClass('bg-destructive/(--btn-fill)'); // Destructive variant
   });
 
   it('should be accessible with proper ARIA attributes', () => {

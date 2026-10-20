@@ -179,7 +179,7 @@ export function ConflictResolutionModal({
           <Button
             onClick={() => onResolve('local')}
             disabled={isResolving}
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             {isResolving ? 'Salvando...' : 'Mantieni Le Mie Modifiche'}
           </Button>

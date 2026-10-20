@@ -17,6 +17,7 @@ import { render, screen, waitFor, act, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { usePipelineBuilderStore } from '@/stores/pipelineBuilderStore';
+import { backgroundClasses } from '@/test-utils/background-classes';
 
 import { PipelineToolbar } from '../PipelineToolbar';
 
@@ -232,5 +233,34 @@ describe('PipelineToolbar', () => {
     expect(screen.getByText('Badge Test Pipeline')).toBeInTheDocument();
     expect(screen.getByText('0 nodes')).toBeInTheDocument();
     expect(screen.getByText('0 edges')).toBeInTheDocument();
+  });
+});
+
+/**
+ * #4548 — un pulsante di vista attivo usa la variante `secondary` con `bg-muted`. Prima, in tema
+ * scuro, vinceva `dark:bg-secondary/90` del Button; ora si vede `bg-muted`, e il testo deve
+ * essere `text-foreground`: quello della variante (bianco in chiaro, quasi nero in scuro) su
+ * `muted` scendeva a 1,25:1 e 1,38:1.
+ */
+describe('PipelineToolbar active view button (#4548)', () => {
+  beforeEach(() => {
+    resetStore();
+  });
+
+  it('ha solo il fondo muted, col testo foreground', () => {
+    render(
+      <div data-theme="dark" className="dark">
+        <PipelineToolbar />
+      </div>
+    );
+
+    // showGrid e' true all'avvio: il pulsante della griglia e' attivo.
+    const gridButton = screen
+      .getAllByRole('button')
+      .find(btn => btn.querySelector('svg[class*="grid"]'));
+    expect(gridButton).toBeDefined();
+    expect(backgroundClasses(gridButton!)).toEqual(['bg-muted']);
+    expect(gridButton).toHaveClass('text-foreground');
+    expect(gridButton).not.toHaveClass('text-secondary-foreground');
   });
 });

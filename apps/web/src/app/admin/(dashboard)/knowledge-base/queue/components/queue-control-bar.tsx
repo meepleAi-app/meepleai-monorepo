@@ -73,7 +73,7 @@ export function QueueControlBar() {
         size="sm"
         onClick={() => togglePauseMutation.mutate()}
         disabled={togglePauseMutation.isPending}
-        className={isPaused ? 'bg-amber-600 hover:bg-amber-700 text-white' : ''}
+        className={isPaused ? 'bg-amber-700 hover:bg-amber-800 text-white' : ''}
       >
         {isPaused ? (
           <>

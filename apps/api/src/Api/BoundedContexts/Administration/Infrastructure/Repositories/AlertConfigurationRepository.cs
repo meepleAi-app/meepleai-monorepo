@@ -66,7 +66,21 @@ internal class AlertConfigurationRepository : RepositoryBase, IAlertConfiguratio
         if (entity != null) { DbContext.AlertConfigurations.Remove(entity); await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false); }
     }
 
-    private static AlertConfiguration MapToDomain(AlertConfigurationEntity e) => AlertConfiguration.Create(e.ConfigKey, e.ConfigValue, ConfigCategoryExtensions.FromString(e.Category), e.UpdatedBy, e.Description);
+    /// <remarks>
+    /// Passa da <see cref="AlertConfiguration.Reconstitute"/>, non dalla factory di creazione: quella genera un id
+    /// nuovo, data ad "adesso" e azzera <c>IsEncrypted</c>, quindi <see cref="UpdateAsync"/> non trovava più la
+    /// riga (#4552). Ogni colonna scritta da <see cref="MapToEntity"/> torna qui (vedi
+    /// <c>AlertConfigurationRepositoryTests</c>).
+    /// </remarks>
+    private static AlertConfiguration MapToDomain(AlertConfigurationEntity e) => AlertConfiguration.Reconstitute(
+        id: e.Id,
+        configKey: e.ConfigKey,
+        configValue: e.ConfigValue,
+        category: ConfigCategoryExtensions.FromString(e.Category),
+        isEncrypted: e.IsEncrypted,
+        description: e.Description,
+        updatedAt: e.UpdatedAt,
+        updatedBy: e.UpdatedBy);
 
     private static AlertConfigurationEntity MapToEntity(AlertConfiguration c) => new() { Id = c.Id, ConfigKey = c.ConfigKey, ConfigValue = c.ConfigValue, Category = c.Category.ToDisplayString(), IsEncrypted = c.IsEncrypted, Description = c.Description, UpdatedAt = c.UpdatedAt, UpdatedBy = c.UpdatedBy };
 }

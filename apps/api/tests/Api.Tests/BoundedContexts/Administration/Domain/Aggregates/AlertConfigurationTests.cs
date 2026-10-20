@@ -267,4 +267,45 @@ public sealed class AlertConfigurationTests
     }
 
     #endregion
+
+    #region Reconstitute Tests (#4552)
+
+    // Create è la factory di una configurazione nuova: id nuovo, data "adesso", non cifrata. Una riga salvata ha
+    // già tutti e tre: ricostruirla con Create li perdeva.
+
+    [Fact]
+    public void Reconstitute_KeepsEveryStoredValue()
+    {
+        var id = Guid.NewGuid();
+        var updatedAt = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+
+        var config = AlertConfiguration.Reconstitute(
+            id, "secrets.api_key", "valore-cifrato", ConfigCategory.PagerDuty,
+            isEncrypted: true, "descrizione", updatedAt, "autore");
+
+        config.Id.Should().Be(id);
+        config.ConfigKey.Should().Be("secrets.api_key");
+        config.ConfigValue.Should().Be("valore-cifrato");
+        config.Category.Should().Be(ConfigCategory.PagerDuty);
+        config.IsEncrypted.Should().BeTrue();
+        config.Description.Should().Be("descrizione");
+        config.UpdatedAt.Should().Be(updatedAt);
+        config.UpdatedBy.Should().Be("autore");
+    }
+
+    [Fact]
+    public void Reconstitute_ThenDecrypt_ClearsTheStoredFlag()
+    {
+        // La riga cifrata torna cifrata, e i metodi di dominio partono dallo stato salvato.
+        var config = AlertConfiguration.Reconstitute(
+            Guid.NewGuid(), "secrets.api_key", "valore-cifrato", ConfigCategory.Global,
+            isEncrypted: true, description: null, DateTime.UtcNow.AddDays(-3), "autore");
+
+        config.Decrypt("valore-in-chiaro", "admin");
+
+        config.IsEncrypted.Should().BeFalse();
+        config.ConfigValue.Should().Be("valore-in-chiaro");
+    }
+
+    #endregion
 }

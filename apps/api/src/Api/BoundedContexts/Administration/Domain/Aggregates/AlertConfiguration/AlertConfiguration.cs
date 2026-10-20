@@ -38,6 +38,31 @@ internal class AlertConfiguration
         return config;
     }
 
+    /// <summary>
+    /// Ricostituisce una configurazione letta dal database, così com'è (#4552).
+    /// </summary>
+    /// <remarks>
+    /// Solo per il repository. <see cref="Create"/> è la factory di una configurazione nuova: genera l'id, la data
+    /// ad "adesso" e la dichiara non cifrata. Usata per ricostruire una riga, dava a ogni lettura un id che nel
+    /// database non esiste: la modifica di una chiave esistente cercava la riga per quell'id e falliva sempre, e
+    /// la lettura riportava data e <see cref="IsEncrypted"/> sbagliati. Nessuna validazione: la riga è già stata
+    /// scritta, e un valore salvato non diventa illeggibile perché la regola di una configurazione nuova cambia.
+    /// </remarks>
+    internal static AlertConfiguration Reconstitute(
+        Guid id,
+        string configKey,
+        string configValue,
+        ConfigCategory category,
+        bool isEncrypted,
+        string? description,
+        DateTime updatedAt,
+        string updatedBy) => new(id, configKey, configValue, category, updatedBy)
+        {
+            IsEncrypted = isEncrypted,
+            Description = description,
+            UpdatedAt = updatedAt,
+        };
+
     public void UpdateValue(string configValue, string updatedBy)
     {
         if (string.IsNullOrWhiteSpace(configValue)) throw new ArgumentException("ConfigValue cannot be empty", nameof(configValue));

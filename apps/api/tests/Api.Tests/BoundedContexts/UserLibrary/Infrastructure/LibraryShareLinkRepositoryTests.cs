@@ -191,6 +191,26 @@ public sealed class LibraryShareLinkRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateAsync_Revoke_IsSaved()
+    {
+        // revoked_at è il token di concorrenza e la revoca ne cambia il valore: senza l'originale fissato a
+        // NULL in UpdateAsync, EF userebbe come originale il valore nuovo (WHERE revoked_at = <adesso>) e
+        // ogni revoca fallirebbe con DbUpdateConcurrencyException. Lo stesso guasto di xmin con un update
+        // detached.
+        var seeded = await SeedEveryColumnAsync(revoked: false);
+        var repository = CreateRepository();
+        var link = await repository.GetByIdAsync(seeded.Id);
+
+        link!.Revoke();
+        await repository.UpdateAsync(link);
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        var after = await _db.LibraryShareLinks.AsNoTracking().SingleAsync(l => l.Id == seeded.Id);
+        after.RevokedAt.Should().Be(link.RevokedAt);
+    }
+
+    [Fact]
     public async Task UpdateAsync_OnALinkRevokedAfterTheRead_IsRefusedAndTheRevocationStays()
     {
         var seeded = await SeedEveryColumnAsync(revoked: false);

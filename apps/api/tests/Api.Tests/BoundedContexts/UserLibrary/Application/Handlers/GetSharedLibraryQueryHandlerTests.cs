@@ -3,6 +3,7 @@ using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -161,8 +162,12 @@ public class GetSharedLibraryQueryHandlerTests
         _mockShareLinkRepository
             .Setup(r => r.TryRecordAccessAsync(shareLink.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
+        // Il proprietario esiste, e la libreria è un mock stretto: un handler che ignorasse l'esito del
+        // conteggio andrebbe avanti fino a leggerla, e il test lo vedrebbe.
         var libraryRepository = new Mock<IUserLibraryRepository>(MockBehavior.Strict);
         using var db = CreateDbContext();
+        db.Users.Add(new UserEntity { Id = shareLink.UserId, Email = "owner@example.com", DisplayName = "Owner" });
+        await db.SaveChangesAsync();
 
         var result = await CreateHandler(libraryRepository.Object, db)
             .Handle(new GetSharedLibraryQuery(shareLink.ShareToken), CancellationToken.None);

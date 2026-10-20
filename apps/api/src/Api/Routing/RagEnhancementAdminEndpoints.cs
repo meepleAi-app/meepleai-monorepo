@@ -1,7 +1,6 @@
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands.RagEnhancements;
-using Api.BoundedContexts.KnowledgeBase.Application.Services;
-using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.RagEnhancements;
 using Api.Extensions;
 using Api.Filters;
 using Api.Services;
@@ -24,26 +23,9 @@ internal static class RagEnhancementAdminEndpoints
 
         // GET /api/v1/admin/rag-enhancements — List all enhancements with status
         ragGroup.MapGet("/", async (
-            IFeatureFlagService featureFlags,
+            IMediator mediator,
             CancellationToken ct) =>
-        {
-            var result = new List<object>();
-            foreach (var enhancement in Enum.GetValues<RagEnhancement>())
-            {
-                if (enhancement == RagEnhancement.None) continue;
-                var flagKey = enhancement.ToFeatureFlagKey();
-                var isEnabled = await featureFlags.IsEnabledAsync(flagKey).ConfigureAwait(false);
-                result.Add(new
-                {
-                    Name = enhancement.ToString(),
-                    FlagKey = flagKey,
-                    IsGloballyEnabled = isEnabled,
-                    ExtraCreditsBalanced = enhancement.GetExtraCredits(useBalancedForAux: true),
-                    ExtraCreditsFast = enhancement.GetExtraCredits(useBalancedForAux: false)
-                });
-            }
-            return Results.Ok(result);
-        })
+            Results.Ok(await mediator.Send(new ListRagEnhancementsQuery(), ct).ConfigureAwait(false)))
         .WithName("ListRagEnhancements")
         .WithSummary("List all RAG enhancements with their current status");
 
@@ -98,23 +80,10 @@ internal static class RagEnhancementAdminEndpoints
     {
         // GET /api/v1/rag/enhancements/estimate — User-facing cost estimate
         group.MapGet("/rag/enhancements/estimate", async (
-            IRagEnhancementService enhancementService,
+            IMediator mediator,
             HttpContext ctx,
             CancellationToken ct) =>
-        {
-            var tier = TierOf(ctx);
-
-            var active = await enhancementService.GetActiveEnhancementsAsync(tier, ct).ConfigureAwait(false);
-            var extraCredits = await enhancementService.EstimateExtraCreditsAsync(active, ct).ConfigureAwait(false);
-
-            return Results.Ok(new
-            {
-                ActiveEnhancements = active.ToString(),
-                ActiveFlags = active.GetIndividualFlags().Select(f => f.ToString()),
-                ExtraCreditsPerQuery = extraCredits,
-                UseBalancedAuxModel = await enhancementService.UseBalancedAuxModelAsync(ct).ConfigureAwait(false)
-            });
-        })
+            Results.Ok(await mediator.Send(new EstimateRagEnhancementCostQuery(TierOf(ctx)), ct).ConfigureAwait(false)))
         .WithName("EstimateRagEnhancementCost")
         .WithSummary("Get active RAG enhancements and estimated extra credits for current user");
 

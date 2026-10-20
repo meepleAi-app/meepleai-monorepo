@@ -58,8 +58,9 @@ internal sealed class UpdateGameFaqCommandHandler : ICommandHandler<UpdateGameFa
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // #4565: il dettaglio del gioco (`GET /api/v1/shared-games/{id}`) riporta le FAQ e sta in cache
-        // sotto `shared-game:{id}` (30 minuti in L1, 2 ore in L2): senza questa evizione la modifica si
-        // vedeva alla scadenza. Dopo il salvataggio, mai prima. Vedi SharedGameDetailCacheInvalidation.
+        // sotto `shared-game:{id}` (durata: `DetailCacheL1Expiration` e `DetailCacheL2Expiration` di
+        // `GetSharedGameByIdQueryHandler`): senza questa evizione la modifica si vedeva alla scadenza.
+        // Dopo il salvataggio, mai prima. Vedi SharedGameDetailCacheInvalidation.
         await SharedGameDetailCacheInvalidation
             .EvictAsync(_cache, _retryPolicy, _hybridCache, command.SharedGameId, cancellationToken)
             .ConfigureAwait(false);

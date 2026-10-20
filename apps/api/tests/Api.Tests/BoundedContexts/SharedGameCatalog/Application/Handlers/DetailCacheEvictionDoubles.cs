@@ -68,7 +68,8 @@ internal sealed class DetailCacheEvictionDoubles
         Events.Should().Equal(
             new[] { Written, $"wrapper:{tag}", $"native:{tag}" },
             "the detail is evicted once, after the write, through the wrapper (retry + other replicas) "
-            + "and through the native HybridCache that the detail is written with (#4561)");
+            + "and through the native HybridCache that the detail is written with, which is what makes "
+            + "the next read on this replica miss, with or without Redis");
     }
 
     public void AssertNothingEvicted() =>

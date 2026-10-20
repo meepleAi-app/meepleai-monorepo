@@ -20,8 +20,9 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 /// Due difetti, e i test li separano. (1) <c>GetSharedGameByIdQueryHandler</c> costruiva i due campi da
 /// <c>game.Erratas</c> e <c>game.Faqs</c> dell'aggregato letto con <c>GetByIdAsync</c>, che non li
 /// include: <c>erratas: []</c> e <c>faqs: []</c> sempre. I test «Detail_Lists…» falliscono solo per
-/// questo. (2) Il dettaglio sta in cache sotto il tag <c>shared-game:{id}</c> (30 minuti in L1, 2 ore in
-/// L2) e gli handler di errata e FAQ non lo invalidavano: corretta la lettura, una scrittura si sarebbe
+/// questo. (2) Il dettaglio sta in cache sotto il tag <c>shared-game:{id}</c> (durata:
+/// <c>DetailCacheL1Expiration</c> e <c>DetailCacheL2Expiration</c> di <c>GetSharedGameByIdQueryHandler</c>)
+/// e gli handler di errata e FAQ non lo invalidavano: corretta la lettura, una scrittura si sarebbe
 /// vista alla scadenza. I test «Detail_After…» leggono il dettaglio una volta per riempire la cache,
 /// scrivono, e lo rileggono.
 /// </para>
@@ -29,9 +30,12 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 /// 🔴 Perché la cache del test è quella vera. L'host di integrazione sostituisce
 /// <c>IHybridCacheService</c> con un doppio che non fa niente (<c>TestHybridCacheService</c>), ma
 /// <c>HybridCache</c> di Microsoft, quello con cui il dettaglio è scritto, resta il reale (L1 in
-/// memoria). Quindi la rilettura è davvero servita dalla cache, e il test diventa verde solo se
-/// l'handler evince il tag col <c>HybridCache</c> nativo: l'evizione tramite il wrapper, da sola, qui
-/// non fa niente e in produzione non raggiunge la voce (#4561).
+/// memoria). Quindi la rilettura è davvero servita dalla cache. Qui l'evizione tramite il wrapper non fa
+/// niente (è il doppio) e non c'è Redis, quindi nemmeno il Pub/Sub: il test diventa verde solo se
+/// l'handler evince il tag col <c>HybridCache</c> nativo. È il passo che in produzione serve per la lettura
+/// subito dopo la scrittura sulla replica che ha eseguito il comando e per l'esecuzione senza Redis: con
+/// Redis il wrapper raggiunge la voce via Pub/Sub, ma in modo asincrono (vedi
+/// <c>SharedGameDetailCacheInvalidation</c>, #4561).
 /// </para>
 /// </remarks>
 public sealed partial class SharedGameCatalogEndpointsIntegrationTests
@@ -82,6 +86,46 @@ public sealed partial class SharedGameCatalogEndpointsIntegrationTests
             "the detail lists the game's FAQs by DisplayOrder, and none of another game's");
         detail.Faqs[1].Should().BeEquivalentTo(new DetailFaq(
             second.Id, game.Id, "Seconda", "Risposta due", Order: 2, Upvotes: 7));
+    }
+
+    /// <summary>
+    /// Gli spareggi dell'ordine (#4565): FAQ con lo stesso <c>DisplayOrder</c> per voti decrescenti e poi
+    /// per <c>CreatedAt</c>, errata con la stessa <c>PublishedDate</c> per <c>CreatedAt</c> decrescente.
+    /// </summary>
+    /// <remarks>
+    /// Le righe si inseriscono in ordine OPPOSTO a quello atteso: a parità di chiave Postgres restituisce
+    /// di norma l'ordine di inserimento, quindi senza lo spareggio il test vede l'ordine di inserimento e
+    /// fallisce. Con le righe già in ordine il test passerebbe anche senza spareggio.
+    /// </remarks>
+    [Fact]
+    public async Task Detail_TiedRows_AreOrderedByTheTieBreakers()
+    {
+        var game = await CreateTestGameAsync(GameStatus.Published);
+        var t0 = new DateTime(2025, 2, 1, 10, 0, 0, DateTimeKind.Utc);
+
+        // FAQ, tutte con DisplayOrder 1 salvo una con 0 inserita per ultima. Ordine atteso:
+        // prima = DisplayOrder 0; poi voti decrescenti (5, 5, 1); i due da 5 per CreatedAt crescente.
+        var fewVotes = await SeedDetailFaqAsync(game.Id, "Pochi voti", displayOrder: 1, upvotes: 1, createdAt: t0);
+        var tiedNewer = await SeedDetailFaqAsync(game.Id, "5 voti, più recente", displayOrder: 1, upvotes: 5, createdAt: t0.AddMinutes(10));
+        var tiedOlder = await SeedDetailFaqAsync(game.Id, "5 voti, più vecchia", displayOrder: 1, upvotes: 5, createdAt: t0.AddMinutes(5));
+        var firstByOrder = await SeedDetailFaqAsync(game.Id, "DisplayOrder 0", displayOrder: 0, upvotes: 0, createdAt: t0.AddMinutes(20));
+
+        // Errata, tutte con la stessa PublishedDate salvo una più recente inserita per prima.
+        // Ordine atteso: la più recente per PublishedDate; poi CreatedAt decrescente.
+        var published = new DateTime(2025, 3, 1, 0, 0, 0, DateTimeKind.Utc);
+        var newestPublished = await SeedDetailErrataAsync(game.Id, "Pubblicata dopo", "p. 1", published.AddDays(30), createdAt: t0);
+        var createdFirst = await SeedDetailErrataAsync(game.Id, "Creata prima", "p. 2", published, createdAt: t0);
+        var createdLast = await SeedDetailErrataAsync(game.Id, "Creata dopo", "p. 3", published, createdAt: t0.AddMinutes(10));
+        var createdMiddle = await SeedDetailErrataAsync(game.Id, "Creata in mezzo", "p. 4", published, createdAt: t0.AddMinutes(5));
+
+        var detail = await ReadDetailAsync(game.Id);
+
+        detail.Faqs.Select(f => f.Id).Should().Equal(
+            new[] { firstByOrder.Id, tiedOlder.Id, tiedNewer.Id, fewVotes.Id },
+            "same DisplayOrder: more votes first, then the older FAQ first");
+        detail.Erratas.Select(e => e.Id).Should().Equal(
+            new[] { newestPublished.Id, createdLast.Id, createdMiddle.Id, createdFirst.Id },
+            "same PublishedDate: the most recently created erratum first");
     }
 
     [Fact]
@@ -299,7 +343,7 @@ public sealed partial class SharedGameCatalogEndpointsIntegrationTests
     }
 
     private async Task<GameErrataEntity> SeedDetailErrataAsync(
-        Guid gameId, string description, string pageReference, DateTime publishedDate)
+        Guid gameId, string description, string pageReference, DateTime publishedDate, DateTime? createdAt = null)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -311,9 +355,30 @@ public sealed partial class SharedGameCatalogEndpointsIntegrationTests
             Description = description,
             PageReference = pageReference,
             PublishedDate = publishedDate,
-            CreatedAt = new DateTime(2025, 1, 2, 3, 4, 5, DateTimeKind.Utc),
+            CreatedAt = createdAt ?? new DateTime(2025, 1, 2, 3, 4, 5, DateTimeKind.Utc),
         };
         db.GameErrata.Add(row);
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        return row;
+    }
+
+    private async Task<GameFaqEntity> SeedDetailFaqAsync(
+        Guid gameId, string question, int displayOrder, int upvotes, DateTime createdAt)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var row = new GameFaqEntity
+        {
+            Id = Guid.NewGuid(),
+            SharedGameId = gameId,
+            Question = question,
+            Answer = "Risposta",
+            DisplayOrder = displayOrder,
+            UpvoteCount = upvotes,
+            CreatedAt = createdAt,
+        };
+        db.GameFaqs.Add(row);
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         return row;
     }

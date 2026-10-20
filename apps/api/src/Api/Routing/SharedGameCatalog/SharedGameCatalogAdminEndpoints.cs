@@ -1324,9 +1324,13 @@ internal static class SharedGameCatalogAdminEndpoints
         return Results.Created($"/api/v1/admin/shared-games/{id}/faq/{faqId}", faqId);
     }
 
+    // #4543: il primo parametro deve chiamarsi come il segmento {id}, anche se l'handler non lo
+    // usa. Chiamato `_`, il binding lo cercava nella query e rispondeva 400 prima dell'handler.
+    // Vale per tutti gli handler di questo file: lo controlla
+    // NoDuplicateRouteTests.EveryRouteParameter_IsBoundByAHandlerParameter.
 #pragma warning disable S1172 // Unused method parameters - Route parameter for URL binding, command uses faqId directly
     private static async Task<IResult> HandleUpdateFaq(
-        Guid _,
+        Guid id,
         Guid faqId,
         [FromBody] UpdateFaqRequest request,
         IMediator mediator,
@@ -1346,7 +1350,7 @@ internal static class SharedGameCatalogAdminEndpoints
     }
 
     private static async Task<IResult> HandleDeleteFaq(
-        Guid _,
+        Guid id,
         Guid faqId,
         IMediator mediator,
         CancellationToken ct)
@@ -1379,7 +1383,7 @@ internal static class SharedGameCatalogAdminEndpoints
 
 #pragma warning disable S1172 // Unused method parameters - Route parameter for URL binding, command uses errataId directly
     private static async Task<IResult> HandleUpdateErrata(
-        Guid _,
+        Guid id,
         Guid errataId,
         [FromBody] UpdateErrataRequest request,
         IMediator mediator,
@@ -1399,7 +1403,7 @@ internal static class SharedGameCatalogAdminEndpoints
     }
 
     private static async Task<IResult> HandleDeleteErrata(
-        Guid _,
+        Guid id,
         Guid errataId,
         IMediator mediator,
         CancellationToken ct)
@@ -1498,12 +1502,12 @@ internal static class SharedGameCatalogAdminEndpoints
 
 #pragma warning disable S1172 // Unused method parameters - Route parameter for URL binding
     private static async Task<IResult> HandleSetActiveDocument(
-        Guid _,
+        Guid id,
         Guid documentId,
         IMediator mediator,
         CancellationToken ct)
     {
-        var command = new SetActiveDocumentVersionCommand(_, documentId);
+        var command = new SetActiveDocumentVersionCommand(id, documentId);
 
         try
         {
@@ -1608,7 +1612,7 @@ internal static class SharedGameCatalogAdminEndpoints
 
 #pragma warning disable S1172 // Unused method parameters - Route parameter for URL binding
     private static async Task<IResult> HandleUpdateStateTemplate(
-        Guid _,
+        Guid id,
         Guid templateId,
         [FromBody] UpdateStateTemplateRequest request,
         IMediator mediator,
@@ -1632,7 +1636,7 @@ internal static class SharedGameCatalogAdminEndpoints
     }
 
     private static async Task<IResult> HandleActivateStateTemplate(
-        Guid _,
+        Guid id,
         Guid templateId,
         IMediator mediator,
         CancellationToken ct)

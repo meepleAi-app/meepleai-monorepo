@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
@@ -8,6 +9,7 @@ using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 
@@ -26,6 +28,7 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
     {
         ArgumentNullException.ThrowIfNull(sharedGame);
         var entity = MapToEntity(sharedGame);
+        AddErrataRows(entity, sharedGame);
         await DbContext.Set<SharedGameEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
@@ -46,6 +49,7 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
         ArgumentNullException.ThrowIfNull(sharedGame);
 
         var entity = MapToEntity(sharedGame);
+        AddErrataRows(entity, sharedGame);
 
         foreach (var designer in await ResolveDesignerEntitiesAsync(designerNames, cancellationToken).ConfigureAwait(false))
         {
@@ -220,9 +224,130 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
     public void Update(SharedGame sharedGame)
     {
         ArgumentNullException.ThrowIfNull(sharedGame);
+
+        // MapToEntity porta la sola radice: Update() su un grafo detached marcherebbe Modified anche
+        // un'errata nuova, che ha già l'id — un UPDATE di una riga che non esiste. Le errata passano
+        // da ReconcileErrata (#4543).
         var entity = MapToEntity(sharedGame);
         DbContext.Set<SharedGameEntity>().Update(entity);
+        ReconcileErrata(sharedGame);
     }
+
+    /// <summary>
+    /// Le errata che una lettura ha messo nell'aggregato, per id, come le ha trovate (#4543).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <see cref="Update"/> riceve solo l'aggregato, e l'aggregato da solo non dice se la sua lista
+    /// di errata è vuota o non è stata letta: <see cref="GetByIdAsync"/>, la lettura di quasi ogni
+    /// comando sullo <c>SharedGame</c>, non le carica. Cancellare «ciò che è nel database e non
+    /// nell'aggregato» cancellerebbe tutte le errata a ogni salvataggio. Si cancella quindi solo ciò
+    /// che la lettura ha caricato e il dominio ha tolto; una riga che la lettura non ha visto non si
+    /// tocca.
+    /// </para>
+    /// <para>
+    /// Un aggregato assente dalla tabella non ha letto le errata: quelle che porta sono nate nel
+    /// dominio dopo la lettura, e diventano INSERT. Stesso schema di <c>UserLibraryRepository</c>
+    /// (#4505). La chiave è l'istanza dell'aggregato, tenuta per riferimento debole: la voce sparisce
+    /// con lui, e un aggregato letto da un'istanza del repository e salvato da un'altra resta
+    /// corretto.
+    /// </para>
+    /// </remarks>
+    private static readonly ConditionalWeakTable<SharedGame, IReadOnlyDictionary<Guid, GameErrataEntity>> ErrataReadBy = new();
+
+    /// <summary>
+    /// Porta nel change tracker le errata dell'aggregato (#4543): <c>Added</c> quelle che la lettura
+    /// non aveva; quelle lette e ancora presenti partono dai valori letti e ricevono quelli del
+    /// dominio, così EF scrive solo le colonne cambiate (nessuna, nessun UPDATE); quelle lette e
+    /// tolte dal dominio diventano <c>Deleted</c>.
+    /// </summary>
+    /// <remarks>
+    /// Le errata non hanno un token di concorrenza: una scrittura da una lettura superata fallisce
+    /// per intero perché l'UPDATE della radice, nella stessa transazione, controlla <c>xmin</c>.
+    /// </remarks>
+    private void ReconcileErrata(SharedGame sharedGame)
+    {
+        ErrataReadBy.TryGetValue(sharedGame, out var read);
+
+        var currentIds = new HashSet<Guid>();
+        foreach (var errata in sharedGame.Erratas)
+        {
+            currentIds.Add(errata.Id);
+            var desired = MapErrataToEntity(errata);
+
+            if (read is null || !read.TryGetValue(errata.Id, out var row))
+            {
+                DbContext.Entry(desired).State = EntityState.Added;
+                continue;
+            }
+
+            TrackAsRead(row).CurrentValues.SetValues(desired);
+        }
+
+        if (read is null)
+        {
+            return;
+        }
+
+        foreach (var (id, row) in read)
+        {
+            if (!currentIds.Contains(id))
+            {
+                TrackAsRead(row).State = EntityState.Deleted;
+            }
+        }
+    }
+
+    /// <summary>
+    /// La riga di errata nel change tracker, con i valori letti come originali. Se il contesto la
+    /// traccia già usa quella: attaccarne una seconda con la stessa chiave fallirebbe.
+    /// </summary>
+    private EntityEntry<GameErrataEntity> TrackAsRead(GameErrataEntity row)
+    {
+        var tracked = DbContext.Set<GameErrataEntity>().Local.FindEntry(row.Id);
+        if (tracked is not null)
+        {
+            return tracked;
+        }
+
+        // Una copia nuova a ogni salvataggio: la stessa istanza attaccata a due contesti
+        // porterebbe nel secondo lo stato del primo.
+        var entry = DbContext.Entry(CopyOf(row));
+        entry.State = EntityState.Unchanged;
+        return entry;
+    }
+
+    /// <summary>
+    /// #4543 — le errata di un aggregato nuovo: tutto il grafo è <c>Added</c>, quindi qui vanno
+    /// nel grafo, a differenza di <see cref="Update"/>.
+    /// </summary>
+    private static void AddErrataRows(SharedGameEntity entity, SharedGame sharedGame)
+    {
+        foreach (var errata in sharedGame.Erratas)
+        {
+            entity.Erratas.Add(MapErrataToEntity(errata));
+        }
+    }
+
+    private static GameErrataEntity MapErrataToEntity(GameErrata errata) => new()
+    {
+        Id = errata.Id,
+        SharedGameId = errata.SharedGameId,
+        Description = errata.Description,
+        PageReference = errata.PageReference,
+        PublishedDate = errata.PublishedDate,
+        CreatedAt = errata.CreatedAt,
+    };
+
+    private static GameErrataEntity CopyOf(GameErrataEntity row) => new()
+    {
+        Id = row.Id,
+        SharedGameId = row.SharedGameId,
+        Description = row.Description,
+        PageReference = row.PageReference,
+        PublishedDate = row.PublishedDate,
+        CreatedAt = row.CreatedAt,
+    };
 
     /// <summary>
     /// Epic #3470 — child-safe reconcile of the per-context cover assignments.
@@ -541,14 +666,47 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
         return gameEntity != null ? MapToDomain(gameEntity) : null;
     }
 
+    /// <remarks>
+    /// #4543: l'unica lettura che carica le errata, perché modificarne o toglierne una richiede di
+    /// averla nell'aggregato. Le carica tutte, non solo quella cercata: <see cref="Update"/> tocca
+    /// solo le errata che la lettura ha visto, quindi le altre resterebbero comunque intatte, ma
+    /// l'aggregato deve rappresentare il gioco intero. Le altre letture non le caricano: nessun altro
+    /// comando ne ha bisogno, e <c>AddErrata</c> funziona anche senza (l'errata nuova diventa INSERT).
+    /// </remarks>
     public async Task<SharedGame?> GetGameByErrataIdAsync(Guid errataId, CancellationToken cancellationToken = default)
     {
         var gameEntity = await DbContext.SharedGames
+            .AsNoTracking()
             .Include(g => g.Erratas)
             .Where(g => g.Erratas.Any(e => e.Id == errataId))
             .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
-        return gameEntity != null ? MapToDomain(gameEntity) : null;
+        return gameEntity != null ? MapToDomainWithErrata(gameEntity) : null;
+    }
+
+    /// <summary>
+    /// <see cref="MapToDomain"/> più le errata che la query ha incluso, ricordate per
+    /// <see cref="Update"/> (#4543).
+    /// </summary>
+    private static SharedGame MapToDomainWithErrata(SharedGameEntity entity)
+    {
+        var sharedGame = MapToDomain(entity);
+
+        var read = new Dictionary<Guid, GameErrataEntity>();
+        foreach (var row in entity.Erratas)
+        {
+            sharedGame.LoadErrata(new GameErrata(
+                row.Id,
+                row.SharedGameId,
+                row.Description,
+                row.PageReference,
+                row.PublishedDate,
+                row.CreatedAt));
+            read[row.Id] = CopyOf(row);
+        }
+
+        ErrataReadBy.AddOrUpdate(sharedGame, read);
+        return sharedGame;
     }
 
     public async Task<SharedGame?> GetByIdWithDeletedAsync(Guid id, CancellationToken cancellationToken = default)

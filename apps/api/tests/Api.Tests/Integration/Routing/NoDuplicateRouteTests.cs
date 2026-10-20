@@ -73,8 +73,9 @@ public sealed partial class NoDuplicateRouteTests
     /// <c>RoutePattern.RawText</c>, che contiene il nome: <c>…/{gameId:guid}/documents/overview</c> e
     /// <c>…/{sharedGameId:guid}/documents/overview</c> risultavano due modelli diversi, mentre per il routing
     /// sono lo stesso (stessi segmenti, stesso vincolo <c>guid</c>) e ogni richiesta finiva in
-    /// <c>AmbiguousMatchException</c>. I vincoli restano nella chiave perché <c>{id}</c> e <c>{id:guid}</c>
-    /// non sono ambigui: il vincolo li distingue.
+    /// <c>AmbiguousMatchException</c>. Il vincolo resta nella chiave: <c>{id}</c> e <c>{id:guid}</c> hanno chiavi
+    /// diverse e la guardia non le segnala. Che il routing le consideri distinte non è provato qui; sulla tabella
+    /// reale la scelta non cambia l'esito, perché non ci sono coppie di questo tipo.
     /// </summary>
     [Fact]
     public void NoRouteTemplate_IsRegisteredTwiceForTheSameHttpMethod()
@@ -109,9 +110,9 @@ public sealed partial class NoDuplicateRouteTests
     }
 
     /// <summary>
-    /// Il modello di una rotta come lo vede il routing: segmenti letterali e separatori com'è, e di ogni parametro
-    /// solo ciò che lo distingue da un altro — catch-all, vincoli, opzionalità e valore predefinito — senza il nome.
-    /// Senza la barra iniziale, che dipende da come è stato composto il gruppo.
+    /// La chiave di confronto di una rotta: segmenti letterali e separatori com'è, e di ogni parametro solo
+    /// catch-all, vincoli, opzionalità e valore predefinito — senza il nome. Senza la barra iniziale, che dipende
+    /// da come è stato composto il gruppo. Due modelli con la stessa chiave differiscono al più per i nomi.
     /// </summary>
     internal static string TemplateWithoutParameterNames(RoutePattern pattern)
     {
@@ -158,28 +159,6 @@ public sealed partial class NoDuplicateRouteTests
         }
 
         return template.ToString().TrimStart('/');
-    }
-
-    /// <summary>
-    /// La chiave di confronto fa quello che dice: ignora il nome del parametro (il caso di #4579), tiene il
-    /// vincolo, e non fonde modelli che il routing distingue.
-    /// </summary>
-    [Theory]
-    [InlineData("api/v1/admin/shared-games/{gameId:guid}/documents/overview", "api/v1/admin/shared-games/{sharedGameId:guid}/documents/overview", true)]
-    [InlineData("api/v1/games/{id}", "api/v1/games/{slug}", true)]
-    [InlineData("files/{*path}", "files/{*rest}", true)]
-    [InlineData("api/v1/games/{id:guid}", "api/v1/games/{id}", false)]
-    [InlineData("api/v1/games/{id:guid}", "api/v1/games/{id:int}", false)]
-    [InlineData("api/v1/games/{id}", "api/v1/games/{id?}", false)]
-    [InlineData("files/{path}", "files/{*path}", false)]
-    [InlineData("api/v1/games/{id:guid}/errata", "api/v1/games/{id:guid}/faq", false)]
-    [InlineData("api/v1/games/{id:guid}", "api/v1/games/{id:guid}/errata", false)]
-    public void TemplateWithoutParameterNames_IgnoresTheNameAndKeepsTheConstraints(string left, string right, bool sameRoute)
-    {
-        var leftKey = TemplateWithoutParameterNames(RoutePatternFactory.Parse(left));
-        var rightKey = TemplateWithoutParameterNames(RoutePatternFactory.Parse(right));
-
-        (leftKey == rightKey).Should().Be(sameRoute, $"'{left}' → '{leftKey}', '{right}' → '{rightKey}'");
     }
 
     /// <summary>

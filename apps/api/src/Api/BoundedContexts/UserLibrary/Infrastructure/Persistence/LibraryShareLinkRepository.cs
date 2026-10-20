@@ -130,39 +130,24 @@ internal class LibraryShareLinkRepository : RepositoryBase, ILibraryShareLinkRep
     /// <summary>
     /// Maps persistence entity to domain entity.
     /// </summary>
-    private static LibraryShareLink MapToDomain(LibraryShareLinkEntity entity)
-    {
-        var domainEntity = LibraryShareLink.Create(
+    /// <remarks>
+    /// Passa da <see cref="LibraryShareLink.Reconstitute"/>, non dalla factory di creazione: quella rifiuta
+    /// una scadenza passata, e un link scaduto diventava illeggibile (#4544). Ogni colonna scritta da
+    /// <see cref="MapToPersistence"/> torna qui: una colonna mancante in una delle due direzioni verrebbe
+    /// azzerata al primo <see cref="UpdateAsync"/> (vedi <c>LibraryShareLinkRepositoryTests</c>).
+    /// </remarks>
+    private static LibraryShareLink MapToDomain(LibraryShareLinkEntity entity) =>
+        LibraryShareLink.Reconstitute(
+            id: entity.Id,
             userId: entity.UserId,
+            shareToken: entity.ShareToken,
             privacyLevel: (LibrarySharePrivacyLevel)entity.PrivacyLevel,
             includeNotes: entity.IncludeNotes,
-            expiresAt: entity.ExpiresAt
-        );
-
-        // Use reflection to set properties that are set during creation
-        var idProp = typeof(LibraryShareLink).GetProperty("Id");
-        idProp?.SetValue(domainEntity, entity.Id);
-
-        var tokenProp = typeof(LibraryShareLink).GetProperty("ShareToken");
-        tokenProp?.SetValue(domainEntity, entity.ShareToken);
-
-        var createdAtProp = typeof(LibraryShareLink).GetProperty("CreatedAt");
-        createdAtProp?.SetValue(domainEntity, entity.CreatedAt);
-
-        var revokedAtProp = typeof(LibraryShareLink).GetProperty("RevokedAt");
-        revokedAtProp?.SetValue(domainEntity, entity.RevokedAt);
-
-        var viewCountProp = typeof(LibraryShareLink).GetProperty("ViewCount");
-        viewCountProp?.SetValue(domainEntity, entity.ViewCount);
-
-        var lastAccessedAtProp = typeof(LibraryShareLink).GetProperty("LastAccessedAt");
-        lastAccessedAtProp?.SetValue(domainEntity, entity.LastAccessedAt);
-
-        // Clear domain events raised during construction
-        domainEntity.ClearDomainEvents();
-
-        return domainEntity;
-    }
+            createdAt: entity.CreatedAt,
+            expiresAt: entity.ExpiresAt,
+            revokedAt: entity.RevokedAt,
+            viewCount: entity.ViewCount,
+            lastAccessedAt: entity.LastAccessedAt);
 
     /// <summary>
     /// Maps domain entity to persistence entity.

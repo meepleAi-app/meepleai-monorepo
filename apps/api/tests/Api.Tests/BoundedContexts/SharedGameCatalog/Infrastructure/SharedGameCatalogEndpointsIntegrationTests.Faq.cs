@@ -146,7 +146,7 @@ public sealed partial class SharedGameCatalogEndpointsIntegrationTests
     /// Quando il voto passava dall'aggregato (<c>GetGameByFaqIdAsync</c> + <c>Update</c>), l'update su
     /// grafo detached marcava Modified ogni colonna di <c>shared_games</c>, comprese le quattro che
     /// <c>MapToEntity</c> non copia: ogni voto azzerava <c>has_knowledge_base</c>, <c>is_rag_public</c>,
-    /// <c>bgg_raw_data</c> e <c>test_run_id</c>. Il gioco usciva dal filtro «AI-ready» e perdeva la
+    /// <c>BggRawData</c> e <c>test_run_id</c>. Il gioco usciva dal filtro «AI-ready» e perdeva la
     /// regola RAG pubblica. L'<c>xmin</c> è la prova che la riga non è stata scritta affatto.
     /// </remarks>
     [Fact]
@@ -369,10 +369,15 @@ public sealed partial class SharedGameCatalogEndpointsIntegrationTests
     }
 
     /// <summary>
-    /// Un gioco con le quattro colonne che <c>MapToEntity</c> non copia, valorizzate: se un comando
-    /// riscrive la riga dall'aggregato le azzera, e il test lo vede.
+    /// Un gioco con le quattro colonne che <c>MapToEntity</c> non copiava, valorizzate: se un comando
+    /// riscrive la riga dall'aggregato le azzera, e il test lo vede. Tre non sono dell'aggregato
+    /// (<c>has_knowledge_base</c>, <c>BggRawData</c>, <c>test_run_id</c>); <c>is_rag_public</c> sì, da
+    /// #4585, e un comando che non lo cambia deve lasciarlo com'è.
     /// </summary>
-    private async Task<SharedGameEntity> CreateGameWithColumnsTheAggregateDoesNotOwnAsync(bool isDeleted = false)
+    private async Task<SharedGameEntity> CreateGameWithColumnsTheAggregateDoesNotOwnAsync(
+        bool isDeleted = false,
+        GameStatus status = GameStatus.Published,
+        bool isRagPublic = true)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -389,11 +394,11 @@ public sealed partial class SharedGameCatalogEndpointsIntegrationTests
             MinAge = 10,
             ImageUrl = "https://example.com/image.jpg",
             ThumbnailUrl = "https://example.com/thumb.jpg",
-            Status = (int)GameStatus.Published,
+            Status = (int)status,
             CreatedBy = TestUserId,
             CreatedAt = DateTime.UtcNow,
             HasKnowledgeBase = true,
-            IsRagPublic = true,
+            IsRagPublic = isRagPublic,
             BggRawData = "Catan BGG metadata",
             TestRunId = "run-4557",
             IsDeleted = isDeleted,

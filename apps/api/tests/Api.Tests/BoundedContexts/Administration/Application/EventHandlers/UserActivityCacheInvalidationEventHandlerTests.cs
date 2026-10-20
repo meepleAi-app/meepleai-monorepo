@@ -1,9 +1,17 @@
 using Api.BoundedContexts.Administration.Application.EventHandlers;
+using Api.BoundedContexts.Administration.Application.Queries;
+using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.Administration.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
+using Api.Configuration;
 using Api.Services;
 using Api.Tests.Constants;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 using FluentAssertions;
@@ -17,20 +25,15 @@ namespace Api.Tests.BoundedContexts.Administration.Application.EventHandlers;
 [Trait("Category", TestCategories.Unit)]
 public class UserActivityCacheInvalidationEventHandlerTests
 {
-    private readonly Mock<IHybridCacheService> _cacheMock;
+    private readonly Mock<HybridCache> _cacheMock;
     private readonly Mock<ILogger<UserActivityCacheInvalidationEventHandler>> _loggerMock;
     private readonly UserActivityCacheInvalidationEventHandler _handler;
 
     public UserActivityCacheInvalidationEventHandlerTests()
     {
-        _cacheMock = new Mock<IHybridCacheService>();
+        _cacheMock = new Mock<HybridCache>();
         _loggerMock = new Mock<ILogger<UserActivityCacheInvalidationEventHandler>>();
         _handler = new UserActivityCacheInvalidationEventHandler(_cacheMock.Object, _loggerMock.Object);
-
-        // Default: RemoveByTagAsync succeeds and returns 3 removed entries
-        _cacheMock
-            .Setup(c => c.RemoveByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(3);
     }
 
     [Fact]
@@ -191,12 +194,14 @@ public class UserActivityCacheInvalidationEventHandlerTests
         // Act
         await _handler.Handle(evt, CancellationToken.None);
 
-        // Assert
+        // Assert — #4559: HybridCache non restituisce un conteggio, il log riporta il tag invalidato
         _loggerMock.Verify(
             x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Dashboard cache invalidated")),
+                It.Is<It.IsAnyType>((v, t) =>
+                    v.ToString()!.Contains("Dashboard cache invalidated")
+                    && v.ToString()!.Contains($"tag user:{userId}")),
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once,
@@ -219,5 +224,148 @@ public class UserActivityCacheInvalidationEventHandlerTests
         // Assert
         _cacheMock.Verify(c => c.RemoveByTagAsync($"user:{userId1}", It.IsAny<CancellationToken>()), Times.Once);
         _cacheMock.Verify(c => c.RemoveByTagAsync($"user:{userId2}", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>
+    /// #4559: dopo un'attività dell'utente, gli insights della dashboard devono essere ricalcolati.
+    /// Cache vera (L1 + L2 in memoria) e handler della query vero: la voce è scritta con
+    /// <see cref="HybridCache"/> di Microsoft, come in produzione. Il controllo prima dell'evento
+    /// (voce servita dalla cache) è ciò che rende significativo il passo dopo. Le voci di un altro
+    /// utente restano in cache: l'invalidazione è per utente, non globale.
+    /// </summary>
+    [Fact]
+    public async Task Handle_UserActivity_RecomputesInsightsWrittenWithHybridCache()
+    {
+        var cache = CreateHybridCache();
+        var handler = new UserActivityCacheInvalidationEventHandler(cache, _loggerMock.Object);
+        var insights = new CountingInsights();
+        var query = new GetDashboardInsightsQueryHandler(
+            insights.Service, cache, Mock.Of<ILogger<GetDashboardInsightsQueryHandler>>());
+        var userId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+
+        (await ReadInsightsAsync(query, userId)).Should().Be(CountingInsights.GeneratedAt(1));
+        (await ReadInsightsAsync(query, otherUserId)).Should().Be(CountingInsights.GeneratedAt(2));
+        (await ReadInsightsAsync(query, userId)).Should().Be(CountingInsights.GeneratedAt(1),
+            "prima dell'evento la voce è in cache");
+
+        await handler.Handle(new UserLibraryGameAddedEvent(userId, Guid.NewGuid()), CancellationToken.None);
+
+        (await ReadInsightsAsync(query, userId)).Should().Be(CountingInsights.GeneratedAt(3),
+            "dopo l'aggiunta di un gioco gli insights devono essere ricalcolati, non serviti dalla cache");
+        (await ReadInsightsAsync(query, otherUserId)).Should().Be(CountingInsights.GeneratedAt(2),
+            "l'evento di un utente non tocca la cache di un altro");
+    }
+
+    /// <summary>
+    /// #4559: ciò che oggi funziona non si perde. Una voce scritta tramite il wrapper
+    /// (<see cref="HybridCacheService"/>, con la chiave e i tag che usa <c>ActivityTimelineService</c>)
+    /// deve essere ricalcolata dopo l'evento. Il wrapper qui non ha Redis, quindi nessun set
+    /// <c>cache:tag:{tag}</c>: l'invalidazione non dipende più da quel set.
+    /// </summary>
+    [Fact]
+    public async Task Handle_UserActivity_RecomputesEntryWrittenThroughWrapper()
+    {
+        var cache = CreateHybridCache();
+        var handler = new UserActivityCacheInvalidationEventHandler(cache, _loggerMock.Object);
+        var userId = Guid.NewGuid();
+        var timeline = TimelineThroughWrapper(cache, userId);
+
+        (await timeline.ReadAsync()).Should().Be("calcolo 1");
+        (await timeline.ReadAsync()).Should().Be("calcolo 1", "prima dell'evento la voce è in cache");
+
+        await handler.Handle(new UserChatSavedEvent(userId, Guid.NewGuid()), CancellationToken.None);
+
+        (await timeline.ReadAsync()).Should().Be("calcolo 2",
+            "dopo il salvataggio di una chat la timeline deve essere ricalcolata");
+    }
+
+    /// <summary>
+    /// #4559: anche il ramo di <see cref="SessionFinalizedEvent"/>, che invalida il tag globale
+    /// <c>activity-timeline</c>, ora passa da <see cref="HybridCache"/> e deve raggiungere le voci
+    /// scritte tramite il wrapper.
+    /// </summary>
+    [Fact]
+    public async Task Handle_SessionFinalized_RecomputesTimelineWrittenThroughWrapper()
+    {
+        var cache = CreateHybridCache();
+        var handler = new UserActivityCacheInvalidationEventHandler(cache, _loggerMock.Object);
+        var timeline = TimelineThroughWrapper(cache, Guid.NewGuid());
+
+        (await timeline.ReadAsync()).Should().Be("calcolo 1");
+        (await timeline.ReadAsync()).Should().Be("calcolo 1", "prima dell'evento la voce è in cache");
+
+        await handler.Handle(
+            new SessionFinalizedEvent { SessionId = Guid.NewGuid(), DurationMinutes = 45 },
+            CancellationToken.None);
+
+        (await timeline.ReadAsync()).Should().Be("calcolo 2",
+            "dopo la chiusura di una sessione la timeline deve essere ricalcolata");
+    }
+
+    private static async Task<DateTime> ReadInsightsAsync(GetDashboardInsightsQueryHandler query, Guid userId) =>
+        (await query.Handle(new GetDashboardInsightsQuery(userId), CancellationToken.None)).GeneratedAt;
+
+    private static HybridCache CreateHybridCache()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IMemoryCache, MemoryCache>();
+        services.AddSingleton<IDistributedCache>(new MemoryDistributedCache(
+            Options.Create(new MemoryDistributedCacheOptions())));
+        services.AddHybridCache();
+        return services.BuildServiceProvider().GetRequiredService<HybridCache>();
+    }
+
+    /// <summary>
+    /// La voce che <c>ActivityTimelineService.GetFilteredActivitiesAsync</c> scrive, con la sua chiave e
+    /// i suoi tag, scritta dal wrapper vero sopra la stessa <see cref="HybridCache"/>.
+    /// </summary>
+    private static CountingWrapperEntry TimelineThroughWrapper(HybridCache cache, Guid userId)
+    {
+        var wrapper = new HybridCacheService(
+            cache,
+            Options.Create(new HybridCacheConfiguration { EnableTags = true, MaxTagsPerEntry = 10 }),
+            Mock.Of<ILogger<HybridCacheService>>(),
+            redis: null);
+        return new CountingWrapperEntry(
+            wrapper, $"activity-timeline-full:{userId}", ["activity-timeline", $"user:{userId}"]);
+    }
+
+    /// <summary>
+    /// Un <see cref="IAiInsightsService"/> che conta i calcoli: il calcolo n-esimo porta
+    /// <c>GeneratedAt(n)</c>, quindi la risposta dice se è stata ricalcolata o servita dalla cache.
+    /// </summary>
+    private sealed class CountingInsights
+    {
+        private static readonly DateTime Origin = new(2026, 10, 20, 12, 0, 0, DateTimeKind.Utc);
+        private int _computations;
+
+        public CountingInsights()
+        {
+            var mock = new Mock<IAiInsightsService>();
+            mock.Setup(s => s.GetInsightsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(() =>
+                {
+                    var n = Interlocked.Increment(ref _computations);
+                    return new AiInsightsDto([], GeneratedAt(n), GeneratedAt(n).AddMinutes(15));
+                });
+            Service = mock.Object;
+        }
+
+        public IAiInsightsService Service { get; }
+
+        public static DateTime GeneratedAt(int computation) => Origin.AddMinutes(computation);
+    }
+
+    /// <summary>Una voce scritta tramite il wrapper, il cui valore dice quale calcolo l'ha prodotta.</summary>
+    private sealed class CountingWrapperEntry(IHybridCacheService wrapper, string key, string[] tags)
+    {
+        private int _computations;
+
+        public Task<string> ReadAsync() => wrapper.GetOrCreateAsync(
+            key,
+            _ => Task.FromResult($"calcolo {Interlocked.Increment(ref _computations)}"),
+            tags,
+            TimeSpan.FromMinutes(5));
     }
 }

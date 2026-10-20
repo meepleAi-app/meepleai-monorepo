@@ -543,4 +543,72 @@ public sealed class PdfUploadQuotaEnforcementIntegrationTests : IAsyncLifetime
         info.WeeklyUploadsUsed.Should().Be(3);
         (info.WeeklyLimit - info.WeeklyUploadsUsed).Should().Be(17); // WeeklyRemaining computed
     }
+
+    private PdfUploadQuotaService CreateQuotaService(TimeProvider clock)
+    {
+        var configServiceMock = new Mock<IConfigurationService>();
+        configServiceMock.Setup(c => c.GetValueAsync<int?>(It.IsAny<string>()!, It.IsAny<int?>(), It.IsAny<string?>()))
+            .ReturnsAsync((int?)null);
+
+        return new PdfUploadQuotaService(
+            _redis!,
+            configServiceMock.Object,
+            _serviceProvider!.GetRequiredService<ILogger<PdfUploadQuotaService>>(),
+            clock);
+    }
+
+    private async Task<int> ReadCounterAsync(string key)
+    {
+        var value = await _redis!.GetDatabase().StringGetAsync(key);
+        return value.HasValue ? (int)value : 0;
+    }
+
+    // #4547: il rilascio decrementa i contatori del periodo della prenotazione. Prima decrementava
+    // quelli del rilascio: dopo la mezzanotte di domenica scendevano di uno il giorno e la settimana
+    // nuovi, e l'utente aveva un upload in piu' del limite.
+    [Fact(Timeout = 90_000)]
+    public async Task ReleaseQuota_AfterSundayMidnight_RestoresOnlyTheReservationPeriod()
+    {
+        var user = await CreateUserAsync(UserTier.Free);
+        var clock = new TestTimeProvider(new DateTime(2026, 10, 18, 23, 50, 0, DateTimeKind.Utc)); // domenica, 2026-W42
+        var service = CreateQuotaService(clock);
+
+        (await service.ReserveQuotaAsync(user.Id, "pdf-sunday", TestCancellationToken)).Reserved.Should().BeTrue();
+        clock.SetUtcNow(new DateTime(2026, 10, 19, 0, 10, 0, DateTimeKind.Utc)); // lunedi', 2026-W43
+        (await service.ReserveQuotaAsync(user.Id, "pdf-monday", TestCancellationToken)).Reserved.Should().BeTrue();
+
+        await service.ReleaseQuotaAsync(user.Id, "pdf-sunday", TestCancellationToken);
+
+        (await ReadCounterAsync($"pdf:upload:daily:{user.Id}:2026-10-18")).Should().Be(0);
+        (await ReadCounterAsync($"pdf:upload:weekly:{user.Id}:2026-W42")).Should().Be(0);
+        (await ReadCounterAsync($"pdf:upload:daily:{user.Id}:2026-10-19")).Should().Be(1);
+        (await ReadCounterAsync($"pdf:upload:weekly:{user.Id}:2026-W43")).Should().Be(1);
+        var db = _redis!.GetDatabase();
+        (await db.KeyExistsAsync($"pdf:quota:reservation:{user.Id}:pdf-sunday")).Should().BeFalse();
+        (await db.KeyExistsAsync($"pdf:quota:reservation:{user.Id}:pdf-monday")).Should().BeTrue();
+
+        var info = await service.GetQuotaInfoAsync(user.Id, user.Tier, user.Role, TestCancellationToken);
+        info.DailyUploadsUsed.Should().Be(1);
+        info.WeeklyUploadsUsed.Should().Be(1);
+    }
+
+    // Piu' rilasci della stessa prenotazione nello stesso momento: decrementa uno solo. Prima il
+    // controllo (EXISTS) e la cancellazione (DEL) erano comandi separati, con i decrementi in mezzo.
+    [Fact(Timeout = 90_000)]
+    public async Task ReleaseQuota_SameReservationReleasedConcurrently_DecrementsOnce()
+    {
+        var user = await CreateUserAsync(UserTier.Free);
+        var clock = new TestTimeProvider(new DateTime(2026, 10, 14, 12, 0, 0, DateTimeKind.Utc));
+        var service = CreateQuotaService(clock);
+
+        (await service.ReserveQuotaAsync(user.Id, "pdf-a", TestCancellationToken)).Reserved.Should().BeTrue();
+        (await service.ReserveQuotaAsync(user.Id, "pdf-b", TestCancellationToken)).Reserved.Should().BeTrue();
+
+        await Task.WhenAll(Enumerable.Range(0, 8).Select(_ =>
+            Task.Run(() => service.ReleaseQuotaAsync(user.Id, "pdf-a", TestCancellationToken), TestCancellationToken)));
+        await service.ReleaseQuotaAsync(user.Id, "pdf-a", TestCancellationToken);
+
+        (await ReadCounterAsync($"pdf:upload:daily:{user.Id}:2026-10-14")).Should().Be(1);
+        (await ReadCounterAsync($"pdf:upload:weekly:{user.Id}:2026-W42")).Should().Be(1);
+    }
 }

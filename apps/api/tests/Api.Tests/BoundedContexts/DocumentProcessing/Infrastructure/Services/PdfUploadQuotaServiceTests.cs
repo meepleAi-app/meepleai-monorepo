@@ -10,6 +10,7 @@ using FluentAssertions;
 using AuthRole = Api.SharedKernel.Domain.ValueObjects.Role;
 using UserTier = Api.SharedKernel.Domain.ValueObjects.UserTier;
 using Api.Tests.Constants;
+using System.Collections.Concurrent;
 using System.Globalization;
 
 namespace Api.Tests.BoundedContexts.DocumentProcessing.Infrastructure.Services;
@@ -1094,5 +1095,220 @@ public class PdfUploadQuotaServiceTests
 
         var expected = $"pdf:upload:weekly:{userId}:{isoWeek}";
         weeklyKeys.Should().Equal(expected, expected);
+    }
+
+    // ============================================================================
+    // #4547: il rilascio decrementa i contatori del periodo della prenotazione, non di quello in
+    // cui avviene. Prima, una prenotazione di domenica alle 23:50 rilasciata lunedi' alle 00:10
+    // decrementava lunedi' e la settimana nuova.
+    // ============================================================================
+
+    // Le prenotazioni stanno in un dizionario che fa da Redis: EXISTS, GET e DEL (il codice di prima
+    // ne usava due) e GETDEL (quello di adesso) leggono lo stesso stato. Cosi' i test girano contro
+    // ogni versione, e il rosso di prima e' per il motivo giusto, non per una Setup mancante.
+    private readonly ConcurrentDictionary<string, RedisValue> _reservations = new(StringComparer.Ordinal);
+    private readonly ConcurrentQueue<string> _incrementedKeys = new();
+    private readonly ConcurrentQueue<string> _decrementedKeys = new();
+
+    private void UseFakeReservationStore()
+    {
+        _databaseMock.Setup(db => db.KeyExistsAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync((RedisKey key, CommandFlags _) => _reservations.ContainsKey(key.ToString()));
+        _databaseMock.Setup(db => db.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync((RedisKey key, CommandFlags flags) =>
+                _reservations.TryGetValue(key.ToString(), out var value) ? value : RedisValue.Null);
+        _databaseMock.Setup(db => db.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync((RedisKey key, CommandFlags flags) => _reservations.TryRemove(key.ToString(), out var _));
+        _databaseMock.Setup(db => db.StringGetDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync((RedisKey key, CommandFlags _) =>
+                _reservations.TryRemove(key.ToString(), out var value) ? value : RedisValue.Null);
+        _databaseMock.Setup(db => db.ScriptEvaluateAsync(
+                It.IsAny<string>(), It.IsAny<RedisKey[]>(), It.IsAny<RedisValue[]>(), It.IsAny<CommandFlags>()))
+            .Callback<string, RedisKey[]?, RedisValue[]?, CommandFlags>((script, keys, _, _) =>
+            {
+                var target = script.Contains("DECR", StringComparison.Ordinal) ? _decrementedKeys : _incrementedKeys;
+                foreach (var key in keys!)
+                    target.Enqueue(key.ToString());
+            })
+            .ReturnsAsync(RedisResult.Create(new RedisValue("1")));
+    }
+
+    // La scrittura si legge dalle invocazioni, non da una Setup: StringSetAsync ha parecchi
+    // overload, e una Setup sull'overload sbagliato non scatterebbe.
+    private async Task ReserveAsync(PdfUploadQuotaService service, Guid userId, string pdfId)
+    {
+        var result = await service.ReserveQuotaAsync(userId, pdfId);
+        result.Reserved.Should().BeTrue();
+        var write = _databaseMock.Invocations.Last(i => i.Method.Name == nameof(IDatabaseAsync.StringSetAsync));
+        _reservations[write.Arguments[0].ToString()!] = (RedisValue)write.Arguments[1];
+    }
+
+    private static string ReservationKey(Guid userId, string pdfId) => $"pdf:quota:reservation:{userId}:{pdfId}";
+    private static string DailyKey(Guid userId, string day) => $"pdf:upload:daily:{userId}:{day}";
+    private static string WeeklyKey(Guid userId, string isoWeek) => $"pdf:upload:weekly:{userId}:{isoWeek}";
+
+    [Fact]
+    public async Task ReleaseQuota_AfterSundayMidnight_DecrementsTheDayAndWeekOfTheReservation()
+    {
+        UseFakeReservationStore();
+        var userId = Guid.NewGuid();
+        _timeProvider.SetUtcNow(new DateTime(2026, 10, 18, 23, 50, 0, DateTimeKind.Utc)); // domenica, 2026-W42
+        await ReserveAsync(_service, userId, "pdf-1");
+
+        _timeProvider.SetUtcNow(new DateTime(2026, 10, 19, 0, 10, 0, DateTimeKind.Utc)); // lunedi', 2026-W43
+        await _service.ReleaseQuotaAsync(userId, "pdf-1");
+
+        _incrementedKeys.Should().Equal(DailyKey(userId, "2026-10-18"), WeeklyKey(userId, "2026-W42"));
+        _decrementedKeys.Should().Equal(DailyKey(userId, "2026-10-18"), WeeklyKey(userId, "2026-W42"));
+        _reservations.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ReleaseQuota_AfterAnyMidnight_DecrementsTheDayOfTheReservation()
+    {
+        UseFakeReservationStore();
+        var userId = Guid.NewGuid();
+        _timeProvider.SetUtcNow(new DateTime(2026, 10, 14, 23, 50, 0, DateTimeKind.Utc)); // mercoledi', 2026-W42
+        await ReserveAsync(_service, userId, "pdf-1");
+
+        _timeProvider.SetUtcNow(new DateTime(2026, 10, 15, 0, 10, 0, DateTimeKind.Utc)); // giovedi', stessa settimana
+        await _service.ReleaseQuotaAsync(userId, "pdf-1");
+
+        _decrementedKeys.Should().Equal(DailyKey(userId, "2026-10-14"), WeeklyKey(userId, "2026-W42"));
+        _reservations.Should().BeEmpty();
+    }
+
+    // Una prenotazione scritta prima del deploy vive al massimo 30 minuti, e al deploy e' in Redis
+    // con il JSON del codice di prima. Il formato e' lo stesso di adesso (ReservedAt c'era gia'):
+    // qui e' scritto a mano, cosi' un cambio futuro del writer non nasconde un lettore che non lo
+    // capisce piu'. Il valore e' quello che scrive ReserveQuotaAsync (System.Text.Json, DateTime UTC).
+    [Fact]
+    public async Task ReleaseQuota_ReservationWrittenBeforeTheDeploy_DecrementsItsPeriod()
+    {
+        UseFakeReservationStore();
+        var userId = Guid.NewGuid();
+        _reservations[ReservationKey(userId, "pdf-1")] =
+            $$"""{"UserId":"{{userId}}","PdfId":"pdf-1","ReservedAt":"2026-10-18T23:50:00.1234567Z","ExpiresAt":"2026-10-19T00:20:00.1234567Z"}""";
+
+        _timeProvider.SetUtcNow(new DateTime(2026, 10, 19, 0, 10, 0, DateTimeKind.Utc));
+        await _service.ReleaseQuotaAsync(userId, "pdf-1");
+
+        _decrementedKeys.Should().Equal(DailyKey(userId, "2026-10-18"), WeeklyKey(userId, "2026-W42"));
+        _reservations.Should().BeEmpty();
+    }
+
+    // Il JSON che il rilascio legge. Se cambia il formato, al deploy restano in Redis per 30 minuti
+    // prenotazioni nel formato vecchio: il lettore deve capirle ancora, e il JSON scritto a mano nel
+    // test qui sopra va lasciato com'era.
+    [Fact]
+    public async Task ReserveQuota_WritesTheReservationJsonTheReleaseReads()
+    {
+        UseFakeReservationStore();
+        var userId = Guid.NewGuid();
+        _timeProvider.SetUtcNow(new DateTime(2026, 10, 18, 23, 50, 0, DateTimeKind.Utc).AddTicks(1234567));
+
+        await ReserveAsync(_service, userId, "pdf-1");
+
+        ((string?)_reservations[ReservationKey(userId, "pdf-1")]).Should().Be(
+            $$"""{"UserId":"{{userId}}","PdfId":"pdf-1","ReservedAt":"2026-10-18T23:50:00.1234567Z","ExpiresAt":"2026-10-19T00:20:00.1234567Z"}""");
+    }
+
+    // Ripiego: se ReservedAt non si legge, il rilascio decrementa il periodo di adesso, come faceva
+    // prima. Non e' giusto a cavallo della mezzanotte, ma la prenotazione si rilascia comunque.
+    [Theory]
+    [InlineData("non e' JSON")]
+    [InlineData("""{"UserId":"x","PdfId":"pdf-1"}""")]
+    [InlineData("""{"ReservedAt":"ieri sera"}""")]
+    [InlineData("""{"ReservedAt":12345}""")]
+    [InlineData("""["ReservedAt"]""")]
+    public async Task ReleaseQuota_ReservedAtUnreadable_FallsBackToTheCurrentPeriod(string reservation)
+    {
+        UseFakeReservationStore();
+        var userId = Guid.NewGuid();
+        _reservations[ReservationKey(userId, "pdf-1")] = reservation;
+
+        _timeProvider.SetUtcNow(new DateTime(2026, 10, 19, 0, 10, 0, DateTimeKind.Utc));
+        await _service.ReleaseQuotaAsync(userId, "pdf-1");
+
+        _decrementedKeys.Should().Equal(DailyKey(userId, "2026-10-19"), WeeklyKey(userId, "2026-W43"));
+        _reservations.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ReleaseQuota_NoReservation_DecrementsNothing()
+    {
+        UseFakeReservationStore();
+        var userId = Guid.NewGuid();
+
+        await _service.ReleaseQuotaAsync(userId, "pdf-1");
+
+        _decrementedKeys.Should().BeEmpty();
+    }
+
+    // Due rilasci della stessa prenotazione, il secondo mentre il primo sta decrementando. Prima il
+    // controllo (KeyExists) e la cancellazione (KeyDelete) erano due comandi con i decrementi in
+    // mezzo: tutti e due i rilasci vedevano la prenotazione e decrementavano due volte.
+    [Fact]
+    public async Task ReleaseQuota_SecondReleaseWhileTheFirstIsDecrementing_DecrementsOnce()
+    {
+        UseFakeReservationStore();
+        var userId = Guid.NewGuid();
+        await ReserveAsync(_service, userId, "pdf-1");
+
+        var firstIsDecrementing = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var letTheFirstGoOn = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var decrements = 0;
+        _databaseMock.Setup(db => db.ScriptEvaluateAsync(
+                It.Is<string>(s => s.Contains("DECR", StringComparison.Ordinal)),
+                It.IsAny<RedisKey[]>(), It.IsAny<RedisValue[]>(), It.IsAny<CommandFlags>()))
+            .Returns(async (string _, RedisKey[]? _, RedisValue[]? _, CommandFlags _) =>
+            {
+                if (Interlocked.Increment(ref decrements) == 1)
+                {
+                    firstIsDecrementing.SetResult();
+                    await letTheFirstGoOn.Task;
+                }
+                return RedisResult.Create(new RedisValue("0"));
+            });
+
+        var first = _service.ReleaseQuotaAsync(userId, "pdf-1");
+        await firstIsDecrementing.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await _service.ReleaseQuotaAsync(userId, "pdf-1").WaitAsync(TimeSpan.FromSeconds(10));
+        letTheFirstGoOn.SetResult();
+        await first.WaitAsync(TimeSpan.FromSeconds(10));
+
+        decrements.Should().Be(2, "un solo rilascio: la chiave del giorno e quella della settimana, una volta");
+    }
+
+    // ReservedAt e i contatori incrementati devono venire dalla stessa lettura dell'orologio: se la
+    // prenotazione ne fa due, e la mezzanotte cade fra le due (c'e' in mezzo la scrittura su Redis),
+    // il JSON dice domenica e l'incremento va su lunedi'; il rilascio decrementerebbe domenica, e
+    // lunedi' resterebbe con un +1.
+    [Fact]
+    public async Task ReserveThenRelease_MidnightFallsInsideTheReservation_ReleaseUndoesTheSameKeys()
+    {
+        UseFakeReservationStore();
+        var userId = Guid.NewGuid();
+        var service = new PdfUploadQuotaService(
+            _redisMock.Object,
+            _configServiceMock.Object,
+            NullLogger<PdfUploadQuotaService>.Instance,
+            new SteppingTimeProvider(new DateTime(2026, 10, 18, 23, 59, 59, 999, DateTimeKind.Utc), TimeSpan.FromMilliseconds(2)));
+
+        await ReserveAsync(service, userId, "pdf-1");
+        await service.ReleaseQuotaAsync(userId, "pdf-1");
+
+        // La prima lettura e' domenica 23:59:59.999: e' l'istante della prenotazione.
+        _incrementedKeys.Should().Equal(DailyKey(userId, "2026-10-18"), WeeklyKey(userId, "2026-W42"));
+        _decrementedKeys.Should().Equal(_incrementedKeys);
+    }
+
+    /// <summary>Un orologio che avanza di <paramref name="step"/> a ogni lettura.</summary>
+    private sealed class SteppingTimeProvider(DateTime start, TimeSpan step) : TimeProvider
+    {
+        private long _reads = -1;
+
+        public override DateTimeOffset GetUtcNow() =>
+            new(start + step * Interlocked.Increment(ref _reads), TimeSpan.Zero);
     }
 }

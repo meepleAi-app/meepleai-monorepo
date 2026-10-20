@@ -45,13 +45,7 @@ import { cn } from '@/lib/utils';
 // ========== Types ==========
 
 export type IndexingStage =
-  | 'uploaded'
-  | 'processing'
-  | 'extracted'
-  | 'chunked'
-  | 'embedding'
-  | 'indexed'
-  | 'failed';
+  'uploaded' | 'processing' | 'extracted' | 'chunked' | 'embedding' | 'indexed' | 'failed';
 
 export interface PdfIndexingStatusData {
   pdfId: string;

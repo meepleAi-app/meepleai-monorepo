@@ -56,12 +56,22 @@ export default function PromptVersionCard({
           {showActions && (
             <div className="flex gap-2">
               {!version.isActive && onActivate && (
-                <Button onClick={() => onActivate?.(version.id)} size="sm" variant="default" data-testid="activate-button">
+                <Button
+                  onClick={() => onActivate?.(version.id)}
+                  size="sm"
+                  variant="default"
+                  data-testid="activate-button"
+                >
                   Activate
                 </Button>
               )}
               {onCompare && (
-                <Button onClick={() => onCompare?.(version.id)} size="sm" variant="secondary" data-testid="compare-button">
+                <Button
+                  onClick={() => onCompare?.(version.id)}
+                  size="sm"
+                  variant="secondary"
+                  data-testid="compare-button"
+                >
                   Compare
                 </Button>
               )}
@@ -78,16 +88,22 @@ export default function PromptVersionCard({
       <CardContent>
         <div className="space-y-2 text-sm text-muted-foreground">
           <div className="flex items-center gap-2">
-            <span className="font-medium" data-testid="created-by-label">Created by:</span>
+            <span className="font-medium" data-testid="created-by-label">
+              Created by:
+            </span>
             <span>{version.createdByEmail}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="font-medium" data-testid="created-at-label">Created at:</span>
+            <span className="font-medium" data-testid="created-at-label">
+              Created at:
+            </span>
             <span>{new Date(version.createdAt).toLocaleString()}</span>
           </div>
           {version.metadata && Object.keys(version.metadata).length > 0 && (
             <div className="flex items-start gap-2">
-              <span className="font-medium" data-testid="metadata-label">Metadata:</span>
+              <span className="font-medium" data-testid="metadata-label">
+                Metadata:
+              </span>
               <Badge variant="secondary" className="text-xs">
                 {Object.keys(version.metadata).length} field(s)
               </Badge>

@@ -1738,6 +1738,16 @@ public sealed class SharedGame : AggregateRoot<Guid>
         _erratas.Add(errata);
     }
 
+    /// <summary>
+    /// Reconstitution hook for the repository (#4557): appends a persisted FAQ to the aggregate
+    /// WITHOUT re-running creation validation or raising <c>GameFaqAddedEvent</c>.
+    /// </summary>
+    internal void LoadFaq(GameFaq faq)
+    {
+        ArgumentNullException.ThrowIfNull(faq);
+        _faqs.Add(faq);
+    }
+
     // Validation Methods
 
     private static void ValidateTitle(string title)

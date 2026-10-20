@@ -33,8 +33,13 @@ internal sealed class UpdateGameFaqCommandHandler : ICommandHandler<UpdateGameFa
             "Updating FAQ: {FaqId}, Question: {Question}, Order: {Order}",
             command.FaqId, command.Question, command.Order);
 
-        var game = await _repository.GetGameByFaqIdAsync(command.FaqId, cancellationToken).ConfigureAwait(false)
-            ?? throw new NotFoundException("Faq", command.FaqId.ToString());
+        var game = await _repository.GetGameByFaqIdAsync(command.FaqId, cancellationToken).ConfigureAwait(false);
+
+        // #4557: una FAQ di un altro gioco non esiste sotto la rotta di questo.
+        if (game is null || game.Id != command.SharedGameId)
+        {
+            throw new NotFoundException("Faq", command.FaqId.ToString());
+        }
 
         game.UpdateFaq(command.FaqId, command.Question, command.Answer, command.Order);
 

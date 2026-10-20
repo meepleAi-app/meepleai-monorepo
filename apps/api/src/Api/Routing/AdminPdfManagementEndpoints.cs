@@ -45,6 +45,12 @@ internal static class AdminPdfManagementEndpoints
             .WithName("CleanupOrphans")
             .WithSummary("Delete orphaned text chunks referencing non-existent PDFs");
 
+        // #4514: PDF files in storage that no row references. Dry run unless ?dryRun=false.
+        group.MapPost("/maintenance/cleanup-orphan-files", CleanupOrphanFiles)
+            .WithName("CleanupOrphanPdfFiles")
+            .Produces<CleanupOrphanPdfFilesResult>(StatusCodes.Status200OK)
+            .WithSummary("List PDF files under pdfs/ that no row references, and delete them (dry run by default)");
+
         // #3435 (SP1): admin-triggered batch — runs a hi_res pass over Ready, never-seeded PDFs and
         // seeds their image-table regions. Gated by PdfProcessing:ImageRegionSeeding:Enabled (default off).
         group.MapPost("/maintenance/seed-image-regions-batch", SeedImageRegionsBatch)
@@ -152,6 +158,16 @@ internal static class AdminPdfManagementEndpoints
         CancellationToken cancellationToken)
     {
         var result = await mediator.Send(new CleanupOrphansCommand(), cancellationToken)
+            .ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> CleanupOrphanFiles(
+        IMediator mediator,
+        CancellationToken cancellationToken,
+        bool dryRun = true)
+    {
+        var result = await mediator.Send(new CleanupOrphanPdfFilesCommand(dryRun), cancellationToken)
             .ConfigureAwait(false);
         return Results.Ok(result);
     }

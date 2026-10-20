@@ -145,6 +145,8 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
     {
         var started = Stopwatch.GetTimestamp();
         long afterTemplate;
+        long afterBootClone;
+        long afterCreate;
         long afterHost;
 
         try
@@ -192,6 +194,7 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
             var bootDatabase = $"{_prefix}_boot";
             await CloneFromTemplateAsync(bootDatabase);
             _createdDatabases.Add(bootDatabase);
+            afterBootClone = Stopwatch.GetTimestamp();
 
             var bootConnection = ConnectionTo(bootDatabase);
             _connectionSource.Provider.SetConnectionString(bootConnection);
@@ -206,6 +209,7 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
             // ConfigureHost di norma restituisce un oggetto NUOVO (WithWebHostBuilder non muta il
             // ricevente), quindi _baseFactory resta da disporre a parte: vedi SafeDisposeAsync.
             Factory = ConfigureHost(_baseFactory);
+            afterCreate = Stopwatch.GetTimestamp();
 
             // `WithWebHostBuilder` è PIGRO: senza questa riga il costo dell'host finirebbe nel primo
             // test invece che qui, e la strumentazione riporterebbe host=0,0 — lo stesso inganno
@@ -226,6 +230,17 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
             $"{Stopwatch.GetElapsedTime(started).TotalSeconds:F1} " +
             $"template={Stopwatch.GetElapsedTime(started, afterTemplate).TotalSeconds:F1} " +
             $"host={Stopwatch.GetElapsedTime(afterTemplate, afterHost).TotalSeconds:F1}");
+
+        // #4572: la fase `host=` qui sopra, divisa. `services` è il primo accesso a Factory.Services,
+        // cioè Program fino a RunAsync più l'avvio del server di test; le fasi di Program le
+        // registra StartupPhaseTimings, e `resto` è ciò che di `services` le fasi non coprono.
+        TestContext.Current?.SendDiagnosticMessage(
+            HostStartupDiagnostics.Format(
+                GetType().Name,
+                services: Stopwatch.GetElapsedTime(afterCreate, afterHost),
+                Factory.Services,
+                ("clone", Stopwatch.GetElapsedTime(afterTemplate, afterBootClone)),
+                ("create", Stopwatch.GetElapsedTime(afterBootClone, afterCreate))));
     }
 
     /// <summary>

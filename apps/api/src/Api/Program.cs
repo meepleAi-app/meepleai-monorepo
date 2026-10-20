@@ -93,7 +93,10 @@ else if (isCIEnv)
     Console.WriteLine("[DotNetEnv] CI environment detected - skipping .env.development loading");
 }
 
+// #4572: le fasi dell'avvio, misurate da qui. Vedi StartupPhaseTimings.
+var startupTimings = new Api.Observability.StartupPhaseTimings();
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSingleton(startupTimings);
 
 // Issue #1928 Task B (DEC-B-4) — Triple gate STARTUP fail-fast.
 // Refuses to start if BOTH E2E_SEEDING_ENABLED=true AND ASPNETCORE_ENVIRONMENT=Production.
@@ -593,6 +596,7 @@ if (builder.Environment.IsDevelopment())
 #endif
 
 var app = builder.Build();
+startupTimings.Mark("build");
 
 // Issue #1314 PR 2: wire the current-layout-version ObservableGauge once
 // the DI root is built. Idempotent — safe across HotReload restarts.
@@ -632,6 +636,7 @@ using (var scope = app.Services.CreateScope())
         app.Logger.LogInformation("✓ Embedding configuration validated: Provider={Provider}, Model={Model}, Dimensions={Dimensions}",
             provider, model, embeddingDimensions);
     }
+    startupTimings.Mark("migrations");
 
     // Slice E: surface a misconfigured OPENROUTER_DEFAULT_MODEL at boot (loud) instead of as a
     // chat-time 500. AgentDefaults.DefaultModel feeds the seeded system agent + routing fallbacks
@@ -654,6 +659,7 @@ using (var scope = app.Services.CreateScope())
             scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IAgentProfileRepository>(),
             app.Logger).ConfigureAwait(false);
     }
+    startupTimings.Mark("agent-profile-check");
 
     // Create read-only projection views for bounded context entity decomposition.
     // Each BC gets its own view of the "users" table to avoid EF Core conflicts
@@ -675,6 +681,7 @@ using (var scope = app.Services.CreateScope())
             app.Logger.LogWarning(ex, "Could not create user projection views (non-fatal)");
         }
     }
+    startupTimings.Mark("views");
 
     // Epic #318: Layered seeding pipeline with advisory lock (runs independently of migrations)
     if (db != null)
@@ -689,6 +696,7 @@ using (var scope = app.Services.CreateScope())
             app.Logger.LogError(ex, "Seeding failed — API will continue startup");
         }
     }
+    startupTimings.Mark("seeding");
 }
 
 // F3: Register observable gauges that depend on DI singletons
@@ -1121,6 +1129,8 @@ if (app.Environment.IsDevelopment())
 
 app.MapHub<Api.Hubs.GameStateHub>("/hubs/gamestate");
 
+startupTimings.Mark("pipeline");
+
 // ISSUE-2511: Startup health check for critical services
 using (var scope = app.Services.CreateScope())
 {
@@ -1168,6 +1178,9 @@ using (var scope = app.Services.CreateScope())
             "Startup health check threw instead of reporting status. Application starting in degraded mode.");
     }
 }
+
+startupTimings.Mark("health-check");
+app.Logger.LogInformation("Startup phases: {StartupPhases}", startupTimings);
 
 await app.RunAsync().ConfigureAwait(false);
 

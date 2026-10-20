@@ -20,6 +20,7 @@ public class DeleteGameFaqCommandHandlerTests
     private readonly Mock<ISharedGameRepository> _repositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<ILogger<DeleteGameFaqCommandHandler>> _loggerMock;
+    private readonly DetailCacheEvictionDoubles _eviction = new();
     private readonly DeleteGameFaqCommandHandler _handler;
 
     public DeleteGameFaqCommandHandlerTests()
@@ -30,6 +31,9 @@ public class DeleteGameFaqCommandHandlerTests
         _handler = new DeleteGameFaqCommandHandler(
             _repositoryMock.Object,
             _unitOfWorkMock.Object,
+            _eviction.Cache.Object,
+            _eviction.RetryPolicy.Object,
+            _eviction.HybridCache.Object,
             _loggerMock.Object);
     }
 
@@ -125,5 +129,48 @@ public class DeleteGameFaqCommandHandlerTests
         game.Faqs.Should().ContainSingle("a FAQ of another game must not be removed");
         _repositoryMock.Verify(r => r.Update(It.IsAny<SharedGame>()), Times.Never);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// #4565: il dettaglio del gioco riporta le FAQ e sta in cache. La prova end-to-end è
+    /// <c>Detail_AfterDeletingAFaq_NoLongerReportsIt</c>, su Postgres.
+    /// </summary>
+    [Fact]
+    public async Task Handle_AfterSave_EvictsTheDetailCacheOfTheGame()
+    {
+        var game = DetailCacheEvictionDoubles.NewGame();
+        var faq = GameFaq.Create(game.Id, "Question?", "Answer", 1);
+        game.AddFaq(faq);
+        _repositoryMock
+            .Setup(r => r.GetGameByFaqIdAsync(faq.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+        _unitOfWorkMock
+            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Callback(_eviction.MarkWritten)
+            .ReturnsAsync(1);
+
+        await _handler.Handle(
+            new DeleteGameFaqCommand(game.Id, faq.Id),
+            TestContext.Current.CancellationToken);
+
+        _eviction.AssertEvictedAfterTheWrite(game.Id);
+    }
+
+    [Fact]
+    public async Task Handle_WithAFaqOfAnotherGame_EvictsNothing()
+    {
+        var owner = DetailCacheEvictionDoubles.NewGame();
+        var faq = GameFaq.Create(owner.Id, "Of another game?", "Yes", 1);
+        owner.AddFaq(faq);
+        _repositoryMock
+            .Setup(r => r.GetGameByFaqIdAsync(faq.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(owner);
+
+        var act = () => _handler.Handle(
+            new DeleteGameFaqCommand(Guid.NewGuid(), faq.Id),
+            TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
+
+        _eviction.AssertNothingEvicted();
     }
 }

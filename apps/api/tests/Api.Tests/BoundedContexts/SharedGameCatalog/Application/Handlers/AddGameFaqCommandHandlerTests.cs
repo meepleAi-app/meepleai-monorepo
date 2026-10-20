@@ -19,6 +19,7 @@ public class AddGameFaqCommandHandlerTests
     private readonly Mock<ISharedGameRepository> _repositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<ILogger<AddGameFaqCommandHandler>> _loggerMock;
+    private readonly DetailCacheEvictionDoubles _eviction = new();
     private readonly AddGameFaqCommandHandler _handler;
 
     public AddGameFaqCommandHandlerTests()
@@ -29,6 +30,9 @@ public class AddGameFaqCommandHandlerTests
         _handler = new AddGameFaqCommandHandler(
             _repositoryMock.Object,
             _unitOfWorkMock.Object,
+            _eviction.Cache.Object,
+            _eviction.RetryPolicy.Object,
+            _eviction.HybridCache.Object,
             _loggerMock.Object);
     }
 
@@ -93,5 +97,44 @@ public class AddGameFaqCommandHandlerTests
 
         _repositoryMock.Verify(r => r.Update(It.IsAny<SharedGame>()), Times.Never);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// #4565: il dettaglio del gioco riporta le FAQ e sta in cache. La prova end-to-end è
+    /// <c>Detail_AfterAddingAFaq_ReportsIt</c>, su Postgres.
+    /// </summary>
+    [Fact]
+    public async Task Handle_AfterSave_EvictsTheDetailCacheOfTheGame()
+    {
+        var game = DetailCacheEvictionDoubles.NewGame();
+        _repositoryMock
+            .Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+        _unitOfWorkMock
+            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Callback(_eviction.MarkWritten)
+            .ReturnsAsync(1);
+
+        await _handler.Handle(
+            new AddGameFaqCommand(game.Id, "How many players?", "2-4 players", 1),
+            TestContext.Current.CancellationToken);
+
+        _eviction.AssertEvictedAfterTheWrite(game.Id);
+    }
+
+    [Fact]
+    public async Task Handle_WithNonExistentGame_EvictsNothing()
+    {
+        var gameId = Guid.NewGuid();
+        _repositoryMock
+            .Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SharedGame?)null);
+
+        var act = () => _handler.Handle(
+            new AddGameFaqCommand(gameId, "Question?", "Answer", 1),
+            TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
+
+        _eviction.AssertNothingEvicted();
     }
 }

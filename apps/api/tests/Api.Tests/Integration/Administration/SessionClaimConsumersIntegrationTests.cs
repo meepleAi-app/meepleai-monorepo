@@ -1,11 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
-using Api.Services;
-using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
@@ -203,14 +200,14 @@ public sealed class SessionClaimConsumersIntegrationTests
     [Fact]
     public async Task RagEnhancementEstimate_UsesTheTierOfTheUser()
     {
-        var (adminId, _) = await CreateSessionAsync(TestSessionHelper.CreateAdminSessionAsync);
+        var (_, adminToken) = await CreateSessionAsync(TestSessionHelper.CreateAdminSessionAsync);
         var (premiumId, premiumToken) = await CreateSessionAsync(TestSessionHelper.CreateUserSessionAsync);
         var (_, freeToken) = await CreateSessionAsync(TestSessionHelper.CreateUserSessionAsync);
         await SetTierAsync(premiumId, "premium");
 
         // Senza chiavi per tier ogni tier ha ogni funzione (il ripiego di IsEnabledForTierAsync è «attivo»).
         // Spegnerne una per «premium» separa i due tier: chi la legge come «free» la vede ancora accesa.
-        await DisableForTierAsync(AdaptiveRoutingKey, UserTier.Premium, adminId);
+        await DisableForTierAsync(AdaptiveRoutingKey, "premium", adminToken);
 
         var premium = await SendAsync(HttpMethod.Get, "/api/v1/rag/enhancements/estimate", premiumToken);
         premium.Status.Should().Be(HttpStatusCode.OK, $"Body: {premium.Body}");
@@ -227,10 +224,10 @@ public sealed class SessionClaimConsumersIntegrationTests
     [Fact]
     public async Task RagEnhancementEstimate_WithoutASession_IsEstimatedAsFree()
     {
-        var (adminId, _) = await CreateSessionAsync(TestSessionHelper.CreateAdminSessionAsync);
+        var (_, adminToken) = await CreateSessionAsync(TestSessionHelper.CreateAdminSessionAsync);
 
         // Il comportamento di chi non ha la sessione non deve cambiare: prima era «Free» perché mancava il claim.
-        await DisableForTierAsync(CragEvaluationKey, UserTier.Free, adminId);
+        await DisableForTierAsync(CragEvaluationKey, "free", adminToken);
 
         using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/rag/enhancements/estimate");
         using var response = await _client.SendAsync(request);
@@ -242,15 +239,21 @@ public sealed class SessionClaimConsumersIntegrationTests
     }
 
     /// <summary>
-    /// Spegne una funzione di RAG per un tier, con l'id di un admin vero come autore. Non passa dall'endpoint
-    /// <c>POST /admin/rag-enhancements/{key}/tier/{tier}/toggle</c>: quell'endpoint non passa l'id dell'admin al
-    /// servizio dei flag e risponde 422 (<c>CreatedByUserId is required</c>), un difetto diverso da #4580.
+    /// Spegne una funzione di RAG per un tier dall'endpoint dell'admin,
+    /// <c>POST /admin/rag-enhancements/{key}/tier/{tier}/toggle</c>. Senza riga ogni tier ha ogni funzione
+    /// accesa, e il toggle inverte: la risposta è asserita, così un secondo toggle non la riaccende in silenzio.
+    /// Fino a #4594 l'endpoint rispondeva 422 (<c>CreatedByUserId is required</c>) e questo passo usava
+    /// <c>IFeatureFlagService</c> direttamente.
     /// </summary>
-    private async Task DisableForTierAsync(string featureKey, UserTier tier, Guid adminId)
+    private async Task DisableForTierAsync(string featureKey, string tier, string adminToken)
     {
-        using var scope = _factory.Services.CreateScope();
-        var flags = scope.ServiceProvider.GetRequiredService<IFeatureFlagService>();
-        await flags.DisableFeatureForTierAsync(featureKey, tier, adminId.ToString());
+        var toggle = await SendAsync(
+            HttpMethod.Post, $"/api/v1/admin/rag-enhancements/{featureKey}/tier/{tier}/toggle", adminToken);
+
+        toggle.Status.Should().Be(HttpStatusCode.OK, $"setup: an admin may toggle a RAG enhancement. Body: {toggle.Body}");
+        using var json = JsonDocument.Parse(toggle.Body);
+        json.RootElement.GetProperty("isNowEnabled").GetBoolean().Should().BeFalse(
+            "setup: the flag was on for the tier (no row), and the toggle turned it off");
     }
 
     private static string[] ActiveFlags(string body)
@@ -307,21 +310,7 @@ public sealed class SessionClaimConsumersIntegrationTests
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var token = SessionToken.Generate();
-        db.UserSessions.Add(new UserSessionEntity
-        {
-            Id = Guid.NewGuid(),
-            UserId = subjectId,
-            TokenHash = token.ComputeHash(),
-            CreatedAt = DateTime.UtcNow,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(15),
-            LastSeenAt = DateTime.UtcNow,
-            ImpersonatedByUserId = actorId,
-            ImpersonatedUntil = DateTime.UtcNow.AddMinutes(15),
-            User = null!,
-        });
-        await db.SaveChangesAsync();
-        return token.Value;
+        return await TestSessionHelper.CreateImpersonationSessionAsync(db, subjectId, actorId);
     }
 
     private async Task SetDisplayNameAsync(Guid userId, string displayName)

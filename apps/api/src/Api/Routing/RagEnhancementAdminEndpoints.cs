@@ -1,9 +1,11 @@
-using Api.BoundedContexts.KnowledgeBase.Application.Services;
-using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands.RagEnhancements;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries.RagEnhancements;
 using Api.Extensions;
 using Api.Filters;
 using Api.Services;
 using Api.SharedKernel.Domain.ValueObjects;
+using MediatR;
 
 namespace Api.Routing;
 
@@ -21,46 +23,27 @@ internal static class RagEnhancementAdminEndpoints
 
         // GET /api/v1/admin/rag-enhancements — List all enhancements with status
         ragGroup.MapGet("/", async (
-            IFeatureFlagService featureFlags,
+            IMediator mediator,
             CancellationToken ct) =>
-        {
-            var result = new List<object>();
-            foreach (var enhancement in Enum.GetValues<RagEnhancement>())
-            {
-                if (enhancement == RagEnhancement.None) continue;
-                var flagKey = enhancement.ToFeatureFlagKey();
-                var isEnabled = await featureFlags.IsEnabledAsync(flagKey).ConfigureAwait(false);
-                result.Add(new
-                {
-                    Name = enhancement.ToString(),
-                    FlagKey = flagKey,
-                    IsGloballyEnabled = isEnabled,
-                    ExtraCreditsBalanced = enhancement.GetExtraCredits(useBalancedForAux: true),
-                    ExtraCreditsFast = enhancement.GetExtraCredits(useBalancedForAux: false)
-                });
-            }
-            return Results.Ok(result);
-        })
+            Results.Ok(await mediator.Send(new ListRagEnhancementsQuery(), ct).ConfigureAwait(false)))
         .WithName("ListRagEnhancements")
         .WithSummary("List all RAG enhancements with their current status");
 
         // POST /api/v1/admin/rag-enhancements/{key}/toggle — Toggle enhancement globally
         ragGroup.MapPost("/{key}/toggle", async (
             string key,
-            IFeatureFlagService featureFlags,
+            HttpContext context,
+            IMediator mediator,
             CancellationToken ct) =>
         {
-            var validKeys = FeatureFlagConstants.RagEnhancements;
-            if (!validKeys.Contains(key, StringComparer.Ordinal))
+            if (!IsRagEnhancementKey(key))
                 return Results.BadRequest(new { Error = $"Unknown enhancement key: {key}" });
 
-            var isEnabled = await featureFlags.IsEnabledAsync(key).ConfigureAwait(false);
-            if (isEnabled)
-                await featureFlags.DisableFeatureAsync(key).ConfigureAwait(false);
-            else
-                await featureFlags.EnableFeatureAsync(key).ConfigureAwait(false);
+            var isNowEnabled = await mediator
+                .Send(new ToggleRagEnhancementCommand(key, AdminId(context)), ct)
+                .ConfigureAwait(false);
 
-            return Results.Ok(new { Key = key, IsNowEnabled = !isEnabled });
+            return Results.Ok(new { Key = key, IsNowEnabled = isNowEnabled });
         })
         .WithName("ToggleRagEnhancement")
         .WithSummary("Toggle a RAG enhancement on/off globally");
@@ -69,21 +52,20 @@ internal static class RagEnhancementAdminEndpoints
         ragGroup.MapPost("/{key}/tier/{tierName}/toggle", async (
             string key,
             string tierName,
-            IFeatureFlagService featureFlags,
+            HttpContext context,
+            IMediator mediator,
             CancellationToken ct) =>
         {
-            var validKeys = FeatureFlagConstants.RagEnhancements;
-            if (!validKeys.Contains(key, StringComparer.Ordinal))
+            if (!IsRagEnhancementKey(key))
                 return Results.BadRequest(new { Error = $"Unknown enhancement key: {key}" });
 
+            // An unknown tier throws the domain ValidationException, which the middleware answers with 400.
             var tier = UserTier.Parse(tierName);
-            var isEnabled = await featureFlags.IsEnabledForTierAsync(key, tier).ConfigureAwait(false);
-            if (isEnabled)
-                await featureFlags.DisableFeatureForTierAsync(key, tier).ConfigureAwait(false);
-            else
-                await featureFlags.EnableFeatureForTierAsync(key, tier).ConfigureAwait(false);
+            var isNowEnabled = await mediator
+                .Send(new ToggleRagEnhancementCommand(key, AdminId(context), tier), ct)
+                .ConfigureAwait(false);
 
-            return Results.Ok(new { Key = key, Tier = tierName, IsNowEnabled = !isEnabled });
+            return Results.Ok(new { Key = key, Tier = tierName, IsNowEnabled = isNowEnabled });
         })
         .WithName("ToggleRagEnhancementForTier")
         .WithSummary("Toggle a RAG enhancement on/off for a specific tier");
@@ -98,28 +80,27 @@ internal static class RagEnhancementAdminEndpoints
     {
         // GET /api/v1/rag/enhancements/estimate — User-facing cost estimate
         group.MapGet("/rag/enhancements/estimate", async (
-            IRagEnhancementService enhancementService,
+            IMediator mediator,
             HttpContext ctx,
             CancellationToken ct) =>
-        {
-            var tier = TierOf(ctx);
-
-            var active = await enhancementService.GetActiveEnhancementsAsync(tier, ct).ConfigureAwait(false);
-            var extraCredits = await enhancementService.EstimateExtraCreditsAsync(active, ct).ConfigureAwait(false);
-
-            return Results.Ok(new
-            {
-                ActiveEnhancements = active.ToString(),
-                ActiveFlags = active.GetIndividualFlags().Select(f => f.ToString()),
-                ExtraCreditsPerQuery = extraCredits,
-                UseBalancedAuxModel = await enhancementService.UseBalancedAuxModelAsync(ct).ConfigureAwait(false)
-            });
-        })
+            Results.Ok(await mediator.Send(new EstimateRagEnhancementCostQuery(TierOf(ctx)), ct).ConfigureAwait(false)))
         .WithName("EstimateRagEnhancementCost")
         .WithSummary("Get active RAG enhancements and estimated extra credits for current user");
 
         return group;
     }
+
+    private static bool IsRagEnhancementKey(string key) =>
+        FeatureFlagConstants.RagEnhancements.Contains(key, StringComparer.Ordinal);
+
+    /// <summary>
+    /// The admin who sent the request, saved as the author of the flag row. <c>RequireAdminSessionFilter</c> on
+    /// the group has already required a valid session, so the cast cannot fail here. EffectiveActor
+    /// (Principal.cs) is the real admin also during an impersonation. #4594: the routes passed no id, the
+    /// author was <see cref="Guid.Empty"/> and the request was rejected with 422.
+    /// </summary>
+    private static Guid AdminId(HttpContext context) =>
+        ((SessionStatusDto)context.Items[nameof(SessionStatusDto)]!).Principal!.EffectiveActor.Id;
 
     /// <summary>
     /// The tier the estimate is computed for: the tier of the user of the session, or Free without one

@@ -202,7 +202,7 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
             // 3. L'HOST: costruito una volta, con la stringa di connessione mutabile.
             _baseFactory = IntegrationWebApplicationFactory.Create(
                 bootConnection,
-                extraConfig: ExtraConfiguration,
+                extraConfig: WithoutStartupSeeding(ExtraConfiguration),
                 enableRateLimiting: EnableRateLimiting,
                 mutableConnectionString: _connectionSource);
 
@@ -267,6 +267,34 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
         TestContext.Current?.SendDiagnosticMessage(
             $"per-test-db {GetType().Name} {name} " +
             $"{Stopwatch.GetElapsedTime(started).TotalSeconds:F2}s");
+    }
+
+    /// <summary>
+    /// La configurazione dell'host con il seeding di avvio spento, se la fixture concreta non lo
+    /// imposta da sé (#4572).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// In ambiente <c>Testing</c> nessuno imposta <c>Seeding:Profile</c>, quindi
+    /// <c>SeedOrchestrator.ResolveProfile</c> ricade su <c>Dev</c> e Program semina tutto all'avvio.
+    /// Qui l'host parte sul database di <b>avvio</b>, migrato, e il seeding gira per davvero: misurato
+    /// nel run 39429067815 al 72% della costruzione dell'host (38,5 s di media su 53 host, fino a
+    /// 112 s su un runner lento). Ed è lavoro perso, perché nessun test legge il database di avvio:
+    /// <see cref="BeginTestAsync"/> clona il <b>template</b>, migrato ma senza seed.
+    /// </para>
+    /// <para>
+    /// <see cref="IntegrationHostFixture"/> non ne ha bisogno: costruisce l'host su un database vuoto,
+    /// dove il seeding fallisce subito. Una fixture concreta che volesse il seeding all'avvio può
+    /// dichiarare la chiave in <see cref="ExtraConfiguration"/>: vince la sua.
+    /// </para>
+    /// </remarks>
+    private static Dictionary<string, string?> WithoutStartupSeeding(Dictionary<string, string?>? extra)
+    {
+        var config = extra is null
+            ? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, string?>(extra, StringComparer.OrdinalIgnoreCase);
+        config.TryAdd("Seeding:Profile", "None");
+        return config;
     }
 
     private string ConnectionTo(string database) =>

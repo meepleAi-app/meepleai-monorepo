@@ -136,4 +136,7 @@ internal sealed class InterleavingChatShareLinkRepository(
         await interleaving.RunBeforeVisitCountAsync(id);
         return await inner.TryRecordAccessAsync(id, cancellationToken);
     }
+
+    public Task<bool> IsActiveAsync(Guid id, CancellationToken cancellationToken = default) =>
+        inner.IsActiveAsync(id, cancellationToken);
 }

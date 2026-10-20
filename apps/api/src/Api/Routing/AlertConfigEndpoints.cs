@@ -190,8 +190,9 @@ internal static class AlertConfigEndpoints
     }
 
     /// <summary>
-    /// The author recorded on a rule: the admin who made the request. The admin filter has stored
-    /// the session; audit attribution reads EffectiveActor (Principal.cs), the real admin even
+    /// The author recorded on a rule: the admin who made the request. SessionAuthenticationMiddleware
+    /// stores the session in Items, and the admin filter on the group has already required it to be
+    /// valid, so the cast cannot fail here. EffectiveActor (Principal.cs) is the real admin even
     /// during an impersonation. #4568: these endpoints read a "userId" claim that the session
     /// handler does not emit, so every rule said "system".
     /// </summary>

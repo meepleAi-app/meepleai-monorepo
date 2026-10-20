@@ -55,8 +55,9 @@ internal static class AlertConfigurationEndpoints
             CancellationToken ct) =>
         {
             // #4568: the session handler emits no "userId" claim, so the author was always
-            // "system". The admin filter has stored the session; audit attribution reads
-            // EffectiveActor (Principal.cs), the real admin even during an impersonation.
+            // "system". SessionAuthenticationMiddleware stores the session in Items, and the admin
+            // filter has already required it to be valid, so the cast cannot fail here.
+            // EffectiveActor (Principal.cs) is the real admin even during an impersonation.
             var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
             var updatedBy = session.Principal!.EffectiveActor.Id.ToString();
 

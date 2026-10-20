@@ -83,6 +83,18 @@ public sealed partial class NoDuplicateRouteTests
 
         using var client = _factory.CreateClient();
 
+        // La sonda legge 401 e 403 allo stesso modo. Se il cookie non fosse riconosciuto, ogni rotta darebbe 401 e
+        // il test passerebbe a vuoto, cioè proprio nella forma di #4568 (RequireAuthorization() risponde 401 a un
+        // anonimo). Prima di tutto, quindi, la sessione dell'utente normale deve essere una sessione valida.
+        using (var me = new HttpRequestMessage(HttpMethod.Get, "/api/v1/auth/me"))
+        {
+            me.Headers.Add("Cookie", $"{TestSessionHelper.SessionCookieName}={userToken}");
+            using var meResponse = await client.SendAsync(me);
+            meResponse.StatusCode.Should().Be(
+                HttpStatusCode.OK,
+                "the probe session must be recognised, or every admin route would answer 401 and the probe would prove nothing");
+        }
+
         var protectedRoutes = new List<string>();
         var reached = new List<string>();
         var undecided = new List<string>();

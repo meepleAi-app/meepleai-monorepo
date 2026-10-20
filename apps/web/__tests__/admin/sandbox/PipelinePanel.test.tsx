@@ -10,6 +10,7 @@ import {
   type DeepMetricsData,
 } from '@/components/admin/sandbox/PipelineDeepMetrics';
 import { PipelinePanel } from '@/components/admin/sandbox/PipelinePanel';
+import { backgroundClasses } from '@/test-utils/background-classes';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -262,16 +263,53 @@ describe('PipelineDeepMetrics', () => {
     expect(screen.getByText('Nessuna metrica disponibile')).toBeInTheDocument();
   });
 
-  // #4513: the canonical Badge variant carries `dark:bg-primary/90`; tailwind-merge drops
-  // `bg-primary` for the badge's own colour but keeps that class (another modifier). In the
-  // always-dark admin shell every badge here turned orange. Each must bring its own dark background.
+  // #4513, #4539: until #4539 the canonical Badge variant carried `dark:bg-primary/90` (and hover
+  // equivalents); tailwind-merge dropped `bg-primary` for the badge's own colour but kept the
+  // classes with another modifier, and in the always-dark admin shell every badge here turned
+  // orange. Each badge must carry exactly its own background classes, none left from the variant.
+  const OK = ['bg-emerald-100', 'dark:bg-emerald-900/30'];
+  const WARN = ['bg-amber-100', 'dark:bg-amber-900/30'];
+  const BAD = ['bg-red-100', 'dark:bg-red-900/30'];
   it.each([
-    { collectionStatus: 'green' as const, coverage: 95, empty: 0, duplicates: 0 },
-    { collectionStatus: 'yellow' as const, coverage: 80, empty: 3, duplicates: 2 },
-    { collectionStatus: 'red' as const, coverage: 40, empty: 3, duplicates: 2 },
+    {
+      collectionStatus: 'green' as const,
+      coverage: 95,
+      empty: 0,
+      duplicates: 0,
+      expected: {
+        'collection-status': OK,
+        'page-coverage': OK,
+        'empty-chunks': OK,
+        duplicates: OK,
+      },
+    },
+    {
+      collectionStatus: 'yellow' as const,
+      coverage: 80,
+      empty: 3,
+      duplicates: 2,
+      expected: {
+        'collection-status': WARN,
+        'page-coverage': WARN,
+        'empty-chunks': WARN,
+        duplicates: WARN,
+      },
+    },
+    {
+      collectionStatus: 'red' as const,
+      coverage: 40,
+      empty: 3,
+      duplicates: 2,
+      expected: {
+        'collection-status': BAD,
+        'page-coverage': BAD,
+        'empty-chunks': WARN,
+        duplicates: WARN,
+      },
+    },
   ])(
-    'badges keep their own background in the dark shell ($collectionStatus)',
-    ({ collectionStatus, coverage, empty, duplicates }) => {
+    'badges carry only their own background ($collectionStatus)',
+    ({ collectionStatus, coverage, empty, duplicates, expected }) => {
       render(
         <PipelineDeepMetrics
           metrics={{
@@ -285,12 +323,8 @@ describe('PipelineDeepMetrics', () => {
         />
       );
 
-      for (const id of ['collection-status', 'page-coverage', 'empty-chunks', 'duplicates']) {
-        const badge = screen.getByTestId(id);
-        expect(badge.className).not.toMatch(
-          /(?:^|\s)dark:bg-(?:primary|secondary|destructive)\/90(?=\s|$)/
-        );
-        expect(badge.className).toMatch(/(?:^|\s)dark:bg-/);
+      for (const [id, background] of Object.entries(expected)) {
+        expect(backgroundClasses(screen.getByTestId(id))).toEqual(background);
       }
     }
   );

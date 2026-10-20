@@ -42,8 +42,8 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-// Each colour brings its own dark pair (#4513): the Badge variant carries `dark:bg-primary/90`,
-// which tailwind-merge keeps next to a plain `bg-*`, and the admin shell is always dark.
+// Each colour has a darker tint for the admin shell, which is always dark. Until #4539 the `dark:`
+// pair also had to beat the Badge variant's `dark:bg-primary/90`; the variant no longer has one.
 const OK_BADGE = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300';
 const WARN_BADGE = 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300';
 const BAD_BADGE = 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';

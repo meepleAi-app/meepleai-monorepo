@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using Api.Extensions;
 using Api.Filters;
 using Api.Services;
 using Api.SharedKernel.Domain.ValueObjects;
@@ -101,8 +102,7 @@ internal static class RagEnhancementAdminEndpoints
             HttpContext ctx,
             CancellationToken ct) =>
         {
-            var tierClaim = ctx.User?.FindFirst("tier")?.Value ?? "Free";
-            var tier = UserTier.Parse(tierClaim);
+            var tier = TierOf(ctx);
 
             var active = await enhancementService.GetActiveEnhancementsAsync(tier, ct).ConfigureAwait(false);
             var extraCredits = await enhancementService.EstimateExtraCreditsAsync(active, ct).ConfigureAwait(false);
@@ -119,5 +119,19 @@ internal static class RagEnhancementAdminEndpoints
         .WithSummary("Get active RAG enhancements and estimated extra credits for current user");
 
         return group;
+    }
+
+    /// <summary>
+    /// The tier the estimate is computed for: the tier of the user of the session, or Free without one
+    /// (the route is reachable anonymously). #4580: this read a "tier" claim that the session handler does
+    /// not emit, so everybody was estimated as Free. The tier travels in the session (<c>UserDto.Tier</c>).
+    /// Subject, not EffectiveActor: the tier is the one of the user whose quota is in scope, also during
+    /// an impersonation (Principal.cs).
+    /// </summary>
+    private static UserTier TierOf(HttpContext ctx)
+    {
+        var (authenticated, session, _) = ctx.TryGetActiveSession();
+        var tier = authenticated ? session.Principal!.Subject.Tier : null;
+        return UserTier.IsValid(tier) ? UserTier.Parse(tier!) : UserTier.Free;
     }
 }

@@ -4,7 +4,6 @@ using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Security;
 using Api.SharedKernel.Application.Interfaces;
-using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.UserLibrary.Application.Queries;
@@ -13,24 +12,29 @@ namespace Api.BoundedContexts.UserLibrary.Application.Queries;
 /// Handler for getting a shared library by its share token (public access).
 /// Records access and returns library data.
 /// </summary>
+/// <remarks>
+/// La visita non salva l'aggregato (#4558). Prima incrementava il contatore sull'aggregato letto e lo
+/// riscriveva tutto: una revoca arrivata fra la lettura e la scrittura tornava <c>revoked_at = NULL</c>, e il
+/// link revocato era di nuovo pubblico. Ora la visita conta sé stessa con
+/// <see cref="ILibraryShareLinkRepository.TryRecordAccessAsync"/>, che controlla la validità e incrementa
+/// nello stesso statement. Se il link non è più valido in quel momento la visita risponde 404, anche se
+/// la lettura l'aveva trovato valido.
+/// </remarks>
 internal class GetSharedLibraryQueryHandler : IQueryHandler<GetSharedLibraryQuery, SharedLibraryDto?>
 {
     private readonly ILibraryShareLinkRepository _shareLinkRepository;
     private readonly IUserLibraryRepository _libraryRepository;
-    private readonly IUnitOfWork _unitOfWork;
     private readonly MeepleAiDbContext _db;
     private readonly ILogger<GetSharedLibraryQueryHandler> _logger;
 
     public GetSharedLibraryQueryHandler(
         ILibraryShareLinkRepository shareLinkRepository,
         IUserLibraryRepository libraryRepository,
-        IUnitOfWork unitOfWork,
         MeepleAiDbContext db,
         ILogger<GetSharedLibraryQueryHandler> logger)
     {
         _shareLinkRepository = shareLinkRepository ?? throw new ArgumentNullException(nameof(shareLinkRepository));
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
-        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -53,10 +57,13 @@ internal class GetSharedLibraryQueryHandler : IQueryHandler<GetSharedLibraryQuer
             return null;
         }
 
-        // Record access
-        shareLink.RecordAccess();
-        await _shareLinkRepository.UpdateAsync(shareLink, cancellationToken).ConfigureAwait(false);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        // Conta la visita solo se il link è ancora valido adesso: fra la lettura e qui il proprietario può
+        // averlo revocato, o sostituito con uno nuovo (#4558).
+        if (!await _shareLinkRepository.TryRecordAccessAsync(shareLink.Id, cancellationToken).ConfigureAwait(false))
+        {
+            _logger.LogDebug("Share link {LinkId} became invalid while being visited (revoked or expired)", shareLink.Id);
+            return null;
+        }
 
         // Get owner display name
         var owner = await _db.Users

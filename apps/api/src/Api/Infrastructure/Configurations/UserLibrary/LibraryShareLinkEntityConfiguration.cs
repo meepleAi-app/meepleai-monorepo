@@ -44,8 +44,12 @@ internal sealed class LibraryShareLinkEntityConfiguration : IEntityTypeConfigura
         builder.Property(sl => sl.ExpiresAt)
             .HasColumnName("expires_at");
 
+        // #4558: token di concorrenza. LibraryShareLinkRepository.UpdateAsync ne fissa l'originale a NULL, così
+        // una scrittura del proprietario vale solo su un link non ancora revocato: una revoca non si annulla.
+        // Nessuna migrazione: lo schema non cambia, cambia solo la condizione dell'UPDATE.
         builder.Property(sl => sl.RevokedAt)
-            .HasColumnName("revoked_at");
+            .HasColumnName("revoked_at")
+            .IsConcurrencyToken();
 
         builder.Property(sl => sl.ViewCount)
             .HasColumnName("view_count")

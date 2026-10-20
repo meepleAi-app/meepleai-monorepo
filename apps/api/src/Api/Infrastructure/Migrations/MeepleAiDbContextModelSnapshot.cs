@@ -15330,6 +15330,7 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnName("privacy_level");
 
                     b.Property<DateTime?>("RevokedAt")
+                        .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("revoked_at");
 

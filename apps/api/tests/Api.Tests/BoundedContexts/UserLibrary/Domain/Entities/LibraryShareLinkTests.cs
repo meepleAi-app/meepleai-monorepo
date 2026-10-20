@@ -163,55 +163,6 @@ public sealed class LibraryShareLinkTests
 
     #endregion
 
-    #region RecordAccess Tests
-
-    [Fact]
-    public void RecordAccess_IncrementsViewCount()
-    {
-        // Arrange
-        var link = LibraryShareLink.Create(Guid.NewGuid(), LibrarySharePrivacyLevel.Public, false);
-
-        // Act
-        link.RecordAccess();
-
-        // Assert
-        link.ViewCount.Should().Be(1);
-    }
-
-    [Fact]
-    public void RecordAccess_UpdatesLastAccessedAt()
-    {
-        // Arrange
-        var link = LibraryShareLink.Create(Guid.NewGuid(), LibrarySharePrivacyLevel.Public, false);
-        var before = DateTime.UtcNow;
-
-        // Act
-        link.RecordAccess();
-        var after = DateTime.UtcNow;
-
-        // Assert
-        link.LastAccessedAt.Should().NotBeNull();
-        link.LastAccessedAt.Should().BeOnOrAfter(before);
-        link.LastAccessedAt.Should().BeOnOrBefore(after);
-    }
-
-    [Fact]
-    public void RecordAccess_MultipleAccesses_AccumulatesViewCount()
-    {
-        // Arrange
-        var link = LibraryShareLink.Create(Guid.NewGuid(), LibrarySharePrivacyLevel.Public, false);
-
-        // Act
-        link.RecordAccess();
-        link.RecordAccess();
-        link.RecordAccess();
-
-        // Assert
-        link.ViewCount.Should().Be(3);
-    }
-
-    #endregion
-
     #region UpdatePrivacyLevel Tests
 
     [Fact]

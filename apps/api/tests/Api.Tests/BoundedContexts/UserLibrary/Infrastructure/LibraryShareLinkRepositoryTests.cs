@@ -24,6 +24,7 @@ namespace Api.Tests.BoundedContexts.UserLibrary.Infrastructure;
 [Trait("Category", "Unit")]
 [Trait("BoundedContext", "UserLibrary")]
 [Trait("Issue", "4544")]
+[Trait("Issue", "4558")]
 public sealed class LibraryShareLinkRepositoryTests : IDisposable
 {
     // Nel passato: la riga è quella di un link scaduto, il caso che la factory di creazione rifiuta. Ogni
@@ -83,13 +84,20 @@ public sealed class LibraryShareLinkRepositoryTests : IDisposable
         };
     }
 
-    private async Task<LibraryShareLinkEntity> SeedEveryColumnAsync()
+    // revoked: false lascia revoked_at a NULL. UpdateAsync scrive solo su un link non revocato (#4558), quindi
+    // i test di scrittura partono da lì; quelli di lettura tengono la sentinella anche su revoked_at.
+    private async Task<LibraryShareLinkEntity> SeedEveryColumnAsync(bool revoked = true)
     {
         var seeded = new LibraryShareLinkEntity();
         var columns = Columns();
         for (var index = 0; index < columns.Count; index++)
         {
             columns[index].PropertyInfo!.SetValue(seeded, SentinelFor(columns[index], index));
+        }
+
+        if (!revoked)
+        {
+            seeded.RevokedAt = null;
         }
 
         // Con due sentinelle uguali il confronto per colonna non vedrebbe uno scambio fra quelle due.
@@ -134,7 +142,7 @@ public sealed class LibraryShareLinkRepositoryTests : IDisposable
     [Fact]
     public async Task UpdateAsync_WithNoChange_LeavesEveryColumnAsItWas()
     {
-        var seeded = await SeedEveryColumnAsync();
+        var seeded = await SeedEveryColumnAsync(revoked: false);
         var expected = Columns().ToDictionary(c => c.Name, c => c.PropertyInfo!.GetValue(seeded), StringComparer.Ordinal);
 
         var repository = CreateRepository();
@@ -150,5 +158,69 @@ public sealed class LibraryShareLinkRepositoryTests : IDisposable
         string.Join(Environment.NewLine, changed).Should().BeEmpty(
             "an UpdateAsync that changes nothing must change nothing: a column MapToPersistence does not " +
             "write is saved as its default (DbSet.Update marks every column modified)");
+    }
+
+    // #4558: una scrittura del proprietario non deve cancellare ciò che un'altra richiesta ha salvato fra la
+    // sua lettura e la sua scrittura. Qui la richiesta "altra" è simulata scrivendo la riga direttamente.
+
+    [Fact]
+    public async Task UpdateAsync_DoesNotWriteBackTheVisitCounters()
+    {
+        var seeded = await SeedEveryColumnAsync(revoked: false);
+        var repository = CreateRepository();
+        var link = await repository.GetByIdAsync(seeded.Id);
+
+        // Una visita contata dopo la lettura del proprietario.
+        var visitedAt = SentinelDate.AddDays(1);
+        await ChangeRowAsync(seeded.Id, row =>
+        {
+            row.ViewCount = seeded.ViewCount + 1;
+            row.LastAccessedAt = visitedAt;
+        });
+
+        link!.UpdateIncludeNotes(!seeded.IncludeNotes);
+        await repository.UpdateAsync(link);
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        var after = await _db.LibraryShareLinks.AsNoTracking().SingleAsync(l => l.Id == seeded.Id);
+        after.IncludeNotes.Should().Be(!seeded.IncludeNotes, "the owner's change is saved");
+        after.ViewCount.Should().Be(seeded.ViewCount + 1,
+            "the counters belong to the visit (TryRecordAccessAsync): the owner's write must not bring them back to what it read");
+        after.LastAccessedAt.Should().Be(visitedAt);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_OnALinkRevokedAfterTheRead_IsRefusedAndTheRevocationStays()
+    {
+        var seeded = await SeedEveryColumnAsync(revoked: false);
+        var repository = CreateRepository();
+        var link = await repository.GetByIdAsync(seeded.Id);
+
+        var revokedAt = SentinelDate.AddDays(2);
+        await ChangeRowAsync(seeded.Id, row => row.RevokedAt = revokedAt);
+
+        link!.UpdateIncludeNotes(!seeded.IncludeNotes);
+        await repository.UpdateAsync(link);
+        var save = () => _db.SaveChangesAsync();
+
+        await save.Should().ThrowAsync<DbUpdateConcurrencyException>(
+            "the owner read a link that was not revoked, and the link was revoked before the write: writing it " +
+            "back would set revoked_at to NULL again");
+        _db.ChangeTracker.Clear();
+
+        var after = await _db.LibraryShareLinks.AsNoTracking().SingleAsync(l => l.Id == seeded.Id);
+        after.RevokedAt.Should().Be(revokedAt, "a revocation is never undone");
+        after.IncludeNotes.Should().Be(seeded.IncludeNotes, "the refused write changes nothing");
+    }
+
+    // AsTracking: MeepleAiDbContext legge NoTracking per default, e una modifica a una riga non tracciata
+    // non verrebbe salvata — il test passerebbe o fallirebbe senza che la "richiesta concorrente" sia mai avvenuta.
+    private async Task ChangeRowAsync(Guid id, Action<LibraryShareLinkEntity> change)
+    {
+        var row = await _db.LibraryShareLinks.AsTracking().SingleAsync(l => l.Id == id);
+        change(row);
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
     }
 }

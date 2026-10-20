@@ -56,8 +56,7 @@ export function SessionQuickActions({
   const advanceTurn = useContextualHandStore(s => s.advanceTurn);
 
   // Only show quick actions if the contextual hand store is tracking this session
-  const isContextualHandActive =
-    hasActiveSession && currentSession?.sessionId === sessionId;
+  const isContextualHandActive = hasActiveSession && currentSession?.sessionId === sessionId;
 
   // ── Dice state ──
   const [diceParticipant, setDiceParticipant] = useState('');
@@ -241,7 +240,8 @@ export function SessionQuickActions({
 
           {currentPlayerName && (
             <p className="text-sm text-muted-foreground">
-              Turno corrente: <span className="font-medium text-foreground">{currentPlayerName}</span>
+              Turno corrente:{' '}
+              <span className="font-medium text-foreground">{currentPlayerName}</span>
             </p>
           )}
 

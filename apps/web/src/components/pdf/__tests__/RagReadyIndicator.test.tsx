@@ -17,7 +17,9 @@ import type { UseEmbeddingStatusReturn } from '@/hooks/useEmbeddingStatus';
 // Mock Next.js Link
 vi.mock('next/link', () => ({
   default: ({ children, href, ...props }: { children: React.ReactNode; href: string }) => (
-    <a href={href} {...props}>{children}</a>
+    <a href={href} {...props}>
+      {children}
+    </a>
   ),
 }));
 
@@ -87,7 +89,9 @@ describe('RagReadyIndicator', () => {
       render(<RagReadyIndicator gameId="game-1" />);
 
       expect(screen.getByTestId('rag-ready-indicator')).toBeInTheDocument();
-      expect(screen.getByTestId('stage-label')).toHaveTextContent('Generazione embeddings: 60/100 (60%)');
+      expect(screen.getByTestId('stage-label')).toHaveTextContent(
+        'Generazione embeddings: 60/100 (60%)'
+      );
       expect(screen.getByTestId('chunk-progress')).toHaveTextContent('60/100');
     });
 

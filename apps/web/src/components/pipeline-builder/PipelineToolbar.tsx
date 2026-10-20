@@ -166,7 +166,7 @@ export function PipelineToolbar({ className }: PipelineToolbarProps) {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json';
-    input.onchange = async (e) => {
+    input.onchange = async e => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
@@ -196,12 +196,7 @@ export function PipelineToolbar({ className }: PipelineToolbarProps) {
   const edgeCount = pipeline?.edges.length ?? 0;
 
   return (
-    <div
-      className={cn(
-        'flex items-center gap-1 px-2 py-1.5 bg-card border-b',
-        className
-      )}
-    >
+    <div className={cn('flex items-center gap-1 px-2 py-1.5 bg-card border-b', className)}>
       {/* File Operations */}
       <div className="flex items-center gap-1">
         {/* New Pipeline */}
@@ -220,9 +215,9 @@ export function PipelineToolbar({ className }: PipelineToolbarProps) {
             </DialogHeader>
             <Input
               value={newPipelineName}
-              onChange={(e) => setNewPipelineName(e.target.value)}
+              onChange={e => setNewPipelineName(e.target.value)}
               placeholder="Pipeline name..."
-              onKeyDown={(e) => e.key === 'Enter' && handleNew()}
+              onKeyDown={e => e.key === 'Enter' && handleNew()}
             />
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsNewDialogOpen(false)}>

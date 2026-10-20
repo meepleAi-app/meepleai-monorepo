@@ -1,8 +1,15 @@
 using Api.BoundedContexts.Administration.Application.EventHandlers;
 using Api.BoundedContexts.SystemConfiguration.Domain.Events;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
+using Api.Models;
+using Api.Services;
+using Api.Tests.TestHelpers;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
 using FluentAssertions;
@@ -44,12 +51,11 @@ public class DashboardCacheInvalidationEventHandlerTests
         // Act
         await _handler.Handle(evt, CancellationToken.None);
 
-        // Assert
-        // Verify cache removal was called multiple times (for common cache key combinations)
+        // Assert — #4542: one tag covers every entry, whatever its date range or filters
         _cacheMock.Verify(
-            c => c.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.AtLeast(16), // 4 day ranges × 4 role filters = 16 keys
-            "Should invalidate all common dashboard cache key combinations");
+            c => c.RemoveByTagAsync(AdminStatsService.DashboardStatsCacheTag, It.IsAny<CancellationToken>()),
+            Times.Once,
+            "Should invalidate every dashboard stats entry by its tag");
     }
 
     [Fact]
@@ -68,8 +74,8 @@ public class DashboardCacheInvalidationEventHandlerTests
 
         // Assert
         _cacheMock.Verify(
-            c => c.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
-            Times.AtLeast(16),
+            c => c.RemoveByTagAsync(AdminStatsService.DashboardStatsCacheTag, It.IsAny<CancellationToken>()),
+            Times.Once,
             "Should invalidate dashboard cache on configuration toggle");
     }
 
@@ -123,7 +129,7 @@ public class DashboardCacheInvalidationEventHandlerTests
             updatedByUserId: Guid.NewGuid());
 
         _cacheMock
-            .Setup(c => c.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(c => c.RemoveByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Cache error"));
 
         // Act
@@ -142,39 +148,69 @@ public class DashboardCacheInvalidationEventHandlerTests
             "Should log error when cache removal fails");
     }
 
+    /// <summary>
+    /// #4542: l'invalidazione deve raggiungere le voci che <see cref="AdminStatsService"/> scrive davvero,
+    /// qualunque sia il formato della chiave. Cache vera (L1 + L2 in memoria), servizio vero: tre voci —
+    /// intervallo di default, intervallo esplicito, filtro per gioco — devono essere ricalcolate dopo un
+    /// cambio di configurazione. <c>generatedAt</c> viene dall'orologio finto, quindi dice se la risposta
+    /// è stata ricalcolata o servita dalla cache.
+    /// </summary>
     [Fact]
-    public async Task Handle_GeneratesCacheKeys_CoversCommonParameters()
+    public async Task Handle_ConfigurationUpdated_EvictsEveryDashboardStatsEntry()
     {
-        // Arrange
-        var configKey = new ConfigKey("TestConfig");
-        var evt = new ConfigurationUpdatedEvent(
+        var cache = CreateHybridCache();
+        var clock = new FakeTimeProvider(new DateTimeOffset(2025, 6, 15, 12, 0, 0, TimeSpan.Zero));
+        using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var resourceMetrics = new Mock<IResourceMetricsService>();
+        resourceMetrics.Setup(m => m.GetTokenBalanceAsync(It.IsAny<CancellationToken>())).ReturnsAsync((0m, 0m));
+        resourceMetrics.Setup(m => m.GetDatabaseMetricsAsync(It.IsAny<CancellationToken>())).ReturnsAsync((0m, 0m, 0m));
+        resourceMetrics.Setup(m => m.GetCacheHitRateAsync(It.IsAny<CancellationToken>())).ReturnsAsync((0.0, 0.0));
+        var service = new AdminStatsService(
+            db, cache, Mock.Of<ILogger<AdminStatsService>>(), resourceMetrics.Object, clock);
+        var handler = new DashboardCacheInvalidationEventHandler(cache, _loggerMock.Object);
+
+        AnalyticsQueryParams[] requests =
+        [
+            new(Days: 30),
+            new(FromDate: new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc), ToDate: new DateTime(2025, 1, 3, 0, 0, 0, DateTimeKind.Utc)),
+            new(Days: 30, GameId: Guid.NewGuid().ToString()),
+        ];
+
+        var computedAt = clock.GetUtcNow().UtcDateTime;
+        foreach (var request in requests)
+        {
+            (await service.GetDashboardStatsAsync(request)).GeneratedAt.Should().Be(computedAt);
+        }
+
+        clock.Advance(TimeSpan.FromSeconds(1));
+        foreach (var request in requests)
+        {
+            (await service.GetDashboardStatsAsync(request)).GeneratedAt.Should().Be(computedAt,
+                "prima dell'evento la voce è in cache: è il controllo che rende significativo il passo dopo");
+        }
+
+        await handler.Handle(new ConfigurationUpdatedEvent(
             configurationId: Guid.NewGuid(),
-            key: configKey,
+            key: new ConfigKey("TestConfig"),
             previousValue: "old",
             newValue: "new",
             version: 1,
-            updatedByUserId: Guid.NewGuid());
+            updatedByUserId: Guid.NewGuid()), CancellationToken.None);
 
-        var removedKeys = new List<string>();
-        _cacheMock
-            .Setup(c => c.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Callback<string, CancellationToken>((key, _) => removedKeys.Add(key))
-            .Returns(ValueTask.CompletedTask);
+        foreach (var request in requests)
+        {
+            (await service.GetDashboardStatsAsync(request)).GeneratedAt.Should().Be(clock.GetUtcNow().UtcDateTime,
+                $"dopo il cambio di configurazione la voce {request} deve essere ricalcolata");
+        }
+    }
 
-        // Act
-        await _handler.Handle(evt, CancellationToken.None);
-
-        // Assert
-        // Verify common day ranges are covered
-        removedKeys.Should().Contain(k => k.Contains("dashboard:stats:7:"));
-        removedKeys.Should().Contain(k => k.Contains("dashboard:stats:14:"));
-        removedKeys.Should().Contain(k => k.Contains("dashboard:stats:30:"));
-        removedKeys.Should().Contain(k => k.Contains("dashboard:stats:90:"));
-
-        // Verify common role filters are covered
-        removedKeys.Should().Contain(k => k.Contains("::"));      // No filters
-        removedKeys.Should().Contain(k => k.Contains("::admin"));  // Admin filter
-        removedKeys.Should().Contain(k => k.Contains("::user"));   // User filter
-        removedKeys.Should().Contain(k => k.Contains("::all"));    // All roles
+    private static HybridCache CreateHybridCache()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<IMemoryCache, MemoryCache>();
+        services.AddSingleton<IDistributedCache>(new MemoryDistributedCache(
+            Microsoft.Extensions.Options.Options.Create(new MemoryDistributedCacheOptions())));
+        services.AddHybridCache();
+        return services.BuildServiceProvider().GetRequiredService<HybridCache>();
     }
 }

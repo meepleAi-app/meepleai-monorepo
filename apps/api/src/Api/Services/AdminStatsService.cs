@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using Api.Filters;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Models;
@@ -44,14 +45,23 @@ internal class AdminStatsService : IAdminStatsService
     }
 
     /// <summary>
+    /// #4542 — il tag di ogni voce scritta da <see cref="GetDashboardStatsAsync"/>. Le voci hanno una
+    /// chiave per intervallo di date, quindi non si possono elencare: l'invalidazione passa da qui.
+    /// </summary>
+    internal const string DashboardStatsCacheTag = "dashboard-stats";
+
+    /// <summary>
     /// Get comprehensive dashboard statistics with caching.
-    /// Cache key includes query parameters for proper cache invalidation.
+    /// The cache key is the effective query: see <see cref="DashboardStatsCacheKey"/>.
     /// </summary>
     public async Task<DashboardStatsDto> GetDashboardStatsAsync(
         AnalyticsQueryParams queryParams,
         CancellationToken cancellationToken = default)
     {
-        var cacheKey = $"dashboard:stats:{queryParams.Days}:{queryParams.GameId}:{queryParams.RoleFilter}";
+        ArgumentNullException.ThrowIfNull(queryParams);
+        var explicitFrom = AsUtcOrNull(queryParams.FromDate);
+        var explicitTo = AsUtcOrNull(queryParams.ToDate);
+        var cacheKey = DashboardStatsCacheKey(queryParams);
 
         return await _cache.GetOrCreateAsync<DashboardStatsDto>(
             cacheKey,
@@ -60,8 +70,8 @@ internal class AdminStatsService : IAdminStatsService
                 _logger.LogInformation("Cache miss for dashboard stats, generating fresh data");
 
                 var now = _timeProvider.GetUtcNow().UtcDateTime;
-                var fromDate = queryParams.FromDate ?? now.AddDays(-queryParams.Days);
-                var toDate = queryParams.ToDate ?? now;
+                var fromDate = explicitFrom ?? now.AddDays(-queryParams.Days);
+                var toDate = explicitTo ?? now;
 
                 // Sequential execution - DbContext is not thread-safe for parallel operations
                 // Issue: "A second operation was started on this context instance before a previous operation completed"
@@ -87,9 +97,63 @@ internal class AdminStatsService : IAdminStatsService
                 Expiration = CacheDuration,
                 LocalCacheExpiration = TimeSpan.FromSeconds(30) // Issue #879: Proportional to 1min L2 (was 2min for 5min L2)
             },
+            tags: [DashboardStatsCacheTag],
             cancellationToken: cancellationToken
         ).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// #4542 — la chiave di cache di <see cref="GetDashboardStatsAsync"/>: ogni segmento è un input che
+    /// cambia il risultato, scritto come lo usano le query.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Formato: <c>dashboard:stats:{da}:{a}:{gioco}:{ruolo}</c>.
+    /// <list type="bullet">
+    ///   <item><c>{da}</c>: i tick UTC di <c>FromDate</c> se c'è; altrimenti <c>now-{Days}d</c>, perché
+    ///     l'inizio si calcola da adesso. <c>Days</c> conta solo in questo caso.</item>
+    ///   <item><c>{a}</c>: i tick UTC di <c>ToDate</c> se c'è; altrimenti <c>now</c>.</item>
+    ///   <item><c>{gioco}</c>: il Guid in formato <c>N</c> se <c>GameId</c> si legge come Guid, altrimenti
+    ///     <c>-</c>: è la stessa condizione con cui le query applicano il filtro.</item>
+    ///   <item><c>{ruolo}</c>: <c>RoleFilter</c> così com'è, per ultimo.</item>
+    /// </list>
+    /// </para>
+    /// <para>
+    /// <b>Istante, non giorno.</b> Le query confrontano gli istanti (<c>CreatedAt &gt;= fromDate</c>):
+    /// due intervalli negli stessi giorni con orari diversi danno numeri diversi, e una chiave al giorno
+    /// li confonderebbe. Le date passano dalla regola di #4063 prima dei tick, quindi lo stesso istante
+    /// scritto con un altro <see cref="DateTimeKind"/> dà la stessa chiave.
+    /// </para>
+    /// <para>
+    /// <b>Niente orologio.</b> L'intervallo di default si misura da adesso, ma la chiave contiene solo
+    /// <c>now-{Days}d</c>: un istante corrente nella chiave renderebbe ogni richiesta un cache miss. Il
+    /// risultato resta vecchio al massimo quanto la durata della voce, come prima.
+    /// </para>
+    /// <para>
+    /// <b>Niente collisioni.</b> I segmenti prima del ruolo non contengono mai <c>:</c> (tick, Guid in
+    /// formato <c>N</c>, <c>now…</c>, <c>-</c>), quindi il ruolo, l'unico testo libero, può stare per
+    /// ultimo senza ambiguità.
+    /// </para>
+    /// </remarks>
+    internal static string DashboardStatsCacheKey(AnalyticsQueryParams queryParams)
+    {
+        ArgumentNullException.ThrowIfNull(queryParams);
+
+        var from = AsUtcOrNull(queryParams.FromDate) is { } f
+            ? f.Ticks.ToString(CultureInfo.InvariantCulture)
+            : string.Create(CultureInfo.InvariantCulture, $"now-{queryParams.Days}d");
+        var to = AsUtcOrNull(queryParams.ToDate) is { } t
+            ? t.Ticks.ToString(CultureInfo.InvariantCulture)
+            : "now";
+        var game = Guid.TryParse(queryParams.GameId, out var gameGuid)
+            ? gameGuid.ToString("N")
+            : "-";
+
+        return $"dashboard:stats:{from}:{to}:{game}:{queryParams.RoleFilter}";
+    }
+
+    private static DateTime? AsUtcOrNull(DateTime? value) =>
+        value is { } v ? UtcDateTimeArguments.AsUtc(v) : null;
 
     /// <summary>
     /// Get current dashboard metrics (totals and aggregates).

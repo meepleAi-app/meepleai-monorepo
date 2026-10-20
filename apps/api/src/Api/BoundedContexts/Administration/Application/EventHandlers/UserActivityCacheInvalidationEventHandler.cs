@@ -13,6 +13,7 @@ namespace Api.BoundedContexts.Administration.Application.EventHandlers;
 /// Performance target: invalidation &lt; 10ms.
 /// </summary>
 /// <remarks>
+/// <para>
 /// #4559 — l'invalidazione passa da <see cref="HybridCache.RemoveByTagAsync(string, CancellationToken)"/>
 /// di Microsoft, non da <c>IHybridCacheService.RemoveByTagAsync</c>. Il wrapper rimuove solo le chiavi
 /// elencate nel suo set Redis <c>cache:tag:{tag}</c>, che si riempie solo quando la voce passa da lui:
@@ -22,6 +23,18 @@ namespace Api.BoundedContexts.Administration.Application.EventHandlers;
 /// <see cref="HybridCache"/>; e funziona anche senza Redis. Il set del wrapper non viene svuotato:
 /// le chiavi che vi restano non sono un problema di correttezza, perché rimuovere una chiave assente
 /// non fa nulla e una chiave riscritta porta di nuovo il tag.
+/// </para>
+/// <para>
+/// <b>Più istanze: non è come prima.</b> Il wrapper cancellava le chiavi dalla L2.
+/// <see cref="HybridCache.RemoveByTagAsync(string, CancellationToken)"/> invece lascia i dati in L2 e vi
+/// scrive solo l'istante in cui il tag è stato invalidato. Un'altra istanza che ha già letto quel tag non
+/// rilegge l'istante, quindi serve la voce vecchia (dalla sua L1, poi dalla L2) finché la voce in L2 scade
+/// o qualcuno la riscrive. Oggi non pesa: l'API gira a istanza singola per contratto
+/// (<c>infra/docker-compose.yml</c>, allarme <c>MultipleApiInstances</c>). Per più istanze serve il pub/sub
+/// (<c>IHybridCacheService.RemoveByTagAcrossReplicasAsync</c>), che però raggiungerà le voci scritte con
+/// <see cref="HybridCache"/> grezzo solo dopo #4561. Il test
+/// <c>Handle_UserActivity_AnotherInstanceThatReadTheTag_KeepsServingTheOldL2Entry</c> documenta il limite.
+/// </para>
 /// </remarks>
 internal sealed class UserActivityCacheInvalidationEventHandler :
     INotificationHandler<UserLibraryGameAddedEvent>,

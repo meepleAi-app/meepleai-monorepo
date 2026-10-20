@@ -292,6 +292,14 @@ Then   [Fact(Skip = "DIFETTO: #4016 — …")]
   token più stretto. Per questo il bats confronta ora i token **massimali**, cioè quelli che non
   contengono un altro token dello stesso insieme. Misure e alternative scartate stanno nel
   commento del 2026-10-18 in #3742.
+
+  **Aggiunta del 2026-10-20 (#4571): terza volta, ancora `KnowledgeBase`.** Staccata `GroupB`, la
+  sessione la fa `Integration-GroupA`, classi di `KnowledgeBase` e di `DocumentProcessing`: 66
+  minuti su un runner lento, quasi tutti di test e non di attese. Qui il confine fra i due contesti
+  coincide col token, quindi `DocProcessing` prende `DocumentProcessing` intero e `KnowledgeBase`
+  lo esclude. Prima del bats generale di #4488 questa divisione avrebbe richiesto una regola nuova
+  per la coppia; ora le regole su doppi, cicli e copertura la coprono già. In testa a
+  `KnowledgeBase` resta `GroupD`, la cui leva è #4572.
 - [x] **A3** — **verificato con un drill distruttivo**, 2026-10-03. Le due suite di #3978
   (`S3BlobStorageIntegrationTests`, `CoverR2ConventionIntegrationTests`) contro l'immagine MinIO
   puntata a un tag inesistente:

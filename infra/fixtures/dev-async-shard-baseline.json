@@ -167,6 +167,11 @@
     },
     "KnowledgeBase": {
       "_comment": [
+        "Divisa il 2026-10-20 (#4571): i nomi dichiarati che cadono nel filtro di DocProcessing sono",
+        "passati a quella voce. Restano qui 0 falliti e i 9 saltati che non portano DocumentProcessing:",
+        "tutti e diciassette i falliti di prima sono test di DocumentProcessing. Nessun nome aggiunto o",
+        "tolto rispetto alla voce precedente, che veniva da:",
+        "",
         "Ricatturati il 2026-10-19 dal run 39287747459: dev-async sul merge di #4508 (3286ca293).",
         "Tutti i job del run success; il log dello shard non contiene «Aborting test run: test run",
         "timeout» (grep -c -> 0); la controprova dal trailer e' coerente.",
@@ -178,8 +183,30 @@
         "Fatto con `gh run download 39287747459 --name integration-results-KnowledgeBase` e",
         "`shard-skip-assert.sh --shard KnowledgeBase --trx <file> --log <file> --update-baseline`."
       ],
+      "failed": 0,
+      "skipped": 9,
+      "failedTests": [],
+      "skippedTests": [
+        "Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.RagPromptAssemblyServiceInlineCitationLlmIntegrationTests.RealLlmEmitsBracketedMarkersInMajorityOfRuns",
+        "Api.Tests.BoundedContexts.KnowledgeBase.Integration.GoldenDatasetAccuracyIntegrationTests.AccuracyByDifficulty_GroupsCorrectly",
+        "Api.Tests.BoundedContexts.KnowledgeBase.Integration.GoldenDatasetAccuracyIntegrationTests.BelowThresholdScenario_60PercentCorrect_FailsThreshold",
+        "Api.Tests.BoundedContexts.KnowledgeBase.Integration.GoldenDatasetAccuracyIntegrationTests.CitationValidation_CorrectPageNumbers_PassesValidation",
+        "Api.Tests.BoundedContexts.KnowledgeBase.Integration.GoldenDatasetAccuracyIntegrationTests.ForbiddenKeywords_DetectedCorrectly",
+        "Api.Tests.BoundedContexts.KnowledgeBase.Integration.GoldenDatasetAccuracyIntegrationTests.PerfectScenario_AllAnswersCorrect_MeetsThreshold",
+        "Api.Tests.BoundedContexts.KnowledgeBase.Integration.GoldenDatasetAccuracyIntegrationTests.StratifiedSample_50Cases_MaintainsDifficultyDistribution",
+        "Api.Tests.BoundedContexts.KnowledgeBase.Integration.GoldenDatasetAccuracyIntegrationTests.ThresholdScenario_80PercentCorrect_MeetsThreshold",
+        "Api.Tests.BoundedContexts.KnowledgeBase.Quality.RagQualityValidationTests.ValidateRagQuality_With20SampleQuestions_MeetsSuccessMetrics"
+      ]
+    },
+    "DocProcessing": {
+      "_comment": [
+        "Shard nuovo (#4571): i falliti e i saltati che la voce KnowledgeBase dichiarava e che cadono nel",
+        "filtro di DocProcessing (FullyQualifiedName~DocumentProcessing). Stessi nomi, stessa provenienza:",
+        "run 39287747459, dev-async sul merge di #4508 (3286ca293). Ripartiti applicando i filtri di",
+        "dev-async.yml ai nomi della voce, e confermati dal gate sul run del branch."
+      ],
       "failed": 17,
-      "skipped": 11,
+      "skipped": 2,
       "failedTests": [
         "Api.Tests.Integration.DocumentProcessing.DeletePdfIntegrationTests.ConcurrentDeletion_HandlesRaceConditionGracefully",
         "Api.Tests.Integration.DocumentProcessing.DeletePdfIntegrationTests.DeleteExistingPdf_WithoutVectors_Success",
@@ -200,15 +227,6 @@
         "Api.Tests.Integration.DocumentProcessing.PdfRowVersionConcurrencyIntegrationTests.Reindex_RacesWithDelete_LeavesNoOrphanState"
       ],
       "skippedTests": [
-        "Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.RagPromptAssemblyServiceInlineCitationLlmIntegrationTests.RealLlmEmitsBracketedMarkersInMajorityOfRuns",
-        "Api.Tests.BoundedContexts.KnowledgeBase.Integration.GoldenDatasetAccuracyIntegrationTests.AccuracyByDifficulty_GroupsCorrectly",
-        "Api.Tests.BoundedContexts.KnowledgeBase.Integration.GoldenDatasetAccuracyIntegrationTests.BelowThresholdScenario_60PercentCorrect_FailsThreshold",
-        "Api.Tests.BoundedContexts.KnowledgeBase.Integration.GoldenDatasetAccuracyIntegrationTests.CitationValidation_CorrectPageNumbers_PassesValidation",
-        "Api.Tests.BoundedContexts.KnowledgeBase.Integration.GoldenDatasetAccuracyIntegrationTests.ForbiddenKeywords_DetectedCorrectly",
-        "Api.Tests.BoundedContexts.KnowledgeBase.Integration.GoldenDatasetAccuracyIntegrationTests.PerfectScenario_AllAnswersCorrect_MeetsThreshold",
-        "Api.Tests.BoundedContexts.KnowledgeBase.Integration.GoldenDatasetAccuracyIntegrationTests.StratifiedSample_50Cases_MaintainsDifficultyDistribution",
-        "Api.Tests.BoundedContexts.KnowledgeBase.Integration.GoldenDatasetAccuracyIntegrationTests.ThresholdScenario_80PercentCorrect_MeetsThreshold",
-        "Api.Tests.BoundedContexts.KnowledgeBase.Quality.RagQualityValidationTests.ValidateRagQuality_With20SampleQuestions_MeetsSuccessMetrics",
         "Api.Tests.Integration.DocumentProcessing.S3BlobStorageIntegrationTests.GetPresignedDownloadUrlAsync_AfterStore_ReturnsValidUrl",
         "Api.Tests.Integration.DocumentProcessing.S3BlobStorageIntegrationTests.StoreAsync_ValidFile_ReturnsSuccessWithFileId"
       ]

@@ -6,6 +6,7 @@ using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
 namespace Api.BoundedContexts.UserLibrary.Application.Commands;
@@ -22,6 +23,10 @@ internal class CreateLibraryShareLinkCommandHandler : ICommandHandler<CreateLibr
     private readonly ILogger<CreateLibraryShareLinkCommandHandler> _logger;
 
     private const int MaxShareLinksPerDay = 10;
+
+    // Tentativi di salvataggio quando il link da revocare è già stato revocato da un'altra richiesta (#4558).
+    // Ogni tentativo rilegge il link attivo: ne serve uno in più per ogni richiesta concorrente.
+    private const int MaxSaveAttempts = 3;
 
     public CreateLibraryShareLinkCommandHandler(
         ILibraryShareLinkRepository shareLinkRepository,
@@ -48,13 +53,7 @@ internal class CreateLibraryShareLinkCommandHandler : ICommandHandler<CreateLibr
         }
 
         // Revoke any existing active share link
-        var existingLink = await _shareLinkRepository.GetActiveByUserIdAsync(command.UserId, cancellationToken).ConfigureAwait(false);
-        if (existingLink != null)
-        {
-            existingLink.Revoke();
-            await _shareLinkRepository.UpdateAsync(existingLink, cancellationToken).ConfigureAwait(false);
-            _logger.LogInformation("Revoked existing share link {LinkId} for user {UserId}", existingLink.Id, command.UserId);
-        }
+        await RevokeActiveLinkAsync(command.UserId, cancellationToken).ConfigureAwait(false);
 
         // Parse privacy level
         var privacyLevel = command.PrivacyLevel.ToLowerInvariant() switch
@@ -73,13 +72,65 @@ internal class CreateLibraryShareLinkCommandHandler : ICommandHandler<CreateLibr
         );
 
         await _shareLinkRepository.AddAsync(shareLink, cancellationToken).ConfigureAwait(false);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await SaveRevokingTheActiveLinkAsync(command.UserId, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Created library share link {LinkId} for user {UserId} with privacy {Privacy}",
             shareLink.Id, command.UserId, privacyLevel);
 
         return MapToDto(shareLink);
+    }
+
+    private async Task RevokeActiveLinkAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var existingLink = await _shareLinkRepository.GetActiveByUserIdAsync(userId, cancellationToken).ConfigureAwait(false);
+        if (existingLink == null)
+        {
+            return;
+        }
+
+        existingLink.Revoke();
+        await _shareLinkRepository.UpdateAsync(existingLink, cancellationToken).ConfigureAwait(false);
+        _logger.LogInformation("Revoked existing share link {LinkId} for user {UserId}", existingLink.Id, userId);
+    }
+
+    /// <summary>
+    /// Salva il link nuovo e la revoca del vecchio, anche se un'altra richiesta ha revocato il vecchio nel frattempo.
+    /// </summary>
+    /// <remarks>
+    /// <c>UpdateAsync</c> scrive la revoca solo su un link ancora non revocato (#4558). Se un'altra richiesta l'ha
+    /// revocato dopo la nostra lettura (una revoca, o un'altra creazione come in un doppio click), l'UPDATE tocca
+    /// 0 righe e <c>SaveChangesAsync</c> fallisce, INSERT del link nuovo compreso. La revoca che volevamo c'è già:
+    /// si stacca la scrittura fallita, si rilegge il link attivo (può essere quello appena creato dall'altra
+    /// richiesta) e si riprova. L'esito è quello delle due richieste in fila: un solo link attivo, l'ultimo creato.
+    /// </remarks>
+    private async Task SaveRevokingTheActiveLinkAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var attempt = 1;
+        while (true)
+        {
+            try
+            {
+                await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                return;
+            }
+            catch (DbUpdateConcurrencyException ex) when (attempt < MaxSaveAttempts)
+            {
+                _logger.LogInformation(
+                    ex,
+                    "The share link to revoke for user {UserId} was revoked by a concurrent request (attempt {Attempt})",
+                    userId, attempt);
+                attempt++;
+
+                // Solo l'UPDATE della revoca può toccare 0 righe: l'INSERT del link nuovo resta in coda.
+                foreach (var entry in ex.Entries)
+                {
+                    entry.State = EntityState.Detached;
+                }
+
+                await RevokeActiveLinkAsync(userId, cancellationToken).ConfigureAwait(false);
+            }
+        }
     }
 
     private LibraryShareLinkDto MapToDto(LibraryShareLink link)

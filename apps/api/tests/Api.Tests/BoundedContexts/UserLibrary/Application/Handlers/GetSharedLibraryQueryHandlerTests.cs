@@ -2,8 +2,14 @@ using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities;
+using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -91,42 +97,6 @@ public class GetSharedLibraryQueryHandlerTests
         shareLink.IsValid.Should().BeTrue();
     }
 
-    [Fact]
-    public void ShareLink_RecordAccess_IncrementsViewCount()
-    {
-        // Arrange
-        var shareLink = LibraryShareLink.Create(
-            Guid.NewGuid(),
-            LibrarySharePrivacyLevel.Public,
-            true,
-            null);
-        var initialCount = shareLink.ViewCount;
-
-        // Act
-        shareLink.RecordAccess();
-
-        // Assert
-        shareLink.ViewCount.Should().Be(initialCount + 1);
-        shareLink.LastAccessedAt.Should().NotBeNull();
-    }
-
-    [Fact]
-    public void ShareLink_RecordAccess_UpdatesLastAccessedAt()
-    {
-        // Arrange
-        var shareLink = LibraryShareLink.Create(
-            Guid.NewGuid(),
-            LibrarySharePrivacyLevel.Public,
-            true,
-            null);
-
-        // Act
-        shareLink.RecordAccess();
-
-        // Assert
-        shareLink.LastAccessedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(1));
-    }
-
     #endregion
 
     #region Repository Behavior Tests
@@ -174,6 +144,86 @@ public class GetSharedLibraryQueryHandlerTests
         result!.ShareToken.Should().Be(shareToken);
         result.UserId.Should().Be(userId);
     }
+
+    #endregion
+
+    #region Visit Counting Tests (#4558)
+
+    // La visita conta sé stessa con TryRecordAccessAsync, che controlla la validità nello stesso statement.
+    // Non riscrive mai l'aggregato: prima di #4558 lo faceva, e una revoca concorrente tornava NULL.
+
+    [Fact]
+    public async Task Handle_LinkRevokedBeforeTheVisitCounts_ReturnsNullAndNeverRewritesTheLink()
+    {
+        var shareLink = LibraryShareLink.Create(Guid.NewGuid(), LibrarySharePrivacyLevel.Public, true, null);
+        _mockShareLinkRepository
+            .Setup(r => r.GetByShareTokenAsync(shareLink.ShareToken, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(shareLink);
+        _mockShareLinkRepository
+            .Setup(r => r.TryRecordAccessAsync(shareLink.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        // Il proprietario esiste, e la libreria è un mock stretto: un handler che ignorasse l'esito del
+        // conteggio andrebbe avanti fino a leggerla, e il test lo vedrebbe.
+        var libraryRepository = new Mock<IUserLibraryRepository>(MockBehavior.Strict);
+        using var db = CreateDbContext();
+        db.Users.Add(new UserEntity { Id = shareLink.UserId, Email = "owner@example.com", DisplayName = "Owner" });
+        await db.SaveChangesAsync();
+
+        var result = await CreateHandler(libraryRepository.Object, db)
+            .Handle(new GetSharedLibraryQuery(shareLink.ShareToken), CancellationToken.None);
+
+        result.Should().BeNull("the link was valid when read but no longer when the visit counted itself: 404");
+        _mockShareLinkRepository.Verify(r => r.UpdateAsync(It.IsAny<LibraryShareLink>(), It.IsAny<CancellationToken>()), Times.Never(),
+            "a visit never writes the aggregate back: that write is what undid a concurrent revocation");
+    }
+
+    [Fact]
+    public async Task Handle_LinkStillValid_CountsTheVisitOnceAndNeverRewritesTheLink()
+    {
+        var shareLink = LibraryShareLink.Create(Guid.NewGuid(), LibrarySharePrivacyLevel.Public, true, null);
+        _mockShareLinkRepository
+            .Setup(r => r.GetByShareTokenAsync(shareLink.ShareToken, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(shareLink);
+        _mockShareLinkRepository
+            .Setup(r => r.TryRecordAccessAsync(shareLink.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        using var db = CreateDbContext();
+
+        // Il proprietario non è nel database: l'handler si ferma dopo aver contato la visita.
+        await CreateHandler(new Mock<IUserLibraryRepository>().Object, db)
+            .Handle(new GetSharedLibraryQuery(shareLink.ShareToken), CancellationToken.None);
+
+        _mockShareLinkRepository.Verify(r => r.TryRecordAccessAsync(shareLink.Id, It.IsAny<CancellationToken>()), Times.Once());
+        _mockShareLinkRepository.Verify(r => r.UpdateAsync(It.IsAny<LibraryShareLink>(), It.IsAny<CancellationToken>()), Times.Never());
+    }
+
+    [Fact]
+    public async Task Handle_LinkAlreadyRevokedWhenRead_DoesNotCountTheVisit()
+    {
+        var shareLink = LibraryShareLink.Create(Guid.NewGuid(), LibrarySharePrivacyLevel.Public, true, null);
+        shareLink.Revoke();
+        _mockShareLinkRepository
+            .Setup(r => r.GetByShareTokenAsync(shareLink.ShareToken, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(shareLink);
+        using var db = CreateDbContext();
+
+        var result = await CreateHandler(new Mock<IUserLibraryRepository>().Object, db)
+            .Handle(new GetSharedLibraryQuery(shareLink.ShareToken), CancellationToken.None);
+
+        result.Should().BeNull();
+        _mockShareLinkRepository.Verify(r => r.TryRecordAccessAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never());
+    }
+
+    private GetSharedLibraryQueryHandler CreateHandler(IUserLibraryRepository libraryRepository, MeepleAiDbContext db) =>
+        new(_mockShareLinkRepository.Object, libraryRepository, db, NullLogger<GetSharedLibraryQueryHandler>.Instance);
+
+    private static MeepleAiDbContext CreateDbContext() =>
+        new(
+            new DbContextOptionsBuilder<MeepleAiDbContext>()
+                .UseInMemoryDatabase($"GetSharedLibrary_{Guid.NewGuid()}")
+                .Options,
+            new Mock<IMediator>().Object,
+            new Mock<IDomainEventCollector>().Object);
 
     #endregion
 }

@@ -39,4 +39,27 @@ internal interface ILibraryShareLinkRepository : IRepository<LibraryShareLink, G
     /// <param name="cancellationToken">Cancellation token</param>
     /// <returns>Count of share links created in last 24 hours</returns>
     Task<int> CountRecentByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Conta una visita pubblica al link, solo se il link è ancora valido nel momento in cui la scrive (#4558).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Un solo statement: incrementa <c>view_count</c> e aggiorna <c>last_accessed_at</c> dove il link non è
+    /// revocato né scaduto. Non passa dall'aggregato e non tocca altre colonne, quindi una visita non può
+    /// riscrivere ciò che il proprietario ha deciso nel frattempo: revoca, privacy, note, scadenza. Due visite
+    /// concorrenti contano entrambe.
+    /// </para>
+    /// <para>
+    /// Si scrive subito, fuori dall'unità di lavoro: non serve <c>SaveChangesAsync</c>. Le colonne del
+    /// contatore sono di questo metodo: <c>UpdateAsync</c> non le scrive.
+    /// </para>
+    /// </remarks>
+    /// <param name="id">Id del link letto dalla visita.</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>
+    /// <c>true</c> se la visita è stata contata; <c>false</c> se nel frattempo il link è stato revocato, è
+    /// scaduto o non esiste più. Per la visita <c>false</c> vuol dire 404.
+    /// </returns>
+    Task<bool> TryRecordAccessAsync(Guid id, CancellationToken cancellationToken = default);
 }

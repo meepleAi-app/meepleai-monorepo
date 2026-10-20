@@ -470,6 +470,7 @@ internal static class UserLibraryCoreEndpoints
         .Produces<LibraryShareLinkDto>(201)
         .Produces(400)
         .Produces(401)
+        .Produces(409)
         .WithTags("Library", "Sharing")
         .WithSummary("Create library share link")
         .WithDescription("Creates a new share link for user's library. Revokes any existing active link. Max 10 per day.");
@@ -552,6 +553,7 @@ internal static class UserLibraryCoreEndpoints
         .Produces(400)
         .Produces(401)
         .Produces(404)
+        .Produces(409)
         .WithTags("Library", "Sharing")
         .WithSummary("Update library share link")
         .WithDescription("Updates settings for an existing library share link.");
@@ -589,6 +591,7 @@ internal static class UserLibraryCoreEndpoints
         .Produces(204)
         .Produces(401)
         .Produces(404)
+        .Produces(409)
         .WithTags("Library", "Sharing")
         .WithSummary("Revoke library share link")
         .WithDescription("Revokes (deletes) a library share link. The link will return 404 after revocation.");

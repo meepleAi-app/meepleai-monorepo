@@ -98,6 +98,20 @@ public abstract class IntegrationHostFixture : IAsyncLifetime
     /// </summary>
     protected virtual Dictionary<string, string?>? ExtraConfiguration => null;
 
+    /// <summary>
+    /// Ultimo passaggio sull'host: qui la fixture concreta sostituisce o decora servizi. Lo stesso
+    /// aggancio di <see cref="SharedHostPerTestDatabaseFixture"/>.
+    /// </summary>
+    /// <remarks>
+    /// Tipicamente <c>factory.WithWebHostBuilder(b =&gt; b.ConfigureTestServices(...))</c>, che
+    /// restituisce un oggetto NUOVO: la fixture dispone anche l'originale. 🔴 Un doppio registrato qui
+    /// vive quanto la classe, come il database: se ha stato, lo deve isolare per test da sé.
+    /// </remarks>
+    protected virtual WebApplicationFactory<Program> ConfigureHost(
+        WebApplicationFactory<Program> factory) => factory;
+
+    private WebApplicationFactory<Program>? _baseFactory;
+
     // Il tempo speso qui NON viene attribuito da xUnit ad alcun test: nel .trx non esiste. Senza
     // strumentazione, convertire le classi farebbe uscire dalla misura il costo dominante del gate
     // (79% del tempo) lasciandolo sul runner — la stessa forma di difetto da cui nasce #3742.
@@ -138,7 +152,8 @@ public abstract class IntegrationHostFixture : IAsyncLifetime
             await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(connectionString);
             afterDb = Stopwatch.GetTimestamp();
 
-            Factory = IntegrationWebApplicationFactory.Create(connectionString, extraConfig: ExtraConfiguration);
+            _baseFactory = IntegrationWebApplicationFactory.Create(connectionString, extraConfig: ExtraConfiguration);
+            Factory = ConfigureHost(_baseFactory);
 
             // `WithWebHostBuilder` e' PIGRO: l'host si costruisce al primo accesso a `.Services`.
             // Senza questa riga il tempo dell'host finirebbe nel campo `migrate=` e la
@@ -182,6 +197,12 @@ public abstract class IntegrationHostFixture : IAsyncLifetime
             if (Factory is not null)
             {
                 await Factory.DisposeAsync();
+            }
+
+            // ConfigureHost puo' aver restituito un oggetto diverso: l'originale va chiuso a parte.
+            if (_baseFactory is not null && !ReferenceEquals(_baseFactory, Factory))
+            {
+                await _baseFactory.DisposeAsync();
             }
         }
         finally

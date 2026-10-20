@@ -3,6 +3,7 @@ using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.UserLibrary.Application.Commands;
 
@@ -53,7 +54,28 @@ internal class RevokeLibraryShareLinkCommandHandler : ICommandHandler<RevokeLibr
 
         shareLink.Revoke();
         await _shareLinkRepository.UpdateAsync(shareLink, cancellationToken).ConfigureAwait(false);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            // UpdateAsync scrive solo su un link non ancora revocato (#4558): 0 righe vuol dire che un'altra
+            // richiesta l'ha revocato dopo la nostra lettura. La revoca voluta c'è già, e DELETE è idempotente.
+            foreach (var entry in ex.Entries)
+            {
+                entry.State = EntityState.Detached;
+            }
+
+            var current = await _shareLinkRepository.GetByShareTokenAsync(command.ShareToken, cancellationToken).ConfigureAwait(false);
+            if (current is not { IsRevoked: true })
+            {
+                throw;
+            }
+
+            _logger.LogInformation(ex, "Share link {LinkId} was revoked by a concurrent request", shareLink.Id);
+            return;
+        }
 
         _logger.LogInformation("Revoked share link {LinkId} for user {UserId}", shareLink.Id, command.UserId);
     }

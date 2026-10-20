@@ -161,6 +161,7 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
     private static readonly IReadOnlyDictionary<string, (string Property, string Reason)> DeclaredStateTokens =
         new Dictionary<string, (string, string)>(StringComparer.Ordinal)
         {
+            ["ShareLinkEntity"] = ("RevokedAt", "ShareLinkRepository.UpdateAsync fissa l'originale a NULL: una scrittura del proprietario vale solo su un link non revocato, quindi nessuna scrittura annulla una revoca. La visita non passa dall'aggregato (TryRecordAccessAsync) e UpdateAsync non scrive i contatori. Niente xmin di proposito, come per LibraryShareLinkEntity: ogni visita lo cambierebbe e farebbe fallire la revoca di un link molto visitato (#4573)"),
             ["LibraryShareLinkEntity"] = ("RevokedAt", "LibraryShareLinkRepository.UpdateAsync fissa l'originale a NULL: una scrittura del proprietario vale solo su un link non revocato, quindi nessuna scrittura annulla una revoca. Le visite non passano dall'aggregato (TryRecordAccessAsync). Niente xmin di proposito: ogni visita lo cambierebbe e farebbe fallire con 409 la revoca di un link molto visitato (#4558)"),
         };
 

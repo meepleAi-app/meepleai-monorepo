@@ -17,7 +17,6 @@ internal class ShareLinkBuilder
     private DateTime _expiresAt = DateTime.UtcNow.AddDays(7);
     private string? _label;
     private bool _revoked;
-    private int _accessCount;
 
     /// <summary>
     /// Sets the thread ID.
@@ -110,15 +109,6 @@ internal class ShareLinkBuilder
     }
 
     /// <summary>
-    /// Sets the access count (for testing analytics).
-    /// </summary>
-    public ShareLinkBuilder WithAccessCount(int count)
-    {
-        _accessCount = count;
-        return this;
-    }
-
-    /// <summary>
     /// Builds the ShareLink entity.
     /// </summary>
     public ShareLink Build()
@@ -135,12 +125,6 @@ internal class ShareLinkBuilder
             expiresAt: effectiveExpiresAt,
             label: _label
         );
-
-        // Record access count
-        for (var i = 0; i < _accessCount; i++)
-        {
-            shareLink.RecordAccess();
-        }
 
         // Revoke if needed
         if (_revoked)
@@ -212,12 +196,6 @@ internal class ShareLinkBuilder
         {
             // Try setting via property setter if available
             expiresAtProperty.SetValue(shareLink, pastExpiration);
-        }
-
-        // Record access count
-        for (var i = 0; i < _accessCount; i++)
-        {
-            shareLink.RecordAccess();
         }
 
         // Revoke if needed

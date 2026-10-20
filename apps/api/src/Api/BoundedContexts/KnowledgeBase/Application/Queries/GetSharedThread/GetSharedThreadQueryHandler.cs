@@ -55,22 +55,21 @@ internal sealed class GetSharedThreadQueryHandler : IRequestHandler<GetSharedThr
             return null;
         }
 
-        // Record access for analytics (synchronous to avoid DI scope violation)
-        // Note: Fire-and-forget with Task.Run was removed because _shareLinkRepository
-        // is a scoped service that may be disposed before the background task completes,
-        // causing ObjectDisposedException under load. The ~20-50ms overhead is acceptable
-        // for analytics tracking. For Beta/Prod, consider IBackgroundTaskQueue with
-        // IServiceScopeFactory for zero response penalty. See Issue #2150 for details.
+        // Conta la visita (analytics) solo se il link è ancora valido adesso: fra la validazione e qui il
+        // proprietario può averlo revocato (#4573), e la riga è la verità anche quando la chiave nella
+        // blacklist Redis si è persa. Sincrono per non uscire dallo scope DI (#2150): il costo è uno statement.
+        // Per il resto il conteggio è accessorio, e un errore non deve far fallire la lettura della chat.
         try
         {
-            var shareLink = await _shareLinkRepository.GetByIdAsync(validation.ShareLinkId, cancellationToken).ConfigureAwait(false);
-
-            if (shareLink != null)
+            if (!await _shareLinkRepository.TryRecordAccessAsync(validation.ShareLinkId, cancellationToken).ConfigureAwait(false))
             {
-                shareLink.RecordAccess();
-                await _shareLinkRepository.UpdateAsync(shareLink, cancellationToken).ConfigureAwait(false);
-                _logger.LogDebug("Recorded share link access for ShareLinkId {ShareLinkId}", validation.ShareLinkId);
+                _logger.LogDebug(
+                    "Share link {ShareLinkId} became invalid while being visited (revoked or expired)",
+                    validation.ShareLinkId);
+                return null;
             }
+
+            _logger.LogDebug("Recorded share link access for ShareLinkId {ShareLinkId}", validation.ShareLinkId);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out

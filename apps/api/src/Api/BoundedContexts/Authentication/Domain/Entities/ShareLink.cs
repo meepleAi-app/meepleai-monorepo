@@ -48,11 +48,18 @@ internal sealed class ShareLink : AggregateRoot<Guid>
     /// <summary>
     /// Tracking counter for number of times the link was accessed.
     /// </summary>
+    /// <remarks>
+    /// Solo lettura per l'aggregato (#4573): la visita lo incrementa nel database con
+    /// <c>IShareLinkRepository.TryRecordAccessAsync</c>, in un solo statement con il controllo di validità.
+    /// Un metodo di dominio che lo incrementasse andrebbe salvato riscrivendo l'aggregato, cioè il difetto
+    /// che quel metodo ha sostituito: una visita e una revoca che si incrociano si cancellerebbero a vicenda.
+    /// </remarks>
     public int AccessCount { get; private set; }
 
     /// <summary>
     /// UTC timestamp of last access via this link.
     /// </summary>
+    /// <remarks>Come <see cref="AccessCount"/>: lo scrive solo la visita, nel database.</remarks>
     public DateTime? LastAccessedAt { get; private set; }
 
     // Constructor for domain factory method
@@ -132,15 +139,6 @@ internal sealed class ShareLink : AggregateRoot<Guid>
             throw new InvalidOperationException("Share link is already revoked");
 
         RevokedAt = DateTime.UtcNow;
-    }
-
-    /// <summary>
-    /// Records an access to this share link (for analytics/audit).
-    /// </summary>
-    public void RecordAccess()
-    {
-        AccessCount++;
-        LastAccessedAt = DateTime.UtcNow;
     }
 
     /// <summary>

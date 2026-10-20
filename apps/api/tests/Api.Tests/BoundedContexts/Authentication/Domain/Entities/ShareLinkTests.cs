@@ -195,49 +195,6 @@ public class ShareLinkTests
     }
 
     [Fact]
-    public void RecordAccess_IncrementsAccessCount()
-    {
-        // Arrange
-        var shareLink = ShareLink.Create(
-            threadId: Guid.NewGuid(),
-            creatorId: Guid.NewGuid(),
-            role: ShareLinkRole.View,
-            expiresAt: DateTime.UtcNow.AddDays(7)
-        );
-
-        // Act
-        shareLink.RecordAccess();
-        shareLink.RecordAccess();
-        shareLink.RecordAccess();
-
-        // Assert
-        shareLink.AccessCount.Should().Be(3);
-    }
-
-    [Fact]
-    public void RecordAccess_SetsLastAccessedAt()
-    {
-        // Arrange
-        var shareLink = ShareLink.Create(
-            threadId: Guid.NewGuid(),
-            creatorId: Guid.NewGuid(),
-            role: ShareLinkRole.View,
-            expiresAt: DateTime.UtcNow.AddDays(7)
-        );
-
-        var before = DateTime.UtcNow;
-
-        // Act
-        shareLink.RecordAccess();
-
-        var after = DateTime.UtcNow;
-
-        // Assert
-        shareLink.LastAccessedAt.Should().NotBeNull();
-        shareLink.LastAccessedAt.Value.Should().BeOnOrAfter(before).And.BeOnOrBefore(after);
-    }
-
-    [Fact]
     public void UpdateExpiration_WithFutureDate_UpdatesExpiration()
     {
         // Arrange

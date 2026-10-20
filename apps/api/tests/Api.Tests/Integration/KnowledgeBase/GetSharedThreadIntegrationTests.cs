@@ -11,6 +11,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.Authentication;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
@@ -185,8 +186,7 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
         result.ThreadId.Should().Be(threadId);
 
         // Assert - access count incremented (Issue #2150 fix verification)
-        var shareLinkAfter = await repository.GetByIdAsync(createResult.ShareLinkId, TestCancellationToken);
-        shareLinkAfter.Should().NotBeNull();
+        var shareLinkAfter = await ReadCommittedShareLinkAsync(createResult.ShareLinkId);
         shareLinkAfter.AccessCount.Should().Be(1);
         shareLinkAfter.LastAccessedAt.Should().NotBeNull();
     }
@@ -206,7 +206,6 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
         await CreateTestChatThreadAsync(threadId, userId, gameId);
 
         var mediator = _serviceProvider!.GetRequiredService<IMediator>();
-        var repository = _serviceProvider!.GetRequiredService<IShareLinkRepository>();
 
         // Create share link
         var createCommand = new CreateShareLinkCommand(
@@ -229,8 +228,7 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
         }
 
         // Assert - access count is 3
-        var shareLinkAfter = await repository.GetByIdAsync(createResult.ShareLinkId, TestCancellationToken);
-        shareLinkAfter.Should().NotBeNull();
+        var shareLinkAfter = await ReadCommittedShareLinkAsync(createResult.ShareLinkId);
         shareLinkAfter.AccessCount.Should().Be(3);
     }
 
@@ -265,7 +263,6 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
         await CreateTestChatThreadAsync(threadId, userId, gameId);
 
         var mediator = _serviceProvider!.GetRequiredService<IMediator>();
-        var repository = _serviceProvider!.GetRequiredService<IShareLinkRepository>();
 
         // Create and then revoke share link
         var createCommand = new CreateShareLinkCommand(
@@ -287,9 +284,9 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
         revokeResult.Should().BeTrue("Revoke command should succeed");
 
         // Verify the share link is marked as revoked in the database
-        var shareLinkAfterRevoke = await repository.GetByIdAsync(createResult.ShareLinkId, TestCancellationToken);
-        shareLinkAfterRevoke.Should().NotBeNull();
-        shareLinkAfterRevoke.IsRevoked.Should().BeTrue("Share link should be marked as revoked in database");
+        // Dalla riga, non dall'istanza che il contesto del test tiene tracciata da AddAsync (#4573).
+        var shareLinkAfterRevoke = await ReadCommittedShareLinkAsync(createResult.ShareLinkId);
+        shareLinkAfterRevoke.RevokedAt.Should().NotBeNull("Share link should be marked as revoked in database");
 
         // Verify token is marked as invalid via ValidateShareLinkQuery (checks Redis blacklist)
         var validateQuery = new ValidateShareLinkQuery(createResult.Token);
@@ -305,8 +302,7 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
         result.Should().BeNull();
 
         // Verify access count is still 0 (no analytics for revoked tokens)
-        var shareLinkAfter = await repository.GetByIdAsync(createResult.ShareLinkId, TestCancellationToken);
-        shareLinkAfter.Should().NotBeNull();
+        var shareLinkAfter = await ReadCommittedShareLinkAsync(createResult.ShareLinkId);
         shareLinkAfter.AccessCount.Should().Be(0);
     }
 
@@ -389,6 +385,15 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
     #endregion
 
     #region Helper Methods
+
+    /// <summary>
+    /// Legge la riga com'è nel database, non l'istanza tracciata dal contesto del test (#4573). La visita conta
+    /// con un UPDATE diretto (<c>TryRecordAccessAsync</c>) che non passa dal change tracker: questo contesto
+    /// vive quanto la classe e tiene l'aggregato letto prima della visita, quindi <c>repository.GetByIdAsync</c>
+    /// restituirebbe il contatore vecchio.
+    /// </summary>
+    private async Task<ShareLinkEntity> ReadCommittedShareLinkAsync(Guid shareLinkId) =>
+        await _dbContext!.ShareLinks.AsNoTracking().SingleAsync(l => l.Id == shareLinkId, TestCancellationToken);
 
     private async Task CreateTestUserAsync(Guid userId, string email)
     {

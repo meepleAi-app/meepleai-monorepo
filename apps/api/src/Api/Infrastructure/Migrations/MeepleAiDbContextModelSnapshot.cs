@@ -4518,6 +4518,7 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnName("last_accessed_at");
 
                     b.Property<DateTime?>("RevokedAt")
+                        .IsConcurrencyToken()
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("revoked_at");
 

@@ -41,8 +41,14 @@ internal sealed class ShareLinkEntityConfiguration : IEntityTypeConfiguration<Sh
             .HasColumnName("created_at")
             .IsRequired();
 
+        // #4573: token di concorrenza, la stessa guardia di stato di LibraryShareLinkEntity (#4558).
+        // ShareLinkRepository.UpdateAsync ne fissa l'originale a NULL, così una scrittura del proprietario vale
+        // solo su un link non ancora revocato: una revoca non si annulla. Niente xmin di proposito: ogni visita
+        // è un UPDATE e lo cambierebbe, quindi farebbe fallire la revoca di un link molto visitato.
+        // Nessuna migrazione: lo schema non cambia, cambia solo la condizione dell'UPDATE.
         builder.Property(sl => sl.RevokedAt)
-            .HasColumnName("revoked_at");
+            .HasColumnName("revoked_at")
+            .IsConcurrencyToken();
 
         builder.Property(sl => sl.Label)
             .HasColumnName("label")

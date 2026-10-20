@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Api.BoundedContexts.UserNotifications.Application.Commands;
 using Api.Extensions;
 using Api.Filters;
@@ -31,8 +32,11 @@ internal static class AdminManualNotificationEndpoints
         CancellationToken ct)
     {
         var adminId = httpContext.User.GetUserId();
-        var adminName = httpContext.User.FindFirst("displayName")?.Value
-            ?? httpContext.User.FindFirst("email")?.Value
+        // #4580: this read the claims "displayName" and "email", which the session handler does not emit,
+        // so the notification always said "Admin". The handler emits Name (only when the display name is
+        // not blank) and Email.
+        var adminName = httpContext.User.FindFirst(ClaimTypes.Name)?.Value
+            ?? httpContext.User.FindFirst(ClaimTypes.Email)?.Value
             ?? "Admin";
 
         var command = new SendManualNotificationCommand

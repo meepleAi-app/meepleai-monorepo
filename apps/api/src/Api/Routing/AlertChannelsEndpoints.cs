@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Administration.Application.Commands.AlertChannels;
 using Api.BoundedContexts.Administration.Application.Queries.AlertChannels;
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Extensions;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -58,7 +59,7 @@ internal static class AlertChannelsEndpoints
                 CancellationToken ct) =>
             {
                 ArgumentNullException.ThrowIfNull(request);
-                var userId = context.User.FindFirst("userId")?.Value ?? "system";
+                var userId = AuthorId(context);
 
                 var command = new UpsertAlertChannelCommand(
                     Type: type,
@@ -89,6 +90,16 @@ internal static class AlertChannelsEndpoints
             .WithName("AlertChannels_TestConnection")
             .WithSummary("Probe the channel's transport (Slack: webhook POST · Email: config sanity-check)");
     }
+
+    /// <summary>
+    /// The author recorded on a channel: the admin who made the request. SessionAuthenticationMiddleware
+    /// stores the session in Items, and <c>RequireAdminSession()</c> has already required it to be valid,
+    /// so the cast cannot fail here. EffectiveActor (Principal.cs) is the real admin even during an
+    /// impersonation. #4580: this endpoint read a "userId" claim that the session handler does not emit,
+    /// so every channel said "system".
+    /// </summary>
+    private static string AuthorId(HttpContext context) =>
+        ((SessionStatusDto)context.Items[nameof(SessionStatusDto)]!).Principal!.EffectiveActor.Id.ToString();
 }
 
 /// <summary>

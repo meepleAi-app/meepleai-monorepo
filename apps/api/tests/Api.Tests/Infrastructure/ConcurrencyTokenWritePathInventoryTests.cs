@@ -32,7 +32,7 @@ namespace Api.Tests.Infrastructure;
 ///   .OriginalValue = aggregate.Xmin</c> prima di salvare (<c>AlertChannelRepository:78</c>).</item>
 ///   <item><see cref="WritePathTechnique.TokenRoundTrip"/> — il mapper riporta il token letto
 ///   nell'entità mappata, così <c>Update()</c> su detached parte dal valore giusto
-///   (<c>PlayRecordRepository:320</c>, con commento).</item>
+///   (<c>PlayRecordRepository:469</c>, con commento).</item>
 ///   <item><see cref="WritePathTechnique.TrackedMutation"/> — si carica l'entità tracked e la si
 ///   muta, così EF conserva l'original value caricato
 ///   (<c>MechanicGoldenClaimRepository:72</c>).</item>
@@ -98,7 +98,7 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
             ["MechanicCardEntity"] = (WritePathTechnique.TokenRoundTrip, "MechanicCardRepository:159"),
             ["PdfDocumentEntity"] = (WritePathTechnique.TokenRoundTrip, "PdfDocumentRepository:338 (#3694) — il commento a :333 spiega il difetto"),
             ["PhotoBatchUpload"] = (WritePathTechnique.TokenRoundTrip, "PhotoBatchUploadRepository:75 — legge AsNoTracking e riattacca con Update(); l'aggregato è l'entità EF e trasporta il token (#3651 lotto 8)"),
-            ["PlayRecordEntity"] = (WritePathTechnique.TokenRoundTrip, "PlayRecordRepository:320 — «round-trip for detached Update (ADR-060)»"),
+            ["PlayRecordEntity"] = (WritePathTechnique.TokenRoundTrip, "PlayRecordRepository:469 — «round-trip for detached Update (ADR-060)»"),
             ["ProposalMigrationEntity"] = (WritePathTechnique.TokenRoundTrip, "ProposalMigrationRepository:117 — Xmin nel mapper; UpdateAsync ha un ramo detached a :97 (#3651 lotto 7)"),
             ["GameSessionStateEntity"] = (WritePathTechnique.TokenRoundTrip, "GameSessionStateRepository:145 — detach del tracked + Update() su detached, token nel mapper (#3651 lotto 10)"),
             ["SessionEntity"] = (WritePathTechnique.TokenRoundTrip, "SessionMapper:37/:74 — il round-trip esisteva già, cambia solo il tipo del token (#3651 lotto 10)"),

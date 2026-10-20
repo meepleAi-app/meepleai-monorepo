@@ -1,6 +1,8 @@
 using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
@@ -240,5 +242,41 @@ public sealed class PlayRecordRepositoryTests : IDisposable
         string.Join(Environment.NewLine, changed).Should().BeEmpty(
             "an UpdateAsync that changes nothing must change nothing: DbSet.Update marks every column modified, " +
             "so a column the mapper loses is saved as its default");
+    }
+
+    /// <summary>
+    /// #4569: <c>UpdateAsync</c> riconosce quali punteggi sono già salvati da ciò che la lettura ha trovato. Un
+    /// aggregato che non viene da una lettura di questo repository e porta dei punteggi non ha quell'informazione:
+    /// trattarli tutti come nuovi darebbe INSERT di righe che magari esistono. Si ferma, prima di toccare il
+    /// change tracker.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4569")]
+    public async Task UpdateAsync_OfAnAggregateNotReadFromTheRepository_ThatCarriesScores_Refuses()
+    {
+        var record = PlayRecord.CreateFreeForm(
+            Guid.NewGuid(), "Gioco libero", Guid.NewGuid(), SentinelDate, PlayRecordVisibility.Private,
+            SessionScoringConfig.CreateDefault());
+        record.AddPlayer(null, "Anna");
+        record.RecordScore(record.Players[0].Id, new RecordScore("points", 5, "pts"));
+
+        var act = () => CreateRepository().UpdateAsync(record);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*#4569*");
+        _db.ChangeTracker.Entries().Should().BeEmpty("the refusal comes before anything is tracked");
+    }
+
+    [Fact]
+    [Trait("Issue", "4569")]
+    public async Task UpdateAsync_OfAnAggregateNotReadFromTheRepository_WithoutScores_IsAccepted()
+    {
+        var record = PlayRecord.CreateFreeForm(
+            Guid.NewGuid(), "Gioco libero", Guid.NewGuid(), SentinelDate, PlayRecordVisibility.Private,
+            SessionScoringConfig.CreateDefault());
+        record.AddPlayer(null, "Anna");
+
+        var act = () => CreateRepository().UpdateAsync(record);
+
+        await act.Should().NotThrowAsync();
     }
 }

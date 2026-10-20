@@ -31,7 +31,7 @@ namespace Api.Tests.Integration.UserLibrary;
 /// — email univoca per chiamata — e i giochi referenziati sono id inesistenti (<c>Guid.NewGuid()</c>),
 /// quindi nessuna collisione fra test. I test del link scaduto (#4544) leggono e scrivono solo la
 /// riga del link che hanno creato, cercata per token; quelli delle gare (#4558) anche, e l'unico
-/// conteggio (i link attivi dopo la creazione di uno nuovo) e' filtrato per il proprio utente.
+/// conteggio (i link attivi di un utente) e' filtrato per il proprio utente.
 /// </para>
 /// </summary>
 public sealed class UserLibraryEndpointsHostFixture(SharedTestcontainersFixture shared)
@@ -543,14 +543,7 @@ public sealed class UserLibraryEndpointsIntegrationTests : IClassFixture<UserLib
         (await ReadShareLinkRowAsync(oldToken)).RevokedAt.Should().NotBeNull(
             "the visit must not bring the old link back. Before #4558 it wrote back revoked_at = NULL");
 
-        var now = DateTime.UtcNow;
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var active = await db.LibraryShareLinks.AsNoTracking()
-            .Where(l => l.UserId == userId && l.RevokedAt == null && (l.ExpiresAt == null || l.ExpiresAt > now))
-            .Select(l => l.ShareToken)
-            .ToListAsync();
-        active.Should().Equal(new[] { newToken }, "an owner has one active link: the one created last");
+        (await ActiveShareTokensAsync(userId)).Should().Equal(new[] { newToken }, "an owner has one active link: the one created last");
     }
 
     [Fact]
@@ -663,6 +656,98 @@ public sealed class UserLibraryEndpointsIntegrationTests : IClassFixture<UserLib
         }
 
         ErrorOf(body).Should().Be("concurrent_edit", "the conflict is the middleware's answer to DbUpdateConcurrencyException");
+    }
+
+    [Fact]
+    public async Task GetSharedLibrary_ExpiredWhileTheVisitIsInFlight_Answers404AndDoesNotCount()
+    {
+        var (_, owner) = await CreateOwnerAsync();
+        var shareToken = await CreateShareLinkAsync(owner);
+        var before = await ReadShareLinkRowAsync(shareToken);
+
+        // La scadenza passa fra la lettura e il conteggio: il controllo dell'handler (IsValid) ha visto il
+        // link valido, quindi a fermare la visita può essere solo la condizione di TryRecordAccessAsync.
+        _interleaving.AfterNextRead(shareToken, () => ExpireShareLinkAsync(shareToken));
+
+        using var visit = await _client.GetAsync($"/api/v1/library/shared/{shareToken}");
+
+        _interleaving.IsPending(shareToken).Should().BeFalse("setup: the link must expire inside the visit");
+        var after = await ReadShareLinkRowAsync(shareToken);
+        using (new AssertionScope())
+        {
+            visit.StatusCode.Should().Be(HttpStatusCode.NotFound,
+                "the link expired before the visit could count itself: the count is conditioned on expires_at too");
+            after.ViewCount.Should().Be(before.ViewCount, "a visit to an expired link is not an access");
+            after.LastAccessedAt.Should().Be(before.LastAccessedAt);
+        }
+    }
+
+    [Fact]
+    public async Task RevokeShareLink_RevokedTwiceAtTheSameTime_BothAnswer204()
+    {
+        var (_, owner) = await CreateOwnerAsync();
+        var shareToken = await CreateShareLinkAsync(owner);
+        HttpStatusCode? otherRevoke = null;
+        _interleaving.AfterNextRead(shareToken, async () => otherRevoke = await RevokeAsync(shareToken, owner));
+
+        var revoke = await RevokeAsync(shareToken, owner);
+
+        _interleaving.IsPending(shareToken).Should().BeFalse("setup: the second revocation must run inside the first");
+        otherRevoke.Should().Be(HttpStatusCode.NoContent, "setup: the other revocation completes first");
+
+        // La prima revoca ha letto un link attivo e lo trova revocato quando scrive: la sua scrittura tocca
+        // 0 righe. Ma il risultato che voleva c'è già, e DELETE è idempotente.
+        revoke.Should().Be(HttpStatusCode.NoContent,
+            "the link is revoked, which is what both requests asked for. Without handling the conflict it answered 409");
+        (await ReadShareLinkRowAsync(shareToken)).RevokedAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task CreateShareLink_OldLinkRevokedWhileTheCreationIsInFlight_CreatesTheNewLink()
+    {
+        var (userId, owner) = await CreateOwnerAsync();
+        var oldToken = await CreateShareLinkAsync(owner);
+        HttpStatusCode? revoke = null;
+        _interleaving.AfterNextActiveLinkRead(userId, async () => revoke = await RevokeAsync(oldToken, owner));
+
+        var (status, body) = await SendJsonAsync(
+            HttpMethod.Post, "/api/v1/library/share", owner, """{"privacyLevel":"unlisted"}""");
+
+        _interleaving.IsPending(userId).Should().BeFalse("setup: the revocation must run inside the creation");
+        revoke.Should().Be(HttpStatusCode.NoContent, "setup: the owner revokes the old link while the creation is in flight");
+
+        // La creazione voleva revocare il vecchio link, e lo trova già revocato: la sua revoca tocca 0 righe,
+        // ma non deve trascinare con sé l'INSERT del link nuovo.
+        status.Should().Be(HttpStatusCode.Created,
+            $"the old link is revoked as the creation wanted, so the new link must still be created. " +
+            $"Without handling the conflict it answered 409. Body: {body}");
+        var newToken = JsonDocument.Parse(body).RootElement.GetProperty("shareToken").GetString();
+        (await ActiveShareTokensAsync(userId)).Should().Equal(new[] { newToken }, "the new link is the only active one");
+    }
+
+    [Fact]
+    public async Task CreateShareLink_TwoCreationsAtTheSameTime_LeaveOnlyTheLastActive()
+    {
+        var (userId, owner) = await CreateOwnerAsync();
+        var oldToken = await CreateShareLinkAsync(owner);
+        (HttpStatusCode Status, string Body)? other = null;
+        _interleaving.AfterNextActiveLinkRead(userId, async () => other = await SendJsonAsync(
+            HttpMethod.Post, "/api/v1/library/share", owner, """{"privacyLevel":"unlisted"}"""));
+
+        var (status, body) = await SendJsonAsync(
+            HttpMethod.Post, "/api/v1/library/share", owner, """{"privacyLevel":"unlisted"}""");
+
+        _interleaving.IsPending(userId).Should().BeFalse("setup: the other creation must run inside this one");
+        other.Should().NotBeNull();
+        other!.Value.Status.Should().Be(HttpStatusCode.Created, $"setup: the other creation completes first. Body: {other.Value.Body}");
+
+        // Un doppio click. La seconda creazione a scrivere trova il vecchio link già revocato dalla prima, e il
+        // link attivo è ora quello della prima: lo revoca, come avrebbe fatto se fosse arrivata dopo.
+        status.Should().Be(HttpStatusCode.Created, $"Without handling the conflict it answered 409. Body: {body}");
+        var lastToken = JsonDocument.Parse(body).RootElement.GetProperty("shareToken").GetString();
+        (await ActiveShareTokensAsync(userId)).Should().Equal(new[] { lastToken },
+            "an owner has one active link, the one created last, as if the two creations had arrived one after the other");
+        (await ReadShareLinkRowAsync(oldToken)).RevokedAt.Should().NotBeNull();
     }
 
     // ========================================
@@ -789,6 +874,17 @@ public sealed class UserLibraryEndpointsIntegrationTests : IClassFixture<UserLib
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         return await TestSessionHelper.CreateUserSessionAsync(db);
+    }
+
+    private async Task<List<string>> ActiveShareTokensAsync(Guid userId)
+    {
+        var now = DateTime.UtcNow;
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        return await db.LibraryShareLinks.AsNoTracking()
+            .Where(l => l.UserId == userId && l.RevokedAt == null && (l.ExpiresAt == null || l.ExpiresAt > now))
+            .Select(l => l.ShareToken)
+            .ToListAsync();
     }
 
     private async Task<HttpStatusCode> RevokeAsync(string shareToken, string token)

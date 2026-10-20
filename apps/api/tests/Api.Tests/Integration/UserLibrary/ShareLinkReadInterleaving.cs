@@ -26,6 +26,7 @@ namespace Api.Tests.Integration.UserLibrary;
 internal sealed class ShareLinkReadInterleaving
 {
     private readonly ConcurrentDictionary<string, Func<Task>> _afterRead = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<Guid, Func<Task>> _afterActiveRead = new();
 
     public void AfterNextRead(string shareToken, Func<Task> action)
     {
@@ -35,10 +36,27 @@ internal sealed class ShareLinkReadInterleaving
         }
     }
 
+    /// <summary>
+    /// Come <see cref="AfterNextRead"/>, ma sulla lettura del link attivo di un utente
+    /// (<c>GetActiveByUserIdAsync</c>), quella con cui la creazione di un link trova il vecchio da revocare.
+    /// </summary>
+    public void AfterNextActiveLinkRead(Guid userId, Func<Task> action)
+    {
+        if (!_afterActiveRead.TryAdd(userId, action))
+        {
+            throw new InvalidOperationException($"An interleaving is already registered for the active link of user {userId}.");
+        }
+    }
+
     public bool IsPending(string shareToken) => _afterRead.ContainsKey(shareToken);
+
+    public bool IsPending(Guid userId) => _afterActiveRead.ContainsKey(userId);
 
     internal Task RunAfterReadAsync(string shareToken) =>
         _afterRead.TryRemove(shareToken, out var action) ? action() : Task.CompletedTask;
+
+    internal Task RunAfterActiveReadAsync(Guid userId) =>
+        _afterActiveRead.TryRemove(userId, out var action) ? action() : Task.CompletedTask;
 
     /// <summary>
     /// Sostituisce nell'host il repository dei link con il decoratore, che avvolge l'implementazione
@@ -68,8 +86,8 @@ internal sealed class ShareLinkReadInterleaving
 }
 
 /// <summary>
-/// Il repository reale, con una sola differenza: dopo la lettura per token esegue l'azione registrata
-/// in <see cref="ShareLinkReadInterleaving"/>. Tutto il resto passa invariato.
+/// Il repository reale, con una sola differenza: dopo la lettura per token, o del link attivo di un utente,
+/// esegue l'azione registrata in <see cref="ShareLinkReadInterleaving"/>. Tutto il resto passa invariato.
 /// </summary>
 internal sealed class InterleavingShareLinkRepository(
     ILibraryShareLinkRepository inner,
@@ -82,8 +100,12 @@ internal sealed class InterleavingShareLinkRepository(
         return link;
     }
 
-    public Task<LibraryShareLink?> GetActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) =>
-        inner.GetActiveByUserIdAsync(userId, cancellationToken);
+    public async Task<LibraryShareLink?> GetActiveByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
+    {
+        var link = await inner.GetActiveByUserIdAsync(userId, cancellationToken);
+        await interleaving.RunAfterActiveReadAsync(userId);
+        return link;
+    }
 
     public Task<IReadOnlyList<LibraryShareLink>> GetAllByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) =>
         inner.GetAllByUserIdAsync(userId, cancellationToken);

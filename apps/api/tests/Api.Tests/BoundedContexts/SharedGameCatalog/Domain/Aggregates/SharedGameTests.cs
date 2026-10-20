@@ -1058,6 +1058,38 @@ public sealed class SharedGameTests
         game.QuickQuestions.Should().Contain(newQuestions[1]);
     }
 
+    [Fact]
+    public void ReplaceQuickQuestions_KeepsTheManualQuestions()
+    {
+        // #4596: una rigenerazione sostituisce le domande generate, non quelle scritte a mano.
+        var game = CreateValidGame();
+        var oldGenerated = new QuickQuestion(Guid.NewGuid(), game.Id, "Old generated?", "❓", QuestionCategory.Rules, 0, true, DateTime.UtcNow, true);
+        var manual = new QuickQuestion(Guid.NewGuid(), game.Id, "Written by an admin?", "🎲", QuestionCategory.Rules, 1, false, DateTime.UtcNow, true);
+        game.AddQuickQuestion(oldGenerated);
+        game.AddQuickQuestion(manual);
+
+        var generated = new QuickQuestion(Guid.NewGuid(), game.Id, "New generated?", "❓", QuestionCategory.Setup, 0, true, DateTime.UtcNow, true);
+
+        game.ReplaceQuickQuestions([generated]);
+
+        game.QuickQuestions.Should().BeEquivalentTo([manual, generated]);
+        game.QuickQuestions.Should().NotContain(oldGenerated);
+    }
+
+    [Fact]
+    public void ReplaceQuickQuestions_WithAnEmptySet_RemovesOnlyTheGeneratedOnes()
+    {
+        var game = CreateValidGame();
+        var oldGenerated = new QuickQuestion(Guid.NewGuid(), game.Id, "Old generated?", "❓", QuestionCategory.Rules, 0, true, DateTime.UtcNow, true);
+        var manual = new QuickQuestion(Guid.NewGuid(), game.Id, "Written by an admin?", "🎲", QuestionCategory.Rules, 1, false, DateTime.UtcNow, true);
+        game.AddQuickQuestion(oldGenerated);
+        game.AddQuickQuestion(manual);
+
+        game.ReplaceQuickQuestions([]);
+
+        game.QuickQuestions.Should().BeEquivalentTo([manual]);
+    }
+
     #endregion
 
     #region Contributor Tests

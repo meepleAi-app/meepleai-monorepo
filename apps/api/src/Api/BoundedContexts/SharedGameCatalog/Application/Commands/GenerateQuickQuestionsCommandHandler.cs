@@ -51,8 +51,8 @@ internal sealed class GenerateQuickQuestionsCommandHandler
             "Generating quick questions for shared game: {SharedGameId}",
             command.SharedGameId);
 
-        // 1. Verify shared game exists
-        var game = await _gameRepository.GetByIdAsync(command.SharedGameId, cancellationToken)
+        // 1. Verify shared game exists; load its quick questions so the replace can delete the old ones (#4596)
+        var game = await _gameRepository.GetByIdWithQuickQuestionsAsync(command.SharedGameId, cancellationToken)
             .ConfigureAwait(false);
 
         if (game is null)
@@ -84,6 +84,20 @@ internal sealed class GenerateQuickQuestionsCommandHandler
             rulebookContent ?? string.Empty,
             cancellationToken).ConfigureAwait(false);
 
+        // 4b. #4596: a fallback is the generator's way of saying the LLM gave nothing usable (402, 429,
+        // unreadable JSON, no questions). It is five fixed generic questions, not a result: saving it
+        // would replace the generated questions already stored. Nothing is touched, and the caller
+        // gets an error instead of a 201 with questions that were never meant to be kept.
+        if (generationResult.IsFallback)
+        {
+            _logger.LogWarning(
+                "Quick question generation for game {GameId} fell back to generic questions; saved questions left unchanged",
+                command.SharedGameId);
+            throw new ExternalServiceException(
+                "The AI could not generate quick questions right now. The questions already saved were left unchanged.",
+                "quick_questions_generation_unavailable");
+        }
+
         // 5. Create domain entities from generated questions
         var quickQuestions = generationResult.Questions
             .Select((q, index) => QuickQuestion.CreateFromAI(
@@ -93,7 +107,7 @@ internal sealed class GenerateQuickQuestionsCommandHandler
                 displayOrder: index))
             .ToList();
 
-        // 6. Replace existing questions with new ones (clear and add)
+        // 6. Replace the previously generated questions with the new ones; manual questions are kept (#4596)
         game.ReplaceQuickQuestions(quickQuestions);
 
         // 7. Persist changes

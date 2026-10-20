@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using Api.BoundedContexts.SharedGameCatalog.Application;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
@@ -22,6 +23,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
 using FluentAssertions;
 
@@ -36,6 +38,11 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 /// stato: registrarle una volta per classe invece che per test non cambia cio' che i test vedono.
 /// Il seeding, invece, resta nell'<c>InitializeAsync</c> della classe di test, perche' deve
 /// finire nel database di QUEL test.
+/// <para>
+/// #4596: la rigenerazione delle quick question chiama un LLM (<c>LlmQuickQuestionGenerator</c>).
+/// L'host di test installa gia' la guardia sugli host AI a pagamento; qui il generatore e' sostituito
+/// con <see cref="FixedQuickQuestionGenerator"/>, senza stato, cosi' il test non passa dalla rete.
+/// </para>
 /// </remarks>
 public sealed class SharedGameCatalogEndpointsHostFixture(SharedTestcontainersFixture shared)
     : SharedHostPerTestDatabaseFixture(shared, "sharedgame_endpoints")
@@ -43,7 +50,12 @@ public sealed class SharedGameCatalogEndpointsHostFixture(SharedTestcontainersFi
     protected override WebApplicationFactory<Program> ConfigureHost(
         WebApplicationFactory<Program> factory) =>
         factory.WithWebHostBuilder(builder =>
-            builder.ConfigureTestServices(services => services.AddSharedGameCatalogPolicies()));
+            builder.ConfigureTestServices(services =>
+            {
+                services.AddSharedGameCatalogPolicies();
+                services.RemoveAll<IQuickQuestionGenerator>();
+                services.AddScoped<IQuickQuestionGenerator, FixedQuickQuestionGenerator>();
+            }));
 }
 
 /// <summary>

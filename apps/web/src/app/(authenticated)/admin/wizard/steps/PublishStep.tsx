@@ -186,7 +186,7 @@ export function PublishStep({
         <Button
           onClick={() => setShowConfirmModal(true)}
           disabled={publishing}
-          className="min-w-40 bg-green-600 hover:bg-green-700"
+          className="min-w-40 bg-green-700 hover:bg-green-800 text-white"
         >
           {publishing ? (
             <>

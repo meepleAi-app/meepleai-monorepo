@@ -971,7 +971,7 @@ export default function MechanicAnalysesPage() {
                 suppressReason.length > 500 ||
                 suppressMutation.isPending
               }
-              className="bg-rose-600 hover:bg-rose-700"
+              className="bg-rose-700 hover:bg-rose-800 text-white"
               data-testid="suppress-confirm-button"
             >
               {suppressMutation.isPending ? (

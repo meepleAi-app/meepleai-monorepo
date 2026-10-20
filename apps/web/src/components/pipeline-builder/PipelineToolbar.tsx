@@ -94,7 +94,7 @@ function ToolbarButton({
             size="sm"
             onClick={onClick}
             disabled={disabled}
-            className={cn('h-8 w-8 p-0', active && 'bg-muted')}
+            className={cn('h-8 w-8 p-0', active && 'bg-muted text-foreground')}
           >
             {icon}
           </Button>

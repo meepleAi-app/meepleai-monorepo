@@ -113,7 +113,7 @@ export default function JoinSessionPage() {
             <Button
               onClick={handleJoin}
               disabled={code.length < 4 || isJoining}
-              className="w-full bg-indigo-600 hover:bg-indigo-700"
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white"
             >
               {isJoining ? (
                 <>

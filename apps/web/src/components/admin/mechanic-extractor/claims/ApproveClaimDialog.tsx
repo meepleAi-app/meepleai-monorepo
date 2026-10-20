@@ -133,7 +133,7 @@ export function ApproveClaimDialog({
               onConfirm(note.trim(), structure ?? undefined);
             }}
             disabled={isPending}
-            className="bg-green-600 hover:bg-green-700"
+            className="bg-green-700 hover:bg-green-800 text-white"
             data-testid="approve-claim-confirm"
           >
             {isPending ? <Loader2Icon className="mr-1 h-4 w-4 animate-spin" /> : null}

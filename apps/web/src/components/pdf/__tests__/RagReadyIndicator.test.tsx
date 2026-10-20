@@ -10,6 +10,8 @@ import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { axe } from 'jest-axe';
 
+import { backgroundClasses } from '@/test-utils/background-classes';
+
 import { RagReadyIndicator } from '../RagReadyIndicator';
 
 import type { UseEmbeddingStatusReturn } from '@/hooks/useEmbeddingStatus';
@@ -178,6 +180,31 @@ describe('RagReadyIndicator', () => {
 
       const link = chatButton.closest('a');
       expect(link).toHaveAttribute('href', '/chat/new?game=game-123');
+    });
+
+    it('"Chat Now": in tema scuro resta solo il verde del consumatore, col testo bianco (#4548)', () => {
+      setHookReturn({
+        isReady: true,
+        data: {
+          status: 'Completed',
+          progress: 100,
+          totalChunks: 120,
+          processedChunks: 120,
+          errorMessage: null,
+        },
+      });
+
+      render(
+        <div data-theme="dark" className="dark">
+          <RagReadyIndicator gameId="game-123" />
+        </div>
+      );
+
+      // Prima il Button aggiungeva `dark:bg-primary/90` e `dark:hover:bg-primary`, che battevano
+      // il verde in tema scuro; e senza `text-white` il testo era quello scuro della variante.
+      const chatButton = screen.getByTestId('chat-now-button');
+      expect(backgroundClasses(chatButton)).toEqual(['bg-green-700', 'hover:bg-green-800']);
+      expect(chatButton).toHaveClass('text-white');
     });
 
     it('does not show stage indicators when ready', () => {

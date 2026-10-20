@@ -280,7 +280,7 @@ export function ResumePhotoReview({
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute top-2 right-2 bg-foreground/50 hover:bg-foreground/70 text-white"
+                className="absolute top-2 right-2 bg-foreground/50 hover:bg-foreground/70 text-background"
                 onClick={() => setLightboxUrl(null)}
                 aria-label="Close"
                 data-testid="review-lightbox-close"

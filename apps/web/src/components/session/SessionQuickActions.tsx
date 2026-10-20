@@ -218,7 +218,10 @@ export function SessionQuickActions({
               size="sm"
               onClick={handleUpsertScore}
               disabled={isScoreLoading || !scoreParticipant || !scoreValue}
-              className={cn('shrink-0', scoreSuccess && 'bg-green-600 hover:bg-green-700')}
+              className={cn(
+                'shrink-0',
+                scoreSuccess && 'bg-green-700 hover:bg-green-800 text-white'
+              )}
             >
               {isScoreLoading ? (
                 <Loader2 className="h-3 w-3 animate-spin" />

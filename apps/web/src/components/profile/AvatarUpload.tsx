@@ -445,7 +445,7 @@ export function AvatarUpload({
               type="button"
               onClick={handleCropComplete}
               disabled={isUploading || !crop}
-              className="bg-purple-500 hover:bg-purple-600"
+              className="bg-purple-600 hover:bg-purple-700 text-white"
             >
               {isUploading ? (
                 <>

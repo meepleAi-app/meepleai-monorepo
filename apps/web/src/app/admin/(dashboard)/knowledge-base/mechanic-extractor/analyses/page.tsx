@@ -607,7 +607,7 @@ export default function MechanicAnalysesPage() {
             <Button
               onClick={() => generateMutation.mutate()}
               disabled={!canGenerate}
-              className="bg-amber-500 hover:bg-amber-600 text-white"
+              className="bg-amber-700 hover:bg-amber-800 text-white"
             >
               {generateMutation.isPending ? (
                 <Loader2Icon className="mr-1 h-4 w-4 animate-spin" />
@@ -833,7 +833,7 @@ export default function MechanicAnalysesPage() {
                 <Button
                   onClick={() => approveMutation.mutate()}
                   disabled={!canApprove || approveMutation.isPending}
-                  className="bg-green-600 hover:bg-green-700 text-white"
+                  className="bg-green-700 hover:bg-green-800 text-white"
                 >
                   {approveMutation.isPending ? (
                     <Loader2Icon className="mr-1 h-4 w-4 animate-spin" />

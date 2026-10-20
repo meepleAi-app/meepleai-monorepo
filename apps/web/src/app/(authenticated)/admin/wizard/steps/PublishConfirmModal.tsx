@@ -98,7 +98,7 @@ export function PublishConfirmModal({
           <Button variant="outline" onClick={onClose} className="flex-1">
             Annulla
           </Button>
-          <Button onClick={onConfirm} className="flex-1 bg-green-600 hover:bg-green-700 text-white">
+          <Button onClick={onConfirm} className="flex-1 bg-green-700 hover:bg-green-800 text-white">
             Conferma Pubblicazione
           </Button>
         </DialogFooter>

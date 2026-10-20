@@ -292,7 +292,7 @@ export function PdfUploadStep({
         <Button
           onClick={handleUpload}
           disabled={!file || uploading}
-          className="min-w-32 ml-auto bg-amber-600 hover:bg-amber-700 text-white"
+          className="min-w-32 ml-auto bg-amber-700 hover:bg-amber-800 text-white"
         >
           {uploading ? (
             <>

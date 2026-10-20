@@ -246,7 +246,7 @@ export function ResumePhotoReview({
         {isHost && (
           <Button
             onClick={onAllReady}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="bg-emerald-700 hover:bg-emerald-800 text-white"
             disabled={attachments.length === 0}
             data-testid="resume-button"
           >

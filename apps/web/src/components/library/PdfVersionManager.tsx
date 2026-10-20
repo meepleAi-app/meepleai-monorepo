@@ -425,7 +425,7 @@ export function PdfVersionManager({ gameId, gameName }: PdfVersionManagerProps) 
             </Button>
             <Button
               onClick={() => void handleReplace()}
-              className="bg-amber-600 hover:bg-amber-700 text-white"
+              className="bg-amber-700 hover:bg-amber-800 text-white"
               disabled={toggleRagMutation.isPending}
               data-testid="replace-button"
             >

@@ -111,7 +111,8 @@ jobs:
         # Stessa SELEZIONE di ci.yml, deliberatamente: se i due gate misurassero insiemi diversi,
         # un test potrebbe non essere eseguito da nessuno dei due — il difetto di #3622 su un altro
         # asse. La ripartizione invece qui e' piu' fine (#3742): cio' che ci.yml chiama `Games` e'
-        # diviso in `Catalog` e `GamesAdmin`, e da `KnowledgeBase` e' staccato `AuthIntegration`.
+        # diviso in `Catalog` e `GamesAdmin`, e da `KnowledgeBase` sono staccati `AuthIntegration` e
+        # `DocProcessing`.
         #
         # Perche' divisa, e perche' li'. Uno shard dura quanto la sua catena seriale piu' lunga:
         # xUnit mette in parallelo le collection e in serie i test dentro una collection. In `Games`
@@ -138,12 +139,18 @@ jobs:
         # anche `Integration.Authentication`.
         # Previsioni e misure: commento del 2026-10-18 in #3742.
         #
+        # Terza volta (#4571). Tolta GroupB, la sessione di `KnowledgeBase` la fa Integration-GroupA,
+        # classi di KnowledgeBase e di DocumentProcessing: 66 minuti su un runner lento il
+        # 2026-10-19, quasi tutti di test e non di attese. `DocProcessing` prende il token intero
+        # `DocumentProcessing`, e `KnowledgeBase` lo esclude: il confine e' fra due contesti, come
+        # per Games, e una classe nuova di DocumentProcessing finisce sempre in `DocProcessing`.
+        #
         # Le esclusioni sono precedenze (#4488). Un test il cui nome contiene i token di due shard lo
         # selezionano tutti e due: le classi cross-context con `GameManagement` nel nome, i test di
         # SharedGameCatalog con `KnowledgeBase` nel nome del metodo. Lo shard che esclude il token
         # cede il test a quello che lo seleziona. L'ordine e' Catalog, GamesAdmin, AuthIntegration,
-        # KnowledgeBase: un test con i token di due contesti resta nel contesto di gioco ed esce
-        # dallo shard con meno margine. Un ciclo di esclusioni (A cede a B e B ad A) farebbe sparire
+        # DocProcessing, KnowledgeBase: un test con i token di due contesti resta nel contesto di
+        # gioco ed esce dallo shard con meno margine. Un ciclo di esclusioni (A cede a B e B ad A) farebbe sparire
         # quei test da ogni shard.
         #
         # 🔴 Le due meta' di questa regola non si tengono da sole. Togliere un token da uno shard
@@ -153,7 +160,9 @@ jobs:
         # nella baseline.
         shard:
           - name: "KnowledgeBase"
-            filter_extra: "&(FullyQualifiedName~KnowledgeBase|FullyQualifiedName~DocumentProcessing|FullyQualifiedName~Authentication)&FullyQualifiedName!~Integration.Authentication&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
+            filter_extra: "&(FullyQualifiedName~KnowledgeBase|FullyQualifiedName~Authentication)&FullyQualifiedName!~Integration.Authentication&FullyQualifiedName!~DocumentProcessing&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
+          - name: "DocProcessing"
+            filter_extra: "&(FullyQualifiedName~DocumentProcessing)&FullyQualifiedName!~Integration.Authentication&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
           - name: "AuthIntegration"
             filter_extra: "&(FullyQualifiedName~Integration.Authentication)&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
           - name: "Catalog"

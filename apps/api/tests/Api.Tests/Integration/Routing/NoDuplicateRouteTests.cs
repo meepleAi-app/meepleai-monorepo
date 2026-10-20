@@ -39,12 +39,13 @@ public sealed class NoDuplicateRouteTestsHostFixture(SharedTestcontainersFixture
 /// in production.
 ///
 /// The class also hosts the route-parameter binding guard of #4543: it reads the same
-/// routing table, so it rides on this host instead of paying for another one.
+/// routing table, so it rides on this host instead of paying for another one. For the same
+/// reason it hosts the admin-authorization probe of #4568 (NoDuplicateRouteTests.AdminAuthorization.cs).
 /// </summary>
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "Administration")]
-public sealed class NoDuplicateRouteTests
+public sealed partial class NoDuplicateRouteTests
     : IClassFixture<NoDuplicateRouteTestsHostFixture>, IAsyncLifetime
 {
     private readonly NoDuplicateRouteTestsHostFixture _hostFixture;

@@ -1,5 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Commands.AlertConfiguration;
 using Api.BoundedContexts.Administration.Application.Queries.AlertConfiguration;
+using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.Filters;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,9 +15,12 @@ internal static class AlertConfigurationEndpoints
 {
     public static void MapAlertConfigurationEndpoints(this IEndpointRouteBuilder app)
     {
+        // #4568: the values are SMTP hosts, Slack webhooks and PagerDuty keys. A bare
+        // RequireAuthorization() let any signed-in user read and write them; the admin
+        // filter answers 401 to anonymous callers and 403 to non-admins before any handler.
         var group = app.MapGroup("/admin/alert-configuration")
             .WithTags("Admin", "AlertConfiguration")
-            .RequireAuthorization();
+            .AddEndpointFilter<RequireAdminSessionFilter>();
 
         // GET /api/v1/admin/alert-configuration
         group.MapGet("/", async (IMediator mediator, CancellationToken ct) =>
@@ -49,13 +54,18 @@ internal static class AlertConfigurationEndpoints
             IMediator mediator,
             CancellationToken ct) =>
         {
-            var userId = context.User.FindFirst("userId")?.Value ?? "system";
+            // #4568: the session handler emits no "userId" claim, so the author was always
+            // "system". SessionAuthenticationMiddleware stores the session in Items, and the admin
+            // filter has already required it to be valid, so the cast cannot fail here.
+            // EffectiveActor (Principal.cs) is the real admin even during an impersonation.
+            var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
+            var updatedBy = session.Principal!.EffectiveActor.Id.ToString();
 
             var command = new UpdateAlertConfigurationCommand(
                 request.ConfigKey,
                 request.ConfigValue,
                 request.Category,
-                userId,
+                updatedBy,
                 request.Description);
 
             var success = await mediator.Send(command, ct).ConfigureAwait(false);

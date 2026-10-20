@@ -12,7 +12,8 @@ namespace Api.Filters;
 /// Pattern:
 /// - Validates session exists and is active (401 Unauthorized if not)
 /// - Validates user has Admin role (403 Forbidden if not)
-/// - Stores validated SessionStatusDto in HttpContext.Items for endpoint access
+/// - Reads the SessionStatusDto that SessionAuthenticationMiddleware stored in HttpContext.Items
+///   (it does not store it itself): once the filter has passed, the handler can rely on it being there
 ///
 /// Example:
 /// <code>

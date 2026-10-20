@@ -98,6 +98,36 @@ internal static class TestSessionHelper
     }
 
     /// <summary>
+    /// Creates an impersonation session: the cookie is the one of <paramref name="subjectId"/>, but the
+    /// person acting is <paramref name="actorId"/> (<c>ImpersonatedByUserId</c>). It is the only case where
+    /// <c>Principal.Subject</c> and <c>Principal.EffectiveActor</c> are different people. Both users must
+    /// already exist.
+    /// </summary>
+    /// <returns>The raw session token for the HTTP cookie header.</returns>
+    public static async Task<string> CreateImpersonationSessionAsync(
+        MeepleAiDbContext dbContext,
+        Guid subjectId,
+        Guid actorId,
+        CancellationToken cancellationToken = default)
+    {
+        var token = SessionToken.Generate();
+        dbContext.Set<UserSessionEntity>().Add(new UserSessionEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = subjectId,
+            TokenHash = token.ComputeHash(),
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(15),
+            LastSeenAt = DateTime.UtcNow,
+            ImpersonatedByUserId = actorId,
+            ImpersonatedUntil = DateTime.UtcNow.AddMinutes(15),
+            User = null! // Navigation property, not needed for insert
+        });
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return token.Value;
+    }
+
+    /// <summary>
     /// Creates a user and session in the database with the specified role.
     /// </summary>
     private static async Task<(Guid UserId, string RawToken)> CreateSessionAsync(

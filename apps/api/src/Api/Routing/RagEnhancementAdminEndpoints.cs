@@ -1,9 +1,12 @@
+using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands.RagEnhancements;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 using Api.Extensions;
 using Api.Filters;
 using Api.Services;
 using Api.SharedKernel.Domain.ValueObjects;
+using MediatR;
 
 namespace Api.Routing;
 
@@ -47,20 +50,18 @@ internal static class RagEnhancementAdminEndpoints
         // POST /api/v1/admin/rag-enhancements/{key}/toggle — Toggle enhancement globally
         ragGroup.MapPost("/{key}/toggle", async (
             string key,
-            IFeatureFlagService featureFlags,
+            HttpContext context,
+            IMediator mediator,
             CancellationToken ct) =>
         {
-            var validKeys = FeatureFlagConstants.RagEnhancements;
-            if (!validKeys.Contains(key, StringComparer.Ordinal))
+            if (!IsRagEnhancementKey(key))
                 return Results.BadRequest(new { Error = $"Unknown enhancement key: {key}" });
 
-            var isEnabled = await featureFlags.IsEnabledAsync(key).ConfigureAwait(false);
-            if (isEnabled)
-                await featureFlags.DisableFeatureAsync(key).ConfigureAwait(false);
-            else
-                await featureFlags.EnableFeatureAsync(key).ConfigureAwait(false);
+            var isNowEnabled = await mediator
+                .Send(new ToggleRagEnhancementCommand(key, AdminId(context)), ct)
+                .ConfigureAwait(false);
 
-            return Results.Ok(new { Key = key, IsNowEnabled = !isEnabled });
+            return Results.Ok(new { Key = key, IsNowEnabled = isNowEnabled });
         })
         .WithName("ToggleRagEnhancement")
         .WithSummary("Toggle a RAG enhancement on/off globally");
@@ -69,21 +70,20 @@ internal static class RagEnhancementAdminEndpoints
         ragGroup.MapPost("/{key}/tier/{tierName}/toggle", async (
             string key,
             string tierName,
-            IFeatureFlagService featureFlags,
+            HttpContext context,
+            IMediator mediator,
             CancellationToken ct) =>
         {
-            var validKeys = FeatureFlagConstants.RagEnhancements;
-            if (!validKeys.Contains(key, StringComparer.Ordinal))
+            if (!IsRagEnhancementKey(key))
                 return Results.BadRequest(new { Error = $"Unknown enhancement key: {key}" });
 
+            // An unknown tier throws the domain ValidationException, which the middleware answers with 400.
             var tier = UserTier.Parse(tierName);
-            var isEnabled = await featureFlags.IsEnabledForTierAsync(key, tier).ConfigureAwait(false);
-            if (isEnabled)
-                await featureFlags.DisableFeatureForTierAsync(key, tier).ConfigureAwait(false);
-            else
-                await featureFlags.EnableFeatureForTierAsync(key, tier).ConfigureAwait(false);
+            var isNowEnabled = await mediator
+                .Send(new ToggleRagEnhancementCommand(key, AdminId(context), tier), ct)
+                .ConfigureAwait(false);
 
-            return Results.Ok(new { Key = key, Tier = tierName, IsNowEnabled = !isEnabled });
+            return Results.Ok(new { Key = key, Tier = tierName, IsNowEnabled = isNowEnabled });
         })
         .WithName("ToggleRagEnhancementForTier")
         .WithSummary("Toggle a RAG enhancement on/off for a specific tier");
@@ -120,6 +120,18 @@ internal static class RagEnhancementAdminEndpoints
 
         return group;
     }
+
+    private static bool IsRagEnhancementKey(string key) =>
+        FeatureFlagConstants.RagEnhancements.Contains(key, StringComparer.Ordinal);
+
+    /// <summary>
+    /// The admin who sent the request, saved as the author of the flag row. <c>RequireAdminSessionFilter</c> on
+    /// the group has already required a valid session, so the cast cannot fail here. EffectiveActor
+    /// (Principal.cs) is the real admin also during an impersonation. #4594: the routes passed no id, the
+    /// author was <see cref="Guid.Empty"/> and the request was rejected with 422.
+    /// </summary>
+    private static Guid AdminId(HttpContext context) =>
+        ((SessionStatusDto)context.Items[nameof(SessionStatusDto)]!).Principal!.EffectiveActor.Id;
 
     /// <summary>
     /// The tier the estimate is computed for: the tier of the user of the session, or Free without one

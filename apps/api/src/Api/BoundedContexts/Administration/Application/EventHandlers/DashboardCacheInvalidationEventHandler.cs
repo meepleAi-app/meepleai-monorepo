@@ -54,34 +54,31 @@ internal sealed class DashboardCacheInvalidationEventHandler :
     }
 
     /// <summary>
-    /// Invalidate all dashboard cache entries.
-    /// Issue #879: Uses pattern matching to remove all cached dashboard stats.
+    /// Invalidate all dashboard stats cache entries.
     /// </summary>
+    /// <remarks>
+    /// #4542 — per tag, non per chiave. La chiave di <see cref="AdminStatsService.GetDashboardStatsAsync"/>
+    /// contiene l'intervallo di date, quindi le voci non si possono elencare. Prima di #4542 questo metodo
+    /// rimuoveva sedici chiavi esatte (Days 7/14/30/90 per quattro ruoli, senza gioco): le voci con un
+    /// gameId non venivano mai rimosse, e quelle con date esplicite solo perché, per il difetto, cadevano
+    /// sulla chiave senza date. Il tag le raggiunge tutte, qualunque sia il formato della chiave.
+    /// </remarks>
     private async Task InvalidateDashboardCacheAsync(string configKey, CancellationToken cancellationToken)
     {
         try
         {
-            // HybridCache doesn't support wildcard removal, so we track known cache keys
-            // Dashboard cache keys format: "dashboard:stats:{days}:{gameId}:{roleFilter}"
-            // For simplicity, we invalidate common parameter combinations
-
-            var cacheKeysToRemove = GenerateDashboardCacheKeys();
-
-            foreach (var cacheKey in cacheKeysToRemove)
-            {
-                await _cache.RemoveAsync(cacheKey, cancellationToken).ConfigureAwait(false);
-            }
+            await _cache.RemoveByTagAsync(AdminStatsService.DashboardStatsCacheTag, cancellationToken)
+                .ConfigureAwait(false);
 
             _logger.LogInformation(
-                "Dashboard cache invalidated: {Count} cache entries removed due to config change: {ConfigKey}",
-                cacheKeysToRemove.Count,
+                "Dashboard cache invalidated: tag {CacheTag} removed due to config change: {ConfigKey}",
+                AdminStatsService.DashboardStatsCacheTag,
                 configKey);
 
             // Issue #879: Record cache invalidation metric for Prometheus
             var tags = new System.Diagnostics.TagList
             {
-                { "config_key", configKey },
-                { "entries_removed", cacheKeysToRemove.Count }
+                { "config_key", configKey }
             };
             MeepleAiMetrics.DashboardCacheInvalidationsTotal.Add(1, tags);
         }
@@ -99,29 +96,5 @@ internal sealed class DashboardCacheInvalidationEventHandler :
                 configKey);
         }
 #pragma warning restore CA1031
-    }
-
-    /// <summary>
-    /// Generate common dashboard cache key combinations for invalidation.
-    /// Covers most frequently used parameter combinations.
-    /// </summary>
-    private static List<string> GenerateDashboardCacheKeys()
-    {
-        var cacheKeys = new List<string>();
-
-        // Common day ranges: 7, 14, 30, 90
-        var commonDays = new[] { 7, 14, 30, 90 };
-
-        // Common filters: no gameId, no roleFilter (most common use case)
-        foreach (var days in commonDays)
-        {
-            // Format: dashboard:stats:{days}:{gameId}:{roleFilter}
-            cacheKeys.Add($"dashboard:stats:{days}::");           // No filters
-            cacheKeys.Add($"dashboard:stats:{days}::admin");      // Admin role filter
-            cacheKeys.Add($"dashboard:stats:{days}::user");       // User role filter
-            cacheKeys.Add($"dashboard:stats:{days}::all");        // All roles
-        }
-
-        return cacheKeys;
     }
 }

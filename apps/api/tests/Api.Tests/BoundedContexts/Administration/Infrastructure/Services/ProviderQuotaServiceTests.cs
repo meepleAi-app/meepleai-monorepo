@@ -174,7 +174,9 @@ public sealed class ProviderQuotaServiceTests
         resolver.Setup(r => r.ResolveAsync("openrouter", It.IsAny<CancellationToken>()))
             .ReturnsAsync(() => currentKey);
 
-        var svc = BuildSubjectWithRealCache(providerMock.Object, resolver);
+        await using var services = BuildRealHybridCacheProvider();
+        var svc = BuildSubjectWithRealCache(
+            providerMock.Object, resolver, services.GetRequiredService<HybridCache>());
 
         (await svc.GetQuotaAsync("openrouter", CancellationToken.None)).RemainingUsd.Should().Be(10m);
         (await svc.GetQuotaAsync("openrouter", CancellationToken.None)).RemainingUsd.Should().Be(10m);
@@ -223,7 +225,11 @@ public sealed class ProviderQuotaServiceTests
 
         cache.Keys.Should().HaveCount(2);
         cache.Keys[1].Should().NotBe(cache.Keys[0], "due credenziali diverse sono due voci diverse");
-        cache.Keys.Should().OnlyContain(k => k.StartsWith("provider-quota:openrouter:", StringComparison.Ordinal));
+        // Il formato esatto, non solo l'assenza della credenziale intera: un pezzo della credenziale
+        // (per esempio i suoi ultimi caratteri) non deve entrare nella chiave. L'impronta è TokenFingerprint,
+        // 8 caratteri esadecimali minuscoli.
+        cache.Keys.Should().AllSatisfy(k => k.Should().MatchRegex("^provider-quota:openrouter:[0-9a-f]{8}$",
+            "la chiave è il provider più l'impronta della credenziale, e nient'altro"));
         cache.Keys.Should().NotContain(
             k => k.Contains(secretA, StringComparison.Ordinal) || k.Contains(secretB, StringComparison.Ordinal),
             "la credenziale in chiaro non entra mai nella chiave di cache");
@@ -251,20 +257,28 @@ public sealed class ProviderQuotaServiceTests
         public Task<HybridCacheStats> GetStatsAsync(CancellationToken ct = default) => Task.FromResult(new HybridCacheStats());
     }
 
-    private static ProviderQuotaService BuildSubjectWithRealCache(
-        IProviderQuotaProvider provider,
-        Mock<IProviderCredentialResolver> resolver,
-        string providerName = "openrouter")
+    /// <summary>
+    /// Un <see cref="HybridCache"/> vero, con L1 e L2 in memoria. Il chiamante possiede il provider e lo
+    /// libera a fine test (<c>await using</c>): la cache vive quanto il provider.
+    /// </summary>
+    private static ServiceProvider BuildRealHybridCacheProvider()
     {
-        var factory = new Mock<IProviderQuotaProviderFactory>();
-        factory.Setup(f => f.GetProvider(providerName)).Returns(provider);
-
         var services = new ServiceCollection();
         services.AddSingleton<IMemoryCache, MemoryCache>();
         services.AddSingleton<IDistributedCache>(new MemoryDistributedCache(
             Options.Create(new MemoryDistributedCacheOptions())));
         services.AddHybridCache();
-        var hybridCache = services.BuildServiceProvider().GetRequiredService<HybridCache>();
+        return services.BuildServiceProvider();
+    }
+
+    private static ProviderQuotaService BuildSubjectWithRealCache(
+        IProviderQuotaProvider provider,
+        Mock<IProviderCredentialResolver> resolver,
+        HybridCache hybridCache,
+        string providerName = "openrouter")
+    {
+        var factory = new Mock<IProviderQuotaProviderFactory>();
+        factory.Setup(f => f.GetProvider(providerName)).Returns(provider);
 
         var cache = new HybridCacheService(
             hybridCache,

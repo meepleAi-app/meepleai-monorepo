@@ -36,10 +36,18 @@ namespace Api.Tests.Architecture;
 /// data con quella salvata.
 /// </para>
 /// <para>
+/// Ogni altro metodo di dominio che il mapper chiama — statico o d'istanza, per esempio un metodo che ripristina un
+/// figlio — viene seguito allo stesso modo, e conta solo l'evento: <c>PlayRecord.RecordScore</c>, usato per
+/// ricaricare i punteggi, sollevava un evento per punteggio a ogni lettura. Un evento non conta se il mapper
+/// chiama <c>ClearDomainEvents</c>; un'esenzione copre la factory, mai un evento lasciato sull'aggregato.
+/// </para>
+/// <para>
 /// <b>Cosa non vede.</b> Una factory chiamata da un aiuto che non riceve l'entità (per esempio un metodo che
 /// prende i campi già estratti). Una factory che riceve l'id ma data ad "adesso" senza che il mapper ripristini
 /// la data (oggi <c>GameLabel.CreatePredefinedWithId</c>). Le validazioni della factory: una factory senza
-/// effetti che rifiuta una data passata non viene segnalata. E una colonna che il mapper non ripristina: quella
+/// effetti che rifiuta una data passata non viene segnalata. Un metodo d'istanza che genera un id per un figlio o
+/// data ad "adesso" senza sollevare eventi: oggi conta solo l'evento. L'ordine delle chiamate: un
+/// <c>ClearDomainEvents</c> in un punto qualunque del mapper basta. E una colonna che il mapper non ripristina: quella
 /// la vedono le guardie per repository che leggono le colonne dal modello EF (per esempio
 /// <c>AlertConfigurationRepositoryTests</c>). Il gate restringe il campo; il giudizio resta a chi scrive il
 /// mapper.
@@ -86,10 +94,6 @@ public sealed class RepositoryReconstitutionArchitectureTests
             "Id, date, BggSyncedAt e cancellazione tornano via reflection; eventi puliti con ClearDomainEvents.",
         ["Api.BoundedContexts.UserLibrary.Infrastructure.Persistence.PrivateGameRepository → PrivateGame.CreateManual"] =
             "Id, date e cancellazione tornano via reflection; eventi puliti con ClearDomainEvents.",
-        ["Api.BoundedContexts.UserLibrary.Infrastructure.Persistence.WishlistRepository → WishlistItem.Create"] =
-            "Id, AddedAt e UpdatedAt tornano via reflection, evento pulito. Visibility invece non torna (resta " +
-            "Private): oggi è latente, perché nessun percorso scrive un valore diverso da Private. Da correggere " +
-            "con un Reconstitute appena la visibilità diventa modificabile.",
     };
 
     private const int MaxDepth = 4;
@@ -131,18 +135,22 @@ public sealed class RepositoryReconstitutionArchitectureTests
     {
         var found = FindCreationFactoryCallsInMappers();
 
+        // Un'esenzione copre la factory, non un evento che il mapper lascia sull'aggregato: quello ripartirebbe
+        // al primo salvataggio, quindi resta un errore anche per una chiave esentata.
         var offenders = found
-            .Where(f => !Exempt.ContainsKey(f.Key))
-            .Select(f => $"{f.Key}: {f.Effects} (in {f.Mapper})")
+            .Where(f => !Exempt.ContainsKey(f.Key) || f.UnclearedEvent)
+            .Select(f => $"{f.Key}: {f.Effects} (in {f.Mapper})" +
+                (f.UnclearedEvent ? " — evento non pulito: il mapper non chiama ClearDomainEvents" : ""))
             .Distinct(StringComparer.Ordinal)
             .Order(StringComparer.Ordinal);
 
         // Unite in una stringa, così il messaggio elenca ogni caso: BeEmpty su una lista mostra solo il primo.
         string.Join(Environment.NewLine, offenders).Should().BeEmpty(
             "a mapper that rebuilds an aggregate from a stored row must not go through the factory of a NEW " +
-            "object: that factory generates a new id, stamps the current time or raises a creation event, and " +
-            "the row already has all three (#4552, #4544). Add an internal Reconstitute that takes every column " +
-            "as it is stored, like GameSession.Reconstitute.");
+            "object, nor leave a domain event on it: the factory generates a new id, stamps the current time or " +
+            "raises a creation event, and the row already has all three (#4552, #4544). Add an internal " +
+            "Reconstitute that takes every column as it is stored, like GameSession.Reconstitute, and restore " +
+            "children with methods that raise no event.");
     }
 
     [Fact]
@@ -155,7 +163,7 @@ public sealed class RepositoryReconstitutionArchitectureTests
             "cover the next mapper that reintroduces the call");
     }
 
-    private sealed record Finding(string Key, string Mapper, string Effects);
+    private sealed record Finding(string Key, string Mapper, string Effects, bool UnclearedEvent);
 
     private static List<Finding> FindCreationFactoryCallsInMappers()
     {
@@ -165,9 +173,16 @@ public sealed class RepositoryReconstitutionArchitectureTests
 
         foreach (var mapper in ApiAssembly.GetTypes().SelectMany(DeclaredMethods).Where(m => IsMapper(m, entityTypes)))
         {
-            foreach (var target in CalledMethods(mapper).OfType<MethodInfo>())
+            var called = CalledMethods(mapper);
+
+            // Approssimazione voluta: basta che il mapper chiami ClearDomainEvents in un punto qualunque. È lo
+            // schema dei mapper che ripristinano lo stato con i metodi di dominio e poi puliscono gli eventi.
+            var clearsEvents = called.Any(m => string.Equals(m.Name, "ClearDomainEvents", StringComparison.Ordinal));
+
+            foreach (var target in called.OfType<MethodInfo>())
             {
-                if (!IsCreationFactoryCandidate(target, entityTypes))
+                var isFactory = IsCreationFactoryCandidate(target, entityTypes);
+                if (!isFactory && !IsDomainMethod(target))
                 {
                     continue;
                 }
@@ -178,16 +193,20 @@ public sealed class RepositoryReconstitutionArchitectureTests
                     effectsCache[target] = effects;
                 }
 
-                // L'ora corrente da sola non basta: un Reconstitute passa spesso dal costruttore privato, che data
-                // l'oggetto ad "adesso", e poi sovrascrive la data con quella salvata. Un id nuovo o un evento di
-                // creazione, invece, non hanno mai senso per una riga che esiste già.
-                if (!effects.Contains(NewIdEffect) && !effects.Contains(DomainEventEffect))
+                var unclearedEvent = effects.Contains(DomainEventEffect) && !clearsEvents;
+
+                // Factory: l'ora corrente da sola non basta, perché un Reconstitute passa spesso dal costruttore
+                // privato, che data l'oggetto ad "adesso", e poi sovrascrive la data con quella salvata. Un id nuovo,
+                // invece, non ha mai senso per una riga che esiste già.
+                // Ogni altro metodo di dominio chiamato dal mapper (statico o d'istanza, per esempio un metodo che
+                // ripristina un figlio): conta solo l'evento lasciato sull'aggregato.
+                if (isFactory ? !effects.Contains(NewIdEffect) && !unclearedEvent : !unclearedEvent)
                 {
                     continue;
                 }
 
                 var key = $"{OuterType(mapper.DeclaringType!).FullName} → {target.DeclaringType!.Name}.{target.Name}";
-                findings.Add(new Finding(key, mapper.Name, string.Join(", ", effects)));
+                findings.Add(new Finding(key, mapper.Name, string.Join(", ", effects), unclearedEvent));
             }
         }
 
@@ -221,6 +240,12 @@ public sealed class RepositoryReconstitutionArchitectureTests
         IsDomainType(method.ReturnType) &&
         method.ReturnType.IsClass &&
         method.GetParameters().Any(p => entityTypes.Contains(p.ParameterType));
+
+    private static bool IsDomainMethod(MethodInfo target) =>
+        target.DeclaringType is { } owner &&
+        owner.Assembly == ApiAssembly &&
+        IsDomainType(owner) &&
+        !string.Equals(target.Name, "ClearDomainEvents", StringComparison.Ordinal);
 
     private static bool IsCreationFactoryCandidate(MethodInfo target, HashSet<Type> entityTypes) =>
         target.IsStatic &&

@@ -26,7 +26,8 @@ namespace Api.Tests.BoundedContexts.UserLibrary.Infrastructure;
 [Trait("Issue", "4544")]
 public sealed class LibraryShareLinkRepositoryTests : IDisposable
 {
-    // Nel passato: la riga è quella di un link scaduto, il caso che la factory di creazione rifiuta.
+    // Nel passato: la riga è quella di un link scaduto, il caso che la factory di creazione rifiuta. Ogni
+    // colonna data riceve un'ora diversa a partire da questa base, sempre nel passato.
     private static readonly DateTime SentinelDate = new(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc);
 
     // Valori che l'aggregato legge come tipo di dominio: la sentinella deve essere ammessa, e diversa dal
@@ -60,7 +61,9 @@ public sealed class LibraryShareLinkRepositoryTests : IDisposable
             .Where(p => p.PropertyInfo is not null)
             .ToList();
 
-    private static object? SentinelFor(IProperty property)
+    // Una sentinella diversa per ogni colonna, ricavata dalla sua posizione nel modello: due colonne dello
+    // stesso tipo con lo stesso valore lascerebbero verde un mapper che le scambia (revokedAt: entity.ExpiresAt).
+    private static object? SentinelFor(IProperty property, int index)
     {
         if (LegalSentinels.TryGetValue(property.Name, out var legal))
         {
@@ -71,9 +74,9 @@ public sealed class LibraryShareLinkRepositoryTests : IDisposable
         return type switch
         {
             _ when type == typeof(string) => $"sentinella-{property.Name}",
-            _ when type == typeof(int) => 7,
+            _ when type == typeof(int) => 7 + index,
             _ when type == typeof(bool) => true,
-            _ when type == typeof(DateTime) => SentinelDate,
+            _ when type == typeof(DateTime) => SentinelDate.AddHours(index),
             _ when type == typeof(Guid) => Guid.NewGuid(),
             _ => throw new InvalidOperationException(
                 $"Colonna {property.Name} di tipo {property.ClrType.Name}: aggiungi una sentinella per questo tipo."),
@@ -83,10 +86,15 @@ public sealed class LibraryShareLinkRepositoryTests : IDisposable
     private async Task<LibraryShareLinkEntity> SeedEveryColumnAsync()
     {
         var seeded = new LibraryShareLinkEntity();
-        foreach (var column in Columns())
+        var columns = Columns();
+        for (var index = 0; index < columns.Count; index++)
         {
-            column.PropertyInfo!.SetValue(seeded, SentinelFor(column));
+            columns[index].PropertyInfo!.SetValue(seeded, SentinelFor(columns[index], index));
         }
+
+        // Con due sentinelle uguali il confronto per colonna non vedrebbe uno scambio fra quelle due.
+        columns.Select(c => c.PropertyInfo!.GetValue(seeded)).Should().OnlyHaveUniqueItems(
+            "setup: every column needs its own sentinel, or a mapper that swaps two columns stays green");
 
         _db.LibraryShareLinks.Add(seeded);
         await _db.SaveChangesAsync();
@@ -102,7 +110,7 @@ public sealed class LibraryShareLinkRepositoryTests : IDisposable
         var link = await CreateRepository().GetByShareTokenAsync(seeded.ShareToken);
 
         link.Should().NotBeNull();
-        link!.IsExpired.Should().BeTrue("the row expired on {0:O}", SentinelDate);
+        link!.IsExpired.Should().BeTrue("the row expired on {0:O}", seeded.ExpiresAt);
         link.IsValid.Should().BeFalse();
     }
 

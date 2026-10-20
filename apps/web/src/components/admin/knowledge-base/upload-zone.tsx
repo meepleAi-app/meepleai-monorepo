@@ -307,7 +307,7 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
             {selectedGame && (
               <Badge
                 variant="secondary"
-                className="absolute right-2 top-1/2 -translate-y-1/2 bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/30"
+                className="absolute right-2 top-1/2 -translate-y-1/2 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
               >
                 <CheckCircleIcon className="w-3 h-3 mr-1" />
                 Selezionato

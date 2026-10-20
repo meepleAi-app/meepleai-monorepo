@@ -205,10 +205,7 @@ export function ValidationPanel({
 
     if (validation.isValid && validation.warnings.length === 0) {
       return (
-        <Badge
-          variant="default"
-          className={cn('text-xs bg-green-500 hover:bg-green-600', className)}
-        >
+        <Badge variant="default" className={cn('text-xs bg-green-500', className)}>
           <CheckCircle2 className="h-3 w-3 mr-1" />
           Valid
         </Badge>

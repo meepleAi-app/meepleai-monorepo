@@ -258,10 +258,10 @@ function SimilarGameCard({ game, href }: SimilarGameCardProps) {
                   className={cn(
                     'font-semibold',
                     game.similarityScore >= 0.7
-                      ? 'bg-green-500 hover:bg-green-600'
+                      ? 'bg-green-500'
                       : game.similarityScore >= 0.5
-                        ? 'bg-yellow-500 hover:bg-yellow-600'
-                        : 'bg-orange-500 hover:bg-orange-600'
+                        ? 'bg-yellow-500'
+                        : 'bg-orange-500'
                   )}
                 >
                   {formatSimilarity(game.similarityScore)} simile

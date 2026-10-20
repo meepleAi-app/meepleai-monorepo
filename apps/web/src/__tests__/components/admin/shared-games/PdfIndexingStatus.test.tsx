@@ -185,7 +185,9 @@ describe('PdfIndexingStatus', () => {
     });
 
     // #4539: la console admin è sempre scura. Il verde del badge deve restare l'unico fondo,
-    // senza il dark:bg-primary/90 né il dark:hover:bg-primary della variante accanto.
+    // senza il dark:bg-primary/90 né il dark:hover:bg-primary della variante accanto. E senza un
+    // hover proprio: il badge non è interattivo, e hover:bg-green-700 col testo scuro della
+    // variante in tema scuro dava 3,54:1.
     it.each([
       ['compatta', true],
       ['completa', false],
@@ -198,7 +200,7 @@ describe('PdfIndexingStatus', () => {
       );
 
       const badge = await screen.findByText('RAG Ready');
-      expect(backgroundClasses(badge)).toEqual(['bg-green-600', 'hover:bg-green-700']);
+      expect(backgroundClasses(badge)).toEqual(['bg-green-600']);
     });
 
     it('should render error badge when failed', async () => {

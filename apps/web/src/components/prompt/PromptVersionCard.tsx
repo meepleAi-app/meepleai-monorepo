@@ -46,7 +46,7 @@ export default function PromptVersionCard({
             {version.isActive && (
               <Badge
                 variant="default"
-                className="bg-green-100 text-green-800 hover:bg-green-100/80 border-transparent"
+                className="bg-green-100 text-green-800 border-transparent"
                 data-testid="active-badge"
               >
                 Active

@@ -188,7 +188,7 @@ export function SharedGameSearchFilters({
           <SlidersHorizontal className="h-4 w-4" />
           Filtri Avanzati
           {activeFiltersCount > 0 && (
-            <Badge className="ml-1 h-5 min-w-5 px-1.5 rounded-full text-xs bg-orange-500 hover:bg-orange-500 text-white border-0">
+            <Badge className="ml-1 h-5 min-w-5 px-1.5 rounded-full text-xs bg-orange-500 text-white border-0">
               {activeFiltersCount}
             </Badge>
           )}
@@ -207,7 +207,7 @@ export function SharedGameSearchFilters({
           {selectedCategoryNames.map((name, index) => (
             <Badge
               key={`cat-${filters.categoryIds[index]}`}
-              className="gap-1 bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30 hover:bg-orange-500/20"
+              className="gap-1 bg-orange-500/10 text-orange-700 dark:text-orange-400 border-orange-500/30"
             >
               {name}
               <button

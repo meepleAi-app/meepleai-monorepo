@@ -232,7 +232,7 @@ export function PdfIndexingStatus({
       <div className="flex items-center gap-3">
         {isComplete ? (
           <>
-            <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+            <Badge variant="default" className="bg-green-600">
               <CheckCircle2 className="h-3 w-3 mr-1" />
               RAG Ready
             </Badge>
@@ -278,7 +278,7 @@ export function PdfIndexingStatus({
             {fileName && <CardDescription className="mt-1">{fileName}</CardDescription>}
           </div>
           {isComplete && (
-            <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+            <Badge variant="default" className="bg-green-600">
               RAG Ready
             </Badge>
           )}

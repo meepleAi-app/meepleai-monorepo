@@ -216,11 +216,6 @@ internal static class ShareLinkEndpoints
                 timestamp = result.Timestamp
             });
         }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("Rate limit"))
-        {
-            logger.LogWarning(ex, "Comment denied: rate limit exceeded");
-            return Results.StatusCode(429); // Too Many Requests
-        }
         catch (ArgumentException ex)
         {
             logger.LogWarning(ex, "Comment validation failed: {Error}", ex.Message);

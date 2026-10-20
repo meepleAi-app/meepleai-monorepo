@@ -1,3 +1,4 @@
+using System.Globalization;
 using Api.BoundedContexts.Authentication.Application.Queries.ValidateShareLink;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
@@ -184,6 +185,26 @@ public class AddCommentToSharedThreadCommandHandlerTests
 
         await act.Should().ThrowAsync<ForbiddenException>(
             "a valid link without the comment role is refused as forbidden, not as a server error");
+        VerifyNothingWritten();
+    }
+
+    [Fact]
+    public async Task Handle_RateLimitReached_ThrowsTooManyRequestsExceptionAndWritesNothing()
+    {
+        // Prima: InvalidOperationException riconosciuta dal testo del messaggio nell'endpoint. Ora un'eccezione
+        // tipizzata che il middleware traduce in 429.
+        var threadId = Guid.NewGuid();
+        var shareLinkId = Guid.NewGuid();
+        SetupValidCommentLink(threadId, shareLinkId);
+        await _cache.SetStringAsync(
+            $"share_link_comments:{shareLinkId}",
+            AddCommentToSharedThreadCommandHandler.MaxCommentsPerHour.ToString(CultureInfo.InvariantCulture));
+
+        var act = () => _handler.Handle(new AddCommentToSharedThreadCommand("token", "Great game!"), CancellationToken.None);
+
+        await act.Should().ThrowAsync<TooManyRequestsException>(
+            "the hourly limit is a 429 by type, not an InvalidOperationException matched by its message");
+        _mockRepository.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
         VerifyNothingWritten();
     }
 

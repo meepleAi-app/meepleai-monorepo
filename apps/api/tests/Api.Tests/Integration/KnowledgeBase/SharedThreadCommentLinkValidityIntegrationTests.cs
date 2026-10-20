@@ -1,7 +1,9 @@
+using System.Globalization;
 using System.Net;
 using System.Text;
 using System.Text.Json;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
+using Api.BoundedContexts.KnowledgeBase.Application.Commands.AddCommentToSharedThread;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.Authentication;
@@ -152,6 +154,27 @@ public sealed class SharedThreadCommentLinkValidityIntegrationTests : IClassFixt
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
+    [Fact]
+    public async Task AddComment_HourlyLimitReached_Answers429AndWritesNothing()
+    {
+        // Guardia sul percorso del rate limit: l'endpoint lo traduceva da solo, ora lo fa il middleware.
+        var owner = await CreateOwnerAsync();
+        var link = await CreateShareLinkAsync(owner, "comment");
+        await SetCommentCountAsync(link.Id, AddCommentToSharedThreadCommandHandler.MaxCommentsPerHour);
+
+        using var response = await CommentAsync(link.Token);
+        var body = await response.Content.ReadAsStringAsync();
+
+        var messages = await ReadMessagesJsonAsync(link.ThreadId);
+        using (new AssertionScope())
+        {
+            response.StatusCode.Should().Be(HttpStatusCode.TooManyRequests, $"the link reached the hourly limit. Body: {body}");
+            body.Should().Contain("\"error\":\"too_many_requests\"", "the exception middleware answered, not a hand-written catch");
+            messages.Should().NotContain(CommentText);
+            MessageCount(messages).Should().Be(0);
+        }
+    }
+
     // ========================================
     // REPOSITORY: IsActiveAsync
     // ========================================
@@ -262,6 +285,16 @@ public sealed class SharedThreadCommentLinkValidityIntegrationTests : IClassFixt
         var key = $"revoked_share_link:{shareLinkId}";
         (await cache.GetStringAsync(key)).Should().NotBeNull("setup: the revocation must have put the link in the blacklist");
         await cache.RemoveAsync(key);
+    }
+
+    private async Task SetCommentCountAsync(Guid shareLinkId, int count)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var cache = scope.ServiceProvider.GetRequiredService<IDistributedCache>();
+        await cache.SetStringAsync(
+            $"share_link_comments:{shareLinkId}",
+            count.ToString(CultureInfo.InvariantCulture),
+            new DistributedCacheEntryOptions { AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(1) });
     }
 
     private async Task<string> ReadMessagesJsonAsync(Guid threadId)

@@ -25,7 +25,7 @@ internal sealed class AddCommentToSharedThreadCommandHandler
     private readonly IUnitOfWork _unitOfWork;
 
     // Rate limiting: 10 comments per hour per share link
-    private const int MaxCommentsPerHour = 10;
+    internal const int MaxCommentsPerHour = 10; // internal: i test scrivono nella cache il valore del massimo
     private static readonly TimeSpan RateLimitWindow = TimeSpan.FromHours(1);
 
     public AddCommentToSharedThreadCommandHandler(
@@ -88,7 +88,7 @@ internal sealed class AddCommentToSharedThreadCommandHandler
 
         if (commentCount >= MaxCommentsPerHour)
         {
-            throw new InvalidOperationException(
+            throw new TooManyRequestsException(
                 $"Rate limit exceeded: maximum {MaxCommentsPerHour} comments per hour");
         }
 

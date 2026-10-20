@@ -51,8 +51,8 @@ internal sealed class GenerateQuickQuestionsCommandHandler
             "Generating quick questions for shared game: {SharedGameId}",
             command.SharedGameId);
 
-        // 1. Verify shared game exists
-        var game = await _gameRepository.GetByIdAsync(command.SharedGameId, cancellationToken)
+        // 1. Verify shared game exists; load its quick questions so the replace can delete the old ones (#4596)
+        var game = await _gameRepository.GetByIdWithQuickQuestionsAsync(command.SharedGameId, cancellationToken)
             .ConfigureAwait(false);
 
         if (game is null)

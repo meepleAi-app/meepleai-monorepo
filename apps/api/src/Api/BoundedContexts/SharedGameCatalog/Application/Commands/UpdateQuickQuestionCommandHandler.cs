@@ -46,8 +46,8 @@ internal sealed class UpdateQuickQuestionCommandHandler
             .ConfigureAwait(false)
             ?? throw new NotFoundException("QuickQuestion", command.QuestionId.ToString());
 
-        // Fetch aggregate (SharedGame owns QuickQuestion)
-        var game = await _gameRepository.GetByIdAsync(questionEntity.SharedGameId, cancellationToken)
+        // Fetch aggregate with its quick questions (#4596: GetByIdAsync does not load them)
+        var game = await _gameRepository.GetByIdWithQuickQuestionsAsync(questionEntity.SharedGameId, cancellationToken)
             .ConfigureAwait(false)
             ?? throw new NotFoundException("SharedGame", questionEntity.SharedGameId.ToString());
 

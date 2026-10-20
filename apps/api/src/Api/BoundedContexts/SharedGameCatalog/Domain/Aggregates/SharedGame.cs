@@ -1731,6 +1731,17 @@ public sealed class SharedGame : AggregateRoot<Guid>
         _faqs.Add(faq);
     }
 
+    /// <summary>
+    /// Reconstitution hook for the repository (#4596): appends a persisted quick question to the
+    /// aggregate WITHOUT re-running creation validation. Unlike <see cref="AddQuickQuestion"/> it does
+    /// not check the owner: the repository builds the row from the game's own collection.
+    /// </summary>
+    internal void LoadQuickQuestion(QuickQuestion question)
+    {
+        ArgumentNullException.ThrowIfNull(question);
+        _quickQuestions.Add(question);
+    }
+
     // Validation Methods
 
     private static void ValidateTitle(string title)

@@ -261,8 +261,8 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
         ArgumentNullException.ThrowIfNull(sharedGame);
 
         // MapToEntity porta la sola radice: Update() su un grafo detached marcherebbe Modified anche
-        // un figlio nuovo, che ha già l'id — un UPDATE di una riga che non esiste. Errata (#4543) e
-        // FAQ (#4557) passano da ReconcileChildren.
+        // un figlio nuovo, che ha già l'id — un UPDATE di una riga che non esiste. Errata (#4543), FAQ
+        // (#4557) e quick question (#4596) passano da ReconcileChildren.
         var entity = MapToEntity(sharedGame);
         var entry = DbContext.Set<SharedGameEntity>().Update(entity);
 
@@ -280,6 +280,12 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
 
         FaqsReadBy.TryGetValue(sharedGame, out var faqsRead);
         ReconcileChildren(faqsRead, sharedGame.Faqs.ToDictionary(f => f.Id, MapFaqToEntity), CopyOf);
+
+        QuickQuestionsReadBy.TryGetValue(sharedGame, out var quickQuestionsRead);
+        ReconcileChildren(
+            quickQuestionsRead,
+            sharedGame.QuickQuestions.ToDictionary(q => q.Id, MapQuickQuestionToEntity),
+            CopyOf);
     }
 
     /// <summary>
@@ -312,7 +318,16 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
     private static readonly ConditionalWeakTable<SharedGame, IReadOnlyDictionary<Guid, GameFaqEntity>> FaqsReadBy = new();
 
     /// <summary>
-    /// Porta nel change tracker le righe figlie dell'aggregato, errata (#4543) o FAQ (#4557):
+    /// Le quick question che una lettura ha messo nell'aggregato, per id, come le ha trovate (#4596).
+    /// Stesse ragioni di <see cref="ErrataReadBy"/>: solo <see cref="GetByIdWithQuickQuestionsAsync"/>
+    /// le carica, e <see cref="Update"/> cancella soltanto ciò che quella lettura ha visto e il dominio
+    /// ha tolto.
+    /// </summary>
+    private static readonly ConditionalWeakTable<SharedGame, IReadOnlyDictionary<Guid, QuickQuestionEntity>> QuickQuestionsReadBy = new();
+
+    /// <summary>
+    /// Porta nel change tracker le righe figlie dell'aggregato, errata (#4543), FAQ (#4557) o quick
+    /// question (#4596):
     /// <c>Added</c> quelle che la lettura non aveva; quelle lette e ancora presenti partono dai valori
     /// letti e ricevono quelli del dominio, così EF scrive solo le colonne cambiate (nessuna, nessun
     /// UPDATE); quelle lette e tolte dal dominio diventano <c>Deleted</c>.
@@ -322,12 +337,13 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
     /// <param name="desired">Le righe come le vuole il dominio, per id.</param>
     /// <param name="copyOf">Una copia scollegata di una riga letta.</param>
     /// <remarks>
-    /// Errata e FAQ non hanno un token di concorrenza: una scrittura da una lettura superata fallisce
-    /// per intero perché l'UPDATE della radice, nella stessa transazione, controlla <c>xmin</c>. Quella
-    /// UPDATE c'è sempre perché <c>Update()</c> su un grafo detached marca ogni colonna della radice:
-    /// se un giorno la radice si salvasse solo quando cambia, i figli resterebbero senza protezione.
-    /// Lo fissano <c>ConcurrentErrataUpdates_TheSecondSaveFailsOnTheGameXmin</c> e
-    /// <c>ConcurrentFaqUpdates_TheSecondSaveFailsOnTheGameXmin</c>.
+    /// Errata, FAQ e quick question non hanno un token di concorrenza: una scrittura da una lettura
+    /// superata fallisce per intero perché l'UPDATE della radice, nella stessa transazione, controlla
+    /// <c>xmin</c>. Quella UPDATE c'è sempre perché <c>Update()</c> su un grafo detached marca ogni
+    /// colonna della radice: se un giorno la radice si salvasse solo quando cambia, i figli resterebbero
+    /// senza protezione. Lo fissano <c>ConcurrentErrataUpdates_TheSecondSaveFailsOnTheGameXmin</c>,
+    /// <c>ConcurrentFaqUpdates_TheSecondSaveFailsOnTheGameXmin</c> e
+    /// <c>ConcurrentQuickQuestionUpdates_TheSecondSaveFailsOnTheGameXmin</c>.
     /// </remarks>
     private void ReconcileChildren<TRow>(
         IReadOnlyDictionary<Guid, TRow>? read,
@@ -381,8 +397,8 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
     }
 
     /// <summary>
-    /// #4543, #4557 — errata e FAQ di un aggregato nuovo: tutto il grafo è <c>Added</c>, quindi qui
-    /// vanno nel grafo, a differenza di <see cref="Update"/>.
+    /// #4543, #4557, #4596 — errata, FAQ e quick question di un aggregato nuovo: tutto il grafo è
+    /// <c>Added</c>, quindi qui vanno nel grafo, a differenza di <see cref="Update"/>.
     /// </summary>
     private static void AddChildRows(SharedGameEntity entity, SharedGame sharedGame)
     {
@@ -394,6 +410,11 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
         foreach (var faq in sharedGame.Faqs)
         {
             entity.Faqs.Add(MapFaqToEntity(faq));
+        }
+
+        foreach (var question in sharedGame.QuickQuestions)
+        {
+            entity.QuickQuestions.Add(MapQuickQuestionToEntity(question));
         }
     }
 
@@ -439,6 +460,32 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
         UpvoteCount = row.UpvoteCount,
         CreatedAt = row.CreatedAt,
         UpdatedAt = row.UpdatedAt,
+    };
+
+    private static QuickQuestionEntity MapQuickQuestionToEntity(QuickQuestion question) => new()
+    {
+        Id = question.Id,
+        SharedGameId = question.SharedGameId,
+        Text = question.Text,
+        Emoji = question.Emoji,
+        Category = question.Category,
+        DisplayOrder = question.DisplayOrder,
+        IsGenerated = question.IsGenerated,
+        CreatedAt = question.CreatedAt,
+        IsActive = question.IsActive,
+    };
+
+    private static QuickQuestionEntity CopyOf(QuickQuestionEntity row) => new()
+    {
+        Id = row.Id,
+        SharedGameId = row.SharedGameId,
+        Text = row.Text,
+        Emoji = row.Emoji,
+        Category = row.Category,
+        DisplayOrder = row.DisplayOrder,
+        IsGenerated = row.IsGenerated,
+        CreatedAt = row.CreatedAt,
+        IsActive = row.IsActive,
     };
 
     /// <summary>
@@ -882,6 +929,53 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
         }
 
         ErrataReadBy.AddOrUpdate(sharedGame, read);
+        return sharedGame;
+    }
+
+    /// <remarks>
+    /// #4596: l'unica lettura che carica le quick question, perché sostituirle, toglierne una o
+    /// modificarne una richiede di averle nell'aggregato. Le carica tutte: <see cref="Update"/> tocca
+    /// solo ciò che la lettura ha visto. <c>AddQuickQuestion</c> funziona anche senza (la domanda nuova
+    /// diventa INSERT), quindi il POST manuale resta su <see cref="GetByIdAsync"/>.
+    /// </remarks>
+    public async Task<SharedGame?> GetByIdWithQuickQuestionsAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var gameEntity = await DbContext.SharedGames
+            .AsNoTracking()
+            .Include(g => g.QuickQuestions)
+            .FirstOrDefaultAsync(g => g.Id == id && !g.IsDeleted, cancellationToken)
+            .ConfigureAwait(false);
+
+        return gameEntity != null ? MapToDomainWithQuickQuestions(gameEntity) : null;
+    }
+
+    /// <summary>
+    /// <see cref="MapToDomain"/> più le quick question che la query ha incluso, ricordate per
+    /// <see cref="Update"/> (#4596). Ricostruite con il costruttore interno di
+    /// <see cref="QuickQuestion"/>: niente <c>CreateManual</c>, che genera un id e rilancia la
+    /// validazione sul testo già salvato.
+    /// </summary>
+    private static SharedGame MapToDomainWithQuickQuestions(SharedGameEntity entity)
+    {
+        var sharedGame = MapToDomain(entity);
+
+        var read = new Dictionary<Guid, QuickQuestionEntity>();
+        foreach (var row in entity.QuickQuestions)
+        {
+            sharedGame.LoadQuickQuestion(new QuickQuestion(
+                row.Id,
+                row.SharedGameId,
+                row.Text,
+                row.Emoji,
+                row.Category,
+                row.DisplayOrder,
+                row.IsGenerated,
+                row.CreatedAt,
+                row.IsActive));
+            read[row.Id] = CopyOf(row);
+        }
+
+        QuickQuestionsReadBy.AddOrUpdate(sharedGame, read);
         return sharedGame;
     }
 

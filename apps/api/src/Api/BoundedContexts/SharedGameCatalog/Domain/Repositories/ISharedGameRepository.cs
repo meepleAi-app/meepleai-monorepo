@@ -170,6 +170,22 @@ public interface ISharedGameRepository
     Task<SharedGame?> GetGameByErrataIdAsync(Guid errataId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// #4596 — gets a shared game by its ID WITH its quick questions loaded. Soft-deleted games are not
+    /// found.
+    ///
+    /// <para>
+    /// The only read that loads the quick questions: <see cref="GetByIdAsync"/> does not. Replacing,
+    /// removing or editing a question needs the rows already saved to be in the aggregate;
+    /// <c>AddQuickQuestion</c> works without them (the new question becomes an INSERT). A game read with
+    /// <see cref="GetByIdAsync"/> and saved never touches <c>quick_questions</c> that it did not read.
+    /// </para>
+    /// </summary>
+    /// <param name="id">The game ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The game with its quick questions if found, null otherwise</returns>
+    Task<SharedGame?> GetByIdWithQuickQuestionsAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets a shared game by its ID, including soft-deleted games.
     /// </summary>
     /// <param name="id">The game ID</param>

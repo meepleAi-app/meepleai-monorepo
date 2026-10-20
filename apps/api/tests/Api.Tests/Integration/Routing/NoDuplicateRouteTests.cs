@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Text;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.Routing.Patterns;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -66,6 +68,15 @@ public sealed partial class NoDuplicateRouteTests
     // Host, client e database appartengono alla fixture.
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
+    /// <summary>
+    /// #4579 — il confronto è sul modello <b>senza i nomi dei parametri</b>, con i vincoli tenuti. Prima usava
+    /// <c>RoutePattern.RawText</c>, che contiene il nome: <c>…/{gameId:guid}/documents/overview</c> e
+    /// <c>…/{sharedGameId:guid}/documents/overview</c> risultavano due modelli diversi, mentre per il routing
+    /// sono lo stesso (stessi segmenti, stesso vincolo <c>guid</c>) e ogni richiesta finiva in
+    /// <c>AmbiguousMatchException</c>. Il vincolo resta nella chiave: <c>{id}</c> e <c>{id:guid}</c> hanno chiavi
+    /// diverse e la guardia non le segnala. Che il routing le consideri distinte non è provato qui; sulla tabella
+    /// reale la scelta non cambia l'esito, perché non ci sono coppie di questo tipo.
+    /// </summary>
     [Fact]
     public void NoRouteTemplate_IsRegisteredTwiceForTheSameHttpMethod()
     {
@@ -77,8 +88,9 @@ public sealed partial class NoDuplicateRouteTests
                 (e.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods ?? new[] { "*" })
                     .Select(method => new
                     {
-                        Key = $"{method} {e.RoutePattern.RawText}",
-                        Endpoint = e.DisplayName ?? "(senza nome)"
+                        Key = $"{method} {TemplateWithoutParameterNames(e.RoutePattern)}",
+                        // Il testo grezzo nel resoconto: è lì che si vedono i due nomi diversi.
+                        Endpoint = $"{e.DisplayName ?? "(senza nome)"} [{e.RoutePattern.RawText}]"
                     }))
             .GroupBy(x => x.Key, StringComparer.OrdinalIgnoreCase)
             .Where(g => g.Count() > 1)
@@ -91,8 +103,62 @@ public sealed partial class NoDuplicateRouteTests
         // duplicate" without naming it sends the reader back to square one.
         duplicates.Should().BeEmpty(
             "a route registered twice for the same method throws AmbiguousMatchException (HTTP 500) " +
-            "on every request, while the endpoint looks correctly registered. Duplicates found: " +
+            "on every request, while the endpoint looks correctly registered. The comparison ignores " +
+            "parameter names ({gameId:guid} and {sharedGameId:guid} are the same route) and keeps the " +
+            "constraints. Duplicates found: " +
             string.Join(" ;; ", duplicates));
+    }
+
+    /// <summary>
+    /// La chiave di confronto di una rotta: segmenti letterali e separatori com'è, e di ogni parametro solo
+    /// catch-all, vincoli, opzionalità e valore predefinito — senza il nome. Senza la barra iniziale, che dipende
+    /// da come è stato composto il gruppo. Due modelli con la stessa chiave differiscono al più per i nomi.
+    /// </summary>
+    internal static string TemplateWithoutParameterNames(RoutePattern pattern)
+    {
+        var template = new StringBuilder();
+        foreach (var segment in pattern.PathSegments)
+        {
+            template.Append('/');
+            foreach (var part in segment.Parts)
+            {
+                switch (part)
+                {
+                    case RoutePatternLiteralPart literal:
+                        template.Append(literal.Content);
+                        break;
+                    case RoutePatternSeparatorPart separator:
+                        template.Append(separator.Content);
+                        break;
+                    case RoutePatternParameterPart parameter:
+                        template.Append('{');
+                        if (parameter.IsCatchAll)
+                        {
+                            template.Append('*');
+                        }
+
+                        foreach (var policy in parameter.ParameterPolicies)
+                        {
+                            template.Append(':').Append(policy.Content);
+                        }
+
+                        if (parameter.IsOptional)
+                        {
+                            template.Append('?');
+                        }
+
+                        if (parameter.Default is not null)
+                        {
+                            template.Append('=').Append(parameter.Default);
+                        }
+
+                        template.Append('}');
+                        break;
+                }
+            }
+        }
+
+        return template.ToString().TrimStart('/');
     }
 
     /// <summary>

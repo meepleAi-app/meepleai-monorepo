@@ -75,14 +75,21 @@ import type { HttpClient } from '../../core/httpClient';
 
 // ========== Shared Game Documents Types (Issue #119) ==========
 
+// Mirrors SharedGameDocumentDetailDto (GetSharedGameDocumentsQuery), served by
+// GET /api/v1/admin/shared-games/{id}/documents/overview. #4579: this type used to carry a
+// `description` the API never sent and lacked the fields it does send.
 export type SharedGameDocumentDetail = {
   id: string;
   sharedGameId: string;
-  fileName: string;
+  pdfDocumentId: string;
   documentType: string;
-  approvalStatus: string;
-  description: string | null;
+  version: string;
+  isActive: boolean;
   tags: string[];
+  createdAt: string;
+  createdBy: string;
+  approvalStatus: string;
+  fileName: string | null;
   processingState: string | null;
   fileSizeBytes: number | null;
   uploadedAt: string | null;

@@ -57,12 +57,8 @@ public sealed partial class NoDuplicateRouteTests
     /// </summary>
     private static readonly Dictionary<string, string> AdminAuthorizationExempt = new(StringComparer.Ordinal)
     {
-        ["GET api/v1/admin/shared-games/{gameId:guid}/documents/overview"] =
-            "#4579: registered twice with different parameter names; every request throws AmbiguousMatchException " +
-            "before any authorization check, so the probe cannot read it. Both registrations are admin-only " +
-            "(AdminOrEditorPolicy here, the admin filter on the other).",
-        ["GET api/v1/admin/shared-games/{sharedGameId:guid}/documents/overview"] =
-            "#4579: the other half of the duplicate above.",
+        // Vuoto: #4579 ne ha tolto le due voci (una rotta registrata due volte, che la sonda non poteva leggere).
+        // Una voce nuova deve dire perché la rotta non si può sondare e quale issue la chiude.
     };
 
     private static readonly TimeSpan AdminProbeTimeout = TimeSpan.FromSeconds(15);
@@ -136,8 +132,13 @@ public sealed partial class NoDuplicateRouteTests
         // Guardia di non-vacuità: la sonda deve vedere le rotte admin e distinguerle. Il gruppo di #4568 è
         // protetto dal filtro di endpoint, cioè proprio dal meccanismo che i metadati non mostrano.
         protectedRoutes.Should().Contain(
-            ["GET api/v1/admin/alert-configuration", "PUT api/v1/admin/alert-configuration"],
-            "the probe must see the routes of #4568 and read them as protected, or it proves nothing");
+            [
+                "GET api/v1/admin/alert-configuration",
+                "PUT api/v1/admin/alert-configuration",
+                // #4579: la rotta che era registrata due volte e per questo esente. Rimasta una sola, la sonda la legge.
+                "GET api/v1/admin/shared-games/{gameId:guid}/documents/overview",
+            ],
+            "the probe must see the routes of #4568 and #4579 and read them as protected, or it proves nothing");
 
         var staleExemptions = AdminAuthorizationExempt.Keys.Where(k => !exemptSeen.Contains(k)).Order(StringComparer.Ordinal).ToList();
 

@@ -134,6 +134,7 @@ public abstract class IntegrationHostFixture : IAsyncLifetime
     {
         var started = Stopwatch.GetTimestamp();
         long afterDb;
+        long afterCreate;
         long afterHost;
 
         try
@@ -154,6 +155,7 @@ public abstract class IntegrationHostFixture : IAsyncLifetime
 
             _baseFactory = IntegrationWebApplicationFactory.Create(connectionString, extraConfig: ExtraConfiguration);
             Factory = ConfigureHost(_baseFactory);
+            afterCreate = Stopwatch.GetTimestamp();
 
             // `WithWebHostBuilder` e' PIGRO: l'host si costruisce al primo accesso a `.Services`.
             // Senza questa riga il tempo dell'host finirebbe nel campo `migrate=` e la
@@ -185,6 +187,14 @@ public abstract class IntegrationHostFixture : IAsyncLifetime
             $"db={Stopwatch.GetElapsedTime(started, afterDb).TotalSeconds:F1} " +
             $"host={Stopwatch.GetElapsedTime(afterDb, afterHost).TotalSeconds:F1} " +
             $"migrate={Stopwatch.GetElapsedTime(afterHost).TotalSeconds:F1}");
+
+        // #4572: la fase `host=` divisa come in SharedHostPerTestDatabaseFixture, per confrontarle.
+        TestContext.Current?.SendDiagnosticMessage(
+            HostStartupDiagnostics.Format(
+                GetType().Name,
+                services: Stopwatch.GetElapsedTime(afterCreate, afterHost),
+                Factory.Services,
+                ("create", Stopwatch.GetElapsedTime(afterDb, afterCreate))));
     }
 
     public ValueTask DisposeAsync() => SafeDisposeAsync();

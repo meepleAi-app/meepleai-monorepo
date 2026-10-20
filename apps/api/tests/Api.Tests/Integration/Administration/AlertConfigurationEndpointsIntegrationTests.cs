@@ -85,6 +85,41 @@ public sealed class AlertConfigurationEndpointsIntegrationTests : IClassFixture<
     }
 
     [Fact]
+    public async Task Put_ExistingEncryptedKey_StoresThePlainValueAsNotEncrypted()
+    {
+        var token = await CreateAdminSessionTokenAsync();
+        var key = $"Test4552.{Guid.NewGuid():N}";
+
+        // Riga marcata cifrata scritta direttamente: AlertConfiguration.Encrypt non ha chiamanti.
+        var row = new AlertConfigurationEntity
+        {
+            Id = Guid.NewGuid(),
+            ConfigKey = key,
+            ConfigValue = "valore-cifrato",
+            Category = "PagerDuty",
+            IsEncrypted = true,
+            UpdatedAt = new DateTime(2026, 2, 3, 4, 5, 6, DateTimeKind.Utc),
+            UpdatedBy = "autore-salvato",
+        };
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            db.AlertConfigurations.Add(row);
+            await db.SaveChangesAsync();
+        }
+
+        var updated = await PutAsync(token, key, "valore-in-chiaro", "PagerDuty", "ignorata");
+
+        updated.Status.Should().Be(HttpStatusCode.OK, $"Body: {updated.Body}");
+        var after = await ReadRowAsync(key);
+        after.Id.Should().Be(row.Id);
+        after.ConfigValue.Should().Be("valore-in-chiaro");
+        after.IsEncrypted.Should().BeFalse(
+            "the endpoint writes the value as it arrives, in plain text: a row left flagged as encrypted would " +
+            "claim a cipher text it does not hold");
+    }
+
+    [Fact]
     public async Task GetAll_ReturnsIdEncryptionFlagAndDateOfTheStoredRow()
     {
         var token = await CreateAdminSessionTokenAsync();

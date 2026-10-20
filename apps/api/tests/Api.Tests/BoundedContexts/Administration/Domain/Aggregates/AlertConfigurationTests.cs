@@ -294,6 +294,20 @@ public sealed class AlertConfigurationTests
     }
 
     [Fact]
+    public void UpdateValue_OnAnEncryptedConfiguration_ClearsTheFlag()
+    {
+        // UpdateValue riceve un valore in chiaro: una riga cifrata aggiornata così non è più cifrata.
+        var config = AlertConfiguration.Reconstitute(
+            Guid.NewGuid(), "secrets.api_key", "valore-cifrato", ConfigCategory.Global,
+            isEncrypted: true, description: null, DateTime.UtcNow.AddDays(-3), "autore");
+
+        config.UpdateValue("valore-in-chiaro", "admin");
+
+        config.IsEncrypted.Should().BeFalse();
+        config.ConfigValue.Should().Be("valore-in-chiaro");
+    }
+
+    [Fact]
     public void Reconstitute_ThenDecrypt_ClearsTheStoredFlag()
     {
         // La riga cifrata torna cifrata, e i metodi di dominio partono dallo stato salvato.

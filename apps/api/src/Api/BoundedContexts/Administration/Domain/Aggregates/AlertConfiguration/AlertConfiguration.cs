@@ -63,10 +63,18 @@ internal class AlertConfiguration
             UpdatedAt = updatedAt,
         };
 
+    /// <summary>
+    /// Sostituisce il valore con uno in chiaro. Per un valore cifrato c'è <see cref="Encrypt"/>.
+    /// </summary>
+    /// <remarks>
+    /// Il flag torna a <c>false</c> (#4552): il valore che arriva qui non è cifrato, e una riga cifrata aggiornata
+    /// così resterebbe altrimenti marcata cifrata con un valore in chiaro.
+    /// </remarks>
     public void UpdateValue(string configValue, string updatedBy)
     {
         if (string.IsNullOrWhiteSpace(configValue)) throw new ArgumentException("ConfigValue cannot be empty", nameof(configValue));
         ConfigValue = configValue;
+        IsEncrypted = false;
         UpdatedAt = DateTime.UtcNow;
         UpdatedBy = updatedBy;
     }

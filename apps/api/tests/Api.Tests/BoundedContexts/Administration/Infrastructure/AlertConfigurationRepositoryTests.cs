@@ -163,7 +163,7 @@ public sealed class AlertConfigurationRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateValue_ThenUpdateAsync_WritesOnlyValueTimeAndAuthor()
+    public async Task UpdateValue_ThenUpdateAsync_WritesValueTimeAuthorAndClearsTheEncryptionFlag()
     {
         var seeded = await SeedEveryColumnAsync();
         var expected = Columns().ToDictionary(c => c.Name, c => c.PropertyInfo!.GetValue(seeded), StringComparer.Ordinal);
@@ -178,12 +178,14 @@ public sealed class AlertConfigurationRepositoryTests : IDisposable
         after.ConfigValue.Should().Be("valore-nuovo");
         after.UpdatedBy.Should().Be("autore-nuovo");
         after.UpdatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromMinutes(1));
+        after.IsEncrypted.Should().BeFalse("the new value is plain text: the stored row was encrypted, the new one is not");
 
-        // UpdateValue cambia valore, data e autore. Tutto il resto, compreso IsEncrypted, il repository lo
-        // riscrive com'era: è l'aggregato a decidere cosa cambia, non la factory usata per leggerlo.
+        // UpdateValue cambia valore, flag di cifratura, data e autore. Tutto il resto il repository lo riscrive
+        // com'era: è l'aggregato a decidere cosa cambia, non la factory usata per leggerlo.
         var untouched = new[]
         {
             nameof(AlertConfigurationEntity.ConfigValue),
+            nameof(AlertConfigurationEntity.IsEncrypted),
             nameof(AlertConfigurationEntity.UpdatedBy),
             nameof(AlertConfigurationEntity.UpdatedAt),
         };

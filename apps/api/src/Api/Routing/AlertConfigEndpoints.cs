@@ -1,6 +1,8 @@
 using Api.BoundedContexts.Administration.Application.Commands.AlertRules;
 using Api.BoundedContexts.Administration.Application.Queries.AlertRules;
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.Extensions;
+using Api.Filters;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,7 +22,13 @@ internal static class AlertConfigEndpoints
         // addresses this pre-existing latent routing bug from issue #921 because
         // the new `MapTestAlertRuleEndpoint` is registered inside this group and
         // would otherwise inherit the same broken path.
-        var group = app.MapGroup("/admin/alert-rules").WithTags("Admin", "AlertRules");
+        //
+        // #4568: every route of the group was guarded by a bare RequireAuthorization(), so any
+        // signed-in user could list, create, edit, toggle and delete alert rules. The admin
+        // filter on the group answers 401/403 before any handler runs.
+        var group = app.MapGroup("/admin/alert-rules")
+            .WithTags("Admin", "AlertRules")
+            .AddEndpointFilter<RequireAdminSessionFilter>();
 
         MapGetAllAlertRulesEndpoint(group);
         MapGetAlertRuleByIdEndpoint(group);
@@ -41,7 +49,6 @@ internal static class AlertConfigEndpoints
             var rules = await mediator.Send(new GetAllAlertRulesQuery(), ct).ConfigureAwait(false);
             return Results.Ok(rules);
         })
-        .RequireAuthorization()
         .WithName("GetAllAlertRules");
     }
 
@@ -53,7 +60,6 @@ internal static class AlertConfigEndpoints
             var rule = await mediator.Send(new GetAlertRuleByIdQuery(id), ct).ConfigureAwait(false);
             return rule == null ? Results.NotFound() : Results.Ok(rule);
         })
-        .RequireAuthorization()
         .WithName("GetAlertRuleById");
     }
 
@@ -63,7 +69,7 @@ internal static class AlertConfigEndpoints
         group.MapPost("/", async ([FromBody] CreateAlertRuleRequest request, HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
             ArgumentNullException.ThrowIfNull(request);
-            var userId = context.User.FindFirst("userId")?.Value ?? "system";
+            var userId = AuthorId(context);
 
             var command = new CreateAlertRuleCommand(
                 request.Name,
@@ -79,7 +85,6 @@ internal static class AlertConfigEndpoints
             var id = await mediator.Send(command, ct).ConfigureAwait(false);
             return Results.Created($"/api/v1/admin/alert-rules/{id}", new { id });
         })
-        .RequireAuthorization()
         .WithName("CreateAlertRule");
     }
 
@@ -89,7 +94,7 @@ internal static class AlertConfigEndpoints
         group.MapPut("/{id:guid}", async (Guid id, [FromBody] UpdateAlertRuleRequest request, HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
             ArgumentNullException.ThrowIfNull(request);
-            var userId = context.User.FindFirst("userId")?.Value ?? "system";
+            var userId = AuthorId(context);
 
             var command = new UpdateAlertRuleCommand(
                 id,
@@ -105,7 +110,6 @@ internal static class AlertConfigEndpoints
             await mediator.Send(command, ct).ConfigureAwait(false);
             return Results.NoContent();
         })
-        .RequireAuthorization()
         .WithName("UpdateAlertRule");
     }
 
@@ -117,7 +121,6 @@ internal static class AlertConfigEndpoints
             await mediator.Send(new DeleteAlertRuleCommand(id), ct).ConfigureAwait(false);
             return Results.NoContent();
         })
-        .RequireAuthorization()
         .WithName("DeleteAlertRule");
     }
 
@@ -126,12 +129,11 @@ internal static class AlertConfigEndpoints
         // PATCH /api/v1/admin/alert-rules/{id}/toggle
         group.MapPatch("/{id:guid}/toggle", async (Guid id, HttpContext context, IMediator mediator, CancellationToken ct) =>
         {
-            var userId = context.User.FindFirst("userId")?.Value ?? "system";
+            var userId = AuthorId(context);
 
             await mediator.Send(new EnableAlertRuleCommand(id, userId), ct).ConfigureAwait(false);
             return Results.NoContent();
         })
-        .RequireAuthorization()
         .WithName("ToggleAlertRule");
     }
 
@@ -142,10 +144,8 @@ internal static class AlertConfigEndpoints
         // "dryRun" (safe by default per spec decision D3); explicit
         // ?mode=live requires the FE to gate behind a confirm dialog.
         //
-        // Auth: RequireAdminSession() enforces both session + Admin role check.
-        // The plain RequireAuthorization() used by the legacy sibling endpoints
-        // in this file only enforces authentication and would allow any signed-in
-        // user — tracked as a follow-up (legacy hardening, out-of-scope for #1840).
+        // Auth: the admin filter on the group (#4568). This route carried its own
+        // RequireAdminSession() while its siblings had only RequireAuthorization().
         group.MapPost("/{id:guid}/test", async (
                 Guid id,
                 [FromQuery] string? mode,
@@ -153,13 +153,12 @@ internal static class AlertConfigEndpoints
                 IMediator mediator,
                 CancellationToken ct) =>
             {
-                var userId = context.User.FindFirst("userId")?.Value ?? "system";
+                var userId = AuthorId(context);
                 var result = await mediator
                     .Send(new TestAlertRuleCommand(id, mode, userId), ct)
                     .ConfigureAwait(false);
                 return Results.Ok(result);
             })
-            .RequireAdminSession()
             .WithName("TestAlertRule")
             .WithSummary("Probe an existing alert rule by raising a synthetic AlertFiredEvent");
     }
@@ -174,7 +173,7 @@ internal static class AlertConfigEndpoints
             var templates = await mediator.Send(new GetAlertTemplatesQuery(), ct).ConfigureAwait(false);
             return Results.Ok(templates);
         })
-        .RequireAuthorization()
+        .RequireAdminSession() // #4568: was a bare RequireAuthorization()
         .WithTags("Admin", "AlertRules")
         .WithName("GetAlertTemplates");
 
@@ -185,10 +184,19 @@ internal static class AlertConfigEndpoints
             var success = await mediator.Send(new TestAlertCommand(request.AlertType, request.Channel), ct).ConfigureAwait(false);
             return success ? Results.Ok(new { success = true }) : Results.BadRequest(new { success = false, error = "Test alert failed" });
         })
-        .RequireAuthorization()
+        .RequireAdminSession() // #4568: was a bare RequireAuthorization()
         .WithTags("Admin", "AlertRules")
         .WithName("TestAlert");
     }
+
+    /// <summary>
+    /// The author recorded on a rule: the admin who made the request. The admin filter has stored
+    /// the session; audit attribution reads EffectiveActor (Principal.cs), the real admin even
+    /// during an impersonation. #4568: these endpoints read a "userId" claim that the session
+    /// handler does not emit, so every rule said "system".
+    /// </summary>
+    private static string AuthorId(HttpContext context) =>
+        ((SessionStatusDto)context.Items[nameof(SessionStatusDto)]!).Principal!.EffectiveActor.Id.ToString();
 }
 
 internal record CreateAlertRuleRequest(string Name, string AlertType, string Severity, double ThresholdValue, string ThresholdUnit, int DurationMinutes, string? Description);

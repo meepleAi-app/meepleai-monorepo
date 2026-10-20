@@ -392,6 +392,77 @@ public sealed class LibraryShareLinkTests
 
     #endregion
 
+    #region Reconstitute Tests (#4544)
+
+    // Create è la factory di un link nuovo e rifiuta una scadenza passata. Una riga salvata può essere
+    // scaduta: ricostruirla con Create la rendeva illeggibile.
+
+    private static LibraryShareLink ReconstituteExpired(DateTime? revokedAt = null) =>
+        LibraryShareLink.Reconstitute(
+            id: Guid.NewGuid(),
+            userId: Guid.NewGuid(),
+            shareToken: "0123456789abcdef0123456789abcdef",
+            privacyLevel: LibrarySharePrivacyLevel.Unlisted,
+            includeNotes: true,
+            createdAt: DateTime.UtcNow.AddDays(-20),
+            expiresAt: DateTime.UtcNow.AddDays(-1),
+            revokedAt: revokedAt,
+            viewCount: 3,
+            lastAccessedAt: DateTime.UtcNow.AddDays(-2));
+
+    [Fact]
+    public void Reconstitute_ExpiredRow_IsExpiredAndNotValid()
+    {
+        var link = ReconstituteExpired();
+
+        link.IsExpired.Should().BeTrue();
+        link.IsRevoked.Should().BeFalse();
+        link.IsValid.Should().BeFalse();
+        link.TimeUntilExpiration.Should().BeNull();
+    }
+
+    [Fact]
+    public void Reconstitute_KeepsEveryStoredValue()
+    {
+        var id = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var createdAt = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+        var expiresAt = createdAt.AddDays(10);
+        var revokedAt = createdAt.AddDays(5);
+        var lastAccessedAt = createdAt.AddDays(4);
+
+        var link = LibraryShareLink.Reconstitute(
+            id, userId, "fedcba9876543210fedcba9876543210", LibrarySharePrivacyLevel.Unlisted,
+            includeNotes: true, createdAt, expiresAt, revokedAt, viewCount: 12, lastAccessedAt);
+
+        link.Id.Should().Be(id);
+        link.UserId.Should().Be(userId);
+        link.ShareToken.Should().Be("fedcba9876543210fedcba9876543210");
+        link.PrivacyLevel.Should().Be(LibrarySharePrivacyLevel.Unlisted);
+        link.IncludeNotes.Should().BeTrue();
+        link.CreatedAt.Should().Be(createdAt);
+        link.ExpiresAt.Should().Be(expiresAt);
+        link.RevokedAt.Should().Be(revokedAt);
+        link.ViewCount.Should().Be(12);
+        link.LastAccessedAt.Should().Be(lastAccessedAt);
+        link.DomainEvents.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Revoke_ExpiredLink_SetsRevokedAt()
+    {
+        // L'aggregato vieta la revoca solo a un link già revocato: il proprietario può revocare un link
+        // scaduto.
+        var link = ReconstituteExpired();
+
+        link.Revoke();
+
+        link.IsRevoked.Should().BeTrue();
+        link.RevokedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
+    }
+
+    #endregion
+
     #region TimeUntilExpiration Tests
 
     [Fact]

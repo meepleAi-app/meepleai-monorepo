@@ -98,6 +98,39 @@ internal sealed class LibraryShareLink : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Ricostituisce un link letto dal database, così com'è (#4544).
+    /// </summary>
+    /// <remarks>
+    /// Solo per il repository. <see cref="Create"/> è la factory di un link nuovo: genera id e token,
+    /// lo data ad "adesso" e rifiuta una scadenza passata, ed è giusto per un link che nasce. Usata per
+    /// ricostruire una riga, rendeva illeggibile ogni link scaduto: la lettura pubblica rispondeva 400
+    /// invece di 404, e la revoca falliva allo stesso modo. Un link salvato può essere scaduto o revocato:
+    /// sono stati che <see cref="IsExpired"/> e <see cref="IsRevoked"/> descrivono, non errori.
+    /// </remarks>
+    internal static LibraryShareLink Reconstitute(
+        Guid id,
+        Guid userId,
+        string shareToken,
+        LibrarySharePrivacyLevel privacyLevel,
+        bool includeNotes,
+        DateTime createdAt,
+        DateTime? expiresAt,
+        DateTime? revokedAt,
+        int viewCount,
+        DateTime? lastAccessedAt) => new(id)
+        {
+            UserId = userId,
+            ShareToken = shareToken,
+            PrivacyLevel = privacyLevel,
+            IncludeNotes = includeNotes,
+            CreatedAt = createdAt,
+            ExpiresAt = expiresAt,
+            RevokedAt = revokedAt,
+            ViewCount = viewCount,
+            LastAccessedAt = lastAccessedAt,
+        };
+
+    /// <summary>
     /// Generates a secure random token (32 hex characters).
     /// </summary>
     private static string GenerateSecureToken()

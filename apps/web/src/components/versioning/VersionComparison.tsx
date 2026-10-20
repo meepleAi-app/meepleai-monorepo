@@ -29,19 +29,19 @@ function DiffSummaryBadges({ summary }: { summary: DiffSummary }): React.JSX.Ele
   return (
     <div className="flex items-center gap-2 flex-wrap">
       {summary.added > 0 && (
-        <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+        <Badge variant="default" className="bg-green-600">
           <Plus className="h-3 w-3 mr-1" />
           {summary.added} Added
         </Badge>
       )}
       {summary.modified > 0 && (
-        <Badge variant="default" className="bg-amber-500 hover:bg-amber-600">
+        <Badge variant="default" className="bg-amber-500">
           <RefreshCw className="h-3 w-3 mr-1" />
           {summary.modified} Modified
         </Badge>
       )}
       {summary.deleted > 0 && (
-        <Badge variant="default" className="bg-red-600 hover:bg-red-700">
+        <Badge variant="default" className="bg-red-600 text-white">
           <Minus className="h-3 w-3 mr-1" />
           {summary.deleted} Deleted
         </Badge>
@@ -195,9 +195,7 @@ export function VersionComparison({
         {/* Summary */}
         <div className="flex items-center justify-between flex-wrap gap-4 p-4 bg-muted/50 rounded-lg">
           <div>
-            <span className="text-sm font-medium">
-              {diff.summary.totalChanges} total changes
-            </span>
+            <span className="text-sm font-medium">{diff.summary.totalChanges} total changes</span>
           </div>
           <DiffSummaryBadges summary={diff.summary} />
         </div>
@@ -217,11 +215,7 @@ export function VersionComparison({
               </Button>
             ))}
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowUnchanged(!showUnchanged)}
-          >
+          <Button variant="ghost" size="sm" onClick={() => setShowUnchanged(!showUnchanged)}>
             {showUnchanged ? 'Hide' : 'Show'} Unchanged
           </Button>
         </div>

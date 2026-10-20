@@ -44,12 +44,7 @@ import type { LucideIcon } from 'lucide-react';
  * Available gradient presets
  */
 export type GradientPreset =
-  | 'green-emerald'
-  | 'blue-indigo'
-  | 'amber-orange'
-  | 'red-rose'
-  | 'purple-violet'
-  | 'stone-stone';
+  'green-emerald' | 'blue-indigo' | 'amber-orange' | 'red-rose' | 'purple-violet' | 'stone-stone';
 
 /**
  * Action item configuration
@@ -119,7 +114,7 @@ const iconVariantStyles: Record<string, string> = {
  * Badge styling per variant
  */
 const badgeVariantStyles: Record<string, string> = {
-  default: 'bg-muted-foreground',
+  default: 'bg-muted-foreground text-background',
   primary: 'bg-blue-500',
   warning: 'bg-yellow-500',
   danger: 'bg-red-500',

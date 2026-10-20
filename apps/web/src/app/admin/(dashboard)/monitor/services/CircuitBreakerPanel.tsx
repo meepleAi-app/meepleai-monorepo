@@ -6,15 +6,15 @@ import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api';
 import type { CircuitBreakerState } from '@/lib/api/schemas/admin/admin-circuit-breakers.schemas';
 
-// Each entry brings its own dark background (#4513): the Badge variant carries
-// `dark:bg-primary/90`, which tailwind-merge keeps next to a plain `bg-*`, and the admin shell is
-// always dark — without the `dark:` pair every state would render orange.
+// Each state has a darker tint for the admin shell, which is always dark. Until #4539 the `dark:`
+// pair also had to beat the Badge variant's `dark:bg-primary/90`; the variant no longer has one, so
+// the fallback needs no pair: `bg-muted` already follows the theme.
 const STATE_COLORS: Record<string, string> = {
   Closed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
   Open: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
   HalfOpen: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
 };
-const UNKNOWN_STATE_COLOR = 'bg-muted text-muted-foreground dark:bg-muted';
+const UNKNOWN_STATE_COLOR = 'bg-muted text-muted-foreground';
 
 export function CircuitBreakerPanel() {
   const { data: states, isLoading } = useQuery({

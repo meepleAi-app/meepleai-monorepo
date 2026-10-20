@@ -77,14 +77,14 @@ function getStatusBadge(overallReadiness: string) {
       );
     case READINESS_STATES.READY_FOR_AGENT:
       return (
-        <Badge variant="default" className="bg-amber-600 hover:bg-amber-700">
+        <Badge variant="default" className="bg-amber-600">
           <Bot className="mr-1 h-3 w-3" />
           Pronto per agente
         </Badge>
       );
     case READINESS_STATES.FULLY_OPERATIONAL:
       return (
-        <Badge variant="default" className="bg-green-600 hover:bg-green-700">
+        <Badge variant="default" className="bg-green-600">
           <CheckCircle2 className="mr-1 h-3 w-3" />
           Operativo
         </Badge>

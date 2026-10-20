@@ -18,7 +18,7 @@ function levelBadgeClass(level: LokiLogEntry['level']): string {
     case 'info':
       return 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300';
     default:
-      return 'bg-muted text-muted-foreground dark:bg-muted';
+      return 'bg-muted text-muted-foreground';
   }
 }
 

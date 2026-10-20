@@ -95,8 +95,8 @@ function MetricGauge({
           {typeof value === 'number' && value >= 1000
             ? value.toLocaleString()
             : typeof value === 'number' && value < 1
-            ? value.toFixed(4)
-            : value}
+              ? value.toFixed(4)
+              : value}
           {unit}
         </span>
       </div>
@@ -149,14 +149,10 @@ function ValidationItem({ type, code, message, nodeId, edgeId }: ValidationItemP
             {code}
           </Badge>
           {nodeId && (
-            <span className="text-[9px] text-muted-foreground">
-              Node: {nodeId.slice(0, 8)}...
-            </span>
+            <span className="text-[9px] text-muted-foreground">Node: {nodeId.slice(0, 8)}...</span>
           )}
           {edgeId && (
-            <span className="text-[9px] text-muted-foreground">
-              Edge: {edgeId.slice(0, 8)}...
-            </span>
+            <span className="text-[9px] text-muted-foreground">Edge: {edgeId.slice(0, 8)}...</span>
           )}
         </div>
       </div>
@@ -209,10 +205,7 @@ export function ValidationPanel({
 
     if (validation.isValid && validation.warnings.length === 0) {
       return (
-        <Badge
-          variant="default"
-          className={cn('text-xs bg-green-500 hover:bg-green-600', className)}
-        >
+        <Badge variant="default" className={cn('text-xs bg-green-500', className)}>
           <CheckCircle2 className="h-3 w-3 mr-1" />
           Valid
         </Badge>
@@ -239,12 +232,7 @@ export function ValidationPanel({
   // Full panel
   if (!validation) {
     return (
-      <div
-        className={cn(
-          'p-4 text-center text-muted-foreground',
-          className
-        )}
-      >
+      <div className={cn('p-4 text-center text-muted-foreground', className)}>
         <Info className="h-8 w-8 mx-auto mb-2 opacity-50" />
         <p className="text-sm">Add blocks to see validation</p>
       </div>
@@ -339,9 +327,7 @@ export function ValidationPanel({
                 <AccordionTrigger className="py-2">
                   <div className="flex items-center gap-2 text-destructive">
                     <AlertCircle className="h-4 w-4" />
-                    <span className="text-sm font-medium">
-                      Errors ({validation.errors.length})
-                    </span>
+                    <span className="text-sm font-medium">Errors ({validation.errors.length})</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>

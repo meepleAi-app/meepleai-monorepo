@@ -94,7 +94,7 @@ function getProcessingStateBadge(state: string) {
   }
   if (isActive) {
     return (
-      <Badge variant="default" className="bg-blue-600 animate-pulse">
+      <Badge variant="default" className="bg-blue-600 text-white animate-pulse">
         {state}
       </Badge>
     );

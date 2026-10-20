@@ -28,10 +28,10 @@ interface StatusMeta {
   badgeClass: string;
 }
 
-// Every badgeClass brings its own dark pair (#4513): the Badge variant carries `dark:bg-primary/90`,
-// which tailwind-merge keeps next to a plain `bg-*` — with the dark theme every status was orange.
-// The neutral states use the theme tokens; `dark:bg-muted` is there only to beat that variant class.
-const NEUTRAL_BADGE = 'bg-muted text-foreground border-transparent dark:bg-muted';
+// The coloured statuses have a darker tint for the dark theme. Until #4539 a `dark:` pair also had to
+// beat the Badge variant's `dark:bg-primary/90`; the variant no longer has one, so the neutral
+// states use the theme tokens alone.
+const NEUTRAL_BADGE = 'bg-muted text-foreground border-transparent';
 
 const STATUS_MAP: Record<string, StatusMeta> = {
   in_progress: {

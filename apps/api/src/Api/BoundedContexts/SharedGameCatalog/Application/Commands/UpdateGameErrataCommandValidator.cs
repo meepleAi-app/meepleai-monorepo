@@ -9,6 +9,9 @@ internal sealed class UpdateGameErrataCommandValidator : AbstractValidator<Updat
 {
     public UpdateGameErrataCommandValidator()
     {
+        RuleFor(x => x.SharedGameId)
+            .NotEqual(Guid.Empty).WithMessage("SharedGameId is required");
+
         RuleFor(x => x.ErrataId)
             .NotEqual(Guid.Empty).WithMessage("ErrataId is required");
 

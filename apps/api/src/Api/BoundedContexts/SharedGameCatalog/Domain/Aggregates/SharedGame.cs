@@ -1728,6 +1728,16 @@ public sealed class SharedGame : AggregateRoot<Guid>
         _coverAssignments.Add(assignment);
     }
 
+    /// <summary>
+    /// Reconstitution hook for the repository (#4543): appends a persisted erratum to the
+    /// aggregate WITHOUT re-running creation validation or raising <c>GameErrataAddedEvent</c>.
+    /// </summary>
+    internal void LoadErrata(GameErrata errata)
+    {
+        ArgumentNullException.ThrowIfNull(errata);
+        _erratas.Add(errata);
+    }
+
     // Validation Methods
 
     private static void ValidateTitle(string title)

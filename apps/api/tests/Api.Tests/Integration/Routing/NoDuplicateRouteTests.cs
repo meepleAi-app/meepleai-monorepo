@@ -1,6 +1,9 @@
+using System.Reflection;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -34,6 +37,9 @@ public sealed class NoDuplicateRouteTestsHostFixture(SharedTestcontainersFixture
 /// <see cref="GameNightDiaryRouteUniquenessTests"/> guards one specific route;
 /// this one covers the whole table, so the next duplicate fails in CI instead of
 /// in production.
+///
+/// The class also hosts the route-parameter binding guard of #4543: it reads the same
+/// routing table, so it rides on this host instead of paying for another one.
 /// </summary>
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
@@ -112,5 +118,129 @@ public sealed class NoDuplicateRouteTests
         postTemplates.Should().ContainSingle(
             t => string.Equals(t, "api/v1/live-sessions/{sessionId}/scores/proposals/confirm", StringComparison.OrdinalIgnoreCase),
             "the host-facing proposal ratification (ConfirmScoreProposalCommand) must stay reachable exactly once");
+    }
+
+    /// <summary>
+    /// #4543 — ogni parametro di una rotta deve avere nel metodo un parametro che lo legge.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Le minimal API legano un parametro alla rotta per <b>nome</b>. Se il metodo chiama
+    /// <c>Guid _</c> quello che la rotta chiama <c>{id:guid}</c>, il binding lo cerca nella query
+    /// string, non lo trova e risponde 400 a corpo vuoto prima dell'handler. Nessun avviso
+    /// all'avvio: l'endpoint sembra registrato bene. Così erano rotti PUT e DELETE delle errata e
+    /// delle FAQ del catalogo, l'attivazione di un documento e due rotte dei template di stato.
+    /// </para>
+    /// <para>
+    /// La regola letta qui è quella del binding: un parametro senza attributo con lo stesso nome
+    /// del segmento, oppure <c>[FromRoute]</c> (con o senza <c>Name</c>), anche dentro un
+    /// <c>[AsParameters]</c>. Un parametro con un'altra sorgente esplicita (<c>[FromQuery]</c>,
+    /// <c>[FromBody]</c>, …) non conta, anche se il nome coincide. Un segmento che nessun
+    /// parametro legge non è sempre un 400, ma è sempre un valore che l'handler non vede: se è
+    /// voluto, il metodo lo dichiara e lo ignora.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void EveryRouteParameter_IsBoundByAHandlerParameter()
+    {
+        var dataSource = _factory.Services.GetRequiredService<EndpointDataSource>();
+
+        var inspected = new List<string>();
+        var unbound = new List<string>();
+
+        foreach (var endpoint in dataSource.Endpoints.OfType<RouteEndpoint>())
+        {
+            var handler = endpoint.Metadata.GetMetadata<MethodInfo>();
+            if (handler is null || endpoint.RoutePattern.Parameters.Count == 0)
+            {
+                continue;
+            }
+
+            var methods = endpoint.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods ?? ["*"];
+            var name = $"{string.Join(",", methods)} {(endpoint.RoutePattern.RawText ?? string.Empty).Trim('/')}";
+            inspected.Add(name);
+
+            var bound = RouteBoundNames(handler);
+            var missing = endpoint.RoutePattern.Parameters
+                .Select(p => p.Name)
+                .Where(n => !bound.Contains(n))
+                .ToList();
+
+            if (missing.Count > 0)
+            {
+                var signature = string.Join(", ", handler.GetParameters().Select(p => $"{p.ParameterType.Name} {p.Name}"));
+                unbound.Add(
+                    $"{name} → {handler.DeclaringType?.Name}.{handler.Name}({signature}) non legge {{{string.Join("}, {", missing)}}}");
+            }
+        }
+
+        // Guardia di non-vacuità: se la metadata MethodInfo sparisse, o la scansione non vedesse più
+        // le rotte del catalogo, l'asserzione sotto passerebbe su una lista vuota.
+        inspected.Should().Contain(
+            [
+                "PUT api/v1/admin/shared-games/{id:guid}/errata/{errataId:guid}",
+                "DELETE api/v1/admin/shared-games/{id:guid}/errata/{errataId:guid}",
+            ],
+            "the scan must see the routes of #4543, or it proves nothing");
+
+        unbound.Sort(StringComparer.Ordinal);
+        unbound.Should().BeEmpty(
+            "a route segment that no handler parameter binds by name is looked up in the query string, and a " +
+            "required one answers 400 before the handler (#4543). Rename the parameter after the segment. Found: " +
+            string.Join(" ;; ", unbound));
+    }
+
+    /// <summary>
+    /// I nomi di segmento che i parametri di <paramref name="handler"/> leggono dalla rotta.
+    /// </summary>
+    private static HashSet<string> RouteBoundNames(MethodInfo handler)
+    {
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var parameter in handler.GetParameters())
+        {
+            if (parameter.GetCustomAttribute<AsParametersAttribute>() is not null)
+            {
+                foreach (var property in parameter.ParameterType.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+                {
+                    AddIfFromRoute(names, property.Name, property.GetCustomAttributes(inherit: true));
+                }
+
+                // Un record posizionale porta gli attributi sul parametro del costruttore.
+                var constructor = parameter.ParameterType.GetConstructors()
+                    .OrderByDescending(c => c.GetParameters().Length)
+                    .FirstOrDefault();
+                foreach (var constructorParameter in constructor?.GetParameters() ?? [])
+                {
+                    AddIfFromRoute(names, constructorParameter.Name!, constructorParameter.GetCustomAttributes(inherit: true));
+                }
+
+                continue;
+            }
+
+            AddIfFromRoute(names, parameter.Name!, parameter.GetCustomAttributes(inherit: true));
+        }
+
+        return names;
+    }
+
+    private static void AddIfFromRoute(HashSet<string> names, string name, object[] attributes)
+    {
+        var fromRoute = attributes.OfType<IFromRouteMetadata>().FirstOrDefault();
+        if (fromRoute is not null)
+        {
+            names.Add(string.IsNullOrEmpty(fromRoute.Name) ? name : fromRoute.Name);
+            return;
+        }
+
+        var otherSource = attributes.Any(a => a is IFromQueryMetadata
+            or IFromBodyMetadata
+            or IFromHeaderMetadata
+            or IFromFormMetadata
+            or IFromServiceMetadata);
+        if (!otherSource)
+        {
+            names.Add(name);
+        }
     }
 }

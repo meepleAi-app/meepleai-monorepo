@@ -54,7 +54,7 @@ public sealed class SharedGameCatalogEndpointsHostFixture(SharedTestcontainersFi
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
-public sealed class SharedGameCatalogEndpointsIntegrationTests
+public sealed partial class SharedGameCatalogEndpointsIntegrationTests
     : IClassFixture<SharedGameCatalogEndpointsHostFixture>, IAsyncLifetime
 {
     private readonly SharedGameCatalogEndpointsHostFixture _hostFixture;

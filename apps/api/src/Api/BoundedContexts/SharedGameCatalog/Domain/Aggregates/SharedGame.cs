@@ -1489,14 +1489,16 @@ public sealed class SharedGame : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Clears all quick questions and replaces them with a new set (used during AI regeneration).
+    /// Replaces the AI-generated quick questions with a new set (used during AI regeneration).
+    /// Questions written by an administrator (<c>IsGenerated == false</c>) are kept: regenerating
+    /// must not throw away manual work (#4596).
     /// </summary>
     /// <param name="questions">The new questions to set</param>
     public void ReplaceQuickQuestions(IEnumerable<QuickQuestion> questions)
     {
         ArgumentNullException.ThrowIfNull(questions);
 
-        _quickQuestions.Clear();
+        _quickQuestions.RemoveAll(q => q.IsGenerated);
         _quickQuestions.AddRange(questions);
     }
 

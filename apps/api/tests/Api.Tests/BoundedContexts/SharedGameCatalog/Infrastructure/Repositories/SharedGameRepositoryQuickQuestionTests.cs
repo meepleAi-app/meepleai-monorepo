@@ -232,10 +232,11 @@ public sealed class SharedGameRepositoryQuickQuestionTests
     }
 
     [Fact]
-    public async Task Update_AfterReplaceQuickQuestions_DeletesTheOldRowsAndInsertsTheNewOnes()
+    public async Task Update_AfterReplaceQuickQuestions_DeletesTheGeneratedRowsAndInsertsTheNewOnes_KeepingTheManualRow()
     {
+        // SeedAsync: la prima è generata, la seconda scritta a mano. La rigenerazione toglie solo la prima.
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
-        var (gameId, first, second) = await SeedAsync(db);
+        var (gameId, generatedBefore, manual) = await SeedAsync(db);
         var repo = Repo(db);
 
         var game = await repo.GetByIdWithQuickQuestionsAsync(gameId, TestContext.Current.CancellationToken);
@@ -250,16 +251,17 @@ public sealed class SharedGameRepositoryQuickQuestionTests
         db.ChangeTracker.Entries<QuickQuestionEntity>()
             .Select(e => (e.Entity.Id, e.State))
             .Should().BeEquivalentTo([
-                (first.Id, EntityState.Deleted),
-                (second.Id, EntityState.Deleted),
+                (generatedBefore.Id, EntityState.Deleted),
+                (manual.Id, EntityState.Unchanged),
                 (generated[0].Id, EntityState.Added),
                 (generated[1].Id, EntityState.Added),
             ]);
 
         await db.SaveChangesAsync(TestContext.Current.CancellationToken);
         var rows = await RowsAsync(db, gameId);
-        rows.Keys.Should().BeEquivalentTo([generated[0].Id, generated[1].Id]);
-        rows.Values.Should().OnlyContain(q => q.IsGenerated);
+        rows.Keys.Should().BeEquivalentTo([manual.Id, generated[0].Id, generated[1].Id]);
+        rows[manual.Id].Text.Should().Be(manual.Text);
+        rows[manual.Id].IsGenerated.Should().BeFalse();
     }
 
     [Fact]

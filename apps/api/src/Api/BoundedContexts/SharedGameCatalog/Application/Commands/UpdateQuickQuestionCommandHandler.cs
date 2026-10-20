@@ -56,9 +56,11 @@ internal sealed class UpdateQuickQuestionCommandHandler
             ?? throw new NotFoundException("QuickQuestion", command.QuestionId.ToString());
 
         // Update via domain methods (preserves encapsulation)
+        // The category goes before the emoji: UpdateCategory assigns the category's default emoji, so
+        // applying it after UpdateEmoji threw away the emoji the admin sent (#4602).
         question.UpdateText(command.Text);
-        question.UpdateEmoji(command.Emoji);
         question.UpdateCategory(command.Category);
+        question.UpdateEmoji(command.Emoji);
         question.UpdateDisplayOrder(command.DisplayOrder);
 
         // Persist aggregate

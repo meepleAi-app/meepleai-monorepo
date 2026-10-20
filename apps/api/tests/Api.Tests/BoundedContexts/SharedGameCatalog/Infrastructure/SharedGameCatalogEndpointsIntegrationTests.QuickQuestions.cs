@@ -18,8 +18,11 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 /// </summary>
 /// <remarks>
 /// Sostituisce <c>LlmQuickQuestionGenerator</c> nella fixture della classe
-/// (<see cref="SharedGameCatalogEndpointsHostFixture"/>). Senza stato: lo registra uno scope per
-/// richiesta e tutti i test della classe vedono le stesse tre domande.
+/// (<see cref="SharedGameCatalogEndpointsHostFixture"/>). Lo registra uno scope per richiesta e i
+/// test della classe vedono le domande di <see cref="Questions"/>. Un test che vuole il ripiego del
+/// generatore vero (l'LLM che non risponde) lo chiede per titolo del gioco con
+/// <see cref="FallBackFor"/>: i titoli dei giochi di test sono unici, quindi la richiesta di un test
+/// non tocca gli altri e non c'e' nulla da ripulire.
 /// </remarks>
 internal sealed class FixedQuickQuestionGenerator : IQuickQuestionGenerator
 {
@@ -30,13 +33,31 @@ internal sealed class FixedQuickQuestionGenerator : IQuickQuestionGenerator
         ("Cosa si fa nel proprio turno?", QuestionCategory.Gameplay),
     ];
 
+    /// <summary>Le domande che il ripiego del generatore vero restituisce al posto di quelle generate.</summary>
+    internal static readonly string[] FallbackTexts = ["Come si gioca?", "Come si vince?"];
+
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte> FallbackTitles = new(StringComparer.Ordinal);
+
+    /// <summary>Per il gioco con questo titolo il generatore risponde con il ripiego.</summary>
+    internal static void FallBackFor(string gameTitle) => FallbackTitles[gameTitle] = 0;
+
     public Task<QuickQuestionGenerationResult> GenerateQuestionsAsync(
         string gameName,
         string rulebookContent,
-        CancellationToken cancellationToken = default) =>
-        Task.FromResult(new QuickQuestionGenerationResult(
+        CancellationToken cancellationToken = default)
+    {
+        if (FallbackTitles.ContainsKey(gameName))
+        {
+            return Task.FromResult(new QuickQuestionGenerationResult(
+                FallbackTexts.Select(t => new GeneratedQuestion(t, QuestionCategory.Gameplay, 0.5m)).ToList(),
+                0.5m,
+                IsFallback: true));
+        }
+
+        return Task.FromResult(new QuickQuestionGenerationResult(
             Questions.Select(q => new GeneratedQuestion(q.Text, q.Category, 0.9m)).ToList(),
             0.9m));
+    }
 }
 
 /// <summary>
@@ -160,6 +181,35 @@ public sealed partial class SharedGameCatalogEndpointsIntegrationTests
         AssertQuickQuestionUnchanged(rows[other.Id], other);
     }
 
+    /// <summary>
+    /// Il PUT applicava l'emoji inviata e poi la categoria, che riassegna l'emoji di default della
+    /// categoria: l'emoji scelta dall'admin si perdeva sempre (#4602).
+    /// </summary>
+    [Fact]
+    public async Task UpdateQuickQuestion_KeepsTheEmojiSent_WhenItDiffersFromTheCategoryDefault()
+    {
+        var token = await CreateAdminTokenAsync();
+        var game = await CreateTestGameAsync(GameStatus.Published);
+        var target = await SeedQuickQuestionAsync(game.Id, "Testo originale", QuestionCategory.Setup, displayOrder: 0);
+
+        // 🎲 non e' l'emoji di default di nessuna categoria (Rules => 📖).
+        using var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Put,
+            $"/api/v1/admin/quick-questions/{target.Id}",
+            token,
+            new { text = "Testo corretto", emoji = "🎲", category = (int)QuestionCategory.Rules, displayOrder = 0 });
+        using var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        using var json = JsonDocument.Parse(body);
+        json.RootElement.GetProperty("emoji").GetString().Should().Be("🎲");
+
+        var row = (await QuickQuestionRowsAsync(game.Id)).Single();
+        row.Category.Should().Be(QuestionCategory.Rules);
+        row.Emoji.Should().Be("🎲", "the emoji the admin chose must survive the category change");
+    }
+
     [Fact]
     public async Task UpdateQuickQuestion_OnAQuestionThatDoesNotExist_Returns404()
     {
@@ -198,13 +248,18 @@ public sealed partial class SharedGameCatalogEndpointsIntegrationTests
         AssertQuickQuestionUnchanged(rows[0], other);
     }
 
+    /// <summary>
+    /// #4596, decisione da confermare con chi possiede il prodotto: la rigenerazione sostituisce le
+    /// domande generate e lascia quelle scritte a mano. Cancellarle tutte farebbe perdere il lavoro di un
+    /// admin con un solo clic.
+    /// </summary>
     [Fact]
-    public async Task GenerateQuickQuestions_ReplacesTheOldOnes_WithTheGeneratedOnes()
+    public async Task GenerateQuickQuestions_ReplacesTheGeneratedOnes_AndKeepsTheManualOnes()
     {
         var token = await CreateAdminTokenAsync();
         var game = await CreateTestGameAsync(GameStatus.Published);
         var oldGenerated = await SeedQuickQuestionAsync(game.Id, "Vecchia generata", QuestionCategory.Setup, displayOrder: 0, isGenerated: true);
-        var oldManual = await SeedQuickQuestionAsync(game.Id, "Vecchia manuale", QuestionCategory.Rules, displayOrder: 1);
+        var manual = await SeedQuickQuestionAsync(game.Id, "Scritta a mano", QuestionCategory.Rules, displayOrder: 1);
 
         using var request = TestSessionHelper.CreateAuthenticatedRequest(
             HttpMethod.Post,
@@ -216,18 +271,52 @@ public sealed partial class SharedGameCatalogEndpointsIntegrationTests
         response.StatusCode.Should().Be(HttpStatusCode.Created, body);
 
         var rows = await QuickQuestionRowsAsync(game.Id);
-        rows.Select(r => r.Id).Should().NotContain([oldGenerated.Id, oldManual.Id],
-            "regenerating replaces the old questions, generated or not");
-        rows.Select(r => (r.Text, r.Category, r.DisplayOrder))
-            .Should().Equal(FixedQuickQuestionGenerator.Questions.Select((q, i) => (q.Text, q.Category, i)),
-                "the rows must be the generated questions, in order");
-        rows.Should().OnlyContain(r => r.IsGenerated && r.IsActive && r.SharedGameId == game.Id);
+        rows.Select(r => r.Id).Should().NotContain(oldGenerated.Id, "regenerating replaces the generated questions");
 
-        // Le domande che il comando restituisce sono quelle salvate, con gli stessi id.
+        var keptManual = rows.Single(r => r.Id == manual.Id);
+        AssertQuickQuestionUnchanged(keptManual, manual);
+
+        var generatedRows = rows.Where(r => r.Id != manual.Id).OrderBy(r => r.DisplayOrder).ToList();
+        generatedRows.Select(r => (r.Text, r.Category, r.DisplayOrder))
+            .Should().Equal(FixedQuickQuestionGenerator.Questions.Select((q, i) => (q.Text, q.Category, i)),
+                "the other rows must be the generated questions, in order");
+        generatedRows.Should().OnlyContain(r => r.IsGenerated && r.IsActive && r.SharedGameId == game.Id);
+
+        // Le domande che il comando restituisce sono quelle generate e salvate, con gli stessi id.
         using var json = JsonDocument.Parse(body);
         json.RootElement.GetProperty("questions").EnumerateArray()
             .Select(q => q.GetProperty("id").GetGuid())
-            .Should().BeEquivalentTo(rows.Select(r => r.Id));
+            .Should().BeEquivalentTo(generatedRows.Select(r => r.Id));
+    }
+
+    /// <summary>
+    /// Il generatore vero, se l'LLM non risponde (402, 429, JSON illeggibile, nessuna domanda), restituisce
+    /// cinque domande generiche come se fosse un risultato. Prima di #4596 non si salvava niente, ora
+    /// sovrascriverebbero le domande vere: il ripiego non si salva, e la richiesta risponde con un errore.
+    /// </summary>
+    [Fact]
+    public async Task GenerateQuickQuestions_WhenTheGeneratorFallsBack_KeepsTheSavedQuestions_AndAnswers503()
+    {
+        var token = await CreateAdminTokenAsync();
+        var game = await CreateTestGameAsync(GameStatus.Published);
+        FixedQuickQuestionGenerator.FallBackFor(game.Title);
+        var generated = await SeedQuickQuestionAsync(game.Id, "Generata, da tenere", QuestionCategory.Setup, displayOrder: 0, isGenerated: true);
+        var manual = await SeedQuickQuestionAsync(game.Id, "Scritta a mano, da tenere", QuestionCategory.Rules, displayOrder: 1);
+
+        using var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            $"/api/v1/admin/shared-games/{game.Id}/quick-questions/generate",
+            token);
+        using var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        response.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable, body);
+        body.Should().Contain("quick_questions_generation_unavailable");
+
+        var rows = (await QuickQuestionRowsAsync(game.Id)).ToDictionary(r => r.Id);
+        rows.Should().HaveCount(2, "a fallback result must not replace, add or remove any saved question");
+        AssertQuickQuestionUnchanged(rows[generated.Id], generated);
+        AssertQuickQuestionUnchanged(rows[manual.Id], manual);
     }
 
     [Fact]

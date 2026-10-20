@@ -109,52 +109,27 @@ internal sealed class PlayerMemoryRepository : RepositoryBase, IPlayerMemoryRepo
     /// <summary>
     /// Maps persistence entity to domain aggregate.
     /// </summary>
+    /// <remarks>
+    /// Passa da <see cref="PlayerMemory.Reconstitute"/>, non dalle factory di creazione (#4552): quelle conoscono
+    /// un solo lato fra utente e ospite, e la memoria di un ospite reclamato perdeva il nome dell'ospite, che
+    /// <see cref="UpdateAsync"/> scriveva poi a NULL. Ogni colonna scritta da <see cref="MapToPersistence"/> torna
+    /// qui (vedi <c>PlayerMemoryRepositoryTests</c>).
+    /// </remarks>
     private static PlayerMemory MapToDomain(PlayerMemoryEntity entity)
     {
-        PlayerMemory memory;
+        var gameStats = entity.GameStatsJson is null
+            ? []
+            : JsonSerializer.Deserialize<List<PlayerGameStatsDto>>(entity.GameStatsJson) ?? [];
 
-        if (entity.UserId.HasValue)
-        {
-            memory = PlayerMemory.CreateForUser(entity.UserId.Value, entity.GroupId);
-        }
-        else
-        {
-            memory = PlayerMemory.CreateForGuest(entity.GuestName ?? "Unknown", entity.GroupId);
-        }
-
-        // Restore Id, CreatedAt, ClaimedAt via reflection (factory generates new ones)
-        SetPrivateProperty(memory, nameof(PlayerMemory.Id), entity.Id);
-        SetPrivateProperty(memory, nameof(PlayerMemory.CreatedAt), entity.CreatedAt);
-        SetPrivateProperty(memory, nameof(PlayerMemory.ClaimedAt), entity.ClaimedAt);
-        SetPrivateProperty(memory, nameof(PlayerMemory.LastProcessedEventId), entity.LastProcessedEventId);
-
-        // For guest records that were later claimed, restore UserId
-        // (CreateForGuest doesn't set UserId, but the entity might have it from a claim)
-        if (entity.GuestName != null && entity.UserId.HasValue)
-        {
-            SetPrivateProperty(memory, nameof(PlayerMemory.UserId), entity.UserId);
-        }
-
-        // Restore game stats from JSONB
-        if (entity.GameStatsJson != null)
-        {
-            var stats = JsonSerializer.Deserialize<List<PlayerGameStatsDto>>(entity.GameStatsJson);
-            if (stats != null)
-            {
-#pragma warning disable S3011 // Reflection needed for domain reconstruction from persistence
-                var gameStatsList = (List<PlayerGameStats>)typeof(PlayerMemory)
-                    .GetField("_gameStats", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
-                    .GetValue(memory)!;
-#pragma warning restore S3011
-
-                foreach (var stat in stats)
-                {
-                    gameStatsList.Add(PlayerGameStats.Restore(stat.GameId, stat.Wins, stat.Losses, stat.TotalPlayed, stat.BestScore));
-                }
-            }
-        }
-
-        return memory;
+        return PlayerMemory.Reconstitute(
+            id: entity.Id,
+            userId: entity.UserId,
+            guestName: entity.GuestName,
+            groupId: entity.GroupId,
+            claimedAt: entity.ClaimedAt,
+            createdAt: entity.CreatedAt,
+            lastProcessedEventId: entity.LastProcessedEventId,
+            gameStats: gameStats.Select(s => PlayerGameStats.Restore(s.GameId, s.Wins, s.Losses, s.TotalPlayed, s.BestScore)));
     }
 
     /// <summary>
@@ -188,15 +163,6 @@ internal sealed class PlayerMemoryRepository : RepositoryBase, IPlayerMemoryRepo
         }
 
         return entity;
-    }
-
-    private static void SetPrivateProperty(object obj, string propertyName, object? value)
-    {
-        var property = obj.GetType().GetProperty(propertyName);
-        if (property != null && property.CanWrite)
-        {
-            property.SetValue(obj, value);
-        }
     }
 
     /// <summary>DTO for JSON serialization of PlayerGameStats.</summary>

@@ -226,6 +226,14 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
     /// <summary>
     /// Maps persistence entity to domain aggregate.
     /// </summary>
+    /// <remarks>
+    /// Passa da <see cref="PlayRecord.Reconstitute"/>, non dalle factory di creazione (#4552): quelle sollevano
+    /// <c>PlayRecordCreatedEvent</c>, e il repository lo raccoglieva di nuovo al primo <see cref="UpdateAsync"/>
+    /// dopo ogni lettura. I punteggi tornano con <see cref="PlayRecord.RestoreScore"/>, non con
+    /// <see cref="PlayRecord.RecordScore"/>, che riportava <c>UpdatedAt</c> ad "adesso" e sollevava un evento per
+    /// punteggio. Ogni colonna scritta da <see cref="MapToPersistence"/> torna qui (vedi
+    /// <c>PlayRecordRepositoryTests</c>).
+    /// </remarks>
     private static PlayRecord MapToDomain(PlayRecordEntity entity)
     {
         // Deserialize scoring config
@@ -236,58 +244,38 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
             scoringConfig.EnabledDimensions,
             scoringConfig.DimensionUnits);
 
-        // Create record using appropriate factory
-        PlayRecord record;
-        if (entity.GameId.HasValue)
-        {
-            record = PlayRecord.CreateWithGame(
-                entity.Id,
-                entity.GameId.Value,
-                entity.GameName,
-                entity.CreatedByUserId,
-                entity.SessionDate,
-                (PlayRecordVisibility)entity.Visibility,
-                timeProvider: null,
-                groupId: entity.GroupId,
-                scoringConfig: config,
-                sourceEventId: entity.SourceEventId);
-        }
-        else
-        {
-            record = PlayRecord.CreateFreeForm(
-                entity.Id,
-                entity.GameName,
-                entity.CreatedByUserId,
-                entity.SessionDate,
-                (PlayRecordVisibility)entity.Visibility,
-                config,
-                timeProvider: null,
-                groupId: entity.GroupId,
-                sourceEventId: entity.SourceEventId);
-        }
-
-        // Restore state via reflection (private setters)
-        SetPrivateProperty(record, nameof(PlayRecord.Status), (PlayRecordStatus)entity.Status);
-        SetPrivateProperty(record, nameof(PlayRecord.StartTime), entity.StartTime);
-        SetPrivateProperty(record, nameof(PlayRecord.EndTime), entity.EndTime);
-        SetPrivateProperty(record, nameof(PlayRecord.Duration), entity.Duration);
-        SetPrivateProperty(record, nameof(PlayRecord.Notes), entity.Notes);
-        SetPrivateProperty(record, nameof(PlayRecord.Location), entity.Location);
-        SetPrivateProperty(record, nameof(PlayRecord.CreatedAt), entity.CreatedAt);
-        SetPrivateProperty(record, nameof(PlayRecord.UpdatedAt), entity.UpdatedAt);
-        SetPrivateProperty(record, nameof(PlayRecord.IsDeleted), entity.IsDeleted);
-        SetPrivateProperty(record, nameof(PlayRecord.DeletedAt), entity.DeletedAt);
+        var record = PlayRecord.Reconstitute(
+            id: entity.Id,
+            gameId: entity.GameId,
+            gameName: entity.GameName,
+            createdByUserId: entity.CreatedByUserId,
+            visibility: (PlayRecordVisibility)entity.Visibility,
+            groupId: entity.GroupId,
+            sessionDate: entity.SessionDate,
+            startTime: entity.StartTime,
+            endTime: entity.EndTime,
+            duration: entity.Duration,
+            status: (PlayRecordStatus)entity.Status,
+            notes: entity.Notes,
+            location: entity.Location,
+            scoringConfig: config,
+            createdAt: entity.CreatedAt,
+            updatedAt: entity.UpdatedAt,
+            isDeleted: entity.IsDeleted,
+            deletedAt: entity.DeletedAt,
+            sourceEventId: entity.SourceEventId,
+            shareToken: entity.ShareToken,  // #2437-2
+            isShared: entity.IsShared,
+            xmin: entity.Xmin);  // round-trip for detached Update (ADR-060). #2436 PR-B / #2437-1.
 
         // Restore players and scores with original IDs (no domain events)
         foreach (var playerEntity in entity.Players)
         {
             record.RestorePlayer(playerEntity.Id, playerEntity.UserId, playerEntity.DisplayName);
-            var player = record.Players[^1];  // Last player added
 
             foreach (var scoreEntity in playerEntity.Scores)
             {
-                var score = new RecordScore(scoreEntity.Dimension, scoreEntity.Value, scoreEntity.Unit);
-                record.RecordScore(player.Id, score);
+                record.RestoreScore(playerEntity.Id, new RecordScore(scoreEntity.Dimension, scoreEntity.Value, scoreEntity.Unit));
             }
         }
 
@@ -300,12 +288,6 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
                 photoEntity.OcrConfidence, photoEntity.Caption, photoEntity.UploadedByUserId,
                 photoEntity.UploadedAt);
         }
-
-        // Restore the xmin optimistic-concurrency token (ADR-060). #2436 PR-B / #2437-1.
-        record.SetXmin(entity.Xmin);
-
-        // Restore share state (#2437-2, GameNightPlaylist pattern).
-        record.SetShareState(entity.ShareToken, entity.IsShared);
 
         return record;
     }
@@ -399,15 +381,6 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
         }
 
         return entity;
-    }
-
-    private static void SetPrivateProperty(object obj, string propertyName, object? value)
-    {
-        var property = obj.GetType().GetProperty(propertyName);
-        if (property != null && property.CanWrite)
-        {
-            property.SetValue(obj, value);
-        }
     }
 
     /// <summary>

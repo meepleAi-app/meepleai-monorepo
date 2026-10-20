@@ -117,12 +117,8 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             return null;
         }
 
-        // La reidratazione passa dal costruttore e da AddMessage, che sollevano eventi di dominio. Questo
-        // thread viene aggiornato a ogni turno: senza azzerarli, ogni UpdateAsync riscriverebbe
-        // nell'outbox e nell'audit l'intera storia della conversazione.
-        var thread = MapToDomain(threadEntity);
-        thread.ClearDomainEvents();
-        return thread;
+        // Gli eventi della reidratazione li azzera MapToDomain (#4552), come per ogni altra lettura.
+        return MapToDomain(threadEntity);
     }
 
     public async Task<IReadOnlyList<ChatThread>> GetRecentAsync(int limit = 20, CancellationToken cancellationToken = default)
@@ -420,6 +416,12 @@ internal class ChatThreadRepository : RepositoryBase, IChatThreadRepository
             var kbIdsProp = typeof(ChatThread).GetProperty("SelectedKnowledgeBaseIdsJson");
             kbIdsProp?.SetValue(thread, entity.SelectedKnowledgeBaseIdsJson);
         }
+
+        // La reidratazione passa dal costruttore pubblico e da AddMessage, che sollevano ChatThreadCreatedEvent e un
+        // MessageAddedEvent per messaggio. Senza azzerarli, il primo UpdateAsync dopo una lettura riscriveva
+        // nell'outbox e nell'audit la creazione del thread e l'intera storia della conversazione. Prima di #4552
+        // lo faceva solo GetByLiveSessionIdAsync (#4276); ora vale per ogni lettura.
+        thread.ClearDomainEvents();
 
         return thread;
     }

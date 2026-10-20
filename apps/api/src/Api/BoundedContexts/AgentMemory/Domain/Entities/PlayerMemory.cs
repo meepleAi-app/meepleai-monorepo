@@ -57,6 +57,41 @@ internal sealed class PlayerMemory : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Ricostituisce una memoria letta dal database, così com'è (#4552).
+    /// </summary>
+    /// <remarks>
+    /// Solo per il repository. <see cref="CreateForUser"/> e <see cref="CreateForGuest"/> sono le factory di una
+    /// memoria nuova, e ciascuna conosce uno solo dei due lati: la memoria di un ospite reclamato ha sia l'utente
+    /// sia il nome dell'ospite. Ricostruita con <see cref="CreateForUser"/> perdeva il nome, e il primo
+    /// aggiornamento delle statistiche lo scriveva a NULL.
+    /// </remarks>
+    internal static PlayerMemory Reconstitute(
+        Guid id,
+        Guid? userId,
+        string? guestName,
+        Guid? groupId,
+        DateTime? claimedAt,
+        DateTime createdAt,
+        Guid? lastProcessedEventId,
+        IEnumerable<PlayerGameStats> gameStats)
+    {
+        ArgumentNullException.ThrowIfNull(gameStats);
+
+        var memory = new PlayerMemory
+        {
+            Id = id,
+            UserId = userId,
+            GuestName = guestName,
+            GroupId = groupId,
+            ClaimedAt = claimedAt,
+            CreatedAt = createdAt,
+            LastProcessedEventId = lastProcessedEventId,
+        };
+        memory._gameStats.AddRange(gameStats);
+        return memory;
+    }
+
+    /// <summary>
     /// Claims a guest player memory for a registered user.
     /// </summary>
     public void ClaimByUser(Guid userId)

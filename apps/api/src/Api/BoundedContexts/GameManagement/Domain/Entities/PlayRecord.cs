@@ -75,13 +75,6 @@ internal sealed class PlayRecord : AggregateRoot<Guid>
         UpdatedAt = TimeProvider.System.GetUtcNow().UtcDateTime;
     }
 
-    /// <summary>Repository-only: restore share state after loading from persistence.</summary>
-    internal void SetShareState(string? shareToken, bool isShared)
-    {
-        ShareToken = shareToken;
-        IsShared = isShared;
-    }
-
     // Soft Delete (issue #2439 — mirrors GameBook.SoftDelete pattern)
     public bool IsDeleted { get; private set; }
     public DateTime? DeletedAt { get; private set; }
@@ -214,6 +207,64 @@ internal sealed class PlayRecord : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Ricostituisce una partita registrata letta dal database, così com'è (#4552). Giocatori, punteggi e foto si
+    /// ripristinano dopo, con <see cref="RestorePlayer"/>, <see cref="RestoreScore"/> e <see cref="RestorePhoto"/>.
+    /// </summary>
+    /// <remarks>
+    /// Solo per il repository. <see cref="CreateWithGame"/> e <see cref="CreateFreeForm"/> sono le factory di una
+    /// partita nuova: sollevano <see cref="PlayRecordCreatedEvent"/>, datano ad "adesso" e rifiutano una data futura.
+    /// Usate per ricostruire una riga, l'evento di creazione ripartiva al primo salvataggio successivo a ogni
+    /// lettura. Nessuna validazione e nessun evento: la riga è già stata scritta.
+    /// </remarks>
+    internal static PlayRecord Reconstitute(
+        Guid id,
+        Guid? gameId,
+        string gameName,
+        Guid createdByUserId,
+        PlayRecordVisibility visibility,
+        Guid? groupId,
+        DateTime sessionDate,
+        DateTime? startTime,
+        DateTime? endTime,
+        TimeSpan? duration,
+        PlayRecordStatus status,
+        string? notes,
+        string? location,
+        SessionScoringConfig scoringConfig,
+        DateTime createdAt,
+        DateTime updatedAt,
+        bool isDeleted,
+        DateTime? deletedAt,
+        Guid? sourceEventId,
+        string? shareToken,
+        bool isShared,
+        uint xmin) => new()
+        {
+            Id = id,
+            GameId = gameId,
+            GameName = gameName,
+            CreatedByUserId = createdByUserId,
+            Visibility = visibility,
+            GroupId = groupId,
+            SessionDate = sessionDate,
+            StartTime = startTime,
+            EndTime = endTime,
+            Duration = duration,
+            Status = status,
+            Notes = notes,
+            Location = location,
+            ScoringConfig = scoringConfig,
+            CreatedAt = createdAt,
+            UpdatedAt = updatedAt,
+            IsDeleted = isDeleted,
+            DeletedAt = deletedAt,
+            SourceEventId = sourceEventId,
+            ShareToken = shareToken,
+            IsShared = isShared,
+            Xmin = xmin,
+        };
+
+    /// <summary>
     /// Adds a player to the play record.
     /// Can be a registered user or an external guest.
     /// </summary>
@@ -305,6 +356,21 @@ internal sealed class PlayRecord : AggregateRoot<Guid>
         UpdatedAt = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
 
         AddDomainEvent(new RecordScoreRecordedEvent(Id, playerId, score.Dimension, score.Value));
+    }
+
+    /// <summary>
+    /// Repository-only: ripristina un punteggio salvato (#4552). A differenza di <see cref="RecordScore"/> non lo
+    /// confronta con la configurazione dei punteggi, non tocca <see cref="UpdatedAt"/> e non solleva eventi: il
+    /// punteggio non viene registrato adesso, è già stato registrato.
+    /// </summary>
+    internal void RestoreScore(Guid playerId, RecordScore score)
+    {
+        ArgumentNullException.ThrowIfNull(score);
+
+        var player = _players.FirstOrDefault(p => p.Id == playerId)
+            ?? throw new DomainException($"Player {playerId} not found in record");
+
+        player.RecordScore(score);
     }
 
     /// <summary>

@@ -290,6 +290,30 @@ public sealed class SharedThreadVisitRaceIntegrationTests : IClassFixture<Shared
         }
     }
 
+    [Fact]
+    public async Task RevokeShareLink_RevokedAgainAfterTheFirstRevocation_AnswersLikeTheFirstAndWritesTheBlacklistKey()
+    {
+        var owner = await CreateOwnerAsync();
+        var link = await CreateShareLinkAsync(owner);
+        var first = await RevokeAsync(link.Id, owner);
+        var revokedAt = (await ReadRowAsync(link.Id)).RevokedAt;
+
+        // La prima revoca è nel database ma Redis ha fallito: la chiave non c'è. Il proprietario riprova.
+        await RemoveBlacklistKeyAsync(link.Id);
+        var second = await RevokeAsync(link.Id, owner);
+
+        var row = await ReadRowAsync(link.Id);
+        using var visit = await VisitAsync(link.Token);
+        using (new AssertionScope())
+        {
+            first.Should().Be(HttpStatusCode.OK);
+            second.Should().Be(HttpStatusCode.OK, "a repeated revocation is not an error. Without handling it the answer is 500");
+            row.RevokedAt.Should().Be(revokedAt, "a revocation is never rewritten, not even by a repeated one");
+            (await ReadBlacklistKeyAsync(link.Id)).Should().NotBeNull("the retry must write the key the first attempt lost");
+            visit.StatusCode.Should().Be(HttpStatusCode.NotFound, "the revoked link is blocked");
+        }
+    }
+
     // ========================================
     // REPOSITORY: SCRITTURE DEL PROPRIETARIO E CONTEGGIO DELLA VISITA
     // ========================================
@@ -476,6 +500,13 @@ public sealed class SharedThreadVisitRaceIntegrationTests : IClassFixture<Shared
         var key = $"revoked_share_link:{shareLinkId}";
         (await cache.GetStringAsync(key)).Should().NotBeNull("setup: the revocation must have put the link in the blacklist");
         await cache.RemoveAsync(key);
+    }
+
+    private async Task<string?> ReadBlacklistKeyAsync(Guid shareLinkId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var cache = scope.ServiceProvider.GetRequiredService<IDistributedCache>();
+        return await cache.GetStringAsync($"revoked_share_link:{shareLinkId}");
     }
 
     private async Task<ShareLinkEntity> ReadRowAsync(Guid shareLinkId)

@@ -55,34 +55,20 @@ internal sealed class GetSharedThreadQueryHandler : IRequestHandler<GetSharedThr
             return null;
         }
 
-        // Conta la visita (analytics) solo se il link è ancora valido adesso: fra la validazione e qui il
-        // proprietario può averlo revocato (#4573), e la riga è la verità anche quando la chiave nella
-        // blacklist Redis si è persa. Sincrono per non uscire dallo scope DI (#2150): il costo è uno statement.
-        // Per il resto il conteggio è accessorio, e un errore non deve far fallire la lettura della chat.
-        try
+        // Conta la visita e, nello stesso statement, controlla che il link sia ancora valido sulla riga (#4573):
+        // fra la validazione del token e qui il proprietario può averlo revocato, e la riga è la verità anche
+        // quando la chiave nella blacklist Redis si è persa. Non è più solo analytics, quindi un errore NON si
+        // inghiotte: se il controllo non riesce non si sa se il link è revocato, e la chat non si serve
+        // (come GetSharedLibraryQueryHandler, #4558). Sincrono per non uscire dallo scope DI (#2150).
+        if (!await _shareLinkRepository.TryRecordAccessAsync(validation.ShareLinkId, cancellationToken).ConfigureAwait(false))
         {
-            if (!await _shareLinkRepository.TryRecordAccessAsync(validation.ShareLinkId, cancellationToken).ConfigureAwait(false))
-            {
-                _logger.LogDebug(
-                    "Share link {ShareLinkId} became invalid while being visited (revoked or expired)",
-                    validation.ShareLinkId);
-                return null;
-            }
+            _logger.LogDebug(
+                "Share link {ShareLinkId} became invalid while being visited (revoked or expired)",
+                validation.ShareLinkId);
+            return null;
+        }
 
-            _logger.LogDebug("Recorded share link access for ShareLinkId {ShareLinkId}", validation.ShareLinkId);
-        }
-#pragma warning disable CA1031 // Do not catch general exception types
-#pragma warning disable S125 // Sections of code should not be commented out
-        // QUERY HANDLER PATTERN: CQRS query boundary
-        // Analytics tracking is non-critical. Generic catch prevents analytics failures
-        // from blocking the main thread retrieval response. Logs warning and continues.
-#pragma warning restore S125
-        catch (Exception ex)
-        {
-            // Analytics errors should not fail the main request
-            _logger.LogWarning(ex, "Failed to record share link access for ShareLinkId {ShareLinkId}", validation.ShareLinkId);
-        }
-#pragma warning restore CA1031
+        _logger.LogDebug("Recorded share link access for ShareLinkId {ShareLinkId}", validation.ShareLinkId);
 
         // Convert messages to DTO (filter deleted messages for shared view)
         var messageDtos = thread.Messages

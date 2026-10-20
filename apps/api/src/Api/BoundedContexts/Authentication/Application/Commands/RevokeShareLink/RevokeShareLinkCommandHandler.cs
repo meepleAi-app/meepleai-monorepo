@@ -37,32 +37,40 @@ internal sealed class RevokeShareLinkCommandHandler : IRequestHandler<RevokeShar
             return false;
         }
 
-        // Revoke the share link (domain logic)
-        shareLink.Revoke();
-
-        // Save changes via repository
-        try
+        // Un link già revocato alla lettura (#4573): la revoca voluta c'è già nel database, ed è il caso del
+        // proprietario che riprova perché la prima volta Redis è fallito. Non si rilegge né si riscrive la riga
+        // (una revoca non si riscrive, e Revoke() lancerebbe), ma la blacklist si scrive comunque: è la sola cosa
+        // che la prima richiesta può aver lasciato a metà.
+        if (!shareLink.IsRevoked)
         {
-            await _shareLinkRepository.UpdateAsync(shareLink, cancellationToken).ConfigureAwait(false);
-        }
-        catch (DbUpdateConcurrencyException ex)
-        {
-            // UpdateAsync scrive solo su un link non ancora revocato (#4573): 0 righe vuol dire che un'altra
-            // richiesta l'ha revocato dopo la nostra lettura. La revoca voluta c'è già, e una revoca ripetuta
-            // non è un errore. Si prosegue con la riga com'è: la blacklist si scrive comunque, perché se
-            // l'altra richiesta è caduta fra il database e Redis il link resterebbe valido.
-            foreach (var entry in ex.Entries)
-            {
-                entry.State = EntityState.Detached;
-            }
+            // Revoke the share link (domain logic)
+            shareLink.Revoke();
 
-            var current = await _shareLinkRepository.GetByIdAsync(request.ShareLinkId, cancellationToken).ConfigureAwait(false);
-            if (current is not { IsRevoked: true })
+            // Save changes via repository
+            try
             {
-                throw;
+                await _shareLinkRepository.UpdateAsync(shareLink, cancellationToken).ConfigureAwait(false);
             }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                // UpdateAsync scrive solo su un link non ancora revocato (#4573): 0 righe vuol dire che
+                // un'altra richiesta l'ha revocato dopo la nostra lettura. La revoca voluta c'è già, e una
+                // revoca ripetuta non è un errore. Si prosegue con la riga com'è: la blacklist si scrive
+                // comunque, perché se l'altra richiesta è caduta fra il database e Redis il link resterebbe
+                // valido.
+                foreach (var entry in ex.Entries)
+                {
+                    entry.State = EntityState.Detached;
+                }
 
-            shareLink = current;
+                var current = await _shareLinkRepository.GetByIdAsync(request.ShareLinkId, cancellationToken).ConfigureAwait(false);
+                if (current is not { IsRevoked: true })
+                {
+                    throw;
+                }
+
+                shareLink = current;
+            }
         }
 
         // Add token to Redis blacklist

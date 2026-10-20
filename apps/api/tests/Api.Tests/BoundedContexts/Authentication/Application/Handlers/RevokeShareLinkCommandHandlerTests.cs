@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Authentication.Application.Commands.RevokeShareLink;
+using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Api.Tests.Constants;
@@ -67,6 +68,26 @@ public class RevokeShareLinkCommandHandlerTests
         await act.Should().ThrowAsync<DbUpdateConcurrencyException>(
             "a conflict that is not 'already revoked' is a real conflict, not a repeated revocation");
         (await _cache.GetStringAsync($"revoked_share_link:{link.Id}")).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_LinkAlreadyRevokedWhenRead_AnswersTrueWritesTheBlacklistAndDoesNotRewriteTheRow()
+    {
+        // Il caso del proprietario che riprova: la prima revoca è salvata nel database, Redis è fallito e la
+        // chiave non c'è. La seconda revoca non deve lanciare (500) e deve scrivere la chiave.
+        var creatorId = Guid.NewGuid();
+        var link = new ShareLinkBuilder().WithCreatorId(creatorId).AsRevoked().Build();
+        _repository
+            .Setup(r => r.GetByIdAsync(link.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(link);
+
+        var revoked = await CreateHandler().Handle(new RevokeShareLinkCommand(link.Id, creatorId), CancellationToken.None);
+
+        revoked.Should().BeTrue("the link is revoked, which is what the request asked for");
+        _repository.Verify(r => r.UpdateAsync(It.IsAny<ShareLink>(), It.IsAny<CancellationToken>()), Times.Never(),
+            "a revocation is never rewritten, not even by a repeated one");
+        (await _cache.GetStringAsync($"revoked_share_link:{link.Id}")).Should().NotBeNull(
+            "the blacklist is written anyway: the first attempt may have failed between the database and Redis");
     }
 
     [Fact]

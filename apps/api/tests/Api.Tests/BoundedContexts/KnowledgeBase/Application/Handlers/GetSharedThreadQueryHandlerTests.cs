@@ -80,18 +80,19 @@ public class GetSharedThreadQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_CountingFails_StillReturnsTheThread()
+    public async Task Handle_CountingFails_TheQueryFailsAndTheThreadIsNotReturned()
     {
-        // Il conteggio è accessorio: un errore del database non deve far fallire la lettura della chat.
+        // TryRecordAccessAsync non è solo il conteggio: è l'unico controllo di validità sulla riga. Se lancia
+        // (timeout, pool esaurito) non si può sapere se il link è revocato, e con la chiave Redis persa
+        // inghiottire l'errore servirebbe la chat di un link revocato.
         SetupValidTokenAndThread();
         _shareLinkRepository
             .Setup(r => r.TryRecordAccessAsync(_shareLinkId, It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("database unavailable"));
 
-        var result = await CreateHandler().Handle(new GetSharedThreadQuery("token"), CancellationToken.None);
+        var act = () => CreateHandler().Handle(new GetSharedThreadQuery("token"), CancellationToken.None);
 
-        result.Should().NotBeNull();
-        result!.ThreadId.Should().Be(_threadId);
+        await act.Should().ThrowAsync<InvalidOperationException>("a failed validity check must not serve the chat");
     }
 
     [Fact]

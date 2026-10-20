@@ -263,7 +263,6 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
         await CreateTestChatThreadAsync(threadId, userId, gameId);
 
         var mediator = _serviceProvider!.GetRequiredService<IMediator>();
-        var repository = _serviceProvider!.GetRequiredService<IShareLinkRepository>();
 
         // Create and then revoke share link
         var createCommand = new CreateShareLinkCommand(
@@ -285,9 +284,9 @@ public sealed class GetSharedThreadIntegrationTests : IAsyncLifetime
         revokeResult.Should().BeTrue("Revoke command should succeed");
 
         // Verify the share link is marked as revoked in the database
-        var shareLinkAfterRevoke = await repository.GetByIdAsync(createResult.ShareLinkId, TestCancellationToken);
-        shareLinkAfterRevoke.Should().NotBeNull();
-        shareLinkAfterRevoke.IsRevoked.Should().BeTrue("Share link should be marked as revoked in database");
+        // Dalla riga, non dall'istanza che il contesto del test tiene tracciata da AddAsync (#4573).
+        var shareLinkAfterRevoke = await ReadCommittedShareLinkAsync(createResult.ShareLinkId);
+        shareLinkAfterRevoke.RevokedAt.Should().NotBeNull("Share link should be marked as revoked in database");
 
         // Verify token is marked as invalid via ValidateShareLinkQuery (checks Redis blacklist)
         var validateQuery = new ValidateShareLinkQuery(createResult.Token);

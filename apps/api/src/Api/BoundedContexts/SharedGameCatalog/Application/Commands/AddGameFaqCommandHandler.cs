@@ -1,8 +1,10 @@
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 
@@ -13,15 +15,24 @@ internal sealed class AddGameFaqCommandHandler : ICommandHandler<AddGameFaqComma
 {
     private readonly ISharedGameRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IHybridCacheService _cache;
+    private readonly ICacheInvalidationRetryPolicy _retryPolicy;
+    private readonly HybridCache _hybridCache;
     private readonly ILogger<AddGameFaqCommandHandler> _logger;
 
     public AddGameFaqCommandHandler(
         ISharedGameRepository repository,
         IUnitOfWork unitOfWork,
+        IHybridCacheService cache,
+        ICacheInvalidationRetryPolicy retryPolicy,
+        HybridCache hybridCache,
         ILogger<AddGameFaqCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
+        _retryPolicy = retryPolicy ?? throw new ArgumentNullException(nameof(retryPolicy));
+        _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -49,6 +60,13 @@ internal sealed class AddGameFaqCommandHandler : ICommandHandler<AddGameFaqComma
         // Update the game in repository
         _repository.Update(game);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // #4565: il dettaglio del gioco (`GET /api/v1/shared-games/{id}`) riporta le FAQ e sta in cache
+        // sotto `shared-game:{id}` (30 minuti in L1, 2 ore in L2): senza questa evizione la modifica si
+        // vedeva alla scadenza. Dopo il salvataggio, mai prima. Vedi SharedGameDetailCacheInvalidation.
+        await SharedGameDetailCacheInvalidation
+            .EvictAsync(_cache, _retryPolicy, _hybridCache, command.SharedGameId, cancellationToken)
+            .ConfigureAwait(false);
 
         _logger.LogInformation(
             "FAQ added successfully: {FaqId} to game {SharedGameId}",

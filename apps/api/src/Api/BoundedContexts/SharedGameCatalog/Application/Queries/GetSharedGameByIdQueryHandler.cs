@@ -192,15 +192,40 @@ internal sealed class GetSharedGameByIdQueryHandler : IRequestHandler<GetSharedG
             rulesDto = new GameRulesDto(game.Rules.Content, game.Rules.Language);
         }
 
-        var faqDtos = game.Faqs
+        // #4565: FAQ ed errata si leggono con una proiezione dal DbContext, non dall'aggregato.
+        // `GetByIdAsync` carica solo Designers e CoverAssignments, quindi `game.Faqs` e `game.Erratas`
+        // erano sempre vuote e il dettaglio riportava `faqs: []` ed `erratas: []` anche con righe in
+        // `game_faqs` e `game_errata`. Non si aggiunge un Include a `GetByIdAsync`: serve quasi ogni
+        // comando sullo `SharedGame`, e ogni comando pagherebbe due JOIN che non usa (e, per gli
+        // update, caricherebbe figli che `Update` poi riconcilia: vedi #4543 e #4557).
+        //
+        // Visibilita': il gioco e' gia' stato letto con il filtro globale `!IsDeleted`, quindi uno
+        // soft-deleted e' null e arriva qui solo l'id di un gioco vivo. FAQ ed errata non hanno una
+        // colonna `IsDeleted` propria ne' uno stato di pubblicazione: la rimozione e' un DELETE
+        // (`RemoveFaq`/`RemoveErrata`), quindi ogni riga presente e' una riga da mostrare.
+        //
+        // Ordine: come prima (FAQ per DisplayOrder, errata dalla piu' recente), piu' uno spareggio.
+        // Nella lettura in memoria a parita' di chiave restava l'ordine di arrivo; in SQL non e' definito,
+        // e il dettaglio e' in cache: senza spareggio la stessa FAQ potrebbe cambiare posto fra due
+        // rigenerazioni. Per le FAQ lo spareggio e' quello della lista pubblica (`GetGameFaqsQueryHandler`).
+        var faqDtos = await _context.GameFaqs
+            .AsNoTracking()
+            .Where(f => f.SharedGameId == gameId)
             .OrderBy(f => f.DisplayOrder)
+            .ThenByDescending(f => f.UpvoteCount)
+            .ThenBy(f => f.CreatedAt)
             .Select(f => new GameFaqDto(f.Id, f.SharedGameId, f.Question, f.Answer, f.DisplayOrder, f.UpvoteCount, f.CreatedAt, f.UpdatedAt))
-            .ToList();
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
 
-        var errataDtos = game.Erratas
+        var errataDtos = await _context.GameErrata
+            .AsNoTracking()
+            .Where(e => e.SharedGameId == gameId)
             .OrderByDescending(e => e.PublishedDate)
+            .ThenByDescending(e => e.CreatedAt)
             .Select(e => new GameErrataDto(e.Id, e.Description, e.PageReference, e.PublishedDate, e.CreatedAt))
-            .ToList();
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
 
         var designerDtos = game.Designers.Select(d => new GameDesignerDto(d.Id, d.Name)).ToList();
         var publisherDtos = game.Publishers.Select(p => new GamePublisherDto(p.Id, p.Name)).ToList();

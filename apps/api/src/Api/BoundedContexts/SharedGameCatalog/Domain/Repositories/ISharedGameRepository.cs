@@ -158,8 +158,8 @@ public interface ISharedGameRepository
     /// </summary>
     /// <param name="faqId">The FAQ ID</param>
     /// <param name="cancellationToken">Cancellation token</param>
-    /// <returns>The new upvote count, or null when the FAQ does not exist or its game is deleted.</returns>
-    Task<int?> IncrementFaqUpvoteAsync(Guid faqId, CancellationToken cancellationToken = default);
+    /// <returns>The new upvote count and the game the FAQ belongs to (#4565), or null when the FAQ does not exist or its game is deleted.</returns>
+    Task<FaqUpvoteResult?> IncrementFaqUpvoteAsync(Guid faqId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets a shared game by an Errata ID contained within it.

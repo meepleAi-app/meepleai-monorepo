@@ -20,6 +20,7 @@ public class UpdateGameErrataCommandHandlerTests
     private readonly Mock<ISharedGameRepository> _repositoryMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<ILogger<UpdateGameErrataCommandHandler>> _loggerMock;
+    private readonly DetailCacheEvictionDoubles _eviction = new();
     private readonly UpdateGameErrataCommandHandler _handler;
 
     public UpdateGameErrataCommandHandlerTests()
@@ -30,6 +31,9 @@ public class UpdateGameErrataCommandHandlerTests
         _handler = new UpdateGameErrataCommandHandler(
             _repositoryMock.Object,
             _unitOfWorkMock.Object,
+            _eviction.Cache.Object,
+            _eviction.RetryPolicy.Object,
+            _eviction.HybridCache.Object,
             _loggerMock.Object);
     }
 
@@ -140,5 +144,49 @@ public class UpdateGameErrataCommandHandlerTests
 
         _repositoryMock.Verify(r => r.Update(It.IsAny<SharedGame>()), Times.Never);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// #4565: il dettaglio del gioco riporta le errata e sta in cache. La prova end-to-end è
+    /// <c>Detail_AfterUpdatingAnErratum_ReportsTheNewText</c>, su Postgres.
+    /// </summary>
+    [Fact]
+    public async Task Handle_AfterSave_EvictsTheDetailCacheOfTheGame()
+    {
+        var game = DetailCacheEvictionDoubles.NewGame();
+        var errata = GameErrata.Create(game.Id, "Original description", "Page 5", DateTime.UtcNow);
+        game.AddErrata(errata);
+        _repositoryMock
+            .Setup(r => r.GetGameByErrataIdAsync(errata.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+        _unitOfWorkMock
+            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Callback(_eviction.MarkWritten)
+            .ReturnsAsync(1);
+
+        await _handler.Handle(
+            new UpdateGameErrataCommand(game.Id, errata.Id, "Updated", "Page 10", DateTime.UtcNow),
+            TestContext.Current.CancellationToken);
+
+        _eviction.AssertEvictedAfterTheWrite(game.Id);
+    }
+
+    [Fact]
+    public async Task Handle_WithAnErratumOfAnotherGame_EvictsNothing()
+    {
+        // L'errata esiste ma sotto un altro gioco: 404, nessuna scrittura, nessuna evizione.
+        var owner = DetailCacheEvictionDoubles.NewGame();
+        var errata = GameErrata.Create(owner.Id, "Of another game", "Page 1", DateTime.UtcNow);
+        owner.AddErrata(errata);
+        _repositoryMock
+            .Setup(r => r.GetGameByErrataIdAsync(errata.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(owner);
+
+        var act = () => _handler.Handle(
+            new UpdateGameErrataCommand(Guid.NewGuid(), errata.Id, "x", "Page 2", DateTime.UtcNow),
+            TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
+
+        _eviction.AssertNothingEvicted();
     }
 }

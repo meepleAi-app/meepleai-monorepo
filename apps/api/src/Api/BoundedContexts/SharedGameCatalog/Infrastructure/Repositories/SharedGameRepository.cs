@@ -756,9 +756,8 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
     /// #4557: l'unica lettura che carica le FAQ, perché modificarne, toglierne o votarne una richiede
     /// di averla nell'aggregato. Stesse scelte di <see cref="GetGameByErrataIdAsync"/>: le carica
     /// tutte, solo qui, e <c>AddFaq</c> funziona anche senza (la FAQ nuova diventa INSERT).
-    /// <c>GetSharedGameByIdQueryHandler</c> costruisce le FAQ del dettaglio da
-    /// <see cref="GetByIdAsync"/>, quindi le riporta sempre vuote: è #4565. La lista pubblica delle FAQ
-    /// (<c>GetGameFaqsQueryHandler</c>) legge invece <c>game_faqs</c> direttamente.
+    /// Il dettaglio del gioco (<c>GetSharedGameByIdQueryHandler</c>) e la lista pubblica delle FAQ
+    /// (<c>GetGameFaqsQueryHandler</c>) leggono <c>game_faqs</c> direttamente dal DbContext, non da qui (#4565).
     /// </remarks>
     public async Task<SharedGame?> GetGameByFaqIdAsync(Guid faqId, CancellationToken cancellationToken = default)
     {
@@ -787,7 +786,7 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
     /// arrivato in mezzo è già nel conteggio che torna, e non si perde nulla.
     /// </para>
     /// </remarks>
-    public async Task<int?> IncrementFaqUpvoteAsync(Guid faqId, CancellationToken cancellationToken = default)
+    public async Task<FaqUpvoteResult?> IncrementFaqUpvoteAsync(Guid faqId, CancellationToken cancellationToken = default)
     {
         var now = DateTime.UtcNow;
 
@@ -807,7 +806,7 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
         return await DbContext.Set<GameFaqEntity>()
             .AsNoTracking()
             .Where(f => f.Id == faqId)
-            .Select(f => (int?)f.UpvoteCount)
+            .Select(f => new FaqUpvoteResult(f.SharedGameId, f.UpvoteCount))
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
     }
@@ -845,9 +844,8 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
     /// solo le errata che la lettura ha visto, quindi le altre resterebbero comunque intatte, ma
     /// l'aggregato deve rappresentare il gioco intero. Le altre letture non le caricano: degli altri
     /// comandi nessuno ne ha bisogno, e <c>AddErrata</c> funziona anche senza (l'errata nuova diventa
-    /// INSERT). Un consumatore però c'è: <c>GetSharedGameByIdQueryHandler</c> costruisce le errata del
-    /// dettaglio da <see cref="GetByIdAsync"/>, quindi le riporta sempre vuote. È #4565, insieme alla
-    /// cache <c>shared-game:{id}</c> che le scritture delle errata non invalidano.
+    /// INSERT). Il dettaglio del gioco (<c>GetSharedGameByIdQueryHandler</c>) non ne ha bisogno: legge
+    /// <c>game_errata</c> direttamente dal DbContext (#4565).
     /// </remarks>
     public async Task<SharedGame?> GetGameByErrataIdAsync(Guid errataId, CancellationToken cancellationToken = default)
     {

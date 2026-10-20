@@ -2,6 +2,7 @@ using Api.BoundedContexts.Administration.Domain.Services;
 using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Services;
+using Api.Services.Providers.Probe;
 using Api.Services.Providers.Quota;
 
 namespace Api.BoundedContexts.Administration.Infrastructure.Services;
@@ -92,7 +93,7 @@ internal sealed class ProviderQuotaService : IProviderQuotaService
                 CacheTtlSeconds: 0);
         }
 
-        var cacheKey = $"provider-quota:{providerName.ToLowerInvariant()}";
+        var cacheKey = QuotaCacheKey(providerName, apiKey);
         return await _cache.GetOrCreateAsync(
             cacheKey,
             async ct =>
@@ -115,6 +116,37 @@ internal sealed class ProviderQuotaService : IProviderQuotaService
             expiration: CacheTtl,
             ct: cancellationToken).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// #4555 — la chiave di cache della quota: il provider e l'impronta della credenziale con cui la
+    /// quota viene chiesta. Formato: <c>provider-quota:{provider}:{impronta}</c>.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>Perché la credenziale.</b> La quota è quella della chiave usata da <c>FetchAsync</c>. Con la
+    /// chiave di cache fatta del solo provider, dopo una rotazione <c>GET /admin/providers/{name}/quota</c>
+    /// restituiva per la durata della voce la quota della chiave vecchia. Con l'impronta, appena il
+    /// resolver risolve la chiave nuova la voce è un'altra, e la quota viene ricalcolata.
+    /// </para>
+    /// <para>
+    /// <b>Perché non un'invalidazione per tag alla rotazione.</b> L'impronta segue la credenziale che il
+    /// resolver restituisce, qualunque sia la via che l'ha cambiata: la rotazione da admin, una riga
+    /// disattivata che fa tornare alla variabile d'ambiente, una variabile cambiata al deploy. Non dipende
+    /// da Redis né dal messaggio <c>provider:cache-invalidate</c>, e non ha la gara fra rimozione della
+    /// voce e invalidazione del resolver, in cui una richiesta nel mezzo riscriverebbe la quota con la
+    /// chiave vecchia per altri cinque minuti. Le voci della chiave vecchia scadono da sole.
+    /// </para>
+    /// <para>
+    /// <b>Mai la chiave in chiaro.</b> La chiave di cache finisce nei log di debug, e in Redis quando L2
+    /// è attivo.
+    /// L'impronta è <see cref="TokenFingerprint"/>: i primi 8 caratteri esadecimali dello SHA-256, la
+    /// stessa che l'audit delle prove dei provider salva già nel database. Due credenziali con la stessa
+    /// impronta (probabilità 2^-32) darebbero al massimo cinque minuti di quota vecchia, cioè il
+    /// comportamento di prima.
+    /// </para>
+    /// </remarks>
+    internal static string QuotaCacheKey(string providerName, string apiKey) =>
+        $"provider-quota:{providerName.ToLowerInvariant()}:{TokenFingerprint.Compute(apiKey) ?? "-"}";
 
     public async Task<IReadOnlyList<ProviderQuotaDto>> GetAllQuotasAsync(CancellationToken cancellationToken)
     {

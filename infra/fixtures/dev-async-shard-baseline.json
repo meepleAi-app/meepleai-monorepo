@@ -167,21 +167,18 @@
     },
     "KnowledgeBase": {
       "_comment": [
-        "Ricatturati il 2026-10-14 dal run 38554611216: dev-async sul merge di #4346 (7c339c38d).",
-        "Tutti i job del run 'success', nessuno 'skipped'; il log dello shard non contiene",
-        "'Aborting test run: test run timeout' (grep -c -> 0); la controprova dal trailer e' coerente.",
+        "Ricatturati il 2026-10-19 dal run 39287747459: dev-async sul merge di #4508 (3286ca293).",
+        "Tutti i job del run success; il log dello shard non contiene «Aborting test run: test run",
+        "timeout» (grep -c -> 0); la controprova dal trailer e' coerente.",
         "",
-        "failed 20 -> 18: escono PdfIndexingFlowKbFlagIntegrationTests.UploadPdf_OnSuccessfulIndexing_",
-        "SetsHasKnowledgeBaseTrue_OnSharedGame e UploadPdfExtractionPersistenceIntegrationTests.",
-        "ProcessPdfAsync_UploadPathReachesReady_PersistsExtractedTextAndStructuredElementsJson, che il loro",
-        "contenitore non sapeva costruire (cache semantica e accesso al RAG, #3982): li ha riparati #4346",
-        "(#4339). Gli altri diciotto nomi sono quelli di prima. Il comparatore li ha segnalati per nome",
-        "come «dichiarati ma non falliscono piu'» prima dell'aggiornamento.",
+        "failed 18 -> 17 (#4530): esce UploadPdfHeadingAwareIntegrationTests.ChunkExtractedText_WithAdvancedChunking_",
+        "PersistsHeadingBearingChunks, il cui impianto non registrava ISemanticResponseCache: lo ha corretto #4399",
+        "(ab330cba6, 2026-10-15). Gli altri diciassette nomi e gli undici saltati sono quelli di prima.",
         "",
-        "Fatto con `gh run download 38554611216 --name integration-results-KnowledgeBase` e",
+        "Fatto con `gh run download 39287747459 --name integration-results-KnowledgeBase` e",
         "`shard-skip-assert.sh --shard KnowledgeBase --trx <file> --log <file> --update-baseline`."
       ],
-      "failed": 18,
+      "failed": 17,
       "skipped": 11,
       "failedTests": [
         "Api.Tests.Integration.DocumentProcessing.DeletePdfIntegrationTests.ConcurrentDeletion_HandlesRaceConditionGracefully",
@@ -200,8 +197,7 @@
         "Api.Tests.Integration.DocumentProcessing.OrphanCleanupAndReattemptIntegrationTests.Cleanup_IsIdempotent_OnSecondRun",
         "Api.Tests.Integration.DocumentProcessing.PdfPipelineIntegrationTests.PdfDocument_SevenStateProgression_ShouldAdvanceThroughAllStates",
         "Api.Tests.Integration.DocumentProcessing.PdfPipelineMetricsIntegrationTests.FullPipeline_StateDurations_CanBeCalculatedFromTimingFields",
-        "Api.Tests.Integration.DocumentProcessing.PdfRowVersionConcurrencyIntegrationTests.Reindex_RacesWithDelete_LeavesNoOrphanState",
-        "Api.Tests.Integration.DocumentProcessing.UploadPdfHeadingAwareIntegrationTests.ChunkExtractedText_WithAdvancedChunking_PersistsHeadingBearingChunks"
+        "Api.Tests.Integration.DocumentProcessing.PdfRowVersionConcurrencyIntegrationTests.Reindex_RacesWithDelete_LeavesNoOrphanState"
       ],
       "skippedTests": [
         "Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.RagPromptAssemblyServiceInlineCitationLlmIntegrationTests.RealLlmEmitsBracketedMarkersInMajorityOfRuns",

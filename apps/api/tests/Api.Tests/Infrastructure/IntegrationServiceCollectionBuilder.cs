@@ -152,6 +152,13 @@ internal static class IntegrationServiceCollectionBuilder
             services.AddScoped(_ =>
                 Mock.Of<Api.Services.IHybridCacheService>());
         }
+
+        // #4587: anche HybridCache di Microsoft, come in produzione (InfrastructureServiceExtensions).
+        // Da #4567 UserActivityCacheInvalidationEventHandler la chiede, e gestisce eventi come
+        // SessionFinalizedEvent: senza, gli handler di quegli eventi non si costruiscono, la
+        // pubblicazione si interrompe e il dispatch inghiotte l'eccezione. Nessun handler parte e
+        // nessun test se ne accorge, salvo chi asserisce l'invocazione.
+        services.AddHybridCache();
         services.AddScoped(_ =>
             Mock.Of<Api.Services.IEmbeddingService>());
         services.AddScoped(_ =>

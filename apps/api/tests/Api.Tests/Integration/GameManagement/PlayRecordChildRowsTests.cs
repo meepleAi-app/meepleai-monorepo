@@ -14,6 +14,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Npgsql;
 using Xunit;
 
 namespace Api.Tests.Integration.GameManagement;
@@ -438,8 +439,16 @@ public sealed class PlayRecordChildRowsTests(PlayRecordMigratedDatabase database
         await repositoryB.UpdateAsync(recordB, Ct);
         var saveB = () => scopeB.ServiceProvider.GetRequiredService<MeepleAiDbContext>().SaveChangesAsync(Ct);
 
-        // Qui B inserisce lo stesso (giocatore, dimensione) di A: l'indice unico risponde prima di xmin.
-        await saveB.Should().ThrowAsync<DbUpdateException>();
+        // Qui B inserisce lo stesso (giocatore, dimensione) di A. Osservato: risponde l'indice unico, non xmin.
+        // EF manda l'INSERT del punteggio prima dell'UPDATE della partita, quindi B riceve un DbUpdateException
+        // con dentro la PostgresException 23505, e NON un DbUpdateConcurrencyException (409): all'API è un 500.
+        // L'ordine è quello con cui EF emette i comandi, non una garanzia. Il tipo esatto è nell'asserzione
+        // perché la sottoclasse non la soddisfa: se l'ordine cambiasse, B riceverebbe la concorrenza e il test
+        // dirà che il caso è diventato un 409.
+        var thrown = await saveB.Should().ThrowExactlyAsync<DbUpdateException>();
+        var postgres = thrown.Which.InnerException.Should().BeOfType<PostgresException>().Subject;
+        postgres.SqlState.Should().Be(PostgresErrorCodes.UniqueViolation);
+        postgres.ConstraintName.Should().Be("IX_RecordScores_Player_Dimension_Unique");
         var rows = await ScoreRowsAsync(seeded.RecordId);
         rows.Should().HaveCount(2);
         rows.Single(r => r.Dimension == "vp").Value.Should().Be(3);

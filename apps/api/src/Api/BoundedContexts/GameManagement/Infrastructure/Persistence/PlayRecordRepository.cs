@@ -272,8 +272,10 @@ internal class PlayRecordRepository : RepositoryBase, IPlayRecordRepository
     /// perché <c>Update()</c> su un grafo staccato marca ogni colonna della radice: se un giorno la radice si
     /// salvasse solo quando cambia, i punteggi resterebbero senza protezione. Lo fissa
     /// <c>ConcurrentScoreWrites_TheSecondSaveFailsOnTheRecordXmin</c>. Due scrittori che inseriscono lo stesso
-    /// (giocatore, dimensione) non arrivano a xmin: EF inserisce i figli prima di aggiornare la radice, e
-    /// risponde l'indice unico (23505).
+    /// (giocatore, dimensione) non arrivano a xmin: osservato, EF manda l'INSERT del punteggio prima dell'UPDATE
+    /// della partita, e risponde l'indice unico (<c>DbUpdateException</c> con 23505, non
+    /// <c>DbUpdateConcurrencyException</c>). È l'ordine dei comandi di EF, non una garanzia: lo fissa
+    /// <c>ConcurrentScoreWritesOnADimensionNobodyHadYet_TheSecondSaveFails_AndKeepsTheFirst</c>.
     /// </remarks>
     private void ReconcileScores(
         IReadOnlyList<RecordScoreEntity> current,

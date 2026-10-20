@@ -56,7 +56,7 @@ public class DeleteGameErrataCommandHandlerTests
         var errata = GameErrata.Create(game.Id, "Description", "Page 5", DateTime.UtcNow);
         game.AddErrata(errata);
 
-        var command = new DeleteGameErrataCommand(ErrataId: errata.Id);
+        var command = new DeleteGameErrataCommand(SharedGameId: game.Id, ErrataId: errata.Id);
 
         _repositoryMock
             .Setup(r => r.GetGameByErrataIdAsync(errata.Id, It.IsAny<CancellationToken>()))
@@ -76,7 +76,7 @@ public class DeleteGameErrataCommandHandlerTests
     {
         // Arrange
         var errataId = Guid.NewGuid();
-        var command = new DeleteGameErrataCommand(ErrataId: errataId);
+        var command = new DeleteGameErrataCommand(SharedGameId: Guid.NewGuid(), ErrataId: errataId);
 
         _repositoryMock
             .Setup(r => r.GetGameByErrataIdAsync(errataId, It.IsAny<CancellationToken>()))
@@ -87,6 +87,42 @@ public class DeleteGameErrataCommandHandlerTests
             _handler.Handle(command, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<NotFoundException>();
 
+        _repositoryMock.Verify(r => r.Update(It.IsAny<SharedGame>()), Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WithErrataOfAnotherGame_ThrowsNotFoundException()
+    {
+        // #4543: il gioco della rotta non è quello dell'errata.
+        var game = SharedGame.Create(
+            title: "Test Game",
+            yearPublished: 2020,
+            description: "Test",
+            minPlayers: 2,
+            maxPlayers: 4,
+            playingTimeMinutes: 60,
+            minAge: 10,
+            complexityRating: null,
+            averageRating: null,
+            imageUrl: "https://example.com/game.jpg",
+            thumbnailUrl: "https://example.com/thumb.jpg",
+            rules: null,
+            createdBy: Guid.NewGuid(),
+            bggId: null);
+        var errata = GameErrata.Create(game.Id, "Description", "Page 5", DateTime.UtcNow);
+        game.AddErrata(errata);
+
+        _repositoryMock
+            .Setup(r => r.GetGameByErrataIdAsync(errata.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        var command = new DeleteGameErrataCommand(SharedGameId: Guid.NewGuid(), ErrataId: errata.Id);
+
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<NotFoundException>();
+
+        game.Erratas.Should().ContainSingle("the erratum of another game must not be removed");
         _repositoryMock.Verify(r => r.Update(It.IsAny<SharedGame>()), Times.Never);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }

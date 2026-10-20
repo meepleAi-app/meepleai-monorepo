@@ -37,7 +37,9 @@ internal sealed class UpdateGameErrataCommandHandler : ICommandHandler<UpdateGam
 
         // Fetch the game containing this erratum
         var game = await _repository.GetGameByErrataIdAsync(command.ErrataId, cancellationToken).ConfigureAwait(false);
-        if (game is null)
+
+        // #4543: un'errata di un altro gioco non esiste sotto la rotta di questo.
+        if (game is null || game.Id != command.SharedGameId)
         {
             throw new NotFoundException("Erratum", command.ErrataId.ToString());
         }

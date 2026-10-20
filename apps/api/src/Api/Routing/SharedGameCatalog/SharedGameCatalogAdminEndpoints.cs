@@ -1381,7 +1381,6 @@ internal static class SharedGameCatalogAdminEndpoints
         return Results.Created($"/api/v1/admin/shared-games/{id}/errata/{errataId}", errataId);
     }
 
-#pragma warning disable S1172 // Unused method parameters - Route parameter for URL binding, command uses errataId directly
     private static async Task<IResult> HandleUpdateErrata(
         Guid id,
         Guid errataId,
@@ -1389,7 +1388,7 @@ internal static class SharedGameCatalogAdminEndpoints
         IMediator mediator,
         CancellationToken ct)
     {
-        var command = new UpdateGameErrataCommand(errataId, request.Description, request.PageReference, request.PublishedDate);
+        var command = new UpdateGameErrataCommand(id, errataId, request.Description, request.PageReference, request.PublishedDate);
 
         try
         {
@@ -1408,7 +1407,7 @@ internal static class SharedGameCatalogAdminEndpoints
         IMediator mediator,
         CancellationToken ct)
     {
-        var command = new DeleteGameErrataCommand(errataId);
+        var command = new DeleteGameErrataCommand(id, errataId);
 
         try
         {
@@ -1420,7 +1419,6 @@ internal static class SharedGameCatalogAdminEndpoints
             return Results.NotFound();
         }
     }
-#pragma warning restore S1172
 
     // ========================================
     // DOCUMENT HANDLERS (Issue #2391 Sprint 1)
@@ -1610,7 +1608,6 @@ internal static class SharedGameCatalogAdminEndpoints
         }
     }
 
-#pragma warning disable S1172 // Unused method parameters - Route parameter for URL binding
     private static async Task<IResult> HandleUpdateStateTemplate(
         Guid id,
         Guid templateId,
@@ -1619,6 +1616,7 @@ internal static class SharedGameCatalogAdminEndpoints
         CancellationToken ct)
     {
         var command = new UpdateGameStateTemplateCommand(
+            id,
             templateId,
             request.Name,
             request.SchemaJson,
@@ -1641,7 +1639,7 @@ internal static class SharedGameCatalogAdminEndpoints
         IMediator mediator,
         CancellationToken ct)
     {
-        var command = new ActivateGameStateTemplateCommand(templateId);
+        var command = new ActivateGameStateTemplateCommand(id, templateId);
 
         try
         {
@@ -1653,7 +1651,6 @@ internal static class SharedGameCatalogAdminEndpoints
             return Results.NotFound();
         }
     }
-#pragma warning restore S1172
 
     // ========================================
     // SEEDING STATUS HANDLER

@@ -10,6 +10,10 @@ internal sealed class UpdateGameStateTemplateCommandValidator : AbstractValidato
 {
     public UpdateGameStateTemplateCommandValidator()
     {
+        RuleFor(x => x.SharedGameId)
+            .NotEqual(Guid.Empty)
+            .WithMessage("SharedGameId is required");
+
         RuleFor(x => x.TemplateId)
             .NotEqual(Guid.Empty)
             .WithMessage("TemplateId is required");

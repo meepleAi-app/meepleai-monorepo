@@ -24,9 +24,14 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 /// </para>
 /// <para>
 /// I codici HTTP da soli non bastano: il POST rispondeva già 201. Ogni test asserisce la riga in
-/// <c>game_errata</c>. Gli ultimi tre fissano il rischio della correzione: l'update di uno
+/// <c>game_errata</c>. <c>AddErrata_KeepsTheErrataAlreadySaved</c> e
+/// <c>AnotherUpdateOfTheGame_KeepsItsErrata</c> fissano il rischio della correzione: l'update di uno
 /// <c>SharedGame</c> riguarda tutto l'aggregato, e un comando che non carica le errata non deve
 /// cancellarle.
+/// </para>
+/// <para>
+/// Dalla review della PR #4560: il segmento <c>{id}</c> conta (un'errata di un altro gioco risponde
+/// 404), e due modifiche concorrenti non si sovrascrivono.
 /// </para>
 /// <para>
 /// Classe parziale per riusare l'host della classe (#4050): una classe nuova ne costruirebbe un
@@ -180,6 +185,85 @@ public sealed partial class SharedGameCatalogEndpointsIntegrationTests
         var rows = await ErrataRowsAsync(game.Id);
         rows.Should().ContainSingle();
         AssertUnchanged(rows[0], existing);
+    }
+
+    [Fact]
+    public async Task UpdateErrata_UnderAnotherGame_Returns404_AndChangesNothing()
+    {
+        // Il segmento {id} ora arriva all'handler: un'errata di un altro gioco non si tocca.
+        var token = await CreateAdminTokenAsync();
+        var game = await CreateTestGameAsync(GameStatus.Published);
+        var otherGame = await CreateTestGameAsync(GameStatus.Published);
+        var errata = await SeedErrataAsync(otherGame.Id, "Del gioco B", "p. 1");
+
+        using var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Put,
+            $"/api/v1/admin/shared-games/{game.Id}/errata/{errata.Id}",
+            token,
+            new { description = "Scritta dal gioco A", pageReference = "p. 2", publishedDate = ErrataPublished });
+        using var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var rows = await ErrataRowsAsync(otherGame.Id);
+        rows.Should().ContainSingle();
+        AssertUnchanged(rows[0], errata);
+    }
+
+    [Fact]
+    public async Task DeleteErrata_UnderAnotherGame_Returns404_AndKeepsTheRow()
+    {
+        var token = await CreateAdminTokenAsync();
+        var game = await CreateTestGameAsync(GameStatus.Published);
+        var otherGame = await CreateTestGameAsync(GameStatus.Published);
+        var errata = await SeedErrataAsync(otherGame.Id, "Del gioco B", "p. 1");
+
+        using var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Delete,
+            $"/api/v1/admin/shared-games/{game.Id}/errata/{errata.Id}",
+            token);
+        using var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await ErrataRowsAsync(otherGame.Id)).Should().ContainSingle();
+    }
+
+    /// <summary>
+    /// Due modifiche della stessa errata da letture parallele: vince la prima, la seconda fallisce.
+    /// </summary>
+    /// <remarks>
+    /// Le errata non hanno un token di concorrenza proprio. Le protegge l'UPDATE della radice, che
+    /// <c>Update</c> emette sempre (su un grafo detached marca ogni colonna come modificata) con il
+    /// controllo su <c>xmin</c> (#3651). Questo test fissa quella dipendenza: se un giorno l'update
+    /// della radice non scrivesse colonne, la seconda modifica sovrascriverebbe la prima in silenzio.
+    /// </remarks>
+    [Fact]
+    public async Task ConcurrentErrataUpdates_TheSecondSaveFailsOnTheGameXmin()
+    {
+        var game = await CreateTestGameAsync(GameStatus.Published);
+        var errata = await SeedErrataAsync(game.Id, "Originale", "p. 1");
+        var ct = TestContext.Current.CancellationToken;
+
+        using var scopeA = _factory.Services.CreateScope();
+        using var scopeB = _factory.Services.CreateScope();
+        var repoA = scopeA.ServiceProvider.GetRequiredService<Api.BoundedContexts.SharedGameCatalog.Domain.Repositories.ISharedGameRepository>();
+        var repoB = scopeB.ServiceProvider.GetRequiredService<Api.BoundedContexts.SharedGameCatalog.Domain.Repositories.ISharedGameRepository>();
+        var dbA = scopeA.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var dbB = scopeB.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var gameA = await repoA.GetGameByErrataIdAsync(errata.Id, ct);
+        var gameB = await repoB.GetGameByErrataIdAsync(errata.Id, ct);
+
+        gameA!.UpdateErrata(errata.Id, "Scritta da A", "p. 1", ErrataPublished);
+        repoA.Update(gameA);
+        await dbA.SaveChangesAsync(ct);
+
+        gameB!.UpdateErrata(errata.Id, "Scritta da B", "p. 1", ErrataPublished);
+        repoB.Update(gameB);
+        var saveB = () => dbB.SaveChangesAsync(ct);
+
+        await saveB.Should().ThrowAsync<DbUpdateConcurrencyException>(
+            "B read the game before A saved it: its write must not overwrite A's");
+        (await ErrataRowsAsync(game.Id)).Single().Description.Should().Be("Scritta da A");
     }
 
     private async Task<string> CreateAdminTokenAsync()

@@ -19,7 +19,7 @@ public class DeleteGameErrataCommandValidatorTests
     [Fact]
     public void Validate_WithValidCommand_PassesValidation()
     {
-        var command = new DeleteGameErrataCommand(Guid.NewGuid());
+        var command = new DeleteGameErrataCommand(Guid.NewGuid(), Guid.NewGuid());
         var result = _validator.TestValidate(command);
         result.ShouldNotHaveAnyValidationErrors();
     }
@@ -27,8 +27,16 @@ public class DeleteGameErrataCommandValidatorTests
     [Fact]
     public void Validate_WithEmptyErrataId_FailsValidation()
     {
-        var command = new DeleteGameErrataCommand(Guid.Empty);
+        var command = new DeleteGameErrataCommand(Guid.NewGuid(), Guid.Empty);
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(x => x.ErrataId);
+    }
+
+    [Fact]
+    public void Validate_WithEmptySharedGameId_FailsValidation()
+    {
+        var command = new DeleteGameErrataCommand(Guid.Empty, Guid.NewGuid());
+        var result = _validator.TestValidate(command);
+        result.ShouldHaveValidationErrorFor(x => x.SharedGameId);
     }
 }

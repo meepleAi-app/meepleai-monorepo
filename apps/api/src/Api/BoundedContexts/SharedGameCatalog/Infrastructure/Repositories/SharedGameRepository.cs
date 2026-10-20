@@ -263,7 +263,10 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
     /// </summary>
     /// <remarks>
     /// Le errata non hanno un token di concorrenza: una scrittura da una lettura superata fallisce
-    /// per intero perché l'UPDATE della radice, nella stessa transazione, controlla <c>xmin</c>.
+    /// per intero perché l'UPDATE della radice, nella stessa transazione, controlla <c>xmin</c>. Quella
+    /// UPDATE c'è sempre perché <c>Update()</c> su un grafo detached marca ogni colonna della radice:
+    /// se un giorno la radice si salvasse solo quando cambia, le errata resterebbero senza protezione.
+    /// Lo fissa <c>ConcurrentErrataUpdates_TheSecondSaveFailsOnTheGameXmin</c>.
     /// </remarks>
     private void ReconcileErrata(SharedGame sharedGame)
     {
@@ -670,8 +673,11 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
     /// #4543: l'unica lettura che carica le errata, perché modificarne o toglierne una richiede di
     /// averla nell'aggregato. Le carica tutte, non solo quella cercata: <see cref="Update"/> tocca
     /// solo le errata che la lettura ha visto, quindi le altre resterebbero comunque intatte, ma
-    /// l'aggregato deve rappresentare il gioco intero. Le altre letture non le caricano: nessun altro
-    /// comando ne ha bisogno, e <c>AddErrata</c> funziona anche senza (l'errata nuova diventa INSERT).
+    /// l'aggregato deve rappresentare il gioco intero. Le altre letture non le caricano: degli altri
+    /// comandi nessuno ne ha bisogno, e <c>AddErrata</c> funziona anche senza (l'errata nuova diventa
+    /// INSERT). Un consumatore però c'è: <c>GetSharedGameByIdQueryHandler</c> costruisce le errata del
+    /// dettaglio da <see cref="GetByIdAsync"/>, quindi le riporta sempre vuote. È #4565, insieme alla
+    /// cache <c>shared-game:{id}</c> che le scritture delle errata non invalidano.
     /// </remarks>
     public async Task<SharedGame?> GetGameByErrataIdAsync(Guid errataId, CancellationToken cancellationToken = default)
     {

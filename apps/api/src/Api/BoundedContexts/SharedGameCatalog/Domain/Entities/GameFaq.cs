@@ -13,7 +13,7 @@ public sealed class GameFaq : Entity<Guid>
     private readonly string _question = string.Empty;
     private readonly string _answer = string.Empty;
     private int _displayOrder;
-    private int _upvoteCount;
+    private readonly int _upvoteCount;
     private readonly DateTime _createdAt;
     private DateTime? _updatedAt;
 
@@ -132,16 +132,5 @@ public sealed class GameFaq : Entity<Guid>
 
         _displayOrder = newDisplayOrder;
         _updatedAt = DateTime.UtcNow;
-    }
-
-    /// <summary>
-    /// Increments the upvote count for this FAQ.
-    /// </summary>
-    /// <returns>The new upvote count.</returns>
-    public int Upvote()
-    {
-        _upvoteCount++;
-        _updatedAt = DateTime.UtcNow;
-        return _upvoteCount;
     }
 }

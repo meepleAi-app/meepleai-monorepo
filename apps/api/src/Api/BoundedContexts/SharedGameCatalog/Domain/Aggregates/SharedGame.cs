@@ -1368,25 +1368,6 @@ public sealed class SharedGame : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Upvotes a FAQ in this game.
-    /// Issue #2681: Public FAQs endpoints
-    /// </summary>
-    /// <param name="faqId">The ID of the FAQ to upvote</param>
-    /// <returns>The new upvote count</returns>
-    /// <exception cref="InvalidOperationException">Thrown when FAQ is not found</exception>
-    public int UpvoteFaq(Guid faqId)
-    {
-        if (faqId == Guid.Empty)
-            throw new ArgumentException("FaqId cannot be empty", nameof(faqId));
-
-        var faq = _faqs.FirstOrDefault(f => f.Id == faqId);
-        if (faq is null)
-            throw new InvalidOperationException($"FAQ with ID {faqId} not found in this game");
-
-        return faq.Upvote();
-    }
-
-    /// <summary>
     /// Removes an existing FAQ from this game.
     /// </summary>
     /// <param name="faqId">The ID of the FAQ to remove</param>
@@ -1736,6 +1717,16 @@ public sealed class SharedGame : AggregateRoot<Guid>
     {
         ArgumentNullException.ThrowIfNull(errata);
         _erratas.Add(errata);
+    }
+
+    /// <summary>
+    /// Reconstitution hook for the repository (#4557): appends a persisted FAQ to the aggregate
+    /// WITHOUT re-running creation validation or raising <c>GameFaqAddedEvent</c>.
+    /// </summary>
+    internal void LoadFaq(GameFaq faq)
+    {
+        ArgumentNullException.ThrowIfNull(faq);
+        _faqs.Add(faq);
     }
 
     // Validation Methods

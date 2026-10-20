@@ -1324,11 +1324,10 @@ internal static class SharedGameCatalogAdminEndpoints
         return Results.Created($"/api/v1/admin/shared-games/{id}/faq/{faqId}", faqId);
     }
 
-    // #4543: il primo parametro deve chiamarsi come il segmento {id}, anche se l'handler non lo
-    // usa. Chiamato `_`, il binding lo cercava nella query e rispondeva 400 prima dell'handler.
-    // Vale per tutti gli handler di questo file: lo controlla
-    // NoDuplicateRouteTests.EveryRouteParameter_IsBoundByAHandlerParameter.
-#pragma warning disable S1172 // Unused method parameters - Route parameter for URL binding, command uses faqId directly
+    // #4543: il primo parametro deve chiamarsi come il segmento {id}. Chiamato `_`, il binding lo
+    // cercava nella query e rispondeva 400 prima dell'handler. Vale per tutti gli handler di questo
+    // file: lo controlla NoDuplicateRouteTests.EveryRouteParameter_IsBoundByAHandlerParameter.
+    // #4557: il command lo porta, e una FAQ di un altro gioco risponde 404.
     private static async Task<IResult> HandleUpdateFaq(
         Guid id,
         Guid faqId,
@@ -1336,7 +1335,7 @@ internal static class SharedGameCatalogAdminEndpoints
         IMediator mediator,
         CancellationToken ct)
     {
-        var command = new UpdateGameFaqCommand(faqId, request.Question, request.Answer, request.Order);
+        var command = new UpdateGameFaqCommand(id, faqId, request.Question, request.Answer, request.Order);
 
         try
         {
@@ -1355,7 +1354,7 @@ internal static class SharedGameCatalogAdminEndpoints
         IMediator mediator,
         CancellationToken ct)
     {
-        var command = new DeleteGameFaqCommand(faqId);
+        var command = new DeleteGameFaqCommand(id, faqId);
 
         try
         {
@@ -1367,7 +1366,6 @@ internal static class SharedGameCatalogAdminEndpoints
             return Results.NotFound();
         }
     }
-#pragma warning restore S1172
 
     // Errata Handlers
     private static async Task<IResult> HandleAddErrata(

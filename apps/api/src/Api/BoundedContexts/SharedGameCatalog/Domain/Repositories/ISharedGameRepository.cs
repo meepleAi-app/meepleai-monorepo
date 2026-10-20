@@ -140,6 +140,28 @@ public interface ISharedGameRepository
     Task<SharedGame?> GetGameByFaqIdAsync(Guid faqId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// #4557 — adds one vote to a FAQ and returns the new count, without loading or saving the
+    /// <c>SharedGame</c> aggregate.
+    ///
+    /// <para>
+    /// A vote is a counter on <c>game_faqs</c>, not a change to the game. It is public and
+    /// anonymous, so it must not go through <see cref="Update"/>: that marks every column of
+    /// <c>shared_games</c> as modified, including the ones the mapper does not carry
+    /// (<c>has_knowledge_base</c>, <c>is_rag_public</c>, <c>bgg_raw_data</c>, <c>test_run_id</c>), and
+    /// it takes the game's <c>xmin</c> check, so two simultaneous votes would end in a 409.
+    /// </para>
+    /// <para>
+    /// Executes immediately, server-side, as <c>upvote_count = upvote_count + 1</c>: concurrent votes
+    /// are serialised by Postgres and all counted. Does NOT call <c>SaveChanges</c> and bypasses the
+    /// change tracker. A FAQ of a soft-deleted game is not found.
+    /// </para>
+    /// </summary>
+    /// <param name="faqId">The FAQ ID</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>The new upvote count, or null when the FAQ does not exist or its game is deleted.</returns>
+    Task<int?> IncrementFaqUpvoteAsync(Guid faqId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets a shared game by an Errata ID contained within it.
     /// </summary>
     /// <param name="errataId">The Errata ID</param>

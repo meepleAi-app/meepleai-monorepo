@@ -28,7 +28,7 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
     {
         ArgumentNullException.ThrowIfNull(sharedGame);
         var entity = MapToEntity(sharedGame);
-        AddErrataRows(entity, sharedGame);
+        AddChildRows(entity, sharedGame);
         await DbContext.Set<SharedGameEntity>().AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
@@ -49,7 +49,7 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
         ArgumentNullException.ThrowIfNull(sharedGame);
 
         var entity = MapToEntity(sharedGame);
-        AddErrataRows(entity, sharedGame);
+        AddChildRows(entity, sharedGame);
 
         foreach (var designer in await ResolveDesignerEntitiesAsync(designerNames, cancellationToken).ConfigureAwait(false))
         {
@@ -226,11 +226,16 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
         ArgumentNullException.ThrowIfNull(sharedGame);
 
         // MapToEntity porta la sola radice: Update() su un grafo detached marcherebbe Modified anche
-        // un'errata nuova, che ha già l'id — un UPDATE di una riga che non esiste. Le errata passano
-        // da ReconcileErrata (#4543).
+        // un figlio nuovo, che ha già l'id — un UPDATE di una riga che non esiste. Errata (#4543) e
+        // FAQ (#4557) passano da ReconcileChildren.
         var entity = MapToEntity(sharedGame);
         DbContext.Set<SharedGameEntity>().Update(entity);
-        ReconcileErrata(sharedGame);
+
+        ErrataReadBy.TryGetValue(sharedGame, out var errataRead);
+        ReconcileChildren(errataRead, sharedGame.Erratas.ToDictionary(e => e.Id, MapErrataToEntity), CopyOf);
+
+        FaqsReadBy.TryGetValue(sharedGame, out var faqsRead);
+        ReconcileChildren(faqsRead, sharedGame.Faqs.ToDictionary(f => f.Id, MapFaqToEntity), CopyOf);
     }
 
     /// <summary>
@@ -256,35 +261,45 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
     private static readonly ConditionalWeakTable<SharedGame, IReadOnlyDictionary<Guid, GameErrataEntity>> ErrataReadBy = new();
 
     /// <summary>
-    /// Porta nel change tracker le errata dell'aggregato (#4543): <c>Added</c> quelle che la lettura
-    /// non aveva; quelle lette e ancora presenti partono dai valori letti e ricevono quelli del
-    /// dominio, così EF scrive solo le colonne cambiate (nessuna, nessun UPDATE); quelle lette e
-    /// tolte dal dominio diventano <c>Deleted</c>.
+    /// Le FAQ che una lettura ha messo nell'aggregato, per id, come le ha trovate (#4557). Stesse
+    /// ragioni di <see cref="ErrataReadBy"/>: una tabella per figlio, perché una lettura può caricare
+    /// le errata senza le FAQ, o il contrario.
     /// </summary>
+    private static readonly ConditionalWeakTable<SharedGame, IReadOnlyDictionary<Guid, GameFaqEntity>> FaqsReadBy = new();
+
+    /// <summary>
+    /// Porta nel change tracker le righe figlie dell'aggregato, errata (#4543) o FAQ (#4557):
+    /// <c>Added</c> quelle che la lettura non aveva; quelle lette e ancora presenti partono dai valori
+    /// letti e ricevono quelli del dominio, così EF scrive solo le colonne cambiate (nessuna, nessun
+    /// UPDATE); quelle lette e tolte dal dominio diventano <c>Deleted</c>.
+    /// </summary>
+    /// <param name="read">Le righe che la lettura ha caricato, per id; <c>null</c> se non le ha
+    /// caricate. In quel caso nessuna riga si cancella e nessuna si aggiorna.</param>
+    /// <param name="desired">Le righe come le vuole il dominio, per id.</param>
+    /// <param name="copyOf">Una copia scollegata di una riga letta.</param>
     /// <remarks>
-    /// Le errata non hanno un token di concorrenza: una scrittura da una lettura superata fallisce
+    /// Errata e FAQ non hanno un token di concorrenza: una scrittura da una lettura superata fallisce
     /// per intero perché l'UPDATE della radice, nella stessa transazione, controlla <c>xmin</c>. Quella
     /// UPDATE c'è sempre perché <c>Update()</c> su un grafo detached marca ogni colonna della radice:
-    /// se un giorno la radice si salvasse solo quando cambia, le errata resterebbero senza protezione.
-    /// Lo fissa <c>ConcurrentErrataUpdates_TheSecondSaveFailsOnTheGameXmin</c>.
+    /// se un giorno la radice si salvasse solo quando cambia, i figli resterebbero senza protezione.
+    /// Lo fissano <c>ConcurrentErrataUpdates_TheSecondSaveFailsOnTheGameXmin</c> e
+    /// <c>ConcurrentFaqUpdates_TheSecondSaveFailsOnTheGameXmin</c>.
     /// </remarks>
-    private void ReconcileErrata(SharedGame sharedGame)
+    private void ReconcileChildren<TRow>(
+        IReadOnlyDictionary<Guid, TRow>? read,
+        IReadOnlyDictionary<Guid, TRow> desired,
+        Func<TRow, TRow> copyOf)
+        where TRow : class
     {
-        ErrataReadBy.TryGetValue(sharedGame, out var read);
-
-        var currentIds = new HashSet<Guid>();
-        foreach (var errata in sharedGame.Erratas)
+        foreach (var (id, row) in desired)
         {
-            currentIds.Add(errata.Id);
-            var desired = MapErrataToEntity(errata);
-
-            if (read is null || !read.TryGetValue(errata.Id, out var row))
+            if (read is null || !read.TryGetValue(id, out var readRow))
             {
-                DbContext.Entry(desired).State = EntityState.Added;
+                DbContext.Entry(row).State = EntityState.Added;
                 continue;
             }
 
-            TrackAsRead(row).CurrentValues.SetValues(desired);
+            TrackAsRead(id, readRow, copyOf).CurrentValues.SetValues(row);
         }
 
         if (read is null)
@@ -292,22 +307,23 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             return;
         }
 
-        foreach (var (id, row) in read)
+        foreach (var (id, readRow) in read)
         {
-            if (!currentIds.Contains(id))
+            if (!desired.ContainsKey(id))
             {
-                TrackAsRead(row).State = EntityState.Deleted;
+                TrackAsRead(id, readRow, copyOf).State = EntityState.Deleted;
             }
         }
     }
 
     /// <summary>
-    /// La riga di errata nel change tracker, con i valori letti come originali. Se il contesto la
+    /// La riga figlia nel change tracker, con i valori letti come originali. Se il contesto la
     /// traccia già usa quella: attaccarne una seconda con la stessa chiave fallirebbe.
     /// </summary>
-    private EntityEntry<GameErrataEntity> TrackAsRead(GameErrataEntity row)
+    private EntityEntry<TRow> TrackAsRead<TRow>(Guid id, TRow row, Func<TRow, TRow> copyOf)
+        where TRow : class
     {
-        var tracked = DbContext.Set<GameErrataEntity>().Local.FindEntry(row.Id);
+        var tracked = DbContext.Set<TRow>().Local.FindEntry(id);
         if (tracked is not null)
         {
             return tracked;
@@ -315,20 +331,25 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
 
         // Una copia nuova a ogni salvataggio: la stessa istanza attaccata a due contesti
         // porterebbe nel secondo lo stato del primo.
-        var entry = DbContext.Entry(CopyOf(row));
+        var entry = DbContext.Entry(copyOf(row));
         entry.State = EntityState.Unchanged;
         return entry;
     }
 
     /// <summary>
-    /// #4543 — le errata di un aggregato nuovo: tutto il grafo è <c>Added</c>, quindi qui vanno
-    /// nel grafo, a differenza di <see cref="Update"/>.
+    /// #4543, #4557 — errata e FAQ di un aggregato nuovo: tutto il grafo è <c>Added</c>, quindi qui
+    /// vanno nel grafo, a differenza di <see cref="Update"/>.
     /// </summary>
-    private static void AddErrataRows(SharedGameEntity entity, SharedGame sharedGame)
+    private static void AddChildRows(SharedGameEntity entity, SharedGame sharedGame)
     {
         foreach (var errata in sharedGame.Erratas)
         {
             entity.Erratas.Add(MapErrataToEntity(errata));
+        }
+
+        foreach (var faq in sharedGame.Faqs)
+        {
+            entity.Faqs.Add(MapFaqToEntity(faq));
         }
     }
 
@@ -350,6 +371,30 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
         PageReference = row.PageReference,
         PublishedDate = row.PublishedDate,
         CreatedAt = row.CreatedAt,
+    };
+
+    private static GameFaqEntity MapFaqToEntity(GameFaq faq) => new()
+    {
+        Id = faq.Id,
+        SharedGameId = faq.SharedGameId,
+        Question = faq.Question,
+        Answer = faq.Answer,
+        DisplayOrder = faq.DisplayOrder,
+        UpvoteCount = faq.UpvoteCount,
+        CreatedAt = faq.CreatedAt,
+        UpdatedAt = faq.UpdatedAt,
+    };
+
+    private static GameFaqEntity CopyOf(GameFaqEntity row) => new()
+    {
+        Id = row.Id,
+        SharedGameId = row.SharedGameId,
+        Question = row.Question,
+        Answer = row.Answer,
+        DisplayOrder = row.DisplayOrder,
+        UpvoteCount = row.UpvoteCount,
+        CreatedAt = row.CreatedAt,
+        UpdatedAt = row.UpdatedAt,
     };
 
     /// <summary>
@@ -659,14 +704,91 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             UpdatedBy = assignment.UpdatedBy,
         };
 
+    /// <remarks>
+    /// #4557: l'unica lettura che carica le FAQ, perché modificarne, toglierne o votarne una richiede
+    /// di averla nell'aggregato. Stesse scelte di <see cref="GetGameByErrataIdAsync"/>: le carica
+    /// tutte, solo qui, e <c>AddFaq</c> funziona anche senza (la FAQ nuova diventa INSERT).
+    /// <c>GetSharedGameByIdQueryHandler</c> costruisce le FAQ del dettaglio da
+    /// <see cref="GetByIdAsync"/>, quindi le riporta sempre vuote: è #4565. La lista pubblica delle FAQ
+    /// (<c>GetGameFaqsQueryHandler</c>) legge invece <c>game_faqs</c> direttamente.
+    /// </remarks>
     public async Task<SharedGame?> GetGameByFaqIdAsync(Guid faqId, CancellationToken cancellationToken = default)
     {
         var gameEntity = await DbContext.SharedGames
+            .AsNoTracking()
             .Include(g => g.Faqs)
             .Where(g => g.Faqs.Any(f => f.Id == faqId))
             .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 
-        return gameEntity != null ? MapToDomain(gameEntity) : null;
+        return gameEntity != null ? MapToDomainWithFaqs(gameEntity) : null;
+    }
+
+    /// <remarks>
+    /// #4557: il voto è un contatore su <c>game_faqs</c>, non una modifica del gioco, quindi non passa
+    /// da <see cref="Update"/>. L'update dell'aggregato riscrive tutta la riga di <c>shared_games</c>:
+    /// azzera le quattro colonne che <c>MapToEntity</c> non copia (<c>has_knowledge_base</c>,
+    /// <c>is_rag_public</c>, <c>bgg_raw_data</c>, <c>test_run_id</c>) e passa dal controllo su
+    /// <c>xmin</c>, cioè due voti insieme finivano in 409. Il voto è pubblico e anonimo: chiunque
+    /// poteva toglierlo dal filtro «AI-ready».
+    /// <para>
+    /// Il predicato sul gioco tiene il 404 per i giochi cancellati: la FAQ non ha un filtro suo, e senza
+    /// accedere a <c>SharedGame</c> il filtro globale del gioco non entra nella query.
+    /// </para>
+    /// <para>
+    /// Il conteggio si rilegge dopo l'UPDATE: sono due istruzioni, ma l'incremento è atomico. Un voto
+    /// arrivato in mezzo è già nel conteggio che torna, e non si perde nulla.
+    /// </para>
+    /// </remarks>
+    public async Task<int?> IncrementFaqUpvoteAsync(Guid faqId, CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+
+        var updated = await DbContext.Set<GameFaqEntity>()
+            .Where(f => f.Id == faqId && !f.SharedGame.IsDeleted)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(f => f.UpvoteCount, f => f.UpvoteCount + 1)
+                      .SetProperty(f => f.UpdatedAt, now),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        if (updated == 0)
+        {
+            return null;
+        }
+
+        return await DbContext.Set<GameFaqEntity>()
+            .AsNoTracking()
+            .Where(f => f.Id == faqId)
+            .Select(f => (int?)f.UpvoteCount)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// <see cref="MapToDomain"/> più le FAQ che la query ha incluso, ricordate per
+    /// <see cref="Update"/> (#4557).
+    /// </summary>
+    private static SharedGame MapToDomainWithFaqs(SharedGameEntity entity)
+    {
+        var sharedGame = MapToDomain(entity);
+
+        var read = new Dictionary<Guid, GameFaqEntity>();
+        foreach (var row in entity.Faqs)
+        {
+            sharedGame.LoadFaq(new GameFaq(
+                row.Id,
+                row.SharedGameId,
+                row.Question,
+                row.Answer,
+                row.DisplayOrder,
+                row.UpvoteCount,
+                row.CreatedAt,
+                row.UpdatedAt));
+            read[row.Id] = CopyOf(row);
+        }
+
+        FaqsReadBy.AddOrUpdate(sharedGame, read);
+        return sharedGame;
     }
 
     /// <remarks>

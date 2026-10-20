@@ -916,22 +916,6 @@ public sealed class SharedGameTests
     }
 
     [Fact]
-    public void UpvoteFaq_IncreasesUpvoteCount()
-    {
-        // Arrange
-        var game = CreateValidGame();
-        var faq = new GameFaq(Guid.NewGuid(), game.Id, "Question", "Answer", 1, 0, DateTime.UtcNow, null);
-        game.AddFaq(faq);
-
-        // Act
-        var newCount = game.UpvoteFaq(faq.Id);
-
-        // Assert
-        newCount.Should().Be(1);
-        game.Faqs.First().UpvoteCount.Should().Be(1);
-    }
-
-    [Fact]
     public void RemoveFaq_RemovesFaqFromCollection()
     {
         // Arrange

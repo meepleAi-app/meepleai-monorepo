@@ -19,7 +19,7 @@ public class UpdateGameFaqCommandValidatorTests
     [Fact]
     public void Validate_WithValidCommand_PassesValidation()
     {
-        var command = new UpdateGameFaqCommand(Guid.NewGuid(), "How to play?", "Follow the rulebook", 1);
+        var command = new UpdateGameFaqCommand(Guid.NewGuid(), Guid.NewGuid(), "How to play?", "Follow the rulebook", 1);
         var result = _validator.TestValidate(command);
         result.ShouldNotHaveAnyValidationErrors();
     }
@@ -29,7 +29,7 @@ public class UpdateGameFaqCommandValidatorTests
     [InlineData("   ")]
     public void Validate_WithEmptyQuestion_FailsValidation(string question)
     {
-        var command = new UpdateGameFaqCommand(Guid.NewGuid(), question, "Answer", 0);
+        var command = new UpdateGameFaqCommand(Guid.NewGuid(), Guid.NewGuid(), question, "Answer", 0);
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(x => x.Question);
     }
@@ -39,7 +39,7 @@ public class UpdateGameFaqCommandValidatorTests
     [InlineData("   ")]
     public void Validate_WithEmptyAnswer_FailsValidation(string answer)
     {
-        var command = new UpdateGameFaqCommand(Guid.NewGuid(), "Question?", answer, 0);
+        var command = new UpdateGameFaqCommand(Guid.NewGuid(), Guid.NewGuid(), "Question?", answer, 0);
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(x => x.Answer);
     }
@@ -47,15 +47,23 @@ public class UpdateGameFaqCommandValidatorTests
     [Fact]
     public void Validate_WithEmptyFaqId_FailsValidation()
     {
-        var command = new UpdateGameFaqCommand(Guid.Empty, "Question?", "Answer", 0);
+        var command = new UpdateGameFaqCommand(Guid.NewGuid(), Guid.Empty, "Question?", "Answer", 0);
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(x => x.FaqId);
     }
 
     [Fact]
+    public void Validate_WithEmptySharedGameId_FailsValidation()
+    {
+        var command = new UpdateGameFaqCommand(Guid.Empty, Guid.NewGuid(), "Question?", "Answer", 0);
+        var result = _validator.TestValidate(command);
+        result.ShouldHaveValidationErrorFor(x => x.SharedGameId);
+    }
+
+    [Fact]
     public void Validate_WithNegativeOrder_FailsValidation()
     {
-        var command = new UpdateGameFaqCommand(Guid.NewGuid(), "Question?", "Answer", -1);
+        var command = new UpdateGameFaqCommand(Guid.NewGuid(), Guid.NewGuid(), "Question?", "Answer", -1);
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(x => x.Order);
     }
@@ -64,7 +72,7 @@ public class UpdateGameFaqCommandValidatorTests
     public void Validate_WithQuestionTooLong_FailsValidation()
     {
         var longQuestion = new string('a', 501);
-        var command = new UpdateGameFaqCommand(Guid.NewGuid(), longQuestion, "Answer", 0);
+        var command = new UpdateGameFaqCommand(Guid.NewGuid(), Guid.NewGuid(), longQuestion, "Answer", 0);
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(x => x.Question);
     }

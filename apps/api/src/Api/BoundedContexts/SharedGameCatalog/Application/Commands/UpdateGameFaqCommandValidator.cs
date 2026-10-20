@@ -9,6 +9,9 @@ internal sealed class UpdateGameFaqCommandValidator : AbstractValidator<UpdateGa
 {
     public UpdateGameFaqCommandValidator()
     {
+        RuleFor(x => x.SharedGameId)
+            .NotEqual(Guid.Empty).WithMessage("SharedGameId is required");
+
         RuleFor(x => x.FaqId)
             .NotEqual(Guid.Empty).WithMessage("FaqId is required");
 

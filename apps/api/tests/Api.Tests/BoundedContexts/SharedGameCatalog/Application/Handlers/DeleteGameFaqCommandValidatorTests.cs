@@ -19,7 +19,7 @@ public class DeleteGameFaqCommandValidatorTests
     [Fact]
     public void Validate_WithValidCommand_PassesValidation()
     {
-        var command = new DeleteGameFaqCommand(Guid.NewGuid());
+        var command = new DeleteGameFaqCommand(Guid.NewGuid(), Guid.NewGuid());
         var result = _validator.TestValidate(command);
         result.ShouldNotHaveAnyValidationErrors();
     }
@@ -27,8 +27,16 @@ public class DeleteGameFaqCommandValidatorTests
     [Fact]
     public void Validate_WithEmptyFaqId_FailsValidation()
     {
-        var command = new DeleteGameFaqCommand(Guid.Empty);
+        var command = new DeleteGameFaqCommand(Guid.NewGuid(), Guid.Empty);
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(x => x.FaqId);
+    }
+
+    [Fact]
+    public void Validate_WithEmptySharedGameId_FailsValidation()
+    {
+        var command = new DeleteGameFaqCommand(Guid.Empty, Guid.NewGuid());
+        var result = _validator.TestValidate(command);
+        result.ShouldHaveValidationErrorFor(x => x.SharedGameId);
     }
 }

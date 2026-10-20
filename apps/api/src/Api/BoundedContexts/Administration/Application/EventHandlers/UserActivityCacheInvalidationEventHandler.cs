@@ -1,8 +1,8 @@
 using Api.BoundedContexts.Administration.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.Observability;
-using Api.Services;
 using MediatR;
+using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Api.BoundedContexts.Administration.Application.EventHandlers;
 
@@ -12,6 +12,30 @@ namespace Api.BoundedContexts.Administration.Application.EventHandlers;
 /// (dashboard-api, dashboard-insights, activity-timeline).
 /// Performance target: invalidation &lt; 10ms.
 /// </summary>
+/// <remarks>
+/// <para>
+/// #4559 — l'invalidazione passa da <see cref="HybridCache.RemoveByTagAsync(string, CancellationToken)"/>
+/// di Microsoft, non da <c>IHybridCacheService.RemoveByTagAsync</c>. Il wrapper rimuove solo le chiavi
+/// elencate nel suo set Redis <c>cache:tag:{tag}</c>, che si riempie solo quando la voce passa da lui:
+/// le voci scritte con <see cref="HybridCache"/> grezzo (gli insights della dashboard, la dashboard V1,
+/// <c>UserDashboardService</c>) non c'erano, e restavano vecchie fino alla scadenza. Il tag di
+/// <see cref="HybridCache"/> le raggiunge tutte, comprese quelle del wrapper, che passa i suoi tag a
+/// <see cref="HybridCache"/>; e funziona anche senza Redis. Il set del wrapper non viene svuotato:
+/// le chiavi che vi restano non sono un problema di correttezza, perché rimuovere una chiave assente
+/// non fa nulla e una chiave riscritta porta di nuovo il tag.
+/// </para>
+/// <para>
+/// <b>Più istanze: non è come prima.</b> Il wrapper cancellava le chiavi dalla L2.
+/// <see cref="HybridCache.RemoveByTagAsync(string, CancellationToken)"/> invece lascia i dati in L2 e vi
+/// scrive solo l'istante in cui il tag è stato invalidato. Un'altra istanza che ha già letto quel tag non
+/// rilegge l'istante, quindi serve la voce vecchia (dalla sua L1, poi dalla L2) finché la voce in L2 scade
+/// o qualcuno la riscrive. Oggi non pesa: l'API gira a istanza singola per contratto
+/// (<c>infra/docker-compose.yml</c>, allarme <c>MultipleApiInstances</c>). Per più istanze serve il pub/sub
+/// (<c>IHybridCacheService.RemoveByTagAcrossReplicasAsync</c>), che però raggiungerà le voci scritte con
+/// <see cref="HybridCache"/> grezzo solo dopo #4561. Il test
+/// <c>Handle_UserActivity_AnotherInstanceThatReadTheTag_KeepsServingTheOldL2Entry</c> documenta il limite.
+/// </para>
+/// </remarks>
 internal sealed class UserActivityCacheInvalidationEventHandler :
     INotificationHandler<UserLibraryGameAddedEvent>,
     INotificationHandler<UserGameSessionCompletedEvent>,
@@ -19,11 +43,13 @@ internal sealed class UserActivityCacheInvalidationEventHandler :
     INotificationHandler<UserWishlistUpdatedEvent>,
     INotificationHandler<SessionFinalizedEvent>
 {
-    private readonly IHybridCacheService _cache;
+    private const string ActivityTimelineTag = "activity-timeline";
+
+    private readonly HybridCache _cache;
     private readonly ILogger<UserActivityCacheInvalidationEventHandler> _logger;
 
     public UserActivityCacheInvalidationEventHandler(
-        IHybridCacheService cache,
+        HybridCache cache,
         ILogger<UserActivityCacheInvalidationEventHandler> logger)
     {
         _cache = cache;
@@ -83,7 +109,7 @@ internal sealed class UserActivityCacheInvalidationEventHandler :
         try
         {
             // SessionFinalizedEvent doesn't have UserId; invalidate the activity-timeline tag globally
-            await _cache.RemoveByTagAsync("activity-timeline", cancellationToken).ConfigureAwait(false);
+            await _cache.RemoveByTagAsync(ActivityTimelineTag, cancellationToken).ConfigureAwait(false);
 
             RecordMetric("session_finalized");
         }
@@ -101,17 +127,22 @@ internal sealed class UserActivityCacheInvalidationEventHandler :
     /// Invalidates all dashboard-related caches for a specific user using tag-based invalidation.
     /// Tags cleared: "user:{userId}" which covers dashboard-api, dashboard-insights, activity-timeline.
     /// </summary>
+    /// <remarks>
+    /// #4559 — <see cref="HybridCache.RemoveByTagAsync(string, CancellationToken)"/> non dice quante voci
+    /// ha rimosso: segna il tag come invalidato, e le voci che lo portano diventano vecchie alla lettura.
+    /// Il log riporta quindi il tag, non un conteggio.
+    /// </remarks>
     private async Task InvalidateUserCacheAsync(
         Guid userId, string trigger, CancellationToken cancellationToken)
     {
+        var userTag = $"user:{userId}";
         try
         {
-            var removed = await _cache.RemoveByTagAsync($"user:{userId}", cancellationToken)
-                .ConfigureAwait(false);
+            await _cache.RemoveByTagAsync(userTag, cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
-                "Dashboard cache invalidated for user {UserId}: {RemovedCount} entries removed (trigger: {Trigger})",
-                userId, removed, trigger);
+                "Dashboard cache invalidated for user {UserId}: tag {CacheTag} (trigger: {Trigger})",
+                userId, userTag, trigger);
 
             RecordMetric(trigger);
         }

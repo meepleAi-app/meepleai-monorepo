@@ -369,10 +369,15 @@ public sealed partial class SharedGameCatalogEndpointsIntegrationTests
     }
 
     /// <summary>
-    /// Un gioco con le quattro colonne che <c>MapToEntity</c> non copia, valorizzate: se un comando
-    /// riscrive la riga dall'aggregato le azzera, e il test lo vede.
+    /// Un gioco con le quattro colonne che <c>MapToEntity</c> non copiava, valorizzate: se un comando
+    /// riscrive la riga dall'aggregato le azzera, e il test lo vede. Tre non sono dell'aggregato
+    /// (<c>has_knowledge_base</c>, <c>bgg_raw_data</c>, <c>test_run_id</c>); <c>is_rag_public</c> sì, da
+    /// #4585, e un comando che non lo cambia deve lasciarlo com'è.
     /// </summary>
-    private async Task<SharedGameEntity> CreateGameWithColumnsTheAggregateDoesNotOwnAsync(bool isDeleted = false)
+    private async Task<SharedGameEntity> CreateGameWithColumnsTheAggregateDoesNotOwnAsync(
+        bool isDeleted = false,
+        GameStatus status = GameStatus.Published,
+        bool isRagPublic = true)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -389,11 +394,11 @@ public sealed partial class SharedGameCatalogEndpointsIntegrationTests
             MinAge = 10,
             ImageUrl = "https://example.com/image.jpg",
             ThumbnailUrl = "https://example.com/thumb.jpg",
-            Status = (int)GameStatus.Published,
+            Status = (int)status,
             CreatedBy = TestUserId,
             CreatedAt = DateTime.UtcNow,
             HasKnowledgeBase = true,
-            IsRagPublic = true,
+            IsRagPublic = isRagPublic,
             BggRawData = "Catan BGG metadata",
             TestRunId = "run-4557",
             IsDeleted = isDeleted,

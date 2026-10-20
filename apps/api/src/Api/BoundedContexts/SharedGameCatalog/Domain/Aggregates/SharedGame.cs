@@ -445,7 +445,8 @@ public sealed class SharedGame : AggregateRoot<Guid>
         Guid? manualCoverAttestedBy = null,
         DateTime? manualCoverAttestedAt = null,
         string? bggCoverR2Key = null,
-        uint xminVersion = 0) : base(id)
+        uint xminVersion = 0,
+        bool isRagPublic = false) : base(id)
     {
         XminVersion = xminVersion;
         _id = id;
@@ -485,6 +486,7 @@ public sealed class SharedGame : AggregateRoot<Guid>
         _modifiedAt = modifiedAt;
         _bggId = bggId;
         _agentDefinitionId = agentDefinitionId;
+        _isRagPublic = isRagPublic;
     }
 
     /// <summary>

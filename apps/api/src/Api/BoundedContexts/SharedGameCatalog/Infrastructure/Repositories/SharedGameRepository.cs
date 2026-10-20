@@ -18,6 +18,41 @@ namespace Api.BoundedContexts.SharedGameCatalog.Infrastructure.Repositories;
 /// </summary>
 internal sealed class SharedGameRepository : RepositoryBase, ISharedGameRepository
 {
+    /// <summary>
+    /// Le colonne di <c>shared_games</c> che l'aggregato non porta (#4585). <see cref="Update"/> non le
+    /// scrive mai: ci pensa chi le possiede, sull'entità.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <c>DbSet.Update</c> su un grafo detached segna come modificata ogni colonna, e una colonna che
+    /// <c>MapToEntity</c> non copia arrivava al database al valore di default della classe. Valeva per
+    /// tutte le scritture del catalogo, non solo per quelle che le riguardavano. Stesso schema di
+    /// <c>PdfDocumentRepository.ColumnsNotOwnedByTheAggregate</c> (#4347).
+    /// </para>
+    /// <list type="bullet">
+    /// <item><c>HasKnowledgeBase</c>: la proiezione dell'indicizzazione
+    /// (<c>VectorDocumentIndexedForKbFlagHandler</c>) e <c>KbFlagDriftAuditJob</c>.</item>
+    /// <item><c>BggRawData</c>: la risposta grezza di BGG, per ripopolare il gioco. Nessun codice del
+    /// prodotto la scrive sull'aggregato.</item>
+    /// <item><c>TestRunId</c>: il marcatore dei giochi di test (<c>SeedTestLibraryGameCommandHandler</c>),
+    /// su cui si appoggia <c>CleanupTestEntitiesCommandHandler</c>.</item>
+    /// </list>
+    /// <para>
+    /// <c>IsRagPublic</c> non è qui: l'aggregato lo porta (<c>SetRagPublicAccess</c>), quindi lo legge
+    /// <c>MapToDomain</c> e lo scrive <c>MapToEntity</c>. Escluderlo farebbe perdere
+    /// <c>PUT …/rag-access</c> in silenzio.
+    /// </para>
+    /// <para>
+    /// Il test <c>SharedGameRepositoryUnownedColumnsTests</c> prende le colonne dal modello EF: una colonna
+    /// aggiunta domani all'entità, senza mapping e senza essere qui, lo fa fallire con il suo nome.
+    /// </para>
+    /// </remarks>
+    internal static readonly IReadOnlyList<string> ColumnsNotOwnedByTheAggregate =
+    [
+        nameof(SharedGameEntity.HasKnowledgeBase),
+        nameof(SharedGameEntity.BggRawData),
+        nameof(SharedGameEntity.TestRunId),
+    ];
 
     public SharedGameRepository(MeepleAiDbContext dbContext, IDomainEventCollector eventCollector)
         : base(dbContext, eventCollector)
@@ -229,7 +264,16 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
         // un figlio nuovo, che ha già l'id — un UPDATE di una riga che non esiste. Errata (#4543) e
         // FAQ (#4557) passano da ReconcileChildren.
         var entity = MapToEntity(sharedGame);
-        DbContext.Set<SharedGameEntity>().Update(entity);
+        var entry = DbContext.Set<SharedGameEntity>().Update(entity);
+
+        // #4585: Update() segna come modificate anche le colonne che il mapper lascia al default. Quelle
+        // restano come sono nella riga. Nell'entità che resta nel contesto però valgono il default: chi la
+        // rilegge tracciata nello stesso contesto le sovrascriva, non le usi. L'UPDATE della radice parte
+        // comunque, perché le altre colonne restano modificate: è quello che porta il controllo su xmin.
+        foreach (var column in ColumnsNotOwnedByTheAggregate)
+        {
+            entry.Property(column).IsModified = false;
+        }
 
         ErrataReadBy.TryGetValue(sharedGame, out var errataRead);
         ReconcileChildren(errataRead, sharedGame.Erratas.ToDictionary(e => e.Id, MapErrataToEntity), CopyOf);
@@ -592,7 +636,10 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             // una riga tracciata da cui ricavare l'original value e usa quello sulla proprietà.
             // Senza questa lettura sarebbe 0, e ogni UPDATE emetterebbe `WHERE xmin = 0` — che non
             // corrisponde mai a un xid reale — fallendo anche senza alcuna concorrenza.
-            xminVersion: entity.Xmin);
+            xminVersion: entity.Xmin,
+            // #4585 — SetRagPublicAccess cambia questo campo: senza la lettura l'aggregato partirebbe
+            // sempre da false, e senza la scrittura in MapToEntity il valore nuovo non arriverebbe alla riga.
+            isRagPublic: entity.IsRagPublic);
 
         // Issue #2035: Hydrate designers from the M:N join — only when the caller
         // eager-loaded the navigation (GetByIdAsync), otherwise the EF Core
@@ -676,6 +723,7 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
             ModifiedAt = game.ModifiedAt,
             IsDeleted = game.IsDeleted,  // Fix: Use aggregate value, not hardcoded false (Issue #2514 code review)
             AgentDefinitionId = game.AgentDefinitionId,  // Issue #4228
+            IsRagPublic = game.IsRagPublic,  // #4585 — SetRagPublicAccess lo cambia; omessa, la riga restava a false
             // #3651 — token di concorrenza (ADR-060). Su un grafo detached EF non ha una riga
             // tracciata da cui ricavare l'original value del token e usa quello che trova qui:
             // omettendolo resterebbe 0, e ogni UPDATE emetterebbe `WHERE xmin = 0` colpendo 0
@@ -725,11 +773,11 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
 
     /// <remarks>
     /// #4557: il voto è un contatore su <c>game_faqs</c>, non una modifica del gioco, quindi non passa
-    /// da <see cref="Update"/>. L'update dell'aggregato riscrive tutta la riga di <c>shared_games</c>:
-    /// azzera le quattro colonne che <c>MapToEntity</c> non copia (<c>has_knowledge_base</c>,
-    /// <c>is_rag_public</c>, <c>bgg_raw_data</c>, <c>test_run_id</c>) e passa dal controllo su
-    /// <c>xmin</c>, cioè due voti insieme finivano in 409. Il voto è pubblico e anonimo: chiunque
-    /// poteva toglierlo dal filtro «AI-ready».
+    /// da <see cref="Update"/>. L'update dell'aggregato riscrive la riga di <c>shared_games</c> e passa
+    /// dal controllo su <c>xmin</c>, cioè due voti insieme finivano in 409. Prima di #4585 azzerava anche
+    /// le quattro colonne che <c>MapToEntity</c> non copiava (<c>has_knowledge_base</c>,
+    /// <c>is_rag_public</c>, <c>bgg_raw_data</c>, <c>test_run_id</c>): il voto è pubblico e anonimo, e
+    /// chiunque poteva togliere il gioco dal filtro «AI-ready».
     /// <para>
     /// Il predicato sul gioco tiene il 404 per i giochi cancellati: la FAQ non ha un filtro suo, e senza
     /// accedere a <c>SharedGame</c> il filtro globale del gioco non entra nella query.

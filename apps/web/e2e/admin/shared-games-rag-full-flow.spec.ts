@@ -351,20 +351,25 @@ test.describe('Admin RAG Full Flow — Mocked (#253)', () => {
           contentType: 'application/json',
           body: JSON.stringify({
             sharedGameId: MOCK_GAME_ID,
-            gameTitle: 'Carcassonne',
-            totalDocuments: 1,
-            statusBreakdown: { ready: 1, processing: 0, failed: 0, pending: 0 },
             documents: [
               {
+                id: 'link-1',
+                sharedGameId: MOCK_GAME_ID,
                 pdfDocumentId: 'doc-1',
-                fileName: 'carcassone_rulebook.pdf',
                 documentType: 'Rulebook',
+                version: '1.0',
+                isActive: true,
+                tags: [],
+                createdAt: '2026-01-01T00:00:00Z',
+                createdBy: 'admin-1',
+                approvalStatus: 'Approved',
+                fileName: 'carcassone_rulebook.pdf',
                 processingState: 'Ready',
-                chunkCount: 42,
-                isActiveForRag: true,
+                fileSizeBytes: 1024,
+                uploadedAt: '2026-01-01T00:00:00Z',
               },
             ],
-            ragReadiness: { isReady: true, blockers: [] },
+            totalCount: 1,
           }),
         })
       );

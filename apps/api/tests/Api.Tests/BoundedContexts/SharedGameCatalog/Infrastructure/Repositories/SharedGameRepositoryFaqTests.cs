@@ -174,27 +174,6 @@ public sealed class SharedGameRepositoryFaqTests
     }
 
     [Fact]
-    public async Task Update_AfterUpvoteFaq_ModifiesOnlyTheCountAndItsTimestamp()
-    {
-        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
-        var (gameId, first, _) = await SeedAsync(db);
-        var repo = Repo(db);
-
-        var game = await repo.GetGameByFaqIdAsync(first.Id, TestContext.Current.CancellationToken);
-        game!.UpvoteFaq(first.Id).Should().Be(4);
-        repo.Update(game);
-
-        ModifiedColumns(db, first.Id).Should().BeEquivalentTo(
-            [nameof(GameFaqEntity.UpvoteCount), nameof(GameFaqEntity.UpdatedAt)],
-            "a vote must not rewrite the question or the answer");
-
-        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
-        var rows = await RowsAsync(db, gameId);
-        rows[first.Id].UpvoteCount.Should().Be(4);
-        rows[first.Id].Question.Should().Be(first.Question);
-    }
-
-    [Fact]
     public async Task Update_AfterRemoveFaq_DeletesOnlyThatRow()
     {
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();

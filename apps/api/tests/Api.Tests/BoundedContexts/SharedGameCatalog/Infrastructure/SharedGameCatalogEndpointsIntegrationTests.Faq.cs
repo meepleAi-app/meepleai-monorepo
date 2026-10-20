@@ -132,9 +132,114 @@ public sealed partial class SharedGameCatalogEndpointsIntegrationTests
 
         var row = (await FaqRowsAsync(game.Id)).Single();
         row.UpvoteCount.Should().Be(4);
+        row.UpdatedAt.Should().NotBeNull("a vote stamps the FAQ's update time");
         row.Question.Should().Be(faq.Question);
         row.Answer.Should().Be(faq.Answer);
         row.DisplayOrder.Should().Be(faq.DisplayOrder);
+        row.CreatedAt.Should().BeCloseTo(faq.CreatedAt, TimeSpan.FromMilliseconds(1));
+    }
+
+    /// <summary>
+    /// Il voto è <c>AllowAnonymous</c>: chiunque, senza sessione. Non deve scrivere sulla riga del gioco.
+    /// </summary>
+    /// <remarks>
+    /// Quando il voto passava dall'aggregato (<c>GetGameByFaqIdAsync</c> + <c>Update</c>), l'update su
+    /// grafo detached marcava Modified ogni colonna di <c>shared_games</c>, comprese le quattro che
+    /// <c>MapToEntity</c> non copia: ogni voto azzerava <c>has_knowledge_base</c>, <c>is_rag_public</c>,
+    /// <c>bgg_raw_data</c> e <c>test_run_id</c>. Il gioco usciva dal filtro «AI-ready» e perdeva la
+    /// regola RAG pubblica. L'<c>xmin</c> è la prova che la riga non è stata scritta affatto.
+    /// </remarks>
+    [Fact]
+    public async Task UpvoteFaq_DoesNotWriteTheGameRow()
+    {
+        var game = await CreateGameWithColumnsTheAggregateDoesNotOwnAsync();
+        var faq = await SeedFaqAsync(game.Id, "Domanda votata", "Risposta votata", displayOrder: 1, upvotes: 3);
+        var gameBefore = await GameRowAsync(game.Id);
+
+        using var response = await _client.PostAsync(
+            $"/api/v1/faqs/{faq.Id}/upvote", content: null, TestContext.Current.CancellationToken);
+
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+
+        var gameAfter = await GameRowAsync(game.Id);
+        gameAfter.HasKnowledgeBase.Should().BeTrue("a vote must not take the game out of the AI-ready filter");
+        gameAfter.IsRagPublic.Should().BeTrue("a vote must not drop the public RAG rule");
+        gameAfter.BggRawData.Should().Be(game.BggRawData);
+        gameAfter.TestRunId.Should().Be(game.TestRunId);
+        gameAfter.Description.Should().Be(game.Description);
+        gameAfter.Xmin.Should().Be(gameBefore.Xmin, "the game row must not be written by a vote on one of its FAQs");
+
+        (await FaqRowsAsync(game.Id)).Single().UpvoteCount.Should().Be(4);
+    }
+
+    [Fact]
+    public async Task UpvoteFaq_TwoVotesInARow_AddTwo()
+    {
+        var game = await CreateTestGameAsync(GameStatus.Published);
+        var faq = await SeedFaqAsync(game.Id, "Domanda votata", "Risposta votata", displayOrder: 1, upvotes: 3);
+
+        for (var i = 0; i < 2; i++)
+        {
+            using var response = await _client.PostAsync(
+                $"/api/v1/faqs/{faq.Id}/upvote", content: null, TestContext.Current.CancellationToken);
+            var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+            response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        }
+
+        (await FaqRowsAsync(game.Id)).Single().UpvoteCount.Should().Be(5);
+    }
+
+    /// <summary>
+    /// Voti simultanei sulla stessa FAQ: nessun 409, e il conteggio li somma tutti.
+    /// </summary>
+    /// <remarks>
+    /// Prima il voto leggeva il gioco e lo riscriveva col controllo su <c>xmin</c>: due voti che
+    /// leggevano insieme facevano fallire il secondo con 409, e un voto andava perso. Ora è un
+    /// <c>UPDATE ... SET upvote_count = upvote_count + 1</c> sulla riga della FAQ, che Postgres
+    /// serializza.
+    /// </remarks>
+    [Fact]
+    public async Task UpvoteFaq_ConcurrentVotes_AreAllCounted_WithoutConflict()
+    {
+        const int votes = 8;
+        var game = await CreateTestGameAsync(GameStatus.Published);
+        var faq = await SeedFaqAsync(game.Id, "Domanda votata", "Risposta votata", displayOrder: 1, upvotes: 3);
+
+        var responses = await Task.WhenAll(Enumerable.Range(0, votes).Select(async _ =>
+        {
+            using var response = await _client.PostAsync(
+                $"/api/v1/faqs/{faq.Id}/upvote", content: null, TestContext.Current.CancellationToken);
+            return response.StatusCode;
+        }));
+
+        responses.Should().OnlyContain(status => status == HttpStatusCode.OK,
+            "a vote must not conflict with another vote on the same FAQ");
+        (await FaqRowsAsync(game.Id)).Single().UpvoteCount.Should().Be(3 + votes);
+    }
+
+    [Fact]
+    public async Task UpvoteFaq_OnAFaqOfADeletedGame_Returns404_AndChangesNothing()
+    {
+        var game = await CreateGameWithColumnsTheAggregateDoesNotOwnAsync(isDeleted: true);
+        var faq = await SeedFaqAsync(game.Id, "Domanda votata", "Risposta votata", displayOrder: 1, upvotes: 3);
+
+        using var response = await _client.PostAsync(
+            $"/api/v1/faqs/{faq.Id}/upvote", content: null, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var row = (await FaqRowsAsync(game.Id)).Single();
+        row.UpvoteCount.Should().Be(3, "a soft-deleted game's FAQs are not public");
+        row.UpdatedAt.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpvoteFaq_OnAFaqThatDoesNotExist_Returns404()
+    {
+        using var response = await _client.PostAsync(
+            $"/api/v1/faqs/{Guid.NewGuid()}/upvote", content: null, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -261,6 +366,53 @@ public sealed partial class SharedGameCatalogEndpointsIntegrationTests
         await saveB.Should().ThrowAsync<DbUpdateConcurrencyException>(
             "B read the game before A saved it: its write must not overwrite A's");
         (await FaqRowsAsync(game.Id)).Single().Question.Should().Be("Scritta da A");
+    }
+
+    /// <summary>
+    /// Un gioco con le quattro colonne che <c>MapToEntity</c> non copia, valorizzate: se un comando
+    /// riscrive la riga dall'aggregato le azzera, e il test lo vede.
+    /// </summary>
+    private async Task<SharedGameEntity> CreateGameWithColumnsTheAggregateDoesNotOwnAsync(bool isDeleted = false)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var game = new SharedGameEntity
+        {
+            Id = Guid.NewGuid(),
+            Title = $"Test Game {Guid.NewGuid():N}",
+            YearPublished = 2024,
+            Description = "Test description",
+            MinPlayers = 2,
+            MaxPlayers = 4,
+            PlayingTimeMinutes = 60,
+            MinAge = 10,
+            ImageUrl = "https://example.com/image.jpg",
+            ThumbnailUrl = "https://example.com/thumb.jpg",
+            Status = (int)GameStatus.Published,
+            CreatedBy = TestUserId,
+            CreatedAt = DateTime.UtcNow,
+            HasKnowledgeBase = true,
+            IsRagPublic = true,
+            BggRawData = "Catan BGG metadata",
+            TestRunId = "run-4557",
+            IsDeleted = isDeleted,
+        };
+
+        db.SharedGames.Add(game);
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        return game;
+    }
+
+    /// <summary>La riga di <c>shared_games</c> com'è nel database, anche se il gioco è cancellato.</summary>
+    private async Task<SharedGameEntity> GameRowAsync(Guid gameId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        return await db.SharedGames
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .SingleAsync(g => g.Id == gameId, TestContext.Current.CancellationToken);
     }
 
     private async Task<GameFaqEntity> SeedFaqAsync(Guid gameId, string question, string answer, int displayOrder, int upvotes)

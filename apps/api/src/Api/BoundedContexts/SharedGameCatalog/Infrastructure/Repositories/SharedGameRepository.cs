@@ -723,6 +723,47 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
         return gameEntity != null ? MapToDomainWithFaqs(gameEntity) : null;
     }
 
+    /// <remarks>
+    /// #4557: il voto è un contatore su <c>game_faqs</c>, non una modifica del gioco, quindi non passa
+    /// da <see cref="Update"/>. L'update dell'aggregato riscrive tutta la riga di <c>shared_games</c>:
+    /// azzera le quattro colonne che <c>MapToEntity</c> non copia (<c>has_knowledge_base</c>,
+    /// <c>is_rag_public</c>, <c>bgg_raw_data</c>, <c>test_run_id</c>) e passa dal controllo su
+    /// <c>xmin</c>, cioè due voti insieme finivano in 409. Il voto è pubblico e anonimo: chiunque
+    /// poteva toglierlo dal filtro «AI-ready».
+    /// <para>
+    /// Il predicato sul gioco tiene il 404 per i giochi cancellati: la FAQ non ha un filtro suo, e senza
+    /// accedere a <c>SharedGame</c> il filtro globale del gioco non entra nella query.
+    /// </para>
+    /// <para>
+    /// Il conteggio si rilegge dopo l'UPDATE: sono due istruzioni, ma l'incremento è atomico. Un voto
+    /// arrivato in mezzo è già nel conteggio che torna, e non si perde nulla.
+    /// </para>
+    /// </remarks>
+    public async Task<int?> IncrementFaqUpvoteAsync(Guid faqId, CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+
+        var updated = await DbContext.Set<GameFaqEntity>()
+            .Where(f => f.Id == faqId && !f.SharedGame.IsDeleted)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(f => f.UpvoteCount, f => f.UpvoteCount + 1)
+                      .SetProperty(f => f.UpdatedAt, now),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        if (updated == 0)
+        {
+            return null;
+        }
+
+        return await DbContext.Set<GameFaqEntity>()
+            .AsNoTracking()
+            .Where(f => f.Id == faqId)
+            .Select(f => (int?)f.UpvoteCount)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     /// <summary>
     /// <see cref="MapToDomain"/> più le FAQ che la query ha incluso, ricordate per
     /// <see cref="Update"/> (#4557).

@@ -776,7 +776,7 @@ internal sealed class SharedGameRepository : RepositoryBase, ISharedGameReposito
     /// da <see cref="Update"/>. L'update dell'aggregato riscrive la riga di <c>shared_games</c> e passa
     /// dal controllo su <c>xmin</c>, cioè due voti insieme finivano in 409. Prima di #4585 azzerava anche
     /// le quattro colonne che <c>MapToEntity</c> non copiava (<c>has_knowledge_base</c>,
-    /// <c>is_rag_public</c>, <c>bgg_raw_data</c>, <c>test_run_id</c>): il voto è pubblico e anonimo, e
+    /// <c>is_rag_public</c>, <c>BggRawData</c>, <c>test_run_id</c>): il voto è pubblico e anonimo, e
     /// chiunque poteva togliere il gioco dal filtro «AI-ready».
     /// <para>
     /// Il predicato sul gioco tiene il 404 per i giochi cancellati: la FAQ non ha un filtro suo, e senza

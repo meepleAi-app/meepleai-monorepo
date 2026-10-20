@@ -19,7 +19,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure.Repositorie
 /// #4585: <see cref="SharedGameRepository"/>.<c>Update</c> rimette sul contesto un'entità costruita da
 /// <c>MapToEntity</c> con <c>DbSet.Update</c>, che segna come modificate tutte le colonne di
 /// <c>shared_games</c>. Una colonna che il mapper non scrive veniva quindi salvata al valore di default
-/// della classe: <c>has_knowledge_base</c>, <c>bgg_raw_data</c> e <c>test_run_id</c> a ogni comando admin
+/// della classe: <c>has_knowledge_base</c>, <c>BggRawData</c> e <c>test_run_id</c> a ogni comando admin
 /// che salva un gioco, e <c>is_rag_public</c> anche quando l'aggregato lo portava a <c>true</c>.
 /// <para>
 /// Il primo test non elenca le colonne: le prende dal modello EF. Una colonna aggiunta domani all'entità,
@@ -88,6 +88,9 @@ public sealed class SharedGameRepositoryUnownedColumnsTests : IDisposable
     [Fact]
     public async Task Update_WithNoChange_LeavesEveryColumnAsItWas()
     {
+        // Se il modello non si carica, non c'è nessuna colonna da confrontare e il test passerebbe a vuoto.
+        Columns().Should().NotBeEmpty("le colonne vengono dal modello EF, che deve avere SharedGameEntity");
+
         // Arrange: ogni colonna con un valore diverso dal suo default.
         var seeded = new SharedGameEntity();
         foreach (var column in Columns())

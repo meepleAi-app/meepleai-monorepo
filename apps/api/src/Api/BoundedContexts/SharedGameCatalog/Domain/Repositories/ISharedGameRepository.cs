@@ -147,7 +147,7 @@ public interface ISharedGameRepository
     /// A vote is a counter on <c>game_faqs</c>, not a change to the game. It is public and
     /// anonymous, so it must not go through <see cref="Update"/>: that rewrites the game row and takes
     /// its <c>xmin</c> check, so two simultaneous votes would end in a 409. (Before #4585 it also
-    /// zeroed <c>has_knowledge_base</c>, <c>is_rag_public</c>, <c>bgg_raw_data</c> and
+    /// zeroed <c>has_knowledge_base</c>, <c>is_rag_public</c>, <c>BggRawData</c> and
     /// <c>test_run_id</c>, which the mapper did not carry.)
     /// </para>
     /// <para>

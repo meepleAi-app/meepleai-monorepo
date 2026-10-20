@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Tests.TestHelpers;
@@ -14,7 +15,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 /// <remarks>
 /// <para>
 /// <c>SharedGameRepository.Update</c> segnava come modificata ogni colonna, e <c>MapToEntity</c> non
-/// ne copiava quattro: <c>has_knowledge_base</c>, <c>is_rag_public</c>, <c>bgg_raw_data</c> e
+/// ne copiava quattro: <c>has_knowledge_base</c>, <c>is_rag_public</c>, <c>BggRawData</c> e
 /// <c>test_run_id</c> arrivavano al database al default. Il gioco usciva dal filtro «AI-ready» e perdeva
 /// la regola RAG pubblica a ogni invio in approvazione, a ogni FAQ aggiunta, a ogni modifica.
 /// </para>
@@ -96,6 +97,57 @@ public sealed partial class SharedGameCatalogEndpointsIntegrationTests
         after.HasKnowledgeBase.Should().Be(game.HasKnowledgeBase);
         after.BggRawData.Should().Be(game.BggRawData);
         after.TestRunId.Should().Be(game.TestRunId);
+    }
+
+    /// <summary>
+    /// <c>PUT …/rag-access</c> scrive la riga, ma la lista del catalogo (<c>GET /api/v1/shared-games</c>)
+    /// vive in <c>HybridCache</c> sotto il tag <c>search-games</c> e mostra <c>isRagPublic</c>: senza
+    /// l'evizione dopo il salvataggio la lista serviva il valore vecchio per la durata della cache (L1:
+    /// 15 minuti). Prima di #4585 non si vedeva, perché la scrittura non arrivava mai al database.
+    /// </summary>
+    /// <remarks>
+    /// La prima GET popola la cache: senza, il test passerebbe anche con l'evizione tolta.
+    /// </remarks>
+    [Fact]
+    public async Task SetRagPublicAccess_ThenTheCatalogList_ShowsTheNewValue()
+    {
+        var token = await CreateAdminTokenAsync();
+        var game = await CreateGameWithColumnsTheAggregateDoesNotOwnAsync(isRagPublic: false);
+
+        var before = await ListedIsRagPublicAsync(game.Id);
+        before.Should().BeFalse("la prima lettura popola la cache con il valore di partenza");
+
+        using var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Put,
+            $"/api/v1/admin/shared-games/{game.Id}/rag-access",
+            token,
+            new { isRagPublic = true });
+        using var response = await _client.SendAsync(request, TestContext.Current.CancellationToken);
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent, body);
+
+        (await GameRowAsync(game.Id)).IsRagPublic.Should().BeTrue("la riga è cambiata");
+        var after = await ListedIsRagPublicAsync(game.Id);
+        after.Should().BeTrue("la lista non deve servire dalla cache il valore precedente");
+    }
+
+    /// <summary>
+    /// Il valore di <c>isRagPublic</c> con cui la lista del catalogo mostra il gioco. Legge il JSON
+    /// grezzo: gli enum della lista sono stringhe, e qui interessa un solo campo.
+    /// </summary>
+    private async Task<bool> ListedIsRagPublicAsync(Guid gameId)
+    {
+        using var response = await _client.GetAsync(
+            "/api/v1/shared-games?pageNumber=1&pageSize=50", TestContext.Current.CancellationToken);
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+
+        using var json = JsonDocument.Parse(body);
+        var listed = json.RootElement.GetProperty("items").EnumerateArray()
+            .Where(g => g.GetProperty("id").GetGuid() == gameId)
+            .ToList();
+        listed.Should().ContainSingle("il gioco è pubblicato e compare nella prima pagina");
+        return listed[0].GetProperty("isRagPublic").GetBoolean();
     }
 
     /// <summary>

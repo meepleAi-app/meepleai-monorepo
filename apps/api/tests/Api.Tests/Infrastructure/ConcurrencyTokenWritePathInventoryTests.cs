@@ -147,6 +147,23 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
         {
         };
 
+    /// <summary>
+    /// Entità il cui concurrency token è una <b>colonna normale</b> usata come guardia di stato, non
+    /// <c>xmin</c> né <c>bytea</c> (#4581). La chiave è il nome CLR dell'entità; il valore è la
+    /// proprietà che porta il token e il perché.
+    ///
+    /// <para>
+    /// Una guardia di stato non protegge da ogni scrittura concorrente, come fa <c>xmin</c>: rende
+    /// condizionale l'UPDATE a un valore preciso della colonna. Per questo non rientra in
+    /// <see cref="DeclaredWritePaths"/> e va dichiarata qui, con il write-path che fissa l'originale.
+    /// </para>
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, (string Property, string Reason)> DeclaredStateTokens =
+        new Dictionary<string, (string, string)>(StringComparer.Ordinal)
+        {
+            ["LibraryShareLinkEntity"] = ("RevokedAt", "LibraryShareLinkRepository.UpdateAsync fissa l'originale a NULL: una scrittura del proprietario vale solo su un link non revocato, quindi nessuna scrittura annulla una revoca. Le visite non passano dall'aggregato (TryRecordAccessAsync). Niente xmin di proposito: ogni visita lo cambierebbe e farebbe fallire con 409 la revoca di un link molto visitato (#4558)"),
+        };
+
     private static MeepleAiDbContext CreateModelOnlyContext()
     {
         // Nessuna connessione viene aperta: costruire il modello non tocca il database. Il provider
@@ -161,7 +178,7 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
         return new MeepleAiDbContext(options, Mock.Of<IMediator>(), Mock.Of<IDomainEventCollector>());
     }
 
-    private static IReadOnlyList<(string EntityName, Type TokenType)> DiscoverConcurrencyTokens()
+    private static IReadOnlyList<(string EntityName, Type TokenType, string PropertyName)> DiscoverConcurrencyTokens()
     {
         using var context = CreateModelOnlyContext();
 
@@ -172,11 +189,17 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
                 Token = entityType.GetProperties().FirstOrDefault(p => p.IsConcurrencyToken),
             })
             .Where(x => x.Token is not null)
-            .Select(x => (x.Name, TokenType: x.Token!.ClrType))
+            .Select(x => (x.Name, TokenType: x.Token!.ClrType, PropertyName: x.Token!.Name))
             .DistinctBy(x => x.Name, StringComparer.Ordinal)
             .OrderBy(x => x.Name, StringComparer.Ordinal)
             .ToList();
     }
+
+    private static bool IsXminOrBytea(Type tokenType) => tokenType == typeof(uint) || tokenType == typeof(byte[]);
+
+    private static bool IsDeclaredStateToken(string entityName, string propertyName) =>
+        DeclaredStateTokens.TryGetValue(entityName, out var declared)
+        && string.Equals(declared.Property, propertyName, StringComparison.Ordinal);
 
     [Fact]
     public void EveryXminTokenDeclaresHowItsWritePathPreservesIt()
@@ -240,14 +263,36 @@ public sealed class ConcurrencyTokenWritePathInventoryTests
     public void NoConcurrencyTokenUsesAnUnexpectedClrType()
     {
         var unexpected = DiscoverConcurrencyTokens()
-            .Where(x => x.TokenType != typeof(uint) && x.TokenType != typeof(byte[]))
-            .Select(x => $"{x.EntityName} ({x.TokenType.Name})")
+            .Where(x => !IsXminOrBytea(x.TokenType) && !IsDeclaredStateToken(x.EntityName, x.PropertyName))
+            .Select(x => $"{x.EntityName}.{x.PropertyName} ({x.TokenType.Name})")
             .ToList();
 
         unexpected.Should().BeEmpty(
-            "questo inventario conosce due forme di token: uint (xmin, quella corretta) e byte[] "
-            + "(bytea, inerte, in via di conversione da #3651). Una terza forma non sarebbe "
-            + "classificata da nessuno dei due test sopra e passerebbe inosservata: {0}",
+            "questo inventario conosce tre forme di token: uint (xmin, quella corretta), byte[] "
+            + "(bytea, inerte, in via di conversione da #3651) e le guardie di stato dichiarate in "
+            + "DeclaredStateTokens (#4581). Un token che non è nessuna delle tre non sarebbe "
+            + "classificato da nessun test e passerebbe inosservato: se è una guardia di stato voluta, "
+            + "dichiarala con la proprietà e il write-path che ne fissa l'originale. Non classificati: {0}",
             string.Join(", ", unexpected));
+    }
+
+    [Fact]
+    public void EveryDeclaredStateTokenStillExistsInTheModel()
+    {
+        var discovered = DiscoverConcurrencyTokens()
+            .Where(x => !IsXminOrBytea(x.TokenType))
+            .Select(x => $"{x.EntityName}.{x.PropertyName}")
+            .ToHashSet(StringComparer.Ordinal);
+
+        var stale = DeclaredStateTokens
+            .Select(x => $"{x.Key}.{x.Value.Property}")
+            .Where(declared => !discovered.Contains(declared))
+            .ToList();
+
+        stale.Should().BeEmpty(
+            "una voce di DeclaredStateTokens che non corrisponde più a un token di stato nel modello è "
+            + "rumore: o il token è stato tolto o cambiato (togli o aggiorna la riga), o l'entità è stata "
+            + "rinominata. Voci stale: {0}",
+            string.Join(", ", stale));
     }
 }

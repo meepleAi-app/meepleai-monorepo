@@ -5,6 +5,7 @@ using Api.Infrastructure.Entities.Authentication;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace Api.BoundedContexts.Authentication.Infrastructure.Repositories;
 
@@ -134,12 +135,9 @@ internal sealed class ShareLinkRepository : RepositoryBase, IShareLinkRepository
     {
         var now = DateTime.UtcNow;
 
-        // La validità è quella dell'aggregato (ShareLink.IsValid): non revocato, e non scaduto (IsExpired è
-        // `now > ExpiresAt`).
         var counted = await DbContext.ShareLinks
             .Where(e => e.Id == id)
-            .Where(e => e.RevokedAt == null)
-            .Where(e => e.ExpiresAt >= now)
+            .Where(ActiveAt(now))
             .ExecuteUpdateAsync(
                 setters => setters
                     .SetProperty(e => e.AccessCount, e => e.AccessCount + 1)
@@ -149,6 +147,28 @@ internal sealed class ShareLinkRepository : RepositoryBase, IShareLinkRepository
 
         return counted == 1;
     }
+
+    public async Task<bool> IsActiveAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+
+        return await DbContext.ShareLinks
+            .Where(e => e.Id == id)
+            .Where(ActiveAt(now))
+            .AnyAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// La validità di un link sulla riga, in un solo punto: <see cref="TryRecordAccessAsync"/> e
+    /// <see cref="IsActiveAsync"/> la usano entrambe, quindi la visita e il commento non possono divergere (#4592).
+    /// </summary>
+    /// <remarks>
+    /// È quella dell'aggregato (<see cref="ShareLink.IsValid"/>): non revocato, e non scaduto
+    /// (<c>IsExpired</c> è <c>now &gt; ExpiresAt</c>, quindi un link vale fino all'istante di scadenza compreso).
+    /// </remarks>
+    private static Expression<Func<ShareLinkEntity, bool>> ActiveAt(DateTime now) =>
+        e => e.RevokedAt == null && e.ExpiresAt >= now;
 
     public async Task DeleteAsync(ShareLink entity, CancellationToken cancellationToken = default)
     {

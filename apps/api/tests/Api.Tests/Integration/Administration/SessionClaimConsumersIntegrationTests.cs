@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Services;
@@ -99,15 +100,7 @@ public sealed class SessionClaimConsumersIntegrationTests
             : TestSessionHelper.CreateSuperAdminSessionAsync);
         var name = $"Test4580.{Guid.NewGuid():N}";
 
-        var response = await SendAsync(HttpMethod.Post, "/api/v1/admin/reports/schedule", token, new
-        {
-            name,
-            description = "test #4580",
-            template = "SystemHealth",
-            format = "Json",
-            parameters = new Dictionary<string, object>(),
-            scheduleExpression = "0 0 8 * * ?",
-        });
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/admin/reports/schedule", token, ScheduleReportBody(name));
 
         response.Status.Should().Be(HttpStatusCode.OK,
             $"an {role} may schedule a report. Before #4580 the endpoint read the claim \"user_id\", which the " +
@@ -115,6 +108,19 @@ public sealed class SessionClaimConsumersIntegrationTests
 
         var report = await ReadReportAsync(name);
         report.CreatedBy.Should().Be(adminId.ToString(), "the creator of the schedule is the admin who sent the POST");
+    }
+
+    [Fact]
+    public async Task ScheduleReport_AsRegularUser_IsForbidden_AndSchedulesNothing()
+    {
+        var (_, token) = await CreateSessionAsync(TestSessionHelper.CreateUserSessionAsync);
+        var name = $"Test4580.{Guid.NewGuid():N}";
+
+        var response = await SendAsync(HttpMethod.Post, "/api/v1/admin/reports/schedule", token, ScheduleReportBody(name));
+
+        response.Status.Should().Be(HttpStatusCode.Forbidden,
+            $"scheduling a report is for admins: the 403 of #4580 was right for a user and wrong for an admin. Body: {response.Body}");
+        (await CountReportsAsync(name)).Should().Be(0, "a rejected request must not save a schedule");
     }
 
     [Fact]
@@ -139,6 +145,59 @@ public sealed class SessionClaimConsumersIntegrationTests
             await ReadDisplayNameAsync(adminId),
             "the notification names the admin who sent it. Before #4580 the endpoint read the claims " +
             "\"displayName\" and \"email\", which the session handler does not emit, so it always said \"Admin\"");
+    }
+
+    [Fact]
+    public async Task ManualNotification_DuringAnImpersonation_NamesTheRealAdmin_NotTheImpersonatedUser()
+    {
+        var (superAdminId, _) = await CreateSessionAsync(TestSessionHelper.CreateSuperAdminSessionAsync);
+        var (impersonatedId, _) = await CreateSessionAsync(TestSessionHelper.CreateUserSessionAsync);
+        var (recipientId, _) = await CreateSessionAsync(TestSessionHelper.CreateUserSessionAsync);
+
+        // L'impersonazione vera: il cookie è quello di una sessione del soggetto (UserId = utente X) con
+        // ImpersonatedByUserId = il superadmin. È l'unico caso in cui Subject e EffectiveActor sono persone diverse.
+        var impersonationToken = await CreateImpersonationSessionAsync(subjectId: impersonatedId, actorId: superAdminId);
+
+        var send = await SendAsync(HttpMethod.Post, "/api/v1/admin/notifications/send", impersonationToken, new
+        {
+            title = $"Test4580.{Guid.NewGuid():N}",
+            message = "test #4580",
+            channels = new[] { "inapp" },
+            recipientType = "users",
+            recipientUserIds = new[] { recipientId },
+        });
+        send.Status.Should().Be(HttpStatusCode.OK,
+            $"setup: the admin filter authorizes on the real actor, a superadmin. Body: {send.Body}");
+
+        var metadata = await ReadNotificationMetadataAsync(recipientId);
+        metadata.GetProperty("sentByAdminId").GetGuid().Should().Be(superAdminId,
+            "the notification is attributed to the person who sent it (EffectiveActor), not to the user being impersonated");
+        var name = metadata.GetProperty("sentByAdminName").GetString();
+        name.Should().Be(await ReadDisplayNameAsync(superAdminId));
+        name.Should().NotBe(await ReadDisplayNameAsync(impersonatedId),
+            "the recipients must not read the name of a person who sent nothing");
+    }
+
+    [Fact]
+    public async Task ManualNotification_WithABlankDisplayName_SaysAdmin_NotTheEmail()
+    {
+        var (adminId, adminToken) = await CreateSessionAsync(TestSessionHelper.CreateAdminSessionAsync);
+        var (recipientId, _) = await CreateSessionAsync(TestSessionHelper.CreateUserSessionAsync);
+        await SetDisplayNameAsync(adminId, "   ");
+
+        var send = await SendAsync(HttpMethod.Post, "/api/v1/admin/notifications/send", adminToken, new
+        {
+            title = $"Test4580.{Guid.NewGuid():N}",
+            message = "test #4580",
+            channels = new[] { "inapp" },
+            recipientType = "users",
+            recipientUserIds = new[] { recipientId },
+        });
+        send.Status.Should().Be(HttpStatusCode.OK, $"setup: an admin may send a notification. Body: {send.Body}");
+
+        var metadata = await ReadNotificationMetadataAsync(recipientId);
+        metadata.GetProperty("sentByAdminName").GetString().Should().Be("Admin",
+            "with a blank display name the notification says \"Admin\": the admin's email address must not reach the recipients");
     }
 
     [Fact]
@@ -231,6 +290,55 @@ public sealed class SessionClaimConsumersIntegrationTests
             .Where(u => u.Id == userId)
             .ExecuteUpdateAsync(s => s.SetProperty(u => u.Tier, tier));
         updated.Should().Be(1, "setup: the user exists");
+    }
+
+    private static object ScheduleReportBody(string name) => new
+    {
+        name,
+        description = "test #4580",
+        template = "SystemHealth",
+        format = "Json",
+        parameters = new Dictionary<string, object>(),
+        scheduleExpression = "0 0 8 * * ?",
+    };
+
+    /// <summary>Una sessione di impersonazione: il cookie vale come <paramref name="subjectId"/>, ma l'attore è <paramref name="actorId"/>.</summary>
+    private async Task<string> CreateImpersonationSessionAsync(Guid subjectId, Guid actorId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var token = SessionToken.Generate();
+        db.UserSessions.Add(new UserSessionEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = subjectId,
+            TokenHash = token.ComputeHash(),
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(15),
+            LastSeenAt = DateTime.UtcNow,
+            ImpersonatedByUserId = actorId,
+            ImpersonatedUntil = DateTime.UtcNow.AddMinutes(15),
+            User = null!,
+        });
+        await db.SaveChangesAsync();
+        return token.Value;
+    }
+
+    private async Task SetDisplayNameAsync(Guid userId, string displayName)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var updated = await db.Set<UserEntity>()
+            .Where(u => u.Id == userId)
+            .ExecuteUpdateAsync(s => s.SetProperty(u => u.DisplayName, displayName));
+        updated.Should().Be(1, "setup: the user exists");
+    }
+
+    private async Task<int> CountReportsAsync(string name)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        return await db.AdminReports.AsNoTracking().CountAsync(r => r.Name == name);
     }
 
     private async Task<string> ReadDisplayNameAsync(Guid userId)

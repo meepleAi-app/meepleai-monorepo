@@ -123,6 +123,7 @@ internal sealed class ConfirmExcelImportCommandHandler
         }
 
         // ── Update modified games (Draft only) ──
+        var updatedGameIds = new List<Guid>();
         foreach (var mod in request.ModifiedGames)
         {
             try
@@ -173,6 +174,7 @@ internal sealed class ConfirmExcelImportCommandHandler
                 _repository.Update(game);
                 await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 updated++;
+                updatedGameIds.Add(mod.GameId);
             }
             catch (Exception ex)
             {
@@ -216,10 +218,18 @@ internal sealed class ConfirmExcelImportCommandHandler
             }
         }
 
-        // #4603: una bozza cancellata esce dal dettaglio in cache, che un admin puo' aver letto. Fuori dal
-        // ciclo e dal suo try/catch: un'evizione che fallisce non deve finire fra gli errori di
-        // cancellazione di una riga gia' salvata. Vedi ISharedGameCacheInvalidator.
-        await _cacheInvalidator.EvictDetailsAndListAsync(deletedGameIds, cancellationToken).ConfigureAwait(false);
+        // #4603: l'admin puo' aver letto la bozza prima dell'import, e il dettaglio sta in cache: senza
+        // questa evizione continua a vedere il titolo vecchio (o la bozza cancellata) fino alla scadenza
+        // della voce. Fuori dai cicli e dal loro try/catch: un'evizione che fallisce non deve finire fra
+        // gli errori di una riga gia' salvata.
+        //
+        // Solo il dettaglio, non la lista: entrambi i rami agiscono solo su giochi Draft (gli altri sono
+        // «protetti» piu' sopra), e la lista pubblica contiene solo i Published. Se l'import potesse
+        // toccare un gioco pubblicato, andrebbe evinta anche la lista. Vedi ISharedGameCacheInvalidator.
+        foreach (var gameId in updatedGameIds.Concat(deletedGameIds).Distinct())
+        {
+            await _cacheInvalidator.EvictDetailAsync(gameId, cancellationToken).ConfigureAwait(false);
+        }
 
         _logger.LogInformation(
             "Excel import confirmed: {Created} created, {Updated} updated, {Deleted} deleted, {Protected} protected, {Errors} errors",

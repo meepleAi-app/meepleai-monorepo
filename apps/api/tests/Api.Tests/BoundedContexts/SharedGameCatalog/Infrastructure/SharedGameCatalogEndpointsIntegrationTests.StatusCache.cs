@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Tests.TestHelpers;
@@ -119,6 +120,69 @@ public sealed partial class SharedGameCatalogEndpointsIntegrationTests
 
         (await ReadDetailAsStatusAsync(game.Id, admin)).Status.Should().Be(
             HttpStatusCode.NotFound, "the soft-deleted draft must not be served to the admin from the cached detail");
+    }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // Bozza modificata dall'import Excel: l'admin che l'aveva letta vede i dati nuovi
+    // ────────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Detail_DraftModifiedByExcelConfirmAfterAnAdminRead_ReportsTheNewTitle()
+    {
+        var admin = await CreateAdminTokenAsync();
+        var game = await CreateTestGameAsync(GameStatus.Draft);
+        var firstRead = await ReadDetailAsStatusAsync(game.Id, admin);
+        firstRead.Title.Should().Be(game.Title, "first read: fills the cache");
+
+        await SendAdminAsync(
+            admin,
+            HttpMethod.Post,
+            "/api/v1/admin/catalog-ingestion/excel-confirm",
+            HttpStatusCode.OK,
+            ExcelConfirmBody(modified: new { gameId = game.Id, title = "Titolo dall'import", bggId = (int?)null }));
+
+        (await ReadDetailAsStatusAsync(game.Id, admin)).Title.Should().Be(
+            "Titolo dall'import", "the import saved the new title: the cached detail must not outlive it");
+    }
+
+    [Fact]
+    public async Task Detail_SkeletonGivenABggIdByExcelConfirmAfterAnAdminRead_ReportsTheBggId()
+    {
+        // Il ramo «scheletro» non chiama UpdateInfo: assegna solo il BggId. Stessa cache, stesso difetto.
+        var admin = await CreateAdminTokenAsync();
+        var bggId = 900_000 + (int)(BitConverter.ToUInt32(Guid.NewGuid().ToByteArray(), 0) % 99_000);
+        var game = await SeedGameWithTitleAsync(GameStatus.Draft, $"Scheletro {Guid.NewGuid():N}", GameDataStatus.Skeleton);
+        (await ReadBggIdAsync(game.Id, admin)).Should().BeNull("first read: fills the cache");
+
+        await SendAdminAsync(
+            admin,
+            HttpMethod.Post,
+            "/api/v1/admin/catalog-ingestion/excel-confirm",
+            HttpStatusCode.OK,
+            ExcelConfirmBody(modified: new { gameId = game.Id, title = game.Title, bggId = (int?)bggId }));
+
+        (await ReadBggIdAsync(game.Id, admin)).Should().Be(bggId);
+    }
+
+    [Fact]
+    public async Task Detail_PublishedGameInAnExcelConfirm_IsLeftAloneAndStaysCached()
+    {
+        // Un gioco pubblicato è protetto: l'import non lo tocca, quindi non c'è niente da togliere dalla
+        // cache. Il titolo cambiato SOTTO la cache (senza un handler) non compare: la voce non è stata
+        // evinta. Se un domani l'import potesse modificare un pubblicato, la lista andrebbe evinta.
+        var admin = await CreateAdminTokenAsync();
+        var game = await CreateTestGameAsync(GameStatus.Published);
+        var firstRead = await ReadDetailAsStatusAsync(game.Id, token: null);
+        await RenameGameBeneathTheCacheAsync(game.Id, "Titolo scritto sotto la cache");
+
+        await SendAdminAsync(
+            admin,
+            HttpMethod.Post,
+            "/api/v1/admin/catalog-ingestion/excel-confirm",
+            HttpStatusCode.OK,
+            ExcelConfirmBody(modified: new { gameId = game.Id, title = "Titolo dall'import", bggId = (int?)null }));
+
+        (await ReadDetailAsStatusAsync(game.Id, token: null)).Title.Should().Be(firstRead.Title);
     }
 
     // ────────────────────────────────────────────────────────────────────────────
@@ -350,6 +414,26 @@ public sealed partial class SharedGameCatalogEndpointsIntegrationTests
         return token;
     }
 
+    private static object ExcelConfirmBody(object modified) => new
+    {
+        newGames = Array.Empty<object>(),
+        modifiedGames = new[] { modified },
+        removedGameIds = Array.Empty<Guid>(),
+    };
+
+    private async Task<int?> ReadBggIdAsync(Guid gameId, string token)
+    {
+        using var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get, $"/api/v1/shared-games/{gameId}", token);
+        using var response = await NewCookielessClient().SendAsync(request, TestContext.Current.CancellationToken);
+        var body = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+
+        using var document = JsonDocument.Parse(body);
+        var bggId = document.RootElement.GetProperty("bggId");
+        return bggId.ValueKind == JsonValueKind.Number ? bggId.GetInt32() : null;
+    }
+
     private async Task<List<Guid>> ListPublicIdsAsync(string searchTerm)
     {
         using var response = await NewCookielessClient().GetAsync(
@@ -371,7 +455,8 @@ public sealed partial class SharedGameCatalogEndpointsIntegrationTests
     private static string UniqueSearchWord() =>
         "Zq" + new string(Guid.NewGuid().ToByteArray().Take(10).Select(b => (char)('a' + (b % 26))).ToArray());
 
-    private async Task<SharedGameEntity> SeedGameWithTitleAsync(GameStatus status, string title)
+    private async Task<SharedGameEntity> SeedGameWithTitleAsync(
+        GameStatus status, string title, GameDataStatus? dataStatus = null)
     {
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -392,6 +477,10 @@ public sealed partial class SharedGameCatalogEndpointsIntegrationTests
             CreatedBy = TestUserId,
             CreatedAt = DateTime.UtcNow,
         };
+        if (dataStatus is not null)
+        {
+            game.GameDataStatus = (int)dataStatus.Value;
+        }
 
         dbContext.SharedGames.Add(game);
         await dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);

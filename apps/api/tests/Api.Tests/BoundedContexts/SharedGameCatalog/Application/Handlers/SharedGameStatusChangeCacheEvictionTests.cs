@@ -53,12 +53,18 @@ public sealed class SharedGameStatusChangeCacheEvictionTests
             .Callback<Guid, CancellationToken>((id, _) => _events.Add(EvictedOne(id)))
             .Returns(Task.CompletedTask);
         _invalidator
+            .Setup(i => i.EvictDetailAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Callback<Guid, CancellationToken>((id, _) => _events.Add(EvictedDetail(id)))
+            .Returns(Task.CompletedTask);
+        _invalidator
             .Setup(i => i.EvictDetailsAndListAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
             .Callback<IReadOnlyCollection<Guid>, CancellationToken>((ids, _) => _events.Add(EvictedMany(ids)))
             .Returns(Task.CompletedTask);
     }
 
     private static string EvictedOne(Guid id) => $"evict:{id}";
+
+    private static string EvictedDetail(Guid id) => $"evict-detail:{id}";
 
     private static string EvictedMany(IEnumerable<Guid> ids) =>
         $"evict-many:{string.Join(",", ids.OrderBy(i => i))}";
@@ -246,13 +252,11 @@ public sealed class SharedGameStatusChangeCacheEvictionTests
     }
 
     [Fact]
-    public async Task ExcelConfirm_EvictsOnlyTheDraftsItDeleted_AfterTheSaves()
+    public async Task ExcelConfirm_EvictsOnlyTheDetailOfTheDraftsItDeleted_AfterTheSaves()
     {
         var draft = Stored(Draft());
         var published = Stored(Published());
-        var handler = new ConfirmExcelImportCommandHandler(
-            _repository.Object, _unitOfWork.Object, _invalidator.Object, TimeProvider.System,
-            NullLogger<ConfirmExcelImportCommandHandler>.Instance);
+        var handler = NewExcelConfirmHandler();
 
         var result = await handler.Handle(
             new ConfirmExcelImportCommand(
@@ -261,8 +265,66 @@ public sealed class SharedGameStatusChangeCacheEvictionTests
 
         result.Deleted.Should().Be(1);
         result.ProtectedSkipped.Should().Be(1);
-        _events.Should().Equal(Saved, EvictedMany([draft.Id]));
+        // Solo il dettaglio: l'import agisce sulle bozze, che la lista pubblica non mostra.
+        _events.Should().Equal(Saved, EvictedDetail(draft.Id));
     }
+
+    [Fact]
+    public async Task ExcelConfirm_EvictsOnlyTheDetailOfTheDraftsItModified_AfterTheSaves()
+    {
+        var modified = Stored(Draft());
+        var published = Stored(Published());
+        var invalid = Stored(Draft());
+        var missing = Guid.NewGuid();
+        _repository
+            .Setup(r => r.GetByIdAsync(missing, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SharedGame?)null);
+        var handler = NewExcelConfirmHandler();
+
+        var result = await handler.Handle(
+            new ConfirmExcelImportCommand(
+                new ConfirmExcelImportRequest(
+                    [],
+                    [
+                        Modification(modified.Id, "Titolo dall'import"),
+                        Modification(published.Id, "Non deve cambiare"),
+                        Modification(invalid.Id, ""),
+                        Modification(missing, "Inesistente"),
+                    ],
+                    []),
+                Admin),
+            TestContext.Current.CancellationToken);
+
+        result.Updated.Should().Be(1);
+        result.ProtectedSkipped.Should().Be(1);
+        result.Errors.Should().HaveCount(2, "the invalid title and the missing game");
+        modified.Title.Should().Be("Titolo dall'import");
+        // Un salvataggio, un'evizione: quella della bozza che l'import ha davvero scritto. Dopo i cicli.
+        _events.Should().Equal(Saved, EvictedDetail(modified.Id));
+    }
+
+    [Fact]
+    public async Task ExcelConfirm_EvictsModifiedAndDeletedDrafts_OnceEach_AfterAllTheSaves()
+    {
+        var modified = Stored(Draft());
+        var removed = Stored(Draft());
+        var handler = NewExcelConfirmHandler();
+
+        await handler.Handle(
+            new ConfirmExcelImportCommand(
+                new ConfirmExcelImportRequest([], [Modification(modified.Id, "Nuovo")], [removed.Id]),
+                Admin),
+            TestContext.Current.CancellationToken);
+
+        _events.Should().Equal(Saved, Saved, EvictedDetail(modified.Id), EvictedDetail(removed.Id));
+    }
+
+    private ConfirmExcelImportCommandHandler NewExcelConfirmHandler() => new(
+        _repository.Object, _unitOfWork.Object, _invalidator.Object, TimeProvider.System,
+        NullLogger<ConfirmExcelImportCommandHandler>.Instance);
+
+    private static ModifyGameRequest Modification(Guid gameId, string title) =>
+        new(gameId, title, null, null, null, null, null, null, null);
 
     // ────────────────────────────────────────────────────────────────────────────
     // Se il comando fallisce, niente evizione

@@ -6,8 +6,11 @@ using Api.Infrastructure.Entities;
 using Api.Helpers;
 using Api.Middleware;
 using Api.Models;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace Api.Services;
@@ -52,6 +55,7 @@ internal class FeatureFlagService : IFeatureFlagService
     private readonly IMediator _mediator;
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<FeatureFlagService> _logger;
+    private readonly IServiceScopeFactory _scopeFactory;
     private const string FeatureFlagCategory = "FeatureFlags";
     private const string TierPrefix = "Tier";
 
@@ -59,12 +63,14 @@ internal class FeatureFlagService : IFeatureFlagService
         IConfigurationService configService,
         IMediator mediator,
         IWebHostEnvironment environment,
-        ILogger<FeatureFlagService> logger)
+        ILogger<FeatureFlagService> logger,
+        IServiceScopeFactory scopeFactory)
     {
         _configService = configService;
         _mediator = mediator;
         _environment = environment;
         _logger = logger;
+        _scopeFactory = scopeFactory;
     }
 
     /// <summary>
@@ -204,6 +210,64 @@ internal class FeatureFlagService : IFeatureFlagService
     }
 
     /// <summary>
+    /// Creates the row of a flag and, if another request created it a moment earlier, applies the wanted
+    /// value on top of that row instead (#4599).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The callers look the key up and create the row when there is none. Two requests on a key without a
+    /// row both see «no row» and both create it; the unique index on <c>(Key, Environment)</c> fails the
+    /// second with 23505, and that was a 500. The row now exists, so the request that lost does what a
+    /// request arriving after the winner would have done: it updates the row to its own value.
+    /// </para>
+    /// <para>
+    /// 🔴 The creation runs in <b>its own DI scope</b>. A failed <c>SaveChangesAsync</c> leaves, in the
+    /// context that ran it, the row it tried to insert, the <c>domain_event_outbox</c> row of
+    /// <c>ConfigurationCreatedEvent</c>, and the event itself still pending in the collector (the collector
+    /// is emptied only after a successful save). Detaching the row is not enough, and it was tried: the next
+    /// save in the same scope tracks the outbox row a second time (<c>InvalidOperationException</c>, same
+    /// key), and the pending event would be enqueued again for a configuration that never existed. In a
+    /// scope of its own the failed creation is disposed with everything it left behind, and the caller's
+    /// context never sees it. The price is that the creation no longer shares the caller's unit of work:
+    /// nothing the callers do depends on that.
+    /// </para>
+    /// <para>
+    /// Only a unique violation that the re-read explains is recovered. If the key has no active row to
+    /// update (for example the colliding row is inactive, and the lookup only sees active ones), the
+    /// original exception is rethrown.
+    /// </para>
+    /// </remarks>
+    private async Task CreateRowAsync(CreateConfigurationCommand create, string environmentName, Guid userGuid)
+    {
+        try
+        {
+            using var scope = _scopeFactory.CreateScope();
+            await scope.ServiceProvider.GetRequiredService<IMediator>().Send(create).ConfigureAwait(false);
+        }
+        catch (DbUpdateException ex) when (CounterTableIdempotency.IsUniqueViolation(ex))
+        {
+            // The lookup that led here was stale: forget it and read what the winner wrote.
+            await _configService.InvalidateAsync(create.Key, environmentName).ConfigureAwait(false);
+            var winner = await _configService.GetConfigurationByKeyAsync(create.Key, environmentName).ConfigureAwait(false);
+
+            if (winner is null || !Guid.TryParse(winner.Id, out var winnerId))
+            {
+                throw;
+            }
+
+            _logger.LogInformation(
+                ex,
+                "Feature flag {Key} was created by a concurrent request; applying the value {Value} on top of it",
+                LogSanitizer.Sanitize(create.Key), LogSanitizer.Sanitize(create.Value));
+
+            await _mediator.Send(new UpdateConfigValueCommand(
+                ConfigId: winnerId,
+                NewValue: create.Value,
+                UpdatedByUserId: userGuid)).ConfigureAwait(false);
+        }
+    }
+
+    /// <summary>
     /// Enable a feature globally or for a specific role.
     /// </summary>
     public async Task EnableFeatureAsync(string featureName, UserRole? role = null, string? userId = null)
@@ -256,7 +320,7 @@ internal class FeatureFlagService : IFeatureFlagService
                 Environment: environmentName,
                 RequiresRestart: false);
 
-            await _mediator.Send(command).ConfigureAwait(false);
+            await CreateRowAsync(command, environmentName, userGuid).ConfigureAwait(false);
 
             // #3844 — la lettura e' in cache, compreso il "non esiste": senza questa riga la
             // prossima chiamata riprende il valore vecchio e riscrive invece di aggiornare,
@@ -317,7 +381,7 @@ internal class FeatureFlagService : IFeatureFlagService
                 Environment: environmentName,
                 RequiresRestart: false);
 
-            await _mediator.Send(command).ConfigureAwait(false);
+            await CreateRowAsync(command, environmentName, userGuid).ConfigureAwait(false);
 
             // #3844 — la lettura e' in cache, compreso il "non esiste": senza questa riga la
             // prossima chiamata riprende il valore vecchio e riscrive invece di aggiornare,
@@ -379,7 +443,7 @@ internal class FeatureFlagService : IFeatureFlagService
                 Environment: environmentName,
                 RequiresRestart: false);
 
-            await _mediator.Send(command).ConfigureAwait(false);
+            await CreateRowAsync(command, environmentName, userGuid).ConfigureAwait(false);
 
             // #3844 — la lettura e' in cache, compreso il "non esiste": senza questa riga la
             // prossima chiamata riprende il valore vecchio e riscrive invece di aggiornare,
@@ -441,7 +505,7 @@ internal class FeatureFlagService : IFeatureFlagService
                 Environment: environmentName,
                 RequiresRestart: false);
 
-            await _mediator.Send(command).ConfigureAwait(false);
+            await CreateRowAsync(command, environmentName, userGuid).ConfigureAwait(false);
 
             // #3844 — la lettura e' in cache, compreso il "non esiste": senza questa riga la
             // prossima chiamata riprende il valore vecchio e riscrive invece di aggiornare,

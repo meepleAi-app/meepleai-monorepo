@@ -7,7 +7,13 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.EventHandlers;
 
 /// <summary>
 /// Handler for ConfigurationCreatedEvent domain event.
-/// Automatically creates audit log entry via base class.
+/// Does nothing beyond the base class logging.
+///
+/// <para>
+/// The audit row is NOT written here: since #1534 it comes from the open-generic
+/// <see cref="Api.SharedKernel.Application.EventHandlers.DomainEventAuditHandler{TEvent}"/>, and the
+/// <c>GetUserId</c>/<c>GetAuditMetadata</c> overrides below are dead hooks of the base class.
+/// </para>
 /// </summary>
 internal sealed class ConfigurationCreatedEventHandler : DomainEventHandlerBase<ConfigurationCreatedEvent>
 {

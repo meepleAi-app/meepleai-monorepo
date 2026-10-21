@@ -81,9 +81,11 @@ public sealed class SystemConfiguration : AggregateRoot<Guid>
     /// Solo per il repository. Il costruttore pubblico è quello di una configurazione NUOVA: solleva
     /// <see cref="ConfigurationCreatedEvent"/> e imposta versione 1 e data ad "adesso". Usato per ricostruire una
     /// riga, ogni aggregato letto portava già un «creata» e <c>UpdateAsync</c> lo consegnava al collector insieme
-    /// all'evento vero: l'audit registrava una creazione falsa a ogni modifica. Nessun evento, quindi, e nessuna
-    /// validazione: la riga è già stata scritta, e un valore salvato non diventa illeggibile perché la regola di
-    /// una configurazione nuova cambia.
+    /// all'evento vero: l'audit registrava una creazione falsa a ogni modifica.
+    /// Nessun evento, quindi, e nessuna validazione dei valori: la riga è già stata scritta.
+    /// <b>Il limite</b>: la chiave no. Il chiamante la passa già come <see cref="ConfigKey"/>, e il repository la
+    /// costruisce con <c>new ConfigKey(entity.Key)</c>, che valida (non vuota, al massimo 200 caratteri, solo lettere,
+    /// cifre e <c>: _ - .</c>). Una chiave storica che non rispetta queste regole fa fallire la lettura della riga.
     /// </remarks>
     internal static SystemConfiguration Reconstitute(
         Guid id,

@@ -51,7 +51,7 @@ public sealed class ConfigurationRepositoryTests : IDisposable
 
     // Colonne della riga che l'aggregato non porta: le scrive solo RegisterCommandHandler (claim del bootstrap
     // admin, con ExecuteUpdate). Non fanno parte di ciò che la lettura ricostruisce. Che UpdateAsync le riporti
-    // al default è un difetto distinto da #4608, descritto nella PR.
+    // al default è un difetto distinto da #4608: è la issue di sicurezza #4612, non corretta qui.
     private static readonly string[] NotOwnedByTheAggregate =
     [
         nameof(SystemConfigurationEntity.BootstrapAdminCreated),

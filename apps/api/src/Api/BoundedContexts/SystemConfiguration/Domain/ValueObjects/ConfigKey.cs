@@ -12,9 +12,17 @@ public sealed class ConfigKey : ValueObject
 {
     public string Value { get; }
 
-    public ConfigKey(string key)
+    /// <remarks>
+    /// 🔴 Il parametro si chiama <c>value</c> come la proprietà <see cref="Value"/>, e non è un caso: i
+    /// <c>Configuration*Event</c> portano un <see cref="ConfigKey"/>, e l'outbox li riscrive con
+    /// <c>System.Text.Json</c>, che lega ogni parametro del costruttore a una proprietà dello stesso nome. Con il nome
+    /// <c>key</c> la deserializzazione lanciava (#4608): in produzione la riga andava in retry e poi in Failed, e
+    /// nessun handler di quegli eventi partiva. <c>ConfigurationEventsJsonRoundTripTests</c> lo tiene fermo.
+    /// Il JSON scritto non cambia: <c>{"value": ..., "category": ...}</c>, e le righe già salvate restano leggibili.
+    /// </remarks>
+    public ConfigKey(string value)
     {
-        Value = key
+        Value = value
             .NotNullOrWhiteSpace(nameof(ConfigKey), "Configuration key cannot be empty")
             .Then(k => k.Trim().MaxLength(200, nameof(ConfigKey), "Configuration key cannot exceed 200 characters"))
             .Then(k => k.MatchesPattern(

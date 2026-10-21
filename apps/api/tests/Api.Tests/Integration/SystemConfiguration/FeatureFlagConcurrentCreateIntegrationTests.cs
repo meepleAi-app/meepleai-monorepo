@@ -104,28 +104,29 @@ public sealed class FeatureFlagConcurrentCreateIntegrationTests : IClassFixture<
     public async Task EnableFeature_AnotherRequestCreatedTheRowAfterTheLookup_LeavesNoTraceOfTheFailedCreation()
     {
         // The create that lost the race never happened, so the outbox — which feeds the audit log — must hold
-        // the same events as two requests that ran one after the other. A failed save leaves its own outbox
-        // row and its pending event in the context that ran it; the loser must not reuse that context.
+        // the same events as two requests that ran one after the other: one «created» (the winner's) and one
+        // «updated» (the loser's, applied on top of the row the winner wrote).
         //
-        // The comparison is with a sequential run, not with fixed counts: loading a configuration to update
-        // it also raises a ConfigurationCreatedEvent (the aggregate constructor adds it), so an update is
-        // always [created, updated] in the outbox. That is how it was before #4599 and is not touched here.
+        // Since #4608 that is exactly [created, updated]. Before it, loading a configuration to update it also
+        // raised a ConfigurationCreatedEvent (the aggregate constructor added it), so the sequential run was
+        // [created, created, updated] and this test could only compare the race with it, not say what it holds.
         var flag = NewFlagName();
         var sequentialFlag = NewFlagName();
         var admin = await CreateUserAsync();
+        var expected = new[] { nameof(ConfigurationCreatedEvent), nameof(ConfigurationUpdatedEvent) };
 
         await RunAsync(ff => ff.EnableFeatureAsync(sequentialFlag, userId: admin.ToString()));
         await RunAsync(ff => ff.EnableFeatureAsync(sequentialFlag, userId: admin.ToString()));
-        var sequential = await OutboxEventTypesAsync(sequentialFlag);
-        sequential.Should().Contain(t => t.EndsWith(nameof(ConfigurationUpdatedEvent), StringComparison.Ordinal),
-            "setup: the sequential run must have produced the events to compare with");
+        var sequential = await OutboxEventNamesAsync(sequentialFlag);
+        sequential.Should().BeEquivalentTo(expected,
+            "setup: two sequential enables are a creation and an update, and nothing else");
 
         await RaceAsync(
             flag,
             loser: ff => ff.EnableFeatureAsync(flag, userId: admin.ToString()),
             winner: ff => ff.EnableFeatureAsync(flag, userId: admin.ToString()));
 
-        (await OutboxEventTypesAsync(flag)).Should().BeEquivalentTo(sequential,
+        (await OutboxEventNamesAsync(flag)).Should().BeEquivalentTo(sequential,
             "a creation that lost the race must leave no event behind: it never created anything");
     }
 
@@ -298,8 +299,8 @@ public sealed class FeatureFlagConcurrentCreateIntegrationTests : IClassFixture<
         return await db.Set<SystemConfigurationEntity>().AsNoTracking().Where(c => c.Key == key).ToListAsync(Ct);
     }
 
-    /// <summary>Tipo degli eventi di dominio in outbox che parlano di <paramref name="key"/>.</summary>
-    private async Task<List<string>> OutboxEventTypesAsync(string key)
+    /// <summary>Nome (senza namespace) degli eventi di dominio in outbox che parlano di <paramref name="key"/>.</summary>
+    private async Task<List<string>> OutboxEventNamesAsync(string key)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -308,7 +309,9 @@ public sealed class FeatureFlagConcurrentCreateIntegrationTests : IClassFixture<
         var rows = await db.DomainEventOutbox.AsNoTracking()
             .Select(o => new { o.EventType, o.PayloadJson })
             .ToListAsync(Ct);
-        return rows.Where(o => o.PayloadJson.Contains(key, StringComparison.Ordinal)).Select(o => o.EventType).ToList();
+        return rows.Where(o => o.PayloadJson.Contains(key, StringComparison.Ordinal))
+            .Select(o => o.EventType[(o.EventType.LastIndexOf('.') + 1)..])
+            .ToList();
     }
 
     private async Task InsertInactiveRowAsync(string key, Guid author)

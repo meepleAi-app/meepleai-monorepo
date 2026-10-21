@@ -8,7 +8,13 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.EventHandlers;
 
 /// <summary>
 /// Handler for ConfigurationDeletedEvent domain event.
-/// Automatically creates audit log entry and invalidates cache via base class.
+/// Invalidates the cache of the deleted key (every environment, plus the category tag).
+///
+/// <para>
+/// The audit row is NOT written here: since #1534 it comes from the open-generic
+/// <see cref="Api.SharedKernel.Application.EventHandlers.DomainEventAuditHandler{TEvent}"/>, and the
+/// <c>GetUserId</c>/<c>GetAuditMetadata</c> overrides below are dead hooks of the base class.
+/// </para>
 /// </summary>
 internal sealed class ConfigurationDeletedEventHandler : DomainEventHandlerBase<ConfigurationDeletedEvent>
 {

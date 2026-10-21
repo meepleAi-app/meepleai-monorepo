@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Events;
@@ -34,6 +35,7 @@ public class ApproveSharedGamePublicationCommandHandlerTests
         _handler = new ApproveSharedGamePublicationCommandHandler(
             _repositoryMock.Object,
             _unitOfWorkMock.Object,
+            new Mock<ISharedGameCacheInvalidator>().Object,
             _loggerMock.Object);
     }
 

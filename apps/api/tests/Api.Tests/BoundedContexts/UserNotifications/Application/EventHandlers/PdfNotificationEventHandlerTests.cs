@@ -79,6 +79,24 @@ public sealed class PdfNotificationEventHandlerTests
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    /// <summary>
+    /// #4610: l'utente che ha premuto «annulla» sa di averlo fatto. Il fallimento non gli viene notificato.
+    /// Il documento esiste (come in <see cref="Handle_PdfFailed_DispatchesFailedNotification"/>): a non far partire
+    /// la notifica è la categoria, non un documento mancante.
+    /// </summary>
+    [Fact]
+    public async Task Handle_PdfCancelledByTheUser_DoesNotDispatch()
+    {
+        var pdfDoc = new PdfDocumentBuilder().WithId(_pdfDocumentId).WithGameId(_gameId).WithFileName(TestFileName).WithUploadedBy(_userId).Build();
+        _pdfRepo.Setup(r => r.GetByIdAsync(_pdfDocumentId, It.IsAny<CancellationToken>())).ReturnsAsync(pdfDoc);
+
+        var evt = new PdfFailedEvent(_pdfDocumentId, ErrorCategory.Cancelled, PdfProcessingState.Embedding, "Processing cancelled by user", _userId);
+
+        await _sut.Handle(evt, CancellationToken.None);
+
+        _dispatcher.Verify(d => d.DispatchAsync(It.IsAny<NotificationMessage>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Fact]
     public async Task Handle_PdfRetry_DispatchesRetryNotification()
     {

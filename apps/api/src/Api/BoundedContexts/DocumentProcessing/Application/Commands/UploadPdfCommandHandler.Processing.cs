@@ -104,9 +104,12 @@ internal partial class UploadPdfCommandHandler
             await FinalizeProcessingAsync(pdfId, pdfDoc, userId, db, quotaService, scopedMediator, pdfRepo, startTime, cancellationToken).ConfigureAwait(false);
             _logger.LogInformation("✅ [PDF-DEBUG] ProcessPdfAsync COMPLETE for {PdfId}", pdfId);
         }
-        catch (OperationCanceledException)
+        // Only a cancellation OF THE TASK'S TOKEN is the user's (CancelPdfProcessingCommand → CancelTask). A
+        // TaskCanceledException from an HttpClient timeout leaves that token alone: it falls through to the
+        // generic catch below, is recorded as a transient failure and stays retriable (#4610).
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            await HandleProcessingCancellationAsync(pdfId, userId, db, scope, quotaService, startTime, cancellationToken).ConfigureAwait(false);
+            await HandleProcessingCancellationAsync(pdfId, userId, db, scope, quotaService, startTime).ConfigureAwait(false);
         }
         catch (InvalidOperationException ex)
         {
@@ -517,8 +520,15 @@ internal partial class UploadPdfCommandHandler
             _logger.LogInformation("📦 [BATCH-EMBED] Processing batch {Current}/{Total}: {ChunkCount} chunks",
                 batchIndex + 1, batchCount, batchTexts.Count);
 
+            // #4531: the token goes down to the call. Without it a cancelled upload kept waiting for the
+            // embedding service to answer this batch, and noticed the cancellation only afterwards.
             var batchResult = await embeddingService.GenerateEmbeddingsAsync(
-                batchTexts, pdfDoc.Language ?? "en").ConfigureAwait(false);
+                batchTexts, pdfDoc.Language ?? "en", cancellationToken).ConfigureAwait(false);
+
+            // EmbeddingService turns every provider exception, cancellation included, into a failed result. Without
+            // this line a cancelled batch would be logged as «BATCH-EMBED FAILED» at Error level and handed to
+            // HandleEmbeddingFailureAsync as a service failure, when it is the user's cancellation.
+            cancellationToken.ThrowIfCancellationRequested();
 
             if (!batchResult.Success)
             {
@@ -909,28 +919,66 @@ internal partial class UploadPdfCommandHandler
     /// <summary>
     /// Handles processing cancellation with cleanup.
     /// </summary>
+    /// <remarks>
+    /// <para>The token that triggered this branch is already signalled, so none of the writes below can use it
+    /// (#4531). The progress update did, and <see cref="UpdateProgressAsync"/> rethrows
+    /// <see cref="OperationCanceledException"/>: it threw at once, out of this method, and neither the quota
+    /// release nor the Failed transition ran. The document stayed in the step it was in (Embedding,
+    /// Indexing…) and the reservation was not given back.</para>
+    /// <para>The document ends <c>Failed</c> with <see cref="ErrorCategory.Cancelled"/>: <c>RetryFailedPdfsJob</c>
+    /// does not retry it and <c>PdfNotificationEventHandler</c> does not tell the user their own cancellation
+    /// failed (#4610).</para>
+    /// </remarks>
     private async Task HandleProcessingCancellationAsync(
         string pdfId,
         Guid userId,
         MeepleAiDbContext db,
         IServiceScope scope,
         IPdfUploadQuotaService quotaService,
-        DateTime startTime,
-        CancellationToken cancellationToken)
+        DateTime startTime)
     {
         _logger.LogInformation("PDF processing cancelled for {PdfId}", pdfId);
-        await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, "Processing cancelled by user", cancellationToken).ConfigureAwait(false);
+
+        // The step that was cancelled can leave work behind that must not be saved now that the token no longer
+        // stops the saves: rows in the change tracker (text chunks or pgvector rows of a save that never went
+        // through), and the domain events queued in the collector for a save that never committed (the
+        // collector is drained only after a successful save). Same rule as TransitionToFailedAsync (#4395).
+        // The collector is cleared as well: otherwise the next save writes to the outbox a state change that
+        // the database never saw.
+        db.ChangeTracker.Clear();
+        scope.ServiceProvider.GetRequiredService<Api.SharedKernel.Application.Services.IDomainEventCollector>().Clear();
+
+        var hasPdfGuid = Guid.TryParse(pdfId, out var cancelledPdfGuid);
+
+        // The cancellation can arrive after the Ready commit, in the tail of FinalizeProcessingAsync (cache
+        // invalidation, quota confirmation). The document is then done and indexed: marking it Failed would
+        // rewrite its progress, give back a quota it consumed, and MarkAsFailed throws on a Ready aggregate.
+        if (hasPdfGuid)
+        {
+            var currentState = await db.PdfDocuments.AsNoTracking()
+                .Where(p => p.Id == cancelledPdfGuid)
+                .Select(p => p.ProcessingState)
+                .FirstOrDefaultAsync(CancellationToken.None).ConfigureAwait(false);
+            if (string.Equals(currentState, nameof(PdfProcessingState.Ready), StringComparison.Ordinal))
+            {
+                _logger.LogInformation(
+                    "PDF {PdfId} was cancelled after it became Ready: nothing to clean up", pdfId);
+                return;
+            }
+        }
+
+        await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, "Processing cancelled by user", CancellationToken.None).ConfigureAwait(false);
         await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
 
         // #2284 follow-up: TD2 — transition Failed via domain. failedAtState=null →
         // resolved to current pdfDomain.ProcessingState (whatever step the cancellation
         // hit). Use CancellationToken.None because the cancellation token that triggered
         // this branch is already signalled; we still want to persist the Failed state.
-        if (Guid.TryParse(pdfId, out var cancelledPdfGuid))
+        if (hasPdfGuid)
         {
             await TransitionToFailedAsync(
                 scope, db, cancelledPdfGuid, "Processing cancelled by user",
-                Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.Unknown,
+                Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.Cancelled,
                 failedAtState: null, CancellationToken.None).ConfigureAwait(false);
         }
     }

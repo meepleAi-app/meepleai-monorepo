@@ -3,6 +3,7 @@ using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.Services;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using MediatR;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
@@ -38,7 +39,8 @@ public class FeatureFlagTierAccessIntegrationTests
             _mockConfigService.Object,
             _mockMediator.Object,
             environment.Object,
-            _mockLogger.Object);
+            _mockLogger.Object,
+            MediatorScopeFactory.For(_mockMediator.Object));
     }
 
     [Fact]

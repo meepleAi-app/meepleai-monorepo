@@ -7,6 +7,7 @@ using Api.Models;
 using Api.Services;
 using Api.Tests.BoundedContexts.Authentication.TestHelpers;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using MediatR;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Logging;
@@ -43,7 +44,8 @@ public class FeatureFlagServiceTests
             _mockConfigService.Object,
             _mockMediator.Object,
             _mockEnvironment.Object,
-            _mockLogger.Object);
+            _mockLogger.Object,
+            MediatorScopeFactory.For(_mockMediator.Object));
     }
 
     #region IsEnabledForTierAsync Tests

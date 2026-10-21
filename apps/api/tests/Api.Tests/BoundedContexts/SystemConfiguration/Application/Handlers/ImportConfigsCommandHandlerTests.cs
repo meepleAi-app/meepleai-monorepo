@@ -63,7 +63,7 @@ public class ImportConfigsCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Should().Be(3);
+        result.ImportedCount.Should().Be(3);
         _mockConfigRepository.Verify(
             r => r.AddAsync(It.IsAny<SystemConfig>(), It.IsAny<CancellationToken>()),
             Times.Exactly(3));
@@ -93,7 +93,7 @@ public class ImportConfigsCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Should().Be(1);
+        result.ImportedCount.Should().Be(1);
         _mockConfigRepository.Verify(
             r => r.UpdateAsync(existingConfig, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -124,7 +124,7 @@ public class ImportConfigsCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Should().Be(0);
+        result.ImportedCount.Should().Be(0);
         _mockConfigRepository.Verify(
             r => r.UpdateAsync(It.IsAny<SystemConfig>(), It.IsAny<CancellationToken>()),
             Times.Never);
@@ -158,7 +158,7 @@ public class ImportConfigsCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Should().Be(1);
+        result.ImportedCount.Should().Be(1);
         capturedConfig.Should().NotBeNull();
         capturedConfig!.IsActive.Should().BeFalse();
     }
@@ -185,7 +185,7 @@ public class ImportConfigsCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Should().Be(2);
+        result.ImportedCount.Should().Be(2);
         _mockConfigRepository.Verify(
             r => r.UpdateAsync(existingConfig, It.IsAny<CancellationToken>()),
             Times.Once);
@@ -208,7 +208,7 @@ public class ImportConfigsCommandHandlerTests
         var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        result.Should().Be(0);
+        result.ImportedCount.Should().Be(0);
         _mockConfigRepository.Verify(
             r => r.AddAsync(It.IsAny<SystemConfig>(), It.IsAny<CancellationToken>()),
             Times.Never);

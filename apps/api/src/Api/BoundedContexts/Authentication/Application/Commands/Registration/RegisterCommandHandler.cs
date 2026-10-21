@@ -11,6 +11,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Constants;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Guards;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -29,8 +30,10 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
 {
     // C5: SystemConfiguration row that records whether the bootstrap-admin
     // path has already been consumed. Single-use enforcement is layered on
-    // top of the constant-time token compare.
-    private const string BootstrapAdminConfigKey = "Authentication:BootstrapAdmin";
+    // top of the constant-time token compare. The key is shared with the admin
+    // configuration API, which refuses to touch it (#4612): see
+    // ReservedConfigurationKeys.
+    private const string BootstrapAdminConfigKey = ReservedConfigurationKeys.BootstrapAdmin;
 
     private readonly IUserRepository _userRepository;
     private readonly ISessionRepository _sessionRepository;

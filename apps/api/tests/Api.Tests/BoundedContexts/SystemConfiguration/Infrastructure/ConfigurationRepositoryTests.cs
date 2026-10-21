@@ -50,13 +50,10 @@ public sealed class ConfigurationRepositoryTests : IDisposable
     };
 
     // Colonne della riga che l'aggregato non porta: le scrive solo RegisterCommandHandler (claim del bootstrap
-    // admin, con ExecuteUpdate). Non fanno parte di ciò che la lettura ricostruisce. Che UpdateAsync le riporti
-    // al default è un difetto distinto da #4608: è la issue di sicurezza #4612, non corretta qui.
-    private static readonly string[] NotOwnedByTheAggregate =
-    [
-        nameof(SystemConfigurationEntity.BootstrapAdminCreated),
-        nameof(SystemConfigurationEntity.BootstrapAdminCreatedAt),
-    ];
+    // admin, con ExecuteUpdate). Non fanno parte di ciò che la lettura ricostruisce, e UpdateAsync non deve
+    // toccarle (#4612): la lista è quella del repository, non una copia, così il test non si può scollare.
+    private static readonly IReadOnlyList<string> NotOwnedByTheAggregate =
+        ConfigurationRepository.ColumnsNotOwnedByTheAggregate;
 
     private readonly MeepleAiDbContext _db;
 
@@ -233,6 +230,111 @@ public sealed class ConfigurationRepositoryTests : IDisposable
         var deleted = collector.PeekEvents().Should().ContainSingle().Which.Should().BeOfType<ConfigurationDeletedEvent>().Subject;
         deleted.ConfigurationId.Should().Be(seeded.Id);
     }
+
+    // ----- #4612: le colonne che l'aggregato non porta -----
+
+    // Sentinelle diverse dal default dell'entità (false / NULL): un valore riportato al default si vede.
+    private static readonly DateTime BootstrapClaimedAt = new(2026, 3, 4, 5, 6, 7, DateTimeKind.Utc);
+
+    private async Task<SystemConfigurationEntity> SeedClaimedBootstrapRowAsync()
+    {
+        var seeded = await SeedEveryColumnAsync();
+        seeded.BootstrapAdminCreated = true;
+        seeded.BootstrapAdminCreatedAt = BootstrapClaimedAt;
+        _db.Set<SystemConfigurationEntity>().Update(seeded);
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+        return seeded;
+    }
+
+    public static TheoryData<string> AggregateChanges => new()
+    {
+        "update-value",
+        "activate",
+        "rollback",
+    };
+
+    private static void Change(SystemConfigurationAggregate config, string change)
+    {
+        switch (change)
+        {
+            case "update-value":
+                config.UpdateValue("valore-nuovo", Guid.NewGuid());
+                break;
+            case "activate":
+                config.Activate();
+                break;
+            case "rollback":
+                config.Rollback(Guid.NewGuid());
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(change), change, null);
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(AggregateChanges))]
+    public async Task UpdateAsync_AfterAnyAggregateChange_LeavesTheColumnsTheAggregateDoesNotOwnAsTheyWere(string change)
+    {
+        var seeded = await SeedClaimedBootstrapRowAsync();
+        var (repository, _) = CreateRepository();
+        var config = await repository.GetByIdAsync(seeded.Id);
+
+        Change(config!, change);
+        await repository.UpdateAsync(config!);
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        var after = await _db.Set<SystemConfigurationEntity>().AsNoTracking().SingleAsync(c => c.Id == seeded.Id);
+        after.UpdatedAt.Should().BeAfter(seeded.UpdatedAt, "setup: the change reached the row, so UpdateAsync did write");
+        var reset = NotOwnedByTheAggregate
+            .Select(name => (Name: name, Expected: Column(seeded, name), Actual: Column(after, name)))
+            .Where(x => !Equals(x.Expected, x.Actual))
+            .Select(x => $"{x.Name}: «{x.Expected}» → «{x.Actual}»");
+        string.Join(Environment.NewLine, reset).Should().BeEmpty(
+            "the bootstrap flag closes the first-admin claim for good: an update of the row must not reopen it");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_MarksNoColumnNotOwnedByTheAggregateAsModified()
+    {
+        var seeded = await SeedClaimedBootstrapRowAsync();
+        var (repository, _) = CreateRepository();
+        var config = await repository.GetByIdAsync(seeded.Id);
+        config!.UpdateValue("valore-nuovo", Guid.NewGuid());
+
+        await repository.UpdateAsync(config);
+
+        var entry = _db.ChangeTracker.Entries<SystemConfigurationEntity>().Single();
+        entry.Property(nameof(SystemConfigurationEntity.Value)).IsModified.Should().BeTrue(
+            "control: DbSet.Update marks every column, so a column left unmarked was unmarked on purpose");
+        var marked = NotOwnedByTheAggregate.Where(name => entry.Property(name).IsModified).ToList();
+        marked.Should().BeEmpty("these columns belong to RegisterCommandHandler, not to the aggregate");
+    }
+
+    [Fact]
+    public void ColumnsNotOwnedByTheAggregate_AreNotPropertiesOfTheAggregate()
+    {
+        // Una colonna che l'aggregato porta e che il mapper scrive non va esclusa: le sue modifiche andrebbero
+        // perse in silenzio.
+        var ownedByTheAggregate = NotOwnedByTheAggregate
+            .Where(name => typeof(SystemConfigurationAggregate).GetProperty(name) is not null)
+            .ToList();
+
+        ownedByTheAggregate.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void ColumnsNotOwnedByTheAggregate_AreColumnsOfTheRow()
+    {
+        var columns = _db.Model.FindEntityType(typeof(SystemConfigurationEntity))!
+            .GetProperties().Select(p => p.Name).ToHashSet(StringComparer.Ordinal);
+
+        NotOwnedByTheAggregate.Should().OnlyContain(name => columns.Contains(name));
+    }
+
+    private static object? Column(SystemConfigurationEntity entity, string name) =>
+        typeof(SystemConfigurationEntity).GetProperty(name)!.GetValue(entity);
 
     [Fact]
     public async Task AddAsync_NewConfiguration_CollectsTheCreatedEvent()

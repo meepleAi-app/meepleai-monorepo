@@ -74,6 +74,53 @@ public sealed class SystemConfiguration : AggregateRoot<Guid>
         ));
     }
 
+    /// <summary>
+    /// Ricostituisce una configurazione letta dal database, così com'è (#4608).
+    /// </summary>
+    /// <remarks>
+    /// Solo per il repository. Il costruttore pubblico è quello di una configurazione NUOVA: solleva
+    /// <see cref="ConfigurationCreatedEvent"/> e imposta versione 1 e data ad "adesso". Usato per ricostruire una
+    /// riga, ogni aggregato letto portava già un «creata» e <c>UpdateAsync</c> lo consegnava al collector insieme
+    /// all'evento vero: l'audit registrava una creazione falsa a ogni modifica. Nessun evento, quindi, e nessuna
+    /// validazione: la riga è già stata scritta, e un valore salvato non diventa illeggibile perché la regola di
+    /// una configurazione nuova cambia.
+    /// </remarks>
+    internal static SystemConfiguration Reconstitute(
+        Guid id,
+        ConfigKey key,
+        string value,
+        string valueType,
+        string? description,
+        string category,
+        bool isActive,
+        bool requiresRestart,
+        string environment,
+        int version,
+        string? previousValue,
+        DateTime createdAt,
+        DateTime updatedAt,
+        Guid createdByUserId,
+        Guid? updatedByUserId,
+        DateTime? lastToggledAt) => new()
+        {
+            Id = id,
+            Key = key,
+            Value = value,
+            ValueType = valueType,
+            Description = description,
+            Category = category,
+            IsActive = isActive,
+            RequiresRestart = requiresRestart,
+            Environment = environment,
+            Version = version,
+            PreviousValue = previousValue,
+            CreatedAt = createdAt,
+            UpdatedAt = updatedAt,
+            CreatedByUserId = createdByUserId,
+            UpdatedByUserId = updatedByUserId,
+            LastToggledAt = lastToggledAt,
+        };
+
     public void UpdateValue(string newValue, Guid updatedByUserId)
     {
         if (string.IsNullOrWhiteSpace(newValue))

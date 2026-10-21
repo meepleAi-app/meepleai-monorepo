@@ -144,6 +144,9 @@ internal class ConfigurationRepository : RepositoryBase, IConfigurationRepositor
 
     public Task DeleteAsync(SystemConfigurationAggregate config, CancellationToken cancellationToken = default)
     {
+        // Il ConfigurationDeletedEvent di MarkAsDeleted() vive sull'aggregato: senza questa raccolta non arriva
+        // mai all'outbox, e la cancellazione non lascia traccia (#4608).
+        CollectDomainEvents(config);
         var entity = MapToPersistence(config);
         DbContext.Set<Api.Infrastructure.Entities.SystemConfigurationEntity>().Remove(entity);
         return Task.CompletedTask;
@@ -157,43 +160,25 @@ internal class ConfigurationRepository : RepositoryBase, IConfigurationRepositor
 
     private static SystemConfigurationAggregate MapToDomain(Api.Infrastructure.Entities.SystemConfigurationEntity entity)
     {
-        var key = new ConfigKey(entity.Key);
-
-        var config = new SystemConfigurationAggregate(
+        // Reconstitute, non il costruttore pubblico (#4608): quello è di una configurazione nuova, e solleva
+        // ConfigurationCreatedEvent a ogni lettura.
+        return SystemConfigurationAggregate.Reconstitute(
             id: entity.Id,
-            key: key,
+            key: new ConfigKey(entity.Key),
             value: entity.Value,
             valueType: entity.ValueType,
-            createdByUserId: entity.CreatedByUserId,
             description: entity.Description,
             category: entity.Category,
+            isActive: entity.IsActive,
+            requiresRestart: entity.RequiresRestart,
             environment: entity.Environment,
-            requiresRestart: entity.RequiresRestart
-        );
-
-        // Override properties from DB via reflection
-        var isActiveProp = typeof(SystemConfigurationAggregate).GetProperty("IsActive");
-        isActiveProp?.SetValue(config, entity.IsActive);
-
-        var versionProp = typeof(SystemConfigurationAggregate).GetProperty("Version");
-        versionProp?.SetValue(config, entity.Version);
-
-        var previousValueProp = typeof(SystemConfigurationAggregate).GetProperty("PreviousValue");
-        previousValueProp?.SetValue(config, entity.PreviousValue);
-
-        var createdAtProp = typeof(SystemConfigurationAggregate).GetProperty("CreatedAt");
-        createdAtProp?.SetValue(config, entity.CreatedAt);
-
-        var updatedAtProp = typeof(SystemConfigurationAggregate).GetProperty("UpdatedAt");
-        updatedAtProp?.SetValue(config, entity.UpdatedAt);
-
-        var updatedByUserIdProp = typeof(SystemConfigurationAggregate).GetProperty("UpdatedByUserId");
-        updatedByUserIdProp?.SetValue(config, entity.UpdatedByUserId);
-
-        var lastToggledAtProp = typeof(SystemConfigurationAggregate).GetProperty("LastToggledAt");
-        lastToggledAtProp?.SetValue(config, entity.LastToggledAt);
-
-        return config;
+            version: entity.Version,
+            previousValue: entity.PreviousValue,
+            createdAt: entity.CreatedAt,
+            updatedAt: entity.UpdatedAt,
+            createdByUserId: entity.CreatedByUserId,
+            updatedByUserId: entity.UpdatedByUserId,
+            lastToggledAt: entity.LastToggledAt);
     }
 
     private static Api.Infrastructure.Entities.SystemConfigurationEntity MapToPersistence(SystemConfigurationAggregate domain)

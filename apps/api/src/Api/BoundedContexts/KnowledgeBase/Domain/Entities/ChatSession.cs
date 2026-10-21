@@ -86,6 +86,58 @@ internal sealed class ChatSession : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Ricostituisce una chat letta dal database, così com'è (#4613).
+    /// </summary>
+    /// <remarks>
+    /// Solo per il repository. Il costruttore pubblico è quello di una chat NUOVA: solleva
+    /// <see cref="ChatSessionCreatedEvent"/>, data la chat ad "adesso", toglie gli spazi dal titolo e rifiuta un
+    /// utente o un gioco vuoti. Usato per ricostruire una riga, ogni aggregato letto portava già un «creata», e
+    /// <c>UpdateAsync</c> lo consegnava al collector insieme all'evento vero: il feed attività mostrava una chat
+    /// «creata» a ogni messaggio aggiunto.
+    /// Nessun evento, quindi, e nessuna validazione: la riga è già stata scritta. <paramref name="messages"/> sono
+    /// quelli che il chiamante ha caricato: un elenco può non portarli (la riga li ha tutti, l'aggregato solo quelli
+    /// richiesti), e in quel caso l'aggregato non va salvato.
+    /// </remarks>
+    internal static ChatSession Reconstitute(
+        Guid id,
+        Guid userId,
+        Guid gameId,
+        Guid? userLibraryEntryId,
+        Guid? agentSessionId,
+        Guid? agentId,
+        string? agentType,
+        string? agentName,
+        string? title,
+        string agentConfigJson,
+        DateTime createdAt,
+        DateTime lastMessageAt,
+        bool isArchived,
+        IEnumerable<SessionChatMessage> messages)
+    {
+        ArgumentNullException.ThrowIfNull(agentConfigJson);
+        ArgumentNullException.ThrowIfNull(messages);
+
+        var session = new ChatSession
+        {
+            Id = id,
+            UserId = userId,
+            GameId = gameId,
+            UserLibraryEntryId = userLibraryEntryId,
+            AgentSessionId = agentSessionId,
+            AgentId = agentId,
+            AgentType = agentType,
+            AgentName = agentName,
+            Title = title,
+            AgentConfigJson = agentConfigJson,
+            CreatedAt = createdAt,
+            LastMessageAt = lastMessageAt,
+            IsArchived = isArchived,
+        };
+        session._messages.AddRange(messages);
+        return session;
+    }
+
+    /// <summary>
     /// Adds a message to the session.
     /// </summary>
     public void AddMessage(SessionChatMessage message)

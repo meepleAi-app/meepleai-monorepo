@@ -352,14 +352,18 @@ public class UserRepository : RepositoryBase, IUserRepository
         // Reconstruct OAuth accounts collection
         if (entity.OAuthAccounts.Count > 0)
         {
-            var oauthAccounts = entity.OAuthAccounts.Select(oauthEntity => new OAuthAccount(
+            // Reconstitute, non il costruttore pubblico (#4613): quello è di un collegamento nuovo, data creazione
+            // e aggiornamento ad "adesso" e porta un OAuthAccountLinkedEvent.
+            var oauthAccounts = entity.OAuthAccounts.Select(oauthEntity => OAuthAccount.Reconstitute(
                 oauthEntity.Id,
                 oauthEntity.UserId,
                 oauthEntity.Provider,
                 oauthEntity.ProviderUserId,
                 oauthEntity.AccessTokenEncrypted,
                 oauthEntity.RefreshTokenEncrypted,
-                oauthEntity.TokenExpiresAt
+                oauthEntity.TokenExpiresAt,
+                oauthEntity.CreatedAt,
+                oauthEntity.UpdatedAt
             )).ToList();
 
             // Use internal method instead of reflection (S3011 compliance)

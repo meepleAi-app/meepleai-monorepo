@@ -77,14 +77,30 @@ internal sealed class CatalogSeedStreamService : ICatalogSeedStreamService
     }
 
     /// <summary>
+    /// Subscribers currently registered. A subscriber registers on the first
+    /// <c>MoveNextAsync</c> of its enumerator (the iterator body is lazy), not when
+    /// <see cref="SubscribeAsync"/> is called, and unregisters when the enumeration ends.
+    /// Exposed so tests can observe registration instead of guessing it with a
+    /// delay (#4604, same shape as #3711 and #4193).
+    /// </summary>
+    internal int SubscriberCount => _subscribers.Count;
+
+    /// <summary>
     /// Subscribe to stream. New subscriber receives a replay of recent events
-    /// (up to <see cref="ReplayBufferSize"/>) followed by live events. Replay
-    /// uses an <c>OccurredAt</c> cutoff to prevent the "subscribe/publish seam"
-    /// race from delivering duplicate events — only events strictly before the
-    /// channel-registration timestamp are replayed; everything at or after the
-    /// cutoff arrives via the live channel. In the unlikely case two events
-    /// share the same <c>OccurredAt</c> microsecond, one may be duplicated;
-    /// acceptable for a diagnostic SSE stream.
+    /// (up to <see cref="ReplayBufferSize"/>) followed by live events. The
+    /// subscriber registers lazily, on the first <c>MoveNextAsync</c>; an event
+    /// whose <c>PublishAsync</c> completed between the call and that first move
+    /// is not lost — it sits in the replay buffer and is delivered by the
+    /// replay, exactly once.
+    /// Replay uses an <c>OccurredAt</c> cutoff, taken right after registration,
+    /// to reduce duplicates at the "subscribe/publish seam": only events strictly
+    /// before the cutoff are replayed, and events stamped at or after it are
+    /// guaranteed to reach the live channel. That is <b>exactly-once only when
+    /// <c>PublishAsync</c> does not overlap the registration</b>. If it does, an
+    /// event E stamped before the cutoff can be added to the buffer (so the
+    /// snapshot replays it) and then written to the channel that has just been
+    /// registered (so it arrives live too): E is delivered twice. Nothing is lost;
+    /// the duplicate is acceptable for a diagnostic SSE stream.
     /// </summary>
     /// <inheritdoc />
     public async IAsyncEnumerable<CatalogSeedStreamEvent> SubscribeAsync(
@@ -103,8 +119,14 @@ internal sealed class CatalogSeedStreamService : ICatalogSeedStreamService
 
         // Mark cutoff: events with OccurredAt >= cutoff are guaranteed to reach
         // the channel (since registration above happens-before any subsequent
-        // PublishAsync write). Replay only events strictly before cutoff to
-        // avoid double-delivery at the subscribe/publish seam.
+        // PublishAsync write), so they are not replayed. This narrows, but does
+        // not close, the double-delivery window at the subscribe/publish seam:
+        // a PublishAsync already in flight can add an event E (OccurredAt <
+        // cutoff) to the replay buffer and then write E to this freshly
+        // registered channel, so E arrives from the snapshot AND live. Closing
+        // it needs registration, cutoff and snapshot under _replayLock together
+        // with the buffer add and the subscriber enumeration in PublishAsync, or
+        // a sequence number instead of the timestamp.
         var registrationCutoff = DateTime.UtcNow;
 
         _logger.LogDebug(

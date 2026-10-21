@@ -137,7 +137,7 @@ internal sealed class UpdateSharedGameCommandHandler : ICommandHandler<UpdateSha
         //
         // Passa dall'invalidatore del catalogo (ISharedGameCacheInvalidator, lo stesso dei percorsi
         // cover): invalida sia il tag di lista `search-games` sia quello di dettaglio, con la retry
-        // policy di #613. Cinque altri percorsi di scrittura di questo BC lo facevano gia'; questo, il
+        // policy di #613. I percorsi cover, le traduzioni e il resto del BC lo facevano gia'; questo, il
         // piu' centrale, no.
         await _cacheInvalidator.EvictDetailAndListAsync(command.GameId, cancellationToken).ConfigureAwait(false);
 

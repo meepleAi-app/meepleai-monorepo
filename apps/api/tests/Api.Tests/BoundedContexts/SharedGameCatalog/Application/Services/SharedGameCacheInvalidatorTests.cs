@@ -14,11 +14,11 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Services;
 /// dettaglio e la lista del catalogo.
 /// </summary>
 /// <remarks>
-/// Fissa quattro cose, perché sono quelle da cui dipendono gli handler e che un cambio silenzioso
-/// romperebbe: i tag (e che il dettaglio sia per gioco), i due passi per tag nell'ordine wrapper e poi
-/// <see cref="HybridCache"/> nativo, il comportamento in errore (rilancio dopo i tentativi della retry
-/// policy: la questione aperta di #4603 punto 2) e il token della richiesta. La retry policy dei doppi
-/// ESEGUE il delegato, come quella vera, altrimenti il doppio della cache non viene esercitato.
+/// Fissa ciò da cui dipendono gli handler e che un cambio silenzioso romperebbe: i tag (e che il
+/// dettaglio sia per gioco), i due passi per tag nell'ordine wrapper e poi <see cref="HybridCache"/>
+/// nativo, il comportamento in errore (rilancio dopo i tentativi della retry policy: la questione aperta
+/// di #4603 punto 2) e il token della richiesta. La retry policy dei doppi ESEGUE il delegato, come quella
+/// vera, altrimenti il doppio della cache non viene esercitato.
 /// </remarks>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "SharedGameCatalog")]

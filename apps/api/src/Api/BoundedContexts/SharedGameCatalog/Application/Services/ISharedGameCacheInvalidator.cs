@@ -1,10 +1,20 @@
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 
 /// <summary>
-/// #4603: l'unico punto in cui un comando toglie dalla cache il read model del catalogo — il dettaglio
-/// di un gioco (<c>GET /api/v1/shared-games/{id}</c>) e la lista (<c>GET /api/v1/shared-games</c>).
+/// #4603: il punto in cui i command handler di SharedGameCatalog tolgono dalla cache il read model del
+/// catalogo — il dettaglio di un gioco (<c>GET /api/v1/shared-games/{id}</c>) e la lista
+/// (<c>GET /api/v1/shared-games</c>).
 /// </summary>
 /// <remarks>
+/// <para>
+/// Chi lo chiama oggi: i command handler del BC che cambiano lo stato di un gioco o lo cancellano, o che
+/// scrivono cover, traduzioni, errata, FAQ, dati (<c>UpdateSharedGame</c>, import Excel) e accesso RAG. Non
+/// è la garanzia che ogni percorso di scrittura del BC lo chiami. Chi non lo usa e scrive i tag a mano:
+/// gli event handler e i job <c>PdfCoverGeneratedEventHandler</c>,
+/// <c>VectorDocumentIndexedForKbFlagHandler</c>, <c>ToolkitChangedForCatalogAggregatesHandler</c>,
+/// <c>AgentDefinitionChangedForCatalogAggregatesHandler</c>, <c>ScheduledBulkInvalidationJob</c> e
+/// <c>KbFlagDriftAuditJob</c> (quest'ultimo vive in DocumentProcessing). Migrarli è un seguito di #4603.
+/// </para>
 /// <para>
 /// Da chiamare DOPO il salvataggio: un'evizione prima lascerebbe che una lettura ripopoli la cache col
 /// contenuto vecchio, prima che la scrittura sia visibile.

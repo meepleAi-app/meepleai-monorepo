@@ -3,6 +3,7 @@ using System.Text;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatalogCover;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
@@ -18,6 +19,7 @@ using Api.Tests.TestHelpers;
 using FluentAssertions;
 using ImageMagick;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
@@ -551,8 +553,14 @@ public class EnrichCatalogCoverCommandHandlerTests
         harness.CacheMock.Verify(
             c => c.RemoveByTagAcrossReplicasAsync("search-games", It.IsAny<CancellationToken>()),
             Times.Once);
+        harness.NativeCacheMock.Verify(
+            c => c.RemoveByTagAsync("search-games", It.IsAny<CancellationToken>()),
+            Times.Once);
         harness.CacheMock.Verify(
             c => c.RemoveByTagAcrossReplicasAsync($"shared-game:{game.Id}", It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.NativeCacheMock.Verify(
+            c => c.RemoveByTagAsync($"shared-game:{game.Id}", It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -573,6 +581,9 @@ public class EnrichCatalogCoverCommandHandlerTests
         result.Should().BeOfType<EnrichCatalogCoverResult.Skipped>();
         harness.CacheMock.Verify(
             c => c.RemoveByTagAcrossReplicasAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.NativeCacheMock.Verify(
+            c => c.RemoveByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -600,6 +611,9 @@ public class EnrichCatalogCoverCommandHandlerTests
         result.Should().BeOfType<EnrichCatalogCoverResult.Failed>();
         harness.CacheMock.Verify(
             c => c.RemoveByTagAcrossReplicasAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.NativeCacheMock.Verify(
+            c => c.RemoveByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -654,6 +668,7 @@ public class EnrichCatalogCoverCommandHandlerTests
         Mock<IUnitOfWork> UowMock,
         Mock<IAmazonS3> S3Mock,
         Mock<IHybridCacheService> CacheMock,
+        Mock<HybridCache> NativeCacheMock,
         WikidataSparqlHandler WikidataHandler,
         CommonsRoutingHandler CommonsHandler,
         FakeTimeProvider TimeProvider);
@@ -718,6 +733,8 @@ public class EnrichCatalogCoverCommandHandlerTests
             .Setup(c => c.RemoveByTagAcrossReplicasAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(0);
 
+        var nativeCacheMock = new Mock<HybridCache>();
+
         var handler = new EnrichCatalogCoverCommandHandler(
             repo.Object,
             uow.Object,
@@ -725,15 +742,14 @@ public class EnrichCatalogCoverCommandHandlerTests
             commonsClient,
             webpGenerator,
             fakeTime,
-            cacheMock.Object,
-            new PassthroughRetryPolicy(),
+            new SharedGameCacheInvalidator(cacheMock.Object, new PassthroughRetryPolicy(), nativeCacheMock.Object),
             NullLogger<EnrichCatalogCoverCommandHandler>.Instance,
             // #3886: la pipeline R2 e' ora l'ultimo parametro, opzionale con default null (non e'
             // registrata quando STORAGE_PROVIDER non e' s3). Questo harness esercita il ramo cloud,
             // quindi la passa esplicitamente.
             r2Pipeline);
 
-        return new TestHarness(handler, repo, uow, s3Mock, cacheMock, sparqlHandler, commonsHandler, fakeTime);
+        return new TestHarness(handler, repo, uow, s3Mock, cacheMock, nativeCacheMock, sparqlHandler, commonsHandler, fakeTime);
     }
 
     private static SharedGame BuildGame(

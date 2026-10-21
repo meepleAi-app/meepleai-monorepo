@@ -228,9 +228,13 @@ public sealed class FeatureFlagConcurrentCreateIntegrationTests : IClassFixture<
     [Fact]
     public async Task EnableFeature_UniqueViolationOnARowTheLookupCannotSee_StillFails()
     {
+        // 🔴 This test photographs a KNOWN LIMIT, not a contract: today this case answers 500, and it should not.
+        // It is tracked in #4607 (https://github.com/meepleAi-app/meepleai-monorepo/issues/4607); when that is
+        // fixed, change the expectation here instead of defending the 500.
+        //
         // The lookup only sees active rows, so an inactive row for the same (Key, Environment) is invisible to
-        // it and still trips the unique index. Re-reading finds nothing to update: the original error must come
-        // out, not a silent success and not a second attempt.
+        // it and still trips the unique index. Re-reading finds nothing to update: what #4599 guarantees is that
+        // the original error comes out, not a silent success and not a second attempt.
         var flag = NewFlagName();
         var admin = await CreateUserAsync();
         await InsertInactiveRowAsync(flag, admin);

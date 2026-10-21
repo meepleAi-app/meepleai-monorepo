@@ -328,9 +328,21 @@ public class FeatureFlagServiceCacheInvalidationTests
     // La creazione perde la gara con un'altra richiesta (23505)
     // ----------------------------------------
 
-    private static DbUpdateException ViolazioneDiUnicita() =>
+    /// <summary>
+    /// Violazione dell'indice univoco su (Key, Environment). Il nome del vincolo si imposta col costruttore
+    /// pubblico di <c>PostgresException</c> (Npgsql 10): senza, il recupero non riconosce l'errore.
+    /// </summary>
+    private static DbUpdateException ViolazioneDiUnicita(string? vincolo = FeatureFlagService.KeyEnvironmentIndexName) =>
+        ErroreDiDatabase(PostgresErrorCodes.UniqueViolation, vincolo);
+
+    private static DbUpdateException ErroreDiDatabase(string sqlState, string? vincolo) =>
         new("An error occurred while saving the entity changes.",
-            new PostgresException("duplicate key value violates unique constraint", "ERROR", "ERROR", PostgresErrorCodes.UniqueViolation));
+            new PostgresException(
+                messageText: "database error",
+                severity: "ERROR",
+                invariantSeverity: "ERROR",
+                sqlState: sqlState,
+                constraintName: vincolo));
 
     [Theory]
     [InlineData(true)]
@@ -386,14 +398,18 @@ public class FeatureFlagServiceCacheInvalidationTests
     }
 
     [Theory]
-    [InlineData(PostgresErrorCodes.SerializationFailure)]
-    [InlineData(PostgresErrorCodes.ForeignKeyViolation)] // l'autore della riga non esiste
-    public async Task Globale_UnErroreDiDatabaseCheNonEUnaViolazioneDiUnicita_NonVieneRecuperato(string sqlState)
+    [InlineData(PostgresErrorCodes.SerializationFailure, FeatureFlagService.KeyEnvironmentIndexName)]
+    [InlineData(PostgresErrorCodes.ForeignKeyViolation, "FK_system_configurations_users_CreatedByUserId")] // l'autore della riga non esiste
+    [InlineData(PostgresErrorCodes.UniqueViolation, "PK_system_configurations")] // un altro vincolo univoco
+    [InlineData(PostgresErrorCodes.UniqueViolation, null)]
+    public async Task Globale_UnErroreDiDatabaseCheNonEQuelloDellIndiceKeyEnvironment_NonVieneRecuperato(
+        string sqlState, string? vincolo)
     {
-        var errore = new DbUpdateException("fail", new PostgresException("fail", "ERROR", "ERROR", sqlState));
+        var errore = ErroreDiDatabase(sqlState, vincolo);
         var s = CreaScenario(creazione: (nuova, config) =>
         {
-            // Anche con una riga presente: il recupero non deve scattare per un errore che non e' il 23505.
+            // Anche con una riga presente: il recupero non deve scattare per un errore che non e' il 23505
+            // sull'indice (Key, Environment).
             config.ScriviDirettamente(nuova.Key, nuova.Environment, "false");
             throw errore;
         });

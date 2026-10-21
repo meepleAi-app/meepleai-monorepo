@@ -10,17 +10,35 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Services;
 /// Covers: null-guard, replay-to-new-subscriber, live delivery, multi-subscriber
 /// fan-out, replay-buffer bounded eviction, and CT-driven subscriber cleanup.
 /// </summary>
+/// <remarks>
+/// <para>
+/// <c>SubscribeAsync</c> è un iteratore lazy: il subscriber si registra alla prima
+/// <c>MoveNextAsync</c>, non alla chiamata. I test dei percorsi live non avviano un
+/// consumer in <c>Task.Run</c> aspettando un <c>Task.Delay</c> che indovini quando si registra
+/// (#4604): pilotano l'enumeratore a mano. La prima <c>MoveNextAsync</c> esegue il corpo
+/// dell'iteratore sul thread chiamante fino alla prima sospensione, quindi quando la chiamata
+/// ritorna il subscriber è registrato e il replay è esaurito — per costruzione, senza thread
+/// pool e senza orologio. Un evento pubblicato da lì in poi può arrivare solo dal canale live.
+/// </para>
+/// <para>
+/// Nessun test ha un budget a tempo che decida l'esito: <see cref="SafetyNet"/> serve solo a
+/// non appendere la suite se qualcosa si blocca, e non sta mai sul percorso che passa.
+/// </para>
+/// </remarks>
 [Trait("Category", "Unit")]
 [Trait("BoundedContext", "SharedGameCatalog")]
 public sealed class CatalogSeedStreamServiceTests
 {
+    /// <summary>Limite superiore per non appendere la suite. Mai sul percorso che passa.</summary>
+    private static readonly TimeSpan SafetyNet = TimeSpan.FromSeconds(30);
+
     private static CatalogSeedStreamService CreateService() =>
         new(NullLogger<CatalogSeedStreamService>.Instance);
 
-    private static BatchStartedEvent NewBatchStarted(Guid? id = null) =>
+    private static BatchStartedEvent NewBatchStarted(Guid? id = null, DateTime? occurredAt = null) =>
         new(id ?? Guid.NewGuid(),
             new[] { Guid.NewGuid(), Guid.NewGuid() },
-            DateTime.UtcNow);
+            occurredAt ?? DateTime.UtcNow);
 
     [Fact]
     public async Task PublishAsync_Throws_OnNullEvent()
@@ -63,83 +81,38 @@ public sealed class CatalogSeedStreamServiceTests
     public async Task SubscribeAsync_LiveEvent_DeliveredToActiveSubscriber()
     {
         var svc = CreateService();
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        await using var subscriber = svc.SubscribeAsync(CancellationToken.None).GetAsyncEnumerator();
 
-        var received = new List<CatalogSeedStreamEvent>();
-        var consumer = Task.Run(async () =>
-        {
-            try
-            {
-                await foreach (var item in svc.SubscribeAsync(cts.Token))
-                {
-                    received.Add(item);
-                    if (received.Count == 1)
-                    {
-                        await cts.CancelAsync();
-                        return;
-                    }
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                // expected on shutdown
-            }
-        });
-
-        // Brief yield so the subscriber gets registered before we publish.
-        await Task.Delay(50);
+        // Registra il subscriber ed esaurisce il replay (vuoto): resta in attesa di un evento live.
+        var next = subscriber.MoveNextAsync();
+        svc.SubscriberCount.Should().Be(1);
+        next.IsCompleted.Should().BeFalse("nulla è stato pubblicato: il subscriber aspetta il canale live");
 
         var evt = NewBatchStarted();
         await svc.PublishAsync(evt);
 
-        await consumer.WaitAsync(TimeSpan.FromSeconds(2));
-
-        received.Should().ContainSingle();
-        received[0].Should().Be(evt);
+        (await next.AsTask().WaitAsync(SafetyNet)).Should().BeTrue();
+        subscriber.Current.Should().Be(evt);
     }
 
     [Fact]
     public async Task SubscribeAsync_TwoSubscribers_BothReceiveLiveEvent()
     {
         var svc = CreateService();
-        using var cts1 = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-        using var cts2 = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        await using var subscriber1 = svc.SubscribeAsync(CancellationToken.None).GetAsyncEnumerator();
+        await using var subscriber2 = svc.SubscribeAsync(CancellationToken.None).GetAsyncEnumerator();
 
-        var received1 = new List<CatalogSeedStreamEvent>();
-        var received2 = new List<CatalogSeedStreamEvent>();
-
-        async Task RunConsumer(CancellationTokenSource cts, List<CatalogSeedStreamEvent> sink)
-        {
-            try
-            {
-                await foreach (var item in svc.SubscribeAsync(cts.Token))
-                {
-                    sink.Add(item);
-                    if (sink.Count == 1)
-                    {
-                        await cts.CancelAsync();
-                        return;
-                    }
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                // shutdown path
-            }
-        }
-
-        var t1 = Task.Run(() => RunConsumer(cts1, received1));
-        var t2 = Task.Run(() => RunConsumer(cts2, received2));
-
-        await Task.Delay(80);
+        var next1 = subscriber1.MoveNextAsync();
+        var next2 = subscriber2.MoveNextAsync();
+        svc.SubscriberCount.Should().Be(2);
 
         var evt = NewBatchStarted();
         await svc.PublishAsync(evt);
 
-        await Task.WhenAll(t1, t2).WaitAsync(TimeSpan.FromSeconds(2));
-
-        received1.Should().ContainSingle().Which.Should().Be(evt);
-        received2.Should().ContainSingle().Which.Should().Be(evt);
+        (await next1.AsTask().WaitAsync(SafetyNet)).Should().BeTrue();
+        (await next2.AsTask().WaitAsync(SafetyNet)).Should().BeTrue();
+        subscriber1.Current.Should().Be(evt);
+        subscriber2.Current.Should().Be(evt);
     }
 
     [Fact]
@@ -182,28 +155,20 @@ public sealed class CatalogSeedStreamServiceTests
     {
         var svc = CreateService();
         using var cts = new CancellationTokenSource();
+        await using var subscriber = svc.SubscribeAsync(cts.Token).GetAsyncEnumerator();
 
-        var consumer = Task.Run(async () =>
-        {
-            try
-            {
-                await foreach (var _ in svc.SubscribeAsync(cts.Token))
-                {
-                    // never expect any event before we cancel
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                // expected
-            }
-        });
-
-        // Let the subscriber register.
-        await Task.Delay(50);
+        var next = subscriber.MoveNextAsync();
+        svc.SubscriberCount.Should().Be(1);
 
         // Cancel the subscriber — finally{} block must run and remove the channel.
         await cts.CancelAsync();
-        await consumer.WaitAsync(TimeSpan.FromSeconds(2));
+        var cancelled = async () => await next.AsTask().WaitAsync(SafetyNet);
+        await cancelled.Should().ThrowAsync<OperationCanceledException>();
+
+        // Il finally{} dell'iteratore gira prima che l'eccezione arrivi al chiamante: il
+        // subscriber è già stato tolto. Prima questo test non lo asseriva — "publish non lancia"
+        // vale anche con il subscriber ancora registrato.
+        svc.SubscriberCount.Should().Be(0);
 
         // After cleanup, publishing must not throw — there are no live subscribers
         // and the publish loop has nothing to write to.
@@ -250,40 +215,54 @@ public sealed class CatalogSeedStreamServiceTests
         // Edge-case check: a single subscriber should see BOTH the replay AND any
         // subsequent live events arriving after the replay completes.
         var svc = CreateService();
-        var replayEvt = NewBatchStarted();
+        var replayEvt = NewBatchStarted(occurredAt: DateTime.UtcNow.AddSeconds(-1));
         await svc.PublishAsync(replayEvt);
 
-        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+        await using var subscriber = svc.SubscribeAsync(CancellationToken.None).GetAsyncEnumerator();
 
-        var received = new List<CatalogSeedStreamEvent>();
-        var consumer = Task.Run(async () =>
-        {
-            try
-            {
-                await foreach (var item in svc.SubscribeAsync(cts.Token))
-                {
-                    received.Add(item);
-                    if (received.Count == 2)
-                    {
-                        await cts.CancelAsync();
-                        return;
-                    }
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                // expected
-            }
-        });
+        // Il replay si consegna in modo sincrono, prima di qualunque attesa sul canale.
+        var first = subscriber.MoveNextAsync();
+        first.IsCompleted.Should().BeTrue("il replay è già nel buffer");
+        (await first).Should().BeTrue();
+        subscriber.Current.Should().Be(replayEvt);
 
-        await Task.Delay(80);
+        // Replay esaurito: il subscriber è registrato e aspetta il live.
+        var second = subscriber.MoveNextAsync();
+        svc.SubscriberCount.Should().Be(1);
+        second.IsCompleted.Should().BeFalse("il replay contiene un solo evento");
+
         var liveEvt = NewBatchStarted();
         await svc.PublishAsync(liveEvt);
 
-        await consumer.WaitAsync(TimeSpan.FromSeconds(2));
+        (await second.AsTask().WaitAsync(SafetyNet)).Should().BeTrue();
+        subscriber.Current.Should().Be(liveEvt);
+    }
 
-        received.Should().HaveCount(2);
-        received[0].Should().Be(replayEvt);
-        received[1].Should().Be(liveEvt);
+    [Fact]
+    public async Task SubscribeAsync_EventPublishedBetweenCallAndFirstMoveNext_ArrivesOnceViaReplay()
+    {
+        // Contratto stabilito per #4604. SubscribeAsync è lazy: fra la chiamata e la prima
+        // MoveNextAsync il subscriber NON è registrato, quindi un evento pubblicato in quella
+        // finestra non può arrivare dal canale live. Non va per questo perso: sta nel replay
+        // buffer e il subscriber lo riceve alla registrazione, una volta sola.
+        var svc = CreateService();
+        var subscription = svc.SubscribeAsync(CancellationToken.None);
+
+        var early = NewBatchStarted(occurredAt: DateTime.UtcNow.AddSeconds(-1));
+        await svc.PublishAsync(early);
+        svc.SubscriberCount.Should().Be(0, "la finestra esiste: il corpo dell'iteratore non è ancora partito");
+
+        await using var subscriber = subscription.GetAsyncEnumerator();
+        (await subscriber.MoveNextAsync().AsTask().WaitAsync(SafetyNet)).Should().BeTrue();
+        subscriber.Current.Should().Be(early);
+        svc.SubscriberCount.Should().Be(1);
+
+        // Una volta sola: la lettura successiva non rende di nuovo `early`, ma l'evento che segue.
+        var next = subscriber.MoveNextAsync();
+        var later = NewBatchStarted();
+        await svc.PublishAsync(later);
+
+        (await next.AsTask().WaitAsync(SafetyNet)).Should().BeTrue();
+        subscriber.Current.Should().Be(later);
     }
 }

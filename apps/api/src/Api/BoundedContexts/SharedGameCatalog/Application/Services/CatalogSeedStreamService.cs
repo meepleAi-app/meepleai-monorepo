@@ -77,8 +77,20 @@ internal sealed class CatalogSeedStreamService : ICatalogSeedStreamService
     }
 
     /// <summary>
+    /// Subscribers currently registered. A subscriber registers on the first
+    /// <c>MoveNextAsync</c> of its enumerator (the iterator body is lazy), not when
+    /// <see cref="SubscribeAsync"/> is called, and unregisters when the enumeration ends.
+    /// Exposed so tests can observe registration instead of guessing it with a
+    /// delay (#4604, same shape as #3711 and #4193).
+    /// </summary>
+    internal int SubscriberCount => _subscribers.Count;
+
+    /// <summary>
     /// Subscribe to stream. New subscriber receives a replay of recent events
-    /// (up to <see cref="ReplayBufferSize"/>) followed by live events. Replay
+    /// (up to <see cref="ReplayBufferSize"/>) followed by live events. The
+    /// subscriber registers lazily, on the first <c>MoveNextAsync</c>; an event
+    /// published between the call and that first move is not lost — it sits in
+    /// the replay buffer and is delivered by the replay, exactly once. Replay
     /// uses an <c>OccurredAt</c> cutoff to prevent the "subscribe/publish seam"
     /// race from delivering duplicate events — only events strictly before the
     /// channel-registration timestamp are replayed; everything at or after the

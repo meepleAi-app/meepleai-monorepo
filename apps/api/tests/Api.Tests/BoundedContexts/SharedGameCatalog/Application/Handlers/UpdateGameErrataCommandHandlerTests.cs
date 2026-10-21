@@ -31,9 +31,7 @@ public class UpdateGameErrataCommandHandlerTests
         _handler = new UpdateGameErrataCommandHandler(
             _repositoryMock.Object,
             _unitOfWorkMock.Object,
-            _eviction.Cache.Object,
-            _eviction.RetryPolicy.Object,
-            _eviction.HybridCache.Object,
+            _eviction.Invalidator,
             _loggerMock.Object);
     }
 

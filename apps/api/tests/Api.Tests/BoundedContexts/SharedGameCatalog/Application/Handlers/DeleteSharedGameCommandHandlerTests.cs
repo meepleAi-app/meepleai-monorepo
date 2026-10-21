@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
@@ -29,6 +30,7 @@ public class DeleteSharedGameCommandHandlerTests
         _handler = new DeleteSharedGameCommandHandler(
             _repositoryMock.Object,
             _unitOfWorkMock.Object,
+            new Mock<ISharedGameCacheInvalidator>().Object,
             _loggerMock.Object);
     }
 

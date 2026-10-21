@@ -58,6 +58,45 @@ internal sealed class AgentSession : AggregateRoot<Guid>
         AddDomainEvent(new AgentSessionCreatedEvent(id, agentDefinitionId, gameSessionId, userId));
     }
 
+    /// <summary>
+    /// Ricostituisce una sessione agente letta dal database, così com'è (#4613).
+    /// </summary>
+    /// <remarks>
+    /// Solo per il repository. Il costruttore pubblico è quello di una sessione NUOVA: la dichiara attiva, la data
+    /// ad "adesso" e solleva <see cref="AgentSessionCreatedEvent"/>. Usato per ricostruire una riga, ogni aggregato
+    /// letto portava già un «creata», e <c>UpdateAsync</c> lo consegnava al collector insieme all'evento vero.
+    /// Nessun evento, quindi, e nessuna validazione: la riga è già stata scritta.
+    /// <b>Il limite</b>: <see cref="Config"/> non ha una colonna, quindi non si può ricostituire. Torna quella di
+    /// default, come con il costruttore.
+    /// </remarks>
+    internal static AgentSession Reconstitute(
+        Guid id,
+        Guid agentDefinitionId,
+        Guid gameSessionId,
+        Guid userId,
+        Guid gameId,
+        GameState currentGameState,
+        DateTime startedAt,
+        DateTime? endedAt,
+        bool isActive)
+    {
+        ArgumentNullException.ThrowIfNull(currentGameState);
+
+        return new AgentSession
+        {
+            Id = id,
+            AgentDefinitionId = agentDefinitionId,
+            GameSessionId = gameSessionId,
+            UserId = userId,
+            GameId = gameId,
+            Config = AgentConfig.Default(),
+            CurrentGameState = currentGameState,
+            StartedAt = startedAt,
+            EndedAt = endedAt,
+            IsActive = isActive,
+        };
+    }
+
 
     public void UpdateGameState(GameState newState)
     {

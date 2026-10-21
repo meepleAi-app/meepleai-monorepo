@@ -226,16 +226,6 @@ internal class GameSessionRepository : RepositoryBase, IGameSessionRepository
         var playerDtos = JsonSerializer.Deserialize<List<SessionPlayerDto>>(entity.PlayersJson) ?? new List<SessionPlayerDto>();
         var players = playerDtos.Select(dto => new SessionPlayer(dto.PlayerName, dto.PlayerOrder, dto.Color)).ToList();
 
-        // Reconstruct session with CreatedByUserId (Issue #3070)
-        var session = new GameSession(
-            id: entity.Id,
-            gameId: entity.GameId,
-            players: players,
-            createdByUserId: entity.CreatedByUserId
-        );
-
-        // Override status and timestamps via reflection
-        var statusProp = typeof(GameSession).GetProperty("Status");
         var status = entity.Status switch
         {
             "Setup" => SessionStatus.Setup,
@@ -245,21 +235,19 @@ internal class GameSessionRepository : RepositoryBase, IGameSessionRepository
             "Abandoned" => SessionStatus.Abandoned,
             _ => SessionStatus.Setup
         };
-        statusProp?.SetValue(session, status);
 
-        var startedAtProp = typeof(GameSession).GetProperty("StartedAt");
-        startedAtProp?.SetValue(session, entity.StartedAt);
-
-        var completedAtProp = typeof(GameSession).GetProperty("CompletedAt");
-        completedAtProp?.SetValue(session, entity.CompletedAt);
-
-        var winnerNameProp = typeof(GameSession).GetProperty("WinnerName");
-        winnerNameProp?.SetValue(session, entity.WinnerName);
-
-        var notesProp = typeof(GameSession).GetProperty("Notes");
-        notesProp?.SetValue(session, entity.Notes);
-
-        return session;
+        // Reconstitute, non il costruttore pubblico (#4613): quello è di una sessione nuova, e solleva
+        // GameSessionCreatedEvent a ogni lettura.
+        return GameSession.Reconstitute(
+            id: entity.Id,
+            gameId: entity.GameId,
+            createdByUserId: entity.CreatedByUserId,
+            status: status,
+            startedAt: entity.StartedAt,
+            completedAt: entity.CompletedAt,
+            winnerName: entity.WinnerName,
+            notes: entity.Notes,
+            players: players);
     }
 
     /// <summary>

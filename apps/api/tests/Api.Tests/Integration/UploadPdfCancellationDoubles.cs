@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Services;
 using Microsoft.EntityFrameworkCore;
@@ -76,6 +77,14 @@ internal sealed class CancellableBackgroundTaskService : IBackgroundTaskService
     private readonly ConcurrentQueue<Exception> _errors = new();
     private int _started;
 
+    /// <summary>
+    /// Vero dentro la lambda avviata da <see cref="ExecuteWithCancellation"/> e in ciò che essa attende, falso
+    /// sul thread della richiesta. Lascia a un doppio condiviso con la richiesta (la cache dell'AI, invalidata
+    /// sia dall'upload sia dalla chiusura dell'elaborazione) di fermare soltanto il task in background, senza
+    /// contare le chiamate nell'ordine in cui arrivano.
+    /// </summary>
+    public static readonly AsyncLocal<bool> InBackgroundTask = new();
+
     /// <summary>Quante lambda sono state avviate.</summary>
     public int Started => Volatile.Read(ref _started);
 
@@ -117,6 +126,7 @@ internal sealed class CancellableBackgroundTaskService : IBackgroundTaskService
         Interlocked.Increment(ref _started);
         _running.Enqueue(Task.Run(async () =>
         {
+            InBackgroundTask.Value = true;
             try
             {
                 await taskFactory(cts.Token).ConfigureAwait(false);
@@ -228,32 +238,43 @@ internal sealed class ErrorLogCapture : ILoggerProvider
 }
 
 /// <summary>
-/// Ferma il salvataggio delle righe vettoriali (<c>pgvector_embeddings</c>) un istante prima che parta il
-/// comando, con le righe già nel change tracker: il punto in cui <c>PdfChunkPersistence</c> è «a metà» della
-/// fase di indicizzazione.
+/// Ferma un <c>SaveChangesAsync</c> un istante prima che parta il comando, con le modifiche già nel change
+/// tracker e gli eventi di dominio già accodati nel collector: il punto in cui una scrittura è «a metà».
 /// </summary>
 /// <remarks>
 /// Se il token del chiamante viene cancellato mentre è fermo, esce con <see cref="OperationCanceledException"/>
-/// dal <c>SaveChangesAsync</c>, come farebbe EF con un comando interrotto: le righe restano <c>Added</c> nel
-/// tracker e il database non le ha viste. È la condizione in cui chi gestisce la cancellazione non deve
-/// rifare un salvataggio senza prima ripulire il tracker.
+/// dal <c>SaveChangesAsync</c>, come farebbe EF con un comando interrotto: le entità restano nel tracker, gli
+/// eventi restano nel collector e il database non ha visto niente. È la condizione in cui chi gestisce la
+/// cancellazione non deve rifare un salvataggio senza prima ripulire entrambi.
 /// </remarks>
-internal sealed class HoldingVectorRowsSaveInterceptor : SaveChangesInterceptor
+internal sealed class HoldingSaveChangesInterceptor : SaveChangesInterceptor
 {
+    private readonly Func<DbContext, bool> _shouldHold;
     private readonly HoldPoint _hold;
 
-    public HoldingVectorRowsSaveInterceptor(HoldPoint hold)
+    private HoldingSaveChangesInterceptor(Func<DbContext, bool> shouldHold, HoldPoint hold)
     {
+        _shouldHold = shouldHold;
         _hold = hold;
     }
+
+    /// <summary>Il primo salvataggio che contiene righe di <c>pgvector_embeddings</c> nuove.</summary>
+    public static HoldingSaveChangesInterceptor ForVectorRows(HoldPoint hold) =>
+        new(context => context.ChangeTracker.Entries<PgVectorEmbeddingEntity>().Any(e => e.State == EntityState.Added), hold);
+
+    /// <summary>Il salvataggio che porta un PDF già esistente allo stato <paramref name="state"/> (<c>PdfDocumentEntity.ProcessingState</c>).</summary>
+    public static HoldingSaveChangesInterceptor ForPdfStateTransition(string state, HoldPoint hold) =>
+        new(
+            context => context.ChangeTracker.Entries<PdfDocumentEntity>()
+                .Any(e => e.State == EntityState.Modified && string.Equals(e.Entity.ProcessingState, state, StringComparison.Ordinal)),
+            hold);
 
     public override async ValueTask<InterceptionResult<int>> SavingChangesAsync(
         DbContextEventData eventData,
         InterceptionResult<int> result,
         CancellationToken cancellationToken = default)
     {
-        if (eventData.Context is { } context
-            && context.ChangeTracker.Entries<PgVectorEmbeddingEntity>().Any(e => e.State == EntityState.Added))
+        if (eventData.Context is { } context && _shouldHold(context))
         {
             await _hold.EnterAsync(cancellationToken).ConfigureAwait(false);
         }

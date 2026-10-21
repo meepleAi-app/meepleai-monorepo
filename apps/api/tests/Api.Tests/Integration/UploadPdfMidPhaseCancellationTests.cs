@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.DocumentProcessing.Application.Jobs;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
@@ -24,8 +25,11 @@ using DotNet.Testcontainers.Containers;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using MediatR;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using Quartz;
 using Xunit;
 using AuthRole = Api.SharedKernel.Domain.ValueObjects.Role;
 
@@ -46,8 +50,10 @@ namespace Api.Tests.Integration;
 /// 4. Mid-embedding batch cancellation (pipeline in background, <c>ProcessPdfAsync</c>)
 /// 5. Mid-vector store cancellation: all'ingresso di <c>IndexAsync</c> e durante il salvataggio delle righe
 ///    vettoriali (pipeline in background)
-/// 6. Controllo: la stessa pipeline, senza cancellazione, arriva a <c>Ready</c>
-/// 7. Cancellazione a istanti casuali e a istanti fissi (parte sincrona dell'upload, stress)
+/// 6. Cancellazione durante una transizione di stato, e dopo il commit di <c>Ready</c> (pipeline in background)
+/// 7. Un annullamento dell'utente non viene ritentato; un timeout sì (#4610)
+/// 8. Controllo: la stessa pipeline, senza cancellazione, arriva a <c>Ready</c>
+/// 9. Cancellazione a istanti casuali e a istanti fissi (parte sincrona dell'upload, stress)
 /// </summary>
 /// <remarks>
 /// <para>In CI gira nello shard <c>Core</c>, come gli altri <c>Category=Integration</c> (#4522).
@@ -464,9 +470,9 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     /// <para><b>Scenario reale:</b> l'utente annulla l'elaborazione (<c>CancelPdfProcessingCommand</c> →
     /// <c>IBackgroundTaskService.CancelTask</c>) mentre la richiesta del secondo lotto è in volo.</para>
     /// <para><b>Atteso:</b> la chiamata finisce con la cancellazione senza aspettare il servizio; il documento
-    /// passa a <c>Failed</c> («Processing cancelled by user», con <c>Embedding</c> come punto di rottura); la
-    /// prenotazione di quota è rilasciata e non confermata; del lavoro a metà non resta niente nel database
-    /// (né passaggi, né documento vettoriale, né righe vettoriali).</para>
+    /// passa a <c>Failed</c> («Processing cancelled by user», categoria <c>Cancelled</c>, con <c>Embedding</c>
+    /// come punto di rottura); la prenotazione di quota è rilasciata e non confermata; del lavoro a metà non resta
+    /// niente nel database (né passaggi, né documento vettoriale, né righe vettoriali); nessun errore nei log.</para>
     /// <para><b>Prova di essere arrivati alla fase:</b> il doppio ha ricevuto due richieste (il primo lotto
     /// completo, il secondo fermato) e l'indicizzazione non è mai partita. Prima di #4531 il test usava un
     /// <c>IBackgroundTaskService</c> senza setup: la lambda non girava mai e il servizio di embedding non veniva
@@ -483,16 +489,8 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
 
         // Act - cancella quando il secondo lotto è DENTRO la chiamata. Non lo lascia andare: in produzione
         // è la cancellazione a chiudere la richiesta al provider, non una risposta.
-        await WaitUntilInsideAsync(harness, embeddingHold, "the second embedding batch", pdfId);
-        try
-        {
-            harness.Background.CancelTask(pdfId.ToString()).Should().BeTrue("the processing task is still running");
-            await WaitForBackgroundAsync(harness, "the embedding call has to end with the cancellation");
-        }
-        finally
-        {
-            embeddingHold.Release();
-        }
+        await CancelWhenInsideAsync(harness, embeddingHold, "the second embedding batch", pdfId,
+            "the embedding call has to end with the cancellation");
 
         // Assert - la fase c'è stata, e il documento è in uno stato finale e pulito
         embeddingHold.Calls.Should().Be(2, "the test must have cancelled inside the second batch, not before or after");
@@ -507,35 +505,30 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// Cancellazione all'ingresso dell'indicizzazione vettoriale (<c>ProcessPdfAsync</c>, passo 4).
+    /// Cancellazione all'ingresso dell'indicizzazione vettoriale (<c>ProcessPdfAsync</c>, passo 4), prima che
+    /// <c>IPdfIndexingPipeline.IndexAsync</c> scriva qualunque cosa. Si chiamava
+    /// <c>MidVectorStore_MaintainsConsistency</c>: il nome prometteva il centro della scrittura, e il centro è
+    /// nel test <c>WhileSavingVectorRows</c>.
     ///
-    /// <para><b>Scenario reale:</b> l'utente annulla un istante prima che <c>IPdfIndexingPipeline.IndexAsync</c>
-    /// scriva il documento vettoriale, quando tutti gli embedding sono già stati calcolati.</para>
+    /// <para><b>Scenario reale:</b> l'utente annulla quando tutti gli embedding sono già stati calcolati e
+    /// l'indicizzazione sta per partire.</para>
     /// <para><b>Atteso:</b> documento <c>Failed</c> con <c>Indexing</c> come punto di rottura, quota rilasciata,
     /// nessun passaggio, documento vettoriale o riga vettoriale rimasti.</para>
     /// <para><b>Prova di essere arrivati alla fase:</b> il doppio dell'indicizzazione ha ricevuto la chiamata, e
     /// gli embedding sono stati richiesti più volte (tutti i lotti) prima di lei.</para>
     /// </summary>
     [Fact(Timeout = 120_000)]
-    public async Task UploadPdf_WhenCancelledMidVectorStore_MaintainsConsistency()
+    public async Task UploadPdf_WhenCancelledAtIndexAsyncEntry_WritesNothing()
     {
         // Arrange - gli embedding passano tutti; l'indicizzazione resta ferma all'ingresso
         var embeddingHold = HoldPoint.Never();
         var indexingHold = new HoldPoint(holdOnCall: 1);
         await using var harness = BuildProcessingHarness(embeddingHold, indexingHold);
-        var pdfId = await UploadAsPlainUserAsync(harness, "mid_vector.pdf");
+        var pdfId = await UploadAsPlainUserAsync(harness, "index_entry.pdf");
 
         // Act
-        await WaitUntilInsideAsync(harness, indexingHold, "the vector indexing", pdfId);
-        try
-        {
-            harness.Background.CancelTask(pdfId.ToString()).Should().BeTrue("the processing task is still running");
-            await WaitForBackgroundAsync(harness, "the indexing call has to end with the cancellation");
-        }
-        finally
-        {
-            indexingHold.Release();
-        }
+        await CancelWhenInsideAsync(harness, indexingHold, "the vector indexing", pdfId,
+            "the indexing call has to end with the cancellation");
 
         // Assert
         embeddingHold.Calls.Should().BeGreaterThan(1, "every embedding batch has to be computed before the indexing step");
@@ -565,7 +558,8 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     {
         // Arrange - il salvataggio delle righe vettoriali resta fermo prima di partire
         var vectorRowsSaveHold = new HoldPoint(holdOnCall: 1);
-        await using var harness = BuildProcessingHarness(HoldPoint.Never(), HoldPoint.Never(), vectorRowsSaveHold);
+        await using var harness = BuildProcessingHarness(
+            HoldPoint.Never(), HoldPoint.Never(), HoldingSaveChangesInterceptor.ForVectorRows(vectorRowsSaveHold));
 
         // Act
         var (pdfId, inFlight) = await CancelWhileSavingVectorRowsAsync(harness, vectorRowsSaveHold, "mid_vector_rows.pdf");
@@ -589,6 +583,9 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     /// <c>PdfChunkPersistence</c> salvi passaggi e righe vettoriali. Una cancellazione, o qualunque errore, fra i
     /// due passi lascia un PDF <c>Failed</c> con un documento vettoriale «completato», passaggi senza righe
     /// vettoriali e un gioco che dichiara di avere una base di conoscenza vuota.</para>
+    /// <para>Asserisce l'invariante e non una delle correzioni possibili: nessun documento vettoriale
+    /// <c>completed</c> senza righe, e il gioco senza base di conoscenza. Va bene sia scrivere <c>completed</c>
+    /// dopo i salvataggi sia compensare nel percorso d'errore.</para>
     /// <para>Non è un difetto della cancellazione soltanto, e la correzione cambia l'ordine di una pipeline con
     /// più chiamanti: è tracciata in #4609. Lo <c>Skip</c> si toglie quando la issue è chiusa.</para>
     /// </summary>
@@ -597,7 +594,8 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     {
         // Arrange
         var vectorRowsSaveHold = new HoldPoint(holdOnCall: 1);
-        await using var harness = BuildProcessingHarness(HoldPoint.Never(), HoldPoint.Never(), vectorRowsSaveHold);
+        await using var harness = BuildProcessingHarness(
+            HoldPoint.Never(), HoldPoint.Never(), HoldingSaveChangesInterceptor.ForVectorRows(vectorRowsSaveHold));
 
         // Act
         var (pdfId, _) = await CancelWhileSavingVectorRowsAsync(harness, vectorRowsSaveHold, "mid_vector_rows_leftovers.pdf");
@@ -605,9 +603,123 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         // Assert
         var outcome = await ReadOutcomeAsync(harness, pdfId);
         outcome.State.Should().Be("Failed");
-        outcome.VectorDocuments.Should().Be(0, $"no vector document announcing an index that has no vector rows ({outcome.Describe(harness)})");
-        outcome.TextChunks.Should().Be(0, "no text chunks left for a document that failed");
+        var completedWithoutRows = string.Equals(outcome.VectorDocumentStatus, "completed", StringComparison.Ordinal)
+            && outcome.Embeddings == 0;
+        completedWithoutRows.Should().BeFalse($"no vector document may claim an index that has no vector rows ({outcome.Describe(harness)})");
         outcome.HasKnowledgeBase.Should().BeFalse("the game must not claim a knowledge base that was never written");
+    }
+
+    /// <summary>
+    /// Cancellazione mentre si salva una transizione di stato (<c>Embedding → Indexing</c>).
+    ///
+    /// <para>La transizione accoda <c>PdfStateChangedEvent</c> nel <c>IDomainEventCollector</c> PRIMA del
+    /// salvataggio, e lo svuota solo a salvataggio riuscito. Se il salvataggio è interrotto, <c>ChangeTracker.Clear()</c>
+    /// non basta: l'evento resta in coda e il salvataggio della pulizia lo scrive nell'outbox, annunciando una
+    /// transizione che nel database non è mai avvenuta.</para>
+    /// <para><b>Atteso:</b> il punto di rottura è <c>Embedding</c> (è lo stato che ha il database) e l'outbox non
+    /// contiene alcun cambio di stato verso <c>Indexing</c> per questo PDF.</para>
+    /// </summary>
+    [Fact(Timeout = 120_000)]
+    public async Task UploadPdf_WhenCancelledDuringAStateTransition_DoesNotPublishATransitionThatNeverHappened()
+    {
+        // Arrange - il salvataggio che porta il PDF a Indexing resta fermo prima di partire
+        var transitionHold = new HoldPoint(holdOnCall: 1);
+        await using var harness = BuildProcessingHarness(
+            HoldPoint.Never(), HoldPoint.Never(), HoldingSaveChangesInterceptor.ForPdfStateTransition("Indexing", transitionHold));
+        var pdfId = await UploadAsPlainUserAsync(harness, "mid_transition.pdf");
+
+        // Act
+        await CancelWhenInsideAsync(harness, transitionHold, "the save of the Embedding → Indexing transition", pdfId,
+            "the transition save has to end with the cancellation");
+
+        // Assert
+        var outcome = await ReadOutcomeAsync(harness, pdfId);
+        AssertCancelled(harness, outcome, failedAt: "Embedding");
+
+        var transitions = await ReadStateChangesInOutboxAsync(harness, pdfId);
+        transitions.Should().NotContain(t => string.Equals(t.NewState, "indexing", StringComparison.OrdinalIgnoreCase),
+            "the outbox must not announce a transition the database never made");
+        transitions.Should().Contain(t => string.Equals(t.NewState, "failed", StringComparison.OrdinalIgnoreCase),
+            "the cleanup's own transition is announced, so the check above is not reading an empty outbox");
+    }
+
+    /// <summary>
+    /// Cancellazione dopo il commit di <c>Ready</c>, nella coda di <c>FinalizeProcessingAsync</c> (qui: mentre
+    /// invalida la cache dell'AI).
+    ///
+    /// <para>A quel punto l'elaborazione è finita: il documento è <c>Ready</c> e indicizzato. Il gestore della
+    /// cancellazione non deve riscrivere il progresso come <c>Failed</c>, né liberare la quota, né tentare di
+    /// portare a <c>Failed</c> un aggregato <c>Ready</c> (<c>InvalidOperationException</c>).</para>
+    /// </summary>
+    [Fact(Timeout = 120_000)]
+    public async Task UploadPdf_WhenCancelledAfterTheReadyCommit_LeavesTheDocumentReady()
+    {
+        // Arrange - la seconda invalidazione della cache, quella del task in background, resta ferma
+        var cacheInvalidationHold = new HoldPoint(holdOnCall: 1);
+        await using var harness = BuildProcessingHarness(
+            HoldPoint.Never(), HoldPoint.Never(), cacheInvalidationHold: cacheInvalidationHold);
+        var pdfId = await UploadAsPlainUserAsync(harness, "after_ready.pdf");
+
+        // Act
+        await CancelWhenInsideAsync(harness, cacheInvalidationHold, "the cache invalidation that closes the processing", pdfId,
+            "the cache invalidation has to end with the cancellation");
+
+        // Assert
+        var outcome = await ReadOutcomeAsync(harness, pdfId);
+        outcome.State.Should().Be("Ready", $"a cancellation after the Ready commit must not undo it ({outcome.Describe(harness)})");
+        outcome.ProgressStep.Should().Be(Api.Models.ProcessingStep.Completed);
+        harness.Background.Errors.Should().BeEmpty("the cleanup must leave a Ready document alone, not throw on it");
+        harness.Quota.Verify(q => q.ReleaseQuotaAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Un PDF annullato dall'utente non viene ritentato da <c>RetryFailedPdfsJob</c> (#4610): l'utente ha chiesto
+    /// di fermarlo. Prima il job lo rielaborava fino a tre volte, a spese degli embedding.
+    /// </summary>
+    [Fact(Timeout = 120_000)]
+    public async Task UploadPdf_WhenCancelledByTheUser_IsNotRetriedByTheRetryJob()
+    {
+        // Arrange
+        var indexingHold = new HoldPoint(holdOnCall: 1);
+        await using var harness = BuildProcessingHarness(HoldPoint.Never(), indexingHold);
+        var pdfId = await UploadAsPlainUserAsync(harness, "cancelled_no_retry.pdf");
+        await CancelWhenInsideAsync(harness, indexingHold, "the vector indexing", pdfId,
+            "the indexing call has to end with the cancellation");
+
+        // Act
+        var retried = await RunRetryJobAsync(harness);
+
+        // Assert
+        var outcome = await ReadOutcomeAsync(harness, pdfId);
+        outcome.State.Should().Be("Failed");
+        outcome.ErrorCategory.Should().Be("Cancelled");
+        retried.Should().NotContain(pdfId, "the user asked to stop this document");
+    }
+
+    /// <summary>
+    /// Un timeout che esce come <see cref="OperationCanceledException"/> (<c>TaskCanceledException</c> di
+    /// <c>HttpClient</c>) quando il token del task NON è cancellato non è un annullamento dell'utente: il PDF
+    /// finisce <c>Failed</c> con una categoria transitoria e il job lo ritenta.
+    /// </summary>
+    [Fact(Timeout = 120_000)]
+    public async Task UploadPdf_WhenTheExtractorTimesOut_FailsAsTransientNotAsCancelled()
+    {
+        // Arrange - HttpClient scaduto: TaskCanceledException, ma nessuno ha cancellato il token del task
+        var timeout = new TaskCanceledException("The request was canceled due to the configured HttpClient.Timeout of 100 seconds elapsing.");
+        await using var harness = BuildProcessingHarness(HoldPoint.Never(), HoldPoint.Never(), extractionFailure: timeout);
+
+        // Act
+        var pdfId = await UploadAsPlainUserAsync(harness, "extractor_timeout.pdf");
+        await WaitForBackgroundAsync(harness, "a failed upload has to finish");
+        var retried = await RunRetryJobAsync(harness);
+
+        // Assert
+        var outcome = await ReadOutcomeAsync(harness, pdfId);
+        outcome.State.Should().Be("Failed", outcome.Describe(harness));
+        outcome.Error.Should().Be(timeout.Message, "a timeout is reported as what it is, not as the user's cancellation");
+        outcome.ErrorCategory.Should().Be("Unknown");
+        retried.Should().Contain(pdfId, "a transient failure stays retriable");
+        harness.Quota.Verify(q => q.ReleaseQuotaAsync(It.IsAny<Guid>(), pdfId.ToString(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     /// <summary>
@@ -793,7 +905,12 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     /// può fermarsi dentro la chiamata; l'estrazione del testo è un doppio; la scrittura vettoriale va
     /// su Postgres con <c>PdfIndexingPipeline</c> e <c>PdfChunkPersistence</c> veri.
     /// </summary>
-    private ProcessingHarness BuildProcessingHarness(HoldPoint embeddingHold, HoldPoint indexingHold, HoldPoint? vectorRowsSaveHold = null)
+    private ProcessingHarness BuildProcessingHarness(
+        HoldPoint embeddingHold,
+        HoldPoint indexingHold,
+        HoldingSaveChangesInterceptor? saveInterceptor = null,
+        Exception? extractionFailure = null,
+        HoldPoint? cacheInvalidationHold = null)
     {
         var background = new CancellableBackgroundTaskService();
         var logs = new ErrorLogCapture();
@@ -834,9 +951,17 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         services.AddSingleton(embedding.Object);
 
         var extractor = new Mock<IPdfTextExtractor>();
-        extractor
-            .Setup(e => e.ExtractPagedTextAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(BuildRulebookExtraction(pages: 30));
+        var extraction = extractor
+            .Setup(e => e.ExtractPagedTextAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()));
+        if (extractionFailure is null)
+        {
+            extraction.ReturnsAsync(BuildRulebookExtraction(pages: 30));
+        }
+        else
+        {
+            extraction.ThrowsAsync(extractionFailure);
+        }
+
         services.AddSingleton(extractor.Object);
 
         var tableExtractor = new Mock<IPdfTableExtractor>();
@@ -854,10 +979,9 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         services.AddScoped(_ => Mock.Of<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IVectorDocumentRepository>());
         services.AddScoped<ICacheInvalidationRetryPolicy>(_ => new PassthroughRetryPolicy());
         services.AddScoped<PdfIndexingPipeline>();
-        if (vectorRowsSaveHold is not null)
+        if (saveInterceptor is not null)
         {
-            var interceptor = new HoldingVectorRowsSaveInterceptor(vectorRowsSaveHold);
-            services.ConfigureDbContext<MeepleAiDbContext>(options => options.AddInterceptors(interceptor));
+            services.ConfigureDbContext<MeepleAiDbContext>(options => options.AddInterceptors(saveInterceptor));
         }
 
         services.AddScoped<IPdfIndexingPipeline>(sp =>
@@ -865,6 +989,22 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
 
         services.Configure<PdfProcessingOptions>(options => options.MaxFileSizeBytes = 10485760);
         services.AddScoped<UploadPdfCommandHandler>();
+
+        if (cacheInvalidationHold is not null)
+        {
+            // L'upload invalida la cache dell'AI due volte: la richiesta, all'avvio, e il task in background,
+            // alla chiusura dell'elaborazione, DOPO il commit di Ready. Si ferma solo la seconda.
+            var cache = new Mock<IAiResponseCacheService>();
+            cache.Setup(c => c.InvalidateGameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns(async (string gameId, CancellationToken ct) =>
+                {
+                    if (CancellableBackgroundTaskService.InBackgroundTask.Value)
+                    {
+                        await cacheInvalidationHold.EnterAsync(ct).ConfigureAwait(false);
+                    }
+                });
+            services.AddSingleton(cache.Object);
+        }
 
         RegisterDefaultMockServices(services);
 
@@ -925,19 +1065,97 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     {
         var pdfId = await UploadAsPlainUserAsync(harness, fileName);
 
-        await WaitUntilInsideAsync(harness, vectorRowsSaveHold, "the save of the vector rows", pdfId);
-        var inFlight = await ReadOutcomeAsync(harness, pdfId);
+        PdfOutcome? inFlight = null;
+        await CancelWhenInsideAsync(harness, vectorRowsSaveHold, "the save of the vector rows", pdfId,
+            "the save of the vector rows has to end with the cancellation",
+            async () => inFlight = await ReadOutcomeAsync(harness, pdfId));
+
+        return (pdfId, inFlight!);
+    }
+
+    /// <summary>
+    /// Aspetta che il codice sotto prova sia dentro la chiamata fermata, annulla l'elaborazione come farebbe
+    /// l'utente (<c>CancelTask</c> con l'id del documento) e aspetta la fine del task. La chiamata ferma viene
+    /// lasciata andare in ogni caso, anche se l'attesa fallisce, perché il task non resti appeso.
+    /// </summary>
+    private async Task CancelWhenInsideAsync(
+        ProcessingHarness harness,
+        HoldPoint hold,
+        string where,
+        Guid pdfId,
+        string becauseItHasToEnd,
+        Func<Task>? beforeCancel = null)
+    {
+        await WaitUntilInsideAsync(harness, hold, where, pdfId);
         try
         {
+            if (beforeCancel is not null)
+            {
+                await beforeCancel();
+            }
+
             harness.Background.CancelTask(pdfId.ToString()).Should().BeTrue("the processing task is still running");
-            await WaitForBackgroundAsync(harness, "the save of the vector rows has to end with the cancellation");
+            await WaitForBackgroundAsync(harness, becauseItHasToEnd);
         }
         finally
         {
-            vectorRowsSaveHold.Release();
+            hold.Release();
+        }
+    }
+
+    /// <summary>
+    /// Esegue <c>RetryFailedPdfsJob</c> sul database del banco, con un mediator-doppio al posto del vero, e
+    /// restituisce gli id dei PDF per cui ha inviato <c>RetryPdfProcessingCommand</c>.
+    /// </summary>
+    private static async Task<IReadOnlyList<Guid>> RunRetryJobAsync(ProcessingHarness harness)
+    {
+        var mediator = new Mock<IMediator>();
+        mediator
+            .Setup(m => m.Send(It.IsAny<RetryPdfProcessingCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RetryPdfProcessingResult(true, "Pending", 1));
+
+        var context = new Mock<IJobExecutionContext>();
+        context.SetupGet(c => c.CancellationToken).Returns(CancellationToken.None);
+        context.SetupGet(c => c.FireTimeUtc).Returns(DateTimeOffset.UtcNow);
+        context.SetupProperty(c => c.Result);
+
+        using var scope = harness.Provider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var job = new RetryFailedPdfsJob(db, mediator.Object, NullLogger<RetryFailedPdfsJob>.Instance);
+        await job.Execute(context.Object);
+
+        return mediator.Invocations
+            .Select(i => i.Arguments[0])
+            .OfType<RetryPdfProcessingCommand>()
+            .Select(c => c.PdfId)
+            .ToList();
+    }
+
+    /// <summary>I cambi di stato di un PDF scritti nell'outbox degli eventi di dominio.</summary>
+    private static async Task<IReadOnlyList<(string PreviousState, string NewState)>> ReadStateChangesInOutboxAsync(
+        ProcessingHarness harness,
+        Guid pdfId)
+    {
+        using var scope = harness.Provider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var payloads = await db.DomainEventOutbox
+            .Where(o => o.EventType == "pdf.state.changed")
+            .Select(o => o.PayloadJson)
+            .ToListAsync(TestCancellationToken);
+
+        var changes = new List<(string, string)>();
+        foreach (var payload in payloads)
+        {
+            using var json = System.Text.Json.JsonDocument.Parse(payload);
+            var root = json.RootElement;
+            if (root.GetProperty("pdfDocumentId").GetGuid() == pdfId)
+            {
+                changes.Add((root.GetProperty("previousState").GetString()!, root.GetProperty("newState").GetString()!));
+            }
         }
 
-        return (pdfId, inFlight);
+        return changes;
     }
 
     /// <summary>
@@ -990,14 +1208,34 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
             .Select(g => g.HasKnowledgeBase)
             .SingleAsync(TestCancellationToken);
 
-        return new PdfOutcome(pdf.ProcessingState, pdf.ProcessingError, pdf.FailedAtState, textChunks, vectorDocuments, vectorDocumentStatus, embeddings, hasKnowledgeBase);
+        var progress = pdf.ProcessingProgress;
+
+        return new PdfOutcome(
+            pdf.ProcessingState,
+            pdf.ProcessingError,
+            pdf.ErrorCategory,
+            pdf.FailedAtState,
+            progress?.CurrentStep,
+            progress?.ErrorMessage,
+            textChunks,
+            vectorDocuments,
+            vectorDocumentStatus,
+            embeddings,
+            hasKnowledgeBase);
     }
 
     private static void AssertCancelled(ProcessingHarness harness, PdfOutcome outcome, string failedAt)
     {
         outcome.State.Should().Be("Failed", $"a cancelled upload ends as Failed, not stuck in flight ({outcome.Describe(harness)})");
         outcome.Error.Should().Be("Processing cancelled by user");
+        outcome.ErrorCategory.Should().Be("Cancelled", "a user's cancellation is neither retried nor notified as a failure (#4610)");
         outcome.FailedAtState.Should().Be(failedAt);
+
+        // Ciò che vede la UI (GET /pdfs/{id}/progress) è il progresso, non la colonna di stato.
+        outcome.ProgressStep.Should().Be(Api.Models.ProcessingStep.Failed);
+        outcome.ProgressError.Should().Be("Processing cancelled by user");
+
+        harness.Logs.Entries.Should().BeEmpty("a cancellation is not an error and must not be logged as one");
     }
 
     private static void AssertQuotaReleased(ProcessingHarness harness, Guid pdfId)
@@ -1009,7 +1247,10 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     private sealed record PdfOutcome(
         string State,
         string? Error,
+        string? ErrorCategory,
         string? FailedAtState,
+        Api.Models.ProcessingStep? ProgressStep,
+        string? ProgressError,
         int TextChunks,
         int VectorDocuments,
         string? VectorDocumentStatus,
@@ -1017,7 +1258,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         bool HasKnowledgeBase)
     {
         public string Describe(ProcessingHarness harness) =>
-            $"state={State}, failedAt={FailedAtState}, error=\"{Error}\", textChunks={TextChunks}, vectorDocuments={VectorDocuments} (status {VectorDocumentStatus}), embeddings={Embeddings}, hasKnowledgeBase={HasKnowledgeBase}, " +
+            $"state={State}, category={ErrorCategory}, failedAt={FailedAtState}, progress={ProgressStep}, error=\"{Error}\", textChunks={TextChunks}, vectorDocuments={VectorDocuments} (status {VectorDocumentStatus}), embeddings={Embeddings}, hasKnowledgeBase={HasKnowledgeBase}, " +
             $"background exceptions=[{string.Join("; ", harness.Background.Errors.Select(e => $"{e.GetType().Name}: {e.Message}"))}], " +
             $"logged errors=[{string.Join(" || ", harness.Logs.Entries.Take(3).Select(l => l.Length > 1500 ? l[..1500] : l))}]";
     }

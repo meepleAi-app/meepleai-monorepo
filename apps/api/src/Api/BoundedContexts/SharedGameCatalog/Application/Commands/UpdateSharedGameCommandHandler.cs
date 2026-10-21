@@ -1,10 +1,10 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Middleware.Exceptions;
-using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
@@ -28,23 +28,20 @@ internal sealed class UpdateSharedGameCommandHandler : ICommandHandler<UpdateSha
     private readonly ISharedGameRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly MeepleAiDbContext _dbContext;
-    private readonly IHybridCacheService _cache;
-    private readonly ICacheInvalidationRetryPolicy _retryPolicy;
+    private readonly ISharedGameCacheInvalidator _cacheInvalidator;
     private readonly ILogger<UpdateSharedGameCommandHandler> _logger;
 
     public UpdateSharedGameCommandHandler(
         ISharedGameRepository repository,
         IUnitOfWork unitOfWork,
         MeepleAiDbContext dbContext,
-        IHybridCacheService cache,
-        ICacheInvalidationRetryPolicy retryPolicy,
+        ISharedGameCacheInvalidator cacheInvalidator,
         ILogger<UpdateSharedGameCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
-        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-        _retryPolicy = retryPolicy ?? throw new ArgumentNullException(nameof(retryPolicy));
+        _cacheInvalidator = cacheInvalidator ?? throw new ArgumentNullException(nameof(cacheInvalidator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -138,13 +135,11 @@ internal sealed class UpdateSharedGameCommandHandler : ICommandHandler<UpdateSha
         // salvava, il drawer si chiudeva senza errori, la pagina non cambiava: misurato con il DB
         // che riportava il titolo nuovo e `GET /api/v1/shared-games/{id}` quello vecchio.
         //
-        // Riusa l'helper dei percorsi cover: il nome e' cover-specifico ma la funzione e' generica
-        // (evicts the SharedGameCatalog read-model caches) e invalida sia il tag di lista
-        // `search-games` sia quello di dettaglio, con la retry policy di #613. Cinque altri
-        // percorsi di scrittura di questo BC lo facevano gia'; questo, il piu' centrale, no.
-        await CoverCacheInvalidation
-            .EvictReadModelAsync(_cache, _retryPolicy, command.GameId, cancellationToken)
-            .ConfigureAwait(false);
+        // Passa dall'invalidatore del catalogo (ISharedGameCacheInvalidator, lo stesso dei percorsi
+        // cover): invalida sia il tag di lista `search-games` sia quello di dettaglio, con la retry
+        // policy di #613. Cinque altri percorsi di scrittura di questo BC lo facevano gia'; questo, il
+        // piu' centrale, no.
+        await _cacheInvalidator.EvictDetailAndListAsync(command.GameId, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Shared game updated successfully: {GameId}",

@@ -26,8 +26,7 @@ internal sealed class ReuploadBggCoverCommandHandler : ICommandHandler<ReuploadB
     private readonly IBggApiService _bggApiService;
     private readonly IBggCoverDownloader _coverDownloader;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IHybridCacheService _cache;
-    private readonly ICacheInvalidationRetryPolicy _cacheRetryPolicy;
+    private readonly ISharedGameCacheInvalidator _cacheInvalidator;
     private readonly ILogger<ReuploadBggCoverCommandHandler> _logger;
 
     public ReuploadBggCoverCommandHandler(
@@ -35,16 +34,14 @@ internal sealed class ReuploadBggCoverCommandHandler : ICommandHandler<ReuploadB
         IBggApiService bggApiService,
         IBggCoverDownloader coverDownloader,
         IUnitOfWork unitOfWork,
-        IHybridCacheService cache,
-        ICacheInvalidationRetryPolicy cacheRetryPolicy,
+        ISharedGameCacheInvalidator cacheInvalidator,
         ILogger<ReuploadBggCoverCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _bggApiService = bggApiService ?? throw new ArgumentNullException(nameof(bggApiService));
         _coverDownloader = coverDownloader ?? throw new ArgumentNullException(nameof(coverDownloader));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-        _cacheRetryPolicy = cacheRetryPolicy ?? throw new ArgumentNullException(nameof(cacheRetryPolicy));
+        _cacheInvalidator = cacheInvalidator ?? throw new ArgumentNullException(nameof(cacheInvalidator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -96,9 +93,7 @@ internal sealed class ReuploadBggCoverCommandHandler : ICommandHandler<ReuploadB
             .ConfigureAwait(false);
 
         // La colonna che il read-model risolve è cambiata → evict lista + dettaglio.
-        await CoverCacheInvalidation
-            .EvictReadModelAsync(_cache, _cacheRetryPolicy, game.Id, cancellationToken)
-            .ConfigureAwait(false);
+        await _cacheInvalidator.EvictDetailAndListAsync(game.Id, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "BGG cover re-hosted for game {GameId} (BggId {BggId}) by {AdminId} → {R2Key}",

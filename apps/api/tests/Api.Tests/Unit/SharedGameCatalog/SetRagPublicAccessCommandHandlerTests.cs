@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
@@ -54,7 +55,11 @@ public sealed class SetRagPublicAccessCommandHandlerTests
     }
 
     private SetRagPublicAccessCommandHandler CreateHandler() =>
-        new(_mockRepo.Object, _mockUow.Object, _mockCache.Object, _mockRetryPolicy.Object, _mockHybridCache.Object, _mockLogger.Object);
+        new(
+            _mockRepo.Object,
+            _mockUow.Object,
+            new SharedGameCacheInvalidator(_mockCache.Object, _mockRetryPolicy.Object, _mockHybridCache.Object),
+            _mockLogger.Object);
 
     [Theory]
     [InlineData(true)]
@@ -151,6 +156,10 @@ public sealed class SetRagPublicAccessCommandHandlerTests
         // La lista è scritta con HybridCache grezzo, che il wrapper non raggiunge (#4561): serve il tag nativo.
         _mockHybridCache.Verify(
             c => c.RemoveByTagAsync("search-games", It.IsAny<CancellationToken>()), Times.Once);
+        // Il dettaglio non riporta `isRagPublic`, ma questo handler lo evince da sempre insieme alla lista
+        // (via #4100): resta, e ora ha anche il passo nativo.
+        _mockHybridCache.Verify(
+            c => c.RemoveByTagAsync($"shared-game:{game.Id}", It.IsAny<CancellationToken>()), Times.Once);
         evictedBeforeSave.Should().BeFalse("evict prima del salvataggio lascerebbe che una lettura ripopoli la cache col valore vecchio");
     }
 

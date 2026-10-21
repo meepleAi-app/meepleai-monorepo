@@ -32,9 +32,7 @@ public class UpvoteFaqCommandHandlerTests
         _repositoryMock = new Mock<ISharedGameRepository>(MockBehavior.Strict);
         _handler = new UpvoteFaqCommandHandler(
             _repositoryMock.Object,
-            _eviction.Cache.Object,
-            _eviction.RetryPolicy.Object,
-            _eviction.HybridCache.Object,
+            _eviction.Invalidator,
             new Mock<ILogger<UpvoteFaqCommandHandler>>().Object);
     }
 

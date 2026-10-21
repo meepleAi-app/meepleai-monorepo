@@ -1,6 +1,6 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
-using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -21,23 +21,20 @@ internal sealed class RemoveCoverAssignmentCommandHandler : ICommandHandler<Remo
 {
     private readonly ISharedGameRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IHybridCacheService _cache;
-    private readonly ICacheInvalidationRetryPolicy _cacheRetryPolicy;
+    private readonly ISharedGameCacheInvalidator _cacheInvalidator;
     private readonly IBlobStorageService _blobStorage;
     private readonly ILogger<RemoveCoverAssignmentCommandHandler> _logger;
 
     public RemoveCoverAssignmentCommandHandler(
         ISharedGameRepository repository,
         IUnitOfWork unitOfWork,
-        IHybridCacheService cache,
-        ICacheInvalidationRetryPolicy cacheRetryPolicy,
+        ISharedGameCacheInvalidator cacheInvalidator,
         IBlobStorageService blobStorage,
         ILogger<RemoveCoverAssignmentCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-        _cacheRetryPolicy = cacheRetryPolicy ?? throw new ArgumentNullException(nameof(cacheRetryPolicy));
+        _cacheInvalidator = cacheInvalidator ?? throw new ArgumentNullException(nameof(cacheInvalidator));
         _blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -80,9 +77,7 @@ internal sealed class RemoveCoverAssignmentCommandHandler : ICommandHandler<Remo
             }
         }
 
-        await CoverCacheInvalidation
-            .EvictReadModelAsync(_cache, _cacheRetryPolicy, command.GameId, cancellationToken)
-            .ConfigureAwait(false);
+        await _cacheInvalidator.EvictDetailAndListAsync(command.GameId, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Removed cover assignment for {Context} on game {GameId} by {AdminId}",

@@ -8,6 +8,7 @@ using Api.Tests.Constants;
 using Api.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using FluentAssertions;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
@@ -36,6 +37,7 @@ public sealed class ReuploadBggCoverCommandHandlerTests
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IHybridCacheService> _cache = new();
     private readonly Mock<ICacheInvalidationRetryPolicy> _cacheRetryPolicy = new();
+    private readonly Mock<HybridCache> _hybridCache = new();
 
     public ReuploadBggCoverCommandHandlerTests()
     {
@@ -52,8 +54,7 @@ public sealed class ReuploadBggCoverCommandHandlerTests
         _bggApi.Object,
         _downloader.Object,
         _unitOfWork.Object,
-        _cache.Object,
-        _cacheRetryPolicy.Object,
+        new SharedGameCacheInvalidator(_cache.Object, _cacheRetryPolicy.Object, _hybridCache.Object),
         NullLogger<ReuploadBggCoverCommandHandler>.Instance);
 
     // Il BggId va passato alla factory: AssignBggId è ammesso solo negli stati Skeleton/Failed,

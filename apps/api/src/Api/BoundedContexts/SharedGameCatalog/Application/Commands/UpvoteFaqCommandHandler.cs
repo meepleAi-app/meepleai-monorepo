@@ -1,8 +1,7 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
-using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
-using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 
@@ -27,22 +26,16 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 internal sealed class UpvoteFaqCommandHandler : ICommandHandler<UpvoteFaqCommand, UpvoteFaqResultDto>
 {
     private readonly ISharedGameRepository _repository;
-    private readonly IHybridCacheService _cache;
-    private readonly ICacheInvalidationRetryPolicy _retryPolicy;
-    private readonly HybridCache _hybridCache;
+    private readonly ISharedGameCacheInvalidator _cacheInvalidator;
     private readonly ILogger<UpvoteFaqCommandHandler> _logger;
 
     public UpvoteFaqCommandHandler(
         ISharedGameRepository repository,
-        IHybridCacheService cache,
-        ICacheInvalidationRetryPolicy retryPolicy,
-        HybridCache hybridCache,
+        ISharedGameCacheInvalidator cacheInvalidator,
         ILogger<UpvoteFaqCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
-        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-        _retryPolicy = retryPolicy ?? throw new ArgumentNullException(nameof(retryPolicy));
-        _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
+        _cacheInvalidator = cacheInvalidator ?? throw new ArgumentNullException(nameof(cacheInvalidator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -55,10 +48,8 @@ internal sealed class UpvoteFaqCommandHandler : ICommandHandler<UpvoteFaqCommand
         var upvote = await _repository.IncrementFaqUpvoteAsync(command.FaqId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("Faq", command.FaqId.ToString());
 
-        // #4565: dopo l'UPDATE, non prima. Vedi SharedGameDetailCacheInvalidation.
-        await SharedGameDetailCacheInvalidation
-            .EvictAsync(_cache, _retryPolicy, _hybridCache, upvote.SharedGameId, cancellationToken)
-            .ConfigureAwait(false);
+        // #4565: dopo l'UPDATE, non prima. Vedi ISharedGameCacheInvalidator.
+        await _cacheInvalidator.EvictDetailAsync(upvote.SharedGameId, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("FAQ upvoted successfully: {FaqId}, New count: {UpvoteCount}", command.FaqId, upvote.UpvoteCount);
 

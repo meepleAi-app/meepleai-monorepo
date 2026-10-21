@@ -7,11 +7,13 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Services;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
+using Api.Tests.TestHelpers;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -38,12 +40,14 @@ namespace Api.Tests.Integration;
 /// <para><b>Acceptance Criteria:</b> Issue #1819 (#1736) - Database consistency verification across ALL stages</para>
 ///
 /// Test Coverage:
-/// 1. Mid-database operation cancellation
-/// 2. Mid-blob write cancellation
-/// 3. Mid-text extraction cancellation
-/// 4. Mid-embedding batch cancellation
-/// 5. Mid-vector store cancellation
-/// 6. Random timing cancellation (stress test)
+/// 1. Mid-database operation cancellation (parte sincrona dell'upload)
+/// 2. Mid-blob write cancellation (parte sincrona dell'upload)
+/// 3. Mid-text extraction cancellation (saltato: DIFETTO #1684 follow-up)
+/// 4. Mid-embedding batch cancellation (pipeline in background, <c>ProcessPdfAsync</c>)
+/// 5. Mid-vector store cancellation: all'ingresso di <c>IndexAsync</c> e durante il salvataggio delle righe
+///    vettoriali (pipeline in background)
+/// 6. Controllo: la stessa pipeline, senza cancellazione, arriva a <c>Ready</c>
+/// 7. Cancellazione a istanti casuali e a istanti fissi (parte sincrona dell'upload, stress)
 /// </summary>
 /// <remarks>
 /// <para>In CI gira nello shard <c>Core</c>, come gli altri <c>Category=Integration</c> (#4522).
@@ -56,6 +60,12 @@ namespace Api.Tests.Integration;
 /// che lo userebbero, quota e tier, sono doppi). Prima la classe si collegava al Redis della fixture
 /// solo per farci <c>FLUSHDB</c> a ogni test: in CI quel Redis è il service container condiviso da
 /// tutto lo shard, e il flush cancellava lo stato degli altri test in parallelo (#4522).</para>
+/// <para><b>Quali test arrivano alle fasi (#4531):</b> i test che usano il banco di <c>InitializeAsync</c>
+/// hanno <c>IBackgroundTaskService</c> come Mock senza setup, quindi esercitano solo la parte sincrona
+/// dell'upload. Quelli che nominano embedding e indicizzazione usano <c>BuildProcessingHarness</c>: la lambda
+/// in background gira davvero (<see cref="CancellableBackgroundTaskService"/>), la pipeline scrive su
+/// Postgres, e l'embedding e l'estrazione del testo sono doppi che segnalano di essere «dentro la chiamata»
+/// (<see cref="HoldPoint"/>). Nessun servizio esterno e nessun LLM.</para>
 /// </remarks>
 [Collection("Integration-GroupB")]
 [Trait("Category", TestCategories.Integration)]
@@ -449,94 +459,202 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// Tests cancellation during embedding generation batch processing.
+    /// Cancellazione mentre il servizio di embedding lavora a un lotto (<c>ProcessPdfAsync</c>, passo 3).
     ///
-    /// <para><b>Production Scenario:</b> User cancels during slow embedding API call</para>
-    /// <para><b>Expected Behavior:</b> Stop processing, no partial embeddings indexed</para>
+    /// <para><b>Scenario reale:</b> l'utente annulla l'elaborazione (<c>CancelPdfProcessingCommand</c> →
+    /// <c>IBackgroundTaskService.CancelTask</c>) mentre la richiesta del secondo lotto è in volo.</para>
+    /// <para><b>Atteso:</b> la chiamata finisce con la cancellazione senza aspettare il servizio; il documento
+    /// passa a <c>Failed</c> («Processing cancelled by user», con <c>Embedding</c> come punto di rottura); la
+    /// prenotazione di quota è rilasciata e non confermata; del lavoro a metà non resta niente nel database
+    /// (né passaggi, né documento vettoriale, né righe vettoriali).</para>
+    /// <para><b>Prova di essere arrivati alla fase:</b> il doppio ha ricevuto due richieste (il primo lotto
+    /// completo, il secondo fermato) e l'indicizzazione non è mai partita. Prima di #4531 il test usava un
+    /// <c>IBackgroundTaskService</c> senza setup: la lambda non girava mai e il servizio di embedding non veniva
+    /// nemmeno chiamato.</para>
     /// </summary>
-    [Fact(Timeout = 90000)]
+    [Fact(Timeout = 120_000)]
     public async Task UploadPdf_WhenCancelledMidEmbeddingBatch_StopsGracefully()
     {
-        // Arrange
-        var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
-        var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
+        // Arrange - il secondo lotto resta in volo finché non lo cancella il test
+        var embeddingHold = new HoldPoint(holdOnCall: 2);
+        var indexingHold = HoldPoint.Never();
+        await using var harness = BuildProcessingHarness(embeddingHold, indexingHold);
+        var pdfId = await UploadAsPlainUserAsync(harness, "mid_embedding.pdf");
 
-        var pdfBytes = PdfUploadTestHelpers.CreateValidPdfBytes(1024 * 100);
-        var formFile = PdfUploadTestHelpers.CreateMockFormFile("mid_embedding.pdf", pdfBytes);
-
-        var command = new UploadPdfCommand(
-            GameId: testGame.Id.ToString(),
-            Metadata: null,
-            null,  // PrivateGameId
-            UserId: testUser.Id,
-            File: formFile);
-
-        using var cts = PdfUploadTestHelpers.CreateDelayedCancellation(150);
-
-        // Act
+        // Act - cancella quando il secondo lotto è DENTRO la chiamata. Non lo lascia andare: in produzione
+        // è la cancellazione a chiudere la richiesta al provider, non una risposta.
+        await WaitUntilInsideAsync(harness, embeddingHold, "the second embedding batch", pdfId);
         try
         {
-            var result = await handler.Handle(command, cts.Token);
-            result.Should().NotBeNull();
+            harness.Background.CancelTask(pdfId.ToString()).Should().BeTrue("the processing task is still running");
+            await WaitForBackgroundAsync(harness, "the embedding call has to end with the cancellation");
         }
-        catch (OperationCanceledException)
+        finally
         {
-            // Acceptable - cancellation propagated
+            embeddingHold.Release();
         }
 
-        // Verify no partial processing artifacts
-        await PdfUploadTestHelpers.VerifyDatabaseConsistencyAsync(_dbContext, testUser.Id, testGame.Id);
+        // Assert - la fase c'è stata, e il documento è in uno stato finale e pulito
+        embeddingHold.Calls.Should().Be(2, "the test must have cancelled inside the second batch, not before or after");
+        indexingHold.Calls.Should().Be(0, "a cancelled embedding step must not go on to the indexing step");
+
+        var outcome = await ReadOutcomeAsync(harness, pdfId);
+        AssertCancelled(harness, outcome, failedAt: "Embedding");
+        outcome.TextChunks.Should().Be(0, "nothing is persisted before the indexing step");
+        outcome.VectorDocuments.Should().Be(0);
+        outcome.Embeddings.Should().Be(0, "no partial embeddings of the batches already computed");
+        AssertQuotaReleased(harness, pdfId);
     }
 
     /// <summary>
-    /// Tests cancellation during vector store indexing operation.
+    /// Cancellazione all'ingresso dell'indicizzazione vettoriale (<c>ProcessPdfAsync</c>, passo 4).
     ///
-    /// <para><b>Production Scenario:</b> pgvector indexing timeout or user cancellation</para>
-    /// <para><b>Expected Behavior:</b> Maintain consistency, no corrupted vector indices</para>
+    /// <para><b>Scenario reale:</b> l'utente annulla un istante prima che <c>IPdfIndexingPipeline.IndexAsync</c>
+    /// scriva il documento vettoriale, quando tutti gli embedding sono già stati calcolati.</para>
+    /// <para><b>Atteso:</b> documento <c>Failed</c> con <c>Indexing</c> come punto di rottura, quota rilasciata,
+    /// nessun passaggio, documento vettoriale o riga vettoriale rimasti.</para>
+    /// <para><b>Prova di essere arrivati alla fase:</b> il doppio dell'indicizzazione ha ricevuto la chiamata, e
+    /// gli embedding sono stati richiesti più volte (tutti i lotti) prima di lei.</para>
     /// </summary>
-    [Fact(Timeout = 90000)]
+    [Fact(Timeout = 120_000)]
     public async Task UploadPdf_WhenCancelledMidVectorStore_MaintainsConsistency()
     {
-        // Arrange
-        var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
-        var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
-        var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
-
-        var pdfBytes = PdfUploadTestHelpers.CreateValidPdfBytes(1024 * 50);
-        var formFile = PdfUploadTestHelpers.CreateMockFormFile("mid_vector.pdf", pdfBytes);
-
-        var command = new UploadPdfCommand(
-            GameId: testGame.Id.ToString(),
-            Metadata: null,
-            null,  // PrivateGameId
-            UserId: testUser.Id,
-            File: formFile);
-
-        using var cts = PdfUploadTestHelpers.CreateDelayedCancellation(200);
+        // Arrange - gli embedding passano tutti; l'indicizzazione resta ferma all'ingresso
+        var embeddingHold = HoldPoint.Never();
+        var indexingHold = new HoldPoint(holdOnCall: 1);
+        await using var harness = BuildProcessingHarness(embeddingHold, indexingHold);
+        var pdfId = await UploadAsPlainUserAsync(harness, "mid_vector.pdf");
 
         // Act
+        await WaitUntilInsideAsync(harness, indexingHold, "the vector indexing", pdfId);
         try
         {
-            await handler.Handle(command, cts.Token);
+            harness.Background.CancelTask(pdfId.ToString()).Should().BeTrue("the processing task is still running");
+            await WaitForBackgroundAsync(harness, "the indexing call has to end with the cancellation");
         }
-        catch (OperationCanceledException)
+        finally
         {
-            // Expected for mid-phase cancellation
+            indexingHold.Release();
         }
 
-        // Verify database consistency maintained
-        await PdfUploadTestHelpers.VerifyDatabaseConsistencyAsync(_dbContext, testUser.Id, testGame.Id);
+        // Assert
+        embeddingHold.Calls.Should().BeGreaterThan(1, "every embedding batch has to be computed before the indexing step");
+        indexingHold.Calls.Should().Be(1);
+
+        var outcome = await ReadOutcomeAsync(harness, pdfId);
+        AssertCancelled(harness, outcome, failedAt: "Indexing");
+        outcome.TextChunks.Should().Be(0);
+        outcome.VectorDocuments.Should().Be(0, "no vector document announcing an index that was never written");
+        outcome.Embeddings.Should().Be(0);
+        AssertQuotaReleased(harness, pdfId);
     }
 
     /// <summary>
-    /// Tests cancellation at random unpredictable timing (stress test).
+    /// Cancellazione mentre <c>PdfChunkPersistence</c> salva le righe vettoriali: è «a metà» della fase di
+    /// indicizzazione davvero, con i passaggi già scritti e il documento vettoriale già creato.
+    ///
+    /// <para><b>Atteso:</b> documento <c>Failed</c> con <c>Indexing</c> come punto di rottura, quota rilasciata,
+    /// e nessuna riga vettoriale: né quelle del salvataggio interrotto, che restano nel change tracker del
+    /// contesto, né un loro salvataggio in un secondo momento da parte del gestore della cancellazione.</para>
+    /// <para><b>Prova di essere arrivati alla fase:</b> l'interceptor ha fermato il primo salvataggio che
+    /// contiene righe vettoriali, e a quel punto i passaggi sono già nel database (il test lo legge prima di
+    /// cancellare).</para>
+    /// </summary>
+    [Fact(Timeout = 120_000)]
+    public async Task UploadPdf_WhenCancelledWhileSavingVectorRows_LeavesNoPartialEmbeddings()
+    {
+        // Arrange - il salvataggio delle righe vettoriali resta fermo prima di partire
+        var vectorRowsSaveHold = new HoldPoint(holdOnCall: 1);
+        await using var harness = BuildProcessingHarness(HoldPoint.Never(), HoldPoint.Never(), vectorRowsSaveHold);
+
+        // Act
+        var (pdfId, inFlight) = await CancelWhileSavingVectorRowsAsync(harness, vectorRowsSaveHold, "mid_vector_rows.pdf");
+
+        // Assert
+        inFlight.TextChunks.Should().BeGreaterThan(0, "the text chunks are saved before the vector rows, so the test is cancelling in the middle of the step");
+        inFlight.Embeddings.Should().Be(0);
+
+        var outcome = await ReadOutcomeAsync(harness, pdfId);
+        AssertCancelled(harness, outcome, failedAt: "Indexing");
+        outcome.Embeddings.Should().Be(0, "the vector rows of a cancelled save must not be saved later by the cancellation handler");
+        AssertQuotaReleased(harness, pdfId);
+    }
+
+    /// <summary>
+    /// Lo stesso scenario del test sopra, con la domanda che quello non fa: che cosa resta del lavoro già
+    /// committato prima dell'interruzione?
+    ///
+    /// <para><c>IPdfIndexingPipeline.IndexAsync</c> scrive il documento vettoriale già <c>completed</c> e
+    /// pubblica <c>VectorDocumentIndexedEvent</c> (che alza <c>shared_games.has_knowledge_base</c>) PRIMA che
+    /// <c>PdfChunkPersistence</c> salvi passaggi e righe vettoriali. Una cancellazione, o qualunque errore, fra i
+    /// due passi lascia un PDF <c>Failed</c> con un documento vettoriale «completato», passaggi senza righe
+    /// vettoriali e un gioco che dichiara di avere una base di conoscenza vuota.</para>
+    /// <para>Non è un difetto della cancellazione soltanto, e la correzione cambia l'ordine di una pipeline con
+    /// più chiamanti: è tracciata in #4609. Lo <c>Skip</c> si toglie quando la issue è chiusa.</para>
+    /// </summary>
+    [Fact(Skip = "DIFETTO: #4609 un upload interrotto fra IndexAsync e il salvataggio dei vettori lascia un documento vettoriale completed, i passaggi e has_knowledge_base=true su un PDF Failed", Timeout = 120_000)]
+    public async Task UploadPdf_WhenCancelledWhileSavingVectorRows_LeavesNoCompletedVectorDocument()
+    {
+        // Arrange
+        var vectorRowsSaveHold = new HoldPoint(holdOnCall: 1);
+        await using var harness = BuildProcessingHarness(HoldPoint.Never(), HoldPoint.Never(), vectorRowsSaveHold);
+
+        // Act
+        var (pdfId, _) = await CancelWhileSavingVectorRowsAsync(harness, vectorRowsSaveHold, "mid_vector_rows_leftovers.pdf");
+
+        // Assert
+        var outcome = await ReadOutcomeAsync(harness, pdfId);
+        outcome.State.Should().Be("Failed");
+        outcome.VectorDocuments.Should().Be(0, $"no vector document announcing an index that has no vector rows ({outcome.Describe(harness)})");
+        outcome.TextChunks.Should().Be(0, "no text chunks left for a document that failed");
+        outcome.HasKnowledgeBase.Should().BeFalse("the game must not claim a knowledge base that was never written");
+    }
+
+    /// <summary>
+    /// Controllo dei test di cancellazione sopra: senza cancellazione la stessa pipeline arriva a <c>Ready</c> e
+    /// scrive passaggi, documento vettoriale e righe vettoriali.
+    ///
+    /// <para>Se un giorno la configurazione di questa classe smettesse di bastare alla pipeline (una
+    /// dipendenza nuova, un gestore di eventi che non si costruisce), i test di cancellazione diventerebbero
+    /// rossi, o peggio verdi, per un motivo che non è quello che dichiarano. Questo dice per primo che il
+    /// banco funziona.</para>
+    /// </summary>
+    [Fact(Timeout = 120_000)]
+    public async Task UploadPdf_WhenNotCancelled_RunsEveryPhaseToReady()
+    {
+        // Arrange
+        var embeddingHold = HoldPoint.Never();
+        var indexingHold = HoldPoint.Never();
+        await using var harness = BuildProcessingHarness(embeddingHold, indexingHold);
+
+        // Act
+        var pdfId = await UploadAsPlainUserAsync(harness, "not_cancelled.pdf");
+        await WaitForBackgroundAsync(harness, "an uncancelled upload has to finish");
+
+        // Assert
+        var outcome = await ReadOutcomeAsync(harness, pdfId);
+        outcome.State.Should().Be("Ready", $"the pipeline ended with: {outcome.Describe(harness)}");
+        embeddingHold.Calls.Should().BeGreaterThan(1, "the fixture has to be long enough for more than one embedding batch");
+        indexingHold.Calls.Should().Be(1);
+        outcome.TextChunks.Should().BeGreaterThan(0);
+        outcome.VectorDocuments.Should().Be(1);
+        outcome.Embeddings.Should().Be(outcome.TextChunks, "one vector row per chunk");
+        harness.Quota.Verify(q => q.ConfirmQuotaAsync(It.IsAny<Guid>(), pdfId.ToString(), It.IsAny<CancellationToken>()), Times.Once);
+        harness.Quota.Verify(q => q.ReleaseQuotaAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Tests cancellation at a random instant (stress test).
     ///
     /// <para><b>Production Scenario:</b> Real-world unpredictable user cancellation timing</para>
     /// <para><b>Expected Behavior:</b> ALWAYS clean up resources, regardless of timing</para>
+    /// <para><b>Cosa esercita davvero (#4531):</b> istanti, non fasi. Il ritardo (10-300 ms) cade nella parte
+    /// sincrona dell'upload: validazione, ricerca per hash, scrittura del blob, record, prenotazione della quota.
+    /// Qui <c>IBackgroundTaskService</c> è un Mock senza setup, quindi la lambda con estrazione, embedding e
+    /// indicizzazione non gira mai. Quelle fasi sono nei test <c>MidEmbeddingBatch</c> e <c>MidVectorStore</c>.</para>
     /// </summary>
     [Fact(Timeout = 90000)]
-    public async Task UploadPdf_WhenCancelledAtRandomStage_AlwaysCleansUp()
+    public async Task UploadPdf_WhenCancelledAtRandomInstant_AlwaysCleansUp()
     {
         // Arrange
         var handler = _serviceProvider!.GetRequiredService<UploadPdfCommandHandler>();
@@ -578,16 +696,19 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// Tests comprehensive database consistency after cancellation at multiple pipeline stages.
+    /// Tests comprehensive database consistency after cancellation at several instants of the upload.
     ///
     /// <para><b>Test Category:</b> Cancellation - Consistency Verification</para>
-    /// <para><b>Production Scenario:</b> Verify no data corruption after cancellation at ANY stage</para>
+    /// <para><b>Production Scenario:</b> Verify no data corruption after cancellation at ANY instant</para>
     /// <para><b>Expected Behavior:</b> FK integrity maintained, no orphaned records, referential consistency</para>
     /// <para><b>Acceptance Criteria:</b> Issue #1819 (#1736) - Database consistency verification (EXPLICIT)</para>
     /// </summary>
     /// <remarks>
-    /// This test explicitly satisfies the acceptance criterion:
-    /// "Database consistency verification" by testing ALL stages.
+    /// <para>This test satisfies the acceptance criterion "Database consistency verification" for the
+    /// synchronous part of the upload only (#4531). The five delays (10-500 ms) are instants, not pipeline
+    /// phases: <c>IBackgroundTaskService</c> is a Mock without setup, so the lambda with extraction,
+    /// embedding and indexing never runs, so no delay can reach them. The phases of
+    /// <c>ProcessPdfAsync</c> are covered by <c>MidEmbeddingBatch</c> and <c>MidVectorStore</c>.</para>
     ///
     /// Verifies:
     /// - User and Game entities remain untouched
@@ -596,9 +717,9 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     /// - Transaction atomicity across all cancellation scenarios
     /// </remarks>
     [Fact(Timeout = 90_000)]
-    public async Task UploadPdf_WhenCancelledAtMultipleStages_MaintainsDatabaseConsistency()
+    public async Task UploadPdf_WhenCancelledAtVariousInstants_MaintainsDatabaseConsistency()
     {
-        // Arrange - Test cancellation at 5 different stages
+        // Arrange - Test cancellation at 5 different instants
         var testUser = await _dbContext!.Users.FirstAsync(TestCancellationToken);
         var testGame = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
 
@@ -655,5 +776,285 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
 
         userStillExists.Should().BeTrue("user should survive all cancellation scenarios");
         gameStillExists.Should().BeTrue("game should survive all cancellation scenarios");
+    }
+
+    // -------------------------------------------------------------------------------------------
+    // Banco per le fasi di elaborazione (#4531)
+    //
+    // I test di sopra che chiamano il gestore con il banco di InitializeAsync esercitano solo la parte
+    // sincrona dell'upload: lì IBackgroundTaskService è un Mock senza setup e la lambda con
+    // ProcessPdfAsync non gira mai. Questo banco la fa girare: estrazione, suddivisione, embedding,
+    // indicizzazione e chiusura vanno su Postgres, e i servizi esterni sono doppi.
+    // -------------------------------------------------------------------------------------------
+
+    /// <summary>
+    /// Costruisce il gestore con la pipeline di elaborazione vera dietro. Nessun servizio esterno e nessun
+    /// LLM: l'embedding è un doppio che calcola vettori deterministici (<see cref="MockEmbeddingService"/>) e
+    /// può fermarsi dentro la chiamata; l'estrazione del testo è un doppio; la scrittura vettoriale va
+    /// su Postgres con <c>PdfIndexingPipeline</c> e <c>PdfChunkPersistence</c> veri.
+    /// </summary>
+    private ProcessingHarness BuildProcessingHarness(HoldPoint embeddingHold, HoldPoint indexingHold, HoldPoint? vectorRowsSaveHold = null)
+    {
+        var background = new CancellableBackgroundTaskService();
+        var logs = new ErrorLogCapture();
+        var services = IntegrationServiceCollectionBuilder.CreateBase(_isolatedDbConnectionString);
+        services.AddLogging(builder => builder.AddProvider(logs));
+
+        // Registrati prima di RegisterDefaultMockServices, che non sovrascrive ciò che trova già.
+        services.AddSingleton<IBackgroundTaskService>(background);
+
+        var quota = new Mock<IPdfUploadQuotaService>();
+        quota.Setup(q => q.CheckQuotaAsync(It.IsAny<Guid>(), It.IsAny<UserTier>(), It.IsAny<AuthRole>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(PdfUploadQuotaResult.Success(0, int.MaxValue, 0, int.MaxValue, DateTime.MaxValue, DateTime.MaxValue));
+        quota.Setup(q => q.ReserveQuotaAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(QuotaReservationResult.Success(DateTime.UtcNow.AddHours(1)));
+        services.AddSingleton(quota.Object);
+
+        var vectors = new MockEmbeddingService(dimensions: 768);
+        var embedding = new Mock<IEmbeddingService>();
+        embedding.Setup(e => e.GetModelName()).Returns(vectors.GetModelName());
+        embedding.Setup(e => e.GetEmbeddingDimensions()).Returns(vectors.GetEmbeddingDimensions());
+        embedding
+            .Setup(e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(async (List<string> texts, string language, CancellationToken ct) =>
+            {
+                try
+                {
+                    await embeddingHold.EnterAsync(ct).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    // Come EmbeddingService: l'eccezione del provider, cancellazione compresa, esce come
+                    // risultato fallito (GenerateWithFallbackAsync la cattura).
+                    return EmbeddingResult.CreateFailure("embedding generation failed: The operation was canceled.");
+                }
+
+                return await vectors.GenerateEmbeddingsAsync(texts, language, ct).ConfigureAwait(false);
+            });
+        services.AddSingleton(embedding.Object);
+
+        var extractor = new Mock<IPdfTextExtractor>();
+        extractor
+            .Setup(e => e.ExtractPagedTextAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(BuildRulebookExtraction(pages: 30));
+        services.AddSingleton(extractor.Object);
+
+        var tableExtractor = new Mock<IPdfTableExtractor>();
+        tableExtractor
+            .Setup(t => t.ExtractStructuredContentAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(StructuredContentResult.CreateFailure("Skipped in test"));
+        services.AddSingleton(tableExtractor.Object);
+
+        services.AddSingleton<ITextChunkingService, TextChunkingService>();
+
+        // Ciò che la pipeline vera chiede e CreateBase non registra: la cache semantica, e le dipendenze dei
+        // gestori di VectorDocumentIndexedEvent, che IndexAsync pubblica in linea (il secondo alza
+        // shared_games.has_knowledge_base).
+        services.AddSingleton(Mock.Of<ISemanticResponseCache>());
+        services.AddScoped(_ => Mock.Of<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IVectorDocumentRepository>());
+        services.AddScoped<ICacheInvalidationRetryPolicy>(_ => new PassthroughRetryPolicy());
+        services.AddScoped<PdfIndexingPipeline>();
+        if (vectorRowsSaveHold is not null)
+        {
+            var interceptor = new HoldingVectorRowsSaveInterceptor(vectorRowsSaveHold);
+            services.ConfigureDbContext<MeepleAiDbContext>(options => options.AddInterceptors(interceptor));
+        }
+
+        services.AddScoped<IPdfIndexingPipeline>(sp =>
+            new HoldingPdfIndexingPipeline(sp.GetRequiredService<PdfIndexingPipeline>(), indexingHold));
+
+        services.Configure<PdfProcessingOptions>(options => options.MaxFileSizeBytes = 10485760);
+        services.AddScoped<UploadPdfCommandHandler>();
+
+        RegisterDefaultMockServices(services);
+
+        return new ProcessingHarness(services.BuildServiceProvider(), background, quota, logs);
+    }
+
+    /// <summary>
+    /// Un testo abbastanza lungo per più lotti di embedding (il gestore ne calcola 20 passaggi alla volta).
+    /// </summary>
+    private static PagedTextExtractionResult BuildRulebookExtraction(int pages)
+    {
+        var chunks = new List<PageTextChunk>();
+        var offset = 0;
+        for (var page = 1; page <= pages; page++)
+        {
+            var text = $"Pagina {page}. " + string.Concat(Enumerable.Repeat($"Il giocatore {page} pesca una carta e la gioca. ", 16));
+            chunks.Add(new PageTextChunk(page, text, offset, offset + text.Length));
+            offset += text.Length + 2; // il testo intero unisce le pagine con una riga vuota
+        }
+
+        return PagedTextExtractionResult.CreateSuccess(chunks, pages, offset, ocrTriggered: false);
+    }
+
+    /// <summary>
+    /// Carica un PDF come utente semplice (<c>Role = "User"</c>): è il ruolo per cui il gestore avvia la
+    /// lambda in background invece di accodare il lavoro. Restituisce l'id del documento.
+    /// </summary>
+    private async Task<Guid> UploadAsPlainUserAsync(ProcessingHarness harness, string fileName)
+    {
+        var user = await _dbContext!.Users.FirstAsync(TestCancellationToken);
+        var game = await _dbContext.SharedGames.FirstAsync(TestCancellationToken);
+        user.Role.Should().Be("User", "an admin or editor upload goes to the queue and the lambda under test never runs");
+
+        var command = new UploadPdfCommand(
+            GameId: game.Id.ToString(),
+            Metadata: null,
+            null,  // PrivateGameId
+            UserId: user.Id,
+            File: PdfUploadTestHelpers.CreateMockFormFile(fileName, PdfUploadTestHelpers.CreateValidPdfBytes(1024 * 10)));
+
+        var handler = harness.RequestScope.ServiceProvider.GetRequiredService<UploadPdfCommandHandler>();
+        var result = await handler.Handle(command, TestCancellationToken);
+
+        result.Success.Should().BeTrue($"the upload itself has to succeed: {result.Message}");
+        harness.Background.Started.Should().Be(1, "an upload by a plain user is processed by a background task");
+        return result.Document!.Id;
+    }
+
+    /// <summary>
+    /// Carica un PDF, aspetta che <c>PdfChunkPersistence</c> sia sul punto di salvare le righe vettoriali, annulla
+    /// l'elaborazione come farebbe l'utente e aspetta la fine del task. Restituisce l'id del documento e lo
+    /// stato che aveva un istante prima della cancellazione.
+    /// </summary>
+    private async Task<(Guid PdfId, PdfOutcome InFlight)> CancelWhileSavingVectorRowsAsync(
+        ProcessingHarness harness,
+        HoldPoint vectorRowsSaveHold,
+        string fileName)
+    {
+        var pdfId = await UploadAsPlainUserAsync(harness, fileName);
+
+        await WaitUntilInsideAsync(harness, vectorRowsSaveHold, "the save of the vector rows", pdfId);
+        var inFlight = await ReadOutcomeAsync(harness, pdfId);
+        try
+        {
+            harness.Background.CancelTask(pdfId.ToString()).Should().BeTrue("the processing task is still running");
+            await WaitForBackgroundAsync(harness, "the save of the vector rows has to end with the cancellation");
+        }
+        finally
+        {
+            vectorRowsSaveHold.Release();
+        }
+
+        return (pdfId, inFlight);
+    }
+
+    /// <summary>
+    /// Aspetta che il codice sotto prova sia dentro la chiamata fermata. Se la pipeline finisce prima, o non ci
+    /// arriva in tempo, il fallimento dice dove si è fermata: un test che non raggiunge la fase non deve
+    /// restare verde.
+    /// </summary>
+    private async Task WaitUntilInsideAsync(ProcessingHarness harness, HoldPoint hold, string where, Guid pdfId)
+    {
+        var finished = harness.Background.WaitForAllAsync();
+        var first = await Task.WhenAny(hold.Entered, finished, Task.Delay(TimeSpan.FromSeconds(60), TestCancellationToken));
+        if (first == hold.Entered)
+        {
+            return;
+        }
+
+        var outcome = await ReadOutcomeAsync(harness, pdfId);
+        Assert.Fail($"The pipeline must reach {where} before the test cancels it, but it did not: {outcome.Describe(harness)}");
+    }
+
+    private static async Task WaitForBackgroundAsync(ProcessingHarness harness, string because)
+    {
+        var finished = harness.Background.WaitForAllAsync();
+        if (await Task.WhenAny(finished, Task.Delay(TimeSpan.FromSeconds(30), TestCancellationToken)) != finished)
+        {
+            Assert.Fail($"The background task did not finish within 30 s: {because}.");
+        }
+
+        await finished;
+    }
+
+    /// <summary>Lo stato del documento e le righe che ha lasciato, letti con un contesto nuovo.</summary>
+    private static async Task<PdfOutcome> ReadOutcomeAsync(ProcessingHarness harness, Guid pdfId)
+    {
+        using var scope = harness.Provider.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var pdf = await db.PdfDocuments.AsNoTracking().SingleAsync(p => p.Id == pdfId, TestCancellationToken);
+        var textChunks = await db.TextChunks.CountAsync(t => t.PdfDocumentId == pdfId, TestCancellationToken);
+        var vectorDocuments = await db.VectorDocuments.CountAsync(v => v.PdfDocumentId == pdfId, TestCancellationToken);
+        var embeddings = await db.PgVectorEmbeddings
+            .CountAsync(e => db.VectorDocuments.Any(v => v.Id == e.VectorDocumentId && v.PdfDocumentId == pdfId), TestCancellationToken);
+
+        var vectorDocumentStatus = await db.VectorDocuments
+            .Where(v => v.PdfDocumentId == pdfId)
+            .Select(v => v.IndexingStatus)
+            .FirstOrDefaultAsync(TestCancellationToken);
+        var hasKnowledgeBase = await db.SharedGames
+            .Where(g => g.Id == pdf.SharedGameId)
+            .Select(g => g.HasKnowledgeBase)
+            .SingleAsync(TestCancellationToken);
+
+        return new PdfOutcome(pdf.ProcessingState, pdf.ProcessingError, pdf.FailedAtState, textChunks, vectorDocuments, vectorDocumentStatus, embeddings, hasKnowledgeBase);
+    }
+
+    private static void AssertCancelled(ProcessingHarness harness, PdfOutcome outcome, string failedAt)
+    {
+        outcome.State.Should().Be("Failed", $"a cancelled upload ends as Failed, not stuck in flight ({outcome.Describe(harness)})");
+        outcome.Error.Should().Be("Processing cancelled by user");
+        outcome.FailedAtState.Should().Be(failedAt);
+    }
+
+    private static void AssertQuotaReleased(ProcessingHarness harness, Guid pdfId)
+    {
+        harness.Quota.Verify(q => q.ReleaseQuotaAsync(It.IsAny<Guid>(), pdfId.ToString(), It.IsAny<CancellationToken>()), Times.Once);
+        harness.Quota.Verify(q => q.ConfirmQuotaAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private sealed record PdfOutcome(
+        string State,
+        string? Error,
+        string? FailedAtState,
+        int TextChunks,
+        int VectorDocuments,
+        string? VectorDocumentStatus,
+        int Embeddings,
+        bool HasKnowledgeBase)
+    {
+        public string Describe(ProcessingHarness harness) =>
+            $"state={State}, failedAt={FailedAtState}, error=\"{Error}\", textChunks={TextChunks}, vectorDocuments={VectorDocuments} (status {VectorDocumentStatus}), embeddings={Embeddings}, hasKnowledgeBase={HasKnowledgeBase}, " +
+            $"background exceptions=[{string.Join("; ", harness.Background.Errors.Select(e => $"{e.GetType().Name}: {e.Message}"))}], " +
+            $"logged errors=[{string.Join(" || ", harness.Logs.Entries.Take(3).Select(l => l.Length > 1500 ? l[..1500] : l))}]";
+    }
+
+    private sealed class ProcessingHarness : IAsyncDisposable
+    {
+        public ProcessingHarness(
+            ServiceProvider provider,
+            CancellableBackgroundTaskService background,
+            Mock<IPdfUploadQuotaService> quota,
+            ErrorLogCapture logs)
+        {
+            Provider = provider;
+            Background = background;
+            Quota = quota;
+            Logs = logs;
+            RequestScope = provider.CreateScope();
+        }
+
+        public ServiceProvider Provider { get; }
+
+        public CancellableBackgroundTaskService Background { get; }
+
+        public Mock<IPdfUploadQuotaService> Quota { get; }
+
+        /// <summary>I log di errore, per dire nel fallimento che cosa è andato storto.</summary>
+        public ErrorLogCapture Logs { get; }
+
+        /// <summary>Lo scope «della richiesta» del gestore: vive quanto il test, come la lambda in background.</summary>
+        public IServiceScope RequestScope { get; }
+
+        public async ValueTask DisposeAsync()
+        {
+            // Un test che fallisce non lascia la lambda appesa sul provider già smaltito.
+            await Task.WhenAny(Background.WaitForAllAsync(), Task.Delay(TimeSpan.FromSeconds(10))).ConfigureAwait(false);
+            RequestScope.Dispose();
+            await Provider.DisposeAsync().ConfigureAwait(false);
+        }
     }
 }

@@ -106,7 +106,7 @@ internal partial class UploadPdfCommandHandler
         }
         catch (OperationCanceledException)
         {
-            await HandleProcessingCancellationAsync(pdfId, userId, db, scope, quotaService, startTime, cancellationToken).ConfigureAwait(false);
+            await HandleProcessingCancellationAsync(pdfId, userId, db, scope, quotaService, startTime).ConfigureAwait(false);
         }
         catch (InvalidOperationException ex)
         {
@@ -517,8 +517,10 @@ internal partial class UploadPdfCommandHandler
             _logger.LogInformation("📦 [BATCH-EMBED] Processing batch {Current}/{Total}: {ChunkCount} chunks",
                 batchIndex + 1, batchCount, batchTexts.Count);
 
+            // #4531: the token goes down to the call. Without it a cancelled upload kept waiting for the
+            // embedding service to answer this batch, and noticed the cancellation only afterwards.
             var batchResult = await embeddingService.GenerateEmbeddingsAsync(
-                batchTexts, pdfDoc.Language ?? "en").ConfigureAwait(false);
+                batchTexts, pdfDoc.Language ?? "en", cancellationToken).ConfigureAwait(false);
 
             if (!batchResult.Success)
             {
@@ -909,17 +911,30 @@ internal partial class UploadPdfCommandHandler
     /// <summary>
     /// Handles processing cancellation with cleanup.
     /// </summary>
+    /// <remarks>
+    /// The token that triggered this branch is already signalled, so none of the writes below can use it
+    /// (#4531). The progress update did, and <see cref="UpdateProgressAsync"/> rethrows
+    /// <see cref="OperationCanceledException"/>: it threw at once, out of this method, and neither the quota
+    /// release nor the Failed transition ran. The document stayed in the step it was in (Embedding,
+    /// Indexing…) and the reservation was not given back.
+    /// </remarks>
     private async Task HandleProcessingCancellationAsync(
         string pdfId,
         Guid userId,
         MeepleAiDbContext db,
         IServiceScope scope,
         IPdfUploadQuotaService quotaService,
-        DateTime startTime,
-        CancellationToken cancellationToken)
+        DateTime startTime)
     {
         _logger.LogInformation("PDF processing cancelled for {PdfId}", pdfId);
-        await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, "Processing cancelled by user", cancellationToken).ConfigureAwait(false);
+
+        // The step that was cancelled can leave rows in the change tracker: text chunks or pgvector rows of a
+        // save that never went through. The save in UpdateProgressAsync now runs without a cancelled token, so
+        // it would write them for a document that is being marked Failed. Same rule as TransitionToFailedAsync
+        // (#4395): whatever was interrupted is dropped before anything is saved.
+        db.ChangeTracker.Clear();
+
+        await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, "Processing cancelled by user", CancellationToken.None).ConfigureAwait(false);
         await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
 
         // #2284 follow-up: TD2 — transition Failed via domain. failedAtState=null →

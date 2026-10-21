@@ -25,6 +25,9 @@ internal class CreateConfigurationCommandHandler : ICommandHandler<CreateConfigu
         ArgumentNullException.ThrowIfNull(command);
         var key = new ConfigKey(command.Key);
 
+        // #4612: una riga di questa chiave scritta dall'API nascerebbe con il claim del primo admin aperto.
+        ReservedConfigurationKeyGuard.EnsureNotReserved(key.Value);
+
         var config = new Domain.Entities.SystemConfiguration(
             id: Guid.NewGuid(),
             key: key,

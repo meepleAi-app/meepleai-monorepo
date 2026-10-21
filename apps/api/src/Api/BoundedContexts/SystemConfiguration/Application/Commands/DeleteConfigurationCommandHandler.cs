@@ -26,6 +26,9 @@ internal class DeleteConfigurationCommandHandler : ICommandHandler<DeleteConfigu
         if (config == null)
             return false;
 
+        // #4612: tolta la riga, il ramo «primo claim» di RegisterCommandHandler la ricrea e promuove.
+        ReservedConfigurationKeyGuard.EnsureNotReserved(config.Key.Value);
+
         // Mark as deleted to raise domain event
         config.MarkAsDeleted();
 

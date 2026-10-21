@@ -2,6 +2,7 @@ using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
 using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Constants;
 
 namespace Api.BoundedContexts.SystemConfiguration.Application.Queries;
 
@@ -27,6 +28,8 @@ internal class ExportConfigsQueryHandler : IQueryHandler<ExportConfigsQuery, Con
         var configs = allConfigs
             .Where(c => string.Equals(c.Environment, query.Environment, StringComparison.Ordinal) || string.Equals(c.Environment, "All", StringComparison.Ordinal))
             .Where(c => !query.ActiveOnly || c.IsActive)
+            // #4612: la riga riservata non esce nell'export, così un backup non la porta a un import.
+            .Where(c => !ReservedConfigurationKeys.IsReserved(c.Key.Value))
             .Select(MapToDto)
             .ToList();
 

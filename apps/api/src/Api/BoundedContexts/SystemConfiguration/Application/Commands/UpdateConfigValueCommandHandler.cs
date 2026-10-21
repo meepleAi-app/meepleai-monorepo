@@ -28,6 +28,8 @@ internal class UpdateConfigValueCommandHandler : ICommandHandler<UpdateConfigVal
         if (config == null)
             throw new DomainException($"Configuration with ID {command.ConfigId} not found");
 
+        ReservedConfigurationKeyGuard.EnsureNotReserved(config.Key.Value);
+
         config.UpdateValue(command.NewValue, command.UpdatedByUserId);
 
         await _configurationRepository.UpdateAsync(config, cancellationToken).ConfigureAwait(false);

@@ -28,6 +28,8 @@ internal class ToggleConfigurationCommandHandler : ICommandHandler<ToggleConfigu
         if (config == null)
             throw new DomainException($"Configuration with ID {command.ConfigId} not found");
 
+        ReservedConfigurationKeyGuard.EnsureNotReserved(config.Key.Value);
+
         if (command.IsActive)
             config.Activate();
         else

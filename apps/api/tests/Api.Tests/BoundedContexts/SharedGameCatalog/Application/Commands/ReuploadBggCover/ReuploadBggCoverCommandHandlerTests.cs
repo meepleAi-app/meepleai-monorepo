@@ -86,6 +86,57 @@ public sealed class ReuploadBggCoverCommandHandlerTests
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    /// <summary>
+    /// La colonna cover che il read model risolve è cambiata: lista e dettaglio di QUESTO gioco vanno tolti
+    /// dalla cache, con entrambi i passi, e DOPO il salvataggio (un'evizione prima lascerebbe che una
+    /// lettura ripopoli la cache col valore vecchio).
+    /// </summary>
+    [Fact]
+    public async Task Handle_HappyPath_EvictsListAndDetailAfterTheSave()
+    {
+        var game = NewGame();
+        var events = new List<string>();
+        _repository.Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>())).ReturnsAsync(game);
+        _bggApi.Setup(b => b.GetGameDetailsAsync(BggId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Details(RemoteImage));
+        _downloader.Setup(d => d.DownloadAndUploadAsync(BggId, RemoteImage, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(R2Key);
+        _unitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Callback(() => events.Add("saved"))
+            .ReturnsAsync(1);
+        _cache.Setup(c => c.RemoveByTagAcrossReplicasAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, CancellationToken>((tag, _) => events.Add($"wrapper:{tag}"))
+            .ReturnsAsync(0);
+        _hybridCache.Setup(c => c.RemoveByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, CancellationToken>((tag, _) => events.Add($"native:{tag}"))
+            .Returns(ValueTask.CompletedTask);
+
+        await CreateHandler().Handle(new ReuploadBggCoverCommand(game.Id, AdminId), CancellationToken.None);
+
+        var detail = $"shared-game:{game.Id}";
+        events.Should().Equal(
+            "saved",
+            "wrapper:search-games", "native:search-games",
+            $"wrapper:{detail}", $"native:{detail}");
+    }
+
+    [Fact]
+    public async Task Handle_WhenBggExposesNoImage_EvictsNothing()
+    {
+        var game = NewGame();
+        _repository.Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>())).ReturnsAsync(game);
+        _bggApi.Setup(b => b.GetGameDetailsAsync(BggId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Details(imageUrl: null));
+
+        var act = () => CreateHandler().Handle(new ReuploadBggCoverCommand(game.Id, AdminId), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConflictException>();
+        _cache.Verify(
+            c => c.RemoveByTagAcrossReplicasAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _hybridCache.Verify(
+            c => c.RemoveByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Fact]
     public async Task Handle_GameWithoutBggId_Throws409_AndNeverFetches()
     {

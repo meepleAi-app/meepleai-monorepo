@@ -113,6 +113,19 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
 
             _logger.LogInformation("Deleted PDF document record {PdfId}", pdfId);
 
+            // #4308: what the hybrid cache still holds of the document — the uploader's «my documents»
+            // list (5 minutes), the document, its chunks. Only on this branch: when the PDF is still linked
+            // from other games the row survives and the list does not change. The same rule as
+            // DeleteKbDocumentCommandHandler, in one place.
+            //
+            // Right after the commit, before the steps below: the event publication, the blob and the AI
+            // caches let a cancellation through, and a client that aborts the request there would leave the
+            // row deleted and the list stale for 5 minutes. Neither this command nor the commands that send
+            // it are [AtomicAudit], so the delete is already committed and no read can slip in between.
+            await DeletedKbDocumentCaches
+                .InvalidateSafelyAsync(_hybridCache, _logger, uploadedByUserId, pdfGuid, cancellationToken)
+                .ConfigureAwait(false);
+
             // Issue #1831 AC: raise PdfDeletedDomainEvent so PdfDeletedEventHandler
             // evicts the L4 cover thumb/preview from R2. Published AFTER
             // SaveChangesAsync succeeds (not via IDomainEventCollector pre-save):
@@ -133,16 +146,6 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
 
             // Invalidate cache
             await InvalidateCacheSafelyAsync(storageGameId, "PDF deletion", cancellationToken).ConfigureAwait(false);
-
-            // #4308: what the hybrid cache still holds of the document — the uploader's «my documents»
-            // list (5 minutes), the document, its chunks. Only on this branch: when the PDF is still linked
-            // from other games the row survives and the list does not change. The same rule as
-            // DeleteKbDocumentCommandHandler, in one place. Neither this command nor the commands that send
-            // it are [AtomicAudit], and the delete is already committed above, so no read can slip between
-            // the invalidation and the commit.
-            await DeletedKbDocumentCaches
-                .InvalidateSafelyAsync(_hybridCache, _logger, uploadedByUserId, pdfGuid, cancellationToken)
-                .ConfigureAwait(false);
 
             return new PdfDeleteResult(true, "PDF deleted successfully", storageGameId);
         }

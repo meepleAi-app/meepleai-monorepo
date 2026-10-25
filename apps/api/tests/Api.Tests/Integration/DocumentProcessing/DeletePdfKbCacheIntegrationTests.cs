@@ -16,6 +16,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Moq;
 using Xunit;
 
 namespace Api.Tests.Integration.DocumentProcessing;
@@ -30,11 +31,27 @@ public sealed class DeletePdfKbCacheHostFixture(SharedTestcontainersFixture shar
 {
     internal RememberingHybridCache HybridCache { get; } = new();
 
+    /// <summary>
+    /// Acceso, l'invalidazione della cache delle risposte AI risponde come una richiesta interrotta: è il
+    /// punto del gestore che, dopo il commit, lascia passare un annullamento invece di inghiottirlo.
+    /// Vive quanto la classe: ogni test lo riporta a spento.
+    /// </summary>
+    internal bool AiCacheCancelsInvalidation { get; set; }
+
     protected override WebApplicationFactory<Program> ConfigureHost(WebApplicationFactory<Program> factory) =>
         factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
         {
             services.RemoveAll<IHybridCacheService>();
             services.AddSingleton<IHybridCacheService>(HybridCache);
+
+            var aiCache = new Mock<IAiResponseCacheService>();
+            aiCache
+                .Setup(c => c.InvalidateGameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Returns(() => AiCacheCancelsInvalidation
+                    ? Task.FromCanceled(new CancellationToken(canceled: true))
+                    : Task.CompletedTask);
+            services.RemoveAll<IAiResponseCacheService>();
+            services.AddSingleton<IAiResponseCacheService>(aiCache.Object);
         }));
 }
 
@@ -75,8 +92,9 @@ public sealed class DeletePdfKbCacheIntegrationTests
     public async ValueTask InitializeAsync()
     {
         await _hostFixture.BeginTestAsync();
-        // La cache vive quanto la classe: ogni test parte da vuota.
+        // La cache e l'interruttore vivono quanto la classe: ogni test parte da vuota e da spento.
         _hostFixture.HybridCache.Clear();
+        _hostFixture.AiCacheCancelsInvalidation = false;
         _client = _hostFixture.Factory.CreateClient();
 
         using var scope = _hostFixture.Factory.Services.CreateScope();
@@ -133,11 +151,13 @@ public sealed class DeletePdfKbCacheIntegrationTests
     }
 
     /// <summary>
-    /// Se un altro gioco usa ancora il PDF, il gestore toglie un collegamento e la riga resta (#2949): l'elenco
-    /// non cambia, quindi non c'è niente da invalidare.
+    /// Un PDF con più di un collegamento non si cancella: la riga resta (#2949), l'elenco non cambia, e quindi non
+    /// c'è niente da invalidare. Qui il PDF è di un gioco privato e la richiesta non nomina nessun gioco, perciò
+    /// il gestore non toglie nemmeno un collegamento; quel che conta per #4308 è che la riga resti e che le
+    /// etichette del documento non vengano toccate.
     /// </summary>
     [Fact]
-    public async Task APdfAnotherGameStillLinks_IsOnlyUnlinked_AndItsCachesAreLeftAlone()
+    public async Task APdfLinkedFromOtherGames_SurvivesTheDelete_AndItsCachesAreLeftAlone()
     {
         await LinkGameToPdfAsync(_gameId, _pdfId);
         await LinkGameToPdfAsync(_otherGameId, _pdfId);
@@ -148,9 +168,11 @@ public sealed class DeletePdfKbCacheIntegrationTests
         response.StatusCode.Should().Be(HttpStatusCode.NoContent, await response.Content.ReadAsStringAsync(Ct));
         (await PdfExistsAsync(_pdfId)).Should().BeTrue("another game still uses it: the row survives");
         (await ListedDocumentsAsync()).Should().BeEquivalentTo(new[] { _pdfId, _controlPdfId });
-        // Le due etichette del documento sono solo sue: nessuno le ha toccate.
+        // Le due etichette del documento sono solo sue: nessuno le ha toccate. Né quella dell'elenco del proprietario:
+        // se la cancellazione la togliesse qui, ricalcolerebbe l'elenco per niente.
         _hostFixture.HybridCache.RemovalsOf($"kbDoc:{_pdfId:N}").Should().Be(0);
         _hostFixture.HybridCache.RemovalsOf($"kbChunks:{_pdfId:N}").Should().Be(0);
+        _hostFixture.HybridCache.RemovalsOf($"user:{_userId}").Should().Be(0);
     }
 
     /// <summary>
@@ -167,9 +189,43 @@ public sealed class DeletePdfKbCacheIntegrationTests
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent, await response.Content.ReadAsStringAsync(Ct));
         (await PdfExistsAsync(_pdfId)).Should().BeFalse();
-        // Senza questa riga il test passerebbe anche se l'invalidazione non venisse mai chiesta.
+        // Senza queste righe il test passerebbe anche se l'invalidazione non venisse mai chiesta.
         _hostFixture.HybridCache.RemovalsOf($"user:{_userId}").Should().BeGreaterThan(0,
             "the deletion must have tried to clear the owner's list, and survived its failure");
+        // Ciascuna etichetta è tentata per conto suo: il fallimento della prima non lascia leggibili il
+        // documento e i suoi passaggi (30 minuti e più di cache) solo perché non è toccato a loro.
+        _hostFixture.HybridCache.RemovalsOf($"kbDoc:{_pdfId:N}").Should().BeGreaterThan(0,
+            "one tag failing must not stop the others from being tried");
+        _hostFixture.HybridCache.RemovalsOf($"kbChunks:{_pdfId:N}").Should().BeGreaterThan(0,
+            "one tag failing must not stop the others from being tried");
+    }
+
+    /// <summary>
+    /// Il gestore lascia passare un annullamento (<see cref="OperationCanceledException"/>) dai passi che
+    /// seguono il commit: se il client interrompe la richiesta lì, la riga è già cancellata. L'elenco non deve
+    /// restare stantio per cinque minuti solo perché l'invalidazione stava in coda dopo quei passi.
+    /// </summary>
+    [Fact]
+    public async Task ARequestAbortedAfterTheDeletion_StillTakesThePdfOutOfTheList()
+    {
+        (await ListedDocumentsAsync()).Should().BeEquivalentTo(new[] { _pdfId, _controlPdfId });
+        _hostFixture.AiCacheCancelsInvalidation = true;
+
+        try
+        {
+            await DeletePdfAsync(_pdfId);
+        }
+        catch (OperationCanceledException)
+        {
+            // La richiesta è interrotta: l'esito HTTP non interessa, interessa che cosa è rimasto.
+        }
+        finally
+        {
+            _hostFixture.AiCacheCancelsInvalidation = false;
+        }
+
+        (await PdfExistsAsync(_pdfId)).Should().BeFalse("the row was committed before the request was aborted");
+        (await ListedDocumentsAsync()).Should().BeEquivalentTo(new[] { _controlPdfId });
     }
 
     // ─── Supporto ────────────────────────────────────────────────

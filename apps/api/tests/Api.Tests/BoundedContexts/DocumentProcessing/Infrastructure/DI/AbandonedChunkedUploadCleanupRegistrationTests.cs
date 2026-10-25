@@ -47,6 +47,34 @@ public sealed class AbandonedChunkedUploadCleanupRegistrationTests
             d.ImplementationType == typeof(AbandonedChunkedUploadCleanupService));
     }
 
+    /// <summary>
+    /// L'intervallo viene da una chiave di configurazione. <c>PeriodicTimer</c> lancia con un intervallo non positivo o
+    /// oltre circa cinquanta giorni, e <c>GetValue&lt;int&gt;</c> lancia su un valore che non è un intero: fuori dal
+    /// giro protetto, il servizio morirebbe in silenzio dopo il ritardo iniziale e la pulizia non girerebbe mai più.
+    /// </summary>
+    [Theory]
+    [InlineData(null, 60)]
+    [InlineData("30", 30)]
+    [InlineData("1", 1)]
+    [InlineData("0", 60)]
+    [InlineData("-5", 60)]
+    [InlineData("0.5", 60)]
+    [InlineData("abc", 60)]
+    [InlineData("100000", 1440)]
+    public void TheInterval_FallsBackToTheDefault_WhenTheConfigurationIsNotUsable(string? configured, int expectedMinutes)
+    {
+        var settings = new Dictionary<string, string?>();
+        if (configured is not null)
+        {
+            settings["ChunkedUploadCleanup:IntervalMinutes"] = configured;
+        }
+
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection(settings).Build();
+
+        AbandonedChunkedUploadCleanupService.ResolveInterval(configuration)
+            .Should().Be(TimeSpan.FromMinutes(expectedMinutes));
+    }
+
     [Fact]
     public void TheContainer_CanBuildTheCleanup_WithItsOptionalBasePathLeftToTheDefault()
     {

@@ -1,5 +1,5 @@
+using System.Globalization;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
-using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,8 +25,12 @@ internal sealed record ChunkedUploadCleanupResult(int SessionsExpired, int Direc
 /// <para>Un giro fa due passate.</para>
 /// <list type="number">
 /// <item>
-/// <b>Le sessioni scadute</b> (<c>FindExpiredSessionsAsync</c>): si marcano <c>expired</c> e si toglie la cartella,
-/// subito. Una sessione scaduta rifiuta ogni pezzo (<c>MarkChunkReceived</c>), quindi non c'è più nessuno che scriva.
+/// <b>Le sessioni scadute</b>: si marca la riga <c>expired</c> e poi si toglie la cartella, subito. Una sessione scaduta
+/// rifiuta ogni pezzo (<c>MarkChunkReceived</c>), quindi non c'è più nessuno che scriva. Fa eccezione
+/// <c>assembling</c>: <c>CompleteChunkedUploadCommandHandler</c> controlla la scadenza una volta, prima di cominciare,
+/// e poi legge i pezzi da quella cartella per tutto l'assemblaggio, che può durare oltre il minuto in cui
+/// <c>ExpiresAt</c> passa. Una sessione in assemblaggio si chiude solo quando è scaduta da più di una sessione, cioè
+/// quando l'assemblaggio è stato interrotto da un riavvio.
 /// </item>
 /// <item>
 /// <b>Le cartelle sotto la base</b> che nessuna sessione viva reclama: si tolgono solo se la loro ultima scrittura è
@@ -38,10 +42,21 @@ internal sealed record ChunkedUploadCleanupResult(int SessionsExpired, int Direc
 /// </item>
 /// </list>
 /// <para>
-/// Il percorso di ogni cartella viene dal database. Non si cancella mai niente che non stia <i>strettamente dentro</i>
-/// la cartella di base (non la base stessa, non una sorella con lo stesso prefisso), e un collegamento simbolico non
-/// si segue. Il controllo è più stretto di quello dei due gestori, che confrontano solo il prefisso della stringa:
-/// per leggere o scrivere un pezzo basta, per cancellare no.
+/// Le sessioni si leggono dal <c>DbContext</c> con una proiezione (<c>Id</c>, <c>Status</c>, <c>TempDirectory</c>) e si
+/// aggiornano con <c>ExecuteUpdateAsync</c> condizionato allo stato letto, senza passare dall'aggregato. Due ragioni.
+/// La chiave esterna <c>GameId</c> è <c>ON DELETE SET NULL</c>: se un gioco viene cancellato fisicamente la sessione
+/// resta senza <c>GameId</c> e senza <c>PrivateGameId</c>, e <c>ChunkedUploadSession</c> non si lascia costruire così,
+/// quindi <c>FindExpiredSessionsAsync</c> lancia e il giro si ferma su quella riga per sempre (misurato nei test). E
+/// <c>UpdateAsync</c> riscrive la riga intera da uno snapshot: senza concorrenza ottimistica avrebbe potuto
+/// sovrascrivere un <c>completed</c> appena scritto. Con lo stato nella condizione, se qualcun altro ha mosso la
+/// sessione nel frattempo l'aggiornamento non colpisce niente e la sessione si lascia stare.
+/// </para>
+/// <para>
+/// Il percorso di ogni cartella viene dal database. Si cancella solo un <i>figlio diretto</i> della cartella di base:
+/// i gestori producono sempre e solo <c>&lt;base&gt;/&lt;guid&gt;</c>. Non la base stessa, non una sorella con lo stesso
+/// prefisso, non una cartella annidata (un collegamento simbolico intermedio non verrebbe visto), e un collegamento
+/// simbolico non si segue. Il controllo è più stretto di quello dei tre gestori, che confrontano solo il prefisso
+/// della stringa: per leggere o scrivere un pezzo basta, per cancellare no.
 /// </para>
 /// <para>
 /// Con più repliche dell'API ogni replica vede solo il proprio disco: la riga la marca scaduta la prima che passa,
@@ -53,15 +68,27 @@ internal sealed class AbandonedChunkedUploadCleanupService : BackgroundService
     /// <summary>Stessa cartella di base dei tre gestori dei caricamenti a pezzi.</summary>
     internal static readonly string DefaultUploadBasePath = Path.Combine(Path.GetTempPath(), "meepleai_uploads");
 
+    internal const string IntervalMinutesKey = "ChunkedUploadCleanup:IntervalMinutes";
+    internal const int DefaultIntervalMinutes = 60;
+
+    /// <summary>
+    /// Un giorno: <c>PeriodicTimer</c> lancia oltre circa cinquanta giorni, e una pulizia più rada di una sessione non
+    /// ha senso.
+    /// </summary>
+    internal const int MaxIntervalMinutes = 24 * 60;
+
+    private const string AssemblingStatus = "assembling";
+    private const string ExpiredStatus = "expired";
+
     private static readonly TimeSpan InitialDelay = TimeSpan.FromMinutes(2);
 
     /// <summary>
-    /// Quanto deve essere vecchia l'ultima scrittura di una cartella senza sessione viva prima di toglierla: quanto
-    /// può vivere una sessione, più il tempo di una richiesta in volo.
+    /// Quanto deve essere vecchia l'ultima scrittura di una cartella senza sessione viva prima di toglierla, e da
+    /// quanto deve essere scaduta una sessione in assemblaggio prima di chiuderla: quanto può vivere una sessione.
     /// </summary>
     private static readonly TimeSpan OrphanGrace = TimeSpan.FromHours(ChunkedUploadSession.SessionExpirationHours);
 
-    private static readonly string[] TerminalStatuses = ["completed", "failed", "expired"];
+    private static readonly string[] TerminalStatuses = ["completed", "failed", ExpiredStatus];
 
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IConfiguration _configuration;
@@ -80,8 +107,22 @@ internal sealed class AbandonedChunkedUploadCleanupService : BackgroundService
         _uploadBasePath = NormalizePath(uploadBasePath ?? DefaultUploadBasePath);
     }
 
-    private TimeSpan Interval =>
-        TimeSpan.FromMinutes(_configuration.GetValue("ChunkedUploadCleanup:IntervalMinutes", 60));
+    /// <summary>
+    /// L'intervallo tra due giri, in minuti: 60 se la chiave manca, non è un intero o è minore di uno; al più un giorno.
+    /// Fuori dal giro protetto un valore che fa lanciare <c>PeriodicTimer</c> (zero, negativo, enorme) o
+    /// <c>GetValue&lt;int&gt;</c> (non è un intero) farebbe morire il servizio in silenzio dopo il ritardo iniziale.
+    /// </summary>
+    internal static TimeSpan ResolveInterval(IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+
+        var parsed = int.TryParse(
+            configuration[IntervalMinutesKey], NumberStyles.Integer, CultureInfo.InvariantCulture, out var minutes);
+
+        return parsed && minutes >= 1
+            ? TimeSpan.FromMinutes(Math.Min(minutes, MaxIntervalMinutes))
+            : TimeSpan.FromMinutes(DefaultIntervalMinutes);
+    }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -94,7 +135,7 @@ internal sealed class AbandonedChunkedUploadCleanupService : BackgroundService
             return;
         }
 
-        var interval = Interval;
+        var interval = ResolveInterval(_configuration);
         _logger.LogInformation(
             "[ChunkedUploadCleanup] Started. Interval: {Interval} minute(s), base folder: {BasePath}",
             interval.TotalMinutes, _uploadBasePath);
@@ -145,77 +186,108 @@ internal sealed class AbandonedChunkedUploadCleanupService : BackgroundService
     internal async Task<ChunkedUploadCleanupResult> CleanupOnceAsync(CancellationToken cancellationToken)
     {
         using var scope = _scopeFactory.CreateScope();
-        var sessions = scope.ServiceProvider.GetRequiredService<IChunkedUploadSessionRepository>();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var now = DateTime.UtcNow;
+        var tally = new Tally();
 
-        var expired = 0;
-        var deleted = 0;
-        var failures = 0;
+        await ExpireSessionsAsync(db, now, tally, cancellationToken).ConfigureAwait(false);
+        await SweepFoldersAsync(db, now, tally, cancellationToken).ConfigureAwait(false);
 
-        // Prima passata: le sessioni scadute. Si marca la riga e poi si toglie la cartella, in questo ordine: se la
-        // cartella non si lascia togliere la riga è già a posto, e la seconda passata riprova quando sarà vecchia.
-        var expiredSessions = await sessions.FindExpiredSessionsAsync(cancellationToken).ConfigureAwait(false);
-        foreach (var session in expiredSessions)
+        return new ChunkedUploadCleanupResult(tally.Expired, tally.Deleted, tally.Failures);
+    }
+
+    /// <summary>
+    /// Prima passata: le sessioni scadute. Si marca la riga e poi si toglie la cartella, in questo ordine: se la
+    /// cartella non si lascia togliere la riga è già a posto, e la seconda passata riprova quando sarà vecchia.
+    /// </summary>
+    private async Task ExpireSessionsAsync(
+        MeepleAiDbContext db, DateTime now, Tally tally, CancellationToken cancellationToken)
+    {
+        var assemblingCutoff = now - OrphanGrace;
+
+        var candidates = await db.ChunkedUploadSessions
+            .AsNoTracking()
+            .Where(s => s.ExpiresAt < now
+                        && !TerminalStatuses.Contains(s.Status)
+                        && (s.Status != AssemblingStatus || s.ExpiresAt < assemblingCutoff))
+            .Select(s => new { s.Id, s.Status, s.TempDirectory })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        foreach (var candidate in candidates)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-#pragma warning disable CA1031 // Per-session boundary: one bad row must not stop the rest of the round
-            try
+            if (!await TryMarkExpiredAsync(db, candidate.Id, candidate.Status, now, tally, cancellationToken)
+                    .ConfigureAwait(false))
             {
-                session.MarkAsExpired();
-                await sessions.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
-                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-                expired++;
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                failures++;
-                _logger.LogWarning(ex, "[ChunkedUploadCleanup] Could not expire session {SessionId}", session.Id);
                 continue;
             }
-#pragma warning restore CA1031
 
-            switch (TryDeleteFolder(session.TempDirectory))
-            {
-                case FolderOutcome.Deleted:
-                    deleted++;
-                    break;
-                case FolderOutcome.Failed:
-                    failures++;
-                    break;
-            }
+            tally.Add(TryDeleteFolder(candidate.TempDirectory));
         }
+    }
 
-        // Seconda passata: le cartelle sotto la base che nessuna sessione viva reclama.
-        if (Directory.Exists(_uploadBasePath))
+    /// <summary>
+    /// Marca la sessione scaduta se è ancora nello stato in cui è stata letta. Falso se qualcun altro l'ha mossa nel
+    /// frattempo (un completamento appena scritto vince) o se l'aggiornamento è fallito.
+    /// </summary>
+    private async Task<bool> TryMarkExpiredAsync(
+        MeepleAiDbContext db, Guid sessionId, string statusRead, DateTime now, Tally tally,
+        CancellationToken cancellationToken)
+    {
+#pragma warning disable CA1031 // Per-session boundary: one bad row must not stop the rest of the round
+        try
         {
-            var now = DateTime.UtcNow;
-            var liveFolders = await LoadLiveFoldersAsync(db, now, cancellationToken).ConfigureAwait(false);
+            var updated = await db.ChunkedUploadSessions
+                .Where(s => s.Id == sessionId && s.Status == statusRead)
+                .ExecuteUpdateAsync(
+                    set => set
+                        .SetProperty(s => s.Status, ExpiredStatus)
+                        .SetProperty(s => s.CompletedAt, (DateTime?)now),
+                    cancellationToken)
+                .ConfigureAwait(false);
 
-            foreach (var folder in Directory.EnumerateDirectories(_uploadBasePath))
+            if (updated == 0)
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var info = new DirectoryInfo(folder);
-                if (liveFolders.Contains(NormalizePath(info.FullName)) ||
-                    now - info.LastWriteTimeUtc < OrphanGrace)
-                {
-                    continue;
-                }
-
-                switch (TryDeleteFolder(info.FullName))
-                {
-                    case FolderOutcome.Deleted:
-                        deleted++;
-                        break;
-                    case FolderOutcome.Failed:
-                        failures++;
-                        break;
-                }
+                return false;
             }
+
+            tally.Expired++;
+            return true;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            tally.Failures++;
+            _logger.LogWarning(ex, "[ChunkedUploadCleanup] Could not expire session {SessionId}", sessionId);
+            return false;
+        }
+#pragma warning restore CA1031
+    }
+
+    /// <summary>Seconda passata: le cartelle sotto la base che nessuna sessione viva reclama.</summary>
+    private async Task SweepFoldersAsync(
+        MeepleAiDbContext db, DateTime now, Tally tally, CancellationToken cancellationToken)
+    {
+        if (!Directory.Exists(_uploadBasePath))
+        {
+            return;
         }
 
-        return new ChunkedUploadCleanupResult(expired, deleted, failures);
+        var liveFolders = await LoadLiveFoldersAsync(db, now, cancellationToken).ConfigureAwait(false);
+
+        foreach (var folder in Directory.EnumerateDirectories(_uploadBasePath))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var info = new DirectoryInfo(folder);
+            if (liveFolders.Contains(NormalizePath(info.FullName)) || now - info.LastWriteTimeUtc < OrphanGrace)
+            {
+                continue;
+            }
+
+            tally.Add(TryDeleteFolder(info.FullName));
+        }
     }
 
     /// <summary>Le cartelle che una sessione non scaduta e non conclusa sta ancora usando.</summary>
@@ -249,12 +321,35 @@ internal sealed class AbandonedChunkedUploadCleanupService : BackgroundService
         Failed,
     }
 
+    /// <summary>I conteggi di un giro, passati alle due passate.</summary>
+    private sealed class Tally
+    {
+        public int Expired { get; set; }
+
+        public int Deleted { get; private set; }
+
+        public int Failures { get; set; }
+
+        public void Add(FolderOutcome outcome)
+        {
+            switch (outcome)
+            {
+                case FolderOutcome.Deleted:
+                    Deleted++;
+                    break;
+                case FolderOutcome.Failed:
+                    Failures++;
+                    break;
+            }
+        }
+    }
+
     private FolderOutcome TryDeleteFolder(string? tempDirectory)
     {
-        if (!IsStrictlyInsideUploadBase(tempDirectory, out var fullPath))
+        if (!IsDirectChildOfUploadBase(tempDirectory, out var fullPath))
         {
             _logger.LogWarning(
-                "[ChunkedUploadCleanup] Refusing to delete {TempDirectory}: not strictly inside {BasePath}",
+                "[ChunkedUploadCleanup] Refusing to delete {TempDirectory}: not a direct child of {BasePath}",
                 tempDirectory, _uploadBasePath);
             return FolderOutcome.Skipped;
         }
@@ -285,10 +380,11 @@ internal sealed class AbandonedChunkedUploadCleanupService : BackgroundService
     }
 
     /// <summary>
-    /// Vero solo se il percorso sta <i>dentro</i> la cartella di base: non la base stessa (cancellerebbe i caricamenti
-    /// di tutti) e non una sorella che ne condivide il prefisso (<c>meepleai_uploads_altro</c>).
+    /// Vero solo se il percorso è un figlio <i>diretto</i> della cartella di base, che è la forma che producono i
+    /// gestori (<c>&lt;base&gt;/&lt;guid&gt;</c>). Non la base stessa (cancellerebbe i caricamenti di tutti), non una
+    /// sorella che ne condivide il prefisso (<c>meepleai_uploads_altro</c>), non una cartella annidata.
     /// </summary>
-    private bool IsStrictlyInsideUploadBase(string? tempDirectory, out string fullPath)
+    private bool IsDirectChildOfUploadBase(string? tempDirectory, out string fullPath)
     {
         fullPath = string.Empty;
         if (string.IsNullOrWhiteSpace(tempDirectory) ||
@@ -298,7 +394,8 @@ internal sealed class AbandonedChunkedUploadCleanupService : BackgroundService
             return false;
         }
 
-        if (!normalized.StartsWith(_uploadBasePath + Path.DirectorySeparatorChar, PathComparison))
+        var parent = Path.GetDirectoryName(normalized);
+        if (parent is null || !string.Equals(parent, _uploadBasePath, PathComparison))
         {
             return false;
         }

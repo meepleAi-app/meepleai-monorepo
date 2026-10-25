@@ -1,5 +1,3 @@
-using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
-using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -54,9 +52,7 @@ public sealed class AbandonedChunkedUploadCleanupIntegrationTests : IAsyncLifeti
         _databaseName = $"test_chunk_cleanup_{Guid.NewGuid():N}";
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
-        var services = IntegrationServiceCollectionBuilder.CreateBase(connectionString);
-        services.AddScoped<IChunkedUploadSessionRepository, ChunkedUploadSessionRepository>();
-        _serviceProvider = services.BuildServiceProvider();
+        _serviceProvider = IntegrationServiceCollectionBuilder.CreateBase(connectionString).BuildServiceProvider();
         _dbContext = _serviceProvider.GetRequiredService<MeepleAiDbContext>();
         await _dbContext.Database.MigrateAsync(Ct);
 
@@ -211,6 +207,105 @@ public sealed class AbandonedChunkedUploadCleanupIntegrationTests : IAsyncLifeti
         result.DirectoriesDeleted.Should().Be(0);
     }
 
+    /// <summary>
+    /// La chiave esterna <c>GameId</c> è <c>ON DELETE SET NULL</c>: se il gioco viene cancellato fisicamente la sessione
+    /// resta con <c>GameId</c> e <c>PrivateGameId</c> entrambi nulli. L'aggregato non si lascia costruire così, e un
+    /// servizio che passasse da lì si fermerebbe su quella riga a ogni giro, per sempre.
+    /// </summary>
+    [Fact]
+    public async Task ASessionWhoseGameIsGone_DoesNotStopTheRound()
+    {
+        var vanishedGameId = Guid.NewGuid();
+        _dbContext!.SharedGames.Add(new SharedGameEntity
+        {
+            Id = vanishedGameId,
+            Title = "Chunk Cleanup Vanishing Game",
+            BggId = Guid.NewGuid().GetHashCode() & 0x7FFFFFFF,
+            YearPublished = 2024,
+            MinPlayers = 2,
+            MaxPlayers = 4,
+            PlayingTimeMinutes = 60,
+            CreatedAt = DateTime.UtcNow,
+        });
+        await _dbContext.SaveChangesAsync(Ct);
+        var orphaned = await SeedSessionAsync(
+            "uploading", expiresAt: DateTime.UtcNow.AddHours(-2), withFolder: true, gameId: vanishedGameId);
+        var ordinary = await SeedSessionAsync("uploading", expiresAt: DateTime.UtcNow.AddHours(-2), withFolder: true);
+        await _dbContext.SharedGames.Where(g => g.Id == vanishedGameId).ExecuteDeleteAsync(Ct);
+
+        var result = await RunCleanupAsync();
+
+        (await StatusOfAsync(orphaned.Id)).Should().Be("expired");
+        (await StatusOfAsync(ordinary.Id)).Should().Be("expired");
+        Directory.Exists(orphaned.TempDirectory).Should().BeFalse();
+        Directory.Exists(ordinary.TempDirectory).Should().BeFalse();
+        result.SessionsExpired.Should().Be(2);
+    }
+
+    /// <summary>
+    /// Una sessione in assemblaggio, appena scaduta, ha un <c>CompleteChunkedUploadCommandHandler</c> che legge i pezzi
+    /// da quella cartella: il gestore controlla la scadenza prima di cominciare, e l'assemblaggio può durare oltre il
+    /// minuto in cui <c>ExpiresAt</c> passa. Non si tocca, né la riga né la cartella.
+    /// </summary>
+    [Fact]
+    public async Task ASessionBeingAssembled_IsLeftAloneJustAfterItExpires()
+    {
+        var session = await SeedSessionAsync("assembling", expiresAt: DateTime.UtcNow.AddMinutes(-1), withFolder: true);
+
+        var result = await RunCleanupAsync();
+
+        (await StatusOfAsync(session.Id)).Should().Be("assembling");
+        Directory.Exists(session.TempDirectory).Should().BeTrue();
+        result.SessionsExpired.Should().Be(0);
+    }
+
+    /// <summary>
+    /// Ma non per sempre: un assemblaggio interrotto da un riavvio lascia la riga in <c>assembling</c>. Scaduta da più di
+    /// una sessione, nessun assemblaggio può ancora leggerla.
+    /// </summary>
+    [Fact]
+    public async Task ASessionLeftAssemblingForLong_IsClosedLikeTheOthers()
+    {
+        var session = await SeedSessionAsync("assembling", expiresAt: DateTime.UtcNow.AddDays(-2), withFolder: true);
+
+        await RunCleanupAsync();
+
+        (await StatusOfAsync(session.Id)).Should().Be("expired");
+        Directory.Exists(session.TempDirectory).Should().BeFalse();
+    }
+
+    /// <summary>
+    /// I gestori producono sempre e solo <c>&lt;base&gt;/&lt;guid&gt;</c>. Un percorso che non è figlio diretto della base
+    /// (la base stessa, una cartella annidata, un percorso che ci arriva con <c>..</c>) viene dal database e non da
+    /// loro: non si cancella. Un collegamento simbolico in mezzo a un percorso annidato non verrebbe visto.
+    /// </summary>
+    [Theory]
+    [InlineData("base")]
+    [InlineData("nested")]
+    [InlineData("dotdot")]
+    public async Task APathThatIsNotADirectChildOfTheBase_IsNeverDeleted(string shape)
+    {
+        var marker = MakeFolder(Path.Combine(_uploadBase, "marker"), age: TimeSpan.FromHours(1));
+        var nestedParent = MakeFolder(Path.Combine(_uploadBase, "parent"), age: TimeSpan.FromHours(1));
+        var target = shape switch
+        {
+            "base" => _uploadBase,
+            "nested" => MakeFolder(Path.Combine(nestedParent, "nested"), age: TimeSpan.FromDays(3)),
+            _ => MakeFolder(Path.Combine(_uploadBase + "_outside", "dati"), age: TimeSpan.FromDays(3)),
+        };
+        var tempDirectory = shape == "dotdot"
+            ? Path.Combine(_uploadBase, "..", Path.GetFileName(_uploadBase) + "_outside", "dati")
+            : target;
+        var session = await SeedSessionAsync(
+            "uploading", expiresAt: DateTime.UtcNow.AddHours(-2), withFolder: false, tempDirectory: tempDirectory);
+
+        await RunCleanupAsync();
+
+        Directory.Exists(target).Should().BeTrue();
+        Directory.Exists(marker).Should().BeTrue("the folders of other uploads are not touched either");
+        (await StatusOfAsync(session.Id)).Should().Be("expired");
+    }
+
     // ─── Supporto ────────────────────────────────────────────────
 
     private async Task<ChunkedUploadCleanupResult> RunCleanupAsync()
@@ -229,7 +324,8 @@ public sealed class AbandonedChunkedUploadCleanupIntegrationTests : IAsyncLifeti
         DateTime expiresAt,
         bool withFolder,
         TimeSpan? folderAge = null,
-        string? tempDirectory = null)
+        string? tempDirectory = null,
+        Guid? gameId = null)
     {
         var id = Guid.NewGuid();
         var directory = tempDirectory ?? Path.Combine(_uploadBase, id.ToString());
@@ -241,7 +337,7 @@ public sealed class AbandonedChunkedUploadCleanupIntegrationTests : IAsyncLifeti
         var entity = new ChunkedUploadSessionEntity
         {
             Id = id,
-            GameId = TestGameId,
+            GameId = gameId ?? TestGameId,
             UserId = TestUserId,
             FileName = "regolamento.pdf",
             TotalFileSize = 20_000_000,

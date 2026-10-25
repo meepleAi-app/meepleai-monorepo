@@ -18,7 +18,8 @@ namespace Api.Tests.Integration.Routing;
 /// <summary>
 /// #4568 — nessuna rotta di amministrazione deve rispondere a un utente normale. «Di amministrazione» vuol dire con
 /// un segmento <c>admin</c> nel modello: tutto <c>/api/v1/admin/**</c>, e anche rotte come
-/// <c>/api/v1/auth/admin/2fa/disable</c>.
+/// <c>/api/v1/auth/admin/2fa/disable</c>. #4584: più le rotte da amministratore che quel segmento non ce l'hanno,
+/// elencate per prefisso in <see cref="AdminRoutePrefixesWithoutAdminSegment"/>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -60,6 +61,24 @@ public sealed partial class NoDuplicateRouteTests
         // Vuoto: #4579 ne ha tolto le due voci (una rotta registrata due volte, che la sonda non poteva leggere).
         // Una voce nuova deve dire perché la rotta non si può sondare e quale issue la chiude.
     };
+
+    /// <summary>
+    /// Prefissi di rotte da amministratore che non hanno un segmento <c>admin</c> nel percorso, e che la sonda
+    /// quindi non vedrebbe (#4584: le metriche di <c>rag-dashboard</c> chiedevano solo una sessione). Una rotta nuova
+    /// sotto questi prefissi entra nella sonda da sola.
+    /// <para>
+    /// Non c'è il prefisso del gruppo <c>rag-dashboard</c> intero: <c>/config</c> è la configurazione dell'utente e
+    /// <c>/options</c> è anonima di proposito, quindi un utente normale le raggiunge per scelta. Un prefisso va
+    /// aggiunto qui solo se tutto ciò che sta sotto è da amministratore; un prefisso che non corrisponde più a
+    /// nessuna rotta fa fallire il test.
+    /// </para>
+    /// </summary>
+    private static readonly string[] AdminRoutePrefixesWithoutAdminSegment =
+    [
+        "api/v1/rag-dashboard/overview",
+        "api/v1/rag-dashboard/strategies",
+        "api/v1/rag-dashboard/query",
+    ];
 
     private static readonly TimeSpan AdminProbeTimeout = TimeSpan.FromSeconds(15);
 
@@ -137,10 +156,23 @@ public sealed partial class NoDuplicateRouteTests
                 "PUT api/v1/admin/alert-configuration",
                 // #4579: la rotta che era registrata due volte e per questo esente. Rimasta una sola, la sonda la legge.
                 "GET api/v1/admin/shared-games/{gameId:guid}/documents/overview",
+                // #4584: rotte da amministratore senza il segmento admin nel percorso, che la sonda legge per prefisso.
+                "GET api/v1/rag-dashboard/overview",
+                "GET api/v1/rag-dashboard/strategies/{strategyId}/metrics",
+                "GET api/v1/rag-dashboard/strategies/{strategyId}/time-series",
+                "GET api/v1/rag-dashboard/strategies/compare",
+                "POST api/v1/rag-dashboard/query/stream",
             ],
-            "the probe must see the routes of #4568 and #4579 and read them as protected, or it proves nothing");
+            "the probe must see the routes of #4568, #4579 and #4584 and read them as protected, or it proves nothing");
 
         var staleExemptions = AdminAuthorizationExempt.Keys.Where(k => !exemptSeen.Contains(k)).Order(StringComparer.Ordinal).ToList();
+        var routeTemplates = dataSource.Endpoints.OfType<RouteEndpoint>()
+            .Select(e => (e.RoutePattern.RawText ?? string.Empty).Trim('/'))
+            .ToList();
+        var stalePrefixes = AdminRoutePrefixesWithoutAdminSegment
+            .Where(prefix => !routeTemplates.Any(template => MatchesPrefix(template, prefix)))
+            .Order(StringComparer.Ordinal)
+            .ToList();
 
         reached.Sort(StringComparer.Ordinal);
         undecided.Sort(StringComparer.Ordinal);
@@ -154,6 +186,9 @@ public sealed partial class NoDuplicateRouteTests
             "with the reason. Undecided: " + string.Join(" ;; ", undecided));
         staleExemptions.Should().BeEmpty(
             "an exemption that matches no route is stale and would hide the next route registered under that name");
+        stalePrefixes.Should().BeEmpty(
+            "a prefix in AdminRoutePrefixesWithoutAdminSegment that matches no route is stale: the routes it was " +
+            "meant to cover were renamed or removed, and the probe no longer sees them");
     }
 
     private enum AdminProbeKind
@@ -215,7 +250,12 @@ public sealed partial class NoDuplicateRouteTests
     }
 
     private static bool IsAdminRoute(string template) =>
-        template.Split('/').Any(segment => string.Equals(segment, "admin", StringComparison.OrdinalIgnoreCase));
+        template.Split('/').Any(segment => string.Equals(segment, "admin", StringComparison.OrdinalIgnoreCase))
+        || AdminRoutePrefixesWithoutAdminSegment.Any(prefix => MatchesPrefix(template, prefix));
+
+    private static bool MatchesPrefix(string template, string prefix) =>
+        template.Equals(prefix, StringComparison.OrdinalIgnoreCase)
+        || template.StartsWith(prefix + "/", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// La richiesta della sonda: parametri di rotta e di query del tipo che l'handler dichiara, e un corpo vuoto

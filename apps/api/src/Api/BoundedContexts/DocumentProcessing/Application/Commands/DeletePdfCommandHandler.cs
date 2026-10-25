@@ -21,6 +21,7 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
     private readonly IAiResponseCacheService _cacheService;
     private readonly Api.BoundedContexts.KnowledgeBase.Application.Services.ISemanticResponseCache _semanticCache;
     private readonly IEntityLinkRepository _entityLinkRepository;
+    private readonly IHybridCacheService _hybridCache;
     private readonly IMediator? _mediator;
     private readonly ILogger<DeletePdfCommandHandler> _logger;
 
@@ -31,6 +32,7 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
         Api.BoundedContexts.KnowledgeBase.Application.Services.ISemanticResponseCache semanticCache,
         ILogger<DeletePdfCommandHandler> logger,
         IEntityLinkRepository entityLinkRepository,
+        IHybridCacheService hybridCache,
         IMediator? mediator = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
@@ -38,6 +40,7 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
         _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
         _semanticCache = semanticCache ?? throw new ArgumentNullException(nameof(semanticCache));
         _entityLinkRepository = entityLinkRepository ?? throw new ArgumentNullException(nameof(entityLinkRepository));
+        _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _mediator = mediator;
     }
@@ -67,6 +70,7 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
 
             var gameId = pdfDoc.SharedGameId;
             var coverR2Key = pdfDoc.CoverR2Key;
+            var uploadedByUserId = pdfDoc.UploadedByUserId;
 
             var storageGameIdForUnlink = (pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId)?.ToString() ?? string.Empty;
 
@@ -129,6 +133,16 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
 
             // Invalidate cache
             await InvalidateCacheSafelyAsync(storageGameId, "PDF deletion", cancellationToken).ConfigureAwait(false);
+
+            // #4308: what the hybrid cache still holds of the document — the uploader's «my documents»
+            // list (5 minutes), the document, its chunks. Only on this branch: when the PDF is still linked
+            // from other games the row survives and the list does not change. The same rule as
+            // DeleteKbDocumentCommandHandler, in one place. Neither this command nor the commands that send
+            // it are [AtomicAudit], and the delete is already committed above, so no read can slip between
+            // the invalidation and the commit.
+            await DeletedKbDocumentCaches
+                .InvalidateSafelyAsync(_hybridCache, _logger, uploadedByUserId, pdfGuid, cancellationToken)
+                .ConfigureAwait(false);
 
             return new PdfDeleteResult(true, "PDF deleted successfully", storageGameId);
         }

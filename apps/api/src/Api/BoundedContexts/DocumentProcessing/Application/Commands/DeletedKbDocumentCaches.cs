@@ -21,8 +21,10 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// utente basta, e quella larga svuoterebbe l'elenco di tutti a ogni documento cancellato.
 /// </para>
 /// <para>
-/// Non lancia: una cache che non si svuota vuol dire dati vecchi per qualche minuto, non una
-/// cancellazione fallita.
+/// Non lancia, salvo l'annullamento: una cache che non si svuota vuol dire dati vecchi per qualche
+/// minuto, non una cancellazione fallita. Ogni etichetta ha il suo tentativo (#4308): se la prima
+/// fallisce — la cache è giù, e con ogni probabilità cadono tutte — le altre vanno provate lo stesso,
+/// perché i passaggi di un documento restano leggibili più a lungo dell'elenco.
 /// </para>
 /// </remarks>
 internal static class DeletedKbDocumentCaches
@@ -37,23 +39,26 @@ internal static class DeletedKbDocumentCaches
         ArgumentNullException.ThrowIfNull(cache);
         ArgumentNullException.ThrowIfNull(logger);
 
-        try
+        string[] tags = [$"user:{uploadedByUserId}", $"kbDoc:{pdfId:N}", $"kbChunks:{pdfId:N}"];
+
+        foreach (var tag in tags)
         {
-            await cache.RemoveByTagAsync($"user:{uploadedByUserId}", cancellationToken).ConfigureAwait(false);
-            await cache.RemoveByTagAsync($"kbDoc:{pdfId:N}", cancellationToken).ConfigureAwait(false);
-            await cache.RemoveByTagAsync($"kbChunks:{pdfId:N}", cancellationToken).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
-        }
+            try
+            {
+                await cache.RemoveByTagAsync(tag, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
 #pragma warning disable CA1031 // Do not catch general exception types — best-effort, come le altre cache della cancellazione
-        catch (Exception ex)
+            catch (Exception ex)
 #pragma warning restore CA1031
-        {
-            logger.LogWarning(ex,
-                "Error invalidating the caches of deleted KB document {PdfId} — stale data may be served until the TTL expires",
-                pdfId);
+            {
+                logger.LogWarning(ex,
+                    "Error invalidating cache tag {Tag} of deleted KB document {PdfId} — stale data may be served until the TTL expires",
+                    tag, pdfId);
+            }
         }
     }
 }

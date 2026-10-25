@@ -23,7 +23,7 @@ public sealed class RagDashboardMetricsAuthorizationHostFixture(SharedTestcontai
     : IntegrationHostFixture(shared, "rag_dashboard_authz");
 
 /// <summary>
-/// #4584: le quattro rotte di metriche di <c>/api/v1/rag-dashboard</c> chiedevano solo una sessione valida
+/// #4584: le rotte di metriche di <c>/api/v1/rag-dashboard</c> chiedevano solo una sessione valida
 /// (<c>TryGetActiveSession</c>), quindi le leggeva ogni utente autenticato. Restituiscono metriche aggregate su
 /// tutte le strategie, senza nessun <c>UserId</c> nella query: sono dati da amministratore, come
 /// <c>POST /query/stream</c> nello stesso gruppo.
@@ -65,17 +65,7 @@ public sealed class RagDashboardMetricsAuthorizationIntegrationTests
     public async Task EveryMetricsRoute_RejectsWhoIsNotAdmin()
     {
         var routes = MetricsRoutes();
-
-        // Guardia di non-vacuità: se la lettura della tabella di routing non vedesse più queste rotte, il ciclo
-        // sotto non proverebbe nulla.
-        routes.Select(r => $"{r.Method} {r.Template}").Should().Contain(
-            [
-                $"GET {GroupPath}/overview",
-                $"GET {GroupPath}/strategies/{{strategyId}}/metrics",
-                $"GET {GroupPath}/strategies/{{strategyId}}/time-series",
-                $"GET {GroupPath}/strategies/compare",
-            ],
-            "the scan must see the routes of #4584, or it proves nothing");
+        AssertTheScanSeesTheMetricsRoutes(routes);
 
         var (_, userToken) = await CreateSessionAsync(TestSessionHelper.CreateUserSessionAsync);
         var (_, editorToken) = await CreateSessionAsync(TestSessionHelper.CreateEditorSessionAsync);
@@ -97,12 +87,12 @@ public sealed class RagDashboardMetricsAuthorizationIntegrationTests
     }
 
     /// <summary>
-    /// L'admin non viene fermato dalla guardia. Non si pretende un 200: le quattro rotte oggi rispondono 400 a
+    /// L'admin non viene fermato dalla guardia. Non si pretende un 200: le rotte di metriche oggi rispondono 400 a
     /// chiunque, admin compreso, perché <c>RagExecutionRepository</c> passa a Npgsql date con
     /// <c>DateTimeKind.Unspecified</c> (<c>ArgumentException: Cannot write DateTime with Kind=Unspecified to
     /// PostgreSQL type 'timestamp with time zone'</c>, che il middleware mostra come «Invalid request parameters»).
-    /// È un difetto distinto da #4584, che la sua correzione non tocca. Quando le date saranno corrette, questo
-    /// test va stretto a 200.
+    /// È un difetto distinto da #4584, tracciato in #4623, che la correzione di #4584 non tocca. Quando le date
+    /// saranno corrette, questo test va stretto a 200.
     /// </summary>
     [Theory]
     [InlineData("Admin")]
@@ -113,8 +103,11 @@ public sealed class RagDashboardMetricsAuthorizationIntegrationTests
             ? TestSessionHelper.CreateAdminSessionAsync
             : TestSessionHelper.CreateSuperAdminSessionAsync);
 
+        var routes = MetricsRoutes();
+        AssertTheScanSeesTheMetricsRoutes(routes);
+
         var stopped = new List<string>();
-        foreach (var (method, template) in MetricsRoutes())
+        foreach (var (method, template) in routes)
         {
             var path = "/" + template.Replace("{strategyId}", "Hybrid", StringComparison.Ordinal);
             var (status, body) = await SendAsync(new HttpMethod(method), path, token);
@@ -129,7 +122,7 @@ public sealed class RagDashboardMetricsAuthorizationIntegrationTests
 
     /// <summary>
     /// L'issue nota che il resto del gruppo non è un difetto: <c>/config</c> è la configurazione dell'utente e
-    /// <c>/options</c> è anonima di proposito. Restringere il gruppo intero invece delle quattro rotte le
+    /// <c>/options</c> è anonima di proposito. Restringere il gruppo intero invece delle sole rotte di metriche le
     /// chiuderebbe a chi le usa davvero (<c>knowledgeBaseClient.ts</c> chiama <c>/config</c>).
     /// </summary>
     [Fact]
@@ -143,6 +136,20 @@ public sealed class RagDashboardMetricsAuthorizationIntegrationTests
         var options = await SendAsync(HttpMethod.Get, $"/{GroupPath}/options", token: null);
         options.Status.Should().Be(HttpStatusCode.OK, $"the options are public by design (AllowAnonymous). Body: {options.Body}");
     }
+
+    /// <summary>
+    /// Guardia di non-vacuità, comune ai test che scorrono le rotte: se la lettura della tabella di routing non
+    /// vedesse più queste rotte, il ciclo del test non proverebbe nulla.
+    /// </summary>
+    private static void AssertTheScanSeesTheMetricsRoutes(IEnumerable<(string Method, string Template)> routes) =>
+        routes.Select(r => $"{r.Method} {r.Template}").Should().Contain(
+            [
+                $"GET {GroupPath}/overview",
+                $"GET {GroupPath}/strategies/{{strategyId}}/metrics",
+                $"GET {GroupPath}/strategies/{{strategyId}}/time-series",
+                $"GET {GroupPath}/strategies/compare",
+            ],
+            "the scan must see the routes of #4584, or it proves nothing");
 
     /// <summary>Le rotte di #4584 lette dalla tabella di routing dell'host vero, come «METODO modello».</summary>
     private List<(string Method, string Template)> MetricsRoutes() =>

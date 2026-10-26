@@ -2,6 +2,7 @@ using Api.BoundedContexts.KnowledgeBase.Application.Commands.RagEnhancements;
 using Api.BoundedContexts.SystemConfiguration.Domain.Events;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.Constants;
@@ -15,7 +16,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Npgsql;
+using System.Net;
 using Xunit;
 
 namespace Api.Tests.Integration.SystemConfiguration;
@@ -227,25 +228,78 @@ public sealed class FeatureFlagConcurrentCreateIntegrationTests : IClassFixture<
     // ========================================
 
     [Fact]
-    public async Task EnableFeature_UniqueViolationOnARowTheLookupCannotSee_StillFails()
+    public async Task EnableFeature_WhenTheRowIsDeactivated_RefusesWithAConflict_AndLeavesTheRowAsItWas()
     {
-        // 🔴 This test photographs a KNOWN LIMIT, not a contract: today this case answers 500, and it should not.
-        // It is tracked in #4607 (https://github.com/meepleAi-app/meepleai-monorepo/issues/4607); when that is
-        // fixed, change the expectation here instead of defending the 500.
-        //
-        // The lookup only sees active rows, so an inactive row for the same (Key, Environment) is invisible to
-        // it and still trips the unique index. Re-reading finds nothing to update: what #4599 guarantees is that
-        // the original error comes out, not a silent success and not a second attempt.
+        // #4607. The lookup only sees active rows, so a deactivated row for the same (Key, Environment) is
+        // invisible to it and still trips the unique index. Re-reading finds nothing to update. It used to
+        // answer 500 (#4606 photographed it); the chosen answer is an explicit 409 that says where to
+        // reactivate the row. Nothing is overwritten: a deliberate deactivation is the admin's choice.
         var flag = NewFlagName();
         var admin = await CreateUserAsync();
         await InsertInactiveRowAsync(flag, admin);
 
         var act = async () => await RunAsync(ff => ff.EnableFeatureAsync(flag, userId: admin.ToString()));
 
-        var failure = await act.Should().ThrowAsync<DbUpdateException>();
-        failure.Which.InnerException.Should().BeOfType<PostgresException>()
-            .Which.SqlState.Should().Be(PostgresErrorCodes.UniqueViolation);
-        (await RowsAsync(flag)).Should().ContainSingle().Which.IsActive.Should().BeFalse("the inactive row is left as it was");
+        var conflict = await act.Should().ThrowAsync<ConflictException>();
+        conflict.Which.Message.Should().Contain(flag, "the message names the flag").And.Contain("/admin/config", "and says where to reactivate it");
+        var row = (await RowsAsync(flag)).Should().ContainSingle().Subject;
+        row.IsActive.Should().BeFalse("the inactive row is left as it was");
+        row.Value.Should().Be("false", "and so is its value");
+    }
+
+    [Fact]
+    public async Task DisableFeature_WhenTheRowIsDeactivated_RefusesWithAConflict_AndLeavesTheRowAsItWas()
+    {
+        var flag = NewFlagName();
+        var admin = await CreateUserAsync();
+        await InsertInactiveRowAsync(flag, admin, value: "true");
+
+        var act = async () => await RunAsync(ff => ff.DisableFeatureAsync(flag, userId: admin.ToString()));
+
+        await act.Should().ThrowAsync<ConflictException>();
+        var row = (await RowsAsync(flag)).Should().ContainSingle().Subject;
+        row.IsActive.Should().BeFalse();
+        row.Value.Should().Be("true");
+    }
+
+    [Fact]
+    public async Task EnableFeatureForTier_WhenTheRowIsDeactivated_RefusesWithAConflict()
+    {
+        var flag = NewFlagName();
+        var tierKey = $"{flag}.Tier.{UserTier.Free.Value}";
+        var admin = await CreateUserAsync();
+        await InsertInactiveRowAsync(tierKey, admin);
+
+        var act = async () => await RunAsync(ff => ff.EnableFeatureForTierAsync(flag, UserTier.Free, admin.ToString()));
+
+        await act.Should().ThrowAsync<ConflictException>();
+        (await RowsAsync(tierKey)).Should().ContainSingle().Which.IsActive.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ToggleRagEnhancementEndpoint_WhenTheRowIsDeactivated_Answers409_NotA500()
+    {
+        // The case of the issue: an admin deactivates the configuration from /admin/config and then turns
+        // the same flag on from another page (the rag-enhancements toggles, #4594).
+        var key = FeatureFlagConstants.RagEnhancements[2];
+        Guid adminId;
+        string adminToken;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            (adminId, adminToken) = await TestSessionHelper.CreateAdminSessionAsync(db, cancellationToken: Ct);
+        }
+
+        await InsertInactiveRowAsync(key, adminId);
+        using var client = _factory.CreateClient();
+
+        using var response = await client.SendAsync(
+            TestSessionHelper.CreateAuthenticatedRequest(HttpMethod.Post, $"/api/v1/admin/rag-enhancements/{key}/toggle", adminToken),
+            Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict, await response.Content.ReadAsStringAsync(Ct));
+        (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("/admin/config");
+        (await RowsAsync(key)).Should().ContainSingle().Which.IsActive.Should().BeFalse("the deactivation survives the refused toggle");
     }
 
     // ========================================
@@ -314,7 +368,7 @@ public sealed class FeatureFlagConcurrentCreateIntegrationTests : IClassFixture<
             .ToList();
     }
 
-    private async Task InsertInactiveRowAsync(string key, Guid author)
+    private async Task InsertInactiveRowAsync(string key, Guid author, string value = "false")
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -323,7 +377,7 @@ public sealed class FeatureFlagConcurrentCreateIntegrationTests : IClassFixture<
         {
             Id = Guid.NewGuid(),
             Key = key,
-            Value = "false",
+            Value = value,
             ValueType = "Boolean",
             Category = "FeatureFlags",
             IsActive = false,

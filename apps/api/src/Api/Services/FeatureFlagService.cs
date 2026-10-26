@@ -239,8 +239,11 @@ internal class FeatureFlagService : IFeatureFlagService
     /// </para>
     /// <para>
     /// Only a unique violation on <see cref="KeyEnvironmentIndexName"/> that the re-read explains is
-    /// recovered. If the key has no active row to update (for example the colliding row is inactive, and the
-    /// lookup only sees active ones), the original exception is rethrown.
+    /// recovered. If the colliding row is <b>inactive</b> (the lookup only sees active ones) the answer is an
+    /// explicit <see cref="Api.Middleware.Exceptions.ConflictException"/> (409, #4607): an admin who
+    /// deactivated the configuration from <c>/admin/config</c> made a choice, and turning the flag on from
+    /// another page must not undo it in silence, nor answer 500 at every attempt. If the re-read finds no
+    /// row at all, the original exception is rethrown.
     /// </para>
     /// </remarks>
     private async Task CreateRowAsync(CreateConfigurationCommand create, string environmentName, Guid userGuid)
@@ -257,7 +260,23 @@ internal class FeatureFlagService : IFeatureFlagService
             await _configService.InvalidateAsync(create.Key, environmentName).ConfigureAwait(false);
             var winner = await _configService.GetConfigurationByKeyAsync(create.Key, environmentName).ConfigureAwait(false);
 
-            if (winner is null || !Guid.TryParse(winner.Id, out var winnerId))
+            if (winner is null)
+            {
+                // #4607: nothing active to update. If the colliding row exists but is inactive, say so.
+                var inactive = await _mediator
+                    .Send(new GetConfigByKeyQuery(create.Key, environmentName, ActiveOnly: false))
+                    .ConfigureAwait(false);
+                if (inactive is { IsActive: false })
+                {
+                    throw new Api.Middleware.Exceptions.ConflictException(
+                        $"The feature flag '{create.Key}' has a deactivated configuration row for environment '{environmentName}'. " +
+                        "Reactivate it from /admin/config to change the flag.");
+                }
+
+                throw;
+            }
+
+            if (!Guid.TryParse(winner.Id, out var winnerId))
             {
                 throw;
             }

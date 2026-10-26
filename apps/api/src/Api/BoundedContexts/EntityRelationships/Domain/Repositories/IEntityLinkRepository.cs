@@ -59,6 +59,29 @@ public interface IEntityLinkRepository
         MeepleEntityType? targetEntityType = null,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Like <see cref="GetCountForEntityAsync"/>, for a user who is looking: a <c>User</c>-scope link is personal, so
+    /// those of other users are left out. <c>Shared</c>-scope links count for everybody (#4637).
+    /// </summary>
+    Task<int> GetCountForEntityVisibleToAsync(
+        Guid viewerUserId,
+        MeepleEntityType entityType,
+        Guid entityId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Like <see cref="GetForEntityAsync"/>, for a user who is looking: a <c>User</c>-scope link is personal, so those
+    /// of other users are left out. <c>Shared</c>-scope links are visible to everybody (#4637).
+    /// </summary>
+    Task<IReadOnlyList<EntityLink>> GetForEntityVisibleToAsync(
+        Guid viewerUserId,
+        MeepleEntityType entityType,
+        Guid entityId,
+        EntityLinkScope? scope = null,
+        EntityLinkType? linkType = null,
+        MeepleEntityType? targetEntityType = null,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Adds a new EntityLink to the repository.</summary>
     Task AddAsync(EntityLink entityLink, CancellationToken cancellationToken = default);
 

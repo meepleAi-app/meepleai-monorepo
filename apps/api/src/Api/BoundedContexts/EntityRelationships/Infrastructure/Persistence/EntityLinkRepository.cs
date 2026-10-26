@@ -104,13 +104,31 @@ internal sealed class EntityLinkRepository : RepositoryBase, IEntityLinkReposito
         Guid entityId,
         CancellationToken cancellationToken = default)
     {
-        return await DbContext.EntityLinks
-            .CountAsync(x =>
-                (x.SourceEntityType == entityType && x.SourceEntityId == entityId) ||
-                (x.IsBidirectional && x.TargetEntityType == entityType && x.TargetEntityId == entityId),
-                cancellationToken)
+        return await LinksOfEntity(entityType, entityId)
+            .CountAsync(cancellationToken)
             .ConfigureAwait(false);
     }
+
+    public async Task<int> GetCountForEntityVisibleToAsync(
+        Guid viewerUserId,
+        MeepleEntityType entityType,
+        Guid entityId,
+        CancellationToken cancellationToken = default)
+    {
+        return await VisibleTo(LinksOfEntity(entityType, entityId), viewerUserId)
+            .CountAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>The links where the entity is the source, or the target of a bidirectional link.</summary>
+    private IQueryable<EntityLink> LinksOfEntity(MeepleEntityType entityType, Guid entityId) =>
+        DbContext.EntityLinks.Where(x =>
+            (x.SourceEntityType == entityType && x.SourceEntityId == entityId) ||
+            (x.IsBidirectional && x.TargetEntityType == entityType && x.TargetEntityId == entityId));
+
+    /// <summary>A <c>User</c>-scope link is personal: only its owner sees it. Any other scope is for everybody (#4637).</summary>
+    private static IQueryable<EntityLink> VisibleTo(IQueryable<EntityLink> links, Guid viewerUserId) =>
+        links.Where(x => x.Scope != EntityLinkScope.User || x.OwnerUserId == viewerUserId);
 
     public async Task<IReadOnlyList<EntityLink>> GetForEntityAsync(
         MeepleEntityType entityType,
@@ -120,11 +138,34 @@ internal sealed class EntityLinkRepository : RepositoryBase, IEntityLinkReposito
         MeepleEntityType? targetEntityType = null,
         CancellationToken cancellationToken = default)
     {
-        // Bidirectional query: entity as source OR as target of a bilateral link
-        var query = DbContext.EntityLinks.Where(x =>
-            (x.SourceEntityType == entityType && x.SourceEntityId == entityId) ||
-            (x.IsBidirectional && x.TargetEntityType == entityType && x.TargetEntityId == entityId));
+        return await FilteredLinks(LinksOfEntity(entityType, entityId), entityType, scope, linkType, targetEntityType)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
 
+    public async Task<IReadOnlyList<EntityLink>> GetForEntityVisibleToAsync(
+        Guid viewerUserId,
+        MeepleEntityType entityType,
+        Guid entityId,
+        EntityLinkScope? scope = null,
+        EntityLinkType? linkType = null,
+        MeepleEntityType? targetEntityType = null,
+        CancellationToken cancellationToken = default)
+    {
+        return await FilteredLinks(
+                VisibleTo(LinksOfEntity(entityType, entityId), viewerUserId),
+                entityType, scope, linkType, targetEntityType)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private static IQueryable<EntityLink> FilteredLinks(
+        IQueryable<EntityLink> query,
+        MeepleEntityType entityType,
+        EntityLinkScope? scope,
+        EntityLinkType? linkType,
+        MeepleEntityType? targetEntityType)
+    {
         if (scope.HasValue)
             query = query.Where(x => x.Scope == scope.Value);
 
@@ -139,10 +180,7 @@ internal sealed class EntityLinkRepository : RepositoryBase, IEntityLinkReposito
                 (x.SourceEntityType == entityType && x.TargetEntityType == targetEntityType.Value) ||
                 (x.IsBidirectional && x.TargetEntityType == entityType && x.SourceEntityType == targetEntityType.Value));
 
-        return await query
-            .OrderByDescending(x => x.CreatedAt)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+        return query.OrderByDescending(x => x.CreatedAt);
     }
 
     public async Task AddAsync(EntityLink entityLink, CancellationToken cancellationToken = default)

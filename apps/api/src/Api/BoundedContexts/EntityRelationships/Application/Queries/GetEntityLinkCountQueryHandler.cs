@@ -25,9 +25,16 @@ internal sealed class GetEntityLinkCountQueryHandler
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        return await _repository.GetCountForEntityAsync(
-            query.EntityType,
-            query.EntityId,
-            cancellationToken).ConfigureAwait(false);
+        // #4637: the badge counts what the viewer can see. With no viewer (internal use) it counts everything.
+        return query.RequestingUserId is { } viewerId
+            ? await _repository.GetCountForEntityVisibleToAsync(
+                viewerId,
+                query.EntityType,
+                query.EntityId,
+                cancellationToken).ConfigureAwait(false)
+            : await _repository.GetCountForEntityAsync(
+                query.EntityType,
+                query.EntityId,
+                cancellationToken).ConfigureAwait(false);
     }
 }

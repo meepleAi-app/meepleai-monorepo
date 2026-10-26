@@ -86,17 +86,28 @@ internal sealed class EntityLinkRepository : RepositoryBase, IEntityLinkReposito
         MeepleEntityType targetEntityType,
         Guid targetEntityId,
         EntityLinkType linkType,
+        EntityLinkScope scope,
+        Guid ownerUserId,
         CancellationToken cancellationToken = default)
     {
-        return await DbContext.EntityLinks
-            .AnyAsync(x =>
-                x.SourceEntityType == sourceEntityType &&
-                x.SourceEntityId == sourceEntityId &&
-                x.TargetEntityType == targetEntityType &&
-                x.TargetEntityId == targetEntityId &&
-                x.LinkType == linkType,
-                cancellationToken)
-            .ConfigureAwait(false);
+        var sameTriple = DbContext.EntityLinks.Where(x =>
+            x.SourceEntityType == sourceEntityType &&
+            x.SourceEntityId == sourceEntityId &&
+            x.TargetEntityType == targetEntityType &&
+            x.TargetEntityId == targetEntityId &&
+            x.LinkType == linkType);
+
+        // #4641: the slot of a Shared link is the triple; the slot of a User link is the triple of its owner, and a
+        // Shared link already on the triple makes a personal copy of it pointless. The two unique indexes say the same.
+        return scope == EntityLinkScope.Shared
+            ? await sameTriple
+                .AnyAsync(x => x.Scope == EntityLinkScope.Shared, cancellationToken)
+                .ConfigureAwait(false)
+            : await sameTriple
+                .AnyAsync(x => x.Scope == EntityLinkScope.Shared
+                               || (x.Scope == EntityLinkScope.User && x.OwnerUserId == ownerUserId),
+                    cancellationToken)
+                .ConfigureAwait(false);
     }
 
     public async Task<int> GetCountForEntityAsync(

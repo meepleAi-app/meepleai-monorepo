@@ -1488,7 +1488,12 @@ namespace Api.Infrastructure.Migrations
                     b.HasIndex("SourceEntityType", "SourceEntityId", "TargetEntityType", "TargetEntityId", "LinkType")
                         .IsUnique()
                         .HasDatabaseName("uq_entity_links_source_target_type")
-                        .HasFilter("is_deleted = false");
+                        .HasFilter("is_deleted = false AND scope = 'Shared'");
+
+                    b.HasIndex("SourceEntityType", "SourceEntityId", "TargetEntityType", "TargetEntityId", "LinkType", "OwnerUserId")
+                        .IsUnique()
+                        .HasDatabaseName("uq_entity_links_user_source_target_type_owner")
+                        .HasFilter("is_deleted = false AND scope = 'User'");
 
                     b.ToTable("entity_links", "entity_relationships");
                 });

@@ -2,6 +2,7 @@ using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Constants;
 using Api.SharedKernel.Infrastructure.Persistence;
 
 namespace Api.BoundedContexts.SystemConfiguration.Application.Commands;
@@ -10,7 +11,7 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.Commands;
 /// Handles import of configurations from backup/export.
 /// Supports both creation and overwrite modes.
 /// </summary>
-internal class ImportConfigsCommandHandler : ICommandHandler<ImportConfigsCommand, int>
+internal class ImportConfigsCommandHandler : ICommandHandler<ImportConfigsCommand, ImportConfigsResult>
 {
     private readonly IConfigurationRepository _configurationRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -23,7 +24,7 @@ internal class ImportConfigsCommandHandler : ICommandHandler<ImportConfigsComman
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
     }
 
-    public async Task<int> Handle(ImportConfigsCommand command, CancellationToken cancellationToken)
+    public async Task<ImportConfigsResult> Handle(ImportConfigsCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
 
@@ -35,10 +36,21 @@ internal class ImportConfigsCommandHandler : ICommandHandler<ImportConfigsComman
             .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.OrdinalIgnoreCase);
 
         var importedCount = 0;
+        var skippedKeys = new List<string>();
 
         foreach (var item in command.Configurations)
         {
             var key = new ConfigKey(item.Key);
+
+            // #4612: una chiave riservata non si importa né si sovrascrive, esista già o no. Si salta e si dice,
+            // invece di rifiutare l'import: un export fatto prima della correzione la contiene, e un backup
+            // intero non va reso inutilizzabile da una riga che il sistema non vuole comunque.
+            if (ReservedConfigurationKeys.IsReserved(key.Value))
+            {
+                skippedKeys.Add(key.Value);
+                continue;
+            }
+
             // Find existing config matching key and environment
             var existing = configByKey.TryGetValue(key.Value, out var matches)
                 ? matches.FirstOrDefault(c =>
@@ -79,6 +91,6 @@ internal class ImportConfigsCommandHandler : ICommandHandler<ImportConfigsComman
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-        return importedCount;
+        return new ImportConfigsResult(importedCount, skippedKeys);
     }
 }

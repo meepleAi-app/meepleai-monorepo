@@ -373,10 +373,20 @@ internal static class ConfigurationEndpoints
         )).ToList();
 
         var command = new ImportConfigsCommand(items, request.OverwriteExisting, session!.Principal!.Subject.Id);
-        var importedCount = await mediator.Send(command, ct).ConfigureAwait(false);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
-        logger.LogInformation("Successfully imported {Count} configurations", importedCount);
-        return Results.Json(new { importedCount });
+        logger.LogInformation("Successfully imported {Count} configurations", result.ImportedCount);
+
+        // #4612: le chiavi riservate si saltano senza fallire l'import; il chiamante le trova qui.
+        if (result.SkippedKeys.Count > 0)
+        {
+            logger.LogWarning(
+                "Import skipped {Count} reserved configuration key(s): {Keys}",
+                result.SkippedKeys.Count,
+                string.Join(", ", result.SkippedKeys));
+        }
+
+        return Results.Json(new { importedCount = result.ImportedCount, skippedKeys = result.SkippedKeys });
     }
 
     private static async Task<IResult> HandleGetConfigurationHistory(

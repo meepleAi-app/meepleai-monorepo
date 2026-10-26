@@ -52,7 +52,6 @@ internal static class KnowledgeBaseEndpoints
         MapContextEngineeringEndpoints(group);
         MapSharedGameKbStatusEndpoint(group);
         MapGameDocumentsEndpoint(group);
-        MapLinkKbEndpoint(group);
         MapKbDocumentEndpoints(group);
         MapUserKbDocsEndpoint(group);
 
@@ -1388,35 +1387,6 @@ internal static class KnowledgeBaseEndpoints
         return Results.Ok(result);
     }
 
-    private static void MapLinkKbEndpoint(RouteGroupBuilder group)
-    {
-        group.MapPost("/games/{gameId:guid}/knowledge-base/link", HandleLinkKb)
-            .WithName("LinkExistingKbToGame")
-            .RequireSession()
-            .WithTags("KnowledgeBase")
-            .WithSummary("Link an existing KB to a game")
-            .WithDescription("Creates a VectorDocument clone linking an existing processed PDF to a different game. The pgvector embeddings are shared.");
-    }
-
-    private static async Task<IResult> HandleLinkKb(
-        Guid gameId,
-        LinkKbRequest request,
-        HttpContext context,
-        IMediator mediator,
-        CancellationToken ct)
-    {
-        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-
-        var result = await mediator.Send(new LinkExistingKbToGameCommand(
-            UserId: session.Principal!.Subject.Id,
-            TargetGameId: gameId,
-            SourcePdfDocumentId: request.PdfDocumentId), ct).ConfigureAwait(false);
-
-        return string.Equals(result.Status, "linked", StringComparison.Ordinal)
-            ? Results.Ok(result)
-            : Results.Accepted(value: result);
-    }
-
     private static async Task<IResult> HandleGetGameDocuments(
         Guid gameId,
         HttpContext context,
@@ -1497,11 +1467,6 @@ internal record AssembleContextRequest(
     IDictionary<string, int>? MaxTokensPerSource = null,
     bool? IncludeEmbedding = null
 );
-
-/// <summary>
-/// Request model for linking an existing KB (processed PDF) to a different game.
-/// </summary>
-internal record LinkKbRequest(Guid PdfDocumentId);
 
 /// <summary>
 /// Request body for POST /api/v1/kb-docs/{id}/chunks/search (G3 in-document FTS).

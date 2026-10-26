@@ -174,6 +174,7 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
         yield return ["GET", "/api/v1/budget/user/00000000-0000-0000-0000-000000000001", "#4212 — token tiers and credits (Administration): a second per-user plan that never blocked a request; the plan is TierDefinition"];        yield return ["POST", "/api/v1/live-sessions/00000000-0000-0000-0000-000000000001/scores/parse", "#4448 (A7) — dictated score parsing: replaced by the in-game assistant, no page mounted its only caller (ScoreAssistant)"];
         yield return ["POST", "/api/v1/live-sessions/00000000-0000-0000-0000-000000000001/scores/confirm", "#4448 (A7) — confirmation of a dictated score: same flow as scores/parse; host ratification of a guest proposal stays on scores/proposals/confirm"];
         yield return ["POST", "/api/v1/game-sessions/00000000-0000-0000-0000-000000000001/agent/chat", "#4448 (A7) — legacy in-game agent chat (ChatWithSessionAgent): replaced by the in-game assistant; no page mounted its consumers since #4156 D5"];
+        yield return ["POST", "/api/v1/games/00000000-0000-0000-0000-000000000001/knowledge-base/link", "#4327 — cloned the VectorDocument of an indexed PDF for another game, which IX_vector_documents_PdfDocumentId rejects (23505) on every call; no page called it. A game's knowledge base is its own PDF (#4326, #4317)"];
     }
 
     [Theory]

@@ -19,6 +19,10 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
+import {
+  QA_TOO_MANY_REQUESTS_MESSAGE,
+  QaTooManyRequestsError,
+} from '@/components/chat-unified/qaStreamErrors';
 import { qaStream } from '@/lib/api/clients/chatClient';
 import { api } from '@/lib/api';
 import { GameChatTab } from '../GameChatTab';
@@ -221,5 +225,45 @@ describe('GameChatTab', () => {
 
     await waitFor(() => expect(screen.getByText(/Sì, ogni potere/)).toBeInTheDocument());
     expect(screen.queryByTestId('tier-limit-exceeded')).not.toBeInTheDocument();
+  });
+
+  /**
+   * #4388: il backend tiene aperte al massimo due risposte per utente e rifiuta la terza con 429.
+   * La domanda resta e compare la frase che dice di aspettare; prima non compariva niente e la
+   * richiesta rifiutata risaliva come promessa rifiutata, senza chi la gestisse.
+   */
+  it('too many open answers: keeps the question and says to wait', async () => {
+    const refused = async function* () {
+      throw new QaTooManyRequestsError();
+      yield happyEvents[2];
+    };
+    vi.mocked(qaStream).mockReturnValueOnce(refused() as any);
+    render(<GameChatTab gameId="wingspan" />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'q?' } });
+    fireEvent.click(screen.getByRole('button', { name: /invia/i }));
+
+    expect(await screen.findByTestId('answer-refusal')).toHaveTextContent(
+      QA_TOO_MANY_REQUESTS_MESSAGE
+    );
+    expect(screen.getByText('q?')).toBeInTheDocument();
+  });
+
+  it('too many open answers: the notice goes away with the next question', async () => {
+    const refused = async function* () {
+      throw new QaTooManyRequestsError();
+      yield happyEvents[2];
+    };
+    vi.mocked(qaStream).mockReturnValueOnce(refused() as any);
+    render(<GameChatTab gameId="wingspan" />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'q?' } });
+    fireEvent.click(screen.getByRole('button', { name: /invia/i }));
+    await screen.findByTestId('answer-refusal');
+
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'q2?' } });
+    fireEvent.click(screen.getByRole('button', { name: /invia/i }));
+
+    await waitFor(() => expect(screen.getByText(/Sì, ogni potere/)).toBeInTheDocument());
+    expect(screen.queryByTestId('answer-refusal')).not.toBeInTheDocument();
   });
 });

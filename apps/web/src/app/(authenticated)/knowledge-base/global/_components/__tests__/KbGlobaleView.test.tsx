@@ -14,6 +14,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { QA_TOO_MANY_REQUESTS_MESSAGE } from '@/components/chat-unified/qaStreamErrors';
 import type { UseGlobalKbSearchResult } from '@/hooks/queries/useGlobalKbSearch';
 import type { UseUserKbDocsResult } from '@/hooks/queries/useUserKbDocs';
 import type { KbDocEnvelope } from '@/lib/api/schemas/kb-chunks.schemas';
@@ -97,13 +98,18 @@ vi.mock('@/components/features/kb-globale/KbDocViewerDesktop', () => ({
   ),
 }));
 
+type BusyLabels = { error: { busy: { title: string; body: string; action: string } } };
+
 vi.mock('@/components/features/kb-globale/DrawerShell', () => ({
   DrawerShell: (props: Record<string, unknown>) => {
     const onCitationClick = props['onCitationClick'] as
-      | ((link: { docId: string; page: number; chunkId?: string }) => void)
-      | undefined;
+      ((link: { docId: string; page: number; chunkId?: string }) => void) | undefined;
+    const labels = props['labels'] as BusyLabels | undefined;
     return (
       <div data-slot="kb-globale-drawer" data-testid="kb-globale-drawer">
+        <span data-testid="drawer-busy-labels">
+          {labels?.error.busy.title}|{labels?.error.busy.body}|{labels?.error.busy.action}
+        </span>
         <button
           data-testid="drawer-citation-trigger"
           onClick={() => onCitationClick?.({ docId: 'doc-1', page: 5, chunkId: 'doc-1_3' })}
@@ -573,6 +579,15 @@ describe('KbGlobaleView (orchestrator)', () => {
       searchParamsMap = { ask: '1' };
       render(<KbGlobaleView />);
       expect(screen.getByTestId('kb-globale-drawer')).toBeInTheDocument();
+    });
+
+    /** #4388: il testo del riquadro 'busy' è quello della chat, non uno scritto a parte per la pagina. */
+    it('gives the drawer the busy labels, with the sentence the chat shows', () => {
+      searchParamsMap = { ask: '1' };
+      render(<KbGlobaleView />);
+      expect(screen.getByTestId('drawer-busy-labels')).toHaveTextContent(
+        `Troppe richieste|${QA_TOO_MANY_REQUESTS_MESSAGE}|Riprova`
+      );
     });
 
     it('does NOT mount DrawerShell when ?ask param is absent', () => {

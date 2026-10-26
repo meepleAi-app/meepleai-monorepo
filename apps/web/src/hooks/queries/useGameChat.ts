@@ -21,6 +21,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { QaTooManyRequestsError } from '@/components/chat-unified/qaStreamErrors';
 import type { AgentKind } from '@/components/features/game-chat/GameChatHeader';
 import { api } from '@/lib/api';
 import { qaStream } from '@/lib/api/clients/chatClient';
@@ -50,6 +51,11 @@ export interface UseGameChatResult {
    * (`isError` resta falso e `ask` non rifiuta): i numeri del piano e il link, per l'avviso.
    */
   readonly tierLimit: TierLimit | null;
+  /**
+   * #4388: l'ultima domanda è stata rifiutata perché l'utente ha già due risposte aperte (429). Come
+   * per la quota, non è un errore (`isError` resta falso e `ask` non rifiuta): la frase da mostrare.
+   */
+  readonly refusal: string | null;
   readonly currentAgent: AgentKind;
   readonly chatThreadId: string | null;
   readonly hasHistoricalMessages: boolean;
@@ -143,6 +149,7 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);
   const [tierLimit, setTierLimit] = useState<TierLimit | null>(null);
+  const [refusal, setRefusal] = useState<string | null>(null);
   // G2: default false (set true in effect) per non rompere test esistenti
   const [isHydrating, setIsHydrating] = useState(false);
   const [chatThreadId, setChatThreadId] = useState<string | null>(null);
@@ -197,6 +204,7 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
       setIsLoading(true);
       setIsError(false);
       setTierLimit(null);
+      setRefusal(null);
 
       let answerBuffer = '';
       let collectedCitations: Citation[] = [];
@@ -279,6 +287,12 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
           // Ignora type=0 (StateUpdate) e type=8 (Follow-up).
         }
       } catch (e) {
+        if (e instanceof QaTooManyRequestsError) {
+          // #4388: due risposte già aperte. Non è un guasto: niente rifiuto — chi chiama non lo
+          // gestisce — ma la frase che dice di aspettare, per l'avviso.
+          setRefusal(e.message);
+          return;
+        }
         setIsError(true);
         throw e;
       } finally {
@@ -298,6 +312,7 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
     isHydrating,
     isError,
     tierLimit,
+    refusal,
     currentAgent,
     chatThreadId,
     hasHistoricalMessages,

@@ -27,7 +27,10 @@
 
 import { useCallback, useMemo, useRef } from 'react';
 
-import { qaStreamErrorMessage } from '@/components/chat-unified/qaStreamErrors';
+import {
+  QaTooManyRequestsError,
+  qaStreamErrorMessage,
+} from '@/components/chat-unified/qaStreamErrors';
 import { TIER_LIMIT_EXCEEDED } from '@/lib/tier-limit';
 
 import { useSseStreamFsm, type SseStreamFsmConfig } from './useSseStreamFsm';
@@ -41,7 +44,8 @@ import type {
 } from '../lib/api/schemas/kb-ask.schemas';
 
 export type KbAskStatus = 'idle' | 'streaming' | 'completed' | 'completed-empty' | 'error';
-export type KbAskErrorKind = 'connection' | 'timeout' | 'interrupted' | 'server';
+/** `busy` (#4388): two answers are already open for the user; the third is refused with a 429. */
+export type KbAskErrorKind = 'connection' | 'timeout' | 'interrupted' | 'busy' | 'server';
 
 export interface KbAskError {
   readonly kind: KbAskErrorKind;
@@ -165,7 +169,11 @@ export function useKbAskStream(): UseKbAskStream {
       // IMPORTANT: also stash to pendingErrorRef so it's visible during retries.
       errorMapper: raw => {
         let mapped: KbAskError;
-        if (isFsmSentinel(raw, 'interrupted') || partialTextRef.current !== '') {
+        if (raw instanceof QaTooManyRequestsError) {
+          // #4388: never retried (the other two answers would still be open), and first: the words
+          // of a previous answer must not turn the refusal into an interruption.
+          mapped = { kind: 'busy', message: raw.message };
+        } else if (isFsmSentinel(raw, 'interrupted') || partialTextRef.current !== '') {
           // #4510: never retried. With words already on screen, the retry would start from the
           // accumulated state and append the answer again under them ("La La "). Without, the
           // connection did work and the server (or a proxy) closed it: not the failure to connect

@@ -13,6 +13,7 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 
 import { ChatMobile } from '../ChatMobile';
+import { QA_TOO_MANY_REQUESTS_MESSAGE, QaTooManyRequestsError } from '../qaStreamErrors';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), back: vi.fn() }),
@@ -60,11 +61,14 @@ const qa = vi.hoisted(() => ({
     CONTINUATION_AVAILABLE: 29,
   } as const,
   script: [] as Array<{ type: number; data: unknown }>,
+  /** Se c'è, il trasporto fallisce con questo errore prima di dare un evento (un rifiuto HTTP). */
+  failure: null as Error | null,
 }));
 
 vi.mock('@/lib/api/clients/chatClient', () => ({
   QA_EVENT_TYPES: qa.EVENT,
   qaStream: async function* qaStreamMock() {
+    if (qa.failure) throw qa.failure;
     for (const ev of qa.script) yield ev as QaEvent;
   },
 }));
@@ -89,6 +93,7 @@ describe('ChatMobile — la quota del piano (#4168, 5g-b)', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     qa.script = [];
+    qa.failure = null;
 
     const { api } = await import('@/lib/api');
     (api.chat.getThreadById as Mock).mockResolvedValue(thread);
@@ -196,5 +201,31 @@ describe('ChatMobile — la quota del piano (#4168, 5g-b)', () => {
     await ask(user);
 
     expect(await screen.findByText('Provider unavailable')).toBeInTheDocument();
+  });
+
+  /**
+   * #4388: il backend tiene aperte al massimo due risposte per utente e rifiuta la terza con 429.
+   * Qui lo stream non si apre nemmeno: la bolla dell'assistente dice di aspettare, invece del
+   * guasto generico «Errore nella generazione della risposta».
+   */
+  it('a question refused for too many open answers says to wait, in the assistant bubble', async () => {
+    qa.failure = new QaTooManyRequestsError();
+    const user = userEvent.setup();
+
+    await ask(user);
+
+    expect(await screen.findByText(QA_TOO_MANY_REQUESTS_MESSAGE)).toBeInTheDocument();
+    expect(screen.queryByText('Errore nella generazione della risposta')).not.toBeInTheDocument();
+    expect(screen.getByText('Quante carte si pescano?')).toBeInTheDocument();
+  });
+
+  it('still shows the generic message when the stream fails for another reason', async () => {
+    qa.failure = new Error('QA stream failed: HTTP 500');
+    const user = userEvent.setup();
+
+    await ask(user);
+
+    expect(await screen.findByText('Errore nella generazione della risposta')).toBeInTheDocument();
+    expect(screen.queryByText(QA_TOO_MANY_REQUESTS_MESSAGE)).not.toBeInTheDocument();
   });
 });

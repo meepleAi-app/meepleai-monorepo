@@ -41,6 +41,11 @@ const labels = {
       alt: "Fai un'altra domanda",
     },
     server: { title: 'Errore del server', body: 'Riprova', action: 'Riprova' },
+    busy: {
+      title: 'Troppe richieste',
+      body: 'Hai già due risposte in corso. Aspetta che una finisca, poi riprova.',
+      action: 'Riprova',
+    },
     interrupted: {
       title: 'Risposta interrotta',
       body: 'La risposta si è interrotta prima della fine, quindi non è completa. Riprova a chiedere.',
@@ -231,6 +236,41 @@ describe('DrawerShell — FSM state rendering', () => {
     expect(screen.getByText(/RBAC_RESOLUTION_FAILED/)).toBeInTheDocument();
     // Un guasto si può riprovare.
     expect(screen.getByRole('button', { name: /Riprova/ })).toBeInTheDocument();
+  });
+
+  /**
+   * #4388: la terza domanda con due risposte già aperte riceve 429. Non è un guasto del server:
+   * il riquadro dice di aspettare, con la frase della chat, e offre di riprovare.
+   */
+  it('renders error[busy]: says to wait for an answer in progress, and offers to try again', async () => {
+    const onRetry = vi.fn();
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'error',
+      error: { kind: 'busy', message: labels.error.busy.body },
+    };
+    render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+        onRetry={onRetry}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId('drawer-state-error-busy')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('Troppe richieste');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Hai già due risposte in corso. Aspetta che una finisca, poi riprova.'
+    );
+    expect(screen.queryByTestId('drawer-state-error-server')).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: /Riprova/ }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
   /**

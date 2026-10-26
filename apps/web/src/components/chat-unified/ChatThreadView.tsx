@@ -51,7 +51,11 @@ import { ChatMessageList, type ChatMessageItem } from './ChatMessageList';
 import { ChatThreadHeader } from './ChatThreadHeader';
 import { DebugStepCard } from './DebugStepCard';
 import { DebugSummaryBar } from './DebugSummaryBar';
-import { qaStreamErrorMessage } from './qaStreamErrors';
+import {
+  QaTooManyRequestsError,
+  qaRequestFailureMessage,
+  qaStreamErrorMessage,
+} from './qaStreamErrors';
 import { RAG_OWNERSHIP_REQUIRED, RagOwnershipRequiredNotice } from './RagOwnershipRequiredNotice';
 import {
   TIER_LIMIT_EXCEEDED,
@@ -340,8 +344,12 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
               }
             }
           }
-        } catch {
-          /* handled */
+        } catch (err) {
+          // #4388: «Continua» apre una seconda risposta sulla stessa rotta: con due già aperte il
+          // backend la rifiuta con 429. Gli altri errori restano com'erano (già gestiti).
+          if (err instanceof QaTooManyRequestsError) {
+            setError(err.message);
+          }
         } finally {
           setIsSending(false);
         }
@@ -524,7 +532,8 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
         }
       } catch (err) {
         if ((err as Error).name !== 'AbortError') {
-          setError("Errore nell'invio del messaggio");
+          // #4388: due risposte già aperte, la terza è rifiutata con 429: la chat dice di aspettare.
+          setError(qaRequestFailureMessage(err, "Errore nell'invio del messaggio"));
           // Remove optimistic assistant message on error
           removeMessageById(assistantMsgId);
         }

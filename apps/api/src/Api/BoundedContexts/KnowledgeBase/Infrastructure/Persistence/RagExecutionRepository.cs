@@ -138,6 +138,56 @@ internal sealed class RagExecutionRepository : RepositoryBase, IRagExecutionRepo
     }
 
     /// <inheritdoc />
+    public async Task<int> BlankTextsOlderThanAsync(DateTime cutoff, int batchSize, CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(batchSize, 1);
+
+        var total = 0;
+
+        // Key pagination: every batch restarts after the last id seen. The loop ends even if the filter and the
+        // update ever diverge (a column added to one and not to the other) and a row stays selectable after the
+        // update: restarting from the head each time would rewrite the same rows forever.
+        var lastId = Guid.Empty;
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // Only rows that still have something to blank: a row already blanked is not rewritten, and the count
+            // says how much was really done. `query` is NOT NULL, so "blank" is the empty string.
+            var ids = await DbContext.Set<RagExecution>()
+                .AsNoTracking()
+                .Where(e => e.Id > lastId
+                            && e.CreatedAt < cutoff
+                            && (e.Query != string.Empty || e.ExecutionTrace != null))
+                .OrderBy(e => e.Id)
+                .Select(e => e.Id)
+                .Take(batchSize)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            if (ids.Count == 0)
+                break;
+
+            lastId = ids[^1];
+
+            total += await DbContext.Set<RagExecution>()
+                .Where(e => ids.Contains(e.Id))
+                .ExecuteUpdateAsync(
+                    s => s
+                        .SetProperty(e => e.Query, string.Empty)
+                        .SetProperty(e => e.ExecutionTrace, (string?)null),
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            // A partial batch is the last one.
+            if (ids.Count < batchSize)
+                break;
+        }
+
+        return total;
+    }
+
+    /// <inheritdoc />
     public async Task<List<AgentExecutionStats>> GetStatsByAgentAsync(
         DateTime dateFrom,
         DateTime dateTo,

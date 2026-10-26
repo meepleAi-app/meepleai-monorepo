@@ -109,9 +109,10 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
 
             if (otherGames > 0)
             {
-                // Issue #2949 finding #1: catalog dedup is GLOBAL, so pdfDoc.SharedGameId
-                // stays pinned to the original uploader game even after other games link
-                // the same PDF via reuse. When the command carries an explicit caller game
+                // Issue #2949 finding #1: pdfDoc.SharedGameId stays pinned to the original
+                // uploader game even after other users link the same PDF via reuse (or other
+                // games, through links the global dedup wrote before #4326). When the
+                // command carries an explicit caller game
                 // (e.g. RemoveRagFromSharedGameCommandHandler cleaning up that specific
                 // game), remove THAT game's link. Only fall back to SharedGameId for call
                 // sites where caller == uploader's game (no distinct game context exists).

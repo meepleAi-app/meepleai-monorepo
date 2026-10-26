@@ -12,6 +12,7 @@ using Api.Tests.TestHelpers;
 using FluentAssertions;
 using MediatR;
 using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -81,13 +82,14 @@ public sealed class UploadPdfDedupScopeIntegrationTests
 
     /// <summary>The case of #4317: the same file on a second private game of the same user.</summary>
     [Fact]
-    public async Task APrivateUpload_OfAFileOnAnotherPrivateGame_IsNotAnExistingKb()
+    public async Task APrivateUpload_OfAFileOnAnotherPrivateGame_StoresAPdfOfItsOwn()
     {
         await SeedPdfAsync(privateGameId: _firstGame);
 
         var result = await UploadAsync(privateGameId: _secondGame);
 
         result.ExistingKb.Should().BeNull("a private game has its own PDF and its own index");
+        (await PdfsOfAsync(privateGameId: _secondGame)).Should().Be(1, "the second game has to end up with a PDF of its own");
     }
 
     /// <summary>The one reuse left: the same file again on the same private game.</summary>
@@ -102,6 +104,53 @@ public sealed class UploadPdfDedupScopeIntegrationTests
         result.ExistingKb.Should().NotBeNull();
         result.ExistingKb!.PdfDocumentId.Should().Be(existing);
         result.ExistingKb.Source.Should().Be("user");
+        (await PdfsOfAsync(privateGameId: _firstGame)).Should().Be(1, "nothing new is stored");
+    }
+
+    /// <summary>
+    /// A PDF of the catalog with the same content is not a KB for a private game either. The second check of this
+    /// branch answered "Existing KB found in shared catalog", the web ignores <c>existingKb</c>, and the private game
+    /// stayed without a PDF (retrieval reads a private game's documents by its own id).
+    /// </summary>
+    [Fact]
+    public async Task APrivateUpload_OfAFileOnACatalogGame_StoresAPdfOfItsOwn()
+    {
+        var catalogGame = await SeedCatalogGameAsync();
+        await SeedPdfAsync(sharedGameId: catalogGame);
+
+        var result = await UploadAsync(privateGameId: _firstGame);
+
+        result.ExistingKb.Should().BeNull("a PDF of the catalog is not a KB of a private game");
+        (await PdfsOfAsync(privateGameId: _firstGame)).Should().Be(1);
+    }
+
+    /// <summary>
+    /// The PDF of somebody else on the same private game is not an existing KB of this user. The deduplication runs
+    /// before the check on who owns the game, so the answer would carry the file name and state of a PDF that is not
+    /// theirs (a PDF of another user lands on a private game through the chunked upload of an admin or editor).
+    /// </summary>
+    [Fact]
+    public async Task APrivateUpload_OfAFileOfAnotherUserOnTheSameGame_IsNotAnExistingKb()
+    {
+        var otherUser = await SeedOtherUserAsync();
+        await SeedPdfAsync(privateGameId: _firstGame, uploadedBy: otherUser);
+
+        var result = await UploadAsync(privateGameId: _firstGame);
+
+        result.ExistingKb.Should().BeNull("only the PDF of the same user is an existing KB");
+        (await PdfsOfAsync(privateGameId: _firstGame)).Should().Be(2, "the other user's PDF stays and a new one is stored");
+    }
+
+    /// <summary>A failed PDF is not a KB to point at: the deduplication service says the same.</summary>
+    [Fact]
+    public async Task APrivateUpload_OfAFileFailedOnTheSameGame_IsNotAnExistingKb()
+    {
+        await SeedPdfAsync(privateGameId: _firstGame, state: "Failed");
+
+        var result = await UploadAsync(privateGameId: _firstGame);
+
+        result.ExistingKb.Should().BeNull();
+        (await PdfsOfAsync(privateGameId: _firstGame)).Should().Be(2, "the failed row stays and a new one is stored");
     }
 
     // ─── Standard upload ─────────────────────────────────────────
@@ -111,7 +160,7 @@ public sealed class UploadPdfDedupScopeIntegrationTests
     /// was told "Existing KB found in your uploads" and the game stayed without one.
     /// </summary>
     [Fact]
-    public async Task AStandardUpload_OfAFileOnAPrivateGame_IsNotAnExistingKb()
+    public async Task AStandardUpload_OfAFileOnAPrivateGame_StoresAPdfOfItsOwn()
     {
         var catalogGame = await SeedCatalogGameAsync();
         await SeedPdfAsync(privateGameId: _firstGame);
@@ -120,11 +169,30 @@ public sealed class UploadPdfDedupScopeIntegrationTests
 
         result.Message.Should().NotContain("Game not found", "the test has to reach the question it asks");
         result.ExistingKb.Should().BeNull("a private PDF is not a document to reuse for another game");
+        (await PdfsOfAsync(sharedGameId: catalogGame)).Should().Be(1, "the catalog game has to end up with a PDF of its own");
     }
 
-    /// <summary>The user's own PDF of a catalog game is still found first, as before.</summary>
+    /// <summary>
+    /// The PDF of ANOTHER catalog game is not a document of this one. Retrieval reads a game's documents by its own
+    /// id, and the web ignores <c>existingKb</c>: the second game stayed without one.
+    /// </summary>
     [Fact]
-    public async Task AStandardUpload_OfAFileOnACatalogGame_IsTheExistingKb()
+    public async Task AStandardUpload_OfAFileOnAnotherCatalogGame_StoresAPdfOfItsOwn()
+    {
+        var firstCatalogGame = await SeedCatalogGameAsync();
+        var secondCatalogGame = await SeedCatalogGameAsync();
+        await SeedPdfAsync(sharedGameId: firstCatalogGame);
+
+        var result = await UploadAsync(gameId: secondCatalogGame);
+
+        result.Message.Should().NotContain("Game not found", "the test has to reach the question it asks");
+        result.ExistingKb.Should().BeNull("the PDF of another game is not a document of this one");
+        (await PdfsOfAsync(sharedGameId: secondCatalogGame)).Should().Be(1);
+    }
+
+    /// <summary>The user's own PDF of the same catalog game is still found first, as before.</summary>
+    [Fact]
+    public async Task AStandardUpload_OfAFileOnTheSameCatalogGame_IsTheExistingKb()
     {
         var catalogGame = await SeedCatalogGameAsync();
         var existing = await SeedPdfAsync(sharedGameId: catalogGame);
@@ -133,6 +201,52 @@ public sealed class UploadPdfDedupScopeIntegrationTests
 
         result.ExistingKb.Should().NotBeNull(result.Message);
         result.ExistingKb!.PdfDocumentId.Should().Be(existing);
+        result.ExistingKb.Source.Should().Be("user");
+        (await PdfsOfAsync(sharedGameId: catalogGame)).Should().Be(1, "nothing new is stored");
+    }
+
+    /// <summary>The reuse across users stays, on the same catalog game.</summary>
+    [Fact]
+    public async Task AStandardUpload_OfAFileOfAnotherUserOnTheSameCatalogGame_IsTheSharedKb()
+    {
+        var catalogGame = await SeedCatalogGameAsync();
+        var otherUser = await SeedOtherUserAsync();
+        var existing = await SeedPdfAsync(sharedGameId: catalogGame, uploadedBy: otherUser);
+
+        var result = await UploadAsync(gameId: catalogGame);
+
+        result.ExistingKb.Should().NotBeNull(result.Message);
+        result.ExistingKb!.PdfDocumentId.Should().Be(existing);
+        result.ExistingKb.Source.Should().Be("shared");
+    }
+
+    /// <summary>A failed PDF of the user is not a KB to point at, as in the deduplication service.</summary>
+    [Fact]
+    public async Task AStandardUpload_OfAFileFailedOnTheSameCatalogGame_IsNotAnExistingKb()
+    {
+        var catalogGame = await SeedCatalogGameAsync();
+        await SeedPdfAsync(sharedGameId: catalogGame, state: "Failed");
+
+        var result = await UploadAsync(gameId: catalogGame);
+
+        result.Message.Should().NotContain("Game not found", "the test has to reach the question it asks");
+        result.ExistingKb.Should().BeNull();
+        (await PdfsOfAsync(sharedGameId: catalogGame)).Should().Be(2, "the failed row stays and a new one is stored");
+    }
+
+    /// <summary>The same for the failed PDF of another user, which the second check looks at.</summary>
+    [Fact]
+    public async Task AStandardUpload_OfAFileFailedForAnotherUserOnTheSameCatalogGame_IsNotAnExistingKb()
+    {
+        var catalogGame = await SeedCatalogGameAsync();
+        var otherUser = await SeedOtherUserAsync();
+        await SeedPdfAsync(sharedGameId: catalogGame, uploadedBy: otherUser, state: "Failed");
+
+        var result = await UploadAsync(gameId: catalogGame);
+
+        result.Message.Should().NotContain("Game not found", "the test has to reach the question it asks");
+        result.ExistingKb.Should().BeNull();
+        (await PdfsOfAsync(sharedGameId: catalogGame)).Should().Be(2, "the failed row stays and a new one is stored");
     }
 
     // ─── Support ────────────────────────────────────────────────
@@ -197,7 +311,27 @@ public sealed class UploadPdfDedupScopeIntegrationTests
         return id;
     }
 
-    private async Task<Guid> SeedPdfAsync(Guid? sharedGameId = null, Guid? privateGameId = null)
+    private async Task<Guid> SeedOtherUserAsync()
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (otherUserId, _) = await TestSessionHelper.CreateUserSessionAsync(db, cancellationToken: Ct);
+        return otherUserId;
+    }
+
+    /// <summary>How many PDFs with this content the database holds for one game.</summary>
+    private async Task<int> PdfsOfAsync(Guid? sharedGameId = null, Guid? privateGameId = null)
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        return await db.PdfDocuments.CountAsync(
+            p => p.ContentHash == Hash
+                 && ((sharedGameId.HasValue && p.SharedGameId == sharedGameId)
+                     || (privateGameId.HasValue && p.PrivateGameId == privateGameId)), Ct);
+    }
+
+    private async Task<Guid> SeedPdfAsync(
+        Guid? sharedGameId = null, Guid? privateGameId = null, Guid? uploadedBy = null, string state = "Ready")
     {
         using var scope = _hostFixture.Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -208,8 +342,8 @@ public sealed class UploadPdfDedupScopeIntegrationTests
             FileName = $"rulebook-{id:N}.pdf",
             FilePath = $"/tmp/rulebook-{id:N}.pdf",
             FileSizeBytes = PdfBytes.Length,
-            UploadedByUserId = _userId,
-            ProcessingState = "Ready",
+            UploadedByUserId = uploadedBy ?? _userId,
+            ProcessingState = state,
             ContentHash = Hash,
             SharedGameId = sharedGameId,
             PrivateGameId = privateGameId,

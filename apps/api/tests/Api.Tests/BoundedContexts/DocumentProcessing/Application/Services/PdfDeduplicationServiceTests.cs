@@ -14,8 +14,8 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Services;
 /// Unit tests for <see cref="PdfDeduplicationService"/>.
 /// Verifies the centralized dedup rule (Task 1 of the PDF cover-config plan):
 /// catalog (shared game) PDFs use a content-hash lookup across users, limited to
-/// the catalog's PDFs (#4326); private-game PDFs use a lookup limited to that one
-/// game (#4317). A match in <see cref="PdfProcessingState.Failed"/>
+/// the PDFs of that one catalog game (#4326); private-game PDFs use a lookup
+/// limited to that one private game (#4317). A match in <see cref="PdfProcessingState.Failed"/>
 /// is treated as "no reusable match" (NewUpload); any other match is reused.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
@@ -30,10 +30,11 @@ public class PdfDeduplicationServiceTests
     public async Task Evaluate_CatalogHashKnownAndReady_ReturnsReuseExisting()
     {
         var existing = PdfDocumentTestFactory.Ready();
-        _repo.Setup(r => r.FindCatalogByContentHashAsync("h", It.IsAny<CancellationToken>()))
+        var sharedGameId = Guid.NewGuid();
+        _repo.Setup(r => r.FindByContentHashForCatalogGameAsync("h", sharedGameId, It.IsAny<CancellationToken>()))
              .ReturnsAsync(existing);
 
-        var result = await Sut().EvaluateAsync("h", sharedGameId: Guid.NewGuid(),
+        var result = await Sut().EvaluateAsync("h", sharedGameId: sharedGameId,
             privateGameId: null, userId: Guid.NewGuid(), CancellationToken.None);
 
         result.Decision.Should().Be(PdfDedupDecision.ReuseExisting);
@@ -44,10 +45,11 @@ public class PdfDeduplicationServiceTests
     public async Task Evaluate_CatalogHashKnownButFailed_ReturnsNewUpload()
     {
         var existing = PdfDocumentTestFactory.Failed();
-        _repo.Setup(r => r.FindCatalogByContentHashAsync("h", It.IsAny<CancellationToken>()))
+        var sharedGameId = Guid.NewGuid();
+        _repo.Setup(r => r.FindByContentHashForCatalogGameAsync("h", sharedGameId, It.IsAny<CancellationToken>()))
              .ReturnsAsync(existing);
 
-        var result = await Sut().EvaluateAsync("h", Guid.NewGuid(), null, Guid.NewGuid(), CancellationToken.None);
+        var result = await Sut().EvaluateAsync("h", sharedGameId, null, Guid.NewGuid(), CancellationToken.None);
 
         result.Decision.Should().Be(PdfDedupDecision.NewUpload);
     }
@@ -64,8 +66,24 @@ public class PdfDeduplicationServiceTests
             privateGameId: privateGameId, userId: userId, CancellationToken.None);
 
         result.Decision.Should().Be(PdfDedupDecision.NewUpload);
-        _repo.Verify(r => r.FindCatalogByContentHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _repo.Verify(r => r.FindByContentHashForCatalogGameAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
         _repo.Verify(r => r.FindByContentHashForUserAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+        _repo.Verify(r => r.FindByContentHashForPrivateGameAsync("h", userId, privateGameId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Evaluate_BothGamesNamed_LooksAtThePrivateGameOnly()
+    {
+        var userId = Guid.NewGuid();
+        var privateGameId = Guid.NewGuid();
+        _repo.Setup(r => r.FindByContentHashForPrivateGameAsync("h", userId, privateGameId, It.IsAny<CancellationToken>()))
+             .ReturnsAsync((PdfDocument?)null);
+
+        var result = await Sut().EvaluateAsync("h", sharedGameId: Guid.NewGuid(),
+            privateGameId: privateGameId, userId: userId, CancellationToken.None);
+
+        result.Decision.Should().Be(PdfDedupDecision.NewUpload);
+        _repo.Verify(r => r.FindByContentHashForCatalogGameAsync(It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
         _repo.Verify(r => r.FindByContentHashForPrivateGameAsync("h", userId, privateGameId, It.IsAny<CancellationToken>()), Times.Once);
     }
 

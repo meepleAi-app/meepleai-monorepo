@@ -24,7 +24,8 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// (the old <c>FindByContentHashAsync</c> had no filter), the private ones of other users included. The uploader was then
 /// linked to somebody else's private PDF, got a success answer with its id, and the catalog game stayed without a
 /// document (retrieval reads by <c>shared_game_id</c>, and that PDF carries a private game). Decided (2026-10-25,
-/// 2026-10-26): it looks only among the PDFs uploaded against a catalog game.
+/// 2026-10-26): it looks only among the PDFs uploaded against a catalog game. Narrowed to THAT game after a review:
+/// the PDF of another catalog game was reused by writing a link, which retrieval does not follow.
 /// </para>
 /// <para>
 /// <b>Private upload.</b> The same file on two private games of one user gave the second a link to the PDF of the first,
@@ -124,18 +125,34 @@ public sealed class PdfDeduplicationScopeIntegrationTests : IAsyncLifetime
         result.Decision.Should().Be(PdfDedupDecision.NewUpload);
     }
 
-    /// <summary>The catalog deduplication stays global across users, for the PDFs of the catalog.</summary>
+    /// <summary>The catalog deduplication stays across users, for the PDFs of the same catalog game.</summary>
     [Fact]
-    public async Task ACatalogUpload_ReusesTheCatalogPdfOfAnotherUser()
+    public async Task ACatalogUpload_ReusesThePdfOfAnotherUserOnTheSameGame()
     {
-        var firstCatalogGame = await SeedCatalogGameAsync();
-        var secondCatalogGame = await SeedCatalogGameAsync();
-        var existing = await SeedPdfAsync(_userA, sharedGameId: firstCatalogGame);
+        var catalogGame = await SeedCatalogGameAsync();
+        var existing = await SeedPdfAsync(_userA, sharedGameId: catalogGame);
 
-        var result = await _service!.EvaluateAsync(Hash, secondCatalogGame, null, _userB, Ct);
+        var result = await _service!.EvaluateAsync(Hash, catalogGame, null, _userB, Ct);
 
         result.Decision.Should().Be(PdfDedupDecision.ReuseExisting);
         result.ExistingPdfDocumentId.Should().Be(existing);
+    }
+
+    /// <summary>
+    /// The PDF of ANOTHER catalog game is not a document of this one: reuse only wrote a link, and retrieval reads a
+    /// game's documents by <c>shared_game_id</c> (<c>RagAccessService</c>), so the second game stayed without one.
+    /// </summary>
+    [Fact]
+    public async Task ACatalogUpload_DoesNotReuseThePdfOfAnotherCatalogGame()
+    {
+        var firstCatalogGame = await SeedCatalogGameAsync();
+        var secondCatalogGame = await SeedCatalogGameAsync();
+        await SeedPdfAsync(_userA, sharedGameId: firstCatalogGame);
+
+        var result = await _service!.EvaluateAsync(Hash, secondCatalogGame, null, _userB, Ct);
+
+        result.Decision.Should().Be(PdfDedupDecision.NewUpload, "retrieval reads a game's documents by its own id");
+        result.ExistingPdfDocumentId.Should().BeNull();
     }
 
     /// <summary>A match left in the Failed state is not reusable, as before.</summary>
@@ -203,6 +220,55 @@ public sealed class PdfDeduplicationScopeIntegrationTests : IAsyncLifetime
         var result = await _service!.EvaluateAsync(Hash, null, gameOfB, _userB, Ct);
 
         result.Decision.Should().Be(PdfDedupDecision.NewUpload);
+    }
+
+    /// <summary>
+    /// The same game, another uploader: the filter on the game alone would reuse it. A private game can hold a PDF
+    /// of somebody else (the chunked upload of an admin or editor does not check who owns the game), and the
+    /// answer to the owner must not carry the file name and state of a PDF that is not theirs.
+    /// </summary>
+    [Fact]
+    public async Task APrivateUpload_DoesNotReuseThePdfOfAnotherUserOnTheSameGame()
+    {
+        var gameOfA = await SeedPrivateGameAsync(_userA);
+        await SeedPdfAsync(_userB, privateGameId: gameOfA);
+
+        var result = await _service!.EvaluateAsync(Hash, null, gameOfA, _userA, Ct);
+
+        result.Decision.Should().Be(PdfDedupDecision.NewUpload, "only the uploader's own PDF is reused");
+        result.ExistingPdfDocumentId.Should().BeNull();
+    }
+
+    // ─── Both games named ────────────────────────────────────────
+
+    /// <summary>
+    /// A chunked upload of an admin or editor can name both games, and the record is stored as the private one (the
+    /// catalog id is dropped). The search has to be for the PDF that would be stored, i.e. the private game's.
+    /// </summary>
+    [Fact]
+    public async Task AnUploadNamingBothGames_ReusesThePdfOfThePrivateGame()
+    {
+        var catalogGame = await SeedCatalogGameAsync();
+        var privateGame = await SeedPrivateGameAsync(_userA);
+        var existing = await SeedPdfAsync(_userA, privateGameId: privateGame);
+
+        var result = await _service!.EvaluateAsync(Hash, catalogGame, privateGame, _userA, Ct);
+
+        result.Decision.Should().Be(PdfDedupDecision.ReuseExisting);
+        result.ExistingPdfDocumentId.Should().Be(existing);
+    }
+
+    /// <summary>The same case, from the other side: a PDF of the catalog game is not what would be stored.</summary>
+    [Fact]
+    public async Task AnUploadNamingBothGames_DoesNotReuseThePdfOfTheCatalogGame()
+    {
+        var catalogGame = await SeedCatalogGameAsync();
+        var privateGame = await SeedPrivateGameAsync(_userA);
+        await SeedPdfAsync(_userA, sharedGameId: catalogGame);
+
+        var result = await _service!.EvaluateAsync(Hash, catalogGame, privateGame, _userA, Ct);
+
+        result.Decision.Should().Be(PdfDedupDecision.NewUpload, "the record would be stored for the private game");
     }
 
     // ─── Support ────────────────────────────────────────────────

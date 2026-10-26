@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Services;
 
 /// <summary>
 /// Default implementation of <see cref="IPdfDeduplicationService"/>.
-/// See the interface doc for the dedup rule (across users among catalog PDFs, same game only for private).
+/// See the interface doc for the dedup rule (across users on the same catalog game, same game only for private).
 /// </summary>
 internal sealed class PdfDeduplicationService : IPdfDeduplicationService
 {
@@ -30,13 +30,16 @@ internal sealed class PdfDeduplicationService : IPdfDeduplicationService
         Guid userId,
         CancellationToken cancellationToken)
     {
-        // Catalog (shared): dedup across all users, but only among the PDFs of the catalog (#4326): a private PDF is
-        // not a catalog document. Private: only the PDF of the same game (#4317): a private game has its own PDF and
-        // its own index. No game named: the user's own PDFs, whatever game.
-        var existing = sharedGameId.HasValue
-            ? await _repo.FindCatalogByContentHashAsync(contentHash, cancellationToken).ConfigureAwait(false)
-            : privateGameId.HasValue
-                ? await _repo.FindByContentHashForPrivateGameAsync(contentHash, userId, privateGameId.Value, cancellationToken)
+        // Private: only the PDF of the same game (#4317): a private game has its own PDF and its own index. It comes
+        // first because that is how a record naming both ids is stored (the chunked upload keeps the private id and
+        // drops the catalog one). Catalog: across all users, but only the PDFs of THAT game (#4326): a private PDF is
+        // not a catalog document, and retrieval reads a game's documents by its own id. No game named: the user's own
+        // PDFs, whatever game.
+        var existing = privateGameId.HasValue
+            ? await _repo.FindByContentHashForPrivateGameAsync(contentHash, userId, privateGameId.Value, cancellationToken)
+                .ConfigureAwait(false)
+            : sharedGameId.HasValue
+                ? await _repo.FindByContentHashForCatalogGameAsync(contentHash, sharedGameId.Value, cancellationToken)
                     .ConfigureAwait(false)
                 : await _repo.FindByContentHashForUserAsync(contentHash, userId, cancellationToken).ConfigureAwait(false);
 

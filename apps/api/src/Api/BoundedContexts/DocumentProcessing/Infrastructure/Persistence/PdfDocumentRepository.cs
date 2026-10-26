@@ -206,11 +206,12 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
         return await DbContext.PdfDocuments.AnyAsync(p => p.Id == id, cancellationToken).ConfigureAwait(false);
     }
 
-    public async Task<PdfDocument?> FindCatalogByContentHashAsync(string contentHash, CancellationToken cancellationToken = default)
+    public async Task<PdfDocument?> FindByContentHashForCatalogGameAsync(
+        string contentHash, Guid sharedGameId, CancellationToken cancellationToken = default)
     {
         var entity = await DbContext.PdfDocuments
             .AsNoTracking()
-            .Where(p => p.ContentHash == contentHash && p.SharedGameId != null)
+            .Where(p => p.ContentHash == contentHash && p.SharedGameId == sharedGameId)
             .OrderByDescending(p => p.UploadedAt)
             .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
 

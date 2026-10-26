@@ -136,14 +136,17 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
             // Compute content hash and check for existing KBs with same content
             var privateContentHash = await ComputeContentHashAsync(file, cancellationToken).ConfigureAwait(false);
 
-            // Check 1: the PDF this user already uploaded to THIS private game (#4317, "strada 1"). A private game
-            // has its own PDF and its own index, even for the same content: the same file on a second private game
-            // used to be told "Existing KB found in your uploads", and the second game stayed without a PDF.
+            // The PDF this user already uploaded to THIS private game (#4317, "strada 1"). A private game has its
+            // own PDF and its own index, even for the same content: the same file on a second private game used to be
+            // told "Existing KB found in your uploads", and the second game stayed without a PDF. A PDF of the
+            // catalog with the same content is not reused either, which is what the second check here used to do. A
+            // failed one is not a KB to point at: the upload goes on, as in the deduplication service.
             var privateGameId = command.PrivateGameId.Value;
+            var failedState = nameof(PdfProcessingState.Failed);
             var privateUserMatch = await _db.PdfDocuments
                 .AsNoTracking()
                 .Where(p => p.ContentHash == privateContentHash && p.UploadedByUserId == userId
-                            && p.PrivateGameId == privateGameId)
+                            && p.PrivateGameId == privateGameId && p.ProcessingState != failedState)
                 .Select(p => new
                 {
                     p.Id,
@@ -168,34 +171,6 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
                 return new PdfUploadResult(true, "Existing KB found in your uploads", null, kbInfo);
             }
 
-            // Check 2: SharedGameCatalog PDFs with same content
-            var privateSharedMatch = await _db.PdfDocuments
-                .AsNoTracking()
-                .Where(p => p.ContentHash == privateContentHash && p.SharedGameId != null)
-                .Select(p => new
-                {
-                    p.Id,
-                    p.FileName,
-                    p.ProcessingState,
-                    p.SharedGameId,
-                    GameName = _db.SharedGames.Where(sg => sg.Id == p.SharedGameId).Select(sg => sg.Title).FirstOrDefault(),
-                    TotalChunks = _db.VectorDocuments.Where(vd => vd.PdfDocumentId == p.Id).Select(vd => (int?)vd.ChunkCount).FirstOrDefault()
-                })
-                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-
-            if (privateSharedMatch != null)
-            {
-                var kbInfo = new ExistingKbInfoDto(
-                    PdfDocumentId: privateSharedMatch.Id,
-                    Source: "shared",
-                    FileName: privateSharedMatch.FileName,
-                    ProcessingState: privateSharedMatch.ProcessingState ?? "Pending",
-                    TotalChunks: privateSharedMatch.TotalChunks,
-                    OriginalGameName: privateSharedMatch.GameName,
-                    SharedGameId: privateSharedMatch.SharedGameId);
-                return new PdfUploadResult(true, "Existing KB found in shared catalog", null, kbInfo);
-            }
-
             return await HandlePrivateGamePdfUploadAsync(
                 command.PrivateGameId.Value, userId, file, fileName, privateContentHash, cancellationToken).ConfigureAwait(false);
         }
@@ -214,12 +189,16 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
         // Compute content hash and check for existing KBs with same content
         var contentHash = await ComputeContentHashAsync(file, cancellationToken).ConfigureAwait(false);
 
-        // Check 1: User's own PDFs with same content, on a catalog game. A PDF the user keeps on a private game is not a
-        // document to reuse for this one (#4326): the upload was told "Existing KB found in your uploads" and the
-        // game stayed without one.
+        // Check 1: User's own PDFs with same content, on THIS catalog game. A PDF the user keeps on a private game, or
+        // on another catalog game, is not a document to reuse for this one (#4326): the upload was told "Existing KB
+        // found in your uploads" and the game stayed without one (retrieval reads a game's documents by its own id).
+        // A failed PDF is not a KB to point at: the upload goes on, as in the deduplication service.
+        var catalogGameId = resolvedGameId.Value;
+        var failedCatalogState = nameof(PdfProcessingState.Failed);
         var userMatch = await _db.PdfDocuments
             .AsNoTracking()
-            .Where(p => p.ContentHash == contentHash && p.UploadedByUserId == userId && p.PrivateGameId == null)
+            .Where(p => p.ContentHash == contentHash && p.UploadedByUserId == userId && p.SharedGameId == catalogGameId
+                        && p.ProcessingState != failedCatalogState)
             .Select(p => new
             {
                 p.Id,
@@ -244,10 +223,11 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
             return new PdfUploadResult(true, "Existing KB found in your uploads", null, kbInfo);
         }
 
-        // Check 2: SharedGameCatalog PDFs with same content
+        // Check 2: PDFs of THIS catalog game with same content, uploaded by anybody
         var sharedMatch = await _db.PdfDocuments
             .AsNoTracking()
-            .Where(p => p.ContentHash == contentHash && p.SharedGameId != null)
+            .Where(p => p.ContentHash == contentHash && p.SharedGameId == catalogGameId
+                        && p.ProcessingState != failedCatalogState)
             .Select(p => new
             {
                 p.Id,

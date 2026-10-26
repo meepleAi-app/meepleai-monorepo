@@ -22,9 +22,10 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Commands;
 /// else, and every link written by somebody who is not the uploader, <b>whatever the game</b>.
 /// </para>
 /// <para>
-/// That last part is a choice, and it has a cost. The catalog deduplication is global: a user who uploads a file that
-/// is already in the catalog is linked to the PDF of the first uploader, and that second game is left out when the
-/// first uploader deletes the PDF. It cannot be told from a forged link: <c>SharedGameId</c> is set on every PDF a user
+/// That last part is a choice, and it has a cost. The catalog deduplication reuses a PDF across users on the same
+/// catalog game (#4326): a second user who uploads a file that is already there is linked to the PDF of the first
+/// uploader, and that link is left out when the first uploader deletes the PDF. The same holds for the links to a PDF
+/// of another game that the earlier, global deduplication wrote. It cannot be told from a forged link: <c>SharedGameId</c> is set on every PDF a user
 /// uploads against a catalog game (<c>AddRulebook</c> asks only for a library entry), so it is no sign of "belongs to
 /// the catalog", and a link carries nothing that says a trusted flow wrote it. A sign like that would have to be
 /// written by the flows that reuse a PDF; until then the safe side is the one that does not let a stranger decide

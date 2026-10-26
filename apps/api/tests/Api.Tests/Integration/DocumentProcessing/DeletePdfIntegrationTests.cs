@@ -576,7 +576,7 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         // Act: delete issued on behalf of Game B (the caller), not the uploader Game A.
         var result = await handler.Handle(command, TestCancellationToken);
 
-        // Assert: success, record + vectors preserved (linkCount was 2).
+        // Assert: success, record + vectors preserved (another game still uses it).
         result.Success.Should().BeTrue();
 
         var pdfExists = await _dbContext.PdfDocuments.AnyAsync(p => p.Id == pdfId, TestCancellationToken);

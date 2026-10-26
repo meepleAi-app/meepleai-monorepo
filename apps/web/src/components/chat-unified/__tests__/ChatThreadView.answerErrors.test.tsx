@@ -215,6 +215,27 @@ describe('ChatThreadView — risposta chiusa con un codice (#4168)', () => {
     expect(savedAssistantMessages()).toHaveLength(0);
   });
 
+  /**
+   * #4388: «Continua» apre una seconda risposta sulla stessa rotta. Con due già aperte il backend la
+   * rifiuta con 429, e prima il pulsante non faceva niente di visibile (l'errore era inghiottito).
+   */
+  it('continuing an answer refused for too many open answers says to wait', async () => {
+    qa.script = [
+      { type: qa.EVENT.TOKEN, data: { token: 'Ogni giocatore pesca' } },
+      { type: qa.EVENT.CONTINUATION_AVAILABLE, data: { continuationToken: 'tok-1' } },
+      { type: qa.EVENT.COMPLETE, data: { answer: 'Ogni giocatore pesca', snippets: [] } },
+    ];
+    const user = userEvent.setup();
+    await ask(user);
+    const continueButton = await screen.findByTestId('continue-button');
+
+    qa.script = [];
+    qa.failure = new QaTooManyRequestsError();
+    await user.click(continueButton);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(QA_TOO_MANY_REQUESTS_MESSAGE);
+  });
+
   it('still reports another failure of the stream as a failed send', async () => {
     qa.failure = new Error('QA stream failed: HTTP 500');
     const user = userEvent.setup();

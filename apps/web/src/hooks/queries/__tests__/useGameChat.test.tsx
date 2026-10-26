@@ -17,6 +17,10 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
+import {
+  QA_TOO_MANY_REQUESTS_MESSAGE,
+  QaTooManyRequestsError,
+} from '@/components/chat-unified/qaStreamErrors';
 import { qaStream } from '@/lib/api/clients/chatClient';
 import { api } from '@/lib/api';
 import { useGameChat } from '../useGameChat';
@@ -295,6 +299,75 @@ describe('useGameChat', () => {
     expect(result.current.isLoading).toBe(false);
     // La domanda resta; una risposta dell'agente non c'è.
     expect(result.current.messages.map(m => m.role)).toEqual(['user']);
+  });
+
+  /**
+   * #4388: il backend tiene aperte al massimo due risposte per utente e rifiuta la terza con 429.
+   * Come per la quota, non è un guasto che chi chiama sappia gestire: `ask` non rifiuta, e l'hook
+   * dà la frase da mostrare. Prima `isError` diventava vero e il rifiuto risaliva fino a una
+   * `void chat.ask(q)` senza catch: la domanda restava senza risposta e senza un perché.
+   */
+  it('reports a refusal for too many open answers instead of failing', async () => {
+    const refused = async function* () {
+      throw new QaTooManyRequestsError();
+      yield happyEvents[2];
+    };
+    vi.mocked(qaStream).mockReturnValueOnce(refused() as any);
+    const { result } = renderHook(() => useGameChat('wingspan'));
+
+    let rejection: unknown = null;
+    await act(async () => {
+      try {
+        await result.current.ask('q');
+      } catch (e) {
+        rejection = e;
+      }
+    });
+
+    expect(rejection).toBeNull();
+    expect(result.current.refusal).toBe(QA_TOO_MANY_REQUESTS_MESSAGE);
+    expect(result.current.isError).toBe(false);
+    expect(result.current.isLoading).toBe(false);
+    // La domanda resta; una risposta dell'agente non c'è.
+    expect(result.current.messages.map(m => m.role)).toEqual(['user']);
+  });
+
+  it('forgets the refusal with the next question', async () => {
+    const refused = async function* () {
+      throw new QaTooManyRequestsError();
+      yield happyEvents[2];
+    };
+    vi.mocked(qaStream)
+      .mockReturnValueOnce(refused() as any)
+      .mockReturnValueOnce(mockStream(happyEvents) as any);
+    const { result } = renderHook(() => useGameChat('wingspan'));
+    await act(async () => {
+      await result.current.ask('prima');
+    });
+    expect(result.current.refusal).not.toBeNull();
+
+    await act(async () => {
+      await result.current.ask('seconda');
+    });
+
+    expect(result.current.refusal).toBeNull();
+    expect(result.current.messages.at(-1)?.role).toBe('agent');
+  });
+
+  it('still fails for another error', async () => {
+    const broken = async function* () {
+      throw new Error('QA stream failed: HTTP 500');
+      yield happyEvents[2];
+    };
+    vi.mocked(qaStream).mockReturnValueOnce(broken() as any);
+    const { result } = renderHook(() => useGameChat('wingspan'));
+
+    await act(async () => {
+      await expect(result.current.ask('q')).rejects.toThrow('HTTP 500');
+    });
+
+    expect(result.current.isError).toBe(true);
+    expect(result.current.refusal).toBeNull();
   });
 
   it('forgets the plan quota with the next question', async () => {

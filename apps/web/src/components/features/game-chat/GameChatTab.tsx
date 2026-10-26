@@ -226,6 +226,16 @@ export function GameChatTab({
                     lo sente arrivare come un messaggio. Una regione viva sua, annidata, lo farebbe
                     annunciare due volte. */}
                 {chat.tierLimit && <TierLimitNotice limit={chat.tierLimit} />}
+                {/* #4388: due risposte già aperte, la terza è rifiutata (429). Come l'avviso della quota,
+                    sta nella lista dei messaggi, che è già una regione viva: niente role="alert" annidato. */}
+                {chat.refusal && (
+                  <div
+                    data-testid="answer-refusal"
+                    className="rounded-md bg-destructive/10 border border-destructive/30 border-l-4 border-l-destructive p-3 text-sm text-foreground"
+                  >
+                    {chat.refusal}
+                  </div>
+                )}
                 <div ref={messagesEndRef} aria-hidden="true" />
               </>
             )}

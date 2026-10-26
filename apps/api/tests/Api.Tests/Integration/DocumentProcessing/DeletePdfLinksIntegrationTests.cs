@@ -222,9 +222,10 @@ public sealed class DeletePdfLinksIntegrationTests
     }
 
     /// <summary>
-    /// THE CHOICE, pinned so that changing it is deliberate. The catalog deduplication is global: a user who uploads a
-    /// file that is already in the catalog is linked to the PDF of the first uploader, with a link of their own. That
-    /// second game is left out when the first uploader deletes the PDF: the link cannot be told from a forged one
+    /// THE CHOICE, pinned so that changing it is deliberate. The catalog deduplication links a user who uploads a file
+    /// that is already there to the PDF of the first uploader, with a link of their own; before #4326 it did so across
+    /// catalog games too, and those links are still in the database. A game reached that way is left out when the first
+    /// uploader deletes the PDF: the link cannot be told from a forged one
     /// (<c>SharedGameId</c> is set on every PDF a user uploads against a catalog game, and a link carries nothing that
     /// says a trusted flow wrote it). Protecting that reuse needs a sign that only the reusing flows write.
     /// </summary>
@@ -376,6 +377,31 @@ public sealed class DeletePdfLinksIntegrationTests
         (await PdfExistsAsync(_pdfId)).Should().BeFalse("the only other link was deleted");
     }
 
+    /// <summary>
+    /// #4641: a catalog game can hold two links to the same PDF, one for each user who uploaded the file. The game that
+    /// lets go of the PDF lets go of both: removing one of them (whichever came first) left the other user's link on a
+    /// game that no longer has the PDF, and the list of the games with a knowledge base kept showing it there.
+    /// </summary>
+    [Fact]
+    public async Task TheGameLettingGo_LosesTheLinksOfEveryUser_NotJustOne()
+    {
+        var (secondUploaderId, _) = await SeedStrangerWithAGameAsync();
+        var uploadedFor = await SeedCatalogGameAsync(deleted: false);
+        var otherGame = await SeedCatalogGameAsync(deleted: false);
+        await MakeItACatalogPdfAsync(_pdfId, uploadedFor);
+        await LinkAsync(uploadedFor, _pdfId, _userId);
+        await LinkAsync(uploadedFor, _pdfId, secondUploaderId);
+        await LinkAsync(otherGame, _pdfId, _userId);
+
+        var result = await SendDeleteThroughMediatorAsync(_pdfId);
+
+        result.Success.Should().BeTrue();
+        result.Message.Should().Contain("unlinked");
+        (await LiveLinksAsync(uploadedFor, _pdfId)).Should().Be(0, "the game let go of the PDF, for both of its users");
+        (await LiveLinksAsync(otherGame, _pdfId)).Should().Be(1, "the other game keeps its link");
+        (await PdfExistsAsync(_pdfId)).Should().BeTrue("the other game still uses it");
+    }
+
     // ─── Support ────────────────────────────────────────────────
 
     private Task<HttpResponseMessage> DeletePdfAsync(Guid pdfId) =>
@@ -494,6 +520,14 @@ public sealed class DeletePdfLinksIntegrationTests
         using var scope = _hostFixture.Factory.Services.CreateScope();
         return await scope.ServiceProvider.GetRequiredService<IMediator>()
             .Send(new DeletePdfCommand(pdfId.ToString()), Ct);
+    }
+
+    private async Task<int> LiveLinksAsync(Guid gameId, Guid pdfId)
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        return await db.EntityLinks.CountAsync(l =>
+            l.SourceEntityId == gameId && l.TargetEntityId == pdfId && l.TargetEntityType == MeepleEntityType.KbCard, Ct);
     }
 
     private async Task<bool> PdfExistsAsync(Guid pdfId)

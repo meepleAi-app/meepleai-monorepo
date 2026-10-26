@@ -114,7 +114,7 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
                 // games, through links the global dedup wrote before #4326). When the
                 // command carries an explicit caller game
                 // (e.g. RemoveRagFromSharedGameCommandHandler cleaning up that specific
-                // game), remove THAT game's link. Only fall back to SharedGameId for call
+                // game), remove THAT game's links. Only fall back to SharedGameId for call
                 // sites where caller == uploader's game (no distinct game context exists).
                 var linkRemoved = await RemoveCallerLinkAsync(
                     pdfGuid,
@@ -224,9 +224,11 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
     }
 
     /// <summary>
-    /// Removes only the calling game's Game→KbCard link (the last-link case is
+    /// Removes only the calling game's Game→KbCard links (the last-link case is
     /// handled by the destructive path in <see cref="Handle"/>). Used when other
-    /// games still reference this PDF, so the record must survive.
+    /// games still reference this PDF, so the record must survive. A game can hold one
+    /// link for each user who uploaded the file (#4641): the game letting go of the PDF
+    /// lets go of all of them.
     /// </summary>
     /// <returns><c>true</c> if a matching link was found and removed; otherwise <c>false</c>.</returns>
     private async Task<bool> RemoveCallerLinkAsync(Guid pdfGuid, Guid? callerGameId, CancellationToken cancellationToken)
@@ -246,13 +248,15 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
                 cancellationToken: cancellationToken)
             .ConfigureAwait(false);
 
-        var callerLink = links.FirstOrDefault(l =>
-            l.SourceEntityType == MeepleEntityType.Game &&
-            l.SourceEntityId == callerGameId.Value &&
-            l.TargetEntityType == MeepleEntityType.KbCard &&
-            l.TargetEntityId == pdfGuid);
+        var callerLinks = links
+            .Where(l =>
+                l.SourceEntityType == MeepleEntityType.Game &&
+                l.SourceEntityId == callerGameId.Value &&
+                l.TargetEntityType == MeepleEntityType.KbCard &&
+                l.TargetEntityId == pdfGuid)
+            .ToList();
 
-        if (callerLink is null)
+        if (callerLinks.Count == 0)
         {
             return false;
         }
@@ -263,18 +267,29 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
         // same key value is already being tracked", wrapped as a PdfStorageException: a 500 on a
         // delete that should succeed. `GetByIdAsync` is the tracked read the repository documents
         // for exactly this purpose (#3858), so the delete goes through it.
-        var trackedLink = await _entityLinkRepository
-            .GetByIdAsync(callerLink.Id, cancellationToken)
-            .ConfigureAwait(false);
+        var removed = false;
+        foreach (var callerLink in callerLinks)
+        {
+            var trackedLink = await _entityLinkRepository
+                .GetByIdAsync(callerLink.Id, cancellationToken)
+                .ConfigureAwait(false);
 
-        if (trackedLink is null)
+            if (trackedLink is null)
+            {
+                continue;
+            }
+
+            // Follow-up: this hard-deletes the link (Remove) instead of the aggregate's
+            // soft-delete (link.Delete()) used by DeleteEntityLinkCommandHandler.
+            _entityLinkRepository.Remove(trackedLink);
+            removed = true;
+        }
+
+        if (!removed)
         {
             return false;
         }
 
-        // Follow-up: this hard-deletes the link (Remove) instead of the aggregate's
-        // soft-delete (link.Delete()) used by DeleteEntityLinkCommandHandler.
-        _entityLinkRepository.Remove(trackedLink);
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return true;
     }

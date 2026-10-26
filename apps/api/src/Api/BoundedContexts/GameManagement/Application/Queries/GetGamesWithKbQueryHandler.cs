@@ -58,7 +58,9 @@ internal sealed class GetGamesWithKbQueryHandler
             .GroupBy(x => new { x.Id, x.Title, x.ImageUrl })
             .Select(g =>
             {
-                var rulebooks = g.Select(r => new RulebookDto(
+                // #4641: a PDF that two users uploaded is one file with a link for each of them, both from this game.
+                // The join gives one row per link; the rulebook is the file.
+                var rulebooks = g.DistinctBy(r => r.PdfDocumentId).Select(r => new RulebookDto(
                     r.PdfDocumentId,
                     r.FileName,
                     MapKbStatus(r.ProcessingState),

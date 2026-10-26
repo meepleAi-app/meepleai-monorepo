@@ -35,13 +35,15 @@ internal sealed class CreateEntityLinkCommandHandler
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        // BR-08: reject duplicate links
+        // BR-08: reject duplicate links. A User link is personal, so the check is per owner (#4641).
         var duplicate = await _repository.ExistsAsync(
             command.SourceEntityType,
             command.SourceEntityId,
             command.TargetEntityType,
             command.TargetEntityId,
             command.LinkType,
+            command.Scope,
+            command.OwnerUserId,
             cancellationToken).ConfigureAwait(false);
 
         if (duplicate)

@@ -42,7 +42,7 @@ Implementazioni concrete e accesso ai dati:
 BR-01: Game auto-crea Toolkit 1:1 quando aggiunto alla library
 BR-04: EntityLink scope=user → IsAdminApproved = true automaticamente
 BR-05: EntityLink scope=shared → richiede ruolo Admin
-BR-08: EntityLink è unico per (sourceType, sourceId, targetType, targetId, linkType)
+BR-08: EntityLink scope=shared è unico per (sourceType, sourceId, targetType, targetId, linkType); scope=user è personale, quindi unico anche per proprietario (#4641)
 ```
 
 ## Link Type Taxonomy

@@ -27,13 +27,20 @@ public interface IEntityLinkRepository
         Guid? ownerUserId = null,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Checks whether an identical link already exists (BR-08).</summary>
+    /// <summary>
+    /// Checks whether the link that is about to be written already exists (BR-08). A <c>User</c>-scope link is
+    /// personal: for it a duplicate is the same triple held by the same owner, or a <c>Shared</c> one, which already
+    /// stands for everybody. A <c>Shared</c>-scope link is a duplicate only of another <c>Shared</c> one, whoever owns
+    /// it: the personal links of users never keep it from being published (#4641).
+    /// </summary>
     Task<bool> ExistsAsync(
         MeepleEntityType sourceEntityType,
         Guid sourceEntityId,
         MeepleEntityType targetEntityType,
         Guid targetEntityId,
         EntityLinkType linkType,
+        EntityLinkScope scope,
+        Guid ownerUserId,
         CancellationToken cancellationToken = default);
 
     /// <summary>

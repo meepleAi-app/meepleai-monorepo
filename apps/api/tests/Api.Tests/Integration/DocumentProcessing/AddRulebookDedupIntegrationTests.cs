@@ -190,6 +190,78 @@ public sealed class AddRulebookDedupIntegrationTests : IAsyncLifetime
         linkExists.Should().BeTrue("reuse must create the Game->KbCard EntityLink");
     }
 
+    /// <summary>
+    /// #4641: user B uploads the file user A already uploaded for the same catalog game. It stays one file: B's upload
+    /// reuses A's PDF and stores no second record. What B was missing is a link of their own to it: the slot
+    /// (game, PDF, type) was A's, the duplicate was swallowed as "idempotent", and the game card showed B nothing.
+    /// </summary>
+    [Fact]
+    public async Task Handle_SameFileFromASecondUser_ReusesThePdfAndWritesALinkOfTheirOwn()
+    {
+        var content = PdfBytes("second-user");
+        var dedup = _serviceProvider!.GetRequiredService<IPdfDeduplicationService>();
+        string hash;
+        using (var s = new MemoryStream(content))
+            hash = await dedup.ComputeContentHashAsync(s, TestCancellationToken);
+
+        var userB = Guid.NewGuid();
+        _dbContext!.Users.Add(new UserEntity
+        {
+            Id = userB,
+            Email = "rb-second@meepleai.dev",
+            DisplayName = "RB second",
+            Role = "Editor",
+            Tier = "Free",
+            CreatedAt = DateTime.UtcNow,
+        });
+        _dbContext.UserLibraryEntries.Add(new UserLibraryEntryEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userB,
+            SharedGameId = _gameId,
+        });
+
+        var existingId = Guid.NewGuid();
+        _dbContext.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = existingId,
+            SharedGameId = _gameId,
+            UploadedByUserId = _userId,
+            FileName = "of-a.pdf",
+            FilePath = "/test/of-a.pdf",
+            FileSizeBytes = content.Length,
+            UploadedAt = DateTime.UtcNow,
+            ContentHash = hash,
+            ProcessingState = nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.PdfProcessingState.Ready),
+        });
+        _dbContext.EntityLinks.Add(EntityLink.Create(
+            MeepleEntityType.Game, _gameId, MeepleEntityType.KbCard, existingId,
+            EntityLinkType.RelatedTo, EntityLinkScope.User, _userId));
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        _dbContext.ChangeTracker.Clear();
+
+        var handler = _serviceProvider.GetRequiredService<AddRulebookCommandHandler>();
+
+        var result = await handler.Handle(new AddRulebookCommand(_gameId, userB, MakePdfFile(content)), TestCancellationToken);
+
+        result.IsNew.Should().BeFalse();
+        result.PdfDocumentId.Should().Be(existingId);
+        (await _dbContext.PdfDocuments.CountAsync(p => p.SharedGameId == _gameId, TestCancellationToken))
+            .Should().Be(1, "the same file is one PDF, whoever uploads it");
+
+        var owners = await _dbContext.EntityLinks
+            .Where(l => l.SourceEntityId == _gameId && l.TargetEntityId == existingId)
+            .Select(l => l.OwnerUserId)
+            .ToListAsync(TestCancellationToken);
+        owners.Should().BeEquivalentTo(new[] { _userId, userB }, "each of the two uploaders has a link of their own");
+
+        // What B sees on the game: their own link, and not the one of A.
+        var repository = _serviceProvider.GetRequiredService<IEntityLinkRepository>();
+        var seenByB = await repository.GetForEntityVisibleToAsync(
+            userB, MeepleEntityType.Game, _gameId, cancellationToken: TestCancellationToken);
+        seenByB.Should().ContainSingle().Which.OwnerUserId.Should().Be(userB);
+    }
+
     [Fact]
     public async Task Handle_NoHashMatch_PerformsFullUpload_CreatesNewRecord()
     {

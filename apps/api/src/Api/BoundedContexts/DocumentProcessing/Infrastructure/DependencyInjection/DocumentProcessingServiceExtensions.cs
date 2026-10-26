@@ -232,6 +232,10 @@ internal static class DocumentProcessingServiceExtensions
         // Issue #5460: Queue monitoring for proactive alerts (stuck docs, depth, failure rate)
         services.AddHostedService<ProcessingQueueMonitorService>();
 
+        // #4319: expire abandoned chunked uploads and remove their folders under meepleai_uploads.
+        // Before this, the 24h expiry only applied if somebody called the session again.
+        services.AddHostedService<AbandonedChunkedUploadCleanupService>();
+
         // Issue #4208: Register Quartz job for automatic PDF retry (every 5 minutes)
         RegisterRetryFailedPdfsJob(services);
 

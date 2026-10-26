@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 import { CitationBlock } from './CitationBlock';
 import { ContinueButton } from './ContinueButton';
 import { InlineCitationText } from './InlineCitationText';
+import { QaTooManyRequestsError, qaRequestFailureMessage } from './qaStreamErrors';
 import { QuickPromptChips } from './QuickPromptChips';
 import {
   TIER_LIMIT_EXCEEDED,
@@ -498,12 +499,20 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
                   : m
               )
             );
-          } catch {
+          } catch (err) {
             if (!abortController.signal.aborted) {
+              // #4388: due risposte già aperte, la terza è rifiutata con 429: la bolla dice di aspettare.
+              const refused = err instanceof QaTooManyRequestsError;
               setMessages(prev =>
                 prev.map(m =>
                   m.id === assistantMsgId
-                    ? { ...m, content: finalAnswer || 'Errore nella generazione della risposta' }
+                    ? {
+                        ...m,
+                        content:
+                          finalAnswer ||
+                          qaRequestFailureMessage(err, 'Errore nella generazione della risposta'),
+                        ...(refused ? { isError: true } : {}),
+                      }
                     : m
                 )
               );

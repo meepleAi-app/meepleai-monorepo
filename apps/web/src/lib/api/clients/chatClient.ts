@@ -5,6 +5,7 @@
  * Covers: ChatThreads, Messages, RuleSpec Comments, Cache Management, Export
  */
 
+import { throwIfQaTooManyRequests } from '@/components/chat-unified/qaStreamErrors';
 import type { FeedbackOutcome } from '@/lib/constants/feedback';
 
 import { downloadFile, getApiBase } from '../core/httpClient';
@@ -412,6 +413,8 @@ export async function* qaStream(
     signal,
   });
 
+  // #4388: due risposte aperte per utente; la terza riceve 429 e la vista lo dice.
+  throwIfQaTooManyRequests(response);
   if (!response.ok) {
     throw new Error(`QA stream failed: HTTP ${response.status}`);
   }

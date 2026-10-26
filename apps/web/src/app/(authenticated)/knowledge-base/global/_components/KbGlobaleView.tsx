@@ -35,7 +35,10 @@ import { type JSX, useCallback, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { qaStreamErrorMessage } from '@/components/chat-unified/qaStreamErrors';
+import {
+  QA_TOO_MANY_REQUESTS_MESSAGE,
+  qaStreamErrorMessage,
+} from '@/components/chat-unified/qaStreamErrors';
 import { FilterAccordion } from '@/components/features/kb-globale/FilterAccordion';
 import { HeroSearch } from '@/components/features/kb-globale/HeroSearch';
 import type { KbDocViewerCitation } from '@/components/features/kb-globale/KbDocViewerDesktop';
@@ -239,6 +242,12 @@ const LABELS = {
           body: qaStreamErrorMessage('AI_STREAM_INTERRUPTED'),
           action: 'Chiedi di nuovo',
           alt: "Fai un'altra domanda",
+        },
+        // #4388: due risposte già aperte; la terza è rifiutata con 429. La frase è quella della chat.
+        busy: {
+          title: 'Troppe richieste',
+          body: QA_TOO_MANY_REQUESTS_MESSAGE,
+          action: 'Riprova',
         },
       },
     },

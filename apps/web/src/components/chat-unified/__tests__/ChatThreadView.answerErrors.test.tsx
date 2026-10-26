@@ -18,7 +18,11 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 
 import { ChatThreadView } from '../ChatThreadView';
-import { qaStreamErrorMessage } from '../qaStreamErrors';
+import {
+  QA_TOO_MANY_REQUESTS_MESSAGE,
+  QaTooManyRequestsError,
+  qaStreamErrorMessage,
+} from '../qaStreamErrors';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -109,11 +113,14 @@ const qa = vi.hoisted(() => ({
     CONTINUATION_AVAILABLE: 29,
   } as const,
   script: [] as Array<{ type: number; data: unknown }>,
+  /** Se c'è, il trasporto fallisce con questo errore prima di dare un evento (un rifiuto HTTP). */
+  failure: null as Error | null,
 }));
 
 vi.mock('@/lib/api/clients/chatClient', () => ({
   QA_EVENT_TYPES: qa.EVENT,
   qaStream: async function* qaStreamMock() {
+    if (qa.failure) throw qa.failure;
     for (const ev of qa.script) yield ev as QaEvent;
   },
 }));
@@ -147,6 +154,7 @@ describe('ChatThreadView — risposta chiusa con un codice (#4168)', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     qa.script = [];
+    qa.failure = null;
 
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
@@ -187,6 +195,34 @@ describe('ChatThreadView — risposta chiusa con un codice (#4168)', () => {
     expect(await screen.findByText(/si è interrotta prima della fine/)).toBeInTheDocument();
     expect(screen.queryByText(/The answer was interrupted/)).not.toBeInTheDocument();
     expect(savedAssistantMessages()).toHaveLength(0);
+  });
+
+  /**
+   * #4388: il backend tiene aperte al massimo due risposte per utente e rifiuta la terza con 429,
+   * prima di chiamare il gateway. Non è un guasto dell'invio: la chat dice di aspettare, la domanda
+   * resta nel thread e la bolla vuota dell'assistente se ne va.
+   */
+  it('a question refused for too many open answers says to wait, not that sending failed', async () => {
+    qa.failure = new QaTooManyRequestsError();
+    const user = userEvent.setup();
+
+    await ask(user);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(QA_TOO_MANY_REQUESTS_MESSAGE);
+    expect(screen.queryByText("Errore nell'invio del messaggio")).not.toBeInTheDocument();
+    expect(screen.getAllByTestId('message-user')).toHaveLength(1);
+    expect(screen.queryAllByTestId('message-assistant')).toHaveLength(0);
+    expect(savedAssistantMessages()).toHaveLength(0);
+  });
+
+  it('still reports another failure of the stream as a failed send', async () => {
+    qa.failure = new Error('QA stream failed: HTTP 500');
+    const user = userEvent.setup();
+
+    await ask(user);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent("Errore nell'invio del messaggio");
+    expect(screen.queryByText(QA_TOO_MANY_REQUESTS_MESSAGE)).not.toBeInTheDocument();
   });
 
   /**

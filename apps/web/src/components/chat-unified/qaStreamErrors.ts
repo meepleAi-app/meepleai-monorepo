@@ -29,3 +29,35 @@ export function qaStreamErrorMessage(errorCode?: string, backendMessage?: string
 
   return backendMessage ?? 'Errore nella risposta AI';
 }
+
+/**
+ * #4388: le rotte di risposta (`/agents/qa/stream`, `/agents/qa`, `/knowledge-base/ask`,
+ * `/knowledge-base/ask/global`) tengono aperte al massimo due risposte per utente. La terza domanda
+ * riceve 429 prima che il gateway sia chiamato: non è un guasto, e un nuovo tentativo immediato
+ * arriverebbe mentre le altre due sono ancora in corso. La frase dice di aspettare.
+ */
+export const QA_TOO_MANY_REQUESTS_MESSAGE =
+  'Hai già due risposte in corso. Aspetta che una finisca, poi riprova.';
+
+/** Il 429 delle rotte di risposta, come errore che i trasporti lanciano e le viste riconoscono. */
+export class QaTooManyRequestsError extends Error {
+  constructor() {
+    super(QA_TOO_MANY_REQUESTS_MESSAGE);
+    this.name = 'QaTooManyRequestsError';
+  }
+}
+
+/** Chiamata dai trasporti subito dopo la fetch: per un 429 lancia, per ogni altro stato non fa nulla. */
+export function throwIfQaTooManyRequests(response: { readonly status: number }): void {
+  if (response.status === 429) {
+    throw new QaTooManyRequestsError();
+  }
+}
+
+/**
+ * La frase per una domanda che non è nemmeno partita: quella del 429 se è lui, altrimenti
+ * `fallback` (il guasto generico che la vista mostrava già).
+ */
+export function qaRequestFailureMessage(error: unknown, fallback: string): string {
+  return error instanceof QaTooManyRequestsError ? error.message : fallback;
+}

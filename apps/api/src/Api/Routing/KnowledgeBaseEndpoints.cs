@@ -158,6 +158,7 @@ internal static class KnowledgeBaseEndpoints
         // DDD-PHASE3: RAG Q&amp;A endpoint using MediatR
         group.MapPost("/knowledge-base/ask", HandleAsk)
         .WithName("KnowledgeBaseAsk")
+        .RequireRateLimiting(RateLimitingServiceExtensions.AnswerOpenRequestsPolicy) // #4388: at most 2 open answers per user
         .RequireSession()
         .WithTags("KnowledgeBase");
     }
@@ -170,6 +171,7 @@ internal static class KnowledgeBaseEndpoints
         // Emits text/event-stream; honors EC-3 client-disconnect via CancellationToken.
         group.MapPost("/knowledge-base/ask/global", HandleGlobalAskStream)
             .WithName("GlobalKbAskStream")
+            .RequireRateLimiting(RateLimitingServiceExtensions.AnswerOpenRequestsPolicy) // #4388: at most 2 open answers per user
             .RequireSession()
             .WithTags("KnowledgeBase")
             .WithSummary("Cross-game knowledge base SSE ask (RBAC-filtered)")

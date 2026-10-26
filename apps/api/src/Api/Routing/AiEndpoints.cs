@@ -87,6 +87,7 @@ internal static class AiEndpoints
     private static void MapQaEndpoint(RouteGroupBuilder group)
     {
         group.MapPost("/agents/qa", HandleQaRequest)
+        .RequireRateLimiting(RateLimitingServiceExtensions.AnswerOpenRequestsPolicy) // #4388: at most 2 open answers per user
         .WithName("QaAgent")
         .WithDescription("Ask a question about game rules using RAG (Retrieval-Augmented Generation)")
         .WithTags("AI Agents")
@@ -142,7 +143,9 @@ internal static class AiEndpoints
     {
         // CHAT-01: Streaming QA endpoint (SSE)
         // Migrated to CQRS: Uses StreamQaQuery via MediatR (Issue #1186)
-        group.MapPost("/agents/qa/stream", HandleQaStreamAsync);
+        // #4388: at most 2 open answers per user, shared with the other answer routes.
+        group.MapPost("/agents/qa/stream", HandleQaStreamAsync)
+            .RequireRateLimiting(RateLimitingServiceExtensions.AnswerOpenRequestsPolicy);
     }
 
     private static async Task<IResult> HandleQaStreamAsync(

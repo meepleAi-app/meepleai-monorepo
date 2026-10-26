@@ -26,7 +26,7 @@ namespace Api.Extensions;
 /// - BggSearch:            20 req/hour — respects BoardGameGeek external API quota
 /// - ProposePrivateGame:    2 req/min  — prevents catalog proposal spam
 /// - BulkImportAdmin:       1 req/5min — heavy admin batch operation
-/// - AgentQuery:           30 req/min  — AI query (expensive, per user)
+/// - AnswerOpenRequests:    2 open     — answers in progress per user, on the four answer routes (Issue #4388)
 /// - AgentCreation:        10 req/min  — AI agent creation (per user)
 /// - ContactForm:           5 req/hour — anonymous contact form spam prevention (IP-based)
 /// - AccessRequest:         5 req/hour — access request spam prevention (IP-based)
@@ -39,6 +39,15 @@ namespace Api.Extensions;
 /// </summary>
 internal static class RateLimitingServiceExtensions
 {
+    /// <summary>
+    /// Answers a user can have open at once on the four answer routes (Issue #4388). The web views say
+    /// "two" (<c>QA_TOO_MANY_REQUESTS_MESSAGE</c>): change both together.
+    /// </summary>
+    internal const int MaxOpenAnswersPerUser = 2;
+
+    /// <summary>The name of the policy mounted on the answer routes (Issue #4388).</summary>
+    internal const string AnswerOpenRequestsPolicy = "AnswerOpenRequests";
+
     public static IServiceCollection AddRateLimitingServices(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -258,19 +267,38 @@ internal static class RateLimitingServiceExtensions
                     });
             });
 
-            // Policy 12: AgentQuery - 30 req/min for AI agent query operations (Issue #4338)
-            // AI queries are expensive (LLM token cost); per-user limit prevents runaway usage.
-            options.AddPolicy("AgentQuery", httpContext =>
+            // Policy 12: AnswerOpenRequests - at most 2 answers open at once per user (Issue #4388,
+            // decision c of #4168). The answer quota stays "check first, count when the answer is
+            // delivered" (no reservation): between the check and the count lies the whole generation,
+            // tens of seconds, so N parallel requests under the limit all pass, and one user can
+            // exhaust the global budget of the gateway for everyone (AI_BUDGET_EXCEEDED for all).
+            //
+            // A concurrency limiter, not a rate: it counts requests IN PROGRESS, and the lease is held
+            // until the response ends (for an SSE answer, the whole stream; a client that disconnects
+            // frees it). The third request is refused with 429 BEFORE the pipeline runs: the gateway
+            // is not called and the quota counter does not grow. QueueLimit 0: no waiting; the web
+            // views tell the user to wait for an answer to finish (qaStreamErrors.ts).
+            //
+            // Same exemption as the quota: SuperAdmin, Admin and Editor (evaluations, the admin
+            // playground and the RAG gates run as one of them and open many answers on purpose).
+            //
+            // This replaces the AgentQuery policy (30 req/min), which was defined and mounted by no
+            // route. With two answers open at 10-30 s each a user cannot reach 30 a minute, so it
+            // could never fire: a dead knob, removed rather than mounted.
+            options.AddPolicy(AnswerOpenRequestsPolicy, httpContext =>
             {
+                if (IsExemptFromOpenAnswersLimit(httpContext))
+                {
+                    return RateLimitPartition.GetNoLimiter("answer-open-exempt");
+                }
+
                 var userId = GetUserId(httpContext);
 
-                return RateLimitPartition.GetSlidingWindowLimiter(
-                    partitionKey: $"agent-query-{userId}",
-                    factory: _ => new SlidingWindowRateLimiterOptions
+                return RateLimitPartition.GetConcurrencyLimiter(
+                    partitionKey: $"answer-open-{userId}",
+                    factory: _ => new ConcurrencyLimiterOptions
                     {
-                        Window = TimeSpan.FromMinutes(1),
-                        PermitLimit = 30,
-                        SegmentsPerWindow = 6,
+                        PermitLimit = MaxOpenAnswersPerUser,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,
                     });
@@ -650,6 +678,17 @@ internal static class RateLimitingServiceExtensions
     /// Returns IP address as fallback for unauthenticated requests.
     /// Defensive implementation with full null checks to prevent rate limiter crashes.
     /// </summary>
+    /// <summary>
+    /// SuperAdmin, Admin and Editor are not subject to the open-answers limit, as they are not to the
+    /// answer quota (TierEnforcementService). The role claims are the ones SessionAuthenticationHandler sets.
+    /// </summary>
+    private static bool IsExemptFromOpenAnswersLimit(HttpContext? httpContext)
+    {
+        var user = httpContext?.User;
+        return user?.Identity?.IsAuthenticated == true
+            && (user.IsInRole("SuperAdmin") || user.IsInRole("Admin") || user.IsInRole("Editor"));
+    }
+
     private static string GetUserId(HttpContext? httpContext)
     {
         if (httpContext is null)

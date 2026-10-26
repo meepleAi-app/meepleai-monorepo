@@ -87,13 +87,25 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
             // that stand up can drop the caller's own (its game is gone), so the threshold would read a PDF
             // that another game still uses as unused. The game letting go of the PDF is the one the caller names,
             // else the one it was uploaded for.
+            //
+            // Asking twice changes nothing the second time while another game uses the PDF: the first call removes
+            // the link of the game it was uploaded for, that game is still the one letting go, and the other game
+            // still uses it. The old threshold deleted it on the second call, taking the PDF from the game that
+            // used it. What to answer to someone who asked to delete is #4627.
             var letGoGameId = command.CallerGameId ?? pdfDoc.SharedGameId ?? pdfDoc.PrivateGameId ?? Guid.Empty;
-            var otherGames = await _db.LiveLinksToPdfs()
-                .Where(l => l.TargetEntityId == pdfGuid && l.SourceEntityId != letGoGameId)
+            var usingGames = await _db.LiveLinksToPdfs()
+                .Where(l => l.TargetEntityId == pdfGuid)
                 .Select(l => l.SourceEntityId)
                 .Distinct()
-                .CountAsync(cancellationToken)
+                .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
+
+            // A PDF with no game of its own and no named caller (a legacy row) has nobody letting go of it: one game
+            // using it is its only use, which is what the old threshold said. With a game letting go, it is everyone
+            // else.
+            var otherGames = letGoGameId == Guid.Empty
+                ? Math.Max(usingGames.Count - 1, 0)
+                : usingGames.Count(g => g != letGoGameId);
 
             if (otherGames > 0)
             {
@@ -103,16 +115,21 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
                 // (e.g. RemoveRagFromSharedGameCommandHandler cleaning up that specific
                 // game), remove THAT game's link. Only fall back to SharedGameId for call
                 // sites where caller == uploader's game (no distinct game context exists).
-                await RemoveCallerLinkAsync(
+                var linkRemoved = await RemoveCallerLinkAsync(
                     pdfGuid,
                     command.CallerGameId ?? pdfDoc.SharedGameId,
                     cancellationToken).ConfigureAwait(false);
 
                 _logger.LogInformation(
-                    "PDF {PdfId} still used by {OtherGames} other game(s) after unlink — record/blob/vectors preserved",
-                    pdfId, otherGames);
+                    "PDF {PdfId} still used by {OtherGames} other game(s) (caller link removed: {LinkRemoved}) — record/blob/vectors preserved",
+                    pdfId, otherGames, linkRemoved);
 
-                return new PdfDeleteResult(true, "PDF unlinked from game (still referenced by other games)", storageGameIdForUnlink);
+                return new PdfDeleteResult(
+                    true,
+                    linkRemoved
+                        ? "PDF unlinked from game (still referenced by other games)"
+                        : "PDF kept (still used by other games, no link of the caller left to remove)",
+                    storageGameIdForUnlink);
             }
 
             // Delete associated vector document and vectors from pgvector

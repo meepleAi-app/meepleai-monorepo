@@ -1,5 +1,6 @@
 using System.Net;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.EntityRelationships.Domain.Aggregates;
 using Api.BoundedContexts.EntityRelationships.Domain.Enums;
 using Api.BoundedContexts.UserLibrary.Domain.Enums;
@@ -18,8 +19,8 @@ using Xunit;
 namespace Api.Tests.Integration.DocumentProcessing;
 
 /// <summary>
-/// #4325: <c>DeletePdfCommandHandler</c> (#2949) counts the links to a PDF with <c>GetCountForEntityAsync</c> and, with
-/// more than one, does not delete: it answers "unlinked from game (still referenced by other games)" and leaves the
+/// #4325: <c>DeletePdfCommandHandler</c> (#2949) counted the links to a PDF with <c>GetCountForEntityAsync</c> and, with
+/// more than one, did not delete: it answered "unlinked from game (still referenced by other games)" and left the
 /// row, the file and the vectors. The count was every link of anyone from any id, and
 /// <c>POST /library/entity-links</c> writes one between any two ids with nothing but a session. Whoever knows the id of
 /// somebody else's PDF can keep its owner from deleting it, and the owner gets a success answer.
@@ -28,10 +29,13 @@ namespace Api.Tests.Integration.DocumentProcessing;
 /// <para>
 /// Decision (2026-10-25): the direct delete counts only the links that make sense, with the same rule as the purge of a
 /// deleted private game (#4313): <see cref="Api.BoundedContexts.DocumentProcessing.Application.Commands.KbCardLinkRule"/>.
+/// The question became "does a game other than the one letting go of the PDF use it?".
 /// </para>
 /// <para>
-/// On Postgres, over HTTP. The links are seeded straight in the database: the point is what the delete does with a
-/// link that is already there, not how it got written. Every case but the controls is red before the change.
+/// On Postgres, over HTTP (one case goes through the mediator, because only a saga names a caller game). The links are
+/// seeded straight in the database: the point is what the delete does with a link that is already there, not how it
+/// got written. The cases above the "Pinned" line are red on the old code. The ones below pin what the new decision
+/// keeps: some pass on the old code too (a control), others are the behaviour change itself and are named as such.
 /// </para>
 /// </remarks>
 [Collection("Integration-GroupD")]
@@ -217,8 +221,6 @@ public sealed class DeletePdfLinksIntegrationTests
         (await PdfExistsAsync(_pdfId)).Should().BeFalse("those games are not the owner's");
     }
 
-    // ─── Controls: what must not change ──────────────────────────
-
     /// <summary>
     /// THE CHOICE, pinned so that changing it is deliberate. The catalog deduplication is global: a user who uploads a
     /// file that is already in the catalog is linked to the PDF of the first uploader, with a link of their own. That
@@ -241,6 +243,25 @@ public sealed class DeletePdfLinksIntegrationTests
         response.StatusCode.Should().Be(HttpStatusCode.NoContent, await response.Content.ReadAsStringAsync(Ct));
         (await PdfExistsAsync(_pdfId)).Should().BeFalse("the link of somebody else is never counted, whatever the game");
     }
+
+    /// <summary>
+    /// The rule is about games. The endpoint lets a link start from any entity type with any id, so one that starts
+    /// from an agent, a session, ... and happens to carry the id of a game that exists is not a game using the PDF.
+    /// </summary>
+    [Fact]
+    public async Task ALinkWhoseSourceIsNotAGame_DoesNotKeepThePdf()
+    {
+        var secondGame = await SeedPrivateGameAsync(_userId, deleted: false);
+        await LinkAsync(_gameId, _pdfId, _userId);
+        await LinkAsync(secondGame, _pdfId, _userId, sourceType: MeepleEntityType.Session);
+
+        var response = await DeletePdfAsync(_pdfId);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent, await response.Content.ReadAsStringAsync(Ct));
+        (await PdfExistsAsync(_pdfId)).Should().BeFalse("a session is not a game, whatever id it carries");
+    }
+
+    // ─── Pinned: what the new decision keeps ─────────────────
 
     /// <summary>
     /// The game letting go of the PDF is the one the caller names (<c>RemoveRagFromSharedGame</c> does), and the
@@ -292,6 +313,67 @@ public sealed class DeletePdfLinksIntegrationTests
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent, await response.Content.ReadAsStringAsync(Ct));
         (await PdfExistsAsync(_pdfId)).Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Asking twice changes nothing the second time while another game uses the PDF. The first call removes the link of
+    /// the game the PDF was uploaded for; that game is still the one letting go on the second call, the other game
+    /// still uses it, and there is no link of the caller left to remove. The old threshold deleted it on the second
+    /// call, taking the PDF from the game that used it. Pinned so that the answer to "what does the owner see" (#4627)
+    /// is a decision and not a surprise: the message says that nothing was left to unlink.
+    /// </summary>
+    [Fact]
+    public async Task ADeleteAskedTwice_OfAPdfAnotherGameUses_KeepsItBothTimes()
+    {
+        var uploadedFor = await SeedCatalogGameAsync(deleted: false);
+        var otherGame = await SeedCatalogGameAsync(deleted: false);
+        await MakeItACatalogPdfAsync(_pdfId, uploadedFor);
+        await LinkAsync(uploadedFor, _pdfId, _userId);
+        await LinkAsync(otherGame, _pdfId, _userId);
+
+        var first = await SendDeleteThroughMediatorAsync(_pdfId);
+        var second = await SendDeleteThroughMediatorAsync(_pdfId);
+
+        first.Success.Should().BeTrue();
+        first.Message.Should().Contain("unlinked");
+        second.Success.Should().BeTrue();
+        second.Message.Should().Contain("kept", "there was no link of the caller left to remove");
+        (await PdfExistsAsync(_pdfId)).Should().BeTrue("the other game still uses it");
+    }
+
+    /// <summary>
+    /// A legacy row with no game of its own (neither <c>SharedGameId</c> nor <c>PrivateGameId</c>) and no named caller
+    /// has nobody letting go of it: its single link is its only use, and it goes, as it did.
+    /// </summary>
+    [Fact]
+    public async Task APdfWithNoGameOfItsOwn_AndOneLink_IsDeleted()
+    {
+        await ForgetTheGamesOfAsync(_pdfId);
+        await LinkAsync(_gameId, _pdfId, _userId);
+
+        var response = await DeletePdfAsync(_pdfId);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent, await response.Content.ReadAsStringAsync(Ct));
+        (await PdfExistsAsync(_pdfId)).Should().BeFalse("its single link is its only use");
+    }
+
+    /// <summary>
+    /// <c>IgnoreQueryFilters</c> removes the default filter on links, so the rule has to leave out the soft-deleted ones
+    /// by itself. An owner who deleted a reuse link (the `DELETE /library/entity-links` flow) from a game that still
+    /// exists has let go of the PDF from that game.
+    /// </summary>
+    [Fact]
+    public async Task ASoftDeletedLink_FromAGameThatExists_DoesNotKeepThePdf()
+    {
+        var secondGame = await SeedPrivateGameAsync(_userId, deleted: false);
+        await LinkAsync(_gameId, _pdfId, _userId);
+        await LinkAsync(secondGame, _pdfId, _userId);
+        await SoftDeleteLinksFromAsync(secondGame);
+
+        var response = await DeletePdfAsync(_pdfId);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent, await response.Content.ReadAsStringAsync(Ct));
+        (await PdfExistsAsync(_pdfId)).Should().BeFalse("the only other link was deleted");
     }
 
     // ─── Support ────────────────────────────────────────────────
@@ -369,15 +451,49 @@ public sealed class DeletePdfLinksIntegrationTests
                 .SetProperty(p => p.PrivateGameId, (Guid?)null), Ct);
     }
 
-    private async Task LinkAsync(Guid gameId, Guid pdfId, Guid ownerId, EntityLinkType linkType = EntityLinkType.RelatedTo)
+    private async Task LinkAsync(
+        Guid gameId,
+        Guid pdfId,
+        Guid ownerId,
+        EntityLinkType linkType = EntityLinkType.RelatedTo,
+        MeepleEntityType sourceType = MeepleEntityType.Game)
     {
         using var scope = _hostFixture.Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         db.EntityLinks.Add(EntityLink.Create(
-            MeepleEntityType.Game, gameId,
+            sourceType, gameId,
             MeepleEntityType.KbCard, pdfId,
             linkType, EntityLinkScope.User, ownerId));
         await db.SaveChangesAsync(Ct);
+    }
+
+    /// <summary>Soft-deletes the links that start from the game, as <c>DELETE /library/entity-links</c> does.</summary>
+    private async Task SoftDeleteLinksFromAsync(Guid gameId)
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        await db.EntityLinks
+            .Where(l => l.SourceEntityId == gameId)
+            .ExecuteUpdateAsync(s => s.SetProperty(l => l.IsDeleted, true), Ct);
+    }
+
+    /// <summary>The PDF as a legacy upload leaves it: no catalog game, no private game.</summary>
+    private async Task ForgetTheGamesOfAsync(Guid pdfId)
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        await db.PdfDocuments
+            .Where(p => p.Id == pdfId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(p => p.SharedGameId, (Guid?)null)
+                .SetProperty(p => p.PrivateGameId, (Guid?)null), Ct);
+    }
+
+    private async Task<PdfDeleteResult> SendDeleteThroughMediatorAsync(Guid pdfId)
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        return await scope.ServiceProvider.GetRequiredService<IMediator>()
+            .Send(new DeletePdfCommand(pdfId.ToString()), Ct);
     }
 
     private async Task<bool> PdfExistsAsync(Guid pdfId)

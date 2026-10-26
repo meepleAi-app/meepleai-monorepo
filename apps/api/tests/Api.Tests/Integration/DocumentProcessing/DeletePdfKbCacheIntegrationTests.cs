@@ -151,7 +151,7 @@ public sealed class DeletePdfKbCacheIntegrationTests
     }
 
     /// <summary>
-    /// Un PDF con più di un collegamento non si cancella: la riga resta (#2949), l'elenco non cambia, e quindi non
+    /// Un PDF che un altro gioco usa ancora non si cancella: la riga resta (#2949), l'elenco non cambia, e quindi non
     /// c'è niente da invalidare. Qui il PDF è di un gioco privato e la richiesta non nomina nessun gioco, perciò
     /// il gestore non toglie nemmeno un collegamento; quel che conta per #4308 è che la riga resti e che le
     /// etichette del documento non vengano toccate.

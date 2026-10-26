@@ -122,16 +122,15 @@ internal static class EntityLinkUserEndpoints
             if (userId == Guid.Empty)
                 return Results.Unauthorized();
 
-            var command = new CreateEntityLinkCommand(
+            // #4325: the request of a user, so the entities have to exist and be ones the caller may link.
+            var command = new CreateUserEntityLinkCommand(
                 SourceEntityType: request.SourceEntityType,
                 SourceEntityId: request.SourceEntityId,
                 TargetEntityType: request.TargetEntityType,
                 TargetEntityId: request.TargetEntityId,
                 LinkType: request.LinkType,
-                Scope: EntityLinkScope.User,
                 OwnerUserId: userId,
-                Metadata: request.Metadata,
-                IsBggImported: false);
+                Metadata: request.Metadata);
 
             try
             {
@@ -151,10 +150,11 @@ internal static class EntityLinkUserEndpoints
         .Produces<EntityLinkDto>(201)
         .Produces(400)
         .Produces(401)
+        .Produces(404)
         .Produces(409)
         .WithTags("EntityLinks")
         .WithSummary("Create entity link (user scope)")
-        .WithDescription("Creates a new user-scope link between two entities. Scope=User, IsAdminApproved=true automatically (BR-04). Returns 409 for duplicates. Issue #5137.");
+        .WithDescription("Creates a new user-scope link between two entities. Scope=User, IsAdminApproved=true automatically (BR-04). Returns 404 when a Game or KbCard does not exist or is not one the caller may link (#4325), 409 for duplicates. Issue #5137.");
     }
 
     // DELETE /library/entity-links/{linkId}

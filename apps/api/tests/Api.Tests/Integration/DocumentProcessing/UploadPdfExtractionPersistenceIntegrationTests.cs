@@ -819,7 +819,8 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
         public Task<IReadOnlyList<Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument>> GetByIdsAsync(IEnumerable<Guid> ids, CancellationToken cancellationToken = default) => inner.GetByIdsAsync(ids, cancellationToken);
         public Task<IReadOnlyList<Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument>> FindByUserIdAsync(Guid userId, CancellationToken cancellationToken = default) => inner.FindByUserIdAsync(userId, cancellationToken);
         public Task<bool> ExistsByContentHashAsync(string contentHash, Guid? gameId, Guid? privateGameId, CancellationToken cancellationToken = default) => inner.ExistsByContentHashAsync(contentHash, gameId, privateGameId, cancellationToken);
-        public Task<Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument?> FindByContentHashAsync(string contentHash, CancellationToken cancellationToken = default) => inner.FindByContentHashAsync(contentHash, cancellationToken);
+        public Task<Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument?> FindByContentHashForCatalogGameAsync(string contentHash, Guid sharedGameId, CancellationToken cancellationToken = default) => inner.FindByContentHashForCatalogGameAsync(contentHash, sharedGameId, cancellationToken);
+        public Task<Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument?> FindByContentHashForPrivateGameAsync(string contentHash, Guid userId, Guid privateGameId, CancellationToken cancellationToken = default) => inner.FindByContentHashForPrivateGameAsync(contentHash, userId, privateGameId, cancellationToken);
         public Task<Api.BoundedContexts.DocumentProcessing.Domain.Entities.PdfDocument?> FindByContentHashForUserAsync(string contentHash, Guid userId, CancellationToken cancellationToken = default) => inner.FindByContentHashForUserAsync(contentHash, userId, cancellationToken);
     }
 

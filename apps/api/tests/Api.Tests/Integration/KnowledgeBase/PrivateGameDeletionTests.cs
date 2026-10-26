@@ -466,10 +466,10 @@ public sealed partial class PrivateGameDeletionTests
     }
 
     /// <summary>
-    /// Per un gioco del catalogo la deduplicazione cerca il file fra i PDF di tutti gli utenti
-    /// (<c>PdfDocumentRepository.FindByContentHashAsync</c>): se un altro carica lo stesso file per
-    /// un gioco del catalogo, nasce un suo collegamento verso questo PDF privato. Non lo tiene in
-    /// vita: chi l'ha caricato ha cancellato il gioco, e il PDF è suo.
+    /// Un collegamento di un altro utente da un gioco del catalogo verso questo PDF privato non lo
+    /// tiene in vita: chi l'ha caricato ha cancellato il gioco, e il PDF è suo. Non lo scrive più la
+    /// deduplicazione del catalogo (#4326: cerca solo fra i PDF del catalogo), ma può esistere
+    /// ancora, scritto allora o a mano con <c>POST /library/entity-links</c>.
     /// </summary>
     [Fact]
     public async Task ALinkOfAnotherUserFromACatalogGame_DoesNotKeepThePdfAlive()

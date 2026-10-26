@@ -21,8 +21,10 @@ public sealed record PdfDedupResult(PdfDedupDecision Decision, Guid? ExistingPdf
 /// previously duplicated and divergent between <c>AddRulebookCommandHandler</c>
 /// (reuse via EntityLink) and <c>CompleteChunkedUploadCommandHandler</c> (reject).
 ///
-/// Rule: catalog uploads (<c>sharedGameId</c> set) dedup GLOBALLY across the
-/// catalog; private uploads (<c>privateGameId</c> set) dedup PER-USER only.
+/// Rule: catalog uploads (<c>sharedGameId</c> set) dedup across users, but only
+/// among the PDFs uploaded against a catalog game (#4326); private uploads
+/// (<c>privateGameId</c> set) reuse only the PDF of the SAME private game
+/// (#4317): a private game has its own PDF and its own index.
 /// A match left in <see cref="Domain.Enums.PdfProcessingState.Failed"/> is treated
 /// as not reusable (a fresh upload is required).
 /// </summary>
@@ -33,7 +35,7 @@ public interface IPdfDeduplicationService
 
     /// <summary>
     /// Evaluates whether an existing PDF with the same content hash can be reused,
-    /// scoping the lookup to the catalog (global) or the uploading user (private).
+    /// scoping the lookup to the catalog PDFs (across users) or to the one private game.
     /// </summary>
     Task<PdfDedupResult> EvaluateAsync(
         string contentHash,

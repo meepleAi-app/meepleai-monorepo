@@ -136,10 +136,14 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
             // Compute content hash and check for existing KBs with same content
             var privateContentHash = await ComputeContentHashAsync(file, cancellationToken).ConfigureAwait(false);
 
-            // Check 1: User's own PDFs with same content (any game)
+            // Check 1: the PDF this user already uploaded to THIS private game (#4317, "strada 1"). A private game
+            // has its own PDF and its own index, even for the same content: the same file on a second private game
+            // used to be told "Existing KB found in your uploads", and the second game stayed without a PDF.
+            var privateGameId = command.PrivateGameId.Value;
             var privateUserMatch = await _db.PdfDocuments
                 .AsNoTracking()
-                .Where(p => p.ContentHash == privateContentHash && p.UploadedByUserId == userId)
+                .Where(p => p.ContentHash == privateContentHash && p.UploadedByUserId == userId
+                            && p.PrivateGameId == privateGameId)
                 .Select(p => new
                 {
                     p.Id,
@@ -210,10 +214,12 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
         // Compute content hash and check for existing KBs with same content
         var contentHash = await ComputeContentHashAsync(file, cancellationToken).ConfigureAwait(false);
 
-        // Check 1: User's own PDFs with same content (any game)
+        // Check 1: User's own PDFs with same content, on a catalog game. A PDF the user keeps on a private game is not a
+        // document to reuse for this one (#4326): the upload was told "Existing KB found in your uploads" and the
+        // game stayed without one.
         var userMatch = await _db.PdfDocuments
             .AsNoTracking()
-            .Where(p => p.ContentHash == contentHash && p.UploadedByUserId == userId)
+            .Where(p => p.ContentHash == contentHash && p.UploadedByUserId == userId && p.PrivateGameId == null)
             .Select(p => new
             {
                 p.Id,

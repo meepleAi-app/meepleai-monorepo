@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Services;
 
 /// <summary>
 /// Default implementation of <see cref="IPdfDeduplicationService"/>.
-/// See the interface doc for the dedup rule (global for catalog, per-user for private).
+/// See the interface doc for the dedup rule (across users among catalog PDFs, same game only for private).
 /// </summary>
 internal sealed class PdfDeduplicationService : IPdfDeduplicationService
 {
@@ -30,10 +30,15 @@ internal sealed class PdfDeduplicationService : IPdfDeduplicationService
         Guid userId,
         CancellationToken cancellationToken)
     {
-        // Catalog (shared): dedup GLOBALLY across all users. Private: dedup PER-USER (isolation).
+        // Catalog (shared): dedup across all users, but only among the PDFs of the catalog (#4326): a private PDF is
+        // not a catalog document. Private: only the PDF of the same game (#4317): a private game has its own PDF and
+        // its own index. No game named: the user's own PDFs, whatever game.
         var existing = sharedGameId.HasValue
-            ? await _repo.FindByContentHashAsync(contentHash, cancellationToken).ConfigureAwait(false)
-            : await _repo.FindByContentHashForUserAsync(contentHash, userId, cancellationToken).ConfigureAwait(false);
+            ? await _repo.FindCatalogByContentHashAsync(contentHash, cancellationToken).ConfigureAwait(false)
+            : privateGameId.HasValue
+                ? await _repo.FindByContentHashForPrivateGameAsync(contentHash, userId, privateGameId.Value, cancellationToken)
+                    .ConfigureAwait(false)
+                : await _repo.FindByContentHashForUserAsync(contentHash, userId, cancellationToken).ConfigureAwait(false);
 
         if (existing is null || existing.ProcessingState == PdfProcessingState.Failed)
         {

@@ -16,8 +16,9 @@ internal record RegisterCommand(
     string? IpAddress = null,
     string? UserAgent = null,
     // C5: explicit bootstrap-admin token. When equal (constant-time) to the
-    // configured Authentication:BootstrapAdminToken AND the single-use flag
-    // hasn't been set yet, the resulting user is provisioned as Admin. All
+    // configured Authentication:BootstrapAdminToken, the single-use flag
+    // hasn't been set yet AND no Admin or SuperAdmin exists (#4617), the
+    // resulting user is provisioned as Admin. All
     // other inputs land Role.User regardless of the registration order
     // (replaces the race-prone HasAnyUsersAsync first-user-is-admin path).
     string? BootstrapToken = null,

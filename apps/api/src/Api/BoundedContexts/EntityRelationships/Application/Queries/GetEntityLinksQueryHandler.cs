@@ -32,13 +32,24 @@ internal sealed class GetEntityLinksQueryHandler
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var links = await _repository.GetForEntityAsync(
-            query.EntityType,
-            query.EntityId,
-            query.Scope,
-            query.LinkType,
-            query.TargetEntityType,
-            cancellationToken).ConfigureAwait(false);
+        // #4637: a User-scope link is personal. With a requesting user the listing leaves out those of other users;
+        // the admin listing passes none and sees every scope and every owner.
+        var links = query.RequestingUserId is { } viewerId
+            ? await _repository.GetForEntityVisibleToAsync(
+                viewerId,
+                query.EntityType,
+                query.EntityId,
+                query.Scope,
+                query.LinkType,
+                query.TargetEntityType,
+                cancellationToken).ConfigureAwait(false)
+            : await _repository.GetForEntityAsync(
+                query.EntityType,
+                query.EntityId,
+                query.Scope,
+                query.LinkType,
+                query.TargetEntityType,
+                cancellationToken).ConfigureAwait(false);
 
         // Batch-fetch KB card statuses when needed (Issue #5188)
         IReadOnlyDictionary<Guid, PdfDocumentStatusResult> kbStatuses =

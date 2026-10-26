@@ -68,6 +68,28 @@ public class GetEntityLinkCountQueryHandlerTests
             MeepleEntityType.Agent, _gameId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    /// <summary>
+    /// #4637: the badge counts what the viewer can see. With a requesting user the handler asks for that, and not for
+    /// everything.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithRequestingUserId_CountsWhatTheUserCanSee()
+    {
+        var viewer = Guid.NewGuid();
+        _repoMock
+            .Setup(r => r.GetCountForEntityVisibleToAsync(
+                viewer, MeepleEntityType.Game, _gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(2);
+
+        var result = await _handler.Handle(
+            new GetEntityLinkCountQuery(MeepleEntityType.Game, _gameId, viewer),
+            TestContext.Current.CancellationToken);
+
+        result.Should().Be(2);
+        _repoMock.Verify(r => r.GetCountForEntityAsync(
+            It.IsAny<MeepleEntityType>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     // ── Null guard ────────────────────────────────────────────────────────────
 
     [Fact]

@@ -96,7 +96,7 @@ internal static class EntityLinkUserEndpoints
             if (!Enum.TryParse<MeepleEntityType>(entityType, ignoreCase: true, out var parsedEntityType))
                 return Results.BadRequest(new { error = $"Invalid entityType: {entityType}" });
 
-            var query = new GetEntityLinkCountQuery(parsedEntityType, entityId);
+            var query = new GetEntityLinkCountQuery(parsedEntityType, entityId, RequestingUserId: userId);
             var count = await mediator.Send(query, ct).ConfigureAwait(false);
             return Results.Ok(new { count });
         })

@@ -67,11 +67,12 @@ public class GetEntityLinksQueryHandlerTests
     {
         var otherUserId = Guid.NewGuid();
         var myLink = BuildLink(_gameId, _targetId1, ownerId: _ownerId);
-        var otherLink = BuildLink(_gameId, _targetId2, ownerId: otherUserId);
+        // What the user can see of somebody else's is a Shared-scope link (#4637).
+        var otherLink = BuildLink(_gameId, _targetId2, scope: EntityLinkScope.Shared, ownerId: otherUserId);
 
         _repoMock
-            .Setup(r => r.GetForEntityAsync(
-                MeepleEntityType.Game, _gameId,
+            .Setup(r => r.GetForEntityVisibleToAsync(
+                _ownerId, MeepleEntityType.Game, _gameId,
                 null, null, null, It.IsAny<CancellationToken>()))
             .ReturnsAsync([myLink, otherLink]);
 
@@ -83,6 +84,30 @@ public class GetEntityLinksQueryHandlerTests
 
         myDto.IsOwner.Should().BeTrue("Link owned by requesting user should have IsOwner=true");
         otherDto.IsOwner.Should().BeFalse("Link owned by another user should have IsOwner=false");
+    }
+
+    /// <summary>
+    /// #4637: a User-scope link is personal. With a requesting user the handler asks the repository for what that user
+    /// can see, and never for everything.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithRequestingUserId_AsksOnlyForWhatTheUserCanSee()
+    {
+        _repoMock
+            .Setup(r => r.GetForEntityVisibleToAsync(
+                _ownerId, MeepleEntityType.Game, _gameId,
+                null, null, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        await _handler.Handle(
+            new GetEntityLinksQuery(MeepleEntityType.Game, _gameId, RequestingUserId: _ownerId),
+            TestContext.Current.CancellationToken);
+
+        _repoMock.Verify(r => r.GetForEntityVisibleToAsync(
+            _ownerId, MeepleEntityType.Game, _gameId, null, null, null, It.IsAny<CancellationToken>()), Times.Once);
+        _repoMock.Verify(r => r.GetForEntityAsync(
+            It.IsAny<MeepleEntityType>(), It.IsAny<Guid>(), It.IsAny<EntityLinkScope?>(), It.IsAny<EntityLinkType?>(),
+            It.IsAny<MeepleEntityType?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

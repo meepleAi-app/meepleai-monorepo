@@ -26,6 +26,18 @@ internal sealed class GetGamesWithKbQueryHandler
     {
         ArgumentNullException.ThrowIfNull(query);
 
+        // The PDFs a user can use are those of the games they can chat with (CanAccessRagAsync, 2026-10-26): an admin,
+        // a game whose RAG is public, or a game whose ownership the user declared. This list is the chat selection
+        // screen, so it follows the same rule: all the PDFs of the game, or none. Same role test as the library.
+        var role = await _db.Users
+            .AsNoTracking()
+            .Where(u => u.Id == query.UserId)
+            .Select(u => u.Role)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var isAdmin = string.Equals(role, "admin", StringComparison.OrdinalIgnoreCase)
+                      || string.Equals(role, "superadmin", StringComparison.OrdinalIgnoreCase);
+
         // Cross-context read via direct EF joins through EntityLink.
         // UserLibraryEntries (user's games) → EntityLink (Game→KbCard) → PdfDocument
         // Note: Uses SharedGameId (mapped column) not GameId (ignored CLR-only wrapper).
@@ -41,6 +53,7 @@ internal sealed class GetGamesWithKbQueryHandler
                 on link.TargetEntityId equals pdf.Id
             join game in _db.SharedGames
                 on lib.SharedGameId equals game.Id
+            where isAdmin || game.IsRagPublic || lib.OwnershipDeclaredAt != null
             select new
             {
                 game.Id,

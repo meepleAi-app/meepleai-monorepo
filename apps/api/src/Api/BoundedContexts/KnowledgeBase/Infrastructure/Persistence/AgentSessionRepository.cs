@@ -72,6 +72,8 @@ internal class AgentSessionRepository : RepositoryBase, IAgentSessionRepository
             throw new NotFoundException("AgentSession", agentSession.Id.ToString());
         }
 
+        // #4613: UpdateAgentDefinition() cambia l'aggregato, e senza questa riga la riga restava com'era.
+        entity.AgentDefinitionId = agentSession.AgentDefinitionId;
         entity.CurrentGameStateJson = agentSession.CurrentGameState.ToJson();
         entity.IsActive = agentSession.IsActive;
         entity.EndedAt = agentSession.EndedAt;

@@ -151,54 +151,17 @@ internal class ChatSessionRepository : RepositoryBase, IChatSessionRepository
 
     private static ChatSession MapToDomain(ChatSessionEntity entity)
     {
-        var messageDtos = JsonSerializer.Deserialize<List<PersistenceMessageDto>>(entity.MessagesJson, s_jsonOptions)
-            ?? new List<PersistenceMessageDto>();
-
-        var session = CreateSessionFromEntity(entity);
-
-        foreach (var dto in messageDtos)
-        {
-            var message = SessionChatMessage.FromPersistence(
-                dto.Id,
-                dto.Content,
-                dto.Role,
-                dto.SequenceNumber,
-                dto.Timestamp,
-                dto.MetadataJson);
-
-            AddMessageViaReflection(session, message);
-        }
-
-        return session;
+        return Reconstitute(entity, ReadMessages(entity));
     }
 
     private static ChatSession MapToDomainWithPagination(ChatSessionEntity entity, int skip, int take)
     {
-        var messageDtos = JsonSerializer.Deserialize<List<PersistenceMessageDto>>(entity.MessagesJson, s_jsonOptions)
-            ?? new List<PersistenceMessageDto>();
-
-        var session = CreateSessionFromEntity(entity);
-
-        var paginatedMessages = messageDtos
+        var paginatedMessages = ReadMessages(entity)
             .OrderBy(m => m.SequenceNumber)
             .Skip(skip)
-            .Take(take)
-            .ToList();
+            .Take(take);
 
-        foreach (var dto in paginatedMessages)
-        {
-            var message = SessionChatMessage.FromPersistence(
-                dto.Id,
-                dto.Content,
-                dto.Role,
-                dto.SequenceNumber,
-                dto.Timestamp,
-                dto.MetadataJson);
-
-            AddMessageViaReflection(session, message);
-        }
-
-        return session;
+        return Reconstitute(entity, paginatedMessages);
     }
 
     /// <summary>
@@ -206,44 +169,44 @@ internal class ChatSessionRepository : RepositoryBase, IChatSessionRepository
     /// </summary>
     private static ChatSession MapToDomainSummary(ChatSessionEntity entity)
     {
-        return CreateSessionFromEntity(entity);
+        return Reconstitute(entity, []);
     }
 
-    private static ChatSession CreateSessionFromEntity(ChatSessionEntity entity)
+    private static List<SessionChatMessage> ReadMessages(ChatSessionEntity entity)
     {
-        var session = new ChatSession(
+        var messageDtos = JsonSerializer.Deserialize<List<PersistenceMessageDto>>(entity.MessagesJson, s_jsonOptions)
+            ?? new List<PersistenceMessageDto>();
+
+        return messageDtos
+            .Select(dto => SessionChatMessage.FromPersistence(
+                dto.Id,
+                dto.Content,
+                dto.Role,
+                dto.SequenceNumber,
+                dto.Timestamp,
+                dto.MetadataJson))
+            .ToList();
+    }
+
+    // Reconstitute, non il costruttore pubblico (#4613): quello è di una chat nuova, e solleva
+    // ChatSessionCreatedEvent a ogni lettura.
+    private static ChatSession Reconstitute(ChatSessionEntity entity, IEnumerable<SessionChatMessage> messages)
+    {
+        return ChatSession.Reconstitute(
             id: entity.Id,
             userId: entity.UserId,
             gameId: entity.GameId,
-            title: entity.Title,
             userLibraryEntryId: entity.UserLibraryEntryId,
             agentSessionId: entity.AgentSessionId,
-            agentConfigJson: entity.AgentConfigJson,
             agentId: entity.AgentId,
             agentType: entity.AgentType,
-            agentName: entity.AgentName);
-
-        // Override timestamps from DB
-        var createdAtProp = typeof(ChatSession).GetProperty("CreatedAt");
-        createdAtProp?.SetValue(session, entity.CreatedAt);
-
-        var lastMessageAtProp = typeof(ChatSession).GetProperty("LastMessageAt");
-        lastMessageAtProp?.SetValue(session, entity.LastMessageAt);
-
-        var isArchivedProp = typeof(ChatSession).GetProperty("IsArchived");
-        isArchivedProp?.SetValue(session, entity.IsArchived);
-
-        return session;
-    }
-
-    private static void AddMessageViaReflection(ChatSession session, SessionChatMessage message)
-    {
-#pragma warning disable S3011 // Reflection needed for domain reconstruction from persistence
-        var messagesField = typeof(ChatSession).GetField("_messages",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-        var messages = messagesField?.GetValue(session) as List<SessionChatMessage>;
-        messages?.Add(message);
-#pragma warning restore S3011
+            agentName: entity.AgentName,
+            title: entity.Title,
+            agentConfigJson: entity.AgentConfigJson,
+            createdAt: entity.CreatedAt,
+            lastMessageAt: entity.LastMessageAt,
+            isArchived: entity.IsArchived,
+            messages: messages);
     }
 
     private static ChatSessionEntity MapToEntity(ChatSession session)

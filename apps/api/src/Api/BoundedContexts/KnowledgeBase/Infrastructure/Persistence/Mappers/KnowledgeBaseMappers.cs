@@ -142,29 +142,18 @@ internal static class KnowledgeBaseMappers
     {
         var gameState = GameState.FromJson(entity.CurrentGameStateJson);
 
-        var session = new AgentSession(
+        // Reconstitute, non il costruttore pubblico (#4613): quello è di una sessione nuova, e solleva
+        // AgentSessionCreatedEvent a ogni lettura.
+        return AgentSession.Reconstitute(
             id: entity.Id,
             agentDefinitionId: entity.AgentDefinitionId,
             gameSessionId: entity.GameSessionId,
             userId: entity.UserId,
             gameId: entity.GameId,
-            initialState: gameState
-        );
-
-        // Use reflection to restore read-only properties (StartedAt, EndedAt, IsActive)
-        var startedAtProp = typeof(AgentSession).GetProperty(nameof(AgentSession.StartedAt));
-        startedAtProp?.SetValue(session, entity.StartedAt);
-
-        if (entity.EndedAt.HasValue)
-        {
-            var endedAtProp = typeof(AgentSession).GetProperty(nameof(AgentSession.EndedAt));
-            endedAtProp?.SetValue(session, entity.EndedAt);
-        }
-
-        var isActiveProp = typeof(AgentSession).GetProperty(nameof(AgentSession.IsActive));
-        isActiveProp?.SetValue(session, entity.IsActive);
-
-        return session;
+            currentGameState: gameState,
+            startedAt: entity.StartedAt,
+            endedAt: entity.EndedAt,
+            isActive: entity.IsActive);
     }
 
     /// <summary>

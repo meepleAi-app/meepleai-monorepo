@@ -75,6 +75,40 @@ public sealed class OAuthAccount : AggregateRoot<Guid>
     }
 
     /// <summary>
+    /// Ricostituisce un collegamento letto dal database, così com'è (#4613).
+    /// </summary>
+    /// <remarks>
+    /// Solo per il repository. Il costruttore pubblico è quello di un collegamento NUOVO: data creazione e
+    /// aggiornamento ad "adesso", rifiuta un provider non ammesso e solleva <see cref="OAuthAccountLinkedEvent"/>.
+    /// Usato per ricostruire una riga, ogni aggregato letto portava già un «collegato», e <c>UpdateAsync</c> lo
+    /// consegnava al collector insieme all'evento vero.
+    /// Nessun evento, quindi, e nessuna validazione: la riga è già stata scritta, e un collegamento salvato non
+    /// diventa illeggibile perché l'elenco dei provider ammessi cambia. Il provider resta com'è salvato: il
+    /// costruttore lo porta in minuscolo, e il repository lo scrive e lo cerca già così.
+    /// </remarks>
+    internal static OAuthAccount Reconstitute(
+        Guid id,
+        Guid userId,
+        string provider,
+        string providerUserId,
+        string accessTokenEncrypted,
+        string? refreshTokenEncrypted,
+        DateTime? tokenExpiresAt,
+        DateTime createdAt,
+        DateTime updatedAt) => new()
+        {
+            Id = id,
+            UserId = userId,
+            Provider = provider,
+            ProviderUserId = providerUserId,
+            AccessTokenEncrypted = accessTokenEncrypted,
+            RefreshTokenEncrypted = refreshTokenEncrypted,
+            TokenExpiresAt = tokenExpiresAt,
+            CreatedAt = createdAt,
+            UpdatedAt = updatedAt,
+        };
+
+    /// <summary>
     /// Updates the OAuth tokens (e.g., after refresh).
     /// </summary>
     public void UpdateTokens(

@@ -77,7 +77,7 @@ internal static class EntityLinkUserEndpoints
         .Produces(401)
         .WithTags("EntityLinks")
         .WithSummary("Get entity links (user scope)")
-        .WithDescription("Returns all user-scope links where the entity appears as source or target of a bidirectional link. Supports optional targetEntityType filter (Issue #5188). Issue #5137.");
+        .WithDescription("Returns the caller's own user-scope links where the entity appears as source or target of a bidirectional link: a user-scope link is personal (#4637). Supports optional targetEntityType filter (Issue #5188). Issue #5137.");
     }
 
     private static void MapGetEntityLinkCountEndpoint(RouteGroupBuilder group)
@@ -106,7 +106,7 @@ internal static class EntityLinkUserEndpoints
         .Produces(401)
         .WithTags("EntityLinks")
         .WithSummary("Get entity link count (badge)")
-        .WithDescription("Returns the total count of links for an entity (as source or bidirectional target). Used by MeepleCard badge. Issue #5137.");
+        .WithDescription("Returns the count of links the caller can see for an entity (as source or bidirectional target): shared links and the caller's own user-scope links (#4637). Used by MeepleCard badge. Issue #5137.");
     }
 
     // POST /library/entity-links

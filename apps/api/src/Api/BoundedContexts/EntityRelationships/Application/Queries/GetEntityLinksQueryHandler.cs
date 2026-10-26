@@ -11,7 +11,8 @@ namespace Api.BoundedContexts.EntityRelationships.Application.Queries;
 /// Handler for GetEntityLinksQuery (Issue #5135).
 ///
 /// Retrieves all EntityLinks for the given entity (as source or as target of
-/// bidirectional links). Populates IsOwner on each DTO when RequestingUserId is provided.
+/// bidirectional links). Populates IsOwner on each DTO when RequestingUserId is provided; with it, the User-scope
+/// links of other users are left out (#4637).
 /// When TargetEntityType=KbCard, enriches each link with KbCardStatus (Issue #5188).
 /// </summary>
 internal sealed class GetEntityLinksQueryHandler

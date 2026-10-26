@@ -78,11 +78,24 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
             // multiple games (Task 2 of #2943 introduced dedup reuse via EntityLink).
             // Deleting the record/blob/vectors while another game still links it would
             // orphan those games' KB cards. Gate the destructive path on the last link.
-            var linkCount = await _entityLinkRepository
-                .GetCountForEntityAsync(MeepleEntityType.KbCard, pdfGuid, cancellationToken)
+            //
+            // #4325: the question is "does another game use it?", and only the links that stand up answer it
+            // (KbCardLinkRule, the same rule as the purge of a deleted private game). It used to be a count of
+            // every link of anyone from any id, with the threshold "more than one" standing for "the uploader's
+            // own link plus one": POST /library/entity-links writes a link between any two ids, so a stranger's
+            // links could keep the owner from deleting a PDF, with a success answer. And a count of the links
+            // that stand up can drop the caller's own (its game is gone), so the threshold would read a PDF
+            // that another game still uses as unused. The game letting go of the PDF is the one the caller names,
+            // else the one it was uploaded for.
+            var letGoGameId = command.CallerGameId ?? pdfDoc.SharedGameId ?? pdfDoc.PrivateGameId ?? Guid.Empty;
+            var otherGames = await _db.LiveLinksToPdfs()
+                .Where(l => l.TargetEntityId == pdfGuid && l.SourceEntityId != letGoGameId)
+                .Select(l => l.SourceEntityId)
+                .Distinct()
+                .CountAsync(cancellationToken)
                 .ConfigureAwait(false);
 
-            if (linkCount > 1)
+            if (otherGames > 0)
             {
                 // Issue #2949 finding #1: catalog dedup is GLOBAL, so pdfDoc.SharedGameId
                 // stays pinned to the original uploader game even after other games link
@@ -90,16 +103,14 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
                 // (e.g. RemoveRagFromSharedGameCommandHandler cleaning up that specific
                 // game), remove THAT game's link. Only fall back to SharedGameId for call
                 // sites where caller == uploader's game (no distinct game context exists).
-                var linkRemoved = await RemoveCallerLinkAsync(
+                await RemoveCallerLinkAsync(
                     pdfGuid,
                     command.CallerGameId ?? pdfDoc.SharedGameId,
                     cancellationToken).ConfigureAwait(false);
 
-                var remainingLinks = linkRemoved ? linkCount - 1 : linkCount;
-
                 _logger.LogInformation(
-                    "PDF {PdfId} still referenced by {RemainingLinks} game link(s) after unlink — record/blob/vectors preserved",
-                    pdfId, remainingLinks);
+                    "PDF {PdfId} still used by {OtherGames} other game(s) after unlink — record/blob/vectors preserved",
+                    pdfId, otherGames);
 
                 return new PdfDeleteResult(true, "PDF unlinked from game (still referenced by other games)", storageGameIdForUnlink);
             }
@@ -205,7 +216,7 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
         if (callerGameId is null || callerGameId.Value == Guid.Empty)
         {
             // No owning-game link to remove for this call; the record survives
-            // because other links exist (linkCount > 1 already established).
+            // because other games use it (established by the caller).
             return false;
         }
 

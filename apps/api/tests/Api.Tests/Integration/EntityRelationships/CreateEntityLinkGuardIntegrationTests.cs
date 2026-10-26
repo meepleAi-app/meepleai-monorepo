@@ -28,13 +28,14 @@ namespace Api.Tests.Integration.EntityRelationships;
 /// <remarks>
 /// <para>
 /// Scope, decided 2026-10-26: only the pair the code treats as fact, <c>Game</c> and <c>KbCard</c>, and only on the
-/// endpoint. The other seven entity types are not checked yet. The flows that link on their own (upload, reuse by
+/// endpoint. Player, Session, Agent, Document, ChatSession, Event and Toolkit are not checked yet. The flows that link on their own (upload, reuse by
 /// deduplication) send <c>CreateEntityLinkCommand</c> to the mediator directly and are untouched; one case below
 /// pins it.
 /// </para>
 /// <para>
-/// A game is linkable when it is a catalog game that exists, or a private game of the caller that exists. A PDF is
-/// linkable when the caller uploaded it. "Not found" and "not yours" answer the same 404, so the endpoint does not
+/// A game is linkable when it is a private game of the caller that exists, or a catalog game that exists; to attach a
+/// PDF to a catalog game, one that the caller has in the library (as <c>AddRulebook</c> asks). A PDF is linkable when
+/// the caller uploaded it. "Not found" and "not yours" answer the same 404, so the endpoint does not
 /// say which ids exist.
 /// </para>
 /// <para>On Postgres, over HTTP.</para>
@@ -154,6 +155,22 @@ public sealed class CreateEntityLinkGuardIntegrationTests
         response.StatusCode.Should().Be(HttpStatusCode.NotFound, await response.Content.ReadAsStringAsync(Ct));
     }
 
+    /// <summary>
+    /// A catalog game that exists but that the caller does not have in the library: <c>AddRulebook</c> would answer 403
+    /// for it. Without this, anybody could attach their PDF to any catalog game, and it would show in the rulebook list
+    /// of everyone who owns that game.
+    /// </summary>
+    [Fact]
+    public async Task ACatalogGameNotInYourLibrary_LinkedToYourOwnPdf_IsRefused()
+    {
+        var catalogGame = await SeedCatalogGameAsync(deleted: false);
+
+        var response = await CreateLinkAsync(catalogGame, MeepleEntityType.Game, _pdfId, MeepleEntityType.KbCard);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound, await response.Content.ReadAsStringAsync(Ct));
+        (await LinksOfAsync(_pdfId)).Should().Be(0);
+    }
+
     // ─── Allowed ─────────────────────────────────────────────────
 
     /// <summary>What the upload creates for a private game, and what the user is allowed to do by hand.</summary>
@@ -166,11 +183,12 @@ public sealed class CreateEntityLinkGuardIntegrationTests
         (await LinksOfAsync(_pdfId)).Should().Be(1);
     }
 
-    /// <summary>What <c>AddRulebook</c> creates for a catalog game: the uploader links a catalog game that exists.</summary>
+    /// <summary>What <c>AddRulebook</c> creates for a catalog game: the uploader links a catalog game of her library.</summary>
     [Fact]
-    public async Task ACatalogGame_LinkedToYourOwnPdf_IsCreated()
+    public async Task ACatalogGameInYourLibrary_LinkedToYourOwnPdf_IsCreated()
     {
         var catalogGame = await SeedCatalogGameAsync(deleted: false);
+        await AddToLibraryAsync(catalogGame);
 
         var response = await CreateLinkAsync(catalogGame, MeepleEntityType.Game, _pdfId, MeepleEntityType.KbCard);
 
@@ -256,6 +274,20 @@ public sealed class CreateEntityLinkGuardIntegrationTests
             linkType = linkType.ToString(),
         });
         return await _client.SendAsync(request, Ct);
+    }
+
+    private async Task AddToLibraryAsync(Guid catalogGameId)
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        db.UserLibraryEntries.Add(new UserLibraryEntryEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = _userId,
+            SharedGameId = catalogGameId,
+            AddedAt = DateTime.UtcNow,
+        });
+        await db.SaveChangesAsync(Ct);
     }
 
     private async Task<int> LinksOfAsync(Guid pdfId)

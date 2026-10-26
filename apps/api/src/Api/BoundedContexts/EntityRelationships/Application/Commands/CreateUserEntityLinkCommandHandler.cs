@@ -19,12 +19,16 @@ namespace Api.BoundedContexts.EntityRelationships.Application.Commands;
 /// things that exist and that the caller may link.
 /// </para>
 /// <list type="bullet">
-/// <item><b>Game</b>, on either end: a catalog game that exists, or a private game of the caller that exists.</item>
+/// <item><b>Game</b>, on either end: a private game of the caller that exists, or a catalog game that exists. When
+/// the other end is a PDF the catalog game also has to be in the caller's library, as <c>AddRulebook</c> asks: otherwise
+/// anybody could attach their PDF to any catalog game, and it would show up in the rulebook list of everyone who owns
+/// that game.</item>
 /// <item><b>KbCard</b>: a PDF the caller uploaded. A PDF of the catalog that somebody else uploaded is not the
 /// caller's to link: <c>SharedGameId</c> is set on every PDF a user uploads against a catalog game, so it says nothing
 /// about who may link it, and the reuse of such a PDF is done by the deduplication on its own, not through here.</item>
 /// <item><b>Any other type</b> is not checked: only the pair that the code treats as fact is covered, as decided on
-/// 2026-10-26. The other seven entity types are the next ones to cover if a reader starts to trust them.</item>
+/// 2026-10-26. Player, Session, Agent, Document, ChatSession, Event and Toolkit are the next ones to cover if a
+/// reader starts to trust them.</item>
 /// </list>
 /// <para>
 /// "Does not exist" and "is not yours" give the same <see cref="NotFoundException"/>, so the answer does not say
@@ -48,10 +52,13 @@ internal sealed class CreateUserEntityLinkCommandHandler
     {
         ArgumentNullException.ThrowIfNull(command);
 
+        var linksAPdf = command.SourceEntityType == MeepleEntityType.KbCard
+                        || command.TargetEntityType == MeepleEntityType.KbCard;
+
         await EnsureTheCallerMayLinkAsync(
-            command.SourceEntityType, command.SourceEntityId, command.OwnerUserId, cancellationToken).ConfigureAwait(false);
+            command.SourceEntityType, command.SourceEntityId, command.OwnerUserId, linksAPdf, cancellationToken).ConfigureAwait(false);
         await EnsureTheCallerMayLinkAsync(
-            command.TargetEntityType, command.TargetEntityId, command.OwnerUserId, cancellationToken).ConfigureAwait(false);
+            command.TargetEntityType, command.TargetEntityId, command.OwnerUserId, linksAPdf, cancellationToken).ConfigureAwait(false);
 
         return await _mediator.Send(
             new CreateEntityLinkCommand(
@@ -69,7 +76,7 @@ internal sealed class CreateUserEntityLinkCommandHandler
 
     // The soft-delete filters of the context (private and catalog games) leave out the games that are deleted.
     private async Task EnsureTheCallerMayLinkAsync(
-        MeepleEntityType type, Guid id, Guid callerId, CancellationToken cancellationToken)
+        MeepleEntityType type, Guid id, Guid callerId, bool linksAPdf, CancellationToken cancellationToken)
     {
         var mayLink = type switch
         {
@@ -77,9 +84,7 @@ internal sealed class CreateUserEntityLinkCommandHandler
                 await _db.PrivateGames
                     .AnyAsync(g => g.Id == id && g.OwnerId == callerId, cancellationToken)
                     .ConfigureAwait(false)
-                || await _db.SharedGames
-                    .AnyAsync(g => g.Id == id, cancellationToken)
-                    .ConfigureAwait(false),
+                || await MayLinkACatalogGameAsync(id, callerId, linksAPdf, cancellationToken).ConfigureAwait(false),
             MeepleEntityType.KbCard =>
                 await _db.PdfDocuments
                     .AnyAsync(p => p.Id == id && p.UploadedByUserId == callerId, cancellationToken)
@@ -91,5 +96,23 @@ internal sealed class CreateUserEntityLinkCommandHandler
         {
             throw new NotFoundException(type.ToString(), id.ToString());
         }
+    }
+
+    /// <summary>
+    /// A catalog game that exists. To attach a PDF to it, also one the caller has in the library (the same ask as
+    /// <c>AddRulebook</c>).
+    /// </summary>
+    private async Task<bool> MayLinkACatalogGameAsync(
+        Guid id, Guid callerId, bool linksAPdf, CancellationToken cancellationToken)
+    {
+        if (!await _db.SharedGames.AnyAsync(g => g.Id == id, cancellationToken).ConfigureAwait(false))
+        {
+            return false;
+        }
+
+        return !linksAPdf
+               || await _db.UserLibraryEntries
+                   .AnyAsync(e => e.UserId == callerId && e.SharedGameId == id, cancellationToken)
+                   .ConfigureAwait(false);
     }
 }

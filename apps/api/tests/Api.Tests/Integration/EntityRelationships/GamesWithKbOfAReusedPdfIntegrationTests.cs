@@ -21,6 +21,11 @@ namespace Api.Tests.Integration.EntityRelationships;
 /// games with a knowledge base (<c>GET /users/{userId}/games/with-kb</c>) joins the library of whoever asks to the links
 /// of the game, <b>of anybody</b>, and then to the PDFs: with two links to one PDF it listed the PDF twice, to both users.
 /// </summary>
+/// <remarks>
+/// Decision (2026-10-26): the PDFs a user can use are those of the games they declared to own, which is the rule the chat
+/// already applies (<c>CanAccessRagAsync</c>: admin, public RAG, or declared ownership). The list is the chat selection
+/// screen, so it follows the same rule: all the PDFs of the game, or none.
+/// </remarks>
 [Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("Dependency", "PostgreSQL")]
@@ -67,6 +72,7 @@ public sealed class GamesWithKbOfAReusedPdfIntegrationTests : IAsyncLifetime
                 Id = Guid.NewGuid(),
                 UserId = id,
                 SharedGameId = _gameId,
+                OwnershipDeclaredAt = DateTime.UtcNow,
             });
         }
 
@@ -148,5 +154,56 @@ public sealed class GamesWithKbOfAReusedPdfIntegrationTests : IAsyncLifetime
         var games = await new GetGamesWithKbQueryHandler(_db).Handle(new GetGamesWithKbQuery(_userB), Ct);
 
         games.Should().ContainSingle().Which.Rulebooks.Should().ContainSingle();
+    }
+
+    /// <summary>The user has the game in the library and never declared to own it: the chat refuses it, so the list does not offer it.</summary>
+    [Fact]
+    public async Task AGameWhoseOwnershipIsNotDeclared_IsNotOffered()
+    {
+        await LinkBothUsersAsync();
+        await _db.UserLibraryEntries
+            .Where(e => e.UserId == _userB)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.OwnershipDeclaredAt, (DateTime?)null), Ct);
+        var handler = new GetGamesWithKbQueryHandler(_db);
+
+        var asB = await handler.Handle(new GetGamesWithKbQuery(_userB), Ct);
+        var asA = await handler.Handle(new GetGamesWithKbQuery(_userA), Ct);
+
+        asB.Should().BeEmpty("B never declared to own the game");
+        asA.Should().ContainSingle("A did, and the rule is the same for both");
+    }
+
+    /// <summary>A game whose RAG is public is usable by everybody, declared ownership or not.</summary>
+    [Fact]
+    public async Task AGameWithPublicRag_IsOffered_WithoutADeclaration()
+    {
+        await LinkBothUsersAsync();
+        await _db.UserLibraryEntries
+            .Where(e => e.UserId == _userB)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.OwnershipDeclaredAt, (DateTime?)null), Ct);
+        await _db.SharedGames
+            .Where(g => g.Id == _gameId)
+            .ExecuteUpdateAsync(s => s.SetProperty(g => g.IsRagPublic, true), Ct);
+
+        var asB = await new GetGamesWithKbQueryHandler(_db).Handle(new GetGamesWithKbQuery(_userB), Ct);
+
+        asB.Should().ContainSingle();
+    }
+
+    /// <summary>An admin can always use the chat of a game, so the list offers it.</summary>
+    [Fact]
+    public async Task AnAdmin_IsOffered_TheGame_WithoutADeclaration()
+    {
+        await LinkBothUsersAsync();
+        await _db.UserLibraryEntries
+            .Where(e => e.UserId == _userB)
+            .ExecuteUpdateAsync(s => s.SetProperty(e => e.OwnershipDeclaredAt, (DateTime?)null), Ct);
+        await _db.Users
+            .Where(u => u.Id == _userB)
+            .ExecuteUpdateAsync(s => s.SetProperty(u => u.Role, "Admin"), Ct);
+
+        var asB = await new GetGamesWithKbQueryHandler(_db).Handle(new GetGamesWithKbQuery(_userB), Ct);
+
+        asB.Should().ContainSingle();
     }
 }

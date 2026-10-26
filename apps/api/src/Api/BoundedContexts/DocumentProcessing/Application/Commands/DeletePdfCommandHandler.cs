@@ -114,11 +114,14 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
                 // games, through links the global dedup wrote before #4326). When the
                 // command carries an explicit caller game
                 // (e.g. RemoveRagFromSharedGameCommandHandler cleaning up that specific
-                // game), remove THAT game's links. Only fall back to SharedGameId for call
-                // sites where caller == uploader's game (no distinct game context exists).
+                // game), remove THAT game's links, whoever wrote them: the flow decides for the game.
+                // Only fall back to SharedGameId for call sites where caller == uploader's game (no
+                // distinct game context exists): there the uploader is letting go, and only the links
+                // the uploader wrote go (#4641). A second user who declared the same file keeps theirs.
                 var linkRemoved = await RemoveCallerLinkAsync(
                     pdfGuid,
                     command.CallerGameId ?? pdfDoc.SharedGameId,
+                    command.CallerGameId is null ? uploadedByUserId : null,
                     cancellationToken).ConfigureAwait(false);
 
                 _logger.LogInformation(
@@ -227,11 +230,12 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
     /// Removes only the calling game's Game→KbCard links (the last-link case is
     /// handled by the destructive path in <see cref="Handle"/>). Used when other
     /// games still reference this PDF, so the record must survive. A game can hold one
-    /// link for each user who uploaded the file (#4641): the game letting go of the PDF
-    /// lets go of all of them.
+    /// link for each user who declared the file (#4641). With <paramref name="onlyLinksOfUser"/>
+    /// only that user's links go; without it the game lets go of all of them.
     /// </summary>
     /// <returns><c>true</c> if a matching link was found and removed; otherwise <c>false</c>.</returns>
-    private async Task<bool> RemoveCallerLinkAsync(Guid pdfGuid, Guid? callerGameId, CancellationToken cancellationToken)
+    private async Task<bool> RemoveCallerLinkAsync(
+        Guid pdfGuid, Guid? callerGameId, Guid? onlyLinksOfUser, CancellationToken cancellationToken)
     {
         if (callerGameId is null || callerGameId.Value == Guid.Empty)
         {
@@ -253,7 +257,8 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
                 l.SourceEntityType == MeepleEntityType.Game &&
                 l.SourceEntityId == callerGameId.Value &&
                 l.TargetEntityType == MeepleEntityType.KbCard &&
-                l.TargetEntityId == pdfGuid)
+                l.TargetEntityId == pdfGuid &&
+                (onlyLinksOfUser is null || l.OwnerUserId == onlyLinksOfUser))
             .ToList();
 
         if (callerLinks.Count == 0)

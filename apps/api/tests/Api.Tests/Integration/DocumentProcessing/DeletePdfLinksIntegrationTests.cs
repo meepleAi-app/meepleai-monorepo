@@ -378,12 +378,12 @@ public sealed class DeletePdfLinksIntegrationTests
     }
 
     /// <summary>
-    /// #4641: a catalog game can hold two links to the same PDF, one for each user who uploaded the file. The game that
-    /// lets go of the PDF lets go of both: removing one of them (whichever came first) left the other user's link on a
-    /// game that no longer has the PDF, and the list of the games with a knowledge base kept showing it there.
+    /// #4641: a catalog game can hold two links to the same PDF, one for each user who declared to have the file. When
+    /// the uploader takes the PDF off the game (the user flow names no caller game), the uploader's links go; the other
+    /// user's stays, because that user declared it too and the PDF is still there for the game that uses it.
     /// </summary>
     [Fact]
-    public async Task TheGameLettingGo_LosesTheLinksOfEveryUser_NotJustOne()
+    public async Task TheUploaderLettingGo_KeepsTheLinkOfTheOtherUser()
     {
         var (secondUploaderId, _) = await SeedStrangerWithAGameAsync();
         var uploadedFor = await SeedCatalogGameAsync(deleted: false);
@@ -397,8 +397,34 @@ public sealed class DeletePdfLinksIntegrationTests
 
         result.Success.Should().BeTrue();
         result.Message.Should().Contain("unlinked");
-        (await LiveLinksAsync(uploadedFor, _pdfId)).Should().Be(0, "the game let go of the PDF, for both of its users");
-        (await LiveLinksAsync(otherGame, _pdfId)).Should().Be(1, "the other game keeps its link");
+        (await LinkOwnersAsync(uploadedFor, _pdfId)).Should().BeEquivalentTo(new[] { secondUploaderId },
+            "the uploader's link went, the other user's did not");
+        (await LinkOwnersAsync(otherGame, _pdfId)).Should().BeEquivalentTo(new[] { _userId });
+        (await PdfExistsAsync(_pdfId)).Should().BeTrue("the other game still uses it");
+    }
+
+    /// <summary>
+    /// The flow that names a caller game (an admin taking the RAG off a catalog game) decides for the game, not for a
+    /// user: every link of that game to the PDF goes, whoever wrote it.
+    /// </summary>
+    [Fact]
+    public async Task ANamedCallerGame_LosesTheLinksOfEveryUser()
+    {
+        var (secondUploaderId, _) = await SeedStrangerWithAGameAsync();
+        var uploadedFor = await SeedCatalogGameAsync(deleted: false);
+        var otherGame = await SeedCatalogGameAsync(deleted: false);
+        await MakeItACatalogPdfAsync(_pdfId, uploadedFor);
+        await LinkAsync(uploadedFor, _pdfId, _userId);
+        await LinkAsync(uploadedFor, _pdfId, secondUploaderId);
+        await LinkAsync(otherGame, _pdfId, _userId);
+
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var result = await scope.ServiceProvider.GetRequiredService<IMediator>()
+            .Send(new DeletePdfCommand(_pdfId.ToString(), CallerGameId: uploadedFor), Ct);
+
+        result.Success.Should().BeTrue();
+        (await LinkOwnersAsync(uploadedFor, _pdfId)).Should().BeEmpty("the game let go of the PDF, for every user");
+        (await LinkOwnersAsync(otherGame, _pdfId)).Should().BeEquivalentTo(new[] { _userId });
         (await PdfExistsAsync(_pdfId)).Should().BeTrue("the other game still uses it");
     }
 
@@ -522,12 +548,14 @@ public sealed class DeletePdfLinksIntegrationTests
             .Send(new DeletePdfCommand(pdfId.ToString()), Ct);
     }
 
-    private async Task<int> LiveLinksAsync(Guid gameId, Guid pdfId)
+    private async Task<List<Guid>> LinkOwnersAsync(Guid gameId, Guid pdfId)
     {
         using var scope = _hostFixture.Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        return await db.EntityLinks.CountAsync(l =>
-            l.SourceEntityId == gameId && l.TargetEntityId == pdfId && l.TargetEntityType == MeepleEntityType.KbCard, Ct);
+        return await db.EntityLinks
+            .Where(l => l.SourceEntityId == gameId && l.TargetEntityId == pdfId && l.TargetEntityType == MeepleEntityType.KbCard)
+            .Select(l => l.OwnerUserId)
+            .ToListAsync(Ct);
     }
 
     private async Task<bool> PdfExistsAsync(Guid pdfId)

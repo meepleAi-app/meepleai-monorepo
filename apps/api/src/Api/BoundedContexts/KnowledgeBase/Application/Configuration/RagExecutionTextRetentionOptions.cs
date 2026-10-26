@@ -18,18 +18,15 @@ public sealed class RagExecutionTextRetentionOptions
     public const int DefaultRetentionDays = 90;
 
     /// <summary>
-    /// Default number of rows blanked per statement, to avoid one long write on the table.
+    /// Rows blanked per statement, to avoid one long write on the table. Not a setting: the connection has a 30 second
+    /// command timeout, and a batch large enough to exceed it would roll back as a whole every night, so the backlog
+    /// would never shrink. 5,000 rows leaves a wide margin.
     /// </summary>
-    public const int DefaultBatchSize = 5_000;
+    public const int BatchSize = 5_000;
 
     /// <summary>
     /// Rows older than this many days lose their texts. Zero or less is a misconfiguration, not "blank everything":
     /// the job logs a warning and touches nothing.
     /// </summary>
     public int RetentionDays { get; set; } = DefaultRetentionDays;
-
-    /// <summary>
-    /// Rows blanked per statement. Zero or less falls back to <see cref="DefaultBatchSize"/>.
-    /// </summary>
-    public int BatchSize { get; set; } = DefaultBatchSize;
 }

@@ -223,6 +223,23 @@ public sealed class RagExecutionTextRetentionJobIntegrationTests : IAsyncLifetim
     }
 
     /// <summary>
+    /// A shutdown cancels the token. The sweep stops at the next batch instead of finishing the whole backlog, and
+    /// what it did not reach is still there for the next round.
+    /// </summary>
+    [Fact]
+    public async Task ACancelledToken_StopsTheSweep_BeforeBlankingAnything()
+    {
+        var old = await SeedAsync(ageDays: 120);
+        using var cancelled = new CancellationTokenSource();
+        await cancelled.CancelAsync();
+
+        var act = () => _repository!.BlankTextsOlderThanAsync(DateTime.UtcNow.AddDays(-90), 5000, cancelled.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        (await ReadAsync(old)).Query.Should().Be(Question);
+    }
+
+    /// <summary>
     /// A batch size that is not positive is a caller bug: it would read no rows and report a clean sweep, so it is
     /// rejected.
     /// </summary>

@@ -39,29 +39,29 @@ internal sealed class RagExecutionTextRetentionJob : IJob
 
     public async Task Execute(IJobExecutionContext context)
     {
-        var config = _options.Value;
-
-        if (config.RetentionDays <= 0)
-        {
-            _logger.LogWarning(
-                "RAG execution text retention job: RetentionDays={RetentionDays} is not a positive number of days, nothing is blanked",
-                config.RetentionDays);
-            return;
-        }
-
-        var batchSize = config.BatchSize > 0 ? config.BatchSize : RagExecutionTextRetentionOptions.DefaultBatchSize;
-
-        _logger.LogInformation(
-            "Starting RAG execution text retention job: RetentionDays={RetentionDays}, FireTime={FireTime}",
-            config.RetentionDays, context.FireTimeUtc);
-
         try
         {
-            var cutoff = DateTime.UtcNow.AddDays(-config.RetentionDays);
+            // The options are read inside the try: a value that does not bind (a non-numeric RetentionDays from an
+            // environment variable) throws on .Value, and a background job must not take the scheduler down.
+            var retentionDays = _options.Value.RetentionDays;
+
+            if (retentionDays <= 0)
+            {
+                _logger.LogWarning(
+                    "RAG execution text retention job: RetentionDays={RetentionDays} is not a positive number of days, nothing is blanked",
+                    retentionDays);
+                return;
+            }
+
+            _logger.LogInformation(
+                "Starting RAG execution text retention job: RetentionDays={RetentionDays}, FireTime={FireTime}",
+                retentionDays, context.FireTimeUtc);
+
+            var cutoff = DateTime.UtcNow.AddDays(-retentionDays);
 
             var blankedCount = await _repository.BlankTextsOlderThanAsync(
                 cutoff,
-                batchSize,
+                RagExecutionTextRetentionOptions.BatchSize,
                 context.CancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation(
@@ -78,9 +78,7 @@ internal sealed class RagExecutionTextRetentionJob : IJob
 #pragma warning restore S125
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            _logger.LogError(ex,
-                "RAG execution text retention job failed: RetentionDays={RetentionDays}",
-                config.RetentionDays);
+            _logger.LogError(ex, "RAG execution text retention job failed");
 
             context.Result = new { Success = false, Error = ex.Message };
         }

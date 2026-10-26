@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Configuration;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Scheduling;
 using Api.Tests.Constants;
@@ -57,7 +58,6 @@ public sealed class RagExecutionTextRetentionRegistrationTests
         var options = provider.GetRequiredService<IOptions<RagExecutionTextRetentionOptions>>().Value;
 
         options.RetentionDays.Should().Be(RagExecutionTextRetentionOptions.DefaultRetentionDays);
-        options.BatchSize.Should().Be(RagExecutionTextRetentionOptions.DefaultBatchSize);
     }
 
     [Fact]
@@ -66,13 +66,29 @@ public sealed class RagExecutionTextRetentionRegistrationTests
         using var provider = BuildProvider(new Dictionary<string, string?>
         {
             [$"{RagExecutionTextRetentionOptions.SectionKey}:RetentionDays"] = "30",
-            [$"{RagExecutionTextRetentionOptions.SectionKey}:BatchSize"] = "250",
         });
 
         var options = provider.GetRequiredService<IOptions<RagExecutionTextRetentionOptions>>().Value;
 
         options.RetentionDays.Should().Be(30);
-        options.BatchSize.Should().Be(250);
+    }
+
+    /// <summary>
+    /// The job is built by Quartz from the container, with the repository it needs. There are two interfaces called
+    /// <c>IRagExecutionRepository</c> (KnowledgeBase and Administration); the job takes the KnowledgeBase one, and a
+    /// missing registration would show at 05:00 in production, not in a test.
+    /// </summary>
+    [Fact]
+    public void TheRepositoryTheJobNeeds_IsRegistered()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        var configuration = new ConfigurationBuilder().AddInMemoryCollection().Build();
+        services.AddSingleton<IConfiguration>(configuration);
+
+        services.AddKnowledgeBaseServices(configuration);
+
+        services.Should().Contain(d => d.ServiceType == typeof(IRagExecutionRepository));
     }
 
     [Fact]

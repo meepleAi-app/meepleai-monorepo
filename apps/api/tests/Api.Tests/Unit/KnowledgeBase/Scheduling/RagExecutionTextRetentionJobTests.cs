@@ -35,12 +35,12 @@ public sealed class RagExecutionTextRetentionJobTests
         new(_repositoryMock.Object, Options.Create(options), Mock.Of<ILogger<RagExecutionTextRetentionJob>>());
 
     [Fact]
-    public async Task Execute_BlanksTheRowsOlderThanTheConfiguredDays_InBatchesOfTheConfiguredSize()
+    public async Task Execute_BlanksTheRowsOlderThanTheConfiguredDays_InBatchesOfTheFixedSize()
     {
         _repositoryMock
             .Setup(r => r.BlankTextsOlderThanAsync(It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(7);
-        var job = CreateJob(new RagExecutionTextRetentionOptions { RetentionDays = 30, BatchSize = 200 });
+        var job = CreateJob(new RagExecutionTextRetentionOptions { RetentionDays = 30 });
 
         var before = DateTime.UtcNow.AddDays(-30);
         await job.Execute(_contextMock.Object);
@@ -48,7 +48,7 @@ public sealed class RagExecutionTextRetentionJobTests
 
         _repositoryMock.Verify(r => r.BlankTextsOlderThanAsync(
             It.Is<DateTime>(d => d >= before && d <= after),
-            200,
+            RagExecutionTextRetentionOptions.BatchSize,
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -70,17 +70,23 @@ public sealed class RagExecutionTextRetentionJobTests
             It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-3)]
-    public async Task Execute_WithABatchSizeThatIsNotPositive_UsesTheDefaultBatch(int batchSize)
+    /// <summary>
+    /// A value that does not bind (a non-numeric <c>RetentionDays</c> from an environment variable) makes
+    /// <c>IOptions.Value</c> throw. That is a wrong setting like the others, and it must not take the scheduler down.
+    /// </summary>
+    [Fact]
+    public async Task Execute_WhenTheOptionsDoNotBind_DoesNotPropagate_AndTouchesNothing()
     {
-        var job = CreateJob(new RagExecutionTextRetentionOptions { RetentionDays = 90, BatchSize = batchSize });
+        var options = new Mock<IOptions<RagExecutionTextRetentionOptions>>();
+        options.Setup(o => o.Value).Throws(new InvalidOperationException("Failed to convert configuration value 'abc' to type 'System.Int32'."));
+        var job = new RagExecutionTextRetentionJob(
+            _repositoryMock.Object, options.Object, Mock.Of<ILogger<RagExecutionTextRetentionJob>>());
 
-        await job.Execute(_contextMock.Object);
+        var act = () => job.Execute(_contextMock.Object);
 
+        await act.Should().NotThrowAsync();
         _repositoryMock.Verify(r => r.BlankTextsOlderThanAsync(
-            It.IsAny<DateTime>(), RagExecutionTextRetentionOptions.DefaultBatchSize, It.IsAny<CancellationToken>()), Times.Once);
+            It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     /// <summary>

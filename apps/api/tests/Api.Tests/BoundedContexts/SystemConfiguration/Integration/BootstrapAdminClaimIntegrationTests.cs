@@ -52,11 +52,18 @@ public sealed class BootstrapAdminClaimHostFixture(SharedTestcontainersFixture s
 /// asserzioni possono fallire: con il flag a <c>false</c> la stessa registrazione promuove, e una chiave
 /// qualunque si modifica ancora.
 /// </para>
+/// <para>
+/// #4617: il token apre la strada al primo admin, non a un altro, quindi il claim è rifiutato se in database
+/// c'è già un Admin o un SuperAdmin, qualunque sia la riga. Questi test hanno bisogno di un admin per chiamare
+/// l'API, ma per provare che è il flag a tenere chiuso il claim l'admin non deve esserci al momento della
+/// registrazione: <see cref="TheTestAdminStepsDownAsync"/> lo declassa prima.
+/// </para>
 /// </remarks>
 [Collection("Integration-GroupD")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SystemConfiguration")]
 [Trait("Issue", "4612")]
+[Trait("Issue", "4617")]
 public sealed class BootstrapAdminClaimIntegrationTests : IClassFixture<BootstrapAdminClaimHostFixture>, IAsyncLifetime
 {
     private const string BootstrapKey = "Authentication:BootstrapAdmin";
@@ -294,6 +301,67 @@ public sealed class BootstrapAdminClaimIntegrationTests : IClassFixture<Bootstra
     }
 
     // ---------------------------------------------------------------------------------------------------
+    // #4617: il token apre la strada al PRIMO admin, non a un altro
+    // ---------------------------------------------------------------------------------------------------
+
+    [Fact]
+    public async Task Claim_WhenAnAdminAlreadyExists_AndTheRowIsAbsent_IsRefused_AndWritesNothing()
+    {
+        // L'ambiente seminato: l'admin c'è (CoreSeedLayer lo crea in ogni profilo), la riga del bootstrap non è mai
+        // nata perché nessuno ha usato il token. Il primo claim non deve restare disponibile a chi lo conosce.
+        var (status, role) = await RegisterWithTheTokenAsync();
+
+        status.Should().Be(HttpStatusCode.OK, "the account is still created");
+        role.Should().Be("user", "an environment that already has an admin does not hand out a second one for a token");
+        (await ReadBootstrapRowsAsync()).Should().BeEmpty("a refused claim must not create the row");
+    }
+
+    [Fact]
+    public async Task Claim_WhenAnAdminAlreadyExists_AndTheFlagWasReset_IsRefused_AndLeavesTheRowAlone()
+    {
+        // Le righe azzerate dal difetto di #4612 prima di #4616: il flag è tornato a false, e #4616 non le ripara.
+        var row = await SeedBootstrapRowAsync(claimed: false);
+
+        var (status, role) = await RegisterWithTheTokenAsync();
+
+        status.Should().Be(HttpStatusCode.OK);
+        role.Should().Be("user", "the admin that exists closes the claim even when the flag says it is open");
+        var after = await ReadRowAsync(row);
+        after.BootstrapAdminCreated.Should().BeFalse("a refused claim writes nothing, not even the flag");
+        after.BootstrapAdminCreatedAt.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Claim_WhenOnlyASuperAdminExists_IsRefused()
+    {
+        // L'admin del test lascia; resta un SuperAdmin, che il seeder crea da INITIAL_ADMIN_EMAIL.
+        await TheTestAdminStepsDownAsync();
+        await SeedSessionOfAsync(TestSessionHelper.CreateSuperAdminSessionAsync);
+        var row = await SeedBootstrapRowAsync(claimed: false);
+
+        var (status, role) = await RegisterWithTheTokenAsync();
+
+        status.Should().Be(HttpStatusCode.OK);
+        role.Should().Be("user", "a SuperAdmin counts as an existing administrator");
+        (await ReadRowAsync(row)).BootstrapAdminCreated.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Claim_WhenNoAdminExists_AndTheRowIsAbsent_PromotesAndCreatesTheRow()
+    {
+        // Il ramo «primo claim» resta quello che era: un database senza admin (un editor non lo è) e senza riga.
+        await TheTestAdminStepsDownAsync();
+        await SeedSessionOfAsync(TestSessionHelper.CreateEditorSessionAsync);
+
+        var (status, role) = await RegisterWithTheTokenAsync();
+
+        status.Should().Be(HttpStatusCode.OK);
+        role.Should().Be("admin", "with no administrator the configured token still provisions the first one");
+        var rows = await ReadBootstrapRowsAsync();
+        rows.Should().ContainSingle().Which.BootstrapAdminCreated.Should().BeTrue("the claim consumes the flag");
+    }
+
+    // ---------------------------------------------------------------------------------------------------
     // Controlli di contorno
     // ---------------------------------------------------------------------------------------------------
 
@@ -302,6 +370,7 @@ public sealed class BootstrapAdminClaimIntegrationTests : IClassFixture<Bootstra
     {
         // Senza questo, «non promuove» passerebbe anche con una registrazione che non può promuovere mai.
         var row = await SeedBootstrapRowAsync(claimed: false);
+        await TheTestAdminStepsDownAsync();
 
         var (status, role) = await RegisterWithTheTokenAsync();
 
@@ -338,6 +407,9 @@ public sealed class BootstrapAdminClaimIntegrationTests : IClassFixture<Bootstra
         var flagAfterTheOperation = rows.Count == 1 ? rows[0].BootstrapAdminCreated : (bool?)null;
         var claimedAtAfterTheOperation = rows.Count == 1 ? rows[0].BootstrapAdminCreatedAt : null;
 
+        // Dopo #4617 il claim è rifiutato comunque se in database c'è un admin, e l'admin di questo test c'è:
+        // senza questo passo «il ruolo resta user» passerebbe per quella ragione, non perché il flag è chiuso.
+        await TheTestAdminStepsDownAsync();
         var (status, role) = await RegisterWithTheTokenAsync();
 
         using var scope = new AssertionScope();
@@ -346,6 +418,25 @@ public sealed class BootstrapAdminClaimIntegrationTests : IClassFixture<Bootstra
         claimedAtAfterTheOperation.Should().Be(ClaimedAt, "the claim date is not rewritten either");
         status.Should().Be(HttpStatusCode.OK, "a registration with the token still creates the account");
         role.Should().Be("user", "a registration with the bootstrap token must not promote once the claim was consumed");
+    }
+
+    /// <summary>
+    /// L'admin che questi test usano per chiamare l'API torna utente semplice: da qui in poi in database non ce
+    /// n'è nessuno, come in un ambiente dove il token è l'unica strada al primo admin (#4617).
+    /// </summary>
+    private async Task TheTestAdminStepsDownAsync()
+    {
+        using var scope = _host.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        await db.Set<UserEntity>().Where(u => u.Id == _adminId)
+            .ExecuteUpdateAsync(s => s.SetProperty(u => u.Role, "user"));
+    }
+
+    private async Task SeedSessionOfAsync(Func<MeepleAiDbContext, Guid?, CancellationToken, Task<(Guid UserId, string RawToken)>> create)
+    {
+        using var scope = _host.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        await create(db, null, CancellationToken.None);
     }
 
     private async Task<(HttpStatusCode Status, string? Role)> RegisterWithTheTokenAsync()

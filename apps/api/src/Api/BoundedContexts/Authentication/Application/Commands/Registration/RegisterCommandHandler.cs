@@ -225,8 +225,8 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
 
     /// <summary>
     /// C5 + F1: atomic single-use bootstrap-admin claim. Returns true only
-    /// when the supplied token matches the configured one (constant-time)
-    /// AND this call wins the race to flip the singleton SystemConfiguration
+    /// when the supplied token matches the configured one (constant-time),
+    /// no Admin or SuperAdmin exists yet (#4617), AND this call wins the race to flip the singleton SystemConfiguration
     /// row's <c>BootstrapAdminCreated</c> flag from false to true. Concurrent
     /// valid-token callers all hit the same row but only one transitions the
     /// flag — Postgres serialises both the unique-constraint INSERT and the
@@ -257,6 +257,20 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
             return false;
         if (!CryptographicOperations.FixedTimeEquals(configBytes, inputBytes))
             return false;
+
+        // #4617: the token opens the way to the FIRST administrator, not to another one. Any Admin or SuperAdmin
+        // already in the database refuses the claim before anything is written: no flag flipped, no row created.
+        // This closes the seeded environments (CoreSeedLayer always creates a SuperAdmin, while the row is born
+        // only at the first claim) and the rows a pre-#4616 write reset to false. It runs after the token compare
+        // so a wrong token costs no query, and the registering user is still Role.User here (promoted only after
+        // a win), so the count is of other people.
+        if (await _userRepository.CountAdminsAsync(cancellationToken).ConfigureAwait(false) > 0)
+        {
+            _logger.LogWarning(
+                "Bootstrap admin token presented but an Admin or SuperAdmin already exists — " +
+                "claim refused; clear AUTHENTICATION__BOOTSTRAPADMINTOKEN on this environment.");
+            return false;
+        }
 
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 

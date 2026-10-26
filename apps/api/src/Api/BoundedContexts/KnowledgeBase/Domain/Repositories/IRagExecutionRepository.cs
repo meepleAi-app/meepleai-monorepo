@@ -33,6 +33,15 @@ public interface IRagExecutionRepository
     Task<int> DeleteOlderThanAsync(DateTime cutoff, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Blanks the question and the execution trace of the rows created before <paramref name="cutoff"/> and keeps the
+    /// rows, so the dashboard and the per-agent statistics, which work on the numeric columns, do not change.
+    /// Issue #4634. <c>query</c> is <c>NOT NULL</c>, so it becomes the empty string; <c>execution_trace</c> becomes
+    /// <c>NULL</c>. Repeatable: a row already blanked is neither rewritten nor counted.
+    /// </summary>
+    /// <returns>The number of rows that actually lost a text.</returns>
+    Task<int> BlankTextsOlderThanAsync(DateTime cutoff, int batchSize, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Get execution stats grouped by AgentDefinitionId for the agent catalog.
     /// Issue #3713: Agent Catalog and Usage Stats
     /// </summary>

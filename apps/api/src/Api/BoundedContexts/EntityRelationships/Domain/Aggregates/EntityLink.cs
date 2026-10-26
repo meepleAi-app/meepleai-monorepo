@@ -9,7 +9,8 @@ namespace Api.BoundedContexts.EntityRelationships.Domain.Aggregates;
 /// Business Rules:
 /// - BR-04: scope=User → IsAdminApproved = true automatically
 /// - BR-05: scope=Shared → requires Admin role (enforced at endpoint level)
-/// - BR-08: Unique per (sourceEntityType, sourceEntityId, targetEntityType, targetEntityId, linkType)
+/// - BR-08: Unique per (sourceEntityType, sourceEntityId, targetEntityType, targetEntityId, linkType) for a
+///   Shared link; for a User link also per owner, because a User link is personal (#4641)
 /// - IsBidirectional is derived from LinkType (cannot be set manually)
 /// - Source entity must differ from target entity (same type + same id not allowed)
 /// </summary>

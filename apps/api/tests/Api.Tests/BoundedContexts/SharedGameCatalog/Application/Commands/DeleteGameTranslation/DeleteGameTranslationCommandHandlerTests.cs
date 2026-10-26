@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.DeleteGameTranslation;
 using Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
@@ -10,6 +11,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Xunit;
+using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Commands.DeleteGameTranslation;
 
@@ -29,6 +31,7 @@ public sealed class DeleteGameTranslationCommandHandlerTests
     private readonly Mock<IUnitOfWork> _uow = new();
     private readonly Mock<IHybridCacheService> _cache = new();
     private readonly Mock<ICacheInvalidationRetryPolicy> _retryPolicy = new();
+    private readonly Mock<HybridCache> _hybridCache = new();
     private readonly TimeProvider _clock;
     private readonly DeleteGameTranslationCommandHandler _sut;
 
@@ -49,8 +52,7 @@ public sealed class DeleteGameTranslationCommandHandlerTests
         _sut = new DeleteGameTranslationCommandHandler(
             _translationRepo.Object,
             _uow.Object,
-            _cache.Object,
-            _retryPolicy.Object,
+            new SharedGameCacheInvalidator(_cache.Object, _retryPolicy.Object, _hybridCache.Object),
             _clock);
     }
 
@@ -164,8 +166,14 @@ public sealed class DeleteGameTranslationCommandHandlerTests
         _cache.Verify(
             c => c.RemoveByTagAcrossReplicasAsync("search-games", It.IsAny<CancellationToken>()),
             Times.Once);
+        _hybridCache.Verify(
+            c => c.RemoveByTagAsync("search-games", It.IsAny<CancellationToken>()),
+            Times.Once);
         _cache.Verify(
             c => c.RemoveByTagAcrossReplicasAsync($"shared-game:{gameId}", It.IsAny<CancellationToken>()),
+            Times.Once);
+        _hybridCache.Verify(
+            c => c.RemoveByTagAsync($"shared-game:{gameId}", It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -188,6 +196,9 @@ public sealed class DeleteGameTranslationCommandHandlerTests
 
         _cache.Verify(
             c => c.RemoveByTagAcrossReplicasAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _hybridCache.Verify(
+            c => c.RemoveByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -215,6 +226,9 @@ public sealed class DeleteGameTranslationCommandHandlerTests
 
         _cache.Verify(
             c => c.RemoveByTagAcrossReplicasAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _hybridCache.Verify(
+            c => c.RemoveByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 

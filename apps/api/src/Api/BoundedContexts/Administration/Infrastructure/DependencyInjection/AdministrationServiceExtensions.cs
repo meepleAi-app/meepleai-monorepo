@@ -4,6 +4,7 @@ using Api.BoundedContexts.Administration.Application.Interfaces;
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Administration.Domain.Services;
+using Api.BoundedContexts.Administration.Infrastructure.BackgroundJobs;
 using Api.BoundedContexts.Administration.Infrastructure.External;
 using Api.BoundedContexts.Administration.Infrastructure.Persistence;
 using Api.BoundedContexts.Administration.Infrastructure.Repositories;
@@ -149,6 +150,10 @@ internal static class AdministrationServiceExtensions
         // Issue #448: Service health monitoring background service with hysteresis
         services.Configure<HealthMonitorOptions>(configuration.GetSection(HealthMonitorOptions.SectionName));
         services.AddHostedService<InfrastructureHealthMonitorService>();
+
+        // #4311: texts of ai_request_logs (query, response snippet, retrieved passages) expire after
+        // Administration:AiRequestLogRetentionDays (90); the metrics stay.
+        services.AddHostedService<AiRequestLogRetentionService>();
 
         // Issue #893: Prometheus HTTP client with Polly retry policy
         services.AddHttpClient<IPrometheusQueryService, PrometheusHttpClient>()

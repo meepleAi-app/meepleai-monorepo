@@ -126,6 +126,63 @@ public sealed class EntityLinkRepositoryIntegrationTests : IAsyncLifetime
         results.Should().BeEmpty();
     }
 
+    // ── #4637: a User-scope link is personal ────────────────────────────────
+
+    /// <summary>Game1 has two User-scope links, both of user1: user2 sees none of them, user1 sees both.</summary>
+    [Fact]
+    public async Task GetForEntityVisibleToAsync_LeavesOutTheUserLinksOfOthers()
+    {
+        var forUser2 = await _repository.GetForEntityVisibleToAsync(
+            _userId2, MeepleEntityType.Game, _gameId1, cancellationToken: TestContext.Current.CancellationToken);
+        var forUser1 = await _repository.GetForEntityVisibleToAsync(
+            _userId1, MeepleEntityType.Game, _gameId1, cancellationToken: TestContext.Current.CancellationToken);
+
+        forUser2.Should().BeEmpty();
+        forUser1.Should().HaveCount(2);
+    }
+
+    /// <summary>
+    /// Game2 is the source of a Shared-scope link written by user2: everybody sees it, with no scope filter or with
+    /// one. Not through the user endpoint, which always asks for User scope, but through the count.
+    /// </summary>
+    [Fact]
+    public async Task GetForEntityVisibleToAsync_KeepsTheSharedLinksOfOthers()
+    {
+        var anyScope = await _repository.GetForEntityVisibleToAsync(
+            _userId1, MeepleEntityType.Game, _gameId2, cancellationToken: TestContext.Current.CancellationToken);
+        var sharedOnly = await _repository.GetForEntityVisibleToAsync(
+            _userId1, MeepleEntityType.Game, _gameId2, scope: EntityLinkScope.Shared,
+            cancellationToken: TestContext.Current.CancellationToken);
+
+        anyScope.Should().ContainSingle().Which.OwnerUserId.Should().Be(_userId2);
+        sharedOnly.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task GetCountForEntityVisibleToAsync_CountsOnlyWhatTheViewerCanSee()
+    {
+        (await _repository.GetCountForEntityVisibleToAsync(
+            _userId2, MeepleEntityType.Game, _gameId1, TestContext.Current.CancellationToken)).Should().Be(0);
+        (await _repository.GetCountForEntityVisibleToAsync(
+            _userId1, MeepleEntityType.Game, _gameId1, TestContext.Current.CancellationToken)).Should().Be(2);
+        (await _repository.GetCountForEntityVisibleToAsync(
+            _userId1, MeepleEntityType.Game, _gameId2, TestContext.Current.CancellationToken)).Should().Be(1);
+    }
+
+    /// <summary>
+    /// The methods that existed keep reading every user's links: the delete of a PDF, the expansion resolver and the
+    /// game-session orchestrator depend on that, and a later "secure the repository" change must not take it away
+    /// without a failing test.
+    /// </summary>
+    [Fact]
+    public async Task TheUnfilteredReads_StillSeeTheUserLinksOfEveryUser()
+    {
+        (await _repository.GetForEntityAsync(
+            MeepleEntityType.Game, _gameId1, cancellationToken: TestContext.Current.CancellationToken)).Should().HaveCount(2);
+        (await _repository.GetCountForEntityAsync(
+            MeepleEntityType.Game, _gameId1, TestContext.Current.CancellationToken)).Should().Be(2);
+    }
+
     // ── GetCountForEntityAsync ───────────────────────────────────────────────
 
     [Fact]
@@ -190,6 +247,7 @@ public sealed class EntityLinkRepositoryIntegrationTests : IAsyncLifetime
             MeepleEntityType.Game, _gameId1,
             MeepleEntityType.Game, _gameId2,
             EntityLinkType.ExpansionOf,
+            EntityLinkScope.User, _userId1,
             TestContext.Current.CancellationToken);
 
         exists.Should().BeTrue();
@@ -202,9 +260,66 @@ public sealed class EntityLinkRepositoryIntegrationTests : IAsyncLifetime
             MeepleEntityType.Game, _gameId1,
             MeepleEntityType.Game, _gameId2,
             EntityLinkType.SequelOf, // different link type
+            EntityLinkScope.User, _userId1,
             TestContext.Current.CancellationToken);
 
         exists.Should().BeFalse();
+    }
+
+    // #4641: a User link is personal, so its duplicate check is per owner; a Shared link is for everybody.
+
+    [Fact]
+    public async Task ExistsAsync_UserScope_OfAnotherOwner_ReturnsFalse()
+    {
+        // Game1 -> Game2 (ExpansionOf) is the User link of user 1: user 2 has none of their own.
+        var exists = await _repository.ExistsAsync(
+            MeepleEntityType.Game, _gameId1,
+            MeepleEntityType.Game, _gameId2,
+            EntityLinkType.ExpansionOf,
+            EntityLinkScope.User, _userId2,
+            TestContext.Current.CancellationToken);
+
+        exists.Should().BeFalse("the personal link of another user does not hold this user's slot");
+    }
+
+    [Fact]
+    public async Task ExistsAsync_SharedScope_IgnoresThePersonalLinksOfUsers()
+    {
+        var exists = await _repository.ExistsAsync(
+            MeepleEntityType.Game, _gameId1,
+            MeepleEntityType.Game, _gameId2,
+            EntityLinkType.ExpansionOf,
+            EntityLinkScope.Shared, _userId2,
+            TestContext.Current.CancellationToken);
+
+        exists.Should().BeFalse("a personal link never keeps a shared one from being published");
+    }
+
+    [Fact]
+    public async Task ExistsAsync_UserScope_SeesASharedLinkOnTheTriple()
+    {
+        // Game2 -> Game3 (SequelOf) is a Shared link: a personal copy of it is not needed, whoever asks.
+        var exists = await _repository.ExistsAsync(
+            MeepleEntityType.Game, _gameId2,
+            MeepleEntityType.Game, _gameId3,
+            EntityLinkType.SequelOf,
+            EntityLinkScope.User, _userId1,
+            TestContext.Current.CancellationToken);
+
+        exists.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ExistsAsync_SharedScope_SeesAnotherSharedLink_WhoeverOwnsIt()
+    {
+        var exists = await _repository.ExistsAsync(
+            MeepleEntityType.Game, _gameId2,
+            MeepleEntityType.Game, _gameId3,
+            EntityLinkType.SequelOf,
+            EntityLinkScope.Shared, _userId1,
+            TestContext.Current.CancellationToken);
+
+        exists.Should().BeTrue();
     }
 
     // ── Soft-delete via Delete() ─────────────────────────────────────────────

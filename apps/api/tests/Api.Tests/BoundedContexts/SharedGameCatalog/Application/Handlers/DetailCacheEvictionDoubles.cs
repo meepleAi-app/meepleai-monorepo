@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.Services;
 using FluentAssertions;
@@ -7,8 +8,8 @@ using Moq;
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
 /// <summary>
-/// I doppi per verificare l'evizione del dettaglio in cache (#4565) negli handler di errata e FAQ,
-/// con l'ordine rispetto alla scrittura.
+/// I doppi per verificare l'evizione del dettaglio e della lista in cache (#4565, #4603) negli handler
+/// del catalogo, con l'ordine rispetto alla scrittura.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -32,11 +33,20 @@ internal sealed class DetailCacheEvictionDoubles
 
     public Mock<HybridCache> HybridCache { get; } = new();
 
+    /// <summary>
+    /// Il servizio vero (<see cref="SharedGameCacheInvalidator"/>) costruito su questi doppi: gli handler
+    /// lo ricevono al posto dei tre doppi, e i test verificano ancora le chiamate al wrapper e a
+    /// <see cref="HybridCache"/> che il servizio fa per loro.
+    /// </summary>
+    public ISharedGameCacheInvalidator Invalidator { get; }
+
     /// <summary>La scrittura e le evizioni, nell'ordine in cui sono avvenute.</summary>
     public List<string> Events { get; } = [];
 
     public DetailCacheEvictionDoubles()
     {
+        Invalidator = new SharedGameCacheInvalidator(Cache.Object, RetryPolicy.Object, HybridCache.Object);
+
         Cache
             .Setup(c => c.RemoveByTagAcrossReplicasAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Callback<string, CancellationToken>((tag, _) => Events.Add($"wrapper:{tag}"))
@@ -70,6 +80,25 @@ internal sealed class DetailCacheEvictionDoubles
             "the detail is evicted once, after the write, through the wrapper (retry + other replicas) "
             + "and through the native HybridCache that the detail is written with, which is what makes "
             + "the next read on this replica miss, with or without Redis");
+    }
+
+    /// <summary>
+    /// Dopo la scrittura, la lista (<c>search-games</c>) e poi il dettaglio di QUEL gioco sono stati
+    /// tolti, ciascuno con entrambi i passi, e nient'altro.
+    /// </summary>
+    public void AssertDetailAndListEvictedAfterTheWrite(Guid gameId)
+    {
+        var tag = $"shared-game:{gameId}";
+
+        Events.Should().Equal(
+            new[]
+            {
+                Written,
+                "wrapper:search-games", "native:search-games",
+                $"wrapper:{tag}", $"native:{tag}",
+            },
+            "the list and the detail of the game are evicted once each, after the write, through the "
+            + "wrapper and through the native HybridCache");
     }
 
     public void AssertNothingEvicted() =>

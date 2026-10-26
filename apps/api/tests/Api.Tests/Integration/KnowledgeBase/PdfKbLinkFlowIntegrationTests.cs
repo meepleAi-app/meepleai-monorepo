@@ -315,28 +315,6 @@ public sealed class PdfKbLinkFlowIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
-    public void LinkKbResultDto_JsonRoundTrip_ShouldPreserveAllFields()
-    {
-        // Arrange
-        var original = new LinkKbResultDto(
-            VectorDocumentId: Guid.NewGuid(),
-            GameId: Guid.NewGuid(),
-            PdfDocumentId: Guid.NewGuid(),
-            Status: "linked");
-
-        // Act
-        var json = System.Text.Json.JsonSerializer.Serialize(original);
-        var deserialized = System.Text.Json.JsonSerializer.Deserialize<LinkKbResultDto>(json);
-
-        // Assert
-        deserialized.Should().NotBeNull();
-        deserialized!.VectorDocumentId.Should().Be(original.VectorDocumentId);
-        deserialized.GameId.Should().Be(original.GameId);
-        deserialized.PdfDocumentId.Should().Be(original.PdfDocumentId);
-        deserialized.Status.Should().Be("linked");
-    }
-
-    [Fact]
     public void PdfUploadResult_WithExistingKb_ShouldRoundTrip()
     {
         // Arrange

@@ -67,33 +67,37 @@ internal static class RagDashboardEndpoints
 
         ragGroup.MapGet("/overview", HandleGetOverview)
             .WithName("GetRagDashboardOverview")
-            .WithSummary("Get RAG dashboard overview")
+            .WithSummary("Get RAG dashboard overview (Admin)")
             .WithDescription("Returns comprehensive metrics for all RAG strategies including aggregated stats.")
             .Produces<RagDashboardOverviewDto>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status401Unauthorized);
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
 
         ragGroup.MapGet("/strategies/{strategyId}/metrics", HandleGetStrategyMetrics)
             .WithName("GetStrategyMetrics")
-            .WithSummary("Get metrics for a specific strategy")
+            .WithSummary("Get metrics for a specific strategy (Admin)")
             .WithDescription("Returns detailed metrics for a single RAG strategy.")
             .Produces<StrategyMetricsDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status401Unauthorized);
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
 
         ragGroup.MapGet("/strategies/{strategyId}/time-series", HandleGetStrategyTimeSeries)
             .WithName("GetStrategyTimeSeries")
-            .WithSummary("Get time series metrics for a strategy")
+            .WithSummary("Get time series metrics for a strategy (Admin)")
             .WithDescription("Returns time series data for latency, relevance, query count, and cost trends.")
             .Produces<StrategyTimeSeriesMetricsDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status404NotFound)
-            .Produces(StatusCodes.Status401Unauthorized);
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
 
         ragGroup.MapGet("/strategies/compare", HandleGetStrategyComparison)
             .WithName("GetStrategyComparison")
-            .WithSummary("Compare multiple strategies")
+            .WithSummary("Compare multiple strategies (Admin)")
             .WithDescription("Returns a comparison of multiple RAG strategies with rankings and recommendations.")
             .Produces<StrategyComparisonDto>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status401Unauthorized);
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
 
         // ========================================
         // Admin Live Testing Endpoint
@@ -193,7 +197,7 @@ internal static class RagDashboardEndpoints
         [FromQuery] DateOnly? endDate,
         CancellationToken ct)
     {
-        var (authorized, _, error) = context.TryGetActiveSession();
+        var (authorized, _, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
         var query = new GetRagDashboardOverviewQuery
@@ -214,7 +218,7 @@ internal static class RagDashboardEndpoints
         [FromQuery] DateOnly? endDate,
         CancellationToken ct)
     {
-        var (authorized, _, error) = context.TryGetActiveSession();
+        var (authorized, _, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
         var validStrategies = new[] { "Hybrid", "Semantic", "Keyword", "Contextual", "MultiQuery", "Agentic" };
@@ -243,7 +247,7 @@ internal static class RagDashboardEndpoints
         [FromQuery] string? granularity,
         CancellationToken ct)
     {
-        var (authorized, _, error) = context.TryGetActiveSession();
+        var (authorized, _, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
         var validStrategies = new[] { "Hybrid", "Semantic", "Keyword", "Contextual", "MultiQuery", "Agentic" };
@@ -362,7 +366,7 @@ internal static class RagDashboardEndpoints
         [FromQuery] DateOnly? endDate,
         CancellationToken ct)
     {
-        var (authorized, _, error) = context.TryGetActiveSession();
+        var (authorized, _, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
         IReadOnlyList<string>? strategies = null;

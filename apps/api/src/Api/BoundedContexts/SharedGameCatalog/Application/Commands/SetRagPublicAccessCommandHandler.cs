@@ -1,9 +1,8 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
-using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
-using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
@@ -13,29 +12,20 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 /// </summary>
 internal sealed class SetRagPublicAccessCommandHandler : ICommandHandler<SetRagPublicAccessCommand>
 {
-    // Il tag con cui SearchSharedGamesQueryHandler mette la lista in cache.
-    private const string SearchGamesTag = "search-games";
-
     private readonly ISharedGameRepository _sharedGameRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IHybridCacheService _cache;
-    private readonly ICacheInvalidationRetryPolicy _retryPolicy;
-    private readonly HybridCache _hybridCache;
+    private readonly ISharedGameCacheInvalidator _cacheInvalidator;
     private readonly ILogger<SetRagPublicAccessCommandHandler> _logger;
 
     public SetRagPublicAccessCommandHandler(
         ISharedGameRepository sharedGameRepository,
         IUnitOfWork unitOfWork,
-        IHybridCacheService cache,
-        ICacheInvalidationRetryPolicy retryPolicy,
-        HybridCache hybridCache,
+        ISharedGameCacheInvalidator cacheInvalidator,
         ILogger<SetRagPublicAccessCommandHandler> logger)
     {
         _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-        _retryPolicy = retryPolicy ?? throw new ArgumentNullException(nameof(retryPolicy));
-        _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
+        _cacheInvalidator = cacheInvalidator ?? throw new ArgumentNullException(nameof(cacheInvalidator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -53,18 +43,9 @@ internal sealed class SetRagPublicAccessCommandHandler : ICommandHandler<SetRagP
 
         // #4585: la lista del catalogo (`SearchSharedGamesQueryHandler`) mostra `isRagPublic` e vive in
         // HybridCache sotto il tag `search-games`. Senza l'evizione serviva il valore precedente per la
-        // durata della cache, e finché la scrittura non arrivava al database non si vedeva.
-        //
-        // Due passi, perché il primo da solo non basta. L'helper è lo stesso di UpdateSharedGameCommandHandler
-        // (#4100): retry policy e Pub/Sub verso le altre repliche. Ma il wrapper rimuove solo le chiavi
-        // elencate nel suo set Redis, che si riempie solo per le voci scritte da lui, e la lista è scritta
-        // con `HybridCache` grezzo: è il limite di #4561 (vedi UserActivityCacheInvalidationEventHandler,
-        // #4559). Il tag nativo raggiunge la voce della lista su questa istanza, anche senza Redis. Quando
-        // #4561 renderà il wrapper capace di farlo, il secondo passo si può togliere.
-        await CoverCacheInvalidation
-            .EvictReadModelAsync(_cache, _retryPolicy, command.SharedGameId, cancellationToken)
-            .ConfigureAwait(false);
-        await _hybridCache.RemoveByTagAsync(SearchGamesTag, cancellationToken).ConfigureAwait(false);
+        // durata della cache, e finche' la scrittura non arrivava al database non si vedeva. I due passi
+        // (wrapper e `HybridCache` nativo) e il perche' di ciascuno stanno in ISharedGameCacheInvalidator.
+        await _cacheInvalidator.EvictDetailAndListAsync(command.SharedGameId, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Set RAG public access for SharedGame {SharedGameId} to {IsRagPublic}",

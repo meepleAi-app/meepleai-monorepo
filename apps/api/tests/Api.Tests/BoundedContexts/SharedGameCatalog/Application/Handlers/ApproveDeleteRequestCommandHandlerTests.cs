@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
@@ -33,6 +34,7 @@ public class ApproveDeleteRequestCommandHandlerTests
             _deleteRequestRepositoryMock.Object,
             _gameRepositoryMock.Object,
             _unitOfWorkMock.Object,
+            new Mock<ISharedGameCacheInvalidator>().Object,
             _loggerMock.Object);
     }
 

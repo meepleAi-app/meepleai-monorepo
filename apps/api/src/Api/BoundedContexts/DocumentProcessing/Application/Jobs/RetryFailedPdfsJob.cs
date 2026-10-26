@@ -22,7 +22,9 @@ internal sealed class RetryFailedPdfsJob : IJob
     private readonly IMediator _mediator;
     private readonly ILogger<RetryFailedPdfsJob> _logger;
 
-    // Transient error categories that should be retried automatically (as strings for EF query)
+    // Transient error categories that should be retried automatically (as strings for EF query).
+    // An allow-list on purpose: Cancelled (the user stopped it, #4610), PayloadTooLarge, StorageObjectMissing,
+    // Parsing and Quota are not here, and a new category is not retried until someone decides it should be.
     private static readonly List<string> RetriableCategories = new()
     {
         ErrorCategory.Network.ToString(),

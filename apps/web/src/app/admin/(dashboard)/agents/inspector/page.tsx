@@ -36,6 +36,7 @@ import {
   type RagExecutionDetail,
 } from '@/lib/api/clients/adminClient';
 import { HttpClient } from '@/lib/api/core/httpClient';
+import { formatExecutionQuery } from '@/lib/format/rag-execution-query';
 import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
@@ -556,7 +557,9 @@ export default function InspectorPage() {
                       <tr>
                         <td colSpan={7} className="py-12 text-center">
                           <div className="flex flex-col items-center gap-3">
-                            <p className="text-sm font-medium text-muted-foreground">No executions found</p>
+                            <p className="text-sm font-medium text-muted-foreground">
+                              No executions found
+                            </p>
                             <p className="text-xs text-muted-foreground">
                               Try adjusting your filters or wait for new executions
                             </p>
@@ -583,7 +586,9 @@ export default function InspectorPage() {
                             </span>
                           </td>
                           <td className="py-3 pr-4 text-sm text-zinc-700 dark:text-zinc-300">
-                            <div className="max-w-md truncate">{execution.query}</div>
+                            <div className="max-w-md truncate">
+                              {formatExecutionQuery(execution.query)}
+                            </div>
                           </td>
                           <td className="py-3 pr-4">
                             <StrategyBadge strategy={execution.strategy} />
@@ -796,8 +801,8 @@ export default function InspectorPage() {
                 >
                   {executions.map(exec => (
                     <option key={exec.id} value={exec.id}>
-                      {exec.status === 'success' ? '\u2713' : '\u2717'} &quot;{exec.query}&quot; —{' '}
-                      {exec.totalLatencyMs}ms
+                      {exec.status === 'success' ? '\u2713' : '\u2717'} &quot;
+                      {formatExecutionQuery(exec.query)}&quot; — {exec.totalLatencyMs}ms
                       {exec.cacheHit ? ' (cache)' : ''}
                     </option>
                   ))}
@@ -927,7 +932,7 @@ export default function InspectorPage() {
               </h2>
               {selectedExecution && (
                 <span className="text-xs text-muted-foreground dark:text-muted-foreground">
-                  Execution: &quot;{selectedExecution.query}&quot; —{' '}
+                  Execution: &quot;{formatExecutionQuery(selectedExecution.query)}&quot; —{' '}
                   {selectedExecution.totalLatencyMs}ms
                 </span>
               )}

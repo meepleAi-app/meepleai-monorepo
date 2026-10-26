@@ -27,13 +27,20 @@ public interface IEntityLinkRepository
         Guid? ownerUserId = null,
         CancellationToken cancellationToken = default);
 
-    /// <summary>Checks whether an identical link already exists (BR-08).</summary>
+    /// <summary>
+    /// Checks whether the link that is about to be written already exists (BR-08). A <c>User</c>-scope link is
+    /// personal: for it a duplicate is the same triple held by the same owner, or a <c>Shared</c> one, which already
+    /// stands for everybody. A <c>Shared</c>-scope link is a duplicate only of another <c>Shared</c> one, whoever owns
+    /// it: the personal links of users never keep it from being published (#4641).
+    /// </summary>
     Task<bool> ExistsAsync(
         MeepleEntityType sourceEntityType,
         Guid sourceEntityId,
         MeepleEntityType targetEntityType,
         Guid targetEntityId,
         EntityLinkType linkType,
+        EntityLinkScope scope,
+        Guid ownerUserId,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -52,6 +59,29 @@ public interface IEntityLinkRepository
     /// Supports optional filtering by Scope, LinkType, and TargetEntityType (Issues #5135, #5188).
     /// </summary>
     Task<IReadOnlyList<EntityLink>> GetForEntityAsync(
+        MeepleEntityType entityType,
+        Guid entityId,
+        EntityLinkScope? scope = null,
+        EntityLinkType? linkType = null,
+        MeepleEntityType? targetEntityType = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Like <see cref="GetCountForEntityAsync"/>, for a user who is looking: a <c>User</c>-scope link is personal, so
+    /// those of other users are left out. <c>Shared</c>-scope links count for everybody (#4637).
+    /// </summary>
+    Task<int> GetCountForEntityVisibleToAsync(
+        Guid viewerUserId,
+        MeepleEntityType entityType,
+        Guid entityId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Like <see cref="GetForEntityAsync"/>, for a user who is looking: a <c>User</c>-scope link is personal, so those
+    /// of other users are left out. <c>Shared</c>-scope links are visible to everybody (#4637).
+    /// </summary>
+    Task<IReadOnlyList<EntityLink>> GetForEntityVisibleToAsync(
+        Guid viewerUserId,
         MeepleEntityType entityType,
         Guid entityId,
         EntityLinkScope? scope = null,

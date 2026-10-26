@@ -11,8 +11,12 @@ namespace Api.BoundedContexts.EntityRelationships.Application.Queries;
 /// - the target of a bidirectional link (IsBidirectional=true)
 ///
 /// Optimised: COUNT(*) with no JOINs, relies on indexed columns.
+///
+/// #4637: pass <c>RequestingUserId</c> to count what that user can see (the <c>User</c>-scope links of others are
+/// personal and are left out). Without it, everything is counted.
 /// </summary>
 internal record GetEntityLinkCountQuery(
     MeepleEntityType EntityType,
-    Guid EntityId
+    Guid EntityId,
+    Guid? RequestingUserId = null
 ) : IQuery<int>;

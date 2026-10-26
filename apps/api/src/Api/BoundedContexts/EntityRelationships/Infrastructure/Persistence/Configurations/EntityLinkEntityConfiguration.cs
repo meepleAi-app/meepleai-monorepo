@@ -97,8 +97,8 @@ internal sealed class EntityLinkEntityConfiguration : IEntityTypeConfiguration<E
             .HasColumnName("updated_at")
             .IsRequired();
 
-        // BR-08: Unique per (sourceEntityType, sourceEntityId, targetEntityType, targetEntityId, linkType)
-        // Only enforced on non-deleted rows.
+        // BR-08 (#4641): a Shared link is unique per (sourceEntityType, sourceEntityId, targetEntityType,
+        // targetEntityId, linkType), whoever owns it. Only enforced on non-deleted rows.
         builder.HasIndex(x => new
         {
             x.SourceEntityType,
@@ -109,7 +109,22 @@ internal sealed class EntityLinkEntityConfiguration : IEntityTypeConfiguration<E
         })
             .IsUnique()
             .HasDatabaseName("uq_entity_links_source_target_type")
-            .HasFilter("is_deleted = false");
+            .HasFilter("is_deleted = false AND scope = 'Shared'");
+
+        // BR-08 (#4641): a User link is personal, so it is unique per owner as well: a file that two users upload is
+        // one PDF and two links, one for each of them. Only enforced on non-deleted rows.
+        builder.HasIndex(x => new
+        {
+            x.SourceEntityType,
+            x.SourceEntityId,
+            x.TargetEntityType,
+            x.TargetEntityId,
+            x.LinkType,
+            x.OwnerUserId
+        })
+            .IsUnique()
+            .HasDatabaseName("uq_entity_links_user_source_target_type_owner")
+            .HasFilter("is_deleted = false AND scope = 'User'");
 
         // Query performance: fetch links for a given source entity
         builder.HasIndex(x => new { x.SourceEntityType, x.SourceEntityId, x.IsDeleted })

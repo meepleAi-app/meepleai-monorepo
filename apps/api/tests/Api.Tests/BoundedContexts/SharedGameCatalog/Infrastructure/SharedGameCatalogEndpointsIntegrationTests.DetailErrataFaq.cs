@@ -35,7 +35,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 /// l'handler evince il tag col <c>HybridCache</c> nativo. È il passo che in produzione serve per la lettura
 /// subito dopo la scrittura sulla replica che ha eseguito il comando e per l'esecuzione senza Redis: con
 /// Redis il wrapper raggiunge la voce via Pub/Sub, ma in modo asincrono (vedi
-/// <c>SharedGameDetailCacheInvalidation</c>, #4561).
+/// <c>SharedGameCacheInvalidator</c>, #4561).
 /// </para>
 /// </remarks>
 public sealed partial class SharedGameCatalogEndpointsIntegrationTests

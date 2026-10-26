@@ -1,11 +1,11 @@
 using Api.BoundedContexts.SecurityAudit.Application.Services;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
 using Api.Middleware.Exceptions;
 using Api.Observability;
 using Api.Services.Pdf;
-using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Covers;
 using Api.SharedKernel.Infrastructure.Http;
@@ -36,8 +36,7 @@ internal sealed class SetManualCoverCommandHandler : ICommandHandler<SetManualCo
     private readonly IWebpVariantGenerator _webpGenerator;
     private readonly IBlobStorageService _blobStorage;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IHybridCacheService _cache;
-    private readonly ICacheInvalidationRetryPolicy _cacheRetryPolicy;
+    private readonly ISharedGameCacheInvalidator _cacheInvalidator;
     private readonly ITransactionalAuditWriter _auditWriter;
     private readonly ILogger<SetManualCoverCommandHandler> _logger;
 
@@ -47,8 +46,7 @@ internal sealed class SetManualCoverCommandHandler : ICommandHandler<SetManualCo
         IWebpVariantGenerator webpGenerator,
         IBlobStorageService blobStorage,
         IUnitOfWork unitOfWork,
-        IHybridCacheService cache,
-        ICacheInvalidationRetryPolicy cacheRetryPolicy,
+        ISharedGameCacheInvalidator cacheInvalidator,
         ITransactionalAuditWriter auditWriter,
         ILogger<SetManualCoverCommandHandler> logger)
     {
@@ -57,8 +55,7 @@ internal sealed class SetManualCoverCommandHandler : ICommandHandler<SetManualCo
         _webpGenerator = webpGenerator ?? throw new ArgumentNullException(nameof(webpGenerator));
         _blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-        _cacheRetryPolicy = cacheRetryPolicy ?? throw new ArgumentNullException(nameof(cacheRetryPolicy));
+        _cacheInvalidator = cacheInvalidator ?? throw new ArgumentNullException(nameof(cacheInvalidator));
         _auditWriter = auditWriter ?? throw new ArgumentNullException(nameof(auditWriter));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -154,9 +151,7 @@ internal sealed class SetManualCoverCommandHandler : ICommandHandler<SetManualCo
             .ConfigureAwait(false);
 
         // The cover columns the read-model resolves changed → evict the list + detail caches (AC-6).
-        await CoverCacheInvalidation
-            .EvictReadModelAsync(_cache, _cacheRetryPolicy, game.Id, cancellationToken)
-            .ConfigureAwait(false);
+        await _cacheInvalidator.EvictDetailAndListAsync(game.Id, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Manual cover set for game {GameId} by {AdminId} from {SourceUrl} (license {License})",

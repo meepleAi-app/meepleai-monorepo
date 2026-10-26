@@ -328,6 +328,46 @@ public class GameSessionOrchestratorServiceTests
         result.GamesWithoutPdf.Should().NotContain(primaryGameId);
     }
 
+    /// <summary>
+    /// #4641: a User link is unique per owner, so two users can hold the same ExpansionOf link, and a personal one can
+    /// sit next to the Shared one. The repository returns a row for each of them; the expansion is one game.
+    /// </summary>
+    [Fact]
+    public async Task BuildContext_TheSameExpansionLinkedByTwoUsers_IsOneExpansion()
+    {
+        var sessionId = Guid.NewGuid();
+        var primaryGameId = Guid.NewGuid();
+        var expansionId = Guid.NewGuid();
+        var session = CreateTestSession(id: sessionId, gameId: primaryGameId);
+        SetupSessionRepository(sessionId, session);
+
+        var links = new[] { Guid.NewGuid(), Guid.NewGuid() }
+            .Select(owner => EntityLink.Create(
+                MeepleEntityType.Game,
+                expansionId,
+                MeepleEntityType.Game,
+                primaryGameId,
+                EntityLinkType.ExpansionOf,
+                EntityLinkScope.User,
+                owner))
+            .ToList();
+        SetupEntityLinks(primaryGameId, links);
+
+        var primaryVectorDoc = new VectorDocument(Guid.NewGuid(), primaryGameId, Guid.NewGuid(), "en", 10);
+        SetupVectorDocuments(primaryGameId, new List<VectorDocument> { primaryVectorDoc });
+        SetupVectorDocuments(expansionId, new List<VectorDocument>());
+        SetupRulebookAnalyses(primaryGameId, new List<RulebookAnalysis>());
+        SetupRulebookAnalyses(expansionId, new List<RulebookAnalysis>());
+        _sharedGameRepoMock
+            .Setup(x => x.GetByIdsAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, SharedGame>());
+
+        var result = await _service.BuildContextAsync(sessionId);
+
+        result.ExpansionGameIds.Should().ContainSingle().Which.Should().Be(expansionId);
+        result.GamesWithoutPdf.Should().ContainSingle().Which.Should().Be(expansionId);
+    }
+
     // ========================================================================
     // Fail-Open Resilience Tests
     // ========================================================================

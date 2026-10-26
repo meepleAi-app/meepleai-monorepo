@@ -30,9 +30,7 @@ public class AddGameFaqCommandHandlerTests
         _handler = new AddGameFaqCommandHandler(
             _repositoryMock.Object,
             _unitOfWorkMock.Object,
-            _eviction.Cache.Object,
-            _eviction.RetryPolicy.Object,
-            _eviction.HybridCache.Object,
+            _eviction.Invalidator,
             _loggerMock.Object);
     }
 

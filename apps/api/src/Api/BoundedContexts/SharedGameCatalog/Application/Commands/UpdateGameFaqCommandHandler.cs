@@ -1,10 +1,9 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
-using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
-using Microsoft.Extensions.Caching.Hybrid;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 
@@ -15,24 +14,18 @@ internal sealed class UpdateGameFaqCommandHandler : ICommandHandler<UpdateGameFa
 {
     private readonly ISharedGameRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IHybridCacheService _cache;
-    private readonly ICacheInvalidationRetryPolicy _retryPolicy;
-    private readonly HybridCache _hybridCache;
+    private readonly ISharedGameCacheInvalidator _cacheInvalidator;
     private readonly ILogger<UpdateGameFaqCommandHandler> _logger;
 
     public UpdateGameFaqCommandHandler(
         ISharedGameRepository repository,
         IUnitOfWork unitOfWork,
-        IHybridCacheService cache,
-        ICacheInvalidationRetryPolicy retryPolicy,
-        HybridCache hybridCache,
+        ISharedGameCacheInvalidator cacheInvalidator,
         ILogger<UpdateGameFaqCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-        _retryPolicy = retryPolicy ?? throw new ArgumentNullException(nameof(retryPolicy));
-        _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
+        _cacheInvalidator = cacheInvalidator ?? throw new ArgumentNullException(nameof(cacheInvalidator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -60,10 +53,8 @@ internal sealed class UpdateGameFaqCommandHandler : ICommandHandler<UpdateGameFa
         // #4565: il dettaglio del gioco (`GET /api/v1/shared-games/{id}`) riporta le FAQ e sta in cache
         // sotto `shared-game:{id}` (durata: `DetailCacheL1Expiration` e `DetailCacheL2Expiration` di
         // `GetSharedGameByIdQueryHandler`): senza questa evizione la modifica si vedeva alla scadenza.
-        // Dopo il salvataggio, mai prima. Vedi SharedGameDetailCacheInvalidation.
-        await SharedGameDetailCacheInvalidation
-            .EvictAsync(_cache, _retryPolicy, _hybridCache, command.SharedGameId, cancellationToken)
-            .ConfigureAwait(false);
+        // Dopo il salvataggio, mai prima. Vedi ISharedGameCacheInvalidator.
+        await _cacheInvalidator.EvictDetailAsync(command.SharedGameId, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation("FAQ updated successfully: {FaqId}", command.FaqId);
 

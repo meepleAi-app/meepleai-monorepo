@@ -12,7 +12,9 @@ namespace Api.BoundedContexts.EntityRelationships.Application.Queries;
 /// - the target of a bidirectional link (IsBidirectional=true)
 ///
 /// Supports optional filtering by Scope, LinkType, and TargetEntityType.
-/// Pass RequestingUserId to populate IsOwner on each returned DTO.
+/// Pass RequestingUserId to populate IsOwner on each returned DTO. #4637: it also says who is looking, and a
+/// User-scope link is personal, so the links of other users are left out. Without it (the admin listing), every scope
+/// and every owner is returned.
 /// Issue #5188: Added TargetEntityType filter for KB card queries.
 /// </summary>
 internal record GetEntityLinksQuery(

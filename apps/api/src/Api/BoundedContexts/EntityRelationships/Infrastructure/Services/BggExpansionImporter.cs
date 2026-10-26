@@ -258,6 +258,7 @@ internal sealed class BggExpansionImporter : IBggExpansionImporter
             MeepleEntityType.Game, sourceId,
             MeepleEntityType.Game, targetId,
             entityLinkType,
+            EntityLinkScope.Shared, adminUserId,
             ct).ConfigureAwait(false);
 
         if (exists)

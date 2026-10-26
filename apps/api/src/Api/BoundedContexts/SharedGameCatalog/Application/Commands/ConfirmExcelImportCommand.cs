@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
@@ -72,17 +73,20 @@ internal sealed class ConfirmExcelImportCommandHandler
 {
     private readonly ISharedGameRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ISharedGameCacheInvalidator _cacheInvalidator;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<ConfirmExcelImportCommandHandler> _logger;
 
     public ConfirmExcelImportCommandHandler(
         ISharedGameRepository repository,
         IUnitOfWork unitOfWork,
+        ISharedGameCacheInvalidator cacheInvalidator,
         TimeProvider timeProvider,
         ILogger<ConfirmExcelImportCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _cacheInvalidator = cacheInvalidator ?? throw new ArgumentNullException(nameof(cacheInvalidator));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -119,6 +123,7 @@ internal sealed class ConfirmExcelImportCommandHandler
         }
 
         // ── Update modified games (Draft only) ──
+        var updatedGameIds = new List<Guid>();
         foreach (var mod in request.ModifiedGames)
         {
             try
@@ -169,6 +174,7 @@ internal sealed class ConfirmExcelImportCommandHandler
                 _repository.Update(game);
                 await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 updated++;
+                updatedGameIds.Add(mod.GameId);
             }
             catch (Exception ex)
             {
@@ -178,6 +184,7 @@ internal sealed class ConfirmExcelImportCommandHandler
         }
 
         // ── Soft-delete removed games (Draft only) ──
+        var deletedGameIds = new List<Guid>();
         foreach (var gameId in request.RemovedGameIds)
         {
             try
@@ -202,12 +209,26 @@ internal sealed class ConfirmExcelImportCommandHandler
                 _repository.Update(game);
                 await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 deleted++;
+                deletedGameIds.Add(gameId);
             }
             catch (Exception ex)
             {
                 errors.Add($"Failed to delete game {gameId}: {ex.Message}");
                 _logger.LogWarning(ex, "Failed to delete game {GameId} from Excel confirm", gameId);
             }
+        }
+
+        // #4603: l'admin puo' aver letto la bozza prima dell'import, e il dettaglio sta in cache: senza
+        // questa evizione continua a vedere il titolo vecchio (o la bozza cancellata) fino alla scadenza
+        // della voce. Fuori dai cicli e dal loro try/catch: un'evizione che fallisce non deve finire fra
+        // gli errori di una riga gia' salvata.
+        //
+        // Solo il dettaglio, non la lista: entrambi i rami agiscono solo su giochi Draft (gli altri sono
+        // «protetti» piu' sopra), e la lista pubblica contiene solo i Published. Se l'import potesse
+        // toccare un gioco pubblicato, andrebbe evinta anche la lista. Vedi ISharedGameCacheInvalidator.
+        foreach (var gameId in updatedGameIds.Concat(deletedGameIds).Distinct())
+        {
+            await _cacheInvalidator.EvictDetailAsync(gameId, cancellationToken).ConfigureAwait(false);
         }
 
         _logger.LogInformation(

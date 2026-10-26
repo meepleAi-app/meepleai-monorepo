@@ -317,7 +317,8 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
             _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
             _serviceProvider!.GetRequiredService<ISemanticResponseCache>(),
             _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>(),
-            _serviceProvider!.GetRequiredService<IEntityLinkRepository>()
+            _serviceProvider!.GetRequiredService<IEntityLinkRepository>(),
+            _serviceProvider!.GetRequiredService<IHybridCacheService>()
         );
 
         var command = new DeletePdfCommand(pdfId.ToString());
@@ -378,7 +379,8 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
             cache,
             _serviceProvider!.GetRequiredService<ISemanticResponseCache>(),
             logger,
-            entityLinks);
+            entityLinks,
+            _serviceProvider!.GetRequiredService<IHybridCacheService>());
     }
     [Fact]
     public async Task DeleteWithDbUpdateException_ThrowsPdfStorageException()
@@ -401,7 +403,8 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
             _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
             _serviceProvider!.GetRequiredService<ISemanticResponseCache>(),
             _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>(),
-            _serviceProvider!.GetRequiredService<IEntityLinkRepository>()
+            _serviceProvider!.GetRequiredService<IEntityLinkRepository>(),
+            _serviceProvider!.GetRequiredService<IHybridCacheService>()
         );
 
         // Act
@@ -424,7 +427,8 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
             _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
             _serviceProvider!.GetRequiredService<ISemanticResponseCache>(),
             _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>(),
-            _serviceProvider!.GetRequiredService<IEntityLinkRepository>()
+            _serviceProvider!.GetRequiredService<IEntityLinkRepository>(),
+            _serviceProvider!.GetRequiredService<IHybridCacheService>()
         );
 
         var command = new DeletePdfCommand(pdfId.ToString());
@@ -462,7 +466,8 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
             _serviceProvider!.GetRequiredService<IAiResponseCacheService>(),
             _serviceProvider!.GetRequiredService<ISemanticResponseCache>(),
             _serviceProvider!.GetRequiredService<ILogger<DeletePdfCommandHandler>>(),
-            _serviceProvider!.GetRequiredService<IEntityLinkRepository>()
+            _serviceProvider!.GetRequiredService<IEntityLinkRepository>(),
+            _serviceProvider!.GetRequiredService<IHybridCacheService>()
         );
 
         var command = new DeletePdfCommand(pdfId.ToString());
@@ -571,7 +576,7 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         // Act: delete issued on behalf of Game B (the caller), not the uploader Game A.
         var result = await handler.Handle(command, TestCancellationToken);
 
-        // Assert: success, record + vectors preserved (linkCount was 2).
+        // Assert: success, record + vectors preserved (another game still uses it).
         result.Success.Should().BeTrue();
 
         var pdfExists = await _dbContext.PdfDocuments.AnyAsync(p => p.Id == pdfId, TestCancellationToken);

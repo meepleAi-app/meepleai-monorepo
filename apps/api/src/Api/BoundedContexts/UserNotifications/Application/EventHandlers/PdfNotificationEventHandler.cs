@@ -60,6 +60,14 @@ internal class PdfNotificationEventHandler :
 
     public async Task Handle(PdfFailedEvent evt, CancellationToken cancellationToken)
     {
+        // #4610: the user pressed «cancel», so they know. The event still happens (the aggregate raises it for
+        // every transition to Failed, and other subscribers may want it); it is this notification that is skipped.
+        if (evt.ErrorCategory == ErrorCategory.Cancelled)
+        {
+            _logger.LogDebug("PDF {PdfId} was cancelled by the user: no failure notification", evt.PdfDocumentId);
+            return;
+        }
+
         var pdfDoc = await _pdfRepo.GetByIdAsync(evt.PdfDocumentId, cancellationToken).ConfigureAwait(false);
         if (pdfDoc == null)
         {

@@ -30,15 +30,16 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 /// comando, e senza Redis il messaggio non parte affatto.</item>
 /// </list>
 /// <para>
-/// Il passo nativo serve a questi due casi: la lettura subito dopo la scrittura, sulla replica che ha
-/// eseguito il comando (senza aspettare il messaggio), e l'esecuzione senza Redis. Se #4561 renderà il
-/// passo locale del wrapper capace di raggiungere le voci grezze, il passo nativo diventerà ridondante e
-/// si toglie da qui.
+/// #4561 ha reso il passo locale del wrapper capace di raggiungere anche le voci grezze (chiama a sua volta
+/// <c>HybridCache.RemoveByTagAsync</c>), quindi il passo nativo qui sotto non è più l'unica strada. Resta
+/// per una ragione diversa, decisa dal proprietario (#4603, punto 2): viene <b>prima</b> del wrapper.
 /// </para>
 /// <para>
 /// Ogni passo passa dalla retry policy, col nome di operazione che alimenta la metrica
-/// (<c>shared-games.list</c> / <c>shared-games.detail</c>). L'ordine per tag è wrapper e poi nativo; la
-/// lista precede il dettaglio.
+/// (<c>shared-games.list</c> / <c>shared-games.detail</c>). L'ordine per tag è nativo e poi wrapper; la
+/// lista precede il dettaglio. Il nativo è locale e immediato; il wrapper dipende da Redis e ha i
+/// tentativi: se li esaurisce l'eccezione esce, ma la replica che ha scritto non serve più la voce vecchia,
+/// invece di restarne con la cache locale stantia.
 /// </para>
 /// </remarks>
 internal sealed class SharedGameCacheInvalidator : ISharedGameCacheInvalidator
@@ -91,13 +92,14 @@ internal sealed class SharedGameCacheInvalidator : ISharedGameCacheInvalidator
 
     private async Task EvictTagAsync(string tag, string operationName, CancellationToken cancellationToken)
     {
+        // Nativo prima (#4603, punto 2): vedi la nota di classe.
         await _retryPolicy.ExecuteAsync(
-            token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync(tag, token)),
+            token => _hybridCache.RemoveByTagAsync(tag, token),
             operationName,
             cancellationToken).ConfigureAwait(false);
 
         await _retryPolicy.ExecuteAsync(
-            token => _hybridCache.RemoveByTagAsync(tag, token),
+            token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync(tag, token)),
             operationName,
             cancellationToken).ConfigureAwait(false);
     }

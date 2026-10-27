@@ -35,6 +35,7 @@ public sealed class HybridCacheServiceIntegrationTests : IAsyncLifetime
 {
     private readonly SharedTestcontainersFixture _fixture;
     private HybridCacheService _cacheService = null!;
+    private HybridCache _hybridCache = null!;
     private IConnectionMultiplexer _redis = null!;
     private string _keyPrefix = null!;
     private readonly Mock<ILogger<HybridCacheService>> _loggerMock;
@@ -75,6 +76,7 @@ public sealed class HybridCacheServiceIntegrationTests : IAsyncLifetime
 
         var serviceProvider = services.BuildServiceProvider();
         var hybridCache = serviceProvider.GetRequiredService<HybridCache>();
+        _hybridCache = hybridCache;
 
         // Create HybridCacheConfiguration
         var config = new HybridCacheConfiguration
@@ -599,6 +601,71 @@ public sealed class HybridCacheServiceIntegrationTests : IAsyncLifetime
 
         // Assert — does not throw despite missing pub/sub channel
         await act.Should().NotThrowAsync();
+    }
+
+    #endregion
+
+    #region Raw HybridCache entries (#4561)
+
+    /// <summary>
+    /// #4561: many catalog and dashboard queries write with the Microsoft <see cref="HybridCache"/> directly.
+    /// Such an entry carries its tag inside HybridCache but is NOT in the wrapper's tag set
+    /// (<c>cache:tag:{tag}</c>), so the wrapper's set-based removal never saw it: an invalidation through the
+    /// wrapper left it alive until it expired (#4559 found the first case, #4585 and #4600 worked around it).
+    /// </summary>
+    [Fact]
+    public async Task RemoveByTagAsync_ReachesAnEntryWrittenWithTheRawHybridCache()
+    {
+        var tag = $"raw_tag_{Guid.NewGuid():N}";
+        var key = $"{_keyPrefix}raw_key_{Guid.NewGuid():N}";
+        var factoryRuns = 0;
+        ValueTask<string> Factory(CancellationToken _)
+        {
+            factoryRuns++;
+            return ValueTask.FromResult("value");
+        }
+
+        await _hybridCache.GetOrCreateAsync(key, Factory, tags: [tag], cancellationToken: TestContext.Current.CancellationToken);
+        await _hybridCache.GetOrCreateAsync(key, Factory, tags: [tag], cancellationToken: TestContext.Current.CancellationToken);
+        factoryRuns.Should().Be(1, "setup: the second read is served from the cache");
+
+        await _cacheService.RemoveByTagAsync(tag, TestContext.Current.CancellationToken);
+
+        await _hybridCache.GetOrCreateAsync(key, Factory, tags: [tag], cancellationToken: TestContext.Current.CancellationToken);
+        factoryRuns.Should().Be(2, "the entry carried the tag, so removing the tag through the wrapper must drop it");
+    }
+
+    [Fact]
+    public async Task RemoveByTagAcrossReplicasAsync_WithoutRedis_ReachesAnEntryWrittenWithTheRawHybridCache()
+    {
+        // Without Redis the wrapper has no tag set at all, so before this fix it removed nothing, not even
+        // its own entries; the native tag invalidation works on L1 and L2 regardless.
+        var serviceNoRedis = new HybridCacheService(
+            _hybridCache,
+            Options.Create(new HybridCacheConfiguration
+            {
+                EnableL2Cache = true,
+                EnableTags = true,
+                DefaultExpiration = TimeSpan.FromMinutes(5),
+                MaxTagsPerEntry = 10,
+            }),
+            _loggerMock.Object,
+            redis: null);
+        var tag = $"raw_tag_{Guid.NewGuid():N}";
+        var key = $"{_keyPrefix}raw_key_{Guid.NewGuid():N}";
+        var factoryRuns = 0;
+        ValueTask<string> Factory(CancellationToken _)
+        {
+            factoryRuns++;
+            return ValueTask.FromResult("value");
+        }
+
+        await _hybridCache.GetOrCreateAsync(key, Factory, tags: [tag], cancellationToken: TestContext.Current.CancellationToken);
+
+        await serviceNoRedis.RemoveByTagAcrossReplicasAsync(tag, TestContext.Current.CancellationToken);
+
+        await _hybridCache.GetOrCreateAsync(key, Factory, tags: [tag], cancellationToken: TestContext.Current.CancellationToken);
+        factoryRuns.Should().Be(2);
     }
 
     #endregion

@@ -37,11 +37,13 @@ internal class InvalidateCacheByTagCommandHandler : ICommandHandler<InvalidateCa
             "Invalidating cache by tag: {Tag}",
             command.Tag);
 
-        // Remove all cache entries with this tag
+        // Remove all cache entries with this tag. #4561: the wrapper also invalidates the tag natively, so the
+        // entries written with the raw HybridCache go too; they are not in the count, which is the number of
+        // entries the wrapper tracks for the tag.
         var removed = await _hybridCache.RemoveByTagAsync(command.Tag, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
-            "Successfully invalidated {Count} cache entries for tag {Tag}",
-            removed, command.Tag);
+            "Invalidated tag {Tag}: {Count} tracked entries removed (entries written with HybridCache directly are invalidated by tag too and are not counted)",
+            command.Tag, removed);
     }
 }

@@ -15,8 +15,8 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Services;
 /// </summary>
 /// <remarks>
 /// Fissa ciò da cui dipendono gli handler e che un cambio silenzioso romperebbe: i tag (e che il
-/// dettaglio sia per gioco), i due passi per tag nell'ordine wrapper e poi <see cref="HybridCache"/>
-/// nativo, il comportamento in errore (rilancio dopo i tentativi della retry policy: la questione aperta
+/// dettaglio sia per gioco), i due passi per tag nell'ordine <see cref="HybridCache"/> nativo e poi
+/// wrapper (decisione di #4603), il comportamento in errore (rilancio dopo i tentativi della retry policy: la questione aperta
 /// di #4603 punto 2) e il token della richiesta. La retry policy dei doppi ESEGUE il delegato, come quella
 /// vera, altrimenti il doppio della cache non viene esercitato.
 /// </remarks>
@@ -31,14 +31,14 @@ public sealed class SharedGameCacheInvalidatorTests
     private static string DetailTag(Guid gameId) => $"shared-game:{gameId}";
 
     [Fact]
-    public async Task EvictDetail_TouchesOnlyTheDetailTagOfThatGame_WrapperThenNative()
+    public async Task EvictDetail_TouchesOnlyTheDetailTagOfThatGame_NativeThenWrapper()
     {
         var gameId = Guid.NewGuid();
 
         await _doubles.Invalidator.EvictDetailAsync(gameId, TestContext.Current.CancellationToken);
 
         _doubles.Events.Should().Equal(
-            new[] { $"wrapper:{DetailTag(gameId)}", $"native:{DetailTag(gameId)}" },
+            new[] { $"native:{DetailTag(gameId)}", $"wrapper:{DetailTag(gameId)}" },
             "errata and FAQ change the detail and nothing the list shows: the list tag stays");
     }
 
@@ -52,11 +52,11 @@ public sealed class SharedGameCacheInvalidatorTests
         _doubles.Events.Should().Equal(
             new[]
             {
-                $"wrapper:{ListTag}", $"native:{ListTag}",
-                $"wrapper:{DetailTag(gameId)}", $"native:{DetailTag(gameId)}",
+                $"native:{ListTag}", $"wrapper:{ListTag}",
+                $"native:{DetailTag(gameId)}", $"wrapper:{DetailTag(gameId)}",
             },
-            "every tag gets both steps, the wrapper first: the native one is what reaches an entry written "
-            + "with the raw HybridCache on this replica, with or without Redis (#4561)");
+            "every tag gets both steps, the native one first (#4603): it is local and immediate, and it "
+            + "reaches an entry written with the raw HybridCache on this replica, with or without Redis");
     }
 
     [Fact]
@@ -70,9 +70,9 @@ public sealed class SharedGameCacheInvalidatorTests
         _doubles.Events.Should().Equal(
             new[]
             {
-                $"wrapper:{ListTag}", $"native:{ListTag}",
-                $"wrapper:{DetailTag(first)}", $"native:{DetailTag(first)}",
-                $"wrapper:{DetailTag(second)}", $"native:{DetailTag(second)}",
+                $"native:{ListTag}", $"wrapper:{ListTag}",
+                $"native:{DetailTag(first)}", $"wrapper:{DetailTag(first)}",
+                $"native:{DetailTag(second)}", $"wrapper:{DetailTag(second)}",
             });
     }
 
@@ -104,22 +104,30 @@ public sealed class SharedGameCacheInvalidatorTests
     }
 
     /// <summary>
-    /// Il comportamento di oggi, fissato perché il punto 2 di #4603 non è deciso: un'evizione che fallisce
-    /// dopo i tentativi risale al chiamante, e il passo nativo non parte.
+    /// Il comportamento fissato perché la politica d'errore dopo il commit (punto 2 di #4603) non è decisa:
+    /// un'evizione che fallisce dopo i tentativi risale al chiamante. Dal momento che il passo nativo viene
+    /// PRIMA (decisione di #4603), quando il wrapper si arrende la replica che ha scritto ha già la cache
+    /// locale pulita: prima il rifiuto arrivava con la cache locale ancora stantia.
     /// </summary>
     [Fact]
-    public async Task WhenTheRetryPolicyGivesUp_TheErrorReachesTheCaller_AndTheNativeStepDoesNotRun()
+    public async Task WhenTheRetryPolicyGivesUpOnTheWrapperStep_TheNativeStepAlreadyRan_AndTheErrorReachesTheCaller()
     {
+        var gameId = Guid.NewGuid();
+        var calls = 0;
+
+        // La prima chiamata (il passo nativo) passa; la seconda (il wrapper) si arrende.
         _doubles.RetryPolicy
             .Setup(p => p.ExecuteAsync(
                 It.IsAny<Func<CancellationToken, ValueTask>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("redis down"));
+            .Returns<Func<CancellationToken, ValueTask>, string, CancellationToken>((op, _, ct) =>
+                ++calls == 1 ? op(ct).AsTask() : Task.FromException(new InvalidOperationException("redis down")));
 
-        var act = () => _doubles.Invalidator.EvictDetailAsync(Guid.NewGuid(), TestContext.Current.CancellationToken);
+        var act = () => _doubles.Invalidator.EvictDetailAsync(gameId, TestContext.Current.CancellationToken);
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("redis down");
-        _doubles.HybridCache.Verify(
-            c => c.RemoveByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _doubles.Events.Should().Equal(
+            new[] { $"native:{DetailTag(gameId)}" },
+            "the local step ran before the wrapper gave up, and the wrapper step did not complete");
     }
 
     [Fact]

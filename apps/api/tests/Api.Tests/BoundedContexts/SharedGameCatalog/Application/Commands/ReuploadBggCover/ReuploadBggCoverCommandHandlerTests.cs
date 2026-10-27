@@ -116,8 +116,8 @@ public sealed class ReuploadBggCoverCommandHandlerTests
         var detail = $"shared-game:{game.Id}";
         events.Should().Equal(
             "saved",
-            "wrapper:search-games", "native:search-games",
-            $"wrapper:{detail}", $"native:{detail}");
+            "native:search-games", "wrapper:search-games",
+            $"native:{detail}", $"wrapper:{detail}");
     }
 
     [Fact]

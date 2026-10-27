@@ -24,6 +24,7 @@ using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using MediatR;
 using Microsoft.Extensions.Logging;
@@ -506,7 +507,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
 
     /// <summary>
     /// Cancellazione all'ingresso dell'indicizzazione vettoriale (<c>ProcessPdfAsync</c>, passo 4), prima che
-    /// <c>IPdfIndexingPipeline.IndexAsync</c> scriva qualunque cosa. Si chiamava
+    /// <c>IPdfIndexingPipeline.BeginIndexingAsync</c> scriva qualunque cosa. Si chiamava
     /// <c>MidVectorStore_MaintainsConsistency</c>: il nome prometteva il centro della scrittura, e il centro è
     /// nel test <c>WhileSavingVectorRows</c>.
     ///
@@ -578,18 +579,19 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     /// Lo stesso scenario del test sopra, con la domanda che quello non fa: che cosa resta del lavoro già
     /// committato prima dell'interruzione?
     ///
-    /// <para><c>IPdfIndexingPipeline.IndexAsync</c> scrive il documento vettoriale già <c>completed</c> e
-    /// pubblica <c>VectorDocumentIndexedEvent</c> (che alza <c>shared_games.has_knowledge_base</c>) PRIMA che
-    /// <c>PdfChunkPersistence</c> salvi passaggi e righe vettoriali. Una cancellazione, o qualunque errore, fra i
-    /// due passi lascia un PDF <c>Failed</c> con un documento vettoriale «completato», passaggi senza righe
-    /// vettoriali e un gioco che dichiara di avere una base di conoscenza vuota.</para>
-    /// <para>Asserisce l'invariante e non una delle correzioni possibili: nessun documento vettoriale
-    /// <c>completed</c> senza righe, e il gioco senza base di conoscenza. Va bene sia scrivere <c>completed</c>
-    /// dopo i salvataggi sia compensare nel percorso d'errore.</para>
-    /// <para>Non è un difetto della cancellazione soltanto, e la correzione cambia l'ordine di una pipeline con
-    /// più chiamanti: è tracciata in #4609. Lo <c>Skip</c> si toglie quando la issue è chiusa.</para>
+    /// <para>Prima di #4609 <c>IPdfIndexingPipeline.IndexAsync</c> scriveva il documento vettoriale già
+    /// <c>completed</c> e pubblicava <c>VectorDocumentIndexedEvent</c> (che alza
+    /// <c>shared_games.has_knowledge_base</c>) PRIMA che <c>PdfChunkPersistence</c> salvasse passaggi e righe
+    /// vettoriali. Una cancellazione, o qualunque errore, fra i due passi lasciava un PDF <c>Failed</c> con un
+    /// documento vettoriale «completato», passaggi senza righe vettoriali e un gioco che dichiarava di avere
+    /// una base di conoscenza vuota. Ora la riga nasce <c>processing</c> (<c>BeginIndexingAsync</c>) e
+    /// <c>IndexAsync</c> la completa per ultimo.</para>
+    /// <para>Asserisce l'invariante e non il meccanismo: nessun documento vettoriale <c>completed</c> senza
+    /// righe, e il gioco senza base di conoscenza. Il suo controllo è <c>UploadPdf_WhenNotCancelled_RunsEveryPhaseToReady</c>,
+    /// che asserisce l'opposto sul percorso riuscito (completo e flag alzato): senza, i due «falso» non
+    /// proverebbero niente.</para>
     /// </summary>
-    [Fact(Skip = "DIFETTO: #4609 un upload interrotto fra IndexAsync e il salvataggio dei vettori lascia un documento vettoriale completed, i passaggi e has_knowledge_base=true su un PDF Failed", Timeout = 120_000)]
+    [Fact(Timeout = 120_000)]
     public async Task UploadPdf_WhenCancelledWhileSavingVectorRows_LeavesNoCompletedVectorDocument()
     {
         // Arrange
@@ -603,6 +605,33 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         // Assert
         var outcome = await ReadOutcomeAsync(harness, pdfId);
         outcome.State.Should().Be("Failed");
+        var completedWithoutRows = string.Equals(outcome.VectorDocumentStatus, "completed", StringComparison.Ordinal)
+            && outcome.Embeddings == 0;
+        completedWithoutRows.Should().BeFalse($"no vector document may claim an index that has no vector rows ({outcome.Describe(harness)})");
+        outcome.HasKnowledgeBase.Should().BeFalse("the game must not claim a knowledge base that was never written");
+    }
+
+    /// <summary>
+    /// Lo stesso invariante del test sopra, con un errore al posto della cancellazione: il salvataggio delle
+    /// righe vettoriali fallisce (<c>DbUpdateException</c>, che <c>PdfChunkPersistence</c> rilancia come
+    /// <c>InvalidOperationException</c>). Dopo l'errore non deve restare un documento vettoriale <c>completed</c>
+    /// senza righe, né un gioco con <c>has_knowledge_base</c> alzato da un indice che non esiste.
+    /// </summary>
+    [Fact(Timeout = 120_000)]
+    public async Task UploadPdf_WhenSavingTheVectorRowsFails_LeavesNoCompletedVectorDocument()
+    {
+        // Arrange - il primo salvataggio che contiene righe vettoriali fallisce
+        await using var harness = BuildProcessingHarness(
+            HoldPoint.Never(), HoldPoint.Never(), FailingSaveChangesInterceptor.ForVectorRows(new DbUpdateException("vector rows rejected by the test")));
+
+        // Act
+        var pdfId = await UploadAsPlainUserAsync(harness, "vector_rows_fail.pdf");
+        await WaitForBackgroundAsync(harness, "a failed vector save has to finish");
+
+        // Assert
+        var outcome = await ReadOutcomeAsync(harness, pdfId);
+        outcome.State.Should().Be("Failed", outcome.Describe(harness));
+        outcome.Embeddings.Should().Be(0, "the interceptor refused the save of the vector rows");
         var completedWithoutRows = string.Equals(outcome.VectorDocumentStatus, "completed", StringComparison.Ordinal)
             && outcome.Embeddings == 0;
         completedWithoutRows.Should().BeFalse($"no vector document may claim an index that has no vector rows ({outcome.Describe(harness)})");
@@ -750,6 +779,8 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         indexingHold.Calls.Should().Be(1);
         outcome.TextChunks.Should().BeGreaterThan(0);
         outcome.VectorDocuments.Should().Be(1);
+        outcome.VectorDocumentStatus.Should().Be("completed", "a finished index is announced as completed");
+        outcome.HasKnowledgeBase.Should().BeTrue("the flag handler has to run in this harness, or the 'false' of the interrupted-upload tests would prove nothing");
         outcome.Embeddings.Should().Be(outcome.TextChunks, "one vector row per chunk");
         harness.Quota.Verify(q => q.ConfirmQuotaAsync(It.IsAny<Guid>(), pdfId.ToString(), It.IsAny<CancellationToken>()), Times.Once);
         harness.Quota.Verify(q => q.ReleaseQuotaAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -908,7 +939,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     private ProcessingHarness BuildProcessingHarness(
         HoldPoint embeddingHold,
         HoldPoint indexingHold,
-        HoldingSaveChangesInterceptor? saveInterceptor = null,
+        SaveChangesInterceptor? saveInterceptor = null,
         Exception? extractionFailure = null,
         HoldPoint? cacheInvalidationHold = null)
     {

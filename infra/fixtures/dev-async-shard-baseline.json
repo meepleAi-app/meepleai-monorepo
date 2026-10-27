@@ -60,6 +60,13 @@
   "shards": {
     "Core": {
       "_comment": [
+        "#4609 — skipped 47 -> 46, DICHIARATO prima del run, NON ancora misurato: va ricontrollato sul",
+        ".trx di `integration-results-Core` del primo run di dev-async dopo il merge.",
+        "  -1 UploadPdfMidPhaseCancellationTests.UploadPdf_WhenCancelledWhileSavingVectorRows_LeavesNoCompletedVectorDocument",
+        "Il difetto e' corretto (il documento vettoriale nasce `processing` e IndexAsync lo completa dopo i",
+        "salvataggi), quindi il test non salta piu'. In piu' la classe ha un test nuovo, che gira:",
+        "UploadPdf_WhenSavingTheVectorRowsFails_LeavesNoCompletedVectorDocument.",
+        "",
         "#4531 — skipped 46 -> 47, DICHIARATO prima del run, NON ancora misurato: va ricontrollato sul",
         ".trx di `integration-results-Core` del primo run di dev-async dopo il merge.",
         "  +1 UploadPdfMidPhaseCancellationTests.UploadPdf_WhenCancelledWhileSavingVectorRows_LeavesNoCompletedVectorDocument",
@@ -118,7 +125,7 @@
         "commit che toccano solo apps/web, e quel run risulta 'success' a vuoto."
       ],
       "failed": 2,
-      "skipped": 47,
+      "skipped": 46,
       "failedTests": [
         "Api.Tests.Integration.FinalValidation.Week12SimpleValidationTests.Concurrency_IsolatedTransactions_NoInterference",
         "Api.Tests.Integration.UploadPdfIntegrationTests.UploadPdf_WhenDatabaseDeadlock_RetriesAndHandlesGracefully"
@@ -169,8 +176,7 @@
         "Api.Tests.Integration.UnstructuredPdfExtractionIntegrationTests.SimpleItalianPdf_SuccessfulExtraction",
         "Api.Tests.Integration.UnstructuredPdfExtractionIntegrationTests.TableDetection_ExtractsStructuredData",
         "Api.Tests.Integration.UploadPdfIntegrationTests.UploadPdf_WhenDatabaseConnectionClosed_HandlesFailureGracefully",
-        "Api.Tests.Integration.UploadPdfMidPhaseCancellationTests.UploadPdf_WhenCancelledMidTextExtraction_ReleasesResources",
-        "Api.Tests.Integration.UploadPdfMidPhaseCancellationTests.UploadPdf_WhenCancelledWhileSavingVectorRows_LeavesNoCompletedVectorDocument"
+        "Api.Tests.Integration.UploadPdfMidPhaseCancellationTests.UploadPdf_WhenCancelledMidTextExtraction_ReleasesResources"
       ]
     },
     "KnowledgeBase": {

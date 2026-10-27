@@ -66,26 +66,29 @@ internal sealed class DegradeStuckJobCommandHandler
 
             // Also degrade the PdfDocument if not already terminal.
             var pdf = await _pdfRepository.GetByIdAsync(job.PdfDocumentId, cancellationToken).ConfigureAwait(false);
-            var pdfDegraded = false;
-            if (pdf is not null
-                && pdf.ProcessingState != PdfProcessingState.Ready
-                && pdf.ProcessingState != PdfProcessingState.Failed)
+            var pdfIsFailed = false;
+            if (pdf is not null && pdf.ProcessingState != PdfProcessingState.Ready)
             {
-                // ErrorCategory.Service (transient) → RetryFailedPdfsJob eligible (RetryCount < 3).
-                pdf.MarkAsFailed(message, ErrorCategory.Service, pdf.ProcessingState);
-                await _pdfRepository.UpdateAsync(pdf, cancellationToken).ConfigureAwait(false);
-                pdfDegraded = true;
+                if (pdf.ProcessingState != PdfProcessingState.Failed)
+                {
+                    // ErrorCategory.Service (transient) → RetryFailedPdfsJob eligible (RetryCount < 3).
+                    pdf.MarkAsFailed(message, ErrorCategory.Service, pdf.ProcessingState);
+                    await _pdfRepository.UpdateAsync(pdf, cancellationToken).ConfigureAwait(false);
+                }
+
+                pdfIsFailed = true;
             }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-            // #4609 follow-up (#4660): the PDF is Failed, so its vector document (created "processing" by
-            // BeginIndexingAsync) must not stay in flight. The retry puts it right again while RetryFailedPdfsJob still
-            // has attempts; once they run out nobody would. After the save, so a lost race leaves it alone; a no-op when
-            // the PDF failed before the indexing phase; never throws. If the pipeline turns out to be alive and finishes
-            // later, IndexAsync completes the row anyway. The text is the category, not an exception message: this column
-            // is served to users by pdf-status.
-            if (pdfDegraded)
+            // #4609 follow-up (#4660): the PDF is Failed (degraded just now, or already by someone else while the job
+            // stayed in Processing), so its vector document (created "processing" by BeginIndexingAsync) must not stay
+            // in flight. The retry puts it right again while RetryFailedPdfsJob still has attempts; once they run out
+            // nobody would. After the save, so a lost race leaves it alone; idempotent, and a no-op when the PDF failed
+            // before the indexing phase; never throws. If the pipeline turns out to be alive and finishes later,
+            // IndexAsync completes the row anyway. The text is the category, not an exception message: this column is
+            // served to users by pdf-status.
+            if (pdfIsFailed)
             {
                 await _indexingPipeline.MarkIndexingFailedAsync(
                     job.PdfDocumentId, $"Processing failed ({ErrorCategory.Service})", CancellationToken.None).ConfigureAwait(false);

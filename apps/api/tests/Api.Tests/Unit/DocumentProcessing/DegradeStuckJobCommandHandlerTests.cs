@@ -143,6 +143,29 @@ public sealed class DegradeStuckJobCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenThePdfIsAlreadyFailed_StillClosesItsVectorDocument_WithoutRewritingThePdf()
+    {
+        var pdfId = Guid.NewGuid();
+        var job = MakeProcessingJob(pdfId);
+        var jobRepo = new Mock<IProcessingJobRepository>();
+        jobRepo.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
+        var pdfRepo = new Mock<IPdfDocumentRepository>();
+        pdfRepo.Setup(r => r.GetByIdAsync(pdfId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(MakeEmbeddingPdf(pdfId, PdfProcessingState.Failed));
+        var indexingPipeline = new Mock<IPdfIndexingPipeline>();
+
+        await BuildHandler(jobRepo.Object, pdfRepo.Object, new Mock<IUnitOfWork>().Object, indexingPipeline.Object)
+            .Handle(new DegradeStuckJobCommand(job.Id, 42.0), CancellationToken.None);
+
+        indexingPipeline.Verify(
+            p => p.MarkIndexingFailedAsync(pdfId, "Processing failed (Service)", CancellationToken.None),
+            Times.Once,
+            "the PDF failed earlier while the job stayed in Processing: its vector document is still in flight");
+        pdfRepo.Verify(r => r.UpdateAsync(It.IsAny<PdfDocument>(), It.IsAny<CancellationToken>()), Times.Never,
+            "an already Failed PDF keeps its own error: only the job is degraded");
+    }
+
+    [Fact]
     public async Task Handle_WhenThePdfIsAlreadyReady_LeavesItsVectorDocumentAlone()
     {
         var pdfId = Guid.NewGuid();

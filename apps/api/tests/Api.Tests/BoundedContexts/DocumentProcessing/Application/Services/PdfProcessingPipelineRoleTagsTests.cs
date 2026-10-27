@@ -307,13 +307,25 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
             Status = "Processing",
             CreatedAt = DateTimeOffset.UtcNow,
         };
+        var step = new Api.Infrastructure.Entities.DocumentProcessing.ProcessingStepEntity
+        {
+            Id = Guid.NewGuid(),
+            ProcessingJobId = job.Id,
+            StepName = "Embed",
+            Status = "Pending",
+        };
         _db.ProcessingJobs.Add(job);
+        _db.ProcessingSteps.Add(step);
         await _db.SaveChangesAsync();
         _vectorStoreMock
             .Setup(v => v.IndexBatchAsync(It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
             // A change the job holds on the shared context, made after the pipeline's last save: still unsaved when the
             // failure handler runs (a change made earlier would be flushed by the pipeline's own saves).
-            .Callback(() => job.CurrentStep = "Embed")
+            .Callback(() =>
+            {
+                job.CurrentStep = "Embed";
+                step.Status = "Running";
+            })
             .ThrowsAsync(new InvalidOperationException("the vector store is down"));
 
         await Record.ExceptionAsync(() => CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None));
@@ -323,6 +335,7 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
         _db.Entry(job).State.Should().NotBe(
             EntityState.Detached, "the job that shares this context saves its own failure through its tracked entity");
         job.CurrentStep.Should().Be("Embed", "the change the job holds is not a residue of the pipeline's failure");
+        step.Status.Should().Be("Running", "nor is the one on its step");
     }
 
     /// <summary>
@@ -350,6 +363,57 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
     }
 
     /// <summary>
+    /// #4660 punto 5, il caso del reprocess: i chunk vecchi del PDF sono segnati `Deleted` e i nuovi `Added` in un
+    /// solo salvataggio, che fallisce. Il salvataggio che segna il PDF `Failed` non deve cancellare i vecchi chunk,
+    /// che nel database sono ancora l'unico testo indicizzabile di quel documento.
+    /// </summary>
+    [Fact]
+    public async Task ProcessAsync_WhenSavingTheNewTextChunksFails_TheOldChunksOfTheReprocessedPdfSurvive()
+    {
+        SeedPdfDocument();
+        for (var index = 0; index < 2; index++)
+        {
+            _db.TextChunks.Add(new TextChunkEntity
+            {
+                Id = Guid.NewGuid(),
+                PdfDocumentId = _pdfDocumentId,
+                PrivateGameId = _gameId,
+                Content = "old chunk",
+                ChunkIndex = index,
+                PageNumber = 1,
+                CharacterCount = 9,
+                CreatedAt = DateTime.UtcNow,
+            });
+        }
+
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear(); // as in production, where the pipeline's context does not track what it has not read
+        SetupExtractor(pageCount: 3);
+        SetupBlobStorage();
+        SetupHierarchicalChunking();
+        SetupEmbeddings();
+        SetupRoleClassifierDistinctPerChunk();
+        SetupIndexingPipelineCreatesVectorDocument();
+        var oldChunksDeletedAtTheFailure = false;
+        _failingSaves.FailWhen = context =>
+        {
+            var failing = context.ChangeTracker.Entries<TextChunkEntity>().Any(e => e.State == EntityState.Added);
+            oldChunksDeletedAtTheFailure |= failing
+                && context.ChangeTracker.Entries<TextChunkEntity>().Any(e => e.State == EntityState.Deleted);
+            return failing;
+        };
+
+        await Record.ExceptionAsync(() => CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None));
+
+        var reprocessed = await _db.PdfDocuments.AsNoTracking().SingleAsync(p => p.Id == _pdfDocumentId);
+        reprocessed.ProcessingState.Should().Be("Failed", "a run that did not fail would make the check below vacuous");
+        _failingSaves.Failures.Should().Be(1, "the failure has to come from the save of the new chunks, and only from it (the PDF failed with: " + reprocessed.ProcessingError + ")");
+        oldChunksDeletedAtTheFailure.Should().BeTrue("the old chunks have to be pending deletion in the failed save, or the check below proves nothing");
+        (await _db.TextChunks.AsNoTracking().CountAsync(c => c.PdfDocumentId == _pdfDocumentId && c.Content == "old chunk"))
+            .Should().Be(2, "the save that deleted them is the one that failed");
+    }
+
+    /// <summary>
     /// #4660 punto 5. Il salvataggio finale (`Ready`) fallisce senza essere un conflitto di concorrenza: il PDF resta
     /// `Ready` solo in memoria, e il controllo «non sovrascrivere un PDF Ready» del gestore d'errore leggeva il
     /// tracker, quindi saltava la scrittura di `Failed`: nel database il PDF restava nell'ultimo stato salvato.
@@ -372,6 +436,25 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
         (await _db.PdfDocuments.AsNoTracking().SingleAsync(p => p.Id == _pdfDocumentId)).ProcessingState
             .Should().Be("Failed");
         _failingSaves.Failures.Should().Be(1, "the failure has to come from the final Ready save, and only from it");
+    }
+
+    /// <summary>
+    /// What <c>DiscardUnsavedChanges</c> relies on: a Modified entity put back to Unchanged gets the values it was
+    /// loaded with, with no explicit copy and no database access. If a future EF Core stopped doing it, the discarded
+    /// PDF would keep its in-memory <c>Ready</c> and the failure handler would skip it.
+    /// </summary>
+    [Fact]
+    public async Task EfCore_AModifiedEntityPutBackToUnchanged_HasTheValuesItWasLoadedWith()
+    {
+        SeedPdfDocument();
+        _db.ChangeTracker.Clear();
+        var pdf = await _db.PdfDocuments.AsTracking().SingleAsync(p => p.Id == _pdfDocumentId);
+        pdf.ProcessingState = "Ready";
+        _db.ChangeTracker.Entries<PdfDocumentEntity>().Single().State.Should().Be(EntityState.Modified);
+
+        _db.Entry(pdf).State = EntityState.Unchanged;
+
+        pdf.ProcessingState.Should().Be("Pending");
     }
 
     private sealed class FailOnDemandSaveInterceptor : Microsoft.EntityFrameworkCore.Diagnostics.SaveChangesInterceptor

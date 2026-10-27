@@ -102,7 +102,8 @@ public class PurgeStaleDocumentsCommandHandlerTests
         using var ctx = CreateDbContext(dbName);
         var stale = Pdf("stuck.pdf", "Indexing", Now.UtcDateTime.AddDays(-20));
         var other = Pdf("done.pdf", "Ready", Now.UtcDateTime.AddDays(-20));
-        ctx.PdfDocuments.AddRange(stale, other);
+        var recent = Pdf("running.pdf", "Indexing", Now.UtcDateTime.AddHours(-1));
+        ctx.PdfDocuments.AddRange(stale, other, recent);
         ctx.VectorDocuments.Add(new VectorDocumentEntity
         {
             Id = Guid.NewGuid(), PdfDocumentId = stale.Id, ChunkCount = 3, TotalCharacters = 30, IndexingStatus = "processing",
@@ -112,12 +113,18 @@ public class PurgeStaleDocumentsCommandHandlerTests
             Id = Guid.NewGuid(), PdfDocumentId = other.Id, ChunkCount = 3, TotalCharacters = 30, IndexingStatus = "completed",
             IndexedAt = Now.UtcDateTime.AddDays(-20),
         });
+        ctx.VectorDocuments.Add(new VectorDocumentEntity
+        {
+            Id = Guid.NewGuid(), PdfDocumentId = recent.Id, ChunkCount = 3, TotalCharacters = 30, IndexingStatus = "processing",
+        });
         await ctx.SaveChangesAsync();
         ctx.ChangeTracker.Clear();
 
         await CreateHandler(ctx).Handle(new PurgeStaleDocumentsCommand(), default);
 
         using var verifyCtx = CreateDbContext(dbName);
+        (await verifyCtx.VectorDocuments.SingleAsync(v => v.PdfDocumentId == recent.Id)).IndexingStatus
+            .Should().Be("processing", "a PDF that is still being indexed is not purged, so neither is its vector document");
         var staleRow = await verifyCtx.VectorDocuments.SingleAsync(v => v.PdfDocumentId == stale.Id);
         staleRow.IndexingStatus.Should().Be("failed");
         staleRow.IndexingError.Should().Be("Processing failed (Service)");

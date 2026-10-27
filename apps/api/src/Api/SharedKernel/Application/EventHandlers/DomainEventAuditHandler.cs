@@ -73,11 +73,23 @@ internal sealed class DomainEventAuditHandler<TEvent> : INotificationHandler<TEv
             ResourceId = notification.EventId.ToString(),
             UserId = TryExtractUserId(notification)?.ToString(),
             Result = "Success",
-            Details = JsonSerializer.Serialize(notification, notification.GetType(), DetailsJsonOptions),
+            Details = FitToTheColumn(JsonSerializer.Serialize(notification, notification.GetType(), DetailsJsonOptions)),
             Timestamp = new DateTimeOffset(DateTime.SpecifyKind(notification.OccurredAt, DateTimeKind.Utc)),
             RequestType = nameof(IDomainEvent),
         };
     }
+
+    /// <summary>
+    /// <c>audit_logs.Details</c> is <c>varchar(1024)</c> (<c>AuditLogEntityConfiguration</c>) and nothing between
+    /// this handler and the column truncates it. An event with free text (a rejection reason, an errata
+    /// description) can serialize to more; <c>AuditOutboxProcessor</c> would then fail the whole batch on the
+    /// <c>SaveChanges</c>, leave the rows Pending, and block every audit behind the first one on each poll
+    /// (#4566). The cut keeps the start of the event and ends with an ellipsis, so it is visibly a cut.
+    /// </summary>
+    private const int MaxDetailsLength = 1024;
+
+    private static string FitToTheColumn(string details) =>
+        details.Length <= MaxDetailsLength ? details : string.Concat(details.AsSpan(0, MaxDetailsLength - 3), "...");
 
     /// <summary>
     /// Convention-based UserId extraction: probes a priority-ordered list of common actor

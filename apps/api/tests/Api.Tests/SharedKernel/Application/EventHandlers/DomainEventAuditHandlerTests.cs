@@ -312,6 +312,53 @@ public sealed class DomainEventAuditHandlerTests
             Times.Once);
     }
 
+    /// <summary>
+    /// #4566: <c>audit_logs.Details</c> is a <c>varchar(1024)</c> and nothing between this handler and the
+    /// column truncates it. An event that carries free text (a rejection reason, an errata description) can
+    /// serialize to more than that; <c>AuditOutboxProcessor</c> then fails the whole batch on the
+    /// `SaveChanges` (value too long), the rows stay Pending, and the same row blocks every audit behind it
+    /// on each poll. The handler has to keep the payload inside the column.
+    /// </summary>
+    [Fact]
+    public async Task Handle_EventWithLongText_KeepsDetailsWithinTheAuditLogColumn()
+    {
+        // Arrange
+        var handler = new DomainEventAuditHandler<SystemEvent>(_auditServiceMock.Object, _systemLoggerMock.Object);
+        var notification = new SystemEvent(new string('x', 5000));
+
+        AuditOutboxPayload? captured = null;
+        _auditServiceMock
+            .Setup(s => s.EnqueueAuditAsync(It.IsAny<AuditOutboxPayload>(), It.IsAny<CancellationToken>()))
+            .Callback<AuditOutboxPayload, CancellationToken>((p, _) => captured = p)
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await handler.Handle(notification, CancellationToken.None);
+
+        // Assert
+        captured.Should().NotBeNull();
+        captured!.Details.Should().NotBeNull();
+        captured.Details!.Length.Should().BeLessThanOrEqualTo(1024, "audit_logs.Details is varchar(1024)");
+        captured.Details.Should().Contain("Reason", "what fits of the event is still there");
+    }
+
+    [Fact]
+    public async Task Handle_EventThatFitsTheColumn_KeepsDetailsWhole()
+    {
+        var handler = new DomainEventAuditHandler<SystemEvent>(_auditServiceMock.Object, _systemLoggerMock.Object);
+        var notification = new SystemEvent(new string('y', 600));
+
+        AuditOutboxPayload? captured = null;
+        _auditServiceMock
+            .Setup(s => s.EnqueueAuditAsync(It.IsAny<AuditOutboxPayload>(), It.IsAny<CancellationToken>()))
+            .Callback<AuditOutboxPayload, CancellationToken>((p, _) => captured = p)
+            .Returns(Task.CompletedTask);
+
+        await handler.Handle(notification, CancellationToken.None);
+
+        captured!.Details.Should().Contain(new string('y', 600), "an event within the limit is stored untouched");
+    }
+
     [Fact]
     public async Task Handle_EmptyActorGuid_ReturnsNullUserId()
     {

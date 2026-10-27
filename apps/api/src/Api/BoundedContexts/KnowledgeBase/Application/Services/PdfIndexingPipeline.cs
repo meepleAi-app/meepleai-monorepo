@@ -184,6 +184,66 @@ internal sealed class PdfIndexingPipeline : IPdfIndexingPipeline
         }
     }
 
+    private const int MaxIndexingErrorLength = 500;
+
+    public async Task MarkIndexingFailedAsync(
+        Guid pdfDocumentId,
+        string errorMessage,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var row = await _db.VectorDocuments
+                .AsTracking()
+                .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfDocumentId, cancellationToken)
+                .ConfigureAwait(false);
+
+            // No row: the PDF failed before BeginIndexingAsync.
+            if (row is null)
+            {
+                return;
+            }
+
+            // The save that made the PDF fail may have left this row tracked with values that never reached the
+            // database (IndexAsync writes "completed" into the entity before it saves, and the queue pipeline shares
+            // the context without clearing it). Judge the row the database has, not the tracker's.
+            var entry = _db.Entry(row);
+            await entry.ReloadAsync(cancellationToken).ConfigureAwait(false);
+
+            // Gone since the read (an admin deleted it): nothing left to mark. Completed: a re-run of an indexed
+            // document is left as it is (see the interface remarks). Failed: already marked, the first error stays.
+            if (entry.State == EntityState.Detached
+                || string.Equals(row.IndexingStatus, "completed", StringComparison.Ordinal)
+                || string.Equals(row.IndexingStatus, "failed", StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            row.IndexingStatus = "failed";
+            row.IndexingError = errorMessage is { Length: > MaxIndexingErrorLength }
+                ? errorMessage[..MaxIndexingErrorLength]
+                : errorMessage;
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(PdfIndexingPipeline),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict marking the VectorDocument of PDF {PdfDocumentId} failed (Category B) — admin mutation wins",
+                pdfDocumentId);
+        }
+#pragma warning disable CA1031 // Failure handlers call this: it must not throw
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogWarning(ex,
+                "Could not mark the VectorDocument of PDF {PdfDocumentId} failed; it stays in its previous state",
+                pdfDocumentId);
+        }
+    }
+
     public async Task IndexAsync(
         Guid pdfDocumentId,
         Guid? gameId,

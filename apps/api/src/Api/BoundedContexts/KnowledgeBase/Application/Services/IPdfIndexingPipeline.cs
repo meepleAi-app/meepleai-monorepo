@@ -91,4 +91,36 @@ public interface IPdfIndexingPipeline
         int totalCharacters,
         string language,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Third step, on the failure path: a PDF that failed after <see cref="BeginIndexingAsync"/> must not leave
+    /// its vector document in "processing".
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// #4609 follow-up. <see cref="BeginIndexingAsync"/> creates the row in "processing" and
+    /// <see cref="IndexAsync"/> completes it; when the PDF fails in between (a save fails, the user cancels) nobody
+    /// completes it, and the game's indexing status would read "processing" for ever (the polling never ends, the
+    /// documents list shows the PDF as being processed). This marks the row "failed" with the error, like the
+    /// re-index command does.
+    /// </para>
+    /// <para>
+    /// A row that is already "completed" is left as it is (this is not the compensation of "completed" that the
+    /// 2026-10-25 decision ruled out), and a PDF with no vector document is a no-op. That does not promise the index
+    /// is intact: the re-index path deletes the embeddings before it inserts them again, so a failed re-index can
+    /// leave a "completed" row without embeddings. The row is judged by the database's values, not by whatever the
+    /// change tracker holds after the save that failed. Best effort: it is called from failure handlers, so it never
+    /// throws; a failure to write is logged.
+    /// </para>
+    /// </remarks>
+    /// <param name="pdfDocumentId">Source PDF id.</param>
+    /// <param name="errorMessage">
+    /// Why the PDF failed; stored (truncated) as the vector document's error, which the indexing-status endpoint
+    /// serves to users: pass text that is safe to show (a category, a fixed phrase), not an exception message.
+    /// </param>
+    /// <param name="cancellationToken">Cancellation token. Failure handlers pass <c>CancellationToken.None</c>.</param>
+    Task MarkIndexingFailedAsync(
+        Guid pdfDocumentId,
+        string errorMessage,
+        CancellationToken cancellationToken = default);
 }

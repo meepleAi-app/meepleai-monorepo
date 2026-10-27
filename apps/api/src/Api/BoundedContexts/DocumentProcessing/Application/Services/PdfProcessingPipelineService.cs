@@ -1244,9 +1244,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
     /// <summary>
     /// Detaches Added/Modified entities of a given type from the change tracker.
-    /// Used in catch blocks of optional, non-blocking enhancement steps so a
-    /// failed SaveChangesAsync does not poison subsequent saves with the same
-    /// unflushed entities (and thus the same error).
+    /// Used in catch blocks (the optional, non-blocking enhancement steps, and the failure
+    /// handler for the vector document) so a failed SaveChangesAsync does not poison
+    /// subsequent saves with the same unflushed entities (and thus the same error).
     /// </summary>
     private void DetachUnsavedChanges<TEntity>() where TEntity : class
     {
@@ -1347,6 +1347,17 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     /// </param>
     private async Task TryMarkFailedAsync(Guid pdfDocumentId, string errorMessage, ErrorCategory? category = null)
     {
+        // #4609 follow-up: IndexAsync sets the vector document to "completed" in memory before it saves, so a failed
+        // save leaves it Modified in the tracker. The save below flushes the whole context, so without this it would
+        // write that "completed" next to the failed PDF. Only the vector document is detached, not the whole tracker
+        // (as the upload path does, #4395): PdfProcessingQuartzJob shares this context and saves its job and step
+        // rows through it after the pipeline returns, so clearing would turn its failure into a no-op and leave the
+        // job in Processing. Everything else the indexing phase writes is saved as it goes (the text chunks) or goes
+        // around the context (the pgvector rows). Not covered, and as before this change (#4660): a failure of the
+        // text-chunk save itself leaves those chunks Added, and a PDF row left Modified or Ready in memory by a failed
+        // save of its own; the save below flushes them again.
+        DetachUnsavedChanges<VectorDocumentEntity>();
+
         try
         {
             // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06),
@@ -1389,6 +1400,12 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             _logger.LogError(ex, "[PdfPipeline] Failed to mark PDF {PdfId} as failed", pdfDocumentId);
         }
 #pragma warning restore CA1031
+
+        // #4609 follow-up: the PDF failed, so its vector document (created "processing" by BeginIndexingAsync)
+        // must not stay in flight. A PDF that failed before the indexing phase has none: a no-op. The text is the
+        // category, not the exception message: this column is served to users by pdf-status.
+        await _indexingPipeline.MarkIndexingFailedAsync(
+            pdfDocumentId, $"Processing failed ({category?.ToString() ?? nameof(ErrorCategory.Unknown)})", CancellationToken.None).ConfigureAwait(false);
     }
 
     /// <summary>

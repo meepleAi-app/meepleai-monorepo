@@ -76,10 +76,10 @@ internal sealed class DetailCacheEvictionDoubles
         var tag = $"shared-game:{gameId}";
 
         Events.Should().Equal(
-            new[] { Written, $"wrapper:{tag}", $"native:{tag}" },
-            "the detail is evicted once, after the write, through the wrapper (retry + other replicas) "
-            + "and through the native HybridCache that the detail is written with, which is what makes "
-            + "the next read on this replica miss, with or without Redis");
+            new[] { Written, $"native:{tag}", $"wrapper:{tag}" },
+            "the detail is evicted once, after the write, through the native HybridCache that the detail "
+            + "is written with (local and immediate: the next read on this replica misses, with or without "
+            + "Redis) and then through the wrapper (retry + other replicas): native first, #4603");
     }
 
     /// <summary>
@@ -94,11 +94,11 @@ internal sealed class DetailCacheEvictionDoubles
             new[]
             {
                 Written,
-                "wrapper:search-games", "native:search-games",
-                $"wrapper:{tag}", $"native:{tag}",
+                "native:search-games", "wrapper:search-games",
+                $"native:{tag}", $"wrapper:{tag}",
             },
             "the list and the detail of the game are evicted once each, after the write, through the "
-            + "wrapper and through the native HybridCache");
+            + "native HybridCache and then through the wrapper");
     }
 
     public void AssertNothingEvicted() =>

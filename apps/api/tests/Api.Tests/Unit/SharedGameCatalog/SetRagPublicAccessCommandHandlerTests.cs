@@ -153,7 +153,7 @@ public sealed class SetRagPublicAccessCommandHandlerTests
             c => c.RemoveByTagAcrossReplicasAsync("search-games", It.IsAny<CancellationToken>()), Times.Once);
         _mockCache.Verify(
             c => c.RemoveByTagAcrossReplicasAsync($"shared-game:{game.Id}", It.IsAny<CancellationToken>()), Times.Once);
-        // La lista è scritta con HybridCache grezzo, che il wrapper non raggiunge (#4561): serve il tag nativo.
+        // La lista è scritta con HybridCache grezzo: l'evizione passa anche dal tag nativo (#4561, #4603).
         _mockHybridCache.Verify(
             c => c.RemoveByTagAsync("search-games", It.IsAny<CancellationToken>()), Times.Once);
         // Il dettaglio non riporta `isRagPublic`, ma questo handler lo evince da sempre insieme alla lista

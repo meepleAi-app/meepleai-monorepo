@@ -13,6 +13,10 @@ internal sealed class InvalidateCacheByTagCommandValidator : AbstractValidator<I
         RuleFor(x => x.Tag)
             .NotEmpty()
             .WithMessage("Tag is required")
+            // #4561: the wrapper now invalidates the tag on the Microsoft HybridCache too, where "*" is the
+            // wildcard that drops every entry. Before, "*" matched an empty wrapper set and did nothing.
+            .NotEqual("*")
+            .WithMessage("Tag '*' is the HybridCache wildcard and would drop every cached entry")
             .MaximumLength(200)
             .WithMessage("Tag cannot exceed 200 characters");
     }

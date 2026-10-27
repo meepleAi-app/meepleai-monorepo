@@ -16,29 +16,28 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 /// (dettaglio) scrivono le voci.
 /// </para>
 /// <para>
-/// Due passi per tag, e il secondo non è un doppione. Il primo è il wrapper
-/// <see cref="IHybridCacheService"/> con la retry policy di #613 e il Pub/Sub verso le repliche. La lista
-/// e il dettaglio però sono scritti con <see cref="HybridCache"/> grezzo, e il wrapper ha due strade verso
-/// una voce così, nessuna delle quali basta da sola:
+/// Due passi per tag: prima il nativo, <c>HybridCache.RemoveByTagAsync</c>, poi il wrapper
+/// <see cref="IHybridCacheService"/> con la retry policy di #613 e il Pub/Sub verso le repliche. La lista e il
+/// dettaglio sono scritti con <see cref="HybridCache"/> grezzo, e per una voce così:
 /// </para>
 /// <list type="bullet">
-/// <item>Il suo passo locale toglie solo le chiavi elencate nel suo set Redis, che si riempie solo per le
-/// voci scritte da lui: per queste non trova nulla (#4561, già incontrato in #4559 e #4585).</item>
-/// <item>Il Pub/Sub invece arriva alla voce: <c>HybridCacheInvalidationSubscriber</c> chiama
-/// <c>HybridCache.RemoveByTagAsync(tag)</c> su ogni replica che riceve il messaggio, compresa quella che
-/// l'ha pubblicato. Ma lo fa in modo asincrono, senza garanzia che arrivi prima della risposta del
-/// comando, e senza Redis il messaggio non parte affatto.</item>
+/// <item>fino a #4561 il passo locale del wrapper non trovava nulla: toglieva solo le chiavi del suo set Redis,
+/// che si riempie solo per le voci scritte da lui (già incontrato in #4559 e #4585). Ora il wrapper comincia a
+/// sua volta con <c>HybridCache.RemoveByTagAsync</c>;</item>
+/// <item>il Pub/Sub arriva alla voce sulle altre repliche (<c>HybridCacheInvalidationSubscriber</c> chiama
+/// <c>HybridCache.RemoveByTagAsync(tag)</c> su ognuna), ma in modo asincrono e, senza Redis, non parte affatto.</item>
 /// </list>
 /// <para>
-/// Il passo nativo serve a questi due casi: la lettura subito dopo la scrittura, sulla replica che ha
-/// eseguito il comando (senza aspettare il messaggio), e l'esecuzione senza Redis. Se #4561 renderà il
-/// passo locale del wrapper capace di raggiungere le voci grezze, il passo nativo diventerà ridondante e
-/// si toglie da qui.
+/// Il passo nativo qui resta, e viene <b>prima</b> del wrapper, per decisione del proprietario (#4603, punto 2).
+/// È una cautela più che un guadagno misurato: dopo #4561 il wrapper fa la stessa evizione come prima cosa,
+/// quindi l'ordine conta solo se qualcosa fallisce prima di quella riga. Ha però un effetto che oggi lo rende
+/// necessario nei test: l'host di integrazione sostituisce il wrapper con un passthrough, e senza il passo
+/// nativo qui nessuna evizione avverrebbe (<c>SharedGameCatalogEndpointsIntegrationTests</c>, <c>StatusCache</c>).
 /// </para>
 /// <para>
 /// Ogni passo passa dalla retry policy, col nome di operazione che alimenta la metrica
-/// (<c>shared-games.list</c> / <c>shared-games.detail</c>). L'ordine per tag è wrapper e poi nativo; la
-/// lista precede il dettaglio.
+/// (<c>shared-games.list</c> / <c>shared-games.detail</c>). La lista precede il dettaglio. Se il wrapper esaurisce
+/// i tentativi l'eccezione esce, a evizione nativa già fatta; se si arrende il passo nativo, il wrapper non parte.
 /// </para>
 /// </remarks>
 internal sealed class SharedGameCacheInvalidator : ISharedGameCacheInvalidator
@@ -91,13 +90,14 @@ internal sealed class SharedGameCacheInvalidator : ISharedGameCacheInvalidator
 
     private async Task EvictTagAsync(string tag, string operationName, CancellationToken cancellationToken)
     {
+        // Nativo prima (#4603, punto 2): vedi la nota di classe.
         await _retryPolicy.ExecuteAsync(
-            token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync(tag, token)),
+            token => _hybridCache.RemoveByTagAsync(tag, token),
             operationName,
             cancellationToken).ConfigureAwait(false);
 
         await _retryPolicy.ExecuteAsync(
-            token => _hybridCache.RemoveByTagAsync(tag, token),
+            token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync(tag, token)),
             operationName,
             cancellationToken).ConfigureAwait(false);
     }

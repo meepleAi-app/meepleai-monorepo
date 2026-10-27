@@ -639,6 +639,52 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     }
 
     /// <summary>
+    /// Seguito di #4609: dopo l'errore il PDF è `Failed`, e il suo documento vettoriale (nato `processing` da
+    /// <c>BeginIndexingAsync</c>) non deve restare `processing` per sempre: lo stato dell'indicizzazione di un
+    /// gioco lo leggerebbe come «in elaborazione» e il polling non finirebbe mai. Diventa `failed`, come
+    /// quando fallisce il comando di re-indicizzazione.
+    /// </summary>
+    [Fact(Timeout = 120_000)]
+    public async Task UploadPdf_WhenSavingTheVectorRowsFails_MarksTheVectorDocumentFailed()
+    {
+        // Arrange - il primo salvataggio che contiene righe vettoriali fallisce
+        await using var harness = BuildProcessingHarness(
+            HoldPoint.Never(), HoldPoint.Never(), FailingSaveChangesInterceptor.ForVectorRows(new DbUpdateException("vector rows rejected by the test")));
+
+        // Act
+        var pdfId = await UploadAsPlainUserAsync(harness, "vector_rows_fail_marks.pdf");
+        await WaitForBackgroundAsync(harness, "a failed vector save has to finish");
+
+        // Assert
+        var outcome = await ReadOutcomeAsync(harness, pdfId);
+        outcome.State.Should().Be("Failed", outcome.Describe(harness));
+        outcome.VectorDocuments.Should().Be(1, "the document was created before the save that failed");
+        outcome.VectorDocumentStatus.Should().Be("failed", $"a failed PDF cannot leave its vector document in flight ({outcome.Describe(harness)})");
+    }
+
+    /// <summary>
+    /// Lo stesso per la cancellazione dell'utente: il PDF è `Failed` (categoria `Cancelled`), il suo documento
+    /// vettoriale non resta `processing`.
+    /// </summary>
+    [Fact(Timeout = 120_000)]
+    public async Task UploadPdf_WhenCancelledWhileSavingVectorRows_MarksTheVectorDocumentFailed()
+    {
+        // Arrange
+        var vectorRowsSaveHold = new HoldPoint(holdOnCall: 1);
+        await using var harness = BuildProcessingHarness(
+            HoldPoint.Never(), HoldPoint.Never(), HoldingSaveChangesInterceptor.ForVectorRows(vectorRowsSaveHold));
+
+        // Act
+        var (pdfId, _) = await CancelWhileSavingVectorRowsAsync(harness, vectorRowsSaveHold, "mid_vector_rows_marks.pdf");
+
+        // Assert
+        var outcome = await ReadOutcomeAsync(harness, pdfId);
+        outcome.State.Should().Be("Failed");
+        outcome.VectorDocuments.Should().Be(1);
+        outcome.VectorDocumentStatus.Should().Be("failed", $"a cancelled PDF cannot leave its vector document in flight ({outcome.Describe(harness)})");
+    }
+
+    /// <summary>
     /// Cancellazione mentre si salva una transizione di stato (<c>Embedding → Indexing</c>).
     ///
     /// <para>La transizione accoda <c>PdfStateChangedEvent</c> nel <c>IDomainEventCollector</c> PRIMA del

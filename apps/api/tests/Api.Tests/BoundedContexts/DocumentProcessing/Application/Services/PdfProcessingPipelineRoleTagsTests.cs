@@ -201,6 +201,31 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
             Times.Never);
     }
 
+    /// <summary>
+    /// Seguito di #4609: se il salvataggio degli embedding fallisce e il PDF finisce `Failed`, anche il suo documento
+    /// vettoriale (nato `processing` da Begin) viene chiuso come fallito, invece di restare in elaborazione.
+    /// </summary>
+    [Fact]
+    public async Task ProcessAsync_WhenSavingTheEmbeddingsFails_MarksTheVectorDocumentFailed()
+    {
+        SeedPdfDocument();
+        SetupExtractor(pageCount: 3);
+        SetupBlobStorage();
+        SetupHierarchicalChunking();
+        SetupEmbeddings();
+        SetupRoleClassifierDistinctPerChunk();
+        SetupIndexingPipelineCreatesVectorDocument();
+        _vectorStoreMock
+            .Setup(v => v.IndexBatchAsync(It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("the vector store is down"));
+
+        await Record.ExceptionAsync(() => CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None));
+
+        _indexingPipelineMock.Verify(
+            p => p.MarkIndexingFailedAsync(_pdfDocumentId, It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
     private PdfProcessingPipelineService CreatePipeline()
     {
         var languageDetectorMock = new Mock<ILanguageDetector>();

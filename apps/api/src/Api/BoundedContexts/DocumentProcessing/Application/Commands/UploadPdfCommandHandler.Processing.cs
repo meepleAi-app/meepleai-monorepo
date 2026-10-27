@@ -802,6 +802,16 @@ internal partial class UploadPdfCommandHandler
             // Swallow: the caller already records the upstream failure reason; the
             // missing event is a tolerable observability gap relative to throwing here.
         }
+
+        // #4609 follow-up: the PDF failed, so its vector document (created "processing" by BeginIndexingAsync) must
+        // not stay in flight. Best effort and optional: a failure before the indexing phase has no vector document,
+        // and the pipeline is not registered in every host that exercises this path. CancellationToken.None: the
+        // cancellation handler calls here with a token that is already signalled.
+        var pipeline = scope.ServiceProvider.GetService<IPdfIndexingPipeline>();
+        if (pipeline is not null)
+        {
+            await pipeline.MarkIndexingFailedAsync(pdfGuid, errorMessage, CancellationToken.None).ConfigureAwait(false);
+        }
     }
 
     /// <summary>

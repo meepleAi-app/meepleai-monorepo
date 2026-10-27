@@ -190,6 +190,9 @@ internal sealed class HoldingPdfIndexingPipeline : IPdfIndexingPipeline
             .ConfigureAwait(false);
     }
 
+    public Task MarkIndexingFailedAsync(Guid pdfDocumentId, string errorMessage, CancellationToken cancellationToken = default) =>
+        _inner.MarkIndexingFailedAsync(pdfDocumentId, errorMessage, cancellationToken);
+
     public async Task IndexAsync(
         Guid pdfDocumentId,
         Guid? gameId,

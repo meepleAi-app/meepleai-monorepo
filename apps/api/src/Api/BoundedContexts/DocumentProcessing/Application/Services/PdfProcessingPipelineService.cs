@@ -1389,6 +1389,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             _logger.LogError(ex, "[PdfPipeline] Failed to mark PDF {PdfId} as failed", pdfDocumentId);
         }
 #pragma warning restore CA1031
+
+        // #4609 follow-up: the PDF failed, so its vector document (created "processing" by BeginIndexingAsync)
+        // must not stay in flight. A PDF that failed before the indexing phase has none: a no-op.
+        await _indexingPipeline.MarkIndexingFailedAsync(pdfDocumentId, errorMessage, CancellationToken.None).ConfigureAwait(false);
     }
 
     /// <summary>

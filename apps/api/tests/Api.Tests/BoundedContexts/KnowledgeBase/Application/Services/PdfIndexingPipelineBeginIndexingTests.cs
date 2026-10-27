@@ -153,6 +153,68 @@ public sealed class PdfIndexingPipelineBeginIndexingTests
         _published.Should().BeEmpty("the document was already announced as indexed");
     }
 
+    /// <summary>
+    /// Seguito di #4609: un PDF che fallisce dopo Begin non lascia il suo documento vettoriale in `processing`.
+    /// </summary>
+    [Fact]
+    public async Task MarkIndexingFailedAsync_OnAProcessingRow_MarksItFailedWithTheError()
+    {
+        var pdfId = Guid.NewGuid();
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var pipeline = CreatePipeline(db);
+        await pipeline.BeginIndexingAsync(pdfId, gameId: null, sharedGameId: null, chunkCount: 3, totalCharacters: 30, language: "en");
+
+        await pipeline.MarkIndexingFailedAsync(pdfId, "Saving the vector rows of the PDF failed.");
+
+        var row = await db.VectorDocuments.AsNoTracking().SingleAsync(v => v.PdfDocumentId == pdfId);
+        row.IndexingStatus.Should().Be("failed");
+        row.IndexingError.Should().Be("Saving the vector rows of the PDF failed.");
+        _published.Should().BeEmpty("a failed index announces nothing");
+    }
+
+    [Fact]
+    public async Task MarkIndexingFailedAsync_OnACompletedRow_LeavesItCompleted()
+    {
+        var pdfId = Guid.NewGuid();
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        db.VectorDocuments.Add(new VectorDocumentEntity
+        {
+            Id = Guid.NewGuid(), PdfDocumentId = pdfId, ChunkCount = 5, TotalCharacters = 50, IndexingStatus = "completed", IndexedAt = DateTime.UtcNow.AddHours(-1),
+        });
+        await db.SaveChangesAsync();
+
+        await CreatePipeline(db).MarkIndexingFailedAsync(pdfId, "a re-run failed");
+
+        var row = await db.VectorDocuments.AsNoTracking().SingleAsync(v => v.PdfDocumentId == pdfId);
+        row.IndexingStatus.Should().Be("completed", "a re-run of an indexed document that fails keeps the index it had");
+        row.IndexingError.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task MarkIndexingFailedAsync_WithoutARow_DoesNothing()
+    {
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
+
+        var act = () => CreatePipeline(db).MarkIndexingFailedAsync(Guid.NewGuid(), "failed before the indexing phase");
+
+        await act.Should().NotThrowAsync("a PDF that failed before Begin has no vector document");
+        (await db.VectorDocuments.CountAsync()).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task MarkIndexingFailedAsync_KeepsALongErrorShort()
+    {
+        var pdfId = Guid.NewGuid();
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var pipeline = CreatePipeline(db);
+        await pipeline.BeginIndexingAsync(pdfId, gameId: null, sharedGameId: null, chunkCount: 3, totalCharacters: 30, language: "en");
+
+        await pipeline.MarkIndexingFailedAsync(pdfId, new string('e', 5000));
+
+        var row = await db.VectorDocuments.AsNoTracking().SingleAsync(v => v.PdfDocumentId == pdfId);
+        row.IndexingError!.Length.Should().Be(500);
+    }
+
     [Theory]
     [InlineData(0, 10, "en")]
     [InlineData(-1, 10, "en")]

@@ -184,6 +184,54 @@ internal sealed class PdfIndexingPipeline : IPdfIndexingPipeline
         }
     }
 
+    private const int MaxIndexingErrorLength = 500;
+
+    public async Task MarkIndexingFailedAsync(
+        Guid pdfDocumentId,
+        string errorMessage,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var row = await _db.VectorDocuments
+                .AsTracking()
+                .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfDocumentId, cancellationToken)
+                .ConfigureAwait(false);
+
+            // No row: the PDF failed before BeginIndexingAsync. Completed: a re-run of an indexed document keeps
+            // the index it had. Failed: already marked.
+            if (row is null
+                || string.Equals(row.IndexingStatus, "completed", StringComparison.Ordinal)
+                || string.Equals(row.IndexingStatus, "failed", StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            row.IndexingStatus = "failed";
+            row.IndexingError = errorMessage is { Length: > MaxIndexingErrorLength }
+                ? errorMessage[..MaxIndexingErrorLength]
+                : errorMessage;
+            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                nameof(PdfIndexingPipeline),
+                MeepleAiMetrics.PdfConcurrencyCategories.B);
+            _logger.LogWarning(ex,
+                "Concurrency conflict marking the VectorDocument of PDF {PdfDocumentId} failed (Category B) — admin mutation wins",
+                pdfDocumentId);
+        }
+#pragma warning disable CA1031 // Failure handlers call this: it must not throw
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogWarning(ex,
+                "Could not mark the VectorDocument of PDF {PdfDocumentId} failed; it stays in its previous state",
+                pdfDocumentId);
+        }
+    }
+
     public async Task IndexAsync(
         Guid pdfDocumentId,
         Guid? gameId,

@@ -91,4 +91,30 @@ public interface IPdfIndexingPipeline
         int totalCharacters,
         string language,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Third step, on the failure path: a PDF that failed after <see cref="BeginIndexingAsync"/> must not leave
+    /// its vector document in "processing".
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// #4609 follow-up. <see cref="BeginIndexingAsync"/> creates the row in "processing" and
+    /// <see cref="IndexAsync"/> completes it; when the PDF fails in between (a save fails, the user cancels) nobody
+    /// completes it, and the game's indexing status would read "processing" for ever (the polling never ends, the
+    /// documents list shows the PDF as being processed). This marks the row "failed" with the error, like the
+    /// re-index command does.
+    /// </para>
+    /// <para>
+    /// A row that is already "completed" is left alone (a re-run of an indexed document that fails keeps the index it
+    /// had), and a PDF with no vector document is a no-op. Best effort: it is called from failure handlers, so it
+    /// never throws; a failure to write is logged.
+    /// </para>
+    /// </remarks>
+    /// <param name="pdfDocumentId">Source PDF id.</param>
+    /// <param name="errorMessage">Why the PDF failed; stored (truncated) as the vector document's error.</param>
+    /// <param name="cancellationToken">Cancellation token. Failure handlers pass <c>CancellationToken.None</c>.</param>
+    Task MarkIndexingFailedAsync(
+        Guid pdfDocumentId,
+        string errorMessage,
+        CancellationToken cancellationToken = default);
 }

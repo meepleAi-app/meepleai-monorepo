@@ -32,6 +32,15 @@ public sealed class AnswerOpenRequestsHostFixture(SharedTestcontainersFixture sh
 
     protected override bool EnableRateLimiting => true;
 
+    /// <summary>
+    /// Ogni risposta tenuta aperta occupa una connessione del pool dell'host per tutto il tempo del
+    /// cancello, e il test ne tiene fino a quattro insieme (due utenti, due risposte a testa); la
+    /// richiesta che deve ricevere il 429 ne vuole una anche lei per autenticarsi. Col tetto di CI la terza
+    /// non risponde in 20 s e non e' un 429: i test passavano in locale e cadevano su dev-async. Il 12 e' un
+    /// margine sopra il caso peggiore, non un conto.
+    /// </summary>
+    protected override int? HostMaxPoolSize => 12;
+
     protected override WebApplicationFactory<Program> ConfigureHost(WebApplicationFactory<Program> factory) =>
         factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
         {

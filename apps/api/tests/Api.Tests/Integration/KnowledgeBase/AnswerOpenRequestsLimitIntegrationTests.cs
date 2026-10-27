@@ -34,9 +34,10 @@ public sealed class AnswerOpenRequestsHostFixture(SharedTestcontainersFixture sh
 
     /// <summary>
     /// Ogni risposta tenuta aperta occupa una connessione del pool dell'host per tutto il tempo del
-    /// cancello, e il test ne tiene fino a quattro insieme (due utenti, due risposte a testa) piu' la
-    /// richiesta che deve ricevere il 429, che per autenticarsi ne vuole una. Col tetto di CI (2) la terza
-    /// non risponde in 20 s e non e' un 429: i test passavano in locale (5) e cadevano su dev-async.
+    /// cancello, e il test ne tiene fino a quattro insieme (due utenti, due risposte a testa); la
+    /// richiesta che deve ricevere il 429 ne vuole una anche lei per autenticarsi. Col tetto di CI la terza
+    /// non risponde in 20 s e non e' un 429: i test passavano in locale e cadevano su dev-async. Il 12 e' un
+    /// margine sopra il caso peggiore, non un conto.
     /// </summary>
     protected override int? HostMaxPoolSize => 12;
 

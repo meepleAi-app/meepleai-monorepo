@@ -110,12 +110,12 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
     /// Il tetto di connessioni del pool dell'HOST, se la classe di test ne ha bisogno di piu' del default.
     /// </summary>
     /// <remarks>
-    /// Il default e' quello di <see cref="SharedTestcontainersFixture"/>: 2 connessioni su CI (Postgres
-    /// esterno, `max_connections=100` condiviso da tutti gli host), 5 in locale. Una classe che tiene
-    /// aperte piu' richieste insieme (le risposte di #4388, ferme su un cancello) ne occupa una per
-    /// richiesta e, a 2, la terza non riesce nemmeno ad autenticarsi: il test passa in locale e cade su
-    /// CI. Il tetto vale per l'host di questa fixture, che usa un database alla volta; non cambia quello
-    /// delle altre.
+    /// Il default e' quello di <see cref="SharedTestcontainersFixture"/> (cerca <c>MaxPoolSize</c> in
+    /// <c>CreateIsolatedDatabaseAsync</c>): piu' basso su CI, dove il Postgres e' esterno e il suo
+    /// <c>max_connections</c> e' condiviso da tutti gli host, che in locale. Una classe che tiene aperte
+    /// piu' richieste insieme, ciascuna con una connessione occupata, puo' esaurirlo: l'ultima richiesta
+    /// non riesce nemmeno ad autenticarsi, e il test passa in locale e cade su CI. Il tetto vale per
+    /// l'host di questa fixture, che usa un database alla volta; non cambia quello delle altre.
     /// </remarks>
     protected virtual int? HostMaxPoolSize => null;
 

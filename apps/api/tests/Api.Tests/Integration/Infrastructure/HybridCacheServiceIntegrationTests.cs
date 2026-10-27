@@ -668,6 +668,37 @@ public sealed class HybridCacheServiceIntegrationTests : IAsyncLifetime
         factoryRuns.Should().Be(2);
     }
 
+    /// <summary>
+    /// The admin endpoint <c>DELETE /admin/cache/tags/{tag}</c> goes through this handler and the wrapper (#4561):
+    /// a raw HybridCache entry served from the cache before the call is recomputed after it.
+    /// </summary>
+    [Fact]
+    public async Task InvalidateCacheByTagCommandHandler_ReachesAnEntryWrittenWithTheRawHybridCache()
+    {
+        var handler = new Api.BoundedContexts.KnowledgeBase.Application.Commands.InvalidateCacheByTagCommandHandler(
+            _cacheService,
+            Mock.Of<ILogger<Api.BoundedContexts.KnowledgeBase.Application.Commands.InvalidateCacheByTagCommandHandler>>());
+        var tag = $"raw_tag_{Guid.NewGuid():N}";
+        var key = $"{_keyPrefix}raw_key_{Guid.NewGuid():N}";
+        var factoryRuns = 0;
+        ValueTask<string> Factory(CancellationToken _)
+        {
+            factoryRuns++;
+            return ValueTask.FromResult("value");
+        }
+
+        await _hybridCache.GetOrCreateAsync(key, Factory, tags: [tag], cancellationToken: TestContext.Current.CancellationToken);
+        await _hybridCache.GetOrCreateAsync(key, Factory, tags: [tag], cancellationToken: TestContext.Current.CancellationToken);
+        factoryRuns.Should().Be(1, "setup: the entry is served from the cache before the call");
+
+        await handler.Handle(
+            new Api.BoundedContexts.KnowledgeBase.Application.Commands.InvalidateCacheByTagCommand(tag),
+            TestContext.Current.CancellationToken);
+
+        await _hybridCache.GetOrCreateAsync(key, Factory, tags: [tag], cancellationToken: TestContext.Current.CancellationToken);
+        factoryRuns.Should().Be(2, "the admin invalidation of the tag has to drop the raw entry");
+    }
+
     #endregion
 
     #region Helper Classes

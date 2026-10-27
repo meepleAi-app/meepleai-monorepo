@@ -17,7 +17,11 @@ namespace Api.Services;
 /// <c>LocalCacheExpiration</c> ticked (15-30 min) — the bug ADR-062 closes.
 ///
 /// Idempotent: the publishing replica also receives its own broadcast and re-runs
-/// the eviction as a no-op (L1 entry already gone from Step 1 of the publish).
+/// the eviction as a no-op (L1 entry already gone from Step 1 of the publish). That holds
+/// for entries written with the raw <see cref="HybridCache"/> too since #4561: Step 1
+/// (<see cref="HybridCacheService.RemoveByTagAsync"/>) also invalidates the tag natively.
+/// Before it, the wrapper's local step only removed the keys of its own tag set, so for a raw
+/// entry this broadcast was the only eviction, and it was asynchronous.
 ///
 /// ADR-062 (KB-flag cache propagation strategy).
 /// </summary>

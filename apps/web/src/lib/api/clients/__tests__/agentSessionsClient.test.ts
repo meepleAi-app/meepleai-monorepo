@@ -83,26 +83,15 @@ describe('agentSessionsClient', () => {
     });
   });
 
-  describe('updateConfig', () => {
-    it('updates config with correct parameters', async () => {
-      mockPatch.mockResolvedValue(undefined);
-
-      const config = {
-        agentSessionId: 'session-123',
-        modelType: 'gpt-4',
-        temperature: 0.7,
-        maxTokens: 1000,
-        ragStrategy: 'BALANCED',
-        ragParams: { topK: 5 },
-      };
-
-      await client.updateConfig('game-session-xyz', config);
-
-      expect(mockPatch).toHaveBeenCalledWith(
-        '/api/v1/game-sessions/game-session-xyz/agent/config',
-        config,
-        undefined
-      );
+  /**
+   * #4618: `PATCH /game-sessions/{id}/agent/config` rispondeva 204 e non salvava niente (`AgentSession.Config`
+   * non ha una colonna). La configurazione sta nel profilo dell'agente (ADR-095), quindi la rotta è tolta e
+   * il client non ha più un modo di chiamarla.
+   */
+  describe('the retired config route (#4618)', () => {
+    it('has no updateConfig: nothing can PATCH the agent config of a session', async () => {
+      expect(typeof (client as unknown as Record<string, unknown>).updateConfig).toBe('undefined');
+      expect(mockPatch).not.toHaveBeenCalled();
     });
   });
 

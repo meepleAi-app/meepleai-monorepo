@@ -1,5 +1,7 @@
 using Api.BoundedContexts.SystemConfiguration.Application.Commands;
 using Api.BoundedContexts.SystemConfiguration.Application.DTOs;
+using Api.BoundedContexts.SystemConfiguration.Application.Queries;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Services;
 using Api.SharedKernel.Domain.ValueObjects;
@@ -217,7 +219,9 @@ public class FeatureFlagServiceCacheInvalidationTests
     /// finta, come farebbe il database. Con <paramref name="creazione"/> la scrittura della creazione la fa
     /// il test: serve a far fallire la creazione come la farebbe l'indice univoco.
     /// </summary>
-    private static Scenario CreaScenario(Action<CreateConfigurationCommand, ConfigurazioneConCache>? creazione = null)
+    private static Scenario CreaScenario(
+        Action<CreateConfigurationCommand, ConfigurazioneConCache>? creazione = null,
+        Func<GetConfigByKeyQuery, ConfigurationDto?>? ricercaRiga = null)
     {
         var config = new ConfigurazioneConCache();
         var comandi = new List<object>();
@@ -245,6 +249,17 @@ public class FeatureFlagServiceCacheInvalidationTests
                 }
             })
             .ReturnsAsync(() => ConfigurazioneFinta());
+
+        if (ricercaRiga is not null)
+        {
+            // #4607: la ricerca di una riga a prescindere dal suo stato, quella che il servizio fa quando il
+            // recupero non trova una riga attiva. Senza questa, il doppio risponde a ogni query con una riga
+            // attiva finta.
+            mediator
+                .Setup(m => m.Send(It.Is<IRequest<ConfigurationDto>>(r => r is GetConfigByKeyQuery), It.IsAny<CancellationToken>()))
+                .Callback<object, CancellationToken>((c, _) => comandi.Add(c))
+                .ReturnsAsync((IRequest<ConfigurationDto> r, CancellationToken _) => ricercaRiga((GetConfigByKeyQuery)r)!);
+        }
 
         var service = new FeatureFlagService(
             config, mediator.Object, ambiente.Object, NullLogger<FeatureFlagService>.Instance,
@@ -385,16 +400,52 @@ public class FeatureFlagServiceCacheInvalidationTests
     }
 
     [Fact]
-    public async Task Globale_ViolazioneDiUnicitaSenzaRigaDaAggiornare_RilanciaLErroreOriginale()
+    public async Task Globale_ViolazioneDiUnicitaSenzaNessunaRiga_RilanciaLErroreOriginale()
     {
-        // Es. la riga in conflitto e' inattiva: la ricerca vede solo le attive, quindi non c'e' niente da aggiornare.
+        // Ne' una riga attiva da aggiornare ne' una disattivata che spieghi il conflitto (#4607): l'errore
+        // originale esce com'e', come garantisce #4599.
         var errore = ViolazioneDiUnicita();
-        var s = CreaScenario(creazione: (_, _) => throw errore);
+        var s = CreaScenario(creazione: (_, _) => throw errore, ricercaRiga: _ => null);
 
         var act = async () => await s.Service.EnableFeatureAsync(FlagGlobale, userId: Guid.NewGuid().ToString());
 
         (await act.Should().ThrowAsync<DbUpdateException>()).Which.Should().BeSameAs(errore);
         s.Comandi.OfType<UpdateConfigValueCommand>().Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Globale_RigaInConflittoDisattivata_Risponde409ConIdERotta_SenzaSovrascriverla()
+    {
+        // #4607: la ricerca vede solo le attive, quindi una riga disattivata non e' da aggiornare ne' da
+        // ricreare: e' una scelta dell'admin, e il servizio lo dice invece di rispondere 500.
+        var errore = ViolazioneDiUnicita();
+        var idRiga = Guid.NewGuid();
+        var s = CreaScenario(
+            creazione: (_, _) => throw errore,
+            ricercaRiga: _ => ConfigurazioneFinta() with { Id = idRiga, IsActive = false });
+
+        var act = async () => await s.Service.EnableFeatureAsync(FlagGlobale, userId: Guid.NewGuid().ToString());
+
+        var conflitto = (await act.Should().ThrowAsync<ConflictException>()).Which;
+        conflitto.Message.Should().Contain(FlagGlobale).And.Contain(idRiga.ToString()).And.Contain("/toggle?isActive=true");
+        conflitto.InnerException.Should().BeSameAs(errore, "l'errore originale resta come causa, per il log");
+        s.Comandi.OfType<UpdateConfigValueCommand>().Should().BeEmpty();
+        var ricerca = s.Comandi.OfType<GetConfigByKeyQuery>().Should().ContainSingle().Subject;
+        ricerca.Key.Should().Be(FlagGlobale);
+        ricerca.Environment.Should().Be(Ambiente);
+        ricerca.ActiveOnly.Should().BeFalse("la riga cercata e' proprio quella che la ricerca normale non vede");
+    }
+
+    [Fact]
+    public async Task Globale_RigaInConflittoAttivaAlSecondoControllo_RilanciaLErroreOriginale()
+    {
+        // Se alla seconda lettura la riga risulta attiva (una gara fuori dal caso di #4607) non e' un 409.
+        var errore = ViolazioneDiUnicita();
+        var s = CreaScenario(creazione: (_, _) => throw errore, ricercaRiga: _ => ConfigurazioneFinta());
+
+        var act = async () => await s.Service.EnableFeatureAsync(FlagGlobale, userId: Guid.NewGuid().ToString());
+
+        (await act.Should().ThrowAsync<DbUpdateException>()).Which.Should().BeSameAs(errore);
     }
 
     [Theory]

@@ -1,5 +1,6 @@
 using Api.Services;
 using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 
@@ -36,8 +37,12 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 /// </para>
 /// <para>
 /// Ogni passo passa dalla retry policy, col nome di operazione che alimenta la metrica
-/// (<c>shared-games.list</c> / <c>shared-games.detail</c>). La lista precede il dettaglio. Se il wrapper esaurisce
-/// i tentativi l'eccezione esce, a evizione nativa già fatta; se si arrende il passo nativo, il wrapper non parte.
+/// (<c>shared-games.list</c> / <c>shared-games.detail</c>). La lista precede il dettaglio.
+/// </para>
+/// <para>
+/// Errori (#4603, punto 2): l'evizione sta dopo il commit, quindi un passo che esaurisce i tentativi si
+/// registra e non si rilancia, e gli altri passi girano comunque; i passi usano <see cref="CancellationToken.None"/>
+/// e ignorano il token della richiesta. Vedi <see cref="ISharedGameCacheInvalidator"/>.
 /// </para>
 /// </remarks>
 internal sealed class SharedGameCacheInvalidator : ISharedGameCacheInvalidator
@@ -49,12 +54,15 @@ internal sealed class SharedGameCacheInvalidator : ISharedGameCacheInvalidator
     private readonly IHybridCacheService _cache;
     private readonly ICacheInvalidationRetryPolicy _retryPolicy;
     private readonly HybridCache _hybridCache;
+    private readonly ILogger<SharedGameCacheInvalidator> _logger;
 
     public SharedGameCacheInvalidator(
         IHybridCacheService cache,
         ICacheInvalidationRetryPolicy retryPolicy,
-        HybridCache hybridCache)
+        HybridCache hybridCache,
+        ILogger<SharedGameCacheInvalidator>? logger = null)
     {
+        _logger = logger ?? NullLogger<SharedGameCacheInvalidator>.Instance;
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _retryPolicy = retryPolicy ?? throw new ArgumentNullException(nameof(retryPolicy));
         _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
@@ -62,7 +70,7 @@ internal sealed class SharedGameCacheInvalidator : ISharedGameCacheInvalidator
 
     /// <inheritdoc />
     public Task EvictDetailAsync(Guid gameId, CancellationToken cancellationToken) =>
-        EvictTagAsync(DetailTag(gameId), DetailOperation, cancellationToken);
+        EvictTagAsync(DetailTag(gameId), DetailOperation);
 
     /// <inheritdoc />
     public Task EvictDetailAndListAsync(Guid gameId, CancellationToken cancellationToken) =>
@@ -78,27 +86,47 @@ internal sealed class SharedGameCacheInvalidator : ISharedGameCacheInvalidator
             return;
         }
 
-        await EvictTagAsync(SearchGamesTag, ListOperation, cancellationToken).ConfigureAwait(false);
+        await EvictTagAsync(SearchGamesTag, ListOperation).ConfigureAwait(false);
 
         foreach (var gameId in gameIds)
         {
-            await EvictTagAsync(DetailTag(gameId), DetailOperation, cancellationToken).ConfigureAwait(false);
+            await EvictTagAsync(DetailTag(gameId), DetailOperation).ConfigureAwait(false);
         }
     }
 
     private static string DetailTag(Guid gameId) => $"shared-game:{gameId}";
 
-    private async Task EvictTagAsync(string tag, string operationName, CancellationToken cancellationToken)
+    private async Task EvictTagAsync(string tag, string operationName)
     {
-        // Nativo prima (#4603, punto 2): vedi la nota di classe.
-        await _retryPolicy.ExecuteAsync(
-            token => _hybridCache.RemoveByTagAsync(tag, token),
-            operationName,
-            cancellationToken).ConfigureAwait(false);
+        // Nativo prima (#4603, punto 2): vedi la nota di classe. Ogni passo gira anche se l'altro è fallito.
+        await TryEvictAsync(token => _hybridCache.RemoveByTagAsync(tag, token), tag, operationName, "native")
+            .ConfigureAwait(false);
 
-        await _retryPolicy.ExecuteAsync(
-            token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync(tag, token)),
-            operationName,
-            cancellationToken).ConfigureAwait(false);
+        await TryEvictAsync(token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync(tag, token)), tag, operationName, "wrapper")
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Un passo di evizione dopo il commit: CancellationToken.None (il client potrebbe essersi disconnesso) e
+    /// nessun rilancio. La scrittura è già salvata; un'evizione non riuscita lascia la voce vecchia fino alla sua
+    /// scadenza, ed è un fatto da vedere nel log, non un errore da restituire a chi ha scritto.
+    /// </summary>
+    private async Task TryEvictAsync(Func<CancellationToken, ValueTask> step, string tag, string operationName, string stepName)
+    {
+        try
+        {
+            await _retryPolicy.ExecuteAsync(step, operationName, CancellationToken.None).ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // The write is already committed: a failed eviction must not fail the caller (#4603)
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogError(
+                ex,
+                "Cache eviction failed after the write was committed: tag {Tag}, operation {Operation}, step {Step}. The cached entry stays until it expires",
+                tag,
+                operationName,
+                stepName);
+        }
     }
 }

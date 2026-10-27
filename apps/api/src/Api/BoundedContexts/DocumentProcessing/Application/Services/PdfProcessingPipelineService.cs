@@ -1244,8 +1244,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
     /// <summary>
     /// Drops what a failed save left unsaved in the change tracker, except the rows of the Quartz job that owns this
-    /// run: added entities are detached, modified ones go back to the values they were loaded with, deleted ones are
-    /// kept (their rows stay in the database).
+    /// run: added entities are detached, modified ones go back to the values they last had in the database (loaded or
+    /// saved), deleted ones are kept (their rows stay in the database).
     /// </summary>
     /// <remarks>
     /// <para>
@@ -1261,28 +1261,37 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     /// </remarks>
     private void DiscardUnsavedChanges()
     {
-        var entries = _db.ChangeTracker.Entries()
-            .Where(e => e.State != EntityState.Unchanged
-                && e.State != EntityState.Detached
-                && e.Entity is not (Api.Infrastructure.Entities.DocumentProcessing.ProcessingJobEntity
-                    or Api.Infrastructure.Entities.DocumentProcessing.ProcessingStepEntity))
-            .ToList();
-
-        foreach (var entry in entries)
+#pragma warning disable CA1031 // Failure handlers call this: it must not throw (Entries() runs DetectChanges)
+        try
         {
-            switch (entry.State)
+            var entries = _db.ChangeTracker.Entries()
+                .Where(e => e.State != EntityState.Unchanged
+                    && e.State != EntityState.Detached
+                    && e.Entity is not (Api.Infrastructure.Entities.DocumentProcessing.ProcessingJobEntity
+                        or Api.Infrastructure.Entities.DocumentProcessing.ProcessingStepEntity))
+                .ToList();
+
+            foreach (var entry in entries)
             {
-                case EntityState.Added:
-                    entry.State = EntityState.Detached;
-                    break;
-                case EntityState.Modified:
-                case EntityState.Deleted:
-                    // Unchanged again: for a Modified entity EF restores the values it was loaded with (the contract
-                    // test EfCore_AModifiedEntityPutBackToUnchanged_HasTheValuesItWasLoadedWith guards it).
-                    entry.State = EntityState.Unchanged;
-                    break;
+                switch (entry.State)
+                {
+                    case EntityState.Added:
+                        entry.State = EntityState.Detached;
+                        break;
+                    case EntityState.Modified:
+                    case EntityState.Deleted:
+                        // Unchanged again: for a Modified entity EF restores the values it last had in the database
+                        // (the contract test EfCore_AModifiedEntityPutBackToUnchanged_HasItsLastSavedValues guards it).
+                        entry.State = EntityState.Unchanged;
+                        break;
+                }
             }
         }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[PdfPipeline] Could not discard the unsaved changes left by a failed save");
+        }
+#pragma warning restore CA1031
     }
 
     /// <summary>
@@ -1432,11 +1441,19 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             _logger.LogWarning(ex,
                 "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
                 pdfDocumentId, nameof(PdfProcessingPipelineService));
+
+            // The PDF stays Modified with the old concurrency token: PdfProcessingQuartzJob shares this context and
+            // saves the failure of its job through it right after, so the same stale row would fail that save too and
+            // leave the job in Processing. Admin wins: drop our write.
+            DiscardUnsavedChanges();
         }
 #pragma warning disable CA1031 // Best-effort error marking must not throw
         catch (Exception ex)
         {
             _logger.LogError(ex, "[PdfPipeline] Failed to mark PDF {PdfId} as failed", pdfDocumentId);
+
+            // Same reason: do not leave our unsaved write in the tracker for the job's own save to trip on.
+            DiscardUnsavedChanges();
         }
 #pragma warning restore CA1031
 

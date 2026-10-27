@@ -387,7 +387,8 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
         }
 
         await _db.SaveChangesAsync();
-        _db.ChangeTracker.Clear(); // as in production, where the pipeline's context does not track what it has not read
+        _db.ChangeTracker.Clear();
+        _db.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking; // PERF-06, as in production
         SetupExtractor(pageCount: 3);
         SetupBlobStorage();
         SetupHierarchicalChunking();
@@ -436,15 +437,46 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
         (await _db.PdfDocuments.AsNoTracking().SingleAsync(p => p.Id == _pdfDocumentId)).ProcessingState
             .Should().Be("Failed");
         _failingSaves.Failures.Should().Be(1, "the failure has to come from the final Ready save, and only from it");
+        (await _db.PdfDocuments.AsNoTracking().SingleAsync(p => p.Id == _pdfDocumentId)).FailedAtState
+            .Should().Be("Indexing", "the state recorded is the last one saved, not the Ready that only reached memory");
     }
 
     /// <summary>
-    /// What <c>DiscardUnsavedChanges</c> relies on: a Modified entity put back to Unchanged gets the values it was
-    /// loaded with, with no explicit copy and no database access. If a future EF Core stopped doing it, the discarded
+    /// Il salvataggio di `Failed` perde una gara di concorrenza (la riga è cambiata da altri): vince l'altro, ma il PDF
+    /// non deve restare `Modified` nel tracker con il vecchio `xmin`. <c>PdfProcessingQuartzJob</c> condivide il
+    /// contesto e salva il fallimento del suo job subito dopo: quel salvataggio ritroverebbe la stessa riga vecchia,
+    /// fallirebbe uguale e il job resterebbe `Processing`.
+    /// </summary>
+    [Fact]
+    public async Task ProcessAsync_WhenTheFailedSaveLosesAConcurrencyRace_LeavesNothingPendingForTheJobsSave()
+    {
+        SeedPdfDocument();
+        SetupExtractor(pageCount: 3);
+        SetupBlobStorage();
+        SetupHierarchicalChunking();
+        SetupEmbeddings();
+        SetupRoleClassifierDistinctPerChunk();
+        SetupIndexingPipelineCreatesVectorDocument();
+        _vectorStoreMock
+            .Setup(v => v.IndexBatchAsync(It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("the vector store is down"));
+        _failingSaves.ExceptionToThrow = () => new DbUpdateConcurrencyException("xmin conflict");
+        _failingSaves.FailWhen = context => context.ChangeTracker.Entries<PdfDocumentEntity>()
+            .Any(e => e.State == EntityState.Modified && string.Equals(e.Entity.ProcessingState, "Failed", StringComparison.Ordinal));
+
+        await Record.ExceptionAsync(() => CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None));
+
+        _failingSaves.Failures.Should().Be(1, "the conflict has to hit the save that marks the PDF Failed, and only it");
+        _db.ChangeTracker.HasChanges().Should().BeFalse("a stale write left in the tracker would fail the job's own save as well");
+    }
+
+    /// <summary>
+    /// What <c>DiscardUnsavedChanges</c> relies on: a Modified entity put back to Unchanged gets the values it last had
+    /// in the database (loaded or saved), with no explicit copy and no database access. If a future EF Core stopped doing it, the discarded
     /// PDF would keep its in-memory <c>Ready</c> and the failure handler would skip it.
     /// </summary>
     [Fact]
-    public async Task EfCore_AModifiedEntityPutBackToUnchanged_HasTheValuesItWasLoadedWith()
+    public async Task EfCore_AModifiedEntityPutBackToUnchanged_HasItsLastSavedValues()
     {
         SeedPdfDocument();
         _db.ChangeTracker.Clear();
@@ -461,6 +493,8 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
     {
         public Func<DbContext, bool>? FailWhen { get; set; }
 
+        public Func<Exception>? ExceptionToThrow { get; set; }
+
         public int Failures { get; private set; }
 
         public override ValueTask<Microsoft.EntityFrameworkCore.Diagnostics.InterceptionResult<int>> SavingChangesAsync(
@@ -471,7 +505,7 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
             if (eventData.Context is { } context && FailWhen?.Invoke(context) == true)
             {
                 Failures++;
-                throw new DbUpdateException("simulated save failure");
+                throw ExceptionToThrow?.Invoke() ?? new DbUpdateException("simulated save failure");
             }
 
             return base.SavingChangesAsync(eventData, result, cancellationToken);

@@ -1347,6 +1347,12 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     /// </param>
     private async Task TryMarkFailedAsync(Guid pdfDocumentId, string errorMessage, ErrorCategory? category = null)
     {
+        // #4609 follow-up: whatever failed may have left rows in the change tracker, among them a vector document
+        // that IndexAsync already set to "completed" in memory before its save failed. The save below flushes the
+        // whole context, so without this it would write that "completed" next to the failed PDF (the upload path
+        // does the same, #4395).
+        _db.ChangeTracker.Clear();
+
         try
         {
             // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06),
@@ -1391,8 +1397,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 #pragma warning restore CA1031
 
         // #4609 follow-up: the PDF failed, so its vector document (created "processing" by BeginIndexingAsync)
-        // must not stay in flight. A PDF that failed before the indexing phase has none: a no-op.
-        await _indexingPipeline.MarkIndexingFailedAsync(pdfDocumentId, errorMessage, CancellationToken.None).ConfigureAwait(false);
+        // must not stay in flight. A PDF that failed before the indexing phase has none: a no-op. The text is the
+        // category, not the exception message: this column is served to users by pdf-status.
+        await _indexingPipeline.MarkIndexingFailedAsync(
+            pdfDocumentId, $"Processing failed ({category?.ToString() ?? nameof(ErrorCategory.Unknown)})", CancellationToken.None).ConfigureAwait(false);
     }
 
     /// <summary>

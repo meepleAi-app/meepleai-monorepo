@@ -16,8 +16,10 @@ using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
@@ -966,9 +968,53 @@ public class IndexPdfCommandHandlerTests
         pipelineMock.Verify(
             p => p.MarkIndexingFailedAsync(
                 pdfId,
-                It.Is<string>(m => m.Contains("Unexpected chunking crash", StringComparison.Ordinal)),
+                It.Is<string>(m => m == "Unexpected error (InvalidOperationException)"),
                 CancellationToken.None),
-            Times.Once);
+            Times.Once,
+            "the vector document gets the exception type, not its message: pdf-status serves that column to users");
+    }
+
+    /// <summary>
+    /// Seguito di #4609, dalla revisione di #4657: se il guasto lascia nel tracker il documento vettoriale già
+    /// `completed` in memoria (l'ha scritto `IndexAsync` prima del salvataggio che è fallito), il salvataggio del
+    /// PDF `Failed` lo rimanderebbe al database. Un PDF fallito non può lasciare un documento vettoriale
+    /// `completed`.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenTheFailureLeavesTheVectorDocumentCompletedInTheTracker_TheDatabaseEndsFailed()
+    {
+        using var context = CreateFreshDbContext();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var pdfId = Guid.NewGuid();
+        var pdf = CreatePdfDocument(pdfId, Guid.NewGuid(), "completed", GenerateExtractedText(10));
+        pdf.ProcessingState = "Extracting";
+        await context.PdfDocuments.AddAsync(pdf);
+        await context.SaveChangesAsync();
+        advancedChunkingServiceMock
+            .Setup(x => x.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+            .Callback(() =>
+            {
+                var tracked = context.VectorDocuments.Local.Single();
+                tracked.IndexingStatus = "completed";
+                tracked.IndexedAt = DateTime.UtcNow;
+            })
+            .ThrowsAsync(new InvalidOperationException("Unexpected chunking crash"));
+        embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
+        embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
+        var pipeline = new PdfIndexingPipeline(
+            context, Mock.Of<IMediator>(), TimeProvider.System, Mock.Of<ISemanticResponseCache>(), NullLogger<PdfIndexingPipeline>.Instance);
+        var handler = new IndexPdfCommandHandler(
+            context, advancedChunkingServiceMock.Object, embeddingServiceMock.Object,
+            loggerMock.Object, indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>(),
+            pipeline);
+
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
+
+        result.Success.Should().BeFalse("a run that did not fail would make the check below vacuous");
+        var row = await context.VectorDocuments.AsNoTracking().SingleAsync(v => v.PdfDocumentId == pdfId);
+        row.IndexingStatus.Should().Be("failed", "the completion never reached the database before the failure");
+        row.IndexingError.Should().Be("Unexpected error (InvalidOperationException)");
     }
 
     // Helper methods

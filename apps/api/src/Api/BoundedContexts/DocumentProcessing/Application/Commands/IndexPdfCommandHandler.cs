@@ -211,6 +211,12 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             // Context: Covers unforeseen errors after specific exception handlers above
             _logger.LogError(ex, "Unexpected error indexing PDF {PdfId}", pdfId);
 
+            // #4609 follow-up: whatever failed may have left rows in the change tracker, among them the vector
+            // document that IndexAsync already set to "completed" in memory before its save failed. The save below
+            // flushes the whole context, so without this it would write that "completed" next to the failed PDF
+            // (the upload path does the same, #4395).
+            _db.ChangeTracker.Clear();
+
             // Persist failed state so the PDF doesn't remain stuck in "Indexing"
             try
             {
@@ -235,18 +241,20 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                             pdfId, nameof(IndexPdfCommandHandler));
                     }
                 }
-
-                // #4609: the vector document this handler created (or reset) in "processing" must not outlive the
-                // failed PDF. A no-op when the failure came before it existed; never throws.
-                if (Guid.TryParse(pdfId, out var failedPdfGuid))
-                {
-                    await _pipeline.MarkIndexingFailedAsync(
-                        failedPdfGuid, $"Unexpected error: {ex.Message}", CancellationToken.None).ConfigureAwait(false);
-                }
             }
             catch (Exception dbEx)
             {
                 _logger.LogError(dbEx, "Failed to persist error state for PDF {PdfId}", pdfId);
+            }
+
+            // #4609: the vector document this handler created (or reset) in "processing" must not outlive the
+            // failed PDF. Outside the try above on purpose: a failure to save the PDF must not skip it. A no-op
+            // when the failure came before the row existed; never throws. The text is the exception type, not its
+            // message: this column is served to users by pdf-status.
+            if (Guid.TryParse(pdfId, out var failedPdfGuid))
+            {
+                await _pipeline.MarkIndexingFailedAsync(
+                    failedPdfGuid, $"Unexpected error ({ex.GetType().Name})", CancellationToken.None).ConfigureAwait(false);
             }
 
             return IndexingResultDto.CreateFailure($"Unexpected error: {ex.Message}", PdfIndexingErrorCode.UnexpectedError);

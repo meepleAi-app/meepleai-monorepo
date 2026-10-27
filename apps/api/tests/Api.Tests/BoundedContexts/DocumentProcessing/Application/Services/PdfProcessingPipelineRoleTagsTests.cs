@@ -228,9 +228,45 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
         _indexingPipelineMock.Verify(
             p => p.MarkIndexingFailedAsync(
                 _pdfDocumentId,
-                It.Is<string>(m => m.Contains("the vector store is down", StringComparison.Ordinal)),
+                It.Is<string>(m => m.StartsWith("Processing failed (", StringComparison.Ordinal)
+                    && !m.Contains("the vector store is down", StringComparison.Ordinal)),
                 CancellationToken.None),
-            Times.Once);
+            Times.Once,
+            "the vector document gets the category, not the exception message: pdf-status serves that column to users");
+    }
+
+    /// <summary>
+    /// Seguito di #4609, dalla revisione di #4657: `IndexAsync` scrive `completed` nell'entità tracciata PRIMA di
+    /// salvare. Se il salvataggio fallisce, la riga resta `Modified` nel contesto, che questa pipeline condivide con
+    /// il gestore d'errore; il salvataggio del PDF `Failed` rimanderebbe quel `completed` al database. Un PDF
+    /// fallito non può lasciare un documento vettoriale `completed`.
+    /// </summary>
+    [Fact]
+    public async Task ProcessAsync_WhenTheFailureLeavesTheVectorRowCompletedInTheTracker_TheDatabaseNeverSeesIt()
+    {
+        SeedPdfDocument();
+        SetupExtractor(pageCount: 3);
+        SetupBlobStorage();
+        SetupHierarchicalChunking();
+        SetupEmbeddings();
+        SetupRoleClassifierDistinctPerChunk();
+        SetupIndexingPipelineCreatesVectorDocument();
+        _vectorStoreMock
+            .Setup(v => v.IndexBatchAsync(It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
+            .Callback(() =>
+            {
+                var tracked = _db.VectorDocuments.Local.Single();
+                tracked.IndexingStatus = "completed";
+                tracked.IndexedAt = DateTime.UtcNow;
+            })
+            .ThrowsAsync(new InvalidOperationException("the vector store is down"));
+
+        await Record.ExceptionAsync(() => CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None));
+
+        (await _db.PdfDocuments.AsNoTracking().SingleAsync(p => p.Id == _pdfDocumentId)).ProcessingState
+            .Should().Be("Failed", "a run that did not fail would make the check below vacuous");
+        (await _db.VectorDocuments.AsNoTracking().SingleAsync(v => v.PdfDocumentId == _pdfDocumentId)).IndexingStatus
+            .Should().NotBe("completed", "the completion never reached the database before the save that failed");
     }
 
     private PdfProcessingPipelineService CreatePipeline()

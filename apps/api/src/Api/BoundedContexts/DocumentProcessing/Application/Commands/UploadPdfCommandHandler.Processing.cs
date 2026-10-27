@@ -812,7 +812,8 @@ internal partial class UploadPdfCommandHandler
         var pipeline = scope.ServiceProvider.GetService<IPdfIndexingPipeline>();
         if (pipeline is not null)
         {
-            await pipeline.MarkIndexingFailedAsync(pdfGuid, errorMessage, CancellationToken.None).ConfigureAwait(false);
+            // The category, not the message: this column is served to users by pdf-status.
+            await pipeline.MarkIndexingFailedAsync(pdfGuid, $"Processing failed ({category})", CancellationToken.None).ConfigureAwait(false);
         }
     }
 

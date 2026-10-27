@@ -269,6 +269,44 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
             .Should().NotBe("completed", "the completion never reached the database before the save that failed");
     }
 
+    /// <summary>
+    /// PdfProcessingQuartzJob condivide questo contesto (la pipeline è scoped come il suo DbContext) e dopo il
+    /// ritorno della pipeline salva il fallimento del job e dei suoi passi attraverso di esso. Il gestore d'errore
+    /// non deve staccare quelle entità: un <c>ChangeTracker.Clear()</c> farebbe del suo salvataggio un no-op e
+    /// lascerebbe il job in <c>Processing</c>, a occupare uno dei posti dei worker.
+    /// </summary>
+    [Fact]
+    public async Task ProcessAsync_WhenTheFailureIsHandled_LeavesTheEntitiesOfTheSharedContextTracked()
+    {
+        SeedPdfDocument();
+        SetupExtractor(pageCount: 3);
+        SetupBlobStorage();
+        SetupHierarchicalChunking();
+        SetupEmbeddings();
+        SetupRoleClassifierDistinctPerChunk();
+        SetupIndexingPipelineCreatesVectorDocument();
+        _vectorStoreMock
+            .Setup(v => v.IndexBatchAsync(It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("the vector store is down"));
+        var job = new Api.Infrastructure.Entities.DocumentProcessing.ProcessingJobEntity
+        {
+            Id = Guid.NewGuid(),
+            PdfDocumentId = _pdfDocumentId,
+            UserId = Guid.NewGuid(),
+            Status = "Processing",
+            CreatedAt = DateTimeOffset.UtcNow,
+        };
+        _db.ProcessingJobs.Add(job);
+        await _db.SaveChangesAsync();
+
+        await Record.ExceptionAsync(() => CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None));
+
+        (await _db.PdfDocuments.AsNoTracking().SingleAsync(p => p.Id == _pdfDocumentId)).ProcessingState
+            .Should().Be("Failed", "a run that did not fail would make the check below vacuous");
+        _db.Entry(job).State.Should().NotBe(
+            EntityState.Detached, "the job that shares this context saves its own failure through its tracked entity");
+    }
+
     private PdfProcessingPipelineService CreatePipeline()
     {
         var languageDetectorMock = new Mock<ILanguageDetector>();

@@ -968,10 +968,10 @@ public class IndexPdfCommandHandlerTests
         pipelineMock.Verify(
             p => p.MarkIndexingFailedAsync(
                 pdfId,
-                It.Is<string>(m => m == "Unexpected error (InvalidOperationException)"),
+                It.Is<string>(m => m == "Unexpected error"),
                 CancellationToken.None),
             Times.Once,
-            "the vector document gets the exception type, not its message: pdf-status serves that column to users");
+            "the vector document gets a fixed text, not the exception message: pdf-status serves that column to users");
     }
 
     /// <summary>
@@ -1014,7 +1014,7 @@ public class IndexPdfCommandHandlerTests
         result.Success.Should().BeFalse("a run that did not fail would make the check below vacuous");
         var row = await context.VectorDocuments.AsNoTracking().SingleAsync(v => v.PdfDocumentId == pdfId);
         row.IndexingStatus.Should().Be("failed", "the completion never reached the database before the failure");
-        row.IndexingError.Should().Be("Unexpected error (InvalidOperationException)");
+        row.IndexingError.Should().Be("Unexpected error");
     }
 
     // Helper methods

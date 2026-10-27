@@ -249,12 +249,12 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
 
             // #4609: the vector document this handler created (or reset) in "processing" must not outlive the
             // failed PDF. Outside the try above on purpose: a failure to save the PDF must not skip it. A no-op
-            // when the failure came before the row existed; never throws. The text is the exception type, not its
-            // message: this column is served to users by pdf-status.
+            // when the failure came before the row existed; never throws. The text is fixed, not the exception
+            // message or type: this column is served to users by pdf-status.
             if (Guid.TryParse(pdfId, out var failedPdfGuid))
             {
                 await _pipeline.MarkIndexingFailedAsync(
-                    failedPdfGuid, $"Unexpected error ({ex.GetType().Name})", CancellationToken.None).ConfigureAwait(false);
+                    failedPdfGuid, "Unexpected error", CancellationToken.None).ConfigureAwait(false);
             }
 
             return IndexingResultDto.CreateFailure($"Unexpected error: {ex.Message}", PdfIndexingErrorCode.UnexpectedError);

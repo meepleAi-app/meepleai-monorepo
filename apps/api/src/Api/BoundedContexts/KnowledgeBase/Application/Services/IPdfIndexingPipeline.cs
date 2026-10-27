@@ -116,7 +116,7 @@ public interface IPdfIndexingPipeline
     /// <param name="pdfDocumentId">Source PDF id.</param>
     /// <param name="errorMessage">
     /// Why the PDF failed; stored (truncated) as the vector document's error, which the indexing-status endpoint
-    /// serves to users: pass text that is safe to show (a category, an exception type), not an exception message.
+    /// serves to users: pass text that is safe to show (a category, a fixed phrase), not an exception message.
     /// </param>
     /// <param name="cancellationToken">Cancellation token. Failure handlers pass <c>CancellationToken.None</c>.</param>
     Task MarkIndexingFailedAsync(

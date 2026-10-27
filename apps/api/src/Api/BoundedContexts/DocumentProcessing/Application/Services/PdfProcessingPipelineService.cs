@@ -1347,11 +1347,14 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     /// </param>
     private async Task TryMarkFailedAsync(Guid pdfDocumentId, string errorMessage, ErrorCategory? category = null)
     {
-        // #4609 follow-up: whatever failed may have left rows in the change tracker, among them a vector document
-        // that IndexAsync already set to "completed" in memory before its save failed. The save below flushes the
-        // whole context, so without this it would write that "completed" next to the failed PDF (the upload path
-        // does the same, #4395).
-        _db.ChangeTracker.Clear();
+        // #4609 follow-up: IndexAsync sets the vector document to "completed" in memory before it saves, so a failed
+        // save leaves it Modified in the tracker. The save below flushes the whole context, so without this it would
+        // write that "completed" next to the failed PDF. Only the vector document is detached, not the whole tracker
+        // (as the upload path does, #4395): PdfProcessingQuartzJob shares this context and saves its job and step
+        // rows through it after the pipeline returns, so clearing would turn its failure into a no-op and leave the
+        // job in Processing. Everything else the indexing phase writes is saved as it goes (the text chunks) or goes
+        // around the context (the pgvector rows).
+        DetachUnsavedChanges<VectorDocumentEntity>();
 
         try
         {

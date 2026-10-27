@@ -4,6 +4,7 @@ using Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Caching.Hybrid;
+using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 
@@ -16,9 +17,11 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Services;
 /// <remarks>
 /// Fissa ciò da cui dipendono gli handler e che un cambio silenzioso romperebbe: i tag (e che il
 /// dettaglio sia per gioco), i due passi per tag nell'ordine <see cref="HybridCache"/> nativo e poi
-/// wrapper (decisione di #4603), il comportamento in errore (rilancio dopo i tentativi della retry policy: la questione aperta
-/// di #4603 punto 2) e il token della richiesta. La retry policy dei doppi ESEGUE il delegato, come quella
-/// vera, altrimenti il doppio della cache non viene esercitato.
+/// wrapper (decisione di #4603), la politica d'errore (l'evizione avviene DOPO il commit: se fallisce dopo i
+/// tentativi della retry policy si registra e non si rilancia, ogni passo gira comunque, #4603 punto 2) e il
+/// token (quello della richiesta si ignora: un client che si disconnette fra commit ed evizione non la salta).
+/// La retry policy dei doppi ESEGUE il delegato, come quella vera, altrimenti il doppio della cache non viene
+/// esercitato.
 /// </remarks>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "SharedGameCatalog")]
@@ -104,13 +107,13 @@ public sealed class SharedGameCacheInvalidatorTests
     }
 
     /// <summary>
-    /// Il comportamento fissato perché la politica d'errore dopo il commit (punto 2 di #4603) non è decisa:
-    /// un'evizione che fallisce dopo i tentativi risale al chiamante. Dal momento che il passo nativo viene
-    /// PRIMA (decisione di #4603), quando il wrapper si arrende la replica che ha scritto ha già la cache
-    /// locale pulita: prima il rifiuto arrivava con la cache locale ancora stantia.
+    /// #4603 punto 2. L'evizione sta DOPO il commit: se il wrapper si arrende dopo i tentativi (Redis giù), la
+    /// scrittura è già salvata e il chiamante non deve rispondere 500 (l'admin riproverebbe e un'errata o una
+    /// FAQ si duplicherebbe). Il passo nativo, che viene prima, ha già pulito la cache locale; la voce delle
+    /// altre repliche scade da sola.
     /// </summary>
     [Fact]
-    public async Task WhenTheRetryPolicyGivesUpOnTheWrapperStep_TheNativeStepAlreadyRan_AndTheErrorReachesTheCaller()
+    public async Task WhenTheWrapperStepGivesUp_TheCallerIsNotTold_AndTheNativeStepAlreadyRan()
     {
         var gameId = Guid.NewGuid();
         var calls = 0;
@@ -124,7 +127,7 @@ public sealed class SharedGameCacheInvalidatorTests
 
         var act = () => _doubles.Invalidator.EvictDetailAsync(gameId, TestContext.Current.CancellationToken);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("redis down");
+        await act.Should().NotThrowAsync("the write is already committed: a cache that cannot be cleared must not fail it");
         _doubles.Events.Should().Equal(
             new[] { $"native:{DetailTag(gameId)}" },
             "the local step ran before the wrapper gave up, and the wrapper step did not complete");
@@ -132,43 +135,140 @@ public sealed class SharedGameCacheInvalidatorTests
 
     /// <summary>
     /// Il caso speculare: se si arrende il passo nativo, il wrapper (e con lui il messaggio alle altre repliche)
-    /// non parte. Fissato com'è, perché la politica d'errore dell'evizione (#4603) non è decisa.
+    /// gira lo stesso. Prima il rilancio lo saltava.
     /// </summary>
     [Fact]
-    public async Task WhenTheRetryPolicyGivesUpOnTheNativeStep_TheWrapperStepDoesNotRun_AndTheErrorReachesTheCaller()
+    public async Task WhenTheNativeStepGivesUp_TheWrapperStepStillRuns_AndTheCallerIsNotTold()
     {
+        var gameId = Guid.NewGuid();
         var calls = 0;
 
-        // La prima chiamata (il passo nativo) si arrende; il wrapper non dovrebbe nemmeno essere chiamato.
+        // La prima chiamata (il passo nativo) si arrende; il wrapper deve partire comunque.
         _doubles.RetryPolicy
             .Setup(p => p.ExecuteAsync(
                 It.IsAny<Func<CancellationToken, ValueTask>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns<Func<CancellationToken, ValueTask>, string, CancellationToken>((op, _, ct) =>
                 ++calls == 1 ? Task.FromException(new InvalidOperationException("l2 down")) : op(ct).AsTask());
 
-        var act = () => _doubles.Invalidator.EvictDetailAsync(Guid.NewGuid(), TestContext.Current.CancellationToken);
+        var act = () => _doubles.Invalidator.EvictDetailAsync(gameId, TestContext.Current.CancellationToken);
 
-        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("l2 down");
-        _doubles.Events.Should().BeEmpty("neither step completed: the wrapper step, which also publishes to the other replicas, never started");
-        calls.Should().Be(1, "the second step is not even handed to the retry policy");
+        await act.Should().NotThrowAsync();
+        _doubles.Events.Should().Equal(
+            new[] { $"wrapper:{DetailTag(gameId)}" },
+            "the wrapper step also publishes to the other replicas: one failed step must not take it away");
+        calls.Should().Be(2);
+    }
+
+    /// <summary>
+    /// Un'evizione che fallisce non ferma le altre: se la lista non si riesce a togliere, il dettaglio di
+    /// ciascun gioco viene tolto lo stesso.
+    /// </summary>
+    [Fact]
+    public async Task WhenTheListEvictionFails_TheDetailsOfEveryGameAreStillEvicted()
+    {
+        var first = Guid.NewGuid();
+        var second = Guid.NewGuid();
+        var calls = 0;
+
+        // Le prime due chiamate (nativo e wrapper della lista) si arrendono; le altre passano.
+        _doubles.RetryPolicy
+            .Setup(p => p.ExecuteAsync(
+                It.IsAny<Func<CancellationToken, ValueTask>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns<Func<CancellationToken, ValueTask>, string, CancellationToken>((op, _, ct) =>
+                ++calls <= 2 ? Task.FromException(new InvalidOperationException("redis down")) : op(ct).AsTask());
+
+        var act = () => _doubles.Invalidator.EvictDetailsAndListAsync([first, second], TestContext.Current.CancellationToken);
+
+        await act.Should().NotThrowAsync();
+        _doubles.Events.Should().Equal(
+            $"native:{DetailTag(first)}", $"wrapper:{DetailTag(first)}",
+            $"native:{DetailTag(second)}", $"wrapper:{DetailTag(second)}");
+    }
+
+    /// <summary>
+    /// #4603 punto 2, l'altra metà: se il client si disconnette fra il commit e l'evizione, il token della
+    /// richiesta è annullato; usarlo salterebbe l'evizione e la voce vecchia resterebbe. L'evizione ignora il
+    /// token (come `HybridCacheInvalidationSubscriber`) e si affida ai tentativi della retry policy.
+    /// </summary>
+    [Fact]
+    public async Task Eviction_IgnoresTheRequestToken_AndRunsEvenWhenTheClientHasGone()
+    {
+        using var source = new CancellationTokenSource();
+        await source.CancelAsync();
+        var cancelled = source.Token;
+        var gameId = Guid.NewGuid();
+
+        await _doubles.Invalidator.EvictDetailAndListAsync(gameId, cancelled);
+
+        _doubles.Events.Should().Equal(
+            $"native:{ListTag}", $"wrapper:{ListTag}",
+            $"native:{DetailTag(gameId)}", $"wrapper:{DetailTag(gameId)}");
+        _doubles.RetryPolicy.Verify(
+            p => p.ExecuteAsync(It.IsAny<Func<CancellationToken, ValueTask>>(), It.IsAny<string>(), CancellationToken.None),
+            Times.Exactly(4));
+        _doubles.Cache.Verify(c => c.RemoveByTagAcrossReplicasAsync(ListTag, CancellationToken.None), Times.Once);
+        _doubles.Cache.Verify(c => c.RemoveByTagAcrossReplicasAsync(DetailTag(gameId), CancellationToken.None), Times.Once);
+        _doubles.HybridCache.Verify(c => c.RemoveByTagAsync(ListTag, CancellationToken.None), Times.Once);
+        _doubles.HybridCache.Verify(c => c.RemoveByTagAsync(DetailTag(gameId), CancellationToken.None), Times.Once);
+    }
+
+    /// <summary>
+    /// Un'evizione che fallisce non risale a chi ha scritto: si vede nel log, con il tag, l'operazione e il passo
+    /// (nativo o wrapper) e con l'eccezione. Senza, una cache che resta vecchia fino alla scadenza non lascerebbe
+    /// nessuna traccia.
+    /// </summary>
+    [Fact]
+    public async Task WhenAStepGivesUp_TheFailureIsLoggedWithTheTagTheOperationAndTheStep()
+    {
+        var gameId = Guid.NewGuid();
+        var logger = new RecordingLogger();
+        var invalidator = new SharedGameCacheInvalidator(
+            _doubles.Cache.Object, _doubles.RetryPolicy.Object, _doubles.HybridCache.Object, logger);
+        var failure = new InvalidOperationException("redis down");
+        var calls = 0;
+        _doubles.RetryPolicy
+            .Setup(p => p.ExecuteAsync(
+                It.IsAny<Func<CancellationToken, ValueTask>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns<Func<CancellationToken, ValueTask>, string, CancellationToken>((op, _, ct) =>
+                ++calls == 2 ? Task.FromException(failure) : op(ct).AsTask());
+
+        await invalidator.EvictDetailAsync(gameId, TestContext.Current.CancellationToken);
+
+        var entry = logger.Entries.Should().ContainSingle("only the wrapper step failed").Subject;
+        entry.Level.Should().Be(LogLevel.Error);
+        entry.Exception.Should().BeSameAs(failure);
+        entry.Message.Should().Contain(DetailTag(gameId)).And.Contain("shared-games.detail").And.Contain("wrapper");
     }
 
     [Fact]
-    public async Task Eviction_PassesTheRequestTokenToEveryStep()
+    public async Task WhenTheNativeStepGivesUp_TheLogNamesTheNativeStep_NotTheWrapper()
     {
-        using var source = new CancellationTokenSource();
-        var token = source.Token;
-        var gameId = Guid.NewGuid();
+        var logger = new RecordingLogger();
+        var invalidator = new SharedGameCacheInvalidator(
+            _doubles.Cache.Object, _doubles.RetryPolicy.Object, _doubles.HybridCache.Object, logger);
+        var calls = 0;
+        _doubles.RetryPolicy
+            .Setup(p => p.ExecuteAsync(
+                It.IsAny<Func<CancellationToken, ValueTask>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns<Func<CancellationToken, ValueTask>, string, CancellationToken>((op, _, ct) =>
+                ++calls == 1 ? Task.FromException(new InvalidOperationException("l2 down")) : op(ct).AsTask());
 
-        await _doubles.Invalidator.EvictDetailAndListAsync(gameId, token);
+        await invalidator.EvictDetailAsync(Guid.NewGuid(), TestContext.Current.CancellationToken);
 
-        _doubles.RetryPolicy.Verify(
-            p => p.ExecuteAsync(It.IsAny<Func<CancellationToken, ValueTask>>(), It.IsAny<string>(), token),
-            Times.Exactly(4));
-        _doubles.Cache.Verify(c => c.RemoveByTagAcrossReplicasAsync(ListTag, token), Times.Once);
-        _doubles.Cache.Verify(c => c.RemoveByTagAcrossReplicasAsync(DetailTag(gameId), token), Times.Once);
-        _doubles.HybridCache.Verify(c => c.RemoveByTagAsync(ListTag, token), Times.Once);
-        _doubles.HybridCache.Verify(c => c.RemoveByTagAsync(DetailTag(gameId), token), Times.Once);
+        var entry = logger.Entries.Should().ContainSingle("only the native step failed").Subject;
+        entry.Message.Should().Contain("native").And.NotContain("wrapper");
+    }
+
+    [Fact]
+    public async Task WhenNothingFails_NothingIsLogged()
+    {
+        var logger = new RecordingLogger();
+        var invalidator = new SharedGameCacheInvalidator(
+            _doubles.Cache.Object, _doubles.RetryPolicy.Object, _doubles.HybridCache.Object, logger);
+
+        await invalidator.EvictDetailAndListAsync(Guid.NewGuid(), TestContext.Current.CancellationToken);
+
+        logger.Entries.Should().BeEmpty();
     }
 
     [Fact]
@@ -184,5 +284,18 @@ public sealed class SharedGameCacheInvalidatorTests
             .Should().Throw<ArgumentNullException>();
         FluentActions.Invoking(() => new SharedGameCacheInvalidator(cache, retry, null!))
             .Should().Throw<ArgumentNullException>();
+    }
+
+    private sealed class RecordingLogger : ILogger<SharedGameCacheInvalidator>
+    {
+        public List<(LogLevel Level, string Message, Exception? Exception)> Entries { get; } = [];
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+            Entries.Add((logLevel, formatter(state, exception), exception));
     }
 }

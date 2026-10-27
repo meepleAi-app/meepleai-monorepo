@@ -28,10 +28,24 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 /// che la lista non riporta, la lasciano com'è.
 /// </para>
 /// <para>
-/// Errori e cancellazione. Un'evizione che fallisce DOPO i tentativi della retry policy (#613) risale al
-/// chiamante, e il token è quello della richiesta. Cosa fare di una scrittura già salvata quando
-/// l'evizione fallisce, o quando il client si è disconnesso, è la questione aperta del punto 2 di #4603:
-/// quando sarà deciso, si cambia qui e in nessun altro posto.
+/// Errori e cancellazione (#4603, punto 2, deciso). L'evizione sta DOPO il commit, quindi non può far
+/// fallire una scrittura già salvata e non deve dipendere dal client:
+/// </para>
+/// <list type="bullet">
+/// <item>Un passo che fallisce DOPO i tentativi della retry policy (#613) si registra (errore, con tag,
+/// operazione e passo) e NON risale al chiamante: prima la richiesta rispondeva 500 su una scrittura
+/// riuscita, e l'admin che riprovava duplicava un'errata o una FAQ. La scadenza della voce resta la rete di
+/// sicurezza.</item>
+/// <item>Ogni passo gira comunque: se uno fallisce, gli altri partono lo stesso (il wrapper porta anche il
+/// messaggio alle altre repliche; i dettagli degli altri giochi non restano indietro).</item>
+/// <item>Il token passato dal chiamante si ignora, di proposito: se il client si disconnette fra il commit e
+/// l'evizione, il token è annullato e usarlo salterebbe l'evizione lasciando la voce vecchia. I passi
+/// girano con <see cref="CancellationToken.None"/>, come `HybridCacheInvalidationSubscriber`. Il parametro
+/// resta nell'interfaccia per non toccare i chiamanti.</item>
+/// </list>
+/// <para>
+/// Chi lo chiama non può quindi accorgersi che l'evizione non è riuscita: non c'è un valore di ritorno né
+/// un'eccezione. Si vede nel log e nella metrica della retry policy.
 /// </para>
 /// </remarks>
 internal interface ISharedGameCacheInvalidator

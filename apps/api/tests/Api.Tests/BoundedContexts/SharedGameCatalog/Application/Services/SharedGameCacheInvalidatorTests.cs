@@ -241,6 +241,25 @@ public sealed class SharedGameCacheInvalidatorTests
     }
 
     [Fact]
+    public async Task WhenTheNativeStepGivesUp_TheLogNamesTheNativeStep_NotTheWrapper()
+    {
+        var logger = new RecordingLogger();
+        var invalidator = new SharedGameCacheInvalidator(
+            _doubles.Cache.Object, _doubles.RetryPolicy.Object, _doubles.HybridCache.Object, logger);
+        var calls = 0;
+        _doubles.RetryPolicy
+            .Setup(p => p.ExecuteAsync(
+                It.IsAny<Func<CancellationToken, ValueTask>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns<Func<CancellationToken, ValueTask>, string, CancellationToken>((op, _, ct) =>
+                ++calls == 1 ? Task.FromException(new InvalidOperationException("l2 down")) : op(ct).AsTask());
+
+        await invalidator.EvictDetailAsync(Guid.NewGuid(), TestContext.Current.CancellationToken);
+
+        var entry = logger.Entries.Should().ContainSingle("only the native step failed").Subject;
+        entry.Message.Should().Contain("native").And.NotContain("wrapper");
+    }
+
+    [Fact]
     public async Task WhenNothingFails_NothingIsLogged()
     {
         var logger = new RecordingLogger();

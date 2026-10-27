@@ -5,7 +5,9 @@ using Api.BoundedContexts.UserNotifications.Application.Constants;
 using Api.BoundedContexts.UserNotifications.Application.Services;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.SharedKernel.Application.EventHandlers;
+using Api.SharedKernel.Domain.Enums;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.UserNotifications.Application.EventHandlers;
@@ -59,8 +61,11 @@ internal sealed class SharedGameSubmittedForApprovalNotificationHandler
             return;
         }
 
-        // Get all admin users to notify
-        var adminDomainEntities = await _userRepository.GetAdminUsersAsync(cancellationToken).ConfigureAwait(false);
+        // Get all admin users to notify. GetAdminUsersAsync scopes by role only, and a suspended or banned admin
+        // cannot sign in, so an in-app notification or an email to them is of no use to anyone.
+        var adminDomainEntities = (await _userRepository.GetAdminUsersAsync(cancellationToken).ConfigureAwait(false))
+            .Where(CanSignIn)
+            .ToList();
 
         if (adminDomainEntities.Count == 0)
         {
@@ -97,6 +102,9 @@ internal sealed class SharedGameSubmittedForApprovalNotificationHandler
             adminDomainEntities.Count,
             game.Title);
     }
+
+    private static bool CanSignIn(User user) =>
+        !user.IsSuspended && user.Status is not (UserAccountStatus.Suspended or UserAccountStatus.Banned);
 
     protected override Guid? GetUserId(SharedGameSubmittedForApprovalEvent domainEvent) => domainEvent.SubmittedBy;
 

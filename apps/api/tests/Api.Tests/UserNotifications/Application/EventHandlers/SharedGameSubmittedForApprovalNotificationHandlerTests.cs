@@ -72,6 +72,56 @@ public sealed class SharedGameSubmittedForApprovalNotificationHandlerTests : IAs
             It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
+    /// <summary>
+    /// Un admin sospeso o bannito non può accedere (<c>User.Suspend</c>: "Suspended users cannot login"), quindi
+    /// una notifica in-app o una email a lui non serve a nessuno. <c>GetAdminUsersAsync</c> filtra solo per ruolo.
+    /// </summary>
+    [Fact]
+    public async Task Handle_DoesNotNotifyASuspendedOrABannedAdmin()
+    {
+        var suspendedId = Guid.NewGuid();
+        var bannedId = Guid.NewGuid();
+        var suspended = new UserBuilder().WithId(suspendedId).WithEmail("suspended@example.com").WithRole(Role.Admin).Build();
+        suspended.Suspend("left the team");
+        var banned = new UserBuilder().WithId(bannedId).WithEmail("banned@example.com").WithRole(Role.SuperAdmin).Build();
+        banned.Ban("abuse");
+        var active = new UserBuilder().WithId(_adminId1).WithEmail("admin1@example.com").WithRole(Role.Admin).Build();
+        _userRepo.Setup(r => r.GetAdminUsersAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<User> { suspended, active, banned });
+        ArrangeSubmission();
+        var recipients = new List<Guid>();
+        _dispatcher
+            .Setup(d => d.DispatchAsync(It.IsAny<NotificationMessage>(), It.IsAny<CancellationToken>()))
+            .Callback<NotificationMessage, CancellationToken>((message, _) => recipients.Add(message.RecipientUserId));
+
+        await _sut.Handle(new SharedGameSubmittedForApprovalEvent(_gameId, _editorId), CancellationToken.None);
+
+        recipients.Should().Equal(new[] { _adminId1 }, "only the active admin can act on the notification");
+    }
+
+    [Fact]
+    public async Task Handle_WhenEveryAdminIsSuspended_SkipsNotification()
+    {
+        var suspended = new UserBuilder().WithId(Guid.NewGuid()).WithEmail("suspended@example.com").WithRole(Role.Admin).Build();
+        suspended.Suspend();
+        _userRepo.Setup(r => r.GetAdminUsersAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<User> { suspended });
+        ArrangeSubmission();
+
+        await _sut.Handle(new SharedGameSubmittedForApprovalEvent(_gameId, _editorId), CancellationToken.None);
+
+        _dispatcher.Verify(d => d.DispatchAsync(It.IsAny<NotificationMessage>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    private void ArrangeSubmission()
+    {
+        var editor = new UserBuilder().WithId(_editorId).WithEmail("editor@example.com").WithDisplayName("Editor User").Build();
+        var game = SharedGame.Create("Gloomhaven", 2017, "Epic dungeon crawler", 1, 4, 120, 14, 3.9m, 8.8m,
+            "https://example.com/image.jpg", "https://example.com/thumb.jpg", null, _editorId, 174430);
+        _userRepo.Setup(r => r.GetByIdAsync(_editorId, It.IsAny<CancellationToken>())).ReturnsAsync(editor);
+        _sharedGameRepo.Setup(r => r.GetByIdAsync(_gameId, It.IsAny<CancellationToken>())).ReturnsAsync(game);
+    }
+
     [Fact]
     public async Task Handle_WhenSubmitterNotFound_SkipsNotification()
     {

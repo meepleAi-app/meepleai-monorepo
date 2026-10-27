@@ -105,9 +105,12 @@ public interface IPdfIndexingPipeline
     /// re-index command does.
     /// </para>
     /// <para>
-    /// A row that is already "completed" is left alone (a re-run of an indexed document that fails keeps the index it
-    /// had), and a PDF with no vector document is a no-op. Best effort: it is called from failure handlers, so it
-    /// never throws; a failure to write is logged.
+    /// A row that is already "completed" is left as it is (this is not the compensation of "completed" that the
+    /// 2026-10-25 decision ruled out), and a PDF with no vector document is a no-op. That does not promise the index
+    /// is intact: the re-index path deletes the embeddings before it inserts them again, so a failed re-index can
+    /// leave a "completed" row without embeddings. The row is judged by the database's values, not by whatever the
+    /// change tracker holds after the save that failed. Best effort: it is called from failure handlers, so it never
+    /// throws; a failure to write is logged.
     /// </para>
     /// </remarks>
     /// <param name="pdfDocumentId">Source PDF id.</param>

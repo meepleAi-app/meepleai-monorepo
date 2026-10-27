@@ -198,9 +198,21 @@ internal sealed class PdfIndexingPipeline : IPdfIndexingPipeline
                 .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfDocumentId, cancellationToken)
                 .ConfigureAwait(false);
 
-            // No row: the PDF failed before BeginIndexingAsync. Completed: a re-run of an indexed document keeps
-            // the index it had. Failed: already marked.
-            if (row is null
+            // No row: the PDF failed before BeginIndexingAsync.
+            if (row is null)
+            {
+                return;
+            }
+
+            // The save that made the PDF fail may have left this row tracked with values that never reached the
+            // database (IndexAsync writes "completed" into the entity before it saves, and the queue pipeline shares
+            // the context without clearing it). Judge the row the database has, not the tracker's.
+            var entry = _db.Entry(row);
+            await entry.ReloadAsync(cancellationToken).ConfigureAwait(false);
+
+            // Gone since the read (an admin deleted it): nothing left to mark. Completed: a re-run of an indexed
+            // document is left as it is (see the interface remarks). Failed: already marked, the first error stays.
+            if (entry.State == EntityState.Detached
                 || string.Equals(row.IndexingStatus, "completed", StringComparison.Ordinal)
                 || string.Equals(row.IndexingStatus, "failed", StringComparison.Ordinal))
             {

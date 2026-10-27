@@ -221,8 +221,15 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
 
         await Record.ExceptionAsync(() => CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None));
 
+        _vectorStoreMock.Verify(
+            v => v.IndexBatchAsync(It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()),
+            Times.Once,
+            "the failure has to come from saving the embeddings, not from a step before it");
         _indexingPipelineMock.Verify(
-            p => p.MarkIndexingFailedAsync(_pdfDocumentId, It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            p => p.MarkIndexingFailedAsync(
+                _pdfDocumentId,
+                It.Is<string>(m => m.Contains("the vector store is down", StringComparison.Ordinal)),
+                CancellationToken.None),
             Times.Once);
     }
 

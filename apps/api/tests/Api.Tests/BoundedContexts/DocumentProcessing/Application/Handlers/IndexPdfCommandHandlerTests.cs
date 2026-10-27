@@ -934,6 +934,43 @@ public class IndexPdfCommandHandlerTests
         updatedPdf.ProcessingError.Should().Contain("Unexpected chunking crash");
     }
 
+    /// <summary>
+    /// Seguito di #4609: l'handler crea da sé il documento vettoriale in `processing`; se un'eccezione imprevista
+    /// manda il PDF in `Failed`, anche quel documento va chiuso (altrimenti il polling dello stato di
+    /// indicizzazione resta su «processing» con il PDF già fallito).
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenUnexpectedExceptionOccurs_AlsoClosesTheVectorDocumentAsFailed()
+    {
+        using var context = CreateFreshDbContext();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+        var pdfId = Guid.NewGuid();
+        var pdf = CreatePdfDocument(pdfId, Guid.NewGuid(), "completed", GenerateExtractedText(10));
+        pdf.ProcessingState = "Extracting";
+        await context.PdfDocuments.AddAsync(pdf);
+        await context.SaveChangesAsync();
+        advancedChunkingServiceMock
+            .Setup(x => x.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Unexpected chunking crash"));
+        embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
+        embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
+        var pipelineMock = new Mock<IPdfIndexingPipeline>();
+        var handler = new IndexPdfCommandHandler(
+            context, advancedChunkingServiceMock.Object, embeddingServiceMock.Object,
+            loggerMock.Object, indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>(),
+            pipelineMock.Object);
+
+        await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
+
+        pipelineMock.Verify(
+            p => p.MarkIndexingFailedAsync(
+                pdfId,
+                It.Is<string>(m => m.Contains("Unexpected chunking crash", StringComparison.Ordinal)),
+                CancellationToken.None),
+            Times.Once);
+    }
+
     // Helper methods
     private static PdfDocumentEntity CreatePdfDocument(Guid id, Guid gameId, string status, string extractedText)
     {

@@ -235,6 +235,14 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                             pdfId, nameof(IndexPdfCommandHandler));
                     }
                 }
+
+                // #4609: the vector document this handler created (or reset) in "processing" must not outlive the
+                // failed PDF. A no-op when the failure came before it existed; never throws.
+                if (Guid.TryParse(pdfId, out var failedPdfGuid))
+                {
+                    await _pipeline.MarkIndexingFailedAsync(
+                        failedPdfGuid, $"Unexpected error: {ex.Message}", CancellationToken.None).ConfigureAwait(false);
+                }
             }
             catch (Exception dbEx)
             {

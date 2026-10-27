@@ -76,6 +76,9 @@ public sealed class AnswerOpenRequestsLimitIntegrationTests
     private Guid _gameId;
     private int _questionNumber;
 
+    /// <summary>Tutte le richieste che il test ha avviato: a fine test si aspetta che finiscano.</summary>
+    private readonly List<Task<HttpResponseMessage>> _requests = [];
+
     public AnswerOpenRequestsLimitIntegrationTests(AnswerOpenRequestsHostFixture hostFixture)
     {
         _hostFixture = hostFixture;
@@ -118,12 +121,28 @@ public sealed class AnswerOpenRequestsLimitIntegrationTests
         await IndexedRulebookSeed.SeedAsync(db, _gameId, userId, Ct);
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        // Un test che fallisce con le richieste ancora aperte non deve lasciarle appese all'host.
+        // Un test che fallisce con le richieste ancora aperte non deve lasciarle appese all'host né al test
+        // dopo: il cancello si apre e si aspetta (a tempo) che finiscano, prima che il prossimo test lo richiuda.
         Llm.Open();
+        await Task.WhenAny(Task.WhenAll(_requests.Select(SettleAsync)), Task.Delay(Patience));
         _client?.Dispose();
-        return ValueTask.CompletedTask;
+    }
+
+    private static async Task SettleAsync(Task<HttpResponseMessage> request)
+    {
+        try
+        {
+            using var response = await request;
+        }
+        catch (HttpRequestException)
+        {
+            // Una richiesta che cade dopo che il test ha già deciso il suo esito non aggiunge niente.
+        }
+        catch (OperationCanceledException)
+        {
+        }
     }
 
     // ─── Il limite ──────────────────────────────────────────────────────────────
@@ -186,6 +205,7 @@ public sealed class AnswerOpenRequestsLimitIntegrationTests
     }
 
     [Theory]
+    [InlineData("superadmin")]
     [InlineData("admin")]
     [InlineData("editor")]
     public async Task AnAdminOrAnEditor_IsNotLimited(string role)
@@ -272,8 +292,12 @@ public sealed class AnswerOpenRequestsLimitIntegrationTests
     }
 
     /// <summary>Apre una richiesta e non aspetta la fine: resta aperta finché il cancello non si apre.</summary>
-    private Task<HttpResponseMessage> OpenAsync(Route route, string token) =>
-        Task.Run(() => _client.SendAsync(RequestFor(route, token), Ct), Ct);
+    private Task<HttpResponseMessage> OpenAsync(Route route, string token)
+    {
+        var request = Task.Run(() => _client.SendAsync(RequestFor(route, token), Ct), Ct);
+        _requests.Add(request);
+        return request;
+    }
 
     /// <summary>
     /// Una richiesta che dovrebbe rispondere subito: o perché è rifiutata, o perché c'è posto. Se non
@@ -281,7 +305,7 @@ public sealed class AnswerOpenRequestsLimitIntegrationTests
     /// </summary>
     private async Task<(HttpStatusCode Status, string Body)> TryThirdAsync(Route route, string token)
     {
-        var request = Task.Run(() => _client.SendAsync(RequestFor(route, token), Ct), Ct);
+        var request = OpenAsync(route, token);
         var finished = await Task.WhenAny(request, Task.Delay(Patience, Ct));
         if (finished != request)
         {
@@ -343,9 +367,12 @@ public sealed class AnswerOpenRequestsLimitIntegrationTests
     {
         using var scope = _hostFixture.Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        var (userId, token) = role == "admin"
-            ? await TestSessionHelper.CreateAdminSessionAsync(db, cancellationToken: Ct)
-            : await TestSessionHelper.CreateEditorSessionAsync(db, cancellationToken: Ct);
+        var (userId, token) = role switch
+        {
+            "superadmin" => await TestSessionHelper.CreateSuperAdminSessionAsync(db, cancellationToken: Ct),
+            "admin" => await TestSessionHelper.CreateAdminSessionAsync(db, cancellationToken: Ct),
+            _ => await TestSessionHelper.CreateEditorSessionAsync(db, cancellationToken: Ct),
+        };
         db.UserLibraryEntries.Add(OwnedBy(userId));
         await db.SaveChangesAsync(Ct);
         return token;

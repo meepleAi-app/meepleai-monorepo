@@ -674,11 +674,6 @@ internal static class RateLimitingServiceExtensions
     }
 
     /// <summary>
-    /// Gets the user ID from the HttpContext User claims.
-    /// Returns IP address as fallback for unauthenticated requests.
-    /// Defensive implementation with full null checks to prevent rate limiter crashes.
-    /// </summary>
-    /// <summary>
     /// SuperAdmin, Admin and Editor are not subject to the open-answers limit, as they are not to the
     /// answer quota (TierEnforcementService). The role claims are the ones SessionAuthenticationHandler sets.
     /// </summary>
@@ -689,6 +684,11 @@ internal static class RateLimitingServiceExtensions
             && (user.IsInRole("SuperAdmin") || user.IsInRole("Admin") || user.IsInRole("Editor"));
     }
 
+    /// <summary>
+    /// Gets the user ID from the HttpContext User claims.
+    /// Returns IP address as fallback for unauthenticated requests.
+    /// Defensive implementation with full null checks to prevent rate limiter crashes.
+    /// </summary>
     private static string GetUserId(HttpContext? httpContext)
     {
         if (httpContext is null)

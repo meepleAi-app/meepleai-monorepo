@@ -73,21 +73,28 @@ public sealed class SharedGameSubmittedForApprovalNotificationHandlerTests : IAs
     }
 
     /// <summary>
-    /// Un admin sospeso o bannito non può accedere (<c>User.Suspend</c>: "Suspended users cannot login"), quindi
-    /// una notifica in-app o una email a lui non serve a nessuno. <c>GetAdminUsersAsync</c> filtra solo per ruolo.
+    /// Un admin sospeso, bannito o non ancora attivato non può accedere (<c>User.CanAuthenticate</c>, quello del
+    /// login), quindi una notifica in-app o una email a lui non serve a nessuno. <c>GetAdminUsersAsync</c> filtra
+    /// solo per ruolo.
     /// </summary>
     [Fact]
-    public async Task Handle_DoesNotNotifyASuspendedOrABannedAdmin()
+    public async Task Handle_DoesNotNotifyAnAdminWhoCannotSignIn()
     {
-        var suspendedId = Guid.NewGuid();
-        var bannedId = Guid.NewGuid();
-        var suspended = new UserBuilder().WithId(suspendedId).WithEmail("suspended@example.com").WithRole(Role.Admin).Build();
+        var suspended = new UserBuilder().WithId(Guid.NewGuid()).WithEmail("suspended@example.com").WithRole(Role.Admin).Build();
         suspended.Suspend("left the team");
-        var banned = new UserBuilder().WithId(bannedId).WithEmail("banned@example.com").WithRole(Role.SuperAdmin).Build();
+        var banned = new UserBuilder().WithId(Guid.NewGuid()).WithEmail("banned@example.com").WithRole(Role.SuperAdmin).Build();
         banned.Ban("abuse");
+        var pending = User.CreatePending(
+            Api.BoundedContexts.Authentication.Domain.ValueObjects.Email.Parse("invited@example.com"),
+            "Invited Admin",
+            Role.Admin,
+            Api.SharedKernel.Domain.ValueObjects.UserTier.Parse("free"),
+            Guid.NewGuid(),
+            DateTime.UtcNow.AddDays(7),
+            TimeProvider.System);
         var active = new UserBuilder().WithId(_adminId1).WithEmail("admin1@example.com").WithRole(Role.Admin).Build();
         _userRepo.Setup(r => r.GetAdminUsersAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<User> { suspended, active, banned });
+            .ReturnsAsync(new List<User> { suspended, pending, active, banned });
         ArrangeSubmission();
         var recipients = new List<Guid>();
         _dispatcher

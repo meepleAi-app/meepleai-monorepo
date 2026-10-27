@@ -22,7 +22,6 @@ internal static class AgentSessionEndpoints
         MapLaunchEndpoint(group);
         MapUpdateStateEndpoint(group);
         MapUpdateDefinitionEndpoint(group); // Issue #3252
-        MapUpdateConfigEndpoint(group); // Issue #3253
         MapEndSessionEndpoint(group);
 
         return group;
@@ -53,15 +52,6 @@ internal static class AgentSessionEndpoints
             .RequireSession()
             .WithTags("AgentSessions")
             .WithDescription("Update agent definition during active session");
-    }
-
-    private static void MapUpdateConfigEndpoint(RouteGroupBuilder group)
-    {
-        group.MapPatch("/game-sessions/{gameSessionId:guid}/agent/config", HandleUpdateConfig)
-            .WithName("UpdateAgentSessionConfig")
-            .RequireSession()
-            .WithTags("AgentSessions")
-            .WithDescription("Update agent runtime configuration");
     }
 
     private static void MapEndSessionEndpoint(RouteGroupBuilder group)
@@ -135,29 +125,6 @@ internal static class AgentSessionEndpoints
         return Results.NoContent();
     }
 
-    private static async Task<IResult> HandleUpdateConfig(
-        [FromRoute] Guid gameSessionId,
-        [FromBody] UpdateAgentSessionConfigRequest request,
-        [FromServices] IMediator mediator,
-        HttpContext httpContext,
-        CancellationToken cancellationToken)
-    {
-        var command = new UpdateAgentSessionConfigCommand(
-            AgentSessionId: request.AgentSessionId,
-            ModelType: request.ModelType,
-            Temperature: request.Temperature,
-            MaxTokens: request.MaxTokens,
-            RagStrategy: request.RagStrategy,
-            RagParams: request.RagParams,
-            GameSessionId: gameSessionId,
-            UserId: httpContext.User.GetUserId()
-        );
-
-        await mediator.Send(command, cancellationToken).ConfigureAwait(false);
-
-        return Results.NoContent();
-    }
-
     private static async Task<IResult> HandleEndSession(
         [FromRoute] Guid gameSessionId,
         [FromBody] EndSessionAgentRequest request,
@@ -193,13 +160,5 @@ internal record UpdateAgentSessionStateRequest(
 internal record UpdateAgentSessionDefinitionRequest(
     Guid AgentSessionId,
     Guid NewAgentDefinitionId);
-
-internal record UpdateAgentSessionConfigRequest(
-    Guid AgentSessionId,
-    string ModelType,
-    double Temperature,
-    int MaxTokens,
-    string RagStrategy,
-    IDictionary<string, object> RagParams);
 
 internal record EndSessionAgentRequest(Guid AgentSessionId);

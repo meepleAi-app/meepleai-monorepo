@@ -14,7 +14,6 @@ internal sealed class AgentSession : AggregateRoot<Guid>
     public Guid GameSessionId { get; private set; }
     public Guid UserId { get; private set; }
     public Guid GameId { get; private set; }
-    public AgentConfig Config { get; private set; }
     public GameState CurrentGameState { get; private set; }
     public DateTime StartedAt { get; private set; }
     public DateTime? EndedAt { get; private set; }
@@ -32,8 +31,7 @@ internal sealed class AgentSession : AggregateRoot<Guid>
         Guid gameSessionId,
         Guid userId,
         Guid gameId,
-        GameState initialState,
-        AgentConfig? config = null) : base(id)
+        GameState initialState) : base(id)
     {
         if (agentDefinitionId == Guid.Empty)
             throw new ArgumentException("AgentDefinitionId cannot be empty", nameof(agentDefinitionId));
@@ -50,7 +48,6 @@ internal sealed class AgentSession : AggregateRoot<Guid>
         GameSessionId = gameSessionId;
         UserId = userId;
         GameId = gameId;
-        Config = config ?? AgentConfig.Default();
         CurrentGameState = initialState;
         StartedAt = DateTime.UtcNow;
         IsActive = true;
@@ -82,18 +79,6 @@ internal sealed class AgentSession : AggregateRoot<Guid>
         AgentDefinitionId = newAgentDefinitionId;
 
         AddDomainEvent(new AgentSessionDefinitionChangedEvent(Id, newAgentDefinitionId));
-    }
-
-    public void UpdateConfig(AgentConfig newConfig)
-    {
-        ArgumentNullException.ThrowIfNull(newConfig);
-
-        if (!IsActive)
-            throw new ConflictException("Cannot update config of inactive agent session");
-
-        Config = newConfig;
-
-        AddDomainEvent(new AgentSessionConfigUpdatedEvent(Id, newConfig.ToJson()));
     }
 
     public void End()

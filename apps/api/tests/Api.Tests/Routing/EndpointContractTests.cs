@@ -140,6 +140,7 @@ public sealed class EndpointContractTests : IClassFixture<RouteContractTestFacto
     {
         yield return ["GET", "/api/v1/admin/kb/games/00000000-0000-0000-0000-000000000001/feedback", "#4469 — per-game feedback list behind a hand-typed game UUID; GET /admin/kb/feedback filters by version and game"];
         yield return ["POST", "/api/v1/agents/user", "#4138 — user agent creation"];
+        yield return ["PATCH", "/api/v1/game-sessions/00000000-0000-0000-0000-000000000001/agent/config", "#4618 — answered 204 and saved nothing (AgentSession.Config had no column); the configuration lives in the agent profile (ADR-095)"];
         yield return ["POST", "/api/v1/agents/create-with-setup", "#4138 — creation + library add + thread"];
         yield return ["POST", "/api/v1/agents/quick-create", "#4138 — 1-click Tutor creation"];
         yield return ["PUT", "/api/v1/agents/00000000-0000-0000-0000-000000000001/user", "#4138 — user-owned agent update"];

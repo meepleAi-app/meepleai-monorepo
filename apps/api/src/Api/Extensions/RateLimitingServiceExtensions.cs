@@ -279,6 +279,9 @@ internal static class RateLimitingServiceExtensions
             // is not called and the quota counter does not grow. QueueLimit 0: no waiting; the web
             // views tell the user to wait for an answer to finish (qaStreamErrors.ts).
             //
+            // The count lives in the memory of each API process, like every limiter here: with several
+            // replicas the limit is 2 per replica, not 2 per user.
+            //
             // Same exemption as the quota: SuperAdmin, Admin and Editor (evaluations, the admin
             // playground and the RAG gates run as one of them and open many answers on purpose).
             //

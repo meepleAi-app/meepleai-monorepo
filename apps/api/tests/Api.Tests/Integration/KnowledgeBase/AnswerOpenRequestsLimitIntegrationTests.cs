@@ -51,7 +51,8 @@ public sealed class AnswerOpenRequestsHostFixture(SharedTestcontainersFixture sh
 /// La quota resta «verifica prima, conteggio a risposta consegnata»: fra la verifica e il conteggio
 /// passa l'intera generazione, quindi N richieste parallele sotto il limite passano tutte, e un solo
 /// utente può esaurire il tetto globale del gateway per tutti. Il rifiuto arriva prima della
-/// pipeline: il gateway non è chiamato e il contatore della quota non cresce.
+/// pipeline: il gateway non è chiamato (le prove lo asseriscono); il contatore della quota non cresce
+/// per costruzione, ma qui non è asserito.
 /// </summary>
 /// <remarks>
 /// Le richieste restano aperte davvero: il gateway di prova si ferma su un cancello, e il test sa

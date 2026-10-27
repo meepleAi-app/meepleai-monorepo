@@ -120,6 +120,87 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
         captured!.Should().OnlyContain(e => e.SourceChunkId != null);
     }
 
+    /// <summary>
+    /// #4609 — the vector document is declared <c>completed</c> (and has_knowledge_base raised) LAST, after the
+    /// pgvector rows are saved: <c>BeginIndexingAsync</c> first, so the row exists, then the rows, then
+    /// <c>IndexAsync</c>.
+    /// </summary>
+    [Fact]
+    public async Task ProcessAsync_CompletesTheVectorDocumentOnlyAfterTheEmbeddingsAreSaved()
+    {
+        SeedPdfDocument();
+        SetupExtractor(pageCount: 3);
+        SetupBlobStorage();
+        SetupHierarchicalChunking();
+        SetupEmbeddings();
+        SetupRoleClassifierDistinctPerChunk();
+        SetupIndexingPipelineCreatesVectorDocument();
+
+        var calls = new List<string>();
+        _indexingPipelineMock
+            .Setup(p => p.BeginIndexingAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<Guid?>(),
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add("begin"))
+            .Returns(async (Guid docId, Guid? gid, Guid? sgid, int chunkCount, int totalChars, string lang, CancellationToken ct) =>
+            {
+                _db.VectorDocuments.Add(new VectorDocumentEntity
+                {
+                    Id = Guid.NewGuid(), PdfDocumentId = docId, GameId = gid, SharedGameId = sgid,
+                    ChunkCount = chunkCount, TotalCharacters = totalChars, IndexingStatus = "processing"
+                });
+                await _db.SaveChangesAsync(ct);
+            });
+        _vectorStoreMock
+            .Setup(v => v.IndexBatchAsync(It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add("embeddings"))
+            .Returns(Task.CompletedTask);
+        _indexingPipelineMock
+            .Setup(p => p.IndexAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<Guid?>(),
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add("complete"))
+            .Returns(Task.CompletedTask);
+
+        await CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        (await _db.PdfDocuments.FindAsync(_pdfDocumentId))!.ProcessingState.Should().Be("Ready", "a run that stopped early would make the order below vacuous");
+        calls.Should().Equal(new[] { "begin", "embeddings", "complete" });
+    }
+
+    /// <summary>
+    /// #4609 — if saving the pgvector rows fails, the document is never declared <c>completed</c>: no
+    /// <c>IndexAsync</c>, so no <c>VectorDocumentIndexedEvent</c> and no has_knowledge_base on an index that
+    /// does not exist.
+    /// </summary>
+    [Fact]
+    public async Task ProcessAsync_WhenSavingTheEmbeddingsFails_NeverCompletesTheVectorDocument()
+    {
+        SeedPdfDocument();
+        SetupExtractor(pageCount: 3);
+        SetupBlobStorage();
+        SetupHierarchicalChunking();
+        SetupEmbeddings();
+        SetupRoleClassifierDistinctPerChunk();
+        SetupIndexingPipelineCreatesVectorDocument();
+        _vectorStoreMock
+            .Setup(v => v.IndexBatchAsync(It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("the vector store is down"));
+
+        await Record.ExceptionAsync(() => CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None));
+
+        _indexingPipelineMock.Verify(
+            p => p.BeginIndexingAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<Guid?>(),
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _indexingPipelineMock.Verify(
+            p => p.IndexAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<Guid?>(),
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     private PdfProcessingPipelineService CreatePipeline()
     {
         var languageDetectorMock = new Mock<ILanguageDetector>();
@@ -265,8 +346,10 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
     /// </summary>
     private void SetupIndexingPipelineCreatesVectorDocument()
     {
+        // #4609: the row is created by BeginIndexingAsync (in "processing"); IndexAsync, called last, only
+        // completes it, so the default mock is enough for it.
         _indexingPipelineMock
-            .Setup(p => p.IndexAsync(
+            .Setup(p => p.BeginIndexingAsync(
                 It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<Guid?>(),
                 It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(async (Guid docId, Guid? gid, Guid? sgid, int chunkCount, int totalChars, string lang, CancellationToken ct) =>
@@ -279,8 +362,7 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
                     SharedGameId = sgid,
                     ChunkCount = chunkCount,
                     TotalCharacters = totalChars,
-                    IndexingStatus = "completed",
-                    IndexedAt = DateTime.UtcNow
+                    IndexingStatus = "processing"
                 });
                 await _db.SaveChangesAsync(ct);
             });

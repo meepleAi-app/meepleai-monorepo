@@ -998,13 +998,21 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         // in IPdfIndexingPipeline (#2244 / epic #2242). The pipeline handles the
         // DbUpdateConcurrencyException internally with the same "Quartz must see
         // success" semantics this path needs.
-        await _indexingPipeline.IndexAsync(
+        //
+        // #4609: two steps, not one. The row has to exist first so the pgvector rows can point at it, but
+        // only as "processing"; IndexAsync, which writes "completed" and publishes
+        // VectorDocumentIndexedEvent (that raises shared_games.has_knowledge_base), runs LAST, after the
+        // embeddings are saved. Called first, a failure while saving them left a "completed" document with
+        // no vector rows and a game claiming a knowledge base.
+        var language = string.IsNullOrWhiteSpace(pdfDoc.Language) ? "en" : pdfDoc.Language;
+        var totalCharacters = pdfDoc.ExtractedText?.Length ?? 0;
+        await _indexingPipeline.BeginIndexingAsync(
             pdfDocumentId: pdfDoc.Id,
             gameId: pdfDoc.SharedGameId,
             sharedGameId: pdfDoc.SharedGameId,
             chunkCount: chunkCount,
-            totalCharacters: pdfDoc.ExtractedText?.Length ?? 0,
-            language: string.IsNullOrWhiteSpace(pdfDoc.Language) ? "en" : pdfDoc.Language,
+            totalCharacters: totalCharacters,
+            language: language,
             cancellationToken: cancellationToken).ConfigureAwait(false);
 
         // Re-read the (now persisted) entity so the pgvector block below has
@@ -1029,11 +1037,33 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 nameof(PdfProcessingPipelineService),
                 MeepleAiMetrics.PdfConcurrencyCategories.B);
             _logger.LogWarning(
-                "PdfPipeline: VectorDocument row for PDF {PdfId} missing after IndexAsync — pipeline swallowed a concurrency conflict, pgvector embeddings skipped. PDF will need re-index.",
+                "PdfPipeline: VectorDocument row for PDF {PdfId} missing after BeginIndexingAsync — pipeline swallowed a concurrency conflict, pgvector embeddings skipped. PDF will need re-index.",
                 pdfDoc.Id);
             return;
         }
 
+        await IndexEmbeddingsAsync(pdfDoc, translatedChunks, embeddings, vectorDoc, cancellationToken).ConfigureAwait(false);
+
+        // #4609: LAST. Every path of IndexEmbeddingsAsync that returns normally (including the ones that skip
+        // the pgvector step because there is no vector store or no game) still completes the document, as
+        // when IndexAsync came first; only a failure while saving leaves it in "processing".
+        await _indexingPipeline.IndexAsync(
+            pdfDocumentId: pdfDoc.Id,
+            gameId: pdfDoc.SharedGameId,
+            sharedGameId: pdfDoc.SharedGameId,
+            chunkCount: chunkCount,
+            totalCharacters: totalCharacters,
+            language: language,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task IndexEmbeddingsAsync(
+        PdfDocumentEntity pdfDoc,
+        List<(DocumentChunkInput chunk, string lang, bool isTranslation)> translatedChunks,
+        List<float[]> embeddings,
+        VectorDocumentEntity vectorDoc,
+        CancellationToken cancellationToken)
+    {
         // Index embeddings in pgvector for semantic search
         if (_vectorStore != null && embeddings.Count == translatedChunks.Count)
         {

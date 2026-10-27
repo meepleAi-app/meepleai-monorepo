@@ -645,8 +645,15 @@ internal partial class UploadPdfCommandHandler
 
         var indexingStopwatch = Stopwatch.StartNew();
 
-        // Create/update VectorDocument row FIRST so the pgvector rows can hang off it
-        await UpdateVectorDocumentAsync(pdfId, pdfDoc, allDocumentChunks.Count, db, scope, cancellationToken).ConfigureAwait(false);
+        // The VectorDocument row has to exist FIRST so the chunks and the pgvector rows can hang off it, but
+        // only as "processing": it becomes "completed", and VectorDocumentIndexedEvent raises
+        // has_knowledge_base, LAST, once the saves below are done (#4609). Declaring the index before the
+        // saves left a "completed" document with no vector rows whenever one of them failed or was cancelled.
+        var pipeline = scope.ServiceProvider.GetRequiredService<IPdfIndexingPipeline>();
+        var links = await ResolveIndexingLinksAsync(pdfId, pdfDoc, allDocumentChunks.Count, db, cancellationToken).ConfigureAwait(false);
+        await pipeline.BeginIndexingAsync(
+            links.PdfGuid, links.GameId, pdfDoc.SharedGameId, links.ChunkCount, links.TotalCharacters, links.Language,
+            cancellationToken).ConfigureAwait(false);
 
         // #4395: both writes go through PdfChunkPersistence, shared with the chunked upload.
         // #4384: text chunks BEFORE the pgvector rows, which point at them — moving this after the
@@ -658,39 +665,39 @@ internal partial class UploadPdfCommandHandler
             scope.ServiceProvider.GetService<Api.BoundedContexts.KnowledgeBase.Application.Services.IRoleClassifierService>(),
             _timeProvider, _logger, nameof(UploadPdfCommandHandler), cancellationToken).ConfigureAwait(false);
 
+        await pipeline.IndexAsync(
+            links.PdfGuid, links.GameId, pdfDoc.SharedGameId, links.ChunkCount, links.TotalCharacters, links.Language,
+            cancellationToken).ConfigureAwait(false);
+
         indexingStopwatch.Stop();
         RecordPipelineMetricSafely("indexing", indexingStopwatch.Elapsed.TotalMilliseconds);
     }
 
     /// <summary>
-    /// Updates or creates VectorDocument record after successful indexing.
-    /// Delegates to <see cref="IPdfIndexingPipeline"/> (#2244 / epic #2242) so the
-    /// VectorDocumentIndexedEvent fires structurally and shared_games.has_knowledge_base
-    /// projection updates — replaces the direct EF write that bypassed the domain event.
+    /// The arguments both <see cref="IPdfIndexingPipeline"/> steps take (#2244 / epic #2242 / #4609):
+    /// <c>BeginIndexingAsync</c> first, so the VectorDocument row exists, and <c>IndexAsync</c> last, so
+    /// VectorDocumentIndexedEvent fires structurally and shared_games.has_knowledge_base updates only for an
+    /// index that was actually written. Resolved once.
     /// </summary>
-    private async Task UpdateVectorDocumentAsync(
+    private readonly record struct IndexingLinks(Guid PdfGuid, Guid? GameId, int ChunkCount, int TotalCharacters, string Language);
+
+    private static async Task<IndexingLinks> ResolveIndexingLinksAsync(
         string pdfId,
         PdfDocumentEntity pdfDoc,
         int indexedCount,
         MeepleAiDbContext db,
-        IServiceScope scope,
         CancellationToken cancellationToken)
     {
-        var pdfGuid = Guid.Parse(pdfId);
-
         // vector_documents.GameId is FK to games.Id (NOT shared_games.id) — see PdfGameIdResolver.
         var resolvedGameId = await PdfGameIdResolver.ResolveAsync(db, pdfDoc, cancellationToken)
             .ConfigureAwait(false);
 
-        var pipeline = scope.ServiceProvider.GetRequiredService<IPdfIndexingPipeline>();
-        await pipeline.IndexAsync(
-            pdfDocumentId: pdfGuid,
-            gameId: resolvedGameId,
-            sharedGameId: pdfDoc.SharedGameId,
-            chunkCount: indexedCount,
-            totalCharacters: pdfDoc.ExtractedText?.Length ?? 0,
-            language: string.IsNullOrWhiteSpace(pdfDoc.Language) ? "en" : pdfDoc.Language,
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+        return new IndexingLinks(
+            Guid.Parse(pdfId),
+            resolvedGameId,
+            indexedCount,
+            pdfDoc.ExtractedText?.Length ?? 0,
+            string.IsNullOrWhiteSpace(pdfDoc.Language) ? "en" : pdfDoc.Language);
     }
 
     /// <summary>

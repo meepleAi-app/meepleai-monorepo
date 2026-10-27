@@ -161,8 +161,9 @@ internal sealed class CancellableBackgroundTaskService : IBackgroundTaskService
 }
 
 /// <summary>
-/// <see cref="IPdfIndexingPipeline"/> che si ferma <b>all'ingresso</b> di <c>IndexAsync</c> (la prima
-/// scrittura della fase di indicizzazione) e poi passa la chiamata a quello vero.
+/// <see cref="IPdfIndexingPipeline"/> che si ferma <b>all'ingresso</b> di <c>BeginIndexingAsync</c> (la prima
+/// scrittura della fase di indicizzazione) e poi passa la chiamata a quello vero. <c>IndexAsync</c>, l'ultima,
+/// passa senza fermarsi (#4609: prima era lei la prima scrittura).
 /// </summary>
 internal sealed class HoldingPdfIndexingPipeline : IPdfIndexingPipeline
 {
@@ -175,7 +176,7 @@ internal sealed class HoldingPdfIndexingPipeline : IPdfIndexingPipeline
         _hold = hold;
     }
 
-    public async Task IndexAsync(
+    public async Task BeginIndexingAsync(
         Guid pdfDocumentId,
         Guid? gameId,
         Guid? sharedGameId,
@@ -185,6 +186,19 @@ internal sealed class HoldingPdfIndexingPipeline : IPdfIndexingPipeline
         CancellationToken cancellationToken = default)
     {
         await _hold.EnterAsync(cancellationToken).ConfigureAwait(false);
+        await _inner.BeginIndexingAsync(pdfDocumentId, gameId, sharedGameId, chunkCount, totalCharacters, language, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task IndexAsync(
+        Guid pdfDocumentId,
+        Guid? gameId,
+        Guid? sharedGameId,
+        int chunkCount,
+        int totalCharacters,
+        string language,
+        CancellationToken cancellationToken = default)
+    {
         await _inner.IndexAsync(pdfDocumentId, gameId, sharedGameId, chunkCount, totalCharacters, language, cancellationToken)
             .ConfigureAwait(false);
     }
@@ -234,6 +248,43 @@ internal sealed class ErrorLogCapture : ILoggerProvider
 
             _entries.Enqueue($"{_category}: {formatter(state, exception)}{(exception is null ? string.Empty : " | " + exception)}");
         }
+    }
+}
+
+/// <summary>
+/// Fa fallire con <paramref name="failure"/> il primo <c>SaveChangesAsync</c> che soddisfa la condizione, un
+/// istante prima che parta il comando: le modifiche restano nel change tracker e il database non ha visto
+/// niente, come con un vincolo violato o una connessione caduta.
+/// </summary>
+internal sealed class FailingSaveChangesInterceptor : SaveChangesInterceptor
+{
+    private readonly Func<DbContext, bool> _shouldFail;
+    private readonly Exception _failure;
+
+    private FailingSaveChangesInterceptor(Func<DbContext, bool> shouldFail, Exception failure)
+    {
+        _shouldFail = shouldFail;
+        _failure = failure;
+    }
+
+    /// <summary>
+    /// Ogni salvataggio che contiene righe di <c>pgvector_embeddings</c> nuove, finché restano nel change
+    /// tracker (chi gestisce l'errore lo svuota prima di scrivere lo stato <c>Failed</c>).
+    /// </summary>
+    public static FailingSaveChangesInterceptor ForVectorRows(Exception failure) =>
+        new(context => context.ChangeTracker.Entries<PgVectorEmbeddingEntity>().Any(e => e.State == EntityState.Added), failure);
+
+    public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+        DbContextEventData eventData,
+        InterceptionResult<int> result,
+        CancellationToken cancellationToken = default)
+    {
+        if (eventData.Context is { } context && _shouldFail(context))
+        {
+            throw _failure;
+        }
+
+        return ValueTask.FromResult(result);
     }
 }
 

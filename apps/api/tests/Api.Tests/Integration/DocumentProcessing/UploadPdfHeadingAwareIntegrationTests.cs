@@ -491,11 +491,14 @@ public sealed class UploadPdfHeadingAwareIntegrationTests : IAsyncLifetime
     }
 
     /// <summary>
-    /// #4390: il caricamento crea il documento vettoriale (<c>IPdfIndexingPipeline.IndexAsync</c>) prima di
-    /// salvare passaggi ed embedding, e l'evento che ne segue fa partire la compensazione, che porta il PDF a
-    /// <c>Ready</c>. Chi aspetta <c>Ready</c> non deve trovarlo finché l'indice è vuoto: in quella finestra
-    /// una domanda riceve <c>NO_RESULTS</c>. Lo stato si legge da dentro la finestra, con un'altra
-    /// connessione, mentre la pipeline è ferma nella classificazione dei ruoli.
+    /// #4390 / #4609: il caricamento crea il documento vettoriale (<c>IPdfIndexingPipeline.BeginIndexingAsync</c>,
+    /// in <c>processing</c>) prima di salvare passaggi ed embedding; <c>IndexAsync</c>, che lo completa e
+    /// pubblica l'evento da cui parte la compensazione, gira per ultimo. Chi aspetta <c>Ready</c> non deve
+    /// trovarlo finché l'indice è vuoto: in quella finestra una domanda riceve <c>NO_RESULTS</c>. Lo stato si
+    /// legge da dentro la finestra, con un'altra connessione, mentre la pipeline è ferma nella classificazione
+    /// dei ruoli. Prima di #4609 l'evento cadeva dentro la finestra; ora ne è fuori, e la protezione dal
+    /// gestore che porta a <c>Ready</c> un PDF in <c>Indexing</c> sta nei test del gestore e nel controllo
+    /// finale qui sotto (la pipeline arriva a <c>Ready</c> da sé, senza «Cannot transition from Ready state»).
     /// </summary>
     [Fact(Timeout = 90000)]
     [Trait("Issue", "4390")]
@@ -545,7 +548,7 @@ public sealed class UploadPdfHeadingAwareIntegrationTests : IAsyncLifetime
         // Assert: la finestra è stata raggiunta, dopo il documento vettoriale e prima di ogni embedding.
         result.Success.Should().BeTrue();
         windowReadError.Should().BeNull();
-        vectorDocumentsInTheWindow.Should().Be(1, "il documento vettoriale, e il suo evento, vengono prima dei passaggi");
+        vectorDocumentsInTheWindow.Should().Be(1, "il documento vettoriale (in processing) esiste prima dei passaggi");
         embeddingsInTheWindow.Should().Be(0, "la finestra precede la scrittura degli embedding");
 
         stateInTheWindow.Should().Be(

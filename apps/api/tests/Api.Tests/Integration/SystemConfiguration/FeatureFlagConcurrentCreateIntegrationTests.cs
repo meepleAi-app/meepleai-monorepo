@@ -241,8 +241,10 @@ public sealed class FeatureFlagConcurrentCreateIntegrationTests : IClassFixture<
         var act = async () => await RunAsync(ff => ff.EnableFeatureAsync(flag, userId: admin.ToString()));
 
         var conflict = await act.Should().ThrowAsync<ConflictException>();
-        conflict.Which.Message.Should().Contain(flag, "the message names the flag").And.Contain("/admin/config", "and says where to reactivate it");
         var row = (await RowsAsync(flag)).Should().ContainSingle().Subject;
+        conflict.Which.Message.Should().Contain(flag, "the message names the flag")
+            .And.Contain(row.Id.ToString(), "and the row")
+            .And.Contain("/toggle?isActive=true", "and the route that reactivates it");
         row.IsActive.Should().BeFalse("the inactive row is left as it was");
         row.Value.Should().Be("false", "and so is its value");
     }
@@ -298,7 +300,7 @@ public sealed class FeatureFlagConcurrentCreateIntegrationTests : IClassFixture<
             Ct);
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict, await response.Content.ReadAsStringAsync(Ct));
-        (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("/admin/config");
+        (await response.Content.ReadAsStringAsync(Ct)).Should().Contain("/toggle?isActive=true");
         (await RowsAsync(key)).Should().ContainSingle().Which.IsActive.Should().BeFalse("the deactivation survives the refused toggle");
     }
 

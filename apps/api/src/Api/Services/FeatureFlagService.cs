@@ -240,9 +240,9 @@ internal class FeatureFlagService : IFeatureFlagService
     /// <para>
     /// Only a unique violation on <see cref="KeyEnvironmentIndexName"/> that the re-read explains is
     /// recovered. If the colliding row is <b>inactive</b> (the lookup only sees active ones) the answer is an
-    /// explicit <see cref="Api.Middleware.Exceptions.ConflictException"/> (409, #4607): an admin who
-    /// deactivated the configuration from <c>/admin/config</c> made a choice, and turning the flag on from
-    /// another page must not undo it in silence, nor answer 500 at every attempt. If the re-read finds no
+    /// explicit <see cref="Api.Middleware.Exceptions.ConflictException"/> (409, #4607) that names the row
+    /// and the route that reactivates it: an admin who deactivated the configuration made a choice, and
+    /// turning the flag on from another page must not undo it in silence, nor answer 500 at every attempt. If the re-read finds no
     /// row at all, the original exception is rethrown.
     /// </para>
     /// </remarks>
@@ -268,9 +268,13 @@ internal class FeatureFlagService : IFeatureFlagService
                     .ConfigureAwait(false);
                 if (inactive is { IsActive: false })
                 {
+                    // The row is not listed by the /admin/config page (it asks for active rows only), so the
+                    // message gives what an admin can act on: the id and the toggle route. The original
+                    // exception stays as the inner one, for the log.
                     throw new Api.Middleware.Exceptions.ConflictException(
-                        $"The feature flag '{create.Key}' has a deactivated configuration row for environment '{environmentName}'. " +
-                        "Reactivate it from /admin/config to change the flag.");
+                        $"The feature flag '{create.Key}' has a deactivated configuration row (id {inactive.Id}) for environment '{environmentName}'. " +
+                        $"Reactivate it with PATCH /api/v1/admin/configurations/{inactive.Id}/toggle?isActive=true to change the flag.",
+                        ex);
                 }
 
                 throw;

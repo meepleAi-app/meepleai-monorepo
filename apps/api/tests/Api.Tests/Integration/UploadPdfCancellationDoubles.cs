@@ -267,7 +267,10 @@ internal sealed class FailingSaveChangesInterceptor : SaveChangesInterceptor
         _failure = failure;
     }
 
-    /// <summary>Il primo salvataggio che contiene righe di <c>pgvector_embeddings</c> nuove.</summary>
+    /// <summary>
+    /// Ogni salvataggio che contiene righe di <c>pgvector_embeddings</c> nuove, finché restano nel change
+    /// tracker (chi gestisce l'errore lo svuota prima di scrivere lo stato <c>Failed</c>).
+    /// </summary>
     public static FailingSaveChangesInterceptor ForVectorRows(Exception failure) =>
         new(context => context.ChangeTracker.Entries<PgVectorEmbeddingEntity>().Any(e => e.State == EntityState.Added), failure);
 

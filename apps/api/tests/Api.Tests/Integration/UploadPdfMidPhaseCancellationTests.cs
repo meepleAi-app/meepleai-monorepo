@@ -49,7 +49,7 @@ namespace Api.Tests.Integration;
 /// 2. Mid-blob write cancellation (parte sincrona dell'upload)
 /// 3. Mid-text extraction cancellation (saltato: DIFETTO #1684 follow-up)
 /// 4. Mid-embedding batch cancellation (pipeline in background, <c>ProcessPdfAsync</c>)
-/// 5. Mid-vector store cancellation: all'ingresso di <c>IndexAsync</c> e durante il salvataggio delle righe
+/// 5. Mid-vector store cancellation: all'ingresso di <c>BeginIndexingAsync</c> e durante il salvataggio delle righe
 ///    vettoriali (pipeline in background)
 /// 6. Cancellazione durante una transizione di stato, e dopo il commit di <c>Ready</c> (pipeline in background)
 /// 7. Un annullamento dell'utente non viene ritentato; un timeout sì (#4610)
@@ -519,7 +519,7 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
     /// gli embedding sono stati richiesti più volte (tutti i lotti) prima di lei.</para>
     /// </summary>
     [Fact(Timeout = 120_000)]
-    public async Task UploadPdf_WhenCancelledAtIndexAsyncEntry_WritesNothing()
+    public async Task UploadPdf_WhenCancelledAtBeginIndexingEntry_WritesNothing()
     {
         // Arrange - gli embedding passano tutti; l'indicizzazione resta ferma all'ingresso
         var embeddingHold = HoldPoint.Never();

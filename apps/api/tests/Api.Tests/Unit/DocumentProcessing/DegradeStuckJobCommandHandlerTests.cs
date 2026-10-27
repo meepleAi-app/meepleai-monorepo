@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Microsoft.EntityFrameworkCore;
@@ -37,7 +38,7 @@ public sealed class DegradeStuckJobCommandHandlerTests
     }
 
     /// <summary>Creates a PdfDocument reconstituted in Embedding state.</summary>
-    private static PdfDocument MakeEmbeddingPdf(Guid id)
+    private static PdfDocument MakeEmbeddingPdf(Guid id, PdfProcessingState state = PdfProcessingState.Embedding)
     {
         return PdfDocument.Reconstitute(
             id: id,
@@ -51,14 +52,15 @@ public sealed class DegradeStuckJobCommandHandlerTests
             pageCount: null,
             processingError: null,
             language: LanguageCode.English,
-            processingState: PdfProcessingState.Embedding);
+            processingState: state);
     }
 
     private static DegradeStuckJobCommandHandler BuildHandler(
         IProcessingJobRepository jobRepo,
         IPdfDocumentRepository pdfRepo,
-        IUnitOfWork unitOfWork) =>
-        new(jobRepo, pdfRepo, unitOfWork, _timeProvider,
+        IUnitOfWork unitOfWork,
+        IPdfIndexingPipeline? indexingPipeline = null) =>
+        new(jobRepo, pdfRepo, unitOfWork, indexingPipeline ?? Mock.Of<IPdfIndexingPipeline>(), _timeProvider,
             NullLogger<DegradeStuckJobCommandHandler>.Instance);
 
     // ──────────────────────────────────────────────────────────────────
@@ -113,6 +115,75 @@ public sealed class DegradeStuckJobCommandHandlerTests
         Assert.Equal(PdfProcessingState.Failed, capturedPdf.ProcessingState);
         Assert.Equal(ErrorCategory.Service, capturedPdf.ErrorCategory);
         Assert.Equal(PdfProcessingState.Embedding, capturedPdf.FailedAtState);
+    }
+
+    // ──────────────────────────────────────────────────────────────────
+    // Seguito di #4609 (#4660 punto 1): il PDF degradato non lascia il suo documento vettoriale in `processing`.
+    // Il retry lo rimette a posto finche' i tentativi bastano; esauriti, resterebbe in elaborazione per sempre.
+    // ──────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_JobStuckInProcessing_AlsoClosesTheVectorDocumentOfThePdf()
+    {
+        var pdfId = Guid.NewGuid();
+        var job = MakeProcessingJob(pdfId);
+        var jobRepo = new Mock<IProcessingJobRepository>();
+        jobRepo.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
+        var pdfRepo = new Mock<IPdfDocumentRepository>();
+        pdfRepo.Setup(r => r.GetByIdAsync(pdfId, It.IsAny<CancellationToken>())).ReturnsAsync(MakeEmbeddingPdf(pdfId));
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var indexingPipeline = new Mock<IPdfIndexingPipeline>();
+
+        await BuildHandler(jobRepo.Object, pdfRepo.Object, unitOfWork.Object, indexingPipeline.Object)
+            .Handle(new DegradeStuckJobCommand(job.Id, 42.0), CancellationToken.None);
+
+        indexingPipeline.Verify(
+            p => p.MarkIndexingFailedAsync(pdfId, "Processing failed (Service)", CancellationToken.None),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenThePdfIsAlreadyReady_LeavesItsVectorDocumentAlone()
+    {
+        var pdfId = Guid.NewGuid();
+        var job = MakeProcessingJob(pdfId);
+        var jobRepo = new Mock<IProcessingJobRepository>();
+        jobRepo.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
+        var pdfRepo = new Mock<IPdfDocumentRepository>();
+        pdfRepo.Setup(r => r.GetByIdAsync(pdfId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(MakeEmbeddingPdf(pdfId, PdfProcessingState.Ready));
+        var indexingPipeline = new Mock<IPdfIndexingPipeline>();
+
+        await BuildHandler(jobRepo.Object, pdfRepo.Object, new Mock<IUnitOfWork>().Object, indexingPipeline.Object)
+            .Handle(new DegradeStuckJobCommand(job.Id, 42.0), CancellationToken.None);
+
+        indexingPipeline.Verify(
+            p => p.MarkIndexingFailedAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "a PDF that finished is not degraded, so its index is not either");
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheDegradationLosesAConcurrencyConflict_LeavesTheVectorDocumentAlone()
+    {
+        var pdfId = Guid.NewGuid();
+        var job = MakeProcessingJob(pdfId);
+        var jobRepo = new Mock<IProcessingJobRepository>();
+        jobRepo.Setup(r => r.GetByIdAsync(job.Id, It.IsAny<CancellationToken>())).ReturnsAsync(job);
+        var pdfRepo = new Mock<IPdfDocumentRepository>();
+        pdfRepo.Setup(r => r.GetByIdAsync(pdfId, It.IsAny<CancellationToken>())).ReturnsAsync(MakeEmbeddingPdf(pdfId));
+        var unitOfWork = new Mock<IUnitOfWork>();
+        unitOfWork.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateConcurrencyException("xmin conflict"));
+        var indexingPipeline = new Mock<IPdfIndexingPipeline>();
+
+        await BuildHandler(jobRepo.Object, pdfRepo.Object, unitOfWork.Object, indexingPipeline.Object)
+            .Handle(new DegradeStuckJobCommand(job.Id, 42.0), CancellationToken.None);
+
+        indexingPipeline.Verify(
+            p => p.MarkIndexingFailedAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "the PDF was not degraded: someone else owns that row now");
     }
 
     // ──────────────────────────────────────────────────────────────────

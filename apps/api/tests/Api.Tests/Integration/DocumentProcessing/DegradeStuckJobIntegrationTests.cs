@@ -5,6 +5,7 @@ using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.DocumentProcessing;
@@ -68,6 +69,11 @@ public sealed class DegradeStuckJobIntegrationTests : IAsyncLifetime
         // Real repositories required directly by DegradeStuckJobCommandHandler.
         services.AddScoped<IProcessingJobRepository, ProcessingJobRepository>();
         services.AddScoped<IPdfDocumentRepository, PdfDocumentRepository>();
+
+        // The handler closes the vector document of the PDF it degrades (#4660). The REAL pipeline, not a mock: a
+        // mock would only prove that the handler asked, and this test is where the write meets the xmin path.
+        services.AddScoped<IPdfIndexingPipeline, PdfIndexingPipeline>();
+        services.AddScoped(_ => Mock.Of<ISemanticResponseCache>());
 
         // IUserRepository: required by ProcessingJobNotificationEventHandler (handles JobFailedEvent).
         services.AddScoped<IUserRepository, UserRepository>();
@@ -205,6 +211,18 @@ public sealed class DegradeStuckJobIntegrationTests : IAsyncLifetime
             MaxRetries = 3,
         });
 
+        // The vector document BeginIndexingAsync created in "processing" before the PDF got stuck (#4660).
+        var vectorDocumentId = Guid.NewGuid();
+        _dbContext.VectorDocuments.Add(new VectorDocumentEntity
+        {
+            Id = vectorDocumentId,
+            PdfDocumentId = pdfId,
+            SharedGameId = TestGameId,
+            ChunkCount = 3,
+            TotalCharacters = 30,
+            IndexingStatus = "processing",
+        });
+
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // ── Act ───────────────────────────────────────────────────────────────────
@@ -235,6 +253,12 @@ public sealed class DegradeStuckJobIntegrationTests : IAsyncLifetime
             "ErrorCategory=Service keeps the PDF eligible for RetryFailedPdfsJob (RetryCount < 3)");
         reloadedPdf.ProcessedAt.Should().NotBeNull(
             "ProcessedAt written by MarkAsFailed (DateTime.UtcNow, Kind=Utc) must persist without ArgumentException");
+
+        var reloadedVectorDocument = await _dbContext.VectorDocuments.AsNoTracking()
+            .FirstAsync(v => v.Id == vectorDocumentId, TestCancellationToken);
+        reloadedVectorDocument.IndexingStatus.Should().Be("failed",
+            "a degraded PDF must not leave its vector document in processing: once RetryFailedPdfsJob runs out of attempts nobody would close it (#4660)");
+        reloadedVectorDocument.IndexingError.Should().Be("Processing failed (Service)");
 
         // Reload job with AsNoTracking.
         var reloadedJob = await _dbContext.ProcessingJobs.AsNoTracking()

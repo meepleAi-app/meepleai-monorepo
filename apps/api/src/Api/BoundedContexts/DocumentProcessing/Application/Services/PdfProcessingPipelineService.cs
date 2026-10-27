@@ -1243,6 +1243,49 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     }
 
     /// <summary>
+    /// Drops what a failed save left unsaved in the change tracker, except the rows of the Quartz job that owns this
+    /// run: added entities are detached, modified and deleted ones are reloaded from the database.
+    /// </summary>
+    /// <remarks>
+    /// Not <c>ChangeTracker.Clear()</c> (as the upload path does, #4395): <c>PdfProcessingQuartzJob</c> shares this
+    /// context and saves the failure of its job and steps through the entities it tracks, after the pipeline
+    /// returns. Cleared, that save would be a no-op and the job would stay in Processing, holding a worker slot.
+    /// Best effort: a row that cannot be reloaded is detached, and the caller goes on to write what it can.
+    /// </remarks>
+    private async Task DiscardUnsavedChangesAsync()
+    {
+        var entries = _db.ChangeTracker.Entries()
+            .Where(e => e.State != EntityState.Unchanged
+                && e.State != EntityState.Detached
+                && e.Entity is not (Api.Infrastructure.Entities.DocumentProcessing.ProcessingJobEntity
+                    or Api.Infrastructure.Entities.DocumentProcessing.ProcessingStepEntity))
+            .ToList();
+
+        foreach (var entry in entries)
+        {
+            if (entry.State == EntityState.Added)
+            {
+                entry.State = EntityState.Detached;
+                continue;
+            }
+
+#pragma warning disable CA1031 // Best-effort: the failure handler must not throw
+            try
+            {
+                await entry.ReloadAsync(CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex,
+                    "[PdfPipeline] Could not reload {EntityType} after a failed save; detaching it",
+                    entry.Metadata.ClrType.Name);
+                entry.State = EntityState.Detached;
+            }
+#pragma warning restore CA1031
+        }
+    }
+
+    /// <summary>
     /// Detaches Added/Modified entities of a given type from the change tracker.
     /// Used in catch blocks (the optional, non-blocking enhancement steps, and the failure
     /// handler for the vector document) so a failed SaveChangesAsync does not poison
@@ -1347,16 +1390,12 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     /// </param>
     private async Task TryMarkFailedAsync(Guid pdfDocumentId, string errorMessage, ErrorCategory? category = null)
     {
-        // #4609 follow-up: IndexAsync sets the vector document to "completed" in memory before it saves, so a failed
-        // save leaves it Modified in the tracker. The save below flushes the whole context, so without this it would
-        // write that "completed" next to the failed PDF. Only the vector document is detached, not the whole tracker
-        // (as the upload path does, #4395): PdfProcessingQuartzJob shares this context and saves its job and step
-        // rows through it after the pipeline returns, so clearing would turn its failure into a no-op and leave the
-        // job in Processing. Everything else the indexing phase writes is saved as it goes (the text chunks) or goes
-        // around the context (the pgvector rows). Not covered, and as before this change (#4660): a failure of the
-        // text-chunk save itself leaves those chunks Added, and a PDF row left Modified or Ready in memory by a failed
-        // save of its own; the save below flushes them again.
-        DetachUnsavedChanges<VectorDocumentEntity>();
+        // Whatever failed may have left unsaved changes in the tracker: the vector document that IndexAsync already set
+        // to "completed" in memory before its save failed (#4609), the text chunks of a failed chunk save, or the PDF
+        // itself left Modified (or Ready) by a failed save of its own (#4660). The save below flushes the whole
+        // context, so without this it would write the "completed" next to the failed PDF, or fail again on the same
+        // chunks and never mark the PDF Failed, or skip the PDF because the tracker still says Ready.
+        await DiscardUnsavedChangesAsync().ConfigureAwait(false);
 
         try
         {

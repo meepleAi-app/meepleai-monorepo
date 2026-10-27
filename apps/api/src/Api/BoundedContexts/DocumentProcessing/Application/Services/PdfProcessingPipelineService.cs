@@ -1244,9 +1244,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
     /// <summary>
     /// Detaches Added/Modified entities of a given type from the change tracker.
-    /// Used in catch blocks of optional, non-blocking enhancement steps so a
-    /// failed SaveChangesAsync does not poison subsequent saves with the same
-    /// unflushed entities (and thus the same error).
+    /// Used in catch blocks (the optional, non-blocking enhancement steps, and the failure
+    /// handler for the vector document) so a failed SaveChangesAsync does not poison
+    /// subsequent saves with the same unflushed entities (and thus the same error).
     /// </summary>
     private void DetachUnsavedChanges<TEntity>() where TEntity : class
     {
@@ -1353,7 +1353,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         // (as the upload path does, #4395): PdfProcessingQuartzJob shares this context and saves its job and step
         // rows through it after the pipeline returns, so clearing would turn its failure into a no-op and leave the
         // job in Processing. Everything else the indexing phase writes is saved as it goes (the text chunks) or goes
-        // around the context (the pgvector rows).
+        // around the context (the pgvector rows). Not covered, and as before this change (#4660): a failure of the
+        // text-chunk save itself leaves those chunks Added, and a PDF row left Modified or Ready in memory by a failed
+        // save of its own; the save below flushes them again.
         DetachUnsavedChanges<VectorDocumentEntity>();
 
         try

@@ -214,7 +214,11 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             // #4609 follow-up: whatever failed may have left rows in the change tracker, among them the vector
             // document that IndexAsync already set to "completed" in memory before its save failed. The save below
             // flushes the whole context, so without this it would write that "completed" next to the failed PDF
-            // (the upload path does the same, #4395).
+            // (the upload path does the same, #4395). Clearing is safe here only because nobody who sends
+            // IndexPdfCommand keeps other entities on this context: the HTTP endpoint reads only the result, and
+            // KbReindexProcessorService rebuilds its job entity in UpdateAsync. A caller that does (as
+            // PdfProcessingQuartzJob does with the pipeline, which is why TryMarkFailedAsync detaches only the vector
+            // document) must not be added without changing this.
             _db.ChangeTracker.Clear();
 
             // Persist failed state so the PDF doesn't remain stuck in "Indexing"

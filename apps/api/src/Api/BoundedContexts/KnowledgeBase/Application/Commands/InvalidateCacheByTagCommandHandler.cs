@@ -43,7 +43,7 @@ internal class InvalidateCacheByTagCommandHandler : ICommandHandler<InvalidateCa
         var removed = await _hybridCache.RemoveByTagAsync(command.Tag, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
-            "Invalidated tag {Tag}: {Count} tracked entries removed (entries written with HybridCache directly are invalidated by tag too and are not counted)",
+            "Invalidated tag {Tag}: {Count} tracked entries removed (with tags enabled, entries written with HybridCache directly are invalidated by tag too and are not counted)",
             command.Tag, removed);
     }
 }

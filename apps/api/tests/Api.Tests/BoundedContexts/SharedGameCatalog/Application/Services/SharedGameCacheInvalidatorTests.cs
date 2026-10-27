@@ -130,6 +130,29 @@ public sealed class SharedGameCacheInvalidatorTests
             "the local step ran before the wrapper gave up, and the wrapper step did not complete");
     }
 
+    /// <summary>
+    /// Il caso speculare: se si arrende il passo nativo, il wrapper (e con lui il messaggio alle altre repliche)
+    /// non parte. Fissato com'è, perché la politica d'errore dell'evizione (#4603) non è decisa.
+    /// </summary>
+    [Fact]
+    public async Task WhenTheRetryPolicyGivesUpOnTheNativeStep_TheWrapperStepDoesNotRun_AndTheErrorReachesTheCaller()
+    {
+        var calls = 0;
+
+        // La prima chiamata (il passo nativo) si arrende; il wrapper non dovrebbe nemmeno essere chiamato.
+        _doubles.RetryPolicy
+            .Setup(p => p.ExecuteAsync(
+                It.IsAny<Func<CancellationToken, ValueTask>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns<Func<CancellationToken, ValueTask>, string, CancellationToken>((op, _, ct) =>
+                ++calls == 1 ? Task.FromException(new InvalidOperationException("l2 down")) : op(ct).AsTask());
+
+        var act = () => _doubles.Invalidator.EvictDetailAsync(Guid.NewGuid(), TestContext.Current.CancellationToken);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("l2 down");
+        _doubles.Events.Should().BeEmpty("neither step completed: the wrapper step, which also publishes to the other replicas, never started");
+        calls.Should().Be(1, "the second step is not even handed to the retry policy");
+    }
+
     [Fact]
     public async Task Eviction_PassesTheRequestTokenToEveryStep()
     {

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.SharedKernel.Application.Services;
@@ -45,6 +46,11 @@ public class PurgeStaleDocumentsCommandHandlerTests
 
     private static PurgeStaleDocumentsCommandHandler CreateHandler(MeepleAiDbContext ctx) =>
         new(ctx,
+            // The real pipeline over the same context, as in production: the handler is meant to close the vector
+            // document of a PDF it fails, and a mock would only check that it asked.
+            new PdfIndexingPipeline(
+                ctx, new Mock<IMediator>().Object, TimeProvider.System, Mock.Of<ISemanticResponseCache>(),
+                NullLogger<PdfIndexingPipeline>.Instance),
             new FakeTimeProvider(Now),
             NullLogger<PurgeStaleDocumentsCommandHandler>.Instance);
 
@@ -82,6 +88,48 @@ public class PurgeStaleDocumentsCommandHandlerTests
         persisted.ErrorCategory.Should().Be("Service");
         persisted.FailedAtState.Should().Be("Embedding");
         persisted.ProcessedAt.Should().Be(Now.UtcDateTime);
+    }
+
+    /// <summary>
+    /// Seguito di #4609 (#4660 punto 1): il PDF scaduto va a `Failed` e il suo documento vettoriale, nato
+    /// `processing` da BeginIndexingAsync, non resta in elaborazione per sempre. Un documento `completed` di un
+    /// altro PDF non si tocca.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenDocumentIsStale_AlsoClosesItsVectorDocument_AndOnlyThat()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        using var ctx = CreateDbContext(dbName);
+        var stale = Pdf("stuck.pdf", "Indexing", Now.UtcDateTime.AddDays(-20));
+        var other = Pdf("done.pdf", "Ready", Now.UtcDateTime.AddDays(-20));
+        var recent = Pdf("running.pdf", "Indexing", Now.UtcDateTime.AddHours(-1));
+        ctx.PdfDocuments.AddRange(stale, other, recent);
+        ctx.VectorDocuments.Add(new VectorDocumentEntity
+        {
+            Id = Guid.NewGuid(), PdfDocumentId = stale.Id, ChunkCount = 3, TotalCharacters = 30, IndexingStatus = "processing",
+        });
+        ctx.VectorDocuments.Add(new VectorDocumentEntity
+        {
+            Id = Guid.NewGuid(), PdfDocumentId = other.Id, ChunkCount = 3, TotalCharacters = 30, IndexingStatus = "completed",
+            IndexedAt = Now.UtcDateTime.AddDays(-20),
+        });
+        ctx.VectorDocuments.Add(new VectorDocumentEntity
+        {
+            Id = Guid.NewGuid(), PdfDocumentId = recent.Id, ChunkCount = 3, TotalCharacters = 30, IndexingStatus = "processing",
+        });
+        await ctx.SaveChangesAsync();
+        ctx.ChangeTracker.Clear();
+
+        await CreateHandler(ctx).Handle(new PurgeStaleDocumentsCommand(), default);
+
+        using var verifyCtx = CreateDbContext(dbName);
+        (await verifyCtx.VectorDocuments.SingleAsync(v => v.PdfDocumentId == recent.Id)).IndexingStatus
+            .Should().Be("processing", "a PDF that is still being indexed is not purged, so neither is its vector document");
+        var staleRow = await verifyCtx.VectorDocuments.SingleAsync(v => v.PdfDocumentId == stale.Id);
+        staleRow.IndexingStatus.Should().Be("failed");
+        staleRow.IndexingError.Should().Be("Processing failed (Service)");
+        (await verifyCtx.VectorDocuments.SingleAsync(v => v.PdfDocumentId == other.Id)).IndexingStatus
+            .Should().Be("completed");
     }
 
     [Theory]

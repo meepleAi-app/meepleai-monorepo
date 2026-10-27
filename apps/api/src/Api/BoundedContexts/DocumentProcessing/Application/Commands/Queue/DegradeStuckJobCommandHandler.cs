@@ -1,6 +1,7 @@
 using System.Globalization;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Observability;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
@@ -22,6 +23,7 @@ internal sealed class DegradeStuckJobCommandHandler
     private readonly IProcessingJobRepository _jobRepository;
     private readonly IPdfDocumentRepository _pdfRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IPdfIndexingPipeline _indexingPipeline;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<DegradeStuckJobCommandHandler> _logger;
 
@@ -29,12 +31,14 @@ internal sealed class DegradeStuckJobCommandHandler
         IProcessingJobRepository jobRepository,
         IPdfDocumentRepository pdfRepository,
         IUnitOfWork unitOfWork,
+        IPdfIndexingPipeline indexingPipeline,
         TimeProvider timeProvider,
         ILogger<DegradeStuckJobCommandHandler> logger)
     {
         _jobRepository = jobRepository ?? throw new ArgumentNullException(nameof(jobRepository));
         _pdfRepository = pdfRepository ?? throw new ArgumentNullException(nameof(pdfRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _indexingPipeline = indexingPipeline ?? throw new ArgumentNullException(nameof(indexingPipeline));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -62,16 +66,33 @@ internal sealed class DegradeStuckJobCommandHandler
 
             // Also degrade the PdfDocument if not already terminal.
             var pdf = await _pdfRepository.GetByIdAsync(job.PdfDocumentId, cancellationToken).ConfigureAwait(false);
-            if (pdf is not null
-                && pdf.ProcessingState != PdfProcessingState.Ready
-                && pdf.ProcessingState != PdfProcessingState.Failed)
+            var pdfIsFailed = false;
+            if (pdf is not null && pdf.ProcessingState != PdfProcessingState.Ready)
             {
-                // ErrorCategory.Service (transient) → RetryFailedPdfsJob eligible (RetryCount < 3).
-                pdf.MarkAsFailed(message, ErrorCategory.Service, pdf.ProcessingState);
-                await _pdfRepository.UpdateAsync(pdf, cancellationToken).ConfigureAwait(false);
+                if (pdf.ProcessingState != PdfProcessingState.Failed)
+                {
+                    // ErrorCategory.Service (transient) → RetryFailedPdfsJob eligible (RetryCount < 3).
+                    pdf.MarkAsFailed(message, ErrorCategory.Service, pdf.ProcessingState);
+                    await _pdfRepository.UpdateAsync(pdf, cancellationToken).ConfigureAwait(false);
+                }
+
+                pdfIsFailed = true;
             }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+            // #4609 follow-up (#4660): the PDF is Failed (degraded just now, or already by someone else while the job
+            // stayed in Processing), so its vector document (created "processing" by BeginIndexingAsync) must not stay
+            // in flight. The retry puts it right again while RetryFailedPdfsJob still has attempts; once they run out
+            // nobody would. After the save, so a lost race leaves it alone; idempotent, and a no-op when the PDF failed
+            // before the indexing phase; never throws. If the pipeline turns out to be alive and finishes later,
+            // IndexAsync completes the row anyway. The text is the category, not an exception message: this column is
+            // served to users by pdf-status.
+            if (pdfIsFailed)
+            {
+                await _indexingPipeline.MarkIndexingFailedAsync(
+                    job.PdfDocumentId, $"Processing failed ({ErrorCategory.Service})", CancellationToken.None).ConfigureAwait(false);
+            }
 
             _logger.LogWarning(
                 "[DegradeStuckJob] Degraded stuck job {JobId} (PDF {PdfId}) to Failed after {Minutes} min",

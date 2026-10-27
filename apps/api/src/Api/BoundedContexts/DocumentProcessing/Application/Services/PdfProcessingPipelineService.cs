@@ -1243,10 +1243,62 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     }
 
     /// <summary>
+    /// Drops what a failed save left unsaved in the change tracker, except the rows of the Quartz job that owns this
+    /// run: added entities are detached, modified ones go back to the values they last had in the database (loaded or
+    /// saved), deleted ones are kept (their rows stay in the database).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Not <c>ChangeTracker.Clear()</c> (as the upload path does, #4395): <c>PdfProcessingQuartzJob</c> shares this
+    /// context and saves the failure of its job and steps through the entities it tracks, after the pipeline
+    /// returns. Cleared, that save would be a no-op and the job would stay in Processing, holding a worker slot.
+    /// </para>
+    /// <para>
+    /// No database access, on purpose: the database may be what failed, and a reload would also refresh the
+    /// concurrency token (xmin) of a row someone else has since changed, so the write that follows would overwrite
+    /// that change instead of losing to it (the "admin mutation wins" rule of the Category B handlers).
+    /// </para>
+    /// </remarks>
+    private void DiscardUnsavedChanges()
+    {
+#pragma warning disable CA1031 // Failure handlers call this: it must not throw (Entries() runs DetectChanges)
+        try
+        {
+            var entries = _db.ChangeTracker.Entries()
+                .Where(e => e.State != EntityState.Unchanged
+                    && e.State != EntityState.Detached
+                    && e.Entity is not (Api.Infrastructure.Entities.DocumentProcessing.ProcessingJobEntity
+                        or Api.Infrastructure.Entities.DocumentProcessing.ProcessingStepEntity))
+                .ToList();
+
+            foreach (var entry in entries)
+            {
+                switch (entry.State)
+                {
+                    case EntityState.Added:
+                        entry.State = EntityState.Detached;
+                        break;
+                    case EntityState.Modified:
+                    case EntityState.Deleted:
+                        // Unchanged again: for a Modified entity EF restores the values it last had in the database
+                        // (the contract test EfCore_AModifiedEntityPutBackToUnchanged_HasItsLastSavedValues guards it).
+                        entry.State = EntityState.Unchanged;
+                        break;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[PdfPipeline] Could not discard the unsaved changes left by a failed save");
+        }
+#pragma warning restore CA1031
+    }
+
+    /// <summary>
     /// Detaches Added/Modified entities of a given type from the change tracker.
-    /// Used in catch blocks (the optional, non-blocking enhancement steps, and the failure
-    /// handler for the vector document) so a failed SaveChangesAsync does not poison
-    /// subsequent saves with the same unflushed entities (and thus the same error).
+    /// Used in catch blocks of the optional, non-blocking enhancement steps so a
+    /// failed SaveChangesAsync does not poison subsequent saves with the same
+    /// unflushed entities (and thus the same error).
     /// </summary>
     private void DetachUnsavedChanges<TEntity>() where TEntity : class
     {
@@ -1347,16 +1399,12 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     /// </param>
     private async Task TryMarkFailedAsync(Guid pdfDocumentId, string errorMessage, ErrorCategory? category = null)
     {
-        // #4609 follow-up: IndexAsync sets the vector document to "completed" in memory before it saves, so a failed
-        // save leaves it Modified in the tracker. The save below flushes the whole context, so without this it would
-        // write that "completed" next to the failed PDF. Only the vector document is detached, not the whole tracker
-        // (as the upload path does, #4395): PdfProcessingQuartzJob shares this context and saves its job and step
-        // rows through it after the pipeline returns, so clearing would turn its failure into a no-op and leave the
-        // job in Processing. Everything else the indexing phase writes is saved as it goes (the text chunks) or goes
-        // around the context (the pgvector rows). Not covered, and as before this change (#4660): a failure of the
-        // text-chunk save itself leaves those chunks Added, and a PDF row left Modified or Ready in memory by a failed
-        // save of its own; the save below flushes them again.
-        DetachUnsavedChanges<VectorDocumentEntity>();
+        // Whatever failed may have left unsaved changes in the tracker: the vector document that IndexAsync already set
+        // to "completed" in memory before its save failed (#4609), the text chunks of a failed chunk save, or the PDF
+        // itself left Modified (or Ready) by a failed save of its own (#4660). The save below flushes the whole
+        // context, so without this it would write the "completed" next to the failed PDF, or fail again on the same
+        // chunks and never mark the PDF Failed, or skip the PDF because the tracker still says Ready.
+        DiscardUnsavedChanges();
 
         try
         {
@@ -1393,11 +1441,19 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             _logger.LogWarning(ex,
                 "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
                 pdfDocumentId, nameof(PdfProcessingPipelineService));
+
+            // The PDF stays Modified with the old concurrency token: PdfProcessingQuartzJob shares this context and
+            // saves the failure of its job through it right after, so the same stale row would fail that save too and
+            // leave the job in Processing. Admin wins: drop our write.
+            DiscardUnsavedChanges();
         }
 #pragma warning disable CA1031 // Best-effort error marking must not throw
         catch (Exception ex)
         {
             _logger.LogError(ex, "[PdfPipeline] Failed to mark PDF {PdfId} as failed", pdfDocumentId);
+
+            // Same reason: do not leave our unsaved write in the tracker for the job's own save to trip on.
+            DiscardUnsavedChanges();
         }
 #pragma warning restore CA1031
 

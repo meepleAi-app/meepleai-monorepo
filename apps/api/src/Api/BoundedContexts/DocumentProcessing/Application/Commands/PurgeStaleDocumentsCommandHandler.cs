@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Infrastructure;
 using Api.Observability;
 using Api.SharedKernel.Application.Interfaces;
@@ -16,15 +17,18 @@ internal sealed class PurgeStaleDocumentsCommandHandler
     : ICommandHandler<PurgeStaleDocumentsCommand, PurgeStaleResult>
 {
     private readonly MeepleAiDbContext _dbContext;
+    private readonly IPdfIndexingPipeline _indexingPipeline;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<PurgeStaleDocumentsCommandHandler> _logger;
 
     public PurgeStaleDocumentsCommandHandler(
         MeepleAiDbContext dbContext,
+        IPdfIndexingPipeline indexingPipeline,
         TimeProvider timeProvider,
         ILogger<PurgeStaleDocumentsCommandHandler> logger)
     {
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _indexingPipeline = indexingPipeline ?? throw new ArgumentNullException(nameof(indexingPipeline));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -81,6 +85,13 @@ internal sealed class PurgeStaleDocumentsCommandHandler
 
                 await _dbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
                 purgedCount++;
+
+                // #4609 follow-up (#4660): the PDF is Failed, so its vector document (created "processing" by
+                // BeginIndexingAsync) must not stay in flight. A no-op when the PDF failed before the indexing phase;
+                // never throws. The text is the category, not an exception message: this column is served to users by
+                // pdf-status.
+                await _indexingPipeline.MarkIndexingFailedAsync(
+                    pdfId, "Processing failed (Service)", CancellationToken.None).ConfigureAwait(false);
             }
             catch (DbUpdateConcurrencyException ex)
             {

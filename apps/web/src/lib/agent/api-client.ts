@@ -5,7 +5,7 @@
  * Centralized HTTP client for agent-related endpoints
  */
 
-import type { AgentTypology, AgentConfig } from './types';
+import type { AgentTypology } from './types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '';
 
@@ -74,27 +74,6 @@ export class AgentApiClient {
 
     if (!response.ok) {
       throw new Error(`Failed to update typology: ${response.statusText}`);
-    }
-  }
-
-  /**
-   * Update agent runtime config
-   * Issue #3253 (BACK-AGT-002)
-   */
-  async updateConfig(
-    gameSessionId: string,
-    agentSessionId: string,
-    config: AgentConfig
-  ): Promise<void> {
-    const response = await fetch(`${API_BASE}/api/v1/game-sessions/${gameSessionId}/agent/config`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ agentSessionId, ...config }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to update config: ${response.statusText}`);
     }
   }
 

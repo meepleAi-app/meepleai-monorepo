@@ -107,6 +107,19 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
     protected virtual bool EnableRateLimiting => false;
 
     /// <summary>
+    /// Il tetto di connessioni del pool dell'HOST, se la classe di test ne ha bisogno di piu' del default.
+    /// </summary>
+    /// <remarks>
+    /// Il default e' quello di <see cref="SharedTestcontainersFixture"/>: 2 connessioni su CI (Postgres
+    /// esterno, `max_connections=100` condiviso da tutti gli host), 5 in locale. Una classe che tiene
+    /// aperte piu' richieste insieme (le risposte di #4388, ferme su un cancello) ne occupa una per
+    /// richiesta e, a 2, la terza non riesce nemmeno ad autenticarsi: il test passa in locale e cade su
+    /// CI. Il tetto vale per l'host di questa fixture, che usa un database alla volta; non cambia quello
+    /// delle altre.
+    /// </remarks>
+    protected virtual int? HostMaxPoolSize => null;
+
+    /// <summary>
     /// Ultimo passaggio sull'host: qui la fixture concreta sostituisce servizi con dei doppi.
     /// </summary>
     /// <remarks>
@@ -297,9 +310,16 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
         return config;
     }
 
-    private string ConnectionTo(string database) =>
-        new NpgsqlConnectionStringBuilder(_adminConnectionString) { Database = database }
-            .ConnectionString;
+    private string ConnectionTo(string database)
+    {
+        var builder = new NpgsqlConnectionStringBuilder(_adminConnectionString) { Database = database };
+        if (HostMaxPoolSize is { } maxPoolSize)
+        {
+            builder.MaxPoolSize = maxPoolSize;
+        }
+
+        return builder.ConnectionString;
+    }
 
     /// <summary>
     /// Clona il template in <paramref name="name"/>.

@@ -15,14 +15,19 @@ public sealed class MechanicAnalysisStaleDraftOptions
 
     /// <summary>
     /// Default age after which a <c>Draft</c> is presumed orphaned. The pipeline has no time limit of its own (only a cost
-    /// cap), so this is an estimate and not a measured bound. Nominal worst case, from the code: seven sections, run one
+    /// cap), so this is an estimate and not a measured bound. Nominal worst case, from the code: nine sections, run one
     /// after the other, each with up to <c>MaxRetriesPerSection + 1</c> = 3 attempts, each attempt capped by the provider
-    /// HTTP client timeout (60 s for DeepSeek and OpenRouter, 120 s for Ollama): about 21 minutes, or 42 with Ollama.
-    /// Two hours leaves a wide margin over that, but not over a retry layer below the clients, which this estimate does
-    /// not count. A <c>Draft</c> whose pipeline is still alive when it is rejected loses the whole run (the final save is
-    /// one transaction that finds the row already <c>Rejected</c>): raise the threshold if runs ever get that long.
+    /// HTTP client timeout (60 s for DeepSeek and OpenRouter, 120 s for Ollama): about 27 minutes on one provider, 54 on
+    /// Ollama. But the pipeline calls <c>GenerateCompletionWithModelFallbackAsync</c>, which moves on to the next provider
+    /// when one fails or times out, each with its own timeout: with the three providers in sequence (60 + 60 + 120 s) the
+    /// worst case is 9 x 3 x 240 s = 108 minutes. That is the case where every attempt times out on every provider, and
+    /// it still leaves out grounding embeddings and context retrieval, so four hours is the smallest round value that
+    /// leaves a real margin over it. The cost is asymmetric: a threshold that is too high only makes an admin wait for an
+    /// orphan, while a <c>Draft</c> whose pipeline is still alive when it is rejected loses the whole run (the final save
+    /// is one transaction that finds the row already <c>Rejected</c>, so section runs, tokens and cost vanish). Raise it
+    /// if runs ever get longer than that.
     /// </summary>
-    public static readonly TimeSpan DefaultThreshold = TimeSpan.FromHours(2);
+    public static readonly TimeSpan DefaultThreshold = TimeSpan.FromHours(4);
 
     /// <summary>
     /// Drafts rejected per run. Not a setting: each one is its own write, and a backlog drains over a few runs

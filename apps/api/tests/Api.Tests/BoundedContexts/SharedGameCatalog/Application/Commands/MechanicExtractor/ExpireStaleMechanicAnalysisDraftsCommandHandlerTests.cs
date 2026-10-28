@@ -186,9 +186,10 @@ public sealed class ExpireStaleMechanicAnalysisDraftsCommandHandlerTests
     }
 
     [Fact]
-    public void DefaultThreshold_IsTwoHours()
+    public void DefaultThreshold_IsFourHours()
     {
-        // Il valore e' un giudizio dichiarato nella PR di #4503, non una misura: se cambia, cambi qui e li'.
-        new MechanicAnalysisStaleDraftOptions().Threshold.Should().Be(TimeSpan.FromHours(2));
+        // Il valore e' una stima ricavata dal codice (nove sezioni x tre tentativi x timeout, piu' il fallback fra
+        // provider: 108 minuti nel caso peggiore), non una misura. Se cambia, cambia qui e nella PR di #4503.
+        new MechanicAnalysisStaleDraftOptions().Threshold.Should().Be(TimeSpan.FromHours(4));
     }
 }

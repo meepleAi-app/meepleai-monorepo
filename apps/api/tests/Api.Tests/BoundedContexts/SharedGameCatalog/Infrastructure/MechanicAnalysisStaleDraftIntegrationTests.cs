@@ -69,7 +69,7 @@ public sealed class MechanicAnalysisStaleDraftIntegrationTests
     public async Task AnOrphanedDraft_IsRejected_AndItsSlotIsFreeAgain()
     {
         var (gameId, pdfId) = await SeedGameWithPdfAsync();
-        var orphanId = await InsertAnalysisAsync(gameId, pdfId, MechanicAnalysisStatus.Draft, HoursAgo(3));
+        var orphanId = await InsertAnalysisAsync(gameId, pdfId, MechanicAnalysisStatus.Draft, HoursAgo(6));
 
         // Il difetto: finche' il Draft c'e', un'altra analisi per lo stesso (gioco, PDF, prompt) non entra.
         var blocked = () => InsertAnalysisAsync(gameId, pdfId, MechanicAnalysisStatus.Draft, HoursAgo(0));
@@ -97,12 +97,16 @@ public sealed class MechanicAnalysisStaleDraftIntegrationTests
     {
         // L'indice unico non esclude le righe sospese: un Draft sospeso tiene lo slot come gli altri.
         var (gameId, pdfId) = await SeedGameWithPdfAsync();
-        var orphanId = await InsertAnalysisAsync(gameId, pdfId, MechanicAnalysisStatus.Draft, HoursAgo(3), suppressed: true);
+        var orphanId = await InsertAnalysisAsync(gameId, pdfId, MechanicAnalysisStatus.Draft, HoursAgo(6), suppressed: true);
 
         var result = await ExpireAsync();
 
         result.Should().Be(new ExpireStaleDraftsResult(Found: 1, Expired: 1));
         (await ReadAsync(orphanId)).Status.Should().Be(MechanicAnalysisStatus.Rejected);
+
+        // Rifiutare la riga non deve toglierle la sospensione: Update riscrive tutti i campi, e il CHECK sul
+        // completamento della sospensione li vuole coerenti.
+        (await ReadSuppressionAsync(orphanId)).Should().Be((true, "Takedown per il test"));
     }
 
     [Fact]
@@ -183,6 +187,19 @@ public sealed class MechanicAnalysisStaleDraftIntegrationTests
             .Select(a => new { a.Status, a.RejectionReason, a.ReviewedBy })
             .SingleAsync();
         return ((MechanicAnalysisStatus)row.Status, row.RejectionReason, row.ReviewedBy);
+    }
+
+    private async Task<(bool IsSuppressed, string? Reason)> ReadSuppressionAsync(Guid id)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var row = await db.Set<MechanicAnalysisEntity>()
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(a => a.Id == id)
+            .Select(a => new { a.IsSuppressed, a.SuppressionReason })
+            .SingleAsync();
+        return (row.IsSuppressed, row.SuppressionReason);
     }
 
     private async Task<List<(MechanicAnalysisStatus From, MechanicAnalysisStatus To, Guid Actor)>> ReadAuditAsync(Guid analysisId)

@@ -240,4 +240,153 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
 
         captured!.ExpiresAt.Should().Be(UtcNow.AddDays(30));
     }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // #4692 — ResendIfPending: the creation of a game night is repeated on purpose
+    // ────────────────────────────────────────────────────────────────────────
+
+    private (GameNightEvent GameNight, Guid OrganizerId) GivenAGameNightWithAPendingInvitationFor(
+        string email, out GameNightInvitation pending)
+    {
+        var organizerId = Guid.NewGuid();
+        var gameNight = CreateGameNight(organizerId);
+        pending = GameNightInvitation.Create(
+            gameNightId: gameNight.Id,
+            email: email,
+            expiresAt: UtcNow.AddDays(14),
+            createdBy: organizerId,
+            utcNow: UtcNow);
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _invitationRepoMock
+            .Setup(r => r.ExistsPendingByEmailAsync(gameNight.Id, email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _invitationRepoMock
+            .Setup(r => r.GetByGameNightIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<GameNightInvitation> { pending });
+        _userRepoMock
+            .Setup(r => r.GetByIdAsync(organizerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Api.BoundedContexts.Authentication.Domain.Entities.User?)null);
+        return (gameNight, organizerId);
+    }
+
+    [Fact]
+    public async Task Handle_ResendIfPending_WithAPendingInvitation_SendsTheSameInvitationAgain()
+    {
+        var (gameNight, organizerId) = GivenAGameNightWithAPendingInvitationFor(
+            "guest@example.com", out var pending);
+
+        var dto = await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(
+                gameNight.Id, "  Guest@example.com ", organizerId, ResendIfPending: true),
+            CancellationToken.None);
+
+        dto.Id.Should().Be(pending.Id);
+        dto.Token.Should().Be(pending.Token, "l'ospite riceve lo stesso invito, non uno nuovo");
+        _emailServiceMock.Verify(
+            s => s.SendGameNightInvitationEmailAsync(
+                "guest@example.com",
+                It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<DateTimeOffset>(), It.IsAny<string?>(), It.IsAny<IReadOnlyList<string>>(),
+                It.Is<string>(url => url.Contains(pending.Token, StringComparison.Ordinal)),
+                It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_ResendIfPending_WithAPendingInvitation_DoesNotPersistAnotherOne()
+    {
+        var (gameNight, organizerId) = GivenAGameNightWithAPendingInvitationFor(
+            "guest@example.com", out _);
+
+        await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(
+                gameNight.Id, "guest@example.com", organizerId, ResendIfPending: true),
+            CancellationToken.None);
+
+        _invitationRepoMock.Verify(
+            r => r.AddAsync(It.IsAny<GameNightInvitation>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ResendIfPending_WhenTheEmailFailsAgain_LetsTheFailureThrough()
+    {
+        var (gameNight, organizerId) = GivenAGameNightWithAPendingInvitationFor(
+            "guest@example.com", out _);
+        _emailServiceMock
+            .Setup(s => s.SendGameNightInvitationEmailAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<DateTimeOffset>(), It.IsAny<string?>(), It.IsAny<IReadOnlyList<string>>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("smtp is down"));
+
+        var act = async () => await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(
+                gameNight.Id, "guest@example.com", organizerId, ResendIfPending: true),
+            CancellationToken.None);
+
+        // The caller must learn that the invitation did not go out: swallowing it would turn a failed
+        // delivery into a success.
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    [Fact]
+    public async Task Handle_ResendIfPending_WhenTheInvitationIsNoLongerPending_ThrowsConflictException()
+    {
+        var organizerId = Guid.NewGuid();
+        var gameNight = CreateGameNight(organizerId);
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        // Pending when the existence check ran, answered or expired by the time the list is read.
+        _invitationRepoMock
+            .Setup(r => r.ExistsPendingByEmailAsync(
+                gameNight.Id, "guest@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _invitationRepoMock
+            .Setup(r => r.GetByGameNightIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<GameNightInvitation>());
+
+        var act = async () => await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(
+                gameNight.Id, "guest@example.com", organizerId, ResendIfPending: true),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConflictException>();
+    }
+
+    [Fact]
+    public async Task Handle_ResendIfPending_WithNoPendingInvitation_CreatesOneAsUsual()
+    {
+        var organizerId = Guid.NewGuid();
+        var gameNight = CreateGameNight(organizerId);
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _invitationRepoMock
+            .Setup(r => r.ExistsPendingByEmailAsync(
+                gameNight.Id, "guest@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _userRepoMock
+            .Setup(r => r.GetByIdAsync(organizerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Api.BoundedContexts.Authentication.Domain.Entities.User?)null);
+
+        await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(
+                gameNight.Id, "guest@example.com", organizerId, ResendIfPending: true),
+            CancellationToken.None);
+
+        _invitationRepoMock.Verify(
+            r => r.AddAsync(It.IsAny<GameNightInvitation>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _invitationRepoMock.Verify(
+            r => r.GetByGameNightIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "il ramo del reinvio non serve quando non c'e' un invito in sospeso");
+    }
 }

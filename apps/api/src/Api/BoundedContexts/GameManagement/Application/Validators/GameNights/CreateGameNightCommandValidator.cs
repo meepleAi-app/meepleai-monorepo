@@ -38,6 +38,13 @@ internal sealed class CreateGameNightCommandValidator : AbstractValidator<Create
             .NotEmpty()
             .WithMessage("User ID is required");
 
+        // Issue #4692: an id chosen by the caller must be a real one (the all-zero Guid is what an
+        // unset value serialises to, and would make every such request "the same creation").
+        RuleFor(x => x.Id)
+            .NotEqual(Guid.Empty)
+            .When(x => x.Id.HasValue)
+            .WithMessage("Id cannot be empty");
+
         RuleFor(x => x.Title)
             .NotEmpty()
             .WithMessage("Title is required")

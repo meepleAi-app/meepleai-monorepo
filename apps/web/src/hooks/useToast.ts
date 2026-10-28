@@ -1,4 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
+
+import { toast as sonnerToast } from 'sonner';
 
 export interface Toast {
   title: string;
@@ -6,24 +8,21 @@ export interface Toast {
   variant?: 'default' | 'destructive';
 }
 
+/**
+ * Adattatore sul `Toaster` di `sonner` montato in `app/providers.tsx`.
+ *
+ * `toast` ha identità stabile per tutta la vita del componente: più consumatori lo mettono
+ * nell'array di dipendenze di un `useEffect` che fa un fetch al mount, e se cambiasse a ogni
+ * render quel fetch ripartirebbe di continuo.
+ */
 export function useToast() {
-  const [toasts, setToasts] = useState<Toast[]>([]);
-
-  const toast = useCallback((toast: Toast) => {
-    // For now, just use console.warn (allowed by linter)
-    // In production, this should integrate with a toast component
-    console.warn('[Toast]', toast.title, toast.description);
-
-    setToasts(prev => [...prev, toast]);
-
-    // Auto-remove after 3 seconds
-    setTimeout(() => {
-      setToasts(prev => prev.slice(1));
-    }, 3000);
+  const toast = useCallback(({ title, description, variant }: Toast) => {
+    if (variant === 'destructive') {
+      sonnerToast.error(title, { description });
+    } else {
+      sonnerToast(title, { description });
+    }
   }, []);
 
-  return {
-    toast,
-    toasts,
-  };
+  return { toast };
 }

@@ -346,7 +346,7 @@ export class HttpClient {
                 return undefined as T;
               }
 
-              const data = await response.json();
+              const data = await this.readBodyNotRetried('POST', path, () => response.json());
 
               // Validate response with Zod if schema provided
               if (schema) {
@@ -499,7 +499,7 @@ export class HttpClient {
                 return undefined as T;
               }
 
-              const data = await response.json();
+              const data = await this.readBodyNotRetried('PUT', path, () => response.json());
 
               // Validate response with Zod if schema provided
               if (schema) {
@@ -641,7 +641,7 @@ export class HttpClient {
                 return undefined as T;
               }
 
-              const data = await response.json();
+              const data = await this.readBodyNotRetried('PATCH', path, () => response.json());
 
               if (schema) {
                 const validated = this.validateResponse(path, data, schema);
@@ -733,8 +733,36 @@ export class HttpClient {
   }
 
   /**
+   * Reads a response body from inside a `withRetry` callback without letting a failed read be retried.
+   *
+   * The request already reached the server, so sending it again because its answer was cut short would
+   * repeat a mutation that ran (a duplicate, or a 404/409 for an operation that succeeded). The retry
+   * policy treats any `TypeError` mentioning "fetch" as a network error, and that is exactly what
+   * `response.json()` rejects with when the connection drops mid-body (measured in Chromium). So anything
+   * that is not already an `ApiError` (e.g. a schema validation failure) is rethrown as a plain `Error`,
+   * which `isRetryableError` never retries. Not for `get`: it is idempotent, and trying again recovers.
+   */
+  private async readBodyNotRetried<T>(
+    method: string,
+    path: string,
+    read: () => Promise<T>
+  ): Promise<T> {
+    try {
+      return await read();
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw new Error(
+        `Could not read the response of ${method} ${path}: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error }
+      );
+    }
+  }
+
+  /**
    * Shared DELETE pipeline (dedup, circuit breaker, retry). `readResult` runs once the response is known
-   * to be 2xx; a failure there is never retried (see the catch below), so the DELETE is not sent a
+   * to be 2xx; a failure there is never retried (see `readBodyNotRetried`), so the DELETE is not sent a
    * second time because its answer was malformed or cut short. `cacheMethod` keeps `delete` and
    * `deleteWithResult` on distinct dedup keys: they resolve to different types.
    */
@@ -796,21 +824,9 @@ export class HttpClient {
                 await this.handleError(path, response, options);
               }
 
-              let result: T;
-              try {
-                result = await readResult(response);
-              } catch (error) {
-                // The DELETE already ran on the server. A bare `TypeError` mentioning "fetch" (a truncated
-                // body) would be read below as a network error and retried, so anything that is not already
-                // an ApiError is rethrown as a plain Error, which the retry policy never retries.
-                if (error instanceof ApiError) {
-                  throw error;
-                }
-                throw new Error(
-                  `Could not read the response of DELETE ${path}: ${error instanceof Error ? error.message : String(error)}`,
-                  { cause: error }
-                );
-              }
+              const result = await this.readBodyNotRetried('DELETE', path, () =>
+                readResult(response)
+              );
 
               // Track success after retry
               if (retryCount > 0) {

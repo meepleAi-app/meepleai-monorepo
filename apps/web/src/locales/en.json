@@ -2151,6 +2151,10 @@
             "deleteCta": "🗑 Delete permanently",
             "cancelCta": "Cancel"
           },
+          "deleteOutcome": {
+            "unlinked": "The PDF was not deleted because other games still use it. It has been unlinked from this game.",
+            "kept": "The PDF was neither deleted nor unlinked, because other games still use it."
+          },
           "errors": {
             "loadFailed": "Unable to load knowledge base. Please retry.",
             "reindexFailed": "Re-index failed. Please try again in a moment.",

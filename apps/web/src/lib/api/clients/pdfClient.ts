@@ -33,6 +33,21 @@ export const PdfUploadLimitsSchema = z.object({
 
 export type PdfUploadLimits = z.infer<typeof PdfUploadLimitsSchema>;
 
+/**
+ * #4683: body of `DELETE /api/v1/pdf/{id}` when the PDF was NOT deleted because other games still
+ * link it (#4627): `unlinked` = this game's link was removed, `kept` = there was none to remove.
+ * A deleted PDF answers 204 with no body, so `deleted` is not a value of the wire format.
+ */
+export const PdfDeleteOutcomeSchema = z.object({
+  outcome: z.enum(['unlinked', 'kept']),
+  message: z.string().optional(),
+});
+
+export interface DeletePdfResult {
+  outcome: 'deleted' | 'unlinked' | 'kept';
+  message?: string;
+}
+
 export interface CreatePdfClientParams {
   httpClient: HttpClient;
 }
@@ -314,10 +329,15 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
     },
 
     /**
-     * Delete a PDF document (admin)
+     * Delete a PDF document (admin). The PDF is only removed when no other game links it: the result
+     * says what happened (204 → `deleted`, 200 → `unlinked` | `kept`).
      */
-    async adminDeletePdf(pdfId: string): Promise<void> {
-      return httpClient.delete(`/api/v1/pdf/${encodeURIComponent(pdfId)}`);
+    async adminDeletePdf(pdfId: string): Promise<DeletePdfResult> {
+      const result = await httpClient.deleteWithResult(
+        `/api/v1/pdf/${encodeURIComponent(pdfId)}`,
+        PdfDeleteOutcomeSchema
+      );
+      return result ?? { outcome: 'deleted' };
     },
 
     /**

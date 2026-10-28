@@ -3,6 +3,7 @@ using System.Text;
 using Api.BoundedContexts.KnowledgeBase.Domain.Models;
 using Api.Models;
 using Api.Services.LlmClients;
+using Strategies = Api.BoundedContexts.KnowledgeBase.Domain.Entities.RagExecutionStrategies;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 
@@ -52,15 +53,17 @@ internal sealed partial class PlaygroundChatCommandHandler
     /// <summary>
     /// Resolves the effective strategy name from command override or defaults to SingleModel.
     /// </summary>
-    private static string ResolveStrategy(string? strategyOverride)
+    internal static string ResolveStrategy(string? strategyOverride)
     {
         if (string.IsNullOrWhiteSpace(strategyOverride))
-            return "SingleModel";
+            return Strategies.SingleModel;
 
+        // The same values the dashboard routes read back (#4677): RagExecutionStrategies.All.
         return strategyOverride switch
         {
-            "RetrievalOnly" or "SingleModel" or "MultiModelConsensus" => strategyOverride,
-            _ => "SingleModel" // Unknown strategies fall back to default
+            Strategies.RetrievalOnly or Strategies.SingleModel
+                or Strategies.MultiModelConsensus => strategyOverride,
+            _ => Strategies.SingleModel // Unknown strategies fall back to default
         };
     }
 

@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -284,5 +285,143 @@ public sealed class CreateGameNightCommandHandlerTests
         captured.Should().NotBeNull();
         captured!.ScheduledAt.Offset.Should().Be(TimeSpan.Zero);
         captured.ScheduledAt.Should().Be(scheduledAt, "la normalizzazione non deve spostare l'istante");
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // #4692 — the same creation sent again must not make a second game night
+    // ────────────────────────────────────────────────────────────────────────
+
+    private GameNightEvent GivenAnExistingGameNight(Guid id, Guid organizerId)
+    {
+        var existing = GameNightEvent.Create(
+            organizerId: organizerId,
+            title: "Friday Night Catan",
+            scheduledAt: DateTimeOffset.UtcNow.AddDays(7),
+            id: id);
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existing);
+        return existing;
+    }
+
+    [Fact]
+    public async Task Handle_WithAnId_CreatesTheGameNightWithThatId()
+    {
+        var id = Guid.NewGuid();
+        GameNightEvent? captured = null;
+        _gameNightRepoMock
+            .Setup(r => r.AddAsync(It.IsAny<GameNightEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<GameNightEvent, CancellationToken>((gn, _) => captured = gn)
+            .Returns(Task.CompletedTask);
+
+        var result = await _sut.Handle(MakeCommand(Guid.NewGuid()) with { Id = id }, CancellationToken.None);
+
+        result.Should().Be(id);
+        captured.Should().NotBeNull();
+        captured!.Id.Should().Be(id);
+    }
+
+    [Fact]
+    public async Task Handle_WithoutAnId_GeneratesOne()
+    {
+        GameNightEvent? captured = null;
+        _gameNightRepoMock
+            .Setup(r => r.AddAsync(It.IsAny<GameNightEvent>(), It.IsAny<CancellationToken>()))
+            .Callback<GameNightEvent, CancellationToken>((gn, _) => captured = gn)
+            .Returns(Task.CompletedTask);
+
+        var result = await _sut.Handle(MakeCommand(Guid.NewGuid()), CancellationToken.None);
+
+        result.Should().NotBe(Guid.Empty);
+        captured!.Id.Should().Be(result);
+        _gameNightRepoMock.Verify(
+            r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "senza un id scelto dal chiamante non c'e' nulla da cercare");
+    }
+
+    [Fact]
+    public async Task Handle_SameIdSameOrganizer_ReturnsTheExistingGameNight_WithoutCreatingAnother()
+    {
+        var organizerId = Guid.NewGuid();
+        var id = Guid.NewGuid();
+        GivenAnExistingGameNight(id, organizerId);
+
+        var result = await _sut.Handle(MakeCommand(organizerId) with { Id = id }, CancellationToken.None);
+
+        result.Should().Be(id);
+        _gameNightRepoMock.Verify(
+            r => r.AddAsync(It.IsAny<GameNightEvent>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _unitOfWorkMock.Verify(
+            u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_SameIdSameOrganizer_SendsTheInvitationsAgain_OnTheExistingGameNight()
+    {
+        SetupInvitationMediatorOk();
+        var organizerId = Guid.NewGuid();
+        var id = Guid.NewGuid();
+        GivenAnExistingGameNight(id, organizerId);
+
+        await _sut.Handle(
+            MakeCommand(organizerId, invitedEmails: ["alice@example.com", "bob@example.com"]) with { Id = id },
+            CancellationToken.None);
+
+        foreach (var email in new[] { "alice@example.com", "bob@example.com" })
+        {
+            _mediatorMock.Verify(
+                m => m.Send(
+                    It.Is<CreateGameNightInvitationByEmailCommand>(c =>
+                        c.GameNightId == id
+                        && c.Email == email
+                        && c.OrganizerUserId == organizerId
+                        && c.ResendIfPending),
+                    It.IsAny<CancellationToken>()),
+                Times.Once);
+        }
+    }
+
+    [Fact]
+    public async Task Handle_SameIdOtherOrganizer_ThrowsConflict_AndTouchesNothing()
+    {
+        var owner = Guid.NewGuid();
+        var id = Guid.NewGuid();
+        GivenAnExistingGameNight(id, owner);
+
+        var act = async () => await _sut.Handle(
+            MakeCommand(Guid.NewGuid(), invitedEmails: ["alice@example.com"]) with { Id = id },
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConflictException>();
+        _gameNightRepoMock.Verify(
+            r => r.AddAsync(It.IsAny<GameNightEvent>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _mediatorMock.Verify(
+            m => m.Send(It.IsAny<CreateGameNightInvitationByEmailCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "l'organizzatore sbagliato non deve poter invitare a una serata che non e' sua");
+    }
+
+    [Fact]
+    public async Task Handle_FirstAttemptWithEmails_AsksForAPendingInvitationToBeSentAgain()
+    {
+        SetupInvitationMediatorOk();
+        var organizerId = Guid.NewGuid();
+
+        await _sut.Handle(
+            MakeCommand(organizerId, invitedEmails: ["alice@example.com"]) with { Id = Guid.NewGuid() },
+            CancellationToken.None);
+
+        // Also on the first attempt: the sub-command is the same, and a retry of the HTTP call must
+        // not have to know whether an earlier attempt got this far.
+        _mediatorMock.Verify(
+            m => m.Send(
+                It.Is<CreateGameNightInvitationByEmailCommand>(c => c.ResendIfPending),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

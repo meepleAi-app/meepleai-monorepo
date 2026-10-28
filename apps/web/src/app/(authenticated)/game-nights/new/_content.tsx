@@ -266,6 +266,9 @@ export function NewGameNightContent(): ReactElement {
     // would touch unrelated callers).
     const p = payloadResult.payload;
     const mutationInput = {
+      // #4692: one id per submission, the same for every attempt below and for React Query's own retry:
+      // the server then sees the repetitions as the same creation instead of making a game night each.
+      id: crypto.randomUUID(),
       title: p.title,
       scheduledAt: p.scheduledAt,
       ...(p.description != null ? { description: p.description } : {}),

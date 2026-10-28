@@ -110,7 +110,8 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Factory method to create a new game night event.
+    /// Factory method to create a new game night event. <paramref name="id"/> lets the caller choose the
+    /// identity, so that sending the same creation again is recognisably the same creation (#4692).
     /// </summary>
     public static GameNightEvent Create(
         Guid organizerId,
@@ -119,9 +120,13 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
         string? description = null,
         string? location = null,
         int? maxPlayers = null,
-        List<Guid>? gameIds = null)
+        List<Guid>? gameIds = null,
+        Guid? id = null)
     {
-        return new GameNightEvent(Guid.NewGuid(), organizerId, title, scheduledAt, description, location, maxPlayers, gameIds);
+        if (id == Guid.Empty)
+            throw new ArgumentException("Id cannot be empty", nameof(id));
+
+        return new GameNightEvent(id ?? Guid.NewGuid(), organizerId, title, scheduledAt, description, location, maxPlayers, gameIds);
     }
 
     /// <summary>

@@ -190,6 +190,9 @@ export function parseGameNightDiaryResilient(raw: unknown): GameNightDiaryDto {
 }
 
 export const CreateGameNightInputSchema = z.object({
+  // #4692: chosen by the caller, so that sending the same creation again (the wizard retries, and so
+  // does React Query) finds the game night already made instead of making another.
+  id: z.string().uuid().optional(),
   title: z.string().min(3).max(200),
   description: z.string().max(2000).optional(),
   scheduledAt: z.string(),

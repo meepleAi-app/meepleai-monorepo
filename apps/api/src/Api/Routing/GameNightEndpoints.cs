@@ -26,9 +26,14 @@ internal static class GameNightEndpoints
             .Produces<Guid>(201)
             .Produces(400)
             .Produces(401)
+            .Produces(409)
             .WithName("CreateGameNight")
             .WithSummary("Create a new game night event")
-            .WithDescription("Creates a new game night event in Draft status.");
+            .WithDescription(
+                "Creates a new game night event in Draft status. The optional `id` is chosen by the caller: "
+                + "sending the same creation again with the same `id` returns the game night already made "
+                + "(its pending invitations are sent again) instead of creating another; the `id` of a game "
+                + "night that belongs to another organizer answers 409.");
 
         gameNights.MapGet("/", HandleGetUpcomingGameNights)
             .RequireAuthenticatedUser()
@@ -419,7 +424,8 @@ internal static class GameNightEndpoints
             MaxPlayers: request.MaxPlayers,
             GameIds: request.GameIds,
             InvitedUserIds: request.InvitedUserIds,
-            InvitedEmails: request.InvitedEmails);
+            InvitedEmails: request.InvitedEmails,
+            Id: request.Id);
 
         var id = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.Created($"/api/v1/game-nights/{id}", id);
@@ -989,7 +995,8 @@ internal static class GameNightEndpoints
         int? MaxPlayers = null,
         List<Guid>? GameIds = null,
         List<Guid>? InvitedUserIds = null,
-        List<string>? InvitedEmails = null);
+        List<string>? InvitedEmails = null,
+        Guid? Id = null);
 
     private sealed record UpdateGameNightRequest(
         string Title,

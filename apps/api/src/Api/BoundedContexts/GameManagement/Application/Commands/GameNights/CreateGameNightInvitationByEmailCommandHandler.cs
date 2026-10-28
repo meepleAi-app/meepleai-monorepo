@@ -2,6 +2,7 @@ using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application;
@@ -77,10 +78,30 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
             .ExistsPendingByEmailAsync(command.GameNightId, normalizedEmail, cancellationToken)
             .ConfigureAwait(false);
 
-        if (alreadyInvited)
+        if (alreadyInvited && !command.ResendIfPending)
         {
             throw new ConflictException(
                 $"A pending invitation already exists for {normalizedEmail} on this game night.");
+        }
+
+        if (alreadyInvited)
+        {
+            // #4692: the same creation sent again. The invitation was saved by the earlier attempt, whose
+            // email may not have gone out; the guest gets the same invitation (same token) once more,
+            // never none.
+            var existing = (await _invitationRepository
+                    .GetByGameNightIdAsync(command.GameNightId, cancellationToken)
+                    .ConfigureAwait(false))
+                .FirstOrDefault(i => i.Status == GameNightInvitationStatus.Pending
+                    && string.Equals(i.Email, normalizedEmail, StringComparison.Ordinal))
+                // Answered or cancelled between the two reads: it is no longer pending, so it is what the
+                // plain path reports for a pending one. ("Pending" is the stored status only: nothing
+                // moves an invitation to expired on its own, so a past ExpiresAt does not end up here.)
+                ?? throw new ConflictException(
+                    $"A pending invitation already exists for {normalizedEmail} on this game night.");
+
+            await SendInvitationEmailAsync(gameNight, existing, cancellationToken).ConfigureAwait(false);
+            return ToDto(existing);
         }
 
         var utcNow = _timeProvider.GetUtcNow();
@@ -101,18 +122,20 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
         // receive the token-bearing accept/decline links.
         await SendInvitationEmailAsync(gameNight, invitation, cancellationToken).ConfigureAwait(false);
 
-        return new GameNightInvitationDto(
-            Id: invitation.Id,
-            Token: invitation.Token,
-            GameNightId: invitation.GameNightId,
-            Email: invitation.Email,
-            Status: invitation.Status.ToString(),
-            ExpiresAt: invitation.ExpiresAt,
-            RespondedAt: invitation.RespondedAt,
-            RespondedByUserId: invitation.RespondedByUserId,
-            CreatedAt: invitation.CreatedAt,
-            CreatedBy: invitation.CreatedBy);
+        return ToDto(invitation);
     }
+
+    private static GameNightInvitationDto ToDto(GameNightInvitation invitation) => new(
+        Id: invitation.Id,
+        Token: invitation.Token,
+        GameNightId: invitation.GameNightId,
+        Email: invitation.Email,
+        Status: invitation.Status.ToString(),
+        ExpiresAt: invitation.ExpiresAt,
+        RespondedAt: invitation.RespondedAt,
+        RespondedByUserId: invitation.RespondedByUserId,
+        CreatedAt: invitation.CreatedAt,
+        CreatedBy: invitation.CreatedBy);
 
     private async Task SendInvitationEmailAsync(
         GameNightEvent gameNight,

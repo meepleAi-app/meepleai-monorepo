@@ -62,6 +62,40 @@ describe('lettura del corpo e retry', () => {
     }
   );
 
+  it.each([
+    [
+      "SyntaxError (corpo che non e' JSON)",
+      () => new SyntaxError('Unexpected token < in JSON'),
+      SyntaxError,
+    ],
+    [
+      'AbortError (richiesta annullata)',
+      () => new DOMException('aborted', 'AbortError'),
+      DOMException,
+    ],
+  ] as const)(
+    "un %s resta del suo tipo: solo il TypeError e' riscritto",
+    async (_label, makeError, errorType) => {
+      // Non erano ritentabili, quindi non serve mascherarli: chi riconosce un AbortError o un SyntaxError
+      // dal tipo continua a poterlo fare.
+      const fetchImpl = vi.fn().mockImplementation(async () => ({
+        ok: true,
+        status: 200,
+        json: () => Promise.reject(makeError()),
+      })) as unknown as typeof fetch & ReturnType<typeof vi.fn>;
+
+      const error = await clientWith(fetchImpl)
+        .post('/api/v1/probe/other-error', { name: 'x' }, undefined, FAST_RETRY)
+        .then(
+          () => undefined,
+          (e: unknown) => e
+        );
+
+      expect(error).toBeInstanceOf(errorType);
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+    }
+  );
+
   it("get invece continua a ritentare: e' idempotente, e un corpo troncato si recupera riprovando", async () => {
     // Controllo: prova che la sonda SA vedere un retry quando c'e'. Non e' un comportamento da cambiare.
     const fetchImpl = fetchReturningTruncatedBody();

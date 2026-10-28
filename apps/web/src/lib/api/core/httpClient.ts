@@ -738,9 +738,11 @@ export class HttpClient {
    * The request already reached the server, so sending it again because its answer was cut short would
    * repeat a mutation that ran (a duplicate, or a 404/409 for an operation that succeeded). The retry
    * policy treats any `TypeError` mentioning "fetch" as a network error, and that is exactly what
-   * `response.json()` rejects with when the connection drops mid-body (measured in Chromium). So anything
-   * that is not already an `ApiError` (e.g. a schema validation failure) is rethrown as a plain `Error`,
-   * which `isRetryableError` never retries. Not for `get`: it is idempotent, and trying again recovers.
+   * `response.json()` rejects with when the connection drops mid-body (measured in Chromium). So a
+   * `TypeError` is rethrown as a plain `Error` (original in `cause`), which `isRetryableError` never
+   * retries. Every other error already is not retried, and keeps its type (a `SyntaxError` from a body
+   * that is not JSON, an `AbortError`, an `ApiError` from a schema check). Not for `get`: it is
+   * idempotent, and trying again recovers the body.
    */
   private async readBodyNotRetried<T>(
     method: string,
@@ -750,7 +752,7 @@ export class HttpClient {
     try {
       return await read();
     } catch (error) {
-      if (error instanceof ApiError) {
+      if (!(error instanceof TypeError)) {
         throw error;
       }
       throw new Error(

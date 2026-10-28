@@ -95,8 +95,8 @@ public interface IMechanicAnalysisRepository
     /// counts it, so it blocks its (game, PDF, prompt) slot until something moves it out of <c>Draft</c>.
     /// </summary>
     /// <remarks>
-    /// Id-only projection, like <see cref="GetIdsByStatusAsync"/>: the caller reloads each aggregate fresh before
-    /// changing it. <paramref name="createdBeforeUtc"/> must be UTC (Npgsql rejects an unspecified kind on a
+    /// Id-only projection, like <see cref="GetIdsByStatusAsync"/>, and like it this ignores the suppression filter:
+    /// a suppressed Draft holds its slot too. The caller reloads each aggregate fresh before changing it. <paramref name="createdBeforeUtc"/> must be UTC (Npgsql rejects an unspecified kind on a
     /// <c>timestamptz</c> column).
     /// </remarks>
     Task<IReadOnlyList<Guid>> GetDraftIdsCreatedBeforeAsync(

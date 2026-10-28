@@ -15,8 +15,12 @@ public sealed class MechanicAnalysisStaleDraftOptions
 
     /// <summary>
     /// Default age after which a <c>Draft</c> is presumed orphaned. The pipeline has no time limit of its own (only a cost
-    /// cap), so this is a judgement and not a measured bound: two hours is far above a single LLM-driven run, and an
-    /// orphan costs an admin a wait, not a lost analysis. Raise it if runs ever get that long.
+    /// cap), so this is an estimate and not a measured bound. Nominal worst case, from the code: seven sections, run one
+    /// after the other, each with up to <c>MaxRetriesPerSection + 1</c> = 3 attempts, each attempt capped by the provider
+    /// HTTP client timeout (60 s for DeepSeek and OpenRouter, 120 s for Ollama): about 21 minutes, or 42 with Ollama.
+    /// Two hours leaves a wide margin over that, but not over a retry layer below the clients, which this estimate does
+    /// not count. A <c>Draft</c> whose pipeline is still alive when it is rejected loses the whole run (the final save is
+    /// one transaction that finds the row already <c>Rejected</c>): raise the threshold if runs ever get that long.
     /// </summary>
     public static readonly TimeSpan DefaultThreshold = TimeSpan.FromHours(2);
 

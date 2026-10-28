@@ -54,14 +54,14 @@ internal static class MechanicAnalysisPromptSlot
 
         var reason = holderStatus switch
         {
-            // A Draft is normally a pipeline still running; but a restart mid-run leaves it Draft
-            // forever (nothing rejects stale Drafts), so the age is what tells the admin which one it is.
+            // A Draft is normally a pipeline still running; but a restart mid-run leaves it Draft until
+            // the stale-draft job (#4503) rejects it, so the age is what tells the admin which one it is.
             MechanicAnalysisStatus.Draft =>
                 $"Un'analisi per questo PDF con il prompt {promptVersion} è in generazione dal "
                 + $"{holderCreatedAt.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)} UTC: "
                 + $"aspetta che finisca e, se non risulta già rifiutata, rifiutala prima di {verb}. "
-                + "Se resta in generazione da molto è orfana (la pipeline si è interrotta e non la "
-                + "chiuderà nessuno): segnalala.",
+                + "Se resta in generazione da molto è orfana (la pipeline si è interrotta): viene chiusa "
+                + "da sola dopo il tempo massimo configurato, di norma due ore dalla creazione.",
             MechanicAnalysisStatus.InReview =>
                 $"Esiste già un'analisi in revisione per questo PDF con il prompt {promptVersion}: "
                 + $"rifiutala prima di {verb}.",

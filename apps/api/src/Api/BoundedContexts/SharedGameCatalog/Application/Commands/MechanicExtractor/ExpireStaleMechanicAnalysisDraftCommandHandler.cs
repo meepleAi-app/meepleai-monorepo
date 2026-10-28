@@ -37,8 +37,9 @@ internal sealed class ExpireStaleMechanicAnalysisDraftCommandHandler
     {
         ArgumentNullException.ThrowIfNull(request);
 
+        // Ignoring filters: the listing includes suppressed Drafts, which hold their slot like any other.
         var analysis = await _analysisRepository
-            .GetByIdWithClaimsAsync(request.AnalysisId, cancellationToken)
+            .GetByIdWithClaimsIgnoringFiltersAsync(request.AnalysisId, cancellationToken)
             .ConfigureAwait(false);
 
         if (analysis is null)

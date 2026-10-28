@@ -5,6 +5,7 @@ using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using FluentAssertions;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
@@ -123,6 +124,29 @@ public sealed class ExpireStaleMechanicAnalysisDraftsCommandHandlerTests
         _mediator.Verify(
             m => m.Send(
                 It.Is<ExpireStaleMechanicAnalysisDraftCommand>(c => c.AnalysisId == second),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheWriteLosesARaceToThePipeline_StopsThePassWithoutFailing()
+    {
+        // La pipeline ha chiuso la riga fra la rilettura e il salvataggio: non e' un guasto. Il DbContext
+        // dello scope tiene ancora la riga fallita, quindi le scritture dopo la rifarebbero fallire: si ferma.
+        var raced = Guid.NewGuid();
+        var untouched = Guid.NewGuid();
+        ReturnsIds(raced, untouched);
+        _mediator
+            .Setup(m => m.Send(It.Is<ExpireStaleMechanicAnalysisDraftCommand>(c => c.AnalysisId == raced), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateConcurrencyException("0 rows"));
+
+        var result = await CreateHandler()
+            .Handle(new ExpireStaleMechanicAnalysisDraftsCommand(), CancellationToken.None);
+
+        result.Should().Be(new ExpireStaleDraftsResult(Found: 2, Expired: 0));
+        _mediator.Verify(
+            m => m.Send(
+                It.Is<ExpireStaleMechanicAnalysisDraftCommand>(c => c.AnalysisId == untouched),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }

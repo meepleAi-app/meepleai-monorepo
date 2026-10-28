@@ -4,6 +4,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -17,7 +18,8 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExt
 /// </summary>
 /// <remarks>
 /// A row that vanished or left <c>Draft</c> between the listing and its own command (404 / 409) is skipped, because it is
-/// no longer an orphan. Any other failure propagates: the job logs it and the next run starts from a fresh scope, so a
+/// no longer an orphan. Losing the write itself to the pipeline (<see cref="DbUpdateConcurrencyException"/>) is the same
+/// case, and ends the pass because the scope's <c>DbContext</c> still holds the failed row. Any other failure propagates: the job logs it and the next run starts from a fresh scope, so a
 /// failed write never leaves state behind for the writes after it.
 /// </remarks>
 internal sealed class ExpireStaleMechanicAnalysisDraftsCommandHandler
@@ -88,6 +90,17 @@ internal sealed class ExpireStaleMechanicAnalysisDraftsCommandHandler
                     ex,
                     "Stale-draft expiry skipped MechanicAnalysis {AnalysisId}: it left Draft in the meantime.",
                     analysisId);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                // The pipeline closed the row between the reload and the save: not a failure. The failed row stays
+                // tracked in this scope, so any write after it would fail with it: the pass stops here. The row is
+                // no longer Draft, so the next run does not list it again.
+                _logger.LogInformation(
+                    ex,
+                    "Stale-draft expiry lost a write race on MechanicAnalysis {AnalysisId}; stopping this pass.",
+                    analysisId);
+                break;
             }
         }
 

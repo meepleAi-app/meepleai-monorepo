@@ -85,6 +85,24 @@ public sealed class MechanicAnalysisStaleDraftIntegrationTests
 
         var retry = () => InsertAnalysisAsync(gameId, pdfId, MechanicAnalysisStatus.Draft, HoursAgo(0));
         await retry.Should().NotThrowAsync("a Rejected row no longer counts for the unique index");
+
+        // L'audit del cambio di stato, scritto dal repository nello stesso SaveChanges.
+        var audit = await ReadAuditAsync(orphanId);
+        audit.Should().ContainSingle()
+            .Which.Should().Be((MechanicAnalysisStatus.Draft, MechanicAnalysisStatus.Rejected, _adminId));
+    }
+
+    [Fact]
+    public async Task ASuppressedOrphan_IsRejectedToo_BecauseItStillHoldsItsSlot()
+    {
+        // L'indice unico non esclude le righe sospese: un Draft sospeso tiene lo slot come gli altri.
+        var (gameId, pdfId) = await SeedGameWithPdfAsync();
+        var orphanId = await InsertAnalysisAsync(gameId, pdfId, MechanicAnalysisStatus.Draft, HoursAgo(3), suppressed: true);
+
+        var result = await ExpireAsync();
+
+        result.Should().Be(new ExpireStaleDraftsResult(Found: 1, Expired: 1));
+        (await ReadAsync(orphanId)).Status.Should().Be(MechanicAnalysisStatus.Rejected);
     }
 
     [Fact]
@@ -167,6 +185,18 @@ public sealed class MechanicAnalysisStaleDraftIntegrationTests
         return ((MechanicAnalysisStatus)row.Status, row.RejectionReason, row.ReviewedBy);
     }
 
+    private async Task<List<(MechanicAnalysisStatus From, MechanicAnalysisStatus To, Guid Actor)>> ReadAuditAsync(Guid analysisId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var rows = await db.Set<MechanicStatusAuditEntity>()
+            .AsNoTracking()
+            .Where(a => a.AnalysisId == analysisId)
+            .Select(a => new { a.FromStatus, a.ToStatus, a.ActorId })
+            .ToListAsync();
+        return rows.Select(r => ((MechanicAnalysisStatus)r.FromStatus, (MechanicAnalysisStatus)r.ToStatus, r.ActorId)).ToList();
+    }
+
     private async Task<(Guid GameId, Guid PdfId)> SeedGameWithPdfAsync()
     {
         using var scope = _factory.Services.CreateScope();
@@ -214,7 +244,8 @@ public sealed class MechanicAnalysisStaleDraftIntegrationTests
         Guid gameId,
         Guid pdfId,
         MechanicAnalysisStatus status,
-        DateTime createdAt)
+        DateTime createdAt,
+        bool suppressed = false)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -239,7 +270,13 @@ public sealed class MechanicAnalysisStaleDraftIntegrationTests
             EstimatedCostUsd = 0m,
             ModelUsed = "test-model",
             Provider = "test-provider",
-            CostCapUsd = 1.00m
+            CostCapUsd = 1.00m,
+            // Il CHECK ck_mechanic_analyses_suppression_completeness vuole, per una riga sospesa, anche
+            // chi, quando e perche'; per una non sospesa vuole tutti questi campi nulli.
+            IsSuppressed = suppressed,
+            SuppressedAt = suppressed ? createdAt : null,
+            SuppressedBy = suppressed ? _adminId : null,
+            SuppressionReason = suppressed ? "Takedown per il test" : null
         });
 
         await db.SaveChangesAsync();

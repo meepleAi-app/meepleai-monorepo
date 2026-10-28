@@ -41,7 +41,7 @@ public sealed class ExpireStaleMechanicAnalysisDraftCommandHandlerTests
 
     private void Loads(MechanicAnalysis? analysis) =>
         _repository
-            .Setup(r => r.GetByIdWithClaimsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByIdWithClaimsIgnoringFiltersAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(analysis);
 
     [Fact]

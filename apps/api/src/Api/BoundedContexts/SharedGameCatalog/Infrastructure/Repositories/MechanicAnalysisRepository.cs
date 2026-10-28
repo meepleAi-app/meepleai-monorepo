@@ -151,10 +151,12 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
         int maxCount,
         CancellationToken cancellationToken = default)
     {
-        // Id-only projection, oldest first so a backlog drains in order. The default query filters stay on:
-        // a row they hide is not one an admin can see or act on.
+        // Id-only projection, oldest first so a backlog drains in order. The suppression filter is ignored:
+        // a suppressed Draft still holds its slot (the unique index does not exclude it, and
+        // FindByPromptVersionAsync ignores filters), so it is exactly as orphaned as any other.
         var ids = await DbContext.MechanicAnalyses
             .AsNoTracking()
+            .IgnoreQueryFilters()
             .Where(a => a.Status == (int)MechanicAnalysisStatus.Draft && a.CreatedAt < createdBeforeUtc)
             .OrderBy(a => a.CreatedAt)
             .Select(a => a.Id)

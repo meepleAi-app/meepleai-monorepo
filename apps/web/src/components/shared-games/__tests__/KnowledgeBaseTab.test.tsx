@@ -17,7 +17,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { KnowledgeBaseTab } from '../KnowledgeBaseTab';
 import * as useDocumentsByGameModule from '@/hooks/queries/useDocumentsByGame';
-import * as useEmbeddingStatusModule from '@/hooks/useEmbeddingStatus';
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
 
 // ============================================================================
@@ -77,18 +76,6 @@ function mockDocuments(
 describe('KnowledgeBaseTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(useEmbeddingStatusModule, 'useEmbeddingStatus').mockReturnValue({
-      data: { status: 'Completed', progress: 100, totalChunks: 10, processedChunks: 10 },
-      isLoading: false,
-      isPolling: false,
-      isReady: true,
-      isFailed: false,
-      stageLabel: 'Completed',
-      chunkProgress: { processed: 10, total: 10 },
-      error: null,
-      refetch: vi.fn(),
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } as any);
   });
 
   describe('Loading States', () => {
@@ -207,6 +194,71 @@ describe('KnowledgeBaseTab', () => {
         expect(screen.getByText(/1 document indexed/i)).toBeInTheDocument();
       });
     });
+  });
+
+  /**
+   * #4360: l'intestazione scriveva «N documents indexed» contando ogni documento, `Failed` e
+   * `Pending` compresi, e ogni scheda mostrava lo stato di embedding dell'INTERO gioco
+   * (`useEmbeddingStatus`) invece di quello del proprio file. Qui il primo file è pronto e gli
+   * altri due no: l'unica verità è `processingState` di ciascun documento.
+   */
+  describe('Stato per documento (#4360)', () => {
+    const MIXED = [
+      doc({
+        id: '33333333-3333-3333-3333-333333333333',
+        fileName: 'ready.pdf',
+        processingState: 'Ready',
+      }),
+      doc({
+        id: '44444444-4444-4444-4444-444444444444',
+        fileName: 'failed.pdf',
+        processingState: 'Failed',
+      }),
+      doc({
+        id: '55555555-5555-5555-5555-555555555555',
+        fileName: 'queued.pdf',
+        processingState: 'Pending',
+      }),
+    ];
+
+    function cardOf(fileName: string): HTMLElement {
+      const card = screen.getByTitle(fileName).closest('[class*="rounded"]');
+      if (!(card instanceof HTMLElement)) throw new Error(`scheda di ${fileName} non trovata`);
+      return card;
+    }
+
+    it('conta come indicizzati solo i documenti pronti', async () => {
+      mockDocuments({ data: MIXED });
+
+      renderWithQueryClient(<KnowledgeBaseTab gameId={GAME_ID} />);
+
+      expect(await screen.findByText(/1 of 3 documents indexed/i)).toBeInTheDocument();
+      expect(screen.queryByText(/^3 documents indexed/i)).not.toBeInTheDocument();
+    });
+
+    it('ogni scheda mostra lo stato del proprio file, non quello del gioco', async () => {
+      mockDocuments({ data: MIXED });
+
+      renderWithQueryClient(<KnowledgeBaseTab gameId={GAME_ID} />);
+
+      await screen.findByText('ready.pdf');
+      const stateOf = (fileName: string) =>
+        cardOf(fileName).querySelector('[data-state]')?.getAttribute('data-state');
+
+      expect(stateOf('ready.pdf')).toBe('ready');
+      expect(stateOf('failed.pdf')).toBe('failed');
+      expect(stateOf('queued.pdf')).toBe('pending');
+    });
+  });
+
+  it('asks the listing to follow documents that are still in progress (#4360)', () => {
+    mockDocuments({ data: [] });
+
+    renderWithQueryClient(<KnowledgeBaseTab gameId={GAME_ID} />);
+
+    expect(useDocumentsByGameModule.useDocumentsByGame).toHaveBeenCalledWith(
+      expect.objectContaining({ gameId: GAME_ID, pollWhileProcessing: true })
+    );
   });
 
   describe('Accessibility', () => {

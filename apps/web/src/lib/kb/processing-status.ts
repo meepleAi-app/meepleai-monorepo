@@ -1,4 +1,5 @@
 import type { ProcessingState } from '@/lib/api/schemas/kb-docs.schemas';
+import type { PdfState } from '@/types/pdf';
 
 /**
  * Canonical display status for a KB/PDF document across the app (card badges,
@@ -24,6 +25,22 @@ const CANONICAL = {
 } satisfies Record<Lowercase<ProcessingState>, KbDisplayStatus>;
 
 /**
+ * Fine-grained UI state for the PDF badges. The canonical `ProcessingState` values are the same
+ * eight words as `PdfState`, only differently cased; `satisfies` makes a newly-added
+ * ProcessingState value a compile error here instead of a silent `pending`.
+ */
+const PDF_STATE = {
+  pending: 'pending',
+  uploading: 'uploading',
+  extracting: 'extracting',
+  chunking: 'chunking',
+  embedding: 'embedding',
+  indexing: 'indexing',
+  ready: 'ready',
+  failed: 'failed',
+} satisfies Record<Lowercase<ProcessingState>, PdfState>;
+
+/**
  * Legacy / alternate payload spellings. The /api/v1/pdfs/{id}/text endpoint
  * emits lowercase `uploaded`; some list endpoints emit `completed`/`processing`.
  */
@@ -44,4 +61,16 @@ export function mapProcessingStateToDisplayStatus(
     .trim()
     .toLowerCase();
   return (CANONICAL as Record<string, KbDisplayStatus>)[key] ?? ALIASES[key] ?? 'none';
+}
+
+/**
+ * Map a PDF processing-state string (canonical PascalCase, lowercase, or the `completed` alias)
+ * to the fine-grained `PdfState` the status badges take. Unknown / empty -> 'pending'.
+ */
+export function mapProcessingStateToPdfState(state: string | null | undefined): PdfState {
+  const key = String(state ?? '')
+    .trim()
+    .toLowerCase();
+  if (key === 'completed') return 'ready';
+  return (PDF_STATE as Record<string, PdfState>)[key] ?? 'pending';
 }

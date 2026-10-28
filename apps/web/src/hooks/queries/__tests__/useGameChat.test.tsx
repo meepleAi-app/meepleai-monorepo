@@ -372,11 +372,6 @@ describe('useGameChat', () => {
   });
 
   /**
-   * #4332: `ask` rifiuta per un errore vero (sopra), e l'hook dà anche la frase da mostrare:
-   * quella tradotta del codice se il backend ne manda uno, altrimenti una generica. Il testo
-   * grezzo di un'eccezione di trasporto (`HTTP 500`) non è per l'utente.
-   */
-  /**
    * Uno stream che si chiude pulito senza `Complete` né `Error` — un proxy che taglia a metà, un backend
    * che cade dopo qualche token. `ask` terminava senza errore e senza messaggio: l'indicatore di scrittura
    * spariva e all'utente non restava niente. È la stessa classe di difetto di #4335, su un altro hook.
@@ -414,6 +409,24 @@ describe('useGameChat', () => {
       expect(result.current.messages.map(m => m.role)).toEqual(['user']);
     });
 
+    it('the next question after an interruption starts clean and can succeed', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(mockStream([{ type: 7, data: 'Cinque ' }]) as any);
+      const { result } = renderHook(() => useGameChat('wingspan'));
+      await act(async () => {
+        await expect(result.current.ask('q')).rejects.toThrow();
+      });
+      expect(result.current.isError).toBe(true);
+
+      vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
+      await act(async () => {
+        await result.current.ask('q2');
+      });
+
+      expect(result.current.isError).toBe(false);
+      expect(result.current.errorMessage).toBeNull();
+      expect(result.current.messages.map(m => m.role)).toEqual(['user', 'user', 'agent']);
+    });
+
     it('a stream that ends with a Complete is not an error', async () => {
       vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
       const { result } = renderHook(() => useGameChat('wingspan'));
@@ -443,6 +456,11 @@ describe('useGameChat', () => {
     });
   });
 
+  /**
+   * #4332: `ask` rifiuta per un errore vero (sopra), e l'hook dà anche la frase da mostrare:
+   * quella tradotta del codice se il backend ne manda uno, altrimenti una generica. Il testo
+   * grezzo di un'eccezione di trasporto (`HTTP 500`) non è per l'utente.
+   */
   describe('errorMessage (#4332)', () => {
     it('is null before any error', () => {
       const { result } = renderHook(() => useGameChat('wingspan'));

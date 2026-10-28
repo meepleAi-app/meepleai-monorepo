@@ -21,13 +21,21 @@ const MESSAGES: Readonly<Record<string, string>> = {
   AGENT_PROFILE_NOT_PUBLISHED: "L'assistente AI non è ancora configurato. Riprova più tardi.",
 };
 
+/**
+ * La frase italiana di un codice che conosciamo, o `undefined` per ogni altro. A differenza di
+ * `qaStreamErrorMessage` non ripiega sul testo del backend: il catch-all degli endpoint di risposta
+ * manda `An error occurred: {ex.Message}` con codice `INTERNAL_ERROR`, e quel testo può contenere
+ * il messaggio di un'eccezione interna (#4332).
+ */
+export function qaStreamKnownErrorMessage(errorCode?: string): string | undefined {
+  return errorCode && Object.prototype.hasOwnProperty.call(MESSAGES, errorCode)
+    ? MESSAGES[errorCode]
+    : undefined;
+}
+
 /** Il messaggio per l'utente: quello del codice se lo conosciamo, altrimenti quello del backend. */
 export function qaStreamErrorMessage(errorCode?: string, backendMessage?: string): string {
-  if (errorCode && Object.prototype.hasOwnProperty.call(MESSAGES, errorCode)) {
-    return MESSAGES[errorCode];
-  }
-
-  return backendMessage ?? 'Errore nella risposta AI';
+  return qaStreamKnownErrorMessage(errorCode) ?? backendMessage ?? 'Errore nella risposta AI';
 }
 
 /**

@@ -93,7 +93,7 @@ export function GameChatTab({
   useEffect(() => {
     if (chat.isHydrating) return;
     messagesEndRef.current?.scrollIntoView({ behavior: 'instant' as ScrollBehavior, block: 'end' });
-  }, [chat.isHydrating, chat.messages.length]);
+  }, [chat.isHydrating, chat.messages.length, chat.errorMessage]);
 
   // #4332: per un errore vero `ask` rifiuta (è il contratto dell'hook), e il guasto è già in
   // `chat.isError` / `chat.errorMessage`, che la lista mostra: il catch toglie la promise

@@ -13,6 +13,8 @@ import {
   QA_TOO_MANY_REQUESTS_MESSAGE,
   QaTooManyRequestsError,
   qaRequestFailureMessage,
+  qaStreamErrorMessage,
+  qaStreamKnownErrorMessage,
   throwIfQaTooManyRequests,
 } from '../qaStreamErrors';
 
@@ -52,5 +54,34 @@ describe('qaRequestFailureMessage', () => {
     ['nothing', undefined],
   ])('gives the fallback for %s', (_label, failure) => {
     expect(qaRequestFailureMessage(failure, 'Errore generico')).toBe('Errore generico');
+  });
+});
+
+describe('qaStreamKnownErrorMessage (#4332)', () => {
+  it('gives the Italian sentence of a code we know', () => {
+    expect(qaStreamKnownErrorMessage('AI_PROVIDER_UNAVAILABLE')).toBe(
+      'Il servizio AI è temporaneamente non disponibile. Riprova tra qualche minuto.'
+    );
+  });
+
+  // Il catch-all degli endpoint di risposta manda `An error occurred: {ex.Message}` con questo codice:
+  // il testo è il messaggio di un'eccezione interna, non una frase per l'utente.
+  it.each(['INTERNAL_ERROR', 'SOMETHING_NEW', '', undefined])(
+    'gives nothing for %s, instead of falling back on the backend text',
+    code => {
+      expect(qaStreamKnownErrorMessage(code)).toBeUndefined();
+    }
+  );
+
+  it('does not mistake an inherited object key for a code', () => {
+    expect(qaStreamKnownErrorMessage('constructor')).toBeUndefined();
+    expect(qaStreamKnownErrorMessage('toString')).toBeUndefined();
+  });
+
+  it('leaves qaStreamErrorMessage as it was: backend text for an unknown code', () => {
+    expect(qaStreamErrorMessage('INTERNAL_ERROR', 'An error occurred: boom')).toBe(
+      'An error occurred: boom'
+    );
+    expect(qaStreamErrorMessage('INTERNAL_ERROR')).toBe('Errore nella risposta AI');
   });
 });

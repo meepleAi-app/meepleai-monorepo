@@ -301,6 +301,27 @@ describe('GameChatTab', () => {
       expect(screen.queryByText(/upstream 503/)).not.toBeInTheDocument();
     });
 
+    it('an unknown code gets the generic sentence, never the backend text', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(
+        mockStream([
+          {
+            type: 5,
+            data: {
+              errorCode: 'INTERNAL_ERROR',
+              message: 'An error occurred: Npgsql.PostgresException 42P01',
+            },
+          },
+        ]) as any
+      );
+      render(<GameChatTab gameId="wingspan" />);
+      ask('q?');
+
+      expect(await screen.findByTestId('answer-error')).toHaveTextContent(
+        'La risposta non è arrivata. Riprova tra poco.'
+      );
+      expect(screen.queryByText(/Npgsql|An error occurred/)).not.toBeInTheDocument();
+    });
+
     it('a transport failure gets a generic sentence, not the raw error', async () => {
       vi.mocked(qaStream).mockReturnValueOnce(
         failing(new Error('QA stream failed: HTTP 500'))() as any

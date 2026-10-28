@@ -23,12 +23,13 @@ import { useCallback, useEffect, useState } from 'react';
 
 import {
   QaTooManyRequestsError,
-  qaStreamErrorMessage,
+  qaStreamKnownErrorMessage,
 } from '@/components/chat-unified/qaStreamErrors';
 import type { AgentKind } from '@/components/features/game-chat/GameChatHeader';
 import { api } from '@/lib/api';
 import { qaStream } from '@/lib/api/clients/chatClient';
 import type { ChatThreadMessageDto } from '@/lib/api/schemas/chat.schemas';
+import { logger } from '@/lib/logger';
 import { readTierLimit, TIER_LIMIT_EXCEEDED, type TierLimit } from '@/lib/tier-limit';
 import type { Citation } from '@/types';
 
@@ -60,9 +61,10 @@ export interface UseGameChatResult {
    */
   readonly refusal: string | null;
   /**
-   * #4332: la frase da mostrare quando `isError` è vero — quella tradotta del codice, se il backend ne
-   * manda uno, altrimenti una generica. `ask` rifiuta comunque (è il contratto per un errore vero): la
-   * frase serve a chi lo chiama per far vedere il guasto, non il testo grezzo dell'eccezione.
+   * #4332: la frase da mostrare quando `isError` è vero — quella tradotta del codice, se è uno dei
+   * codici che conosciamo, altrimenti una generica. Mai il testo grezzo del backend: per un guasto
+   * interno è il messaggio di un'eccezione. `ask` rifiuta comunque (è il contratto per un errore
+   * vero): la frase serve a chi lo chiama per far vedere il guasto.
    */
   readonly errorMessage: string | null;
   readonly currentAgent: AgentKind;
@@ -290,10 +292,7 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
               setTierLimit(readTierLimit(event.data));
               return;
             }
-            failureMessage = qaStreamErrorMessage(
-              errPayload?.errorCode ?? undefined,
-              errPayload?.message
-            );
+            failureMessage = qaStreamKnownErrorMessage(errPayload?.errorCode ?? undefined) ?? null;
             throw new Error(errPayload?.message ?? 'QA stream error');
           } else if (event.type === CITATIONS_EVENT_TYPE) {
             // Issue #V: the early CITATIONS event is the ONLY place citations
@@ -313,6 +312,8 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
           setRefusal(e.message);
           return;
         }
+        // L'utente vede una frase; la causa vera (status HTTP, testo del backend) resta qui.
+        logger.error('useGameChat: la risposta non è arrivata', e);
         setIsError(true);
         setErrorMessage(failureMessage ?? GENERIC_ANSWER_FAILURE);
         throw e;

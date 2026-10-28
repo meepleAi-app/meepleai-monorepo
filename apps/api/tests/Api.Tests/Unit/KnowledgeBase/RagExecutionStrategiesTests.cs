@@ -8,9 +8,10 @@ namespace Api.Tests.Unit.KnowledgeBase;
 
 /// <summary>
 /// #4677: the strategies the playground saves its runs with and the ids the dashboard routes accept were two lists that
-/// nobody tied together, and they had drifted apart. <see cref="RagExecutionStrategies.All"/> is the single definition;
-/// these tests pin that the writer (<c>ResolveStrategy</c>) produces exactly those values and nothing else, so a
-/// strategy added to the writer without the list (or the other way round) fails here instead of reopening the 404.
+/// nobody tied together, and they had drifted apart. <see cref="RagExecutionStrategies.All"/> is the single definition,
+/// and the writer (<c>ResolveStrategy</c>) is derived from it: it keeps what the list holds and nothing else, so a
+/// strategy cannot be added to the writer without being in the list. These tests pin that, and pin the three values
+/// themselves, which are already saved in the database.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]

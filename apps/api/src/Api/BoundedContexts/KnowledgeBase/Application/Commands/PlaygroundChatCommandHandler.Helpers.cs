@@ -55,16 +55,12 @@ internal sealed partial class PlaygroundChatCommandHandler
     /// </summary>
     internal static string ResolveStrategy(string? strategyOverride)
     {
-        if (string.IsNullOrWhiteSpace(strategyOverride))
-            return Strategies.SingleModel;
+        // Derived from the list the dashboard routes read back (#4677): what the writer keeps is exactly
+        // RagExecutionStrategies.All, so a strategy cannot be added here without being in the list.
+        if (strategyOverride is not null && Strategies.All.Contains(strategyOverride, StringComparer.Ordinal))
+            return strategyOverride;
 
-        // The same values the dashboard routes read back (#4677): RagExecutionStrategies.All.
-        return strategyOverride switch
-        {
-            Strategies.RetrievalOnly or Strategies.SingleModel
-                or Strategies.MultiModelConsensus => strategyOverride,
-            _ => Strategies.SingleModel // Unknown strategies fall back to default
-        };
+        return Strategies.SingleModel; // No override, or an unknown one: the default
     }
 
     private static string BuildSystemPrompt(

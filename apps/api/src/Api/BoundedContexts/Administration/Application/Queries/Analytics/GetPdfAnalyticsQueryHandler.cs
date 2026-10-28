@@ -40,12 +40,15 @@ internal class GetPdfAnalyticsQueryHandler : IQueryHandler<GetPdfAnalyticsQuery,
             ? Math.Round((double)totalSucceeded / totalProcessed * 100, 2)
             : 0.0;
 
-        // Average processing time for documents that completed (UploadedAt → ProcessedAt)
+        // Average processing time for documents that completed (UploadedAt → ProcessedAt).
+        // #4678: `Select(...).DefaultIfEmpty(0).AverageAsync()` on a root query is not translatable by EF (the shape #4059
+        // fixed in RagExecutionRepository.GetStatsAsync): the handler threw on every call, on an empty table and on a
+        // full one. SQL AVG skips the NULLs and gives NULL when no row qualifies, so the nullable average keeps the old
+        // meaning (the ready documents with an instant only), and `?? 0` is the zero for "none finished".
         var avgProcessingTimeMs = await _db.Set<PdfDocumentEntity>().AsNoTracking()
             .Where(d => d.ProcessedAt != null && d.ProcessingState == "Ready")
-            .Select(d => (d.ProcessedAt!.Value - d.UploadedAt).TotalMilliseconds)
-            .DefaultIfEmpty(0)
-            .AverageAsync(cancellationToken).ConfigureAwait(false);
+            .Select(d => (double?)(d.ProcessedAt!.Value - d.UploadedAt).TotalMilliseconds)
+            .AverageAsync(cancellationToken).ConfigureAwait(false) ?? 0;
 
         return new PdfAnalyticsDto(
             TotalDocuments: totalDocuments,

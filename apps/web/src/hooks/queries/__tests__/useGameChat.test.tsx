@@ -376,6 +376,73 @@ describe('useGameChat', () => {
    * quella tradotta del codice se il backend ne manda uno, altrimenti una generica. Il testo
    * grezzo di un'eccezione di trasporto (`HTTP 500`) non è per l'utente.
    */
+  /**
+   * Uno stream che si chiude pulito senza `Complete` né `Error` — un proxy che taglia a metà, un backend
+   * che cade dopo qualche token. `ask` terminava senza errore e senza messaggio: l'indicatore di scrittura
+   * spariva e all'utente non restava niente. È la stessa classe di difetto di #4335, su un altro hook.
+   */
+  describe('stream closed without a result', () => {
+    it('an empty stream is reported as interrupted, not as silence', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(mockStream([]) as any);
+      const { result } = renderHook(() => useGameChat('wingspan'));
+
+      await act(async () => {
+        await expect(result.current.ask('q')).rejects.toThrow();
+      });
+
+      expect(result.current.isError).toBe(true);
+      expect(result.current.errorMessage).toBe(
+        'La risposta si è interrotta prima della fine, quindi non è completa. Riprova a chiedere.'
+      );
+    });
+
+    it('tokens without a Complete are reported as interrupted, and no half answer is kept', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(
+        mockStream([
+          { type: 7, data: 'Cinque ' },
+          { type: 7, data: 'tessere ' },
+        ]) as any
+      );
+      const { result } = renderHook(() => useGameChat('wingspan'));
+
+      await act(async () => {
+        await expect(result.current.ask('q')).rejects.toThrow();
+      });
+
+      expect(result.current.isError).toBe(true);
+      expect(result.current.isLoading).toBe(false);
+      expect(result.current.messages.map(m => m.role)).toEqual(['user']);
+    });
+
+    it('a stream that ends with a Complete is not an error', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
+      const { result } = renderHook(() => useGameChat('wingspan'));
+
+      await act(async () => {
+        await result.current.ask('q');
+      });
+
+      expect(result.current.isError).toBe(false);
+      expect(result.current.errorMessage).toBeNull();
+    });
+
+    it('a stream stopped by the plan quota is not reported as interrupted', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(
+        mockStream([
+          { type: 5, data: { errorCode: 'TIER_LIMIT_EXCEEDED', current: 3, max: 3 } },
+        ]) as any
+      );
+      const { result } = renderHook(() => useGameChat('wingspan'));
+
+      await act(async () => {
+        await result.current.ask('q');
+      });
+
+      expect(result.current.isError).toBe(false);
+      expect(result.current.errorMessage).toBeNull();
+    });
+  });
+
   describe('errorMessage (#4332)', () => {
     it('is null before any error', () => {
       const { result } = renderHook(() => useGameChat('wingspan'));

@@ -50,6 +50,24 @@ export interface GameChatTabProps {
   readonly gameIcon?: string;
 }
 
+/** Un avviso nella lista dei messaggi: la risposta non c'è, e qui il perché. */
+function AnswerNotice({
+  testId,
+  children,
+}: {
+  readonly testId: string;
+  readonly children: ReactNode;
+}): ReactElement {
+  return (
+    <div
+      data-testid={testId}
+      className="rounded-md bg-destructive/10 border border-destructive/30 border-l-4 border-l-destructive p-3 text-sm text-foreground"
+    >
+      {children}
+    </div>
+  );
+}
+
 const AGENT_AVATAR: Record<AgentKind, string> = { tutor: '🧙', arbitro: '⚖️' };
 const AGENT_NAME: Record<AgentKind, string> = { tutor: 'Tutor', arbitro: 'Arbitro' };
 
@@ -75,17 +93,19 @@ export function GameChatTab({
   useEffect(() => {
     if (chat.isHydrating) return;
     messagesEndRef.current?.scrollIntoView({ behavior: 'instant' as ScrollBehavior, block: 'end' });
-  }, [chat.isHydrating, chat.messages.length]);
+  }, [chat.isHydrating, chat.messages.length, chat.errorMessage]);
 
-  const handleSubmit = (q: string) => {
+  // #4332: per un errore vero `ask` rifiuta (è il contratto dell'hook), e il guasto è già in
+  // `chat.isError` / `chat.errorMessage`, che la lista mostra: il catch toglie la promise
+  // rifiutata non gestita, non nasconde niente.
+  const send = (question: string) => {
     setInputValue('');
-    void chat.ask(q);
+    chat.ask(question).catch(() => undefined);
   };
 
-  const handleSuggestedClick = (text: string) => {
-    setInputValue('');
-    void chat.ask(text);
-  };
+  const handleSubmit = (q: string) => send(q);
+
+  const handleSuggestedClick = (text: string) => send(text);
 
   const renderAgentExtras = (msg: ChatMessage): ReactNode => {
     const showOoc = msg.outOfContext === true;
@@ -229,12 +249,12 @@ export function GameChatTab({
                 {/* #4388: due risposte già aperte, la terza è rifiutata (429). Come l'avviso della quota,
                     sta nella lista dei messaggi, che è già una regione viva: niente role="alert" annidato. */}
                 {chat.refusal && (
-                  <div
-                    data-testid="answer-refusal"
-                    className="rounded-md bg-destructive/10 border border-destructive/30 border-l-4 border-l-destructive p-3 text-sm text-foreground"
-                  >
-                    {chat.refusal}
-                  </div>
+                  <AnswerNotice testId="answer-refusal">{chat.refusal}</AnswerNotice>
+                )}
+                {/* #4332: un errore vero dello stream. Stessa posizione e stesso motivo di sopra: la
+                    lista è già una regione viva. La domanda resta, e l'invio è di nuovo libero. */}
+                {chat.errorMessage && (
+                  <AnswerNotice testId="answer-error">{chat.errorMessage}</AnswerNotice>
                 )}
                 <div ref={messagesEndRef} aria-hidden="true" />
               </>

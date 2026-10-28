@@ -21,11 +21,15 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { QaTooManyRequestsError } from '@/components/chat-unified/qaStreamErrors';
+import {
+  QaTooManyRequestsError,
+  qaStreamKnownErrorMessage,
+} from '@/components/chat-unified/qaStreamErrors';
 import type { AgentKind } from '@/components/features/game-chat/GameChatHeader';
 import { api } from '@/lib/api';
 import { qaStream } from '@/lib/api/clients/chatClient';
 import type { ChatThreadMessageDto } from '@/lib/api/schemas/chat.schemas';
+import { logger } from '@/lib/logger';
 import { readTierLimit, TIER_LIMIT_EXCEEDED, type TierLimit } from '@/lib/tier-limit';
 import type { Citation } from '@/types';
 
@@ -56,6 +60,13 @@ export interface UseGameChatResult {
    * per la quota, non è un errore (`isError` resta falso e `ask` non rifiuta): la frase da mostrare.
    */
   readonly refusal: string | null;
+  /**
+   * #4332: la frase da mostrare quando `isError` è vero — quella tradotta del codice, se è uno dei
+   * codici che conosciamo, altrimenti una generica. Mai il testo grezzo del backend: per un guasto
+   * interno è il messaggio di un'eccezione. `ask` rifiuta comunque (è il contratto per un errore
+   * vero): la frase serve a chi lo chiama per far vedere il guasto.
+   */
+  readonly errorMessage: string | null;
   readonly currentAgent: AgentKind;
   readonly chatThreadId: string | null;
   readonly hasHistoricalMessages: boolean;
@@ -72,6 +83,9 @@ const TOKEN_EVENT_TYPE = 7;
 const COMPLETE_EVENT_TYPE = 4;
 const ERROR_EVENT_TYPE = 5;
 const CITATIONS_EVENT_TYPE = 1;
+
+/** La frase per un guasto senza un codice del backend (rete, HTTP 5xx): il testo grezzo non è per l'utente. */
+const GENERIC_ANSWER_FAILURE = 'La risposta non è arrivata. Riprova tra poco.';
 
 // Soglie derivate frontend (backend non espone isLowQuality/outOfContext)
 const LOW_QUALITY_THRESHOLD = 0.7;
@@ -150,6 +164,7 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
   const [isError, setIsError] = useState(false);
   const [tierLimit, setTierLimit] = useState<TierLimit | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // G2: default false (set true in effect) per non rompere test esistenti
   const [isHydrating, setIsHydrating] = useState(false);
   const [chatThreadId, setChatThreadId] = useState<string | null>(null);
@@ -205,9 +220,12 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
       setIsError(false);
       setTierLimit(null);
       setRefusal(null);
+      setErrorMessage(null);
 
       let answerBuffer = '';
       let collectedCitations: Citation[] = [];
+      // La frase di un evento di errore, da mostrare se l'eccezione che segue arriva fino al catch.
+      let failureMessage: string | null = null;
 
       try {
         const stream = qaStream({
@@ -274,6 +292,7 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
               setTierLimit(readTierLimit(event.data));
               return;
             }
+            failureMessage = qaStreamKnownErrorMessage(errPayload?.errorCode ?? undefined) ?? null;
             throw new Error(errPayload?.message ?? 'QA stream error');
           } else if (event.type === CITATIONS_EVENT_TYPE) {
             // Issue #V: the early CITATIONS event is the ONLY place citations
@@ -293,7 +312,10 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
           setRefusal(e.message);
           return;
         }
+        // L'utente vede una frase; la causa vera (status HTTP, testo del backend) resta qui.
+        logger.error('useGameChat: la risposta non è arrivata', e);
         setIsError(true);
+        setErrorMessage(failureMessage ?? GENERIC_ANSWER_FAILURE);
         throw e;
       } finally {
         setIsLoading(false);
@@ -313,6 +335,7 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
     isError,
     tierLimit,
     refusal,
+    errorMessage,
     currentAgent,
     chatThreadId,
     hasHistoricalMessages,

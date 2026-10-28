@@ -23,6 +23,7 @@ import {
 } from '@/components/chat-unified/qaStreamErrors';
 import { qaStream } from '@/lib/api/clients/chatClient';
 import { api } from '@/lib/api';
+import { logger } from '@/lib/logger';
 import { useGameChat } from '../useGameChat';
 
 async function* mockStream(events: Array<{ type: number; data: unknown }>) {
@@ -368,6 +369,130 @@ describe('useGameChat', () => {
 
     expect(result.current.isError).toBe(true);
     expect(result.current.refusal).toBeNull();
+  });
+
+  /**
+   * #4332: `ask` rifiuta per un errore vero (sopra), e l'hook dà anche la frase da mostrare:
+   * quella tradotta del codice se il backend ne manda uno, altrimenti una generica. Il testo
+   * grezzo di un'eccezione di trasporto (`HTTP 500`) non è per l'utente.
+   */
+  describe('errorMessage (#4332)', () => {
+    it('is null before any error', () => {
+      const { result } = renderHook(() => useGameChat('wingspan'));
+
+      expect(result.current.errorMessage).toBeNull();
+    });
+
+    it('translates the code of an error event', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(
+        mockStream([
+          { type: 5, data: { errorCode: 'AI_BUDGET_DAILY_EXHAUSTED', message: 'daily budget' } },
+        ]) as any
+      );
+      const { result } = renderHook(() => useGameChat('wingspan'));
+
+      await act(async () => {
+        await expect(result.current.ask('q')).rejects.toThrow();
+      });
+
+      expect(result.current.isError).toBe(true);
+      expect(result.current.errorMessage).toBe(
+        'Il servizio AI è in pausa fino a domani: è stato raggiunto il budget di spesa del giorno.'
+      );
+    });
+
+    it('gives a generic sentence for a transport failure', async () => {
+      const broken = async function* () {
+        throw new Error('QA stream failed: HTTP 500');
+        yield happyEvents[2];
+      };
+      vi.mocked(qaStream).mockReturnValueOnce(broken() as any);
+      const { result } = renderHook(() => useGameChat('wingspan'));
+
+      await act(async () => {
+        await expect(result.current.ask('q')).rejects.toThrow('HTTP 500');
+      });
+
+      expect(result.current.errorMessage).toBe('La risposta non è arrivata. Riprova tra poco.');
+    });
+
+    // Il catch-all degli endpoint di risposta manda `An error occurred: {ex.Message}` con codice
+    // INTERNAL_ERROR: il messaggio di un'eccezione interna non è per l'utente.
+    it('never exposes the raw backend text of a code it does not know', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(
+        mockStream([
+          {
+            type: 5,
+            data: {
+              errorCode: 'INTERNAL_ERROR',
+              message: 'An error occurred: Npgsql.PostgresException 42P01',
+            },
+          },
+        ]) as any
+      );
+      const { result } = renderHook(() => useGameChat('wingspan'));
+
+      await act(async () => {
+        await expect(result.current.ask('q')).rejects.toThrow();
+      });
+
+      expect(result.current.errorMessage).toBe('La risposta non è arrivata. Riprova tra poco.');
+    });
+
+    it('logs the real cause, since the user only sees a sentence', async () => {
+      const spy = vi.spyOn(logger, 'error').mockImplementation(() => undefined);
+      const broken = async function* () {
+        throw new Error('QA stream failed: HTTP 500');
+        yield happyEvents[2];
+      };
+      vi.mocked(qaStream).mockReturnValueOnce(broken() as any);
+      const { result } = renderHook(() => useGameChat('wingspan'));
+
+      await act(async () => {
+        await expect(result.current.ask('q')).rejects.toThrow('HTTP 500');
+      });
+
+      expect(spy).toHaveBeenCalledWith(
+        expect.stringContaining('la risposta non è arrivata'),
+        expect.objectContaining({ message: 'QA stream failed: HTTP 500' })
+      );
+      spy.mockRestore();
+    });
+
+    it('forgets the sentence with the next question', async () => {
+      const broken = async function* () {
+        throw new Error('boom');
+        yield happyEvents[2];
+      };
+      vi.mocked(qaStream).mockReturnValueOnce(broken() as any);
+      const { result } = renderHook(() => useGameChat('wingspan'));
+      await act(async () => {
+        await expect(result.current.ask('q')).rejects.toThrow('boom');
+      });
+      expect(result.current.errorMessage).not.toBeNull();
+
+      vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
+      await act(async () => {
+        await result.current.ask('q2');
+      });
+
+      expect(result.current.errorMessage).toBeNull();
+      expect(result.current.isError).toBe(false);
+    });
+
+    it('is not set by the plan quota or by too many open answers', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(
+        mockStream([
+          { type: 5, data: { errorCode: 'TIER_LIMIT_EXCEEDED', current: 3, max: 3 } },
+        ]) as any
+      );
+      const { result } = renderHook(() => useGameChat('wingspan'));
+      await act(async () => {
+        await result.current.ask('q');
+      });
+
+      expect(result.current.errorMessage).toBeNull();
+    });
   });
 
   it('forgets the plan quota with the next question', async () => {

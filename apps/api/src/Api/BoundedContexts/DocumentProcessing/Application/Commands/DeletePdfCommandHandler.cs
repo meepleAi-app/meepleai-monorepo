@@ -91,7 +91,8 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
             // Asking twice changes nothing the second time while another game uses the PDF: the first call removes
             // the link of the game it was uploaded for, that game is still the one letting go, and the other game
             // still uses it. The old threshold deleted it on the second call, taking the PDF from the game that
-            // used it. What to answer to someone who asked to delete is #4627.
+            // used it. What to answer to someone who asked to delete is #4627, decided on 2026-10-28: the game the PDF
+            // belongs to lets go of it, and the answer says "unlinked" or "kept" (PdfDeleteOutcome), never "deleted".
             var letGoGameId = command.CallerGameId ?? pdfDoc.SharedGameId ?? pdfDoc.PrivateGameId ?? Guid.Empty;
             var usingGames = await _db.LiveLinksToPdfs()
                 .Where(l => l.TargetEntityId == pdfGuid)
@@ -115,12 +116,17 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
                 // command carries an explicit caller game
                 // (e.g. RemoveRagFromSharedGameCommandHandler cleaning up that specific
                 // game), remove THAT game's links, whoever wrote them: the flow decides for the game.
-                // Only fall back to SharedGameId for call sites where caller == uploader's game (no
+                // Only fall back to the game the PDF was uploaded for where caller == uploader's game (no
                 // distinct game context exists): there the uploader is letting go, and only the links
                 // the uploader wrote go (#4641). A second user who declared the same file keeps theirs.
+                //
+                // #4627: the game the PDF was uploaded for is the SAME one the count above reads as letting go,
+                // `letGoGameId`. This used to look in `SharedGameId` only, which is null for the PDF of a private
+                // game: nothing was removed and the answer was still a success, so the client believed the PDF gone
+                // while it stayed linked, indexed and queryable. No game of its own (a legacy row) means nobody lets go.
                 var linkRemoved = await RemoveCallerLinkAsync(
                     pdfGuid,
-                    command.CallerGameId ?? pdfDoc.SharedGameId,
+                    letGoGameId == Guid.Empty ? null : letGoGameId,
                     command.CallerGameId is null ? uploadedByUserId : null,
                     cancellationToken).ConfigureAwait(false);
 
@@ -128,12 +134,17 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
                     "PDF {PdfId} still used by {OtherGames} other game(s) (caller link removed: {LinkRemoved}) — record/blob/vectors preserved",
                     pdfId, otherGames, linkRemoved);
 
-                return new PdfDeleteResult(
-                    true,
-                    linkRemoved
-                        ? "PDF unlinked from game (still referenced by other games)"
-                        : "PDF kept (still used by other games, no link of the caller left to remove)",
-                    storageGameIdForUnlink);
+                return linkRemoved
+                    ? new PdfDeleteResult(
+                        true,
+                        "PDF unlinked from game (still referenced by other games)",
+                        storageGameIdForUnlink,
+                        PdfDeleteOutcome.Unlinked)
+                    : new PdfDeleteResult(
+                        true,
+                        "PDF kept (still used by other games, no link of the caller left to remove)",
+                        storageGameIdForUnlink,
+                        PdfDeleteOutcome.Kept);
             }
 
             // Delete associated vector document and vectors from pgvector

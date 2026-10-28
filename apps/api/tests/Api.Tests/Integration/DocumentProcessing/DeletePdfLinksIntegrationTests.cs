@@ -1,10 +1,12 @@
 using System.Net;
+using System.Text.Json;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.EntityRelationships.Domain.Aggregates;
 using Api.BoundedContexts.EntityRelationships.Domain.Enums;
 using Api.BoundedContexts.UserLibrary.Domain.Enums;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.UserLibrary;
 using Api.Tests.Constants;
@@ -287,12 +289,14 @@ public sealed class DeletePdfLinksIntegrationTests
     }
 
     /// <summary>
-    /// Two links of the owner from two games that exist: another game uses it, the row stays. For a private PDF the
-    /// owner can never delete it from here while that holds, and the answer is still a success: the open question of
-    /// #4627, which this test does not settle.
+    /// #4627, decided (2026-10-28): two links of the owner from two games that exist. Another game uses the PDF, so the
+    /// row stays, and the game the PDF belongs to lets go of it: its link goes, the other game's stays. The answer says
+    /// so (200 "unlinked", not a 204 that reads as "deleted"). Before, the request named no game, the handler looked
+    /// the game up in <c>SharedGameId</c> only (null for a private PDF), removed nothing and answered 204: the client
+    /// believed the PDF gone while it stayed linked, indexed and queryable.
     /// </summary>
     [Fact]
-    public async Task TwoLinksOfTheOwner_FromGamesThatExist_KeepThePdf()
+    public async Task TwoLinksOfTheOwner_FromGamesThatExist_UnlinkTheGameOfThePdf_AndKeepThePdfForTheOther()
     {
         var secondGame = await SeedPrivateGameAsync(_userId, deleted: false);
         await LinkAsync(_gameId, _pdfId, _userId);
@@ -300,8 +304,87 @@ public sealed class DeletePdfLinksIntegrationTests
 
         var response = await DeletePdfAsync(_pdfId);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent, await response.Content.ReadAsStringAsync(Ct));
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        using (var json = JsonDocument.Parse(body))
+        {
+            json.RootElement.GetProperty("outcome").GetString().Should().Be("unlinked");
+            json.RootElement.GetProperty("pdfId").GetGuid().Should().Be(_pdfId);
+            json.RootElement.GetProperty("message").GetString().Should().Contain("unlinked");
+        }
+
+        (await LinkOwnersAsync(_gameId, _pdfId)).Should().BeEmpty("the game the PDF belongs to let go of it");
+        (await LinkOwnersAsync(secondGame, _pdfId)).Should().BeEquivalentTo(new[] { _userId },
+            "the other game still uses it, and its link is untouched");
         (await PdfExistsAsync(_pdfId)).Should().BeTrue("the owner's second game still uses it");
+    }
+
+    /// <summary>
+    /// The audit trail must not say "deleted successfully" when the row stays (#4627): an unlink is its own action.
+    /// </summary>
+    [Fact]
+    public async Task TheAudit_RecordsAnUnlink_NotADeletion_WhenTheRowStays()
+    {
+        var secondGame = await SeedPrivateGameAsync(_userId, deleted: false);
+        await LinkAsync(_gameId, _pdfId, _userId);
+        await LinkAsync(secondGame, _pdfId, _userId);
+
+        (await DeletePdfAsync(_pdfId)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var entries = await AuditEntriesOfAsync(_pdfId);
+        entries.Should().ContainSingle();
+        entries[0].Action.Should().Be("UNLINK");
+        entries[0].Result.Should().Be("Success");
+        entries[0].Details.Should().NotContain("deleted successfully")
+            .And.Contain("unlinked", "it says what happened to the PDF");
+    }
+
+    /// <summary>
+    /// Asked again, the answer is "kept": the game already let go, there is no link of its own left to remove, and the
+    /// other game still uses the PDF. Nothing changes, and the client is told so instead of a 204 (#4627).
+    /// </summary>
+    [Fact]
+    public async Task ADeleteAskedTwice_OfAPrivatePdfAnotherGameUses_AnswersKeptTheSecondTime()
+    {
+        var secondGame = await SeedPrivateGameAsync(_userId, deleted: false);
+        await LinkAsync(_gameId, _pdfId, _userId);
+        await LinkAsync(secondGame, _pdfId, _userId);
+
+        var first = await DeletePdfAsync(_pdfId);
+        var second = await DeletePdfAsync(_pdfId);
+
+        (await OutcomeOfAsync(first)).Should().Be("unlinked");
+        second.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await OutcomeOfAsync(second)).Should().Be("kept");
+        (await LinkOwnersAsync(secondGame, _pdfId)).Should().BeEquivalentTo(new[] { _userId });
+        (await PdfExistsAsync(_pdfId)).Should().BeTrue();
+
+        var entries = await AuditEntriesOfAsync(_pdfId);
+        entries.Select(e => e.Action).Should().Equal("UNLINK", "DELETE");
+        entries[1].Result.Should().Be("Skipped", "nothing was done");
+        entries[1].Details.Should().NotContain("deleted successfully");
+    }
+
+    /// <summary>
+    /// A PDF with no game of its own (a legacy row) that two games link: nobody is letting go of it, so there is
+    /// nothing to unlink. The answer is "kept", not a 204 that reads as "deleted".
+    /// </summary>
+    [Fact]
+    public async Task APdfWithNoGameOfItsOwn_ThatTwoGamesLink_AnswersKept()
+    {
+        var firstGame = await SeedPrivateGameAsync(_userId, deleted: false);
+        var secondGame = await SeedPrivateGameAsync(_userId, deleted: false);
+        await ForgetTheGamesOfAsync(_pdfId);
+        await LinkAsync(firstGame, _pdfId, _userId);
+        await LinkAsync(secondGame, _pdfId, _userId);
+
+        var response = await DeletePdfAsync(_pdfId);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
+        (await OutcomeOfAsync(response)).Should().Be("kept");
+        (await LinkOwnersAsync(firstGame, _pdfId)).Should().NotBeEmpty();
+        (await LinkOwnersAsync(secondGame, _pdfId)).Should().NotBeEmpty();
+        (await PdfExistsAsync(_pdfId)).Should().BeTrue();
     }
 
     /// <summary>The PDF with only its own link is the last use: it goes.</summary>
@@ -337,8 +420,10 @@ public sealed class DeletePdfLinksIntegrationTests
 
         first.Success.Should().BeTrue();
         first.Message.Should().Contain("unlinked");
+        first.Outcome.Should().Be(PdfDeleteOutcome.Unlinked);
         second.Success.Should().BeTrue();
         second.Message.Should().Contain("kept", "there was no link of the caller left to remove");
+        second.Outcome.Should().Be(PdfDeleteOutcome.Kept);
         (await PdfExistsAsync(_pdfId)).Should().BeTrue("the other game still uses it");
     }
 
@@ -397,6 +482,7 @@ public sealed class DeletePdfLinksIntegrationTests
 
         result.Success.Should().BeTrue();
         result.Message.Should().Contain("unlinked");
+        result.Outcome.Should().Be(PdfDeleteOutcome.Unlinked);
         (await LinkOwnersAsync(uploadedFor, _pdfId)).Should().BeEquivalentTo(new[] { secondUploaderId },
             "the uploader's link went, the other user's did not");
         (await LinkOwnersAsync(otherGame, _pdfId)).Should().BeEquivalentTo(new[] { _userId });
@@ -546,6 +632,26 @@ public sealed class DeletePdfLinksIntegrationTests
         using var scope = _hostFixture.Factory.Services.CreateScope();
         return await scope.ServiceProvider.GetRequiredService<IMediator>()
             .Send(new DeletePdfCommand(pdfId.ToString()), Ct);
+    }
+
+    /// <summary>The <c>outcome</c> field of a 200 answer to <c>DELETE /pdf/{id}</c>.</summary>
+    private async Task<string?> OutcomeOfAsync(HttpResponseMessage response)
+    {
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        using var json = JsonDocument.Parse(body);
+        return json.RootElement.GetProperty("outcome").GetString();
+    }
+
+    /// <summary>The audit entries written about the PDF, oldest first.</summary>
+    private async Task<List<AuditLogEntity>> AuditEntriesOfAsync(Guid pdfId)
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        return await db.AuditLogs
+            .AsNoTracking()
+            .Where(a => a.Resource == "PdfDocument" && a.ResourceId == pdfId.ToString())
+            .OrderBy(a => a.CreatedAt)
+            .ToListAsync(Ct);
     }
 
     private async Task<List<Guid>> LinkOwnersAsync(Guid gameId, Guid pdfId)

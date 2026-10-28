@@ -155,9 +155,10 @@ public sealed class DeletePdfKbCacheIntegrationTests
 
     /// <summary>
     /// Un PDF che un altro gioco usa ancora non si cancella: la riga resta (#2949), l'elenco non cambia, e quindi non
-    /// c'è niente da invalidare. Qui il PDF è di un gioco privato e la richiesta non nomina nessun gioco, perciò
-    /// il gestore non toglie nemmeno un collegamento; quel che conta per #4308 è che la riga resti e che le
-    /// etichette del documento non vengano toccate.
+    /// c'è niente da invalidare. Qui il PDF è di un gioco privato e la richiesta non nomina nessun gioco: dal
+    /// 2026-10-28 (#4627) il gioco a cui il PDF appartiene lo molla, cioè il suo collegamento sparisce e quello
+    /// dell'altro gioco resta, e la risposta lo dice (200 «unlinked», non un 204). Per #4308 conta che la riga resti e
+    /// che le etichette del documento non vengano toccate.
     /// </summary>
     [Fact]
     public async Task APdfLinkedFromOtherGames_SurvivesTheDelete_AndItsCachesAreLeftAlone()
@@ -168,7 +169,9 @@ public sealed class DeletePdfKbCacheIntegrationTests
 
         var response = await DeletePdfAsync(_pdfId);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent, await response.Content.ReadAsStringAsync(Ct));
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync(Ct));
+        (await LinkedGamesAsync(_pdfId)).Should().BeEquivalentTo(new[] { _otherGameId },
+            "the game the PDF belongs to let go of it, the other game keeps using it");
         (await PdfExistsAsync(_pdfId)).Should().BeTrue("another game still uses it: the row survives");
         (await ListedDocumentsAsync()).Should().BeEquivalentTo(new[] { _pdfId, _controlPdfId });
         // Le due etichette del documento sono solo sue: nessuno le ha toccate. Né quella dell'elenco del proprietario:
@@ -387,6 +390,19 @@ public sealed class DeletePdfKbCacheIntegrationTests
             MeepleEntityType.KbCard, pdfId,
             EntityLinkType.RelatedTo, EntityLinkScope.User, _userId));
         await db.SaveChangesAsync(Ct);
+    }
+
+    /// <summary>I giochi che hanno un collegamento al PDF.</summary>
+    private async Task<List<Guid>> LinkedGamesAsync(Guid pdfId)
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        return await db.EntityLinks
+            .Where(l => l.TargetEntityId == pdfId
+                && l.TargetEntityType == MeepleEntityType.KbCard
+                && l.SourceEntityType == MeepleEntityType.Game)
+            .Select(l => l.SourceEntityId)
+            .ToListAsync(Ct);
     }
 
     private async Task<bool> PdfExistsAsync(Guid pdfId)

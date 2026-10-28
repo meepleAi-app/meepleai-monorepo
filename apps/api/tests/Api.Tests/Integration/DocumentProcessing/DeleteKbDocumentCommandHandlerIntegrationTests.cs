@@ -182,6 +182,9 @@ public sealed class DeleteKbDocumentCommandHandlerIntegrationTests : IAsyncLifet
             c => c.RemoveByTagAsync($"kbDoc:{pdfId:N}", It.IsAny<CancellationToken>()), Times.Once);
         _hybridCacheMock.Verify(
             c => c.RemoveByTagAsync($"kbChunks:{pdfId:N}", It.IsAny<CancellationToken>()), Times.Once);
+        // #4626: il feed di Discover (GetRecentKbDocsQueryHandler) è uguale per tutti e porta questa etichetta.
+        _hybridCacheMock.Verify(
+            c => c.RemoveByTagAsync("recentDocs", It.IsAny<CancellationToken>()), Times.Once);
         // L'elenco di tutti gli altri utenti resta dov'è: l'etichetta per utente basta.
         _hybridCacheMock.Verify(
             c => c.RemoveByTagAsync("user-docs", It.IsAny<CancellationToken>()), Times.Never);

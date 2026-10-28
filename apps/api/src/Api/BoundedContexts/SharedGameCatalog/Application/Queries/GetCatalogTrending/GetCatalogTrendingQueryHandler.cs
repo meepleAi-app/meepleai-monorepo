@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -24,7 +25,7 @@ internal sealed class GetCatalogTrendingQueryHandler : IRequestHandler<GetCatalo
     // them would render every trending card without the KB badge for up to
     // 12 h after deploy. The new key naturally orphans the old cache.
     private const string CacheKey = "catalog:trending:v2";
-    private const int MaxCacheLimit = 50;
+    internal const int MaxCacheLimit = 50;
     private static readonly TimeSpan CacheTtl = TimeSpan.FromHours(12);
 
     private readonly MeepleAiDbContext _context;
@@ -54,7 +55,7 @@ internal sealed class GetCatalogTrendingQueryHandler : IRequestHandler<GetCatalo
         var allTrending = await _cache.GetOrCreateAsync(
             CacheKey,
             async ct => await ComputeTrendingAsync(MaxCacheLimit, ct).ConfigureAwait(false),
-            tags: ["catalog", "trending"],
+            tags: [CatalogRailsCache.Tag, "trending"],
             expiration: CacheTtl,
             ct: cancellationToken).ConfigureAwait(false);
 
@@ -133,16 +134,21 @@ internal sealed class GetCatalogTrendingQueryHandler : IRequestHandler<GetCatalo
                 };
             })
             .OrderByDescending(g => g.Score)
-            .Take(limit)
             .ToList();
 
-        // Fetch game details for the trending games. Issue #2290: project
+        // Fetch game details for the scored games. Issue #2290: project
         // HasKnowledgeBase into the same round-trip so Discover row 1 has the
         // KB badge data inline (no N+1 on SharedGameDto downstream).
+        //
+        // #4659: only Published games, and only games that still exist (the soft-delete query filter).
+        // Analytics events outlive the game: one archived or deleted after the event was recorded would
+        // otherwise stay in the ranking — for deleted ones as a card titled "Unknown Game" — and its link
+        // opens a detail that answers 404 to anyone but admin/editor. The filter runs BEFORE the limit: the
+        // most viewed of the unpublished games would otherwise take places from published ones.
         var gameIds = gameScores.Select(g => g.GameId).ToList();
         var games = await _context.Set<SharedGameEntity>()
             .AsNoTracking()
-            .Where(g => gameIds.Contains(g.Id))
+            .Where(g => gameIds.Contains(g.Id) && g.Status == (int)GameStatus.Published)
             .Select(g => new { g.Id, g.Title, g.ThumbnailUrl, g.HasKnowledgeBase })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -151,23 +157,26 @@ internal sealed class GetCatalogTrendingQueryHandler : IRequestHandler<GetCatalo
 
         // Build result DTOs with ranking
         var rank = 1;
-        var result = gameScores.Select(g =>
-        {
-            gameMap.TryGetValue(g.GameId, out var game);
-            return new TrendingGameDto
+        var result = gameScores
+            .Where(g => gameMap.ContainsKey(g.GameId))
+            .Take(limit)
+            .Select(g =>
             {
-                Rank = rank++,
-                GameId = g.GameId,
-                Title = game?.Title ?? "Unknown Game",
-                ThumbnailUrl = game?.ThumbnailUrl,
-                Score = Math.Round(g.Score, 2),
-                SearchCount = g.SearchCount,
-                ViewCount = g.ViewCount,
-                LibraryAddCount = g.LibraryAddCount,
-                PlayCount = g.PlayCount,
-                HasKnowledgeBase = game?.HasKnowledgeBase ?? false
-            };
-        }).ToList();
+                var game = gameMap[g.GameId];
+                return new TrendingGameDto
+                {
+                    Rank = rank++,
+                    GameId = g.GameId,
+                    Title = game.Title,
+                    ThumbnailUrl = game.ThumbnailUrl,
+                    Score = Math.Round(g.Score, 2),
+                    SearchCount = g.SearchCount,
+                    ViewCount = g.ViewCount,
+                    LibraryAddCount = g.LibraryAddCount,
+                    PlayCount = g.PlayCount,
+                    HasKnowledgeBase = game.HasKnowledgeBase
+                };
+            }).ToList();
 
         _logger.LogInformation(
             "Computed trending scores for {GameCount} games from {EventCount} events",

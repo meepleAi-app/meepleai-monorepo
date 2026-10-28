@@ -2,14 +2,15 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 
 /// <summary>
 /// #4603: il punto in cui i command handler di SharedGameCatalog tolgono dalla cache il read model del
-/// catalogo — il dettaglio di un gioco (<c>GET /api/v1/shared-games/{id}</c>) e la lista
-/// (<c>GET /api/v1/shared-games</c>).
+/// catalogo — il dettaglio di un gioco (<c>GET /api/v1/shared-games/{id}</c>), la lista
+/// (<c>GET /api/v1/shared-games</c>) e le rail (<c>GET /api/v1/catalog/games/new</c>,
+/// <c>GET /api/v1/catalog/trending</c>, #4659).
 /// </summary>
 /// <remarks>
 /// <para>
 /// Chi lo chiama oggi: i command handler del BC che cambiano lo stato di un gioco o lo cancellano, o che
-/// scrivono cover, traduzioni, errata, FAQ, dati (<c>UpdateSharedGame</c>, import Excel) e accesso RAG. Non
-/// è la garanzia che ogni percorso di scrittura del BC lo chiami. Chi non lo usa e scrive i tag a mano:
+/// scrivono cover, traduzioni, errata, FAQ, dati (<c>UpdateSharedGame</c>, import Excel) e accesso RAG, più
+/// l'import da BGG quando pubblica subito (<c>AutoPublish</c>, #4659). Non è la garanzia che ogni percorso di scrittura del BC lo chiami. Chi non lo usa e scrive i tag a mano:
 /// gli event handler e i job <c>PdfCoverGeneratedEventHandler</c>,
 /// <c>VectorDocumentIndexedForKbFlagHandler</c>, <c>ToolkitChangedForCatalogAggregatesHandler</c>,
 /// <c>AgentDefinitionChangedForCatalogAggregatesHandler</c>, <c>ScheduledBulkInvalidationJob</c> e
@@ -26,6 +27,20 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 /// i flag di KB e toolkit — e include solo i giochi pubblicati: la toccano le scritture su quei campi e
 /// ogni cambio di stato o cancellazione, perché fa entrare o uscire il gioco dalla lista. Errata e FAQ,
 /// che la lista non riporta, la lasciano com'è.
+/// </para>
+/// <para>
+/// Le rail del catalogo (#4659) sono liste di giochi con un loro tag e mostrano un sottoinsieme ancora più
+/// piccolo — titolo, editore, anno, il flag KB nel trending — e solo giochi pubblicati. Cambiano quando
+/// cambia un gioco in quei campi o quando un gioco entra o esce dai pubblicati, che sono fra i casi in cui
+/// si toglie la lista: i due metodi che tolgono la lista tolgono anche le rail, anche per le scritture che
+/// la lista mostra e le rail no (le cover, che le rail risolvono dopo la cache: costano un ricalcolo del
+/// trending, non un errore). <see cref="EvictDetailAsync"/> no.
+/// </para>
+/// <para>
+/// Chi scrive i tag a mano (l'elenco sopra) non toglie le rail: per
+/// <c>VectorDocumentIndexedForKbFlagHandler</c> e <c>KbFlagDriftAuditJob</c>, che cambiano il flag KB, il
+/// trending può restare vecchio fino alla scadenza della voce, e <c>ScheduledBulkInvalidationJob</c> non è
+/// una rete di sicurezza per le rail.
 /// </para>
 /// <para>
 /// Errori e cancellazione (#4603, punto 2, deciso). L'evizione sta DOPO il commit, quindi non può far
@@ -57,15 +72,15 @@ internal interface ISharedGameCacheInvalidator
     Task EvictDetailAsync(Guid gameId, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Toglie dalla cache la lista (tag <c>search-games</c>, tutte le sue voci) e il dettaglio di UN
-    /// gioco (tag <c>shared-game:{id}</c>).
+    /// Toglie dalla cache la lista (tag <c>search-games</c>, tutte le sue voci), le rail del catalogo (tag
+    /// <c>catalog</c>, #4659) e il dettaglio di UN gioco (tag <c>shared-game:{id}</c>).
     /// </summary>
     Task EvictDetailAndListAsync(Guid gameId, CancellationToken cancellationToken);
 
     /// <summary>
     /// Come <see cref="EvictDetailAndListAsync"/> per più giochi di una stessa scrittura (le azioni in
-    /// blocco): la lista si toglie una volta sola, il dettaglio di ciascun gioco una volta. Con un
-    /// elenco vuoto non fa niente, lista compresa.
+    /// blocco): la lista e le rail si tolgono una volta sola, il dettaglio di ciascun gioco una volta. Con un
+    /// elenco vuoto non fa niente, lista e rail comprese.
     /// </summary>
     Task EvictDetailsAndListAsync(IReadOnlyCollection<Guid> gameIds, CancellationToken cancellationToken);
 }

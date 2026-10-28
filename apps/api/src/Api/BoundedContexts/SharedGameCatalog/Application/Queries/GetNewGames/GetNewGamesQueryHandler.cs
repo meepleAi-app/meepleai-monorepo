@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Services;
@@ -19,13 +20,13 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetNewGames;
 /// Strategy mirrors <see cref="GetCatalogTrending.GetCatalogTrendingQueryHandler"/>:
 /// always materialize the full <see cref="MaxCacheLimit"/> set and trim to the
 /// requested limit so a single cache entry serves all caller variants.
-/// Cache TTL: 1 hour (PR #732 §3.2 caching matrix). Excludes soft-deleted rows.
+/// Cache TTL: 1 hour (PR #732 §3.2 caching matrix). Only Published, non-deleted rows (#4659).
 /// </remarks>
 internal sealed class GetNewGamesQueryHandler
     : IRequestHandler<GetNewGamesQuery, IReadOnlyList<NewGameDto>>
 {
     private const string CacheKey = "discover:newGames";
-    private const int MaxCacheLimit = 50;
+    internal const int MaxCacheLimit = 50;
     private static readonly TimeSpan CacheTtl = TimeSpan.FromHours(1);
 
     private readonly MeepleAiDbContext _context;
@@ -54,7 +55,7 @@ internal sealed class GetNewGamesQueryHandler
         var allNew = await _cache.GetOrCreateAsync(
             CacheKey,
             async ct => await ComputeNewGamesAsync(MaxCacheLimit, ct).ConfigureAwait(false),
-            tags: ["catalog", "discover", "newGames"],
+            tags: [CatalogRailsCache.Tag, "discover", "newGames"],
             expiration: CacheTtl,
             ct: cancellationToken).ConfigureAwait(false);
 
@@ -108,9 +109,15 @@ internal sealed class GetNewGamesQueryHandler
     {
         // Soft-delete filter is enforced by HasQueryFilter on SharedGameEntity but we
         // keep the explicit predicate for read-clarity (matches Wiegers SMART intent).
+        //
+        // #4659: only Published games. The rail is open to every authenticated user, and the detail a card
+        // links to answers 404 to anyone but admin/editor for a game that is not Published
+        // (SharedGameCatalogPublicEndpoints.HandleGetGameById); the catalog list defaults to Published too
+        // (SearchSharedGamesQueryHandler). The predicate sits BEFORE Take: after it, recent drafts would use
+        // up the MaxCacheLimit rows and push every published game out of the cached set.
         var rows = await _context.Set<SharedGameEntity>()
             .AsNoTracking()
-            .Where(g => !g.IsDeleted)
+            .Where(g => !g.IsDeleted && g.Status == (int)GameStatus.Published)
             .OrderByDescending(g => g.CreatedAt)
             .Take(limit)
             .Select(g => new

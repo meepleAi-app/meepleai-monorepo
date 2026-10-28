@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.Extensions;
 using Api.Helpers;
 using Api.Middleware;
@@ -22,6 +23,24 @@ internal static class RagDashboardEndpoints
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
+
+    /// <summary>The retrieval strategies of <c>/options</c>. No run is saved with them, so their metrics are zeros.</summary>
+    private static readonly string[] RetrievalStrategyIds =
+        ["Hybrid", "Semantic", "Keyword", "Contextual", "MultiQuery", "Agentic"];
+
+    /// <summary>
+    /// The ids <c>{strategyId}</c> accepts on the per-strategy routes: the retrieval strategies of <c>/options</c> and the
+    /// strategies the playground saves its runs with (#4677). Only the second family can have data, and it is the one
+    /// <c>/overview</c> returns; the routes used to accept only the first, so the id the overview showed got a 404.
+    /// </summary>
+    private static readonly string[] KnownStrategyIds = [.. RetrievalStrategyIds, .. RagExecutionStrategies.All];
+
+    /// <summary>
+    /// The canonical id for a <c>{strategyId}</c> (compared ignoring case), or <c>null</c> when it is none of the known
+    /// ones. The runs are filtered with a case-sensitive equality, so the canonical form is what has to reach the query.
+    /// </summary>
+    private static string? ResolveStrategyId(string strategyId) =>
+        KnownStrategyIds.FirstOrDefault(s => string.Equals(s, strategyId, StringComparison.OrdinalIgnoreCase));
 
     public static RouteGroupBuilder MapRagDashboardEndpoints(this RouteGroupBuilder group)
     {
@@ -221,15 +240,15 @@ internal static class RagDashboardEndpoints
         var (authorized, _, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var validStrategies = new[] { "Hybrid", "Semantic", "Keyword", "Contextual", "MultiQuery", "Agentic" };
-        if (!validStrategies.Contains(strategyId, StringComparer.OrdinalIgnoreCase))
+        var canonicalStrategyId = ResolveStrategyId(strategyId);
+        if (canonicalStrategyId is null)
         {
             return Results.NotFound(new { error = $"Strategy '{strategyId}' not found" });
         }
 
         var query = new GetStrategyMetricsQuery
         {
-            StrategyId = strategyId,
+            StrategyId = canonicalStrategyId,
             StartDate = startDate,
             EndDate = endDate
         };
@@ -250,8 +269,8 @@ internal static class RagDashboardEndpoints
         var (authorized, _, error) = context.RequireAdminSession();
         if (!authorized) return error!;
 
-        var validStrategies = new[] { "Hybrid", "Semantic", "Keyword", "Contextual", "MultiQuery", "Agentic" };
-        if (!validStrategies.Contains(strategyId, StringComparer.OrdinalIgnoreCase))
+        var canonicalStrategyId = ResolveStrategyId(strategyId);
+        if (canonicalStrategyId is null)
         {
             return Results.NotFound(new { error = $"Strategy '{strategyId}' not found" });
         }
@@ -264,7 +283,7 @@ internal static class RagDashboardEndpoints
 
         var query = new GetStrategyTimeSeriesQuery
         {
-            StrategyId = strategyId,
+            StrategyId = canonicalStrategyId,
             StartDate = startDate,
             EndDate = endDate,
             Granularity = granularity ?? "hour"

@@ -30,10 +30,11 @@ import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent } from '@/components/ui/data-display/card';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { useDocumentsByGame } from '@/hooks/queries/useDocumentsByGame';
-import { useEmbeddingStatus } from '@/hooks/useEmbeddingStatus';
-import type { EmbeddingStatus } from '@/lib/api/schemas/knowledge-base.schemas';
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
-import type { PdfState } from '@/types/pdf';
+import {
+  mapProcessingStateToDisplayStatus,
+  mapProcessingStateToPdfState,
+} from '@/lib/kb/processing-status';
 
 // ============================================================================
 // Types
@@ -60,26 +61,7 @@ const DOCUMENT_TYPE_VARIANTS: Record<string, 'default' | 'secondary' | 'outline'
   homerule: 'outline',
 };
 
-/** Map backend EmbeddingStatus to frontend PdfState */
-function mapEmbeddingStatusToPdfState(status: EmbeddingStatus): PdfState {
-  const mapping: Record<EmbeddingStatus, PdfState> = {
-    Pending: 'pending',
-    Extracting: 'extracting',
-    Chunking: 'chunking',
-    Embedding: 'embedding',
-    Completed: 'ready',
-    Failed: 'failed',
-  };
-  return mapping[status];
-}
-
 export function KnowledgeBaseTab({ gameId }: KnowledgeBaseTabProps) {
-  // Fetch embedding status for the game's KB
-  const { data: embeddingData } = useEmbeddingStatus(gameId);
-  const gamePdfState: PdfState = embeddingData
-    ? mapEmbeddingStatusToPdfState(embeddingData.status)
-    : 'pending';
-
   const { data: documents, isLoading, error } = useDocumentsByGame({ gameId });
 
   if (isLoading) {
@@ -113,6 +95,13 @@ export function KnowledgeBaseTab({ gameId }: KnowledgeBaseTabProps) {
     );
   }
 
+  // #4360: solo i documenti pronti sono indicizzati; `Failed` e `Pending` fanno parte dell'elenco
+  // ma non del conto.
+  const indexedCount = documents.filter(
+    doc => mapProcessingStateToDisplayStatus(doc.processingState) === 'indexed'
+  ).length;
+  const noun = `document${documents.length !== 1 ? 's' : ''}`;
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -120,7 +109,9 @@ export function KnowledgeBaseTab({ gameId }: KnowledgeBaseTabProps) {
         <div>
           <h3 className="text-lg font-semibold">Knowledge Base Documents</h3>
           <p className="text-sm text-muted-foreground">
-            {documents.length} document{documents.length !== 1 ? 's' : ''} indexed
+            {indexedCount === documents.length
+              ? `${documents.length} ${noun} indexed`
+              : `${indexedCount} of ${documents.length} ${noun} indexed`}
           </p>
         </div>
       </div>
@@ -128,7 +119,7 @@ export function KnowledgeBaseTab({ gameId }: KnowledgeBaseTabProps) {
       {/* Documents List */}
       <div className="grid gap-4 md:grid-cols-2">
         {documents.map(doc => (
-          <DocumentCard key={doc.id} document={doc} pdfState={gamePdfState} />
+          <DocumentCard key={doc.id} document={doc} />
         ))}
       </div>
     </div>
@@ -141,11 +132,11 @@ export function KnowledgeBaseTab({ gameId }: KnowledgeBaseTabProps) {
 
 interface DocumentCardProps {
   document: PdfDocumentDto;
-  /** PDF indexing state from game-level embedding status */
-  pdfState: PdfState;
 }
 
-function DocumentCard({ document, pdfState }: DocumentCardProps) {
+function DocumentCard({ document }: DocumentCardProps) {
+  // #4360: lo stato è quello del file, non quello dell'intero gioco.
+  const pdfState = mapProcessingStateToPdfState(document.processingState);
   const typeLabel = DOCUMENT_TYPE_LABELS[document.documentType] || 'Unknown';
   const typeVariant = DOCUMENT_TYPE_VARIANTS[document.documentType] || 'secondary';
 

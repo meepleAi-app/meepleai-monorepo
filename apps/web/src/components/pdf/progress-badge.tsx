@@ -130,7 +130,10 @@ export function ProgressBadge({
   // Computed Values (prefer hook data, fallback to static)
   // ============================================================================
 
-  const state = hookData.status?.state ?? staticState ?? 'pending';
+  // Il backend manda lo stato in PascalCase (`Failed`, `Extracting`, …, #4360), l'SSE di
+  // usePdfProgress in minuscolo: icona, pulsazione ed etichette qui sotto confrontano tutte le
+  // chiavi minuscole.
+  const state = (hookData.status?.state ?? staticState ?? 'pending').toLowerCase();
   const progress =
     hookData.metrics?.progressPercentage ?? hookData.status?.progress ?? staticProgress ?? 0;
   const eta = hookData.metrics?.estimatedTimeRemaining ?? hookData.status?.eta ?? staticEta;

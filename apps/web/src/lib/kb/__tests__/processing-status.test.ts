@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
 
-import { mapProcessingStateToDisplayStatus } from '../processing-status';
+import {
+  mapProcessingStateToDisplayStatus,
+  mapProcessingStateToPdfState,
+} from '../processing-status';
 
 describe('mapProcessingStateToDisplayStatus', () => {
   // Full canonical ProcessingState enum coverage (PascalCase).
@@ -41,5 +44,30 @@ describe('mapProcessingStateToDisplayStatus', () => {
 
   it.each([null, undefined, '', '   ', 'garbage'])('maps %s -> none', state => {
     expect(mapProcessingStateToDisplayStatus(state as string | null | undefined)).toBe('none');
+  });
+});
+
+describe('mapProcessingStateToPdfState (#4360)', () => {
+  // I badge dei PDF vogliono lo stato fine, non i quattro valori di KbDisplayStatus.
+  it.each([
+    ['Pending', 'pending'],
+    ['Uploading', 'uploading'],
+    ['Extracting', 'extracting'],
+    ['Chunking', 'chunking'],
+    ['Embedding', 'embedding'],
+    ['Indexing', 'indexing'],
+    ['Ready', 'ready'],
+    ['Failed', 'failed'],
+  ] as const)('maps canonical %s -> %s', (state, expected) => {
+    expect(mapProcessingStateToPdfState(state)).toBe(expected);
+    expect(mapProcessingStateToPdfState(state.toLowerCase())).toBe(expected);
+  });
+
+  it('maps the legacy alias completed -> ready', () => {
+    expect(mapProcessingStateToPdfState('Completed')).toBe('ready');
+  });
+
+  it.each([null, undefined, '', '   ', 'garbage'])('maps %s -> pending', state => {
+    expect(mapProcessingStateToPdfState(state as string | null | undefined)).toBe('pending');
   });
 });

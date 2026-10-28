@@ -39,6 +39,7 @@ import {
 import { buildKbConnections } from '@/components/ui/data-display/meeple-card/nav-items';
 import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
 import { buildKbCardProps } from '@/lib/card-mappers';
+import { mapProcessingStateToDisplayStatus } from '@/lib/kb/processing-status';
 
 // ============================================================================
 // Types
@@ -67,24 +68,6 @@ export interface MeepleKbCardProps {
 // Helper Functions
 // ============================================================================
 
-function mapDocumentStatus(processingState: string): 'indexed' | 'processing' | 'failed' | 'none' {
-  switch (processingState) {
-    case 'Completed':
-    case 'Ready':
-      return 'indexed';
-    case 'Failed':
-      return 'failed';
-    case 'Uploading':
-    case 'Extracting':
-    case 'Chunking':
-    case 'Embedding':
-    case 'Indexing':
-      return 'processing';
-    default:
-      return 'none';
-  }
-}
-
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -106,7 +89,7 @@ export function MeepleKbCard({
   className,
 }: MeepleKbCardProps) {
   const isEditorOrAdmin = isEditor || isAdmin;
-  const documentStatus = mapDocumentStatus(document.processingState);
+  const documentStatus = mapProcessingStateToDisplayStatus(document.processingState);
   const isProcessing = documentStatus === 'processing';
   const isIndexed = documentStatus === 'indexed';
   const mapperProps = buildKbCardProps(document);

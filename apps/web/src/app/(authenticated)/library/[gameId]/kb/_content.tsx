@@ -52,6 +52,8 @@ import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { GamePdfDto } from '@/lib/api/schemas/pdf.schemas';
 
+import { DELETE_OUTCOME_MESSAGE_PREFIX } from './_delete-outcome-messages';
+
 interface KbHubContentProps {
   readonly gameId: string;
 }
@@ -369,7 +371,7 @@ export function KbHubContent({ gameId }: KbHubContentProps): ReactElement {
       // Other games may still use the PDF (#4627): then it was not deleted, and the user is told so
       // instead of watching the dialog close and the row stay.
       if (result.outcome === 'unlinked' || result.outcome === 'kept') {
-        toast.info(t(`pages.library.gameDetail.kb.deleteOutcome.${result.outcome}`));
+        toast.info(t(`${DELETE_OUTCOME_MESSAGE_PREFIX}${result.outcome}`));
       }
     } catch {
       toast.error(t('pages.library.gameDetail.kb.errors.deleteFailed'));

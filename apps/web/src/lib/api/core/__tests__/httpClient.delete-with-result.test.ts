@@ -13,6 +13,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { z } from 'zod';
 
+import { SchemaValidationError } from '../errors';
 import { HttpClient } from '../httpClient';
 
 const OutcomeSchema = z.object({
@@ -80,9 +81,27 @@ describe('HttpClient.deleteWithResult', () => {
       .fn()
       .mockResolvedValue(jsonResponse({ outcome: 'altro' })) as unknown as typeof fetch;
 
+    // Resta un errore di validazione (un ApiError): non viene mascherato da un Error generico.
     await expect(
       clientWith(fetchImpl).deleteWithResult('/api/v1/pdf/bad-body', OutcomeSchema)
-    ).rejects.toThrow();
+    ).rejects.toBeInstanceOf(SchemaValidationError);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it('non ripete il DELETE nemmeno se la lettura del corpo cade con un TypeError "fetch"', async () => {
+    // Il caso che la regola "errori non ritentabili" non copre da sola: un `TypeError` il cui messaggio
+    // contiene "fetch" (es. «Failed to fetch» su un corpo troncato) per il retry e' un errore di rete.
+    // Qui la risposta e' gia' arrivata e il DELETE e' gia' stato eseguito: ripeterlo darebbe `kept` o 404.
+    const truncated = {
+      ok: true,
+      status: 200,
+      json: () => Promise.reject(new TypeError('Failed to fetch')),
+    } as unknown as Response;
+    const fetchImpl = vi.fn().mockResolvedValue(truncated) as unknown as typeof fetch;
+
+    await expect(
+      clientWith(fetchImpl).deleteWithResult('/api/v1/pdf/truncated-body', OutcomeSchema)
+    ).rejects.toThrow(/truncated-body/);
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 

@@ -2153,7 +2153,7 @@
           },
           "deleteOutcome": {
             "unlinked": "The PDF was not deleted because other games still use it. It has been unlinked from this game.",
-            "kept": "The PDF was neither deleted nor unlinked, because other games still use it."
+            "kept": "The PDF was not deleted because other games still use it, and this game has no link to remove."
           },
           "errors": {
             "loadFailed": "Unable to load knowledge base. Please retry.",

@@ -734,8 +734,8 @@ export class HttpClient {
 
   /**
    * Shared DELETE pipeline (dedup, circuit breaker, retry). `readResult` runs once the response is known
-   * to be 2xx; a failure there is not retried (not a network or 502/503 error), so the DELETE is never
-   * sent a second time because its answer was malformed. `cacheMethod` keeps `delete` and
+   * to be 2xx; a failure there is never retried (see the catch below), so the DELETE is not sent a
+   * second time because its answer was malformed or cut short. `cacheMethod` keeps `delete` and
    * `deleteWithResult` on distinct dedup keys: they resolve to different types.
    */
   private async sendDelete<T>(
@@ -796,7 +796,21 @@ export class HttpClient {
                 await this.handleError(path, response, options);
               }
 
-              const result = await readResult(response);
+              let result: T;
+              try {
+                result = await readResult(response);
+              } catch (error) {
+                // The DELETE already ran on the server. A bare `TypeError` mentioning "fetch" (a truncated
+                // body) would be read below as a network error and retried, so anything that is not already
+                // an ApiError is rethrown as a plain Error, which the retry policy never retries.
+                if (error instanceof ApiError) {
+                  throw error;
+                }
+                throw new Error(
+                  `Could not read the response of DELETE ${path}: ${error instanceof Error ? error.message : String(error)}`,
+                  { cause: error }
+                );
+              }
 
               // Track success after retry
               if (retryCount > 0) {

@@ -2160,7 +2160,7 @@
           },
           "deleteOutcome": {
             "unlinked": "Il PDF non è stato cancellato perché è ancora usato da altri giochi. È stato scollegato da questo gioco.",
-            "kept": "Il PDF non è stato né cancellato né scollegato, perché è ancora usato da altri giochi."
+            "kept": "Il PDF non è stato cancellato perché è ancora usato da altri giochi, e da questo gioco non c'è nessun collegamento da togliere."
           },
           "errors": {
             "loadFailed": "Impossibile caricare la knowledge base. Riprova.",

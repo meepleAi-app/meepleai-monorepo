@@ -12,10 +12,10 @@ import enMessages from '@/locales/en.json';
 import itMessages from '@/locales/it.json';
 import type { DeletePdfResult } from '@/lib/api/clients/pdfClient';
 
-const PREFIX = 'pages.library.gameDetail.kb.deleteOutcome.';
+import { DELETE_OUTCOME_MESSAGE_PREFIX as PREFIX } from '../_delete-outcome-messages';
 
-// Esaustiva sul tipo: un nuovo esito del backend senza messaggio non compila finche' non si aggiunge qui
-// (e quindi nei cataloghi).
+// Esaustiva sul tipo: un nuovo esito nel tipo `DeletePdfResult` non compila finche' non si decide qui se
+// ha un messaggio (e, se si', lo si aggiunge ai cataloghi e alla condizione in `_content.tsx`).
 const OUTCOMES_WITH_A_MESSAGE: Record<Exclude<DeletePdfResult['outcome'], 'deleted'>, true> = {
   unlinked: true,
   kept: true,

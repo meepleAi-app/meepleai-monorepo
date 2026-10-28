@@ -62,7 +62,16 @@ const DOCUMENT_TYPE_VARIANTS: Record<string, 'default' | 'secondary' | 'outline'
 };
 
 export function KnowledgeBaseTab({ gameId }: KnowledgeBaseTabProps) {
-  const { data: documents, isLoading, error } = useDocumentsByGame({ gameId });
+  const {
+    data: documents,
+    isLoading,
+    error,
+  } = useDocumentsByGame({
+    gameId,
+    // #4360: lo stato di ogni scheda viene dal documento, quindi l'elenco va riletto finché uno è in
+    // elaborazione (prima lo stato del gioco si aggiornava da solo con useEmbeddingStatus).
+    pollWhileProcessing: true,
+  });
 
   if (isLoading) {
     return (

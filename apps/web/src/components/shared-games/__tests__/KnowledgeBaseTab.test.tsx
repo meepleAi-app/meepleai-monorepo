@@ -251,6 +251,16 @@ describe('KnowledgeBaseTab', () => {
     });
   });
 
+  it('asks the listing to follow documents that are still in progress (#4360)', () => {
+    mockDocuments({ data: [] });
+
+    renderWithQueryClient(<KnowledgeBaseTab gameId={GAME_ID} />);
+
+    expect(useDocumentsByGameModule.useDocumentsByGame).toHaveBeenCalledWith(
+      expect.objectContaining({ gameId: GAME_ID, pollWhileProcessing: true })
+    );
+  });
+
   describe('Accessibility', () => {
     it('gives the truncated file name a title attribute', async () => {
       mockDocuments({

@@ -4,6 +4,8 @@ using Api.BoundedContexts.EntityRelationships.Domain.Aggregates;
 using Api.BoundedContexts.EntityRelationships.Domain.Enums;
 using Api.BoundedContexts.UserLibrary.Domain.Enums;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Infrastructure.Entities.UserLibrary;
 using Api.Services;
 using Api.Tests.Constants;
@@ -70,6 +72,7 @@ public sealed class DeletePdfKbCacheHostFixture(SharedTestcontainersFixture shar
 [Trait("Dependency", "PostgreSQL")]
 [Trait("BoundedContext", "DocumentProcessing")]
 [Trait("Issue", "4308")]
+[Trait("Issue", "4626")]
 public sealed class DeletePdfKbCacheIntegrationTests
     : IClassFixture<DeletePdfKbCacheHostFixture>, IAsyncLifetime
 {
@@ -228,7 +231,102 @@ public sealed class DeletePdfKbCacheIntegrationTests
         (await ListedDocumentsAsync()).Should().BeEquivalentTo(new[] { _controlPdfId });
     }
 
+    /// <summary>
+    /// #4626: Discover («Documenti recenti», <c>GET /api/v1/kb-docs/recent</c>) tiene per cinque minuti la lista
+    /// condivisa dei PDF <c>Ready</c> che non sono di un gioco privato, con le etichette
+    /// <c>kb</c>/<c>discover</c>/<c>recentDocs</c>. Nessuno le toglieva: un PDF di catalogo cancellato restava nel feed
+    /// e, aperto, dava 404. I PDF privati del test non compaiono mai nel feed.
+    /// </summary>
+    [Fact]
+    public async Task DeletingACatalogPdf_TakesItOutOfTheDiscoverFeed()
+    {
+        var catalogPdf = await SeedCatalogPdfAsync("Catalog rulebook");
+        var controlCatalogPdf = await SeedCatalogPdfAsync("Another catalog rulebook");
+        // La prima lettura mette il feed in cache: è il caso che conta. I PDF privati del proprietario non ci sono.
+        (await RecentDocumentsAsync()).Should().BeEquivalentTo(new[] { catalogPdf, controlCatalogPdf });
+
+        var response = await DeletePdfAsync(catalogPdf);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent, await response.Content.ReadAsStringAsync(Ct));
+        (await PdfExistsAsync(catalogPdf)).Should().BeFalse("the row is gone: the feed must not keep showing it");
+        (await RecentDocumentsAsync()).Should().BeEquivalentTo(new[] { controlCatalogPdf });
+    }
+
+    /// <summary>
+    /// La stessa prova per <c>DeleteKbDocumentCommandHandler</c> (la cancellazione admin, <c>DELETE /admin/pdfs/{id}</c>):
+    /// usa lo stesso helper (<c>DeletedKbDocumentCaches</c>), quindi è la stessa regola, ma da un altro gestore.
+    /// </summary>
+    [Fact]
+    public async Task AnAdminDeletingAKbDocument_TakesItOutOfTheDiscoverFeed()
+    {
+        var catalogPdf = await SeedCatalogPdfAsync("Catalog rulebook");
+        var controlCatalogPdf = await SeedCatalogPdfAsync("Another catalog rulebook");
+        (await RecentDocumentsAsync()).Should().BeEquivalentTo(new[] { catalogPdf, controlCatalogPdf });
+        var adminToken = await CreateAdminTokenAsync();
+
+        using var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Delete, $"/api/v1/admin/pdfs/{catalogPdf}", adminToken);
+        var response = await _client.SendAsync(request, Ct);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent, await response.Content.ReadAsStringAsync(Ct));
+        (await PdfExistsAsync(catalogPdf)).Should().BeFalse();
+        (await RecentDocumentsAsync()).Should().BeEquivalentTo(new[] { controlCatalogPdf });
+    }
+
     // ─── Supporto ────────────────────────────────────────────────
+
+    /// <summary>
+    /// Un PDF di catalogo come lo vede il feed: <c>Ready</c>, di un gioco condiviso e di nessun gioco privato.
+    /// Caricato dal proprietario del test, che quindi può cancellarlo da <c>DELETE /pdf/{id}</c>.
+    /// </summary>
+    private async Task<Guid> SeedCatalogPdfAsync(string title)
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var gameId = Guid.NewGuid();
+        db.SharedGames.Add(new SharedGameEntity
+        {
+            Id = gameId, Title = title, YearPublished = 2024, MinPlayers = 2,
+            MaxPlayers = 4, PlayingTimeMinutes = 60, CreatedAt = DateTime.UtcNow,
+        });
+
+        var pdfId = Guid.NewGuid();
+        db.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = pdfId,
+            FileName = $"{title}.pdf",
+            FilePath = $"/tmp/catalog-{pdfId:N}.pdf",
+            FileSizeBytes = 1024,
+            UploadedByUserId = _userId,
+            ProcessingState = "Ready",
+            ProcessedAt = DateTime.UtcNow,
+            SharedGameId = gameId,
+        });
+        await db.SaveChangesAsync(Ct);
+        return pdfId;
+    }
+
+    private async Task<string> CreateAdminTokenAsync()
+    {
+        using var scope = _hostFixture.Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, token) = await TestSessionHelper.CreateAdminSessionAsync(db, null, Ct);
+        return token;
+    }
+
+    /// <summary>Gli id dei documenti nel feed di Discover.</summary>
+    private async Task<List<Guid>> RecentDocumentsAsync()
+    {
+        var response = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get, "/api/v1/kb-docs/recent?limit=50", _token), Ct);
+        var body = await response.Content.ReadAsStringAsync(Ct);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, body);
+        using var json = JsonDocument.Parse(body);
+        return json.RootElement.GetProperty("items").EnumerateArray()
+            .Select(item => item.GetProperty("id").GetGuid())
+            .ToList();
+    }
 
     private async Task<Guid> SeedPrivateGameAsync(MeepleAiDbContext db, string title)
     {

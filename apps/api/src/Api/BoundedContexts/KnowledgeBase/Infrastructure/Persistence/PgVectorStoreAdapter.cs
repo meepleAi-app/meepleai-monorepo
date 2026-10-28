@@ -49,8 +49,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         IReadOnlyList<Guid>? pdfDocumentIds = null,
         CancellationToken cancellationToken = default)
     {
-        var connection = _context.Database.GetDbConnection();
-        await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
+        var lease = await LeaseConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var leaseDisposal = lease.ConfigureAwait(false);
+        var connection = lease.Connection;
 
         // Build SQL with cosine distance operator.
         // pgvector <=> returns cosine distance (0 = identical, 2 = opposite).
@@ -156,8 +157,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         IReadOnlyList<Guid>? pdfDocumentIds = null,
         CancellationToken cancellationToken = default)
     {
-        var connection = _context.Database.GetDbConnection();
-        await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
+        var lease = await LeaseConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var leaseDisposal = lease.ConfigureAwait(false);
+        var connection = lease.Connection;
 
         // RRF fusion-key fix: JOIN vector_documents to resolve the owning PdfDocumentId so hybrid
         // fusion can key vector results on {PdfDocumentId}_{ChunkIndex} (matching the keyword arm).
@@ -301,8 +303,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         if (gameIds is not { Count: > 0 })
             return new List<Embedding>();
 
-        var connection = _context.Database.GetDbConnection();
-        await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
+        var lease = await LeaseConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var leaseDisposal = lease.ConfigureAwait(false);
+        var connection = lease.Connection;
 
         // Build SQL with IN clause for multiple game_ids
         // #3740: same `lang` projection as SearchAsync (column 8) — session-aware RAG spans a primary
@@ -393,8 +396,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         if (embeddings is not { Count: > 0 })
             return;
 
-        var connection = _context.Database.GetDbConnection();
-        await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
+        var lease = await LeaseConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var leaseDisposal = lease.ConfigureAwait(false);
+        var connection = lease.Connection;
 
         // Resolve game_id from vector_documents table via the embedding's VectorDocumentId.
         // All embeddings in a batch typically share the same VectorDocumentId.
@@ -515,8 +519,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         // stays "completed". This is a transaction of the connection, not of EF: the DbContext runs with a
         // retrying execution strategy, which refuses a user-initiated EF transaction. Left uncommitted,
         // disposing it rolls it back.
-        var connection = _context.Database.GetDbConnection();
-        await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
+        var lease = await LeaseConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var leaseDisposal = lease.ConfigureAwait(false);
+        var connection = lease.Connection;
 
         var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
         await using (transaction.ConfigureAwait(false))
@@ -531,8 +536,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         Guid vectorDocumentId,
         CancellationToken cancellationToken = default)
     {
-        var connection = _context.Database.GetDbConnection();
-        await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
+        var lease = await LeaseConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var leaseDisposal = lease.ConfigureAwait(false);
+        var connection = lease.Connection;
 
         var command = (NpgsqlCommand)connection.CreateCommand();
         await using (command.ConfigureAwait(false))
@@ -557,8 +563,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
             return;
         }
 
-        var connection = _context.Database.GetDbConnection();
-        await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
+        var lease = await LeaseConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var leaseDisposal = lease.ConfigureAwait(false);
+        var connection = lease.Connection;
 
         var command = (NpgsqlCommand)connection.CreateCommand();
         await using (command.ConfigureAwait(false))
@@ -578,8 +585,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         Guid gameId,
         CancellationToken cancellationToken = default)
     {
-        var connection = _context.Database.GetDbConnection();
-        await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
+        var lease = await LeaseConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var leaseDisposal = lease.ConfigureAwait(false);
+        var connection = lease.Connection;
 
         var command = (NpgsqlCommand)connection.CreateCommand();
         await using (command.ConfigureAwait(false))
@@ -612,8 +620,9 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
         int vectorDimension = 768,
         CancellationToken cancellationToken = default)
     {
-        var connection = _context.Database.GetDbConnection();
-        await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
+        var lease = await LeaseConnectionAsync(cancellationToken).ConfigureAwait(false);
+        await using var leaseDisposal = lease.ConfigureAwait(false);
+        var connection = lease.Connection;
 
         // Enable pgvector extension
         var extCmd = (NpgsqlCommand)connection.CreateCommand();
@@ -763,14 +772,55 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
             vectorDimension);
     }
 
-    private static async Task EnsureConnectionOpenAsync(
-        DbConnection connection,
-        CancellationToken cancellationToken)
+    /// <summary>
+    /// Presta la connessione del <c>DbContext</c> per la durata di UN'operazione dell'adattatore, e la restituisce
+    /// quando l'operazione finisce (#4662). Prima l'adattatore la apriva a mano e non la richiudeva: restava
+    /// occupata fino alla distruzione del contesto, cioè per tutta la richiesta, e una risposta aperta (che dura
+    /// quanto la generazione del modello) teneva una connessione del pool per tutto quel tempo.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Chiude solo ciò che ha aperto lui. Se la connessione è già aperta (una transazione del contesto, un
+    /// chiamante che l'ha aperta, un prestito esterno) non è sua: la lascia com'è, perché chiuderla sotto una
+    /// transazione la annullerebbe. Per questo i prestiti annidati (<c>Replace</c> che chiama <c>Delete</c> e
+    /// <c>IndexBatch</c>) funzionano: chiude solo il più esterno.
+    /// </para>
+    /// <para>
+    /// Apre la connessione grezza e non usa <c>Database.OpenConnectionAsync</c>: quello passa dalla strategia di
+    /// retry del contesto, che rifiuta una transazione aperta dall'utente (vedi <c>UnitOfWork</c>).
+    /// </para>
+    /// <para>
+    /// Presuppone l'uso in sequenza, che per un <c>DbContext</c> e' comunque l'unico lecito (#3786): con due
+    /// operazioni in parallelo sullo stesso contesto, la prima che ha aperto chiuderebbe la connessione sotto la
+    /// seconda.
+    /// </para>
+    /// </remarks>
+    private async Task<ConnectionLease> LeaseConnectionAsync(CancellationToken cancellationToken)
     {
-        if (connection.State != ConnectionState.Open)
+        var connection = _context.Database.GetDbConnection();
+        if (connection.State == ConnectionState.Open)
         {
-            await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+            return new ConnectionLease(connection, opened: false);
         }
+
+        await connection.OpenAsync(cancellationToken).ConfigureAwait(false);
+        return new ConnectionLease(connection, opened: true);
+    }
+
+    /// <summary>La connessione prestata da <see cref="LeaseConnectionAsync"/>; il <c>DisposeAsync</c> la chiude se l'ha aperta il prestito.</summary>
+    private sealed class ConnectionLease : IAsyncDisposable
+    {
+        private readonly bool _opened;
+
+        public ConnectionLease(DbConnection connection, bool opened)
+        {
+            Connection = connection;
+            _opened = opened;
+        }
+
+        public DbConnection Connection { get; }
+
+        public ValueTask DisposeAsync() => _opened ? new(Connection.CloseAsync()) : ValueTask.CompletedTask;
     }
 
     /// <summary>

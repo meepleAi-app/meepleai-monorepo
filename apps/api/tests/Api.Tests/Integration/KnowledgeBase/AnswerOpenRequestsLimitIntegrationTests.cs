@@ -33,13 +33,14 @@ public sealed class AnswerOpenRequestsHostFixture(SharedTestcontainersFixture sh
     protected override bool EnableRateLimiting => true;
 
     /// <summary>
-    /// Ogni risposta tenuta aperta occupa una connessione del pool dell'host per tutto il tempo del
-    /// cancello, e il test ne tiene fino a quattro insieme (due utenti, due risposte a testa); la
-    /// richiesta che deve ricevere il 429 ne vuole una anche lei per autenticarsi. Col tetto di CI la terza
-    /// non risponde in 20 s e non e' un 429: i test passavano in locale e cadevano su dev-async. Il 12 e' un
-    /// margine sopra il caso peggiore, non un conto.
+    /// Il tetto di CI, fissato anche in locale: una risposta tenuta aperta NON occupa una connessione del pool.
+    /// Il test ne tiene fino a quattro insieme (due utenti, due risposte a testa) e la richiesta che deve
+    /// ricevere il 429 ne vuole una per autenticarsi. Con il pool a 2 questo regge solo se la risposta rilascia
+    /// la connessione prima di arrivare al gateway: #4662, dove l'adattatore pgvector la lasciava aperta per
+    /// tutta la richiesta e i test cadevano su dev-async con il pool di CI (in locale il pool e' piu' grande).
+    /// Prima di quella correzione qui c'era 12, per aggirarlo (#4661).
     /// </summary>
-    protected override int? HostMaxPoolSize => 12;
+    protected override int? HostMaxPoolSize => 2;
 
     protected override WebApplicationFactory<Program> ConfigureHost(WebApplicationFactory<Program> factory) =>
         factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>

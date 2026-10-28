@@ -107,15 +107,23 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
     protected virtual bool EnableRateLimiting => false;
 
     /// <summary>
-    /// Il tetto di connessioni del pool dell'HOST, se la classe di test ne ha bisogno di piu' del default.
+    /// Il tetto di connessioni del pool dell'HOST, per FISSARLO a un valore preciso.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Il default e' quello di <see cref="SharedTestcontainersFixture"/> (cerca <c>MaxPoolSize</c> in
     /// <c>CreateIsolatedDatabaseAsync</c>): piu' basso su CI, dove il Postgres e' esterno e il suo
     /// <c>max_connections</c> e' condiviso da tutti gli host, che in locale. Una classe che tiene aperte
-    /// piu' richieste insieme, ciascuna con una connessione occupata, puo' esaurirlo: l'ultima richiesta
-    /// non riesce nemmeno ad autenticarsi, e il test passa in locale e cade su CI. Il tetto vale per
-    /// l'host di questa fixture, che usa un database alla volta; non cambia quello delle altre.
+    /// piu' richieste insieme puo' esaurirlo: l'ultima richiesta non riesce nemmeno ad autenticarsi, e il test
+    /// passa in locale e cade su CI.
+    /// </para>
+    /// <para>
+    /// Usalo per far girare in locale lo STESSO tetto di CI (<c>2</c>), non per alzarlo: se una classe ne ha
+    /// bisogno di piu' perche' una richiesta tiene una connessione mentre aspetta, e' una perdita da
+    /// correggere. Alzarlo qui e' quello che #4661 aveva fatto per aggirare #4662, dove l'adattatore pgvector
+    /// non restituiva la connessione. Il tetto vale per l'host di questa fixture, che usa un database alla
+    /// volta; non cambia quello delle altre.
+    /// </para>
     /// </remarks>
     protected virtual int? HostMaxPoolSize => null;
 

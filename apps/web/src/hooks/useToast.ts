@@ -17,10 +17,14 @@ export interface Toast {
  */
 export function useToast() {
   const toast = useCallback(({ title, description, variant }: Toast) => {
+    // Lo stesso testo con lo stesso tipo riusa il toast già a schermo invece di impilarne un altro.
+    // Chi interroga un servizio a intervalli (le tab del monitor admin) con il backend giù prima non
+    // mostrava niente: ora avrebbe un toast a ogni giro.
+    const id = `${variant ?? 'default'}|${title}|${description ?? ''}`;
     if (variant === 'destructive') {
-      sonnerToast.error(title, { description });
+      sonnerToast.error(title, { id, description });
     } else {
-      sonnerToast(title, { description });
+      sonnerToast(title, { id, description });
     }
   }, []);
 

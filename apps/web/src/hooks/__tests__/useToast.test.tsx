@@ -86,7 +86,80 @@ describe('useToast', () => {
     await user.click(screen.getByRole('button', { name: 'fire' }));
     await screen.findByText('Riavvio API in corso...');
 
-    expect(warn).not.toHaveBeenCalledWith('[Toast]', expect.anything(), expect.anything());
+    expect(warn.mock.calls.filter(call => call[0] === '[Toast]')).toHaveLength(0);
+  });
+
+  it('shows the description of a destructive toast too', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <Toaster />
+        <Trigger
+          title="Errore"
+          description="Impossibile caricare le preferenze"
+          variant="destructive"
+        />
+      </>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'fire' }));
+
+    expect(await screen.findByText('Impossibile caricare le preferenze')).toBeInTheDocument();
+  });
+
+  it('does not show a default toast as an error', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <Toaster />
+        <Trigger title="Salvato" />
+      </>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'fire' }));
+
+    const message = await screen.findByText('Salvato');
+    // Un toast normale non porta `data-type`: si cerca l'elemento del toast, non l'attributo.
+    const toastElement = message.closest('[data-sonner-toast]');
+    expect(toastElement).not.toBeNull();
+    expect(toastElement?.getAttribute('data-type')).not.toBe('error');
+  });
+
+  it('shows the same toast once, however many times it is fired', async () => {
+    // Le tab del monitor admin interrogano un servizio a intervalli: a backend giù, lo stesso
+    // errore a ogni giro non deve impilare un toast dopo l'altro.
+    const user = userEvent.setup();
+    render(
+      <>
+        <Toaster />
+        <Trigger title="Errore di caricamento" variant="destructive" />
+      </>
+    );
+
+    await user.click(screen.getByRole('button', { name: 'fire' }));
+    await user.click(screen.getByRole('button', { name: 'fire' }));
+    await user.click(screen.getByRole('button', { name: 'fire' }));
+
+    await screen.findByText('Errore di caricamento');
+    expect(screen.getAllByText('Errore di caricamento')).toHaveLength(1);
+  });
+
+  it('keeps two different toasts apart', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <Toaster />
+        <Trigger title="Primo" />
+        <Trigger title="Secondo" />
+      </>
+    );
+
+    const [first, second] = screen.getAllByRole('button', { name: 'fire' });
+    await user.click(first);
+    await user.click(second);
+
+    expect(await screen.findByText('Primo')).toBeInTheDocument();
+    expect(await screen.findByText('Secondo')).toBeInTheDocument();
   });
 
   it('keeps `toast` referentially stable across renders', () => {

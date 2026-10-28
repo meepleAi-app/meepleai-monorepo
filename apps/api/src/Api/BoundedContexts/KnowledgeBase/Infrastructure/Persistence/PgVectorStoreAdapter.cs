@@ -485,6 +485,48 @@ internal sealed class PgVectorStoreAdapter : IVectorStoreAdapter
             embeddings.Count, embeddings[0].VectorDocumentId);
     }
 
+    public async Task ReplaceByVectorDocumentIdAsync(
+        Guid vectorDocumentId,
+        List<Embedding> embeddings,
+        CancellationToken cancellationToken = default)
+    {
+        if (embeddings is not { Count: > 0 })
+            return;
+
+        // The id to delete and the id on the new rows come from two places: they must be the same document, or
+        // the replacement would delete one document's index and add rows to another's.
+        if (embeddings.Exists(e => e.VectorDocumentId != vectorDocumentId))
+            throw new ArgumentException(
+                "Every embedding must belong to the vector document being replaced.", nameof(embeddings));
+
+        // A transaction already open on the context (a unit of work) is joined, not nested: a second BEGIN on
+        // the same connection throws, and the replacement has to follow the outcome of the outer one. It is a
+        // transaction of EF, so DbContext.Database.CurrentTransaction sees it; Npgsql runs a command on the
+        // connection inside whatever transaction the connection is in, which is what the two calls below rely on.
+        if (_context.Database.CurrentTransaction is not null)
+        {
+            await DeleteByVectorDocumentIdAsync(vectorDocumentId, cancellationToken).ConfigureAwait(false);
+            await IndexBatchAsync(embeddings, cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        // #4660: DELETE and COPY in ONE transaction. A COPY that fails at its end (a duplicate key, a bad
+        // vector) used to find the old embeddings already gone, and the vector document of a re-indexed PDF
+        // stays "completed". This is a transaction of the connection, not of EF: the DbContext runs with a
+        // retrying execution strategy, which refuses a user-initiated EF transaction. Left uncommitted,
+        // disposing it rolls it back.
+        var connection = _context.Database.GetDbConnection();
+        await EnsureConnectionOpenAsync(connection, cancellationToken).ConfigureAwait(false);
+
+        var transaction = await connection.BeginTransactionAsync(cancellationToken).ConfigureAwait(false);
+        await using (transaction.ConfigureAwait(false))
+        {
+            await DeleteByVectorDocumentIdAsync(vectorDocumentId, cancellationToken).ConfigureAwait(false);
+            await IndexBatchAsync(embeddings, cancellationToken).ConfigureAwait(false);
+            await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        }
+    }
+
     public async Task DeleteByVectorDocumentIdAsync(
         Guid vectorDocumentId,
         CancellationToken cancellationToken = default)

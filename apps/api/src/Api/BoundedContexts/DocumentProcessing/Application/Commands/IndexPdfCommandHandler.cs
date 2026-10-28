@@ -642,7 +642,11 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
         CancellationToken cancellationToken)
     {
         vectorDoc.IndexingStatus = "failed";
-        vectorDoc.IndexingError = errorMessage;
+        // #4660: this column is served to the authenticated user by the pdf-status poll
+        // (GetGamePdfIndexingStatusQueryHandler), so it holds a fixed text built from the error code, never
+        // errorMessage: for an embedding failure that is the text of an internal service (address, path,
+        // exception). The caller of the command still gets the full message in the result, and the log has it.
+        vectorDoc.IndexingError = $"Indexing failed ({errorCode})";
         try
         {
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

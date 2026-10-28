@@ -128,12 +128,26 @@ internal class VectorDocumentRepository : RepositoryBase, IVectorDocumentReposit
         Guid sharedGameId,
         CancellationToken cancellationToken = default)
     {
+        // Which document stands for the game when it has several (#4660, decided 2026-10-28). A row with a null
+        // IndexedAt (pending, processing, failed) sorts above EVERY completed one, whatever the dates: this is
+        // the poll of whoever just uploaded a PDF, and answering "indexed" with an older PDF would hide a second
+        // PDF that failed for good. Whether the game has a usable knowledge base is answered by
+        // GetKnowledgeBaseStatusQueryHandler, not here. Among the rows with a null IndexedAt (all tie on
+        // MaxValue) the PDF uploaded last wins, then Id, so in these two queries the answer never depends on the
+        // order the database hands the rows back.
+        //
+        // Edges of the rule that nobody has decided: a first attempt that failed keeps masking a PDF uploaded and
+        // completed after it; a re-index keeps its old IndexedAt, so a failing re-index can lose to a document
+        // indexed later; a PDF that fails before its vector document exists is not seen while any other vector
+        // document does.
+        //
         // First: direct match on VectorDocument.GameId (shared games)
         var info = await DbContext.VectorDocuments
             .AsNoTracking()
             .Where(vd => vd.GameId == sharedGameId)
-            // Null IndexedAt (pending/processing) sorts to top so in-progress trumps older completed docs.
             .OrderByDescending(vd => vd.IndexedAt ?? DateTime.MaxValue)
+            .ThenByDescending(vd => vd.PdfDocument.UploadedAt)
+            .ThenByDescending(vd => vd.Id)
             .Select(vd => new { vd.IndexingStatus, vd.ChunkCount, vd.IndexingError })
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -146,7 +160,9 @@ internal class VectorDocumentRepository : RepositoryBase, IVectorDocumentReposit
                 join vd in DbContext.VectorDocuments.AsNoTracking()
                     on pdf.Id equals vd.PdfDocumentId
                 where pdf.PrivateGameId == sharedGameId
-                orderby vd.IndexedAt == null ? DateTime.MaxValue : vd.IndexedAt descending
+                orderby vd.IndexedAt == null ? DateTime.MaxValue : vd.IndexedAt descending,
+                    pdf.UploadedAt descending,
+                    vd.Id descending
                 select new { vd.IndexingStatus, vd.ChunkCount, vd.IndexingError }
             ).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
         }

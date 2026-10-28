@@ -343,7 +343,7 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
         _gameNightRepoMock
             .Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(gameNight);
-        // Pending when the existence check ran, answered or expired by the time the list is read.
+        // Pending when the existence check ran, answered or cancelled by the time the list is read.
         _invitationRepoMock
             .Setup(r => r.ExistsPendingByEmailAsync(
                 gameNight.Id, "guest@example.com", It.IsAny<CancellationToken>()))

@@ -94,8 +94,9 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
                     .ConfigureAwait(false))
                 .FirstOrDefault(i => i.Status == GameNightInvitationStatus.Pending
                     && string.Equals(i.Email, normalizedEmail, StringComparison.Ordinal))
-                // Answered or expired between the two reads: it is no longer pending, so it is what the
-                // plain path reports for a pending one.
+                // Answered or cancelled between the two reads: it is no longer pending, so it is what the
+                // plain path reports for a pending one. ("Pending" is the stored status only: nothing
+                // moves an invitation to expired on its own, so a past ExpiresAt does not end up here.)
                 ?? throw new ConflictException(
                     $"A pending invitation already exists for {normalizedEmail} on this game night.");
 

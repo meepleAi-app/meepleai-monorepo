@@ -12,6 +12,7 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Quartz;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
@@ -124,6 +125,25 @@ public sealed class MechanicAnalysisStaleDraftIntegrationTests
         two.Should().Equal(oldest, middle);
         all.Should().Equal(oldest, middle, newest);
         all.Should().NotContain(onTheCutoff, "a draft created exactly at the cutoff is not older than it");
+    }
+
+    [Fact]
+    public async Task TheJob_IsRegisteredWithTheScheduler_EveryFifteenMinutes()
+    {
+        // I test del comando non vedono se qualcuno chiama il job: senza la riga di registrazione in DI le
+        // analisi orfane restano orfane e nessun test fallirebbe.
+        using var scope = _factory.Services.CreateScope();
+        var scheduler = await scope.ServiceProvider
+            .GetRequiredService<ISchedulerFactory>()
+            .GetScheduler();
+
+        var jobKey = new JobKey("MechanicAnalysisStaleDraftExpirationJob", "SharedGameCatalog");
+        (await scheduler.GetJobDetail(jobKey)).Should().NotBeNull("the job must be registered to ever run");
+
+        var triggers = await scheduler.GetTriggersOfJob(jobKey);
+        triggers.OfType<ICronTrigger>()
+            .Should().ContainSingle()
+            .Which.CronExpressionString.Should().Be("0 0/15 * * * ?");
     }
 
     private static DateTime HoursAgo(double hours) => DateTime.UtcNow.AddHours(-hours);

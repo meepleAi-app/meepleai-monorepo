@@ -267,7 +267,7 @@ public sealed class MechanicAnalysisPromptSlotIntegrationTests
         var body = await response.Content.ReadAsStringAsync();
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict, body);
-        body.Should().Contain("orfana").And.Contain("segnalala");
+        body.Should().Contain("orfana").And.Contain("chiusa da sola");
     }
 
     [Fact]

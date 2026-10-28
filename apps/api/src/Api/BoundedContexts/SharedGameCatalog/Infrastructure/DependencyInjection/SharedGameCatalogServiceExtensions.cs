@@ -305,6 +305,10 @@ internal static class SharedGameCatalogServiceExtensions
         // auto-suppresses cards breaching the admin-tunable thresholds.
         RegisterMechanicCardAutoSuppressionJob(services);
 
+        // Issue #4503: every 15 minutes, rejects mechanic analyses left in Draft past the configured age by a
+        // pipeline that died with the process, so they stop holding their (game, PDF, prompt) slot.
+        RegisterMechanicAnalysisStaleDraftExpirationJob(services);
+
         // Issue #1823 Wave 3 M15 (ADR DEC-3i): Quartz quarterly cron that
         // resets WikidataQidLastVerifiedAt on stale games (>90gg) so the M9
         // scheduler picks them up for re-enrichment. Runs every 3 months at
@@ -758,6 +762,35 @@ internal static class SharedGameCatalogServiceExtensions
                 .WithIdentity("MechanicCardAutoSuppressionTrigger", "SharedGameCatalog")
                 .WithCronSchedule("0 0 * * * ?")
                 .WithDescription("Issue #534 ME-M3.2: hourly aggregate of mechanic-card feedback + auto-suppression of cards breaching the admin-tunable thresholds."));
+        });
+    }
+
+    /// <summary>
+    /// Issue #4503 — registers <see cref="MechanicAnalysisStaleDraftExpirationJob"/> with the Quartz scheduler and binds
+    /// <see cref="MechanicAnalysisStaleDraftOptions"/>. Runs every 15 minutes: the pipeline runs in memory
+    /// (<c>BackgroundTaskService</c>), so a restart or a crash leaves its analysis in <c>Draft</c> for good, and the
+    /// filtered unique index counts a <c>Draft</c>. The threshold (default two hours) is the age past which a
+    /// <c>Draft</c> is presumed orphaned.
+    /// </summary>
+    private static void RegisterMechanicAnalysisStaleDraftExpirationJob(IServiceCollection services)
+    {
+        services.AddOptions<MechanicAnalysisStaleDraftOptions>()
+            .Configure<IConfiguration>((opts, cfg) =>
+                cfg.GetSection(MechanicAnalysisStaleDraftOptions.SectionKey).Bind(opts));
+
+        services.AddQuartz(q =>
+        {
+            var jobKey = new JobKey("MechanicAnalysisStaleDraftExpirationJob", "SharedGameCatalog");
+
+            q.AddJob<MechanicAnalysisStaleDraftExpirationJob>(opts => opts
+                .WithIdentity(jobKey)
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob(jobKey)
+                .WithIdentity("MechanicAnalysisStaleDraftExpirationTrigger", "SharedGameCatalog")
+                .WithCronSchedule("0 0/15 * * * ?")
+                .WithDescription("Issue #4503: every 15 minutes, reject mechanic analyses left in Draft past the configured age."));
         });
     }
 

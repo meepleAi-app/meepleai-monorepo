@@ -146,6 +146,27 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
         return ids;
     }
 
+    public async Task<IReadOnlyList<Guid>> GetDraftIdsCreatedBeforeAsync(
+        DateTime createdBeforeUtc,
+        int maxCount,
+        CancellationToken cancellationToken = default)
+    {
+        // Id-only projection, oldest first so a backlog drains in order. The suppression filter is ignored:
+        // a suppressed Draft still holds its slot (the unique index does not exclude it, and
+        // FindByPromptVersionAsync ignores filters), so it is exactly as orphaned as any other.
+        var ids = await DbContext.MechanicAnalyses
+            .AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(a => a.Status == (int)MechanicAnalysisStatus.Draft && a.CreatedAt < createdBeforeUtc)
+            .OrderBy(a => a.CreatedAt)
+            .Select(a => a.Id)
+            .Take(maxCount)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return ids;
+    }
+
     public async Task<MechanicAnalysis?> FindByPromptVersionAsync(
         Guid sharedGameId,
         Guid pdfDocumentId,

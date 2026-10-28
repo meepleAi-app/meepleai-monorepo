@@ -105,6 +105,53 @@ public sealed class IndexPdfVectorDocNoTrackingPersistenceIntegrationTests : IAs
     [Fact(DisplayName = "IndexPdfCommandHandler marks the existing VectorDocument failed under NoTracking when reindex embedding fails")]
     public async Task Handle_FailedReindexUnderNoTracking_MarksExistingVectorDocumentFailed()
     {
+        var (pdfId, result) = await RunReindexWithFailingEmbeddingServiceAsync("simulated embedding failure");
+
+        // Sanity: the handler reported the embedding failure.
+        result.Success.Should().BeFalse();
+        result.ErrorCode.Should().Be(PdfIndexingErrorCode.EmbeddingFailed);
+
+        // Assert — fresh NoTracking read: the existing VectorDocument must have flipped to "failed".
+        var vectorDoc = await ReadVectorDocumentAsync(pdfId);
+
+        vectorDoc.IndexingStatus.Should().Be(
+            "failed",
+            "IndexPdfCommandHandler must load the existing VectorDocument .AsTracking() so a failed "
+            + "re-index actually marks it failed — under the NoTracking default the mutation is a silent "
+            + "no-op, leaving the VectorDocument 'completed' with stale embeddings while the PDF failed.");
+        vectorDoc.IndexingError.Should().NotBeNullOrEmpty(
+            "a reason for the failure must be recorded on the VectorDocument");
+    }
+
+    /// <summary>
+    /// #4660 punto 4 (deciso il 2026-10-28): `IndexingError` è servito all'utente autenticato da
+    /// `GetGamePdfIndexingStatusQueryHandler`, quindi non porta il testo che il servizio di embedding
+    /// restituisce (un indirizzo interno, un percorso, un'eccezione): solo un testo fisso costruito dal codice
+    /// d'errore. Il chiamante del comando continua a ricevere il messaggio completo nel risultato;
+    /// `ProcessingError` del PDF non è toccato da questa prova.
+    /// </summary>
+    [Fact(DisplayName = "IndexPdfCommandHandler records a fixed text, not the embedding service message, in IndexingError")]
+    public async Task Handle_FailedEmbedding_RecordsAFixedTextInIndexingError_NotTheServiceMessage()
+    {
+        const string serviceMessage = "connect ECONNREFUSED http://embedding-svc.internal:8001/embed SECRET-MARKER";
+
+        var (pdfId, result) = await RunReindexWithFailingEmbeddingServiceAsync(serviceMessage);
+
+        result.ErrorCode.Should().Be(PdfIndexingErrorCode.EmbeddingFailed);
+        var vectorDoc = await ReadVectorDocumentAsync(pdfId);
+
+        vectorDoc.IndexingError.Should().NotContain(
+            "SECRET-MARKER",
+            "the column is served to users by the pdf-status poll: the message of an internal service stays in the log");
+        vectorDoc.IndexingError.Should().Be("Indexing failed (EmbeddingFailed)");
+    }
+
+    /// <summary>
+    /// Il re-index di un PDF `Ready` con un documento vettoriale già `completed`, con un servizio di embedding
+    /// che fallisce con `embeddingErrorMessage`: porta l'esecuzione a `MarkIndexingFailedAsync`.
+    /// </summary>
+    private async Task<(Guid PdfId, IndexingResultDto Result)> RunReindexWithFailingEmbeddingServiceAsync(string embeddingErrorMessage)
+    {
         var pdfId = Guid.NewGuid();
         var gameId = Guid.NewGuid();
         var userId = Guid.NewGuid();
@@ -173,44 +220,30 @@ public sealed class IndexPdfVectorDocNoTrackingPersistenceIntegrationTests : IAs
             {
                 Success = false,
                 Embeddings = new List<float[]>(),
-                ErrorMessage = "simulated embedding failure",
+                ErrorMessage = embeddingErrorMessage,
             });
 
-        IndexingResultDto result;
-        using (var actScope = _serviceProvider!.CreateScope())
-        {
-            var actDb = actScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            var handler = new IndexPdfCommandHandler(
-                actDb,
-                actScope.ServiceProvider.GetRequiredService<IAdvancedChunkingService>(),
-                embeddingMock.Object,
-                NullLogger<IndexPdfCommandHandler>.Instance,
-                IndexingSettings(),
-                Mock.Of<ISemanticResponseCache>(),
-                Mock.Of<IPdfIndexingPipeline>());
+        using var actScope = _serviceProvider!.CreateScope();
+        var actDb = actScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var handler = new IndexPdfCommandHandler(
+            actDb,
+            actScope.ServiceProvider.GetRequiredService<IAdvancedChunkingService>(),
+            embeddingMock.Object,
+            NullLogger<IndexPdfCommandHandler>.Instance,
+            IndexingSettings(),
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
 
-            result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), TestCancellationToken);
-        }
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), TestCancellationToken);
+        return (pdfId, result);
+    }
 
-        // Sanity: the handler reported the embedding failure.
-        result.Success.Should().BeFalse();
-        result.ErrorCode.Should().Be(PdfIndexingErrorCode.EmbeddingFailed);
-
-        // Assert — fresh NoTracking read: the existing VectorDocument must have flipped to "failed".
-        using (var verifyScope = _serviceProvider!.CreateScope())
-        {
-            var verifyDb = verifyScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            var vectorDoc = await verifyDb.Set<VectorDocumentEntity>()
-                .AsNoTracking()
-                .FirstAsync(v => v.PdfDocumentId == pdfId, TestCancellationToken);
-
-            vectorDoc.IndexingStatus.Should().Be(
-                "failed",
-                "IndexPdfCommandHandler must load the existing VectorDocument .AsTracking() so a failed "
-                + "re-index actually marks it failed — under the NoTracking default the mutation is a silent "
-                + "no-op, leaving the VectorDocument 'completed' with stale embeddings while the PDF failed.");
-            vectorDoc.IndexingError.Should().NotBeNullOrEmpty(
-                "the embedding failure message must be recorded on the VectorDocument");
-        }
+    private async Task<VectorDocumentEntity> ReadVectorDocumentAsync(Guid pdfId)
+    {
+        using var verifyScope = _serviceProvider!.CreateScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        return await verifyDb.Set<VectorDocumentEntity>()
+            .AsNoTracking()
+            .FirstAsync(v => v.PdfDocumentId == pdfId, TestCancellationToken);
     }
 }

@@ -1082,10 +1082,6 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             await _vectorStore.EnsureCollectionExistsAsync(gameId, dimension, cancellationToken)
                 .ConfigureAwait(false);
 
-            // Delete old embeddings for this document (re-processing support)
-            await _vectorStore.DeleteByVectorDocumentIdAsync(vectorDoc.Id, cancellationToken)
-                .ConfigureAwait(false);
-
             // Build Embedding domain objects and bulk-insert via pgvector COPY.
             // Issue #1391: text_chunks rows were saved earlier in the pipeline with role_tags
             // populated by TextChunkRoleClassifier. We load them now (one query) to denormalize
@@ -1126,7 +1122,13 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                     roleTags: (int)(tc?.RoleTags ?? GameBookRole.None));
             }).ToList();
 
-            await _vectorStore.IndexBatchAsync(embeddingEntities, cancellationToken)
+            // #4660: replaces the embeddings this document already had (re-processing) with the new ones in ONE
+            // transaction. The old code deleted them first, outside any transaction, and then inserted: an
+            // insert that failed left a vector document that a re-index keeps "completed" (decision of
+            // 2026-10-25) with no embeddings at all. Now a failed insert leaves the old embeddings in place.
+            // Only the embeddings: the text chunks of this run were saved above, so until the retry the old
+            // embeddings' source_chunk_id may point at chunks that no longer exist.
+            await _vectorStore.ReplaceByVectorDocumentIdAsync(vectorDoc.Id, embeddingEntities, cancellationToken)
                 .ConfigureAwait(false);
 
             _logger.LogInformation(

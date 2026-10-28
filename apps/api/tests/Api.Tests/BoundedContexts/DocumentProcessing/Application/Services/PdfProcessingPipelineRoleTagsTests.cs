@@ -32,7 +32,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Services;
 /// vector-arm role-match boost (<c>FusionSignals.ComputeRoleMatchBoost</c>) corpus-wide.
 ///
 /// This test captures the <see cref="Embedding"/> batch handed to
-/// <see cref="IVectorStoreAdapter.IndexBatchAsync"/> — the correct seam (NOT EF PgVectorEmbeddings) —
+/// <see cref="IVectorStoreAdapter.ReplaceByVectorDocumentIdAsync"/> — the correct seam (NOT EF PgVectorEmbeddings) —
 /// and asserts each row's <c>RoleTags</c> / <c>SourceChunkId</c> match the persisted
 /// <see cref="TextChunkEntity"/> at the same <c>ChunkIndex</c>. RED before the swap (all 0 / null),
 /// GREEN after.
@@ -93,9 +93,14 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
         SetupIndexingPipelineCreatesVectorDocument();
 
         List<Embedding>? captured = null;
+        Guid? replacedVectorDocumentId = null;
         _vectorStoreMock
-            .Setup(v => v.IndexBatchAsync(It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
-            .Callback((List<Embedding> batch, CancellationToken _) => captured = batch)
+            .Setup(v => v.ReplaceByVectorDocumentIdAsync(It.IsAny<Guid>(), It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
+            .Callback((Guid vectorDocumentId, List<Embedding> batch, CancellationToken __) =>
+            {
+                replacedVectorDocumentId = vectorDocumentId;
+                captured = batch;
+            })
             .Returns(Task.CompletedTask);
 
         var sut = CreatePipeline();
@@ -107,7 +112,14 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
         var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
         doc!.ProcessingState.Should().Be("Ready");
 
-        captured.Should().NotBeNull("the pipeline must hand the pgvector rows to IVectorStoreAdapter.IndexBatchAsync");
+        captured.Should().NotBeNull("the pipeline must hand the pgvector rows to IVectorStoreAdapter.ReplaceByVectorDocumentIdAsync");
+
+        // The id to delete is the vector document's, not the PDF's: with the PDF's id nothing would be deleted
+        // and the embeddings of every re-index would pile up.
+        var vectorDocument = await _db.VectorDocuments.SingleAsync(v => v.PdfDocumentId == _pdfDocumentId);
+        replacedVectorDocumentId.Should().Be(vectorDocument.Id);
+        replacedVectorDocumentId.Should().NotBe(_pdfDocumentId);
+        captured!.Should().OnlyContain(e => e.VectorDocumentId == vectorDocument.Id);
 
         var persistedByIndex = await _db.TextChunks
             .Where(tc => tc.PdfDocumentId == _pdfDocumentId)
@@ -165,7 +177,7 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
                 await _db.SaveChangesAsync(ct);
             });
         _vectorStoreMock
-            .Setup(v => v.IndexBatchAsync(It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
+            .Setup(v => v.ReplaceByVectorDocumentIdAsync(It.IsAny<Guid>(), It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
             .Callback(() => calls.Add("embeddings"))
             .Returns(Task.CompletedTask);
         _indexingPipelineMock
@@ -197,7 +209,7 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
         SetupRoleClassifierDistinctPerChunk();
         SetupIndexingPipelineCreatesVectorDocument();
         _vectorStoreMock
-            .Setup(v => v.IndexBatchAsync(It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
+            .Setup(v => v.ReplaceByVectorDocumentIdAsync(It.IsAny<Guid>(), It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("the vector store is down"));
 
         await Record.ExceptionAsync(() => CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None));
@@ -229,13 +241,13 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
         SetupRoleClassifierDistinctPerChunk();
         SetupIndexingPipelineCreatesVectorDocument();
         _vectorStoreMock
-            .Setup(v => v.IndexBatchAsync(It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
+            .Setup(v => v.ReplaceByVectorDocumentIdAsync(It.IsAny<Guid>(), It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("the vector store is down"));
 
         await Record.ExceptionAsync(() => CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None));
 
         _vectorStoreMock.Verify(
-            v => v.IndexBatchAsync(It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()),
+            v => v.ReplaceByVectorDocumentIdAsync(It.IsAny<Guid>(), It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()),
             Times.Once,
             "the failure has to come from saving the embeddings, not from a step before it");
         _indexingPipelineMock.Verify(
@@ -265,7 +277,7 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
         SetupRoleClassifierDistinctPerChunk();
         SetupIndexingPipelineCreatesVectorDocument();
         _vectorStoreMock
-            .Setup(v => v.IndexBatchAsync(It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
+            .Setup(v => v.ReplaceByVectorDocumentIdAsync(It.IsAny<Guid>(), It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
             .Callback(() =>
             {
                 var tracked = _db.VectorDocuments.Local.Single();
@@ -318,7 +330,7 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
         _db.ProcessingSteps.Add(step);
         await _db.SaveChangesAsync();
         _vectorStoreMock
-            .Setup(v => v.IndexBatchAsync(It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
+            .Setup(v => v.ReplaceByVectorDocumentIdAsync(It.IsAny<Guid>(), It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
             // A change the job holds on the shared context, made after the pipeline's last save: still unsaved when the
             // failure handler runs (a change made earlier would be flushed by the pipeline's own saves).
             .Callback(() =>
@@ -458,7 +470,7 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
         SetupRoleClassifierDistinctPerChunk();
         SetupIndexingPipelineCreatesVectorDocument();
         _vectorStoreMock
-            .Setup(v => v.IndexBatchAsync(It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
+            .Setup(v => v.ReplaceByVectorDocumentIdAsync(It.IsAny<Guid>(), It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("the vector store is down"));
         _failingSaves.ExceptionToThrow = () => new DbUpdateConcurrencyException("xmin conflict");
         _failingSaves.FailWhen = context => context.ChangeTracker.Entries<PdfDocumentEntity>()

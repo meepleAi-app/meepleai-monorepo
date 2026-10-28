@@ -89,6 +89,22 @@ public interface IMechanicAnalysisRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Returns the ids of analyses still in <see cref="Enums.MechanicAnalysisStatus.Draft"/> that were created strictly
+    /// before <paramref name="createdBeforeUtc"/>, oldest first, at most <paramref name="maxCount"/> of them.
+    /// Issue #4503: such a row is an orphan if its pipeline died with the process, and the filtered unique index
+    /// counts it, so it blocks its (game, PDF, prompt) slot until something moves it out of <c>Draft</c>.
+    /// </summary>
+    /// <remarks>
+    /// Id-only projection, like <see cref="GetIdsByStatusAsync"/>: the caller reloads each aggregate fresh before
+    /// changing it. <paramref name="createdBeforeUtc"/> must be UTC (Npgsql rejects an unspecified kind on a
+    /// <c>timestamptz</c> column).
+    /// </remarks>
+    Task<IReadOnlyList<Guid>> GetDraftIdsCreatedBeforeAsync(
+        DateTime createdBeforeUtc,
+        int maxCount,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Finds the existing non-rejected analysis for the (SharedGame, PdfDocument, PromptVersion)
     /// tuple, or <c>null</c> if none exists. Supports T7 idempotency (ADR-051 §3.5): the generation
     /// pipeline uses this lookup to short-circuit duplicate runs with the same prompt version.

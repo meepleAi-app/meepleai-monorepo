@@ -146,6 +146,25 @@ internal sealed class MechanicAnalysisRepository : RepositoryBase, IMechanicAnal
         return ids;
     }
 
+    public async Task<IReadOnlyList<Guid>> GetDraftIdsCreatedBeforeAsync(
+        DateTime createdBeforeUtc,
+        int maxCount,
+        CancellationToken cancellationToken = default)
+    {
+        // Id-only projection, oldest first so a backlog drains in order. The default query filters stay on:
+        // a row they hide is not one an admin can see or act on.
+        var ids = await DbContext.MechanicAnalyses
+            .AsNoTracking()
+            .Where(a => a.Status == (int)MechanicAnalysisStatus.Draft && a.CreatedAt < createdBeforeUtc)
+            .OrderBy(a => a.CreatedAt)
+            .Select(a => a.Id)
+            .Take(maxCount)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return ids;
+    }
+
     public async Task<MechanicAnalysis?> FindByPromptVersionAsync(
         Guid sharedGameId,
         Guid pdfDocumentId,

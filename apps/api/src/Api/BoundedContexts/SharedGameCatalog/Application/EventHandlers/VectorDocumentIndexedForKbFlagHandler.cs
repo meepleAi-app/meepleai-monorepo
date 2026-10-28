@@ -107,29 +107,38 @@ internal sealed class VectorDocumentIndexedForKbFlagHandler
         //
         // Issue #613: bounded retry guards against transient Redis failures
         // that would otherwise leave the read-model serving a stale flag.
-        await _retryPolicy.ExecuteAsync(
+        //
+        // #4659: each step is best effort (TryExecuteAsync): the flag is already saved, so a step that gives
+        // up after the retries is logged and the next ones still run; it does not fail the PDF that was
+        // just indexed. The token this handler received is not passed on to the evictions: the write is saved,
+        // so they must not depend on the caller (same reason as in SharedGameCacheInvalidator).
+        await _retryPolicy.TryExecuteAsync(
             token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync("search-games", token)),
             "shared-games.list",
-            cancellationToken).ConfigureAwait(false);
+            "search-games",
+            _logger,
+            CancellationToken.None).ConfigureAwait(false);
 
         // Issue #603 (Wave A.4): also evict the per-game detail cache so the
         // next /shared-games/{id} read sees the new HasKnowledgeBase flag and
         // refreshed KbsCount/Kbs preview list.
-        await _retryPolicy.ExecuteAsync(
+        await _retryPolicy.TryExecuteAsync(
             token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync($"shared-game:{sharedGameId.Value}", token)),
             "shared-games.detail",
-            cancellationToken).ConfigureAwait(false);
+            $"shared-game:{sharedGameId.Value}",
+            _logger,
+            CancellationToken.None).ConfigureAwait(false);
 
         // #4659: the trending rail caches HasKnowledgeBase in its entry (tag CatalogRailsCache.Tag), so the
-        // badge stayed as it was until that entry expired (12 h). Same policy as the two evictions above: the
-        // retry policy, then the exception goes up to whoever published the event. Nothing retries it from
-        // there (the flag is already saved, so a second event would leave early at the top), and if the
-        // eviction gives up the rail keeps the old badge until it expires: the same exposure as the list and
-        // the detail, and a policy question for all three, not decided here.
-        await _retryPolicy.ExecuteAsync(
+        // badge stayed as it was until that entry expired (12 h). Same policy as the two evictions above. If
+        // this one gives up the rail keeps the old badge until it expires (the flag is already saved, so a
+        // second event would leave early at the top): the log is where it shows.
+        await _retryPolicy.TryExecuteAsync(
             token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync(CatalogRailsCache.Tag, token)),
             "shared-games.rails",
-            cancellationToken).ConfigureAwait(false);
+            CatalogRailsCache.Tag,
+            _logger,
+            CancellationToken.None).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Set HasKnowledgeBase=true for SharedGame {SharedGameId} triggered by VectorDocument {DocumentId}",

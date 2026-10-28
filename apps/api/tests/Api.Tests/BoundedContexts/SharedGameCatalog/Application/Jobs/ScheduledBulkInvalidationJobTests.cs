@@ -244,10 +244,10 @@ public sealed class ScheduledBulkInvalidationJobTests
     }
 
     [Fact]
-    public async Task Execute_WhenRetryPolicyThrows_CatchesAndSetsFailureResult()
+    public async Task Execute_WhenRetryPolicyThrows_DoesNotThrow_AndTheResultIsAFailure()
     {
-        // Arrange — retry policy that always throws on the FIRST invocation
-        // (the list invalidation), forcing the catch-all to engage.
+        // Arrange — retry policy that always gives up (Redis down after every attempt). #4659: the eviction
+        // is best effort, so the job logs the step and reports it in the result instead of aborting.
         await using var db = TestDbContextFactory.CreateInMemoryDbContext();
         var cache = CreateHybridCache();
         var alwaysFails = new ThrowingRetryPolicy(new InvalidOperationException("Redis down"));
@@ -256,12 +256,13 @@ public sealed class ScheduledBulkInvalidationJobTests
         var ctx = CreateJobContext();
 
         // Act
-        await job.Execute(ctx.Object);
+        var act = async () => await job.Execute(ctx.Object);
 
-        // Assert — job did NOT throw, Result reflects failure
+        // Assert — job did NOT throw, Result reflects failure (the list step, the only one with no events)
+        await act.Should().NotThrowAsync();
         ctx.VerifySet(c => c.Result = It.Is<object>(r =>
             !(bool)r.GetType().GetProperty("Success")!.GetValue(r)! &&
-            r.GetType().GetProperty("Error")!.GetValue(r)!.ToString()!.Contains("Redis down", StringComparison.Ordinal)));
+            (int)r.GetType().GetProperty("FailedInvalidations")!.GetValue(r)! == 1));
     }
 
     [Fact]

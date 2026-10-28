@@ -52,6 +52,8 @@ import { useLibraryGameDetail } from '@/hooks/queries/useLibrary';
 import { useTranslation } from '@/hooks/useTranslation';
 import type { GamePdfDto } from '@/lib/api/schemas/pdf.schemas';
 
+import { DELETE_OUTCOME_MESSAGE_PREFIX } from './_delete-outcome-messages';
+
 interface KbHubContentProps {
   readonly gameId: string;
 }
@@ -362,10 +364,15 @@ export function KbHubContent({ gameId }: KbHubContentProps): ReactElement {
   const handleDeleteConfirm = async (): Promise<void> => {
     if (!deletePdfTarget) return;
     try {
-      await deleteMutation.mutateAsync(deletePdfTarget.id);
+      const result = await deleteMutation.mutateAsync(deletePdfTarget.id);
       // Only dismiss the dialog on success — keep it open on error so the user
       // sees the failure and can decide to retry or cancel.
       setDeletePdfTarget(null);
+      // Other games may still use the PDF (#4627): then it was not deleted, and the user is told so
+      // instead of watching the dialog close and the row stay.
+      if (result.outcome === 'unlinked' || result.outcome === 'kept') {
+        toast.info(t(`${DELETE_OUTCOME_MESSAGE_PREFIX}${result.outcome}`));
+      }
     } catch {
       toast.error(t('pages.library.gameDetail.kb.errors.deleteFailed'));
     }

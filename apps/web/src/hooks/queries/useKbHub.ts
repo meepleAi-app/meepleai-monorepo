@@ -23,6 +23,7 @@ import {
 } from '@tanstack/react-query';
 
 import { api } from '@/lib/api';
+import type { DeletePdfResult } from '@/lib/api/clients/pdfClient';
 import type { UserGameKbStatus } from '@/lib/api/schemas/knowledge-base.schemas';
 import type { GamePdfDto } from '@/lib/api/schemas/pdf.schemas';
 
@@ -92,8 +93,10 @@ export function useRebuildRaptor(gameId: string): UseMutationResult<void, Error,
 /**
  * Delete a PDF document. Invalidates pdfs + status on success.
  * The underlying endpoint is `DELETE /api/v1/pdf/{pdfId}` (Owner/Admin enforced server-side).
+ * It resolves to what happened to the PDF: other games may still use it, in which case it is only
+ * unlinked from this game (`unlinked`) or left as it was (`kept`), not deleted (#4683).
  */
-export function useDeletePdf(gameId: string): UseMutationResult<void, Error, string> {
+export function useDeletePdf(gameId: string): UseMutationResult<DeletePdfResult, Error, string> {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (pdfId: string) => api.pdf.adminDeletePdf(pdfId),

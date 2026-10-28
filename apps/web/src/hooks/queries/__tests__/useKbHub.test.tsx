@@ -117,9 +117,19 @@ describe('useKbHub (Issue #1481)', () => {
   });
 
   it('useDeletePdf invokes adminDeletePdf endpoint with pdfId', async () => {
-    mockAdminDeletePdf.mockResolvedValueOnce(undefined);
+    mockAdminDeletePdf.mockResolvedValueOnce({ outcome: 'deleted' });
     const { result } = renderHook(() => useDeletePdf(GAME_ID), { wrapper });
     await result.current.mutateAsync('pdf-1');
     expect(mockAdminDeletePdf).toHaveBeenCalledWith('pdf-1');
   });
+
+  it.each(['deleted', 'unlinked', 'kept'] as const)(
+    'useDeletePdf hands the %s outcome to the caller (#4683)',
+    async outcome => {
+      mockAdminDeletePdf.mockResolvedValueOnce({ outcome });
+      const { result } = renderHook(() => useDeletePdf(GAME_ID), { wrapper });
+      // The page decides what to tell the user from this value: the mutation must not swallow it.
+      await expect(result.current.mutateAsync('pdf-1')).resolves.toEqual({ outcome });
+    }
+  );
 });

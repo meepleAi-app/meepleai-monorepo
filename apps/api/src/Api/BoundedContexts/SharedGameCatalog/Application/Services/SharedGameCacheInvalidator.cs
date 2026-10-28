@@ -13,8 +13,8 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 /// <remarks>
 /// <para>
 /// I tag sono scritti qui e solo qui, per i percorsi di scrittura che passano da questo servizio. Sono
-/// quelli con cui <c>SearchSharedGamesQueryHandler</c> (lista) e <c>GetSharedGameByIdQueryHandler</c>
-/// (dettaglio) scrivono le voci.
+/// quelli con cui <c>SearchSharedGamesQueryHandler</c> (lista), <c>GetSharedGameByIdQueryHandler</c>
+/// (dettaglio) e le rail del catalogo (<see cref="CatalogRailsCache.Tag"/>, #4659) scrivono le voci.
 /// </para>
 /// <para>
 /// Due passi per tag: prima il nativo, <c>HybridCache.RemoveByTagAsync</c>, poi il wrapper
@@ -37,7 +37,8 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 /// </para>
 /// <para>
 /// Ogni passo passa dalla retry policy, col nome di operazione che alimenta la metrica
-/// (<c>shared-games.list</c> / <c>shared-games.detail</c>). La lista precede il dettaglio.
+/// (<c>shared-games.list</c> / <c>shared-games.rails</c> / <c>shared-games.detail</c>). La lista precede le
+/// rail, le rail precedono il dettaglio.
 /// </para>
 /// <para>
 /// Errori (#4603, punto 2): l'evizione sta dopo il commit, quindi un passo che esaurisce i tentativi si
@@ -49,6 +50,7 @@ internal sealed class SharedGameCacheInvalidator : ISharedGameCacheInvalidator
 {
     private const string SearchGamesTag = "search-games";
     private const string ListOperation = "shared-games.list";
+    private const string RailsOperation = "shared-games.rails";
     private const string DetailOperation = "shared-games.detail";
 
     private readonly IHybridCacheService _cache;
@@ -87,6 +89,10 @@ internal sealed class SharedGameCacheInvalidator : ISharedGameCacheInvalidator
         }
 
         await EvictTagAsync(SearchGamesTag, ListOperation).ConfigureAwait(false);
+
+        // #4659: le rail del catalogo sono liste di giochi con il loro tag. Una volta sola per chiamata, come
+        // la lista: non per gioco.
+        await EvictTagAsync(CatalogRailsCache.Tag, RailsOperation).ConfigureAwait(false);
 
         foreach (var gameId in gameIds)
         {

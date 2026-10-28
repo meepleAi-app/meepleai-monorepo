@@ -83,8 +83,8 @@ internal sealed class DetailCacheEvictionDoubles
     }
 
     /// <summary>
-    /// Dopo la scrittura, la lista (<c>search-games</c>) e poi il dettaglio di QUEL gioco sono stati
-    /// tolti, ciascuno con entrambi i passi, e nient'altro.
+    /// Dopo la scrittura, la lista (<c>search-games</c>), le rail del catalogo (<c>catalog</c>, #4659) e poi il
+    /// dettaglio di QUEL gioco sono stati tolti, ciascuno con entrambi i passi, e nient'altro.
     /// </summary>
     public void AssertDetailAndListEvictedAfterTheWrite(Guid gameId)
     {
@@ -95,10 +95,11 @@ internal sealed class DetailCacheEvictionDoubles
             {
                 Written,
                 "native:search-games", "wrapper:search-games",
+                "native:catalog", "wrapper:catalog",
                 $"native:{tag}", $"wrapper:{tag}",
             },
-            "the list and the detail of the game are evicted once each, after the write, through the "
-            + "native HybridCache and then through the wrapper");
+            "the list, the catalog rails and the detail of the game are evicted once each, after the write, "
+            + "through the native HybridCache and then through the wrapper");
     }
 
     public void AssertNothingEvicted() =>

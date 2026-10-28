@@ -81,23 +81,22 @@ public sealed class RagDashboardMetricsAuthorizationIntegrationTests
         failures.RemoveAll(f => f.Length == 0);
         failures.Should().BeEmpty(
             "these metrics aggregate every strategy and carry no UserId: only an admin may read them. Before " +
-            "#4584 any authenticated user got through to the handler, which then answers 400 for the unrelated " +
-            "reason described on Admin_IsNotStoppedByTheGuard: a 400 here is a user who was not stopped. " +
+            "#4584 any authenticated user got through to the handler; a 200 here (a 400 before #4623, for the " +
+            "reason described on Admin_ReadsEveryMetricsRoute) is a user who was not stopped. " +
             "Found: " + string.Join(" ;; ", failures));
     }
 
     /// <summary>
-    /// L'admin non viene fermato dalla guardia. Non si pretende un 200: le rotte di metriche oggi rispondono 400 a
-    /// chiunque, admin compreso, perché <c>RagExecutionRepository</c> passa a Npgsql date con
-    /// <c>DateTimeKind.Unspecified</c> (<c>ArgumentException: Cannot write DateTime with Kind=Unspecified to
-    /// PostgreSQL type 'timestamp with time zone'</c>, che il middleware mostra come «Invalid request parameters»).
-    /// È un difetto distinto da #4584, tracciato in #4623, che la correzione di #4584 non tocca. Quando le date
-    /// saranno corrette, questo test va stretto a 200.
+    /// L'admin legge le metriche: 200 su ogni rotta, senza parametri. Fino a #4623 rispondevano 400 a chiunque, admin
+    /// compreso, perché <c>RagExecutionRepository</c> passava a Npgsql date con <c>DateTimeKind.Unspecified</c>
+    /// (<c>ArgumentException: Cannot write DateTime with Kind=Unspecified to PostgreSQL type 'timestamp with time
+    /// zone'</c>, che il middleware mostra come «Invalid request parameters»), e questo test pretendeva solo
+    /// «né 401 né 403».
     /// </summary>
     [Theory]
     [InlineData("Admin")]
     [InlineData("SuperAdmin")]
-    public async Task Admin_IsNotStoppedByTheGuard(string role)
+    public async Task Admin_ReadsEveryMetricsRoute(string role)
     {
         var (_, token) = await CreateSessionAsync(role == "Admin"
             ? TestSessionHelper.CreateAdminSessionAsync
@@ -106,18 +105,18 @@ public sealed class RagDashboardMetricsAuthorizationIntegrationTests
         var routes = MetricsRoutes();
         AssertTheScanSeesTheMetricsRoutes(routes);
 
-        var stopped = new List<string>();
+        var notOk = new List<string>();
         foreach (var (method, template) in routes)
         {
             var path = "/" + template.Replace("{strategyId}", "Hybrid", StringComparison.Ordinal);
             var (status, body) = await SendAsync(new HttpMethod(method), path, token);
-            if (status is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+            if (status != HttpStatusCode.OK)
             {
-                stopped.Add($"{method} {path} as {role}: {(int)status} {body[..Math.Min(body.Length, 200)]}");
+                notOk.Add($"{method} {path} as {role}: {(int)status} {body[..Math.Min(body.Length, 200)]}");
             }
         }
 
-        stopped.Should().BeEmpty($"an {role} may read the metrics. Found: " + string.Join(" ;; ", stopped));
+        notOk.Should().BeEmpty($"an {role} reads the metrics. Found: " + string.Join(" ;; ", notOk));
     }
 
     /// <summary>

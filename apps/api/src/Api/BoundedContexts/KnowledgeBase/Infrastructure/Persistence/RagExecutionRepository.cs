@@ -326,9 +326,17 @@ internal sealed class RagExecutionRepository : RepositoryBase, IRagExecutionRepo
         var query = DbContext.Set<RagExecution>().AsNoTracking();
 
         if (startDate.HasValue)
-            query = query.Where(e => e.CreatedAt >= startDate.Value.ToDateTime(TimeOnly.MinValue));
+        {
+            var start = StartOfDayUtc(startDate.Value);
+            query = query.Where(e => e.CreatedAt >= start);
+        }
+
         if (endDate.HasValue)
-            query = query.Where(e => e.CreatedAt <= endDate.Value.ToDateTime(TimeOnly.MaxValue));
+        {
+            var end = EndOfDayUtc(endDate.Value);
+            query = query.Where(e => e.CreatedAt <= end);
+        }
+
         if (!string.IsNullOrWhiteSpace(strategy))
             query = query.Where(e => e.Strategy == strategy);
 
@@ -400,8 +408,8 @@ internal sealed class RagExecutionRepository : RepositoryBase, IRagExecutionRepo
         TimeSeriesGranularity granularity,
         CancellationToken cancellationToken = default)
     {
-        var start = startDate.ToDateTime(TimeOnly.MinValue);
-        var end = endDate.ToDateTime(TimeOnly.MaxValue);
+        var start = StartOfDayUtc(startDate);
+        var end = EndOfDayUtc(endDate);
 
         var executions = await DbContext.Set<RagExecution>()
             .AsNoTracking()
@@ -420,6 +428,13 @@ internal sealed class RagExecutionRepository : RepositoryBase, IRagExecutionRepo
             .OrderBy(p => p.Bucket)
             .ToList();
     }
+
+    // #4623: `created_at` is `timestamp with time zone`, and Npgsql refuses to write a DateTime with Kind=Unspecified to
+    // it (what ToDateTime(TimeOnly) returns without a kind): the four /rag-dashboard metrics routes answered 400 to
+    // everybody. The upper bound stays TimeOnly.MaxValue, so the last day of the range is included whole.
+    private static DateTime StartOfDayUtc(DateOnly day) => day.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+
+    private static DateTime EndOfDayUtc(DateOnly day) => day.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
 
     private static DateTime TruncateTimestamp(DateTime dt, TimeSeriesGranularity granularity) =>
         granularity switch

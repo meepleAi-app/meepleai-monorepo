@@ -28,6 +28,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Services;
 public sealed class SharedGameCacheInvalidatorTests
 {
     private const string ListTag = "search-games";
+    private const string RailsTag = "catalog";
 
     private readonly DetailCacheEvictionDoubles _doubles = new();
 
@@ -46,7 +47,7 @@ public sealed class SharedGameCacheInvalidatorTests
     }
 
     [Fact]
-    public async Task EvictDetailAndList_EvictsTheListFirst_ThenTheDetailOfThatGame()
+    public async Task EvictDetailAndList_EvictsTheListFirst_ThenTheRails_ThenTheDetailOfThatGame()
     {
         var gameId = Guid.NewGuid();
 
@@ -56,6 +57,7 @@ public sealed class SharedGameCacheInvalidatorTests
             new[]
             {
                 $"native:{ListTag}", $"wrapper:{ListTag}",
+                $"native:{RailsTag}", $"wrapper:{RailsTag}",
                 $"native:{DetailTag(gameId)}", $"wrapper:{DetailTag(gameId)}",
             },
             "every tag gets both steps, the native one first (#4603): it is local and immediate, and it "
@@ -63,7 +65,7 @@ public sealed class SharedGameCacheInvalidatorTests
     }
 
     [Fact]
-    public async Task EvictDetailsAndList_ForManyGames_EvictsTheListOnce_AndEachDetailOnce()
+    public async Task EvictDetailsAndList_ForManyGames_EvictsTheListAndTheRailsOnce_AndEachDetailOnce()
     {
         var first = Guid.NewGuid();
         var second = Guid.NewGuid();
@@ -74,6 +76,7 @@ public sealed class SharedGameCacheInvalidatorTests
             new[]
             {
                 $"native:{ListTag}", $"wrapper:{ListTag}",
+                $"native:{RailsTag}", $"wrapper:{RailsTag}",
                 $"native:{DetailTag(first)}", $"wrapper:{DetailTag(first)}",
                 $"native:{DetailTag(second)}", $"wrapper:{DetailTag(second)}",
             });
@@ -87,8 +90,21 @@ public sealed class SharedGameCacheInvalidatorTests
         _doubles.Events.Should().BeEmpty("a bulk action that changed no game has nothing to evict");
     }
 
+    /// <summary>
+    /// #4659. Le rail del catalogo (`newGames`, `trending`) sono liste di giochi con un loro tag (`catalog`):
+    /// un gioco archiviato, cancellato o pubblicato le cambia, e non bastava togliere la lista pubblica.
+    /// Errata e FAQ, che le rail non riportano, toccano solo il dettaglio.
+    /// </summary>
     [Fact]
-    public async Task Eviction_UsesTheRetryPolicy_WithTheMetricNamesOfTheListAndOfTheDetail()
+    public async Task EvictDetail_LeavesTheRailsAlone()
+    {
+        await _doubles.Invalidator.EvictDetailAsync(Guid.NewGuid(), TestContext.Current.CancellationToken);
+
+        _doubles.Events.Should().NotContain(e => e.EndsWith(RailsTag, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task Eviction_UsesTheRetryPolicy_WithTheMetricNamesOfTheListTheRailsAndTheDetail()
     {
         var names = new List<string>();
         _doubles.RetryPolicy
@@ -103,7 +119,9 @@ public sealed class SharedGameCacheInvalidatorTests
         await _doubles.Invalidator.EvictDetailAndListAsync(Guid.NewGuid(), TestContext.Current.CancellationToken);
 
         names.Should().Equal(
-            "shared-games.list", "shared-games.list", "shared-games.detail", "shared-games.detail");
+            "shared-games.list", "shared-games.list",
+            "shared-games.rails", "shared-games.rails",
+            "shared-games.detail", "shared-games.detail");
     }
 
     /// <summary>
@@ -164,7 +182,7 @@ public sealed class SharedGameCacheInvalidatorTests
     /// ciascun gioco viene tolto lo stesso.
     /// </summary>
     [Fact]
-    public async Task WhenTheListEvictionFails_TheDetailsOfEveryGameAreStillEvicted()
+    public async Task WhenTheListEvictionFails_TheRailsAndTheDetailsOfEveryGameAreStillEvicted()
     {
         var first = Guid.NewGuid();
         var second = Guid.NewGuid();
@@ -181,8 +199,33 @@ public sealed class SharedGameCacheInvalidatorTests
 
         await act.Should().NotThrowAsync();
         _doubles.Events.Should().Equal(
+            $"native:{RailsTag}", $"wrapper:{RailsTag}",
             $"native:{DetailTag(first)}", $"wrapper:{DetailTag(first)}",
             $"native:{DetailTag(second)}", $"wrapper:{DetailTag(second)}");
+    }
+
+    /// <summary>
+    /// Come per la lista: se le rail non si riescono a togliere, il dettaglio del gioco viene tolto lo stesso.
+    /// </summary>
+    [Fact]
+    public async Task WhenTheRailsEvictionFails_TheDetailIsStillEvicted()
+    {
+        var gameId = Guid.NewGuid();
+        var calls = 0;
+
+        // Le chiamate 3 e 4 (nativo e wrapper delle rail) si arrendono; la lista e il dettaglio passano.
+        _doubles.RetryPolicy
+            .Setup(p => p.ExecuteAsync(
+                It.IsAny<Func<CancellationToken, ValueTask>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns<Func<CancellationToken, ValueTask>, string, CancellationToken>((op, _, ct) =>
+                ++calls is 3 or 4 ? Task.FromException(new InvalidOperationException("redis down")) : op(ct).AsTask());
+
+        var act = () => _doubles.Invalidator.EvictDetailAndListAsync(gameId, TestContext.Current.CancellationToken);
+
+        await act.Should().NotThrowAsync();
+        _doubles.Events.Should().Equal(
+            $"native:{ListTag}", $"wrapper:{ListTag}",
+            $"native:{DetailTag(gameId)}", $"wrapper:{DetailTag(gameId)}");
     }
 
     /// <summary>
@@ -202,10 +245,13 @@ public sealed class SharedGameCacheInvalidatorTests
 
         _doubles.Events.Should().Equal(
             $"native:{ListTag}", $"wrapper:{ListTag}",
+            $"native:{RailsTag}", $"wrapper:{RailsTag}",
             $"native:{DetailTag(gameId)}", $"wrapper:{DetailTag(gameId)}");
         _doubles.RetryPolicy.Verify(
             p => p.ExecuteAsync(It.IsAny<Func<CancellationToken, ValueTask>>(), It.IsAny<string>(), CancellationToken.None),
-            Times.Exactly(4));
+            Times.Exactly(6));
+        _doubles.Cache.Verify(c => c.RemoveByTagAcrossReplicasAsync(RailsTag, CancellationToken.None), Times.Once);
+        _doubles.HybridCache.Verify(c => c.RemoveByTagAsync(RailsTag, CancellationToken.None), Times.Once);
         _doubles.Cache.Verify(c => c.RemoveByTagAcrossReplicasAsync(ListTag, CancellationToken.None), Times.Once);
         _doubles.Cache.Verify(c => c.RemoveByTagAcrossReplicasAsync(DetailTag(gameId), CancellationToken.None), Times.Once);
         _doubles.HybridCache.Verify(c => c.RemoveByTagAsync(ListTag, CancellationToken.None), Times.Once);

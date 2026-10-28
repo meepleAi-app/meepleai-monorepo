@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetCatalogTrending;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -95,12 +96,12 @@ public sealed class GetCatalogTrendingQueryHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_DefaultsHasKnowledgeBaseToFalse_WhenGameRowIsMissing_Issue2290()
+    public async Task Handle_OmitsAnEvent_WhoseGameRowIsGone_Issue4659()
     {
-        // Arrange — one analytics event but no SharedGameEntity row (orphan
-        // event row, e.g. game deleted after the event was recorded). The
-        // handler uses `gameMap.TryGetValue(...)` so the DTO must default
-        // safely instead of throwing.
+        // Arrange — one analytics event but no SharedGameEntity row (orphan event row, e.g. game
+        // deleted after the event was recorded). Before #4659 this surfaced as a card titled
+        // "Unknown Game" whose link opens a detail that answers 404; the rail now leaves it out.
+        // The handler must also not throw on the missing row (#2290).
         var orphanGameId = Guid.NewGuid();
         SeedEvent(orphanGameId, GameEventType.View);
         await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -111,11 +112,83 @@ public sealed class GetCatalogTrendingQueryHandlerTests : IDisposable
             TestContext.Current.CancellationToken);
 
         // Assert
-        result.Should().ContainSingle();
-        result[0].GameId.Should().Be(orphanGameId);
-        result[0].Title.Should().Be("Unknown Game", "the existing fallback path is preserved");
-        result[0].HasKnowledgeBase.Should().BeFalse(
-            "missing SharedGameEntity rows must default HasKnowledgeBase to false");
+        result.Should().BeEmpty("a game that no longer exists is not a card the rail can open");
+    }
+
+    /// <summary>
+    /// #4659. Il dettaglio che apre una card risponde 404 a chi non è admin per i giochi non pubblicati, e la
+    /// lista del catalogo mostra solo i <c>Published</c>: la rail fa lo stesso. Gli eventi di un gioco che era
+    /// pubblicato e poi è stato archiviato o cancellato restano nei sette giorni di calcolo.
+    /// </summary>
+    [Fact]
+    public async Task Handle_RanksOnlyPublishedGames_Issue4659()
+    {
+        var published = SeedGame(hasKnowledgeBase: false, title: "Published");
+        var draft = SeedGame(hasKnowledgeBase: false, title: "Draft", status: GameStatus.Draft);
+        var pending = SeedGame(hasKnowledgeBase: false, title: "Pending", status: GameStatus.PendingApproval);
+        var archived = SeedGame(hasKnowledgeBase: false, title: "Archived", status: GameStatus.Archived);
+        var deleted = SeedGame(hasKnowledgeBase: false, title: "Deleted", isDeleted: true);
+        foreach (var game in new[] { draft, pending, archived, deleted, published })
+        {
+            SeedEvent(game.Id, GameEventType.Play);
+        }
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await _handler.Handle(
+            new GetCatalogTrendingQuery { Limit = 10 },
+            TestContext.Current.CancellationToken);
+
+        result.Select(r => r.Title).Should().Equal("Published");
+    }
+
+    /// <summary>
+    /// La posizione riparte da 1 dopo l'esclusione: un gioco archiviato in testa alla classifica non lascia un
+    /// buco (la rail mostrerebbe 2, 3 e nessun 1).
+    /// </summary>
+    [Fact]
+    public async Task Handle_TheRankStartsAtOneAfterTheExclusion_Issue4659()
+    {
+        var archivedTop = SeedGame(hasKnowledgeBase: false, title: "Archived top", status: GameStatus.Archived);
+        var first = SeedGame(hasKnowledgeBase: false, title: "First published");
+        var second = SeedGame(hasKnowledgeBase: false, title: "Second published");
+        SeedEvent(archivedTop.Id, GameEventType.Play);
+        SeedEvent(archivedTop.Id, GameEventType.Play);
+        SeedEvent(first.Id, GameEventType.Play);
+        SeedEvent(second.Id, GameEventType.Search);
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await _handler.Handle(
+            new GetCatalogTrendingQuery { Limit = 10 },
+            TestContext.Current.CancellationToken);
+
+        result.Select(r => (r.Rank, r.Title)).Should().Equal((1, "First published"), (2, "Second published"));
+    }
+
+    /// <summary>
+    /// Il filtro sta PRIMA del tetto della voce in cache (50 righe, <c>MaxCacheLimit</c>): se i giochi non
+    /// pubblicati si scartassero dopo il <c>Take</c>, cinquanta archiviati più in vista dei pubblicati ne
+    /// occuperebbero tutti i posti e la rail resterebbe vuota, pur avendo dati per riempirla.
+    /// </summary>
+    [Fact]
+    public async Task Handle_TheCacheCapAppliesAfterThePublishedFilter_Issue4659()
+    {
+        // Tanti archiviati quanto il tetto della voce in cache: il tetto lo dice l'handler, non un numero scritto qui.
+        for (var i = 0; i < GetCatalogTrendingQueryHandler.MaxCacheLimit; i++)
+        {
+            var archived = SeedGame(hasKnowledgeBase: false, title: $"Archived {i}", status: GameStatus.Archived);
+            SeedEvent(archived.Id, GameEventType.Play);
+        }
+        var first = SeedGame(hasKnowledgeBase: false, title: "First published");
+        var second = SeedGame(hasKnowledgeBase: false, title: "Second published");
+        SeedEvent(first.Id, GameEventType.View);
+        SeedEvent(second.Id, GameEventType.Search);
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await _handler.Handle(
+            new GetCatalogTrendingQuery { Limit = 10 },
+            TestContext.Current.CancellationToken);
+
+        result.Select(r => r.Title).Should().Equal("Second published", "First published");
     }
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -200,7 +273,11 @@ public sealed class GetCatalogTrendingQueryHandlerTests : IDisposable
             "still be resolved fresh in Handle(), not inherited from the cached DTO");
     }
 
-    private SharedGameEntity SeedGame(bool hasKnowledgeBase, string title)
+    private SharedGameEntity SeedGame(
+        bool hasKnowledgeBase,
+        string title,
+        GameStatus status = GameStatus.Published,
+        bool isDeleted = false)
     {
         var entity = new SharedGameEntity
         {
@@ -212,11 +289,11 @@ public sealed class GetCatalogTrendingQueryHandlerTests : IDisposable
             MaxPlayers = 4,
             PlayingTimeMinutes = 60,
             MinAge = 10,
-            Status = 1, // Published
+            Status = (int)status,
             CreatedBy = Guid.NewGuid(),
             CreatedAt = DateTime.UtcNow,
             HasKnowledgeBase = hasKnowledgeBase,
-            IsDeleted = false,
+            IsDeleted = isDeleted,
         };
         _db.SharedGames.Add(entity);
         return entity;

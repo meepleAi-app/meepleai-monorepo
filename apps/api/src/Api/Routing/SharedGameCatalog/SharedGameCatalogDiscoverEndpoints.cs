@@ -21,7 +21,7 @@ internal static class SharedGameCatalogDiscoverEndpoints
             .WithDescription(
                 "Returns the most recently created shared games sorted by createdAt DESC. "
                 + "Powers the SP4 /discover \"New games\" rail. "
-                + "Soft-deleted rows excluded. Cache: 1h via HybridCache.")
+                + "Only published games; soft-deleted rows excluded. Cache: 1h via HybridCache.")
             .Produces<DiscoverItemsEnvelope<NewGameDto>>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status400BadRequest);

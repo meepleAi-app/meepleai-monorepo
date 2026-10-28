@@ -131,6 +131,11 @@ public sealed class DeletePdfIntegrationTests : IAsyncLifetime
         cacheMock.Setup(c => c.InvalidateGameAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         services.AddSingleton<IAiResponseCacheService>(cacheMock.Object);
+
+        // #4628: DeletePdfCommandHandler has taken the semantic cache since #3982, and this collection did not register
+        // it: the handler could not be built, from the container or by hand with GetRequiredService, and none of the
+        // tests of the class ran the handler. A double is enough: these tests are about the rows, the links and the blob.
+        services.AddSingleton(Mock.Of<ISemanticResponseCache>());
     }
 
     private async Task SeedTestDataAsync()

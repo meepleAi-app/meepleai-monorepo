@@ -19,7 +19,7 @@ internal static class SharedGameCatalogTrendingEndpoints
             .RequireRateLimiting("SharedGamesPublic")
             .WithName("GetCatalogTrending")
             .WithSummary("Get top trending games in the catalog")
-            .WithDescription("Returns the top trending games based on weighted analytics events (searches, views, library additions, plays) from the last 7 days with time-decay scoring.")
+            .WithDescription("Returns the top trending games based on weighted analytics events (searches, views, library additions, plays) from the last 7 days with time-decay scoring. Only published games are ranked.")
             .Produces<List<TrendingGameDto>>()
             .Produces(StatusCodes.Status400BadRequest);
 

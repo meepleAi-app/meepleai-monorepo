@@ -37,10 +37,12 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 /// trending, non un errore). <see cref="EvictDetailAsync"/> no.
 /// </para>
 /// <para>
-/// Chi scrive i tag a mano (l'elenco sopra) non toglie le rail: per
-/// <c>VectorDocumentIndexedForKbFlagHandler</c> e <c>KbFlagDriftAuditJob</c>, che cambiano il flag KB, il
-/// trending può restare vecchio fino alla scadenza della voce, e <c>ScheduledBulkInvalidationJob</c> non è
-/// una rete di sicurezza per le rail.
+/// Chi scrive i tag a mano (l'elenco sopra) non passa da qui, e nemmeno dalla sua politica d'errore. Due di
+/// loro cambiano il flag KB, che il trending porta nella voce, e tolgono le rail da sé:
+/// <c>VectorDocumentIndexedForKbFlagHandler</c> e <c>KbFlagDriftAuditJob</c>, con il tag di
+/// <see cref="CatalogRailsCache.Tag"/>. <c>ScheduledBulkInvalidationJob</c> invece non le tocca, di proposito:
+/// ogni quindici minuti svuoterebbe una voce di 12 ore che costa una scansione di sette giorni di eventi.
+/// Se l'evizione delle rail non riesce, l'unica rete è quindi la scadenza della voce.
 /// </para>
 /// <para>
 /// Errori e cancellazione (#4603, punto 2, deciso). L'evizione sta DOPO il commit, quindi non può far

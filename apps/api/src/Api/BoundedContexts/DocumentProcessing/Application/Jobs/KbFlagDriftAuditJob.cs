@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.Infrastructure;
 using Api.Observability;
 using Api.Services;
@@ -141,6 +142,13 @@ internal sealed class KbFlagDriftAuditJob : IJob
                 "Investigate publish-event chain in UploadPdfCommandHandler.FinalizeProcessingAsync, " +
                 "PdfIndexingPipeline and IndexPdfCommandHandler.",
                 games.Count);
+
+            // #4659: and the catalog rails, whose trending entry carries the same flag. Last on purpose: if this
+            // step gives up, the list and the details are already evicted and the SLO line above is already logged.
+            await _retryPolicy.ExecuteAsync(
+                token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync(CatalogRailsCache.Tag, token)),
+                "kb-reconcile.rails",
+                cancellationToken).ConfigureAwait(false);
 
             context.Result = new { RepairedGames = games.Count };
         }

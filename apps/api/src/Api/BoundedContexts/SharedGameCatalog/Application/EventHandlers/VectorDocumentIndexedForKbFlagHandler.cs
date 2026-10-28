@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.Infrastructure;
 using Api.Services;
 using MediatR;
@@ -117,6 +118,17 @@ internal sealed class VectorDocumentIndexedForKbFlagHandler
         await _retryPolicy.ExecuteAsync(
             token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync($"shared-game:{sharedGameId.Value}", token)),
             "shared-games.detail",
+            cancellationToken).ConfigureAwait(false);
+
+        // #4659: the trending rail caches HasKnowledgeBase in its entry (tag CatalogRailsCache.Tag), so the
+        // badge stayed as it was until that entry expired (12 h). Same policy as the two evictions above: the
+        // retry policy, then the exception goes up to whoever published the event. Nothing retries it from
+        // there (the flag is already saved, so a second event would leave early at the top), and if the
+        // eviction gives up the rail keeps the old badge until it expires: the same exposure as the list and
+        // the detail, and a policy question for all three, not decided here.
+        await _retryPolicy.ExecuteAsync(
+            token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync(CatalogRailsCache.Tag, token)),
+            "shared-games.rails",
             cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(

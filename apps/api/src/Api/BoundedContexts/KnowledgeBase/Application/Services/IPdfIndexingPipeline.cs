@@ -100,9 +100,9 @@ public interface IPdfIndexingPipeline
     /// <para>
     /// #4609 follow-up. <see cref="BeginIndexingAsync"/> creates the row in "processing" and
     /// <see cref="IndexAsync"/> completes it; when the PDF fails in between (a save fails, the user cancels) nobody
-    /// completes it, and the game's indexing status would read "processing" for ever (the polling never ends, the
-    /// documents list shows the PDF as being processed). This marks the row "failed" with the error, like the
-    /// re-index command does.
+    /// completes it, and the row would read "processing" for ever (the documents list shows the PDF as being
+    /// processed, and the poll has no error text to give: it takes the text from this row, while its state comes
+    /// from the PDF, #4660). This marks the row "failed" with the error, like the re-index command does.
     /// </para>
     /// <para>
     /// A row that is already "completed" is left as it is (this is not the compensation of "completed" that the

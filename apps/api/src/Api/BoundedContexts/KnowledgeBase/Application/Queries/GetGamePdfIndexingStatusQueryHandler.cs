@@ -78,7 +78,7 @@ internal sealed class GetGamePdfIndexingStatusQueryHandler
         if (info is null)
         {
             _logger.LogDebug(
-                "No VectorDocument found for game {GameId}. Returning 404.",
+                "No PDF or VectorDocument found for game {GameId}. Returning 404.",
                 request.GameId);
             throw new NotFoundException("VectorDocument", request.GameId.ToString());
         }

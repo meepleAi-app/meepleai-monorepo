@@ -17,7 +17,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure;
 /// resolution by sharedGameId works directly via PdfDocumentEntity.SharedGameId and
 /// PdfDocumentEntity.PrivateGameId, without touching the games table.
 ///
-/// Target method: GetIndexingInfoByGameIdAsync (contains the bridge logic at lines 171-219).
+/// Target method: GetIndexingInfoByGameIdAsync.
 /// </summary>
 [Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
@@ -96,7 +96,7 @@ public sealed class VectorDocumentRepositoryTests : IClassFixture<SharedTestcont
     /// <summary>
     /// TDD regression test: after removing the legacy bridge, resolution via sharedGameId
     /// must still find PDFs whose SharedGameId OR PrivateGameId matches the input id.
-    /// Validates the pipeline fallback (third fallback in GetIndexingInfoByGameIdAsync).
+    /// Validates the PDF-state path of GetIndexingInfoByGameIdAsync (a PDF with no vector document yet).
     /// </summary>
     [Fact]
     public async Task GetIndexingInfo_WithSharedGameId_ResolvesPdfViaSharedGameIdOrPrivateGameId()
@@ -108,8 +108,8 @@ public sealed class VectorDocumentRepositoryTests : IClassFixture<SharedTestcont
         var sharedGameId = Guid.NewGuid();
         seedContext.SharedGames.Add(CreateSharedGame(sharedGameId));
 
-        // Seed two PDFs in "Extracting" state (pipeline in progress → fallback path)
-        // so the third fallback (pdfProcessingState) evaluates both predicates.
+        // Seed a PDF in "Extracting" state (pipeline in progress, no vector document yet): the state comes
+        // from the PDF, resolved by SharedGameId OR PrivateGameId.
         var sharedPdf = CreatePdfDocument(uploaderId, sharedGameId: sharedGameId, processingState: "Extracting", fileName: "shared.pdf");
         seedContext.PdfDocuments.Add(sharedPdf);
         await seedContext.SaveChangesAsync();
@@ -122,6 +122,60 @@ public sealed class VectorDocumentRepositoryTests : IClassFixture<SharedTestcont
         // Assert: PDF is found → indexing info returned with Processing status
         info.Should().NotBeNull("PDF with SharedGameId == requested id must be found without legacy bridge");
         info!.Status.ToString().Should().BeOneOf("Processing", "Completed", "Pending", "Failed");
+    }
+
+    /// <summary>
+    /// #4660: con più PDF risponde l'ultimo caricato, e conteggio dei chunk ed errore sono quelli del suo
+    /// documento vettoriale. Su PostgreSQL vero, per provare la traduzione di entrambe le query e i vincoli di
+    /// chiave esterna che l'host in memoria non applica.
+    /// </summary>
+    [Fact]
+    public async Task GetIndexingInfo_WithTwoPdfs_ReportsTheLastUploadedOne_WithItsOwnChunkCount()
+    {
+        using var seedContext = _fixture.CreateDbContext(_connectionString!);
+        var uploaderId = Guid.NewGuid();
+        seedContext.Set<UserEntity>().Add(CreateUser(uploaderId));
+        var sharedGameId = Guid.NewGuid();
+        seedContext.SharedGames.Add(CreateSharedGame(sharedGameId));
+
+        var older = CreatePdfDocument(uploaderId, sharedGameId: sharedGameId, processingState: "Failed", fileName: "older.pdf");
+        older.UploadedAt = DateTime.UtcNow.AddHours(-5);
+        var newer = CreatePdfDocument(uploaderId, sharedGameId: sharedGameId, processingState: "Ready", fileName: "newer.pdf");
+        newer.UploadedAt = DateTime.UtcNow.AddHours(-1);
+        seedContext.PdfDocuments.AddRange(older, newer);
+        await seedContext.SaveChangesAsync();
+
+        seedContext.VectorDocuments.AddRange(
+            new VectorDocumentEntity
+            {
+                Id = Guid.NewGuid(),
+                GameId = sharedGameId,
+                SharedGameId = sharedGameId,
+                PdfDocumentId = older.Id,
+                IndexingStatus = "failed",
+                IndexingError = "older failed",
+                ChunkCount = 0,
+            },
+            new VectorDocumentEntity
+            {
+                Id = Guid.NewGuid(),
+                GameId = sharedGameId,
+                SharedGameId = sharedGameId,
+                PdfDocumentId = newer.Id,
+                IndexingStatus = "completed",
+                IndexedAt = DateTime.UtcNow.AddHours(-1),
+                ChunkCount = 9,
+            });
+        await seedContext.SaveChangesAsync();
+
+        using var actContext = _fixture.CreateDbContext(_connectionString!);
+        var repo = new VectorDocumentRepository(actContext, _eventCollectorMock.Object);
+        var info = await repo.GetIndexingInfoByGameIdAsync(sharedGameId);
+
+        info.Should().NotBeNull();
+        info!.Status.ToString().Should().Be("Completed", "the PDF uploaded last is Ready, the older failed one no longer covers it");
+        info.ChunkCount.Should().Be(9);
+        info.IndexingError.Should().BeNull();
     }
 
     /// <summary>

@@ -128,78 +128,78 @@ internal class VectorDocumentRepository : RepositoryBase, IVectorDocumentReposit
         Guid sharedGameId,
         CancellationToken cancellationToken = default)
     {
-        // Which document stands for the game when it has several (#4660, decided 2026-10-28). A row with a null
-        // IndexedAt (pending, processing, failed) sorts above EVERY completed one, whatever the dates: this is
-        // the poll of whoever just uploaded a PDF, and answering "indexed" with an older PDF would hide a second
-        // PDF that failed for good. Whether the game has a usable knowledge base is answered by
-        // GetKnowledgeBaseStatusQueryHandler, not here. Among the rows with a null IndexedAt (all tie on
-        // MaxValue) the PDF uploaded last wins, then Id, so in these two queries the answer never depends on the
-        // order the database hands the rows back.
+        // Which document stands for the game when it has several PDFs (#4660, decided 2026-10-28): the PDF
+        // uploaded LAST, and its state is read from the PDF itself (ProcessingState, the granular state the
+        // pipeline writes at every transition). This is the poll of whoever just uploaded a PDF, so it answers
+        // for that PDF: a second PDF that fails shows up even if an older one is indexed, an older failed PDF no
+        // longer hides a newer one that completed, and a PDF that fails before its vector document exists is
+        // seen. Tie on the upload instant: the higher PDF id wins, so the answer never depends on the order the
+        // database hands the rows back.
         //
-        // Edges of the rule that nobody has decided: a first attempt that failed keeps masking a PDF uploaded and
-        // completed after it; a re-index keeps its old IndexedAt, so a failing re-index can lose to a document
-        // indexed later; a PDF that fails before its vector document exists is not seen while any other vector
-        // document does.
+        // Consequences of reading the PDF, all intended with the rule and none a reason to read the vector
+        // document instead: a re-index sends the PDF back to Pending, so the poll says "pending" while the old
+        // index still serves; any category of PDF (errata, expansion) can be the last upload; a PDF that the
+        // pipeline never moved on from Indexing (a lost concurrency race on the final save) keeps the poll at
+        // "processing". Whether the game has a usable knowledge base is a different question, answered by
+        // GetKbReadinessQueryHandler and GetGameRagReadinessQueryHandler (they count the Ready PDFs), not here.
         //
-        // First: direct match on VectorDocument.GameId (shared games)
-        var info = await DbContext.VectorDocuments
+        // The game is on the PDF: PdfDocumentEntity.SharedGameId for catalogue games, PrivateGameId for private
+        // ones (Task 8: direct resolution, no legacy GameEntity bridge).
+        var latestPdf = await DbContext.PdfDocuments
+            .AsNoTracking()
+            .Where(pdf => pdf.SharedGameId == sharedGameId || pdf.PrivateGameId == sharedGameId)
+            .OrderByDescending(pdf => pdf.UploadedAt)
+            .ThenByDescending(pdf => pdf.Id)
+            .Select(pdf => new { pdf.Id, pdf.ProcessingState })
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (latestPdf is not null)
+        {
+            // The chunk count and the error text belong to the vector document OF THAT PDF; the PDF may have
+            // none yet (still extracting) or none at all (failed before it was created).
+            var vector = await DbContext.VectorDocuments
+                .AsNoTracking()
+                .Where(vd => vd.PdfDocumentId == latestPdf.Id) // unique: at most one per PDF
+                .Select(vd => new { vd.ChunkCount, vd.IndexingError })
+                .FirstOrDefaultAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            return new VectorDocumentIndexingInfo(
+                MapProcessingState(latestPdf.ProcessingState),
+                vector?.ChunkCount ?? 0,
+                vector?.IndexingError);
+        }
+
+        // No PDF carries the game: what is left is a vector document of the game whose PDF does not carry it
+        // (legacy rows from before PdfDocumentEntity.SharedGameId/PrivateGameId). There is no PDF of the game to
+        // read the state from, so the document answers: an unfinished one (IndexedAt null: pending, processing,
+        // failed) before a completed one, then the most recent.
+        var legacy = await DbContext.VectorDocuments
             .AsNoTracking()
             .Where(vd => vd.GameId == sharedGameId)
             .OrderByDescending(vd => vd.IndexedAt ?? DateTime.MaxValue)
-            .ThenByDescending(vd => vd.PdfDocument.UploadedAt)
             .ThenByDescending(vd => vd.Id)
             .Select(vd => new { vd.IndexingStatus, vd.ChunkCount, vd.IndexingError })
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        // Fallback: join via PdfDocumentEntity.PrivateGameId (private games have VectorDocument.GameId = null)
-        if (info is null)
-        {
-            info = await (
-                from pdf in DbContext.PdfDocuments.AsNoTracking()
-                join vd in DbContext.VectorDocuments.AsNoTracking()
-                    on pdf.Id equals vd.PdfDocumentId
-                where pdf.PrivateGameId == sharedGameId
-                orderby vd.IndexedAt == null ? DateTime.MaxValue : vd.IndexedAt descending,
-                    pdf.UploadedAt descending,
-                    vd.Id descending
-                select new { vd.IndexingStatus, vd.ChunkCount, vd.IndexingError }
-            ).FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-        }
-
-        if (info is not null)
-        {
-            // Parse the raw persistence string to the typed enum (case-insensitive for robustness).
-            var status = Enum.Parse<VectorDocumentIndexingStatus>(info.IndexingStatus, ignoreCase: true);
-            return new VectorDocumentIndexingInfo(status, info.ChunkCount, info.IndexingError);
-        }
-
-        // Third fallback: VectorDocument not yet created (PDF still in pipeline).
-        // Read PdfDocumentEntity.ProcessingState (authoritative 7-state field) so polling
-        // returns "processing" instead of 404 during extraction/chunking/embedding.
-        // Direct resolution via PdfDocumentEntity.SharedGameId or PrivateGameId
-        // (Task 8: replaces legacy GameEntity.SharedGameId -> GameEntity.Id bridge).
-        var pdfProcessingState = await DbContext.PdfDocuments
-            .AsNoTracking()
-            .Where(pdf => pdf.PrivateGameId == sharedGameId || pdf.SharedGameId == sharedGameId)
-            // Order by most recently uploaded so multi-PDF games return the latest state.
-            .OrderByDescending(pdf => pdf.UploadedAt)
-            .Select(pdf => pdf.ProcessingState)
-            .FirstOrDefaultAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        if (pdfProcessingState is null)
+        if (legacy is null)
             return null;
 
-        var inferredStatus = pdfProcessingState.ToLowerInvariant() switch
+        // Parse the raw persistence string to the typed enum (case-insensitive for robustness).
+        var status = Enum.Parse<VectorDocumentIndexingStatus>(legacy.IndexingStatus, ignoreCase: true);
+        return new VectorDocumentIndexingInfo(status, legacy.ChunkCount, legacy.IndexingError);
+    }
+
+    private static VectorDocumentIndexingStatus MapProcessingState(string processingState) =>
+        processingState.ToLowerInvariant() switch
         {
             "failed" => VectorDocumentIndexingStatus.Failed,
             "ready" => VectorDocumentIndexingStatus.Completed,       // ProcessingState.Ready = fully indexed
             "pending" => VectorDocumentIndexingStatus.Pending,
             _ => VectorDocumentIndexingStatus.Processing             // uploading/extracting/chunking/embedding/indexing
         };
-        return new VectorDocumentIndexingInfo(inferredStatus, 0, null);
-    }
 
     public async Task<List<Guid>> GetGameIdsWithDocumentsAsync(
         IEnumerable<Guid> gameIds,

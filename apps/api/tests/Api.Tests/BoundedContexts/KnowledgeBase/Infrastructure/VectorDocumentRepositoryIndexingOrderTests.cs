@@ -1,4 +1,5 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
+using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -12,25 +13,31 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure;
 
 /// <summary>
-/// #4660 punto 3 — quale documento vettoriale rappresenta un gioco in
-/// <c>GetIndexingInfoByGameIdAsync</c> quando ce n'è più di uno.
+/// #4660 punto 3 — quale documento rappresenta un gioco in <c>GetIndexingInfoByGameIdAsync</c> quando ha più
+/// PDF: <b>l'ultimo caricato</b>, e il suo stato si legge dal PDF stesso.
 /// </summary>
 /// <remarks>
 /// <para>
-/// La regola, decisa il 2026-10-28: una riga non <c>completed</c> (<c>IndexedAt</c> nullo: pending, processing,
-/// failed) precede OGNI <c>completed</c>, qualunque sia la data, perché l'endpoint è il polling di chi ha appena
-/// caricato un PDF: se un secondo PDF fallisse e la risposta fosse «indicizzato» (il PDF vecchio), il fallimento
-/// non si vedrebbe mai. Se il gioco ha una base di conoscenza utilizzabile lo dice un'altra query
-/// (<c>GetKnowledgeBaseStatusQueryHandler</c>). Limiti non decisi, quindi non fissati da test: un primo
-/// tentativo fallito continua a coprire un PDF caricato e completato dopo; un re-index tiene il suo vecchio
-/// <c>IndexedAt</c>; un PDF che fallisce prima che esista il suo documento vettoriale non si vede.
+/// La regola, decisa il 2026-10-28 (sostituisce la prima, dello stesso giorno, che metteva davanti ogni riga non
+/// <c>completed</c>): l'endpoint è il polling di chi ha appena caricato un PDF, e chi ha caricato per ultimo
+/// aspetta quel PDF. Lo stato è <c>ProcessingState</c> del PDF (le tappe della pipeline), non l'esito del
+/// documento vettoriale: così si vedono anche un PDF che fallisce prima che esista il suo documento vettoriale e
+/// un re-index (il PDF non perde il suo posto perché il documento tiene il vecchio <c>IndexedAt</c>). Il numero
+/// di chunk e il testo d'errore sono quelli del documento vettoriale di <i>quel</i> PDF.
 /// </para>
 /// <para>
-/// Fra più righe non <c>completed</c> l'ordine era indefinito (pari merito su <c>DateTime.MaxValue</c>): decide
-/// la data di upload del PDF, la più recente prima, poi l'id del documento. Ogni caso gira con le righe inserite
-/// nei due ordini, perché con un pari merito il risultato dipende da quale arriva per prima. Gli id sono fissi e
-/// quello alto va sempre alla riga che NON deve vincere: se lo spareggio per data di upload sparisse, deciderebbe
-/// l'id e la prova diventerebbe rossa, non fortunata.
+/// Conseguenze volute: un PDF più vecchio che ha fallito non copre più uno caricato dopo e completato; un PDF più
+/// vecchio completato non nasconde un fallimento di quello nuovo. Conseguenze che ne discendono e che il
+/// proprietario deve confermare: un re-index riporta il PDF a <c>Pending</c> e il polling dice «pending» mentre
+/// il vecchio indice serve ancora; una errata o un'espansione possono essere l'ultimo upload. Se il gioco ha una
+/// base di conoscenza utilizzabile lo dicono <c>GetKbReadinessQueryHandler</c> e
+/// <c>GetGameRagReadinessQueryHandler</c> (contano i PDF <c>Ready</c>), non questa query.
+/// </para>
+/// <para>
+/// Pari merito sull'istante di upload: decide l'id del PDF, il più alto vince. Ogni caso gira con le righe
+/// inserite nei due ordini, perché in un pari merito il risultato dipende da quale arriva per prima. Quando la
+/// prova deve dimostrare che decide la data e non l'id, l'id alto va al PDF che NON deve vincere: se lo spareggio
+/// per data sparisse, deciderebbe l'id e la prova diventerebbe rossa, non fortunata.
 /// </para>
 /// </remarks>
 [Trait("Category", TestCategories.Unit)]
@@ -40,10 +47,10 @@ public sealed class VectorDocumentRepositoryIndexingOrderTests : IDisposable
 {
     private static readonly DateTime Now = new(2026, 10, 28, 12, 0, 0, DateTimeKind.Utc);
 
-    /// <summary>L'id che, in un pari merito deciso dall'id, perde (decrescente).</summary>
+    /// <summary>L'id che, in un pari merito deciso dall'id, perde.</summary>
     private static readonly Guid LowId = Guid.Parse("00000000-0000-0000-0000-000000000001");
 
-    /// <summary>L'id che, in un pari merito deciso dall'id, vince (decrescente).</summary>
+    /// <summary>L'id che, in un pari merito deciso dall'id, vince.</summary>
     private static readonly Guid HighId = Guid.Parse("ffffffff-ffff-ffff-ffff-fffffffffffe");
 
     private readonly MeepleAiDbContext _db = TestDbContextFactory.CreateInMemoryDbContext();
@@ -56,62 +63,82 @@ public sealed class VectorDocumentRepositoryIndexingOrderTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
-    /// <summary>Un PDF e il suo documento vettoriale, nello stato dato, caricato <paramref name="uploadedHoursAgo"/> ore fa.</summary>
-    private void Seed(
-        Guid? sharedGameId,
-        Guid? privateGameId,
-        string indexingStatus,
-        double uploadedHoursAgo,
-        double? indexedHoursAgo = null,
-        string? error = null,
-        Guid? vectorId = null,
-        int chunkCount = 0,
-        MeepleAiDbContext? db = null,
-        DateTime? uploadedAt = null)
+    // ────────────────────────────────────────────────────────────────────────────
+    // Supporto
+    // ────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Il documento vettoriale di un PDF: assente (<c>null</c>) finché la pipeline non lo crea.</summary>
+    private sealed record Vector(string Status, int ChunkCount = 0, string? Error = null, double? IndexedHoursAgo = null);
+
+    private static void SeedPdf(
+        MeepleAiDbContext db,
+        Guid gameId,
+        bool privateGame,
+        string pdfState,
+        DateTime uploadedAt,
+        Guid? pdfId = null,
+        Vector? vector = null)
     {
-        var target = db ?? _db;
         var pdf = new PdfDocumentEntity
         {
-            Id = Guid.NewGuid(),
-            SharedGameId = sharedGameId,
-            PrivateGameId = privateGameId,
-            FileName = $"{indexingStatus}.pdf",
-            FilePath = $"/tmp/{indexingStatus}.pdf",
+            Id = pdfId ?? Guid.NewGuid(),
+            SharedGameId = privateGame ? null : gameId,
+            PrivateGameId = privateGame ? gameId : null,
+            FileName = $"{pdfState}.pdf",
+            FilePath = $"/tmp/{pdfState}.pdf",
             FileSizeBytes = 100,
             ContentType = "application/pdf",
             UploadedByUserId = Guid.NewGuid(),
-            UploadedAt = uploadedAt ?? Now.AddHours(-uploadedHoursAgo),
-            ProcessingState = "Ready",
+            UploadedAt = uploadedAt,
+            ProcessingState = pdfState,
         };
-        target.PdfDocuments.Add(pdf);
-        target.VectorDocuments.Add(new VectorDocumentEntity
+        db.PdfDocuments.Add(pdf);
+
+        if (vector is null)
         {
-            Id = vectorId ?? Guid.NewGuid(),
-            GameId = sharedGameId,
-            SharedGameId = sharedGameId,
-            PrivateGameId = privateGameId,
+            return;
+        }
+
+        db.VectorDocuments.Add(new VectorDocumentEntity
+        {
+            Id = Guid.NewGuid(),
+            GameId = privateGame ? null : gameId,
+            SharedGameId = privateGame ? null : gameId,
+            PrivateGameId = privateGame ? gameId : null,
             PdfDocumentId = pdf.Id,
-            IndexingStatus = indexingStatus,
-            IndexedAt = indexedHoursAgo is null ? null : Now.AddHours(-indexedHoursAgo.Value),
-            ChunkCount = chunkCount,
-            IndexingError = error,
+            IndexingStatus = vector.Status,
+            IndexedAt = vector.IndexedHoursAgo is null ? null : Now.AddHours(-vector.IndexedHoursAgo.Value),
+            ChunkCount = vector.ChunkCount,
+            IndexingError = vector.Error,
         });
     }
 
-    private async Task SaveAsync() => await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-    // ────────────────────────────────────────────────────────────────────────────
-    // Gioco condiviso: VectorDocument.GameId
-    // ────────────────────────────────────────────────────────────────────────────
-
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task Shared_AmongNonCompletedRows_TheNewestUploadWins(bool newestInsertedFirst)
+    /// <summary>Il documento vettoriale che accompagna di norma un PDF nello stato dato.</summary>
+    private static Vector VectorFor(string pdfState, int chunkCount = 0, string? error = null) => pdfState switch
     {
+        "Ready" => new Vector("completed", chunkCount, null, IndexedHoursAgo: 1),
+        "Failed" => new Vector("failed", 0, error ?? "failed"),
+        "Pending" => new Vector("pending"),
+        _ => new Vector("processing"),
+    };
+
+    /// <summary>
+    /// Semina due PDF dello stesso gioco, il più recente e il più vecchio, nell'ordine di inserimento dato: l'id
+    /// alto va sempre al PDF vecchio, quello che NON deve vincere.
+    /// </summary>
+    private static async Task<VectorDocumentIndexingInfo?> PollTwoUploadsAsync(
+        bool privateGame,
+        bool newestInsertedFirst,
+        string newestState,
+        string oldestState,
+        Vector? newestVector,
+        Vector? oldestVector)
+    {
+        using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var repository = new VectorDocumentRepository(db, new Mock<IDomainEventCollector>().Object);
         var gameId = Guid.NewGuid();
-        void Newest() => Seed(gameId, null, "processing", uploadedHoursAgo: 1, vectorId: LowId);
-        void Oldest() => Seed(gameId, null, "failed", uploadedHoursAgo: 5, error: "old failure", vectorId: HighId);
+        void Newest() => SeedPdf(db, gameId, privateGame, newestState, Now.AddHours(-1), LowId, newestVector);
+        void Oldest() => SeedPdf(db, gameId, privateGame, oldestState, Now.AddHours(-48), HighId, oldestVector);
         if (newestInsertedFirst)
         {
             Newest();
@@ -122,150 +149,271 @@ public sealed class VectorDocumentRepositoryIndexingOrderTests : IDisposable
             Oldest();
             Newest();
         }
-        await SaveAsync();
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-        var info = await _repository.GetIndexingInfoByGameIdAsync(gameId, TestContext.Current.CancellationToken);
+        return await repository.GetIndexingInfoByGameIdAsync(gameId, TestContext.Current.CancellationToken);
+    }
+
+    public static TheoryData<string, string, string, bool, bool> LastUploadCases()
+    {
+        var data = new TheoryData<string, string, string, bool, bool>();
+        var cases = new (string Newest, string Oldest, string Expected)[]
+        {
+            // il polling di chi ha appena caricato: un secondo PDF che fallisce non deve sparire dietro il vecchio
+            ("Failed", "Ready", nameof(VectorDocumentIndexingStatus.Failed)),
+            // un PDF vecchio che ha fallito non copre più uno caricato dopo e completato
+            ("Ready", "Failed", nameof(VectorDocumentIndexingStatus.Completed)),
+            ("Embedding", "Failed", nameof(VectorDocumentIndexingStatus.Processing)),
+            ("Embedding", "Ready", nameof(VectorDocumentIndexingStatus.Processing)),
+            ("Pending", "Ready", nameof(VectorDocumentIndexingStatus.Pending)),
+        };
+        foreach (var (newest, oldest, expected) in cases)
+        {
+            foreach (var privateGame in new[] { false, true })
+            {
+                foreach (var newestInsertedFirst in new[] { true, false })
+                {
+                    data.Add(newest, oldest, expected, privateGame, newestInsertedFirst);
+                }
+            }
+        }
+
+        return data;
+    }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // L'ultimo upload decide
+    // ────────────────────────────────────────────────────────────────────────────
+
+    [Theory]
+    [MemberData(nameof(LastUploadCases))]
+    public async Task TheLastUploadedPdfDecides_WhateverTheEarlierOnesDid(
+        string newestState,
+        string oldestState,
+        string expected,
+        bool privateGame,
+        bool newestInsertedFirst)
+    {
+        var info = await PollTwoUploadsAsync(
+            privateGame, newestInsertedFirst, newestState, oldestState, VectorFor(newestState), VectorFor(oldestState));
 
         info!.Status.Should().Be(
-            VectorDocumentIndexingStatus.Processing,
-            "the PDF uploaded last is the one the uploader is waiting for, whatever the insertion order or the id");
+            Enum.Parse<VectorDocumentIndexingStatus>(expected),
+            "the poll answers for the PDF uploaded last, whatever the insertion order or the ids (the older PDF has the higher id)");
     }
 
     [Theory]
-    [InlineData(true)]
     [InlineData(false)]
-    public async Task Shared_ANewerFailedRow_WinsOverAnOlderCompletedOne(bool failedInsertedFirst)
+    [InlineData(true)]
+    public async Task AFailedLastUpload_ReportsItsOwnError_NotTheOlderPdfs(bool privateGame)
     {
-        var gameId = Guid.NewGuid();
-        void Failed() => Seed(gameId, null, "failed", uploadedHoursAgo: 1, error: "second PDF failed");
-        void Completed() => Seed(gameId, null, "completed", uploadedHoursAgo: 48, indexedHoursAgo: 47);
-        if (failedInsertedFirst)
-        {
-            Failed();
-            Completed();
-        }
-        else
-        {
-            Completed();
-            Failed();
-        }
-        await SaveAsync();
+        var info = await PollTwoUploadsAsync(
+            privateGame, newestInsertedFirst: true, "Failed", "Failed",
+            new Vector("failed", 0, "newest failed"), new Vector("failed", 0, "oldest failed"));
 
-        var info = await _repository.GetIndexingInfoByGameIdAsync(gameId, TestContext.Current.CancellationToken);
-
-        info!.Status.Should().Be(
-            VectorDocumentIndexingStatus.Failed,
-            "a second PDF that fails must show up in the poll of whoever uploaded it: answering 'indexed' with "
-            + "the old PDF would hide the failure for good");
-        info.IndexingError.Should().Be("second PDF failed");
+        info!.Status.Should().Be(VectorDocumentIndexingStatus.Failed);
+        info.IndexingError.Should().Be("newest failed");
     }
 
     /// <summary>
-    /// Due PDF caricati nello stesso istante: l'ultimo spareggio è l'id del documento, quindi la risposta non
-    /// dipende dall'ordine in cui il database restituisce le righe. Ogni ordine di inserimento gira su un
-    /// database suo, con gli stessi id, e le due risposte devono coincidere.
+    /// Un PDF indicizzato di nuovo tiene il suo vecchio <c>IndexedAt</c> nel documento vettoriale: con la regola
+    /// vecchia poteva perdere contro un documento indicizzato dopo. Ora conta solo la data di upload.
+    /// </summary>
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+    [InlineData(true, true)]
+    [InlineData(true, false)]
+    public async Task TheLastUpload_Wins_EvenWhenAnOlderPdfWasIndexedLater_AndReportsItsOwnChunkCount(
+        bool privateGame,
+        bool newestInsertedFirst)
+    {
+        var info = await PollTwoUploadsAsync(
+            privateGame, newestInsertedFirst, "Ready", "Ready",
+            new Vector("completed", ChunkCount: 77, IndexedHoursAgo: 40),
+            new Vector("completed", ChunkCount: 10, IndexedHoursAgo: 1));
+
+        info!.Status.Should().Be(VectorDocumentIndexingStatus.Completed);
+        info.ChunkCount.Should().Be(77, "the chunk count is the one of the PDF uploaded last, not of the document indexed last");
+    }
+
+    /// <summary>
+    /// Due PDF caricati nello stesso istante: l'ultimo spareggio è l'id del PDF (il più alto vince), quindi la
+    /// risposta non dipende dall'ordine in cui il database restituisce le righe.
+    /// </summary>
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+    [InlineData(true, true)]
+    [InlineData(true, false)]
+    public async Task WhenTwoUploadsShareTheSameInstant_TheHigherPdfIdWins_WhateverTheInsertionOrder(
+        bool privateGame,
+        bool highInsertedFirst)
+    {
+        using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        var repository = new VectorDocumentRepository(db, new Mock<IDomainEventCollector>().Object);
+        var gameId = Guid.NewGuid();
+        var sameInstant = Now.AddHours(-2);
+        void High() => SeedPdf(db, gameId, privateGame, "Failed", sameInstant, HighId, new Vector("failed", 0, "high"));
+        void Low() => SeedPdf(db, gameId, privateGame, "Embedding", sameInstant, LowId, new Vector("processing"));
+        if (highInsertedFirst)
+        {
+            High();
+            Low();
+        }
+        else
+        {
+            Low();
+            High();
+        }
+        await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var info = await repository.GetIndexingInfoByGameIdAsync(gameId, TestContext.Current.CancellationToken);
+
+        info!.Status.Should().Be(VectorDocumentIndexingStatus.Failed, "the higher id breaks the tie");
+        info.IndexingError.Should().Be("high");
+    }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // Lo stato si legge dal PDF
+    // ────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Un PDF che fallisce prima che esista il suo documento vettoriale (estrazione, chunking) si vede, anche se
+    /// un PDF più vecchio dello stesso gioco è indicizzato. Con la regola vecchia non si vedeva mai.
     /// </summary>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task WhenTwoUploadsShareTheSameInstant_TheAnswerDoesNotDependOnInsertionOrder(bool privateGame)
+    public async Task ALastUploadThatFailedBeforeItsVectorDocumentExisted_IsSeen(bool privateGame)
     {
-        var gameId = Guid.NewGuid();
-        var sameInstant = Now.AddHours(-2);
-        var statuses = new List<VectorDocumentIndexingStatus>();
+        var info = await PollTwoUploadsAsync(
+            privateGame, newestInsertedFirst: false, "Failed", "Ready",
+            newestVector: null, oldestVector: VectorFor("Ready", chunkCount: 10));
 
-        foreach (var processingFirst in new[] { true, false })
-        {
-            using var db = TestDbContextFactory.CreateInMemoryDbContext();
-            var repository = new VectorDocumentRepository(db, new Mock<IDomainEventCollector>().Object);
-            void Processing() => Seed(
-                privateGame ? null : gameId, privateGame ? gameId : null, "processing", 0, vectorId: LowId, db: db, uploadedAt: sameInstant);
-            void Failed() => Seed(
-                privateGame ? null : gameId, privateGame ? gameId : null, "failed", 0, error: "boom", vectorId: HighId, db: db, uploadedAt: sameInstant);
-            if (processingFirst)
-            {
-                Processing();
-                Failed();
-            }
-            else
-            {
-                Failed();
-                Processing();
-            }
-            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-            var info = await repository.GetIndexingInfoByGameIdAsync(gameId, TestContext.Current.CancellationToken);
-            statuses.Add(info!.Status);
-        }
-
-        statuses.Distinct().Should().ContainSingle("the same two rows must give the same answer whichever was inserted first");
+        info!.Status.Should().Be(VectorDocumentIndexingStatus.Failed);
+        info.IndexingError.Should().BeNull("there is no vector document to take a message from");
+        info.ChunkCount.Should().Be(0);
     }
 
-    [Fact]
-    public async Task Shared_AmongCompletedRows_TheMostRecentlyIndexedWins()
+    [Theory]
+    [InlineData("Pending", nameof(VectorDocumentIndexingStatus.Pending))]
+    [InlineData("Uploading", nameof(VectorDocumentIndexingStatus.Processing))]
+    [InlineData("Extracting", nameof(VectorDocumentIndexingStatus.Processing))]
+    [InlineData("Chunking", nameof(VectorDocumentIndexingStatus.Processing))]
+    [InlineData("Embedding", nameof(VectorDocumentIndexingStatus.Processing))]
+    [InlineData("Indexing", nameof(VectorDocumentIndexingStatus.Processing))]
+    [InlineData("Ready", nameof(VectorDocumentIndexingStatus.Completed))]
+    [InlineData("Failed", nameof(VectorDocumentIndexingStatus.Failed))]
+    public async Task APdfWithoutAVectorDocument_IsMappedFromItsProcessingState(
+        string pdfState,
+        string expected)
     {
         var gameId = Guid.NewGuid();
-        Seed(gameId, null, "completed", uploadedHoursAgo: 48, indexedHoursAgo: 47, chunkCount: 10);
-        Seed(gameId, null, "completed", uploadedHoursAgo: 10, indexedHoursAgo: 9, chunkCount: 77);
-        await SaveAsync();
+        SeedPdf(_db, gameId, privateGame: false, pdfState, Now.AddHours(-1));
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var info = await _repository.GetIndexingInfoByGameIdAsync(gameId, TestContext.Current.CancellationToken);
+
+        info!.Status.Should().Be(Enum.Parse<VectorDocumentIndexingStatus>(expected));
+    }
+
+    /// <summary>
+    /// Il PDF è la fonte dello stato: se il documento vettoriale dice un'altra cosa (una riga rimasta
+    /// <c>processing</c> mentre il PDF è già <c>Failed</c>, o un re-index in corso su un PDF <c>Ready</c>), vale
+    /// il PDF. Numero di chunk e testo d'errore restano quelli del documento vettoriale.
+    /// </summary>
+    [Theory]
+    [InlineData("Failed", "processing", nameof(VectorDocumentIndexingStatus.Failed))]
+    [InlineData("Ready", "processing", nameof(VectorDocumentIndexingStatus.Completed))]
+    [InlineData("Embedding", "completed", nameof(VectorDocumentIndexingStatus.Processing))]
+    public async Task TheStateComesFromThePdf_NotFromItsVectorDocument(
+        string pdfState,
+        string vectorStatus,
+        string expected)
+    {
+        var gameId = Guid.NewGuid();
+        SeedPdf(_db, gameId, privateGame: false, pdfState, Now.AddHours(-1), vector: new Vector(vectorStatus, ChunkCount: 5));
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var info = await _repository.GetIndexingInfoByGameIdAsync(gameId, TestContext.Current.CancellationToken);
+
+        info!.Status.Should().Be(Enum.Parse<VectorDocumentIndexingStatus>(expected));
+        if (expected == nameof(VectorDocumentIndexingStatus.Completed))
+        {
+            info.ChunkCount.Should().Be(5, "the chunk count is the vector document's");
+        }
+    }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // Confini della regola
+    // ────────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task APdfOfAnotherGame_UploadedLater_IsNotMixedIn()
+    {
+        var gameId = Guid.NewGuid();
+        SeedPdf(_db, gameId, privateGame: false, "Ready", Now.AddHours(-10), vector: VectorFor("Ready", chunkCount: 12));
+        SeedPdf(_db, Guid.NewGuid(), privateGame: false, "Failed", Now.AddHours(-1), vector: VectorFor("Failed"));
+        SeedPdf(_db, Guid.NewGuid(), privateGame: true, "Embedding", Now.AddHours(-1), vector: VectorFor("Embedding"));
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var info = await _repository.GetIndexingInfoByGameIdAsync(gameId, TestContext.Current.CancellationToken);
 
         info!.Status.Should().Be(VectorDocumentIndexingStatus.Completed);
-        info.ChunkCount.Should().Be(77);
+        info.ChunkCount.Should().Be(12);
     }
 
-    // ────────────────────────────────────────────────────────────────────────────
-    // Gioco privato: VectorDocument.GameId nullo, il gioco sta nel PDF (PrivateGameId)
-    // ────────────────────────────────────────────────────────────────────────────
+    [Fact]
+    public async Task AGameWithNothingIndexedOrUploaded_ReturnsNull()
+    {
+        var info = await _repository.GetIndexingInfoByGameIdAsync(Guid.NewGuid(), TestContext.Current.CancellationToken);
 
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task Private_AmongNonCompletedRows_TheNewestUploadWins(bool newestInsertedFirst)
+        info.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Un documento vettoriale del gioco il cui PDF non porta il gioco (righe vecchie, da prima di
+    /// <c>SharedGameId</c>/<c>PrivateGameId</c> sul PDF) non ha un PDF del gioco da cui leggere lo stato: si
+    /// risponde con quello del documento, come prima. Fra più documenti così, vince il non completato, poi il
+    /// più recente.
+    /// </summary>
+    [Fact]
+    public async Task VectorDocumentsWhosePdfDoesNotCarryTheGame_AreStillReported_TheUnfinishedOneFirst()
     {
         var gameId = Guid.NewGuid();
-        void Newest() => Seed(null, gameId, "processing", uploadedHoursAgo: 1, vectorId: LowId);
-        void Oldest() => Seed(null, gameId, "failed", uploadedHoursAgo: 5, error: "old failure", vectorId: HighId);
-        if (newestInsertedFirst)
+        foreach (var (status, indexedAt, chunks) in new (string, DateTime?, int)[]
+                 {
+                     ("completed", Now.AddHours(-3), 12),
+                     ("processing", null, 0),
+                 })
         {
-            Newest();
-            Oldest();
+            var pdfId = Guid.NewGuid();
+            _db.PdfDocuments.Add(new PdfDocumentEntity
+            {
+                Id = pdfId,
+                FileName = $"{status}.pdf",
+                FilePath = $"/tmp/{status}.pdf",
+                FileSizeBytes = 100,
+                ContentType = "application/pdf",
+                UploadedByUserId = Guid.NewGuid(),
+                UploadedAt = Now.AddHours(-5),
+                ProcessingState = "Ready",
+            });
+            _db.VectorDocuments.Add(new VectorDocumentEntity
+            {
+                Id = Guid.NewGuid(),
+                GameId = gameId,
+                PdfDocumentId = pdfId,
+                IndexingStatus = status,
+                IndexedAt = indexedAt,
+                ChunkCount = chunks,
+            });
         }
-        else
-        {
-            Oldest();
-            Newest();
-        }
-        await SaveAsync();
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var info = await _repository.GetIndexingInfoByGameIdAsync(gameId, TestContext.Current.CancellationToken);
 
         info!.Status.Should().Be(VectorDocumentIndexingStatus.Processing);
-    }
-
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task Private_ANewerFailedRow_WinsOverAnOlderCompletedOne(bool failedInsertedFirst)
-    {
-        var gameId = Guid.NewGuid();
-        void Failed() => Seed(null, gameId, "failed", uploadedHoursAgo: 1, error: "second PDF failed");
-        void Completed() => Seed(null, gameId, "completed", uploadedHoursAgo: 48, indexedHoursAgo: 47);
-        if (failedInsertedFirst)
-        {
-            Failed();
-            Completed();
-        }
-        else
-        {
-            Completed();
-            Failed();
-        }
-        await SaveAsync();
-
-        var info = await _repository.GetIndexingInfoByGameIdAsync(gameId, TestContext.Current.CancellationToken);
-
-        info!.Status.Should().Be(VectorDocumentIndexingStatus.Failed);
     }
 }

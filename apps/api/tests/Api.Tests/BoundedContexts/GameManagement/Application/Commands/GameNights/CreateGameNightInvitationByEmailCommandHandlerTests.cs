@@ -361,6 +361,57 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ResendIfPending_AmongSeveralInvitations_ResendsTheOneOfThatEmail()
+    {
+        var (gameNight, organizerId) = GivenAGameNightWithAPendingInvitationFor(
+            "guest@example.com", out var guest);
+        var other = GameNightInvitation.Create(
+            gameNight.Id, "other@example.com", UtcNow.AddDays(14), organizerId, UtcNow);
+        // The other guest comes first: picking "the first pending one" would resend the wrong invitation.
+        _invitationRepoMock
+            .Setup(r => r.GetByGameNightIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<GameNightInvitation> { other, guest });
+
+        var dto = await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(
+                gameNight.Id, "guest@example.com", organizerId, ResendIfPending: true),
+            CancellationToken.None);
+
+        dto.Token.Should().Be(guest.Token);
+        dto.Email.Should().Be("guest@example.com");
+        _emailServiceMock.Verify(
+            s => s.SendGameNightInvitationEmailAsync(
+                "other@example.com",
+                It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<DateTimeOffset>(), It.IsAny<string?>(), It.IsAny<IReadOnlyList<string>>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ResendIfPending_IgnoresAnAnsweredInvitationOfTheSameEmail()
+    {
+        var (gameNight, organizerId) = GivenAGameNightWithAPendingInvitationFor(
+            "guest@example.com", out var pending);
+        var answered = GameNightInvitation.Create(
+            gameNight.Id, "guest@example.com", UtcNow.AddDays(14), organizerId, UtcNow);
+        answered.Accept(userId: null, UtcNow).Should().BeTrue("the fixture needs a really answered invitation");
+        // The answered one comes first: only a pending invitation may be resent.
+        _invitationRepoMock
+            .Setup(r => r.GetByGameNightIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<GameNightInvitation> { answered, pending });
+
+        var dto = await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(
+                gameNight.Id, "guest@example.com", organizerId, ResendIfPending: true),
+            CancellationToken.None);
+
+        dto.Token.Should().Be(pending.Token);
+        dto.Status.Should().Be(nameof(GameNightInvitationStatus.Pending));
+    }
+
+    [Fact]
     public async Task Handle_ResendIfPending_WithNoPendingInvitation_CreatesOneAsUsual()
     {
         var organizerId = Guid.NewGuid();

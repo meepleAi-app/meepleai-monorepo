@@ -250,6 +250,12 @@ public sealed class DeletePdfKbCacheIntegrationTests
         response.StatusCode.Should().Be(HttpStatusCode.NoContent, await response.Content.ReadAsStringAsync(Ct));
         (await PdfExistsAsync(catalogPdf)).Should().BeFalse("the row is gone: the feed must not keep showing it");
         (await RecentDocumentsAsync()).Should().BeEquivalentTo(new[] { controlCatalogPdf });
+        // L'etichetta giusta e solo quella: la cache finta toglie la voce per qualunque etichetta che porta, quindi
+        // senza queste righe uno scambio (kb, discover) manderebbe lo stesso il test in verde. Le due larghe
+        // svuoterebbero anche altre cache (come `user-docs` per l'elenco di tutti).
+        _hostFixture.HybridCache.RemovalsOf("recentDocs").Should().BeGreaterThan(0);
+        _hostFixture.HybridCache.RemovalsOf("kb").Should().Be(0);
+        _hostFixture.HybridCache.RemovalsOf("discover").Should().Be(0);
     }
 
     /// <summary>
@@ -271,6 +277,9 @@ public sealed class DeletePdfKbCacheIntegrationTests
         response.StatusCode.Should().Be(HttpStatusCode.NoContent, await response.Content.ReadAsStringAsync(Ct));
         (await PdfExistsAsync(catalogPdf)).Should().BeFalse();
         (await RecentDocumentsAsync()).Should().BeEquivalentTo(new[] { controlCatalogPdf });
+        _hostFixture.HybridCache.RemovalsOf("recentDocs").Should().BeGreaterThan(0);
+        _hostFixture.HybridCache.RemovalsOf("kb").Should().Be(0);
+        _hostFixture.HybridCache.RemovalsOf("discover").Should().Be(0);
     }
 
     // ─── Supporto ────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.SharedGameCatalog.Application.EventHandlers;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Services;
 using Api.Tests.Constants;
@@ -187,6 +188,51 @@ public sealed class VectorDocumentIndexedForKbFlagHandlerTests
             c => c.RemoveByTagAcrossReplicasAsync("search-games", It.IsAny<CancellationToken>()),
             Times.Once,
             "handler should evict the catalog list cache namespace across replicas after the flag flip");
+    }
+
+    /// <summary>
+    /// #4659: il trending porta il badge KB nella voce in cache sul tag delle rail: dopo il cambio del flag va tolta,
+    /// altrimenti il badge resta com'era fino alla scadenza (12 h). Il tag è quello che le rail scrivono.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithValidUpdate_InvokesCrossReplicaInvalidationForTheCatalogRailsTag()
+    {
+        var cacheMock = CreateCacheMock();
+        var sharedGameId = Guid.NewGuid();
+
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        db.SharedGames.Add(CreateSharedGame(sharedGameId, hasKb: false));
+        await db.SaveChangesAsync();
+
+        var handler = new VectorDocumentIndexedForKbFlagHandler(db, cacheMock.Object, new PassthroughRetryPolicy(), _logger.Object);
+        await handler.Handle(
+            new VectorDocumentIndexedEvent(Guid.NewGuid(), Guid.NewGuid(), chunkCount: 42, sharedGameId: sharedGameId),
+            CancellationToken.None);
+
+        cacheMock.Verify(
+            c => c.RemoveByTagAcrossReplicasAsync(CatalogRailsCache.Tag, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheFlagIsAlreadyTrue_EvictsNothing()
+    {
+        var cacheMock = CreateCacheMock();
+        var sharedGameId = Guid.NewGuid();
+
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        db.SharedGames.Add(CreateSharedGame(sharedGameId, hasKb: true));
+        await db.SaveChangesAsync();
+
+        var handler = new VectorDocumentIndexedForKbFlagHandler(db, cacheMock.Object, new PassthroughRetryPolicy(), _logger.Object);
+        await handler.Handle(
+            new VectorDocumentIndexedEvent(Guid.NewGuid(), Guid.NewGuid(), chunkCount: 42, sharedGameId: sharedGameId),
+            CancellationToken.None);
+
+        cacheMock.Verify(
+            c => c.RemoveByTagAcrossReplicasAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "nothing changed, so nothing is evicted: the rails stay cached");
     }
 
     [Fact]

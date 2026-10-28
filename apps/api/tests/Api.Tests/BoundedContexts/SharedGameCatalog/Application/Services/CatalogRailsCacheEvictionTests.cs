@@ -1,3 +1,5 @@
+using Api.BoundedContexts.KnowledgeBase.Domain.Events;
+using Api.BoundedContexts.SharedGameCatalog.Application.EventHandlers;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetCatalogTrending;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetNewGames;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
@@ -47,6 +49,7 @@ public sealed class CatalogRailsCacheEvictionTests : IDisposable
     private readonly ServiceProvider _provider;
     private readonly MeepleAiDbContext _db;
     private readonly ISharedGameCacheInvalidator _invalidator;
+    private readonly IHybridCacheService _wrapper;
     private readonly GetNewGamesQueryHandler _newGames;
     private readonly GetCatalogTrendingQueryHandler _trending;
 
@@ -66,6 +69,7 @@ public sealed class CatalogRailsCacheEvictionTests : IDisposable
             hybridCache,
             Options.Create(new HybridCacheConfiguration()),
             NullLogger<HybridCacheService>.Instance);
+        _wrapper = wrapper;
         _invalidator = new SharedGameCacheInvalidator(
             wrapper,
             new CacheInvalidationRetryPolicy(NullLogger<CacheInvalidationRetryPolicy>.Instance),
@@ -125,6 +129,10 @@ public sealed class CatalogRailsCacheEvictionTests : IDisposable
     private async Task<string[]> NewGameNamesAsync() =>
         (await _newGames.Handle(new GetNewGamesQuery(Limit: 10), TestContext.Current.CancellationToken))
         .Select(g => g.Name).Order(StringComparer.Ordinal).ToArray();
+
+    private async Task<bool[]> TrendingKbBadgesAsync() =>
+        (await _trending.Handle(new GetCatalogTrendingQuery { Limit = 10 }, TestContext.Current.CancellationToken))
+        .Select(g => g.HasKnowledgeBase).ToArray();
 
     private async Task<string[]> TrendingTitlesAsync() =>
         (await _trending.Handle(new GetCatalogTrendingQuery { Limit = 10 }, TestContext.Current.CancellationToken))
@@ -206,6 +214,42 @@ public sealed class CatalogRailsCacheEvictionTests : IDisposable
         await _invalidator.EvictDetailsAndListAsync([deleted.Id], TestContext.Current.CancellationToken);
 
         (await TrendingTitlesAsync()).Should().Equal("Kept");
+    }
+
+    /// <summary>
+    /// Il trending porta anche il badge «AI pronta» (<c>HasKnowledgeBase</c>) nella voce in cache. Chi lo cambia
+    /// con <c>VectorDocumentIndexedForKbFlagHandler</c> non passa dall'invalidatore: scrive i tag a mano, e prima
+    /// non toglieva le rail. Il badge restava com'era fino alla scadenza della voce.
+    /// </summary>
+    [Fact]
+    public async Task Trending_KbBadge_Refreshes_WhenTheKbFlagHandlerFlipsTheFlag()
+    {
+        var game = await SeedGameAsync("Gets a rulebook", withPlay: true);
+        (await TrendingKbBadgesAsync()).Should().Equal(false);
+
+        // Control: a change the cache has not been told about is NOT seen. Flip the flag in the database and
+        // put it back, so the handler below still finds it false and flips it itself.
+        game.HasKnowledgeBase = true;
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        (await TrendingKbBadgesAsync()).Should().Equal(
+            new[] { false }, "the cached rail entry is what the 12h entry holds");
+        game.HasKnowledgeBase = false;
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var handler = new VectorDocumentIndexedForKbFlagHandler(
+            _db,
+            _wrapper,
+            new CacheInvalidationRetryPolicy(NullLogger<CacheInvalidationRetryPolicy>.Instance),
+            NullLogger<VectorDocumentIndexedForKbFlagHandler>.Instance);
+
+        await handler.Handle(
+            new VectorDocumentIndexedEvent(Guid.NewGuid(), Guid.NewGuid(), chunkCount: 10, sharedGameId: game.Id),
+            TestContext.Current.CancellationToken);
+
+        (await _db.SharedGames.AsNoTracking().SingleAsync(g => g.Id == game.Id, TestContext.Current.CancellationToken))
+            .HasKnowledgeBase.Should().BeTrue("the handler did flip the flag");
+        (await TrendingKbBadgesAsync()).Should().Equal(
+            new[] { true }, "the flag changed, so the cached rail entry that carries it has to go");
     }
 
     /// <summary>

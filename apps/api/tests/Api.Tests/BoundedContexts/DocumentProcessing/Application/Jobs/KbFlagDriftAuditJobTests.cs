@@ -1,4 +1,5 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Jobs;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -138,6 +139,11 @@ public sealed class KbFlagDriftAuditJobTests
             c => c.RemoveByTagAcrossReplicasAsync($"shared-game:{sharedGameId}", It.IsAny<CancellationToken>()),
             Times.Once);
 
+        // #4659: and the catalog rails, whose trending entry carries the same flag.
+        _cache.Verify(
+            c => c.RemoveByTagAcrossReplicasAsync(CatalogRailsCache.Tag, It.IsAny<CancellationToken>()),
+            Times.Once);
+
         _logger.Verify(
             x => x.Log(
                 LogLevel.Warning,
@@ -146,6 +152,44 @@ public sealed class KbFlagDriftAuditJobTests
                 null,
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once);
+    }
+
+    /// <summary>
+    /// #4659: le rail sono l'ultimo passo. Se si arrendono, la lista e il dettaglio sono già evinti e la riga di
+    /// errore dello SLO è già stata scritta: non è un'evizione che ne salta altre.
+    /// </summary>
+    [Fact]
+    public async Task Execute_WhenTheRailsEvictionGivesUp_TheDetailsAreAlreadyEvicted_AndTheSloIsLogged()
+    {
+        var sharedGameId = Guid.NewGuid();
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        db.SharedGames.Add(Game(sharedGameId, hasKb: false));
+        db.PdfDocuments.Add(ReadyPdf(Guid.NewGuid(), sharedGameId));
+        await db.SaveChangesAsync();
+
+        _retryPolicy
+            .Setup(p => p.ExecuteAsync(
+                It.IsAny<Func<CancellationToken, ValueTask>>(),
+                "kb-reconcile.rails",
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.FromException(new InvalidOperationException("redis down")));
+
+        var ctx = FakeContext();
+        await CreateJob(db).Execute(ctx);
+
+        _cache.Verify(
+            c => c.RemoveByTagAcrossReplicasAsync($"shared-game:{sharedGameId}", It.IsAny<CancellationToken>()),
+            Times.Once,
+            "the detail was evicted before the rails step ran");
+        _logger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("SLO=0 violated", StringComparison.Ordinal)),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once,
+            "the SLO line is logged before the rails step");
     }
 
     [Fact]

@@ -46,7 +46,9 @@ overrides:
   # A '>=0.35.0' l'override era gia' soddisfatto da 0.35.3: un reinstall non alzava nulla,
   # e la patch e' arrivata solo con un `pnpm update sharp --prod` esplicito. Il vincolo qui
   # e' cio' che rende la correzione dichiarata invece che incisa nel solo lockfile (#3707).
-  sharp: '>=0.35.4'
+  # Poi a 0.35.5 (#4629): GHSA-2464-fhr4-w9xw (next, Image Optimization) chiede `sharp` >= 0.35.5, e il
+  # lockfile ci era gia' per caso, con l'override fermo a 0.35.4.
+  sharp: '>=0.35.5'
   protobufjs: '>=8.4.1'
   qs: '>=6.14.2'
   shell-quote: '>=1.9.0'

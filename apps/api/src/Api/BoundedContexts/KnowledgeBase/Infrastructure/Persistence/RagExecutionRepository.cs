@@ -216,10 +216,11 @@ internal sealed class RagExecutionRepository : RepositoryBase, IRagExecutionRepo
                 TotalCost = g.Sum(e => e.TotalCost),
                 SuccessCount = g.Count(e => e.Status == "Success"),
                 AvgLatencyMs = g.Average(e => (double)e.TotalLatencyMs),
-                AvgConfidence = g.Where(e => e.Confidence != null)
-                    .Select(e => e.Confidence!.Value)
-                    .DefaultIfEmpty(0)
-                    .Average(),
+                // #4635: `Where().Select().DefaultIfEmpty(0).Average()` inside a GroupBy projection is not
+                // translatable (the shape #4059 fixed in GetStatsAsync): it threw on every call, and the middleware
+                // showed it as a 400. SQL AVG skips the NULLs, so the nullable average keeps the old meaning
+                // (the present values only); the zero for "none present" is applied below, after the query.
+                AvgConfidence = g.Average(e => e.Confidence),
                 LastExecutedAt = g.Max(e => (DateTime?)e.CreatedAt)
             })
             .OrderByDescending(s => s.ExecutionCount)
@@ -237,7 +238,7 @@ internal sealed class RagExecutionRepository : RepositoryBase, IRagExecutionRepo
             r.TotalCost,
             r.ExecutionCount > 0 ? (double)r.SuccessCount / r.ExecutionCount : 0,
             r.AvgLatencyMs,
-            r.AvgConfidence,
+            r.AvgConfidence ?? 0,
             r.LastExecutedAt)).ToList();
     }
 

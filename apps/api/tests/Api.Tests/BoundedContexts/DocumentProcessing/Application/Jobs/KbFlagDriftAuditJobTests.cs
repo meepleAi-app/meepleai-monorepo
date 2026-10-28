@@ -82,11 +82,11 @@ public sealed class KbFlagDriftAuditJobTests
             HasKnowledgeBase = hasKb,
         };
 
-    private static IJobExecutionContext FakeContext()
+    private static IJobExecutionContext FakeContext(CancellationToken token = default)
     {
         var ctx = new Mock<IJobExecutionContext>();
         ctx.SetupGet(c => c.FireTimeUtc).Returns(DateTimeOffset.UtcNow);
-        ctx.SetupGet(c => c.CancellationToken).Returns(CancellationToken.None);
+        ctx.SetupGet(c => c.CancellationToken).Returns(token);
         ctx.SetupProperty(c => c.Result);
         return ctx.Object;
     }
@@ -190,6 +190,80 @@ public sealed class KbFlagDriftAuditJobTests
                 It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
             Times.Once,
             "the SLO line is logged before the rails step");
+
+        // #4659: the step that gave up is logged and does not turn the reconciliation into an error.
+        ctx.Result.Should().BeEquivalentTo(new { RepairedGames = 1 });
+    }
+
+    /// <summary>
+    /// #4659: ogni passo di evizione è a sé: se si arrendono tutti (lista, dettaglio e rail) il job li prova
+    /// comunque tutti, scrive la riga dello SLO e la riconciliazione, che è già salvata, resta riuscita. I passi
+    /// girano sotto il token di Quartz, a differenza degli handler.
+    /// </summary>
+    [Fact]
+    public async Task Execute_WhenEveryEvictionGivesUp_EveryStepIsTried_TheSloIsLogged_AndTheResultIsTheReconciliation()
+    {
+        var sharedGameId = Guid.NewGuid();
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        db.SharedGames.Add(Game(sharedGameId, hasKb: false));
+        db.PdfDocuments.Add(ReadyPdf(Guid.NewGuid(), sharedGameId));
+        await db.SaveChangesAsync();
+        var policy = GivingUpRetryPolicy.Always();
+        var job = new KbFlagDriftAuditJob(db, _cache.Object, policy, _logger.Object);
+        using var quartz = new CancellationTokenSource();
+
+        var ctx = FakeContext(quartz.Token);
+        await job.Execute(ctx);
+
+        policy.Operations.Should().Equal("kb-reconcile.list", "kb-reconcile.detail", "kb-reconcile.rails");
+        policy.Tokens.Should().OnlyContain(t => t == quartz.Token, "the job runs under the scheduler's token");
+        ctx.Result.Should().BeEquivalentTo(new { RepairedGames = 1 });
+        _logger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("Cache eviction failed", StringComparison.Ordinal)),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Exactly(3));
+        _logger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("SLO=0 violated", StringComparison.Ordinal)),
+                null,
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// #4659: un passo di evizione che si arrende (Redis che non risponde dopo i tentativi) si registra e non
+    /// salta gli altri: la lista persa non toglie il dettaglio né le rail, e la riconciliazione resta riuscita.
+    /// </summary>
+    [Fact]
+    public async Task Execute_WhenTheListEvictionGivesUp_TheDetailsAndTheRailsAreStillEvicted()
+    {
+        var sharedGameId = Guid.NewGuid();
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        db.SharedGames.Add(Game(sharedGameId, hasKb: false));
+        db.PdfDocuments.Add(ReadyPdf(Guid.NewGuid(), sharedGameId));
+        await db.SaveChangesAsync();
+        var policy = GivingUpRetryPolicy.ForOperation("kb-reconcile.list");
+        var job = new KbFlagDriftAuditJob(db, _cache.Object, policy, _logger.Object);
+
+        var ctx = FakeContext();
+        await job.Execute(ctx);
+
+        policy.Operations.Should().Equal("kb-reconcile.list", "kb-reconcile.detail", "kb-reconcile.rails");
+        ctx.Result.Should().BeEquivalentTo(new { RepairedGames = 1 });
+        _logger.Verify(
+            x => x.Log(
+                LogLevel.Error,
+                It.IsAny<EventId>(),
+                It.Is<It.IsAnyType>((v, _) => v.ToString()!.Contains("Cache eviction failed", StringComparison.Ordinal)),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
     }
 
     [Fact]

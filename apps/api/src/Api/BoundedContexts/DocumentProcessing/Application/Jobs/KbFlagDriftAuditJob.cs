@@ -124,16 +124,22 @@ internal sealed class KbFlagDriftAuditJob : IJob
             // Invalidate the catalog read-model cache across replicas so the freshly
             // flipped "AI-ready" flag appears immediately instead of waiting for the
             // L1/L2 TTL — mirrors VectorDocumentIndexedForKbFlagHandler.
-            await _retryPolicy.ExecuteAsync(
+            // #4659: each eviction step is best effort (TryExecuteAsync): one that gives up after the retries is
+            // logged, and the next ones, the SLO line and the result still happen.
+            await _retryPolicy.TryExecuteAsync(
                 token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync("search-games", token)),
                 "kb-reconcile.list",
+                "search-games",
+                _logger,
                 cancellationToken).ConfigureAwait(false);
 
             foreach (var game in games)
             {
-                await _retryPolicy.ExecuteAsync(
+                await _retryPolicy.TryExecuteAsync(
                     token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync($"shared-game:{game.Id}", token)),
                     "kb-reconcile.detail",
+                    $"shared-game:{game.Id}",
+                    _logger,
                     cancellationToken).ConfigureAwait(false);
             }
 
@@ -145,9 +151,11 @@ internal sealed class KbFlagDriftAuditJob : IJob
 
             // #4659: and the catalog rails, whose trending entry carries the same flag. Last on purpose: if this
             // step gives up, the list and the details are already evicted and the SLO line above is already logged.
-            await _retryPolicy.ExecuteAsync(
+            await _retryPolicy.TryExecuteAsync(
                 token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync(CatalogRailsCache.Tag, token)),
                 "kb-reconcile.rails",
+                CatalogRailsCache.Tag,
+                _logger,
                 cancellationToken).ConfigureAwait(false);
 
             context.Result = new { RepairedGames = games.Count };

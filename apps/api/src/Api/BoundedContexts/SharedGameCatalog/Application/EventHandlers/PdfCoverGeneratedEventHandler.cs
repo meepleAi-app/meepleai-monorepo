@@ -87,15 +87,22 @@ internal sealed class PdfCoverGeneratedEventHandler : INotificationHandler<PdfCo
         // coverUrl immediately instead of waiting for the 15min/1h TTL. Cross-replica
         // L1+L2 eviction via Redis Pub/Sub, mirroring #3138 / VectorDocumentIndexedForKbFlagHandler
         // (ADR-062). Only reached after the real key change (the three early returns above are no-ops).
-        await _cacheRetryPolicy.ExecuteAsync(
+        //
+        // #4659: best effort (TryExecuteAsync). The cover key is already saved: a step that gives up after the
+        // retries is logged and the other one still runs, instead of failing the handler.
+        await _cacheRetryPolicy.TryExecuteAsync(
             token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync("search-games", token)),
             "shared-games.list",
-            cancellationToken).ConfigureAwait(false);
+            "search-games",
+            _logger,
+            CancellationToken.None).ConfigureAwait(false);
 
-        await _cacheRetryPolicy.ExecuteAsync(
+        await _cacheRetryPolicy.TryExecuteAsync(
             token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync($"shared-game:{sharedGameId}", token)),
             "shared-games.detail",
-            cancellationToken).ConfigureAwait(false);
+            $"shared-game:{sharedGameId}",
+            _logger,
+            CancellationToken.None).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Propagated cover key to SharedGame {SharedGameId} from PDF {PdfDocumentId}.",

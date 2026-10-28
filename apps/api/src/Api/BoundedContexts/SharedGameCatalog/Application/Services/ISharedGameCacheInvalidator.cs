@@ -14,7 +14,11 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 /// gli event handler e i job <c>PdfCoverGeneratedEventHandler</c>,
 /// <c>VectorDocumentIndexedForKbFlagHandler</c>, <c>ToolkitChangedForCatalogAggregatesHandler</c>,
 /// <c>AgentDefinitionChangedForCatalogAggregatesHandler</c>, <c>ScheduledBulkInvalidationJob</c> e
-/// <c>KbFlagDriftAuditJob</c> (quest'ultimo vive in DocumentProcessing). Migrarli è un seguito di #4603.
+/// <c>KbFlagDriftAuditJob</c> (quest'ultimo vive in DocumentProcessing). Non passano da qui perché ciascuno
+/// toglie i tag che gli servono (per esempio il cambio di una cover non tocca le rail). Quattro di loro
+/// (il flag KB, la cover, la riconciliazione del flag KB e il job massivo) hanno la STESSA politica d'errore:
+/// <c>CacheInvalidationRetryPolicyExtensions.TryExecuteAsync</c> (#4659), vedi sotto. I due handler di toolkit e
+/// di definizione d'agente no, di proposito: vedi sotto.
 /// </para>
 /// <para>
 /// Da chiamare DOPO il salvataggio: un'evizione prima lascerebbe che una lettura ripopoli la cache col
@@ -37,12 +41,25 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Services;
 /// trending, non un errore). <see cref="EvictDetailAsync"/> no.
 /// </para>
 /// <para>
-/// Chi scrive i tag a mano (l'elenco sopra) non passa da qui, e nemmeno dalla sua politica d'errore. Due di
+/// Chi scrive i tag a mano (l'elenco sopra) non passa da qui. Due di
 /// loro cambiano il flag KB, che il trending porta nella voce, e tolgono le rail da sé:
 /// <c>VectorDocumentIndexedForKbFlagHandler</c> e <c>KbFlagDriftAuditJob</c>, con il tag di
 /// <see cref="CatalogRailsCache.Tag"/>. <c>ScheduledBulkInvalidationJob</c> invece non le tocca, di proposito:
 /// ogni quindici minuti svuoterebbe una voce di 12 ore che costa una scansione di sette giorni di eventi.
 /// Se l'evizione delle rail non riesce, l'unica rete è quindi la scadenza della voce.
+/// </para>
+/// <para>
+/// La politica d'errore dei quattro (#4659): un passo di evizione che si arrende dopo i tentativi si registra e
+/// non risale, gli altri passi di evizione girano comunque (un guasto del database, prima o in mezzo, segue le
+/// sue regole). Prima rilanciavano: l'handler del flag KB, che gira in linea nella pubblicazione di un PDF
+/// appena indicizzato, faceva passare a <c>Failed</c> un PDF la cui indicizzazione era riuscita, e la cache
+/// restava vecchia lo stesso.
+/// </para>
+/// <para>
+/// <c>ToolkitChangedForCatalogAggregatesHandler</c> e <c>AgentDefinitionChangedForCatalogAggregatesHandler</c>
+/// invece <b>rilanciano ancora</b>, e va bene così: il loro evento arriva dall'outbox, che in staging e in
+/// produzione (<c>OutboxOnly</c>) ritenta l'evento se l'handler lancia, e l'evizione è idempotente. Lì il
+/// rilancio è il ritentativo, non un PDF che fallisce.
 /// </para>
 /// <para>
 /// Errori e cancellazione (#4603, punto 2, deciso). L'evizione sta DOPO il commit, quindi non può far

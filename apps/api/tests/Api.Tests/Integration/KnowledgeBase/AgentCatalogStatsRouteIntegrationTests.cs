@@ -76,6 +76,32 @@ public sealed class AgentCatalogStatsRouteIntegrationTests : IClassFixture<Agent
         json.RootElement.GetProperty("global").GetProperty("totalExecutions").GetInt32().Should().BeGreaterThanOrEqualTo(3);
     }
 
+    /// <summary>
+    /// Le statistiche d'uso restano dati da amministratore anche ora che la rotta risponde: chi non ha una sessione e un
+    /// utente qualunque sono fermati dal filtro del gruppo, prima di arrivare al gestore.
+    /// </summary>
+    [Fact]
+    public async Task AnAnonymousCaller_AndAPlainUser_AreStopped()
+    {
+        const string path = "/api/v1/admin/agent-definitions/catalog-stats?range=7d";
+
+        using var anonymous = new HttpRequestMessage(HttpMethod.Get, path);
+        using var anonymousResponse = await _client.SendAsync(anonymous, Ct);
+
+        string userToken;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            (_, userToken) = await TestSessionHelper.CreateUserSessionAsync(db, null, Ct);
+        }
+
+        using var plainUser = TestSessionHelper.CreateAuthenticatedRequest(HttpMethod.Get, path, userToken);
+        using var plainUserResponse = await _client.SendAsync(plainUser, Ct);
+
+        anonymousResponse.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        plainUserResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
     private async Task SeedAsync(Guid agentDefinitionId, double? confidence, int tokens, int latencyMs, string status)
     {
         using var scope = _factory.Services.CreateScope();

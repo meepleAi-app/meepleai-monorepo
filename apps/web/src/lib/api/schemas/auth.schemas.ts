@@ -300,7 +300,10 @@ export type ListApiKeysResponse = z.infer<typeof ListApiKeysResponseSchema>;
 export const UserSearchResultSchema = z.object({
   id: z.string().uuid(),
   displayName: z.string().min(1),
-  email: z.string().email(),
+  // #4727: the server returns the address masked (j***n@example.com) so that two people with the same name
+  // can be told apart without handing out their addresses. A masked address is not a valid email, so this
+  // must stay a plain string — `.email()` would reject every result.
+  email: z.string().min(1),
 });
 
 export type UserSearchResult = z.infer<typeof UserSearchResultSchema>;

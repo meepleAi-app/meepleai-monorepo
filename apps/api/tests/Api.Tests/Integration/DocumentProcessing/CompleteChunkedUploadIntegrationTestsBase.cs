@@ -300,7 +300,9 @@ public abstract class CompleteChunkedUploadIntegrationTestsBase : IAsyncLifetime
         failed.ProcessingState.Should().Be(nameof(PdfProcessingState.Failed));
         failed.FailedAtState.Should().Be(nameof(PdfProcessingState.Extracting), "la fase in cui il documento si è fermato");
         failed.ErrorCategory.Should().Be(nameof(ErrorCategory.StorageObjectMissing));
-        failed.ProcessingError.Should().Contain(documentId.ToString("N"), "il messaggio nomina la chiave cercata, non un errore di I/O");
+        // #4660: la chiave cercata sta nel log, non nella colonna che pdf-status serve agli utenti.
+        failed.ProcessingError.Should().Be(PdfFailureText.For(ErrorCategory.StorageObjectMissing));
+        failed.ProcessingError.Should().NotContain(documentId.ToString("N"));
     }
 
     protected static async Task<byte[]> ReadAllAsync(Stream stream)

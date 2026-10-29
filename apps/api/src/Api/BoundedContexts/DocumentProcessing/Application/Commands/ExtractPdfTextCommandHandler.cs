@@ -103,7 +103,9 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
                 _logger.LogError("Text extraction failed for PDF {PdfId}: {Error}",
                     pdfId, extractResult.ErrorMessage);
                 pdf.ProcessingState = nameof(PdfProcessingState.Failed);
-                pdf.ProcessingError = extractResult.ErrorMessage;
+                // #4660: fixed text; the extractor's message is in the log line above and in the result returned to
+                // the (admin) caller, but this column is served to users by pdf-status.
+                pdf.ProcessingError = PdfFailureText.TextExtraction;
                 pdf.ProcessedAt = _timeProvider.GetUtcNow().UtcDateTime;
                 try
                 {

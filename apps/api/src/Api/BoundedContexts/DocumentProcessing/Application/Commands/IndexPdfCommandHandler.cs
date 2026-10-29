@@ -230,7 +230,8 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
                 if (failedPdf != null)
                 {
                     failedPdf.ProcessingState = nameof(PdfProcessingState.Failed);
-                    failedPdf.ProcessingError = $"Unexpected error: {ex.Message}";
+                    // #4660: fixed text; the exception is logged above, and this column is served to users by pdf-status.
+                    failedPdf.ProcessingError = PdfFailureText.For(ErrorCategory.Unknown);
                     try
                     {
                         await _db.SaveChangesAsync(CancellationToken.None).ConfigureAwait(false);

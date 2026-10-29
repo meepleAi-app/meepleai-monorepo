@@ -1,4 +1,5 @@
 using System.Globalization;
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
@@ -91,7 +92,7 @@ internal sealed class DegradeStuckJobCommandHandler
             if (pdfIsFailed)
             {
                 await _indexingPipeline.MarkIndexingFailedAsync(
-                    job.PdfDocumentId, $"Processing failed ({ErrorCategory.Service})", CancellationToken.None).ConfigureAwait(false);
+                    job.PdfDocumentId, PdfFailureText.For(ErrorCategory.Service), CancellationToken.None).ConfigureAwait(false);
             }
 
             _logger.LogWarning(

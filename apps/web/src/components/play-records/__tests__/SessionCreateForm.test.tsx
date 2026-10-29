@@ -344,6 +344,27 @@ describe('SessionCreateForm — wizard 3-step', () => {
       expect(onSubmit).not.toHaveBeenCalled();
     });
 
+    // The guard above covers a submit while the wizard is still on step 1 or 2. The race that actually reaches users
+    // is the Quando → Punteggi transition: React flushes the step change inside the click's microtask checkpoint, i.e.
+    // before the browser runs the click's activation behaviour. If "Avanti" (type=button) and "Salva" (type=submit)
+    // are the same DOM node, that activation behaviour now submits the form on the final step and creates an empty
+    // record, so Punteggi is never shown. jsdom cannot reproduce the timing (it has no microtask checkpoint inside
+    // dispatch); the contract that prevents it is that "Salva" is a different element, so the old node is detached.
+    it('renders "Salva" as a different element from "Avanti", so a click on "Avanti" cannot submit', () => {
+      mockCurrentStep = 1;
+      const view = render(<SessionCreateForm {...defaultProps} />, { wrapper: createWrapper() });
+      const nextButton = screen.getByRole('button', { name: /avanti/i });
+      expect(nextButton).toHaveAttribute('type', 'button');
+
+      mockCurrentStep = 2;
+      view.rerender(<SessionCreateForm {...defaultProps} />);
+      const saveButton = screen.getByRole('button', { name: /salva/i });
+
+      expect(saveButton).toHaveAttribute('type', 'submit');
+      expect(saveButton).not.toBe(nextButton);
+      expect(nextButton.isConnected).toBe(false);
+    });
+
     it('creates the record when the form submits on the final step (Punteggi)', async () => {
       mockCurrentStep = 2;
       const onSubmit = vi.fn();

@@ -1,24 +1,21 @@
 /**
- * ChatEntryOrchestrator — Composes GameSelector, AgentSelector, QuickStartSuggestions,
+ * ChatEntryOrchestrator — Composes GameSelector, QuickStartSuggestions and ThreadCreator into the
+ * full "new chat" flow.
  *
- * Issue #4138: the per-game "custom agents" leg is gone, and with it three things that existed
- * only to serve it: the loading state, the auto-start-on-exactly-one-agent branch, and the
- * OFFSCREEN AgentSelector mount (#923) whose sole job was to let the selector's useEffect fire the
- * API call so the spinner could resolve. A headless mount to drive a fetch is a strong signal the
- * fetch did not belong in the component - and here the data it fetched could not change an answer.
- * and ThreadCreator into the full "new chat" flow.
+ * Issue #4138: the per-game "custom agents" leg is gone, and with it the loading state, the
+ * auto-start-on-exactly-one-agent branch and the OFFSCREEN AgentSelector mount (#923).
+ * Issue #4730: the persona picker (Auto / Tutor / Arbitro / Stratega / Narratore) is gone too. What it
+ * picked never reached the thread — the create request carries no agent type — so it changed nothing
+ * but whether the start button was enabled; inside the thread there is a switcher of its own.
  *
  * Two modes:
- * 1. Full mode (no ?game param): Game grid → Agent grid → Start
- * 2. Direct game mode (?game=id from MeepleCard chat button):
- *    - 0 custom agents → show system agent selection
- *    - 1 custom agent  → auto-create thread and redirect
- *    - 2+ custom agents → show agent picker only
+ * 1. Full mode (no ?game param): Game grid → Start
+ * 2. Direct game mode (?game=id from MeepleCard chat button): the game is already chosen → Start
  */
 
 'use client';
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 
 import { MessageSquarePlus } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -27,8 +24,6 @@ import { trackRulesChatStarted } from '@/lib/analytics/flywheel-events';
 import { cn } from '@/lib/utils';
 import type { Game } from '@/types';
 
-import { AgentSelector } from './AgentSelector';
-import { DEFAULT_AGENTS } from './constants';
 import { GameSelector } from './GameSelector';
 import { QuickStartSuggestions } from './QuickStartSuggestions';
 import { createThreadWithContext } from './ThreadCreator';
@@ -56,9 +51,6 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
 
   // Selection state
   const [selectedGameId, setSelectedGameId] = useState<string | null>(directGameId);
-  const [selectedAgentType, setSelectedAgentType] = useState<string | null>(
-    isDirectGameMode ? null : 'auto'
-  );
 
   // Loaded game list for title resolution
   const [allGames, setAllGames] = useState<Game[]>([]);
@@ -66,12 +58,6 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
   // Thread creation state
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Pre-select agent from ?agent= param
-  useEffect(() => {
-    const agentParam = searchParams?.get('agent');
-    if (agentParam) setSelectedAgentType(agentParam);
-  }, [searchParams]);
 
   // Track games loaded from GameSelector
   const handleGamesLoaded = useCallback((games: Game[]) => {
@@ -85,10 +71,6 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
 
   const handleGameSelect = useCallback((gameId: string) => {
     setSelectedGameId(gameId);
-  }, []);
-
-  const handleSystemAgentSelect = useCallback((agentType: string) => {
-    setSelectedAgentType(agentType);
   }, []);
 
   // Selected game name for display and thread title
@@ -137,7 +119,7 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
   // #4715: the conversation needs a game. "Continue without a game" used to start a thread that never
   // answers, so the start button now waits for one.
   const hasGame = !!selectedGameId;
-  const canStart = DEFAULT_AGENTS.length > 0 && selectedAgentType !== null && hasGame;
+  const canStart = hasGame;
 
   return (
     <div className={cn('min-h-dvh bg-background', className)}>
@@ -147,17 +129,21 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
           <div className="inline-flex items-center gap-3 mb-4">
             <MessageSquarePlus className="h-8 w-8 text-amber-500" />
             <h1 className="text-2xl sm:text-3xl font-bold font-quicksand text-foreground">
-              {isDirectGameMode ? 'Seleziona un agente' : 'Inizia una nuova conversazione'}
+              Inizia una nuova conversazione
             </h1>
           </div>
           <p className="text-muted-foreground font-nunito max-w-lg mx-auto">
-            {isDirectGameMode && selectedGame ? (
-              <>
-                Scegli un agente per{' '}
-                <span className="font-semibold text-foreground">{selectedGame.title}</span>
-              </>
+            {isDirectGameMode ? (
+              selectedGame ? (
+                <>
+                  Fai una domanda su{' '}
+                  <span className="font-semibold text-foreground">{selectedGame.title}</span>
+                </>
+              ) : (
+                'Le risposte si basano sul regolamento del gioco scelto.'
+              )
             ) : (
-              'Seleziona un gioco e un agente AI per iniziare: le risposte si basano sul regolamento del gioco scelto.'
+              'Seleziona un gioco per iniziare: le risposte si basano sul suo regolamento.'
             )}
           </p>
         </div>
@@ -183,12 +169,6 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
               onGamesLoaded={handleGamesLoaded}
             />
           )}
-
-          {/* Agent Selection */}
-          <AgentSelector
-            onSelectSystemAgent={handleSystemAgentSelect}
-            selectedAgentType={selectedAgentType}
-          />
 
           {/* Quick Start — only with a game: every suggestion is a question about one */}
           {hasGame && (

@@ -511,7 +511,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 "[PdfPipeline] Text extraction failed for PDF {PdfId} (permanent={IsPermanentFailure})",
                 pdfId, ex.IsPermanentFailure);
             var category = ex.IsPermanentFailure ? ErrorCategory.PayloadTooLarge : (ErrorCategory?)null;
-            await TryMarkFailedAsync(pdfDocumentId, ex.Message, category).ConfigureAwait(false);
+            await TryMarkFailedAsync(pdfDocumentId, PdfFailureText.For(category ?? ErrorCategory.Unknown), category).ConfigureAwait(false);
             return PdfPipelineOutcome.Failed;
         }
         catch (PdfEmbeddingFailedException ex)
@@ -520,24 +520,21 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             // task records it: transient, so RetryFailedPdfsJob retries it. This pipeline left the
             // category NULL, and since ADR-100 it processes every admin upload.
             _logger.LogError(ex, "[PdfPipeline] Embedding failed for PDF {PdfId}", pdfId);
-            await TryMarkFailedAsync(pdfDocumentId, ex.Message, ErrorCategory.Service).ConfigureAwait(false);
+            await TryMarkFailedAsync(pdfDocumentId, PdfFailureText.For(ErrorCategory.Service), ErrorCategory.Service).ConfigureAwait(false);
             return PdfPipelineOutcome.Failed;
         }
-        catch (PdfStorageObjectMissingException ex)
+        catch (PdfStorageObjectMissingException)
         {
             // #3846: the object is not at the key FilePath records. Retrying cannot conjure it back,
             // so it gets a category RetryFailedPdfsJob excludes — unlike the NULL category the
             // generic catch below leaves, which is treated as retriable.
-            _logger.LogError(ex,
-                "[PdfPipeline] PDF {PdfId} is not in storage at key pdf/{ResourceKey}/{FileId}",
-                pdfId, ex.ResourceKey, ex.FileId);
-            await TryMarkFailedAsync(pdfDocumentId, ex.Message, ErrorCategory.StorageObjectMissing).ConfigureAwait(false);
+            await TryMarkFailedAsync(pdfDocumentId, PdfFailureText.For(ErrorCategory.StorageObjectMissing), ErrorCategory.StorageObjectMissing).ConfigureAwait(false);
             return PdfPipelineOutcome.Failed;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "[PdfPipeline] Processing FAILED for PDF {PdfId}", pdfId);
-            await TryMarkFailedAsync(pdfDocumentId, ex.Message).ConfigureAwait(false);
+            await TryMarkFailedAsync(pdfDocumentId, PdfFailureText.For(ErrorCategory.Unknown)).ConfigureAwait(false);
             return PdfPipelineOutcome.Failed;
         }
 #pragma warning restore CA1031
@@ -1393,7 +1390,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     /// the original DbContext may be in a bad state.
     /// </summary>
     /// <param name="pdfDocumentId">The PDF document to mark as failed.</param>
-    /// <param name="errorMessage">Persisted (truncated to 500 chars) as ProcessingError.</param>
+    /// <param name="errorMessage">
+    /// Persisted (truncated to 500 chars) as ProcessingError. #4660: a fixed text (<see cref="PdfFailureText"/>),
+    /// never an exception message: that column is served to users by pdf-status.
+    /// </param>
     /// <param name="category">
     /// #3589: when provided, persisted as PdfDocument.ErrorCategory so RetryFailedPdfsJob can
     /// exclude permanent failures from automatic retry. Omitted (null) preserves the
@@ -1463,7 +1463,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         // must not stay in flight. A PDF that failed before the indexing phase has none: a no-op. The text is the
         // category, not the exception message: this column is served to users by pdf-status.
         await _indexingPipeline.MarkIndexingFailedAsync(
-            pdfDocumentId, $"Processing failed ({category?.ToString() ?? nameof(ErrorCategory.Unknown)})", CancellationToken.None).ConfigureAwait(false);
+            pdfDocumentId, PdfFailureText.For(category ?? ErrorCategory.Unknown), CancellationToken.None).ConfigureAwait(false);
     }
 
     /// <summary>

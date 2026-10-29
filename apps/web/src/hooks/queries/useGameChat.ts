@@ -226,6 +226,8 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
       let collectedCitations: Citation[] = [];
       // La frase di un evento di errore, da mostrare se l'eccezione che segue arriva fino al catch.
       let failureMessage: string | null = null;
+      // Lo stream ha consegnato un risultato (Complete)? Senza, e' stato interrotto, non finito.
+      let gotResult = false;
 
       try {
         const stream = qaStream({
@@ -248,6 +250,7 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
               answerBuffer += String(obj.token ?? obj.content ?? '');
             }
           } else if (event.type === COMPLETE_EVENT_TYPE) {
+            gotResult = true;
             const payload = event.data as StreamingCompletePayload;
             const confidence = payload.confidence ?? undefined;
             // Issue #V: prefer citations from the COMPLETE payload when present
@@ -304,6 +307,14 @@ export function useGameChat(gameId: string, initialAgent: AgentKind = 'tutor'): 
             }
           }
           // Ignora type=0 (StateUpdate) e type=8 (Follow-up).
+        }
+
+        // #4696: il ciclo e' finito senza un Complete e senza un Error (un proxy che taglia a meta', un backend
+        // che cade dopo qualche token). Prima `ask` terminava in silenzio: spariva l'indicatore di scrittura e
+        // all'utente non restava niente. E' un errore come gli altri: va al catch, che lo registra e lo rilancia.
+        if (!gotResult) {
+          failureMessage = qaStreamKnownErrorMessage('AI_STREAM_INTERRUPTED') ?? null;
+          throw new Error('QA stream ended without a result');
         }
       } catch (e) {
         if (e instanceof QaTooManyRequestsError) {

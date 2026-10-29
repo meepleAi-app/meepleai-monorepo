@@ -322,6 +322,19 @@ describe('GameChatTab', () => {
       expect(screen.queryByText(/Npgsql|An error occurred/)).not.toBeInTheDocument();
     });
 
+    it('a stream cut off before its result says the answer was interrupted', async () => {
+      // Un proxy che taglia a metà: qualche token, poi la connessione si chiude pulita.
+      vi.mocked(qaStream).mockReturnValueOnce(mockStream([{ type: 7, data: 'Cinque ' }]) as any);
+      render(<GameChatTab gameId="wingspan" />);
+      ask('q?');
+
+      expect(await screen.findByTestId('answer-error')).toHaveTextContent(
+        'La risposta si è interrotta prima della fine, quindi non è completa. Riprova a chiedere.'
+      );
+      expect(screen.getByText('q?')).toBeInTheDocument();
+      expect(screen.getByRole('textbox')).toBeEnabled();
+    });
+
     it('a transport failure gets a generic sentence, not the raw error', async () => {
       vi.mocked(qaStream).mockReturnValueOnce(
         failing(new Error('QA stream failed: HTTP 500'))() as any

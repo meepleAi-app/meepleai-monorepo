@@ -86,7 +86,6 @@ describe('usePermissions', () => {
         tier: 'pro',
         role: 'creator',
         status: 'Active',
-        limits: { maxGames: 500, storageQuotaMB: 5000 },
         accessibleFeatures: ['wishlist', 'bulk-select', 'drag-drop', 'agent.create'],
       };
 
@@ -110,7 +109,6 @@ describe('usePermissions', () => {
         tier: 'free',
         role: 'user',
         status: 'Active',
-        limits: { maxGames: 50, storageQuotaMB: 100 },
         accessibleFeatures: ['wishlist'],
       };
 
@@ -133,7 +131,6 @@ describe('usePermissions', () => {
         tier: 'enterprise',
         role: 'admin',
         status: 'Active',
-        limits: { maxGames: 2147483647, storageQuotaMB: 2147483647 },
         accessibleFeatures: [
           'wishlist',
           'bulk-select',
@@ -155,6 +152,50 @@ describe('usePermissions', () => {
       expect(result.current.role).toBe('admin');
       expect(result.current.isAdmin()).toBe(true);
       expect(result.current.canAccess('analytics.view')).toBe(true);
+    });
+
+    // #4268: the API stops sending `limits`. The client never read it, and must keep working
+    // both with the payload the API sends now and with one from a deploy that still includes it.
+    it('works with the payload the API sends now, which has no limits (#4268)', async () => {
+      const mockPermissions: UserPermissions = {
+        tier: 'normal',
+        role: 'user',
+        status: 'Active',
+        accessibleFeatures: ['wishlist', 'drag-drop'],
+      };
+
+      vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(mockPermissions);
+
+      const { result } = renderHook(() => usePermissions(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.tier).toBe('normal');
+      expect(result.current.canAccess('drag-drop')).toBe(true);
+    });
+
+    it('ignores the limits an API that still sends them includes (#4268)', async () => {
+      const olderPayload = {
+        tier: 'free',
+        role: 'user',
+        status: 'Active',
+        limits: { maxGames: 50, storageQuotaMB: 100 },
+        accessibleFeatures: ['wishlist'],
+      } as unknown as UserPermissions;
+
+      vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(olderPayload);
+
+      const { result } = renderHook(() => usePermissions(), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false);
+      });
+
+      expect(result.current.tier).toBe('free');
+      expect(result.current.canAccess('wishlist')).toBe(true);
+      expect(result.current).not.toHaveProperty('limits');
     });
   });
 
@@ -195,7 +236,6 @@ describe('usePermissions', () => {
           tier: 'normal',
           role: 'user',
           status: 'Active',
-          limits: { maxGames: 100, storageQuotaMB: 500 },
           accessibleFeatures: ['wishlist', 'drag-drop'],
         });
       });
@@ -217,7 +257,6 @@ describe('usePermissions', () => {
       tier: 'pro',
       role: 'creator',
       status: 'Active',
-      limits: { maxGames: 500, storageQuotaMB: 5000 },
       accessibleFeatures: ['wishlist', 'bulk-select', 'drag-drop', 'agent.create'],
     };
 
@@ -286,7 +325,6 @@ describe('usePermissions', () => {
         tier: 'normal',
         role: 'user',
         status: 'Active',
-        limits: { maxGames: 100, storageQuotaMB: 500 },
         accessibleFeatures: ['wishlist'],
       };
 
@@ -312,7 +350,6 @@ describe('usePermissions', () => {
         tier: 'pro',
         role: 'user',
         status: 'Active',
-        limits: { maxGames: 500, storageQuotaMB: 5000 },
         accessibleFeatures: ['wishlist', 'bulk-select'],
       };
 
@@ -342,7 +379,6 @@ describe('usePermissions', () => {
         tier: 'normal',
         role: 'user',
         status: 'Active',
-        limits: { maxGames: 100, storageQuotaMB: 500 },
         accessibleFeatures: undefined as unknown as string[],
       };
 
@@ -365,7 +401,6 @@ describe('usePermissions', () => {
         tier: null,
         role: null,
         status: 'Active',
-        limits: { maxGames: 50, storageQuotaMB: 100 },
         accessibleFeatures: [],
       };
 
@@ -402,7 +437,6 @@ describe('usePermissions', () => {
         tier: 'normal',
         role: 'user',
         status: 'Active',
-        limits: { maxGames: 100, storageQuotaMB: 500 },
         accessibleFeatures: ['wishlist'],
       };
 
@@ -440,7 +474,6 @@ describe('usePermissions', () => {
       tier: 'pro',
       role: 'user',
       status: 'Active',
-      limits: { maxGames: 500, storageQuotaMB: 5000 },
       accessibleFeatures: [],
     };
 
@@ -470,7 +503,6 @@ describe('usePermissions', () => {
         tier: 'normal',
         role: 'admin',
         status: 'Active',
-        limits: { maxGames: 100, storageQuotaMB: 500 },
         accessibleFeatures: [],
       };
 
@@ -490,7 +522,6 @@ describe('usePermissions', () => {
         tier: 'free',
         role: 'superadmin',
         status: 'Active',
-        limits: { maxGames: 50, storageQuotaMB: 100 },
         accessibleFeatures: [],
       };
 
@@ -513,7 +544,6 @@ describe('usePermissions', () => {
           tier: 'pro',
           role,
           status: 'Active',
-          limits: { maxGames: 500, storageQuotaMB: 5000 },
           accessibleFeatures: [],
         };
 
@@ -534,7 +564,6 @@ describe('usePermissions', () => {
         tier: 'free',
         role: 'superadmin',
         status: 'Active',
-        limits: { maxGames: 50, storageQuotaMB: 100 },
         accessibleFeatures: [],
       };
 
@@ -555,7 +584,6 @@ describe('usePermissions', () => {
         tier: 'normal',
         role: 'admin',
         status: 'Active',
-        limits: { maxGames: 100, storageQuotaMB: 500 },
         accessibleFeatures: [],
       };
 
@@ -576,7 +604,6 @@ describe('usePermissions', () => {
         tier: 'pro',
         role: 'creator',
         status: 'Active',
-        limits: { maxGames: 500, storageQuotaMB: 5000 },
         accessibleFeatures: [],
       };
 
@@ -620,7 +647,6 @@ describe('usePermissions', () => {
         tier: 'pro',
         role: 'user',
         status: 'Active',
-        limits: { maxGames: 500, storageQuotaMB: 5000 },
         accessibleFeatures: ['wishlist', 'bulk-select'],
       };
 
@@ -642,7 +668,6 @@ describe('usePermissions', () => {
         tier: 'free',
         role: 'user',
         status: 'Active',
-        limits: { maxGames: 50, storageQuotaMB: 100 },
         accessibleFeatures: [],
       };
 
@@ -665,7 +690,6 @@ describe('usePermissions', () => {
         tier: 'normal',
         role: 'user',
         status: 'Active',
-        limits: { maxGames: 100, storageQuotaMB: 500 },
         accessibleFeatures: ['wishlist'],
       };
 
@@ -691,7 +715,6 @@ describe('usePermissions', () => {
         tier: 'normal',
         role: 'user',
         status: 'Active',
-        limits: { maxGames: 100, storageQuotaMB: 500 },
         accessibleFeatures: ['wishlist'],
       };
 

@@ -39,6 +39,8 @@ export interface GameNightRsvpRowProps {
    * how they were invited (and, once they have answered under another name, which address).
    */
   readonly subtitle?: string;
+  /** An action at the end of the row (#4721: withdraw an emailed invitation). Absent for every other row. */
+  readonly action?: React.ReactNode;
   /**
    * Render mode (issue #1169). Defaults to `'authenticated'`. In `'public'`
    * mode the "me" pill is suppressed (no signed-in user can be matched to a
@@ -102,6 +104,7 @@ export function GameNightRsvpRow({
   isHost = false,
   hostLabel,
   subtitle,
+  action,
   mode = 'authenticated',
   className,
 }: GameNightRsvpRowProps): React.JSX.Element {
@@ -188,6 +191,8 @@ export function GameNightRsvpRow({
         </span>
         <span>{statusLabel}</span>
       </div>
+
+      {action ? <div className="shrink-0">{action}</div> : null}
     </div>
   );
 }

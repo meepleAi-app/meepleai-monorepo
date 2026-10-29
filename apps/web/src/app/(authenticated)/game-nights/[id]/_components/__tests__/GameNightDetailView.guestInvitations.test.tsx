@@ -52,6 +52,7 @@ vi.mock('@/components/features/game-night-detail', () => ({
     status: string;
     statusLabel: string;
     subtitle?: string;
+    action?: React.ReactNode;
   }) => (
     <div
       data-testid="row"
@@ -60,7 +61,17 @@ vi.mock('@/components/features/game-night-detail', () => ({
       data-subtitle={props.subtitle ?? ''}
     >
       {props.userName}
+      {props.action}
     </div>
+  ),
+  GuestInvitationWithdraw: (props: { invitationId: string; email: string; accepted: boolean }) => (
+    <button
+      type="button"
+      data-testid="withdraw"
+      data-invitation={props.invitationId}
+      data-email={props.email}
+      data-accepted={String(props.accepted)}
+    />
   ),
 }));
 vi.mock('@/components/game-night/GameNightActions', () => ({
@@ -207,5 +218,52 @@ describe('GameNightDetailView — guests invited by email', () => {
     expect(
       screen.getByRole('heading', { name: 'gameNightDetail.participants.sectionTitle:2' })
     ).toBeInTheDocument();
+  });
+
+  // #4721: the organizer can withdraw a pending or accepted emailed invitation; declined and expired are history.
+  describe('withdrawing an invitation (#4721)', () => {
+    it('offers it on a pending guest, knowing it is not an accepted one', () => {
+      mockDetail('host', [guest({ id: 'g-pending', status: 'Pending' })]);
+      render(<GameNightDetailView id="gn-1" />);
+
+      const withdraw = screen.getByTestId('withdraw');
+      expect(withdraw).toHaveAttribute('data-invitation', 'g-pending');
+      expect(withdraw).toHaveAttribute('data-email', 'carla@example.com');
+      expect(withdraw).toHaveAttribute('data-accepted', 'false');
+    });
+
+    it('offers it on an accepted guest, flagged so the dialog says they lose the seat', () => {
+      mockDetail('host', [
+        guest({ id: 'g-accepted', status: 'Accepted', respondedByName: 'Dario V.' }),
+      ]);
+      render(<GameNightDetailView id="gn-1" />);
+
+      expect(screen.getByTestId('withdraw')).toHaveAttribute('data-accepted', 'true');
+    });
+
+    it.each(['Declined', 'Expired'])('does not offer it on a %s one: it is history', status => {
+      mockDetail('host', [guest({ status })]);
+      render(<GameNightDetailView id="gn-1" />);
+
+      expect(screen.getByText('carla@example.com')).toBeInTheDocument();
+      expect(screen.queryByTestId('withdraw')).toBeNull();
+    });
+
+    it('offers it for each pending or accepted guest and on no member row', () => {
+      mockDetail('host', [
+        guest({ id: 'g-1', email: 'uno@example.com', status: 'Pending' }),
+        guest({ id: 'g-2', email: 'due@example.com', status: 'Declined' }),
+        guest({ id: 'g-3', email: 'tre@example.com', status: 'Accepted' }),
+      ]);
+      render(<GameNightDetailView id="gn-1" />);
+
+      const offered = screen.getAllByTestId('withdraw').map(b => b.getAttribute('data-invitation'));
+      expect(offered).toEqual(['g-1', 'g-3']);
+      // The two members (Anna and Bruno) come first and have no action.
+      const rows = screen.getAllByTestId('row');
+      expect(
+        rows.slice(0, 2).every(r => r.querySelector('[data-testid="withdraw"]') === null)
+      ).toBe(true);
+    });
   });
 });

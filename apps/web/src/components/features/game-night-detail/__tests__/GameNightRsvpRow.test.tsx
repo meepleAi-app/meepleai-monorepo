@@ -47,6 +47,18 @@ describe('GameNightRsvpRow', () => {
     );
   });
 
+  it('renders an action at the end of the row when given (#4721)', () => {
+    render(<GameNightRsvpRow {...baseProps} action={<button type="button">Ritira</button>} />);
+    const row = screen.getByTestId('game-night-rsvp-row');
+    expect(within(row).getByRole('button', { name: 'Ritira' })).toBeInTheDocument();
+  });
+
+  it('renders no action when none is given', () => {
+    render(<GameNightRsvpRow {...baseProps} />);
+    const row = screen.getByTestId('game-night-rsvp-row');
+    expect(within(row).queryByRole('button')).toBeNull();
+  });
+
   it('renders no subtitle line when none is given', () => {
     render(<GameNightRsvpRow {...baseProps} />);
     expect(screen.queryByTestId('game-night-rsvp-row-subtitle')).toBeNull();

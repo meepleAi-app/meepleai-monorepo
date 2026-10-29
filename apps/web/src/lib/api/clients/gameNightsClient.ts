@@ -55,6 +55,8 @@ export interface GameNightsClient {
   getRsvps(id: string): Promise<GameNightRsvpDto[]>;
   // #4706: guests invited by email, organizer only (403 for anyone else).
   getGuestInvitations(id: string): Promise<GameNightGuestInvitationDto[]>;
+  // #4721: the organizer withdraws a pending or accepted emailed invitation (409 for a declined or expired one).
+  cancelGuestInvitation(id: string, invitationId: string): Promise<void>;
   create(data: CreateGameNightInput): Promise<string>;
   update(id: string, data: UpdateGameNightInput): Promise<void>;
   publish(id: string): Promise<void>;
@@ -155,6 +157,10 @@ export function createGameNightsClient({
         `/api/v1/game-nights/${id}/guest-invitations`
       );
       return z.array(GameNightGuestInvitationDtoSchema).parse(data ?? []);
+    },
+
+    async cancelGuestInvitation(id, invitationId) {
+      await httpClient.delete(`/api/v1/game-nights/${id}/guest-invitations/${invitationId}`);
     },
 
     async create(input) {

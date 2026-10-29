@@ -91,6 +91,22 @@ export function useGameNightGuestInvitations(id: string, enabled: boolean) {
   });
 }
 
+/**
+ * #4721: the organizer withdraws an invitation sent by email. Settled, not only on success: a refused
+ * withdrawal (the guest answered in the meantime, 409) also means the list on screen is stale. The counts
+ * on the night and on the lists change too, so the whole night namespace is refreshed.
+ */
+export function useCancelGuestInvitation(gameNightId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (invitationId: string) =>
+      api.gameNights.cancelGuestInvitation(gameNightId, invitationId),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: gameNightKeys.all });
+    },
+  });
+}
+
 export function useCreateGameNight() {
   const queryClient = useQueryClient();
   return useMutation({

@@ -93,6 +93,18 @@ internal sealed class GameNightInvitationRespondedHandler
             return;
         }
 
+        // #4721: the organizer can withdraw an accepted invitation, and this event reaches the handler through
+        // the outbox, seconds after the answer. A guest who has been taken off the night in between must not
+        // be written "You're in". It also leaves the row alone: the write below rewrites the whole invitation,
+        // and would put back the status the withdrawal just changed.
+        if (invitation.Status != Domain.Enums.GameNightInvitationStatus.Accepted)
+        {
+            _logger.LogInformation(
+                "Skipping RSVP confirmation email for invitation {InvitationId}: it is {Status} now, no longer accepted",
+                invitation.Id, invitation.Status);
+            return;
+        }
+
         // Issue #1940 / iso-1 Fix 4: skip if the confirmation email was already sent for this
         // invitation. Guards against duplicate confirmation emails on a retried/rolled-back event
         // (SMTP has no remote dedup; the guest would otherwise receive the same confirmation twice).

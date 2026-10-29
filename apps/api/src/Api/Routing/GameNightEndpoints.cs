@@ -161,6 +161,17 @@ internal static class GameNightEndpoints
             .WithSummary("Get the guests invited by email")
             .WithDescription("Lists the guests invited to a game night by email, with their state. Organizer only (#4706).");
 
+        gameNights.MapDelete("/{id:guid}/guest-invitations/{invitationId:guid}", HandleCancelGuestInvitation)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(403)
+            .Produces(404)
+            .Produces(409)
+            .Produces(401)
+            .WithName("CancelGameNightGuestInvitation")
+            .WithSummary("Withdraw an invitation sent by email")
+            .WithDescription("Organizer only. A pending or accepted invitation is cancelled: its link answers 410 and an accepted guest loses the seat. Declined and expired invitations stay as history (409). Repeating the request is not an error (#4721).");
+
         gameNights.MapPost("/{id:guid}/rsvp", HandleRespondToGameNight)
             .RequireAuthenticatedUser()
             .Produces(204)
@@ -991,6 +1002,18 @@ internal static class GameNightEndpoints
         var userId = httpContext.User.GetUserId();
         var result = await mediator.Send(new GetGameNightGuestInvitationsQuery(id, userId), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleCancelGuestInvitation(
+        Guid id,
+        Guid invitationId,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        await mediator.Send(new CancelGameNightInvitationCommand(id, invitationId, userId), cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
     }
 
     private static async Task<IResult> HandleGetGameNightInvitationByToken(

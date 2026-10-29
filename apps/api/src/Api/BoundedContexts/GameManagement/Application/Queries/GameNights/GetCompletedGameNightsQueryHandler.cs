@@ -35,8 +35,12 @@ internal sealed class GetCompletedGameNightsQueryHandler : IQueryHandler<GetComp
         var organizerIds = events.Select(e => e.OrganizerId).Distinct().ToList();
         var organizerNames = await GetUserDisplayNamesAsync(organizerIds, cancellationToken).ConfigureAwait(false);
 
+        // #4706: guests invited by email are not in the RSVP rows; add them to the counts.
+        var guests = await GuestInvitationCounts.LoadAsync(
+            _context, events.Select(e => e.Id).ToList(), cancellationToken).ConfigureAwait(false);
+
         return events.Select(e => GameNightMapperHelper.MapToDto(
-            e, organizerNames.GetValueOrDefault(e.OrganizerId, "Unknown"))).ToList();
+            e, organizerNames.GetValueOrDefault(e.OrganizerId, "Unknown"), guests: guests.GetValueOrDefault(e.Id))).ToList();
     }
 
     private async Task<Dictionary<Guid, string>> GetUserDisplayNamesAsync(List<Guid> userIds, CancellationToken cancellationToken)

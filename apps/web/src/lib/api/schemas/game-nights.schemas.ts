@@ -32,6 +32,29 @@ export const GameNightRsvpDtoSchema = z.object({
 });
 export type GameNightRsvpDto = z.infer<typeof GameNightRsvpDtoSchema>;
 
+// #4706: mirrors the BE `GameNightInvitationStatus` enum. A guest invited by email lives apart from the
+// member RSVPs. The BE leaves Cancelled out of the list, but all five are accepted so that a change there
+// cannot make the whole roster fail to parse.
+export const GuestInvitationStatusSchema = z.enum([
+  'Pending',
+  'Accepted',
+  'Declined',
+  'Expired',
+  'Cancelled',
+]);
+export type GuestInvitationStatus = z.infer<typeof GuestInvitationStatusSchema>;
+
+export const GameNightGuestInvitationDtoSchema = z.object({
+  id: z.string().uuid(),
+  email: z.string(),
+  status: GuestInvitationStatusSchema,
+  respondedAt: z.string().nullable(),
+  respondedByName: z.string().nullable(),
+  expiresAt: z.string(),
+  createdAt: z.string(),
+});
+export type GameNightGuestInvitationDto = z.infer<typeof GameNightGuestInvitationDtoSchema>;
+
 export const GameNightDtoSchema = z.object({
   id: z.string().uuid(),
   organizerId: z.string().uuid(),

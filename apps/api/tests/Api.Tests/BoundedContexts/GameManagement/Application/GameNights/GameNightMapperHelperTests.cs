@@ -43,4 +43,31 @@ public class GameNightMapperHelperTests
 
         dto.SessionCount.Should().Be(0);
     }
+
+    [Fact]
+    public void MapToDto_AddsTheEmailedGuestsToTheMemberCounts()
+    {
+        // #4706: one accepted member + one pending member (CreatePublishedEvent invites one).
+        var evt = CreatePublishedEvent();
+        evt.GetRsvp(evt.Rsvps[0].UserId)!.Accept();
+
+        var dto = GameNightMapperHelper.MapToDto(
+            evt, "Organizer", guests: new GuestInvitationCounts(Accepted: 2, Pending: 1, Total: 4));
+
+        dto.AcceptedCount.Should().Be(3);
+        dto.PendingCount.Should().Be(1);
+        dto.TotalInvited.Should().Be(5);
+    }
+
+    [Fact]
+    public void MapToDto_WithoutGuestCounts_KeepsTheMemberOnlyCounts()
+    {
+        var evt = CreatePublishedEvent();
+
+        var dto = GameNightMapperHelper.MapToDto(evt, "Organizer");
+
+        dto.AcceptedCount.Should().Be(0);
+        dto.PendingCount.Should().Be(1);
+        dto.TotalInvited.Should().Be(1);
+    }
 }

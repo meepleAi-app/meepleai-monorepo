@@ -32,6 +32,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type {
   GameNightDto,
+  GameNightGuestInvitationDto,
   GameNightRsvpDto,
   RsvpStatus,
 } from '@/lib/api/schemas/game-nights.schemas';
@@ -46,7 +47,12 @@ import {
 } from '@/lib/game-nights/rsvp-state-machine';
 import { useOptimisticMutation } from '@/lib/hooks/use-optimistic-mutation';
 
-import { gameNightKeys, useGameNight, useGameNightRsvps } from './useGameNights';
+import {
+  gameNightKeys,
+  useGameNight,
+  useGameNightGuestInvitations,
+  useGameNightRsvps,
+} from './useGameNights';
 
 /** Mirror of `RsvpStatus` minus Pending; matches state-machine `RsvpResponse`. */
 function toRsvpResponse(status: RsvpStatus): RsvpResponse | undefined {
@@ -86,6 +92,8 @@ export interface SubmitRsvpCallbacks {
 export interface UseGameNightDetailReturn {
   readonly event: GameNightDto | undefined;
   readonly rsvps: readonly GameNightRsvpDto[] | undefined;
+  /** #4706: guests invited by email. Only the host gets them (the endpoint is organizer-only). */
+  readonly guestInvitations: readonly GameNightGuestInvitationDto[] | undefined;
   readonly actor: GameNightActorContext | undefined;
   readonly isLoading: boolean;
   readonly isError: boolean;
@@ -133,6 +141,11 @@ export function useGameNightDetail(
     if (!viewerId || !event) return undefined;
     return classifyGameNightActor({ viewerId, event, rsvps });
   }, [viewerId, event, rsvps]);
+
+  // #4706: guests invited by email are not in the RSVP roster. Fetched for the host only, so a
+  // participant does not fire a request the server answers with 403. A failure here leaves the
+  // roster without them rather than failing the page.
+  const guestInvitationsQuery = useGameNightGuestInvitations(id, actor?.actor === 'host');
 
   const viewerRsvp = actor?.actor === 'guest' ? actor.rsvp : undefined;
   const currentResponse = viewerRsvp ? toRsvpResponse(viewerRsvp.status) : undefined;
@@ -209,6 +222,7 @@ export function useGameNightDetail(
   return {
     event,
     rsvps,
+    guestInvitations: guestInvitationsQuery.data,
     actor,
     isLoading: eventQuery.isLoading || rsvpsQuery.isLoading,
     isError: eventQuery.isError || rsvpsQuery.isError,

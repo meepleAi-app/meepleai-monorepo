@@ -35,6 +35,11 @@ export interface GameNightRsvpRowProps {
   /** Localized "host" pill label (caller resolves). Defaults to 'host' when isHost && undefined. */
   readonly hostLabel?: string;
   /**
+   * Second line under the name (#4706): a guest invited by email has no profile, so the row says
+   * how they were invited (and, once they have answered under another name, which address).
+   */
+  readonly subtitle?: string;
+  /**
    * Render mode (issue #1169). Defaults to `'authenticated'`. In `'public'`
    * mode the "me" pill is suppressed (no signed-in user can be matched to a
    * roster entry on the public surface), keeping the row purely read-only
@@ -96,6 +101,7 @@ export function GameNightRsvpRow({
   isMe = false,
   isHost = false,
   hostLabel,
+  subtitle,
   mode = 'authenticated',
   className,
 }: GameNightRsvpRowProps): React.JSX.Element {
@@ -160,6 +166,14 @@ export function GameNightRsvpRow({
             </span>
           )}
         </div>
+        {subtitle !== undefined && (
+          <div
+            data-testid="game-night-rsvp-row-subtitle"
+            className="truncate font-mono text-[10px] text-muted-foreground"
+          >
+            {subtitle}
+          </div>
+        )}
       </div>
 
       <div

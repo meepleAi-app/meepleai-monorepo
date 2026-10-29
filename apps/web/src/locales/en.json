@@ -4546,11 +4546,13 @@
     "participants": {
       "sectionTitle": "Participants ({count})",
       "hostLabel": "host",
+      "guestByEmail": "Invited by email",
       "rsvpStatus": {
         "accepted": "Going",
         "declined": "Declined",
         "maybe": "Maybe",
         "pending": "Pending",
+        "expired": "Expired",
         "tagged": "To invite"
       }
     },

@@ -2,7 +2,7 @@
  * NewChatView — Thin wrapper around ChatEntryOrchestrator
  *
  * The original 847-line God Component has been decomposed into:
- * - GameSelector, AgentSelector, QuickStartSuggestions, ThreadCreator, ChatEntryOrchestrator
+ * - GameSelector, QuickStartSuggestions, ThreadCreator, ChatEntryOrchestrator
  * See: components/chat/entry/
  */
 

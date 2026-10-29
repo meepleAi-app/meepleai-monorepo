@@ -13,8 +13,8 @@
  *   GET /private-games (paginated { items, ... }) — private games grid (on-mount)
  *   GET /library       (paginated) — shared-library tab (lazy; handler declared anyway)
  * The private-games GET drives the canonical state. States: default (games) / empty /
- * loading / error. AgentSelector always renders the 5 system agents (auto default),
- * so the "Inizia Chat" CTA is enabled without selecting a game.
+ * loading / error. The "Inizia Chat" CTA stays disabled until a game is chosen (#4715), since a chat
+ * with no game never answers.
  * Fixtures MUST be Zod-valid (uuid v4 ownerId + RFC3339 datetimes with offset).
  */
 import { http, HttpResponse } from 'msw';
@@ -106,7 +106,7 @@ const meta: Meta<typeof ChatEntryOrchestrator> = {
     docs: {
       description: {
         component:
-          'New-chat entry. Default = private games grid + agent selector; Empty = no ' +
+          'New-chat entry. Default = private games grid; Empty = no ' +
           'private games; Loading = games skeleton; Error = games load error alert.',
       },
     },

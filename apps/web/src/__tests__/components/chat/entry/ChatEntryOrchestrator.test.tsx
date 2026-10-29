@@ -26,7 +26,7 @@ vi.mock('@/lib/api', () => ({
 
 vi.mock('@/lib/analytics/flywheel-events', () => ({ trackRulesChatStarted: vi.fn() }));
 
-// The real selectors fetch and render cards; here only what they hand the orchestrator matters.
+// The real selector fetches and renders cards; here only what it hands the orchestrator matters.
 vi.mock('@/components/chat/entry/GameSelector', () => ({
   GameSelector: ({
     onSelect,
@@ -48,12 +48,6 @@ vi.mock('@/components/chat/entry/GameSelector', () => ({
   ),
 }));
 
-vi.mock('@/components/chat/entry/AgentSelector', () => ({
-  AgentSelector: ({ onSelectSystemAgent }: { onSelectSystemAgent: (type: string) => void }) => (
-    <button data-testid="pick-agent" onClick={() => onSelectSystemAgent('qa')} />
-  ),
-}));
-
 beforeEach(() => {
   vi.clearAllMocks();
   searchParams = new URLSearchParams();
@@ -61,6 +55,15 @@ beforeEach(() => {
 });
 
 describe('ChatEntryOrchestrator — a chat needs a game (#4715)', () => {
+  it('offers no persona to pick (#4730): it never reached the thread, so it could only gate the button', () => {
+    render(<ChatEntryOrchestrator />);
+
+    for (const persona of ['Tutor', 'Arbitro', 'Stratega', 'Narratore']) {
+      expect(screen.queryByText(persona)).not.toBeInTheDocument();
+    }
+    expect(screen.queryByTestId('agent-card-auto')).not.toBeInTheDocument();
+  });
+
   it('starts nothing and says why while no game is chosen', () => {
     render(<ChatEntryOrchestrator />);
 
@@ -122,14 +125,14 @@ describe('ChatEntryOrchestrator — a chat needs a game (#4715)', () => {
     );
   });
 
-  it('with the game already in the URL, offers the quick starts and starts once an agent is picked', async () => {
+  it('with the game already in the URL, offers the quick starts and starts at once: there is no persona to pick (#4730)', async () => {
     searchParams = new URLSearchParams('game=g9');
     render(<ChatEntryOrchestrator />);
 
     expect(screen.getByTestId('quick-start-section')).toBeInTheDocument();
     expect(screen.queryByTestId('start-needs-game')).not.toBeInTheDocument();
+    expect(screen.getByTestId('start-chat-btn')).toBeEnabled();
 
-    fireEvent.click(screen.getByTestId('pick-agent'));
     fireEvent.click(screen.getByTestId('start-chat-btn'));
 
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/chat/thread-1'));

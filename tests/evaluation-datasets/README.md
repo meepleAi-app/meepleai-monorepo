@@ -46,7 +46,9 @@ lo dà un giudice LLM tarato (#4471), non le parole chiave: il set non ne ha.
     documenti non lo riportano, oppure la regola vera; è sbagliata solo una regola falsa (criterio 6 di
     `misure/criteri-giudizio.md`). La domanda misura se l'agente inventa.
 - `gate` (facoltativo, `true`/`false`): la domanda fa parte del gate di pubblicazione. Il sottoinsieme
-  lo approva l'utente; finché nessuna domanda lo porta, la colonna `in_gate` resta falsa ovunque.
+  l'ha approvato l'utente il 2026-10-29 (un fatto, un caso limite e un fuori ambito per gioco; Ticket to
+  Ride sul gioco base), e `ReferenceQuestionSetTests` lo fissa per nome. Una domanda senza il campo è
+  fuori dal gate, e il seeder aggiorna la colonna `in_gate` a ogni avvio.
 - `game` è il gioco del catalogo su cui la domanda va posta: le domande su Stazioni, Traghetti e Tunnel
   sono di «Ticket to Ride: Europe», che ha il suo regolamento.
 - Ogni risposta attesa è stata confrontata con il testo del regolamento che l'agente legge, non con la

@@ -51,7 +51,11 @@ import { useSharedGames, useSharedGamesByIds } from '@/hooks/queries/useSharedGa
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useToast } from '@/hooks/useToast';
 import { useTranslation } from '@/hooks/useTranslation';
-import type { GameNightStatus } from '@/lib/api/schemas/game-nights.schemas';
+import type {
+  GameNightStatus,
+  GuestInvitationStatus,
+  RsvpStatus,
+} from '@/lib/api/schemas/game-nights.schemas';
 import type { RsvpResponse } from '@/lib/game-nights/rsvp-state-machine';
 import { cn } from '@/lib/utils';
 import { useGameNightStore } from '@/stores/game-night';
@@ -89,6 +93,16 @@ function MobileStickyBar({
   );
 }
 
+/**
+ * #4706: the row of a guest invited by email reuses the member row, which draws four states. An
+ * expired invitation is drawn as waiting (the label says "scaduto"): nobody declined.
+ */
+function guestRsvpStatus(status: GuestInvitationStatus): RsvpStatus {
+  if (status === 'Accepted') return 'Accepted';
+  if (status === 'Declined') return 'Declined';
+  return 'Pending';
+}
+
 export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -102,7 +116,16 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   const publishMutation = usePublishGameNight();
   const cancelMutation = useCancelGameNight();
 
-  const { event, rsvps, actor, isLoading, isError, currentResponse, pendingResponse } = detail;
+  const {
+    event,
+    rsvps,
+    guestInvitations,
+    actor,
+    isLoading,
+    isError,
+    currentResponse,
+    pendingResponse,
+  } = detail;
 
   const isDraft = event?.status === 'Draft';
   const needsCatalog = isDraft || event?.status === 'Published';
@@ -340,6 +363,11 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
       })
     : [];
 
+  // #4706: guests invited by email, listed after the members. Only the host receives them. A cancelled
+  // invitation is a guest the organizer withdrew, so it is not a participant any more.
+  const guestRows = (guestInvitations ?? []).filter(g => g.status !== 'Cancelled');
+  const participantCount = sortedRsvps.length + guestRows.length;
+
   const cancelledBannerLabels = {
     title: t('gameNightDetail.cancelled.title'),
     meta: t('gameNightDetail.cancelled.meta', { organizer: event.organizerName }),
@@ -524,15 +552,15 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
       )}
 
       {/* Roster (details tab) */}
-      {sortedRsvps.length > 0 && showDetailsContent && (
+      {participantCount > 0 && showDetailsContent && (
         <section
           aria-label={t('gameNightDetail.participants.sectionTitle', {
-            count: sortedRsvps.length,
+            count: participantCount,
           })}
           className="space-y-2"
         >
           <h2 className="font-display text-base font-extrabold text-foreground">
-            {t('gameNightDetail.participants.sectionTitle', { count: sortedRsvps.length })}
+            {t('gameNightDetail.participants.sectionTitle', { count: participantCount })}
           </h2>
           <ul className="space-y-2">
             {sortedRsvps.map(rsvp => (
@@ -548,6 +576,26 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
                 />
               </li>
             ))}
+            {guestRows.map(guest => {
+              const byEmail = t('gameNightDetail.participants.guestByEmail');
+              return (
+                <li key={guest.id}>
+                  <GameNightRsvpRow
+                    userId={guest.id}
+                    userName={guest.respondedByName?.trim() || guest.email}
+                    status={guestRsvpStatus(guest.status)}
+                    statusLabel={
+                      guest.status === 'Expired'
+                        ? t('gameNightDetail.participants.rsvpStatus.expired')
+                        : rsvpStatusLabel(guest.status, false)
+                    }
+                    subtitle={
+                      guest.respondedByName?.trim() ? `${guest.email} · ${byEmail}` : byEmail
+                    }
+                  />
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}

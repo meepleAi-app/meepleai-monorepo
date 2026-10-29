@@ -4558,11 +4558,13 @@
     "participants": {
       "sectionTitle": "Partecipanti ({count})",
       "hostLabel": "host",
+      "guestByEmail": "Invitato per email",
       "rsvpStatus": {
         "accepted": "Confermato",
         "declined": "Declinato",
         "maybe": "Forse",
         "pending": "In attesa",
+        "expired": "Scaduto",
         "tagged": "Da invitare"
       }
     },

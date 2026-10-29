@@ -116,8 +116,10 @@ internal sealed class GetGameNightInvitationByTokenQueryHandler
             .CountAcceptedByGameNightIdAsync(invitation.GameNightId, cancellationToken)
             .ConfigureAwait(false);
 
-        // AcceptedSoFar = organizer (always counted as attending) + accepted invitations.
-        var acceptedSoFar = 1 + acceptedInvitations;
+        // AcceptedSoFar = organizer (always counted as attending) + registered members who accepted
+        // + guests who accepted by email. #4706: the members used to be left out, so this page and
+        // the organizer's view counted different sets.
+        var acceptedSoFar = 1 + gameNight.AcceptedCount + acceptedInvitations;
 
         return new PublicGameNightInvitationDto(
             Token: invitation.Token,

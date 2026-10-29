@@ -151,6 +151,16 @@ internal static class GameNightEndpoints
             .WithSummary("Get game night RSVPs")
             .WithDescription("Retrieves all RSVPs for a game night.");
 
+        gameNights.MapGet("/{id:guid}/guest-invitations", HandleGetGameNightGuestInvitations)
+            .RequireAuthenticatedUser()
+            .Produces<IReadOnlyList<GameNightGuestInvitationDto>>(200)
+            .Produces(403)
+            .Produces(404)
+            .Produces(401)
+            .WithName("GetGameNightGuestInvitations")
+            .WithSummary("Get the guests invited by email")
+            .WithDescription("Lists the guests invited to a game night by email, with their state. Organizer only (#4706).");
+
         gameNights.MapPost("/{id:guid}/rsvp", HandleRespondToGameNight)
             .RequireAuthenticatedUser()
             .Produces(204)
@@ -969,6 +979,17 @@ internal static class GameNightEndpoints
     {
         var userId = httpContext.User.GetUserId();
         var result = await mediator.Send(new GetGameNightRsvpsQuery(id, userId), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleGetGameNightGuestInvitations(
+        Guid id,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        var result = await mediator.Send(new GetGameNightGuestInvitationsQuery(id, userId), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
 

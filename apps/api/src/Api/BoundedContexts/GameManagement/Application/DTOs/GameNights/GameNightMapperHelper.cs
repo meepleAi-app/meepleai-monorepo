@@ -10,7 +10,13 @@ namespace Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 /// </summary>
 internal static class GameNightMapperHelper
 {
-    public static GameNightDto MapToDto(GameNightEvent gameNight, string organizerName, Guid? viewerId = null)
+    // #4706: `guests` are the guests invited by email, added to the member counts. Omitted (zeros) only
+    // where the caller has no guest data to give; every read that shows the counts passes it.
+    public static GameNightDto MapToDto(
+        GameNightEvent gameNight,
+        string organizerName,
+        Guid? viewerId = null,
+        GuestInvitationCounts guests = default)
     {
         ArgumentNullException.ThrowIfNull(gameNight);
 
@@ -25,9 +31,9 @@ internal static class GameNightMapperHelper
             MaxPlayers: gameNight.MaxPlayers,
             GameIds: gameNight.GameIds,
             Status: gameNight.Status,
-            AcceptedCount: gameNight.AcceptedCount,
-            PendingCount: gameNight.Rsvps.Count(r => r.Status == RsvpStatus.Pending),
-            TotalInvited: gameNight.Rsvps.Count,
+            AcceptedCount: gameNight.AcceptedCount + guests.Accepted,
+            PendingCount: gameNight.Rsvps.Count(r => r.Status == RsvpStatus.Pending) + guests.Pending,
+            TotalInvited: gameNight.Rsvps.Count + guests.Total,
             // #3084: the sessions collection is already eager-loaded on the read paths
             // (e.g. GetCompletedAsync .Include(e => e.Sessions)), so this is in-memory.
             SessionCount: gameNight.Sessions.Count,

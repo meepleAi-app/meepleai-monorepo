@@ -61,6 +61,50 @@ public sealed class ReferenceQuestionSetTests
             "solo il regolamento Europe dice che i biglietti tenuti non si scartano più");
     }
 
+    // ── Il gate di pubblicazione ────────────────────────────────────────────────
+
+    /// <summary>
+    /// Il sottoinsieme che l'utente ha approvato il 2026-10-29: per ogni gioco un fatto, un caso limite e un
+    /// fuori ambito. Si elenca per nome e non per conteggio, così chi cambia il gate deve cambiare anche
+    /// questa riga, e la ragione sta nel diff.
+    /// </summary>
+    private static readonly string[] ApprovedGate =
+    [
+        "CAT-12", "CAT-02", "CAT-30",
+        "CAR-03", "CAR-19", "CAR-07",
+        "TTR-11", "TTR-03", "TTR-07",
+        "GLO-17", "GLO-02", "GLO-08",
+    ];
+
+    [Fact]
+    public void TheEmbeddedSet_PutsInTheGateExactlyTheQuestionsTheUserApproved()
+    {
+        var set = ReferenceQuestionSet.LoadEmbedded();
+
+        set.Where(q => q.InGate).Select(q => q.Code).Should().BeEquivalentTo(
+            ApprovedGate,
+            "il gate è quello approvato dall'utente: una domanda in più o in meno cambia ciò che blocca la pubblicazione");
+    }
+
+    [Fact]
+    public void TheGate_HasThreeQuestionsPerBaseGame_OneOutOfScope_AndNoneOnEurope()
+    {
+        var gate = ReferenceQuestionSet.LoadEmbedded().Where(q => q.InGate).ToList();
+
+        gate.Select(q => q.Game).Distinct().Should().BeEquivalentTo(
+            ["Catan", "Carcassonne", "Ticket to Ride", "Gloomhaven"],
+            "Ticket to Ride resta sul gioco base: il gate non deve dipendere da un quinto gioco");
+        foreach (var perGame in gate.GroupBy(q => q.Game))
+        {
+            perGame.Should().HaveCount(3, perGame.Key);
+            perGame.Count(q => q.QuestionType.StartsWith("Out of Scope", StringComparison.Ordinal))
+                .Should().Be(1, $"{perGame.Key}: serve un fuori ambito che misuri se l'agente inventa");
+        }
+        gate.Should().OnlyContain(
+            q => !q.OutOfCorpus,
+            "una domanda del gate deve avere la risposta nei documenti, o il gate misurerebbe altro");
+    }
+
     // ── La lettura ──────────────────────────────────────────────────────────────
 
     [Fact]

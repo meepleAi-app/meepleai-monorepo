@@ -113,11 +113,11 @@ internal partial class UploadPdfCommandHandler
         }
         catch (InvalidOperationException ex)
         {
-            await HandleProcessingErrorAsync(pdfId, userId, db, scope, quotaService, startTime, ex, "Invalid operation", cancellationToken).ConfigureAwait(false);
+            await HandleProcessingErrorAsync(pdfId, userId, db, scope, quotaService, startTime, ex, cancellationToken).ConfigureAwait(false);
         }
         catch (DbUpdateException ex)
         {
-            await HandleProcessingErrorAsync(pdfId, userId, db, scope, quotaService, startTime, ex, "Database error occurred", cancellationToken).ConfigureAwait(false);
+            await HandleProcessingErrorAsync(pdfId, userId, db, scope, quotaService, startTime, ex, cancellationToken).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out
@@ -127,7 +127,7 @@ internal partial class UploadPdfCommandHandler
         catch (Exception ex)
 #pragma warning restore CA1031
         {
-            await HandleProcessingErrorAsync(pdfId, userId, db, scope, quotaService, startTime, ex, ex.Message, cancellationToken).ConfigureAwait(false);
+            await HandleProcessingErrorAsync(pdfId, userId, db, scope, quotaService, startTime, ex, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -257,16 +257,20 @@ internal partial class UploadPdfCommandHandler
             // #3846: under S3 `filePath` is an object KEY, not a path — opening it blindly resolved it
             // against the working directory and reported "Could not find a part of the path
             // '/app/pdfs/<gameId>/…'", a location that never existed, under a NULL error category that
-            // RetryFailedPdfsJob keeps retrying. Name the key instead, and mark it non-retriable.
+            // RetryFailedPdfsJob keeps retrying. Name the key instead (in the log: #4660 keeps it out of the column
+            // and the progress, which users are served), and mark it non-retriable.
             if (!File.Exists(filePath))
             {
                 var missing = new PdfStorageObjectMissingException(fileId, resourceKey, filePath);
                 _logger.LogError(missing,
                     "[PDF-DEBUG] PDF {PdfId} is not in storage at key pdf/{ResourceKey}/{FileId}",
                     pdfId, resourceKey, fileId);
-                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, missing.Message, cancellationToken).ConfigureAwait(false);
+                // #4660: the key stays in the log above; the progress and the column, which users are served, get the
+                // fixed text of the category.
+                var missingText = PdfFailureText.For(Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.StorageObjectMissing);
+                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, missingText, cancellationToken).ConfigureAwait(false);
                 await TransitionToFailedAsync(
-                    scope, db, pdfDoc.Id, missing.Message,
+                    scope, db, pdfDoc.Id, missingText,
                     Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.StorageObjectMissing,
                     PdfProcessingState.Extracting, cancellationToken).ConfigureAwait(false);
                 return (false, null, null);
@@ -284,11 +288,15 @@ internal partial class UploadPdfCommandHandler
             if (!extractResult.Success)
             {
                 RecordPipelineMetricSafely("extraction_error", 0);
-                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, extractResult.ErrorMessage, cancellationToken).ConfigureAwait(false);
+                // #4660: the extractor's message goes to the log; the progress and the column, which users are served,
+                // get the fixed text of the category.
+                _logger.LogError("Text extraction failed for PDF {PdfId}: {Error}", pdfId, extractResult.ErrorMessage);
+                var extractionText = PdfFailureText.For(Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.Parsing);
+                await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, extractionText, cancellationToken).ConfigureAwait(false);
                 // #2284 follow-up: TD2 — transition Failed via domain (raises
                 // PdfStateChangedEvent(Extracting → Failed) + PdfFailedEvent).
                 await TransitionToFailedAsync(
-                    scope, db, Guid.Parse(pdfId), extractResult.ErrorMessage ?? "Extraction failed",
+                    scope, db, Guid.Parse(pdfId), extractionText,
                     Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.Parsing,
                     PdfProcessingState.Extracting, cancellationToken).ConfigureAwait(false);
                 return (false, null, null);
@@ -534,8 +542,7 @@ internal partial class UploadPdfCommandHandler
             {
                 _logger.LogError("❌ [BATCH-EMBED] Batch {Current}/{Total} FAILED: {Error}",
                     batchIndex + 1, batchCount, batchResult.ErrorMessage);
-                await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, scope, quotaService, startTime,
-                    $"Embedding generation failed at batch {batchIndex + 1}/{batchCount}: {batchResult.ErrorMessage}", cancellationToken).ConfigureAwait(false);
+                await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, scope, quotaService, startTime, cancellationToken).ConfigureAwait(false);
                 return (false, null);
             }
 
@@ -543,7 +550,7 @@ internal partial class UploadPdfCommandHandler
             {
                 var mismatch = $"Batch {batchIndex + 1} returned {batchResult.Embeddings?.Count ?? 0} embeddings for {batchTexts.Count} texts";
                 _logger.LogError("❌ [BATCH-EMBED] {Mismatch}", mismatch);
-                await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, scope, quotaService, startTime, mismatch, cancellationToken).ConfigureAwait(false);
+                await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, scope, quotaService, startTime, cancellationToken).ConfigureAwait(false);
                 return (false, null);
             }
 
@@ -554,7 +561,7 @@ internal partial class UploadPdfCommandHandler
                 {
                     var error = $"Invalid embedding detected in batch {batchIndex + 1}";
                     _logger.LogError("❌ [BATCH-EMBED] {Error}", error);
-                    await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, scope, quotaService, startTime, error, cancellationToken).ConfigureAwait(false);
+                    await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, scope, quotaService, startTime, cancellationToken).ConfigureAwait(false);
                     return (false, null);
                 }
             }
@@ -593,7 +600,7 @@ internal partial class UploadPdfCommandHandler
         {
             var mismatch = $"Total embeddings {allEmbeddings.Count} != total chunks {allDocumentChunks.Count}";
             _logger.LogError("❌ [BATCH-EMBED] {Mismatch}", mismatch);
-            await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, scope, quotaService, startTime, mismatch, cancellationToken).ConfigureAwait(false);
+            await HandleEmbeddingFailureAsync(pdfId, userId, pdfDoc, db, scope, quotaService, startTime, cancellationToken).ConfigureAwait(false);
             return (false, null);
         }
 
@@ -601,7 +608,9 @@ internal partial class UploadPdfCommandHandler
     }
 
     /// <summary>
-    /// Handles embedding generation or validation failure with consistent error handling.
+    /// Handles embedding generation or validation failure with consistent error handling. The caller has already
+    /// logged what went wrong (the service's message, the count that did not match); #4660: the progress and the
+    /// column, which users are served, get the fixed text of the category, not that detail.
     /// </summary>
     private async Task HandleEmbeddingFailureAsync(
         string pdfId,
@@ -611,9 +620,9 @@ internal partial class UploadPdfCommandHandler
         IServiceScope scope,
         IPdfUploadQuotaService quotaService,
         DateTime startTime,
-        string errorMessage,
         CancellationToken cancellationToken)
     {
+        var errorMessage = PdfFailureText.For(Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.Service);
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, errorMessage, cancellationToken).ConfigureAwait(false);
         await quotaService.ReleaseQuotaAsync(userId, pdfId, CancellationToken.None).ConfigureAwait(false);
         // #2284 follow-up: TD2 — transition Failed via domain. ErrorCategory.Service
@@ -813,7 +822,7 @@ internal partial class UploadPdfCommandHandler
         if (pipeline is not null)
         {
             // The category, not the message: this column is served to users by pdf-status.
-            await pipeline.MarkIndexingFailedAsync(pdfGuid, $"Processing failed ({category})", CancellationToken.None).ConfigureAwait(false);
+            await pipeline.MarkIndexingFailedAsync(pdfGuid, PdfFailureText.For(category), CancellationToken.None).ConfigureAwait(false);
         }
     }
 
@@ -1004,7 +1013,9 @@ internal partial class UploadPdfCommandHandler
     }
 
     /// <summary>
-    /// Handles processing errors with consistent logging and cleanup.
+    /// Handles processing errors with consistent logging and cleanup. #4660: the exception is logged here; the
+    /// progress and the column, which users are served, get the fixed text of the <c>Unknown</c> category, whatever
+    /// the exception (an invalid operation, a database error, anything else), not its message.
     /// </summary>
     private async Task HandleProcessingErrorAsync(
         string pdfId,
@@ -1014,11 +1025,11 @@ internal partial class UploadPdfCommandHandler
         IPdfUploadQuotaService quotaService,
         DateTime startTime,
         Exception ex,
-        string errorMessage,
         CancellationToken cancellationToken = default
         )
     {
         _logger.LogError(ex, "Error during PDF processing for {PdfId}: {ErrorType}", pdfId, ex.GetType().Name);
+        var errorMessage = PdfFailureText.For(Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.Unknown);
         await UpdateProgressAsync(db, pdfId, ProcessingStep.Failed, 0, 0, startTime, errorMessage, cancellationToken).ConfigureAwait(false);
         await quotaService.ReleaseQuotaAsync(userId, pdfId, cancellationToken).ConfigureAwait(false);
 

@@ -1,6 +1,8 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
@@ -933,7 +935,9 @@ public class IndexPdfCommandHandlerTests
         var updatedPdf = await context.PdfDocuments.FindAsync(pdfId);
         updatedPdf!.ProcessingState.Should().Be("Failed");
         updatedPdf.ProcessingState.Should().Be("Failed");
-        updatedPdf.ProcessingError.Should().Contain("Unexpected chunking crash");
+        // #4660: fixed text, the exception message stays in the log (this column is served to users by pdf-status).
+        updatedPdf.ProcessingError.Should().Be(PdfFailureText.For(ErrorCategory.Unknown));
+        updatedPdf.ProcessingError.Should().NotContain("Unexpected chunking crash");
     }
 
     /// <summary>

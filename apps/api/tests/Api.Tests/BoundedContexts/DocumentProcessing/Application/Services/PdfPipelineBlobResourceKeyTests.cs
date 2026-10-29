@@ -46,6 +46,7 @@ public sealed class PdfPipelineBlobResourceKeyTests : IDisposable
 
     private readonly MeepleAiDbContext _db;
     private readonly Mock<IBlobStorageService> _blob = new();
+    private readonly Api.Tests.TestHelpers.RecordingLogger<PdfProcessingPipelineService> _log = new();
     private readonly Mock<IPdfClaimService> _claimService = new();
     private readonly Mock<IPdfTextExtractor> _textExtractor = new();
 
@@ -107,7 +108,7 @@ public sealed class PdfPipelineBlobResourceKeyTests : IDisposable
             embeddingService: Mock.Of<IEmbeddingService>(),
             blobStorageService: _blob.Object,
             timeProvider: TimeProvider.System,
-            logger: NullLogger<PdfProcessingPipelineService>.Instance,
+            logger: _log,
             languageDetector: Mock.Of<ILanguageDetector>(),
             chunkTranslationService: Mock.Of<IChunkTranslationService>(),
             indexingPipeline: Mock.Of<IPdfIndexingPipeline>(),
@@ -163,7 +164,7 @@ public sealed class PdfPipelineBlobResourceKeyTests : IDisposable
     /// <c>RetryFailedPdfsJob</c> treats as retriable — burning retries on an object that is not there.
     /// </summary>
     [Fact]
-    public async Task ProcessAsync_WhenTheObjectIsAbsentFromStorage_FailsAsStorageObjectMissingNamingTheKey()
+    public async Task ProcessAsync_WhenTheObjectIsAbsentFromStorage_FailsAsStorageObjectMissing_WithoutLeakingTheKey()
     {
         var pdf = await SeedUploadedPdfAsync();
         _claimService.Setup(c => c.TryClaimPendingAsync(pdf.Id, It.IsAny<CancellationToken>())).ReturnsAsync(true);
@@ -182,9 +183,11 @@ public sealed class PdfPipelineBlobResourceKeyTests : IDisposable
         reloaded.ErrorCategory.Should().Be(
             nameof(ErrorCategory.StorageObjectMissing),
             "an object that is not in the bucket does not reappear on retry");
-        reloaded.ProcessingError.Should().Contain(
-            missingFileId,
-            "the recorded error must name the key that was looked up, not a filesystem path derived from it");
-        reloaded.ProcessingError.Should().Contain(UploadResourceKey);
+        // #4660: the error names the key that was looked up in the LOG (the pipeline logs it with the exception),
+        // not in the column: pdf-status serves that column to users, and a bucket key is not theirs to see.
+        reloaded.ProcessingError.Should().Be(PdfFailureText.For(ErrorCategory.StorageObjectMissing));
+        reloaded.ProcessingError.Should().NotContain(missingFileId);
+        reloaded.ProcessingError.Should().NotContain(UploadResourceKey);
+        _log.Entries.Should().Contain(l => l.Contains(missingFileId, StringComparison.Ordinal), "the key that was looked up is in the log");
     }
 }

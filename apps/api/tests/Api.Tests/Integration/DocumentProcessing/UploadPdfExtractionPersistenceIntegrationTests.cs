@@ -552,9 +552,12 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
         persisted.ErrorCategory.Should().Be(
             nameof(Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.StorageObjectMissing),
             "an absent object does not reappear on retry, so RetryFailedPdfsJob must skip it");
-        persisted.ProcessingError.Should().Contain(
-            "not found in storage at key",
-            "the error must name the bucket key that was looked up, not a filesystem path derived from it");
+        // #4660: the key that was looked up is in the log (the handler logs the exception that names it), not in the
+        // column: pdf-status serves that column to users, and a bucket key is not theirs to see.
+        persisted.ProcessingError.Should().Be(
+            Api.BoundedContexts.DocumentProcessing.Application.Services.PdfFailureText.For(
+                Api.BoundedContexts.DocumentProcessing.Domain.Enums.ErrorCategory.StorageObjectMissing));
+        persisted.ProcessingError.Should().NotContain("not found in storage at key");
     }
 
     /// <summary>

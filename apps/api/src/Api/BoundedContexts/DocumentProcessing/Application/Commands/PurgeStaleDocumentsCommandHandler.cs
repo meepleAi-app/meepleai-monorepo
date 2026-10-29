@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Infrastructure;
@@ -91,7 +92,7 @@ internal sealed class PurgeStaleDocumentsCommandHandler
                 // never throws. The text is the category, not an exception message: this column is served to users by
                 // pdf-status.
                 await _indexingPipeline.MarkIndexingFailedAsync(
-                    pdfId, "Processing failed (Service)", CancellationToken.None).ConfigureAwait(false);
+                    pdfId, PdfFailureText.For(ErrorCategory.Service), CancellationToken.None).ConfigureAwait(false);
             }
             catch (DbUpdateConcurrencyException ex)
             {

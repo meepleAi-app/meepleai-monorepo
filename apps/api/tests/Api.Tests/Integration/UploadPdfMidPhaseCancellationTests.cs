@@ -3,6 +3,8 @@ using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.Jobs;
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
+using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
@@ -791,10 +793,58 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         // Assert
         var outcome = await ReadOutcomeAsync(harness, pdfId);
         outcome.State.Should().Be("Failed", outcome.Describe(harness));
-        outcome.Error.Should().Be(timeout.Message, "a timeout is reported as what it is, not as the user's cancellation");
+        // #4660: the text is fixed by the category (Unknown, not Cancelled: that is what tells a timeout from the
+        // user's cancellation); the timeout's own message stays in the log.
+        outcome.Error.Should().Be(PdfFailureText.For(ErrorCategory.Unknown), "a timeout is reported as an unknown failure, not as the user's cancellation");
+        outcome.Error.Should().NotContain(timeout.Message);
+        outcome.ProgressError.Should().Be(PdfFailureText.For(ErrorCategory.Unknown), "the progress stream is served to the user too");
+        harness.Logs.Entries.Should().Contain(l => l.Contains(timeout.Message, StringComparison.Ordinal), "the detail is in the log");
         outcome.ErrorCategory.Should().Be("Unknown");
         retried.Should().Contain(pdfId, "a transient failure stays retriable");
         harness.Quota.Verify(q => q.ReleaseQuotaAsync(It.IsAny<Guid>(), pdfId.ToString(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    /// <summary>
+    /// #4660: l'estrattore risponde con un fallimento che nomina un servizio interno. La colonna e il progresso,
+    /// che pdf-status e lo stream servono all'utente, portano il testo fisso della categoria (<c>Parsing</c>); il
+    /// dettaglio sta nel log.
+    /// </summary>
+    [Fact(Timeout = 120_000)]
+    public async Task UploadPdf_WhenTheExtractorReportsAFailure_StoresTheFixedText_AndKeepsTheDetailInTheLog()
+    {
+        const string detail = "unstructured-service at http://10.0.0.5:8000 answered 502 for /var/data/pdfs/rules.pdf";
+        await using var harness = BuildProcessingHarness(HoldPoint.Never(), HoldPoint.Never(), extractionResultError: detail);
+
+        var pdfId = await UploadAsPlainUserAsync(harness, "extractor_reports_failure.pdf");
+        await WaitForBackgroundAsync(harness, "a failed upload has to finish");
+
+        var outcome = await ReadOutcomeAsync(harness, pdfId);
+        outcome.State.Should().Be("Failed", outcome.Describe(harness));
+        outcome.ErrorCategory.Should().Be("Parsing");
+        outcome.Error.Should().Be(PdfFailureText.For(ErrorCategory.Parsing));
+        outcome.ProgressError.Should().Be(PdfFailureText.For(ErrorCategory.Parsing));
+        harness.Logs.Entries.Should().Contain(l => l.Contains(detail, StringComparison.Ordinal), "the detail is in the log");
+    }
+
+    /// <summary>
+    /// #4660: il servizio di embedding risponde con un fallimento che nomina un host. Stesso contratto, categoria
+    /// <c>Service</c>.
+    /// </summary>
+    [Fact(Timeout = 120_000)]
+    public async Task UploadPdf_WhenTheEmbeddingServiceReportsAFailure_StoresTheFixedText_AndKeepsTheDetailInTheLog()
+    {
+        const string detail = "connection to 10.0.0.7:8001 refused";
+        await using var harness = BuildProcessingHarness(HoldPoint.Never(), HoldPoint.Never(), embeddingResultError: detail);
+
+        var pdfId = await UploadAsPlainUserAsync(harness, "embedding_reports_failure.pdf");
+        await WaitForBackgroundAsync(harness, "a failed upload has to finish");
+
+        var outcome = await ReadOutcomeAsync(harness, pdfId);
+        outcome.State.Should().Be("Failed", outcome.Describe(harness));
+        outcome.ErrorCategory.Should().Be("Service");
+        outcome.Error.Should().Be(PdfFailureText.For(ErrorCategory.Service));
+        outcome.ProgressError.Should().Be(PdfFailureText.For(ErrorCategory.Service));
+        harness.Logs.Entries.Should().Contain(l => l.Contains(detail, StringComparison.Ordinal), "the detail is in the log");
     }
 
     /// <summary>
@@ -987,7 +1037,9 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         HoldPoint indexingHold,
         SaveChangesInterceptor? saveInterceptor = null,
         Exception? extractionFailure = null,
-        HoldPoint? cacheInvalidationHold = null)
+        HoldPoint? cacheInvalidationHold = null,
+        string? extractionResultError = null,
+        string? embeddingResultError = null)
     {
         var background = new CancellableBackgroundTaskService();
         var logs = new ErrorLogCapture();
@@ -1012,6 +1064,11 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
             .Setup(e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(async (List<string> texts, string language, CancellationToken ct) =>
             {
+                if (embeddingResultError is not null)
+                {
+                    return EmbeddingResult.CreateFailure(embeddingResultError);
+                }
+
                 try
                 {
                     await embeddingHold.EnterAsync(ct).ConfigureAwait(false);
@@ -1030,7 +1087,11 @@ public sealed class UploadPdfMidPhaseCancellationTests : IAsyncLifetime
         var extractor = new Mock<IPdfTextExtractor>();
         var extraction = extractor
             .Setup(e => e.ExtractPagedTextAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()));
-        if (extractionFailure is null)
+        if (extractionResultError is not null)
+        {
+            extraction.ReturnsAsync(PagedTextExtractionResult.CreateFailure(extractionResultError));
+        }
+        else if (extractionFailure is null)
         {
             extraction.ReturnsAsync(BuildRulebookExtraction(pages: 30));
         }

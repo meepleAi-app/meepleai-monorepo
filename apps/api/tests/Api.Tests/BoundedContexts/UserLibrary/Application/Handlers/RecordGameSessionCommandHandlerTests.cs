@@ -255,4 +255,92 @@ public sealed class RecordGameSessionCommandHandlerTests : IDisposable
     }
 
     #endregion
+
+    #region Cache backend down after the commit (the session is already saved)
+
+    // The game is recorded by SaveChanges BEFORE the cache entry is dropped. If dropping it fails (Redis is
+    // down) and the request turns into an error, the client retries — React Query retries every mutation
+    // once — and the retry records a SECOND session: a double history row and doubled statistics.
+
+    private (RecordGameSessionCommand Command, UserLibraryEntry Entry) GivenARecordableSession()
+    {
+        var userId = Guid.NewGuid();
+        var gameId = Guid.NewGuid();
+        var entry = new UserLibraryEntry(Guid.NewGuid(), userId, gameId);
+        _mockLibraryRepo
+            .Setup(r => r.GetByUserAndGameAsync(userId, gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(entry);
+        var command = new RecordGameSessionCommand(
+            UserId: userId, GameId: gameId, PlayedAt: DateTime.UtcNow.AddHours(-1), DurationMinutes: 60);
+        return (command, entry);
+    }
+
+    private RecordGameSessionCommandHandler HandlerWith(HybridCache cache) =>
+        new(_mockLibraryRepo.Object, _mockUnitOfWork.Object, cache, _mockPublisher.Object, _mockLogger.Object);
+
+    [Fact]
+    public async Task Handle_WhenTheCacheBackendIsDown_StillReturnsTheSessionId()
+    {
+        var (command, entry) = GivenARecordableSession();
+        var handler = HandlerWith(HybridCacheWithL2Down.Create());
+
+        var result = await handler.Handle(command, TestContext.Current.CancellationToken);
+
+        result.Should().NotBeEmpty();
+        entry.Sessions.Should().ContainSingle(s => s.Id == result);
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheCacheBackendIsDown_SavesOnce_AndStillPublishesTheEvent()
+    {
+        var (command, _) = GivenARecordableSession();
+        var handler = HandlerWith(HybridCacheWithL2Down.Create());
+
+        await handler.Handle(command, TestContext.Current.CancellationToken);
+
+        _mockUnitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _mockPublisher.Verify(
+            p => p.Publish(
+                It.IsAny<Api.BoundedContexts.Administration.Domain.Events.UserGameSessionCompletedEvent>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once,
+            "the dashboard invalidation event is part of the same request and must not be skipped");
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheCacheBackendIsDown_LogsAWarning()
+    {
+        var (command, _) = GivenARecordableSession();
+        var handler = HandlerWith(HybridCacheWithL2Down.Create());
+
+        await handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Not silent: the stale entry stays until it expires, and the operator has to be able to see why.
+        _mockLogger.Verify(
+            l => l.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheRequestIsCancelledWhileDroppingTheEntry_StillPropagatesTheCancellation()
+    {
+        var (command, _) = GivenARecordableSession();
+        var cache = new Mock<HybridCache>();
+        cache
+            .Setup(c => c.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(ValueTask.FromException(new OperationCanceledException()));
+        var handler = HandlerWith(cache.Object);
+
+        var act = () => handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // A cancelled request is not a backend failure: swallowing it would hide the cancellation.
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    #endregion
 }

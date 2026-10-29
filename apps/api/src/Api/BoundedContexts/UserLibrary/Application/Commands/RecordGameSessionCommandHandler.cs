@@ -56,9 +56,23 @@ internal class RecordGameSessionCommandHandler : ICommandHandler<RecordGameSessi
         await _libraryRepository.UpdateAsync(entry, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
-        // Invalidate cache
+        // Invalidate cache. The session is already saved: if dropping the entry fails (Redis, the L2 of
+        // HybridCache, is down — RemoveAsync throws then) the request must not turn into an error, because the
+        // client retries it and the retry would record a SECOND session (#4720). The entry stays stale until it
+        // expires. A cancelled request is not a backend failure and still propagates.
         var cacheKey = $"game-detail:{command.UserId}:{command.GameId}";
-        await _cache.RemoveAsync(cacheKey, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _cache.RemoveAsync(cacheKey, cancellationToken).ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types: post-commit, best effort by design
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex,
+                "Game session {SessionId} saved, but dropping cache entry {CacheKey} failed; the entry stays until it expires",
+                session.Id, cacheKey);
+        }
+#pragma warning restore CA1031
 
         _logger.LogInformation("Recorded session {SessionId} for game {GameId} by user {UserId}",
             session.Id, command.GameId, command.UserId);

@@ -188,6 +188,10 @@ public sealed class PdfPipelineBlobResourceKeyTests : IDisposable
         reloaded.ProcessingError.Should().Be(PdfFailureText.For(ErrorCategory.StorageObjectMissing));
         reloaded.ProcessingError.Should().NotContain(missingFileId);
         reloaded.ProcessingError.Should().NotContain(UploadResourceKey);
-        _log.Entries.Should().Contain(l => l.Contains(missingFileId, StringComparison.Ordinal), "the key that was looked up is in the log");
+        // At Error level, with the exception: the Warning that names the file path before the throw does not count,
+        // an object missing from the bucket is a failure an operator must be able to find as one.
+        _log.Entries.Should().Contain(
+            l => l.StartsWith("Error:", StringComparison.Ordinal) && l.Contains(missingFileId, StringComparison.Ordinal),
+            "the key that was looked up is in the log, as an error");
     }
 }

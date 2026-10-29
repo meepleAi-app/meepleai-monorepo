@@ -523,11 +523,16 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             await TryMarkFailedAsync(pdfDocumentId, PdfFailureText.For(ErrorCategory.Service), ErrorCategory.Service).ConfigureAwait(false);
             return PdfPipelineOutcome.Failed;
         }
-        catch (PdfStorageObjectMissingException)
+        catch (PdfStorageObjectMissingException ex)
         {
             // #3846: the object is not at the key FilePath records. Retrying cannot conjure it back,
             // so it gets a category RetryFailedPdfsJob excludes — unlike the NULL category the
             // generic catch below leaves, which is treated as retriable.
+            // #4660: the key is named here, in the log at Error level, with the exception; the column and the
+            // progress, which users are served, carry only the fixed text of the category.
+            _logger.LogError(ex,
+                "[PdfPipeline] PDF {PdfId} is not in storage at key pdf/{ResourceKey}/{FileId}",
+                pdfId, ex.ResourceKey, ex.FileId);
             await TryMarkFailedAsync(pdfDocumentId, PdfFailureText.For(ErrorCategory.StorageObjectMissing), ErrorCategory.StorageObjectMissing).ConfigureAwait(false);
             return PdfPipelineOutcome.Failed;
         }

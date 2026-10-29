@@ -46,6 +46,15 @@ export function LiveScoreSheet({
   const participants = players.map(p => toParticipant(p, currentUserId));
   const rounds = Array.from({ length: currentRound }, (_, i) => i + 1);
   const categories = dimensions.filter(d => d !== 'default');
+  // What "No Category" records into: the session's own 'default' dimension, or else its first configured one.
+  // Hard-coding 'default' made every score added by hand fail (400 "Dimension 'default' is not enabled in this
+  // session's scoring config") on a session created with only "Punti", which is what the creation wizard configures.
+  const noCategoryDimension = dimensions.includes('default')
+    ? 'default'
+    : (dimensions[0] ?? 'default');
+  // A lone configured dimension and no 'default' leaves nothing to choose: no select.
+  const offerCategories =
+    categories.length > 1 || (categories.length === 1 && dimensions.includes('default'));
 
   const handleSubmit = useCallback(
     async (data: {
@@ -57,12 +66,12 @@ export function LiveScoreSheet({
       await recordScore({
         playerId: data.participantId,
         round: data.roundNumber ?? currentRound,
-        dimension: data.category || 'default',
+        dimension: data.category || noCategoryDimension,
         value: data.scoreValue,
       });
       onOpenChange(false);
     },
-    [recordScore, currentRound, onOpenChange]
+    [recordScore, currentRound, onOpenChange, noCategoryDimension]
   );
 
   return (
@@ -78,7 +87,7 @@ export function LiveScoreSheet({
         <ScoreInput
           participants={participants}
           rounds={rounds}
-          categories={categories.length > 0 ? categories : undefined}
+          categories={offerCategories ? categories : undefined}
           currentRound={currentRound}
           onSubmit={handleSubmit}
         />

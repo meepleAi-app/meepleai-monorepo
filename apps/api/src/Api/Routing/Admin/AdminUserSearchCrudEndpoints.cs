@@ -28,7 +28,7 @@ internal static class AdminUserSearchCrudEndpoints
         .RequireRateLimiting("UsersSearch") // Issue #950 (W1-PR2): bound enumeration
         .WithName("SearchUsers")
         .WithTags("Users")
-        .WithDescription("Search users by display name or email (Issue #950 W1-PR2: player invite autocomplete; default limit=10, max=50, rate-limited 10 req/s per user)")
+        .WithDescription("Search users by display name; a whole email address finds that one user. The email in the result is masked (#4727). Issue #950 W1-PR2: player invite autocomplete; default limit=10, max=50, rate-limited 10 req/s per user")
         .Produces<IEnumerable<UserSearchResultDto>>(StatusCodes.Status200OK)
         .Produces(StatusCodes.Status401Unauthorized)
         .Produces(StatusCodes.Status429TooManyRequests);

@@ -4852,6 +4852,27 @@
       "previewLabel": "Anteprima invito"
     }
   },
+  "sessionScoreInput": {
+    "player": "Giocatore",
+    "round": "Round",
+    "roundNumber": "Round {round}",
+    "finalScore": "Punteggio finale",
+    "category": "Categoria",
+    "noCategory": "Nessuna categoria",
+    "score": "Punteggio",
+    "decreaseBy": "Diminuisci di {amount}",
+    "increaseBy": "Aumenta di {amount}",
+    "undo": "Annulla",
+    "saving": "Salvataggio...",
+    "synced": "Sincronizzato",
+    "syncError": "Errore",
+    "addScore": "Aggiungi punteggio",
+    "errors": {
+      "selectParticipant": "Seleziona un giocatore",
+      "invalidScore": "Inserisci un punteggio valido",
+      "saveFailed": "Salvataggio del punteggio non riuscito"
+    }
+  },
   "playRecords": {
     "stats": {
       "badge": {

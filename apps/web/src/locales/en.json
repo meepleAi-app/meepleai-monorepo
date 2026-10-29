@@ -4840,6 +4840,27 @@
       "previewLabel": "Invitation preview"
     }
   },
+  "sessionScoreInput": {
+    "player": "Player",
+    "round": "Round",
+    "roundNumber": "Round {round}",
+    "finalScore": "Final Score",
+    "category": "Category",
+    "noCategory": "No Category",
+    "score": "Score",
+    "decreaseBy": "Decrease by {amount}",
+    "increaseBy": "Increase by {amount}",
+    "undo": "Undo",
+    "saving": "Saving...",
+    "synced": "Synced",
+    "syncError": "Error",
+    "addScore": "Add Score",
+    "errors": {
+      "selectParticipant": "Please select a participant",
+      "invalidScore": "Please enter a valid score",
+      "saveFailed": "Failed to save score"
+    }
+  },
   "playRecords": {
     "stats": {
       "badge": {

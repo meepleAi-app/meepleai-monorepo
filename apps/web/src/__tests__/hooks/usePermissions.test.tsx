@@ -154,9 +154,10 @@ describe('usePermissions', () => {
       expect(result.current.canAccess('analytics.view')).toBe(true);
     });
 
-    // #4268: the API stops sending `limits`. The client never read it, and must keep working
-    // both with the payload the API sends now and with one from a deploy that still includes it.
-    it('works with the payload the API sends now, which has no limits (#4268)', async () => {
+    // #4268: the API is about to stop sending `limits`, which the client never read.
+    // `getUserPermissions` is mocked in this file, so these two guard PermissionProvider and the
+    // context it exposes, not the API layer.
+    it('works with the payload the API will send once #4268 lands, which has no limits', async () => {
       const mockPermissions: UserPermissions = {
         tier: 'normal',
         role: 'user',
@@ -176,7 +177,7 @@ describe('usePermissions', () => {
       expect(result.current.canAccess('drag-drop')).toBe(true);
     });
 
-    it('ignores the limits an API that still sends them includes (#4268)', async () => {
+    it('ignores the limits an API that has not landed #4268 yet still sends', async () => {
       const olderPayload = {
         tier: 'free',
         role: 'user',

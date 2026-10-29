@@ -32,8 +32,7 @@ describe('RoleGate', () => {
       tier: 'normal',
       role: 'admin',
       status: 'Active',
-      limits: { maxGames: 100, storageQuotaMB: 500 },
-      accessibleFeatures: []
+      accessibleFeatures: [],
     };
 
     vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(mockPermissions);
@@ -53,8 +52,7 @@ describe('RoleGate', () => {
       tier: 'pro',
       role: 'user',
       status: 'Active',
-      limits: { maxGames: 500, storageQuotaMB: 5000 },
-      accessibleFeatures: []
+      accessibleFeatures: [],
     };
 
     vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(mockPermissions);
@@ -75,8 +73,7 @@ describe('RoleGate', () => {
       tier: 'normal',
       role: 'creator',
       status: 'Active',
-      limits: { maxGames: 100, storageQuotaMB: 500 },
-      accessibleFeatures: []
+      accessibleFeatures: [],
     };
 
     vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(mockPermissions);
@@ -96,8 +93,7 @@ describe('RoleGate', () => {
       tier: 'enterprise',
       role: 'user',
       status: 'Active',
-      limits: { maxGames: 2147483647, storageQuotaMB: 2147483647 },
-      accessibleFeatures: []
+      accessibleFeatures: [],
     };
 
     vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(mockPermissions);

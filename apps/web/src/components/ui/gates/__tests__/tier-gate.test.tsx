@@ -32,8 +32,7 @@ describe('TierGate', () => {
       tier: 'pro',
       role: 'user',
       status: 'Active',
-      limits: { maxGames: 500, storageQuotaMB: 5000 },
-      accessibleFeatures: []
+      accessibleFeatures: [],
     };
 
     vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(mockPermissions);
@@ -53,8 +52,7 @@ describe('TierGate', () => {
       tier: 'free',
       role: 'user',
       status: 'Active',
-      limits: { maxGames: 50, storageQuotaMB: 100 },
-      accessibleFeatures: []
+      accessibleFeatures: [],
     };
 
     vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(mockPermissions);
@@ -75,8 +73,7 @@ describe('TierGate', () => {
       tier: 'normal',
       role: 'user',
       status: 'Active',
-      limits: { maxGames: 100, storageQuotaMB: 500 },
-      accessibleFeatures: []
+      accessibleFeatures: [],
     };
 
     vi.mocked(permissionsApi.getUserPermissions).mockResolvedValue(mockPermissions);

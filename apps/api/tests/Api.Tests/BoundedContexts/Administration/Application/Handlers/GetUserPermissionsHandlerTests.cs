@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Api.BoundedContexts.Administration.Application.Queries.GetUserPermissions;
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.Infrastructure;
@@ -17,10 +18,14 @@ namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 /// the limit that is enforced is the plan's TierLimits.MaxLibraryGames.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
+[Trait("BoundedContext", "Administration")]
 public sealed class GetUserPermissionsHandlerTests : IDisposable
 {
-    // The minimal API serializes with the web defaults (camelCase).
-    private static readonly JsonSerializerOptions WebJson = new(JsonSerializerDefaults.Web);
+    // Mirrors the host's response options (Program.cs, ConfigureHttpJsonOptions): camelCase, enums as strings.
+    private static readonly JsonSerializerOptions HostJson = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter() }
+    };
 
     private readonly MeepleAiDbContext _dbContext = TestDbContextFactory.CreateInMemoryDbContext();
     private readonly GetUserPermissionsHandler _handler;
@@ -54,7 +59,7 @@ public sealed class GetUserPermissionsHandlerTests : IDisposable
         var response = await _handler.Handle(new GetUserPermissionsQuery(userId), TestContext.Current.CancellationToken);
 
         // Closed list on purpose: a new member of this payload is a decision, not an accident.
-        using var json = JsonDocument.Parse(JsonSerializer.Serialize(response, WebJson));
+        using var json = JsonDocument.Parse(JsonSerializer.Serialize(response, HostJson));
         json.RootElement.EnumerateObject().Select(p => p.Name)
             .Should().BeEquivalentTo("tier", "role", "status", "accessibleFeatures");
     }

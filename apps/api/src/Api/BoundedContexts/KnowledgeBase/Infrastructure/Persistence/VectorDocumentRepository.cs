@@ -136,12 +136,14 @@ internal class VectorDocumentRepository : RepositoryBase, IVectorDocumentReposit
         // seen. Tie on the upload instant: the higher PDF id wins, so the answer never depends on the order the
         // database hands the rows back.
         //
-        // Consequences of reading the PDF, all intended with the rule and none a reason to read the vector
-        // document instead: a re-index sends the PDF back to Pending, so the poll says "pending" while the old
-        // index still serves; any category of PDF (errata, expansion) can be the last upload; a PDF that the
-        // pipeline never moved on from Indexing (a lost concurrency race on the final save) keeps the poll at
-        // "processing". Whether the game has a usable knowledge base is a different question, answered by
-        // GetKbReadinessQueryHandler and GetGameRagReadinessQueryHandler (they count the Ready PDFs), not here.
+        // One exception, decided 2026-10-29: a PDF that is back at work (a re-index sends it to Pending, and one
+        // that lost a concurrency race on its final save stays in Indexing) whose OWN vector document is
+        // "completed" still serves its old index, so the poll says "indexed" with that document's chunk count. A
+        // failed PDF stays "failed" whatever its document says (a failed re-index is not compensated, decision of
+        // 2026-10-25), and an older PDF's completed document never counts for a newer PDF. Any category of PDF
+        // (errata, expansion) can still be the last upload. Whether the game has a usable knowledge base is a
+        // different question, answered by GetKbReadinessQueryHandler and GetGameRagReadinessQueryHandler (they count
+        // the Ready PDFs), not here.
         //
         // The game is on the PDF: PdfDocumentEntity.SharedGameId for catalogue games, PrivateGameId for private
         // ones (Task 8: direct resolution, no legacy GameEntity bridge).
@@ -161,12 +163,17 @@ internal class VectorDocumentRepository : RepositoryBase, IVectorDocumentReposit
             var vector = await DbContext.VectorDocuments
                 .AsNoTracking()
                 .Where(vd => vd.PdfDocumentId == latestPdf.Id) // unique: at most one per PDF
-                .Select(vd => new { vd.ChunkCount, vd.IndexingError })
+                .Select(vd => new { vd.IndexingStatus, vd.ChunkCount, vd.IndexingError })
                 .FirstOrDefaultAsync(cancellationToken)
                 .ConfigureAwait(false);
 
+            var pdfStatus = MapProcessingState(latestPdf.ProcessingState);
+            var indexStillServes = pdfStatus is VectorDocumentIndexingStatus.Pending or VectorDocumentIndexingStatus.Processing
+                && vector is not null
+                && string.Equals(vector.IndexingStatus, "completed", StringComparison.OrdinalIgnoreCase);
+
             return new VectorDocumentIndexingInfo(
-                MapProcessingState(latestPdf.ProcessingState),
+                indexStillServes ? VectorDocumentIndexingStatus.Completed : pdfStatus,
                 vector?.ChunkCount ?? 0,
                 vector?.IndexingError);
         }

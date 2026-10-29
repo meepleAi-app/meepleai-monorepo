@@ -28,8 +28,9 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure;
 /// <para>
 /// Conseguenze volute: un PDF più vecchio che ha fallito non copre più uno caricato dopo e completato; un PDF più
 /// vecchio completato non nasconde un fallimento di quello nuovo. Conseguenze che ne discendono e che il
-/// proprietario deve confermare: un re-index riporta il PDF a <c>Pending</c> e il polling dice «pending» mentre
-/// il vecchio indice serve ancora; una errata o un'espansione possono essere l'ultimo upload. Se il gioco ha una
+/// proprietario ha confermato (2026-10-29): una errata o un'espansione possono essere l'ultimo upload. Eccezione
+/// stretta, anch'essa confermata: un PDF rimesso al lavoro (un re-index lo riporta a <c>Pending</c>) il cui
+/// documento vettoriale è già <c>completed</c> serve ancora il suo vecchio indice, e il polling dice «indexed». Se il gioco ha una
 /// base di conoscenza utilizzabile lo dicono <c>GetKbReadinessQueryHandler</c> e
 /// <c>GetGameRagReadinessQueryHandler</c> (contano i PDF <c>Ready</c>), non questa query.
 /// </para>
@@ -320,13 +321,17 @@ public sealed class VectorDocumentRepositoryIndexingOrderTests : IDisposable
 
     /// <summary>
     /// Il PDF è la fonte dello stato: se il documento vettoriale dice un'altra cosa (una riga rimasta
-    /// <c>processing</c> mentre il PDF è già <c>Failed</c>, o un re-index in corso su un PDF <c>Ready</c>), vale
-    /// il PDF. Numero di chunk e testo d'errore restano quelli del documento vettoriale.
+    /// <c>processing</c> mentre il PDF è già <c>Failed</c> o <c>Ready</c>), vale il PDF. Numero di chunk e testo
+    /// d'errore restano quelli del documento vettoriale. L'unica eccezione è quella dei test sotto: un PDF in
+    /// lavorazione con il documento già <c>completed</c>.
     /// </summary>
     [Theory]
     [InlineData("Failed", "processing", nameof(VectorDocumentIndexingStatus.Failed))]
     [InlineData("Ready", "processing", nameof(VectorDocumentIndexingStatus.Completed))]
-    [InlineData("Embedding", "completed", nameof(VectorDocumentIndexingStatus.Processing))]
+    [InlineData("Embedding", "processing", nameof(VectorDocumentIndexingStatus.Processing))]
+    [InlineData("Embedding", "failed", nameof(VectorDocumentIndexingStatus.Processing))]
+    [InlineData("Pending", "processing", nameof(VectorDocumentIndexingStatus.Pending))]
+    [InlineData("Pending", "pending", nameof(VectorDocumentIndexingStatus.Pending))]
     public async Task TheStateComesFromThePdf_NotFromItsVectorDocument(
         string pdfState,
         string vectorStatus,
@@ -343,6 +348,77 @@ public sealed class VectorDocumentRepositoryIndexingOrderTests : IDisposable
         {
             info.ChunkCount.Should().Be(5, "the chunk count is the vector document's");
         }
+    }
+
+    // ────────────────────────────────────────────────────────────────────────────
+    // Un PDF in lavorazione che serve ancora il suo indice (decisione del 2026-10-29)
+    // ────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Un re-index riporta il PDF a <c>Pending</c> e il documento vettoriale resta <c>completed</c> per tutta la
+    /// durata (decisione del 2026-10-25): il vecchio indice serve ancora. Il polling dice «indexed», con i chunk
+    /// di quel documento, per ogni tappa in cui il PDF può trovarsi. Lo stesso vale per un PDF rimasto in
+    /// <c>Indexing</c> perché ha perso una gara di concorrenza sul salvataggio finale.
+    /// </summary>
+    [Theory]
+    [InlineData("Pending", false)]
+    [InlineData("Uploading", false)]
+    [InlineData("Extracting", false)]
+    [InlineData("Chunking", false)]
+    [InlineData("Embedding", false)]
+    [InlineData("Indexing", false)]
+    [InlineData("Pending", true)]
+    [InlineData("Indexing", true)]
+    public async Task APdfBackAtWork_WhoseOwnVectorDocumentIsCompleted_StillReportsTheIndex(string pdfState, bool privateGame)
+    {
+        var gameId = Guid.NewGuid();
+        SeedPdf(_db, gameId, privateGame, pdfState, Now.AddHours(-1), vector: new Vector("completed", ChunkCount: 42, IndexedHoursAgo: 30));
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var info = await _repository.GetIndexingInfoByGameIdAsync(gameId, TestContext.Current.CancellationToken);
+
+        info!.Status.Should().Be(VectorDocumentIndexingStatus.Completed, "the old index still serves while the PDF is being worked on again");
+        info.ChunkCount.Should().Be(42);
+        info.IndexingError.Should().BeNull();
+    }
+
+    /// <summary>
+    /// Se il re-index fallisce il PDF è <c>Failed</c>, e resta «failed» anche se il documento vettoriale è
+    /// ancora <c>completed</c> (non lo si compensa, decisione del 2026-10-25): chi ha caricato deve vedere il
+    /// fallimento.
+    /// </summary>
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AFailedPdf_WhoseVectorDocumentIsStillCompleted_ReportsFailed(bool privateGame)
+    {
+        var gameId = Guid.NewGuid();
+        SeedPdf(_db, gameId, privateGame, "Failed", Now.AddHours(-1), vector: new Vector("completed", ChunkCount: 42, IndexedHoursAgo: 30));
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var info = await _repository.GetIndexingInfoByGameIdAsync(gameId, TestContext.Current.CancellationToken);
+
+        info!.Status.Should().Be(VectorDocumentIndexingStatus.Failed);
+    }
+
+    /// <summary>
+    /// L'eccezione riguarda il documento vettoriale DEL PDF ultimo: un PDF più vecchio indicizzato non rende
+    /// «indexed» uno nuovo che sta ancora lavorando. L'id alto va al PDF vecchio, quello che non deve contare.
+    /// </summary>
+    [Theory]
+    [InlineData(false, true)]
+    [InlineData(false, false)]
+    [InlineData(true, true)]
+    [InlineData(true, false)]
+    public async Task AnOlderPdfsCompletedIndex_DoesNotMakeTheNewerPdfIndexed(bool privateGame, bool newestInsertedFirst)
+    {
+        var info = await PollTwoUploadsAsync(
+            privateGame, newestInsertedFirst, "Embedding", "Ready",
+            newestVector: new Vector("processing"),
+            oldestVector: new Vector("completed", ChunkCount: 10, IndexedHoursAgo: 40));
+
+        info!.Status.Should().Be(VectorDocumentIndexingStatus.Processing);
+        info.ChunkCount.Should().Be(0);
     }
 
     // ────────────────────────────────────────────────────────────────────────────

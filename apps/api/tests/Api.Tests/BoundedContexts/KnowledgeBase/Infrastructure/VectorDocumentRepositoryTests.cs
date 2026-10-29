@@ -179,6 +179,43 @@ public sealed class VectorDocumentRepositoryTests : IClassFixture<SharedTestcont
     }
 
     /// <summary>
+    /// #4660 (2026-10-29): un PDF rimesso al lavoro da un re-index (`Pending`) il cui documento vettoriale è
+    /// ancora `completed` serve il suo vecchio indice: il polling dice «indexed», con i chunk di quel documento.
+    /// Su PostgreSQL vero, per provare la proiezione dello stato del documento e il vincolo di chiave esterna.
+    /// </summary>
+    [Fact]
+    public async Task GetIndexingInfo_WithAPdfBackAtWork_AndACompletedVectorDocument_ReportsTheIndex()
+    {
+        using var seedContext = _fixture.CreateDbContext(_connectionString!);
+        var uploaderId = Guid.NewGuid();
+        seedContext.Set<UserEntity>().Add(CreateUser(uploaderId));
+        var sharedGameId = Guid.NewGuid();
+        seedContext.SharedGames.Add(CreateSharedGame(sharedGameId));
+        var pdf = CreatePdfDocument(uploaderId, sharedGameId: sharedGameId, processingState: "Pending", fileName: "reindexing.pdf");
+        seedContext.PdfDocuments.Add(pdf);
+        await seedContext.SaveChangesAsync();
+        seedContext.VectorDocuments.Add(new VectorDocumentEntity
+        {
+            Id = Guid.NewGuid(),
+            GameId = sharedGameId,
+            SharedGameId = sharedGameId,
+            PdfDocumentId = pdf.Id,
+            IndexingStatus = "completed",
+            IndexedAt = DateTime.UtcNow.AddHours(-30),
+            ChunkCount = 17,
+        });
+        await seedContext.SaveChangesAsync();
+
+        using var actContext = _fixture.CreateDbContext(_connectionString!);
+        var repo = new VectorDocumentRepository(actContext, _eventCollectorMock.Object);
+        var info = await repo.GetIndexingInfoByGameIdAsync(sharedGameId);
+
+        info.Should().NotBeNull();
+        info!.Status.ToString().Should().Be("Completed", "the old index still serves while the PDF is re-indexed");
+        info.ChunkCount.Should().Be(17);
+    }
+
+    /// <summary>
     /// TDD regression test: no SharedGameEntity record for the id → null result, no exception.
     /// Validates that the repository does NOT attempt to resolve via games table bridge
     /// (which would throw JOIN exceptions once games.SharedGameId column is dropped in sub-project #3).

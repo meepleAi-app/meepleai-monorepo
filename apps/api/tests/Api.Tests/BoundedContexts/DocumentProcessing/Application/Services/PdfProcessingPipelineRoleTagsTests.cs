@@ -601,7 +601,69 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
                 It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
         (await _db.PdfDocuments.AsNoTracking().SingleAsync(p => p.Id == _pdfDocumentId)).ProcessingState
-            .Should().Be("Indexing", "the PDF neither failed nor finished: the next tick picks it up");
+            .Should().Be("Indexing", "the PDF neither failed nor finished");
+        _db.ChangeTracker.HasChanges().Should().BeFalse(
+            "PdfProcessingQuartzJob shares this context and saves the failure of its job through it right after: the "
+            + "chunks the rolled-back save left Added would fail that save on the same conflict");
+        _db.ChangeTracker.Entries<TextChunkEntity>().Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// #4660. The chunks were saved and then the embeddings failed: the transaction takes the database back, so the
+    /// chunk entities the tracker holds as saved describe rows that do not exist. They are dropped with the failure.
+    /// </summary>
+    [Fact]
+    public async Task ProcessAsync_WhenTheEmbeddingsFailAfterTheChunksWereSaved_TheTrackerDoesNotKeepTheRolledBackChunks()
+    {
+        SeedPdfDocument();
+        SetupExtractor(pageCount: 3);
+        SetupBlobStorage();
+        SetupHierarchicalChunking();
+        SetupEmbeddings();
+        SetupRoleClassifierDistinctPerChunk();
+        SetupIndexingPipelineCreatesVectorDocument();
+        _vectorStoreMock
+            .Setup(v => v.ReplaceByVectorDocumentIdAsync(It.IsAny<Guid>(), It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("the vector store is down"));
+
+        await Record.ExceptionAsync(() => CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None));
+
+        (await _db.PdfDocuments.AsNoTracking().SingleAsync(p => p.Id == _pdfDocumentId)).ProcessingState
+            .Should().Be("Failed", "a run that did not fail would make the check below vacuous");
+        _db.ChangeTracker.Entries<TextChunkEntity>().Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// #4660. The job is cancelled (a deploy, a restart) while the chunks are being saved. The transaction takes the
+    /// database back, not the tracker; <c>PdfProcessingQuartzJob</c> then saves the cancelled state of its job through
+    /// this same context with a token that is no longer cancelled — and that save would write the chunk replacement
+    /// the transaction had rolled back, on its own, without the embeddings.
+    /// </summary>
+    [Fact]
+    public async Task ProcessAsync_WhenTheChunkSaveIsCancelled_RethrowsAndLeavesNothingPendingForTheJobsSave()
+    {
+        SeedPdfDocument();
+        SetupExtractor(pageCount: 3);
+        SetupBlobStorage();
+        SetupHierarchicalChunking();
+        SetupEmbeddings();
+        SetupRoleClassifierDistinctPerChunk();
+        SetupIndexingPipelineCreatesVectorDocument();
+        using var cancellation = new CancellationTokenSource();
+        _failingSaves.ExceptionToThrow = () =>
+        {
+            cancellation.Cancel();
+            return new OperationCanceledException(cancellation.Token);
+        };
+        _failingSaves.FailWhen = context => context.ChangeTracker.Entries<TextChunkEntity>().Any(e => e.State == EntityState.Added);
+
+        var thrown = await Record.ExceptionAsync(
+            () => CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), cancellation.Token));
+
+        thrown.Should().BeOfType<OperationCanceledException>("the cancellation goes to the job, which marks itself cancelled");
+        _failingSaves.Failures.Should().Be(1, "the cancellation has to hit the chunk save, and only it");
+        _db.ChangeTracker.HasChanges().Should().BeFalse("what the job saves next must not include the chunk replacement");
+        _db.ChangeTracker.Entries<TextChunkEntity>().Should().BeEmpty();
     }
 
     /// <summary>

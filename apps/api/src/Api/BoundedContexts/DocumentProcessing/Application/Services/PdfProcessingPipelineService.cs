@@ -476,15 +476,17 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             }
             catch (DbUpdateConcurrencyException ex)
             {
-                // The only one that reaches here is the chunk save (the indexing pipeline swallows its own): a row it
-                // replaces was changed or deleted by someone else. The transaction is rolled back, so nothing of this
-                // run was written — and carrying on to write embeddings that point at chunks that were not saved is
-                // what the old code did after swallowing it.
+                // A row the save inside the transaction replaces or updates was changed or deleted by someone else:
+                // an old text chunk, or the vector document row that BeginIndexingAsync left unsaved when it swallowed
+                // its own conflict (the tracker still holds it, and the first save here sends it again). The
+                // transaction is rolled back, so no chunk and no embedding of this run was written; what
+                // BeginIndexingAsync had already committed (the "processing" row) stays. The old code swallowed the
+                // conflict and carried on to write embeddings that pointed at chunks that were not saved.
                 MeepleAiMetrics.RecordPdfConcurrencyConflict(
                     nameof(PdfProcessingPipelineService),
                     MeepleAiMetrics.PdfConcurrencyCategories.B);
                 _logger.LogWarning(ex,
-                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                    "Concurrency conflict while saving the text chunks and the index of PDF {PdfId} in {Handler} (Category B) — admin mutation wins, none of this run's chunks and embeddings was written",
                     pdfId, nameof(PdfProcessingPipelineService));
                 // CRITICAL: do not throw — Quartz must not treat this as a crash. It is NOT a
                 // success either: nothing was indexed, so the outcome says so explicitly (#3592).
@@ -1056,8 +1058,17 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     /// (the classification, the embeddings, the DDL that makes sure the table exists) is done before.
     /// </para>
     /// <para>
-    /// <paramref name="vectorDoc"/> is null when the indexing pipeline lost a concurrency race on the row: the chunks
-    /// are still saved (keyword search reads them), and there are no embeddings to keep in step with.
+    /// <paramref name="vectorDoc"/> is null when the row is not there when it is read back after
+    /// <c>BeginIndexingAsync</c> (deleted in between): the chunks are still saved (keyword search reads them), and
+    /// there are no embeddings to keep in step with. A conflict that <c>BeginIndexingAsync</c> swallowed does not
+    /// make it null — the tracker still returns the row, unsaved — and the first save below sends it again and
+    /// throws the conflict, which leaves through the unit of work.
+    /// </para>
+    /// <para>
+    /// A failure rolls the database back, not the tracker: the catch below drops what the failed attempt left in it
+    /// (the chunks of this run, saved or not, and anything else unsaved) before the exception goes on. The context is
+    /// shared with the Quartz job, which saves its own failure through it right after, and a leftover insert or
+    /// delete would fail that save too.
     /// </para>
     /// </remarks>
     private async Task SaveChunksAndReplaceEmbeddingsAsync(
@@ -1096,19 +1107,30 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
         // #3636: ExecuteInTransactionAsync, not BeginTransactionAsync: under the retrying execution strategy a
         // transaction opened directly throws.
-        await _unitOfWork.ExecuteInTransactionAsync(async ct =>
+        try
         {
-            ForgetTrackedTextChunks();
-            await ReplaceTextChunksAsync(pdfDoc, textChunks, ct).ConfigureAwait(false);
-
-            if (vectorStore is not null && replacement is not null && vectorDoc is not null)
+            await _unitOfWork.ExecuteInTransactionAsync(async ct =>
             {
-                // #4660: replaces the embeddings this document already had (re-processing) with the new ones. The
-                // adapter joins the transaction that is open on the context, so the DELETE and the COPY follow the
-                // outcome of the unit of work, and with them the chunks above.
-                await vectorStore.ReplaceByVectorDocumentIdAsync(vectorDoc.Id, replacement, ct).ConfigureAwait(false);
-            }
-        }, cancellationToken).ConfigureAwait(false);
+                ForgetTrackedTextChunks();
+                await ReplaceTextChunksAsync(pdfDoc, textChunks, ct).ConfigureAwait(false);
+
+                if (vectorStore is not null && replacement is not null && vectorDoc is not null)
+                {
+                    // #4660: replaces the embeddings this document already had (re-processing) with the new ones.
+                    // The adapter joins the transaction that is open on the context, so the DELETE and the COPY
+                    // follow the outcome of the unit of work, and with them the chunks above.
+                    await vectorStore.ReplaceByVectorDocumentIdAsync(vectorDoc.Id, replacement, ct).ConfigureAwait(false);
+                }
+            }, cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            // Whatever the failure (a cancellation included: the job saves its own state through this context right
+            // after): the transaction took the database back, not the tracker.
+            ForgetTrackedTextChunks();
+            DiscardUnsavedChanges();
+            throw;
+        }
 
         if (replacement is not null)
         {
@@ -1190,9 +1212,11 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     }
 
     /// <summary>
-    /// An earlier attempt of the transaction may have left the chunks of this run in the tracker — saved, then rolled
-    /// back with the transaction, or not saved at all — and the old ones marked deleted. None of that is true of the
-    /// database any more, and re-adding an entity that is still tracked would not be the insert it looks like.
+    /// An earlier attempt of the transaction may have left the chunks in the tracker: the new ones <c>Added</c> and the
+    /// old ones <c>Deleted</c> when its save failed, or the new ones <c>Unchanged</c> when the save went through and the
+    /// transaction was rolled back after. None of that is true of the database. The old chunks are read again, and as
+    /// a second instance of an already tracked key they would be an identity conflict; the new ones have to be
+    /// inserts, whatever state they were left in.
     /// </summary>
     private void ForgetTrackedTextChunks()
     {

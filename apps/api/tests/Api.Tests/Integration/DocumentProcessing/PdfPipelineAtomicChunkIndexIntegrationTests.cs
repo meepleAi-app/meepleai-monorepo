@@ -7,6 +7,7 @@ using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
+using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -59,6 +60,7 @@ public sealed class PdfPipelineAtomicChunkIndexIntegrationTests : IAsyncLifetime
     private string _databaseName = string.Empty;
     private ServiceProvider? _provider;
     private Guid _userId;
+    private string _userEmail = string.Empty;
     private Guid _sharedGameId;
     private Guid _pdfId;
 
@@ -94,9 +96,10 @@ public sealed class PdfPipelineAtomicChunkIndexIntegrationTests : IAsyncLifetime
         await TestMigrationHelper.MigrateWithRetryAsync(db, Ct);
 
         _userId = Guid.NewGuid();
+        _userEmail = $"atomic-chunks-{_userId:N}@test.local";
         _sharedGameId = Guid.NewGuid();
         _pdfId = Guid.NewGuid();
-        db.Users.Add(new UserEntity { Id = _userId, Email = $"atomic-chunks-{_userId:N}@test.local", CreatedAt = DateTime.UtcNow });
+        db.Users.Add(new UserEntity { Id = _userId, Email = _userEmail, CreatedAt = DateTime.UtcNow });
         db.SharedGames.Add(new SharedGameEntity
         {
             Id = _sharedGameId,
@@ -186,7 +189,9 @@ public sealed class PdfPipelineAtomicChunkIndexIntegrationTests : IAsyncLifetime
         var outcome = await ProcessAsync();
 
         outcome.Should().Be(PdfPipelineOutcome.Failed, "{0}", _pipelineLog.Problems);
-        (await PdfAsync()).FailedAtState.Should().Be("Indexing", "the failure has to come from writing the index, or the rest proves nothing");
+        (await PdfAsync()).FailedAtState.Should().Be("Indexing");
+        _pipelineLog.Problems.Should().Contain("768 dimensions",
+            "the run has to fail on the server rejecting the vectors, at the end of the COPY and after the chunks were written, or the rest proves nothing");
         (await ChunksAsync()).Select(c => c.Id).Should().BeEquivalentTo(oldChunkIds,
             "the chunk replacement was in the transaction that rolled back");
         var embeddings = await EmbeddingsAsync();
@@ -216,10 +221,72 @@ public sealed class PdfPipelineAtomicChunkIndexIntegrationTests : IAsyncLifetime
         embeddings.Select(e => e.SourceChunkId).Should().BeEquivalentTo(chunks.Select(c => (Guid?)c.Id));
     }
 
+    /// <summary>
+    /// The replacement is inside the unit of work, not just next to it. The COPY here has succeeded; what fails is the
+    /// save that closes the unit of work, after it. If the adapter ran its DELETE and COPY on a transaction of its own
+    /// the new embeddings would already be committed, and only the chunks would go back.
+    /// </summary>
+    [Fact]
+    public async Task Reprocess_WhenTheUnitOfWorkFailsAfterTheReplacement_TheReplacementIsRolledBackToo()
+    {
+        (await ProcessAsync()).Should().Be(PdfPipelineOutcome.Processed, "{0}", _pipelineLog.Problems);
+        var oldChunkIds = (await ChunksAsync()).Select(c => c.Id).ToList();
+        var oldEmbeddingIds = (await EmbeddingsAsync()).Select(e => e.Id).ToList();
+        await BackToPendingAsync();
+        var replaced = 0;
+
+        var outcome = await ProcessAsync(afterTheReplacement: db =>
+        {
+            replaced++;
+            // A second user with the same email: the unit of work's own save fails on the unique index.
+            db.Users.Add(new UserEntity { Id = Guid.NewGuid(), Email = _userEmail, CreatedAt = DateTime.UtcNow });
+            return Task.CompletedTask;
+        });
+
+        outcome.Should().Be(PdfPipelineOutcome.Failed, "{0}", _pipelineLog.Problems);
+        replaced.Should().Be(1, "the replacement has to have run, or the rollback proves nothing");
+        _pipelineLog.Problems.Should().Contain("duplicate key", "the run has to fail on the save that closes the unit of work");
+        (await ChunksAsync()).Select(c => c.Id).Should().BeEquivalentTo(oldChunkIds);
+        var embeddings = await EmbeddingsAsync();
+        embeddings.Select(e => e.Id).Should().BeEquivalentTo(oldEmbeddingIds, "the DELETE and the COPY went back with the chunks");
+        embeddings.Select(e => e.SourceChunkId).Should().BeEquivalentTo(oldChunkIds.Select(id => (Guid?)id));
+    }
+
+    /// <summary>
+    /// The execution strategy of the context (the production wiring: <c>EnableRetryOnFailure</c>) runs the unit of work
+    /// again after a transient failure. The first attempt got as far as saving the chunks and replacing the embeddings
+    /// before it failed; both went back, and the second attempt starts from the tracker that attempt left.
+    /// </summary>
+    [Fact]
+    public async Task Reprocess_WhenTheFirstAttemptFailsTransiently_TheStrategyRerunsItAndTheSecondSucceeds()
+    {
+        (await ProcessAsync()).Should().Be(PdfPipelineOutcome.Processed, "{0}", _pipelineLog.Problems);
+        var oldChunkIds = (await ChunksAsync()).Select(c => c.Id).ToList();
+        var oldEmbeddingIds = (await EmbeddingsAsync()).Select(e => e.Id).ToList();
+        await BackToPendingAsync();
+        var attempts = 0;
+
+        var outcome = await ProcessAsync(afterTheReplacement: _ =>
+        {
+            attempts++;
+            return attempts == 1 ? Task.FromException(new TimeoutException("a transient failure")) : Task.CompletedTask;
+        });
+
+        outcome.Should().Be(PdfPipelineOutcome.Processed, "{0}", _pipelineLog.Problems);
+        attempts.Should().Be(2, "the strategy has to have run the unit of work a second time");
+        var chunks = await ChunksAsync();
+        var embeddings = await EmbeddingsAsync();
+        chunks.Should().HaveCount(3);
+        chunks.Select(c => c.Id).Should().NotIntersectWith(oldChunkIds, "the old chunks are replaced, once");
+        embeddings.Should().HaveCount(3);
+        embeddings.Select(e => e.Id).Should().NotIntersectWith(oldEmbeddingIds);
+        embeddings.Select(e => e.SourceChunkId).Should().BeEquivalentTo(chunks.Select(c => (Guid?)c.Id));
+    }
+
     // ─── Support ────────────────────────────────────────────────────────────────
 
     /// <summary>One run of the queue pipeline, in one scope: the context is shared by every collaborator, as in the job.</summary>
-    private async Task<PdfPipelineOutcome> ProcessAsync()
+    private async Task<PdfPipelineOutcome> ProcessAsync(Func<MeepleAiDbContext, Task>? afterTheReplacement = null)
     {
         _pipelineLog = new CapturingLogger<PdfProcessingPipelineService>();
         using var scope = _provider!.CreateScope();
@@ -267,6 +334,24 @@ public sealed class PdfPipelineAtomicChunkIndexIntegrationTests : IAsyncLifetime
             .ReturnsAsync((IReadOnlyList<ChunkInput> inputs, CancellationToken _) =>
                 (IReadOnlyList<GameBookRole>)inputs.Select((_, i) => cycle[i % cycle.Length]).ToList());
 
+        var vectorStore = sp.GetRequiredService<IVectorStoreAdapter>();
+        if (afterTheReplacement is not null)
+        {
+            // The real adapter, with a step run right after the replacement and still inside the unit of work: the
+            // way to fail something AFTER the DELETE and the COPY have run.
+            var real = vectorStore;
+            var spy = new Mock<IVectorStoreAdapter>();
+            spy.Setup(s => s.EnsureCollectionExistsAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+                .Returns((Guid gameId, int width, CancellationToken ct) => real.EnsureCollectionExistsAsync(gameId, width, ct));
+            spy.Setup(s => s.ReplaceByVectorDocumentIdAsync(It.IsAny<Guid>(), It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
+                .Returns(async (Guid id, List<Embedding> rows, CancellationToken ct) =>
+                {
+                    await real.ReplaceByVectorDocumentIdAsync(id, rows, ct);
+                    await afterTheReplacement(db);
+                });
+            vectorStore = spy.Object;
+        }
+
         var pipeline = new PdfProcessingPipelineService(
             db,
             new RelationalPdfClaimService(db),
@@ -281,7 +366,7 @@ public sealed class PdfPipelineAtomicChunkIndexIntegrationTests : IAsyncLifetime
             Mock.Of<IChunkTranslationService>(),
             sp.GetRequiredService<IPdfIndexingPipeline>(),
             sp.GetRequiredService<IUnitOfWork>(),
-            vectorStore: sp.GetRequiredService<IVectorStoreAdapter>(),
+            vectorStore: vectorStore,
             roleClassifier: roles.Object,
             advancedChunking: chunking.Object);
 

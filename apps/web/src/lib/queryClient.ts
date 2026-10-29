@@ -5,7 +5,7 @@
  *
  * Provides singleton QueryClient with optimized defaults:
  * - 5min staleTime (reduce unnecessary refetches)
- * - 1 retry on failure
+ * - 1 retry on a failed query; mutations are not resent on their own (#4735)
  * - Error logging with correlation IDs
  *
  * Next.js 16 App Router pattern:

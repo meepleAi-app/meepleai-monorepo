@@ -106,7 +106,9 @@ public sealed class S3BlobStorageServiceTests : IDisposable
         // Assert
         result.Success.Should().BeFalse();
         result.FileId.Should().BeNull();
-        result.ErrorMessage.Should().Contain("S3 error");
+        // #4660: fixed text; the exception's message ("Access denied") stays in the log.
+        result.ErrorMessage.Should().Be(BlobStorageFailureText.S3);
+        result.ErrorMessage.Should().NotContain("Access denied");
     }
 
     [Fact]

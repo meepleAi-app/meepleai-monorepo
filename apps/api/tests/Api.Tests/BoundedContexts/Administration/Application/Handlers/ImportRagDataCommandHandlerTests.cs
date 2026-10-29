@@ -534,6 +534,31 @@ public class ImportRagDataCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ReEmbed_AResultThatSaysFailureIsAFailureEvenIfItCarriesVectors()
+    {
+        // Il conteggio dei vettori non basta: un servizio che dichiara il fallimento e allega comunque i vettori
+        // (parziali, o di una risposta di ripiego) non deve far entrare il documento.
+        var service = WorkingEmbeddingService();
+        service.Setup(e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EmbeddingResult
+            {
+                Success = false,
+                ErrorMessage = "degraded",
+                Embeddings = [[0.1f, 0.2f, 0.3f, 0.4f], [0.1f, 0.2f, 0.3f, 0.4f]],
+            });
+
+        var import = await ImportWithReEmbedAsync(
+            nameof(Handle_ReEmbed_AResultThatSaysFailureIsAFailureEvenIfItCarriesVectors),
+            service.Object,
+            [(0, 1, "One."), (1, 1, "Two.")]);
+        await using var db = import.Db;
+
+        import.Result.Failed.Should().Be(1);
+        (await db.PdfDocuments.CountAsync()).Should().Be(0);
+        (await db.PgVectorEmbeddings.CountAsync()).Should().Be(0);
+    }
+
+    [Fact]
     public async Task Handle_ReEmbed_AFailedDocumentDoesNotLeakIntoTheNextOne()
     {
         // Il primo documento ha già PDF, documento vettoriale e passaggi nel tracker quando il servizio fallisce.

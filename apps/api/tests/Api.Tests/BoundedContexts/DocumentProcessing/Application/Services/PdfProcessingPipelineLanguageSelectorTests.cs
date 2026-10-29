@@ -108,6 +108,7 @@ public sealed class PdfProcessingPipelineLanguageSelectorTests : IDisposable
             _languageDetectorMock.Object,
             Mock.Of<IChunkTranslationService>(),
             Mock.Of<IPdfIndexingPipeline>(),
+            Api.Tests.TestHelpers.UnitOfWorkMockExtensions.PassThrough(),
             extractionLanguageSelector: _selector);
 
     private void SeedPdfDocument(string language, double? confidence, string? languageOverride)

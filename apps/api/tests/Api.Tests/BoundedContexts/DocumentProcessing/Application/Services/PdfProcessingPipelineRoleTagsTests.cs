@@ -12,6 +12,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Services;
 using Api.Services.Pdf;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -30,6 +31,10 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Services;
 /// ordering those rows did not exist yet, so every pgvector row was born with
 /// <c>RoleTags == 0</c> (None) and <c>SourceChunkId == null</c>. That silently disabled the
 /// vector-arm role-match boost (<c>FusionSignals.ComputeRoleMatchBoost</c>) corpus-wide.
+///
+/// Since #4660 the rows are taken from the text chunks the run has just built (which it saves in the same unit of
+/// work as the embeddings), not read back from the database, so the ordering cannot be got wrong any more; the
+/// test stays as the check that what reaches the pgvector rows is what was saved.
 ///
 /// This test captures the <see cref="Embedding"/> batch handed to
 /// <see cref="IVectorStoreAdapter.ReplaceByVectorDocumentIdAsync"/> — the correct seam (NOT EF PgVectorEmbeddings) —
@@ -52,12 +57,20 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
     private readonly Mock<IRoleClassifierService> _roleClassifierMock = new();
     private readonly Mock<IVectorStoreAdapter> _vectorStoreMock = new();
     private readonly Mock<IPdfIndexingPipeline> _indexingPipelineMock = new();
+    private readonly Mock<IUnitOfWork> _unitOfWork = new();
 
     private readonly Guid _pdfDocumentId = Guid.NewGuid();
     private readonly Guid _gameId = Guid.NewGuid();
 
+    // True only while the delegate handed to the unit of work is running: what a test reads to know whether a
+    // write happened inside the transaction.
+    private bool _insideTheUnitOfWork;
+    private bool? _beginRanInsideTheUnitOfWork;
+
     public PdfProcessingPipelineRoleTagsTests()
     {
+        RunTheUnitOfWork();
+
         // Same as TestDbContextFactory.CreateInMemoryDbContext, plus an interceptor that fails a save on demand
         // (disarmed unless a test arms it).
         var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
@@ -500,6 +513,198 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
         pdf.ProcessingState.Should().Be("Pending");
     }
 
+    /// <summary>
+    /// #4660. The text chunks of the run and its embeddings are written in ONE unit of work. Written one after the
+    /// other, a COPY that failed left the old embeddings — the only ones the index has — pointing at chunks the first
+    /// write had already replaced. What stays outside is what must: the vector document row (a failed run marks it
+    /// failed, so it has to exist) and its completion (declared only once everything is saved).
+    /// </summary>
+    [Fact]
+    public async Task ProcessAsync_SavesTheTextChunksAndReplacesTheEmbeddingsInsideOneUnitOfWork()
+    {
+        SeedPdfDocument();
+        SetupExtractor(pageCount: 3);
+        SetupBlobStorage();
+        SetupHierarchicalChunking();
+        SetupEmbeddings();
+        SetupRoleClassifierDistinctPerChunk();
+        SetupIndexingPipelineCreatesVectorDocument();
+        var chunkSavesInside = new List<bool>();
+        _failingSaves.FailWhen = context =>
+        {
+            if (context.ChangeTracker.Entries<TextChunkEntity>().Any(e => e.State == EntityState.Added))
+            {
+                chunkSavesInside.Add(_insideTheUnitOfWork);
+            }
+
+            return false;
+        };
+        bool? replaceInside = null;
+        _vectorStoreMock
+            .Setup(v => v.ReplaceByVectorDocumentIdAsync(It.IsAny<Guid>(), It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()))
+            .Callback(() => replaceInside = _insideTheUnitOfWork)
+            .Returns(Task.CompletedTask);
+        bool? ensureInside = null;
+        _vectorStoreMock
+            .Setup(v => v.EnsureCollectionExistsAsync(It.IsAny<Guid>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .Callback(() => ensureInside = _insideTheUnitOfWork)
+            .Returns(Task.CompletedTask);
+        bool? completeInside = null;
+        _indexingPipelineMock
+            .Setup(p => p.IndexAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<Guid?>(),
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback(() => completeInside = _insideTheUnitOfWork)
+            .Returns(Task.CompletedTask);
+
+        await CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        (await _db.PdfDocuments.AsNoTracking().SingleAsync(p => p.Id == _pdfDocumentId)).ProcessingState
+            .Should().Be("Ready", "a run that stopped early would make everything below vacuous");
+        chunkSavesInside.Should().Equal(new[] { true }, "the text chunks are saved once, inside the unit of work");
+        replaceInside.Should().BeTrue("the embeddings are replaced inside the same unit of work as the chunks");
+        ensureInside.Should().BeFalse("it is DDL: inside the transaction its locks would be held until the commit");
+        _beginRanInsideTheUnitOfWork.Should().BeFalse("the vector document row has to be committed whatever happens to the rest");
+        completeInside.Should().BeFalse("the document is declared completed only after the unit of work has committed");
+        _unitOfWork.Verify(u => u.BeginTransactionAsync(It.IsAny<CancellationToken>()), Times.Never,
+            "a transaction opened directly throws under the retrying execution strategy (#3636)");
+    }
+
+    /// <summary>
+    /// #4660. The chunk save loses a race (a row it replaces was changed or deleted by someone else). The old code
+    /// swallowed it and went on to write embeddings that pointed at chunks that were not saved. Now nothing of the
+    /// run is written, and the outcome says so: the PDF is not marked failed (it did not fail, it lost) and not Ready.
+    /// </summary>
+    [Fact]
+    public async Task ProcessAsync_WhenTheChunkSaveLosesAConcurrencyRace_AbortsWithoutWritingTheEmbeddings()
+    {
+        SeedPdfDocument();
+        SetupExtractor(pageCount: 3);
+        SetupBlobStorage();
+        SetupHierarchicalChunking();
+        SetupEmbeddings();
+        SetupRoleClassifierDistinctPerChunk();
+        SetupIndexingPipelineCreatesVectorDocument();
+        _failingSaves.ExceptionToThrow = () => new DbUpdateConcurrencyException("the old chunks are already gone");
+        _failingSaves.FailWhen = context => context.ChangeTracker.Entries<TextChunkEntity>().Any(e => e.State == EntityState.Added);
+
+        var outcome = await CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        outcome.Should().Be(PdfPipelineOutcome.AbortedConcurrency);
+        _failingSaves.Failures.Should().Be(1, "the conflict has to come from the chunk save, and only from it");
+        _vectorStoreMock.Verify(
+            v => v.ReplaceByVectorDocumentIdAsync(It.IsAny<Guid>(), It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _indexingPipelineMock.Verify(
+            p => p.IndexAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<Guid?>(),
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        (await _db.PdfDocuments.AsNoTracking().SingleAsync(p => p.Id == _pdfDocumentId)).ProcessingState
+            .Should().Be("Indexing", "the PDF neither failed nor finished: the next tick picks it up");
+    }
+
+    /// <summary>
+    /// #4660. The execution strategy re-runs the delegate after a transient failure. The first attempt leaves the old
+    /// chunks marked deleted and the new ones added in the tracker, and the database (rolled back) has the old ones:
+    /// the second attempt reads them again, and the tracker still holds them — without forgetting the first attempt's
+    /// entities that is an identity conflict, and the run fails for a failure that was already survived.
+    /// </summary>
+    [Fact]
+    public async Task ProcessAsync_WhenTheUnitOfWorkRunsTheWorkAgainAfterATransientFailure_TheSecondAttemptSucceeds()
+    {
+        SeedPdfDocument();
+        for (var index = 0; index < 2; index++)
+        {
+            _db.TextChunks.Add(new TextChunkEntity
+            {
+                Id = Guid.NewGuid(),
+                PdfDocumentId = _pdfDocumentId,
+                PrivateGameId = _gameId,
+                Content = "old chunk",
+                ChunkIndex = index,
+                PageNumber = 1,
+                CharacterCount = 9,
+                CreatedAt = DateTime.UtcNow,
+            });
+        }
+
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+        _db.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.NoTracking; // PERF-06, as in production
+        SetupExtractor(pageCount: 3);
+        SetupBlobStorage();
+        SetupHierarchicalChunking();
+        SetupEmbeddings();
+        SetupRoleClassifierDistinctPerChunk();
+        SetupIndexingPipelineCreatesVectorDocument();
+        var attempts = 0;
+        _unitOfWork
+            .Setup(u => u.ExecuteInTransactionAsync(It.IsAny<Func<CancellationToken, Task>>(), It.IsAny<CancellationToken>()))
+            .Returns(async (Func<CancellationToken, Task> work, CancellationToken ct) =>
+            {
+                while (true)
+                {
+                    attempts++;
+                    try
+                    {
+                        await work(ct);
+                        return;
+                    }
+                    catch (TransientFailure)
+                    {
+                        // What NpgsqlRetryingExecutionStrategy does: the transaction is gone, run it again.
+                    }
+                }
+            });
+        _failingSaves.ExceptionToThrow = () => new TransientFailure();
+        _failingSaves.FailWhen = context => _failingSaves.Failures == 0
+            && context.ChangeTracker.Entries<TextChunkEntity>().Any(e => e.State == EntityState.Added);
+
+        var outcome = await CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        outcome.Should().Be(PdfPipelineOutcome.Processed);
+        attempts.Should().Be(2, "the first attempt has to fail at the chunk save, or the retry proves nothing");
+        var chunks = await _db.TextChunks.AsNoTracking().Where(c => c.PdfDocumentId == _pdfDocumentId).ToListAsync();
+        chunks.Should().HaveCount(3).And.OnlyContain(c => c.Content != "old chunk", "the old chunks are replaced, once");
+    }
+
+    /// <summary>
+    /// #4660. The indexing pipeline lost a race on the vector document row, so there is no row to point embeddings
+    /// at. The chunks of the run are still saved — keyword search reads them — and nothing else is written.
+    /// </summary>
+    [Fact]
+    public async Task ProcessAsync_WhenTheVectorDocumentRowIsMissing_StillSavesTheTextChunksAndWritesNoEmbeddings()
+    {
+        SeedPdfDocument();
+        SetupExtractor(pageCount: 3);
+        SetupBlobStorage();
+        SetupHierarchicalChunking();
+        SetupEmbeddings();
+        SetupRoleClassifierDistinctPerChunk();
+
+        var outcome = await CreatePipeline().ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        outcome.Should().Be(PdfPipelineOutcome.Processed);
+        (await _db.TextChunks.AsNoTracking().CountAsync(c => c.PdfDocumentId == _pdfDocumentId)).Should().Be(3);
+        _vectorStoreMock.Verify(
+            v => v.ReplaceByVectorDocumentIdAsync(It.IsAny<Guid>(), It.IsAny<List<Embedding>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _indexingPipelineMock.Verify(
+            p => p.IndexAsync(
+                It.IsAny<Guid>(), It.IsAny<Guid?>(), It.IsAny<Guid?>(),
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    private sealed class TransientFailure : Exception
+    {
+        public TransientFailure()
+            : base("a transient failure the execution strategy retries")
+        {
+        }
+    }
+
     private sealed class FailOnDemandSaveInterceptor : Microsoft.EntityFrameworkCore.Diagnostics.SaveChangesInterceptor
     {
         public Func<DbContext, bool>? FailWhen { get; set; }
@@ -542,6 +747,7 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
             languageDetectorMock.Object,
             _chunkTranslationServiceMock.Object,
             _indexingPipelineMock.Object,
+            _unitOfWork.Object,
             vectorStore: _vectorStoreMock.Object,
             roleClassifier: _roleClassifierMock.Object,
             advancedChunking: _advancedChunkingMock.Object);
@@ -671,6 +877,7 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
                 It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(async (Guid docId, Guid? gid, Guid? sgid, int chunkCount, int totalChars, string lang, CancellationToken ct) =>
             {
+                _beginRanInsideTheUnitOfWork = _insideTheUnitOfWork;
                 _db.VectorDocuments.Add(new VectorDocumentEntity
                 {
                     Id = Guid.NewGuid(),
@@ -682,6 +889,29 @@ public sealed class PdfProcessingPipelineRoleTagsTests : IDisposable
                     IndexingStatus = "processing"
                 });
                 await _db.SaveChangesAsync(ct);
+            });
+    }
+
+    /// <summary>
+    /// A unit of work that runs the delegate and commits, and says while it runs that it is running. Nothing is
+    /// rolled back: the in-memory provider has no transactions. That a failure rolls the writes back is proved on
+    /// Postgres (<c>PdfPipelineAtomicChunkIndexIntegrationTests</c>); here, which writes are inside it.
+    /// </summary>
+    private void RunTheUnitOfWork()
+    {
+        _unitOfWork
+            .Setup(u => u.ExecuteInTransactionAsync(It.IsAny<Func<CancellationToken, Task>>(), It.IsAny<CancellationToken>()))
+            .Returns(async (Func<CancellationToken, Task> work, CancellationToken ct) =>
+            {
+                _insideTheUnitOfWork = true;
+                try
+                {
+                    await work(ct);
+                }
+                finally
+                {
+                    _insideTheUnitOfWork = false;
+                }
             });
     }
 }

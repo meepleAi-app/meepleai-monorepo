@@ -82,6 +82,7 @@ public sealed class PdfProcessingPipelineServiceExtractTextTests : IDisposable
             languageDetector: Mock.Of<ILanguageDetector>(),
             chunkTranslationService: Mock.Of<IChunkTranslationService>(),
             indexingPipeline: Mock.Of<IPdfIndexingPipeline>(),
+            unitOfWork: Api.Tests.TestHelpers.UnitOfWorkMockExtensions.PassThrough(),
             raptorIndexer: null,
             entityExtractor: null,
             vectorStore: null,

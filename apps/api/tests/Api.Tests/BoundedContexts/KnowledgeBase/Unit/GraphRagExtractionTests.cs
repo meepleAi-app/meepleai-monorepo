@@ -270,6 +270,7 @@ public sealed class GraphRagExtractionTests : IDisposable
             languageDetectorMock.Object,
             Mock.Of<IChunkTranslationService>(),
             Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.IPdfIndexingPipeline>(),
+            Api.Tests.TestHelpers.UnitOfWorkMockExtensions.PassThrough(),
             raptorIndexer: null,
             entityExtractor: withEntityExtractor ? _entityExtractorMock.Object : null,
             vectorStore: null,

@@ -17,6 +17,7 @@ using Api.Infrastructure.Entities.DocumentProcessing;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Services;
 using Api.Services.Pdf;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
 using MediatR;
@@ -248,6 +249,7 @@ public abstract class CompleteChunkedUploadIntegrationTestsBase : IAsyncLifetime
             language.Object,
             Mock.Of<IChunkTranslationService>(),
             indexing.Object,
+            scope.ServiceProvider.GetRequiredService<IUnitOfWork>(),
             advancedChunking: chunking.Object);
 
         var outcome = await pipeline.ProcessAsync(documentId, pdf.FilePath, TestUserId, Ct);
@@ -284,7 +286,8 @@ public abstract class CompleteChunkedUploadIntegrationTestsBase : IAsyncLifetime
             NullLogger<PdfProcessingPipelineService>.Instance,
             language.Object,
             Mock.Of<IChunkTranslationService>(),
-            Mock.Of<IPdfIndexingPipeline>());
+            Mock.Of<IPdfIndexingPipeline>(),
+            scope.ServiceProvider.GetRequiredService<IUnitOfWork>());
 
         var outcome = await pipeline.ProcessAsync(documentId, pdf.FilePath, TestUserId, Ct);
 

@@ -55,9 +55,12 @@ internal interface IVectorStoreAdapter
     /// anything.
     /// </summary>
     /// <remarks>
-    /// Atomic on the pgvector table only. Whatever else the caller saved before (the text chunks of the same
-    /// run, in the queue pipeline) is not part of the transaction: if the insert fails the old embeddings
-    /// stay, but their <c>source_chunk_id</c> may point at text chunks that run has already replaced.
+    /// Atomic on the pgvector table only, unless the caller opens a transaction on the context first: then it
+    /// joins it. Whatever else the caller saved before and committed is not part of the replacement. The queue
+    /// pipeline opens one for the text chunks of the run and the replacement together (#4660), because the
+    /// embeddings carry the <c>source_chunk_id</c> of the chunk they come from, and a replacement that failed after
+    /// the chunks were committed left the old embeddings pointing at chunks that were gone. A caller that does not
+    /// replace the chunks (the model migration, <c>VectorReembeddingService</c>) has nothing to keep in step.
     /// </remarks>
     Task ReplaceByVectorDocumentIdAsync(
         Guid vectorDocumentId,

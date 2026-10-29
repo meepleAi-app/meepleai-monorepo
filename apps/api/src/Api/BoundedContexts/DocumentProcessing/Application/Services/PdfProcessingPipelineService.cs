@@ -18,6 +18,7 @@ using Api.Services;
 using Api.Services.Pdf;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Covers;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using KbEntities = Api.BoundedContexts.KnowledgeBase.Domain.Entities;
@@ -68,6 +69,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
 
     private readonly IPdfIndexingPipeline _indexingPipeline;
 
+    // #4660: the text chunks of a run and its embeddings are written in ONE transaction. Required, not optional:
+    // a null that silently fell back to two separate writes would put the defect back without anyone noticing.
+    private readonly IUnitOfWork _unitOfWork;
+
     // Issue #3281: optional so pre-existing test constructors compile. When null,
     // chunk production falls back to the flat ITextChunkingService path (pre-Slice-D behaviour).
     private readonly IAdvancedChunkingService? _advancedChunking;
@@ -94,6 +99,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         ILanguageDetector languageDetector,
         IChunkTranslationService chunkTranslationService,
         IPdfIndexingPipeline indexingPipeline,
+        IUnitOfWork unitOfWork,
         IRaptorIndexer? raptorIndexer = null,
         IEntityExtractor? entityExtractor = null,
         IVectorStoreAdapter? vectorStore = null,
@@ -117,6 +123,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         _languageDetector = languageDetector ?? throw new ArgumentNullException(nameof(languageDetector));
         _chunkTranslationService = chunkTranslationService ?? throw new ArgumentNullException(nameof(chunkTranslationService));
         _indexingPipeline = indexingPipeline ?? throw new ArgumentNullException(nameof(indexingPipeline));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _raptorIndexer = raptorIndexer;
         _entityExtractor = entityExtractor;
         _vectorStore = vectorStore;
@@ -455,17 +462,34 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 return PdfPipelineOutcome.AbortedConcurrency;
             }
 
-            // Step 4: Index in pgvector.
-            // Order matters: SaveTextChunksAsync MUST run BEFORE IndexInVectorStoreAsync.
-            // IndexInVectorStoreAsync denormalizes role_tags + source_chunk_id onto the pgvector
-            // rows by reading the freshly-saved (and freshly-classified) text_chunks keyed by
-            // ChunkIndex. Both consume the same `translatedChunks`/`allChunkInputs` order, so the
-            // join by ChunkIndex is stable. If indexing ran first the lookup would be empty and every
-            // pgvector row would be born with role_tags=0 / source_chunk_id=null (silent corpus-wide
-            // role-boost loss — see FusionSignals.ComputeRoleMatchBoost).
+            // Step 4: Save the text chunks and index the embeddings in pgvector.
+            // The pgvector rows carry role_tags + source_chunk_id, denormalized from the text chunk at the same
+            // position: both lists come from `translatedChunks`/`allChunkInputs`, so they are built together and
+            // the rows are taken from the chunks in memory (a row born with role_tags=0 / source_chunk_id=null
+            // would silently disable the role-boost corpus-wide — see FusionSignals.ComputeRoleMatchBoost).
+            // #4660: the chunks and the embeddings are WRITTEN in one transaction, so a run that fails while
+            // writing the embeddings leaves the previous chunks AND the previous embeddings, which still agree.
             _logger.LogInformation("[PdfPipeline] Step 4/4: Indexing {ChunkCount} chunks for {PdfId}", allChunkInputs.Count, pdfId);
-            await SaveTextChunksAsync(pdfDoc, allChunkInputs, cancellationToken).ConfigureAwait(false);
-            await IndexInVectorStoreAsync(pdfDoc, translatedChunks, embeddings, cancellationToken).ConfigureAwait(false);
+            try
+            {
+                await IndexInVectorStoreAsync(pdfDoc, translatedChunks, allChunkInputs, embeddings, cancellationToken).ConfigureAwait(false);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                // The only one that reaches here is the chunk save (the indexing pipeline swallows its own): a row it
+                // replaces was changed or deleted by someone else. The transaction is rolled back, so nothing of this
+                // run was written — and carrying on to write embeddings that point at chunks that were not saved is
+                // what the old code did after swallowing it.
+                MeepleAiMetrics.RecordPdfConcurrencyConflict(
+                    nameof(PdfProcessingPipelineService),
+                    MeepleAiMetrics.PdfConcurrencyCategories.B);
+                _logger.LogWarning(ex,
+                    "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
+                    pdfId, nameof(PdfProcessingPipelineService));
+                // CRITICAL: do not throw — Quartz must not treat this as a crash. It is NOT a
+                // success either: nothing was indexed, so the outcome says so explicitly (#3592).
+                return PdfPipelineOutcome.AbortedConcurrency;
+            }
 
             // Issue #4215: Mark as Ready (final state)
             pdfDoc.ProcessingState = nameof(PdfProcessingState.Ready);
@@ -938,6 +962,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
     private async Task IndexInVectorStoreAsync(
         PdfDocumentEntity pdfDoc,
         List<(DocumentChunkInput chunk, string lang, bool isTranslation)> translatedChunks,
+        List<DocumentChunkInput> chunkInputs,
         List<float[]> embeddings,
         CancellationToken cancellationToken)
     {
@@ -955,6 +980,11 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
         // no vector rows and a game claiming a knowledge base.
         var language = string.IsNullOrWhiteSpace(pdfDoc.Language) ? "en" : pdfDoc.Language;
         var totalCharacters = pdfDoc.ExtractedText?.Length ?? 0;
+
+        // Built (and classified) here, before anything is opened: the role classifier may be a network call, and
+        // neither the transaction below nor a retry of it should wait for, or repeat, one.
+        var textChunks = await BuildTextChunksAsync(pdfDoc, chunkInputs, cancellationToken).ConfigureAwait(false);
+
         await _indexingPipeline.BeginIndexingAsync(
             pdfDocumentId: pdfDoc.Id,
             gameId: pdfDoc.SharedGameId,
@@ -971,6 +1001,10 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             .AsTracking()
             .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfDoc.Id, cancellationToken)
             .ConfigureAwait(false);
+
+        await SaveChunksAndReplaceEmbeddingsAsync(pdfDoc, textChunks, translatedChunks, embeddings, vectorDoc, cancellationToken)
+            .ConfigureAwait(false);
+
         if (vectorDoc is null)
         {
             // Pipeline swallowed a DbUpdateConcurrencyException and the row was never
@@ -991,10 +1025,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             return;
         }
 
-        await IndexEmbeddingsAsync(pdfDoc, translatedChunks, embeddings, vectorDoc, cancellationToken).ConfigureAwait(false);
-
-        // #4609: LAST. Every path of IndexEmbeddingsAsync that returns normally (including the ones that skip
-        // the pgvector step because there is no vector store or no game) still completes the document, as
+        // #4609: LAST. Every path of SaveChunksAndReplaceEmbeddingsAsync that returns normally (including the ones
+        // that skip the pgvector step because there is no vector store or no game) still completes the document, as
         // when IndexAsync came first; only a failure while saving leaves it in "processing".
         await _indexingPipeline.IndexAsync(
             pdfDocumentId: pdfDoc.Id,
@@ -1006,103 +1038,119 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task IndexEmbeddingsAsync(
+    /// <summary>
+    /// #4660: replaces the text chunks of the PDF and the embeddings of its vector document in ONE transaction.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The embeddings carry <c>source_chunk_id</c> and <c>role_tags</c> of the text chunk they come from, and the
+    /// chunks of a re-processed PDF get new ids. Written one after the other, a failure of the second write (the
+    /// COPY) left the OLD embeddings — the only ones the index has, since the replacement keeps them when it fails —
+    /// pointing at chunks the first write had already deleted. In one transaction a failure leaves the previous
+    /// chunks and the previous embeddings, which still agree; and so does an exception from the chunk save.
+    /// </para>
+    /// <para>
+    /// The delegate may run more than once: the context retries transient failures
+    /// (<c>EnableRetryOnFailure</c>), which is why the unit of work owns the transaction, never this code. Hence
+    /// the chunk entities of an earlier attempt are forgotten first, and everything that is slow or not repeatable
+    /// (the classification, the embeddings, the DDL that makes sure the table exists) is done before.
+    /// </para>
+    /// <para>
+    /// <paramref name="vectorDoc"/> is null when the indexing pipeline lost a concurrency race on the row: the chunks
+    /// are still saved (keyword search reads them), and there are no embeddings to keep in step with.
+    /// </para>
+    /// </remarks>
+    private async Task SaveChunksAndReplaceEmbeddingsAsync(
         PdfDocumentEntity pdfDoc,
+        List<TextChunkEntity> textChunks,
         List<(DocumentChunkInput chunk, string lang, bool isTranslation)> translatedChunks,
         List<float[]> embeddings,
-        VectorDocumentEntity vectorDoc,
+        VectorDocumentEntity? vectorDoc,
         CancellationToken cancellationToken)
     {
         // Index embeddings in pgvector for semantic search
-        if (_vectorStore != null && embeddings.Count == translatedChunks.Count)
+        IVectorStoreAdapter? vectorStore = null;
+        List<KbEntities.Embedding>? replacement = null;
+        var gameId = pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId ?? Guid.Empty;
+        if (vectorDoc is not null && _vectorStore != null && embeddings.Count == translatedChunks.Count)
         {
             // GameId resolution: same strategy as IndexPdfCommandHandler.effectiveGameId
-            var gameId = pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId ?? Guid.Empty;
             if (gameId == Guid.Empty)
             {
                 _logger.LogWarning(
                     "[PdfPipeline] No GameId for PDF {PdfId}, skipping pgvector indexing",
                     pdfDoc.Id);
-                return;
             }
-
-            // Ensure pgvector table + HNSW index exist (idempotent)
-            var dimension = embeddings[0].Length;
-            await _vectorStore.EnsureCollectionExistsAsync(gameId, dimension, cancellationToken)
-                .ConfigureAwait(false);
-
-            // Build Embedding domain objects and bulk-insert via pgvector COPY.
-            // Issue #1391: text_chunks rows were saved earlier in the pipeline with role_tags
-            // populated by TextChunkRoleClassifier. We load them now (one query) to denormalize
-            // role_tags + source_chunk_id into pgvector_embeddings so semantic-mode searches
-            // can apply the role-match boost without joining the parent table.
-            var textChunkLookup = await _db.TextChunks
-                .Where(tc => tc.PdfDocumentId == pdfDoc.Id)
-                .Select(tc => new { tc.Id, tc.ChunkIndex, tc.RoleTags })
-                .ToDictionaryAsync(tc => tc.ChunkIndex, cancellationToken)
-                .ConfigureAwait(false);
-
-            // Tripwire: SaveTextChunksAsync must have run earlier in ProcessAsync so this lookup is
-            // populated. If it is empty while we have chunks to index, the pgvector rows would be
-            // denormalized with role_tags=0 / source_chunk_id=null (the ordering bug this method's
-            // precondition guards against). Surface it rather than silently degrading RAG quality.
-            if (textChunkLookup.Count == 0 && translatedChunks.Count > 0)
+            else
             {
-                _logger.LogWarning(
-                    "[PdfPipeline] text_chunks lookup empty for PDF {PdfId} while indexing {ChunkCount} chunks — role_tags/source_chunk_id will not be denormalized onto pgvector rows. Was SaveTextChunksAsync run before IndexInVectorStoreAsync?",
-                    pdfDoc.Id, translatedChunks.Count);
+                // Ensure pgvector table + HNSW index exist (idempotent). Outside the transaction: it is DDL, and
+                // inside it the locks it takes would be held until the commit.
+                var dimension = embeddings[0].Length;
+                await _vectorStore.EnsureCollectionExistsAsync(gameId, dimension, cancellationToken)
+                    .ConfigureAwait(false);
+
+                vectorStore = _vectorStore;
+                replacement = BuildEmbeddings(vectorDoc, textChunks, translatedChunks, embeddings);
             }
+        }
 
-            var modelName = _embeddingService.GetModelName();
-            var embeddingEntities = translatedChunks.Select((item, i) =>
+        // #3636: ExecuteInTransactionAsync, not BeginTransactionAsync: under the retrying execution strategy a
+        // transaction opened directly throws.
+        await _unitOfWork.ExecuteInTransactionAsync(async ct =>
+        {
+            ForgetTrackedTextChunks();
+            await ReplaceTextChunksAsync(pdfDoc, textChunks, ct).ConfigureAwait(false);
+
+            if (vectorStore is not null && replacement is not null && vectorDoc is not null)
             {
-                textChunkLookup.TryGetValue(i, out var tc);
-                return new KbEntities.Embedding(
-                    id: Guid.NewGuid(),
-                    vectorDocumentId: vectorDoc.Id,
-                    textContent: item.chunk.Text,
-                    vector: new KbValueObjects.Vector(embeddings[i]),
-                    model: modelName,
-                    chunkIndex: i,
-                    pageNumber: Math.Max(1, item.chunk.Page),
-                    language: item.lang,
-                    sourceChunkId: tc?.Id,
-                    isTranslation: item.isTranslation,
-                    roleTags: (int)(tc?.RoleTags ?? GameBookRole.None));
-            }).ToList();
+                // #4660: replaces the embeddings this document already had (re-processing) with the new ones. The
+                // adapter joins the transaction that is open on the context, so the DELETE and the COPY follow the
+                // outcome of the unit of work, and with them the chunks above.
+                await vectorStore.ReplaceByVectorDocumentIdAsync(vectorDoc.Id, replacement, ct).ConfigureAwait(false);
+            }
+        }, cancellationToken).ConfigureAwait(false);
 
-            // #4660: replaces the embeddings this document already had (re-processing) with the new ones in ONE
-            // transaction. The old code deleted them first, outside any transaction, and then inserted: an
-            // insert that failed left a vector document that a re-index keeps "completed" (decision of
-            // 2026-10-25) with no embeddings at all. Now a failed insert leaves the old embeddings in place.
-            // Only the embeddings: the text chunks of this run were saved above, so until the retry the old
-            // embeddings' source_chunk_id may point at chunks that no longer exist.
-            await _vectorStore.ReplaceByVectorDocumentIdAsync(vectorDoc.Id, embeddingEntities, cancellationToken)
-                .ConfigureAwait(false);
-
+        if (replacement is not null)
+        {
             _logger.LogInformation(
                 "[PdfPipeline] Indexed {Count} embeddings in pgvector for PDF {PdfId} (gameId={GameId})",
-                embeddingEntities.Count, pdfDoc.Id, gameId);
+                replacement.Count, pdfDoc.Id, gameId);
         }
     }
 
-    private async Task SaveTextChunksAsync(
+    /// <summary>
+    /// The pgvector rows of a run. <c>role_tags</c> and <c>source_chunk_id</c> are denormalized from the text chunk at
+    /// the same position (<c>ChunkIndex</c>): both lists are built from the same <c>translatedChunks</c>, so the
+    /// join is by index and cannot miss, and the semantic search can apply the role-match boost (#1391) without
+    /// joining the parent table.
+    /// </summary>
+    private List<KbEntities.Embedding> BuildEmbeddings(
+        VectorDocumentEntity vectorDoc,
+        List<TextChunkEntity> textChunks,
+        List<(DocumentChunkInput chunk, string lang, bool isTranslation)> translatedChunks,
+        List<float[]> embeddings)
+    {
+        var modelName = _embeddingService.GetModelName();
+        return translatedChunks.Select((item, i) => new KbEntities.Embedding(
+            id: Guid.NewGuid(),
+            vectorDocumentId: vectorDoc.Id,
+            textContent: item.chunk.Text,
+            vector: new KbValueObjects.Vector(embeddings[i]),
+            model: modelName,
+            chunkIndex: i,
+            pageNumber: Math.Max(1, item.chunk.Page),
+            language: item.lang,
+            sourceChunkId: textChunks[i].Id,
+            isTranslation: item.isTranslation,
+            roleTags: (int)textChunks[i].RoleTags)).ToList();
+    }
+
+    private async Task<List<TextChunkEntity>> BuildTextChunksAsync(
         PdfDocumentEntity pdfDoc,
         List<DocumentChunkInput> chunks,
         CancellationToken cancellationToken)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
-
-        // Delete existing chunks for re-processing
-        var existingChunks = await _db.TextChunks
-            .Where(tc => tc.PdfDocumentId == pdfDoc.Id)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        if (existingChunks.Count > 0)
-        {
-            _db.TextChunks.RemoveRange(existingChunks);
-        }
 
         // #4244: text_chunks.GameId is an FK to shared_games, so it only ever carries the shared
         // game; a private game goes in its own column.
@@ -1138,24 +1186,46 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             _roleClassifier, textChunkEntities, chunks, _logger, cancellationToken)
             .ConfigureAwait(false);
 
-        _db.TextChunks.AddRange(textChunkEntities);
-        try
+        return textChunkEntities;
+    }
+
+    /// <summary>
+    /// An earlier attempt of the transaction may have left the chunks of this run in the tracker — saved, then rolled
+    /// back with the transaction, or not saved at all — and the old ones marked deleted. None of that is true of the
+    /// database any more, and re-adding an entity that is still tracked would not be the insert it looks like.
+    /// </summary>
+    private void ForgetTrackedTextChunks()
+    {
+        foreach (var entry in _db.ChangeTracker.Entries<TextChunkEntity>().ToList())
         {
-            await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            entry.State = EntityState.Detached;
         }
-        catch (DbUpdateConcurrencyException ex)
+    }
+
+    private async Task ReplaceTextChunksAsync(
+        PdfDocumentEntity pdfDoc,
+        List<TextChunkEntity> textChunks,
+        CancellationToken cancellationToken)
+    {
+        // Delete existing chunks for re-processing
+        var existingChunks = await _db.TextChunks
+            .Where(tc => tc.PdfDocumentId == pdfDoc.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (existingChunks.Count > 0)
         {
-            MeepleAiMetrics.RecordPdfConcurrencyConflict(
-                nameof(PdfProcessingPipelineService),
-                MeepleAiMetrics.PdfConcurrencyCategories.B);
-            _logger.LogWarning(ex,
-                "Concurrency conflict on PdfDocument {PdfId} in {Handler} (Category B) — admin mutation wins, pipeline will re-read on next tick",
-                pdfDoc.Id, nameof(PdfProcessingPipelineService));
-            return; // CRITICAL: do not throw — Quartz must see job as successful
+            _db.TextChunks.RemoveRange(existingChunks);
         }
 
+        _db.TextChunks.AddRange(textChunks);
+
+        // A DbUpdateConcurrencyException is NOT handled here: it leaves through the unit of work, which rolls the
+        // transaction back, and ProcessAsync answers it with AbortedConcurrency (nothing of this run was written).
+        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
         _logger.LogInformation("[PdfPipeline] Saved {Count} text chunks for hybrid search (PDF {PdfId})",
-            textChunkEntities.Count, pdfDoc.Id);
+            textChunks.Count, pdfDoc.Id);
     }
 
     private async Task SaveRaptorSummariesAsync(

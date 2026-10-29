@@ -1444,6 +1444,7 @@
           "subTextAccepted": "Hai accettato questo invito.",
           "subTextDeclined": "Hai declinato questo invito.",
           "rosterCount": "{accepted} di {expected} confermati",
+          "rosterCountNoLimit": "{accepted} confermati",
           "switchToDeclineCta": "Cambia in: declino",
           "switchToAcceptCta": "Cambia in: accetto"
         }
@@ -1464,6 +1465,7 @@
         "locationMissing": "Luogo da definire",
         "playersLabel": "Posti",
         "playersValue": "{accepted} / {expected}",
+        "playersValueNoLimit": "{accepted} confermati",
         "primaryGameLabel": "Gioco principale"
       },
       "host": {

@@ -1437,6 +1437,7 @@
           "subTextAccepted": "You accepted this invitation.",
           "subTextDeclined": "You declined this invitation.",
           "rosterCount": "{accepted} of {expected} confirmed",
+          "rosterCountNoLimit": "{accepted} confirmed",
           "switchToDeclineCta": "Switch to: decline",
           "switchToAcceptCta": "Switch to: accept"
         }
@@ -1457,6 +1458,7 @@
         "locationMissing": "Location TBD",
         "playersLabel": "Seats",
         "playersValue": "{accepted} / {expected}",
+        "playersValueNoLimit": "{accepted} confirmed",
         "primaryGameLabel": "Primary game"
       },
       "host": {

@@ -20,7 +20,7 @@
 
 'use client';
 
-import { useCallback, useMemo, useState, type JSX } from 'react';
+import { useCallback, useMemo, useState, useSyncExternalStore, type JSX } from 'react';
 
 import Image from 'next/image';
 import Link from 'next/link';
@@ -77,6 +77,11 @@ function initialsFrom(displayName: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 
+// `false` on the server and during hydration, `true` afterwards: lets the first client render match the server HTML.
+const subscribeNever = (): (() => void) => () => {};
+const readHydrated = (): boolean => true;
+const readNotHydrated = (): boolean => false;
+
 // --------------------------------------------------------------------------
 // Component
 // --------------------------------------------------------------------------
@@ -93,6 +98,11 @@ export function InvitesTokenPageClient({
   initialBannerState,
 }: InvitesTokenPageClientProps): JSX.Element {
   const { t, formatDate, formatTime, formatMessage } = useTranslation();
+  // The server does not know the guest's timezone. The HTML it sends, and the first client render (which must match
+  // it), are formatted in UTC and say so; the guest's own time replaces them once mounted. Formatting both in the
+  // runtime's own zone made the server say 20:00 and the browser 21:00: a hydration mismatch (React #418) and an
+  // hour-off first paint for anyone outside the server's zone.
+  const hydrated = useSyncExternalStore(subscribeNever, readHydrated, readNotHydrated);
   const searchParams = useSearchParams();
   const stateOverride = parseStateOverride(searchParams?.get('state') ?? null, {
     enabled: STATE_OVERRIDE_ENABLED,
@@ -171,10 +181,12 @@ export function InvitesTokenPageClient({
       month: 'short',
       year: 'numeric',
       weekday: 'short',
+      ...(hydrated ? {} : { timeZone: 'UTC' }),
     });
     const timeLabel = formatTime(scheduledDate, {
       hour: '2-digit',
       minute: '2-digit',
+      ...(hydrated ? {} : { timeZone: 'UTC', timeZoneName: 'short' as const }),
     });
 
     const items: SessionMetaItem[] = [
@@ -217,14 +229,18 @@ export function InvitesTokenPageClient({
       key: 'players',
       icon: '👥',
       label: t('pages.invites.session.playersLabel'),
-      value: t('pages.invites.session.playersValue', {
-        accepted: invitation.acceptedSoFar,
-        expected: invitation.expectedPlayers,
-      }),
+      // `expectedPlayers` is 0 when the night has no player limit: "1 / 0" is not a count of seats.
+      value:
+        invitation.expectedPlayers > 0
+          ? t('pages.invites.session.playersValue', {
+              accepted: invitation.acceptedSoFar,
+              expected: invitation.expectedPlayers,
+            })
+          : t('pages.invites.session.playersValueNoLimit', { accepted: invitation.acceptedSoFar }),
     });
 
     return items;
-  }, [invitation, formatDate, formatTime, formatMessage, t]);
+  }, [invitation, hydrated, formatDate, formatTime, formatMessage, t]);
 
   // ---- Derive header pieces ---------------------------------------------
   const heroDate = useMemo(() => {
@@ -233,15 +249,17 @@ export function InvitesTokenPageClient({
       day: 'numeric',
       month: 'short',
       weekday: 'short',
+      ...(hydrated ? {} : { timeZone: 'UTC' }),
     });
-  }, [invitation, formatDate]);
+  }, [invitation, hydrated, formatDate]);
   const heroTime = useMemo(() => {
     if (!invitation) return '';
     return formatTime(new Date(invitation.scheduledAt), {
       hour: '2-digit',
       minute: '2-digit',
+      ...(hydrated ? {} : { timeZone: 'UTC', timeZoneName: 'short' as const }),
     });
-  }, [invitation, formatTime]);
+  }, [invitation, hydrated, formatTime]);
 
   const hostHue = invitation ? hueFromHostId(invitation.hostUserId) : 0;
   const hostInitials = invitation ? initialsFrom(invitation.hostDisplayName) : '';
@@ -653,10 +671,14 @@ function AlreadyRespondedSurface({
             ? t('pages.invites.states.alreadyAccepted.subTextAccepted')
             : t('pages.invites.states.alreadyAccepted.subTextDeclined')}
           {' · '}
-          {t('pages.invites.states.alreadyAccepted.rosterCount', {
-            accepted: invitation.acceptedSoFar,
-            expected: invitation.expectedPlayers,
-          })}
+          {invitation.expectedPlayers > 0
+            ? t('pages.invites.states.alreadyAccepted.rosterCount', {
+                accepted: invitation.acceptedSoFar,
+                expected: invitation.expectedPlayers,
+              })
+            : t('pages.invites.states.alreadyAccepted.rosterCountNoLimit', {
+                accepted: invitation.acceptedSoFar,
+              })}
         </ErrorBanner>
         <InviteHostCard
           hostDisplayName={invitation.hostDisplayName}

@@ -24,6 +24,8 @@ internal static class SessionAssistantServiceExtensions
         // Singleton: non ha stato e apre uno scope per ogni scrittura.
         services.AddSingleton<IAssistantProposalApplier, LiveSessionProposalApplier>();
         services.AddScoped<IAssistantSessionDirectory, LiveSessionAssistantDirectory>();
+        // #4729: il pannello dice se il gioco ha un regolamento da consultare.
+        services.AddScoped<IAssistantRulesReadiness, LiveSessionRulesReadiness>();
         services.AddScoped<IToolCallingModelCatalog, CatalogToolCallingModels>();
         return services;
     }

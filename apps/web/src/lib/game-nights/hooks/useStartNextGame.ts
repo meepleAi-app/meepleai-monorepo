@@ -13,7 +13,7 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 
 import { api } from '@/lib/api';
-import { ConflictError } from '@/lib/api/core/errors';
+import { ApiError, ConflictError } from '@/lib/api/core/errors';
 import type { StartGameNightSessionResult } from '@/lib/api/schemas/game-nights.schemas';
 
 import { gameNightLiveKeys } from './useGameNightLive';
@@ -24,6 +24,17 @@ export const MAX_LIVE_SESSIONS_EXCEEDED = 'MAX_LIVE_SESSIONS_EXCEEDED';
 /** DEC-10: true iff the error is the max-1-live 409 (→ blocked modal, not a generic toast). */
 export function isMaxLiveBlockedError(error: unknown): boolean {
   return error instanceof ConflictError && error.code === MAX_LIVE_SESSIONS_EXCEEDED;
+}
+
+/**
+ * Code of the 422 that `CreateSessionCommandHandler` throws when the game has no rulebook indexed yet
+ * (Session Flow v2.1 T4). #4729: nothing showed it, so starting the game just did nothing.
+ */
+export const KB_NOT_READY = 'kb_not_ready';
+
+/** True iff the start was refused because the game has no ready rulebook. */
+export function isKbNotReadyError(error: unknown): boolean {
+  return error instanceof ApiError && error.code === KB_NOT_READY;
 }
 
 export interface StartNextGameVars {

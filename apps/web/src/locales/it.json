@@ -4052,6 +4052,7 @@
           "session_state_invalid": "La partita è conclusa: l'assistente non risponde più.",
           "other": "L'assistente non è disponibile."
         },
+        "rulesMissing": "Per questo gioco non c'è ancora un regolamento pronto: posso segnare i punti e dirti a chi tocca, ma non posso rispondere sulle regole. Carica il PDF dalla scheda del gioco; se l'hai già caricato e l'avviso resta, controlla che l'indicizzazione sia finita senza errori.",
         "empty": "Dimmi un punteggio o chiedimi a chi tocca: io propongo, tu confermi.",
         "inputLabel": "Domanda all'assistente",
         "placeholder": "Es. «Marco fa 5 punti»",

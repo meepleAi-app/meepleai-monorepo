@@ -419,3 +419,56 @@ describe('SessionAssistantPanel — sources (#4411)', () => {
     await act(async () => release.resolve());
   });
 });
+
+describe('SessionAssistantPanel — game without a rulebook (#4729)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const rulesNotice = () => document.querySelector('[data-slot="session-assistant-rules-missing"]');
+
+  it('says the assistant cannot answer rules questions when the game has no rulebook ready', async () => {
+    getAssistant.mockResolvedValue(panel({ rulesLoaded: false }));
+    renderPanel();
+
+    await waitFor(() => expect(rulesNotice()).not.toBeNull());
+    expect(rulesNotice()).toHaveAttribute('role', 'status');
+    expect(rulesNotice()).toHaveTextContent(/non c'è ancora un regolamento pronto/i);
+    expect(rulesNotice()).toHaveTextContent(/non posso rispondere sulle regole/i);
+    expect(rulesNotice()).toHaveTextContent(/indicizzazione/i);
+  });
+
+  it('says nothing when the game has a rulebook', async () => {
+    getAssistant.mockResolvedValue(panel({ rulesLoaded: true }));
+    renderPanel();
+
+    await screen.findByText('Ecco la proposta.');
+    expect(rulesNotice()).toBeNull();
+  });
+
+  it.each([null, undefined])(
+    'says nothing when the server cannot tell (rulesLoaded %s): no game, or a private game',
+    async rulesLoaded => {
+      getAssistant.mockResolvedValue(panel({ rulesLoaded }));
+      renderPanel();
+
+      await screen.findByText('Ecco la proposta.');
+      expect(rulesNotice()).toBeNull();
+    }
+  );
+
+  it('does not add a second note when the assistant is off: the reason is already on screen', async () => {
+    getAssistant.mockResolvedValue(
+      panel({
+        availability: { enabled: false, code: 'assistant_disabled' },
+        messages: [],
+        proposals: [],
+        rulesLoaded: false,
+      })
+    );
+    renderPanel();
+
+    await screen.findByText(/L'assistente non è attivo/);
+    expect(rulesNotice()).toBeNull();
+  });
+});

@@ -33,7 +33,11 @@ import {
 import { useCompleteGameNightSession } from '@/lib/game-nights/hooks/useCompleteGameNightSession';
 import { useGameNightLive } from '@/lib/game-nights/hooks/useGameNightLive';
 import { useNightLiveDiary } from '@/lib/game-nights/hooks/useNightLiveDiary';
-import { isMaxLiveBlockedError, useStartNextGame } from '@/lib/game-nights/hooks/useStartNextGame';
+import {
+  isKbNotReadyError,
+  isMaxLiveBlockedError,
+  useStartNextGame,
+} from '@/lib/game-nights/hooks/useStartNextGame';
 import { mapDiary } from '@/lib/game-nights/mapDiary';
 
 export interface NightLiveClientViewProps {
@@ -69,13 +73,29 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
   // the blocked modal instead of a generic toast.
   const startNextGame = useStartNextGame(nightId);
   const [blockedModalOpen, setBlockedModalOpen] = useState(false);
+  // #4729: any other refusal used to leave the button back as it was, with no word. The 422 for a game
+  // with no rulebook indexed yet is the one a user can fix, so it says how.
+  // It belongs to the game whose start failed: shown for another game (the failed one went live elsewhere and
+  // the night moved on) it would be a stale word under a button that has not failed.
+  const [startError, setStartError] = useState<{ gameId: string; message: string } | null>(null);
   const handleStartNext = useCallback(
     (gameId: string, gameTitle: string) => {
+      setStartError(null);
       startNextGame.mutate(
         { gameId, gameTitle },
         {
           onError: err => {
-            if (isMaxLiveBlockedError(err)) setBlockedModalOpen(true);
+            if (isMaxLiveBlockedError(err)) {
+              setBlockedModalOpen(true);
+            } else if (isKbNotReadyError(err)) {
+              setStartError({
+                gameId,
+                message:
+                  'Questo gioco non ha ancora un regolamento pronto: caricalo dalla scheda del gioco, attendi la fine dell’indicizzazione e riprova.',
+              });
+            } else {
+              setStartError({ gameId, message: 'Impossibile avviare la partita. Riprova.' });
+            }
           },
         }
       );
@@ -158,6 +178,8 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
   // DEC-10: hidden when a game is already live (status==='live') — you can only start the
   // next game when the current one is over. The 409 modal is the backstop for races.
   const showStartCta = vm.isViewerOrganizer && nextGame !== null && vm.status !== 'live';
+  const startErrorMessage =
+    startError && nextGame && startError.gameId === nextGame.gameId ? startError.message : null;
   // #2634 C4: the organizer completes the live game. Mutually exclusive with the start CTA above.
   const showCompleteCta = vm.isViewerOrganizer && vm.status === 'live';
   const completeErrorMessage = completeGame.isError
@@ -215,7 +237,16 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
       />
 
       {showStartCta && nextGame ? (
-        <div className="fixed inset-x-0 bottom-16 z-40 flex lg:bottom-0 justify-center p-4">
+        <div className="fixed inset-x-0 bottom-16 z-40 flex lg:bottom-0 flex-col items-center gap-2 p-4">
+          {startErrorMessage ? (
+            <p
+              role="alert"
+              data-testid="start-next-error"
+              className="max-w-md rounded-md border border-border bg-card px-3 py-1.5 text-center font-mono text-xs font-semibold text-destructive shadow"
+            >
+              {startErrorMessage}
+            </p>
+          ) : null}
           <button
             type="button"
             onClick={() => handleStartNext(nextGame.gameId, nextGame.gameTitle)}

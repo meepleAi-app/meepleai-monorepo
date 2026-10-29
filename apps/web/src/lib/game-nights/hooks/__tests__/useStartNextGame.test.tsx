@@ -10,10 +10,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-import { ConflictError, NotFoundError } from '@/lib/api/core/errors';
+import { ConflictError, createApiError, NotFoundError } from '@/lib/api/core/errors';
 
 import {
+  isKbNotReadyError,
   isMaxLiveBlockedError,
+  KB_NOT_READY,
   MAX_LIVE_SESSIONS_EXCEEDED,
   useStartNextGame,
 } from '../useStartNextGame';
@@ -41,6 +43,38 @@ describe('isMaxLiveBlockedError', () => {
     expect(isMaxLiveBlockedError(new ConflictError({ message: 'x' }))).toBe(false);
     expect(isMaxLiveBlockedError(new NotFoundError({ message: 'x' }))).toBe(false);
     expect(isMaxLiveBlockedError(new Error('x'))).toBe(false);
+  });
+});
+
+describe('isKbNotReadyError (#4729)', () => {
+  it('is true for the 422 the server sends when the game has no ready rulebook, as the HTTP client builds it', async () => {
+    // The real path: a 422 whose body carries `error: "kb_not_ready"` goes through createApiError.
+    const response = new Response(
+      JSON.stringify({ error: KB_NOT_READY, message: 'KB not ready' }),
+      {
+        status: 422,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+
+    const error = await createApiError('/api/v1/game-nights/x/sessions', response);
+
+    expect(isKbNotReadyError(error)).toBe(true);
+    expect(isMaxLiveBlockedError(error)).toBe(false);
+  });
+
+  it('is false for another 422, for the max-live 409, and for anything that is not an API error', async () => {
+    const otherValidation = await createApiError(
+      '/x',
+      new Response(JSON.stringify({ error: 'validation_failed' }), { status: 422 })
+    );
+
+    expect(isKbNotReadyError(otherValidation)).toBe(false);
+    expect(
+      isKbNotReadyError(new ConflictError({ message: 'x', code: MAX_LIVE_SESSIONS_EXCEEDED }))
+    ).toBe(false);
+    expect(isKbNotReadyError(new Error(KB_NOT_READY))).toBe(false);
+    expect(isKbNotReadyError(null)).toBe(false);
   });
 });
 

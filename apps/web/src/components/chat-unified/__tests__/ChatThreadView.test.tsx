@@ -248,6 +248,30 @@ describe('ChatThreadView', () => {
     expect(screen.getByTestId('chat-loading')).toBeInTheDocument();
   });
 
+  // A conversation without a game saves what the user writes and never answers (there is nothing to scope the
+  // retrieval by, and the per-agent chat route does not exist, #4139). It said so nowhere: the message just sat there.
+  describe('conversation without a game', () => {
+    it('says that messages are saved but not answered, and what to do', async () => {
+      (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+        ...mockThread,
+        gameId: null,
+        agentId: null,
+      });
+      await renderView();
+
+      const notice = await screen.findByTestId('chat-no-game-notice');
+      expect(notice).toHaveTextContent(/non ricevono risposta/i);
+      expect(notice).toHaveTextContent(/scegliendo un gioco/i);
+    });
+
+    it('does not show it when the conversation has a game', async () => {
+      await renderView();
+      await screen.findByTestId('chat-thread-view');
+
+      expect(screen.queryByTestId('chat-no-game-notice')).not.toBeInTheDocument();
+    });
+  });
+
   it('loads and renders thread', async () => {
     await renderView();
 

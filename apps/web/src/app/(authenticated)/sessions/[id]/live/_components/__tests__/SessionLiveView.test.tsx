@@ -298,6 +298,7 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.topBar.sessionTitleAriaLabel': 'Sessione: {name}',
   'pages.sessionLive.topBar.turnLabel':
     '{count, plural, =0 {Inizio} =1 {Turno 1/{total}} other {Turno #/{total}}}',
+  'pages.sessionLive.topBar.turnLabelNoTotal': '{count, plural, =0 {Inizio} other {Turno #}}',
   'pages.sessionLive.topBar.statusInProgress': 'In corso',
   'pages.sessionLive.topBar.statusPaused': 'In pausa',
   'pages.sessionLive.topBar.pauseCta': 'Pausa',
@@ -917,6 +918,35 @@ describe('SessionLiveView (Wave D.2 Foundation)', () => {
     // Verify no raw template strings leaked (no literal '{count}' or '{total}' in DOM)
     expect(container.textContent).not.toContain('{count}');
     expect(container.textContent).not.toContain('{total}');
+  });
+
+  // A free-form session has no turn limit (the composed state carries totalTurns 0), and the top bar read "Turno 1/0".
+  it('turn label has no "/total" part when the session has no turn limit', () => {
+    IS_VISUAL_TEST_BUILD_MOCK = false;
+    // Turn 0 reads "Inizio" whatever the total, so the case that showed "Turno 1/0" needs a started turn.
+    useLiveSessionMock.mockReturnValue({
+      data: { ...MOCK_SESSION_DTO, currentTurnIndex: 1 },
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+      refetch: vi.fn(),
+    });
+    const { container } = renderWithIntl(<SessionLiveView />);
+    const topBar = container.querySelector('[data-slot="session-live-top-bar"]');
+    expect(topBar).toBeInTheDocument();
+    const text = topBar?.textContent ?? '';
+    expect(text).toContain('Turno 1');
+    expect(text).not.toMatch(/Turno 1\s*\/\s*0/);
+  });
+
+  it('turn label keeps "/total" when the session does have a turn limit', () => {
+    IS_VISUAL_TEST_BUILD_MOCK = true;
+    // Visual fixture: currentTurn=12, totalTurns=18
+    const { container } = renderWithIntl(<SessionLiveView />);
+    expect(container.querySelector('[data-slot="session-live-top-bar"]')?.textContent).toContain(
+      'Turno 12/18'
+    );
   });
 
   it('Gate A: rosterLabels playerCount ICU plural resolved (no raw template in DOM)', () => {

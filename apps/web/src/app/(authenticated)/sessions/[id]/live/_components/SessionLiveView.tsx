@@ -694,10 +694,11 @@ export function SessionLiveView(): ReactElement {
       sessionTitleAriaLabel: t('pages.sessionLive.topBar.sessionTitleAriaLabel', {
         name: sessionName,
       }),
-      turnLabelResolved: t('pages.sessionLive.topBar.turnLabel', {
-        count: currentTurn,
-        total: totalTurns,
-      }),
+      // A session without a turn limit carries totalTurns 0: "Turno 1/0" is not a count of turns.
+      turnLabelResolved:
+        totalTurns > 0
+          ? t('pages.sessionLive.topBar.turnLabel', { count: currentTurn, total: totalTurns })
+          : t('pages.sessionLive.topBar.turnLabelNoTotal', { count: currentTurn }),
       statusInProgress: t('pages.sessionLive.topBar.statusInProgress'),
       statusPaused: t('pages.sessionLive.topBar.statusPaused'),
       pauseCta: t('pages.sessionLive.topBar.pauseCta'),

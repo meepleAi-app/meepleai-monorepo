@@ -3580,6 +3580,7 @@
       "topBar": {
         "sessionTitleAriaLabel": "Sessione: {name}",
         "turnLabel": "{count, plural, =0 {Inizio} =1 {Turno 1/{total}} other {Turno #/{total}}}",
+        "turnLabelNoTotal": "{count, plural, =0 {Inizio} other {Turno #}}",
         "statusInProgress": "In corso",
         "statusPaused": "In pausa",
         "pauseCta": "Pausa",

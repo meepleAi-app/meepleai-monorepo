@@ -854,6 +854,18 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           {`Possesso dichiarato, ma per ${game?.title ?? 'questo gioco'} non c'è ancora un manuale caricato: finché non ne viene caricato uno, le risposte non potranno citare il regolamento.`}
         </div>
       )}
+      {/* Without a game there is nothing to scope retrieval by, so nothing answers (#4139): say it, instead of
+          letting the user's message sit there with no reply and no error. */}
+      {!thread?.gameId && (
+        <div
+          data-testid="chat-no-game-notice"
+          role="note"
+          className="mx-4 mt-2 rounded-lg border border-border bg-muted p-3 text-sm text-muted-foreground"
+        >
+          Questa conversazione non ha un gioco: i messaggi vengono salvati ma non ricevono risposta.
+          Per fare domande sulle regole, avvia una nuova chat scegliendo un gioco.
+        </div>
+      )}
 
       {/* Split view */}
       <div className="flex flex-1 min-h-0 relative">

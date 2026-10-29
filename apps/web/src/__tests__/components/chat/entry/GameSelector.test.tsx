@@ -301,4 +301,55 @@ describe('GameSelector', () => {
       expect(screen.getByTestId('game-search-input')).toHaveValue('Wing');
     });
   });
+
+  // An empty list used to say only "Nessun gioco trovato". A game added to the library with no manual loaded is
+  // hidden from the library tab by the KB filter, and a user with no private games sees the first tab empty:
+  // neither said why, and the only visible way out was the generic chat.
+  describe('lista vuota', () => {
+    it('spiega che nella scheda dei giochi privati non ce ne sono', async () => {
+      mockGetPrivateGames.mockResolvedValue({ items: [], totalCount: 0 });
+      render(<GameSelector onSelect={onSelect} selectedGameId={null} />);
+
+      expect(await screen.findByTestId('game-empty-state')).toHaveTextContent(/giochi privati/i);
+    });
+
+    it('spiega che i giochi della libreria senza regolamento non compaiono', async () => {
+      mockGetPrivateGames.mockResolvedValue({ items: [], totalCount: 0 });
+      mockGetLibrary.mockResolvedValue({ items: [], totalCount: 0 });
+      render(<GameSelector onSelect={onSelect} selectedGameId={null} />);
+      await screen.findByTestId('game-empty-state');
+
+      fireEvent.click(screen.getByTestId('tab-shared-games'));
+
+      await waitFor(() =>
+        expect(screen.getByTestId('game-empty-state')).toHaveTextContent(/regolamento/i)
+      );
+    });
+
+    it('con una ricerca senza risultati resta il messaggio semplice', async () => {
+      mockGetPrivateGames.mockImplementation(servePrivate([{ id: 'g1', title: 'Catan' }]));
+      render(<GameSelector onSelect={onSelect} selectedGameId={null} />);
+      await screen.findByTestId('game-card-g1');
+
+      fireEvent.change(screen.getByTestId('game-search-input'), { target: { value: 'zzz' } });
+
+      const empty = await screen.findByTestId('game-empty-state');
+      expect(empty).toHaveTextContent('Nessun gioco trovato');
+      expect(empty).not.toHaveTextContent(/regolamento/i);
+    });
+
+    it('senza il filtro sul regolamento la libreria vuota non parla di regolamenti', async () => {
+      mockGetPrivateGames.mockResolvedValue({ items: [], totalCount: 0 });
+      mockGetLibrary.mockResolvedValue({ items: [], totalCount: 0 });
+      render(<GameSelector onSelect={onSelect} selectedGameId={null} showOnlyWithKb={false} />);
+      await screen.findByTestId('game-empty-state');
+
+      fireEvent.click(screen.getByTestId('tab-shared-games'));
+
+      await waitFor(() =>
+        expect(screen.getByTestId('game-empty-state')).toHaveTextContent('Nessun gioco trovato')
+      );
+      expect(screen.getByTestId('game-empty-state')).not.toHaveTextContent(/regolamento/i);
+    });
+  });
 });

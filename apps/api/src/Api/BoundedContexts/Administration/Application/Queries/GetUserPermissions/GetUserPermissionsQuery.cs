@@ -1,6 +1,5 @@
 using MediatR;
 using Api.SharedKernel.Domain.Enums;
-using Api.SharedKernel.Domain.ValueObjects;
 using Auth = Api.BoundedContexts.Authentication.Domain.ValueObjects;
 
 namespace Api.BoundedContexts.Administration.Application.Queries.GetUserPermissions;
@@ -15,5 +14,4 @@ public sealed record GetUserPermissionsResponse(
     string Tier,
     string Role,
     UserAccountStatus Status,
-    CollectionLimits Limits,
     List<string> AccessibleFeatures);

@@ -11,7 +11,8 @@ namespace Api.BoundedContexts.UserLibrary.Application.Commands;
 
 /// <summary>
 /// Handler for recording game sessions with automatic stats updates.
-/// Invalidates game detail cache on success.
+/// Invalidates game detail cache after the commit, best effort: if the cache backend is down the session
+/// stays recorded and the request succeeds, with the entry left to expire (#4720).
 /// </summary>
 internal class RecordGameSessionCommandHandler : ICommandHandler<RecordGameSessionCommand, Guid>
 {

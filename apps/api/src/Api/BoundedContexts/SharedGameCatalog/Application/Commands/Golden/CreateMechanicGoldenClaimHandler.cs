@@ -13,7 +13,8 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.Golden;
 /// Creates a new <see cref="MechanicGoldenClaim"/> aggregate via the async factory (which computes
 /// the embedding and extracts keywords from the statement), persists it through the repository /
 /// unit-of-work, and invalidates the per-game golden-set cache key so downstream scoring readers
-/// observe the change immediately.
+/// observe the change immediately. The invalidation is best effort: if the cache backend is down the
+/// claim is still saved and the request succeeds, with the key left to expire (#4720).
 /// </summary>
 internal sealed class CreateMechanicGoldenClaimHandler : ICommandHandler<CreateMechanicGoldenClaimCommand, Guid>
 {

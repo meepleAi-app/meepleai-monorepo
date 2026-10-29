@@ -342,36 +342,46 @@ public class ImportRagDataCommandHandlerTests
         string testName,
         IEmbeddingService embeddingService,
         (int Index, int Page, string Text)[] chunks,
-        string language = "en")
+        string language = "en",
+        int documentCount = 1)
     {
         var db = CreateInMemoryDb(testName);
         db.SharedGames.Add(new SharedGameEntity { Id = Guid.NewGuid(), Title = "testgame", CreatedBy = Guid.NewGuid(), CreatedAt = DateTime.UtcNow });
         await db.SaveChangesAsync();
 
-        var documentId = Guid.NewGuid();
-        var entryPath = $"{ReEmbedSnapshot}/documents/{documentId}";
+        var documentIds = Enumerable.Range(0, documentCount).Select(_ => Guid.NewGuid()).ToList();
+        string EntryPathOf(Guid id) => $"{ReEmbedSnapshot}/documents/{id}";
+        var entries = string.Join(",", documentIds.Select(id => $$"""
+            { "pdfDocumentId": "{{id}}", "gameSlug": "testgame", "gameName": "Test Game",
+              "path": "{{EntryPathOf(id)}}", "chunks": {{chunks.Length}}, "embeddings": {{chunks.Length}}, "language": "{{language}}" }
+            """));
         var storage = new Mock<IRagBackupStorageService>();
         storage.Setup(s => s.ReadFileAsync($"{ReEmbedSnapshot}/manifest.json", It.IsAny<CancellationToken>()))
             .ReturnsAsync(Encoding.UTF8.GetBytes($$"""
-                { "exportVersion": "1.0", "exportedAt": "2026-10-29T00:00:00Z", "totalDocuments": 1,
-                  "totalChunks": {{chunks.Length}}, "totalEmbeddings": {{chunks.Length}}, "embeddingModel": "old-model",
-                  "documents": [{ "pdfDocumentId": "{{documentId}}", "gameSlug": "testgame", "gameName": "Test Game",
-                                  "path": "{{entryPath}}", "chunks": {{chunks.Length}}, "embeddings": {{chunks.Length}}, "language": "{{language}}" }] }
+                { "exportVersion": "1.0", "exportedAt": "2026-10-29T00:00:00Z", "totalDocuments": {{documentCount}},
+                  "totalChunks": {{chunks.Length * documentCount}}, "totalEmbeddings": {{chunks.Length * documentCount}},
+                  "embeddingModel": "old-model", "documents": [{{entries}}] }
                 """));
-        storage.Setup(s => s.ReadFileAsync($"{entryPath}/metadata.json", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Encoding.UTF8.GetBytes($$"""
-                { "exportVersion": "1.0", "exportedAt": "2026-10-29T00:00:00Z", "embeddingModel": "old-model",
-                  "embeddingDimensions": 1024,
-                  "document": { "pdfDocumentId": "{{documentId}}", "gameId": null, "gameSlug": "testgame",
-                                "gameName": "Test Game", "fileName": "rules.pdf", "language": "{{language}}",
-                                "languageConfidence": null, "documentCategory": null, "versionLabel": null,
-                                "licenseType": null, "pageCount": 2, "characterCount": 30, "contentHash": null,
-                                "fileSizeBytes": null },
-                  "stats": { "totalChunks": {{chunks.Length}}, "totalEmbeddings": {{chunks.Length}}, "chunkSizeAvg": 10 } }
-                """));
-        storage.Setup(s => s.ReadFileAsync($"{entryPath}/chunks.parquet", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(await RagParquetSerializer.SerializeChunksAsync(
-                chunks.Select(c => new RagExportChunkLine(c.Index, c.Page, c.Text, c.Text.Length)).ToList()));
+        var chunksFile = await RagParquetSerializer.SerializeChunksAsync(
+            chunks.Select(c => new RagExportChunkLine(c.Index, c.Page, c.Text, c.Text.Length)).ToList());
+        foreach (var documentId in documentIds)
+        {
+            var documentPath = EntryPathOf(documentId); // a local function cannot appear inside a Moq expression
+            storage.Setup(s => s.ReadFileAsync($"{documentPath}/metadata.json", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(Encoding.UTF8.GetBytes($$"""
+                    { "exportVersion": "1.0", "exportedAt": "2026-10-29T00:00:00Z", "embeddingModel": "old-model",
+                      "embeddingDimensions": 1024,
+                      "document": { "pdfDocumentId": "{{documentId}}", "gameId": null, "gameSlug": "testgame",
+                                    "gameName": "Test Game", "fileName": "rules.pdf", "language": "{{language}}",
+                                    "languageConfidence": null, "documentCategory": null, "versionLabel": null,
+                                    "licenseType": null, "pageCount": 2, "characterCount": 30, "contentHash": null,
+                                    "fileSizeBytes": null },
+                      "stats": { "totalChunks": {{chunks.Length}}, "totalEmbeddings": {{chunks.Length}}, "chunkSizeAvg": 10 } }
+                    """));
+            storage.Setup(s => s.ReadFileAsync($"{documentPath}/chunks.parquet", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(chunksFile);
+        }
+        var entryPath = EntryPathOf(documentIds[0]);
 
         var handler = new ImportRagDataCommandHandler(db, storage.Object, embeddingService, Mock.Of<ILogger<ImportRagDataCommandHandler>>());
         var result = await handler.Handle(
@@ -521,6 +531,33 @@ public class ImportRagDataCommandHandlerTests
         import.Result.Failed.Should().Be(1);
         (await db.PdfDocuments.CountAsync()).Should().Be(0);
         (await db.PgVectorEmbeddings.CountAsync()).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Handle_ReEmbed_AFailedDocumentDoesNotLeakIntoTheNextOne()
+    {
+        // Il primo documento ha già PDF, documento vettoriale e passaggi nel tracker quando il servizio fallisce.
+        // Il secondo si salva con lo stesso contesto: non deve portarsi dietro quello che il primo ha lasciato.
+        var service = WorkingEmbeddingService();
+        service.SetupSequence(e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateFailure("embedding service down"))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(
+                Enumerable.Range(0, 3).Select(_ => new[] { 0.1f, 0.2f, 0.3f, 0.4f }).ToList()));
+
+        var import = await ImportWithReEmbedAsync(
+            nameof(Handle_ReEmbed_AFailedDocumentDoesNotLeakIntoTheNextOne),
+            service.Object,
+            [(0, 1, "One."), (1, 1, "Two."), (2, 1, "Three.")],
+            documentCount: 2);
+        await using var db = import.Db;
+
+        import.Result.Imported.Should().Be(1);
+        import.Result.Failed.Should().Be(1);
+        import.Result.ReEmbedded.Should().Be(1);
+        (await db.PdfDocuments.CountAsync()).Should().Be(1);
+        (await db.VectorDocuments.CountAsync()).Should().Be(1);
+        (await db.TextChunks.CountAsync()).Should().Be(3, "i passaggi del documento fallito non sono stati salvati con l'altro");
+        (await db.PgVectorEmbeddings.CountAsync()).Should().Be(3);
     }
 
     [Fact]

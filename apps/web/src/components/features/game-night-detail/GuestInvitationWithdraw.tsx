@@ -10,6 +10,9 @@
  * The confirm button is a plain button, not `AlertDialogAction`: that one is a Radix `Close`, so with an async
  * handler the dialog would close before the request ends, and a failure would have nobody to tell. The dialog
  * closes only when the withdrawal worked; if it fails it stays open and says so.
+ *
+ * The button is the dialog's `AlertDialogTrigger`: Radix gives the focus back to the trigger when the dialog
+ * closes, and without one it lands on `body` — a keyboard or screen-reader user would lose their place in the list.
  */
 
 import { useState, type JSX } from 'react';
@@ -22,6 +25,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from '@/components/ui/overlays/alert-dialog-primitives';
 import { Button } from '@/components/ui/primitives/button';
 import { useCancelGuestInvitation } from '@/hooks/queries/useGameNights';
@@ -57,66 +61,64 @@ export function GuestInvitationWithdraw({
   }
 
   return (
-    <>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        data-testid="guest-invitation-withdraw"
-        aria-label={t('gameNightDetail.participants.withdraw.triggerAria', { email })}
-        onClick={() => {
-          setFailed(false);
-          setOpen(true);
-        }}
-      >
-        {t('gameNightDetail.participants.withdraw.trigger')}
-      </Button>
+    <AlertDialog
+      open={open}
+      // A request in flight cannot be dismissed: closing now would hide its outcome.
+      onOpenChange={next => {
+        if (cancel.isPending) return;
+        if (next) setFailed(false);
+        setOpen(next);
+      }}
+    >
+      <AlertDialogTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          data-testid="guest-invitation-withdraw"
+          aria-label={t('gameNightDetail.participants.withdraw.triggerAria', { email })}
+        >
+          {t('gameNightDetail.participants.withdraw.trigger')}
+        </Button>
+      </AlertDialogTrigger>
 
-      <AlertDialog
-        open={open}
-        // A request in flight cannot be dismissed: closing now would hide its outcome.
-        onOpenChange={next => {
-          if (!cancel.isPending) setOpen(next);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t('gameNightDetail.participants.withdraw.title')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {accepted
-                ? t('gameNightDetail.participants.withdraw.descriptionAccepted', { email })
-                : t('gameNightDetail.participants.withdraw.descriptionPending', { email })}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t('gameNightDetail.participants.withdraw.title')}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {accepted
+              ? t('gameNightDetail.participants.withdraw.descriptionAccepted', { email })
+              : t('gameNightDetail.participants.withdraw.descriptionPending', { email })}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
 
-          {failed ? (
-            <p
-              role="alert"
-              data-testid="guest-invitation-withdraw-error"
-              className="text-sm text-destructive"
-            >
-              {t('gameNightDetail.participants.withdraw.error')}
-            </p>
-          ) : null}
+        {failed ? (
+          <p
+            role="alert"
+            data-testid="guest-invitation-withdraw-error"
+            className="text-sm text-destructive"
+          >
+            {t('gameNightDetail.participants.withdraw.error')}
+          </p>
+        ) : null}
 
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={cancel.isPending}>
-              {t('gameNightDetail.participants.withdraw.cancel')}
-            </AlertDialogCancel>
-            <Button
-              type="button"
-              variant="destructive"
-              data-testid="guest-invitation-withdraw-confirm"
-              disabled={cancel.isPending}
-              onClick={() => void confirm()}
-            >
-              {cancel.isPending
-                ? t('gameNightDetail.participants.withdraw.confirming')
-                : t('gameNightDetail.participants.withdraw.confirm')}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={cancel.isPending}>
+            {t('gameNightDetail.participants.withdraw.cancel')}
+          </AlertDialogCancel>
+          <Button
+            type="button"
+            variant="destructive"
+            data-testid="guest-invitation-withdraw-confirm"
+            disabled={cancel.isPending}
+            onClick={() => void confirm()}
+          >
+            {cancel.isPending
+              ? t('gameNightDetail.participants.withdraw.confirming')
+              : t('gameNightDetail.participants.withdraw.confirm')}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

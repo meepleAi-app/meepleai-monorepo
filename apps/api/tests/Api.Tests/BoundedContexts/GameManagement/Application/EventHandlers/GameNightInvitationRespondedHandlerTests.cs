@@ -207,6 +207,44 @@ public sealed class GameNightInvitationRespondedHandlerTests
             Times.Never);
     }
 
+    [Theory]
+    [InlineData(GameNightInvitationStatus.Cancelled)]
+    [InlineData(GameNightInvitationStatus.Declined)]
+    [InlineData(GameNightInvitationStatus.Pending)]
+    public async Task Handle_AcceptedEventButInvitationIsNoLongerAccepted_SendsNoEmailAndWritesNothing(
+        GameNightInvitationStatus statusNow)
+    {
+        // #4721: the organizer withdrew the invitation between the answer and this handler (the outbox delivers the
+        // event seconds later). No "You're in" email, and no rewrite of the row: it would put the old status back.
+        var cache = CreateHybridCache();
+        var invitation = Reconstitute(statusNow);
+        _invitationRepoMock
+            .Setup(r => r.GetByIdAsync(invitation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(invitation);
+        // The night exists: without the status check the handler would go on and send the email. Left out, it would
+        // stop at "night not found" and this test would pass whatever the status check did.
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(invitation.GameNightId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateGameNight());
+        var notification = CreateEvent(invitation.Id, invitation.GameNightId, GameNightInvitationStatus.Accepted);
+
+        await CreateHandler(cache).Handle(notification, CancellationToken.None);
+
+        _emailServiceMock.Verify(
+            e => e.SendGameNightRsvpConfirmationEmailAsync(
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<DateTimeOffset>(),
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+        _invitationRepoMock.Verify(
+            r => r.UpdateAsync(It.IsAny<GameNightInvitation>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        invitation.Status.Should().Be(statusNow);
+    }
+
     [Fact]
     public async Task Handle_AcceptedButGameNightDisappeared_SkipsEmailGracefully()
     {

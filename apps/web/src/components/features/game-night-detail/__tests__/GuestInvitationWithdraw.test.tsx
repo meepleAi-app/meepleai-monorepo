@@ -145,6 +145,18 @@ describe('GuestInvitationWithdraw (#4721)', () => {
     expect(cancelGuestInvitation).not.toHaveBeenCalled();
   });
 
+  it('gives the focus back to the row button when the dialog closes, so the list keeps its place', async () => {
+    renderWithdraw();
+    const trigger = screen.getByTestId('guest-invitation-withdraw');
+    openDialog();
+    await screen.findByRole('alertdialog');
+
+    fireEvent.click(screen.getByText('gameNightDetail.participants.withdraw.cancel'));
+
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    await waitFor(() => expect(trigger).toHaveFocus());
+  });
+
   it('forgets an earlier failure when it is opened again', async () => {
     cancelGuestInvitation.mockRejectedValueOnce(new Error('409'));
     renderWithdraw();

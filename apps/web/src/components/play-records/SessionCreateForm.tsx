@@ -877,13 +877,17 @@ export function SessionCreateForm({
       </div>
 
       <div className="flex gap-2">
+        {/* Distinct keys on purpose: with the same element in the same slot React reuses one DOM node and flips its
+            `type` from "button" to "submit" while the click that advanced the wizard is still being dispatched, so the
+            browser's activation behaviour for that click submits the form on the final step and creates an empty
+            record (Punteggi is never shown). A new node means the clicked one is detached and cannot submit. */}
         {currentStep < STEP_COUNT - 1 ? (
-          <Button type="button" onClick={handleNext} disabled={isSubmitting}>
+          <Button key="wizard-next" type="button" onClick={handleNext} disabled={isSubmitting}>
             {t('actions.next')}
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         ) : (
-          <Button type="submit" form={formId} disabled={isSubmitting}>
+          <Button key="wizard-save" type="submit" form={formId} disabled={isSubmitting}>
             {isSubmitting ? (
               <>{t('actions.saving')}</>
             ) : (

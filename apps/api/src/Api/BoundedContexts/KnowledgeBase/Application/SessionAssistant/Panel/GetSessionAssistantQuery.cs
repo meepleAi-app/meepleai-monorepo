@@ -74,7 +74,11 @@ internal sealed class GetSessionAssistantQueryHandler : IQueryHandler<GetSession
         }
 
         var availability = await AvailabilityAsync(access, query.Language, cancellationToken).ConfigureAwait(false);
-        var rulesLoaded = await _rules.HasIndexedRulesAsync(query.LiveSessionId, cancellationToken).ConfigureAwait(false);
+        // The notice only means something while the assistant answers: with it off or the game over, the panel
+        // shows the reason instead and ignores the flag, so the probe's queries are not spent.
+        bool? rulesLoaded = availability.Enabled
+            ? await _rules.HasIndexedRulesAsync(access.GameId, cancellationToken).ConfigureAwait(false)
+            : null;
 
         var thread = await _threads.FindByLiveSessionIdAsync(query.LiveSessionId, cancellationToken).ConfigureAwait(false);
         if (thread is null)

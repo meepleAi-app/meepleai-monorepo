@@ -237,6 +237,7 @@ public sealed class SessionAssistantPanelEndpointTests(SessionAssistantHostFixtu
     [Fact]
     public async Task SessionWithoutAGame_ReturnsNoRulesAnswer()
     {
+        await SessionAssistantTestData.EnableAssistantAsync(host.Factory, Ct);
         var table = await StartedTableAsync();
 
         var (status, panel, raw) = await GetPanelAsync(table.SessionId, _token);
@@ -248,6 +249,8 @@ public sealed class SessionAssistantPanelEndpointTests(SessionAssistantHostFixtu
     [Fact]
     public async Task CatalogGameWithoutARulebook_SaysTheRulesAreNotLoaded()
     {
+        // The probe runs only while the assistant answers: it has to be on for the panel to ask.
+        await SessionAssistantTestData.EnableAssistantAsync(host.Factory, Ct);
         var table = await SessionAssistantTestData.CreateGameTableAsync(host.Factory, _owner, Ct, "Marco", "Giulia");
 
         var (status, panel, raw) = await GetPanelAsync(table.SessionId, _token);
@@ -259,6 +262,7 @@ public sealed class SessionAssistantPanelEndpointTests(SessionAssistantHostFixtu
     [Fact]
     public async Task CatalogGameWithAReadyRulebook_SaysTheRulesAreLoaded()
     {
+        await SessionAssistantTestData.EnableAssistantAsync(host.Factory, Ct);
         var table = await SessionAssistantTestData.CreateGameTableAsync(host.Factory, _owner, Ct, "Marco", "Giulia");
         await SeedReadyRulebookAsync(table.GameId!.Value);
 
@@ -284,6 +288,21 @@ public sealed class SessionAssistantPanelEndpointTests(SessionAssistantHostFixtu
         status.Should().Be(HttpStatusCode.OK, raw);
         panel.GetProperty("messages").GetArrayLength().Should().BePositive("the turn left a conversation");
         panel.GetProperty("rulesLoaded").GetBoolean().Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task WithTheAssistantOff_ThePanelDoesNotProbeTheRules_AndSaysNothingAboutThem()
+    {
+        // A game with no rulebook would answer false if probed: with the assistant off the panel shows the reason
+        // instead and ignores the flag, so the probe's queries are not spent.
+        await SessionAssistantTestData.DisableAssistantAsync(host.Factory, Ct);
+        var table = await SessionAssistantTestData.CreateGameTableAsync(host.Factory, _owner, Ct, "Marco", "Giulia");
+
+        var (status, panel, raw) = await GetPanelAsync(table.SessionId, _token);
+
+        status.Should().Be(HttpStatusCode.OK, raw);
+        panel.GetProperty("availability").GetProperty("enabled").GetBoolean().Should().BeFalse();
+        panel.GetProperty("rulesLoaded").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
     /// <summary>«Pronto» come lo intende il controllo all'avvio: un PDF <c>Ready</c> con un indice <c>completed</c>.</summary>

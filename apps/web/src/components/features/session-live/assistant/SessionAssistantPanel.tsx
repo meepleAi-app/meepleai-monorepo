@@ -151,7 +151,7 @@ export function SessionAssistantPanel({
         <p
           role="status"
           data-slot="session-assistant-rules-missing"
-          className="rounded-md border border-border bg-muted px-2 py-1.5 text-xs text-muted-foreground"
+          className="rounded-md border border-border bg-muted px-2 py-1.5 text-xs text-foreground"
         >
           {t('pages.sessionLive.assistant.rulesMissing')}
         </p>

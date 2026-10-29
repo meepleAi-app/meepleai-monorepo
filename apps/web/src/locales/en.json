@@ -3988,7 +3988,7 @@
           "session_state_invalid": "The game is over: the assistant no longer answers.",
           "other": "The assistant is unavailable."
         },
-        "rulesMissing": "This game has no rulebook ready yet: I can record scores and tell you whose turn it is, but I cannot answer rules questions. Upload the PDF from the game page; if you already did, wait for indexing to finish.",
+        "rulesMissing": "This game has no rulebook ready yet: I can record scores and tell you whose turn it is, but I cannot answer rules questions. Upload the PDF from the game page; if you already did and this notice stays, check that indexing finished without errors.",
         "empty": "Tell me a score or ask whose turn it is: I propose, you confirm.",
         "inputLabel": "Question for the assistant",
         "placeholder": "E.g. “Marco scores 5”",

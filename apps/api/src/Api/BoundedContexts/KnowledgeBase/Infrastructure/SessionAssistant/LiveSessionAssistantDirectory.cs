@@ -22,7 +22,8 @@ internal sealed class LiveSessionAssistantDirectory(IMediator mediator) : IAssis
             session.Status.ToString(),
             // Anche Created: MoveToSetup non ha chiamanti, quindi senza Created l'assistente non
             // risponderebbe mai prima dell'avvio (scostamento S15 del piano 2).
-            AcceptsQuestions: session.Status != LiveSessionStatus.Completed);
+            AcceptsQuestions: session.Status != LiveSessionStatus.Completed,
+            GameId: session.GameId);
     }
 
     public ISessionAssistantReader CreateReader(Guid liveSessionId, Guid ownerUserId) =>

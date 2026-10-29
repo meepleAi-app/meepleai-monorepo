@@ -75,10 +75,12 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
   const [blockedModalOpen, setBlockedModalOpen] = useState(false);
   // #4729: any other refusal used to leave the button back as it was, with no word. The 422 for a game
   // with no rulebook indexed yet is the one a user can fix, so it says how.
-  const [startErrorMessage, setStartErrorMessage] = useState<string | null>(null);
+  // It belongs to the game whose start failed: shown for another game (the failed one went live elsewhere and
+  // the night moved on) it would be a stale word under a button that has not failed.
+  const [startError, setStartError] = useState<{ gameId: string; message: string } | null>(null);
   const handleStartNext = useCallback(
     (gameId: string, gameTitle: string) => {
-      setStartErrorMessage(null);
+      setStartError(null);
       startNextGame.mutate(
         { gameId, gameTitle },
         {
@@ -86,11 +88,13 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
             if (isMaxLiveBlockedError(err)) {
               setBlockedModalOpen(true);
             } else if (isKbNotReadyError(err)) {
-              setStartErrorMessage(
-                'Questo gioco non ha ancora un regolamento pronto: caricalo dalla scheda del gioco, attendi la fine dell’indicizzazione e riprova.'
-              );
+              setStartError({
+                gameId,
+                message:
+                  'Questo gioco non ha ancora un regolamento pronto: caricalo dalla scheda del gioco, attendi la fine dell’indicizzazione e riprova.',
+              });
             } else {
-              setStartErrorMessage('Impossibile avviare la partita. Riprova.');
+              setStartError({ gameId, message: 'Impossibile avviare la partita. Riprova.' });
             }
           },
         }
@@ -174,6 +178,8 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
   // DEC-10: hidden when a game is already live (status==='live') — you can only start the
   // next game when the current one is over. The 409 modal is the backstop for races.
   const showStartCta = vm.isViewerOrganizer && nextGame !== null && vm.status !== 'live';
+  const startErrorMessage =
+    startError && nextGame && startError.gameId === nextGame.gameId ? startError.message : null;
   // #2634 C4: the organizer completes the live game. Mutually exclusive with the start CTA above.
   const showCompleteCta = vm.isViewerOrganizer && vm.status === 'live';
   const completeErrorMessage = completeGame.isError

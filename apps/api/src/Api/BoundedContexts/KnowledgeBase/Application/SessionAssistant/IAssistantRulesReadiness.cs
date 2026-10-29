@@ -8,9 +8,10 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant;
 internal interface IAssistantRulesReadiness
 {
     /// <summary>
-    /// <c>true</c> se il gioco della sessione ha un regolamento pronto, <c>false</c> se no (nessun PDF, o ancora in
-    /// lavorazione, o fallito), <c>null</c> se non si può dire: la sessione non ha un gioco, o il gioco è privato.
-    /// Lancia <see cref="Api.Middleware.Exceptions.NotFoundException"/> se la sessione non esiste.
+    /// <c>true</c> se il gioco ha un regolamento pronto, <c>false</c> se no (nessun PDF, o ancora in lavorazione,
+    /// o fallito), <c>null</c> se non si può dire: nessun gioco (<paramref name="gameId"/> nullo), o gioco privato.
+    /// Prende il gioco e non la sessione: la sessione la legge già chi chiama, e rileggerla intera per ogni
+    /// apertura del pannello costa una query con cinque collezioni.
     /// </summary>
-    Task<bool?> HasIndexedRulesAsync(Guid liveSessionId, CancellationToken cancellationToken);
+    Task<bool?> HasIndexedRulesAsync(Guid? gameId, CancellationToken cancellationToken);
 }

@@ -393,6 +393,42 @@ describe('NightLiveClientView — organizer interactive start (WS1 DEC-10)', () 
       expect(screen.queryByTestId('start-next-error')).toBeNull();
     });
 
+    it('does not keep the message under the button once the night has moved on to another game', async () => {
+      refuseWith(new Error('boom'));
+      mockQuery({
+        data: vm({ isViewerOrganizer: true, nextGame: NEXT_GAME, status: 'transition' }),
+      });
+      const { rerender } = render(<NightLiveClientView nightId={NIGHT_ID} />);
+      await userEvent.click(screen.getByRole('button', { name: /Avvia: Catan/i }));
+      expect(screen.getByTestId('start-next-error')).toBeInTheDocument();
+
+      // The failed game went live elsewhere, was completed, and the next game of the night is another one.
+      mockQuery({
+        data: vm({
+          isViewerOrganizer: true,
+          nextGame: { gameId: '88888888-8888-4888-8888-888888888888', gameTitle: 'Wingspan' },
+          status: 'transition',
+        }),
+      });
+      rerender(<NightLiveClientView nightId={NIGHT_ID} />);
+
+      expect(screen.getByRole('button', { name: /Avvia: Wingspan/i })).toBeInTheDocument();
+      expect(screen.queryByTestId('start-next-error')).toBeNull();
+    });
+
+    it('keeps the message while the same game is still the one to start', async () => {
+      refuseWith(new Error('boom'));
+      mockQuery({
+        data: vm({ isViewerOrganizer: true, nextGame: NEXT_GAME, status: 'transition' }),
+      });
+      const { rerender } = render(<NightLiveClientView nightId={NIGHT_ID} />);
+      await userEvent.click(screen.getByRole('button', { name: /Avvia: Catan/i }));
+
+      rerender(<NightLiveClientView nightId={NIGHT_ID} />);
+
+      expect(screen.getByTestId('start-next-error')).toBeInTheDocument();
+    });
+
     it('clears the message when the organizer tries again', async () => {
       refuseWith(new ValidationError({ message: 'KB not ready', code: KB_NOT_READY }));
       mockQuery({

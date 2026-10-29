@@ -1,4 +1,3 @@
-using Api.BoundedContexts.GameManagement.Application.Queries.LiveSessions;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant;
 using Api.Infrastructure;
@@ -8,8 +7,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.SessionAssistant;
 
 /// <summary>
-/// <see cref="IAssistantRulesReadiness"/> sopra la sessione live (via mediator, come la directory) e la
-/// definizione di «regolamento pronto» che il resto del prodotto già usa: <see cref="GetKbReadinessQuery"/>, la
+/// <see cref="IAssistantRulesReadiness"/> sopra la definizione di «regolamento pronto» che il resto del prodotto
+/// già usa: <see cref="GetKbReadinessQuery"/>, la
 /// stessa del controllo alla creazione di una sessione (almeno un PDF <c>Ready</c> con un indice
 /// <c>completed</c>). Un avviso del pannello e un 422 dell'avvio non devono contraddirsi.
 /// </summary>
@@ -20,24 +19,23 @@ namespace Api.BoundedContexts.KnowledgeBase.Infrastructure.SessionAssistant;
 /// </remarks>
 internal sealed class LiveSessionRulesReadiness(IMediator mediator, MeepleAiDbContext db) : IAssistantRulesReadiness
 {
-    public async Task<bool?> HasIndexedRulesAsync(Guid liveSessionId, CancellationToken cancellationToken)
+    public async Task<bool?> HasIndexedRulesAsync(Guid? gameId, CancellationToken cancellationToken)
     {
-        var session = await mediator.Send(new GetLiveSessionQuery(liveSessionId), cancellationToken).ConfigureAwait(false);
-        if (session.GameId is not { } gameId)
+        if (gameId is not { } id)
         {
             return null;
         }
 
         var isCatalogGame = await db.SharedGames
             .AsNoTracking()
-            .AnyAsync(g => g.Id == gameId, cancellationToken)
+            .AnyAsync(g => g.Id == id, cancellationToken)
             .ConfigureAwait(false);
         if (!isCatalogGame)
         {
             return null;
         }
 
-        var readiness = await mediator.Send(new GetKbReadinessQuery(gameId), cancellationToken).ConfigureAwait(false);
+        var readiness = await mediator.Send(new GetKbReadinessQuery(id), cancellationToken).ConfigureAwait(false);
         return readiness.IsReady;
     }
 }

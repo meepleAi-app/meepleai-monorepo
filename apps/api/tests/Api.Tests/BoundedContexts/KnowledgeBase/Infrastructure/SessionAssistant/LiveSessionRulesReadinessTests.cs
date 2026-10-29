@@ -1,6 +1,3 @@
-using Api.BoundedContexts.GameManagement.Application.DTOs.LiveSessions;
-using Api.BoundedContexts.GameManagement.Application.Queries.LiveSessions;
-using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.SessionAssistant;
@@ -25,7 +22,6 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure.SessionAssistan
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class LiveSessionRulesReadinessTests : IDisposable
 {
-    private static readonly Guid SessionId = Guid.NewGuid();
     private static readonly DateTime Now = new(2026, 10, 29, 12, 0, 0, DateTimeKind.Utc);
 
     private readonly Mock<IMediator> _mediator = new();
@@ -46,37 +42,6 @@ public sealed class LiveSessionRulesReadinessTests : IDisposable
         _db.Dispose();
         GC.SuppressFinalize(this);
     }
-
-    private static LiveSessionDto Session(Guid? gameId) =>
-        new(
-            Id: SessionId,
-            SessionCode: "ABC123",
-            GameId: gameId,
-            GameName: "Azul",
-            GameSlug: "azul",
-            CreatedByUserId: Guid.NewGuid(),
-            Status: LiveSessionStatus.InProgress,
-            Visibility: PlayRecordVisibility.Private,
-            GroupId: null,
-            CreatedAt: Now,
-            StartedAt: Now,
-            PausedAt: null,
-            CompletedAt: null,
-            UpdatedAt: Now,
-            LastSavedAt: null,
-            CurrentTurnIndex: 0,
-            CurrentTurnPlayerId: null,
-            AgentMode: AgentSessionMode.None,
-            Notes: null,
-            GameState: null,
-            Players: [],
-            Teams: [],
-            RoundScores: [],
-            ScoringConfig: new LiveSessionScoringConfigDto(["punti"], new Dictionary<string, string>(StringComparer.Ordinal)));
-
-    private void TheSessionPlays(Guid? gameId) =>
-        _mediator.Setup(m => m.Send(It.Is<GetLiveSessionQuery>(q => q.SessionId == SessionId), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Session(gameId));
 
     private async Task<Guid> CatalogGameAsync()
     {
@@ -105,11 +70,9 @@ public sealed class LiveSessionRulesReadinessTests : IDisposable
             .ReturnsAsync(new KbReadinessDto(isReady, state, isReady ? 1 : 0, 0, []));
 
     [Fact]
-    public async Task SessionWithoutAGame_SaysNothing()
+    public async Task NoGame_SaysNothing()
     {
-        TheSessionPlays(gameId: null);
-
-        var result = await _sut.HasIndexedRulesAsync(SessionId, TestContext.Current.CancellationToken);
+        var result = await _sut.HasIndexedRulesAsync(gameId: null, TestContext.Current.CancellationToken);
 
         result.Should().BeNull();
         _mediator.Verify(m => m.Send(It.IsAny<GetKbReadinessQuery>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -119,9 +82,7 @@ public sealed class LiveSessionRulesReadinessTests : IDisposable
     public async Task PrivateGame_SaysNothing_RatherThanClaimingThereIsNoRulebook()
     {
         // The id is in no catalog: the readiness rule is not defined for it, so nothing is claimed.
-        TheSessionPlays(Guid.NewGuid());
-
-        var result = await _sut.HasIndexedRulesAsync(SessionId, TestContext.Current.CancellationToken);
+        var result = await _sut.HasIndexedRulesAsync(Guid.NewGuid(), TestContext.Current.CancellationToken);
 
         result.Should().BeNull();
         _mediator.Verify(m => m.Send(It.IsAny<GetKbReadinessQuery>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -131,40 +92,35 @@ public sealed class LiveSessionRulesReadinessTests : IDisposable
     public async Task CatalogGameWithAReadyRulebook_IsTrue()
     {
         var gameId = await CatalogGameAsync();
-        TheSessionPlays(gameId);
         KbReadinessIs(gameId, isReady: true, "Ready");
 
-        var result = await _sut.HasIndexedRulesAsync(SessionId, TestContext.Current.CancellationToken);
+        var result = await _sut.HasIndexedRulesAsync(gameId, TestContext.Current.CancellationToken);
 
         result.Should().BeTrue();
     }
 
-    [Theory]
-    [InlineData("None")]
-    [InlineData("VectorPending")]
-    [InlineData("Embedding")]
-    [InlineData("Failed")]
-    public async Task CatalogGameWithoutAReadyRulebook_IsFalse_WhateverTheReason(string state)
+    [Fact]
+    public async Task CatalogGameWithoutAReadyRulebook_IsFalse()
     {
+        // Why it is not ready (no PDF, still indexing, failed, partially ready) is the readiness rule's own business and
+        // is covered by GetKbReadinessQueryHandlerTests: this probe only forwards its verdict.
         var gameId = await CatalogGameAsync();
-        TheSessionPlays(gameId);
-        KbReadinessIs(gameId, isReady: false, state);
+        KbReadinessIs(gameId, isReady: false, "None");
 
-        var result = await _sut.HasIndexedRulesAsync(SessionId, TestContext.Current.CancellationToken);
+        var result = await _sut.HasIndexedRulesAsync(gameId, TestContext.Current.CancellationToken);
 
         result.Should().BeFalse();
     }
 
     [Fact]
-    public async Task AskedAboutTheGameOfThatSession_NotAnotherOne()
+    public async Task AsksTheReadinessOfThatGame_NotAnotherOne()
     {
         var gameId = await CatalogGameAsync();
         var otherGame = await CatalogGameAsync();
-        TheSessionPlays(gameId);
         KbReadinessIs(gameId, isReady: false, "None");
         KbReadinessIs(otherGame, isReady: true, "Ready");
 
-        var result = await _sut.HasIndexedRulesAsync(SessionId, TestContext.Current.CancellationToken);
+        var result = await _sut.HasIndexedRulesAsync(gameId, TestContext.Current.CancellationToken);
 
         result.Should().BeFalse();
     }

@@ -505,12 +505,15 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
       {/* Live / Completed: session flow sections under hero (details tab). */}
       {(isLive || isCompleted) && showDetailsContent && (
         <>
-          <GameNightActions
-            gameNightId={id}
-            hasActiveSession={hasActiveSession}
-            sessionCount={activeSessions.length}
-            isCompleted={isCompleted}
-          />
+          {/* Organizer-only on the server (403 for anyone else): a guest would only meet the error after clicking. */}
+          {isHost && (
+            <GameNightActions
+              gameNightId={id}
+              hasActiveSession={hasActiveSession}
+              sessionCount={activeSessions.length}
+              isCompleted={isCompleted}
+            />
+          )}
           <GameNightSessionsList
             sessions={activeSessions}
             gameNightId={id}

@@ -12,8 +12,10 @@ internal sealed record ImportRagDataCommand : IRequest<ImportRagDataResult>
     public string SnapshotPath { get; init; } = string.Empty;
 
     /// <summary>
-    /// When true, skips importing stored embeddings and marks documents for re-embedding.
-    /// Useful when migrating to a different embedding model.
+    /// When true, ignores the stored embeddings and computes new ones with the current embedding model from the
+    /// imported chunks' text, before each document is saved: a document is imported with its embeddings or not
+    /// at all (#4725). Useful when the backup was made with a different embedding model. The embedding service
+    /// is called once per ten chunks, so a large snapshot makes the request long.
     /// </summary>
     public bool ReEmbed { get; init; }
 }

@@ -118,19 +118,6 @@ function GameGrid({
           ))
         )}
       </div>
-
-      {/* Skip game selection */}
-      <button
-        onClick={() => onSelect('')}
-        className={cn(
-          'mt-3 w-full py-2 px-3 rounded-lg text-xs text-muted-foreground border border-dashed border-border/50 transition-colors',
-          'hover:bg-muted/50 hover:text-foreground',
-          selectedGameId === '' && 'bg-muted/50 text-foreground border-solid'
-        )}
-        data-testid="skip-game-btn"
-      >
-        Continua senza gioco (chat generica)
-      </button>
     </div>
   );
 }

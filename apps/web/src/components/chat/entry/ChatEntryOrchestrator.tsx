@@ -134,7 +134,10 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
     [handleStartChat]
   );
 
-  const canStart = DEFAULT_AGENTS.length > 0 && selectedAgentType !== null;
+  // #4715: the conversation needs a game. "Continue without a game" used to start a thread that never
+  // answers, so the start button now waits for one.
+  const hasGame = !!selectedGameId;
+  const canStart = DEFAULT_AGENTS.length > 0 && selectedAgentType !== null && hasGame;
 
   return (
     <div className={cn('min-h-dvh bg-background', className)}>
@@ -154,7 +157,7 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
                 <span className="font-semibold text-foreground">{selectedGame.title}</span>
               </>
             ) : (
-              'Seleziona un gioco e un agente AI per iniziare. Puoi anche chattare senza un gioco specifico.'
+              'Seleziona un gioco e un agente AI per iniziare: le risposte si basano sul regolamento del gioco scelto.'
             )}
           </p>
         </div>
@@ -187,12 +190,14 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
             selectedAgentType={selectedAgentType}
           />
 
-          {/* Quick Start */}
-          <QuickStartSuggestions
-            gameName={selectedGame?.title}
-            onSelect={handleQuickStart}
-            disabled={isCreating}
-          />
+          {/* Quick Start — only with a game: every suggestion is a question about one */}
+          {hasGame && (
+            <QuickStartSuggestions
+              gameName={selectedGame?.title}
+              onSelect={handleQuickStart}
+              disabled={isCreating}
+            />
+          )}
 
           {/* Start Button */}
           <div className="text-center">
@@ -219,6 +224,14 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
                 </>
               )}
             </button>
+            {!hasGame && (
+              <p
+                className="mt-3 text-sm text-muted-foreground font-nunito"
+                data-testid="start-needs-game"
+              >
+                Scegli un gioco per iniziare la conversazione.
+              </p>
+            )}
           </div>
         </div>
       </div>

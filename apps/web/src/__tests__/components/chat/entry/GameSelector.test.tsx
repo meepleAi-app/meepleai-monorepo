@@ -115,13 +115,13 @@ describe('GameSelector', () => {
     expect(onSelect).toHaveBeenCalledWith('g1');
   });
 
-  it('calls onSelect with empty string for skip-game button', async () => {
+  it('offers no way to continue without a game (#4715): a chat with no game never answers', async () => {
     render(<GameSelector onSelect={onSelect} selectedGameId={null} />);
     await waitFor(() => {
-      expect(screen.getByTestId('skip-game-btn')).toBeInTheDocument();
+      expect(screen.getByTestId('game-card-g1')).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByTestId('skip-game-btn'));
-    expect(onSelect).toHaveBeenCalledWith('');
+    expect(screen.queryByTestId('skip-game-btn')).not.toBeInTheDocument();
+    expect(screen.queryByText(/senza gioco/i)).not.toBeInTheDocument();
   });
 
   it('filters games by search text', async () => {

@@ -523,7 +523,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
             await TryMarkFailedAsync(pdfDocumentId, PdfFailureText.For(ErrorCategory.Service), ErrorCategory.Service).ConfigureAwait(false);
             return PdfPipelineOutcome.Failed;
         }
-        catch (PdfStorageObjectMissingException ex)
+        catch (PdfStorageObjectMissingException)
         {
             // #3846: the object is not at the key FilePath records. Retrying cannot conjure it back,
             // so it gets a category RetryFailedPdfsJob excludes — unlike the NULL category the

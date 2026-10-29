@@ -50,7 +50,6 @@ public sealed class GetUserPermissionsHandler
             userTier.Value,
             userRole.Value,
             userStatus,
-            userTier.GetLimits(),
             accessibleFeatures.ToList());
     }
 }

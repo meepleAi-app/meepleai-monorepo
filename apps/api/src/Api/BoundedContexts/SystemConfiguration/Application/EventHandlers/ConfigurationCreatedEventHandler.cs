@@ -31,14 +31,14 @@ internal sealed class ConfigurationCreatedEventHandler : DomainEventHandlerBase<
 
     protected override async Task HandleEventAsync(ConfigurationCreatedEvent domainEvent, CancellationToken cancellationToken)
     {
-        // Base class automatically creates audit log entry
+        // The audit row comes from DomainEventAuditHandler, not from here (see the class summary)
         // Future: Send notification to administrators for critical configurations
         // Future: Trigger configuration validation workflow
 
         // #4698: the reader caches a lookup that found nothing, so a key created after such a lookup stays invisible
         // until the entry expires. Same entries the Updated/Toggled/Deleted handlers drop, plus the event's own
         // environment (a custom one is not in the fixed list).
-        var environments = new[] { "Development", "Staging", "Production", domainEvent.Environment };
+        var environments = new[] { "Development", "Staging", "Production", "All", domainEvent.Environment };
         foreach (var env in environments.Distinct(StringComparer.Ordinal))
         {
             await _cache.RemoveAsync($"config:{domainEvent.Key.Value}:{env}", cancellationToken).ConfigureAwait(false);

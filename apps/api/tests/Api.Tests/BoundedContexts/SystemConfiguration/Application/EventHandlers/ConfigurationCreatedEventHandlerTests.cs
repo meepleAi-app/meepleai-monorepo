@@ -31,6 +31,16 @@ namespace Api.Tests.BoundedContexts.SystemConfiguration.Application.EventHandler
 /// cinque minuti e un secondo clic tentava di creare di nuovo la riga (23505, HTTP 500).
 /// I test usano la cache vera e il servizio vero: con un doppio, o col passthrough dell'host di integrazione, la voce
 /// non sarebbe mai vecchia.
+/// <para>
+/// Ogni voce del lettore porta il tag <c>config:category:general</c>, e l'invalidazione per tag scade qualunque voce
+/// con quel tag: da sola copre tutto, e coprirebbe anche un'invalidazione per chiave sbagliata. Per questo i test sulle
+/// chiavi spengono i tag (<c>EnableTags = false</c>) e lasciano al solo ciclo per chiave la possibilità di farli
+/// passare; un test a parte accende i tag e prova il caso che le chiavi non possono nominare.
+/// </para>
+/// <para>
+/// Il gestore gira dopo il commit: in linea in sviluppo, dall'outbox (polling di pochi secondi) in staging e produzione.
+/// Questi test chiamano <c>Handle</c> direttamente e non vedono quella finestra.
+/// </para>
 /// </remarks>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "SystemConfiguration")]
@@ -45,7 +55,7 @@ public sealed class ConfigurationCreatedEventHandlerTests
         public required Action<ConfigurationDto?> SetRow { get; init; }
     }
 
-    private static Fixture Create(string hostEnvironment)
+    private static Fixture Create(string hostEnvironment, bool enableTags = false)
     {
         ConfigurationDto? row = null;
 
@@ -64,7 +74,9 @@ public sealed class ConfigurationCreatedEventHandlerTests
         services.AddHybridCache();
         var hybrid = services.BuildServiceProvider().GetRequiredService<HybridCache>();
         var cache = new HybridCacheService(
-            hybrid, Options.Create(new HybridCacheConfiguration()), NullLogger<HybridCacheService>.Instance);
+            hybrid,
+            Options.Create(new HybridCacheConfiguration { EnableTags = enableTags }),
+            NullLogger<HybridCacheService>.Instance);
 
         return new Fixture
         {
@@ -108,7 +120,7 @@ public sealed class ConfigurationCreatedEventHandlerTests
     [InlineData("Development")]
     [InlineData("Staging")]
     [InlineData("Production")]
-    public async Task AKeyCreatedAfterAMiss_IsVisibleAtOnce(string hostEnvironment)
+    public async Task AKeyCreatedAfterAMiss_IsVisibleOnceTheHandlerRuns(string hostEnvironment)
     {
         var f = Create(hostEnvironment);
 
@@ -124,7 +136,7 @@ public sealed class ConfigurationCreatedEventHandlerTests
         await f.Handler.Handle(Created(hostEnvironment), CancellationToken.None);
 
         (await f.Service.GetValueAsync(Key, defaultValue: false)).Should().BeTrue(
-            "dopo la creazione la chiave deve essere visibile, non fra cinque minuti");
+            "dopo la creazione la chiave deve essere visibile appena gira il gestore, non alla scadenza della cache");
     }
 
     [Theory]
@@ -138,6 +150,8 @@ public sealed class ConfigurationCreatedEventHandlerTests
         var f = Create(hostEnvironment);
         (await f.Service.GetValueAsync(Key, defaultValue: false)).Should().BeFalse();
         f.SetRow(Row("All"));
+        (await f.Service.GetValueAsync(Key, defaultValue: false)).Should().BeFalse(
+            "prima dell'evento la lettura a vuoto è in cache");
 
         await f.Handler.Handle(Created("All"), CancellationToken.None);
 
@@ -152,8 +166,26 @@ public sealed class ConfigurationCreatedEventHandlerTests
         var f = Create("Preview");
         (await f.Service.GetValueAsync(Key, defaultValue: false)).Should().BeFalse();
         f.SetRow(Row("Preview"));
+        (await f.Service.GetValueAsync(Key, defaultValue: false)).Should().BeFalse(
+            "prima dell'evento la lettura a vuoto è in cache");
 
         await f.Handler.Handle(Created("Preview"), CancellationToken.None);
+
+        (await f.Service.GetValueAsync(Key, defaultValue: false)).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task ARowForAllEnvironments_ReachesAHostNoKeyNamesThroughTheTag()
+    {
+        // Host con un nome che né l'elenco fisso né l'evento («All») nominano: le chiavi non lo raggiungono, resta il
+        // tag. Qui i tag sono accesi, perché è l'unico test in cui il tag è l'unico modo di passare.
+        var f = Create("Preview", enableTags: true);
+        (await f.Service.GetValueAsync(Key, defaultValue: false)).Should().BeFalse();
+        f.SetRow(Row("All"));
+        (await f.Service.GetValueAsync(Key, defaultValue: false)).Should().BeFalse(
+            "prima dell'evento la lettura a vuoto è in cache");
+
+        await f.Handler.Handle(Created("All"), CancellationToken.None);
 
         (await f.Service.GetValueAsync(Key, defaultValue: false)).Should().BeTrue();
     }

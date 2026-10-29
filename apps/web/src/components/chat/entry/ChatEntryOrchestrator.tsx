@@ -133,18 +133,10 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
             </h1>
           </div>
           <p className="text-muted-foreground font-nunito max-w-lg mx-auto">
-            {isDirectGameMode ? (
-              selectedGame ? (
-                <>
-                  Fai una domanda su{' '}
-                  <span className="font-semibold text-foreground">{selectedGame.title}</span>
-                </>
-              ) : (
-                'Le risposte si basano sul regolamento del gioco scelto.'
-              )
-            ) : (
-              'Seleziona un gioco per iniziare: le risposte si basano sul suo regolamento.'
-            )}
+            {/* In direct game mode GameSelector is hidden, so the game's title is never loaded here. */}
+            {isDirectGameMode
+              ? 'Le risposte si basano sul regolamento del gioco scelto.'
+              : 'Seleziona un gioco per iniziare: le risposte si basano sul suo regolamento.'}
           </p>
         </div>
 

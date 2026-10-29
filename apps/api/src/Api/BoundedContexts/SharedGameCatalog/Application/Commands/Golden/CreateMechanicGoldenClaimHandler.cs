@@ -13,7 +13,8 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.Golden;
 /// Creates a new <see cref="MechanicGoldenClaim"/> aggregate via the async factory (which computes
 /// the embedding and extracts keywords from the statement), persists it through the repository /
 /// unit-of-work, and invalidates the per-game golden-set cache key so downstream scoring readers
-/// observe the change immediately.
+/// observe the change immediately. The invalidation is best effort: if the cache backend is down the
+/// claim is still saved and the request succeeds, with the key left to expire (#4720).
 /// </summary>
 internal sealed class CreateMechanicGoldenClaimHandler : ICommandHandler<CreateMechanicGoldenClaimCommand, Guid>
 {
@@ -69,8 +70,23 @@ internal sealed class CreateMechanicGoldenClaimHandler : ICommandHandler<CreateM
         await _repository.AddAsync(claim, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        // The claim is already saved: if dropping the key fails (Redis is down — the wrapper rethrows on
+        // purpose, other callers need to see it) the request must not turn into an error, because the client
+        // retries it and the retry would embed again and insert a SECOND claim (#4720). The key stays stale
+        // until it expires. A cancelled request is not a backend failure and still propagates.
         var cacheKey = $"golden:{command.SharedGameId}";
-        await _cache.RemoveAsync(cacheKey, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _cache.RemoveAsync(cacheKey, cancellationToken).ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types: post-commit, best effort by design
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogWarning(ex,
+                "Golden claim {ClaimId} saved, but dropping cache key {CacheKey} failed; the key stays until it expires",
+                claim.Id, cacheKey);
+        }
+#pragma warning restore CA1031
 
         _logger.LogInformation(
             "Created mechanic golden claim {ClaimId} for SharedGameId={SharedGameId}",

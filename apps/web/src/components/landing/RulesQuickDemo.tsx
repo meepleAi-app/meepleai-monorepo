@@ -36,7 +36,9 @@ export function RulesQuickDemo(): JSX.Element {
           ))}
         </div>
 
-        <Button asChild size="lg">
+        {/* Button is `whitespace-nowrap`: this label is 368px wide, wider than the column on a phone, and made the
+            whole landing page scroll sideways. Let it wrap inside the column. */}
+        <Button asChild size="lg" className="h-auto max-w-full whitespace-normal py-3 text-center">
           <Link href="/register">Prova gratis — risposta in 10 secondi</Link>
         </Button>
       </div>

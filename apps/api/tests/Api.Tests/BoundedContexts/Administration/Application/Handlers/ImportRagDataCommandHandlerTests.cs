@@ -1,8 +1,11 @@
 using System.Text;
 using Api.BoundedContexts.Administration.Application.Commands.ImportRagData;
+using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Services;
 using Api.SharedKernel.Application.Services;
 using FluentAssertions;
 using MediatR;
@@ -69,6 +72,7 @@ public class ImportRagDataCommandHandlerTests
         var handler = new ImportRagDataCommandHandler(
             db,
             mockStorage.Object,
+            Mock.Of<IEmbeddingService>(),
             Mock.Of<ILogger<ImportRagDataCommandHandler>>());
 
         var command = new ImportRagDataCommand { SnapshotPath = "test/snapshot" };
@@ -158,6 +162,7 @@ public class ImportRagDataCommandHandlerTests
         var handler = new ImportRagDataCommandHandler(
             db,
             mockStorage.Object,
+            Mock.Of<IEmbeddingService>(),
             Mock.Of<ILogger<ImportRagDataCommandHandler>>());
 
         var command = new ImportRagDataCommand { SnapshotPath = snapshotPath };
@@ -243,7 +248,7 @@ public class ImportRagDataCommandHandlerTests
         storage.Setup(s => s.ReadFileAsync($"{entryPath}/embeddings.parquet", It.IsAny<CancellationToken>()))
             .ReturnsAsync(embeddings);
 
-        var handler = new ImportRagDataCommandHandler(db, storage.Object, Mock.Of<ILogger<ImportRagDataCommandHandler>>());
+        var handler = new ImportRagDataCommandHandler(db, storage.Object, Mock.Of<IEmbeddingService>(), Mock.Of<ILogger<ImportRagDataCommandHandler>>());
 
         // Act
         var result = await handler.Handle(new ImportRagDataCommand { SnapshotPath = snapshotPath }, CancellationToken.None);
@@ -306,7 +311,7 @@ public class ImportRagDataCommandHandlerTests
                 new(1, 1, "Each player draws.", [0.2f, 0.3f, 0.4f, 0.1f], "test-model"),
             ]));
 
-        var handler = new ImportRagDataCommandHandler(db, storage.Object, Mock.Of<ILogger<ImportRagDataCommandHandler>>());
+        var handler = new ImportRagDataCommandHandler(db, storage.Object, Mock.Of<IEmbeddingService>(), Mock.Of<ILogger<ImportRagDataCommandHandler>>());
 
         // Act
         var result = await handler.Handle(new ImportRagDataCommand { SnapshotPath = snapshotPath }, CancellationToken.None);
@@ -318,5 +323,251 @@ public class ImportRagDataCommandHandlerTests
         rows[1].SourceChunkId.Should().BeNull("l'indice 1 ha due passaggi: nessuno dei due è quello giusto per certo");
         result.Warnings.Should().Contain(w => w.Contains("more than once"));
         result.Warnings.Should().Contain(w => w.Contains("without a link"));
+    }
+
+    // ── #4725: ReEmbed=true ───────────────────────────────────────────────────────────────────────────────
+    // L'import con ReEmbed lasciava un PDF "Ready" con un documento vettoriale "pending" e nessun embedding,
+    // e niente lo riprendeva. Ora gli embedding si calcolano dal testo dei passaggi appena letti, prima del
+    // salvataggio: o il documento entra completo, o non entra.
+
+    private const string ReEmbedSnapshot = "rag-exports/2026-10-29";
+
+    private sealed record ReEmbedImport(
+        ImportRagDataResult Result,
+        MeepleAiDbContext Db,
+        Mock<IRagBackupStorageService> Storage,
+        string EntryPath);
+
+    private static async Task<ReEmbedImport> ImportWithReEmbedAsync(
+        string testName,
+        IEmbeddingService embeddingService,
+        (int Index, int Page, string Text)[] chunks,
+        string language = "en")
+    {
+        var db = CreateInMemoryDb(testName);
+        db.SharedGames.Add(new SharedGameEntity { Id = Guid.NewGuid(), Title = "testgame", CreatedBy = Guid.NewGuid(), CreatedAt = DateTime.UtcNow });
+        await db.SaveChangesAsync();
+
+        var documentId = Guid.NewGuid();
+        var entryPath = $"{ReEmbedSnapshot}/documents/{documentId}";
+        var storage = new Mock<IRagBackupStorageService>();
+        storage.Setup(s => s.ReadFileAsync($"{ReEmbedSnapshot}/manifest.json", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Encoding.UTF8.GetBytes($$"""
+                { "exportVersion": "1.0", "exportedAt": "2026-10-29T00:00:00Z", "totalDocuments": 1,
+                  "totalChunks": {{chunks.Length}}, "totalEmbeddings": {{chunks.Length}}, "embeddingModel": "old-model",
+                  "documents": [{ "pdfDocumentId": "{{documentId}}", "gameSlug": "testgame", "gameName": "Test Game",
+                                  "path": "{{entryPath}}", "chunks": {{chunks.Length}}, "embeddings": {{chunks.Length}}, "language": "{{language}}" }] }
+                """));
+        storage.Setup(s => s.ReadFileAsync($"{entryPath}/metadata.json", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Encoding.UTF8.GetBytes($$"""
+                { "exportVersion": "1.0", "exportedAt": "2026-10-29T00:00:00Z", "embeddingModel": "old-model",
+                  "embeddingDimensions": 1024,
+                  "document": { "pdfDocumentId": "{{documentId}}", "gameId": null, "gameSlug": "testgame",
+                                "gameName": "Test Game", "fileName": "rules.pdf", "language": "{{language}}",
+                                "languageConfidence": null, "documentCategory": null, "versionLabel": null,
+                                "licenseType": null, "pageCount": 2, "characterCount": 30, "contentHash": null,
+                                "fileSizeBytes": null },
+                  "stats": { "totalChunks": {{chunks.Length}}, "totalEmbeddings": {{chunks.Length}}, "chunkSizeAvg": 10 } }
+                """));
+        storage.Setup(s => s.ReadFileAsync($"{entryPath}/chunks.parquet", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(await RagParquetSerializer.SerializeChunksAsync(
+                chunks.Select(c => new RagExportChunkLine(c.Index, c.Page, c.Text, c.Text.Length)).ToList()));
+
+        var handler = new ImportRagDataCommandHandler(db, storage.Object, embeddingService, Mock.Of<ILogger<ImportRagDataCommandHandler>>());
+        var result = await handler.Handle(
+            new ImportRagDataCommand { SnapshotPath = ReEmbedSnapshot, ReEmbed = true }, CancellationToken.None);
+
+        return new ReEmbedImport(result, db, storage, entryPath);
+    }
+
+    /// <summary>Un servizio che risponde con un vettore per testo: la prima componente è la lunghezza del testo.</summary>
+    private static Mock<IEmbeddingService> WorkingEmbeddingService(string model = "new-model", int dimensions = 4)
+    {
+        var service = new Mock<IEmbeddingService>();
+        service.Setup(e => e.GetModelName()).Returns(model);
+        service.Setup(e => e.GetEmbeddingDimensions()).Returns(dimensions);
+        service.Setup(e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((List<string> texts, CancellationToken _) =>
+                EmbeddingResult.CreateSuccess(texts.Select(t => new[] { (float)t.Length, 0.5f, 0.5f, 0.5f }).ToList()));
+        return service;
+    }
+
+    [Fact]
+    public async Task Handle_ReEmbed_EmbedsTheImportedChunks_AndLeavesTheDocumentCompleted()
+    {
+        // Arrange: quindici passaggi, più dei dieci per chiamata, così il test attraversa anche il confine fra due lotti.
+        var chunks = Enumerable.Range(0, 15)
+            .Select(i => (Index: i, Page: 1 + (i / 5), Text: $"Passage {i}{new string('x', i)}"))
+            .ToArray();
+        var service = WorkingEmbeddingService();
+
+        // Act
+        var import = await ImportWithReEmbedAsync(nameof(Handle_ReEmbed_EmbedsTheImportedChunks_AndLeavesTheDocumentCompleted), service.Object, chunks);
+        await using var db = import.Db;
+
+        // Assert
+        import.Result.Imported.Should().Be(1, because: string.Join("; ", import.Result.Errors.Concat(import.Result.Warnings)));
+        import.Result.ReEmbedded.Should().Be(1);
+
+        var vectorDocument = await db.VectorDocuments.SingleAsync();
+        vectorDocument.IndexingStatus.Should().Be("completed", "nessun documento resta in attesa di qualcuno che lo riprenda");
+        vectorDocument.EmbeddingModel.Should().Be("new-model", "il documento descrive gli embedding che ha, non quelli del backup");
+        vectorDocument.EmbeddingDimensions.Should().Be(4);
+        vectorDocument.ChunkCount.Should().Be(chunks.Length);
+        (await db.PdfDocuments.SingleAsync()).ProcessingState.Should().Be("Ready");
+
+        var chunkIdByIndex = await db.TextChunks.ToDictionaryAsync(tc => tc.ChunkIndex, tc => tc.Id);
+        var rows = await db.PgVectorEmbeddings.OrderBy(e => e.ChunkIndex).ToListAsync();
+        rows.Should().HaveCount(chunks.Length);
+        rows.Should().OnlyContain(r => r.VectorDocumentId == vectorDocument.Id && r.Model == "new-model" && r.Lang == "en");
+        rows.Should().OnlyContain(r => r.SourceChunkId == chunkIdByIndex[r.ChunkIndex],
+            "ogni embedding punta al passaggio da cui è stato calcolato");
+        // Il provider in memoria non conserva la colonna del vettore, e la lettura è senza tracking: il vettore
+        // si legge dalle istanze che il contesto ha appena salvato.
+        var saved = db.ChangeTracker.Entries<PgVectorEmbeddingEntity>().Select(e => e.Entity).OrderBy(e => e.ChunkIndex).ToList();
+        saved.Should().HaveCount(chunks.Length);
+        for (var i = 0; i < chunks.Length; i++)
+        {
+            rows[i].TextContent.Should().Be(chunks[i].Text);
+            rows[i].PageNumber.Should().Be(chunks[i].Page);
+            saved[i].Vector.ToArray()[0].Should().Be(chunks[i].Text.Length, "il vettore è quello del testo di quel passaggio, in ordine");
+        }
+
+        service.Verify(
+            e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
+        import.Storage.Verify(
+            s => s.ReadFileAsync($"{import.EntryPath}/embeddings.parquet", It.IsAny<CancellationToken>()),
+            Times.Never);
+        import.Result.Warnings.Should().NotContain(w => w.Contains("re-embedding required", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Handle_ReEmbed_TagsTheEmbeddingsWithTheDocumentLanguage()
+    {
+        var import = await ImportWithReEmbedAsync(
+            nameof(Handle_ReEmbed_TagsTheEmbeddingsWithTheDocumentLanguage),
+            WorkingEmbeddingService().Object,
+            [(0, 1, "Prepara il tabellone.")],
+            language: "it");
+        await using var db = import.Db;
+
+        import.Result.Imported.Should().Be(1);
+        (await db.PgVectorEmbeddings.SingleAsync()).Lang.Should().Be("it");
+    }
+
+    [Fact]
+    public async Task Handle_ReEmbed_TwoChunksOnOneIndex_EachEmbeddingPointsAtItsOwnChunk()
+    {
+        // L'ambiguità dell'indice riguarda gli embedding importati, che arrivano con il solo indice. Qui il
+        // vettore nasce dal testo di un passaggio preciso: il collegamento è certo, e il warning sarebbe falso.
+        var import = await ImportWithReEmbedAsync(
+            nameof(Handle_ReEmbed_TwoChunksOnOneIndex_EachEmbeddingPointsAtItsOwnChunk),
+            WorkingEmbeddingService().Object,
+            [(0, 1, "Setup the board."), (1, 1, "Each player draws."), (1, 1, "Each player discards.")]);
+        await using var db = import.Db;
+
+        import.Result.Imported.Should().Be(1);
+        var chunkIdByContent = await db.TextChunks.ToDictionaryAsync(tc => tc.Content, tc => tc.Id);
+        var rows = await db.PgVectorEmbeddings.ToListAsync();
+        rows.Should().HaveCount(3);
+        rows.Should().OnlyContain(r => r.SourceChunkId == chunkIdByContent[r.TextContent]);
+        import.Result.Warnings.Should().NotContain(w => w.Contains("without a link", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Handle_ReEmbed_WhenTheEmbeddingServiceFails_ImportsNothingOfThatDocument()
+    {
+        // Il guasto del servizio non deve lasciare un PDF "Ready" senza embedding: il documento non entra.
+        const string serviceDetail = "embedding service down at 10.0.0.7:8001";
+        var service = WorkingEmbeddingService();
+        service.SetupSequence(e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(Enumerable.Range(0, 10).Select(_ => new[] { 0.1f, 0.2f, 0.3f, 0.4f }).ToList()))
+            .ReturnsAsync(EmbeddingResult.CreateFailure(serviceDetail));
+        var chunks = Enumerable.Range(0, 15).Select(i => (Index: i, Page: 1, Text: $"Passage {i}")).ToArray();
+
+        var import = await ImportWithReEmbedAsync(nameof(Handle_ReEmbed_WhenTheEmbeddingServiceFails_ImportsNothingOfThatDocument), service.Object, chunks);
+        await using var db = import.Db;
+
+        import.Result.Imported.Should().Be(0);
+        import.Result.Failed.Should().Be(1);
+        import.Result.ReEmbedded.Should().Be(0);
+        (await db.PdfDocuments.CountAsync()).Should().Be(0);
+        (await db.VectorDocuments.CountAsync()).Should().Be(0);
+        (await db.TextChunks.CountAsync()).Should().Be(0);
+        (await db.PgVectorEmbeddings.CountAsync()).Should().Be(0);
+        import.Result.Errors.Should().ContainSingle().Which.Should().NotContain("10.0.0.7",
+            "l'errore restituito all'admin porta il tipo dell'eccezione, il dettaglio sta nel log");
+    }
+
+    // Meno vettori dei testi lascerebbe un passaggio senza embedding; più vettori ne sposterebbero uno sul passaggio
+    // sbagliato senza che nulla si accorga: il secondo caso non fallisce da solo, va controllato.
+    [Theory]
+    [InlineData(1)]
+    [InlineData(3)]
+    public async Task Handle_ReEmbed_WhenTheServiceReturnsTheWrongNumberOfVectors_ImportsNothingOfThatDocument(int vectorsReturned)
+    {
+        var service = WorkingEmbeddingService();
+        service.Setup(e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess(
+                Enumerable.Range(0, vectorsReturned).Select(_ => new[] { 0.1f, 0.2f, 0.3f, 0.4f }).ToList()));
+
+        var import = await ImportWithReEmbedAsync(
+            nameof(Handle_ReEmbed_WhenTheServiceReturnsTheWrongNumberOfVectors_ImportsNothingOfThatDocument) + vectorsReturned,
+            service.Object,
+            [(0, 1, "One."), (1, 1, "Two.")]);
+        await using var db = import.Db;
+
+        import.Result.Failed.Should().Be(1);
+        (await db.PdfDocuments.CountAsync()).Should().Be(0);
+        (await db.PgVectorEmbeddings.CountAsync()).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Handle_WithoutReEmbed_NeverCallsTheEmbeddingService()
+    {
+        // Il ramo che importa gli embedding salvati non cambia: niente chiamata al servizio.
+        var service = WorkingEmbeddingService();
+        var db = CreateInMemoryDb(nameof(Handle_WithoutReEmbed_NeverCallsTheEmbeddingService));
+        await using var _ = db;
+        db.SharedGames.Add(new SharedGameEntity { Id = Guid.NewGuid(), Title = "testgame", CreatedBy = Guid.NewGuid(), CreatedAt = DateTime.UtcNow });
+        await db.SaveChangesAsync();
+
+        var documentId = Guid.NewGuid();
+        var entryPath = $"{ReEmbedSnapshot}/documents/{documentId}";
+        var storage = new Mock<IRagBackupStorageService>();
+        storage.Setup(s => s.ReadFileAsync($"{ReEmbedSnapshot}/manifest.json", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Encoding.UTF8.GetBytes($$"""
+                { "exportVersion": "1.0", "exportedAt": "2026-10-29T00:00:00Z", "totalDocuments": 1, "totalChunks": 1,
+                  "totalEmbeddings": 1, "embeddingModel": "old-model",
+                  "documents": [{ "pdfDocumentId": "{{documentId}}", "gameSlug": "testgame", "gameName": "Test Game",
+                                  "path": "{{entryPath}}", "chunks": 1, "embeddings": 1, "language": "en" }] }
+                """));
+        storage.Setup(s => s.ReadFileAsync($"{entryPath}/metadata.json", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Encoding.UTF8.GetBytes($$"""
+                { "exportVersion": "1.0", "exportedAt": "2026-10-29T00:00:00Z", "embeddingModel": "old-model",
+                  "embeddingDimensions": 4,
+                  "document": { "pdfDocumentId": "{{documentId}}", "gameId": null, "gameSlug": "testgame",
+                                "gameName": "Test Game", "fileName": "rules.pdf", "language": "en",
+                                "languageConfidence": null, "documentCategory": null, "versionLabel": null,
+                                "licenseType": null, "pageCount": 1, "characterCount": 5, "contentHash": null,
+                                "fileSizeBytes": null },
+                  "stats": { "totalChunks": 1, "totalEmbeddings": 1, "chunkSizeAvg": 5 } }
+                """));
+        storage.Setup(s => s.ReadFileAsync($"{entryPath}/chunks.parquet", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(await RagParquetSerializer.SerializeChunksAsync([new(0, 1, "Hello", 5)]));
+        storage.Setup(s => s.ReadFileAsync($"{entryPath}/embeddings.parquet", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(await RagParquetSerializer.SerializeEmbeddingsAsync([new(0, 1, "Hello", [0.1f, 0.2f, 0.3f, 0.4f], "old-model")]));
+
+        var handler = new ImportRagDataCommandHandler(db, storage.Object, service.Object, Mock.Of<ILogger<ImportRagDataCommandHandler>>());
+
+        var result = await handler.Handle(new ImportRagDataCommand { SnapshotPath = ReEmbedSnapshot }, CancellationToken.None);
+
+        result.Imported.Should().Be(1);
+        result.ReEmbedded.Should().Be(0);
+        (await db.VectorDocuments.SingleAsync()).EmbeddingModel.Should().Be("old-model");
+        service.Verify(
+            e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 }

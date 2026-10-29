@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
+import { useTranslation } from '@/hooks/useTranslation';
 
 import { Participant, SyncStatus } from './types';
 
@@ -41,6 +42,7 @@ export function ScoreInput({
   onUndo,
   syncStatus = 'idle',
 }: ScoreInputProps) {
+  const { t } = useTranslation();
   const [participantId, setParticipantId] = useState<string>('');
   const [roundNumber, setRoundNumber] = useState<number | null>(currentRound ?? null);
   const [category, setCategory] = useState<string | null>(null);
@@ -72,13 +74,13 @@ export function ScoreInput({
     setError(null);
 
     if (!participantId) {
-      setError('Please select a participant');
+      setError(t('sessionScoreInput.errors.selectParticipant'));
       return;
     }
 
     const score = parseFloat(scoreValue);
     if (isNaN(score)) {
-      setError('Please enter a valid score');
+      setError(t('sessionScoreInput.errors.invalidScore'));
       return;
     }
 
@@ -93,7 +95,7 @@ export function ScoreInput({
       // Clear score after submit
       setScoreValue('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save score');
+      setError(err instanceof Error ? err.message : t('sessionScoreInput.errors.saveFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -103,17 +105,17 @@ export function ScoreInput({
     idle: { icon: null, text: '', color: '' },
     saving: {
       icon: <Loader2 className="h-3 w-3 animate-spin" />,
-      text: 'Saving...',
+      text: t('sessionScoreInput.saving'),
       color: 'text-amber-600 dark:text-amber-400',
     },
     synced: {
       icon: <Check className="h-3 w-3" />,
-      text: 'Synced',
+      text: t('sessionScoreInput.synced'),
       color: 'text-emerald-600 dark:text-emerald-400',
     },
     error: {
       icon: <AlertCircle className="h-3 w-3" />,
-      text: 'Error',
+      text: t('sessionScoreInput.syncError'),
       color: 'text-red-600 dark:text-red-400',
     },
   };
@@ -139,7 +141,7 @@ export function ScoreInput({
         {/* Participant Tabs - Mobile Optimized */}
         <div className="space-y-2">
           <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            Player
+            {t('sessionScoreInput.player')}
           </Label>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {participants.map(p => (
@@ -170,7 +172,7 @@ export function ScoreInput({
                 htmlFor="round"
                 className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
               >
-                Round
+                {t('sessionScoreInput.round')}
               </Label>
               <Select
                 value={roundNumber?.toString() ?? 'final'}
@@ -185,10 +187,10 @@ export function ScoreInput({
                 <SelectContent>
                   {rounds.map(r => (
                     <SelectItem key={r} value={r.toString()}>
-                      Round {r}
+                      {t('sessionScoreInput.roundNumber', { round: r })}
                     </SelectItem>
                   ))}
-                  <SelectItem value="final">Final Score</SelectItem>
+                  <SelectItem value="final">{t('sessionScoreInput.finalScore')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -201,7 +203,7 @@ export function ScoreInput({
                 htmlFor="category"
                 className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
               >
-                Category
+                {t('sessionScoreInput.category')}
               </Label>
               <Select
                 value={category ?? 'none'}
@@ -214,7 +216,7 @@ export function ScoreInput({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">No Category</SelectItem>
+                  <SelectItem value="none">{t('sessionScoreInput.noCategory')}</SelectItem>
                   {categories.map(cat => (
                     <SelectItem key={cat} value={cat}>
                       {cat}
@@ -232,7 +234,7 @@ export function ScoreInput({
             htmlFor="score"
             className="text-xs font-bold uppercase tracking-wider text-muted-foreground"
           >
-            Score
+            {t('sessionScoreInput.score')}
           </Label>
 
           <div className="flex items-center gap-2">
@@ -244,7 +246,7 @@ export function ScoreInput({
                 size="icon"
                 onClick={() => adjustScore(-5)}
                 className="h-12 w-12 shrink-0 border-2 border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/50 active:scale-90 transition-all"
-                aria-label="Decrease by 5"
+                aria-label={t('sessionScoreInput.decreaseBy', { amount: 5 })}
               >
                 <span className="font-bold">-5</span>
               </Button>
@@ -254,7 +256,7 @@ export function ScoreInput({
                 size="icon"
                 onClick={() => adjustScore(-1)}
                 className="h-12 w-12 shrink-0 border-2 border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/50 active:scale-90 transition-all"
-                aria-label="Decrease by 1"
+                aria-label={t('sessionScoreInput.decreaseBy', { amount: 1 })}
               >
                 <Minus className="h-5 w-5" />
               </Button>
@@ -279,7 +281,7 @@ export function ScoreInput({
                 size="icon"
                 onClick={() => adjustScore(1)}
                 className="h-12 w-12 shrink-0 border-2 border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 active:scale-90 transition-all"
-                aria-label="Increase by 1"
+                aria-label={t('sessionScoreInput.increaseBy', { amount: 1 })}
               >
                 <Plus className="h-5 w-5" />
               </Button>
@@ -289,7 +291,7 @@ export function ScoreInput({
                 size="icon"
                 onClick={() => adjustScore(5)}
                 className="h-12 w-12 shrink-0 border-2 border-emerald-200 dark:border-emerald-900/50 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-950/50 active:scale-90 transition-all"
-                aria-label="Increase by 5"
+                aria-label={t('sessionScoreInput.increaseBy', { amount: 5 })}
               >
                 <span className="font-bold">+5</span>
               </Button>
@@ -316,7 +318,7 @@ export function ScoreInput({
               className="flex-shrink-0 border-2 border-border bg-card hover:bg-muted active:scale-95 transition-all"
             >
               <Undo2 className="h-4 w-4 mr-2" />
-              Undo
+              {t('sessionScoreInput.undo')}
             </Button>
           )}
           <Button
@@ -327,12 +329,12 @@ export function ScoreInput({
             {isSubmitting ? (
               <>
                 <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                Saving...
+                {t('sessionScoreInput.saving')}
               </>
             ) : (
               <>
                 <Check className="h-5 w-5 mr-2" />
-                Add Score
+                {t('sessionScoreInput.addScore')}
               </>
             )}
           </Button>

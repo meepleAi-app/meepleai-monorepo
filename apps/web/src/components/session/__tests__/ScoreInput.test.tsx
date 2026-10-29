@@ -11,13 +11,46 @@
  * - Undo functionality
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { ScoreInput } from '../ScoreInput';
 import type { Participant } from '../types';
 import { createMockParticipantList } from '@/__tests__/fixtures/common-fixtures';
+
+// The component's strings come from the real locale files, so a missing or misnamed key fails here instead of
+// rendering as a raw key id in the browser. English is the default (the assertions below are in English); the Italian
+// block at the end switches the locale. It was English-only and hardcoded: an Italian user saw PLAYER, ROUND,
+// CATEGORY, "Add Score" in an otherwise Italian live-session screen.
+const i18n = vi.hoisted(() => ({ locale: 'en' as 'en' | 'it' }));
+vi.mock('@/hooks/useTranslation', async () => {
+  const { createIntl } = await import('react-intl');
+  const en = (await import('@/locales/en.json')).default as Record<string, unknown>;
+  const it = (await import('@/locales/it.json')).default as Record<string, unknown>;
+  const flatten = (
+    node: Record<string, unknown>,
+    prefix = '',
+    out: Record<string, string> = {}
+  ) => {
+    for (const [key, value] of Object.entries(node)) {
+      const path = prefix ? `${prefix}.${key}` : key;
+      if (value && typeof value === 'object') flatten(value as Record<string, unknown>, path, out);
+      else out[path] = String(value);
+    }
+    return out;
+  };
+  const intls = {
+    en: createIntl({ locale: 'en', messages: flatten(en) }),
+    it: createIntl({ locale: 'it', messages: flatten(it) }),
+  };
+  return {
+    useTranslation: () => ({
+      t: (id: string, values?: Record<string, string | number>) =>
+        intls[i18n.locale].formatMessage({ id }, values),
+    }),
+  };
+});
 
 describe('ScoreInput', () => {
   const mockOnSubmit = vi.fn();
@@ -386,6 +419,44 @@ describe('ScoreInput', () => {
 
       // Use getByLabelText to specifically find the score input label
       expect(screen.getByLabelText(/score/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('Italian locale', () => {
+    beforeEach(() => {
+      i18n.locale = 'it';
+    });
+    afterEach(() => {
+      i18n.locale = 'en';
+    });
+
+    it('labels the form in Italian', () => {
+      render(<ScoreInput {...defaultProps} categories={['Strategia']} onUndo={mockOnUndo} />);
+
+      expect(screen.getByText('Giocatore')).toBeInTheDocument();
+      expect(screen.getByText('Categoria')).toBeInTheDocument();
+      expect(screen.getByLabelText('Punteggio')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Aggiungi punteggio' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Annulla' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Diminuisci di 5' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Aumenta di 1' })).toBeInTheDocument();
+      expect(screen.queryByText('Player')).not.toBeInTheDocument();
+      expect(screen.queryByText('Add Score')).not.toBeInTheDocument();
+    });
+
+    it('reports a validation error in Italian', async () => {
+      render(<ScoreInput {...defaultProps} participants={[]} />);
+
+      fireEvent.change(screen.getByLabelText('Punteggio'), { target: { value: '5' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Aggiungi punteggio' }));
+
+      expect(await screen.findByText('Seleziona un giocatore')).toBeInTheDocument();
+    });
+
+    it('shows the sync status in Italian', () => {
+      render(<ScoreInput {...defaultProps} syncStatus="synced" />);
+
+      expect(screen.getByText('Sincronizzato')).toBeInTheDocument();
     });
   });
 });

@@ -2,6 +2,7 @@ using System.Text;
 using Api.BoundedContexts.Administration.Application.Commands.ImportRagData;
 using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Services;
+using Api.Constants;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.KnowledgeBase;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -343,7 +344,8 @@ public class ImportRagDataCommandHandlerTests
         IEmbeddingService embeddingService,
         (int Index, int Page, string Text)[] chunks,
         string language = "en",
-        int documentCount = 1)
+        int documentCount = 1,
+        CancellationToken cancellationToken = default)
     {
         var db = CreateInMemoryDb(testName);
         db.SharedGames.Add(new SharedGameEntity { Id = Guid.NewGuid(), Title = "testgame", CreatedBy = Guid.NewGuid(), CreatedAt = DateTime.UtcNow });
@@ -385,7 +387,7 @@ public class ImportRagDataCommandHandlerTests
 
         var handler = new ImportRagDataCommandHandler(db, storage.Object, embeddingService, Mock.Of<ILogger<ImportRagDataCommandHandler>>());
         var result = await handler.Handle(
-            new ImportRagDataCommand { SnapshotPath = ReEmbedSnapshot, ReEmbed = true }, CancellationToken.None);
+            new ImportRagDataCommand { SnapshotPath = ReEmbedSnapshot, ReEmbed = true }, cancellationToken);
 
         return new ReEmbedImport(result, db, storage, entryPath);
     }
@@ -531,6 +533,99 @@ public class ImportRagDataCommandHandlerTests
         import.Result.Failed.Should().Be(1);
         (await db.PdfDocuments.CountAsync()).Should().Be(0);
         (await db.PgVectorEmbeddings.CountAsync()).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Handle_ReEmbed_CapsTheTextSentToTheService_ButKeepsTheFullTextOfTheChunk()
+    {
+        // Un passaggio genitore è una sezione intera e può superare ciò che il provider accetta: come in ogni altro
+        // percorso di ingest, solo l'input del provider si tronca; testo e riga di embedding restano interi.
+        var longText = new string('a', ChunkingConstants.MaxEmbeddingChars + 500);
+        var sent = new List<string>();
+        var service = WorkingEmbeddingService();
+        service.Setup(e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .Callback((List<string> texts, CancellationToken _) => sent.AddRange(texts))
+            .ReturnsAsync((List<string> texts, CancellationToken _) =>
+                EmbeddingResult.CreateSuccess(texts.Select(_ => new[] { 0.1f, 0.2f, 0.3f, 0.4f }).ToList()));
+
+        var import = await ImportWithReEmbedAsync(
+            nameof(Handle_ReEmbed_CapsTheTextSentToTheService_ButKeepsTheFullTextOfTheChunk),
+            service.Object,
+            [(0, 1, longText), (1, 1, "Short.")]);
+        await using var db = import.Db;
+
+        import.Result.Imported.Should().Be(1);
+        sent.Should().Equal(longText[..ChunkingConstants.MaxEmbeddingChars], "Short.");
+        (await db.TextChunks.OrderBy(tc => tc.ChunkIndex).FirstAsync()).Content.Should().Be(longText);
+        (await db.PgVectorEmbeddings.OrderBy(e => e.ChunkIndex).FirstAsync()).TextContent.Should().Be(longText);
+    }
+
+    [Fact]
+    public async Task Handle_ReEmbed_WhenTheImportIsCancelledDuringTheCall_StopsInsteadOfRecordingAFailure()
+    {
+        // EmbeddingService risponde a un annullamento con un risultato fallito. Senza una verifica dopo la chiamata
+        // l'annullamento diventerebbe un documento fallito e l'import tornerebbe normalmente, con Failed = 1.
+        using var cts = new CancellationTokenSource();
+        var service = WorkingEmbeddingService();
+        service.Setup(e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .Returns((List<string> _, CancellationToken _) =>
+            {
+                cts.Cancel();
+                return Task.FromResult(EmbeddingResult.CreateFailure("cancelled"));
+            });
+
+        var act = () => ImportWithReEmbedAsync(
+            nameof(Handle_ReEmbed_WhenTheImportIsCancelledDuringTheCall_StopsInsteadOfRecordingAFailure),
+            service.Object,
+            [(0, 1, "One.")],
+            cancellationToken: cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    // La larghezza è quella del modello (4 nei test); pgvector rifiuta vettori vuoti o non finiti solo al salvataggio.
+    [Theory]
+    [InlineData("shorter")]
+    [InlineData("longer")]
+    [InlineData("empty")]
+    [InlineData("nan")]
+    [InlineData("infinity")]
+    public async Task Handle_ReEmbed_WhenAVectorIsNotWhatTheModelProduces_ImportsNothingOfThatDocument(string flaw)
+    {
+        float[] bad = flaw switch
+        {
+            "shorter" => [0.1f, 0.2f, 0.3f],
+            "longer" => [0.1f, 0.2f, 0.3f, 0.4f, 0.5f],
+            "empty" => [],
+            "nan" => [0.1f, float.NaN, 0.3f, 0.4f],
+            _ => [0.1f, float.PositiveInfinity, 0.3f, 0.4f],
+        };
+        var service = WorkingEmbeddingService();
+        service.Setup(e => e.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(EmbeddingResult.CreateSuccess([[0.1f, 0.2f, 0.3f, 0.4f], bad]));
+
+        var import = await ImportWithReEmbedAsync(
+            nameof(Handle_ReEmbed_WhenAVectorIsNotWhatTheModelProduces_ImportsNothingOfThatDocument) + flaw,
+            service.Object,
+            [(0, 1, "One."), (1, 1, "Two.")]);
+        await using var db = import.Db;
+
+        import.Result.Failed.Should().Be(1);
+        (await db.PdfDocuments.CountAsync()).Should().Be(0);
+        (await db.PgVectorEmbeddings.CountAsync()).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Handle_ReEmbed_AChunkWithoutAPageIsOnPageOne()
+    {
+        // Come negli altri percorsi che producono embedding: la prima pagina è la 1, non la 0.
+        var import = await ImportWithReEmbedAsync(
+            nameof(Handle_ReEmbed_AChunkWithoutAPageIsOnPageOne),
+            WorkingEmbeddingService().Object,
+            [(0, 0, "No page.")]);
+        await using var db = import.Db;
+
+        (await db.PgVectorEmbeddings.SingleAsync()).PageNumber.Should().Be(1);
     }
 
     [Fact]

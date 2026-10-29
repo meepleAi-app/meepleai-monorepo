@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Services;
+using Api.Constants;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.KnowledgeBase;
@@ -207,8 +208,9 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                 // f. Create VectorDocumentEntity
                 var vectorDocumentId = Guid.NewGuid();
 #pragma warning disable MAI005 // Out-of-scope for the #2244 / P234 refactor — admin RAG data import
-                                // is a separate ingestion path that bulk-imports pre-existing embeddings (no
-                                // domain event needed since this is import, not new indexing). Migrate to
+                                // is a separate ingestion path that bulk-imports a backup: its stored embeddings, or
+                                // (ReEmbed) ones recomputed from the imported chunks (no domain event needed since
+                                // this is import, not new indexing). Migrate to
                                 // domain.ToEntity() pattern if/when this path needs to raise events.
                 var vectorDocument = new VectorDocumentEntity
                 {
@@ -330,7 +332,7 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                             textContent: chunks[i].Content,
                             vector: vectors[i],
                             model: model,
-                            pageNumber: chunks[i].PageNumber ?? 0,
+                            pageNumber: Math.Max(1, chunks[i].PageNumber ?? 1),
                             lang: docInfo.Language,
                             sourceChunk: TextChunkLink.From(textChunks[i])));
                     }
@@ -381,19 +383,27 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
     }
 
     /// <summary>
-    /// One vector per chunk, in the chunks' order, from the current embedding model. Throws if the service fails or
-    /// answers with a different number of vectors: a half-embedded document must not be saved.
+    /// One vector per chunk, in the chunks' order, from the current embedding model. Throws if the service fails,
+    /// answers with a different number of vectors, or returns a vector the index would refuse: a half-embedded
+    /// document must not be saved.
     /// </summary>
     private async Task<List<float[]>> EmbedChunksAsync(IReadOnlyList<RagExportChunkLine> chunks, CancellationToken cancellationToken)
     {
+        var dimensions = _embeddingService.GetEmbeddingDimensions();
         var vectors = new List<float[]>(chunks.Count);
 
         for (var offset = 0; offset < chunks.Count; offset += EmbeddingBatchSize)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var texts = chunks.Skip(offset).Take(EmbeddingBatchSize).Select(c => c.Content).ToList();
+            // Only the provider input is capped, as in every ingest path: a parent chunk is a whole section and
+            // can be longer than the provider accepts. The full text stays in text_chunks and in the embedding row.
+            var texts = chunks.Skip(offset).Take(EmbeddingBatchSize).Select(c => CapForEmbedding(c.Content)).ToList();
             var batch = await _embeddingService.GenerateEmbeddingsAsync(texts, cancellationToken).ConfigureAwait(false);
+
+            // EmbeddingService turns every provider exception, cancellation included, into a failed result: without
+            // this line a cancelled import would be recorded as a failed document and carry on with the next one.
+            cancellationToken.ThrowIfCancellationRequested();
 
             if (!batch.Success || batch.Embeddings.Count != texts.Count)
             {
@@ -402,9 +412,20 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                     (batch.Success ? $"{batch.Embeddings.Count} vectors for {texts.Count} texts" : batch.ErrorMessage));
             }
 
+            // The width is the model's: a fallback provider answering with another one would mix models in a
+            // document labelled with the primary's, and pgvector refuses empty or non-finite vectors only at the save.
+            if (batch.Embeddings.Exists(v => v is null || v.Length != dimensions || Array.Exists(v, x => !float.IsFinite(x))))
+            {
+                throw new InvalidOperationException(
+                    $"Invalid embedding vector for chunks {offset}-{offset + texts.Count - 1} (expected {dimensions} finite values)");
+            }
+
             vectors.AddRange(batch.Embeddings);
         }
 
         return vectors;
     }
+
+    private static string CapForEmbedding(string text) =>
+        text.Length <= ChunkingConstants.MaxEmbeddingChars ? text : text[..ChunkingConstants.MaxEmbeddingChars];
 }

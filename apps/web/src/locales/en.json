@@ -4547,6 +4547,17 @@
       "sectionTitle": "Participants ({count})",
       "hostLabel": "host",
       "guestByEmail": "Invited by email",
+      "withdraw": {
+        "trigger": "Withdraw",
+        "triggerAria": "Withdraw the invitation to {email}",
+        "title": "Withdraw the invitation?",
+        "descriptionPending": "The link sent to {email} will stop working. No email is sent.",
+        "descriptionAccepted": "{email} has already accepted: if you withdraw the invitation they lose their seat and the link stops working. No email is sent.",
+        "confirm": "Withdraw the invitation",
+        "confirming": "Withdrawing…",
+        "cancel": "Cancel",
+        "error": "I could not withdraw the invitation. Try again."
+      },
       "rsvpStatus": {
         "accepted": "Going",
         "declined": "Declined",

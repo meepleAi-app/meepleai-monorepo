@@ -34,6 +34,7 @@ import {
   GameNightDetailHero,
   GameNightRsvpActionBar,
   GameNightRsvpRow,
+  GuestInvitationWithdraw,
 } from '@/components/features/game-night-detail';
 import { VotingPanel } from '@/components/features/game-night-detail/voting/VotingPanel';
 import { GameNightActions } from '@/components/game-night/GameNightActions';
@@ -591,6 +592,17 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
                     }
                     subtitle={
                       guest.respondedByName?.trim() ? `${guest.email} · ${byEmail}` : byEmail
+                    }
+                    // #4721: pending and accepted invitations can be withdrawn; declined and expired are history.
+                    action={
+                      guest.status === 'Pending' || guest.status === 'Accepted' ? (
+                        <GuestInvitationWithdraw
+                          gameNightId={id}
+                          invitationId={guest.id}
+                          email={guest.email}
+                          accepted={guest.status === 'Accepted'}
+                        />
+                      ) : undefined
                     }
                   />
                 </li>

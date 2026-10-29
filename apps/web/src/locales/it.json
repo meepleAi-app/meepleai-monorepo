@@ -4559,6 +4559,17 @@
       "sectionTitle": "Partecipanti ({count})",
       "hostLabel": "host",
       "guestByEmail": "Invitato per email",
+      "withdraw": {
+        "trigger": "Ritira",
+        "triggerAria": "Ritira l'invito a {email}",
+        "title": "Ritirare l'invito?",
+        "descriptionPending": "Il link inviato a {email} smetterà di funzionare. Non parte nessuna email.",
+        "descriptionAccepted": "{email} ha già accettato: se ritiri l'invito perde il posto e il link smette di funzionare. Non parte nessuna email.",
+        "confirm": "Ritira l'invito",
+        "confirming": "Ritiro…",
+        "cancel": "Annulla",
+        "error": "Non sono riuscito a ritirare l'invito. Riprova."
+      },
       "rsvpStatus": {
         "accepted": "Confermato",
         "declined": "Declinato",

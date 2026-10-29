@@ -90,7 +90,7 @@ public sealed class GameNightListGuestCountsTests : IDisposable
     [Fact]
     public async Task GetUpcomingGameNights_CountsTheGuestsOfEachNight()
     {
-        _repo.Setup(r => r.GetUpcomingAsync(It.IsAny<CancellationToken>()))
+        _repo.Setup(r => r.GetUpcomingAsync(_organizerId, It.IsAny<CancellationToken>()))
             .ReturnsAsync([_first, _second]);
         var handler = new GetUpcomingGameNightsQueryHandler(_repo.Object, _db);
 
@@ -103,12 +103,12 @@ public sealed class GameNightListGuestCountsTests : IDisposable
     [Fact]
     public async Task GetCompletedGameNights_CountsTheGuestsOfEachNight()
     {
-        _repo.Setup(r => r.GetCompletedAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+        _repo.Setup(r => r.GetCompletedAsync(_organizerId, It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([_first, _second]);
         var handler = new GetCompletedGameNightsQueryHandler(_repo.Object, _db);
 
         var result = await handler.Handle(
-            new GetCompletedGameNightsQuery(), TestContext.Current.CancellationToken);
+            new GetCompletedGameNightsQuery(_organizerId), TestContext.Current.CancellationToken);
 
         AssertEachNightHasItsOwnGuests(result);
     }

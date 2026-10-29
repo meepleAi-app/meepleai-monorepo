@@ -901,10 +901,13 @@ internal static class GameNightEndpoints
     // F20 #1974 (audit 2026-06-07): dashboard "Recenti" slot.
     private static async Task<IResult> HandleGetCompletedGameNights(
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken,
         [FromQuery] int? limit = null)
     {
-        var query = limit.HasValue ? new GetCompletedGameNightsQuery(limit.Value) : new GetCompletedGameNightsQuery();
+        // #4748: only the viewer's nights — the list used to hold every user's completed nights.
+        var userId = httpContext.User.GetUserId();
+        var query = limit.HasValue ? new GetCompletedGameNightsQuery(userId, limit.Value) : new GetCompletedGameNightsQuery(userId);
         var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }

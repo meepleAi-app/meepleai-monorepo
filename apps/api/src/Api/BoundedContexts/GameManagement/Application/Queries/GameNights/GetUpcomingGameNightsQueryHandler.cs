@@ -29,7 +29,7 @@ internal sealed class GetUpcomingGameNightsQueryHandler : IQueryHandler<GetUpcom
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var events = await _repository.GetUpcomingAsync(cancellationToken).ConfigureAwait(false);
+        var events = await _repository.GetUpcomingAsync(query.UserId, cancellationToken).ConfigureAwait(false);
 
         var organizerIds = events.Select(e => e.OrganizerId).Distinct().ToList();
         var organizerNames = await GetUserDisplayNamesAsync(organizerIds, cancellationToken).ConfigureAwait(false);

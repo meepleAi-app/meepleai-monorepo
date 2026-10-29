@@ -2,9 +2,11 @@
  * @vitest-environment jsdom
  */
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { liveSessionKeys } from '@/hooks/queries/useLiveSession';
 import type { LiveSessionPlayerDto } from '@/lib/api/schemas/live-sessions.schemas';
 
 import { LiveScoreSheet } from '../LiveScoreSheet';
@@ -19,8 +21,12 @@ let chosenCategory: string | null = null;
 let lastCategories: string[] | undefined;
 
 vi.mock('@/lib/stores/session-store', () => ({
-  useSessionStore: (select: (s: { recordScore: typeof recordScore }) => unknown) =>
-    select({ recordScore }),
+  useSessionStore: (
+    select: (s: {
+      recordScore: typeof recordScore;
+      activeSession: { id: string } | null;
+    }) => unknown
+  ) => select({ recordScore, activeSession: { id: 'session-1' } }),
 }));
 
 // ScoreInput is exercised by its own tests; here it only hands LiveScoreSheet what the form would submit.
@@ -40,12 +46,15 @@ vi.mock('../ScoreInput', () => ({
         type="button"
         data-testid="submit-score"
         onClick={() =>
-          void props.onSubmit({
-            participantId: 'player-1',
-            roundNumber: null,
-            category: chosenCategory,
-            scoreValue: 7,
-          })
+          // The real form shows the error and swallows the rejection; here it is simply ignored.
+          void props
+            .onSubmit({
+              participantId: 'player-1',
+              roundNumber: null,
+              category: chosenCategory,
+              scoreValue: 7,
+            })
+            .catch(() => undefined)
         }
       />
     );
@@ -64,16 +73,20 @@ const players = [
   },
 ] as unknown as LiveSessionPlayerDto[];
 
+let queryClient: QueryClient;
+
 function renderSheet(dimensions: string[]) {
   return render(
-    <LiveScoreSheet
-      open
-      onOpenChange={vi.fn()}
-      players={players}
-      currentUserId={null}
-      currentRound={2}
-      dimensions={dimensions}
-    />
+    <QueryClientProvider client={queryClient}>
+      <LiveScoreSheet
+        open
+        onOpenChange={vi.fn()}
+        players={players}
+        currentUserId={null}
+        currentRound={2}
+        dimensions={dimensions}
+      />
+    </QueryClientProvider>
   );
 }
 
@@ -93,6 +106,31 @@ beforeEach(() => {
   recordScore.mockResolvedValue(undefined);
   chosenCategory = null;
   lastCategories = undefined;
+  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+});
+
+// The sheet writes through the store, which only updates the store's own copy. The live page reads the session from
+// the `liveSessionKeys.detail(id)` query, so without invalidating it the table kept the old numbers until a reload
+// (measured on the live page: the POST answered 204, no re-read followed, 20 s later the row was unchanged).
+describe('LiveScoreSheet — the live page sees the new score', () => {
+  it('refreshes the session query after the score is saved', async () => {
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+    renderSheet(['Punti']);
+    await submit();
+    await vi.waitFor(() =>
+      expect(invalidate).toHaveBeenCalledWith({ queryKey: liveSessionKeys.detail('session-1') })
+    );
+  });
+
+  it('does not refresh when saving fails (the form shows the error)', async () => {
+    recordScore.mockRejectedValue(new Error('boom'));
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+    renderSheet(['Punti']);
+    fireEvent.click(screen.getByTestId('submit-score'));
+    await vi.waitFor(() => expect(recordScore).toHaveBeenCalledTimes(1));
+    await Promise.resolve();
+    expect(invalidate).not.toHaveBeenCalled();
+  });
 });
 
 describe('LiveScoreSheet — which dimension "No Category" records into', () => {

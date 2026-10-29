@@ -11,6 +11,8 @@
 
 import { useCallback } from 'react';
 
+import { useQueryClient } from '@tanstack/react-query';
+
 import {
   Sheet,
   SheetContent,
@@ -18,6 +20,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/navigation/sheet';
+import { liveSessionKeys } from '@/hooks/queries/useLiveSession';
 import type { LiveSessionPlayerDto } from '@/lib/api/schemas/live-sessions.schemas';
 import { useSessionStore } from '@/lib/stores/session-store';
 
@@ -42,6 +45,8 @@ export function LiveScoreSheet({
   dimensions,
 }: LiveScoreSheetProps) {
   const recordScore = useSessionStore(s => s.recordScore);
+  const sessionId = useSessionStore(s => s.activeSession?.id);
+  const queryClient = useQueryClient();
 
   const participants = players.map(p => toParticipant(p, currentUserId));
   const rounds = Array.from({ length: currentRound }, (_, i) => i + 1);
@@ -69,9 +74,14 @@ export function LiveScoreSheet({
         dimension: data.category || noCategoryDimension,
         value: data.scoreValue,
       });
+      // The store write only updates the store's own copy; the live page reads the session from this query, so
+      // without a refresh its table kept the old numbers until a reload.
+      if (sessionId) {
+        void queryClient.invalidateQueries({ queryKey: liveSessionKeys.detail(sessionId) });
+      }
       onOpenChange(false);
     },
-    [recordScore, currentRound, onOpenChange, noCategoryDimension]
+    [recordScore, currentRound, onOpenChange, noCategoryDimension, sessionId, queryClient]
   );
 
   return (

@@ -68,8 +68,8 @@ public sealed class HybridCacheServiceBackendDownTests
     {
         var cache = HybridCacheWithL2Down.Create();
 
-        var remove = () => cache.RemoveAsync("some-key", TestContext.Current.CancellationToken).AsTask();
-        var removeByTag = () => cache.RemoveByTagAsync("some-tag", TestContext.Current.CancellationToken).AsTask();
+        var remove = async () => await cache.RemoveAsync("some-key", TestContext.Current.CancellationToken);
+        var removeByTag = async () => await cache.RemoveByTagAsync("some-tag", TestContext.Current.CancellationToken);
 
         await remove.Should().ThrowAsync<InvalidOperationException>(
             "HybridCache.RemoveAsync throws when its L2 is down; if this started passing the library became tolerant");

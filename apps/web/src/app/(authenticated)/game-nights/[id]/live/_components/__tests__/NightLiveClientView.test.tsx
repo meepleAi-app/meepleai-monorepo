@@ -19,8 +19,9 @@ import {
   NotFoundError,
   UnauthorizedError,
   NetworkError,
+  ValidationError,
 } from '@/lib/api/core/errors';
-import { MAX_LIVE_SESSIONS_EXCEEDED } from '@/lib/game-nights/hooks/useStartNextGame';
+import { KB_NOT_READY, MAX_LIVE_SESSIONS_EXCEEDED } from '@/lib/game-nights/hooks/useStartNextGame';
 import type { NightLiveViewModel } from '@/lib/game-nights/mapNightLive';
 
 import { NightLiveClientView } from '../NightLiveClientView';
@@ -340,6 +341,73 @@ describe('NightLiveClientView — organizer interactive start (WS1 DEC-10)', () 
     render(<NightLiveClientView nightId={NIGHT_ID} />);
     await userEvent.click(screen.getByRole('button', { name: /Avvia: Catan/i }));
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  // #4729: a start refused for any reason other than the 409 left the button back as it was, with no word.
+  describe('when the start is refused (#4729)', () => {
+    const refuseWith = (error: Error) =>
+      startNextMutateMock.mockImplementation((_vars, opts) => {
+        opts?.onError?.(error);
+      });
+
+    it('explains a game with no ready rulebook (422 kb_not_ready) and says what to do', async () => {
+      refuseWith(new ValidationError({ message: 'KB not ready', code: KB_NOT_READY }));
+      mockQuery({
+        data: vm({ isViewerOrganizer: true, nextGame: NEXT_GAME, status: 'transition' }),
+      });
+      render(<NightLiveClientView nightId={NIGHT_ID} />);
+
+      await userEvent.click(screen.getByRole('button', { name: /Avvia: Catan/i }));
+
+      const alert = screen.getByTestId('start-next-error');
+      expect(alert).toHaveAttribute('role', 'alert');
+      expect(alert).toHaveTextContent(/non ha ancora un regolamento pronto/i);
+      expect(alert).toHaveTextContent(/caricalo/i);
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
+    it('says plainly that the start failed for any other error', async () => {
+      refuseWith(new Error('boom'));
+      mockQuery({
+        data: vm({ isViewerOrganizer: true, nextGame: NEXT_GAME, status: 'transition' }),
+      });
+      render(<NightLiveClientView nightId={NIGHT_ID} />);
+
+      await userEvent.click(screen.getByRole('button', { name: /Avvia: Catan/i }));
+
+      const alert = screen.getByTestId('start-next-error');
+      expect(alert).toHaveTextContent(/impossibile avviare la partita/i);
+      expect(alert).not.toHaveTextContent(/regolamento/i);
+    });
+
+    it('keeps showing the blocked modal, and no message, for the max-1-live 409', async () => {
+      refuseWith(new ConflictError({ message: 'blocked', code: MAX_LIVE_SESSIONS_EXCEEDED }));
+      mockQuery({
+        data: vm({ isViewerOrganizer: true, nextGame: NEXT_GAME, status: 'transition' }),
+      });
+      render(<NightLiveClientView nightId={NIGHT_ID} />);
+
+      await userEvent.click(screen.getByRole('button', { name: /Avvia: Catan/i }));
+
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+      expect(screen.queryByTestId('start-next-error')).toBeNull();
+    });
+
+    it('clears the message when the organizer tries again', async () => {
+      refuseWith(new ValidationError({ message: 'KB not ready', code: KB_NOT_READY }));
+      mockQuery({
+        data: vm({ isViewerOrganizer: true, nextGame: NEXT_GAME, status: 'transition' }),
+      });
+      render(<NightLiveClientView nightId={NIGHT_ID} />);
+      await userEvent.click(screen.getByRole('button', { name: /Avvia: Catan/i }));
+      expect(screen.getByTestId('start-next-error')).toBeInTheDocument();
+
+      // The second attempt goes through (no error callback): the old message must not outlive it.
+      startNextMutateMock.mockImplementation(() => undefined);
+      await userEvent.click(screen.getByRole('button', { name: /Avvia: Catan/i }));
+
+      expect(screen.queryByTestId('start-next-error')).toBeNull();
+    });
   });
 });
 

@@ -3,6 +3,8 @@ using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.KnowledgeBase.Application.SessionAssistant;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
+using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
@@ -228,5 +230,90 @@ public sealed class SessionAssistantPanelEndpointTests(SessionAssistantHostFixtu
         citation.GetProperty("copyrightTier").GetString().Should().Be("protected");
         citation.GetProperty("snippetPreview").ValueKind.Should().Be(JsonValueKind.Null);
         citation.GetProperty("paraphrasedSnippet").GetString().Should().Be("Quattro tessere.");
+    }
+
+    // ---- #4729: l'host sa subito se l'assistente potrà consultare un regolamento ----
+
+    [Fact]
+    public async Task SessionWithoutAGame_ReturnsNoRulesAnswer()
+    {
+        var table = await StartedTableAsync();
+
+        var (status, panel, raw) = await GetPanelAsync(table.SessionId, _token);
+
+        status.Should().Be(HttpStatusCode.OK, raw);
+        panel.GetProperty("rulesLoaded").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    [Fact]
+    public async Task CatalogGameWithoutARulebook_SaysTheRulesAreNotLoaded()
+    {
+        var table = await SessionAssistantTestData.CreateGameTableAsync(host.Factory, _owner, Ct, "Marco", "Giulia");
+
+        var (status, panel, raw) = await GetPanelAsync(table.SessionId, _token);
+
+        status.Should().Be(HttpStatusCode.OK, raw);
+        panel.GetProperty("rulesLoaded").GetBoolean().Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task CatalogGameWithAReadyRulebook_SaysTheRulesAreLoaded()
+    {
+        var table = await SessionAssistantTestData.CreateGameTableAsync(host.Factory, _owner, Ct, "Marco", "Giulia");
+        await SeedReadyRulebookAsync(table.GameId!.Value);
+
+        var (status, panel, raw) = await GetPanelAsync(table.SessionId, _token);
+
+        status.Should().Be(HttpStatusCode.OK, raw);
+        panel.GetProperty("rulesLoaded").GetBoolean().Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task AfterATurn_OnAGameWithoutARulebook_ThePanelStillSaysTheRulesAreNotLoaded()
+    {
+        // The panel has two ways out: no thread yet, and a thread with its messages. Both carry the flag.
+        await SessionAssistantTestData.EnableAssistantAsync(host.Factory, Ct);
+        var table = await SessionAssistantTestData.CreateGameTableAsync(host.Factory, _owner, Ct, "Marco", "Giulia");
+        host.Llm.Reset(Says("Tocca a Marco."));
+        var (askStatus, _, askBody) = await SessionAssistantTestData.AskAsync(
+            _client, _token, table.SessionId, "a chi tocca?", Ct);
+        askStatus.Should().Be(HttpStatusCode.OK, askBody);
+
+        var (status, panel, raw) = await GetPanelAsync(table.SessionId, _token);
+
+        status.Should().Be(HttpStatusCode.OK, raw);
+        panel.GetProperty("messages").GetArrayLength().Should().BePositive("the turn left a conversation");
+        panel.GetProperty("rulesLoaded").GetBoolean().Should().BeFalse();
+    }
+
+    /// <summary>«Pronto» come lo intende il controllo all'avvio: un PDF <c>Ready</c> con un indice <c>completed</c>.</summary>
+    private async Task SeedReadyRulebookAsync(Guid gameId)
+    {
+        await using var scope = host.Factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var pdf = new PdfDocumentEntity
+        {
+            Id = Guid.NewGuid(),
+            FileName = "regolamento.pdf",
+            FilePath = "/tmp/regolamento.pdf",
+            FileSizeBytes = 1024,
+            ContentType = "application/pdf",
+            UploadedByUserId = _owner,
+            SharedGameId = gameId,
+            ProcessingState = "Ready",
+        };
+        db.PdfDocuments.Add(pdf);
+        db.VectorDocuments.Add(new VectorDocumentEntity
+        {
+            Id = Guid.NewGuid(),
+            SharedGameId = gameId,
+            PdfDocumentId = pdf.Id,
+            IndexingStatus = "completed",
+            EmbeddingModel = "test-model",
+            EmbeddingDimensions = 768,
+            ChunkCount = 1,
+            IndexedAt = DateTime.UtcNow,
+        });
+        await db.SaveChangesAsync(Ct);
     }
 }

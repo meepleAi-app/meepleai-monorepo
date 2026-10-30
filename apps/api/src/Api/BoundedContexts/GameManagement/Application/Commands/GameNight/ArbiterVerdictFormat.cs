@@ -93,10 +93,19 @@ internal static class ArbiterVerdictFormat
         "Il tuo compito è emettere verdetti chiari, precisi e imparziali sulle dispute di regole. " +
         "Rispondi SEMPRE in italiano nel formato strutturato richiesto.";
 
+    /// <remarks>
+    /// The parser takes «yes» only from a COPERTURA line whose value is exactly SI (or SÌ), so the prompt says to
+    /// write only the word, and the line it shows is one the parser reads: no explanation on it, which would turn
+    /// «SI, i passaggi coprono il caso» into a «no». The example is the NO form on purpose: a model that copies it
+    /// word for word lands on the honest side (notice, no references), not on the one that cites.
+    /// </remarks>
     private const string RulebookFormat =
-        "Rispondi in formato strutturato, una sezione per riga:\n" +
-        "COPERTURA: [SI se i passaggi del regolamento forniti sopra coprono il caso; NO se non lo coprono " +
-        "(in quel caso proponi comunque l'interpretazione più ragionevole)]\n" +
+        "Rispondi in formato strutturato, una sezione per riga.\n" +
+        "Prima valuta se i passaggi del regolamento forniti sopra coprono il caso. " +
+        "Se non lo coprono, dillo nel VERDETTO e proponi comunque l'interpretazione più ragionevole.\n" +
+        "Sulla riga COPERTURA scrivi SOLO la parola SI oppure la parola NO, senza altro testo: " +
+        "la spiegazione va nel VERDETTO.\n" +
+        "COPERTURA: NO\n" +
         "VERDETTO: [Chi ha ragione e perché — 1-2 frasi]\n" +
         "NOTA: [Se ambigua, spiega perché e suggerisci come gestirla]";
 

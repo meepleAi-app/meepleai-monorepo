@@ -40,7 +40,6 @@ internal sealed class SessionAgentOptions
     /// sized for the live image path and, by its own documentation, below the retrieval latency observed
     /// there; the chat applies it only behind a feature flag that is off by default. Copied here it would
     /// put almost every verdict on the no-rulebook branch. A value of 0 or less disables the budget.
-    /// Default: 15 000 ms.
     ///
     /// NEEDS TUNING: a guess, not a measurement. What this bound exists to cut is the embedding client's own
     /// timeout and retries (see its options), which add up to far more than a player will wait. Observe how

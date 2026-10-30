@@ -610,6 +610,52 @@ public sealed class ArbiterVerdictFormatTests
     }
 
     [Fact]
+    public void ResponseInstructions_TellTheModelToWriteOnlyTheWord_OnTheCoverageLine()
+    {
+        // The parser takes «yes» only from exactly SI/SÌ, so «COPERTURA: SI, i passaggi coprono il caso» is a «no»
+        // (notice, no references, even if the model did use the passages). The prompt must say what the parser
+        // wants — and its own example must not show a line the parser would refuse.
+        var instructions = ArbiterVerdictFormat.ResponseInstructions(StartedSession());
+
+        instructions.Should().Contain("SOLO la parola SI oppure la parola NO, senza altro testo");
+        instructions.Should().Contain("la spiegazione va nel VERDETTO");
+    }
+
+    [Fact]
+    public void ResponseInstructions_EveryCoverageLineOfTheFormat_IsExactlyTheWordAndNothingAfterIt()
+    {
+        var instructions = ArbiterVerdictFormat.ResponseInstructions(StartedSession());
+
+        var coverageLines = instructions
+            .Split('\n')
+            .Select(line => line.TrimEnd('\r'))
+            .Where(line => line.StartsWith("COPERTURA:", StringComparison.Ordinal))
+            .ToList();
+
+        coverageLines.Should().NotBeEmpty("the format shows the line");
+        coverageLines.Should().OnlyContain(
+            line => line == "COPERTURA: SI" || line == "COPERTURA: NO",
+            "an example the model may copy must be a line the parser accepts, with nothing after the word");
+        instructions.Should().NotContain("[SI se", "the old example put the explanation on the line itself");
+    }
+
+    [Fact]
+    public void ResponseInstructions_TheExampleOfTheCoverageLine_IsTheReadableOne()
+    {
+        // What the prompt shows, the parser reads: the example line is a valid answer, not an echo it would refuse
+        var instructions = ArbiterVerdictFormat.ResponseInstructions(StartedSession());
+        var example = instructions
+            .Split('\n')
+            .Select(line => line.TrimEnd('\r'))
+            .First(line => line.StartsWith("COPERTURA:", StringComparison.Ordinal));
+
+        var parsed = ArbiterVerdictFormat.Parse(example + "\nVERDETTO: Ha ragione Sara.");
+
+        parsed.Verdict.Should().Be("Ha ragione Sara.");
+        parsed.RulebookCoversTheCase.Should().Be(example == "COPERTURA: SI");
+    }
+
+    [Fact]
     public void DirectPrompt_TellsTheModelThereIsNoRulebook_AndDoesNotAskForCoverage()
     {
         var (system, user) = ArbiterVerdictFormat.DirectPrompt(StartedSession(), "Il ladro si sposta subito?");

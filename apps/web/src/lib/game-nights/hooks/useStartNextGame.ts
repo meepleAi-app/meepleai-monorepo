@@ -65,10 +65,12 @@ export function startGameErrorMessage(error: unknown): string {
 const GENERIC_CONFLICT_MESSAGE = 'Non è possibile avviare la partita in questo momento.';
 
 /**
- * Le frasi italiane dei rifiuti noti del backend. Il testo del server NON si mostra mai grezzo: il catch di
- * `StartGameNightSessionCommandHandler` trasforma QUALUNQUE `InvalidOperationException` (anche di EF o Npgsql)
- * in un 409 con `ex.Message`, quindi un testo interno potrebbe arrivare all'utente. Ciò che non si riconosce
- * dice la frase generica. I pattern sono ancorati all'inizio del messaggio.
+ * Le frasi italiane dei rifiuti noti del backend. Il testo del server NON si mostra mai grezzo: è in inglese, e
+ * un backend che cambia — o un altro percorso che produce un 409 — potrebbe mandarne uno interno. Fino a #4752
+ * il catch di `StartGameNightSessionCommandHandler` trasformava QUALUNQUE `InvalidOperationException` (anche di
+ * EF o Npgsql) in un 409 con `ex.Message`; ora lo fa solo per le guardie dell'aggregato e per la quota di
+ * sessioni, e il resto è un errore del server. La difesa lato client resta: ciò che non si riconosce dice la
+ * frase generica. I pattern sono ancorati all'inizio del messaggio.
  */
 function conflictMessage(serverMessage: string): string {
   const text = serverMessage.trim();

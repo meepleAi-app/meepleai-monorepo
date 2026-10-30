@@ -112,9 +112,13 @@ describe('useGameNightSessions', () => {
 
   it('does not repeat a refusal: a viewer the read refuses (403) gets no data and one request', async () => {
     getLiveMock.mockRejectedValue(new Error('403'));
+    // The client's DEFAULT is to retry (three times, with no delay): the single request below is the hook's
+    // own `retry: false`, not a client that happens to have retries off. The other tests use a client with
+    // retries off and would pass either way.
+    const retrying = new QueryClient({ defaultOptions: { queries: { retry: 3, retryDelay: 0 } } });
 
     const { result } = renderHook(() => useGameNightSessions(GN_ID), {
-      wrapper: wrapperFor(createClient()),
+      wrapper: wrapperFor(retrying),
     });
 
     await waitFor(() => expect(result.current.isError).toBe(true));

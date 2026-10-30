@@ -6,8 +6,8 @@ using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.SharedKernel.Services;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 
 namespace Api.BoundedContexts.UserLibrary.Application.Commands;
 
@@ -19,7 +19,7 @@ internal class CreateLibraryShareLinkCommandHandler : ICommandHandler<CreateLibr
 {
     private readonly ILibraryShareLinkRepository _shareLinkRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IConfiguration _configuration;
+    private readonly IPublicBaseUrlProvider _publicBaseUrl;
     private readonly ILogger<CreateLibraryShareLinkCommandHandler> _logger;
 
     private const int MaxShareLinksPerDay = 10;
@@ -31,12 +31,12 @@ internal class CreateLibraryShareLinkCommandHandler : ICommandHandler<CreateLibr
     public CreateLibraryShareLinkCommandHandler(
         ILibraryShareLinkRepository shareLinkRepository,
         IUnitOfWork unitOfWork,
-        IConfiguration configuration,
+        IPublicBaseUrlProvider publicBaseUrl,
         ILogger<CreateLibraryShareLinkCommandHandler> logger)
     {
         _shareLinkRepository = shareLinkRepository ?? throw new ArgumentNullException(nameof(shareLinkRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _publicBaseUrl = publicBaseUrl ?? throw new ArgumentNullException(nameof(publicBaseUrl));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -135,8 +135,7 @@ internal class CreateLibraryShareLinkCommandHandler : ICommandHandler<CreateLibr
 
     private LibraryShareLinkDto MapToDto(LibraryShareLink link)
     {
-        var baseUrl = _configuration["App:BaseUrl"]
-            ?? throw new InvalidOperationException("App:BaseUrl configuration is not set");
+        var baseUrl = _publicBaseUrl.GetBaseUrl();
         var shareUrl = $"{baseUrl}/library/shared/{link.ShareToken}";
 
         return new LibraryShareLinkDto(

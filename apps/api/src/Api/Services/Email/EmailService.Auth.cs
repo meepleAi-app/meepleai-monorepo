@@ -15,7 +15,7 @@ internal partial class EmailService
     {
         try
         {
-            var resetUrl = $"{_resetUrlBase}?token={Uri.EscapeDataString(resetToken)}";
+            var resetUrl = BuildPasswordResetUrl(resetToken);
             var subject = "Reset Your MeepleAI Password";
             var body = BuildPasswordResetEmailBody(toName, resetUrl);
 
@@ -114,7 +114,7 @@ internal partial class EmailService
     {
         try
         {
-            var verifyUrl = $"{_frontendBaseUrl}/verify-email?token={Uri.EscapeDataString(verificationToken)}";
+            var verifyUrl = $"{FrontendBaseUrl}/verify-email?token={Uri.EscapeDataString(verificationToken)}";
             var subject = "Verify Your MeepleAI Email";
             var body = BuildVerificationEmailBody(toName, verifyUrl, _timeProvider.GetUtcNow().Year);
 
@@ -328,7 +328,7 @@ internal partial class EmailService
     {
         try
         {
-            var inviteLink = $"{_frontendBaseUrl}/accept-invite?token={Uri.EscapeDataString(token)}";
+            var inviteLink = $"{FrontendBaseUrl}/accept-invite?token={Uri.EscapeDataString(token)}";
             var subject = "You've been invited to MeepleAI";
             var body = BuildInvitationEmailBody(role, inviteLink, invitedByName);
 
@@ -365,7 +365,7 @@ internal partial class EmailService
     {
         try
         {
-            var setupLink = $"{_frontendBaseUrl}/setup-account?token={Uri.EscapeDataString(token)}";
+            var setupLink = $"{FrontendBaseUrl}/setup-account?token={Uri.EscapeDataString(token)}";
             var subject = "Sei stato invitato su MeepleAI!";
             var body = BuildEnhancedInvitationEmailBody(displayName, role, setupLink, invitedByName, customMessage, expiresAt);
 

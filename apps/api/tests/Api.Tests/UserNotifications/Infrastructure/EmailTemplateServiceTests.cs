@@ -1,5 +1,6 @@
 using Api.BoundedContexts.UserNotifications.Infrastructure.Services;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Xunit;
@@ -20,7 +21,7 @@ public sealed class EmailTemplateServiceTests
             })
             .Build();
 
-        _sut = new EmailTemplateService(configuration);
+        _sut = new EmailTemplateService(PublicBaseUrlTestSupport.ProviderFor(configuration));
     }
 
     [Fact]

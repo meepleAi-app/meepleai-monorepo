@@ -297,7 +297,7 @@ internal partial class EmailService
         string contributionType,
         Guid shareRequestId)
     {
-        var requestUrl = $"{_frontendBaseUrl}/contributions/requests/{shareRequestId}";
+        var requestUrl = $"{FrontendBaseUrl}/contributions/requests/{shareRequestId}";
 
         return $@"
 <!DOCTYPE html>
@@ -353,8 +353,8 @@ internal partial class EmailService
         Guid sharedGameId,
         Guid userId)
     {
-        var sharedGameUrl = $"{_frontendBaseUrl}/shared-games/{sharedGameId}";
-        var contributorProfileUrl = $"{_frontendBaseUrl}/users/{userId}/contributions";
+        var sharedGameUrl = $"{FrontendBaseUrl}/shared-games/{sharedGameId}";
+        var contributorProfileUrl = $"{FrontendBaseUrl}/users/{userId}/contributions";
 
         return $@"
 <!DOCTYPE html>
@@ -409,7 +409,7 @@ internal partial class EmailService
         string gameTitle,
         string reason)
     {
-        var guidelinesUrl = $"{_frontendBaseUrl}/help/contribution-guidelines";
+        var guidelinesUrl = $"{FrontendBaseUrl}/help/contribution-guidelines";
 
         return $@"
 <!DOCTYPE html>
@@ -465,7 +465,7 @@ internal partial class EmailService
         string feedback,
         Guid shareRequestId)
     {
-        var editUrl = $"{_frontendBaseUrl}/contributions/requests/{shareRequestId}/edit";
+        var editUrl = $"{FrontendBaseUrl}/contributions/requests/{shareRequestId}/edit";
 
         return $@"
 <!DOCTYPE html>
@@ -520,7 +520,7 @@ internal partial class EmailService
         string gameTitle,
         Guid shareRequestId)
     {
-        var requestUrl = $"{_frontendBaseUrl}/contributions/requests/{shareRequestId}";
+        var requestUrl = $"{FrontendBaseUrl}/contributions/requests/{shareRequestId}";
 
         return $@"
 <!DOCTYPE html>
@@ -575,7 +575,7 @@ internal partial class EmailService
         string gameTitle,
         Guid sharedGameId)
     {
-        var sharedGameUrl = $"{_frontendBaseUrl}/shared-games/{sharedGameId}";
+        var sharedGameUrl = $"{FrontendBaseUrl}/shared-games/{sharedGameId}";
 
         return $@"
 <!DOCTYPE html>

@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Mail;
 using Api.Infrastructure.Security;
 using Api.Services.Email;
+using Api.SharedKernel.Services;
 using Microsoft.Extensions.Configuration;
 
 namespace Api.Services;
@@ -18,8 +19,8 @@ internal partial class EmailService : IEmailService
     private readonly string? _smtpUsername;
     private readonly string? _smtpPassword;
     private readonly bool _enableSsl;
-    private readonly string _resetUrlBase;
-    private readonly string _frontendBaseUrl;
+    private readonly string? _resetUrlOverride;
+    private readonly IPublicBaseUrlProvider _publicBaseUrl;
     private readonly TimeProvider _timeProvider;
 
     /// <summary>
@@ -41,14 +42,9 @@ internal partial class EmailService : IEmailService
         IConfiguration configuration,
         ILogger<EmailService> logger,
         IEmailSender? sender,
-        TimeProvider? timeProvider = null)
+        TimeProvider? timeProvider = null,
+        IPublicBaseUrlProvider? publicBaseUrl = null)
     {
-        // S1075: Default values extracted to const
-#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
-        const string DefaultResetUrlBase = "http://localhost:3000/reset-password";
-        const string DefaultFrontendBaseUrl = "http://localhost:3000";
-#pragma warning restore S1075
-
         _logger = logger;
         _sender = sender;
         _timeProvider = timeProvider ?? TimeProvider.System;
@@ -66,10 +62,28 @@ internal partial class EmailService : IEmailService
         _smtpUsername = configuration["Email:SmtpUsername"] ?? configuration["SMTP_USER"];
         _smtpPassword = configuration["Email:SmtpPassword"] ?? configuration["SMTP_PASSWORD"] ?? configuration["GMAIL_APP_PASSWORD"];
         _enableSsl = bool.Parse(configuration["Email:EnableSsl"] ?? "true");
-        _resetUrlBase = configuration["Email:ResetUrlBase"] ?? DefaultResetUrlBase;
-        _frontendBaseUrl = configuration["Frontend:BaseUrl"]
-            ?? configuration["FRONTEND_BASE_URL"]
-            ?? DefaultFrontendBaseUrl;
+        // An explicit full address for the reset page still wins; without one it hangs off the public
+        // front-end URL (#4774: it used to fall back to localhost, and no deployment sets this key).
+        _resetUrlOverride = string.IsNullOrWhiteSpace(configuration["Email:ResetUrlBase"])
+            ? null
+            : configuration["Email:ResetUrlBase"]!.Trim();
+
+        // Legacy ctor (unit tests that build the service by hand): the same resolver over the same
+        // configuration, outside a host, so without the local last resort.
+        _publicBaseUrl = publicBaseUrl ?? new PublicBaseUrlProvider(configuration);
+    }
+
+    /// <summary>
+    /// The public front-end URL, resolved when a link is composed and not when the service is built: an
+    /// e-mail that has no link to carry must not fail because of one.
+    /// </summary>
+    private string FrontendBaseUrl => _publicBaseUrl.GetBaseUrl();
+
+    /// <summary>The link in the password-reset e-mail.</summary>
+    internal string BuildPasswordResetUrl(string resetToken)
+    {
+        var resetBase = _resetUrlOverride ?? $"{FrontendBaseUrl}/reset-password";
+        return $"{resetBase}?token={Uri.EscapeDataString(resetToken)}";
     }
 
     /// <summary>

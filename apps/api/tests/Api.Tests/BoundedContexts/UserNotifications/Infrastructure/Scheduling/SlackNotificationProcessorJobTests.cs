@@ -50,7 +50,7 @@ public class SlackNotificationProcessorJobTests : IDisposable
     private SlackNotificationProcessorJob CreateSut()
     {
         var configuration = new ConfigurationBuilder().Build();
-        var genericBuilder = new GenericSlackBuilder(configuration);
+        var genericBuilder = new GenericSlackBuilder(PublicBaseUrlTestSupport.ProviderFor(configuration));
         var builderFactory = new SlackMessageBuilderFactory(
             Enumerable.Empty<ISlackMessageBuilder>(), genericBuilder);
 

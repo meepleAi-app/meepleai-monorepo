@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.Infrastructure;
+using Api.SharedKernel.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -15,15 +16,18 @@ internal sealed class CreateShareLinkCommandHandler : IRequestHandler<CreateShar
     private readonly MeepleAiDbContext _context;
     private readonly IShareLinkRepository _shareLinkRepository;
     private readonly IConfiguration _configuration;
+    private readonly IPublicBaseUrlProvider _publicBaseUrl;
 
     public CreateShareLinkCommandHandler(
         MeepleAiDbContext context,
         IShareLinkRepository shareLinkRepository,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IPublicBaseUrlProvider publicBaseUrl)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         _shareLinkRepository = shareLinkRepository ?? throw new ArgumentNullException(nameof(shareLinkRepository));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _publicBaseUrl = publicBaseUrl ?? throw new ArgumentNullException(nameof(publicBaseUrl));
     }
 
     public async Task<CreateShareLinkResult> Handle(
@@ -62,8 +66,7 @@ internal sealed class CreateShareLinkCommandHandler : IRequestHandler<CreateShar
         var token = shareLink.GenerateToken(secretKey);
 
         // Build shareable URL
-        var baseUrl = _configuration["App:BaseUrl"]
-            ?? throw new InvalidOperationException("App base URL not configured");
+        var baseUrl = _publicBaseUrl.GetBaseUrl();
 
         var shareableUrl = $"{baseUrl}/shared/chat?token={token.Value}";
 

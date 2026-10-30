@@ -6,7 +6,7 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
-using Microsoft.Extensions.Configuration;
+using Api.SharedKernel.Services;
 
 namespace Api.BoundedContexts.UserLibrary.Application.Commands;
 
@@ -17,18 +17,18 @@ internal class UpdateLibraryShareLinkCommandHandler : ICommandHandler<UpdateLibr
 {
     private readonly ILibraryShareLinkRepository _shareLinkRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IConfiguration _configuration;
+    private readonly IPublicBaseUrlProvider _publicBaseUrl;
     private readonly ILogger<UpdateLibraryShareLinkCommandHandler> _logger;
 
     public UpdateLibraryShareLinkCommandHandler(
         ILibraryShareLinkRepository shareLinkRepository,
         IUnitOfWork unitOfWork,
-        IConfiguration configuration,
+        IPublicBaseUrlProvider publicBaseUrl,
         ILogger<UpdateLibraryShareLinkCommandHandler> logger)
     {
         _shareLinkRepository = shareLinkRepository ?? throw new ArgumentNullException(nameof(shareLinkRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _publicBaseUrl = publicBaseUrl ?? throw new ArgumentNullException(nameof(publicBaseUrl));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -91,8 +91,7 @@ internal class UpdateLibraryShareLinkCommandHandler : ICommandHandler<UpdateLibr
 
     private LibraryShareLinkDto MapToDto(Domain.Entities.LibraryShareLink link)
     {
-        var baseUrl = _configuration["App:BaseUrl"]
-            ?? throw new InvalidOperationException("App:BaseUrl configuration is not set");
+        var baseUrl = _publicBaseUrl.GetBaseUrl();
         var shareUrl = $"{baseUrl}/library/shared/{link.ShareToken}";
 
         return new LibraryShareLinkDto(

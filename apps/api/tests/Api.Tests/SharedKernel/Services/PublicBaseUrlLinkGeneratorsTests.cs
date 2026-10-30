@@ -2,7 +2,6 @@ using System.Text.Json;
 using Api.BoundedContexts.Authentication.Application.Commands.CreateShareLink;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
-using IUserRepository = Api.BoundedContexts.Authentication.Infrastructure.Persistence.IUserRepository;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
@@ -21,6 +20,7 @@ using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Services;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Slack;
 using Api.Infrastructure.Entities;
+using Api.Routing;
 using Api.Services;
 using Api.Services.Email;
 using Api.SharedKernel.Application;
@@ -32,6 +32,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using IUserRepository = Api.BoundedContexts.Authentication.Infrastructure.Persistence.IUserRepository;
 
 namespace Api.Tests.SharedKernel.Services;
 
@@ -70,6 +71,8 @@ public sealed class PublicBaseUrlLinkGeneratorsTests
         ["slack-generic"] = ProduceGenericSlackLinkAsync,
         ["slack-pdf-processing"] = ProducePdfSlackLinkAsync,
         ["slack-share-request"] = ProduceShareRequestSlackLinkAsync,
+        ["password-reset-url"] = ProducePasswordResetLinkAsync,
+        ["oauth-frontend-redirect"] = ProduceOAuthRedirectAsync,
     };
 
     public static TheoryData<string> Generators() => new(Producers.Keys);
@@ -145,6 +148,53 @@ public sealed class PublicBaseUrlLinkGeneratorsTests
         link.Should().NotContain("front.example.test//");
     }
 
+    [Theory]
+    [MemberData(nameof(Generators))]
+    public async Task WithNoKeyAtAll_InADeployedEnvironment_NoLinkIsMadeUp(string generator)
+    {
+        // The producers build the provider for a deployed environment: nothing is configured, so there is
+        // no honest base to write. A made-up localhost link in a production e-mail fails silently; this fails
+        // where somebody can see it.
+        var act = async () => await ProduceAsync(generator, new Dictionary<string, string?>());
+
+        var failure = await act.Should().ThrowAsync<InvalidOperationException>();
+        failure.Which.ToString().Should().Contain("Frontend:BaseUrl");
+    }
+
+    [Fact]
+    public async Task TheUnsubscribeLink_KeepsThePublishedApiAddressAheadOfTheFrontendOne()
+    {
+        // The unsubscribe page is an API route: the address the API is published at (the OAuth callback
+        // base) was always first, and the front-end URL only stands in when there is none.
+        var link = await ProduceAsync("unsubscribe-url", new()
+        {
+            ["Authentication:OAuth:CallbackBaseUrl"] = "https://api.example.test/",
+            ["Frontend:BaseUrl"] = FrontendUrl,
+        });
+
+        link.Should().StartWith("https://api.example.test/api/v1/notifications/unsubscribe?token=");
+    }
+
+    [Fact]
+    public async Task ThePasswordResetLink_AnExplicitResetAddressStillWins()
+    {
+        var link = await ProduceAsync("password-reset-url", new()
+        {
+            ["Email:ResetUrlBase"] = "https://accounts.example.test/choose-new-password",
+            ["Frontend:BaseUrl"] = FrontendUrl,
+        });
+
+        link.Should().Be("https://accounts.example.test/choose-new-password?token=reset-token");
+    }
+
+    [Fact]
+    public async Task ThePasswordResetLink_HangsOffTheFrontendUrlOnTheResetPage()
+    {
+        var link = await ProduceAsync("password-reset-url", new() { ["Frontend:BaseUrl"] = FrontendUrl });
+
+        link.Should().Be($"{FrontendUrl}/reset-password?token=reset-token");
+    }
+
     // ------------------------------------------------------------------------------------------------------
     // Producers: one per link generator. Each builds the real component over the given configuration.
     // ------------------------------------------------------------------------------------------------------
@@ -176,6 +226,7 @@ public sealed class PublicBaseUrlLinkGeneratorsTests
             email.Object,
             new Mock<IUnitOfWork>().Object,
             configuration,
+            PublicBaseUrlTestSupport.ProviderFor(configuration),
             TimeProvider.System);
 
         await handler.Handle(
@@ -203,7 +254,7 @@ public sealed class PublicBaseUrlLinkGeneratorsTests
         var handler = new GenerateInviteTokenCommandHandler(
             repo.Object,
             new Mock<IUnitOfWork>().Object,
-            configuration,
+            PublicBaseUrlTestSupport.ProviderFor(configuration),
             NullLogger<GenerateInviteTokenCommandHandler>.Instance);
 
         var response = await handler.Handle(
@@ -222,7 +273,7 @@ public sealed class PublicBaseUrlLinkGeneratorsTests
         var handler = new GenerateSessionShareLinkQueryHandler(
             repo.Object,
             scores.Object,
-            configuration,
+            PublicBaseUrlTestSupport.ProviderFor(configuration),
             NullLogger<GenerateSessionShareLinkQueryHandler>.Instance);
 
         var response = await handler.Handle(
@@ -240,7 +291,7 @@ public sealed class PublicBaseUrlLinkGeneratorsTests
         var handler = new CreateLibraryShareLinkCommandHandler(
             repo.Object,
             new Mock<IUnitOfWork>().Object,
-            configuration,
+            PublicBaseUrlTestSupport.ProviderFor(configuration),
             NullLogger<CreateLibraryShareLinkCommandHandler>.Instance);
 
         var dto = await handler.Handle(
@@ -258,7 +309,7 @@ public sealed class PublicBaseUrlLinkGeneratorsTests
         var handler = new UpdateLibraryShareLinkCommandHandler(
             repo.Object,
             new Mock<IUnitOfWork>().Object,
-            configuration,
+            PublicBaseUrlTestSupport.ProviderFor(configuration),
             NullLogger<UpdateLibraryShareLinkCommandHandler>.Instance);
 
         var dto = await handler.Handle(
@@ -274,7 +325,7 @@ public sealed class PublicBaseUrlLinkGeneratorsTests
         var link = LibraryShareLink.Create(userId, LibrarySharePrivacyLevel.Public, true, null);
         var repo = new Mock<ILibraryShareLinkRepository>();
         repo.Setup(r => r.GetActiveByUserIdAsync(userId, It.IsAny<CancellationToken>())).ReturnsAsync(link);
-        var handler = new GetLibraryShareLinkQueryHandler(repo.Object, configuration);
+        var handler = new GetLibraryShareLinkQueryHandler(repo.Object, PublicBaseUrlTestSupport.ProviderFor(configuration));
 
         var dto = await handler.Handle(new GetLibraryShareLinkQuery(userId), CancellationToken.None);
 
@@ -304,7 +355,8 @@ public sealed class PublicBaseUrlLinkGeneratorsTests
         db.ChatThreads.Add(thread);
         await db.SaveChangesAsync(CancellationToken.None);
 
-        var handler = new CreateShareLinkCommandHandler(db, new Mock<IShareLinkRepository>().Object, withSecret);
+        var handler = new CreateShareLinkCommandHandler(
+            db, new Mock<IShareLinkRepository>().Object, withSecret, PublicBaseUrlTestSupport.ProviderFor(withSecret));
 
         var result = await handler.Handle(
             new CreateShareLinkCommand(thread.Id, ShareLinkRole.View, DateTime.UtcNow.AddDays(1), null, userId),
@@ -323,7 +375,7 @@ public sealed class PublicBaseUrlLinkGeneratorsTests
             })
             .Build();
 
-        var service = new UnsubscribeTokenService(withSecret);
+        var service = new UnsubscribeTokenService(withSecret, PublicBaseUrlTestSupport.ProviderFor(withSecret));
 
         return Task.FromResult(service.GenerateUnsubscribeUrl(Guid.NewGuid(), "document_ready"));
     }
@@ -346,7 +398,11 @@ public sealed class PublicBaseUrlLinkGeneratorsTests
             .Callback<EmailRequest, CancellationToken>((request, _) => captured = request)
             .Returns(Task.CompletedTask);
 
-        var service = new EmailService(withTransport, NullLogger<EmailService>.Instance, sender.Object);
+        var service = new EmailService(
+            withTransport,
+            NullLogger<EmailService>.Instance,
+            sender.Object,
+            publicBaseUrl: PublicBaseUrlTestSupport.ProviderFor(withTransport));
 
         await service.SendInvitationEmailAsync("recipient@example.com", "User", "abc123", "Admin", CancellationToken.None);
 
@@ -355,15 +411,30 @@ public sealed class PublicBaseUrlLinkGeneratorsTests
 
     private static Task<string> ProduceEmailTemplateLinksAsync(IConfiguration configuration)
     {
-        var service = new EmailTemplateService(configuration);
+        var service = new EmailTemplateService(PublicBaseUrlTestSupport.ProviderFor(configuration));
 
         // The failure template links the support page; every template links the notification preferences.
         return Task.FromResult(service.RenderDocumentFailed("Mario", "rules.pdf", "boom"));
     }
 
+    private static Task<string> ProducePasswordResetLinkAsync(IConfiguration configuration)
+    {
+        var service = new EmailService(
+            configuration,
+            NullLogger<EmailService>.Instance,
+            sender: null,
+            publicBaseUrl: PublicBaseUrlTestSupport.ProviderFor(configuration));
+
+        return Task.FromResult(service.BuildPasswordResetUrl("reset-token"));
+    }
+
+    private static Task<string> ProduceOAuthRedirectAsync(IConfiguration configuration) =>
+        Task.FromResult(OAuthEndpoints.FrontendUrl(
+            PublicBaseUrlTestSupport.ProviderFor(configuration), "/oauth-callback?success=true&new=False"));
+
     private static Task<string> ProduceGenericSlackLinkAsync(IConfiguration configuration)
     {
-        var builder = new GenericSlackBuilder(configuration);
+        var builder = new GenericSlackBuilder(PublicBaseUrlTestSupport.ProviderFor(configuration));
 
         return Task.FromResult(JsonSerializer.Serialize(
             builder.BuildMessage(new GenericPayload("Title", "Body"), "/notifications/123")));
@@ -371,7 +442,7 @@ public sealed class PublicBaseUrlLinkGeneratorsTests
 
     private static Task<string> ProducePdfSlackLinkAsync(IConfiguration configuration)
     {
-        var builder = new PdfProcessingSlackBuilder(configuration);
+        var builder = new PdfProcessingSlackBuilder(PublicBaseUrlTestSupport.ProviderFor(configuration));
 
         return Task.FromResult(JsonSerializer.Serialize(
             builder.BuildMessage(new PdfProcessingPayload(Guid.NewGuid(), "rules.pdf", "Ready"), "/documents/123")));
@@ -379,7 +450,7 @@ public sealed class PublicBaseUrlLinkGeneratorsTests
 
     private static Task<string> ProduceShareRequestSlackLinkAsync(IConfiguration configuration)
     {
-        var builder = new ShareRequestSlackBuilder(configuration, TimeProvider.System);
+        var builder = new ShareRequestSlackBuilder(PublicBaseUrlTestSupport.ProviderFor(configuration), TimeProvider.System);
 
         return Task.FromResult(JsonSerializer.Serialize(
             builder.BuildMessage(new ShareRequestPayload(Guid.NewGuid(), "Mario", "Catan", null), "/share-requests/1")));

@@ -273,6 +273,51 @@ describe('mapNightLiveToViewModel — currentGame (Slice C1)', () => {
     expect(cg?.score).toBeUndefined();
   });
 
+  // #4752 (the night → live game bridge): the card jumps to the LIVE game of the current sitting.
+  it('carries the live game of the InProgress session on currentGame, and not another sitting’s', () => {
+    const LIVE_ID = 'bbbb2222-2222-4222-8222-222222222222';
+    const dto = live({
+      sessions: [
+        session({
+          sessionId: S1,
+          gameId: G1,
+          playOrder: 1,
+          status: 'Completed',
+          startedAt: '2026-07-04T20:00:00Z',
+          completedAt: '2026-07-04T21:00:00Z',
+          liveSessionId: 'bbbb1111-1111-4111-8111-111111111111',
+        }),
+        session({
+          sessionId: S2,
+          gameId: G2,
+          playOrder: 2,
+          status: 'InProgress',
+          startedAt: '2026-07-04T22:00:00Z',
+          liveSessionId: LIVE_ID,
+        }),
+      ],
+    });
+
+    const cg = mapNightLiveToViewModel(dto, NOW).currentGame;
+
+    expect(cg?.sessionId).toBe(S2);
+    expect(cg?.liveSessionId).toBe(LIVE_ID);
+  });
+
+  it('leaves liveSessionId undefined for a current sitting with no live game (null or absent)', () => {
+    const withNull = live({
+      sessions: [
+        session({ status: 'InProgress', startedAt: '2026-07-04T22:00:00Z', liveSessionId: null }),
+      ],
+    });
+    const absent = live({
+      sessions: [session({ status: 'InProgress', startedAt: '2026-07-04T22:00:00Z' })],
+    });
+
+    expect(mapNightLiveToViewModel(withNull, NOW).currentGame?.liveSessionId).toBeUndefined();
+    expect(mapNightLiveToViewModel(absent, NOW).currentGame?.liveSessionId).toBeUndefined();
+  });
+
   it('currentGame is null when no session is InProgress', () => {
     const allDone = live({
       sessions: [

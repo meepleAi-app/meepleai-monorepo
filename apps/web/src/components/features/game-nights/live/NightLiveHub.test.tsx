@@ -19,6 +19,8 @@ const NIGHT: NightLiveHubNight = {
 const CURRENT_GAME: NightLiveHubCurrentGame = {
   id: 'gs-spirit-1',
   sessionId: 's-spirit-may17',
+  // #4752: the live game where the table plays it — what the jump action opens.
+  liveSessionId: 'live-spirit-may17',
   title: 'Spirit Island',
   emoji: '🌋',
   cover: ['hsl(210 50% 30%)', 'hsl(150 50% 38%)'],
@@ -280,11 +282,39 @@ describe('NightLiveHub', () => {
       expect(screen.getByText('round 2')).toBeInTheDocument();
     });
 
-    it('invokes onJumpToSession with sessionId', async () => {
+    // #4752: the jump opens the LIVE game, not the tracking session the night links to (that id has no
+    // page of its own): it receives `liveSessionId`.
+    it('invokes onJumpToSession with the live session id, not the tracking session id', async () => {
       const onJumpToSession = vi.fn();
       render(<NightLiveHub {...baseProps} onJumpToSession={onJumpToSession} />);
       await userEvent.click(screen.getByRole('button', { name: /Apri sessione live/ }));
-      expect(onJumpToSession).toHaveBeenCalledWith('s-spirit-may17');
+      expect(onJumpToSession).toHaveBeenCalledTimes(1);
+      expect(onJumpToSession).toHaveBeenCalledWith('live-spirit-may17');
+    });
+
+    it('offers no jump for a game with no live game (a sitting that predates the bridge)', () => {
+      render(
+        <NightLiveHub
+          {...baseProps}
+          currentGame={{ ...CURRENT_GAME, liveSessionId: undefined }}
+          onJumpToSession={() => undefined}
+        />
+      );
+      expect(screen.queryByRole('button', { name: /Apri sessione live/ })).not.toBeInTheDocument();
+    });
+
+    it('offers no jump on the mobile card either when the game has no live game', () => {
+      render(
+        <NightLiveHub
+          {...baseProps}
+          mobile
+          currentGame={{ ...CURRENT_GAME, liveSessionId: undefined }}
+          onJumpToSession={() => undefined}
+        />
+      );
+      // The card IS there (the absence below is not a card that never rendered).
+      expect(screen.getAllByText('Spirit Island').length).toBeGreaterThan(0);
+      expect(screen.queryByRole('button', { name: /Apri sessione live/ })).not.toBeInTheDocument();
     });
 
     it('renders empty state when currentGame=null', () => {

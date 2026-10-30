@@ -98,6 +98,40 @@ describe('GamePickerDialog — avvio di una partita della serata (#4752)', () =>
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
+  // #4752 (il ponte serata → partita live): l'avvio crea la partita live, e si gioca lì. La pagina della
+  // serata resta solo per un backend che non dice quale sia.
+  it('porta alla partita live che l’avvio ha creato, non alla pagina della serata', async () => {
+    const LIVE_ID = '99999999-9999-4999-8999-999999999999';
+    mocks.startNextGame.mockResolvedValue({
+      sessionId: 's1',
+      gameNightSessionId: 'gns-1',
+      sessionCode: 'ABC123',
+      playOrder: 1,
+      liveSessionId: LIVE_ID,
+    });
+    renderDialog(vi.fn());
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Catan' }));
+
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith(`/sessions/${LIVE_ID}/live`));
+    expect(mocks.push).toHaveBeenCalledTimes(1);
+  });
+
+  it('se la partita live non c’è (liveSessionId null), ripiega sulla pagina della serata', async () => {
+    mocks.startNextGame.mockResolvedValue({
+      sessionId: 's1',
+      gameNightSessionId: 'gns-1',
+      sessionCode: 'ABC123',
+      playOrder: 1,
+      liveSessionId: null,
+    });
+    renderDialog(vi.fn());
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Catan' }));
+
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith(`/game-nights/${NIGHT_ID}/live`));
+  });
+
   // #4752 (revisione): chiudere il dialogo (Esc, overlay, X) mentre la richiesta pende azzerava la mutazione, e
   // dopo il reset il `onSuccess` PER-CHIAMATA di `mutate` non scatta: la partita partiva sul server e nel
   // browser non succedeva nulla. La navigazione sta nel `onSuccess` dell'hook, che sopravvive al reset.

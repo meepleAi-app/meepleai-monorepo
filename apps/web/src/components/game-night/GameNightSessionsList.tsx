@@ -1,10 +1,12 @@
 /**
  * GameNightSessionsList — Displays sessions played within a game night
  *
- * Shows each session as a card with game title, status badge, play order,
- * and a link to the night page (#4156 D7): the sessions of a night are SessionTracking sessions,
- * with no LiveGameSession and so no page under /sessions/{id}. The night live page is their page
- * while the night runs, the summary once it is completed.
+ * Shows each session as a card with game title, status badge, play order, and a link.
+ *
+ * #4752 (the night → live game bridge): a game started from a night is a LiveGameSession, played at
+ * /sessions/{liveSessionId}/live — that is where a card links while the night runs. A sitting with no live
+ * game (one that predates the bridge, or a draft not yet taken live) and every card of a COMPLETED night keep
+ * the old link: the night live page while the night runs, the summary once it is completed (#4156 D7).
  *
  * Plan 2 Task 5 — Session Flow v2.1
  */
@@ -16,6 +18,7 @@ import Link from 'next/link';
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { liveGameHref } from '@/lib/game-nights/liveGameHref';
 import type { GameNightActiveSession } from '@/stores/game-night/types';
 
 import type { LucideIcon } from 'lucide-react';
@@ -117,11 +120,13 @@ export function GameNightSessionsList({
         {sessions.map(session => {
           const meta = STATUS_MAP[session.status] ?? FALLBACK_STATUS;
           const Icon = meta.icon;
+          const href =
+            !isCompleted && session.liveSessionId ? liveGameHref(session.liveSessionId) : nightHref;
 
           return (
             <Link
               key={session.id}
-              href={nightHref}
+              href={href}
               className="flex items-center justify-between gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
             >
               <div className="flex items-center gap-3 min-w-0">

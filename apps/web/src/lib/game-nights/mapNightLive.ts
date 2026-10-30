@@ -217,6 +217,8 @@ export function mapNightLiveToViewModel(dto: GameNightLiveDto, now: Date): Night
     ? {
         id: currentSession.gameId,
         sessionId: currentSession.sessionId,
+        // #4752: where the game is played; undefined for a sitting with no live game.
+        liveSessionId: currentSession.liveSessionId ?? undefined,
         title: toTitle(currentSession),
         cover: coverFromGameId(currentSession.gameId),
       }

@@ -240,9 +240,32 @@ describe('NightLiveClientView — Published happy path', () => {
     expect(pushMock).toHaveBeenCalledWith(`/game-nights/${NIGHT_ID}`);
   });
 
-  it('#4156 (D7): offers no jump to a session page — the night page is the game page', () => {
-    // The games of a night are SessionTracking sessions, with no LiveGameSession: under
-    // /sessions/{id} they would open a 404. Before #4156 this test asserted that very route.
+  // #4752 (the night → live game bridge): a game of the night IS a live game, played at
+  // /sessions/{liveSessionId}/live. #4156 (D7) had the opposite — the games were bare tracking sessions and
+  // the jump was not offered, because /sessions/{trackingSessionId} would open a 404. It is still true that
+  // the TRACKING id has no page: the jump goes to the LIVE id.
+  it('jumps to the live game of the current game', async () => {
+    const LIVE_ID = '99999999-9999-4999-8999-999999999999';
+    mockQuery({
+      data: vm({
+        currentGame: {
+          id: IN_PROGRESS_SESSION_ID,
+          sessionId: IN_PROGRESS_SESSION_ID,
+          liveSessionId: LIVE_ID,
+          title: 'Spirit Island',
+        },
+      }),
+    });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+
+    await userEvent.click(screen.getByRole('button', { name: /Apri sessione live/i }));
+
+    expect(pushMock).toHaveBeenCalledTimes(1);
+    expect(pushMock).toHaveBeenCalledWith(`/sessions/${LIVE_ID}/live`);
+    expect(pushMock).not.toHaveBeenCalledWith(`/sessions/${IN_PROGRESS_SESSION_ID}/live`);
+  });
+
+  it('offers no jump for a current game with no live game — the tracking id has no page', () => {
     mockQuery({
       data: vm({
         currentGame: {
@@ -313,6 +336,56 @@ describe('NightLiveClientView — organizer interactive start (WS1 DEC-10)', () 
       { gameId: NEXT_GAME.gameId, gameTitle: NEXT_GAME.gameTitle },
       expect.objectContaining({ onError: expect.any(Function) })
     );
+  });
+
+  // #4752: the start creates the live game, and the game is played there.
+  it('goes to the live game the start created', async () => {
+    const LIVE_ID = '99999999-9999-4999-8999-999999999999';
+    startNextMutateMock.mockImplementation((_vars, opts) => {
+      opts?.onSuccess?.({
+        sessionId: 's1',
+        gameNightSessionId: 'gns-1',
+        sessionCode: 'ABC123',
+        playOrder: 1,
+        liveSessionId: LIVE_ID,
+      });
+    });
+    mockQuery({ data: vm({ isViewerOrganizer: true, nextGame: NEXT_GAME, status: 'transition' }) });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+
+    await userEvent.click(screen.getByRole('button', { name: /Avvia: Catan/i }));
+
+    expect(pushMock).toHaveBeenCalledTimes(1);
+    expect(pushMock).toHaveBeenCalledWith(`/sessions/${LIVE_ID}/live`);
+  });
+
+  it('stays on the night page when the start did not say which live game it created', async () => {
+    startNextMutateMock.mockImplementation((_vars, opts) => {
+      opts?.onSuccess?.({
+        sessionId: 's1',
+        gameNightSessionId: 'gns-1',
+        sessionCode: 'ABC123',
+        playOrder: 1,
+      });
+    });
+    mockQuery({ data: vm({ isViewerOrganizer: true, nextGame: NEXT_GAME, status: 'transition' }) });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+
+    await userEvent.click(screen.getByRole('button', { name: /Avvia: Catan/i }));
+
+    expect(pushMock).toHaveBeenCalledWith(`/game-nights/${NIGHT_ID}/live`);
+  });
+
+  it('does not navigate when the start is refused', async () => {
+    startNextMutateMock.mockImplementation((_vars, opts) => {
+      opts?.onError?.(new Error('boom'));
+    });
+    mockQuery({ data: vm({ isViewerOrganizer: true, nextGame: NEXT_GAME, status: 'transition' }) });
+    render(<NightLiveClientView nightId={NIGHT_ID} />);
+
+    await userEvent.click(screen.getByRole('button', { name: /Avvia: Catan/i }));
+
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it('disables the CTA while the mutation is pending', () => {

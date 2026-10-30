@@ -10,8 +10,9 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.GameManagement.Infrastructure.Services;
 
 /// <summary>
-/// #4754: the four game night emails write the time on the night's own zone, name that zone, speak the
-/// organizer's language, and do not tell a guest — an address, not an account — that they have an account.
+/// #4754: the game night emails (invitation, 24 h reminder, cancellation, RSVP confirmation) write the time on
+/// the night's own zone, name that zone, speak the organizer's language, and do not tell a guest — an address,
+/// not an account — that they have an account.
 ///
 /// Observed before the fix, reading the invitation an Italian organizer's guest receives: a night set for
 /// 21:00 in Rome went out as "When Friday, October 30, 2026 at 8:00 PM" (UTC, unlabelled), in English, under
@@ -93,6 +94,38 @@ public sealed class GameNightEmailServiceTests
     }
 
     [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Invitation_WithNoZone_SaysUtcOutLoud_AndLogsNoWarning(string? zone)
+    {
+        // "No zone stored" is the normal state of every night created before the zone existed, and of a client
+        // that does not send one: it is not a fault, so nothing is logged. A warning here would fill the log
+        // with one line per old night, and bury the one that means something (a zone the host cannot use).
+        await SendInvitation(new GameNightEmailLocale("en", zone));
+
+        _body.Should().Contain("Friday, October 30, 2026 at 8:00 PM (UTC)");
+        _loggerMock.Verify(
+            l => l.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception?>(),
+                (Func<It.IsAnyType, Exception?, string>)It.IsAny<object>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Invitation_WithAnOldZoneName_WritesTheLocalTimeInItalian()
+    {
+        // The browser of an organizer in Delhi reports Asia/Calcutta; 20:00Z is 01:30 the next day there.
+        await SendInvitation(new GameNightEmailLocale("it", "Asia/Calcutta"));
+
+        _body.Should().Contain("sabato 31 ottobre 2026 alle 01:30 (Asia/Calcutta, UTC+5:30)");
+        _body.Should().NotContain("(UTC)");
+    }
+
+    [Theory]
     [InlineData("Mars/Olympus")]
     [InlineData("not a zone")]
     public async Task Invitation_WithAZoneThisHostCannotResolve_FallsBackToUtcWithoutThrowing(string zone)
@@ -151,6 +184,7 @@ public sealed class GameNightEmailServiceTests
     [InlineData("it")]
     [InlineData("it-IT")]
     [InlineData("IT")]
+    [InlineData("it_IT")]
     public async Task Invitation_AnItalianLanguageCode_IsItalian(string language)
     {
         await SendInvitation(new GameNightEmailLocale(language, "Europe/Rome"));

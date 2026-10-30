@@ -3,7 +3,8 @@ using System.Globalization;
 namespace Api.BoundedContexts.GameManagement.Infrastructure.Services;
 
 /// <summary>
-/// The single place the four game night emails turn a scheduled instant into the words a guest reads (#4754).
+/// The single place where the game night emails (invitation, 24 h reminder, cancellation, RSVP confirmation)
+/// turn a scheduled instant into the words a guest reads (#4754).
 /// </summary>
 /// <remarks>
 /// <para>
@@ -24,6 +25,14 @@ namespace Api.BoundedContexts.GameManagement.Infrastructure.Services;
 /// Italian names are spelled out below rather than taken from <see cref="CultureInfo"/>, so the text does not
 /// depend on ICU data being present in the container.
 /// </para>
+/// <para>
+/// Old zone names: a V8 browser reports some zones under a name that Ubuntu 24.04 with only <c>tzdata</c> (no
+/// <c>tzdata-legacy</c>) has no file for — <c>Asia/Calcutta</c>, <c>Europe/Kiev</c>, <c>America/Buenos_Aires</c>…
+/// <see cref="LegacyZoneIds"/> maps them to the canonical name BEFORE the host is asked, so an organizer in Delhi
+/// gets 21:00 and not a UTC fallback. The id the browser sent is what is stored and what the email prints; only the
+/// lookup uses the canonical name. An image that ships <c>tzdata-legacy</c> would make the map redundant; the map
+/// is what keeps this correct on a host that does not.
+/// </para>
 /// </remarks>
 internal static class GameNightEmailTime
 {
@@ -35,6 +44,35 @@ internal static class GameNightEmailTime
         "gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
         "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"
     ];
+
+    /// <summary>
+    /// The names a browser reports for a zone and the canonical name the same zone has in the current tz database
+    /// (V8 reports the old name for some zones; the canonical one is a file on every host, the old one is not).
+    /// Only names that a plain Ubuntu 24.04 <c>tzdata</c> lacks as files are listed, which is what the
+    /// <c>Intl</c> of a current browser can report; a name this table does not know is looked up as it is.
+    /// </summary>
+    internal static IReadOnlyDictionary<string, string> LegacyZoneIds { get; } =
+        new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["Africa/Asmera"] = "Africa/Asmara",
+            ["America/Buenos_Aires"] = "America/Argentina/Buenos_Aires",
+            ["America/Catamarca"] = "America/Argentina/Catamarca",
+            ["America/Cordoba"] = "America/Argentina/Cordoba",
+            ["America/Godthab"] = "America/Nuuk",
+            ["America/Indianapolis"] = "America/Indiana/Indianapolis",
+            ["America/Jujuy"] = "America/Argentina/Jujuy",
+            ["America/Louisville"] = "America/Kentucky/Louisville",
+            ["America/Mendoza"] = "America/Argentina/Mendoza",
+            ["Asia/Calcutta"] = "Asia/Kolkata",
+            ["Asia/Katmandu"] = "Asia/Kathmandu",
+            ["Asia/Rangoon"] = "Asia/Yangon",
+            ["Asia/Saigon"] = "Asia/Ho_Chi_Minh",
+            ["Atlantic/Faeroe"] = "Atlantic/Faroe",
+            ["Europe/Kiev"] = "Europe/Kyiv",
+            ["Pacific/Enderbury"] = "Pacific/Kanton",
+            ["Pacific/Ponape"] = "Pacific/Pohnpei",
+            ["Pacific/Truk"] = "Pacific/Chuuk",
+        };
 
     /// <summary>
     /// "venerdì 30 ottobre 2026 alle 21:00 (Europe/Rome, UTC+1)" or, in English,
@@ -49,10 +87,23 @@ internal static class GameNightEmailTime
         DateTimeOffset scheduledAt,
         string? timeZoneId,
         bool italian,
+        out bool zoneResolved) =>
+        FormatWhen(scheduledAt, timeZoneId, italian, FindOnThisHost, out zoneResolved);
+
+    /// <summary>
+    /// <see cref="FormatWhen(DateTimeOffset, string?, bool, out bool)"/> with the host's zone lookup passed in, so
+    /// a test can stand in for a host that lacks some names (the real lookup answers differently on Windows, on
+    /// Ubuntu with <c>tzdata-legacy</c> and on Ubuntu without it).
+    /// </summary>
+    internal static string FormatWhen(
+        DateTimeOffset scheduledAt,
+        string? timeZoneId,
+        bool italian,
+        Func<string, TimeZoneInfo?> findZone,
         out bool zoneResolved)
     {
         var requested = timeZoneId?.Trim();
-        var resolved = TryResolve(requested, out var zone);
+        var resolved = TryResolve(requested, findZone, out var zone);
         zoneResolved = resolved || string.IsNullOrEmpty(requested);
 
         var local = resolved
@@ -69,26 +120,32 @@ internal static class GameNightEmailTime
         return $"{when} ({label})";
     }
 
-    private static bool TryResolve(string? timeZoneId, out TimeZoneInfo? zone)
+    private static bool TryResolve(string? timeZoneId, Func<string, TimeZoneInfo?> findZone, out TimeZoneInfo? zone)
     {
         zone = null;
         if (string.IsNullOrEmpty(timeZoneId))
             return false;
 
+        // The name the browser sent may be an old one the host has no file for: ask for the canonical name.
+        var lookupId = LegacyZoneIds.TryGetValue(timeZoneId, out var canonical) ? canonical : timeZoneId;
+        zone = findZone(lookupId);
+        return zone is not null;
+    }
+
+    private static TimeZoneInfo? FindOnThisHost(string timeZoneId)
+    {
         try
         {
-            return TimeZoneInfo.TryFindSystemTimeZoneById(timeZoneId, out zone);
+            return TimeZoneInfo.TryFindSystemTimeZoneById(timeZoneId, out var zone) ? zone : null;
         }
         catch (InvalidTimeZoneException)
         {
             // The host has an entry for it but the data is unreadable: the same as not knowing the zone.
-            zone = null;
-            return false;
+            return null;
         }
         catch (ArgumentException)
         {
-            zone = null;
-            return false;
+            return null;
         }
     }
 

@@ -4,7 +4,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Services;
 /// Service for sending game night-related emails with HTML templates.
 /// Issue #44/#47: Game night notification types and email templates.
 /// Issue #4754: every method takes the <see cref="GameNightEmailLocale"/> (the organizer's language and the
-/// night's time zone) so the text and the time are written the way the organizer meant them. The two emails
+/// night's time zone) so the text and the time are written the way the organizer meant them. The emails
 /// that go to a guest — the invitation and the RSVP confirmation — take no unsubscribe link: the address is
 /// not an account, there is no preference page behind it, and the link the footer used to carry had no page.
 /// </summary>

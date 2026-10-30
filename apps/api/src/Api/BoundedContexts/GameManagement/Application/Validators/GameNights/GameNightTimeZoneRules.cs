@@ -6,7 +6,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Validators.GameNights;
 
 /// <summary>
 /// The one shape check for the IANA zone a client sends with a game night (#4754), shared by the create and
-/// update validators so the two verbs answer the same input the same way.
+/// update validators so POST and PUT answer the same input the same way.
 /// </summary>
 /// <remarks>
 /// Only the SHAPE is checked (<c>Europe/Rome</c>, <c>America/Argentina/Buenos_Aires</c>, <c>Etc/GMT+5</c>,

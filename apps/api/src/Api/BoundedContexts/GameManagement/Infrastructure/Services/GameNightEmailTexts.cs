@@ -1,7 +1,8 @@
 namespace Api.BoundedContexts.GameManagement.Infrastructure.Services;
 
 /// <summary>
-/// The words of the four game night emails, in the organizer's language (#4754). Italian when the
+/// The words of the game night emails (invitation, 24 h reminder, cancellation, RSVP confirmation), in the
+/// organizer's language (#4754). Italian when the
 /// organizer's language is Italian, English otherwise — English being what every template said before.
 /// </summary>
 /// <remarks>

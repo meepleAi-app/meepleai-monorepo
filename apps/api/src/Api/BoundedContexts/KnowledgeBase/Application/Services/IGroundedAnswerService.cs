@@ -35,10 +35,16 @@ internal interface IGroundedAnswerService
 /// the wire citations, grounding, confidence, and the leak-match count (so a streaming caller can emit
 /// its CopyrightSanitized event without re-scanning).
 /// </summary>
+/// <remarks>
+/// #4751: <c>Sanitized</c> says the leak guard found a verbatim run of a Protected passage and replaced the whole
+/// answer with the copyright fallback message. A caller that stores or broadcasts the text must not take that
+/// message for the answer it asked for.
+/// </remarks>
 internal sealed record GroundedAnswer(
     string ResponseText,
     IReadOnlyList<ChunkCitation> FinalCitations,
     IReadOnlyList<Api.Models.CitationDto> CitationDtos,
     GroundingStatus GroundingStatus,
     double? Confidence,
-    int LeakMatchCount);
+    int LeakMatchCount,
+    bool Sanitized = false);

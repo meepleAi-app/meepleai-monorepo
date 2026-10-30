@@ -110,16 +110,138 @@ public sealed class AskGroundedSessionQueryHandlerTests
         await act.Should().ThrowAsync<GroundedSessionGenerationException>();
     }
 
+    [Fact]
+    public async Task Handle_WithResponseInstructions_AddsThemToTheSystemPromptNotToTheRetrievalQuery()
+    {
+        // #4751: the caller's answer format (the Arbitro's VERDETTO/NOTA) is an instruction for the
+        // generation step. The question is also the retrieval query: a format pasted into it would
+        // be embedded and matched against the rulebook, and pull in chunks about the format.
+        var retrievalQueries = new List<string>();
+        var systemPrompts = new List<string>();
+        var handler = BuildHandler(
+            new List<ChunkCitation>(),
+            llmAnswer: "VERDETTO: ok",
+            retrievalQueries: retrievalQueries,
+            systemPrompts: systemPrompts);
+
+        await handler.Handle(
+            new AskGroundedSessionQuery(
+                Guid.NewGuid(), "Il ladro si sposta subito?", GameStateContext: null, UserId: Guid.Empty,
+                ResponseInstructions: "Rispondi con VERDETTO: e NOTA:"),
+            TestContext.Current.CancellationToken);
+
+        retrievalQueries.Should().ContainSingle().Which.Should().Be("Il ladro si sposta subito?");
+        systemPrompts.Should().ContainSingle().Which.Should().EndWith("Rispondi con VERDETTO: e NOTA:");
+    }
+
+    [Fact]
+    public async Task Handle_WithoutResponseInstructions_LeavesTheSystemPromptAsAssembled()
+    {
+        var systemPrompts = new List<string>();
+        var handler = BuildHandler(new List<ChunkCitation>(), llmAnswer: "answer", systemPrompts: systemPrompts);
+
+        await handler.Handle(
+            new AskGroundedSessionQuery(Guid.NewGuid(), "Question", GameStateContext: null, UserId: Guid.NewGuid()),
+            TestContext.Current.CancellationToken);
+
+        systemPrompts.Should().ContainSingle().Which.Should().Be("You are a helpful board game tutor.");
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheGatewayRefusesTheCall_TheExceptionCarriesItsCode()
+    {
+        // #4751: a refusal by the gateway (daily cap, quota) has a code and a message of its own. The
+        // exception used to carry only the text, so a caller could not tell it from «provider down».
+        var handler = BuildHandler(
+            new List<ChunkCitation>(),
+            llmAnswer: null,
+            llmSuccess: false,
+            failureMetadata: new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["error_code"] = "AI_DAILY_BUDGET_EXCEEDED",
+            });
+
+        var act = () => handler.Handle(
+            new AskGroundedSessionQuery(Guid.NewGuid(), "Question", GameStateContext: null, UserId: Guid.NewGuid()),
+            TestContext.Current.CancellationToken);
+
+        var ex = (await act.Should().ThrowAsync<GroundedSessionGenerationException>()).Which;
+        ex.ErrorCode.Should().Be("AI_DAILY_BUDGET_EXCEEDED");
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheFailureHasNoCode_TheExceptionHasNoCode()
+    {
+        var handler = BuildHandler(new List<ChunkCitation>(), llmAnswer: null, llmSuccess: false);
+
+        var act = () => handler.Handle(
+            new AskGroundedSessionQuery(Guid.NewGuid(), "Question", GameStateContext: null, UserId: Guid.NewGuid()),
+            TestContext.Current.CancellationToken);
+
+        var ex = (await act.Should().ThrowAsync<GroundedSessionGenerationException>()).Which;
+        ex.ErrorCode.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheRetrievalFailed_TheAnswerSaysSo_AsOpposedToFindingNothing()
+    {
+        // #4751: a retrieval that stopped on an error and one that found nothing both leave no citation; a caller
+        // that tells the user why there is no passage must be able to tell them apart.
+        var failed = await BuildHandler(new List<ChunkCitation>(), llmAnswer: "answer", retrievalFailed: true)
+            .Handle(
+                new AskGroundedSessionQuery(Guid.NewGuid(), "Question", GameStateContext: null, UserId: Guid.Empty),
+                TestContext.Current.CancellationToken);
+        var empty = await BuildHandler(new List<ChunkCitation>(), llmAnswer: "answer")
+            .Handle(
+                new AskGroundedSessionQuery(Guid.NewGuid(), "Question", GameStateContext: null, UserId: Guid.Empty),
+                TestContext.Current.CancellationToken);
+
+        failed.RetrievalFailed.Should().BeTrue();
+        failed.Citations.Should().BeEmpty();
+        empty.RetrievalFailed.Should().BeFalse();
+        empty.Citations.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheLeakGuardReplacedTheAnswer_TheAnswerSaysSo()
+    {
+        // #4751: GroundedAnswerService replaces the whole text with the copyright fallback message when the answer
+        // copies a run of a Protected passage. The caller must be able to tell that text is not the answer it
+        // asked for: the Arbitro was saving it as the verdict.
+        var protectedCitation = new ChunkCitation(
+            "doc-1", 4, 0.87f, "preview", CopyrightTier.Protected, IsPublic: false);
+
+        var sanitized = await BuildHandler(new List<ChunkCitation> { protectedCitation }, llmAnswer: "copied words", leak: true)
+            .Handle(
+                new AskGroundedSessionQuery(Guid.NewGuid(), "Question", GameStateContext: null, UserId: Guid.Empty),
+                TestContext.Current.CancellationToken);
+        var clean = await BuildHandler(new List<ChunkCitation> { protectedCitation }, llmAnswer: "own words")
+            .Handle(
+                new AskGroundedSessionQuery(Guid.NewGuid(), "Question", GameStateContext: null, UserId: Guid.Empty),
+                TestContext.Current.CancellationToken);
+
+        sanitized.CopyrightSanitized.Should().BeTrue();
+        sanitized.Answer.Should().Be("[copyright fallback]");
+        clean.CopyrightSanitized.Should().BeFalse();
+        clean.Answer.Should().Be("own words");
+    }
+
     private static AskGroundedSessionQueryHandler BuildHandler(
         IReadOnlyList<ChunkCitation> citations,
         string? llmAnswer,
-        bool llmSuccess = true)
+        bool llmSuccess = true,
+        List<string>? retrievalQueries = null,
+        List<string>? systemPrompts = null,
+        IReadOnlyDictionary<string, string>? failureMetadata = null,
+        bool retrievalFailed = false,
+        bool leak = false)
     {
         var assembled = new AssembledPrompt(
             SystemPrompt: "You are a helpful board game tutor.",
             UserPrompt: "Context...\n\nQuestion",
             Citations: citations.ToList(),
-            EstimatedTokens: 100);
+            EstimatedTokens: 100,
+            RetrievalFailed: retrievalFailed);
 
         var ragPrompt = new Mock<IRagPromptAssemblyService>();
         ragPrompt
@@ -128,6 +250,9 @@ public sealed class AskGroundedSessionQueryHandlerTests
                 It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<ChatThread?>(),
                 It.IsAny<SharedUserTier?>(), It.IsAny<string>(), It.IsAny<CancellationToken>(),
                 It.IsAny<IRagDebugEventCollector?>(), It.IsAny<RetrievalProfile?>(), It.IsAny<RetrievalPolicy?>()))
+            .Callback<string, string, GameState?, string, Guid, ChatThread?, SharedUserTier?, string, CancellationToken,
+                IRagDebugEventCollector?, RetrievalProfile?, RetrievalPolicy?>(
+                (_, _, _, question, _, _, _, _, _, _, _, _) => retrievalQueries?.Add(question))
             .ReturnsAsync(assembled);
 
         var tierResolver = new Mock<ICopyrightTierResolver>();
@@ -139,14 +264,20 @@ public sealed class AskGroundedSessionQueryHandlerTests
         llm
             .Setup(l => l.GenerateCompletionAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, RequestSource, CancellationToken>((system, _, _, _) => systemPrompts?.Add(system))
             .ReturnsAsync(llmSuccess
                 ? LlmCompletionResult.CreateSuccess(llmAnswer ?? "answer")
-                : LlmCompletionResult.CreateFailure("llm down"));
+                : LlmCompletionResult.CreateFailure("llm down") with
+                {
+                    Metadata = failureMetadata ?? new Dictionary<string, string>(StringComparer.Ordinal),
+                });
 
         var leakGuard = new Mock<ICopyrightLeakGuard>();
         leakGuard
             .Setup(g => g.ScanAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<ChunkCitation>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CopyrightLeakResult(HasLeak: false, Matches: Array.Empty<LeakMatch>()));
+            .ReturnsAsync(leak
+                ? new CopyrightLeakResult(HasLeak: true, Matches: new[] { new LeakMatch("doc-1", 4, 12, 0, "copied words") })
+                : new CopyrightLeakResult(HasLeak: false, Matches: Array.Empty<LeakMatch>()));
 
         var fallbackProvider = new Mock<ICopyrightFallbackMessageProvider>();
         fallbackProvider.Setup(f => f.GetMessage(It.IsAny<string>())).Returns("[copyright fallback]");

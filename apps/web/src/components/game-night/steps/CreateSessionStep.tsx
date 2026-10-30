@@ -9,12 +9,14 @@
  * Issue #123 — Game Night Quick Start Wizard
  */
 
-import { useCallback, useId, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 
 import { Loader2, Plus, Trash2, Users } from 'lucide-react';
 
+import { AddSelfButton, OptOutButton, SelfBadge } from '@/components/session/SelfPlayerControls';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
+import { linkedFirst, useSelfPlayer } from '@/hooks/useSelfPlayer';
 import { api } from '@/lib/api';
 import { API_PLAYER_COLORS } from '@/lib/sessions/player-colors';
 import { cn } from '@/lib/utils';
@@ -49,6 +51,10 @@ function createSlot(name = ''): PlayerSlot {
   return { id: `slot-${++slotCounter}`, name };
 }
 
+function sameName(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
 // ============================================================================
 // Component
 // ============================================================================
@@ -63,6 +69,41 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
   const canRemovePlayer = players.length > 2;
   const validPlayers = players.filter(p => p.name.trim().length > 0);
   const canCreate = validPlayers.length >= 2 && !isCreating;
+
+  // #4750: the creator is the first player, linked to their account. Here the link is not a
+  // state of its own: a seat is the user's while it carries their name. Renaming it unlinks it,
+  // and «Io non gioco» empties it.
+  const self = useSelfPlayer();
+  const selfSlotId = self
+    ? players.find(p => p.name.trim() && sameName(p.name, self.displayName))?.id
+    : undefined;
+  const hasRoomForSelf = canAddPlayer || players.some(p => !p.name.trim());
+
+  // Seeded once, into the first seat if it is still empty: after «Io non gioco» the seats are
+  // the user's.
+  const seededSelf = useRef(false);
+  useEffect(() => {
+    if (!self || seededSelf.current) return;
+    seededSelf.current = true;
+    setPlayers(prev =>
+      prev[0]?.name === '' ? [{ ...prev[0], name: self.displayName }, ...prev.slice(1)] : prev
+    );
+  }, [self]);
+
+  const handleOptOut = useCallback(() => {
+    setPlayers(prev => prev.map(p => (p.id === selfSlotId ? { ...p, name: '' } : p)));
+  }, [selfSlotId]);
+
+  const handleAddSelf = useCallback(() => {
+    if (!self) return;
+    setPlayers(prev => {
+      const emptyIndex = prev.findIndex(p => !p.name.trim());
+      if (emptyIndex >= 0) {
+        return prev.map((p, i) => (i === emptyIndex ? { ...p, name: self.displayName } : p));
+      }
+      return prev.length < 8 ? [...prev, createSlot(self.displayName)] : prev;
+    });
+  }, [self]);
 
   const handlePlayerChange = useCallback((slotId: string, value: string) => {
     setPlayers(prev => prev.map(p => (p.id === slotId ? { ...p, name: value } : p)));
@@ -95,11 +136,18 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
         gameName: gameTitle,
       });
 
-      // Add players
-      for (let i = 0; i < validPlayers.length; i++) {
+      // Add players. Colors follow the seats; the linked creator goes first whichever seat they
+      // are in, because the server makes the first player the Host (#4750).
+      const entries = validPlayers.map((p, i) => ({
+        name: p.name,
+        color: PLAYER_COLORS[i % PLAYER_COLORS.length],
+        userId: self && p.id === selfSlotId ? self.userId : undefined,
+      }));
+      for (const entry of linkedFirst(entries)) {
         await api.liveSessions.addPlayer(sessionId, {
-          displayName: validPlayers[i].name,
-          color: PLAYER_COLORS[i % PLAYER_COLORS.length],
+          displayName: entry.name,
+          color: entry.color,
+          ...(entry.userId ? { userId: entry.userId } : {}),
         });
       }
 
@@ -111,7 +159,7 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
       setError('Errore nella creazione della sessione. Riprova.');
       setIsCreating(false);
     }
-  }, [canCreate, gameId, gameTitle, validPlayers, onSessionCreated]);
+  }, [canCreate, gameId, gameTitle, validPlayers, self, selfSlotId, onSessionCreated]);
 
   return (
     <div className="space-y-4" data-testid="create-session-step">
@@ -155,7 +203,13 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
               data-testid={`player-input-${index}`}
               id={`${formId}-player-${index}`}
             />
-            {canRemovePlayer && (
+            {player.id === selfSlotId && (
+              <>
+                <SelfBadge />
+                <OptOutButton onClick={handleOptOut} className="flex-shrink-0" />
+              </>
+            )}
+            {canRemovePlayer && player.id !== selfSlotId && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -180,6 +234,11 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
           <Plus className="h-4 w-4 mr-2" aria-hidden="true" />
           Aggiungi giocatore
         </Button>
+      )}
+
+      {/* The creator opted out and wants back in (#4750) */}
+      {self && !selfSlotId && (
+        <AddSelfButton onClick={handleAddSelf} disabled={!hasRoomForSelf} className="w-full" />
       )}
 
       {error && (

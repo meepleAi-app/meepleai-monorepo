@@ -1,0 +1,81 @@
+/**
+ * useSelfPlayer — il giocatore «io» dei wizard di creazione sessione (#4750).
+ */
+import { renderHook } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { linkedFirst, selfDisplayName, useSelfPlayer } from '../useSelfPlayer';
+
+type TestUser = { id: string; email: string; displayName?: string | null; role: string };
+const currentUser = vi.hoisted(() => ({ value: undefined as TestUser | undefined }));
+
+vi.mock('@/hooks/queries/useCurrentUser', () => ({
+  useCurrentUser: () => ({ data: currentUser.value }),
+}));
+
+describe('selfDisplayName', () => {
+  it('usa il nome del profilo, senza spazi ai bordi', () => {
+    expect(selfDisplayName('  Marco Rossi ', 'marco@example.com')).toBe('Marco Rossi');
+  });
+
+  it('senza nome del profilo usa la parte locale dell’email', () => {
+    expect(selfDisplayName(null, 'marco@example.com')).toBe('marco');
+    expect(selfDisplayName('   ', 'marco@example.com')).toBe('marco');
+  });
+
+  it('senza nulla di meglio dice «Io»', () => {
+    expect(selfDisplayName(undefined, undefined)).toBe('Io');
+    expect(selfDisplayName('', '')).toBe('Io');
+  });
+});
+
+describe('linkedFirst', () => {
+  it('mette per primo chi è collegato e tiene l’ordine degli altri', () => {
+    const players = [{ n: 'a' }, { n: 'b' }, { n: 'me', userId: 'u1' }, { n: 'c' }];
+
+    expect(linkedFirst(players).map(p => p.n)).toEqual(['me', 'a', 'b', 'c']);
+  });
+
+  it('non cambia nulla se nessuno è collegato, e non muta l’elenco ricevuto', () => {
+    const players = [{ n: 'a' }, { n: 'b' }];
+
+    expect(linkedFirst(players)).toEqual(players);
+    expect(linkedFirst(players)).not.toBe(players);
+  });
+});
+
+describe('useSelfPlayer', () => {
+  beforeEach(() => {
+    currentUser.value = undefined;
+  });
+
+  it('è null finché l’utente non è noto', () => {
+    const { result } = renderHook(() => useSelfPlayer());
+
+    expect(result.current).toBeNull();
+  });
+
+  it('con l’utente noto dà il suo id e il nome del profilo', () => {
+    currentUser.value = {
+      id: 'user-marco',
+      email: 'marco@example.com',
+      displayName: 'Marco Rossi',
+      role: 'User',
+    };
+
+    const { result } = renderHook(() => useSelfPlayer());
+
+    expect(result.current).toEqual({ userId: 'user-marco', displayName: 'Marco Rossi' });
+  });
+
+  it('tiene lo stesso oggetto finché l’utente non cambia, così gli effetti non ripartono', () => {
+    currentUser.value = { id: 'user-marco', email: 'marco@example.com', role: 'User' };
+
+    const { result, rerender } = renderHook(() => useSelfPlayer());
+    const first = result.current;
+    rerender();
+
+    expect(result.current).toBe(first);
+    expect(first).toEqual({ userId: 'user-marco', displayName: 'marco' });
+  });
+});

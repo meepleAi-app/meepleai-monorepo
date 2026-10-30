@@ -183,4 +183,127 @@ public sealed class GameNightEventRepositoryTests : IDisposable
             null,
             It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.AtLeastOnce);
     }
+
+    // ── #4748: the dashboard lists show the viewer's nights, not everyone's ─────────────────
+
+    private GameNightEventEntity SeedNight(
+        Guid organizerId, Guid? invitedUserId, string status, DateTimeOffset scheduledAt)
+    {
+        var eventId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+        var entity = new GameNightEventEntity
+        {
+            Id = eventId,
+            OrganizerId = organizerId,
+            Title = "Night",
+            Description = null,
+            ScheduledAt = scheduledAt,
+            Location = "Home",
+            MaxPlayers = 6,
+            GameIdsJson = "[]",
+            Status = status,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+        if (invitedUserId is { } invited)
+        {
+            entity.Rsvps.Add(new GameNightRsvpEntity
+            {
+                Id = Guid.NewGuid(),
+                EventId = eventId,
+                UserId = invited,
+                Status = "Accepted",
+                RespondedAt = now,
+                CreatedAt = now
+            });
+        }
+        _dbContext.GameNightEvents.Add(entity);
+        _dbContext.SaveChanges();
+        return entity;
+    }
+
+    [Fact]
+    public async Task GetUpcomingAsync_ReturnsTheNightsTheUserOrganizesOrIsInvitedTo_NotOthers()
+    {
+        var viewer = Guid.NewGuid();
+        var stranger = Guid.NewGuid();
+        var future = DateTimeOffset.UtcNow.AddDays(2);
+        var mine = SeedNight(viewer, null, "Published", future);
+        var invitedTo = SeedNight(stranger, viewer, "Published", future);
+        SeedNight(stranger, Guid.NewGuid(), "Published", future);
+
+        var result = await _repository.GetUpcomingAsync(viewer, TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            new[] { mine.Id, invitedTo.Id }.OrderBy(id => id),
+            result.Select(n => n.Id).OrderBy(id => id));
+    }
+
+    [Fact]
+    public async Task GetUpcomingAsync_ForAUserWithNoNights_ReturnsNothing()
+    {
+        var future = DateTimeOffset.UtcNow.AddDays(2);
+        SeedNight(Guid.NewGuid(), Guid.NewGuid(), "Published", future);
+
+        var result = await _repository.GetUpcomingAsync(Guid.NewGuid(), TestContext.Current.CancellationToken);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetCompletedAsync_ReturnsTheNightsTheUserOrganizesOrIsInvitedTo_NotOthers()
+    {
+        var viewer = Guid.NewGuid();
+        var stranger = Guid.NewGuid();
+        var past = DateTimeOffset.UtcNow.AddDays(-3);
+        var mine = SeedNight(viewer, null, "Completed", past);
+        var invitedTo = SeedNight(stranger, viewer, "Published", past);
+        SeedNight(stranger, Guid.NewGuid(), "Completed", past);
+        SeedNight(stranger, Guid.NewGuid(), "Published", past);
+
+        var result = await _repository.GetCompletedAsync(viewer, 10, TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            new[] { mine.Id, invitedTo.Id }.OrderBy(id => id),
+            result.Select(n => n.Id).OrderBy(id => id));
+    }
+
+    [Fact]
+    public async Task GetCompletedAsync_ForAUserWithNoNights_ReturnsNothing()
+    {
+        var past = DateTimeOffset.UtcNow.AddDays(-3);
+        SeedNight(Guid.NewGuid(), Guid.NewGuid(), "Completed", past);
+
+        var result = await _repository.GetCompletedAsync(Guid.NewGuid(), 10, TestContext.Current.CancellationToken);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetCompletedAsync_StillHonoursTheLimitAndTheStatusForTheUser()
+    {
+        var viewer = Guid.NewGuid();
+        SeedNight(viewer, null, "Completed", DateTimeOffset.UtcNow.AddDays(-5));
+        var newest = SeedNight(viewer, null, "Completed", DateTimeOffset.UtcNow.AddDays(-1));
+        SeedNight(viewer, null, "Draft", DateTimeOffset.UtcNow.AddDays(-2));
+        SeedNight(viewer, null, "Published", DateTimeOffset.UtcNow.AddDays(3));
+
+        var result = await _repository.GetCompletedAsync(viewer, 1, TestContext.Current.CancellationToken);
+
+        Assert.Equal(newest.Id, Assert.Single(result).Id);
+    }
+
+    [Fact]
+    public async Task GetCompletedAsync_AppliesTheUserFilterBeforeTheLimit()
+    {
+        var viewer = Guid.NewGuid();
+        var stranger = Guid.NewGuid();
+        var mine = SeedNight(viewer, null, "Completed", DateTimeOffset.UtcNow.AddDays(-20));
+        SeedNight(stranger, null, "Completed", DateTimeOffset.UtcNow.AddDays(-1));
+        SeedNight(stranger, null, "Completed", DateTimeOffset.UtcNow.AddDays(-2));
+
+        var result = await _repository.GetCompletedAsync(viewer, 1, TestContext.Current.CancellationToken);
+
+        Assert.Equal(mine.Id, Assert.Single(result).Id);
+    }
 }

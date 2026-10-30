@@ -41,7 +41,7 @@ internal static class GameNightEndpoints
             .Produces(401)
             .WithName("GetUpcomingGameNights")
             .WithSummary("Get upcoming game nights")
-            .WithDescription("Retrieves upcoming published game nights ordered by scheduled date.");
+            .WithDescription("Retrieves the caller's upcoming published game nights (as organizer or invitee) ordered by scheduled date.");
 
         gameNights.MapGet("/mine", HandleGetMyGameNights)
             .RequireAuthenticatedUser()
@@ -59,7 +59,7 @@ internal static class GameNightEndpoints
             .Produces(401)
             .WithName("GetCompletedGameNights")
             .WithSummary("Get recently completed game nights")
-            .WithDescription("Retrieves recently completed (or scheduled-in-the-past published) game nights ordered DESC by ScheduledAt. Limit defaults to 5.");
+            .WithDescription("Retrieves the caller's recently completed (or scheduled-in-the-past published) game nights, as organizer or invitee, ordered DESC by ScheduledAt. Limit defaults to 5.");
 
         // Issue #950 (W1-PR2): regulars feed for Step 3 wizard suggestion list.
         gameNights.MapGet("/regulars", HandleGetRegulars)
@@ -892,7 +892,8 @@ internal static class GameNightEndpoints
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        // #2989 inv#17: pass the viewer so the DTO carries their RSVP status (pending-RSVP card).
+        // #4748: the list holds only the viewer's nights (organizer or invitee). #2989 inv#17: the same
+        // viewer also lets the DTO carry their RSVP status (pending-RSVP card).
         var userId = httpContext.User.GetUserId();
         var result = await mediator.Send(new GetUpcomingGameNightsQuery(userId), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
@@ -901,10 +902,13 @@ internal static class GameNightEndpoints
     // F20 #1974 (audit 2026-06-07): dashboard "Recenti" slot.
     private static async Task<IResult> HandleGetCompletedGameNights(
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken,
         [FromQuery] int? limit = null)
     {
-        var query = limit.HasValue ? new GetCompletedGameNightsQuery(limit.Value) : new GetCompletedGameNightsQuery();
+        // #4748: only the viewer's nights — the list used to hold every user's completed nights.
+        var userId = httpContext.User.GetUserId();
+        var query = limit.HasValue ? new GetCompletedGameNightsQuery(userId, limit.Value) : new GetCompletedGameNightsQuery(userId);
         var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }

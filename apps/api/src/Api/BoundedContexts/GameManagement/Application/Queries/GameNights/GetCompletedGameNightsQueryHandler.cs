@@ -30,7 +30,7 @@ internal sealed class GetCompletedGameNightsQueryHandler : IQueryHandler<GetComp
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var events = await _repository.GetCompletedAsync(query.Limit, cancellationToken).ConfigureAwait(false);
+        var events = await _repository.GetCompletedAsync(query.UserId, query.Limit, cancellationToken).ConfigureAwait(false);
 
         var organizerIds = events.Select(e => e.OrganizerId).Distinct().ToList();
         var organizerNames = await GetUserDisplayNamesAsync(organizerIds, cancellationToken).ConfigureAwait(false);

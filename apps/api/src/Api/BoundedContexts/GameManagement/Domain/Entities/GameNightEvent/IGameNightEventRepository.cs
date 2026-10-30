@@ -9,9 +9,10 @@ namespace Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 internal interface IGameNightEventRepository : IRepository<GameNightEvent, Guid>
 {
     /// <summary>
-    /// Gets upcoming published game nights ordered by scheduled date.
+    /// Gets the user's upcoming published game nights (organized or invited), ordered by scheduled date.
+    /// #4748: a list of nights is never every night: the same rule as reading one by id.
     /// </summary>
-    Task<IReadOnlyList<GameNightEvent>> GetUpcomingAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<GameNightEvent>> GetUpcomingAsync(Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets the most recently completed game nights, DESC by ScheduledAt.
@@ -20,10 +21,11 @@ internal interface IGameNightEventRepository : IRepository<GameNightEvent, Guid>
     /// scheduled time has passed, since the BE does not auto-mark
     /// Published → Completed on a scheduler.
     /// </summary>
+    /// <param name="userId">The viewer: only nights they organize or are invited to (#4748).</param>
     /// <param name="limit">Maximum rows to return (capped at 50 in the
     /// implementation for safety).</param>
     /// <param name="cancellationToken">Cancellation token.</param>
-    Task<IReadOnlyList<GameNightEvent>> GetCompletedAsync(int limit, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<GameNightEvent>> GetCompletedAsync(Guid userId, int limit, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets game nights where the user is organizer or invited.

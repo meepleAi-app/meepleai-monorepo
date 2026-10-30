@@ -78,7 +78,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
         return entities.Select(MapToDomain).ToList();
     }
 
-    public async Task<IReadOnlyList<GameNightEvent>> GetUpcomingAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<GameNightEvent>> GetUpcomingAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var entities = await DbContext.GameNightEvents
             .AsNoTracking()
@@ -86,6 +86,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .Include(e => e.Sessions)
             .Include(e => e.Votes)
             .Where(e => e.Status == nameof(GameNightStatus.Published) && e.ScheduledAt > DateTimeOffset.UtcNow)
+            .Where(e => e.OrganizerId == userId || e.Rsvps.Any(r => r.UserId == userId))
             .OrderBy(e => e.ScheduledAt)
             .Take(50)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
@@ -93,7 +94,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
         return entities.Select(MapToDomain).ToList();
     }
 
-    public async Task<IReadOnlyList<GameNightEvent>> GetCompletedAsync(int limit, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<GameNightEvent>> GetCompletedAsync(Guid userId, int limit, CancellationToken cancellationToken = default)
     {
         // F20 #1974: dashboard "Recenti" slot. Sources events whose Status is
         // "Completed" OR a published event whose scheduled date has already
@@ -112,6 +113,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .Include(e => e.Votes)
             .Where(e => e.Status == nameof(GameNightStatus.Completed)
                 || (e.Status == nameof(GameNightStatus.Published) && e.ScheduledAt < now))
+            .Where(e => e.OrganizerId == userId || e.Rsvps.Any(r => r.UserId == userId))
             .OrderByDescending(e => e.ScheduledAt)
             .Take(cap)
             .ToListAsync(cancellationToken).ConfigureAwait(false);

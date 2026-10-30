@@ -78,6 +78,8 @@ public sealed partial class NoDuplicateRouteTests
         "api/v1/rag-dashboard/overview",
         "api/v1/rag-dashboard/strategies",
         "api/v1/rag-dashboard/query",
+        // #4769: la cronologia delle dispute di un gioco legge le sessioni di tutti, quindi e' da amministratore.
+        "api/v1/games/{gameId}/dispute-history",
     ];
 
     private static readonly TimeSpan AdminProbeTimeout = TimeSpan.FromSeconds(15);
@@ -162,8 +164,10 @@ public sealed partial class NoDuplicateRouteTests
                 "GET api/v1/rag-dashboard/strategies/{strategyId}/time-series",
                 "GET api/v1/rag-dashboard/strategies/compare",
                 "POST api/v1/rag-dashboard/query/stream",
+                // #4769: la lettura trasversale delle dispute di un gioco, da amministratore e senza segmento admin.
+                "GET api/v1/games/{gameId}/dispute-history",
             ],
-            "the probe must see the routes of #4568, #4579 and #4584 and read them as protected, or it proves nothing");
+            "the probe must see the routes of #4568, #4579, #4584 and #4769 and read them as protected, or it proves nothing");
 
         var staleExemptions = AdminAuthorizationExempt.Keys.Where(k => !exemptSeen.Contains(k)).Order(StringComparer.Ordinal).ToList();
         var routeTemplates = dataSource.Endpoints.OfType<RouteEndpoint>()

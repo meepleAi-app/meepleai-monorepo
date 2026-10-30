@@ -334,13 +334,19 @@ internal static class LiveSessionEndpoints
             .WithSummary("Get the dispute history for a live session")
             .WithDescription("Returns all rule disputes recorded in a single live session, ordered by timestamp ascending. Powers the Arbitro tab's REST hydration on reload (#3391).");
 
+        // #4769: administrators only. The handler reads DisputesJson of EVERY session of the game, whoever
+        // took part: descriptions, verdicts (derived from the indexed rulebook, #4768), references and
+        // RaisedByPlayerName. A participant reads their own session through /live-sessions/{id}/disputes.
+        // The admin-route probe (NoDuplicateRouteTests.EveryAdminRoute_RejectsAPlainUser) covers this route by prefix.
         group.MapGet("/games/{gameId}/dispute-history", HandleGetDisputeHistory)
-            .RequireAuthenticatedUser()
+            .RequireAdminSession()
             .Produces<GetGameDisputeHistoryResult>(200)
+            .Produces(401)
+            .Produces(403)
             .Produces(404)
             .WithTags("LiveSessions")
-            .WithSummary("Get game dispute history")
-            .WithDescription("Returns all rule dispute entries across every session played for a given game.");
+            .WithSummary("Get game dispute history (admin)")
+            .WithDescription("Admin only. Returns all rule dispute entries across every session played for a given game. Participants read their own session's disputes from GET /live-sessions/{sessionId}/disputes.");
 
         // === Queries ===
         // NOTE: Literal-segment routes MUST be registered before parameterized {sessionId} route

@@ -387,7 +387,7 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenLlmFails_ThrowsInvalidOperationException()
+    public async Task Handle_WhenLlmFails_ThrowsAReadableServiceError_NotAServerFault()
     {
         // Arrange
         CreateInProgressSession(withDbEntity: true);
@@ -400,10 +400,80 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
 
         var command = BuildCommand();
 
-        // Act & Assert
+        // Act & Assert — #4751: a 503 the player can read, not an InvalidOperationException (500)
         var act = () =>
             _sut.Handle(command, CancellationToken.None);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        var ex = (await act.Should().ThrowAsync<ExternalServiceException>()).Which;
+
+        ex.StatusCode.Should().Be(503);
+        ex.ErrorCode.Should().Be(SubmitRuleDisputeCommandHandler.NoVerdictErrorCode);
+        ex.Message.Should().NotContain("LLM unavailable", "the model's error text belongs in the log, not in the response");
+    }
+
+    // ─── #4751: an empty answer is not a verdict ──────────────────────────────
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("\n\t \n")]
+    public async Task Handle_WhenTheModelAnswersWithNothing_SavesChargesAndPublishesNothing(string emptyAnswer)
+    {
+        // Arrange — the call "succeeds" but carries no text
+        var session = CreateInProgressSession(withDbEntity: true);
+
+        _llmServiceMock
+            .Setup(s => s.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(emptyAnswer));
+
+        var command = BuildCommand();
+
+        // Act
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<ExternalServiceException>()).Which;
+
+        // Assert — it used to be saved as «Nessun verdetto disponibile.», broadcast and counted against the quota
+        ex.ErrorCode.Should().Be(SubmitRuleDisputeCommandHandler.NoVerdictErrorCode);
+        session.Disputes.Should().BeEmpty("no verdict was given, so none is attached to the session");
+        _sessionRepoMock.Verify(
+            r => r.UpdateAsync(It.IsAny<LiveGameSession>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _tierEnforcementMock.Verify(
+            t => t.RecordUsageAsync(It.IsAny<Guid>(), It.IsAny<TierAction>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _publisherMock.Verify(
+            p => p.Publish(It.IsAny<DisputeResolvedEvent>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheModelAnswersWithNothing_TheDisputeStaysAskableAfterwards()
+    {
+        // Arrange — the first answer is empty, the retry works: the failed attempt must leave no trace
+        var session = CreateInProgressSession(withDbEntity: true);
+
+        _llmServiceMock
+            .SetupSequence(s => s.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(string.Empty))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(DefaultLlmResponse));
+
+        var command = BuildCommand();
+
+        // Act
+        var first = () => _sut.Handle(command, CancellationToken.None);
+        await first.Should().ThrowAsync<ExternalServiceException>();
+        var second = await _sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        second.Verdict.Should().StartWith("Il giocatore A ha ragione");
+        session.Disputes.Should().ContainSingle("only the answered attempt is attached");
+        _tierEnforcementMock.Verify(
+            t => t.RecordUsageAsync(TestUserId, TierAction.SessionAgentQuery, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     // ─── Tier enforcement ─────────────────────────────────────────────────────

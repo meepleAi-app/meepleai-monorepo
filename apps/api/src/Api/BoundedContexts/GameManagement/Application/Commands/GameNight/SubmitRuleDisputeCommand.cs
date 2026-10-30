@@ -88,6 +88,9 @@ internal sealed class SubmitRuleDisputeCommandHandler
 
     private static readonly char[] RuleRefSeparators = { ';', '\n', '|' };
 
+    internal const string NoVerdictErrorCode = "arbitro_nessun_verdetto";
+    private const string NoVerdictMessage = "L'Arbitro non è riuscito a emettere un verdetto. Riprova tra poco.";
+
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILlmService _llmService;
@@ -170,14 +173,17 @@ internal sealed class SubmitRuleDisputeCommandHandler
             .GenerateCompletionAsync(systemPrompt, userPrompt, RequestSource.Manual, cancellationToken)
             .ConfigureAwait(false);
 
-        if (!llmResult.Success)
+        // #4751: a model that answers with nothing has not given a verdict. It used to be parsed into
+        // «Nessun verdetto disponibile.», saved as the verdict, broadcast and counted against the quota.
+        // An empty answer is a failure like !Success: nothing is saved, charged or published, and the
+        // caller gets a readable 503 (the model's error text goes to the log, never to the response).
+        if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
         {
             _logger.LogError(
-                "LLM arbitration failed for SessionId={SessionId}: {Error}",
-                request.SessionId, llmResult.ErrorMessage);
+                "LLM arbitration produced no verdict for SessionId={SessionId}: Success={Success}, Error={Error}",
+                request.SessionId, llmResult.Success, llmResult.ErrorMessage);
 
-            throw new InvalidOperationException(
-                $"AI arbitration failed: {llmResult.ErrorMessage}");
+            throw new ExternalServiceException(NoVerdictMessage, NoVerdictErrorCode);
         }
 
         _logger.LogDebug(

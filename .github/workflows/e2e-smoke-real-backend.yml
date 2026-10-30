@@ -251,7 +251,7 @@ jobs:
       # workflow red across multiple runs (e.g. #960 itself).
       - name: Open issue on failure (deduped)
         if: failure()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const existing = await github.rest.issues.listForRepo({

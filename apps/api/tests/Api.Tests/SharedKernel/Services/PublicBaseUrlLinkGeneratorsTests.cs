@@ -38,7 +38,7 @@ namespace Api.Tests.SharedKernel.Services;
 
 /// <summary>
 /// #4774: ogni generatore di link del backend compone la base dall'URL pubblico del front-end, e lo risolve
-/// attraverso un solo punto. Prima, otto generatori leggevano <c>App:BaseUrl</c> (che in staging e produzione
+/// attraverso un solo punto. Prima, inviti, condivisioni e disiscrizione leggevano <c>App:BaseUrl</c> (che in staging e produzione
 /// nessuno imposta, e che <c>appsettings.json</c> riempie con <c>localhost:3000</c>) mentre l'email di verifica
 /// leggeva <c>Frontend:BaseUrl</c>: gli stessi link, due chiavi, due ripieghi.
 /// </summary>

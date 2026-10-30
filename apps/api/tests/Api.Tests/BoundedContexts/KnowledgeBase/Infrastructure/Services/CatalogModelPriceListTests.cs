@@ -117,6 +117,71 @@ public sealed class CatalogModelPriceListTests : IDisposable
         _priceList.Find("m")!.InputCostPer1M.Should().Be(2m);
     }
 
+    /// <summary>
+    /// #4765: l'intreccio che rendeva il test precedente intermittente, forzato. <c>Find</c> interroga
+    /// l'orologio sul thread chiamante: qui, alla prima interrogazione, la ricarica finisce <i>dentro</i>
+    /// la chiamata, come se il thread di sfondo l'avesse completata a metà. Con lo snapshot letto per
+    /// primo la chiamata risponde con il valore vecchio; letto dopo, con il nuovo, ogni volta. Fissa
+    /// «lo snapshot è la prima cosa che <c>Find</c> legge», un po' più stretto di «prima di
+    /// <c>ScheduleRefresh</c>».
+    /// </summary>
+    [Fact]
+    public async Task Find_ReadsTheSnapshotFirst_EvenWhenTheReloadFinishesDuringTheCall()
+    {
+        var clock = new ClockThatRunsAHookOnItsFirstRead(_time);
+        using var priceList = new CatalogModelPriceList(
+            _services.GetRequiredService<IServiceScopeFactory>(),
+            clock,
+            NullLogger<CatalogModelPriceList>.Instance);
+        CatalogContains(Model("m", "OpenRouter", 1m, 1m));
+        await priceList.StartAsync(CancellationToken.None);
+
+        // L'admin cambia il prezzo; l'intervallo scade; la ricarica «finisce» alla prima lettura dell'orologio.
+        CatalogContains(Model("m", "OpenRouter", 2m, 2m));
+        _time.Advance(CatalogModelPriceList.RefreshInterval);
+        clock.Arm(() => priceList.RefreshAsync(CancellationToken.None).GetAwaiter().GetResult());
+
+        var duringTheReload = priceList.Find("m");
+
+        clock.HookRan.Should().BeTrue("il test deve davvero far finire la ricarica dentro Find, altrimenti non prova nulla");
+        duringTheReload!.InputCostPer1M.Should().Be(1m, "Find legge lo snapshot per primo, la ricarica non lo cambia sotto i piedi");
+        priceList.Find("m")!.InputCostPer1M.Should().Be(2m, "la chiamata dopo vede lo snapshot nuovo");
+    }
+
+    /// <summary>
+    /// Un <see cref="TimeProvider"/> che, armato, esegue una volta un'azione alla prima lettura dell'ora
+    /// (senza rientrare: la ricarica rilegge l'orologio) e poi si comporta come quello avvolto.
+    /// </summary>
+    private sealed class ClockThatRunsAHookOnItsFirstRead(TimeProvider inner) : TimeProvider
+    {
+        private Action? _hook;
+        private bool _running;
+
+        public bool HookRan { get; private set; }
+
+        public void Arm(Action hook) => _hook = hook;
+
+        public override DateTimeOffset GetUtcNow()
+        {
+            if (_hook is { } hook && !_running)
+            {
+                _running = true;
+                _hook = null;
+                try
+                {
+                    hook();
+                    HookRan = true;
+                }
+                finally
+                {
+                    _running = false;
+                }
+            }
+
+            return inner.GetUtcNow();
+        }
+    }
+
     [Fact]
     public async Task FailedReload_KeepsThePreviousSnapshot_AndRetriesLater()
     {

@@ -1,10 +1,11 @@
 /**
  * CreateSessionStep — #4750: chi crea la partita è il primo giocatore, collegato al suo account.
  *
- * Qui il collegamento non è uno stato a parte: un posto è «dell'utente» finché porta il suo nome.
- * Cambiare il nome lo scollega, e «Io non gioco» svuota il posto.
+ * Il collegamento è uno stato del posto, non una deduzione dal nome: modificare il nome del posto
+ * non lo toglie, e scrivere lo stesso nome in un altro posto non lo crea. Lo tolgono «Io non
+ * gioco» (che svuota anche il posto) e il nome svuotato.
  */
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -32,6 +33,20 @@ const MARCO: TestUser = {
   role: 'User',
 };
 
+const ANNA: TestUser = {
+  id: 'user-anna',
+  email: 'anna@example.com',
+  displayName: 'Anna',
+  role: 'User',
+};
+
+const NO_NAME: TestUser = {
+  id: 'user-x',
+  email: 'segreto@example.com',
+  displayName: null,
+  role: 'User',
+};
+
 function renderStep(onSessionCreated = vi.fn()) {
   const ui = () => (
     <CreateSessionStep gameId="g1" gameTitle="Catan" onSessionCreated={onSessionCreated} />
@@ -41,6 +56,10 @@ function renderStep(onSessionCreated = vi.fn()) {
 
 function addPlayerPayloads(): Array<Record<string, unknown>> {
   return addPlayer.mock.calls.map(call => call[1]);
+}
+
+function setSeatName(index: number, value: string) {
+  fireEvent.change(screen.getByTestId(`player-input-${index}`), { target: { value } });
 }
 
 describe('CreateSessionStep — #4750: «Aggiungi me»', () => {
@@ -107,16 +126,55 @@ describe('CreateSessionStep — #4750: «Aggiungi me»', () => {
     expect(addPlayerPayloads().every(p => !('userId' in p))).toBe(true);
   });
 
-  it('scrivere un altro nome nel posto dell’utente lo scollega', async () => {
-    const user = userEvent.setup();
-    currentUser.value = MARCO;
-    renderStep();
+  describe('il collegamento è uno stato del posto, non una deduzione dal nome', () => {
+    it('accorciare il nome del posto dell’utente non lo scollega: la stessa persona non compare due volte', async () => {
+      // Profilo «Marco Rossi», il posto diventa «Marco»: dedotto dal nome il collegamento spariva
+      // in silenzio, e «Aggiungi me» rimetteva il profilo in un altro posto.
+      const user = userEvent.setup();
+      currentUser.value = MARCO;
+      const { onSessionCreated } = renderStep();
 
-    await user.clear(screen.getByTestId('player-input-0'));
-    await user.type(screen.getByTestId('player-input-0'), 'Anna');
+      setSeatName(0, 'Marco');
 
-    expect(screen.queryByText('Tu')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Aggiungi me' })).toBeInTheDocument();
+      expect(screen.getAllByText('Tu')).toHaveLength(1);
+      expect(screen.queryByRole('button', { name: 'Aggiungi me' })).not.toBeInTheDocument();
+      await user.type(screen.getByTestId('player-input-1'), 'Luca');
+      await user.click(screen.getByTestId('create-session-button'));
+
+      await waitFor(() => expect(onSessionCreated).toHaveBeenCalled());
+      expect(addPlayer).toHaveBeenCalledTimes(2);
+      const [first, second] = addPlayerPayloads();
+      expect(first).toMatchObject({ displayName: 'Marco', userId: 'user-marco' });
+      expect(second).toMatchObject({ displayName: 'Luca' });
+      expect(second).not.toHaveProperty('userId');
+    });
+
+    it('scrivere il nome del profilo per un altro giocatore non lo collega, dopo «Io non gioco»', async () => {
+      // Profilo «Anna», «Io non gioco», poi «Anna» per un'amica: dedotto dal nome partiva
+      // con lo userId dell'utente, contro «Io non gioco = nessun giocatore collegato».
+      const user = userEvent.setup();
+      currentUser.value = ANNA;
+      const { onSessionCreated } = renderStep();
+      await user.click(screen.getByRole('button', { name: 'Io non gioco' }));
+
+      setSeatName(0, 'Anna');
+      setSeatName(1, 'Luca');
+
+      expect(screen.queryByText('Tu')).not.toBeInTheDocument();
+      await user.click(screen.getByTestId('create-session-button'));
+      await waitFor(() => expect(onSessionCreated).toHaveBeenCalled());
+      expect(addPlayerPayloads().every(p => !('userId' in p))).toBe(true);
+    });
+
+    it('svuotare il nome del posto dell’utente lo scollega, e «Aggiungi me» riappare', () => {
+      currentUser.value = MARCO;
+      renderStep();
+
+      setSeatName(0, '');
+
+      expect(screen.queryByText('Tu')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Aggiungi me' })).toBeInTheDocument();
+    });
   });
 
   it('«Aggiungi me» riempie il primo posto vuoto', async () => {
@@ -145,15 +203,15 @@ describe('CreateSessionStep — #4750: «Aggiungi me»', () => {
     expect(screen.getByTestId('player-input-2')).toHaveValue('Marco Rossi');
   });
 
-  it('è aggiunto per primo anche se il suo nome sta nel secondo posto', async () => {
+  it('è aggiunto per primo anche se siede in un posto dopo il primo', async () => {
     // Il server dà il ruolo Host a chi entra per primo, e il riepilogo lo indica come
     // proprietario: il creatore collegato deve esserlo. I colori seguono invece i posti.
     const user = userEvent.setup();
     currentUser.value = MARCO;
     const { onSessionCreated } = renderStep();
     await user.click(screen.getByRole('button', { name: 'Io non gioco' }));
-    await user.type(screen.getByTestId('player-input-0'), 'Luca');
-    await user.type(screen.getByTestId('player-input-1'), 'Marco Rossi');
+    setSeatName(0, 'Luca');
+    await user.click(screen.getByRole('button', { name: 'Aggiungi me' })); // il primo vuoto: il secondo
 
     await user.click(screen.getByTestId('create-session-button'));
 
@@ -183,5 +241,111 @@ describe('CreateSessionStep — #4750: «Aggiungi me»', () => {
     rerender(ui());
 
     expect(screen.getByTestId('player-input-0')).toHaveValue('Marco Rossi');
+  });
+});
+
+describe('CreateSessionStep — #4750: seme, nomi e posti', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    currentUser.value = undefined;
+    createSession.mockResolvedValue('sess-1');
+    addPlayer.mockResolvedValue('player-1');
+    startSession.mockResolvedValue(undefined);
+  });
+
+  describe('il seme parte una volta, e solo se il primo posto è vuoto', () => {
+    it('un nome già scritto nel primo posto prima che l’utente arrivi non si cancella', async () => {
+      const user = userEvent.setup();
+      const { rerender, ui } = renderStep();
+      setSeatName(0, 'Anna');
+
+      currentUser.value = MARCO;
+      rerender(ui());
+
+      expect(screen.getByTestId('player-input-0')).toHaveValue('Anna');
+      expect(screen.getByTestId('player-input-1')).toHaveValue('');
+      expect(screen.queryByText('Tu')).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: 'Aggiungi me' }));
+      expect(screen.getByTestId('player-input-1')).toHaveValue('Marco Rossi');
+    });
+
+    it('tolto con «Io non gioco», un aggiornamento dell’utente non riempie di nuovo il posto', async () => {
+      const user = userEvent.setup();
+      currentUser.value = MARCO;
+      const { rerender, ui } = renderStep();
+      await user.click(screen.getByRole('button', { name: 'Io non gioco' }));
+
+      currentUser.value = { ...MARCO, displayName: 'Marco R.' };
+      rerender(ui());
+
+      expect(screen.getByTestId('player-input-0')).toHaveValue('');
+      expect(screen.queryByText('Tu')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('nomi', () => {
+    it('due giocatori con lo stesso nome: messaggio accanto ai campi, «Inizia» spento, nessuna sessione', async () => {
+      const user = userEvent.setup();
+      currentUser.value = MARCO;
+      renderStep();
+
+      setSeatName(1, ' marco rossi ');
+
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Due giocatori si chiamano «marco rossi»'
+      );
+      expect(screen.getByTestId('create-session-button')).toBeDisabled();
+      await user.click(screen.getByTestId('create-session-button'));
+      expect(createSession).not.toHaveBeenCalled();
+
+      setSeatName(1, 'Luca');
+
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(screen.getByTestId('create-session-button')).toBeEnabled();
+    });
+
+    it('senza nome del profilo il creatore è «Giocatore 1», non l’email', async () => {
+      const user = userEvent.setup();
+      currentUser.value = NO_NAME;
+      const { onSessionCreated } = renderStep();
+
+      expect(screen.getByTestId('player-input-0')).toHaveValue('Giocatore 1');
+      expect(screen.queryByDisplayValue(/segreto/i)).not.toBeInTheDocument();
+      await user.type(screen.getByTestId('player-input-1'), 'Luca');
+      await user.click(screen.getByTestId('create-session-button'));
+
+      await waitFor(() => expect(onSessionCreated).toHaveBeenCalled());
+      expect(addPlayerPayloads()[0]).toMatchObject({
+        displayName: 'Giocatore 1',
+        userId: 'user-x',
+      });
+    });
+  });
+
+  describe('posti', () => {
+    function fillEightSeats() {
+      for (let i = 0; i < 6; i++) {
+        fireEvent.click(screen.getByTestId('add-player-button')); // da due a otto posti
+      }
+      for (let i = 0; i < 8; i++) setSeatName(i, `Giocatore ${i + 10}`);
+    }
+
+    it('con tutti i posti pieni «Aggiungi me» è spento e dice perché', async () => {
+      const user = userEvent.setup();
+      currentUser.value = MARCO;
+      renderStep();
+      await user.click(screen.getByRole('button', { name: 'Io non gioco' }));
+      fillEightSeats();
+
+      const addSelf = screen.getByRole('button', { name: 'Aggiungi me' });
+      expect(addSelf).toBeDisabled();
+      expect(screen.getByText(/posti sono pieni/i)).toBeInTheDocument();
+      expect(addSelf).toHaveAccessibleDescription(/posti sono pieni/i);
+
+      await user.click(screen.getByRole('button', { name: 'Rimuovi giocatore 8' })); // un posto libero
+
+      expect(screen.getByRole('button', { name: 'Aggiungi me' })).toBeEnabled();
+      expect(screen.queryByText(/posti sono pieni/i)).not.toBeInTheDocument();
+    });
   });
 });

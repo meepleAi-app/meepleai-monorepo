@@ -17,9 +17,12 @@ export interface SelfPlayer {
   displayName: string;
 }
 
-/** Il nome del profilo; per chi non l'ha, la parte locale dell'email. */
-export function selfDisplayName(displayName?: string | null, email?: string | null): string {
-  return displayName?.trim() || email?.split('@')[0]?.trim() || 'Io';
+/**
+ * Il nome del profilo; per chi non l'ha, il nome neutro che i wizard davano al primo giocatore.
+ * Il nome va a tutti i partecipanti della partita: dall'email non si ricava niente.
+ */
+export function selfDisplayName(displayName?: string | null): string {
+  return displayName?.trim() || 'Giocatore 1';
 }
 
 /** `null` finché l'utente non è noto: il wizard resta com'era, senza collegare nessuno. */
@@ -27,11 +30,10 @@ export function useSelfPlayer(): SelfPlayer | null {
   const { data: user } = useCurrentUser();
   const id = user?.id;
   const displayName = user?.displayName;
-  const email = user?.email;
 
   return useMemo(
-    () => (id ? { userId: id, displayName: selfDisplayName(displayName, email) } : null),
-    [id, displayName, email]
+    () => (id ? { userId: id, displayName: selfDisplayName(displayName) } : null),
+    [id, displayName]
   );
 }
 

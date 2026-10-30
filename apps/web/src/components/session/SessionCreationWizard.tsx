@@ -31,6 +31,7 @@ import type {
   PlayerColor,
   CreateLiveSessionRequest,
 } from '@/lib/api/schemas/live-sessions.schemas';
+import { duplicatePlayerNameMessage, findDuplicatePlayerName } from '@/lib/sessions/player-names';
 
 // ========== Types ==========
 
@@ -224,10 +225,12 @@ function AddPlayersStep({
   players,
   onPlayersChange,
   self,
+  duplicateName,
 }: {
   players: PlayerEntry[];
   onPlayersChange: (players: PlayerEntry[]) => void;
   self: SelfPlayer | null;
+  duplicateName: string | null;
 }) {
   const [newName, setNewName] = useState('');
 
@@ -348,6 +351,12 @@ function AddPlayersStep({
         </Button>
       </div>
 
+      {duplicateName && (
+        <p className="text-sm text-destructive" role="alert">
+          {duplicatePlayerNameMessage(duplicateName)}
+        </p>
+      )}
+
       {/* The creator opted out and wants back in (#4750) */}
       {self && !selfInList && <AddSelfButton onClick={addSelf} />}
     </div>
@@ -463,6 +472,9 @@ export function SessionCreationWizard() {
 
   const totalSteps = 4;
 
+  // The server refuses two players with the same name: say so before the session exists.
+  const duplicateName = findDuplicatePlayerName(players.map(p => p.displayName));
+
   const canProceed = (): boolean => {
     switch (step) {
       case 0:
@@ -470,7 +482,7 @@ export function SessionCreationWizard() {
       case 1:
         return dimensions.length > 0;
       case 2:
-        return players.length >= 1;
+        return players.length >= 1 && !duplicateName;
       case 3:
         return true;
       default:
@@ -537,7 +549,14 @@ export function SessionCreationWizard() {
       {step === 1 && (
         <ConfigureScoringStep dimensions={dimensions} onDimensionsChange={setDimensions} />
       )}
-      {step === 2 && <AddPlayersStep players={players} onPlayersChange={setPlayers} self={self} />}
+      {step === 2 && (
+        <AddPlayersStep
+          players={players}
+          onPlayersChange={setPlayers}
+          self={self}
+          duplicateName={duplicateName}
+        />
+      )}
       {step === 3 && (
         <ReviewStep
           gameName={gameName}

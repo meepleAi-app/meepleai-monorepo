@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/primitives/input';
 import { linkedFirst, useSelfPlayer } from '@/hooks/useSelfPlayer';
 import { api } from '@/lib/api';
 import { API_PLAYER_COLORS } from '@/lib/sessions/player-colors';
+import { duplicatePlayerNameMessage, findDuplicatePlayerName } from '@/lib/sessions/player-names';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -34,6 +35,8 @@ interface CreateSessionStepProps {
 interface PlayerSlot {
   id: string;
   name: string;
+  /** Set only on the creator's own seat (#4750); the name does not decide it. */
+  userId?: string;
 }
 
 // #4107: qui c'era una copia locale di otto nomi. Il vocabolario dell'API ne ha dieci, e
@@ -51,10 +54,6 @@ function createSlot(name = ''): PlayerSlot {
   return { id: `slot-${++slotCounter}`, name };
 }
 
-function sameName(a: string, b: string): boolean {
-  return a.trim().toLowerCase() === b.trim().toLowerCase();
-}
-
 // ============================================================================
 // Component
 // ============================================================================
@@ -68,45 +67,58 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
   const canAddPlayer = players.length < 8;
   const canRemovePlayer = players.length > 2;
   const validPlayers = players.filter(p => p.name.trim().length > 0);
-  const canCreate = validPlayers.length >= 2 && !isCreating;
+  // The server refuses two players with the same name: say so before the session exists.
+  const duplicateName = findDuplicatePlayerName(players.map(p => p.name));
+  const canCreate = validPlayers.length >= 2 && !duplicateName && !isCreating;
 
-  // #4750: the creator is the first player, linked to their account. Here the link is not a
-  // state of its own: a seat is the user's while it carries their name. Renaming it unlinks it,
-  // and «Io non gioco» empties it.
+  // #4750: the creator is the first player, linked to their account. The link is a state of the
+  // seat (`userId`), not something read from the name: editing the name keeps it (a nickname is
+  // still the same person), and writing the same name in another seat does not create it. «Io
+  // non gioco» removes it and empties the seat; so does emptying the name, an empty seat is
+  // nobody's.
   const self = useSelfPlayer();
-  const selfSlotId = self
-    ? players.find(p => p.name.trim() && sameName(p.name, self.displayName))?.id
-    : undefined;
+  const isSelfSeat = useCallback(
+    (seat: PlayerSlot) => !!self && seat.userId === self.userId,
+    [self]
+  );
+  const selfInSeats = players.some(isSelfSeat);
   const hasRoomForSelf = canAddPlayer || players.some(p => !p.name.trim());
+  const seatsFullNoticeId = `${formId}-seats-full`;
 
-  // Seeded once, into the first seat if it is still empty: after «Io non gioco» the seats are
-  // the user's.
+  // Seeded once, into the first seat and only if it is still empty: a name already written
+  // stays, and after «Io non gioco» the seats are the user's.
   const seededSelf = useRef(false);
   useEffect(() => {
     if (!self || seededSelf.current) return;
     seededSelf.current = true;
     setPlayers(prev =>
-      prev[0]?.name === '' ? [{ ...prev[0], name: self.displayName }, ...prev.slice(1)] : prev
+      prev[0]?.name === ''
+        ? [{ ...prev[0], name: self.displayName, userId: self.userId }, ...prev.slice(1)]
+        : prev
     );
   }, [self]);
 
   const handleOptOut = useCallback(() => {
-    setPlayers(prev => prev.map(p => (p.id === selfSlotId ? { ...p, name: '' } : p)));
-  }, [selfSlotId]);
+    setPlayers(prev => prev.map(p => (isSelfSeat(p) ? { ...p, name: '', userId: undefined } : p)));
+  }, [isSelfSeat]);
 
   const handleAddSelf = useCallback(() => {
     if (!self) return;
     setPlayers(prev => {
+      const seat = { name: self.displayName, userId: self.userId };
       const emptyIndex = prev.findIndex(p => !p.name.trim());
-      if (emptyIndex >= 0) {
-        return prev.map((p, i) => (i === emptyIndex ? { ...p, name: self.displayName } : p));
-      }
-      return prev.length < 8 ? [...prev, createSlot(self.displayName)] : prev;
+      return emptyIndex >= 0
+        ? prev.map((p, i) => (i === emptyIndex ? { ...p, ...seat } : p))
+        : [...prev, { ...createSlot(), ...seat }];
     });
   }, [self]);
 
   const handlePlayerChange = useCallback((slotId: string, value: string) => {
-    setPlayers(prev => prev.map(p => (p.id === slotId ? { ...p, name: value } : p)));
+    setPlayers(prev =>
+      prev.map(p =>
+        p.id === slotId ? { ...p, name: value, userId: value.trim() ? p.userId : undefined } : p
+      )
+    );
   }, []);
 
   const handleAddPlayer = useCallback(() => {
@@ -141,7 +153,7 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
       const entries = validPlayers.map((p, i) => ({
         name: p.name,
         color: PLAYER_COLORS[i % PLAYER_COLORS.length],
-        userId: self && p.id === selfSlotId ? self.userId : undefined,
+        userId: p.userId,
       }));
       for (const entry of linkedFirst(entries)) {
         await api.liveSessions.addPlayer(sessionId, {
@@ -159,7 +171,7 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
       setError('Errore nella creazione della sessione. Riprova.');
       setIsCreating(false);
     }
-  }, [canCreate, gameId, gameTitle, validPlayers, self, selfSlotId, onSessionCreated]);
+  }, [canCreate, gameId, gameTitle, validPlayers, onSessionCreated]);
 
   return (
     <div className="space-y-4" data-testid="create-session-step">
@@ -203,13 +215,13 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
               data-testid={`player-input-${index}`}
               id={`${formId}-player-${index}`}
             />
-            {player.id === selfSlotId && (
+            {isSelfSeat(player) && (
               <>
                 <SelfBadge />
                 <OptOutButton onClick={handleOptOut} className="flex-shrink-0" />
               </>
             )}
-            {canRemovePlayer && player.id !== selfSlotId && (
+            {canRemovePlayer && !isSelfSeat(player) && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -224,6 +236,12 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
         ))}
       </div>
 
+      {duplicateName && (
+        <p className="text-sm text-destructive" role="alert">
+          {duplicatePlayerNameMessage(duplicateName)}
+        </p>
+      )}
+
       {canAddPlayer && (
         <Button
           variant="outline"
@@ -237,8 +255,20 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
       )}
 
       {/* The creator opted out and wants back in (#4750) */}
-      {self && !selfSlotId && (
-        <AddSelfButton onClick={handleAddSelf} disabled={!hasRoomForSelf} className="w-full" />
+      {self && !selfInSeats && (
+        <div className="space-y-1">
+          <AddSelfButton
+            onClick={handleAddSelf}
+            disabled={!hasRoomForSelf}
+            describedBy={hasRoomForSelf ? undefined : seatsFullNoticeId}
+            className="w-full"
+          />
+          {!hasRoomForSelf && (
+            <p id={seatsFullNoticeId} className="text-xs text-muted-foreground">
+              I posti sono pieni: libera un posto per aggiungerti.
+            </p>
+          )}
+        </div>
       )}
 
       {error && (

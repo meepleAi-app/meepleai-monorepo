@@ -442,3 +442,146 @@ describe('SessionWizardMobile — #4750: «Aggiungi me»', () => {
     });
   });
 });
+
+// ── #4750 (revisione): il seme, gli id, i nomi ─────────────────────────────────
+
+describe('SessionWizardMobile — #4750: seme, id e nomi', () => {
+  const NO_NAME: TestUser = {
+    id: 'user-x',
+    email: 'segreto@example.com',
+    displayName: null,
+    role: 'User',
+  };
+
+  function mount() {
+    const client = new QueryClient();
+    const ui = () => (
+      <QueryClientProvider client={client}>
+        <SessionWizardMobile prefilledGameId="game-abc" prefilledGameName="Catan" />
+      </QueryClientProvider>
+    );
+    return { ...rtlRender(ui()), ui };
+  }
+
+  function addPlayerNamed(name: string) {
+    fireEvent.change(screen.getByLabelText('Nome nuovo giocatore'), { target: { value: name } });
+    fireEvent.click(screen.getByText('Aggiungi'));
+  }
+
+  function startFromPlayersStep() {
+    fireEvent.click(screen.getByText('Avanti')); // → step 3
+    fireEvent.click(screen.getByText('Avanti')); // → step 4
+    fireEvent.click(screen.getByText('Salta')); // → step 5
+    fireEvent.click(screen.getByText('Inizia a Giocare'));
+  }
+
+  describe('il seme parte una volta, e solo a lista intatta', () => {
+    it('i giocatori scritti prima che l’utente arrivi restano, e resta «Aggiungi me»', () => {
+      const { rerender, ui } = mount();
+      addPlayerNamed('Bob'); // la lista è «Giocatore 1» e Bob
+
+      currentUser.value = MARCO;
+      rerender(ui());
+
+      expect(screen.getByText('Giocatore 1')).toBeInTheDocument();
+      expect(screen.getByText('Bob')).toBeInTheDocument();
+      expect(screen.queryByText('Marco Rossi')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Aggiungi me' })).toBeInTheDocument();
+    });
+
+    it('un solo giocatore scritto a mano al posto del segnaposto non viene sostituito', () => {
+      const { rerender, ui } = mount();
+      fireEvent.click(screen.getByRole('button', { name: 'Rimuovi Giocatore 1' }));
+      addPlayerNamed('Bob'); // la lista è solo Bob: un giocatore, ma non il segnaposto
+
+      currentUser.value = MARCO;
+      rerender(ui());
+
+      expect(screen.getByText('Bob')).toBeInTheDocument();
+      expect(screen.queryByText('Marco Rossi')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Aggiungi me' })).toBeInTheDocument();
+    });
+
+    it('tolto con «Io non gioco», un aggiornamento dell’utente non lo rimette in lista', () => {
+      currentUser.value = MARCO;
+      const { rerender, ui } = mount();
+      fireEvent.click(screen.getByRole('button', { name: 'Io non gioco' }));
+
+      currentUser.value = { ...MARCO, displayName: 'Marco R.' };
+      rerender(ui());
+
+      expect(screen.queryByText('Marco R.')).not.toBeInTheDocument();
+      expect(screen.queryByText('Marco Rossi')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Aggiungi me' })).toBeInTheDocument();
+    });
+  });
+
+  describe('id dei giocatori', () => {
+    it('due giocatori aggiunti nello stesso millisecondo hanno id diversi: i turni sono completi', async () => {
+      // Gli id locali erano `p-${Date.now()}`: nello stesso millisecondo coincidevano, e la mappa
+      // «id locale → id del server» teneva l'ultimo, quindi i turni ripetevano un giocatore.
+      currentUser.value = MARCO;
+      mount();
+      const now = vi.spyOn(Date, 'now').mockReturnValue(1_700_000_000_000);
+      addPlayerNamed('Bob');
+      addPlayerNamed('Carla');
+      now.mockRestore();
+
+      startFromPlayersStep();
+
+      await waitFor(() => expect(mockApi.liveSessions.updateTurnOrder).toHaveBeenCalled());
+      expect(mockApi.liveSessions.updateTurnOrder).toHaveBeenCalledWith('session-123', {
+        playerIds: ['player-uuid-1', 'player-uuid-2', 'player-uuid-3'],
+      });
+    });
+  });
+
+  describe('nomi', () => {
+    it('il nome di default non ripete uno già in lista dopo «Io non gioco»', () => {
+      currentUser.value = MARCO;
+      mount();
+      addPlayerNamed(''); // «Giocatore 2»: c'è già Marco
+      fireEvent.click(screen.getByRole('button', { name: 'Io non gioco' }));
+
+      addPlayerNamed(''); // la lista ha un giocatore: contare non basta, «Giocatore 2» c'è
+
+      expect(screen.getAllByText('Giocatore 2')).toHaveLength(1);
+      expect(screen.getByText('Giocatore 3')).toBeInTheDocument();
+    });
+
+    it('due giocatori con lo stesso nome: messaggio accanto al campo, «Avanti» spento, nessuna sessione', () => {
+      currentUser.value = MARCO;
+      mount();
+
+      addPlayerNamed(' marco rossi ');
+
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Due giocatori si chiamano «marco rossi»'
+      );
+      expect(screen.getByRole('button', { name: 'Avanti' })).toBeDisabled();
+      fireEvent.click(screen.getByRole('button', { name: 'Avanti' }));
+      expect(screen.getByText('Aggiungi giocatori')).toBeInTheDocument(); // ancora al passo dei giocatori
+      expect(mockApi.liveSessions.createSession).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Rimuovi marco rossi' }));
+
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Avanti' })).toBeEnabled();
+    });
+
+    it('senza nome del profilo il creatore è «Giocatore 1», non l’email', async () => {
+      currentUser.value = NO_NAME;
+      mount();
+
+      expect(screen.getByText('Giocatore 1').closest('[role="listitem"]')).toHaveTextContent('Tu');
+      expect(screen.queryByText(/segreto/i)).not.toBeInTheDocument();
+      startFromPlayersStep();
+
+      await waitFor(() => expect(mockApi.liveSessions.addPlayer).toHaveBeenCalledTimes(1));
+      expect(mockApi.liveSessions.addPlayer.mock.calls[0][1]).toMatchObject({
+        displayName: 'Giocatore 1',
+        userId: 'user-x',
+      });
+    });
+  });
+});

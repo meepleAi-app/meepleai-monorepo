@@ -18,7 +18,7 @@
 
 'use client';
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 import {
   Check,
@@ -45,6 +45,11 @@ import { linkedFirst, useSelfPlayer } from '@/hooks/useSelfPlayer';
 import { api } from '@/lib/api';
 import type { PhaseTemplateDto } from '@/lib/api/clients/gamesClient';
 import type { PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
+import {
+  duplicatePlayerNameMessage,
+  findDuplicatePlayerName,
+  nextDefaultPlayerName,
+} from '@/lib/sessions/player-names';
 import { cn } from '@/lib/utils';
 
 import { KbSelectionStep } from './KbSelectionStep';
@@ -86,6 +91,13 @@ const COLOR_PALETTE: { value: PlayerColor; label: string; hex: string; className
 
 const PLACEHOLDER_PLAYER_ID = 'p-placeholder';
 const SELF_PLAYER_ID = 'p-self';
+
+// Local ids key the list and map each player to the id the server gives back. Not the clock: two
+// players added in the same millisecond would share one, and the turn order would repeat a player.
+let playerCounter = 0;
+function nextPlayerId(): string {
+  return `p-${++playerCounter}`;
+}
 
 const STEP_ICONS: Record<WizardStep, React.ElementType> = {
   1: Gamepad2,
@@ -145,11 +157,9 @@ export function SessionWizardMobile({
 
   // #4750: the creator is the first player, linked to their account. The user is usually known
   // on the first render; when it arrives later it replaces the untouched placeholder, and only
-  // once: after «Io non gioco» the list is the user's.
-  const seededSelf = useRef(false);
+  // that: any other list is the user's (players already written, or «Io non gioco»).
   useEffect(() => {
-    if (!self || seededSelf.current) return;
-    seededSelf.current = true;
+    if (!self) return;
     setPlayers(prev =>
       prev.length === 1 && prev[0].id === PLACEHOLDER_PLAYER_ID
         ? [
@@ -171,13 +181,13 @@ export function SessionWizardMobile({
 
   // Player management
   const addPlayer = useCallback(() => {
-    const name = newPlayerName.trim() || `Giocatore ${players.length + 1}`;
+    const name = newPlayerName.trim() || nextDefaultPlayerName(players.map(p => p.displayName));
     setPlayers(prev => [
       ...prev,
-      { id: `p-${Date.now()}`, displayName: name, color: nextAvailableColor },
+      { id: nextPlayerId(), displayName: name, color: nextAvailableColor },
     ]);
     setNewPlayerName('');
-  }, [newPlayerName, players.length, nextAvailableColor]);
+  }, [newPlayerName, players, nextAvailableColor]);
 
   const selfInList = !!self && players.some(p => p.userId === self.userId);
 
@@ -318,7 +328,9 @@ export function SessionWizardMobile({
 
   // Navigation
   const canProceedStep1 = !!selectedGameName;
-  const canProceedStep2 = players.length > 0;
+  // The server refuses two players with the same name: say so before the session exists.
+  const duplicateName = findDuplicatePlayerName(players.map(p => p.displayName));
+  const canProceedStep2 = players.length > 0 && !duplicateName;
 
   return (
     <div className="flex flex-col min-h-[60vh]">
@@ -509,6 +521,12 @@ export function SessionWizardMobile({
                 Aggiungi
               </Button>
             </div>
+
+            {duplicateName && (
+              <p className="text-sm text-destructive" role="alert">
+                {duplicatePlayerNameMessage(duplicateName)}
+              </p>
+            )}
 
             {/* The creator opted out and wants back in (#4750) */}
             {self && !selfInList && <AddSelfButton onClick={addSelf} className="w-full" />}

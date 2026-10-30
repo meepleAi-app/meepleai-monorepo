@@ -15,17 +15,14 @@ vi.mock('@/hooks/queries/useCurrentUser', () => ({
 
 describe('selfDisplayName', () => {
   it('usa il nome del profilo, senza spazi ai bordi', () => {
-    expect(selfDisplayName('  Marco Rossi ', 'marco@example.com')).toBe('Marco Rossi');
+    expect(selfDisplayName('  Marco Rossi ')).toBe('Marco Rossi');
   });
 
-  it('senza nome del profilo usa la parte locale dell’email', () => {
-    expect(selfDisplayName(null, 'marco@example.com')).toBe('marco');
-    expect(selfDisplayName('   ', 'marco@example.com')).toBe('marco');
-  });
-
-  it('senza nulla di meglio dice «Io»', () => {
-    expect(selfDisplayName(undefined, undefined)).toBe('Io');
-    expect(selfDisplayName('', '')).toBe('Io');
+  it('senza nome del profilo usa il nome neutro dei giocatori, non l’email', () => {
+    // Il nome va a tutti i partecipanti: dall'email non si deve ricavare niente.
+    expect(selfDisplayName(null)).toBe('Giocatore 1');
+    expect(selfDisplayName(undefined)).toBe('Giocatore 1');
+    expect(selfDisplayName('   ')).toBe('Giocatore 1');
   });
 });
 
@@ -76,6 +73,6 @@ describe('useSelfPlayer', () => {
     rerender();
 
     expect(result.current).toBe(first);
-    expect(first).toEqual({ userId: 'user-marco', displayName: 'marco' });
+    expect(first).toEqual({ userId: 'user-marco', displayName: 'Giocatore 1' });
   });
 });

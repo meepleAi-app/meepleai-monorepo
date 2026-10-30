@@ -20,6 +20,7 @@ internal partial class EmailService : IEmailService
     private readonly bool _enableSsl;
     private readonly string _resetUrlBase;
     private readonly string _frontendBaseUrl;
+    private readonly TimeProvider _timeProvider;
 
     /// <summary>
     /// Legacy ctor used by existing unit tests that mock EmailService directly without
@@ -39,7 +40,8 @@ internal partial class EmailService : IEmailService
     public EmailService(
         IConfiguration configuration,
         ILogger<EmailService> logger,
-        IEmailSender? sender)
+        IEmailSender? sender,
+        TimeProvider? timeProvider = null)
     {
         // S1075: Default values extracted to const
 #pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
@@ -49,6 +51,7 @@ internal partial class EmailService : IEmailService
 
         _logger = logger;
         _sender = sender;
+        _timeProvider = timeProvider ?? TimeProvider.System;
 
         // Load email configuration with fallback to SMTP_* env var names from email.secret
         // email.secret uses SMTP_HOST/SMTP_USER/SMTP_PASSWORD but EmailService originally

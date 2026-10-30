@@ -37,6 +37,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
 
     private readonly Mock<IGameNightInvitationRepository> _invitationRepoMock = new();
     private readonly Mock<IGameNightEventRepository> _gameNightRepoMock = new();
+    private readonly Mock<Api.BoundedContexts.Authentication.Infrastructure.Persistence.IUserRepository> _userRepoMock = new();
     private readonly Mock<IGameNightEmailService> _emailServiceMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly Mock<ILogger<GameNightInvitationRespondedHandler>> _loggerMock = new();
@@ -54,6 +55,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
     private GameNightInvitationRespondedHandler CreateHandler(HybridCache cache) => new(
         _invitationRepoMock.Object,
         _gameNightRepoMock.Object,
+        _userRepoMock.Object,
         _emailServiceMock.Object,
         cache,
         _unitOfWorkMock.Object,
@@ -139,14 +141,54 @@ public sealed class GameNightInvitationRespondedHandlerTests
             cancellationToken: CancellationToken.None);
         factoryRan.Should().BeTrue();
 
-        // Verify confirmation email dispatched with token-bearing unsubscribe URL.
+        // Verify the confirmation email dispatched. No organizer record and no stored zone here: English, UTC.
         _emailServiceMock.Verify(
             e => e.SendGameNightRsvpConfirmationEmailAsync(
                 "guest@example.com",
                 gameNight.Title,
                 gameNight.ScheduledAt,
                 gameNight.Location,
-                $"/invites/{Token}/unsubscribe",
+                GameNightEmailLocale.Unknown,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// #4754: the confirmation is written in the language of the organizer whose invitation the guest answered,
+    /// with the time on the night's zone — the same as the invitation said.
+    /// </summary>
+    [Fact]
+    public async Task Handle_AcceptedResponse_ConfirmationCarriesTheOrganizersLanguageAndTheNightsTimeZone()
+    {
+        var organizer = new Api.Tests.BoundedContexts.Authentication.TestHelpers.UserBuilder().Build();
+        organizer.UpdatePreferences("it", "system", emailNotifications: true, dataRetentionDays: 90);
+        var gameNight = GameNightEvent.Create(
+            organizerId: organizer.Id,
+            title: "Venerdì Catan",
+            scheduledAt: UtcNow.AddDays(7),
+            timeZoneId: "Europe/Rome");
+        var invitation = Reconstitute(GameNightInvitationStatus.Accepted);
+        _invitationRepoMock
+            .Setup(r => r.GetByIdAsync(invitation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(invitation);
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(invitation.GameNightId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _userRepoMock
+            .Setup(r => r.GetByIdAsync(organizer.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(organizer);
+
+        await CreateHandler(CreateHybridCache()).Handle(
+            CreateEvent(invitation.Id, invitation.GameNightId, GameNightInvitationStatus.Accepted),
+            CancellationToken.None);
+
+        _emailServiceMock.Verify(
+            e => e.SendGameNightRsvpConfirmationEmailAsync(
+                "guest@example.com",
+                gameNight.Title,
+                gameNight.ScheduledAt,
+                gameNight.Location,
+                new GameNightEmailLocale("it", "Europe/Rome"),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -169,7 +211,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
                 It.IsAny<string>(),
                 It.IsAny<DateTimeOffset>(),
                 It.IsAny<string>(),
-                It.IsAny<string>(),
+                It.IsAny<GameNightEmailLocale>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
         _invitationRepoMock.Verify(
@@ -202,7 +244,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
                 It.IsAny<string>(),
                 It.IsAny<DateTimeOffset>(),
                 It.IsAny<string>(),
-                It.IsAny<string>(),
+                It.IsAny<GameNightEmailLocale>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -236,7 +278,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
                 It.IsAny<string>(),
                 It.IsAny<DateTimeOffset>(),
                 It.IsAny<string>(),
-                It.IsAny<string>(),
+                It.IsAny<GameNightEmailLocale>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
         _invitationRepoMock.Verify(
@@ -269,7 +311,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
                 It.IsAny<string>(),
                 It.IsAny<DateTimeOffset>(),
                 It.IsAny<string>(),
-                It.IsAny<string>(),
+                It.IsAny<GameNightEmailLocale>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }

@@ -22,6 +22,15 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
     public string Title { get; private set; }
     public string? Description { get; private set; }
     public DateTimeOffset ScheduledAt { get; private set; }
+
+    /// <summary>
+    /// IANA zone the organizer scheduled the night in (e.g. <c>Europe/Rome</c>), or null when the creator
+    /// did not send one (nights created before #4754, or a client that does not know its zone).
+    /// <see cref="ScheduledAt"/> is an instant and carries no zone of its own, so this is what lets an email
+    /// say "21:00" where the organizer meant 21:00. Null means "unknown": emails then say UTC, out loud.
+    /// </summary>
+    public string? TimeZoneId { get; private set; }
+
     public string? Location { get; private set; }
     public int? MaxPlayers { get; private set; }
     public List<Guid> GameIds { get; private set; } = [];
@@ -87,7 +96,8 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
         string? description = null,
         string? location = null,
         int? maxPlayers = null,
-        List<Guid>? gameIds = null) : base(id)
+        List<Guid>? gameIds = null,
+        string? timeZoneId = null) : base(id)
     {
         if (organizerId == Guid.Empty)
             throw new ArgumentException("OrganizerId cannot be empty", nameof(organizerId));
@@ -102,11 +112,32 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
         Title = title.Trim();
         Description = description?.Trim();
         ScheduledAt = ToUtcInstant(scheduledAt);
+        TimeZoneId = NormalizeTimeZoneId(timeZoneId);
         Location = location?.Trim();
         MaxPlayers = maxPlayers;
         GameIds = gameIds ?? [];
         Status = GameNightStatus.Draft;
         CreatedAt = DateTimeOffset.UtcNow;
+    }
+
+    /// <summary>Longest IANA zone id in use is well under this; it is the width of the column.</summary>
+    public const int TimeZoneIdMaxLength = 64;
+
+    /// <summary>
+    /// Blank means "not sent" (null); an id longer than the column is a caller bug, not something to cut.
+    /// Whether the id names a real zone is deliberately NOT decided here: the zone only ever feeds
+    /// a display, so one the server cannot resolve must not stop a night from being created — the email
+    /// formatter falls back to UTC, declared as such.
+    /// </summary>
+    private static string? NormalizeTimeZoneId(string? timeZoneId)
+    {
+        var trimmed = timeZoneId?.Trim();
+        if (string.IsNullOrEmpty(trimmed))
+            return null;
+        if (trimmed.Length > TimeZoneIdMaxLength)
+            throw new ArgumentException(
+                $"TimeZoneId cannot exceed {TimeZoneIdMaxLength} characters", nameof(timeZoneId));
+        return trimmed;
     }
 
     /// <summary>
@@ -121,12 +152,13 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
         string? location = null,
         int? maxPlayers = null,
         List<Guid>? gameIds = null,
-        Guid? id = null)
+        Guid? id = null,
+        string? timeZoneId = null)
     {
         if (id == Guid.Empty)
             throw new ArgumentException("Id cannot be empty", nameof(id));
 
-        return new GameNightEvent(id ?? Guid.NewGuid(), organizerId, title, scheduledAt, description, location, maxPlayers, gameIds);
+        return new GameNightEvent(id ?? Guid.NewGuid(), organizerId, title, scheduledAt, description, location, maxPlayers, gameIds, timeZoneId);
     }
 
     /// <summary>
@@ -213,8 +245,11 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
 
     /// <summary>
     /// Updates the game night event details. Cannot update cancelled or completed events.
+    /// <paramref name="timeZoneId"/> follows the same rule as <paramref name="gameIds"/>: null keeps what is
+    /// stored. A client that does not send the zone (an older build) must not wipe the one the night was
+    /// created with just because the organizer moved the time.
     /// </summary>
-    public void Update(string title, string? description, DateTimeOffset scheduledAt, string? location, int? maxPlayers, List<Guid>? gameIds)
+    public void Update(string title, string? description, DateTimeOffset scheduledAt, string? location, int? maxPlayers, List<Guid>? gameIds, string? timeZoneId = null)
     {
         ThrowIfCorrupted();
 
@@ -228,9 +263,12 @@ internal sealed class GameNightEvent : AggregateRoot<Guid>
         if (maxPlayers.HasValue && maxPlayers.Value < 2)
             throw new ArgumentException("MaxPlayers must be >= 2", nameof(maxPlayers));
 
+        var newTimeZoneId = NormalizeTimeZoneId(timeZoneId);
+
         Title = title.Trim();
         Description = description?.Trim();
         ScheduledAt = ToUtcInstant(scheduledAt);
+        TimeZoneId = newTimeZoneId ?? TimeZoneId;
         Location = location?.Trim();
         MaxPlayers = maxPlayers;
         GameIds = gameIds ?? GameIds;

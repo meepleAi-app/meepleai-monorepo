@@ -55,7 +55,7 @@ public sealed class GameNightInvitationHostFixture(SharedTestcontainersFixture s
             .Setup(s => s.SendGameNightInvitationEmailAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<DateTimeOffset>(), It.IsAny<string?>(), It.IsAny<IReadOnlyList<string>>(),
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameNightEmailLocale>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 

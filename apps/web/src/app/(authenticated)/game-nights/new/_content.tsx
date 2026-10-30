@@ -36,6 +36,7 @@ import {
 import { initialWizardState, wizardReducer } from '@/lib/game-nights/wizard-reducer';
 import type { WizardStep } from '@/lib/game-nights/wizard-types';
 import { buildSubmitPayload } from '@/lib/game-nights/wizard-validators';
+import { getBrowserTimeZone } from '@/lib/utils/browserTimeZone';
 
 import { useGameNightCandidates } from './_lib/useGameNightCandidates';
 
@@ -265,6 +266,9 @@ export function NewGameNightContent(): ReactElement {
     // type check passes without widening the shared schema (a wider change
     // would touch unrelated callers).
     const p = payloadResult.payload;
+    // #4754: the zone the organizer is scheduling in, so the invitation email can say 21:00 where they
+    // meant 21:00. Left out when the browser cannot name one.
+    const timeZoneId = getBrowserTimeZone();
     const mutationInput = {
       // #4692: one id per submission, the same for every attempt below (React Query no longer resends a
       // mutation on its own, #4735): the server then sees the repetitions as the same creation instead of
@@ -272,6 +276,7 @@ export function NewGameNightContent(): ReactElement {
       id: crypto.randomUUID(),
       title: p.title,
       scheduledAt: p.scheduledAt,
+      ...(timeZoneId ? { timeZoneId } : {}),
       ...(p.description != null ? { description: p.description } : {}),
       ...(p.location != null ? { location: p.location } : {}),
       ...(p.maxPlayers != null ? { maxPlayers: p.maxPlayers } : {}),

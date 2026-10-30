@@ -46,7 +46,7 @@ public sealed class GameNightCreateRetryHostFixture(SharedTestcontainersFixture 
                 It.Is<string>(to => to.EndsWith(DownDomain, StringComparison.Ordinal)),
                 It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<DateTimeOffset>(), It.IsAny<string?>(), It.IsAny<IReadOnlyList<string>>(),
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameNightEmailLocale>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("smtp is down"));
 
@@ -55,7 +55,7 @@ public sealed class GameNightCreateRetryHostFixture(SharedTestcontainersFixture 
                 It.Is<string>(to => !to.EndsWith(DownDomain, StringComparison.Ordinal)),
                 It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<DateTimeOffset>(), It.IsAny<string?>(), It.IsAny<IReadOnlyList<string>>(),
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameNightEmailLocale>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 

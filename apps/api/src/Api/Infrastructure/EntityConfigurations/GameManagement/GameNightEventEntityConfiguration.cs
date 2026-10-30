@@ -20,6 +20,7 @@ internal class GameNightEventEntityConfiguration : IEntityTypeConfiguration<Game
         builder.Property(e => e.Title).HasColumnName("title").HasMaxLength(200).IsRequired();
         builder.Property(e => e.Description).HasColumnName("description").HasMaxLength(2000);
         builder.Property(e => e.ScheduledAt).HasColumnName("scheduled_at").IsRequired();
+        builder.Property(e => e.TimeZoneId).HasColumnName("time_zone_id").HasMaxLength(64);
         builder.Property(e => e.Location).HasColumnName("location").HasMaxLength(500);
         builder.Property(e => e.MaxPlayers).HasColumnName("max_players");
         builder.Property(e => e.GameIdsJson).HasColumnName("game_ids").HasColumnType("jsonb").IsRequired();

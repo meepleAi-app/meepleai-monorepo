@@ -219,6 +219,8 @@ export const CreateGameNightInputSchema = z.object({
   title: z.string().min(3).max(200),
   description: z.string().max(2000).optional(),
   scheduledAt: z.string(),
+  // #4754: the IANA zone the organizer scheduled in (the browser's), so emails can write the local time.
+  timeZoneId: z.string().max(64).optional(),
   location: z.string().max(500).optional(),
   maxPlayers: z.number().min(2).max(50).optional(),
   gameIds: z.array(GameIdString).max(20).optional(),
@@ -260,6 +262,8 @@ export const UpdateGameNightInputSchema = z.object({
   title: z.string().min(3).max(200),
   description: z.string().max(2000).optional(),
   scheduledAt: z.string(),
+  // #4754: left out, the server keeps the zone already stored.
+  timeZoneId: z.string().max(64).optional(),
   location: z.string().max(500).optional(),
   maxPlayers: z.number().min(2).max(50).optional(),
   gameIds: z.array(GameIdString).max(20).optional(),

@@ -31,6 +31,11 @@ public class GameNightEventEntity
     [Column("scheduled_at")]
     public DateTimeOffset ScheduledAt { get; set; }
 
+    /// <summary>IANA zone the organizer scheduled the night in; null when it was not sent (#4754).</summary>
+    [Column("time_zone_id")]
+    [MaxLength(64)]
+    public string? TimeZoneId { get; set; }
+
     [Column("location")]
     [MaxLength(500)]
     public string? Location { get; set; }

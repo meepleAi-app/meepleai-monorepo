@@ -42,7 +42,8 @@ internal sealed class UpdateGameNightCommandHandler : ICommandHandler<UpdateGame
                 command.ScheduledAt,
                 command.Location,
                 command.MaxPlayers,
-                command.GameIds);
+                command.GameIds,
+                command.TimeZoneId);
         }
         catch (InvalidOperationException ex)
         {

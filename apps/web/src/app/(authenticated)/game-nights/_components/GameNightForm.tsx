@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import type { CreateGameNightInput } from '@/lib/api/schemas/game-nights.schemas';
+import { getBrowserTimeZone } from '@/lib/utils/browserTimeZone';
 
 interface GameNightFormProps {
   defaultValues?: Partial<CreateGameNightInput>;
@@ -39,9 +40,14 @@ export function GameNightForm({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // #4754: the zone the time was typed in. Sent with every save so that moving the time does not leave the
+    // night with the zone of an earlier edit; left out when the browser cannot name one (the server then keeps
+    // the stored zone).
+    const timeZoneId = getBrowserTimeZone();
     const data: CreateGameNightInput = {
       title: title.trim(),
       scheduledAt: new Date(scheduledAt).toISOString(),
+      ...(timeZoneId && { timeZoneId }),
       ...(description.trim() && { description: description.trim() }),
       ...(location.trim() && { location: location.trim() }),
       ...(maxPlayers && { maxPlayers: Number(maxPlayers) }),

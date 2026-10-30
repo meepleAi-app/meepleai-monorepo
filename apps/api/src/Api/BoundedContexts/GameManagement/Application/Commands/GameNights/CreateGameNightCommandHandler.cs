@@ -67,7 +67,8 @@ internal sealed class CreateGameNightCommandHandler : ICommandHandler<CreateGame
             location: command.Location,
             maxPlayers: command.MaxPlayers,
             gameIds: command.GameIds,
-            id: command.Id);
+            id: command.Id,
+            timeZoneId: command.TimeZoneId);
 
         // Pre-create RSVP entries for invited users so PublishHandler sends invitations.
         if (command.InvitedUserIds is { Count: > 0 })

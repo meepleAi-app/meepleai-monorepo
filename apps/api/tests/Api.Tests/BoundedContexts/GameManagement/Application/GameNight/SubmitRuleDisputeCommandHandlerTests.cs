@@ -387,7 +387,7 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenLlmFails_ThrowsInvalidOperationException()
+    public async Task Handle_WhenLlmFails_ThrowsAReadableServiceError_NotAServerFault()
     {
         // Arrange
         CreateInProgressSession(withDbEntity: true);
@@ -400,10 +400,150 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
 
         var command = BuildCommand();
 
-        // Act & Assert
+        // Act & Assert — #4751: a 503 the player can read, not an InvalidOperationException (500)
         var act = () =>
             _sut.Handle(command, CancellationToken.None);
-        await act.Should().ThrowAsync<InvalidOperationException>();
+        var ex = (await act.Should().ThrowAsync<ExternalServiceException>()).Which;
+
+        ex.StatusCode.Should().Be(503);
+        ex.ErrorCode.Should().Be(SubmitRuleDisputeCommandHandler.NoVerdictErrorCode);
+        ex.Message.Should().NotContain("LLM unavailable", "the model's error text belongs in the log, not in the response");
+        _llmServiceMock.Verify(
+            s => s.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    // ─── #4751: a refusal by the gateway says why ─────────────────────────────
+
+    [Fact]
+    public async Task Handle_WhenTheGatewayRefusesTheCall_PassesItsCodeAndMessageOn_AndChargesNothing()
+    {
+        // Arrange — a daily cap: «riprova tra poco» would be false, the gateway's own words are not
+        var session = CreateInProgressSession(withDbEntity: true);
+        var refusal = LlmCompletionResult.CreateFailure("Il tetto di spesa giornaliero è stato raggiunto.");
+        _llmServiceMock
+            .Setup(s => s.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(refusal with
+            {
+                Metadata = new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["error_code"] = "AI_DAILY_BUDGET_EXCEEDED",
+                },
+            });
+
+        // Act
+        var act = () => _sut.Handle(BuildCommand(), CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<LlmCallRefusedException>()).Which;
+
+        // Assert
+        ex.StatusCode.Should().Be(503);
+        ex.ErrorCode.Should().Be("AI_DAILY_BUDGET_EXCEEDED");
+        ex.Message.Should().Be("Il tetto di spesa giornaliero è stato raggiunto.");
+        session.Disputes.Should().BeEmpty();
+        _tierEnforcementMock.Verify(
+            t => t.RecordUsageAsync(It.IsAny<Guid>(), It.IsAny<TierAction>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenNoProviderAnswered_KeepsTheGenericMessage_NotTheGatewaysText()
+    {
+        // Arrange — AI_PROVIDER_UNAVAILABLE is transient: «riprova tra poco» is true, and the
+        // gateway text may carry provider detail that belongs in the log
+        CreateInProgressSession(withDbEntity: true);
+        var failure = LlmCompletionResult.CreateFailure("no model answered: provider-x returned 503 (secret-detail)");
+        _llmServiceMock
+            .Setup(s => s.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(failure with
+            {
+                Metadata = new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["error_code"] = LlmAnswerErrorCodes.ProviderUnavailable,
+                },
+            });
+
+        // Act
+        var act = () => _sut.Handle(BuildCommand(), CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<ExternalServiceException>()).Which;
+
+        // Assert
+        ex.ErrorCode.Should().Be(SubmitRuleDisputeCommandHandler.NoVerdictErrorCode);
+        ex.Message.Should().NotContain("secret-detail");
+    }
+
+    // ─── #4751: an empty answer is not a verdict ──────────────────────────────
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("\n\t \n")]
+    [InlineData("VERDETTO:\nREGOLA:\nNOTA:")]
+    [InlineData("VERDETTO:")]
+    public async Task Handle_WhenTheModelAnswersWithNothing_SavesChargesAndPublishesNothing(string? emptyAnswer)
+    {
+        // Arrange — the call "succeeds" but carries no text (or only the empty skeleton of the format)
+        var session = CreateInProgressSession(withDbEntity: true);
+
+        _llmServiceMock
+            .Setup(s => s.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(emptyAnswer!));
+
+        var command = BuildCommand();
+
+        // Act
+        var act = () =>
+            _sut.Handle(command, CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<ExternalServiceException>()).Which;
+
+        // Assert — it used to be saved as «Nessun verdetto disponibile.», broadcast and counted against the quota
+        ex.ErrorCode.Should().Be(SubmitRuleDisputeCommandHandler.NoVerdictErrorCode);
+        session.Disputes.Should().BeEmpty("no verdict was given, so none is attached to the session");
+        _sessionRepoMock.Verify(
+            r => r.UpdateAsync(It.IsAny<LiveGameSession>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _tierEnforcementMock.Verify(
+            t => t.RecordUsageAsync(It.IsAny<Guid>(), It.IsAny<TierAction>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _publisherMock.Verify(
+            p => p.Publish(It.IsAny<DisputeResolvedEvent>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheModelAnswersWithNothing_TheDisputeStaysAskableAfterwards()
+    {
+        // Arrange — the first answer is empty, the retry works: the failed attempt must leave no trace
+        var session = CreateInProgressSession(withDbEntity: true);
+
+        _llmServiceMock
+            .SetupSequence(s => s.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(string.Empty))
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(DefaultLlmResponse));
+
+        var command = BuildCommand();
+
+        // Act
+        var first = () => _sut.Handle(command, CancellationToken.None);
+        await first.Should().ThrowAsync<ExternalServiceException>();
+        var second = await _sut.Handle(command, CancellationToken.None);
+
+        // Assert
+        second.Verdict.Should().StartWith("Il giocatore A ha ragione");
+        session.Disputes.Should().ContainSingle("only the answered attempt is attached");
+        _tierEnforcementMock.Verify(
+            t => t.RecordUsageAsync(TestUserId, TierAction.SessionAgentQuery, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     // ─── Tier enforcement ─────────────────────────────────────────────────────
@@ -501,16 +641,40 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         note.Should().BeNull();
     }
 
-    [Fact]
-    public void ParseArbitrationResponse_WithEmptyResponse_ReturnsDefaultVerdict()
+    [Theory]
+    [InlineData("")]
+    [InlineData("  \n ")]
+    public void ParseArbitrationResponse_WithEmptyResponse_FailsLoudlyInsteadOfInventingAVerdict(string empty)
     {
-        // Act
-        var (verdict, refs, note) = SubmitRuleDisputeCommandHandler.ParseArbitrationResponse(string.Empty);
+        // #4751: it used to return «Nessun verdetto disponibile.», which the handler saved as a real
+        // verdict. The handler refuses an empty answer before parsing; reaching this empty is a caller bug.
+        var act = () => SubmitRuleDisputeCommandHandler.ParseArbitrationResponse(empty);
 
-        // Assert
-        (string.IsNullOrWhiteSpace(verdict)).Should().BeFalse();
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Theory]
+    [InlineData("VERDETTO:\nREGOLA:\nNOTA:")]
+    [InlineData("VERDETTO:")]
+    [InlineData("  verdetto:   \n\nregola:  \n")]
+    public void ParseArbitrationResponse_WithOnlyEmptySectionHeaders_YieldsAnEmptyVerdict(string skeleton)
+    {
+        var (verdict, refs, note) = SubmitRuleDisputeCommandHandler.ParseArbitrationResponse(skeleton);
+
+        verdict.Should().BeEmpty("the bare skeleton is not an answer, and must not be saved as one");
         refs.Should().BeEmpty();
         note.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("Ha ragione Sara: il ladro si sposta subito.", "Ha ragione Sara: il ladro si sposta subito.")]
+    [InlineData("REGOLA: pag. 3, «Il ladro»", "REGOLA: pag. 3, «Il ladro»")]
+    public void ParseArbitrationResponse_WithTextButNoVerdettoSection_KeepsTheTextAsTheVerdict(
+        string unstructured, string expectedVerdict)
+    {
+        var (verdict, _, _) = SubmitRuleDisputeCommandHandler.ParseArbitrationResponse(unstructured);
+
+        verdict.Should().Be(expectedVerdict);
     }
 
     [Fact]

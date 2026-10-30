@@ -19,11 +19,13 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 /// <para><c>StartImmediately</c>: starting a game from a night means the table is about to play it, and
 /// the front-end has no control that starts a live game (the wizards start theirs right after creating
 /// it). Left <c>Created</c>, scores, turns and «Termina partita» all answer 409. The live game is
-/// started — with the same domain method as <c>POST /live-sessions/{id}/start</c> — in the same commit
-/// as its creation. The correlated <c>GameSession</c> and its quota slot are NOT created here (that is
-/// <c>StartLiveSessionCommand</c>'s saga, which needs the caller's tier and role): the night start has
-/// already checked the session quota, and completing the game backfills the history record. With no
-/// players there is nothing to start (the domain refuses), so the game stays <c>Created</c>.</para>
+/// started right after it is created, in the caller's transaction, by sending the very command behind
+/// <c>POST /live-sessions/{id}/start</c> — <c>StartLiveSessionCommand</c> — and not by a copy of its
+/// rules: the session quota by tier and role, the creator-only guard, the correlated <c>GameSession</c>
+/// that holds the quota slot and the history record. The tier and the role are the caller's, read from
+/// the user record (as the tracking-session quota check of the night start does). A caller over its
+/// quota gets <c>QuotaExceededException</c>, and the caller's transaction takes the creation with it. With
+/// no players there is nothing to start (the domain refuses), so the game stays <c>Created</c>.</para>
 /// </remarks>
 internal record CreateLiveSessionCommand(
     Guid UserId,

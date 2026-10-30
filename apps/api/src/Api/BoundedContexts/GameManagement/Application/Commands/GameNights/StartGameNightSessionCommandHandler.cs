@@ -12,6 +12,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Exceptions;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -151,6 +152,14 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
             // The quota message is written for the player (limit and tier): it stays a 409 with it.
             throw new ConflictException(ex.Message);
         }
+        catch (QuotaExceededException ex)
+        {
+            // #4752: the second quota of a night's game — the one StartLiveSessionCommand enforces on the
+            // active games, by tier and role (the first is the tracking-session quota above). Same shape,
+            // same 409 with the player-facing message; the whole transaction, tracking Session and link
+            // included, has rolled back.
+            throw new ConflictException(ex.Message);
+        }
 
         // WS1 DEC-1 (#2647): open live mode LAST — AFTER the session↔night link is
         // committed — so the SessionStartedDomainEvent resolves the parent unambiguously
@@ -221,7 +230,7 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
             {
                 Id = Guid.NewGuid(),
                 UserId = command.UserId,
-                DisplayName = DisplayNameOf(organizer),
+                DisplayName = RosterDisplayNames.Resolve(organizer.DisplayName, RosterDisplayNames.Organizer),
                 IsOwner = true,
                 JoinOrder = 0
             }
@@ -243,7 +252,7 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
             {
                 Id = Guid.NewGuid(),
                 UserId = userId,
-                DisplayName = DisplayNameOf(player),
+                DisplayName = RosterDisplayNames.Resolve(player.DisplayName, RosterDisplayNames.Player),
                 IsOwner = false,
                 JoinOrder = joinOrder++
             });
@@ -251,7 +260,4 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
 
         return participants;
     }
-
-    private static string DisplayNameOf(UserDto user) =>
-        !string.IsNullOrWhiteSpace(user.DisplayName) ? user.DisplayName : user.Email;
 }

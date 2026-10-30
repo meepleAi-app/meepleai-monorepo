@@ -9,6 +9,7 @@ using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Exceptions;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -196,6 +197,69 @@ public class StartGameNightSessionLiveGameBridgeTests
 
         var thrown = await act.Should().ThrowAsync<ConflictException>();
         thrown.Which.Message.Should().Contain("free tier");
+    }
+
+    [Fact]
+    public async Task Handle_TheLiveGamesQuotaRefusal_IsAConflictWithItsMessage_AndNothingIsSavedOrOpened()
+    {
+        // The live game is started by StartLiveSessionCommand, which enforces the session quota by tier and
+        // role — a SECOND quota next to the tracking-session one above, with its own exception type. The
+        // player gets the same 409 with the message written for them, and the start rolls back whole.
+        var (night, organizer, _, _) = ArrangeNightWithRoster();
+        _mediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatedSession(Guid.NewGuid(), night.Id));
+        _mediator.Setup(m => m.Send(It.IsAny<CreateLiveSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new QuotaExceededException(
+                "SessionQuota", "Session limit reached (3 active sessions for free tier)."));
+
+        var act = () => _handler.Handle(
+            new StartGameNightSessionCommand(night.Id, night.GameIds[0], "Catan", organizer),
+            CancellationToken.None);
+
+        var thrown = await act.Should().ThrowAsync<ConflictException>();
+        thrown.Which.Message.Should().Contain("free tier");
+        _repository.Verify(r => r.UpdateAsync(It.IsAny<GameNightEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+        _mediator.Verify(m => m.Send(It.IsAny<OpenSessionLiveModeCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Handle_PlayersWithoutADisplayName_GetNeutralNames_AndNoEmailReachesTheTable(bool theNameIsTheEmail)
+    {
+        // A table name is shown to every player, so the fallback must not identify anybody: not the e-mail
+        // address, nor a part of it. The organizer is «Organizzatore», any other player «Giocatore». The user
+        // store FILLS a missing name with the address, so the case that happens for real is the second one:
+        // a name that IS the e-mail (a blank check alone never fires on real data).
+        var (night, organizer, anna, luca) = ArrangeNightWithRoster();
+        _mediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GetUserByIdQuery q, CancellationToken _) =>
+                UserOf(q.UserId, displayName: theNameIsTheEmail ? $"{q.UserId:N}@example.com" : "  "));
+        _mediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatedSession(Guid.NewGuid(), night.Id));
+        _mediator.Setup(m => m.Send(It.IsAny<CreateLiveSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.NewGuid());
+
+        await _handler.Handle(
+            new StartGameNightSessionCommand(night.Id, night.GameIds[0], "Catan", organizer),
+            CancellationToken.None);
+
+        _mediator.Verify(m => m.Send(
+            It.Is<CreateSessionCommand>(c =>
+                c.Participants != null
+                && c.Participants.Single(p => p.UserId == organizer).DisplayName == "Organizzatore"
+                && c.Participants.Single(p => p.UserId == anna).DisplayName == "Giocatore"
+                && c.Participants.Single(p => p.UserId == luca).DisplayName == "Giocatore"),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _mediator.Verify(m => m.Send(
+            It.Is<CreateLiveSessionCommand>(c =>
+                c.InitialPlayers != null
+                && c.InitialPlayers.Count == 3
+                && c.InitialPlayers[0].UserId == organizer
+                && c.InitialPlayers[0].DisplayName == "Organizzatore"
+                && c.InitialPlayers.Skip(1).All(p => p.DisplayName == "Giocatore")
+                && c.InitialPlayers.All(p => !p.DisplayName.Contains('@'))),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

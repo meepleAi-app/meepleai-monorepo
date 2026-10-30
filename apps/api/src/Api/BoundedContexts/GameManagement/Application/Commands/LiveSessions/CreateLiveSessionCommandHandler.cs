@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
@@ -7,7 +8,9 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
+using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
@@ -27,6 +30,7 @@ internal class CreateLiveSessionCommandHandler : ICommandHandler<CreateLiveSessi
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICompanionSessionService _companionSessionService;
     private readonly IGameNightEventRepository _gameNightRepository;
+    private readonly IMediator _mediator;
     private readonly ILogger<CreateLiveSessionCommandHandler> _logger;
 
     public CreateLiveSessionCommandHandler(
@@ -35,6 +39,7 @@ internal class CreateLiveSessionCommandHandler : ICommandHandler<CreateLiveSessi
         IUnitOfWork unitOfWork,
         ICompanionSessionService companionSessionService,
         IGameNightEventRepository gameNightRepository,
+        IMediator mediator,
         ILogger<CreateLiveSessionCommandHandler> logger)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
@@ -42,6 +47,7 @@ internal class CreateLiveSessionCommandHandler : ICommandHandler<CreateLiveSessi
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _companionSessionService = companionSessionService ?? throw new ArgumentNullException(nameof(companionSessionService));
         _gameNightRepository = gameNightRepository ?? throw new ArgumentNullException(nameof(gameNightRepository));
+        _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -107,22 +113,40 @@ internal class CreateLiveSessionCommandHandler : ICommandHandler<CreateLiveSessi
 
         SeedInitialPlayers(session, command.InitialPlayers, trackingSessionId);
 
-        if (command.StartImmediately)
+        // The start needs a player: with an empty roster the game stays Created, which is all the domain
+        // allows. The caller's tier and role are read BEFORE anything is staged, so an unknown caller
+        // fails with nothing written.
+        (UserTier Tier, Role Role)? startAs = command.StartImmediately && session.HasPlayers
+            ? await ResolveStarterAsync(command.UserId, cancellationToken).ConfigureAwait(false)
+            : null;
+        if (command.StartImmediately && startAs is null)
         {
-            // The same domain method as POST /live-sessions/{id}/start. It needs a player: with an empty
-            // roster the game stays Created, which is all the domain allows.
-            if (session.HasPlayers)
-                session.Start(_timeProvider);
-            else
-                _logger.LogInformation(
-                    "Live game {LiveSessionId} (tracking session {TrackingSessionId}) has no players and stays Created",
-                    session.Id, trackingSessionId);
+            _logger.LogInformation(
+                "Live game {LiveSessionId} (tracking session {TrackingSessionId}) has no players and stays Created",
+                session.Id, trackingSessionId);
         }
 
         await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
+        if (startAs is { } starter)
+        {
+            // THE start command, not a copy of its rules (quota by tier and role, creator-only guard,
+            // correlated GameSession): it reads the live game back from the database, hence the save above.
+            await _mediator.Send(
+                new StartLiveSessionCommand(session.Id, command.UserId, starter.Tier, starter.Role),
+                cancellationToken).ConfigureAwait(false);
+        }
+
         return session.Id;
+    }
+
+    private async Task<(UserTier Tier, Role Role)> ResolveStarterAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var user = await _mediator.Send(new GetUserByIdQuery(userId), cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException("User", userId.ToString());
+
+        return (UserTier.Parse(user.Tier), Role.Parse(user.Role));
     }
 
     /// <summary>
@@ -190,7 +214,7 @@ internal class CreateLiveSessionCommandHandler : ICommandHandler<CreateLiveSessi
 
     private static string UniqueDisplayName(string? requested, HashSet<string> usedNames)
     {
-        var baseName = string.IsNullOrWhiteSpace(requested) ? "Giocatore" : requested.Trim();
+        var baseName = RosterDisplayNames.Resolve(requested, RosterDisplayNames.Player).Trim();
         var candidate = Truncate(baseName, MaxDisplayNameLength);
         var suffix = 2;
 

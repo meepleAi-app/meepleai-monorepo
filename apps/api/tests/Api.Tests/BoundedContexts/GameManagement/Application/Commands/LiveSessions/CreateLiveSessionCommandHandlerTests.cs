@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using MediatR;
 using Moq;
 using Xunit;
 
@@ -36,7 +37,7 @@ public sealed class CreateLiveSessionCommandHandlerTests
             .ThrowsAsync(new InvalidOperationException("companion insert failed"));
 
         var sut = new CreateLiveSessionCommandHandler(sessionRepo.Object, TimeProvider.System, uow.Object, companion.Object,
-            Mock.Of<IGameNightEventRepository>(), NullLogger<CreateLiveSessionCommandHandler>.Instance);
+            Mock.Of<IGameNightEventRepository>(), Mock.Of<IMediator>(), NullLogger<CreateLiveSessionCommandHandler>.Instance);
         var cmd = new CreateLiveSessionCommand(UserId: Guid.NewGuid(), GameName: "Mage Knight", GameId: Guid.NewGuid());
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => sut.Handle(cmd, CancellationToken.None));
@@ -60,7 +61,7 @@ public sealed class CreateLiveSessionCommandHandlerTests
             .ReturnsAsync(trackingId);
 
         var sut = new CreateLiveSessionCommandHandler(sessionRepo.Object, TimeProvider.System, uow.Object, companion.Object,
-            Mock.Of<IGameNightEventRepository>(), NullLogger<CreateLiveSessionCommandHandler>.Instance);
+            Mock.Of<IGameNightEventRepository>(), Mock.Of<IMediator>(), NullLogger<CreateLiveSessionCommandHandler>.Instance);
         var cmd = new CreateLiveSessionCommand(UserId: Guid.NewGuid(), GameName: "Mage Knight", GameId: Guid.NewGuid());
 
         await sut.Handle(cmd, CancellationToken.None);
@@ -82,7 +83,7 @@ public sealed class CreateLiveSessionCommandHandlerTests
         var companion = new Mock<ICompanionSessionService>();
 
         var sut = new CreateLiveSessionCommandHandler(sessionRepo.Object, TimeProvider.System, uow.Object, companion.Object,
-            Mock.Of<IGameNightEventRepository>(), NullLogger<CreateLiveSessionCommandHandler>.Instance);
+            Mock.Of<IGameNightEventRepository>(), Mock.Of<IMediator>(), NullLogger<CreateLiveSessionCommandHandler>.Instance);
         var cmd = new CreateLiveSessionCommand(UserId: Guid.NewGuid(), GameName: "Free session", GameId: null);
 
         await sut.Handle(cmd, CancellationToken.None);

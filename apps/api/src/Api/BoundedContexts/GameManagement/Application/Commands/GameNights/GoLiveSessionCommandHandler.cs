@@ -8,6 +8,7 @@ using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.Infrastructure.EntityConfigurations.GameManagement;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -221,6 +222,13 @@ internal sealed class GoLiveSessionCommandHandler : ICommandHandler<GoLiveSessio
             // create-path catch in CreateSessionCommandHandler.
             throw new MaxLiveSessionsExceededException(gameNight.Id);
         }
+        catch (QuotaExceededException ex)
+        {
+            // #4752: the live game is started by StartLiveSessionCommand, which enforces the session quota
+            // by tier and role. The message is written for the player (limit and tier): a 409 with it, as
+            // the night's start answers; the promotion rolled back with the live game.
+            throw new ConflictException(ex.Message);
+        }
 
         return liveSessionId;
     }
@@ -252,7 +260,7 @@ internal sealed class GoLiveSessionCommandHandler : ICommandHandler<GoLiveSessio
             {
                 players.Add(new LiveSessionInitialPlayer(
                     organizer.Id,
-                    !string.IsNullOrWhiteSpace(organizer.DisplayName) ? organizer.DisplayName : organizer.Email));
+                    RosterDisplayNames.Resolve(organizer.DisplayName, RosterDisplayNames.Organizer)));
             }
         }
 

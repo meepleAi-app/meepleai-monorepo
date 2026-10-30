@@ -9,6 +9,7 @@ using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -199,6 +200,58 @@ public class GoLiveSessionLiveGameBridgeTests
         _mediator.Verify(m => m.Send(
             It.Is<CreateLiveSessionCommand>(c => c.InitialPlayers != null && c.InitialPlayers.Count == 0),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Handle_AnOrganizerWithoutADisplayName_IsSeatedAsOrganizzatore_NeverByEmail(bool theNameIsTheEmail)
+    {
+        // The table name is shown to every player of the live game: the fallback must not be the organizer's
+        // e-mail address, nor a part of it. The user store FILLS a missing name with the address, so the case
+        // that happens for real is the second one: a name that IS the e-mail.
+        var sessionId = Guid.NewGuid();
+        var night = NightWithDraft(sessionId, out _);
+        _repository.Setup(r => r.GetByLinkedSessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(night);
+        _mediator.Setup(m => m.Send(It.IsAny<GetSessionDetailsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DetailsWith());
+        _mediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Organizer(
+                night.OrganizerId, theNameIsTheEmail ? $"{night.OrganizerId:N}@example.com" : "  "));
+        _mediator.Setup(m => m.Send(It.IsAny<CreateLiveSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.NewGuid());
+
+        await _handler.Handle(new GoLiveSessionCommand(sessionId, night.OrganizerId), CancellationToken.None);
+
+        _mediator.Verify(m => m.Send(
+            It.Is<CreateLiveSessionCommand>(c =>
+                c.InitialPlayers != null
+                && c.InitialPlayers.Count == 1
+                && c.InitialPlayers[0].DisplayName == "Organizzatore"
+                && !c.InitialPlayers[0].DisplayName.Contains('@')),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_TheLiveGamesQuotaRefusal_IsAConflictWithItsMessage_AndLiveModeDoesNotOpen()
+    {
+        // The live game is started by StartLiveSessionCommand, which enforces the session quota by tier and
+        // role. The message is written for the player: a 409 with it, as the night's start answers. The
+        // promotion rolls back with the live game (proved on a real database).
+        var sessionId = Guid.NewGuid();
+        var night = NightWithDraft(sessionId, out _);
+        _repository.Setup(r => r.GetByLinkedSessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(night);
+        _mediator.Setup(m => m.Send(It.IsAny<CreateLiveSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new QuotaExceededException(
+                "SessionQuota", "Session limit reached (3 active sessions for free tier)."));
+
+        var act = () => _handler.Handle(new GoLiveSessionCommand(sessionId, night.OrganizerId), CancellationToken.None);
+
+        var thrown = await act.Should().ThrowAsync<ConflictException>();
+        thrown.Which.Message.Should().Contain("free tier");
+        _mediator.Verify(m => m.Send(It.IsAny<OpenSessionLiveModeCommand>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

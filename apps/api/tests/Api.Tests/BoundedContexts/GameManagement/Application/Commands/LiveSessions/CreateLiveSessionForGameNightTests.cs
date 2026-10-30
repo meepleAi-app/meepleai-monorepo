@@ -1,3 +1,5 @@
+using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
@@ -5,9 +7,11 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
+using MediatR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -27,6 +31,7 @@ public sealed class CreateLiveSessionForGameNightTests
     private readonly Mock<IUnitOfWork> _uow = new();
     private readonly Mock<ICompanionSessionService> _companion = new();
     private readonly Mock<IGameNightEventRepository> _nights = new();
+    private readonly Mock<IMediator> _mediator = new();
     private readonly ListLogger<CreateLiveSessionCommandHandler> _logger = new();
     private readonly CreateLiveSessionCommandHandler _sut;
     private readonly Guid _caller = Guid.NewGuid();
@@ -42,7 +47,8 @@ public sealed class CreateLiveSessionForGameNightTests
         _companion.Setup(c => c.IsOwnedByAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
         _sut = new CreateLiveSessionCommandHandler(
-            _sessionRepo.Object, TimeProvider.System, _uow.Object, _companion.Object, _nights.Object, _logger);
+            _sessionRepo.Object, TimeProvider.System, _uow.Object, _companion.Object, _nights.Object,
+            _mediator.Object, _logger);
     }
 
     private CreateLiveSessionCommand NightCommand(
@@ -265,52 +271,123 @@ public sealed class CreateLiveSessionForGameNightTests
 
     // ── StartImmediately (#4752): a game started from a night is about to be played ──────────────────────
 
+    private static UserDto UserOf(Guid id, string tier, string role) => new(
+        Id: id,
+        Email: $"{id:N}@example.com",
+        DisplayName: "Marta",
+        Role: role,
+        Tier: tier,
+        CreatedAt: DateTime.UtcNow,
+        IsTwoFactorEnabled: false,
+        TwoFactorEnabledAt: null,
+        Level: 1,
+        ExperiencePoints: 0);
+
+    private void CallerIs(string tier, string role) =>
+        _mediator.Setup(m => m.Send(It.Is<GetUserByIdQuery>(q => q.UserId == _caller), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(UserOf(_caller, tier, role));
+
     [Fact]
-    public async Task Handle_StartImmediately_StartsTheLiveGame_SoScoresTurnsAndCompletionAreOpen()
+    public async Task Handle_StartImmediately_SendsTheStartCommand_WithTheCallersTierAndRole_AfterTheGameIsSaved()
     {
-        // Left Created, scores, turns and «Termina partita» answer 409 — and nothing in the front-end starts a
-        // live game. It is started in the same commit as its creation.
-        await _sut.Handle(
+        // The game is started by THE start command (the one behind POST /live-sessions/{id}/start), not by a
+        // copy of its rules: the session quota by tier and role, the creator-only guard and the correlated
+        // GameSession live there. Tier and role are the caller's, read from the user record. The command reads
+        // the live game back from the database, so it must go AFTER the save.
+        CallerIs(tier: "Normal", role: "Editor");
+        var calls = new List<string>();
+        _uow.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add("save"))
+            .ReturnsAsync(1);
+        _mediator.Setup(m => m.Send(It.IsAny<StartLiveSessionCommand>(), It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add("start"))
+            .Returns(Task.CompletedTask);
+
+        var id = await _sut.Handle(
             StartedNightCommand(Guid.NewGuid(), new LiveSessionInitialPlayer(Guid.NewGuid(), "Marta")),
             CancellationToken.None);
 
-        _added!.Status.Should().Be(LiveSessionStatus.InProgress);
-        _added.StartedAt.Should().NotBeNull();
-        _uow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        calls.Should().Equal("save", "start");
+        _mediator.Verify(m => m.Send(
+            It.Is<StartLiveSessionCommand>(c =>
+                c.SessionId == id
+                && c.UserId == _caller
+                && c.UserTier.Value == "normal"
+                && c.UserRole.Value == "editor"),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _added!.Status.Should().Be(LiveSessionStatus.Created,
+            "the handler delegates the start: it must not run the domain method itself, which would skip the quota");
     }
 
     [Fact]
-    public async Task Handle_StartImmediately_OfARosterGame_LetsTheHostRecordAScore()
+    public async Task Handle_StartImmediately_WhenTheStartCommandRefuses_TheRefusalPropagates()
     {
-        var host = Guid.NewGuid();
-        await _sut.Handle(
-            StartedNightCommand(Guid.NewGuid(), new LiveSessionInitialPlayer(host, "Marta")),
+        // The caller is over its quota: StartLiveSessionCommand says so, and the creation must not be reported
+        // as done (the night handler's transaction takes the game with it).
+        CallerIs(tier: "Free", role: "User");
+        _mediator.Setup(m => m.Send(It.IsAny<StartLiveSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new QuotaExceededException("SessionQuota", "Session limit reached"));
+
+        var act = () => _sut.Handle(
+            StartedNightCommand(Guid.NewGuid(), new LiveSessionInitialPlayer(Guid.NewGuid(), "Marta")),
             CancellationToken.None);
 
-        var act = () => _added!.RecordScore(_added.Host!.Id, 1, "points", 5);
-
-        act.Should().NotThrow();
+        await act.Should().ThrowAsync<QuotaExceededException>();
     }
 
     [Fact]
-    public async Task Handle_WithoutStartImmediately_LeavesTheLiveGameCreated()
+    public async Task Handle_StartImmediately_WithAnUnknownCaller_FailsBeforeAnythingIsStaged()
+    {
+        _mediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserDto?)null);
+
+        var act = () => _sut.Handle(
+            StartedNightCommand(Guid.NewGuid(), new LiveSessionInitialPlayer(Guid.NewGuid(), "Marta")),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+        _sessionRepo.Verify(r => r.AddAsync(It.IsAny<LiveGameSession>(), It.IsAny<CancellationToken>()), Times.Never);
+        _uow.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WithoutStartImmediately_DoesNotStartTheLiveGame_NorReadTheUser()
     {
         await _sut.Handle(
             NightCommand(Guid.NewGuid(), new LiveSessionInitialPlayer(Guid.NewGuid(), "Marta")),
             CancellationToken.None);
 
         _added!.Status.Should().Be(LiveSessionStatus.Created);
+        _mediator.Verify(m => m.Send(It.IsAny<StartLiveSessionCommand>(), It.IsAny<CancellationToken>()), Times.Never);
+        _mediator.Verify(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
-    public async Task Handle_StartImmediately_WithNoPlayers_StaysCreated_AndSaysSo()
+    public async Task Handle_StartImmediately_WithNoPlayers_SendsNoStartCommand_AndSaysSo()
     {
         // The domain refuses to start a game with nobody at the table: it stays Created (the night handlers
         // always seat somebody, so this is a defensive path), and the log says why.
         await _sut.Handle(StartedNightCommand(Guid.NewGuid()), CancellationToken.None);
 
         _added!.Status.Should().Be(LiveSessionStatus.Created);
+        _mediator.Verify(m => m.Send(It.IsAny<StartLiveSessionCommand>(), It.IsAny<CancellationToken>()), Times.Never);
         _logger.Entries.Should().ContainSingle(e => e.Level == LogLevel.Information && e.Message.Contains("stays Created"));
+    }
+
+    [Fact]
+    public async Task Handle_ARequestedNameThatIsAnEmailAddress_NeverReachesTheTable()
+    {
+        // A go-live copies the names of the draft's tracking participants, and a tracking Session joined
+        // elsewhere can carry the e-mail address as a participant name. The funnel is the one place every
+        // seat passes through: whatever the source, the address is not shown to the other players.
+        await _sut.Handle(
+            NightCommand(
+                Guid.NewGuid(),
+                new LiveSessionInitialPlayer(Guid.NewGuid(), "marta.rossi@example.com"),
+                new LiveSessionInitialPlayer(Guid.NewGuid(), "Luca")),
+            CancellationToken.None);
+
+        _added!.Players.Select(p => p.DisplayName).Should().Equal("Giocatore", "Luca");
     }
 
     // ── Who may adopt a tracking Session (#4752, defence in depth) ───────────────────────────────────────

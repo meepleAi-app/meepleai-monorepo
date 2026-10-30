@@ -524,6 +524,109 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
         (await LiveStatusAsync(retried.LiveSessionId!.Value)).Should().Be(LiveSessionStatus.InProgress);
     }
 
+    // ── Quota: the live game is started by the same command as POST /live-sessions/{id}/start ───────────
+
+    [Fact(DisplayName = "A free user at the limit of active games cannot start one from a night — and nothing is left behind")]
+    public async Task Start_OverTheSessionQuota_IsRefused_AndLeavesNothingBehind()
+    {
+        // Two quotas guard a night's game. The tracking-session one (counts tracking Sessions) passes here:
+        // this user has none. The one on the ACTIVE GAMES (GameSession, by tier and role) is enforced by
+        // StartLiveSessionCommand — and the night used to start its live game without it.
+        var (organizer, _, gameId, nightId) = await SeedNightWithAcceptedFriendAsync();
+        await SeedActiveGamesAsync(organizer, gameId, count: 3);
+
+        var act = () => SendAsync(new StartGameNightSessionCommand(nightId, gameId, "Catan", organizer));
+
+        (await act.Should().ThrowAsync<ConflictException>()).Which.Message.Should().Contain("free");
+        (await NightStateAsync(organizer, nightId)).Should().Be((Tracking: 0, Links: 0, Lives: 0),
+            "the refused start must leave neither a tracking Session, nor a link, nor a live game");
+        (await ActiveGamesAsync(organizer)).Should().Be(3, "no game record may be left behind either");
+    }
+
+    [Fact(DisplayName = "A free user under the limit starts a game from a night, and the game takes exactly ONE quota slot")]
+    public async Task Start_UnderTheSessionQuota_Works_AndCountsTheGameOnce()
+    {
+        var (organizer, _, gameId, nightId) = await SeedNightWithAcceptedFriendAsync();
+        await SeedActiveGamesAsync(organizer, gameId, count: 2);
+
+        var started = await SendAsync(new StartGameNightSessionCommand(nightId, gameId, "Catan", organizer));
+
+        started.LiveSessionId.Should().NotBeNull();
+        (await ActiveGamesAsync(organizer)).Should().Be(3, "two before, plus the one this start created: counted once, not twice");
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var live = await scope.ServiceProvider.GetRequiredService<ILiveSessionRepository>()
+            .GetByIdAsync(started.LiveSessionId!.Value);
+        live!.Status.Should().Be(LiveSessionStatus.InProgress);
+        live.CorrelatedGameSessionId.Should().NotBeNull(
+            "started by the same command as /live-sessions/{id}/start, the live game holds its quota slot");
+    }
+
+    [Fact(DisplayName = "The quota is the caller's tier and role: a premium user over the free limit starts a game from a night")]
+    public async Task Start_OverTheFreeLimit_ButOnAPremiumTier_Works()
+    {
+        var (organizer, _, gameId, nightId) = await SeedNightWithAcceptedFriendAsync();
+        await SeedActiveGamesAsync(organizer, gameId, count: 5);
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            await db.Users.Where(u => u.Id == organizer)
+                .ExecuteUpdateAsync(s => s.SetProperty(u => u.Tier, "premium"));
+        }
+
+        var started = await SendAsync(new StartGameNightSessionCommand(nightId, gameId, "Catan", organizer));
+
+        started.LiveSessionId.Should().NotBeNull();
+    }
+
+    [Fact(DisplayName = "A go-live over the session quota is refused and leaves the draft pending with no live game")]
+    public async Task GoLive_OverTheSessionQuota_IsRefused_AndLeavesTheDraftPending()
+    {
+        var (organizer, friend, gameId) = await SeedUsersAndGameAsync();
+        var trackingSessionId = await CreateDraftTrackingSessionAsync(organizer, friend, gameId);
+        await SeedNightWithPendingDraftAsync(organizer, gameId, trackingSessionId);
+        await SeedActiveGamesAsync(organizer, gameId, count: 3);
+
+        var act = () => SendAsync(new GoLiveSessionCommand(trackingSessionId, organizer));
+
+        (await act.Should().ThrowAsync<ConflictException>()).Which.Message.Should().Contain("free");
+        (await LinkStatusAsync(trackingSessionId)).Should().Be(nameof(GameNightSessionStatus.Pending),
+            "the promotion must roll back with the refused live game");
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        (await db.LiveGameSessions.AsNoTracking().CountAsync(l => l.TrackingSessionId == trackingSessionId)).Should().Be(0);
+    }
+
+    // ── Names at the table ───────────────────────────────────────────────────
+
+    [Fact(DisplayName = "A player with no display name sits under a neutral name — never the e-mail address — and it reaches the live game")]
+    public async Task Start_PlayersWithoutADisplayName_GetNeutralNames_NeverTheEmail()
+    {
+        var (organizer, friend, gameId, nightId) = await SeedNightWithAcceptedFriendAsync();
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            await db.Users.Where(u => u.Id == organizer || u.Id == friend)
+                .ExecuteUpdateAsync(s => s.SetProperty(u => u.DisplayName, string.Empty));
+        }
+
+        var started = await SendAsync(new StartGameNightSessionCommand(nightId, gameId, "Catan", organizer));
+
+        await using var verify = _factory.Services.CreateAsyncScope();
+        var verifyDb = verify.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var live = await verify.ServiceProvider.GetRequiredService<ILiveSessionRepository>()
+            .GetByIdAsync(started.LiveSessionId!.Value);
+        var tracked = await verifyDb.SessionTrackingParticipants.AsNoTracking()
+            .Where(p => p.SessionId == started.SessionId).Select(p => p.DisplayName).ToListAsync();
+        var seated = live!.Players.Select(p => p.DisplayName).ToList();
+
+        live.GetPlayer(live.TurnOrder[0])!.DisplayName.Should().Be("Organizzatore");
+        seated.Should().BeEquivalentTo(new[] { "Organizzatore", "Giocatore", "Anna Amica" });
+        // The tracking Session names its own creator «Owner» whatever the roster says (Session.Create): not ours
+        // to change here, and not an address.
+        tracked.Should().Contain(new[] { "Giocatore", "Anna Amica" });
+        seated.Concat(tracked).Should().OnlyContain(name => !name.Contains('@') && !name.Contains("bridge-"));
+    }
+
     // ── Concurrency ──────────────────────────────────────────────────────────
 
     [Fact(DisplayName = "Two starts of the same night at once: exactly one tracking Session, link and live game")]
@@ -649,6 +752,35 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
         await using var scope = _factory.Services.CreateAsyncScope();
         var live = await scope.ServiceProvider.GetRequiredService<ILiveSessionRepository>().GetByIdAsync(liveId);
         return live!.Players.Where(p => p.UserId.HasValue).ToDictionary(p => p.UserId!.Value, p => p.Id);
+    }
+
+    /// <summary>Games the user already has going: what the session quota (free tier: 3) counts.</summary>
+    private async Task SeedActiveGamesAsync(Guid userId, Guid gameId, int count)
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        for (var i = 0; i < count; i++)
+        {
+            db.GameSessions.Add(new GameSessionEntity
+            {
+                Id = Guid.NewGuid(),
+                GameId = gameId,
+                CreatedByUserId = userId,
+                Status = "InProgress",
+                StartedAt = DateTime.UtcNow,
+                PlayersJson = "[]",
+            });
+        }
+
+        await db.SaveChangesAsync();
+    }
+
+    private async Task<int> ActiveGamesAsync(Guid userId)
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        return await db.GameSessions.AsNoTracking().CountAsync(s =>
+            s.CreatedByUserId == userId && (s.Status == "Setup" || s.Status == "InProgress" || s.Status == "Paused"));
     }
 
     private async Task<string> LinkStatusAsync(Guid trackingSessionId)

@@ -331,6 +331,31 @@ function NotFoundShell({
   );
 }
 
+// ─── Viewer role + header status (#4750) ──────────────────────────────────────
+
+/**
+ * The host controls the session: pause, resume, end and save. BE PlayerRole has 'Moderator',
+ * which FE ParticipantRole does not — it maps to 'Player'. The creator is the host whether or
+ * not a player is linked to their account (#4750).
+ */
+function deriveViewerRole(playerRole: string | undefined, isCreator: boolean): ParticipantRole {
+  if (isCreator || playerRole === 'Host') return 'Host';
+  return playerRole === 'Spectator' ? 'Spectator' : 'Player';
+}
+
+/**
+ * The header shows the server's `Completed` as such. `composeSessionLiveState` folds anything
+ * that is not InProgress/Paused into 'Setup', so reading its status alone made a concluded
+ * session look «In corso» with a timer still running (#4750).
+ */
+function toHeaderStatus(
+  dtoStatus: string,
+  composedStatus: 'InProgress' | 'Paused' | 'Setup'
+): 'InProgress' | 'Paused' | 'Completed' {
+  if (dtoStatus === 'Completed') return 'Completed';
+  return composedStatus === 'Paused' ? 'Paused' : 'InProgress';
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function SessionLiveView(): ReactElement {
@@ -462,13 +487,15 @@ export function SessionLiveView(): ReactElement {
     const currentUserId = currentUser?.id ?? '';
     const viewerPlayer = dto.players.find(p => p.userId === currentUserId);
     const derivedRole = viewerPlayer?.role;
-    const viewerRole: ParticipantRole =
-      derivedRole === 'Host' || derivedRole === 'Spectator' ? derivedRole : 'Player';
+    // #4750: the creator of the session is its host — the server checks `CreatedByUserId` — even
+    // when the wizard wrote every player by name and none is linked to the account.
+    const isCreator = currentUserId !== '' && dto.createdByUserId === currentUserId;
+    const viewerRole = deriveViewerRole(derivedRole, isCreator);
 
     return {
       id: dto.id,
       name: `Sessione ${dto.id.slice(0, 8)}`,
-      status: liveState.status === 'Paused' ? 'Paused' : 'InProgress',
+      status: toHeaderStatus(dto.status, liveState.status),
       viewerRole,
       viewerId: viewerPlayer?.id ?? '',
       currentTurn: liveState.currentTurn,
@@ -701,6 +728,7 @@ export function SessionLiveView(): ReactElement {
           : t('pages.sessionLive.topBar.turnLabelNoTotal', { count: currentTurn }),
       statusInProgress: t('pages.sessionLive.topBar.statusInProgress'),
       statusPaused: t('pages.sessionLive.topBar.statusPaused'),
+      statusCompleted: t('pages.sessionLive.topBar.statusCompleted'),
       pauseCta: t('pages.sessionLive.topBar.pauseCta'),
       resumeCta: t('pages.sessionLive.topBar.resumeCta'),
       endgameCta: t('pages.sessionLive.topBar.endgameCta'),
@@ -718,7 +746,12 @@ export function SessionLiveView(): ReactElement {
   }, [t, activeSession?.currentTurn, activeSession?.totalTurns, activeSession?.name]);
 
   // G4 — Issue #2355: live elapsed time + connection pip wiring
-  const elapsedMs = useElapsedTime(sessionQuery.data?.startedAt);
+  // #4750: a concluded session stops at `completedAt` instead of counting on.
+  const elapsedMs = useElapsedTime(
+    sessionQuery.data?.startedAt,
+    undefined,
+    sessionQuery.data?.status === 'Completed' ? sessionQuery.data.completedAt : null
+  );
   // SI-4 (#2635): read-only derived start-time chip label (Invariante 5 — never user-editable).
   const startedAt = sessionQuery.data?.startedAt;
   const startedAtLabel = startedAt

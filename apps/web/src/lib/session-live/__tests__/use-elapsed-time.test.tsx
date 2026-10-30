@@ -69,6 +69,41 @@ describe('useElapsedTime', () => {
     expect(result.current).toBe(5_500);
   });
 
+  describe('#4750: endedAt stops the clock', () => {
+    it('returns endedAt - startedAt, not the time since start', () => {
+      const { result } = renderHook(() =>
+        useElapsedTime('2026-06-15T08:00:00Z', 1_000, '2026-06-15T09:00:00Z')
+      );
+      // 1 hour between start and end; "now" is 2 hours after start and must not count.
+      expect(result.current).toBe(3_600_000);
+    });
+
+    it('does not tick once ended', () => {
+      const { result } = renderHook(() =>
+        useElapsedTime('2026-06-15T08:00:00Z', 1_000, '2026-06-15T09:00:00Z')
+      );
+      act(() => {
+        vi.advanceTimersByTime(10_000);
+      });
+      expect(result.current).toBe(3_600_000);
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('keeps ticking when endedAt is null or does not parse', () => {
+      const { result: withNull } = renderHook(() =>
+        useElapsedTime('2026-06-15T09:59:55Z', 1_000, null)
+      );
+      const { result: withGarbage } = renderHook(() =>
+        useElapsedTime('2026-06-15T09:59:55Z', 1_000, 'not-a-date')
+      );
+      act(() => {
+        vi.advanceTimersByTime(1_000);
+      });
+      expect(withNull.current).toBe(6_000);
+      expect(withGarbage.current).toBe(6_000);
+    });
+  });
+
   it('clears interval on unmount (no leaked timers)', () => {
     const { unmount } = renderHook(() => useElapsedTime('2026-06-15T10:00:00Z'));
     unmount();

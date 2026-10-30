@@ -28,6 +28,8 @@ export interface LiveTopBarLabels {
   readonly turnLabelResolved: string;
   readonly statusInProgress: string;
   readonly statusPaused: string;
+  /** #4750 — a concluded session: no longer «In corso», no controls. */
+  readonly statusCompleted: string;
   readonly pauseCta: string;
   readonly resumeCta: string;
   readonly endgameCta: string;
@@ -50,7 +52,7 @@ export type LiveTopBarConnectionState = 'connected' | 'reconnecting' | 'failed';
 
 export interface LiveTopBarProps {
   readonly sessionName: string;
-  readonly status: 'InProgress' | 'Paused';
+  readonly status: 'InProgress' | 'Paused' | 'Completed';
   readonly viewerRole: ParticipantRole;
   readonly onPause?: () => void;
   readonly onResume?: () => void;
@@ -78,6 +80,19 @@ export interface LiveTopBarProps {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+const STATUS_LABEL_KEY = {
+  InProgress: 'statusInProgress',
+  Paused: 'statusPaused',
+  Completed: 'statusCompleted',
+} as const satisfies Record<LiveTopBarProps['status'], keyof LiveTopBarLabels>;
+
+// Status chip colors: running = emerald, paused = amber, concluded = muted (nothing is live).
+const STATUS_CHIP_CLASS: Record<LiveTopBarProps['status'], string> = {
+  InProgress: 'bg-emerald-500/20 text-emerald-300',
+  Paused: 'bg-amber-500/20 text-amber-300',
+  Completed: 'bg-muted text-muted-foreground',
+};
+
 // G4 — pip color tokens per connection state (entity colors).
 const PIP_COLOR: Record<LiveTopBarConnectionState, string> = {
   connected: 'bg-emerald-400',
@@ -98,10 +113,11 @@ export function LiveTopBar({
   startedAtLabel,
   connectionState,
 }: LiveTopBarProps): ReactElement {
-  const isHost = viewerRole === 'Host';
   const isPaused = status === 'Paused';
+  // #4750: a concluded session has nothing left to pause, resume or end.
+  const canControl = viewerRole === 'Host' && status !== 'Completed';
 
-  const statusLabel = isPaused ? labels.statusPaused : labels.statusInProgress;
+  const statusLabel = labels[STATUS_LABEL_KEY[status]];
 
   // G4 — derive timer + pip render state (defensive: only render if both prop + label provided).
   const showTimer = elapsedMs != null;
@@ -129,7 +145,7 @@ export function LiveTopBar({
         <span
           className={[
             'shrink-0 rounded-full px-2 py-0.5 text-xs font-medium',
-            isPaused ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300',
+            STATUS_CHIP_CLASS[status],
           ].join(' ')}
         >
           {statusLabel}
@@ -186,7 +202,7 @@ export function LiveTopBar({
       {/* Right: role-based CTAs */}
       <div className="flex items-center gap-2">
         {/* Host-only: Pause (shown when InProgress) */}
-        {isHost && !isPaused && (
+        {canControl && !isPaused && (
           <button
             type="button"
             data-slot="session-live-top-bar-pause"
@@ -203,7 +219,7 @@ export function LiveTopBar({
         )}
 
         {/* Host-only: Resume (shown when Paused) */}
-        {isHost && isPaused && (
+        {canControl && isPaused && (
           <button
             type="button"
             data-slot="session-live-top-bar-resume"
@@ -219,8 +235,8 @@ export function LiveTopBar({
           </button>
         )}
 
-        {/* Host-only: End game */}
-        {isHost && (
+        {/* Host-only: End game (not once the session is concluded) */}
+        {canControl && (
           <button
             type="button"
             data-slot="session-live-top-bar-endgame"

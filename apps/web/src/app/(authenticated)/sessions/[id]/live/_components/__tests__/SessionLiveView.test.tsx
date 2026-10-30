@@ -301,6 +301,7 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.topBar.turnLabelNoTotal': '{count, plural, =0 {Inizio} other {Turno #}}',
   'pages.sessionLive.topBar.statusInProgress': 'In corso',
   'pages.sessionLive.topBar.statusPaused': 'In pausa',
+  'pages.sessionLive.topBar.statusCompleted': 'Conclusa',
   'pages.sessionLive.topBar.pauseCta': 'Pausa',
   'pages.sessionLive.topBar.resumeCta': 'Riprendi',
   'pages.sessionLive.topBar.endgameCta': 'Termina sessione',
@@ -2412,5 +2413,97 @@ describe('SessionLiveView — #4373: only the owner of the session gets the assi
     const { container } = renderWithIntl(<SessionLiveView />);
 
     expect(panels(container)).toHaveLength(0);
+  });
+});
+
+// ─── #4750 — the creator is the host; a concluded session says so ─────────────
+
+describe('SessionLiveView — #4750: creator as host, concluded session', () => {
+  // MOCK_SESSION_DTO players carry `userId: null`, like the ones /sessions/new writes by name,
+  // so no player is linked to any account.
+  const CREATOR_ID = '44444444-4444-4444-4444-444444444444';
+
+  function mountWith(dto: LiveSessionDto, userId: string | null) {
+    useCurrentUserMock.mockReturnValue({ data: userId == null ? null : { id: userId } });
+    useLiveSessionMock.mockReturnValue({
+      data: dto,
+      isLoading: false,
+      isError: false,
+      isSuccess: true,
+      error: null,
+    });
+    return renderWithIntl(<SessionLiveView />);
+  }
+
+  const topBarOf = (container: HTMLElement) =>
+    container.querySelector('[data-slot="session-live-top-bar"]');
+  const slotIn = (container: HTMLElement, slot: string) =>
+    container.querySelector(`[data-slot="session-live-top-bar-${slot}"]`);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    Object.keys(searchParamsMap).forEach(k => delete searchParamsMap[k]);
+    mockParamsId = 'session-abc-123';
+    IS_VISUAL_TEST_BUILD_MOCK = false;
+    useSessionLiveStreamMock.mockReturnValue({ ...mockLiveStreamResult });
+    useCurrentUserMock.mockReturnValue({ data: null });
+  });
+
+  it('the creator is the host even when no player is linked to their account', () => {
+    const { container } = mountWith(MOCK_SESSION_DTO, CREATOR_ID);
+
+    expect(topBarOf(container)).toHaveAttribute('data-viewer-role', 'Host');
+    expect(slotIn(container, 'endgame')).toBeInTheDocument();
+    expect(slotIn(container, 'pause')).toBeInTheDocument();
+  });
+
+  it('a user who did not create the session and is linked to no player stays a player', () => {
+    const { container } = mountWith(MOCK_SESSION_DTO, 'someone-else');
+
+    expect(topBarOf(container)).toHaveAttribute('data-viewer-role', 'Player');
+    expect(slotIn(container, 'endgame')).not.toBeInTheDocument();
+    expect(slotIn(container, 'pause')).not.toBeInTheDocument();
+  });
+
+  it('without a signed-in user nobody is the host', () => {
+    const { container } = mountWith(MOCK_SESSION_DTO, null);
+
+    expect(topBarOf(container)).toHaveAttribute('data-viewer-role', 'Player');
+    expect(slotIn(container, 'endgame')).not.toBeInTheDocument();
+  });
+
+  describe('once the session is concluded', () => {
+    // 30 minutes after the start MOCK_SESSION_DTO declares; "now" is an hour after it.
+    const completedAt = new Date(
+      Date.parse(MOCK_SESSION_DTO.startedAt as string) + 30 * 60 * 1000
+    ).toISOString();
+    const COMPLETED_DTO = {
+      ...MOCK_SESSION_DTO,
+      status: 'Completed',
+      completedAt,
+    } as unknown as LiveSessionDto;
+
+    it('the header reads «Conclusa», not «In corso»', () => {
+      const { container } = mountWith(COMPLETED_DTO, CREATOR_ID);
+
+      expect(topBarOf(container)).toHaveAttribute('data-status', 'Completed');
+      expect(topBarOf(container)?.textContent).toContain('Conclusa');
+      expect(topBarOf(container)?.textContent).not.toContain('In corso');
+    });
+
+    it('not even its creator is offered pause or end', () => {
+      const { container } = mountWith(COMPLETED_DTO, CREATOR_ID);
+
+      expect(topBarOf(container)).toHaveAttribute('data-viewer-role', 'Host');
+      expect(slotIn(container, 'pause')).not.toBeInTheDocument();
+      expect(slotIn(container, 'resume')).not.toBeInTheDocument();
+      expect(slotIn(container, 'endgame')).not.toBeInTheDocument();
+    });
+
+    it('the timer stops at completedAt instead of counting on', () => {
+      const { container } = mountWith(COMPLETED_DTO, CREATOR_ID);
+
+      expect(slotIn(container, 'timer')?.textContent).toBe('00:30:00');
+    });
   });
 });

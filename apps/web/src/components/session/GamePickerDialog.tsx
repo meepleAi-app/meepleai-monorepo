@@ -65,7 +65,14 @@ export function GamePickerDialog({ open, onOpenChange, gameNightEventId }: GameP
     enabled: open, // only fetch when dialog is open
   });
 
-  const startGame = useStartNextGame(gameNightEventId);
+  // The way out sits on the hook, not on `mutate()`: closing the dialog while the request is pending resets the
+  // mutation (below), and a per-call callback would then be dropped: the game started, nothing happened here.
+  const startGame = useStartNextGame(gameNightEventId, {
+    onSuccess: () => {
+      onOpenChange(false);
+      router.push(`/game-nights/${gameNightEventId}/live`);
+    },
+  });
   const { reset: resetStartGame } = startGame;
   const isStarting = startGame.isPending;
 
@@ -97,15 +104,7 @@ export function GamePickerDialog({ open, onOpenChange, gameNightEventId }: GameP
   const handleSelect = (gameId: string) => {
     const game = games.find(g => g.gameId === gameId);
     if (!game) return;
-    startGame.mutate(
-      { gameId, gameTitle: game.gameTitle },
-      {
-        onSuccess: () => {
-          onOpenChange(false);
-          router.push(`/game-nights/${gameNightEventId}/live`);
-        },
-      }
-    );
+    startGame.mutate({ gameId, gameTitle: game.gameTitle });
   };
 
   return (

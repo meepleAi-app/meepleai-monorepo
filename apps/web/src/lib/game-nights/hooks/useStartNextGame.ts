@@ -55,6 +55,16 @@ export function startGameErrorMessage(error: unknown): string {
   if (error instanceof ForbiddenError) {
     return 'Solo l’organizzatore può avviare una partita.';
   }
+  // Quota di sessioni, serata già conclusa, tetto di partite: il backend li rimappa in un 409 con il proprio
+  // messaggio e senza un codice che il client conosca. Un nuovo tentativo non può riuscire, quindi niente
+  // «Riprova», e il messaggio del server dice il motivo (così com'è: non c'è una mappa di traduzioni).
+  if (error instanceof ConflictError) {
+    const reason = error.message.trim();
+    const isClientDefault = /^API .+ failed with status \d+$/.test(reason);
+    return reason && reason !== error.code && !isClientDefault
+      ? reason
+      : 'Non è possibile avviare la partita in questo momento.';
+  }
   return 'Impossibile avviare la partita. Riprova.';
 }
 
@@ -63,20 +73,31 @@ export interface StartNextGameVars {
   readonly gameTitle: string;
 }
 
+export interface UseStartNextGameOptions {
+  /**
+   * What to do once the game has started. It runs at HOOK level on purpose: a callback passed to `mutate()`
+   * is dropped when the mutation is `reset()` or the component unmounts while the request is pending
+   * (#4752: closing the picker dialog mid-request started the game on the server and did nothing here).
+   */
+  readonly onSuccess?: (result: StartGameNightSessionResult) => void;
+}
+
 export function useStartNextGame(
-  gameNightId: string
+  gameNightId: string,
+  options?: UseStartNextGameOptions
 ): UseMutationResult<StartGameNightSessionResult, Error, StartNextGameVars> {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({ gameId, gameTitle }: StartNextGameVars) =>
       api.gameNights.startNextGame(gameNightId, gameId, gameTitle),
-    onSuccess: () => {
+    onSuccess: result => {
       // Refetch BOTH reads: the live sessions gain the new InProgress row AND the diary gains
       // its game_started event — invalidating only the live key would leave the diary mis-grouped
       // until its own staleTime elapsed (#2633 C2 must-fix #6, the two-query race).
       void queryClient.invalidateQueries({ queryKey: gameNightLiveKeys.detail(gameNightId) });
       void queryClient.invalidateQueries({ queryKey: nightLiveDiaryKeys.detail(gameNightId) });
+      options?.onSuccess?.(result);
     },
     retry: false,
   });

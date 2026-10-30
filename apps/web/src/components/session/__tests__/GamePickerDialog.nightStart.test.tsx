@@ -23,7 +23,6 @@ const NIGHT_ID = 'night-1';
 const mocks = vi.hoisted(() => ({
   getLibrary: vi.fn(),
   startNextGame: vi.fn(),
-  createSession: vi.fn(),
   push: vi.fn(),
 }));
 
@@ -31,7 +30,6 @@ vi.mock('@/lib/api', () => ({
   api: {
     library: { getLibrary: mocks.getLibrary },
     gameNights: { startNextGame: mocks.startNextGame },
-    sessionFlow: { createSession: mocks.createSession },
   },
 }));
 
@@ -98,8 +96,52 @@ describe('GamePickerDialog — avvio di una partita della serata (#4752)', () =>
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith(`/game-nights/${NIGHT_ID}/live`));
     expect(mocks.startNextGame).toHaveBeenCalledWith(NIGHT_ID, 'game-catan', 'Catan');
     expect(onOpenChange).toHaveBeenCalledWith(false);
-    // La rotta che il backend non ha non si chiama più.
-    expect(mocks.createSession).not.toHaveBeenCalled();
+  });
+
+  // #4752 (revisione): chiudere il dialogo (Esc, overlay, X) mentre la richiesta pende azzerava la mutazione, e
+  // dopo il reset il `onSuccess` PER-CHIAMATA di `mutate` non scatta: la partita partiva sul server e nel
+  // browser non succedeva nulla. La navigazione sta nel `onSuccess` dell'hook, che sopravvive al reset.
+  it('se lo chiudo mentre la richiesta pende e poi riesce, la partita avviata porta alla pagina live', async () => {
+    let resolveStart!: (value: unknown) => void;
+    mocks.startNextGame.mockReturnValueOnce(
+      new Promise(resolve => {
+        resolveStart = resolve;
+      })
+    );
+    const onOpenChange = vi.fn();
+    const { setOpen } = renderDialog(onOpenChange);
+    await userEvent.click(await screen.findByRole('button', { name: 'Catan' }));
+
+    setOpen(false); // il genitore chiude il dialogo: Esc, overlay o X
+    resolveStart({
+      sessionId: 's1',
+      gameNightSessionId: 'gns-1',
+      sessionCode: 'ABC123',
+      playOrder: 1,
+    });
+
+    await waitFor(() => expect(mocks.push).toHaveBeenCalledWith(`/game-nights/${NIGHT_ID}/live`));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('se lo chiudo mentre pende e poi la richiesta fallisce, non naviga né mostra errori alla riapertura', async () => {
+    let rejectStart!: (reason: unknown) => void;
+    mocks.startNextGame.mockReturnValueOnce(
+      new Promise((_resolve, reject) => {
+        rejectStart = reject;
+      })
+    );
+    const { setOpen } = renderDialog();
+    await userEvent.click(await screen.findByRole('button', { name: 'Catan' }));
+
+    setOpen(false);
+    rejectStart(new Error('boom'));
+    await waitFor(() => expect(mocks.startNextGame).toHaveBeenCalledTimes(1));
+    setOpen(true);
+
+    await screen.findByRole('button', { name: 'Catan' });
+    expect(mocks.push).not.toHaveBeenCalled();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it.each([
@@ -115,6 +157,19 @@ describe('GamePickerDialog — avvio di una partita della serata (#4752)', () =>
     ],
     ['non sei l’organizzatore', new ForbiddenError({ message: 'no' }), /solo l.organizzatore/i],
     ['il server risponde in modo imprevisto', new Error('boom'), /impossibile avviare la partita/i],
+    // #4752 (revisione): quota di sessioni, serata già conclusa, tetto di partite: il backend li rimappa in
+    // un 409 con il suo messaggio e senza codice. Dire «Riprova» sarebbe falso (non può riuscire) e
+    // scartare il messaggio nasconderebbe il motivo.
+    [
+      'il server rifiuta con un 409 senza codice',
+      new ConflictError({ message: 'Cannot add sessions to a Completed game night.' }),
+      /cannot add sessions to a completed game night/i,
+    ],
+    [
+      'il server rifiuta con un 409 il cui codice non è noto',
+      new ConflictError({ message: 'Hai raggiunto il limite di sessioni.', code: 'conflict' }),
+      /hai raggiunto il limite di sessioni/i,
+    ],
   ])('se %s lo dice nel dialogo, che resta aperto', async (_caso, error, expected) => {
     mocks.startNextGame.mockRejectedValue(error);
     const onOpenChange = vi.fn();
@@ -125,6 +180,44 @@ describe('GamePickerDialog — avvio di una partita della serata (#4752)', () =>
     expect(await screen.findByRole('alert')).toHaveTextContent(expected);
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
     expect(mocks.push).not.toHaveBeenCalled();
+  });
+
+  it('un 409 senza codice noto non invita a riprovare: un nuovo tentativo non può riuscire', async () => {
+    mocks.startNextGame.mockRejectedValue(
+      new ConflictError({ message: 'Cannot add sessions to a Completed game night.' })
+    );
+    renderDialog();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Catan' }));
+
+    expect(await screen.findByRole('alert')).not.toHaveTextContent(/riprova/i);
+  });
+
+  it('un 409 il cui messaggio è solo il codice macchina non lo mostra come motivo', async () => {
+    mocks.startNextGame.mockRejectedValue(
+      new ConflictError({ message: 'conflict', code: 'conflict' })
+    );
+    renderDialog();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Catan' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).not.toHaveTextContent(/^conflict$/i);
+    expect(alert).toHaveTextContent(/non è possibile avviare la partita/i);
+  });
+
+  it('un 409 il cui messaggio è solo quello generico del client non lo mostra come motivo', async () => {
+    mocks.startNextGame.mockRejectedValue(
+      new ConflictError({ message: 'API /api/v1/game-nights/n1/sessions failed with status 409' })
+    );
+    renderDialog();
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Catan' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).not.toHaveTextContent(/failed with status/i);
+    expect(alert).not.toHaveTextContent(/riprova/i);
+    expect(alert).toHaveTextContent(/non è possibile avviare la partita/i);
   });
 
   it('un nuovo tentativo toglie il messaggio del precedente', async () => {

@@ -36,6 +36,7 @@ import { useNightLiveDiary } from '@/lib/game-nights/hooks/useNightLiveDiary';
 import {
   isKbNotReadyError,
   isMaxLiveBlockedError,
+  KB_NOT_READY_MESSAGE,
   useStartNextGame,
 } from '@/lib/game-nights/hooks/useStartNextGame';
 import { mapDiary } from '@/lib/game-nights/mapDiary';
@@ -88,11 +89,7 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
             if (isMaxLiveBlockedError(err)) {
               setBlockedModalOpen(true);
             } else if (isKbNotReadyError(err)) {
-              setStartError({
-                gameId,
-                message:
-                  'Questo gioco non ha ancora un regolamento pronto: caricalo dalla scheda del gioco, attendi la fine dell’indicizzazione e riprova.',
-              });
+              setStartError({ gameId, message: KB_NOT_READY_MESSAGE });
             } else {
               setStartError({ gameId, message: 'Impossibile avviare la partita. Riprova.' });
             }

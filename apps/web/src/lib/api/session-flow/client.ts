@@ -6,7 +6,7 @@
  * JSON body, centralized error handling).
  *
  * Endpoints covered:
- *   POST   /api/v1/games/{gameId}/sessions            — createSession
+ *   POST   /api/v1/game-sessions                      — createSession  (#4752: il gioco e' nel corpo)
  *   POST   /api/v1/game-sessions/{id}/pause           — pauseSession   (#3662: spostata)
  *   POST   /api/v1/game-sessions/{id}/resume          — resumeSession  (#3662: spostata)
  *   PUT    /api/v1/sessions/{id}/turn-order            — setTurnOrder
@@ -95,10 +95,12 @@ export function createSessionFlowClient({
 }): SessionFlowClient {
   return {
     async createSession(gameId, request) {
-      const response = await httpClient.post<CreateSessionResult>(
-        `${GAMES_BASE}/${encodeURIComponent(gameId)}/sessions`,
-        request
-      );
+      // #4752: the game travels in the body (`CreateSessionRequest.GameId`). This used to be
+      // `POST /games/{gameId}/sessions`, a path the backend registers only for GET: 405 on every call.
+      const response = await httpClient.post<CreateSessionResult>(GAME_SESSION_BASE, {
+        gameId,
+        ...request,
+      });
       if (!response) throw new Error('Create session returned empty response');
       return response;
     },

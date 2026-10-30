@@ -13,7 +13,7 @@
 import { useMutation, useQueryClient, type UseMutationResult } from '@tanstack/react-query';
 
 import { api } from '@/lib/api';
-import { ApiError, ConflictError } from '@/lib/api/core/errors';
+import { ApiError, ConflictError, ForbiddenError } from '@/lib/api/core/errors';
 import type { StartGameNightSessionResult } from '@/lib/api/schemas/game-nights.schemas';
 
 import { gameNightLiveKeys } from './useGameNightLive';
@@ -35,6 +35,27 @@ export const KB_NOT_READY = 'kb_not_ready';
 /** True iff the start was refused because the game has no ready rulebook. */
 export function isKbNotReadyError(error: unknown): boolean {
   return error instanceof ApiError && error.code === KB_NOT_READY;
+}
+
+/** #4729: the 422 a user can fix says how. */
+export const KB_NOT_READY_MESSAGE =
+  'Questo gioco non ha ancora un regolamento pronto: caricalo dalla scheda del gioco, attendi la fine dell’indicizzazione e riprova.';
+
+/**
+ * #4752: what to tell the user when starting a game of the night is refused. «Aggiungi partita» used to
+ * fail on a route the backend does not have and said nothing: every refusal now has a word.
+ */
+export function startGameErrorMessage(error: unknown): string {
+  if (isMaxLiveBlockedError(error)) {
+    return 'C’è già una partita in corso: completala prima di avviarne un’altra.';
+  }
+  if (isKbNotReadyError(error)) {
+    return KB_NOT_READY_MESSAGE;
+  }
+  if (error instanceof ForbiddenError) {
+    return 'Solo l’organizzatore può avviare una partita.';
+  }
+  return 'Impossibile avviare la partita. Riprova.';
 }
 
 export interface StartNextGameVars {

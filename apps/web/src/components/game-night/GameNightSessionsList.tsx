@@ -88,6 +88,18 @@ export function GameNightSessionsList({
             <Gamepad2 className="h-8 w-8 mx-auto mb-2 opacity-40" />
             Nessuna partita ancora — aggiungi un gioco per iniziare!
           </div>
+          {/* #4752: the night page is where the first game is started, so it must be reachable before
+              any session exists (it used to be linked only from a session's card). */}
+          {!isCompleted && (
+            <div className="text-center pb-2">
+              <Link
+                href={nightHref}
+                className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Apri la serata live
+              </Link>
+            </div>
+          )}
         </CardContent>
       </Card>
     );

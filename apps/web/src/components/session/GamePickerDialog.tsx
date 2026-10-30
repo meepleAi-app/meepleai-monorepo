@@ -19,7 +19,7 @@
  * Plan 2 Task 6 — Session Flow v2.1
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Gamepad2, Loader2, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -65,10 +65,21 @@ export function GamePickerDialog({ open, onOpenChange, gameNightEventId }: GameP
     enabled: open, // only fetch when dialog is open
   });
 
-  // The way out sits on the hook, not on `mutate()`: closing the dialog while the request is pending resets the
-  // mutation (below), and a per-call callback would then be dropped: the game started, nothing happened here.
+  // The page that mounted the dialog may be gone by the time the request ends (route change): the game
+  // started, but going to its night page then would bring back someone who has left.
+  const isMounted = useRef(true);
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  // The way out sits on the hook, not on `mutate()`: a per-call callback is dropped when the mutation is reset
+  // or the component unmounts, and the game would start with nothing happening here.
   const startGame = useStartNextGame(gameNightEventId, {
     onSuccess: () => {
+      if (!isMounted.current) return;
       onOpenChange(false);
       router.push(`/game-nights/${gameNightEventId}/live`);
     },
@@ -77,9 +88,12 @@ export function GamePickerDialog({ open, onOpenChange, gameNightEventId }: GameP
   const isStarting = startGame.isPending;
 
   // A refusal belongs to the attempt that was refused: closing the dialog must not leave it for the next opening.
+  // Never while the request is pending: `reset()` clears `isPending`, so a dialog closed and reopened mid-request
+  // would enable the game again and send a second POST (the backend refuses it with a 409 that the reopened
+  // dialog would then show, while the first request is about to take the page away). It resets once it settles.
   useEffect(() => {
-    if (!open) resetStartGame();
-  }, [open, resetStartGame]);
+    if (!open && !startGame.isPending) resetStartGame();
+  }, [open, startGame.isPending, resetStartGame]);
 
   // Map library entries to the picker shape
   const games: GamePickerGame[] = useMemo(() => {
@@ -173,7 +187,7 @@ export function GamePickerDialog({ open, onOpenChange, gameNightEventId }: GameP
           <p
             role="alert"
             data-testid="game-picker-start-error"
-            className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            className="mt-3 break-words rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
           >
             {startGameErrorMessage(startGame.error)}
           </p>

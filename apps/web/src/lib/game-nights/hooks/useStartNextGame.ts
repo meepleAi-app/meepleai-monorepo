@@ -55,17 +55,43 @@ export function startGameErrorMessage(error: unknown): string {
   if (error instanceof ForbiddenError) {
     return 'Solo l’organizzatore può avviare una partita.';
   }
-  // Quota di sessioni, serata già conclusa, tetto di partite: il backend li rimappa in un 409 con il proprio
-  // messaggio e senza un codice che il client conosca. Un nuovo tentativo non può riuscire, quindi niente
-  // «Riprova», e il messaggio del server dice il motivo (così com'è: non c'è una mappa di traduzioni).
-  if (error instanceof ConflictError) {
-    const reason = error.message.trim();
-    const isClientDefault = /^API .+ failed with status \d+$/.test(reason);
-    return reason && reason !== error.code && !isClientDefault
-      ? reason
-      : 'Non è possibile avviare la partita in questo momento.';
-  }
+  // Quota di sessioni, serata che non ammette partite, tetto di partite: il backend li rimappa in un 409 con
+  // il proprio testo, in inglese e senza un codice che il client conosca. Un nuovo tentativo non può riuscire,
+  // quindi niente «Riprova».
+  if (error instanceof ConflictError) return conflictMessage(error.message);
   return 'Impossibile avviare la partita. Riprova.';
+}
+
+const GENERIC_CONFLICT_MESSAGE = 'Non è possibile avviare la partita in questo momento.';
+
+/**
+ * Le frasi italiane dei rifiuti noti del backend. Il testo del server NON si mostra mai grezzo: il catch di
+ * `StartGameNightSessionCommandHandler` trasforma QUALUNQUE `InvalidOperationException` (anche di EF o Npgsql)
+ * in un 409 con `ex.Message`, quindi un testo interno potrebbe arrivare all'utente. Ciò che non si riconosce
+ * dice la frase generica. I pattern sono ancorati all'inizio del messaggio.
+ */
+function conflictMessage(serverMessage: string): string {
+  const text = serverMessage.trim();
+
+  if (/^Concurrent session limit reached/i.test(text)) {
+    return 'Hai raggiunto il numero massimo di sessioni attive del tuo piano: concludine una prima di avviarne un’altra.';
+  }
+
+  const atMost = /^A game night can have at most (\d+) sessions?\b/i.exec(text);
+  if (atMost) return `Una serata può avere al massimo ${atMost[1]} partite.`;
+
+  const status = /^Cannot add sessions to a (\w+) game night/i.exec(text);
+  switch (status?.[1].toLowerCase()) {
+    case 'finalized':
+    case 'completed':
+      return 'La serata è già conclusa: non si possono aggiungere altre partite.';
+    case 'cancelled':
+      return 'La serata è stata annullata: non si possono aggiungere altre partite.';
+    case 'draft':
+      return 'La serata non è ancora pubblicata: pubblicala prima di avviare una partita.';
+    default:
+      return GENERIC_CONFLICT_MESSAGE;
+  }
 }
 
 export interface StartNextGameVars {

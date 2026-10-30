@@ -15,6 +15,7 @@
 
 import { useState, ChangeEvent, FormEvent, useCallback, useEffect } from 'react';
 
+import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, Upload, FileText, X, Check, Eye, ChevronLeft } from 'lucide-react';
 
 import { toast } from '@/components/layout/Toast';
@@ -31,13 +32,32 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { Label } from '@/components/ui/primitives/label';
+import { libraryKeys } from '@/hooks/queries/useLibrary';
 import { usePdfUploadLimits } from '@/hooks/queries/usePdfUploadLimits';
 import { api } from '@/lib/api';
 import { formatSizeLimit } from '@/lib/format/file-size';
 
+import { OwnershipDeclarationDialog } from './OwnershipDeclarationDialog';
+
 // Validation constants (Issue #2616, #4133)
 
 type UploadStep = 'select' | 'preview' | 'uploading';
+
+/**
+ * #4756: an upload does not declare ownership, and the rulebook it adds stays closed to the
+ * assistant until the user does (RagAccessService.CanAccessRagAsync). True when the game is in the
+ * user's library, its manual is not readable yet, and the domain would accept the declaration
+ * (it refuses it from the wishlist). Any failure answers false: the upload already succeeded, and
+ * not proposing is the safe side.
+ */
+async function libraryEntryLacksManualAccess(gameId: string): Promise<boolean> {
+  try {
+    const entry = await api.library.getGameDetail(gameId);
+    return !entry.hasRagAccess && entry.currentState !== 'Wishlist';
+  } catch {
+    return false;
+  }
+}
 
 interface PdfUploadModalProps {
   isOpen: boolean;
@@ -60,6 +80,14 @@ export function PdfUploadModal({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [isValidating, setIsValidating] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  // #4756: its own state, because the effect below resets the rest when the modal closes and the
+  // proposal is made right as it does. It holds the game the PDF went to: the props may name
+  // another one by the time the library answers.
+  const [ownershipTarget, setOwnershipTarget] = useState<{
+    gameId: string;
+    gameTitle: string;
+  } | null>(null);
+  const queryClient = useQueryClient();
   // #4449: the backend's size limit for this user, not a constant of this component.
   const { data: uploadLimits } = usePdfUploadLimits();
   const maxSizeBytes = uploadLimits?.maxFileSizeBytes;
@@ -171,9 +199,16 @@ export function PdfUploadModal({
       toast.success(`PDF "${file.name}" caricato con successo per "${gameTitle}"!`);
       onUploadSuccess?.();
 
+      // #4756: propose, never write, the ownership declaration the new rulebook depends on. The
+      // lookup runs alongside the delay and never rejects, so it cannot hold the modal open.
+      const ownershipLookup = libraryEntryLacksManualAccess(gameId);
+
       // Close modal after short delay
       setTimeout(() => {
         handleClose();
+        void ownershipLookup.then(propose => {
+          if (propose) setOwnershipTarget({ gameId, gameTitle });
+        });
       }, 500);
     } catch (error) {
       const errorMessage =
@@ -198,6 +233,14 @@ export function PdfUploadModal({
     handleShowPreview();
   };
 
+  // #4756: the manual may still be processing, so this does not promise the assistant can read it.
+  const handleOwnershipDeclared = useCallback(() => {
+    toast.success(
+      `Possesso di "${ownershipTarget?.gameTitle ?? gameTitle}" dichiarato. L'assistente potrà consultare il manuale appena sarà elaborato.`
+    );
+    void queryClient.invalidateQueries({ queryKey: libraryKeys.all });
+  }, [ownershipTarget, gameTitle, queryClient]);
+
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
@@ -208,192 +251,205 @@ export function PdfUploadModal({
   const modalSizeClass = step === 'preview' ? 'sm:max-w-6xl h-[90vh]' : 'sm:max-w-[500px]';
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent
-        className={`${modalSizeClass} flex flex-col`}
-        data-testid="pdf-upload-modal"
-        data-step={step}
-      >
-        <DialogHeader>
-          <DialogTitle data-testid="modal-title">
-            {step === 'select' && 'Carica PDF Personalizzato'}
-            {step === 'preview' && `Anteprima: ${file?.name ?? 'PDF'}`}
-            {step === 'uploading' && 'Caricamento in corso...'}
-          </DialogTitle>
-          <DialogDescription>
-            {step === 'select' && (
-              <>
-                Carica un regolamento personalizzato per <strong>{gameTitle}</strong>
-              </>
-            )}
-            {step === 'preview' && <>Verifica il documento prima di procedere con il caricamento</>}
-            {step === 'uploading' && <>Attendere il completamento del caricamento</>}
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Step 1: File Selection */}
-        {step === 'select' && (
-          <>
-            <form onSubmit={handleUpload} className="space-y-4">
-              {/* File Input */}
-              <div className="space-y-2">
-                <Label htmlFor="pdf-file">File PDF</Label>
-                <Input
-                  id="pdf-file"
-                  type="file"
-                  accept="application/pdf"
-                  onChange={handleFileChange}
-                  disabled={isValidating}
-                  className={validationErrors.length > 0 ? 'border-destructive' : ''}
-                  data-testid="pdf-file-input"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Formato: PDF
-                  {maxSizeBytes !== undefined &&
-                    ` • Dimensione massima: ${formatSizeLimit(maxSizeBytes)}`}
-                </p>
-
-                {/* Validating State */}
-                {isValidating && (
-                  <div
-                    className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-950 rounded-md border border-blue-200 dark:border-blue-800"
-                    data-testid="validating-state"
-                  >
-                    <Loader2 className="h-5 w-5 text-blue-600 dark:text-blue-400 animate-spin" />
-                    <p className="text-sm text-blue-900 dark:text-blue-100">
-                      Validazione PDF in corso...
-                    </p>
-                  </div>
-                )}
-
-                {/* Validation Errors */}
-                {validationErrors.length > 0 && (
-                  <Alert variant="destructive" data-testid="validation-errors">
-                    <AlertTitle>Errore di Validazione</AlertTitle>
-                    <AlertDescription>
-                      <ul className="list-disc pl-5 space-y-1">
-                        {validationErrors.map((error, index) => (
-                          <li key={index} className="text-sm">
-                            {error}
-                          </li>
-                        ))}
-                      </ul>
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {/* File Selected (Success State) */}
-                {file && validationErrors.length === 0 && !isValidating && (
-                  <div
-                    className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950 rounded-md border border-green-200 dark:border-green-800"
-                    data-testid="file-selected"
-                  >
-                    <FileText className="h-5 w-5 text-green-600 dark:text-green-400" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-green-900 dark:text-green-100 truncate">
-                        {file.name}
-                      </p>
-                      <p className="text-xs text-green-700 dark:text-green-300">
-                        {formatFileSize(file.size)}
-                      </p>
-                    </div>
-                    <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  </div>
-                )}
-              </div>
-            </form>
-
-            <DialogFooter>
-              <Button variant="outline" onClick={handleClose} data-testid="cancel-button">
-                <X className="mr-2 h-4 w-4" />
-                Annulla
-              </Button>
-              <Button
-                onClick={handleShowPreview}
-                disabled={!file || validationErrors.length > 0 || isValidating}
-                data-testid="preview-button"
-              >
-                <Eye className="mr-2 h-4 w-4" />
-                Anteprima
-              </Button>
-            </DialogFooter>
-          </>
-        )}
-
-        {/* Step 2: PDF Preview */}
-        {step === 'preview' && file && (
-          <>
-            <div className="flex-1 overflow-hidden" data-testid="pdf-preview-container">
-              <PdfPreview file={file} />
-            </div>
-
-            <DialogFooter className="border-t pt-4">
-              <Button variant="outline" onClick={handleBackToSelect} data-testid="back-button">
-                <ChevronLeft className="mr-2 h-4 w-4" />
-                Indietro
-              </Button>
-              <Button variant="outline" onClick={handleClose} data-testid="cancel-button-preview">
-                <X className="mr-2 h-4 w-4" />
-                Annulla
-              </Button>
-              <Button onClick={handleConfirmUpload} data-testid="confirm-upload-button">
-                <Upload className="mr-2 h-4 w-4" />
-                Conferma Upload
-              </Button>
-            </DialogFooter>
-          </>
-        )}
-
-        {/* Step 3: Uploading */}
-        {step === 'uploading' && (
-          <>
-            <div className="space-y-4 py-8" data-testid="uploading-state">
-              {!uploadError ? (
+    <>
+      <Dialog open={isOpen} onOpenChange={handleClose}>
+        <DialogContent
+          className={`${modalSizeClass} flex flex-col`}
+          data-testid="pdf-upload-modal"
+          data-step={step}
+        >
+          <DialogHeader>
+            <DialogTitle data-testid="modal-title">
+              {step === 'select' && 'Carica PDF Personalizzato'}
+              {step === 'preview' && `Anteprima: ${file?.name ?? 'PDF'}`}
+              {step === 'uploading' && 'Caricamento in corso...'}
+            </DialogTitle>
+            <DialogDescription>
+              {step === 'select' && (
                 <>
-                  <div className="flex flex-col items-center gap-4">
-                    <Loader2 className="h-12 w-12 text-primary animate-spin" />
-                    <div className="text-center">
-                      <p className="font-medium" data-testid="uploading-filename">
-                        {file?.name}
-                      </p>
-                      <p className="text-sm text-muted-foreground">Caricamento in corso...</p>
-                    </div>
-                  </div>
+                  Carica un regolamento personalizzato per <strong>{gameTitle}</strong>
+                </>
+              )}
+              {step === 'preview' && (
+                <>Verifica il documento prima di procedere con il caricamento</>
+              )}
+              {step === 'uploading' && <>Attendere il completamento del caricamento</>}
+            </DialogDescription>
+          </DialogHeader>
 
-                  {/* New: PdfProgressBar with state (Issue #4217) */}
-                  <PdfProgressBar
-                    state="uploading"
-                    progress={uploadProgress}
-                    showLabel
+          {/* Step 1: File Selection */}
+          {step === 'select' && (
+            <>
+              <form onSubmit={handleUpload} className="space-y-4">
+                {/* File Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="pdf-file">File PDF</Label>
+                  <Input
+                    id="pdf-file"
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handleFileChange}
+                    disabled={isValidating}
+                    className={validationErrors.length > 0 ? 'border-destructive' : ''}
+                    data-testid="pdf-file-input"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Formato: PDF
+                    {maxSizeBytes !== undefined &&
+                      ` • Dimensione massima: ${formatSizeLimit(maxSizeBytes)}`}
+                  </p>
+
+                  {/* Validating State */}
+                  {isValidating && (
+                    <div
+                      className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-950 rounded-md border border-blue-200 dark:border-blue-800"
+                      data-testid="validating-state"
+                    >
+                      <Loader2 className="h-5 w-5 text-blue-600 dark:text-blue-400 animate-spin" />
+                      <p className="text-sm text-blue-900 dark:text-blue-100">
+                        Validazione PDF in corso...
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Validation Errors */}
+                  {validationErrors.length > 0 && (
+                    <Alert variant="destructive" data-testid="validation-errors">
+                      <AlertTitle>Errore di Validazione</AlertTitle>
+                      <AlertDescription>
+                        <ul className="list-disc pl-5 space-y-1">
+                          {validationErrors.map((error, index) => (
+                            <li key={index} className="text-sm">
+                              {error}
+                            </li>
+                          ))}
+                        </ul>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  {/* File Selected (Success State) */}
+                  {file && validationErrors.length === 0 && !isValidating && (
+                    <div
+                      className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-950 rounded-md border border-green-200 dark:border-green-800"
+                      data-testid="file-selected"
+                    >
+                      <FileText className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-green-900 dark:text-green-100 truncate">
+                          {file.name}
+                        </p>
+                        <p className="text-xs text-green-700 dark:text-green-300">
+                          {formatFileSize(file.size)}
+                        </p>
+                      </div>
+                      <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
+                    </div>
+                  )}
+                </div>
+              </form>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={handleClose} data-testid="cancel-button">
+                  <X className="mr-2 h-4 w-4" />
+                  Annulla
+                </Button>
+                <Button
+                  onClick={handleShowPreview}
+                  disabled={!file || validationErrors.length > 0 || isValidating}
+                  data-testid="preview-button"
+                >
+                  <Eye className="mr-2 h-4 w-4" />
+                  Anteprima
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+
+          {/* Step 2: PDF Preview */}
+          {step === 'preview' && file && (
+            <>
+              <div className="flex-1 overflow-hidden" data-testid="pdf-preview-container">
+                <PdfPreview file={file} />
+              </div>
+
+              <DialogFooter className="border-t pt-4">
+                <Button variant="outline" onClick={handleBackToSelect} data-testid="back-button">
+                  <ChevronLeft className="mr-2 h-4 w-4" />
+                  Indietro
+                </Button>
+                <Button variant="outline" onClick={handleClose} data-testid="cancel-button-preview">
+                  <X className="mr-2 h-4 w-4" />
+                  Annulla
+                </Button>
+                <Button onClick={handleConfirmUpload} data-testid="confirm-upload-button">
+                  <Upload className="mr-2 h-4 w-4" />
+                  Conferma Upload
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+
+          {/* Step 3: Uploading */}
+          {step === 'uploading' && (
+            <>
+              <div className="space-y-4 py-8" data-testid="uploading-state">
+                {!uploadError ? (
+                  <>
+                    <div className="flex flex-col items-center gap-4">
+                      <Loader2 className="h-12 w-12 text-primary animate-spin" />
+                      <div className="text-center">
+                        <p className="font-medium" data-testid="uploading-filename">
+                          {file?.name}
+                        </p>
+                        <p className="text-sm text-muted-foreground">Caricamento in corso...</p>
+                      </div>
+                    </div>
+
+                    {/* New: PdfProgressBar with state (Issue #4217) */}
+                    <PdfProgressBar
+                      state="uploading"
+                      progress={uploadProgress}
+                      showLabel
+                      className="mt-4"
+                    />
+                  </>
+                ) : (
+                  /* New: PdfErrorCard on upload failure (Issue #4217) */
+                  <PdfErrorCard
+                    error={uploadError}
+                    category="network"
+                    canRetry
+                    onRetry={handleRetryUpload}
                     className="mt-4"
                   />
-                </>
-              ) : (
-                /* New: PdfErrorCard on upload failure (Issue #4217) */
-                <PdfErrorCard
-                  error={uploadError}
-                  category="network"
-                  canRetry
-                  onRetry={handleRetryUpload}
-                  className="mt-4"
-                />
-              )}
-            </div>
+                )}
+              </div>
 
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={handleClose}
-                disabled={!uploadError}
-                data-testid="cancel-button-uploading"
-              >
-                <X className="mr-2 h-4 w-4" />
-                {uploadError ? 'Chiudi' : 'Annulla'}
-              </Button>
-            </DialogFooter>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={handleClose}
+                  disabled={!uploadError}
+                  data-testid="cancel-button-uploading"
+                >
+                  <X className="mr-2 h-4 w-4" />
+                  {uploadError ? 'Chiudi' : 'Annulla'}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+      <OwnershipDeclarationDialog
+        gameId={ownershipTarget?.gameId ?? gameId}
+        gameName={ownershipTarget?.gameTitle ?? gameTitle}
+        open={ownershipTarget !== null}
+        onOpenChange={open => {
+          if (!open) setOwnershipTarget(null);
+        }}
+        onOwnershipDeclared={handleOwnershipDeclared}
+      />
+    </>
   );
 }

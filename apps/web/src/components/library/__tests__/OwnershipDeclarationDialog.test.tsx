@@ -4,6 +4,7 @@
  * Tests: rendering, checkbox interaction, confirm flow, cancel, loading state
  */
 
+import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -167,6 +168,54 @@ describe('OwnershipDeclarationDialog', () => {
       expect(mockToastError).toHaveBeenCalledWith(
         'Catan non è nella tua libreria: aggiungilo prima di dichiararne il possesso.'
       );
+    });
+  });
+
+  // #4756: the dialog is offered again on every upload that needs it, from a parent that stays
+  // mounted. A ticked box left over would turn the next offer into a one-click declaration.
+  describe('the confirmation does not outlive the offer (#4756)', () => {
+    function Reopenable() {
+      const [open, setOpen] = useState(true);
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            offer again
+          </button>
+          <OwnershipDeclarationDialog
+            {...defaultProps}
+            open={open}
+            onOpenChange={setOpen}
+            onOwnershipDeclared={vi.fn()}
+          />
+        </>
+      );
+    }
+
+    it('starts unticked again after being closed with Escape', async () => {
+      const user = userEvent.setup();
+      render(<Reopenable />);
+      await user.click(screen.getByTestId('ownership-checkbox'));
+      expect(screen.getByTestId('ownership-checkbox')).toBeChecked();
+
+      await user.keyboard('{Escape}');
+      await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+      await user.click(screen.getByRole('button', { name: 'offer again' }));
+
+      expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
+      expect(screen.getByTestId('ownership-checkbox')).not.toBeChecked();
+    });
+
+    it('starts unticked again after a declaration went through', async () => {
+      const user = userEvent.setup();
+      render(<Reopenable />);
+      await user.click(screen.getByTestId('ownership-checkbox'));
+      await user.click(screen.getByRole('button', { name: /Conferma Possesso/i }));
+      await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
+
+      await user.click(screen.getByRole('button', { name: 'offer again' }));
+
+      expect(await screen.findByRole('alertdialog')).toBeInTheDocument();
+      expect(screen.getByTestId('ownership-checkbox')).not.toBeChecked();
     });
   });
 });

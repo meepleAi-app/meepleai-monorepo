@@ -66,6 +66,7 @@ internal static class GameNightImprovvisataEndpoints
             .Produces(401)
             .Produces(404)
             .Produces(409)
+            .Produces(503) // #4751: the arbitro gave no verdict, or the AI gateway refused the call
             .WithName("SubmitRuleDispute")
             .WithSummary("Submit a rule dispute for AI arbitration")
             .WithDescription("Sends a rule question to the AI arbitro, which returns a structured verdict with rule references. The dispute is stored on the live session for later review.");

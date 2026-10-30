@@ -173,17 +173,33 @@ internal sealed class SubmitRuleDisputeCommandHandler
             .GenerateCompletionAsync(systemPrompt, userPrompt, RequestSource.Manual, cancellationToken)
             .ConfigureAwait(false);
 
+        if (!llmResult.Success)
+        {
+            _logger.LogError(
+                "LLM arbitration failed for SessionId={SessionId}: {Error}",
+                request.SessionId, llmResult.ErrorMessage);
+
+            // #4751: a refusal by the gateway (daily cap, quota, catalog) carries a code and a message the
+            // gateway wrote itself — «riprova tra poco» would be false for it, so both are passed on, as
+            // AskQuestionQueryHandler does. A provider that just did not answer (AI_PROVIDER_UNAVAILABLE) or
+            // any failure without a code keeps the generic message: the provider's own text stays in the log.
+            if (llmResult.Metadata.TryGetValue("error_code", out var refusalCode)
+                && !string.IsNullOrWhiteSpace(refusalCode)
+                && !string.Equals(refusalCode, LlmAnswerErrorCodes.ProviderUnavailable, StringComparison.Ordinal))
+            {
+                throw new LlmCallRefusedException(refusalCode, llmResult.ErrorMessage ?? NoVerdictMessage);
+            }
+
+            throw new ExternalServiceException(NoVerdictMessage, NoVerdictErrorCode);
+        }
+
         // #4751: a model that answers with nothing has not given a verdict. It used to be parsed into
         // «Nessun verdetto disponibile.», saved as the verdict, broadcast and counted against the quota.
         // An empty answer is a failure like !Success: nothing is saved, charged or published, and the
         // caller gets a readable 503 (the model's error text goes to the log, never to the response).
-        if (!llmResult.Success || string.IsNullOrWhiteSpace(llmResult.Response))
+        if (string.IsNullOrWhiteSpace(llmResult.Response))
         {
-            _logger.LogError(
-                "LLM arbitration produced no verdict for SessionId={SessionId}: Success={Success}, Error={Error}",
-                request.SessionId, llmResult.Success, llmResult.ErrorMessage);
-
-            throw new ExternalServiceException(NoVerdictMessage, NoVerdictErrorCode);
+            throw NoVerdict(request.SessionId, llmResult, "the model answered with no text");
         }
 
         _logger.LogDebug(
@@ -192,6 +208,13 @@ internal sealed class SubmitRuleDisputeCommandHandler
 
         // 7. Parse the structured response
         var (verdict, ruleReferences, note) = ParseArbitrationResponse(llmResult.Response);
+
+        // The bare skeleton («VERDETTO:\nREGOLA:\nNOTA:», or an answer cut right after a header) parses to
+        // an empty verdict: same case as an empty answer, not a verdict to save.
+        if (string.IsNullOrWhiteSpace(verdict))
+        {
+            throw NoVerdict(request.SessionId, llmResult, "the answer holds only empty section headers");
+        }
 
         // 8. Create and attach the RuleDisputeEntry
         var now = _timeProvider.GetUtcNow().UtcDateTime;
@@ -230,6 +253,23 @@ internal sealed class SubmitRuleDisputeCommandHandler
             Verdict: entry.Verdict,
             RuleReferences: entry.RuleReferences,
             Note: note);
+    }
+
+    /// <summary>
+    /// The failure of a call that «succeeded» without a usable verdict. The log carries what helps
+    /// to tell a truncated answer (<c>finish_reason=length</c>, the reasoning budget eaten) from a
+    /// refusal; the response carries only the fixed message.
+    /// </summary>
+    private ExternalServiceException NoVerdict(Guid sessionId, LlmCompletionResult llmResult, string reason)
+    {
+        _logger.LogError(
+            "LLM arbitration produced no verdict for SessionId={SessionId}: {Reason} (FinishReason={FinishReason}, CompletionTokens={CompletionTokens})",
+            sessionId,
+            reason,
+            llmResult.Metadata.TryGetValue("finish_reason", out var finishReason) ? finishReason : "n/d",
+            llmResult.Usage.CompletionTokens);
+
+        return new ExternalServiceException(NoVerdictMessage, NoVerdictErrorCode);
     }
 
     // ── Prompt Building ────────────────────────────────────────────────────────
@@ -291,8 +331,10 @@ internal sealed class SubmitRuleDisputeCommandHandler
     internal static (string Verdict, List<string> RuleReferences, string? Note) ParseArbitrationResponse(
         string response)
     {
-        if (string.IsNullOrWhiteSpace(response))
-            return ("Nessun verdetto disponibile.", new List<string>(), null);
+        // #4751: the handler turns an empty answer into a failure before it gets here. This used to
+        // invent «Nessun verdetto disponibile.», which the handler then saved as a real verdict; reaching
+        // this point empty is a bug in the caller, so it fails loudly instead of producing one.
+        ArgumentException.ThrowIfNullOrWhiteSpace(response);
 
         var lines = response
             .Split('\n', StringSplitOptions.RemoveEmptyEntries)
@@ -303,16 +345,34 @@ internal sealed class SubmitRuleDisputeCommandHandler
         var regola = ExtractSection(lines, "REGOLA:");
         var nota = ExtractSection(lines, "NOTA:");
 
-        // If parsing fails entirely, use the full response as the verdict
+        // No VERDETTO text: an unstructured answer is the verdict itself. The bare skeleton
+        // («VERDETTO:\nREGOLA:\nNOTA:», or an answer cut right after a header) is not an answer at
+        // all, and stays empty so that the handler can refuse it.
         if (string.IsNullOrWhiteSpace(verdict))
         {
-            verdict = response.Trim();
+            verdict = lines.All(IsSectionHeaderOnly) ? string.Empty : response.Trim();
         }
 
         // Parse REGOLA into a list of rule references (split by semicolons or newlines)
         var ruleReferences = ParseRuleReferences(regola);
 
         return (verdict, ruleReferences, string.IsNullOrWhiteSpace(nota) ? null : nota);
+    }
+
+    private static readonly string[] SectionHeaders = { "VERDETTO:", "REGOLA:", "NOTA:" };
+
+    /// <summary>A line that is nothing but a section header, with no text after it.</summary>
+    private static bool IsSectionHeaderOnly(string line)
+    {
+        foreach (var header in SectionHeaders)
+        {
+            if (line.StartsWith(header, StringComparison.OrdinalIgnoreCase))
+            {
+                return string.IsNullOrWhiteSpace(line[header.Length..]);
+            }
+        }
+
+        return string.IsNullOrWhiteSpace(line);
     }
 
     private static string ExtractSection(List<string> lines, string prefix)

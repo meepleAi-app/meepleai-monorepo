@@ -75,6 +75,24 @@ public class LibraryGameIdQueriesIntegrationTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task BatchCheck_DoesNotReportAPrivateGameEntry_NotEvenForTheEmptyGuid()
+    {
+        var viewer = await SeedUserAsync();
+        var privateGame = await SeedPrivateGameAsync(viewer);
+        await AddPrivateGameToLibraryAsync(viewer, privateGame);
+        var handler = new BatchCheckGamesInLibraryQueryHandler(_dbContext!);
+
+        var result = await handler.Handle(
+            new BatchCheckGamesInLibraryQuery(viewer, [Guid.Empty, privateGame]),
+            TestContext.Current.CancellationToken);
+
+        result.Results[Guid.Empty].InLibrary.Should().BeFalse(
+            "a private entry has no SharedGameId: the compatibility GameId read it as Guid.Empty and would have matched it");
+        result.Results[privateGame].InLibrary.Should().BeFalse(
+            "batch-status answers for catalog (shared) game ids");
+    }
+
+    [Fact]
     public async Task BulkAssociatedData_CountsOnlyTheCallersEntriesForTheRequestedGames()
     {
         var viewer = await SeedUserAsync();
@@ -135,6 +153,37 @@ public class LibraryGameIdQueriesIntegrationTests : IAsyncLifetime
         });
         await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         return gameId;
+    }
+
+    private async Task<Guid> SeedPrivateGameAsync(Guid ownerId)
+    {
+        var gameId = Guid.NewGuid();
+        _dbContext!.PrivateGames.Add(new PrivateGameEntity
+        {
+            Id = gameId,
+            OwnerId = ownerId,
+            Title = "A prototype",
+            MinPlayers = 1,
+            MaxPlayers = 4,
+            Source = PrivateGameSource.Manual
+        });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        return gameId;
+    }
+
+    private async Task AddPrivateGameToLibraryAsync(Guid userId, Guid privateGameId)
+    {
+        _dbContext!.UserLibraryEntries.Add(new UserLibraryEntryEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            PrivateGameId = privateGameId,
+            CurrentState = (int)GameStateType.Owned,
+            StateChangedAt = DateTime.UtcNow,
+            AddedAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        _dbContext.ChangeTracker.Clear();
     }
 
     private async Task AddToLibraryAsync(Guid userId, Guid gameId, bool isFavorite = false, int checklistItems = 0)

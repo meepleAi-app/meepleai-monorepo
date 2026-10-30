@@ -115,7 +115,7 @@ describe('extractClientCalls', () => {
     expect(extractClientCalls(source, 'x.ts').map(c => c.path)).toEqual(['/api/v1/things/list']);
   });
 
-  // #4752 (revisione): `const url = …` dichiarato in ogni metodo di un client (decine di casi in
+  // #4752 (revisione): `const url = …` dichiarato in ogni metodo di un client (es.
   // gamesClient.ts) rendeva ambigua la costante e invisibili le chiamate. Una costante locale vale
   // dentro il blocco che la dichiara: la dichiarazione più vicina, ancora aperta alla chiamata, è la sua.
   it('una costante locale si risolve con la dichiarazione del blocco che contiene la chiamata', () => {

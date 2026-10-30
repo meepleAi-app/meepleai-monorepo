@@ -78,7 +78,9 @@ function conflictMessage(serverMessage: string): string {
   }
 
   const atMost = /^A game night can have at most (\d+) sessions?\b/i.exec(text);
-  if (atMost) return `Una serata può avere al massimo ${atMost[1]} partite.`;
+  // The server counts only the sessions still waiting or in progress, not the finished ones.
+  if (atMost)
+    return `Una serata può avere al massimo ${atMost[1]} partite in attesa o in corso: concludine una prima.`;
 
   const status = /^Cannot add sessions to a (\w+) game night/i.exec(text);
   switch (status?.[1].toLowerCase()) {

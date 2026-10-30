@@ -262,7 +262,7 @@ describe('GamePickerDialog — avvio di una partita della serata (#4752)', () =>
     [
       'la serata ha raggiunto il tetto di partite',
       new ConflictError({ message: 'A game night can have at most 5 sessions.' }),
-      /al massimo 5 partite/i,
+      /al massimo 5 partite in attesa o in corso/i,
     ],
   ])('se %s lo dice nel dialogo, che resta aperto', async (_caso, error, expected) => {
     mocks.startNextGame.mockRejectedValue(error);

@@ -9,13 +9,17 @@
  * - Each game shows real-time KB readiness status via GamePickerItem
  * - Search games by title on the server (#4187), so a game past the first page is found
  * - Games without ready KB are disabled with tooltip
- * - On selection: creates session via contextual hand store, navigates to it
- * - Optional gameNightEventId for adding games to existing nights
+ * - On selection: starts the game within the night (`POST /game-nights/{id}/sessions`, the same call
+ *   as the "▶ Avvia" action of the night live page) and goes to that page; a refusal is said in the dialog
+ *
+ * #4752: it used to create the session through the contextual hand store, on `POST /games/{id}/sessions`,
+ * a route the backend does not register (405), with no word to the user. The only place this dialog is
+ * mounted is a night, so the night is no longer optional.
  *
  * Plan 2 Task 6 — Session Flow v2.1
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Gamepad2, Loader2, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -30,7 +34,7 @@ import {
 import { TooltipProvider } from '@/components/ui/overlays/tooltip';
 import { Input } from '@/components/ui/primitives/input';
 import { useLibrarySearch } from '@/hooks/queries/useLibrarySearch';
-import { useContextualHandStore } from '@/stores/contextual-hand';
+import { startGameErrorMessage, useStartNextGame } from '@/lib/game-nights/hooks/useStartNextGame';
 
 import { GamePickerItem, type GamePickerGame } from './GamePickerItem';
 
@@ -39,8 +43,8 @@ import { GamePickerItem, type GamePickerGame } from './GamePickerItem';
 export interface GamePickerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** When adding a game to an existing game night */
-  gameNightEventId?: string;
+  /** The game night the chosen game is added to. */
+  gameNightEventId: string;
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -61,8 +65,35 @@ export function GamePickerDialog({ open, onOpenChange, gameNightEventId }: GameP
     enabled: open, // only fetch when dialog is open
   });
 
-  const startSession = useContextualHandStore(s => s.startSession);
-  const isStarting = useContextualHandStore(s => s.isLoading);
+  // The page that mounted the dialog may be gone by the time the request ends (route change): the game
+  // started, but going to its night page then would bring back someone who has left.
+  const isMounted = useRef(true);
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  // The way out sits on the hook, not on `mutate()`: a per-call callback is dropped when the mutation is reset
+  // or the component unmounts, and the game would start with nothing happening here.
+  const startGame = useStartNextGame(gameNightEventId, {
+    onSuccess: () => {
+      if (!isMounted.current) return;
+      onOpenChange(false);
+      router.push(`/game-nights/${gameNightEventId}/live`);
+    },
+  });
+  const { reset: resetStartGame } = startGame;
+  const isStarting = startGame.isPending;
+
+  // A refusal belongs to the attempt that was refused: closing the dialog must not leave it for the next opening.
+  // Never while the request is pending: `reset()` clears `isPending`, so a dialog closed and reopened mid-request
+  // would enable the game again and send a second POST (the backend refuses it with a 409 that the reopened
+  // dialog would then show, while the first request is about to take the page away). It resets once it settles.
+  useEffect(() => {
+    if (!open && !startGame.isPending) resetStartGame();
+  }, [open, startGame.isPending, resetStartGame]);
 
   // Map library entries to the picker shape
   const games: GamePickerGame[] = useMemo(() => {
@@ -82,16 +113,12 @@ export function GamePickerDialog({ open, onOpenChange, gameNightEventId }: GameP
   // the loading state until the answer arrives, instead of "no games".
   const isSearching = isLibraryLoading || (!resultsMatchQuery && games.length === 0);
 
-  // Handle game selection: start session and navigate
-  const handleSelect = async (gameId: string) => {
-    await startSession(gameId, [], gameNightEventId);
-
-    // Read the newly created session from the store
-    const { currentSession } = useContextualHandStore.getState();
-    if (currentSession?.sessionId) {
-      onOpenChange(false);
-      router.push(`/sessions/${currentSession.sessionId}`);
-    }
+  // Handle game selection: start the game in the night and go to the night page, where it is played.
+  // The sessions of a night are SessionTracking sessions with no page under /sessions/{id} (#4156 D7).
+  const handleSelect = (gameId: string) => {
+    const game = games.find(g => g.gameId === gameId);
+    if (!game) return;
+    startGame.mutate({ gameId, gameTitle: game.gameTitle });
   };
 
   return (
@@ -155,6 +182,16 @@ export function GamePickerDialog({ open, onOpenChange, gameNightEventId }: GameP
             )}
           </div>
         </TooltipProvider>
+
+        {startGame.isError && (
+          <p
+            role="alert"
+            data-testid="game-picker-start-error"
+            className="mt-3 break-words rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          >
+            {startGameErrorMessage(startGame.error)}
+          </p>
+        )}
 
         {/* Footer: count */}
         {!isSearching && games.length > 0 && (

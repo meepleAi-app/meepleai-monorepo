@@ -462,12 +462,11 @@ function CurrentGameCard({
         </div>
         <div className="flex items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0 flex-1">
+            {/* #4752: the game is known by its name; the session id is an internal UUID (it is
+                still what the jump action below receives). */}
             <h2 className="truncate font-display text-lg font-extrabold text-foreground">
               {game.title}
             </h2>
-            <span className="font-mono text-[10px] font-bold text-muted-foreground">
-              {game.sessionId}
-            </span>
           </div>
           {onJumpToSession ? (
             <button

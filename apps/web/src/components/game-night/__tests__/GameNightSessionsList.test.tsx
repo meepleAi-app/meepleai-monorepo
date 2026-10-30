@@ -51,6 +51,21 @@ describe('GameNightSessionsList — #4156 (D7)', () => {
     expect(hrefs().some(href => href?.startsWith('/sessions/'))).toBe(false);
   });
 
+  // #4752: the night page was reachable only once a session existed, and a night with none yet is
+  // exactly where the organizer starts the first game (the "▶ Avvia" action lives on that page).
+  it('links a night with no games yet to its live page while it runs', () => {
+    render(<GameNightSessionsList sessions={[]} gameNightId="night-1" />);
+    expect(screen.getByRole('link', { name: /apri la serata live/i })).toHaveAttribute(
+      'href',
+      '/game-nights/night-1/live'
+    );
+  });
+
+  it('offers no live page for a completed night with no games', () => {
+    render(<GameNightSessionsList sessions={[]} gameNightId="night-1" isCompleted />);
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
   // #4513, #4539: until #4539 the canonical Badge variant carried `dark:bg-primary/90` (and hover
   // equivalents). tailwind-merge dropped `bg-primary` for the status colour but kept the classes
   // with another modifier, so with the dark theme every status turned orange. Each badge must carry

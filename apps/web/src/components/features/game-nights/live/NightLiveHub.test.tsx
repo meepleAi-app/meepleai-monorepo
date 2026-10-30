@@ -260,13 +260,19 @@ describe('NightLiveHub', () => {
   });
 
   describe('CurrentGameCard', () => {
-    it('renders current game title + sessionId', () => {
+    // #4752: sotto il titolo la scheda mostrava l'UUID della sessione: un identificativo interno che
+    // a un giocatore non dice nulla. Il gioco si riconosce dal nome; l'id serve solo al pulsante.
+    it('renders the game name and not the raw session id', () => {
       render(<NightLiveHub {...baseProps} />);
       const currentGameSection = screen.getByLabelText('Current game');
-      // Spirit Island title and sessionId rendered inside CurrentGameCard region
-      // (Spirit Island also appears in PlannedGamesPane row, so we scope to the region)
+      // Spirit Island also appears in PlannedGamesPane row, so we scope to the region
       expect(within(currentGameSection).getByText('Spirit Island')).toBeInTheDocument();
-      expect(within(currentGameSection).getByText('s-spirit-may17')).toBeInTheDocument();
+      expect(within(currentGameSection).queryByText('s-spirit-may17')).not.toBeInTheDocument();
+    });
+
+    it('does not show the session id on the mobile card either', () => {
+      render(<NightLiveHub {...baseProps} mobile />);
+      expect(screen.queryByText('s-spirit-may17')).not.toBeInTheDocument();
     });
 
     it('renders score pill when score provided', () => {

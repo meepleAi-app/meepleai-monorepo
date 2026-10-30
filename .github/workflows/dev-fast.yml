@@ -84,6 +84,14 @@ jobs:
               - '.github/workflows/dev-fast.yml'
               - '.github/actions/setup-frontend/**'
               - '.github/actions/setup-playwright/**'
+              # #4752: apps/web/scripts/audit/__tests__/client-routes.gate.test.ts confronta le chiamate dei
+              # client con le rotte che il backend registra, leggendo questi file. Senza queste righe una PR
+              # solo backend che toglie o rinomina una rotta usata dal front-end passerebbe con
+              # `frontend-tests` saltato, e una che ne registra una nuova renderebbe «non più necessaria» una
+              # voce del baseline: la prima PR front-end successiva, che non c'entra, diventerebbe rossa.
+              - 'apps/api/src/Api/Routing/**'
+              - 'apps/api/src/Api/BoundedContexts/**/Routing/**'
+              - 'apps/api/src/Api/Program.cs'
             backend:
               - 'apps/api/**'
               # #4138: FrontendModelRoutingMirrorTests (backend unit) confronta questo file con

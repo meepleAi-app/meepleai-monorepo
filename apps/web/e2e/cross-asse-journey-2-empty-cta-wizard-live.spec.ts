@@ -259,12 +259,14 @@ test.describe('Cross-Asse Journey #2 — Empty CTA → wizard 4-step → live op
     await expect(list).toBeVisible({ timeout: 2_000 });
   });
 
-  // ── T3b.7: Select game in dialog + initiate session navigate ────────────
-  // Scope limit (P177): asserts that startSession initiates navigation away
-  // from the game-night detail page toward /sessions/{id}. Does NOT verify
-  // /live page renders (requires deeper session detail + SSE mocks beyond
-  // Macro 3b scope — tracked follow-up).
-  test('selects game in dialog + clicks → URL initiates navigation away from /game-nights/{id}', async ({
+  // ── T3b.7: Select game in dialog → the game starts and the night live page opens ───
+  // #4752: «Aggiungi partita» started the game with POST /games/{id}/sessions, a route the backend
+  // does not register (405), so nothing happened. It is now POST /game-nights/{id}/sessions (the same
+  // call as «▶ Avvia» on the live page), followed by navigation to /game-nights/{id}/live: the
+  // sessions of a night have no page under /sessions/{id} (#4156 D7).
+  // Scope limit (P177): asserts the navigation to the night live page. Does NOT verify the page's
+  // contents (the start call is mocked below).
+  test('selects game in dialog + clicks → starts the game and opens /game-nights/{id}/live', async ({
     page,
   }) => {
     // ─── Mock KB readiness endpoint — seedLibraryGame doesn't seed PDFs so
@@ -288,6 +290,25 @@ test.describe('Cross-Asse Journey #2 — Empty CTA → wizard 4-step → live op
       });
     });
 
+    // ─── Mock the start call: the real BE refuses a game with no rulebook indexed (422 kb_not_ready),
+    // and seedLibraryGame doesn't seed PDFs. Same targeted deviation as the readiness probe above.
+    await page.context().route(/\/api\/v1\/game-nights\/[^/]+\/sessions$/, async route => {
+      if (route.request().method() !== 'POST') {
+        await route.continue();
+        return;
+      }
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          sessionId: '00000000-0000-4000-8000-0000000000a1',
+          gameNightSessionId: '00000000-0000-4000-8000-0000000000b1',
+          sessionCode: 'E2E001',
+          playOrder: 1,
+        }),
+      });
+    });
+
     // ─── Run full wizard + publish + open dialog
     const createdGnId = await runWizardAndCreateDraftGn(page, libraryGameId);
 
@@ -307,22 +328,13 @@ test.describe('Cross-Asse Journey #2 — Empty CTA → wizard 4-step → live op
     await expect(gameItem).toBeVisible({ timeout: 10_000 });
     await expect(gameItem).toBeEnabled({ timeout: 10_000 });
 
-    // Click game → triggers startSession → router.push('/sessions/{id}')
+    // Click game → POST /game-nights/{id}/sessions → router.push('/game-nights/{id}/live')
     await withRetry(() => gameItem.click(), { reason: 'click game-picker-item' });
 
-    // ─── Assertion: URL transitions AWAY from /game-nights/{id}.
-    // We don't strictly assert the final URL is /sessions/{id} or /sessions/{id}/live
-    // because that depends on session detail mocks beyond scope.
-    // The wire intent: navigation initiates.
-    await page.waitForURL(
-      url => !url.toString().match(new RegExp(`/game-nights/${createdGnId}$`)),
-      {
-        timeout: 10_000,
-      }
-    );
-
-    // Verify we're no longer on the GN detail page
-    expect(page.url()).not.toMatch(new RegExp(`/game-nights/${createdGnId}$`));
+    // ─── Assertion: the night live page opens (not /sessions/{id}, which has no page for a night's game).
+    await page.waitForURL(url => url.pathname === `/game-nights/${createdGnId}/live`, {
+      timeout: 10_000,
+    });
   });
 });
 

@@ -88,15 +88,6 @@ const PRODUCERS: Readonly<Record<string, readonly Site[]>> = {
     { live: DRAWER },
   ],
 
-  // ── debito: id di un altro aggregato ──
-  'components/session/GamePickerDialog.tsx': [
-    {
-      pending:
-        'fuori da #4156: id di SessionTracking, ma il link si raggiunge solo dopo ' +
-        'sessionFlow.createSession, che chiama una rotta che il backend non ha',
-    },
-  ],
-
   // ── codice che nessuno monta ──
   // Il modulo mobile/drawer lo importa solo un test. Il nome SessionDrawerContent coincide con
   // quello vivo della card estesa, quindi si cerca il percorso del modulo, non il componente.

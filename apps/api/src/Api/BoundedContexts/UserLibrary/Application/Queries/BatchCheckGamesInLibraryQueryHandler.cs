@@ -27,12 +27,17 @@ internal class BatchCheckGamesInLibraryQueryHandler
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        // Single optimized query: fetch all matching entries in one DB call
+        // Single optimized query: fetch all matching entries in one DB call.
+        // #4749: filter on SharedGameId, the mapped column. UserLibraryEntryEntity.GameId is a
+        // compatibility property outside the EF model (#3662): EF cannot translate it, so every call
+        // answered 500. The callers pass catalog (shared) game ids, as GameId always meant.
         var entries = await _dbContext.UserLibraryEntries
-            .Where(ulg => ulg.UserId == query.UserId && query.GameIds.Contains(ulg.GameId))
+            .Where(ulg => ulg.UserId == query.UserId
+                && ulg.SharedGameId != null
+                && query.GameIds.Contains(ulg.SharedGameId.Value))
             .Select(ulg => new
             {
-                ulg.GameId,
+                GameId = ulg.SharedGameId!.Value,
                 ulg.IsFavorite
             })
             .ToListAsync(cancellationToken)

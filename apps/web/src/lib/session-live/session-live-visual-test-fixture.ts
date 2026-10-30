@@ -61,7 +61,7 @@ export const STATE_OVERRIDE_ENABLED = process.env.NODE_ENV !== 'production' || I
 export interface LiveSessionFixture {
   readonly id: string; // UUID
   readonly name: string;
-  readonly status: 'InProgress' | 'Paused';
+  readonly status: 'InProgress' | 'Paused' | 'Completed';
   readonly viewerRole: ParticipantRole;
   readonly viewerId: string;
   readonly currentTurn: number;

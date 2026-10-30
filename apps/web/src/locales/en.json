@@ -3519,6 +3519,7 @@
         "turnLabelNoTotal": "{count, plural, =0 {Start} other {Turn #}}",
         "statusInProgress": "In progress",
         "statusPaused": "Paused",
+        "statusCompleted": "Completed",
         "pauseCta": "Pause",
         "resumeCta": "Resume",
         "endgameCta": "End session",

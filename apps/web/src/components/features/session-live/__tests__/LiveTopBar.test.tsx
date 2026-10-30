@@ -23,6 +23,7 @@ const LABELS: LiveTopBarLabels = {
   turnLabelResolved: 'Turno 3/8',
   statusInProgress: 'In corso',
   statusPaused: 'In pausa',
+  statusCompleted: 'Conclusa',
   pauseCta: 'Pausa',
   resumeCta: 'Riprendi',
   endgameCta: 'Termina partita',
@@ -68,6 +69,32 @@ describe('LiveTopBar — backward compat (no G4 props)', () => {
   it('preserves existing TopBar slot + status', () => {
     renderTopBar();
     expect(document.querySelector('[data-slot="session-live-top-bar"]')).not.toBeNull();
+  });
+});
+
+// ─── #4750 — a concluded session ──────────────────────────────────────────────
+
+describe('LiveTopBar — #4750: a concluded session', () => {
+  it('says «Conclusa», not «In corso», and carries the status on the slot', () => {
+    renderTopBar({ status: 'Completed' });
+    const topBar = document.querySelector('[data-slot="session-live-top-bar"]');
+    expect(topBar).toHaveAttribute('data-status', 'Completed');
+    expect(screen.getByText('Conclusa')).toBeInTheDocument();
+    expect(screen.queryByText('In corso')).toBeNull();
+  });
+
+  it('offers the host neither pause, resume nor end — only the way out', () => {
+    renderTopBar({ status: 'Completed', viewerRole: 'Host' });
+    expect(document.querySelector('[data-slot="session-live-top-bar-pause"]')).toBeNull();
+    expect(document.querySelector('[data-slot="session-live-top-bar-resume"]')).toBeNull();
+    expect(document.querySelector('[data-slot="session-live-top-bar-endgame"]')).toBeNull();
+    expect(document.querySelector('[data-slot="session-live-top-bar-exit"]')).not.toBeNull();
+  });
+
+  it('still offers the host pause and end while the session runs', () => {
+    renderTopBar({ status: 'InProgress', viewerRole: 'Host' });
+    expect(document.querySelector('[data-slot="session-live-top-bar-pause"]')).not.toBeNull();
+    expect(document.querySelector('[data-slot="session-live-top-bar-endgame"]')).not.toBeNull();
   });
 });
 

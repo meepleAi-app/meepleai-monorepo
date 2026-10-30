@@ -14,6 +14,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resetPdfUploadLimit, setPdfUploadLimit } from '@/__tests__/utils/pdf-upload-limits-mock';
+import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 import { PdfUploadStep } from '@/app/(authenticated)/admin/wizard/steps/PdfUploadStep';
 import { UploadPrivatePDF } from '@/components/collection/wizard/steps/UploadPrivatePDF';
 import { UploadRulesStep } from '@/components/game-night/steps/UploadRulesStep';
@@ -127,7 +128,8 @@ describe('PDF upload zones read the size limit from the backend (#4449)', () => 
   });
 
   it('library upload modal (PdfUploadModal)', async () => {
-    render(<PdfUploadModal isOpen onClose={vi.fn()} gameId="game-1" gameTitle="Catan" />);
+    // The modal reads the library through React Query (#4756).
+    renderWithQuery(<PdfUploadModal isOpen onClose={vi.fn()} gameId="game-1" gameTitle="Catan" />);
 
     choose(screen.getByTestId('pdf-file-input'), pdfOfSize(LIMIT + MB));
 

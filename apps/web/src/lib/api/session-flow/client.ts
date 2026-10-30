@@ -1,12 +1,16 @@
 /**
  * Session Flow v2.1 API Client
  *
- * Provides typed functions for all 12 Session Flow v2.1 endpoints.
+ * Provides typed functions for the Session Flow v2.1 endpoints.
  * Uses the project's standard HttpClient pattern (credentials: 'include',
  * JSON body, centralized error handling).
  *
+ * #4752: `createSession` is gone. It posted to `/games/{gameId}/sessions` (the backend registers only the
+ * GET there: 405 on every call), its only caller was the night's game picker, and the route that does
+ * create a session (`POST /game-sessions`) rejects the empty `participants` it sent (the validator wants
+ * an owner). A night's game starts with `POST /game-nights/{id}/sessions` (`useStartNextGame`).
+ *
  * Endpoints covered:
- *   POST   /api/v1/game-sessions                      — createSession  (#4752: il gioco e' nel corpo)
  *   POST   /api/v1/game-sessions/{id}/pause           — pauseSession   (#3662: spostata)
  *   POST   /api/v1/game-sessions/{id}/resume          — resumeSession  (#3662: spostata)
  *   PUT    /api/v1/sessions/{id}/turn-order            — setTurnOrder
@@ -21,8 +25,6 @@
  */
 
 import type {
-  CreateSessionRequest,
-  CreateSessionResult,
   SetTurnOrderRequest,
   SetTurnOrderResult,
   AdvanceTurnResult,
@@ -46,9 +48,6 @@ const GAMES_BASE = '/api/v1/games';
 // ─── Client Interface ───────────────────────────────────────────────────────
 
 export interface SessionFlowClient {
-  /** Create a new session for a game (auto-creates ad-hoc GameNight when gameNightEventId is null). */
-  createSession(gameId: string, request: CreateSessionRequest): Promise<CreateSessionResult>;
-
   /** Pause an active session. */
   pauseSession(sessionId: string): Promise<void>;
 
@@ -94,17 +93,6 @@ export function createSessionFlowClient({
   httpClient: HttpClient;
 }): SessionFlowClient {
   return {
-    async createSession(gameId, request) {
-      // #4752: the game travels in the body (`CreateSessionRequest.GameId`). This used to be
-      // `POST /games/{gameId}/sessions`, a path the backend registers only for GET: 405 on every call.
-      const response = await httpClient.post<CreateSessionResult>(GAME_SESSION_BASE, {
-        gameId,
-        ...request,
-      });
-      if (!response) throw new Error('Create session returned empty response');
-      return response;
-    },
-
     async pauseSession(sessionId) {
       await httpClient.post(`${GAME_SESSION_BASE}/${encodeURIComponent(sessionId)}/pause`);
     },

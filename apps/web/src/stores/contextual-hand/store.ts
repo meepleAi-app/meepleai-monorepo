@@ -7,8 +7,11 @@
  * Responsibilities:
  * - Load / recover the current Active or Paused session on mount
  * - Persist `lastActiveSessionId` in localStorage for page-reload recovery
- * - Expose actions for the full session lifecycle (create, pause, resume,
- *   turn order, advance turn, dice rolls, scores, diary)
+ * - Expose actions for the session lifecycle (pause, resume, turn order, advance turn,
+ *   dice rolls, scores, diary). There is no "start": #4752 removed `startSession`, whose
+ *   only caller was the night's game picker and which posted to a route the backend does
+ *   not register. A night's game starts with `POST /game-nights/{id}/sessions`
+ *   (`useStartNextGame`).
  * - Track loading/error state for UI feedback
  *
  * Middleware Stack:
@@ -94,42 +97,6 @@ export const useContextualHandStore = create<ContextualHandStore>()(
                 s.isInitialized = true;
               });
             }
-          } catch (error) {
-            set(s => {
-              s.error = (error as Error).message;
-              s.isLoading = false;
-            });
-          }
-        },
-
-        startSession: async (gameId, guestNames, gameNightEventId) => {
-          set(s => {
-            s.isLoading = true;
-            s.error = null;
-          });
-          try {
-            const result = await api.sessionFlow.createSession(gameId, {
-              sessionType: 'GameSpecific',
-              participants: [],
-              guestNames,
-              gameNightEventId,
-            });
-
-            set(s => {
-              s.createResult = result;
-              s.currentSession = {
-                sessionId: result.sessionId,
-                gameId,
-                status: 'Active',
-                sessionCode: result.sessionCode,
-                sessionDate: new Date().toISOString(),
-                updatedAt: null,
-                gameNightEventId: result.gameNightEventId,
-              };
-              s.context = 'active';
-              s.isLoading = false;
-            });
-            get().subscribeToDiary(result.sessionId);
           } catch (error) {
             set(s => {
               s.error = (error as Error).message;
@@ -310,15 +277,13 @@ export const useContextualHandStore = create<ContextualHandStore>()(
           let retryCount = 0;
           const MAX_RETRIES = 5;
 
-          es.onmessage = (event) => {
+          es.onmessage = event => {
             try {
               const entry = JSON.parse(event.data);
-              set((state) => {
-                if (!state.diaryEntries.some((e) => e.id === entry.id)) {
+              set(state => {
+                if (!state.diaryEntries.some(e => e.id === entry.id)) {
                   state.diaryEntries.push(entry);
-                  state.diaryEntries.sort((a, b) =>
-                    a.timestamp.localeCompare(b.timestamp)
-                  );
+                  state.diaryEntries.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
                 }
               });
               retryCount = 0;

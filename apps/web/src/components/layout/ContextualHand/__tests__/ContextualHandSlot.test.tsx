@@ -26,7 +26,12 @@ vi.mock('@/stores/contextual-hand', () => ({
 
 vi.mock('@/components/ui/data-display/meeple-card/MeepleCard', () => ({
   MeepleCard: ({ entity, title, badge, status }: Record<string, string>) => (
-    <div data-testid={`meeple-card-${entity}`} data-title={title} data-badge={badge} data-status={status} />
+    <div
+      data-testid={`meeple-card-${entity}`}
+      data-title={title}
+      data-badge={badge}
+      data-status={status}
+    />
   ),
 }));
 
@@ -49,7 +54,6 @@ function setMockState(state: Partial<ContextualHandStore>) {
     isDiaryLoading: false,
     kbReadiness: null,
     initialize: vi.fn(),
-    startSession: vi.fn(),
     pauseSession: vi.fn(),
     resumeSession: vi.fn(),
     setTurnOrder: vi.fn(),
@@ -133,7 +137,9 @@ describe('ContextualHandSlot', () => {
 
       for (const [type, label] of Object.entries(labels)) {
         setMockState({ context: 'idle' });
-        const { unmount } = render(<ContextualHandSlot slotType={type as 'game' | 'agent' | 'toolkit' | 'session'} />);
+        const { unmount } = render(
+          <ContextualHandSlot slotType={type as 'game' | 'agent' | 'toolkit' | 'session'} />
+        );
         expect(screen.getByText(label)).toBeInTheDocument();
         unmount();
       }

@@ -127,7 +127,9 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
                     command.GameTitle,
                     command.GameId,
                     ExistingTrackingSessionId: createResult.SessionId,
-                    InitialPlayers: ToInitialPlayers(participants)), ct).ConfigureAwait(false);
+                    InitialPlayers: ToInitialPlayers(participants),
+                    // The table is about to play it, and nothing in the front-end starts a live game.
+                    StartImmediately: true), ct).ConfigureAwait(false);
 
                 await _repository.UpdateAsync(gameNight, ct).ConfigureAwait(false);
                 // The xmin race is detected by the SaveChanges inside ExecuteInTransactionAsync

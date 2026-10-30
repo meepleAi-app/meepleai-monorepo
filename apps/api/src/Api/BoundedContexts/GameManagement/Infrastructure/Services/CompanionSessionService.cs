@@ -42,4 +42,11 @@ internal sealed class CompanionSessionService : ICompanionSessionService
         await _sessionRepository.AddAsync(companion, ct).ConfigureAwait(false);
         return companion.Id;
     }
+
+    /// <inheritdoc />
+    public async Task<bool> IsOwnedByAsync(Guid trackingSessionId, Guid userId, CancellationToken ct)
+    {
+        var session = await _sessionRepository.GetByIdAsync(trackingSessionId, ct).ConfigureAwait(false);
+        return session is not null && session.UserId == userId;
+    }
 }

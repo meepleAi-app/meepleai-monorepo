@@ -106,6 +106,8 @@ public class StartGameNightSessionLiveGameBridgeTests
                 && c.GameName == "Catan"
                 && c.GameId == night.GameIds[0]
                 && c.ExistingTrackingSessionId == trackingSessionId
+                // Started in the same commit: nothing in the front-end starts a live game.
+                && c.StartImmediately
                 && c.InitialPlayers != null
                 && c.InitialPlayers.Count == 3
                 // The organizer sits first (the first seat is the Host), then the accepted players.
@@ -117,10 +119,12 @@ public class StartGameNightSessionLiveGameBridgeTests
     }
 
     [Fact]
-    public async Task Handle_TheLiveGameIsCreatedAfterTheNightLinkAndBeforeTheAggregateIsSaved()
+    public async Task Handle_TheLiveGameIsCreatedAfterTheTrackingSessionAndBeforeTheAggregateIsSaved()
     {
-        // Same transaction, in this order: tracking Session → night link → live game → save. A failure
-        // anywhere rolls the whole start back, so the aggregate must not be saved before the live game.
+        // Same transaction, in this order: tracking Session → live game → save of the aggregate (the link
+        // itself is made in memory by AddSession between the first two, and is not a step of its own here).
+        // A failure anywhere rolls the whole start back, so the aggregate must not be saved before the live
+        // game. The rollback itself is proved on a real database, in GameNightLiveGameBridgeIntegrationTests.
         var (night, organizer, _, _) = ArrangeNightWithRoster();
         var calls = new List<string>();
         _mediator.Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))

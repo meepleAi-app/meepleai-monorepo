@@ -1,4 +1,6 @@
 using Api.Tests.TestHelpers;
+using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.Authentication.Application.Queries;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
@@ -33,7 +35,7 @@ public class GoLiveSessionLiveGameBridgeTests
 
     public GoLiveSessionLiveGameBridgeTests()
     {
-        _unitOfWork.SetupExecuteInTransaction<StartGameNightSessionResult>();
+        _unitOfWork.SetupExecuteInTransaction();
         _handler = new GoLiveSessionCommandHandler(_repository.Object, _mediator.Object, _unitOfWork.Object);
     }
 
@@ -50,6 +52,23 @@ public class GoLiveSessionLiveGameBridgeTests
 
     private static SessionDetailsDto DetailsWith(params ParticipantDto[] participants) =>
         new() { Participants = [.. participants] };
+
+    private static UserDto Organizer(Guid id, string displayName) => new(
+        Id: id,
+        Email: $"{id:N}@example.com",
+        DisplayName: displayName,
+        Role: "User",
+        Tier: "Free",
+        CreatedAt: DateTime.UtcNow,
+        IsTwoFactorEnabled: false,
+        TwoFactorEnabledAt: null,
+        Level: 1,
+        ExperiencePoints: 0,
+        EmailVerified: true,
+        EmailVerifiedAt: DateTime.UtcNow,
+        VerificationGracePeriodEndsAt: null,
+        OnboardingCompleted: true,
+        OnboardingSkipped: false);
 
     [Fact]
     public async Task Handle_CreatesTheLiveGameFromTheDraftsTrackingSessionAndParticipants()
@@ -133,16 +152,45 @@ public class GoLiveSessionLiveGameBridgeTests
     }
 
     [Fact]
-    public async Task Handle_ADraftWithoutParticipants_StillGetsALiveGame()
+    public async Task Handle_ADraftWithoutParticipants_SeatsTheOrganizer_SoTheGameCanBeStarted()
     {
-        // The roster is best-effort: with none, the live game starts empty and the host seats players
-        // from the live page — going live must not fail for that.
+        // A live game with nobody at the table cannot be started, and nothing in the front-end seats a player on
+        // a game it does not own yet: with no participants, the organizer — who is going live — takes the seat.
         var sessionId = Guid.NewGuid();
         var night = NightWithDraft(sessionId, out _);
         _repository.Setup(r => r.GetByLinkedSessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(night);
         _mediator.Setup(m => m.Send(It.IsAny<GetSessionDetailsQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(DetailsWith());
+        _mediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Organizer(night.OrganizerId, "Marta"));
+        _mediator.Setup(m => m.Send(It.IsAny<CreateLiveSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.NewGuid());
+
+        await _handler.Handle(new GoLiveSessionCommand(sessionId, night.OrganizerId), CancellationToken.None);
+
+        _mediator.Verify(m => m.Send(
+            It.Is<CreateLiveSessionCommand>(c =>
+                c.InitialPlayers != null
+                && c.InitialPlayers.Count == 1
+                && c.InitialPlayers[0].UserId == night.OrganizerId
+                && c.InitialPlayers[0].DisplayName == "Marta"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_ADraftWithoutParticipants_AndAnOrganizerThatDoesNotResolve_StillGoesLive()
+    {
+        // Seating the organizer is best-effort: if the user cannot be read, the live game is created empty
+        // (and stays Created) rather than failing the go-live.
+        var sessionId = Guid.NewGuid();
+        var night = NightWithDraft(sessionId, out _);
+        _repository.Setup(r => r.GetByLinkedSessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(night);
+        _mediator.Setup(m => m.Send(It.IsAny<GetSessionDetailsQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DetailsWith());
+        _mediator.Setup(m => m.Send(It.IsAny<GetUserByIdQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserDto?)null);
         _mediator.Setup(m => m.Send(It.IsAny<CreateLiveSessionCommand>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Guid.NewGuid());
 
@@ -151,6 +199,106 @@ public class GoLiveSessionLiveGameBridgeTests
         _mediator.Verify(m => m.Send(
             It.Is<CreateLiveSessionCommand>(c => c.InitialPlayers != null && c.InitialPlayers.Count == 0),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_AsksForTheLiveGameToBeStarted_BecauseNothingInTheFrontEndStartsOne()
+    {
+        var sessionId = Guid.NewGuid();
+        var night = NightWithDraft(sessionId, out _);
+        _repository.Setup(r => r.GetByLinkedSessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(night);
+        _mediator.Setup(m => m.Send(It.IsAny<CreateLiveSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.NewGuid());
+
+        await _handler.Handle(new GoLiveSessionCommand(sessionId, night.OrganizerId), CancellationToken.None);
+
+        _mediator.Verify(m => m.Send(
+            It.Is<CreateLiveSessionCommand>(c => c.StartImmediately), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_PromotesTheLinkAndCreatesTheLiveGameInOneTransaction_AndOpensLiveModeOutsideIt()
+    {
+        // The promotion used to commit alone and the live game was created after it: a second go-live of the
+        // same draft that read the link InProgress in that window took the self-heal branch and created a
+        // SECOND live game. Both writes share one transaction now; live mode (a separate, idempotent commit)
+        // stays outside it.
+        var sessionId = Guid.NewGuid();
+        var night = NightWithDraft(sessionId, out _);
+        var insideTransaction = false;
+        var calls = new List<string>();
+        _unitOfWork.Setup(u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task>>(), It.IsAny<CancellationToken>()))
+            .Returns(async (Func<CancellationToken, Task> work, CancellationToken ct) =>
+            {
+                insideTransaction = true;
+                try
+                {
+                    await work(ct);
+                }
+                finally
+                {
+                    insideTransaction = false;
+                }
+            });
+        _repository.Setup(r => r.GetByLinkedSessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(night);
+        _repository.Setup(r => r.UpdateAsync(It.IsAny<GameNightEvent>(), It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add(insideTransaction ? "promote:in" : "promote:OUT"))
+            .Returns(Task.CompletedTask);
+        _mediator.Setup(m => m.Send(It.IsAny<CreateLiveSessionCommand>(), It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add(insideTransaction ? "live:in" : "live:OUT"))
+            .ReturnsAsync(Guid.NewGuid());
+        _mediator.Setup(m => m.Send(It.IsAny<OpenSessionLiveModeCommand>(), It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add(insideTransaction ? "open-live-mode:IN" : "open-live-mode:out"))
+            .Returns(Task.CompletedTask);
+
+        await _handler.Handle(new GoLiveSessionCommand(sessionId, night.OrganizerId), CancellationToken.None);
+
+        calls.Should().Equal("promote:in", "live:in", "open-live-mode:out");
+        _unitOfWork.Verify(
+            u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task>>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_SelfHeal_RunsTheLiveGameInATransactionToo_WithoutWritingTheAggregate()
+    {
+        var sessionId = Guid.NewGuid();
+        var night = NightWithDraft(sessionId, out _);
+        night.StartSession(sessionId); // link already InProgress
+        _repository.Setup(r => r.GetByLinkedSessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(night);
+        _mediator.Setup(m => m.Send(It.IsAny<CreateLiveSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Guid.NewGuid());
+
+        await _handler.Handle(new GoLiveSessionCommand(sessionId, night.OrganizerId), CancellationToken.None);
+
+        _unitOfWork.Verify(
+            u => u.ExecuteInTransactionAsync(
+                It.IsAny<Func<CancellationToken, Task>>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _repository.Verify(r => r.UpdateAsync(It.IsAny<GameNightEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheLiveGameFails_TheErrorPropagatesAndLiveModeDoesNotOpen()
+    {
+        // The rollback of the promotion with it is proved on a real database (integration tests); here, that the
+        // failure is not swallowed and live mode — which would split-brain the link — does not open.
+        var sessionId = Guid.NewGuid();
+        var night = NightWithDraft(sessionId, out _);
+        _repository.Setup(r => r.GetByLinkedSessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(night);
+        _mediator.Setup(m => m.Send(It.IsAny<CreateLiveSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateException("live insert failed"));
+
+        var act = () => _handler.Handle(new GoLiveSessionCommand(sessionId, night.OrganizerId), CancellationToken.None);
+
+        await act.Should().ThrowAsync<DbUpdateException>();
+        _mediator.Verify(m => m.Send(It.IsAny<OpenSessionLiveModeCommand>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Json;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.EventHandlers;
@@ -8,6 +9,7 @@ using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.Exceptions;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 using Api.BoundedContexts.GameToolbox.Application.DTOs;
 using Api.BoundedContexts.GameToolbox.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
@@ -18,7 +20,9 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.ValueObjects;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
@@ -28,6 +32,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
 
 namespace Api.Tests.Integration.GameManagement;
@@ -43,16 +48,152 @@ namespace Api.Tests.Integration.GameManagement;
 /// quel warm-up in volo faceva fallire la chiusura con un errore di protocollo di Npgsql. Il suo
 /// comportamento ha test propri (<c>StartGameNightSessionToolboxWarmupTests</c>): qui la query dei
 /// template risponde subito, senza toccare il database.</para>
+///
+/// <para>Il host porta anche due guasti iniettabili (<see cref="TransactionFaultSwitch"/>), per provare su
+/// un database vero che l'avvio e il go-live sono atomici: quello che lo switch non arma non cambia nulla.
+/// Lo switch vive quanto il host, cioè quanto la classe: ogni test lo riporta a riposo prima di partire.</para>
 /// </summary>
 public sealed class GameNightLiveGameBridgeIntegrationTestsHostFixture(SharedTestcontainersFixture shared)
     : SharedHostPerTestDatabaseFixture(shared, "night_live_bridge")
 {
+    public TransactionFaultSwitch Faults { get; } = new();
+
     protected override WebApplicationFactory<Program> ConfigureHost(WebApplicationFactory<Program> factory) =>
         factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
         {
             services.AddTransient<IRequestHandler<GetKbReadinessQuery, KbReadinessDto>, AlwaysReadyKbReadinessHandler>();
             services.AddTransient<IRequestHandler<GetToolboxTemplatesQuery, List<ToolboxTemplateDto>>, NoToolboxTemplatesHandler>();
+
+            services.AddSingleton(Faults);
+            services.RemoveAll<IUnitOfWork>();
+            services.AddScoped<IUnitOfWork>(sp => new FaultInjectingUnitOfWork(
+                new EfCoreUnitOfWork(sp.GetRequiredService<MeepleAiDbContext>()),
+                sp.GetRequiredService<MeepleAiDbContext>(),
+                sp.GetRequiredService<TransactionFaultSwitch>()));
+            services.RemoveAll<ILiveSessionRepository>();
+            services.AddScoped<ILiveSessionRepository>(sp => new FaultInjectingLiveSessionRepository(
+                ActivatorUtilities.CreateInstance<LiveSessionRepository>(sp),
+                sp.GetRequiredService<TransactionFaultSwitch>()));
         }));
+}
+
+/// <summary>Dove lo switch fa fallire la richiesta che sta girando.</summary>
+public enum InjectedFaultPoint
+{
+    None = 0,
+
+    /// <summary>Quando il lavoro della transazione è finito: gli INSERT sono già nel database, il commit no.</summary>
+    EndOfTransaction = 1,
+
+    /// <summary>Quando la partita live sta per essere aggiunta: il tracciamento e il collegamento ci sono già.</summary>
+    LiveInsert = 2,
+}
+
+/// <summary>Un guasto armato scatta UNA volta (la prima che lo incontra) e si disarma da solo.</summary>
+public sealed class TransactionFaultSwitch
+{
+    private int _armed;
+
+    public void Arm(InjectedFaultPoint point) => Interlocked.Exchange(ref _armed, (int)point);
+
+    public void Disarm() => Interlocked.Exchange(ref _armed, 0);
+
+    internal bool TryTrip(InjectedFaultPoint point) =>
+        Interlocked.CompareExchange(ref _armed, 0, (int)point) == (int)point;
+}
+
+public sealed class InjectedFaultException(InjectedFaultPoint point)
+    : Exception($"Injected fault at {point}");
+
+/// <summary>
+/// L'unità di lavoro vera, più un guasto a fine lavoro: prima fa arrivare a Postgres ciò che il lavoro ha
+/// preparato (altrimenti il rollback non avrebbe niente da togliere), poi lancia DENTRO la transazione.
+/// </summary>
+internal sealed class FaultInjectingUnitOfWork(
+    EfCoreUnitOfWork inner, MeepleAiDbContext db, TransactionFaultSwitch faults) : IUnitOfWork
+{
+    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
+        inner.SaveChangesAsync(cancellationToken);
+
+    public Task<T> ExecuteInTransactionAsync<T>(
+        Func<CancellationToken, Task<T>> work, CancellationToken cancellationToken = default) =>
+        inner.ExecuteInTransactionAsync(async ct =>
+        {
+            var result = await work(ct).ConfigureAwait(false);
+            await FailIfArmedAsync(ct).ConfigureAwait(false);
+            return result;
+        }, cancellationToken);
+
+    public Task ExecuteInTransactionAsync(
+        Func<CancellationToken, Task> work, CancellationToken cancellationToken = default) =>
+        inner.ExecuteInTransactionAsync(async ct =>
+        {
+            await work(ct).ConfigureAwait(false);
+            await FailIfArmedAsync(ct).ConfigureAwait(false);
+        }, cancellationToken);
+
+    public Task BeginTransactionAsync(CancellationToken cancellationToken = default) =>
+        inner.BeginTransactionAsync(cancellationToken);
+
+    public Task CommitTransactionAsync(CancellationToken cancellationToken = default) =>
+        inner.CommitTransactionAsync(cancellationToken);
+
+    public Task RollbackTransactionAsync(CancellationToken cancellationToken = default) =>
+        inner.RollbackTransactionAsync(cancellationToken);
+
+    public void Dispose() => inner.Dispose();
+
+    private async Task FailIfArmedAsync(CancellationToken cancellationToken)
+    {
+        if (!faults.TryTrip(InjectedFaultPoint.EndOfTransaction))
+        {
+            return;
+        }
+
+        await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        throw new InjectedFaultException(InjectedFaultPoint.EndOfTransaction);
+    }
+}
+
+/// <summary>Il repository vero, più un guasto all'aggiunta della partita live.</summary>
+internal sealed class FaultInjectingLiveSessionRepository(
+    ILiveSessionRepository inner, TransactionFaultSwitch faults) : ILiveSessionRepository
+{
+    public Task<LiveGameSession?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        inner.GetByIdAsync(id, cancellationToken);
+
+    public Task<LiveGameSession?> GetByCodeAsync(string sessionCode, CancellationToken cancellationToken = default) =>
+        inner.GetByCodeAsync(sessionCode, cancellationToken);
+
+    public Task<LiveGameSession?> GetByTrackingSessionIdAsync(
+        Guid trackingSessionId, CancellationToken cancellationToken = default) =>
+        inner.GetByTrackingSessionIdAsync(trackingSessionId, cancellationToken);
+
+    public Task<IReadOnlyList<LiveGameSession>> GetActiveByUserIdAsync(
+        Guid userId, CancellationToken cancellationToken = default) =>
+        inner.GetActiveByUserIdAsync(userId, cancellationToken);
+
+    public Task<Guid?> GetActiveInProgressSessionIdAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        inner.GetActiveInProgressSessionIdAsync(userId, cancellationToken);
+
+    public Task<IReadOnlyList<LiveGameSession>> GetAllActiveAsync(CancellationToken cancellationToken = default) =>
+        inner.GetAllActiveAsync(cancellationToken);
+
+    public Task AddAsync(LiveGameSession session, CancellationToken cancellationToken = default)
+    {
+        if (faults.TryTrip(InjectedFaultPoint.LiveInsert))
+        {
+            throw new InjectedFaultException(InjectedFaultPoint.LiveInsert);
+        }
+
+        return inner.AddAsync(session, cancellationToken);
+    }
+
+    public Task UpdateAsync(LiveGameSession session, CancellationToken cancellationToken = default) =>
+        inner.UpdateAsync(session, cancellationToken);
+
+    public Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default) =>
+        inner.ExistsAsync(id, cancellationToken);
 }
 
 internal sealed class AlwaysReadyKbReadinessHandler : IRequestHandler<GetKbReadinessQuery, KbReadinessDto>
@@ -95,6 +236,8 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
     {
         await _hostFixture.BeginTestAsync();
         _factory = _hostFixture.Factory;
+        // The host (and its switch) outlives the test: never inherit an armed fault from a previous one.
+        _hostFixture.Faults.Disarm();
     }
 
     // Host, client e database appartengono alla fixture.
@@ -118,6 +261,8 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
         live.Should().NotBeNull();
         live!.TrackingSessionId.Should().Be(started.SessionId,
             "the live game adopts the tracking Session the night's link points at");
+        live.Status.Should().Be(LiveSessionStatus.InProgress,
+            "nothing in the front-end starts a live game: it has to be born playable, or scoring and «Termina partita» answer 409");
         live.GameId.Should().Be(gameId);
         live.CreatedByUserId.Should().Be(organizer);
         live.Players.Select(p => p.UserId).Should().BeEquivalentTo(new Guid?[] { organizer, friend, _secondFriend });
@@ -172,6 +317,7 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
             .GetByIdAsync(first.LiveSessionId!.Value);
         live!.Players.Select(p => p.UserId).Should().BeEquivalentTo(new Guid?[] { organizer, friend });
         live.Host!.UserId.Should().Be(organizer);
+        live.Status.Should().Be(LiveSessionStatus.InProgress, "going live hands over a game that can be played");
     }
 
     // ── Completion, live → night ─────────────────────────────────────────────
@@ -182,7 +328,6 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
         var (organizer, friend, gameId, nightId) = await SeedNightWithAcceptedFriendAsync();
         var started = await SendAsync(new StartGameNightSessionCommand(nightId, gameId, "Catan", organizer));
         var liveId = started.LiveSessionId!.Value;
-        await StartTheLiveGameAsync(liveId, organizer);
         await RecordScoresAsync(liveId, (organizer, 3), (friend, 9), (_secondFriend, 1));
 
         await SendAsync(new CompleteLiveSessionCommand(liveId));
@@ -205,35 +350,60 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
         night.Sessions.Should().ContainSingle().Which.Status.Should().Be(GameNightSessionStatus.Completed);
     }
 
-    [Fact(DisplayName = "POST /live-sessions/{id}/complete — the «Termina partita» endpoint — closes the night's sitting too")]
-    public async Task TheCompleteEndpoint_ClosesTheNightSittingToo()
+    [Fact(DisplayName = "A game started from a night is scored and ended over HTTP with no other start, and «Termina partita» closes the night's sitting too")]
+    public async Task ScoringAndEndingOverHttp_WorkOnAGameStartedFromTheNight_AndCloseTheNightSitting()
     {
-        // The follow-up is a second command the endpoint sends after CompleteLiveSessionCommand. Without
-        // the HTTP hop a missing Send would go unseen: every other test sends the two commands itself.
+        // The only start of this live game is the night's own: nothing else in the app starts one. Before
+        // the live game was born InProgress, both calls below answered 409. The follow-up of «Termina
+        // partita» is a second command the endpoint sends: without the HTTP hop a missing Send would go
+        // unseen, because every other test sends the two commands itself.
         var (organizer, friend, gameId, nightId) = await SeedNightWithAcceptedFriendAsync();
         var started = await SendAsync(new StartGameNightSessionCommand(nightId, gameId, "Catan", organizer));
         var liveId = started.LiveSessionId!.Value;
-        await StartTheLiveGameAsync(liveId, organizer);
-        await RecordScoresAsync(liveId, (organizer, 3), (friend, 9), (_secondFriend, 1));
+        var seats = await SeatsByUserAsync(liveId);
 
-        string token;
-        await using (var scope = _factory.Services.CreateAsyncScope())
+        using var client = await ClientForAsync(organizer);
+        foreach (var (userId, value) in new[] { (organizer, 3), (friend, 9), (_secondFriend, 1) })
         {
-            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            (_, token) = await TestSessionHelper.CreateUserSessionAsync(db, organizer);
+            var scored = await client.PostAsJsonAsync(
+                new Uri($"/api/v1/live-sessions/{liveId}/scores", UriKind.Relative),
+                new { playerId = seats[userId], round = 1, dimension = "points", value });
+            scored.StatusCode.Should().Be(HttpStatusCode.NoContent, "a game started from the night must accept scores at once");
         }
-
-        using var client = _factory.CreateClient();
-        client.DefaultRequestHeaders.Add("Cookie", $"{TestSessionHelper.SessionCookieName}={token}");
-        client.DefaultRequestHeaders.Add("X-Test-Session-Token", token);
 
         var response = await client.PostAsync(new Uri($"/api/v1/live-sessions/{liveId}/complete", UriKind.Relative), content: null);
 
-        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent, "a game started from the night must be endable at once");
         await using var verify = _factory.Services.CreateAsyncScope();
         var verifyDb = verify.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        (await verifyDb.GameNightSessions.AsNoTracking().SingleAsync(s => s.SessionId == started.SessionId))
-            .Status.Should().Be(nameof(GameNightSessionStatus.Completed));
+        var link = await verifyDb.GameNightSessions.AsNoTracking().SingleAsync(s => s.SessionId == started.SessionId);
+        link.Status.Should().Be(nameof(GameNightSessionStatus.Completed));
+        var friendParticipant = await verifyDb.SessionTrackingParticipants.AsNoTracking()
+            .SingleAsync(p => p.SessionId == started.SessionId && p.UserId == friend);
+        link.WinnerId.Should().Be(friendParticipant.Id);
+    }
+
+    [Fact(DisplayName = "A repeated «Termina partita» still answers 409 but repairs a night whose sitting was left open")]
+    public async Task TheCompleteEndpoint_Repeated_RepairsAnOpenNightLink_AndStillAnswers409()
+    {
+        // The first «Termina partita» can complete the live game and then fail to close the night's sitting
+        // (the follow-up is best-effort). The player taps again: the live game is already over, so the answer
+        // is the 409 it always was — but the sitting stays InProgress forever unless this retry closes it,
+        // and with it «Concludi serata» and «Aggiungi partita» stay off.
+        var (organizer, friend, gameId, nightId) = await SeedNightWithAcceptedFriendAsync();
+        var started = await SendAsync(new StartGameNightSessionCommand(nightId, gameId, "Catan", organizer));
+        var liveId = started.LiveSessionId!.Value;
+        await RecordScoresAsync(liveId, (organizer, 3), (friend, 9), (_secondFriend, 1));
+        await SendAsync(new CompleteLiveSessionCommand(liveId)); // the game is over; the follow-up never ran
+        (await LinkStatusAsync(started.SessionId)).Should().Be(nameof(GameNightSessionStatus.InProgress),
+            "precondition: the sitting was left open");
+
+        using var client = await ClientForAsync(organizer);
+        var response = await client.PostAsync(new Uri($"/api/v1/live-sessions/{liveId}/complete", UriKind.Relative), content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict, "the live game was already completed");
+        (await LinkStatusAsync(started.SessionId)).Should().Be(nameof(GameNightSessionStatus.Completed),
+            "the repeat must close the sitting the first attempt left open");
     }
 
     [Fact(DisplayName = "A tie (or nobody scoring) completes the night's link with NO winner — and the finalize accepts the ranks")]
@@ -244,7 +414,6 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
         var (organizer, friend, gameId, nightId) = await SeedNightWithAcceptedFriendAsync();
         var started = await SendAsync(new StartGameNightSessionCommand(nightId, gameId, "Catan", organizer));
         var liveId = started.LiveSessionId!.Value;
-        await StartTheLiveGameAsync(liveId, organizer);
         await RecordScoresAsync(liveId, (organizer, 5), (friend, 5), (_secondFriend, 1));
 
         await SendAsync(new CompleteLiveSessionCommand(liveId));
@@ -289,7 +458,8 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
     {
         var (organizer, _, gameId, nightId) = await SeedNightWithAcceptedFriendAsync();
         var started = await SendAsync(new StartGameNightSessionCommand(nightId, gameId, "Catan", organizer));
-        await StartTheLiveGameAsync(started.LiveSessionId!.Value, organizer);
+        (await LiveStatusAsync(started.LiveSessionId!.Value)).Should().Be(LiveSessionStatus.InProgress,
+            "precondition: the start from the night is the only start");
 
         await SendAsync(new CompleteGameNightSessionCommand(nightId, null, organizer));
         await PublishNightGameCompletedAsync(nightId, started.SessionId, gameId);
@@ -297,20 +467,211 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
         (await LiveStatusAsync(started.LiveSessionId.Value)).Should().Be(LiveSessionStatus.Completed);
     }
 
-    [Fact(DisplayName = "Completing the game from the night leaves a live game nobody started alone")]
-    public async Task CompletingTheGameFromTheNight_LeavesANeverStartedLiveGameAlone()
+    // ── Atomicity (a real database, an injected failure) ─────────────────────
+
+    [Theory(DisplayName = "A start that fails after the inserts leaves no tracking Session, no link and no live game — and can be retried")]
+    [InlineData(InjectedFaultPoint.EndOfTransaction)]
+    [InlineData(InjectedFaultPoint.LiveInsert)]
+    public async Task Start_WhenItFailsPartWay_LeavesNothingBehind_AndCanBeRetried(InjectedFaultPoint point)
+    {
+        // EndOfTransaction: everything is written (tracking Session, link, live game) and the commit never
+        // comes. LiveInsert: the tracking Session and the link are written and the live game is refused —
+        // the half-made state that a live game created in ITS OWN transaction, after the commit, would leave.
+        var (organizer, _, gameId, nightId) = await SeedNightWithAcceptedFriendAsync();
+        _hostFixture.Faults.Arm(point);
+
+        var act = () => SendAsync(new StartGameNightSessionCommand(nightId, gameId, "Catan", organizer));
+
+        (await act.Should().ThrowAsync<InjectedFaultException>()).Which.Message.Should().Contain(point.ToString());
+        (await NightStateAsync(organizer, nightId)).Should().Be(
+            (Tracking: 0, Links: 0, Lives: 0),
+            "the failed start must leave the night exactly as it found it");
+
+        var retried = await SendAsync(new StartGameNightSessionCommand(nightId, gameId, "Catan", organizer));
+
+        retried.LiveSessionId.Should().NotBeNull();
+        (await NightStateAsync(organizer, nightId)).Should().Be((Tracking: 1, Links: 1, Lives: 1));
+    }
+
+    [Theory(DisplayName = "A go-live that fails after the inserts leaves the draft pending with no live game — and can be retried")]
+    [InlineData(InjectedFaultPoint.EndOfTransaction)]
+    [InlineData(InjectedFaultPoint.LiveInsert)]
+    public async Task GoLive_WhenItFailsPartWay_LeavesTheDraftPending_AndCanBeRetried(InjectedFaultPoint point)
+    {
+        // The promotion (link Pending → InProgress) and the live game share one transaction. Were the
+        // promotion committed alone, a failed live game would leave a link InProgress with no live game
+        // behind it, and the next go-live would read it InProgress and take the repair branch.
+        var (organizer, friend, gameId) = await SeedUsersAndGameAsync();
+        var trackingSessionId = await CreateDraftTrackingSessionAsync(organizer, friend, gameId);
+        await SeedNightWithPendingDraftAsync(organizer, gameId, trackingSessionId);
+        _hostFixture.Faults.Arm(point);
+
+        var act = () => SendAsync(new GoLiveSessionCommand(trackingSessionId, organizer));
+
+        (await act.Should().ThrowAsync<InjectedFaultException>()).Which.Message.Should().Contain(point.ToString());
+        (await LinkStatusAsync(trackingSessionId)).Should().Be(nameof(GameNightSessionStatus.Pending),
+            "the promotion must roll back with the live game");
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            (await db.LiveGameSessions.AsNoTracking().CountAsync(l => l.TrackingSessionId == trackingSessionId)).Should().Be(0);
+        }
+
+        var retried = await SendAsync(new GoLiveSessionCommand(trackingSessionId, organizer));
+
+        retried.LiveSessionId.Should().NotBeNull();
+        (await LinkStatusAsync(trackingSessionId)).Should().Be(nameof(GameNightSessionStatus.InProgress));
+        (await LiveStatusAsync(retried.LiveSessionId!.Value)).Should().Be(LiveSessionStatus.InProgress);
+    }
+
+    // ── Concurrency ──────────────────────────────────────────────────────────
+
+    [Fact(DisplayName = "Two starts of the same night at once: exactly one tracking Session, link and live game")]
+    public async Task TwoConcurrentStarts_LeaveExactlyOneOfEach()
     {
         var (organizer, _, gameId, nightId) = await SeedNightWithAcceptedFriendAsync();
-        var started = await SendAsync(new StartGameNightSessionCommand(nightId, gameId, "Catan", organizer));
 
-        await SendAsync(new CompleteGameNightSessionCommand(nightId, null, organizer));
-        await PublishNightGameCompletedAsync(nightId, started.SessionId, gameId);
+        var attempts = await Task.WhenAll(
+            AttemptAsync(() => SendAsync(new StartGameNightSessionCommand(nightId, gameId, "Catan", organizer))),
+            AttemptAsync(() => SendAsync(new StartGameNightSessionCommand(nightId, gameId, "Catan", organizer))));
 
-        (await LiveStatusAsync(started.LiveSessionId!.Value)).Should().Be(LiveSessionStatus.Created,
-            "a live game nobody started has nothing to record and is not 'active' anywhere");
+        attempts.Count(a => a.Error is null).Should().Be(1, "only one of two concurrent starts may win");
+        // The loser is told «a game is already live» — or, in the narrow window where both pass the guard
+        // and the second's INSERT meets the unique index before the xmin check (a known gap: the start has
+        // no 23505 catch, tracked as a follow-up), a DbUpdateException. Never a second game.
+        attempts.Where(a => a.Error is not null).Select(a => a.Error)
+            .Should().AllSatisfy(e => e.Should().Match<Exception>(x =>
+                x is MaxLiveSessionsExceededException || x is DbUpdateException || x is ConflictException));
+        (await NightStateAsync(organizer, nightId)).Should().Be((Tracking: 1, Links: 1, Lives: 1));
+    }
+
+    [Fact(DisplayName = "Two go-lives of the same draft at once: one live game, and every success returns it")]
+    public async Task TwoConcurrentGoLives_LeaveOneLiveGame_AndEverySuccessReturnsIt()
+    {
+        // Promotion and live game used to commit separately: a second go-live that read the link InProgress
+        // between the two took the repair branch and created a SECOND live game for the same draft.
+        var (organizer, friend, gameId) = await SeedUsersAndGameAsync();
+        var trackingSessionId = await CreateDraftTrackingSessionAsync(organizer, friend, gameId);
+        await SeedNightWithPendingDraftAsync(organizer, gameId, trackingSessionId);
+
+        var attempts = await Task.WhenAll(
+            AttemptAsync(() => SendAsync(new GoLiveSessionCommand(trackingSessionId, organizer))),
+            AttemptAsync(() => SendAsync(new GoLiveSessionCommand(trackingSessionId, organizer))),
+            AttemptAsync(() => SendAsync(new GoLiveSessionCommand(trackingSessionId, organizer))));
+
+        var successes = attempts.Where(a => a.Error is null).Select(a => a.Result!.LiveSessionId).ToList();
+        successes.Should().NotBeEmpty("at least one go-live must win");
+        successes.Distinct().Should().ContainSingle("every successful go-live must hand back the same live game");
+        attempts.Where(a => a.Error is not null).Select(a => a.Error)
+            .Should().AllSatisfy(e => e.Should().Match<Exception>(x =>
+                x is MaxLiveSessionsExceededException || x is DbUpdateException || x is ConflictException));
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        (await db.LiveGameSessions.AsNoTracking().CountAsync(l => l.TrackingSessionId == trackingSessionId)).Should().Be(1);
+    }
+
+    // ── Who may adopt a tracking Session ─────────────────────────────────────
+
+    [Fact(DisplayName = "Somebody who neither owns the tracking Session nor organizes its night cannot adopt it into a live game")]
+    public async Task CreateLive_AdoptingSomeoneElsesTrackingSession_IsForbidden()
+    {
+        var (organizer, friend, gameId) = await SeedUsersAndGameAsync();
+        var trackingSessionId = await CreateDraftTrackingSessionAsync(organizer, friend, gameId);
+        Guid stranger;
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            stranger = SeedUser(db, "Estraneo Curioso");
+            await db.SaveChangesAsync();
+        }
+
+        var act = () => SendAsync(new CreateLiveSessionCommand(
+            stranger, "Catan", gameId, ExistingTrackingSessionId: trackingSessionId));
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+        await using var verify = _factory.Services.CreateAsyncScope();
+        var verifyDb = verify.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        (await verifyDb.LiveGameSessions.AsNoTracking().CountAsync(l => l.TrackingSessionId == trackingSessionId))
+            .Should().Be(0, "a refused adoption must not leave a live game on somebody else's Session");
+    }
+
+    [Fact(DisplayName = "The night's organizer can go live on a draft somebody else planned")]
+    public async Task GoLive_ByTheNightsOrganizer_OnADraftAnotherUserPlanned_Works()
+    {
+        // The tracking Session belongs to its planner, the night to its organizer: going live is the
+        // organizer's act, so the ownership check must accept the night's organizer too.
+        var (organizer, planner, gameId) = await SeedUsersAndGameAsync();
+        var trackingSessionId = await CreateDraftTrackingSessionAsync(planner, organizer, gameId);
+        await SeedNightWithPendingDraftAsync(organizer, gameId, trackingSessionId);
+
+        var result = await SendAsync(new GoLiveSessionCommand(trackingSessionId, organizer));
+
+        result.LiveSessionId.Should().NotBeNull();
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var live = await scope.ServiceProvider.GetRequiredService<ILiveSessionRepository>()
+            .GetByIdAsync(result.LiveSessionId!.Value);
+        live!.TrackingSessionId.Should().Be(trackingSessionId);
+        live.CreatedByUserId.Should().Be(organizer);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    private static async Task<(T? Result, Exception? Error)> AttemptAsync<T>(Func<Task<T>> call)
+    {
+        try
+        {
+            return (await call(), null);
+        }
+        catch (Exception ex)
+        {
+            return (default, ex);
+        }
+    }
+
+    private async Task<HttpClient> ClientForAsync(Guid userId)
+    {
+        string token;
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            (_, token) = await TestSessionHelper.CreateUserSessionAsync(db, userId);
+        }
+
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("Cookie", $"{TestSessionHelper.SessionCookieName}={token}");
+        client.DefaultRequestHeaders.Add("X-Test-Session-Token", token);
+        return client;
+    }
+
+    /// <summary>The seat (player id) of each User at the live game's table.</summary>
+    private async Task<Dictionary<Guid, Guid>> SeatsByUserAsync(Guid liveId)
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var live = await scope.ServiceProvider.GetRequiredService<ILiveSessionRepository>().GetByIdAsync(liveId);
+        return live!.Players.Where(p => p.UserId.HasValue).ToDictionary(p => p.UserId!.Value, p => p.Id);
+    }
+
+    private async Task<string> LinkStatusAsync(Guid trackingSessionId)
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        return (await db.GameNightSessions.AsNoTracking().SingleAsync(s => s.SessionId == trackingSessionId)).Status;
+    }
+
+    /// <summary>What a start from <paramref name="nightId"/> leaves behind, counted from the database.</summary>
+    /// <remarks>
+    /// The night's own status is not counted: Published → InProgress is the job of a domain event, and this
+    /// host dispatches none.
+    /// </remarks>
+    private async Task<(int Tracking, int Links, int Lives)> NightStateAsync(Guid organizer, Guid nightId)
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        return (
+            await db.SessionTrackingSessions.AsNoTracking().CountAsync(s => s.UserId == organizer),
+            await db.GameNightSessions.AsNoTracking().CountAsync(s => s.GameNightEventId == nightId),
+            await db.LiveGameSessions.AsNoTracking().CountAsync(l => l.CreatedByUserId == organizer));
+    }
 
     private async Task<T> SendAsync<T>(IRequest<T> request)
     {
@@ -325,9 +686,6 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
         await using var scope = _factory.Services.CreateAsyncScope();
         await scope.ServiceProvider.GetRequiredService<IMediator>().Send(request);
     }
-
-    private Task StartTheLiveGameAsync(Guid liveId, Guid userId) =>
-        SendAsync(new StartLiveSessionCommand(liveId, userId, UserTier.Free, Role.User));
 
     private async Task RecordScoresAsync(Guid liveId, params (Guid UserId, int Score)[] scores)
     {

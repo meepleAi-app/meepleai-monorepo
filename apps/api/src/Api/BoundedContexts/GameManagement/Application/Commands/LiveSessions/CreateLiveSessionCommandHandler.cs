@@ -1,11 +1,14 @@
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
+using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 
@@ -23,17 +26,23 @@ internal class CreateLiveSessionCommandHandler : ICommandHandler<CreateLiveSessi
     private readonly TimeProvider _timeProvider;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICompanionSessionService _companionSessionService;
+    private readonly IGameNightEventRepository _gameNightRepository;
+    private readonly ILogger<CreateLiveSessionCommandHandler> _logger;
 
     public CreateLiveSessionCommandHandler(
         ILiveSessionRepository sessionRepository,
         TimeProvider timeProvider,
         IUnitOfWork unitOfWork,
-        ICompanionSessionService companionSessionService)
+        ICompanionSessionService companionSessionService,
+        IGameNightEventRepository gameNightRepository,
+        ILogger<CreateLiveSessionCommandHandler> logger)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _companionSessionService = companionSessionService ?? throw new ArgumentNullException(nameof(companionSessionService));
+        _gameNightRepository = gameNightRepository ?? throw new ArgumentNullException(nameof(gameNightRepository));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     public async Task<Guid> Handle(CreateLiveSessionCommand command, CancellationToken cancellationToken)
@@ -55,9 +64,16 @@ internal class CreateLiveSessionCommandHandler : ICommandHandler<CreateLiveSessi
         Guid? trackingSessionId = null;
         if (command.ExistingTrackingSessionId is { } existingTrackingSessionId)
         {
-            // #4752: the caller (a game night) already owns the tracking Session. Idempotent by that
-            // id: a retry, or a go-live after a start that already created the live session, gets the
-            // same live session back instead of a second one on the same companion.
+            // #4752: defence in depth. Only the two night handlers pass this, and each has already checked
+            // that the caller is the organizer — but adopting a tracking Session (or, by the idempotency
+            // below, being handed the live game of ANY tracking id) must not rest on every future caller
+            // remembering that check.
+            await EnsureCallerMayAdoptAsync(existingTrackingSessionId, command.UserId, cancellationToken)
+                .ConfigureAwait(false);
+
+            // The caller (a game night) already owns the tracking Session. Idempotent by that id: a retry,
+            // or a go-live after a start that already created the live session, gets the same live session
+            // back instead of a second one on the same companion.
             var existing = await _sessionRepository
                 .GetByTrackingSessionIdAsync(existingTrackingSessionId, cancellationToken)
                 .ConfigureAwait(false);
@@ -89,7 +105,19 @@ internal class CreateLiveSessionCommandHandler : ICommandHandler<CreateLiveSessi
             command.AgentMode,
             trackingSessionId: trackingSessionId);
 
-        SeedInitialPlayers(session, command.InitialPlayers);
+        SeedInitialPlayers(session, command.InitialPlayers, trackingSessionId);
+
+        if (command.StartImmediately)
+        {
+            // The same domain method as POST /live-sessions/{id}/start. It needs a player: with an empty
+            // roster the game stays Created, which is all the domain allows.
+            if (session.HasPlayers)
+                session.Start(_timeProvider);
+            else
+                _logger.LogInformation(
+                    "Live game {LiveSessionId} (tracking session {TrackingSessionId}) has no players and stays Created",
+                    session.Id, trackingSessionId);
+        }
 
         await _sessionRepository.AddAsync(session, cancellationToken).ConfigureAwait(false);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
@@ -98,12 +126,35 @@ internal class CreateLiveSessionCommandHandler : ICommandHandler<CreateLiveSessi
     }
 
     /// <summary>
+    /// The tracking Session to adopt must be the caller's own (the night start creates it a moment earlier,
+    /// in the same transaction) or a sitting of a night the caller organizes (a go-live of a draft that
+    /// someone else planned). Anything else is refused: another user's tracking Session is not theirs to
+    /// take, and neither is the live game that hangs off it.
+    /// </summary>
+    private async Task EnsureCallerMayAdoptAsync(
+        Guid trackingSessionId, Guid userId, CancellationToken cancellationToken)
+    {
+        if (await _companionSessionService.IsOwnedByAsync(trackingSessionId, userId, cancellationToken)
+                .ConfigureAwait(false))
+            return;
+
+        var night = await _gameNightRepository.GetByLinkedSessionIdAsync(trackingSessionId, cancellationToken)
+            .ConfigureAwait(false);
+        if (night is not null && night.OrganizerId == userId)
+            return;
+
+        throw new ForbiddenException("Only the owner of a tracking session, or the organizer of its night, can open its live game.");
+    }
+
+    /// <summary>
     /// Adds the roster in table order. The palette is the real cap on a table (one colour per active
     /// player, and there are fewer colours than <c>MaxPlayers</c>), so a longer roster is truncated
-    /// rather than failing the whole creation; a user already seated is skipped; a display name that
-    /// collides (case-insensitively) gets a numeric suffix, because the domain rejects duplicates.
+    /// rather than failing the whole creation — and says so in the log, with the counts and no names; a
+    /// user already seated is skipped; a display name that collides (case-insensitively) gets a numeric
+    /// suffix, because the domain rejects duplicates.
     /// </summary>
-    private void SeedInitialPlayers(LiveGameSession session, IReadOnlyList<LiveSessionInitialPlayer>? players)
+    private void SeedInitialPlayers(
+        LiveGameSession session, IReadOnlyList<LiveSessionInitialPlayer>? players, Guid? trackingSessionId)
     {
         if (players is null || players.Count == 0)
             return;
@@ -112,17 +163,28 @@ internal class CreateLiveSessionCommandHandler : ICommandHandler<CreateLiveSessi
         var seatedUsers = new HashSet<Guid>();
         var usedNames = new HashSet<string>(StringComparer.Ordinal);
         var colorIndex = 0;
+        var excluded = 0;
 
         foreach (var player in players)
         {
             if (colorIndex >= colors.Length)
-                break;
+            {
+                excluded++;
+                continue;
+            }
 
             if (player.UserId is { } userId && !seatedUsers.Add(userId))
                 continue;
 
             var name = UniqueDisplayName(player.DisplayName, usedNames);
             session.AddPlayer(player.UserId, name, colors[colorIndex++], _timeProvider);
+        }
+
+        if (excluded > 0)
+        {
+            _logger.LogWarning(
+                "Live game {LiveSessionId} (tracking session {TrackingSessionId}): {Requested} players asked, {Seated} seated, {Excluded} left out for want of a colour",
+                session.Id, trackingSessionId, players.Count, colorIndex, excluded);
         }
     }
 

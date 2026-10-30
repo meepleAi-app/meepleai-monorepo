@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
+using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 using Api.Observability;
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
@@ -533,6 +534,11 @@ internal static class LiveSessionEndpoints
         CancellationToken cancellationToken)
     {
         await mediator.Send(new CompleteLiveSessionCommand(sessionId), cancellationToken).ConfigureAwait(false);
+
+        // #4752: a live game played from a game night closes that night's sitting too. A separate
+        // command (best-effort, see its summary) because it opens its own transaction; a game that
+        // belongs to no night is a no-op.
+        await mediator.Send(new CompleteNightLinkForLiveSessionCommand(sessionId), cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
 

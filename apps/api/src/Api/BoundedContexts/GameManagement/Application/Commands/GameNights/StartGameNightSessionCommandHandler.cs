@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.Authentication.Application.Queries;
+using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Exceptions;
@@ -7,6 +8,7 @@ using Api.BoundedContexts.GameToolbox.Application.Commands;
 using Api.BoundedContexts.GameToolbox.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.DTOs;
+using Api.BoundedContexts.SessionTracking.Domain.Exceptions;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -20,6 +22,13 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 /// Handles starting a game session within a game night event.
 /// Cross-BC communication: dispatches CreateSessionCommand to SessionTracking BC via MediatR,
 /// then links the resulting session to the GameNightEvent aggregate.
+///
+/// <para>#4752 (the night → live game bridge, ADR-083 Direction A): in the SAME transaction it also
+/// creates the <c>LiveGameSession</c> — the in-play aggregate where players, scores, turns and the
+/// assistant live — through the one creation funnel (<see cref="CreateLiveSessionCommand"/>), adopting
+/// the tracking Session this handler just created as the live session's companion and seeding the
+/// players from the night's roster. The night's link keeps pointing at the tracking Session; the live
+/// session is reached from it (<c>LiveGameSession.TrackingSessionId</c>), so no column is added.</para>
 ///
 /// If the command provides no participants, the handler auto-seeds the organizer
 /// (looked up via Authentication.GetUserByIdQuery) as the sole owner participant.
@@ -92,8 +101,33 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
                     StateTier: command.StateTier,
                     SkipGameNightEnvelope: true), ct).ConfigureAwait(false);
 
-                var gns = gameNight.AddSession(createResult.SessionId, command.GameId, command.GameTitle);
-                gameNight.StartCurrentSession();
+                GameNightSession gns;
+                try
+                {
+                    gns = gameNight.AddSession(createResult.SessionId, command.GameId, command.GameTitle);
+                    gameNight.StartCurrentSession();
+                }
+                catch (InvalidOperationException ex)
+                {
+                    // The aggregate's own guards (a night that cannot take sessions, the cap on
+                    // non-terminal sessions) speak to the user, so they stay a 409 with their message.
+                    // Only these two calls are in the catch (#4752): an InvalidOperationException from
+                    // EF or Npgsql anywhere else in this handler is NOT a conflict, and must neither
+                    // become a 409 nor leak its message to the player.
+                    throw new ConflictException(ex.Message);
+                }
+
+                // #4752: the live game, in the same transaction. Same funnel as the wizard
+                // (CreateLiveSessionCommand), adopting the tracking Session created above as its
+                // companion and seeding the roster in table order (the organizer first, who becomes
+                // the Host). A failure here rolls the whole start back: no night link, no tracking
+                // Session and no live session are left half made.
+                var liveSessionId = await _mediator.Send(new CreateLiveSessionCommand(
+                    command.UserId,
+                    command.GameTitle,
+                    command.GameId,
+                    ExistingTrackingSessionId: createResult.SessionId,
+                    InitialPlayers: ToInitialPlayers(participants)), ct).ConfigureAwait(false);
 
                 await _repository.UpdateAsync(gameNight, ct).ConfigureAwait(false);
                 // The xmin race is detected by the SaveChanges inside ExecuteInTransactionAsync
@@ -101,7 +135,7 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
                 // Session INSERT is rolled back with it.
 
                 return new StartGameNightSessionResult(
-                    createResult.SessionId, gns.Id, createResult.SessionCode, gns.PlayOrder);
+                    createResult.SessionId, gns.Id, createResult.SessionCode, gns.PlayOrder, liveSessionId);
             }, cancellationToken).ConfigureAwait(false);
         }
         catch (DbUpdateConcurrencyException)
@@ -110,8 +144,9 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
             // back — no orphan — and maps to the same blocked-modal 409 instead of an uncaught 500.
             throw new MaxLiveSessionsExceededException(command.GameNightId);
         }
-        catch (InvalidOperationException ex)
+        catch (SessionQuotaExceededException ex)
         {
+            // The quota message is written for the player (limit and tier): it stays a 409 with it.
             throw new ConflictException(ex.Message);
         }
 
@@ -128,6 +163,17 @@ internal sealed class StartGameNightSessionCommandHandler : ICommandHandler<Star
 
         return result;
     }
+
+    /// <summary>
+    /// The seating order of the live game: the owner first (the first seat is the Host), then the
+    /// rest by join order. Mirrors the roster the tracking Session was created with.
+    /// </summary>
+    private static List<LiveSessionInitialPlayer> ToInitialPlayers(IEnumerable<ParticipantDto> participants) =>
+        participants
+            .OrderBy(p => p.IsOwner ? 0 : 1)
+            .ThenBy(p => p.JoinOrder)
+            .Select(p => new LiveSessionInitialPlayer(p.UserId, p.DisplayName))
+            .ToList();
 
     private async Task TryApplyToolboxTemplateAsync(Guid gameId, CancellationToken cancellationToken)
     {

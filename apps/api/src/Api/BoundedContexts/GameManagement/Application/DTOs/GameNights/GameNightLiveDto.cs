@@ -60,4 +60,9 @@ public sealed record GameNightSessionDto(
     // session has no winner (or it could not be resolved).
     string? WinnerName,
     DateTimeOffset? StartedAt,
-    DateTimeOffset? CompletedAt);
+    DateTimeOffset? CompletedAt,
+    // #4752 (the night → live game bridge): the LiveGameSession where the table plays this sitting —
+    // the FE links the card to /sessions/{LiveSessionId}/live. Resolved from the tracking Session the
+    // link points at (LiveGameSession.TrackingSessionId); null for a sitting that has no live game
+    // (a draft not yet taken live, or one that predates the bridge).
+    Guid? LiveSessionId = null);

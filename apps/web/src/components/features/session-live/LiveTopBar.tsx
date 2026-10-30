@@ -90,7 +90,7 @@ const STATUS_LABEL_KEY = {
 const STATUS_CHIP_CLASS: Record<LiveTopBarProps['status'], string> = {
   InProgress: 'bg-emerald-500/20 text-emerald-300',
   Paused: 'bg-amber-500/20 text-amber-300',
-  Completed: 'bg-muted text-muted-foreground',
+  Completed: 'bg-muted text-foreground',
 };
 
 // G4 — pip color tokens per connection state (entity colors).

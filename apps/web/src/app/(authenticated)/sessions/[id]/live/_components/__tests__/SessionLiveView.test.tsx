@@ -2454,7 +2454,10 @@ describe('SessionLiveView — #4750: creator as host, concluded session', () => 
 
     expect(topBarOf(container)).toHaveAttribute('data-viewer-role', 'Host');
     expect(slotIn(container, 'endgame')).toBeInTheDocument();
-    expect(slotIn(container, 'pause')).toBeInTheDocument();
+    expect(slotIn(container, 'endgame')).not.toHaveAttribute('aria-disabled');
+    // The bar never gets `onPause`/`onResume` from this view (follow-up): the button shows, dimmed
+    // and inert. Pinned as such, so it is not read as a working control.
+    expect(slotIn(container, 'pause')).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('a user who did not create the session and is linked to no player stays a player', () => {

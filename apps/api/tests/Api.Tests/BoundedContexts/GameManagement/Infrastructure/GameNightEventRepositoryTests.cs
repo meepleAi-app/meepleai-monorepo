@@ -292,4 +292,18 @@ public sealed class GameNightEventRepositoryTests : IDisposable
 
         Assert.Equal(newest.Id, Assert.Single(result).Id);
     }
+
+    [Fact]
+    public async Task GetCompletedAsync_AppliesTheUserFilterBeforeTheLimit()
+    {
+        var viewer = Guid.NewGuid();
+        var stranger = Guid.NewGuid();
+        var mine = SeedNight(viewer, null, "Completed", DateTimeOffset.UtcNow.AddDays(-20));
+        SeedNight(stranger, null, "Completed", DateTimeOffset.UtcNow.AddDays(-1));
+        SeedNight(stranger, null, "Completed", DateTimeOffset.UtcNow.AddDays(-2));
+
+        var result = await _repository.GetCompletedAsync(viewer, 1, TestContext.Current.CancellationToken);
+
+        Assert.Equal(mine.Id, Assert.Single(result).Id);
+    }
 }

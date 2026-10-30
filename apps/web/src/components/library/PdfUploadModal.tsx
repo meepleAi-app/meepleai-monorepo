@@ -81,8 +81,12 @@ export function PdfUploadModal({
   const [isValidating, setIsValidating] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   // #4756: its own state, because the effect below resets the rest when the modal closes and the
-  // proposal is made right as it does.
-  const [ownershipOpen, setOwnershipOpen] = useState(false);
+  // proposal is made right as it does. It holds the game the PDF went to: the props may name
+  // another one by the time the library answers.
+  const [ownershipTarget, setOwnershipTarget] = useState<{
+    gameId: string;
+    gameTitle: string;
+  } | null>(null);
   const queryClient = useQueryClient();
   // #4449: the backend's size limit for this user, not a constant of this component.
   const { data: uploadLimits } = usePdfUploadLimits();
@@ -195,13 +199,16 @@ export function PdfUploadModal({
       toast.success(`PDF "${file.name}" caricato con successo per "${gameTitle}"!`);
       onUploadSuccess?.();
 
-      // #4756: propose, never write, the ownership declaration the new rulebook depends on.
-      const proposeOwnership = await libraryEntryLacksManualAccess(gameId);
+      // #4756: propose, never write, the ownership declaration the new rulebook depends on. The
+      // lookup runs alongside the delay and never rejects, so it cannot hold the modal open.
+      const ownershipLookup = libraryEntryLacksManualAccess(gameId);
 
       // Close modal after short delay
       setTimeout(() => {
         handleClose();
-        if (proposeOwnership) setOwnershipOpen(true);
+        void ownershipLookup.then(propose => {
+          if (propose) setOwnershipTarget({ gameId, gameTitle });
+        });
       }, 500);
     } catch (error) {
       const errorMessage =
@@ -229,10 +236,10 @@ export function PdfUploadModal({
   // #4756: the manual may still be processing, so this does not promise the assistant can read it.
   const handleOwnershipDeclared = useCallback(() => {
     toast.success(
-      `Possesso di "${gameTitle}" dichiarato. L'assistente potrà consultare il manuale appena sarà elaborato.`
+      `Possesso di "${ownershipTarget?.gameTitle ?? gameTitle}" dichiarato. L'assistente potrà consultare il manuale appena sarà elaborato.`
     );
     void queryClient.invalidateQueries({ queryKey: libraryKeys.all });
-  }, [gameTitle, queryClient]);
+  }, [ownershipTarget, gameTitle, queryClient]);
 
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return bytes + ' B';
@@ -435,10 +442,12 @@ export function PdfUploadModal({
         </DialogContent>
       </Dialog>
       <OwnershipDeclarationDialog
-        gameId={gameId}
-        gameName={gameTitle}
-        open={ownershipOpen}
-        onOpenChange={setOwnershipOpen}
+        gameId={ownershipTarget?.gameId ?? gameId}
+        gameName={ownershipTarget?.gameTitle ?? gameTitle}
+        open={ownershipTarget !== null}
+        onOpenChange={open => {
+          if (!open) setOwnershipTarget(null);
+        }}
         onOwnershipDeclared={handleOwnershipDeclared}
       />
     </>

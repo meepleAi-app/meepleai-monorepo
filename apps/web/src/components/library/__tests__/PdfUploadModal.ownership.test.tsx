@@ -1,9 +1,10 @@
 /**
- * PdfUploadModal Component Tests
+ * PdfUploadModal — ownership proposal after an upload (#4756)
  *
- * #4756: after an upload the modal proposes the ownership declaration, because without it the
- * rulebook the user just uploaded stays closed to the assistant (RagAccessService). It proposes
- * and writes nothing: the declaration is the user's explicit act.
+ * After an upload the modal proposes the ownership declaration, because without it the rulebook
+ * the user just uploaded stays closed to the assistant (RagAccessService). It proposes and writes
+ * nothing: the declaration is the user's explicit act. Validation, preview and closing are in
+ * `__tests__/components/library/PdfUploadModal.test.tsx`.
  */
 
 import { useState } from 'react';
@@ -57,11 +58,19 @@ vi.mock('@/components/pdf', () => ({
 // Helpers
 // ============================================================================
 
-const GAME_ID = 'game-1';
+interface Game {
+  gameId: string;
+  gameTitle: string;
+}
+
+const CATAN: Game = { gameId: 'game-1', gameTitle: 'Catan' };
+const AZUL: Game = { gameId: 'game-2', gameTitle: 'Azul' };
 
 function libraryEntry(overrides: { hasRagAccess: boolean; currentState: string }) {
-  return { id: 'entry-1', gameId: GAME_ID, gameTitle: 'Catan', ...overrides };
+  return { id: 'entry-1', gameId: CATAN.gameId, gameTitle: CATAN.gameTitle, ...overrides };
 }
+
+const WITHOUT_ACCESS = { hasRagAccess: false, currentState: 'Nuovo' };
 
 const OWNERSHIP_RESULT = {
   gameState: 'Owned',
@@ -71,14 +80,22 @@ const OWNERSHIP_RESULT = {
   isRagPublic: false,
 };
 
-function Harness({ onUploadSuccess }: { onUploadSuccess?: () => void }) {
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>(res => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
+function Harness({ game, onUploadSuccess }: { game: Game; onUploadSuccess?: () => void }) {
   const [isOpen, setIsOpen] = useState(true);
   return (
     <PdfUploadModal
       isOpen={isOpen}
       onClose={() => setIsOpen(false)}
-      gameId={GAME_ID}
-      gameTitle="Catan"
+      gameId={game.gameId}
+      gameTitle={game.gameTitle}
       onUploadSuccess={onUploadSuccess}
     />
   );
@@ -87,12 +104,13 @@ function Harness({ onUploadSuccess }: { onUploadSuccess?: () => void }) {
 function renderModal(onUploadSuccess?: () => void) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const invalidateQueries = vi.spyOn(queryClient, 'invalidateQueries');
-  render(
+  const tree = (game: Game) => (
     <QueryClientProvider client={queryClient}>
-      <Harness onUploadSuccess={onUploadSuccess} />
+      <Harness game={game} onUploadSuccess={onUploadSuccess} />
     </QueryClientProvider>
   );
-  return { invalidateQueries };
+  const { rerender } = render(tree(CATAN));
+  return { invalidateQueries, switchGameTo: (game: Game) => rerender(tree(game)) };
 }
 
 async function uploadAPdf() {
@@ -112,6 +130,11 @@ async function waitForTheUploadModalToClose() {
   });
 }
 
+const ownershipToasts = () =>
+  mockToastSuccess.mock.calls
+    .map(call => String(call[0]))
+    .filter(text => text.includes('Possesso'));
+
 // ============================================================================
 // Tests
 // ============================================================================
@@ -123,16 +146,15 @@ describe('PdfUploadModal — ownership proposal after upload (#4756)', () => {
     mockDeclareOwnership.mockResolvedValue(OWNERSHIP_RESULT);
   });
 
-  it('proposes the declaration, and writes nothing, when the library entry cannot read the manual', async () => {
-    mockGetGameDetail.mockResolvedValue(
-      libraryEntry({ hasRagAccess: false, currentState: 'Nuovo' })
-    );
+  it('proposes the declaration, after the upload modal is gone, and writes nothing', async () => {
+    mockGetGameDetail.mockResolvedValue(libraryEntry(WITHOUT_ACCESS));
     renderModal();
 
     await uploadAPdf();
 
     expect(await screen.findByRole('alertdialog', {}, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.getByText(/Possiedi Catan\?/)).toBeInTheDocument();
+    expect(screen.queryByTestId('pdf-upload-modal')).not.toBeInTheDocument();
     expect(mockDeclareOwnership).not.toHaveBeenCalled();
   });
 
@@ -169,9 +191,7 @@ describe('PdfUploadModal — ownership proposal after upload (#4756)', () => {
 
   it('does not look at the library entry, and proposes nothing, when the upload fails', async () => {
     mockUploadPdf.mockRejectedValue(new Error('Upload failed'));
-    mockGetGameDetail.mockResolvedValue(
-      libraryEntry({ hasRagAccess: false, currentState: 'Nuovo' })
-    );
+    mockGetGameDetail.mockResolvedValue(libraryEntry(WITHOUT_ACCESS));
     renderModal();
 
     await uploadAPdf();
@@ -181,10 +201,37 @@ describe('PdfUploadModal — ownership proposal after upload (#4756)', () => {
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 
+  it('closes on time even when the library lookup never answers, and proposes nothing', async () => {
+    mockGetGameDetail.mockReturnValue(new Promise(() => {}));
+    const onUploadSuccess = vi.fn();
+    renderModal(onUploadSuccess);
+
+    await uploadAPdf();
+    await waitForTheUploadModalToClose();
+
+    expect(onUploadSuccess).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  });
+
+  it('proposes for the game that was uploaded to, even if the props change before the lookup answers', async () => {
+    const lookup = deferred<ReturnType<typeof libraryEntry>>();
+    mockGetGameDetail.mockReturnValue(lookup.promise);
+    const { switchGameTo } = renderModal();
+    const user = await uploadAPdf();
+    await waitForTheUploadModalToClose();
+
+    switchGameTo(AZUL);
+    lookup.resolve(libraryEntry(WITHOUT_ACCESS));
+
+    expect(await screen.findByText(/Possiedi Catan\?/)).toBeInTheDocument();
+    await user.click(screen.getByTestId('ownership-checkbox'));
+    await user.click(screen.getByRole('button', { name: /Conferma Possesso/i }));
+    await waitFor(() => expect(mockDeclareOwnership).toHaveBeenCalledWith(CATAN.gameId));
+    expect(mockDeclareOwnership).not.toHaveBeenCalledWith(AZUL.gameId);
+  });
+
   it('declining leaves the upload in place and declares nothing', async () => {
-    mockGetGameDetail.mockResolvedValue(
-      libraryEntry({ hasRagAccess: false, currentState: 'Nuovo' })
-    );
+    mockGetGameDetail.mockResolvedValue(libraryEntry(WITHOUT_ACCESS));
     renderModal();
     const user = await uploadAPdf();
     await screen.findByRole('alertdialog', {}, { timeout: 3000 });
@@ -197,9 +244,7 @@ describe('PdfUploadModal — ownership proposal after upload (#4756)', () => {
   });
 
   it('confirming declares ownership, refreshes the library, and does not say the manual is readable yet', async () => {
-    mockGetGameDetail.mockResolvedValue(
-      libraryEntry({ hasRagAccess: false, currentState: 'Nuovo' })
-    );
+    mockGetGameDetail.mockResolvedValue(libraryEntry(WITHOUT_ACCESS));
     const { invalidateQueries } = renderModal();
     const user = await uploadAPdf();
     await screen.findByRole('alertdialog', {}, { timeout: 3000 });
@@ -207,12 +252,10 @@ describe('PdfUploadModal — ownership proposal after upload (#4756)', () => {
     await user.click(screen.getByTestId('ownership-checkbox'));
     await user.click(screen.getByRole('button', { name: /Conferma Possesso/i }));
 
-    await waitFor(() => expect(mockDeclareOwnership).toHaveBeenCalledWith(GAME_ID));
+    await waitFor(() => expect(mockDeclareOwnership).toHaveBeenCalledWith(CATAN.gameId));
     await waitFor(() => expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['library'] }));
-    const message = mockToastSuccess.mock.calls
-      .map(call => String(call[0]))
-      .find(text => text.includes('Possesso'));
-    expect(message).toMatch(/appena sarà elaborato/);
-    expect(message).not.toMatch(/non c'è ancora|può consultare/);
+    expect(ownershipToasts()).toHaveLength(1);
+    expect(ownershipToasts()[0]).toMatch(/Catan.*appena sarà elaborato/);
+    expect(ownershipToasts()[0]).not.toMatch(/non c'è ancora|può consultare/);
   });
 });

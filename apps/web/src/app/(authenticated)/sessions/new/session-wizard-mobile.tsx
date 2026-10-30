@@ -36,13 +36,20 @@ import {
 import { useRouter } from 'next/navigation';
 
 import { GamePicker } from '@/components/features/game-picker';
+import { AddSelfButton, OptOutButton, SelfBadge } from '@/components/session/SelfPlayerControls';
 import { GradientButton } from '@/components/ui/buttons/GradientButton';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { useKbGameDocuments } from '@/hooks/queries/useGameDocuments';
+import { linkedFirst, ownUserId, useSelfPlayer } from '@/hooks/useSelfPlayer';
 import { api } from '@/lib/api';
 import type { PhaseTemplateDto } from '@/lib/api/clients/gamesClient';
 import type { PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
+import {
+  duplicatePlayerNameMessage,
+  findDuplicatePlayerName,
+  nextDefaultPlayerName,
+} from '@/lib/sessions/player-names';
 import { cn } from '@/lib/utils';
 
 import { KbSelectionStep } from './KbSelectionStep';
@@ -53,6 +60,8 @@ interface WizardPlayer {
   id: string;
   displayName: string;
   color: PlayerColor;
+  /** Set only for the creator's own entry (#4750): the other players are written by name. */
+  userId?: string;
 }
 
 interface WizardPhase {
@@ -80,6 +89,16 @@ const COLOR_PALETTE: { value: PlayerColor; label: string; hex: string; className
   { value: 'Orange', label: 'Arancione', hex: '#f97316', className: 'bg-orange-500' },
 ];
 
+const PLACEHOLDER_PLAYER_ID = 'p-placeholder';
+const SELF_PLAYER_ID = 'p-self';
+
+// Local ids key the list and map each player to the id the server gives back. Not the clock: two
+// players added in the same millisecond would share one, and the turn order would repeat a player.
+let playerCounter = 0;
+function nextPlayerId(): string {
+  return `p-${++playerCounter}`;
+}
+
 const STEP_ICONS: Record<WizardStep, React.ElementType> = {
   1: Gamepad2,
   2: Users,
@@ -96,8 +115,9 @@ export function SessionWizardMobile({
   const [step, setStep] = useState<WizardStep>(prefilledGameId ? 2 : 1);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(prefilledGameId ?? null);
   const [selectedGameName, setSelectedGameName] = useState(prefilledGameName ?? '');
+  const self = useSelfPlayer();
   const [players, setPlayers] = useState<WizardPlayer[]>([
-    { id: `p-${Date.now()}`, displayName: 'Giocatore 1', color: 'Red' },
+    { id: PLACEHOLDER_PLAYER_ID, displayName: 'Giocatore 1', color: 'Red' },
   ]);
   const [newPlayerName, setNewPlayerName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
@@ -135,6 +155,25 @@ export function SessionWizardMobile({
       .finally(() => setIsLoadingPhases(false));
   }, [selectedGameId]);
 
+  // #4750: the creator is the first player, linked to their account. The user is usually known
+  // on the first render; when it arrives later it replaces the untouched placeholder, and only
+  // that: any other list is the user's (players already written, or «Io non gioco»).
+  useEffect(() => {
+    if (!self) return;
+    setPlayers(prev =>
+      prev.length === 1 && prev[0].id === PLACEHOLDER_PLAYER_ID
+        ? [
+            {
+              id: SELF_PLAYER_ID,
+              displayName: self.displayName,
+              color: prev[0].color,
+              userId: self.userId,
+            },
+          ]
+        : prev
+    );
+  }, [self]);
+
   // Color helpers
   const usedColors = players.map(p => p.color);
   const nextAvailableColor =
@@ -142,13 +181,32 @@ export function SessionWizardMobile({
 
   // Player management
   const addPlayer = useCallback(() => {
-    const name = newPlayerName.trim() || `Giocatore ${players.length + 1}`;
+    const name = newPlayerName.trim() || nextDefaultPlayerName(players.map(p => p.displayName));
     setPlayers(prev => [
       ...prev,
-      { id: `p-${Date.now()}`, displayName: name, color: nextAvailableColor },
+      { id: nextPlayerId(), displayName: name, color: nextAvailableColor },
     ]);
     setNewPlayerName('');
-  }, [newPlayerName, players.length, nextAvailableColor]);
+  }, [newPlayerName, players, nextAvailableColor]);
+
+  const selfInList = !!self && players.some(p => p.userId === self.userId);
+
+  const addSelf = useCallback(() => {
+    if (!self) return;
+    setPlayers(prev =>
+      prev.some(p => p.userId === self.userId)
+        ? prev
+        : [
+            ...prev,
+            {
+              id: SELF_PLAYER_ID,
+              displayName: self.displayName,
+              color: nextAvailableColor,
+              userId: self.userId,
+            },
+          ]
+    );
+  }, [self, nextAvailableColor]);
 
   const removePlayer = useCallback((id: string) => {
     setPlayers(prev => prev.filter(p => p.id !== id));
@@ -205,16 +263,22 @@ export function SessionWizardMobile({
         gameId: selectedGameId ?? undefined,
       });
 
-      // 2. Add all players in turn order — collect returned playerIds
+      // 2. Add all players — collect returned playerIds. The creator goes first wherever they sit
+      // in the turn order: the server makes the first player the Host (#4750). The turn order is
+      // set below from the list, whatever order the players were added in.
       const addedPlayerIds: string[] = [];
-      for (const player of players) {
+      const playerIdByLocalId = new Map<string, string>();
+      const toAdd = players.map(p => ({ ...p, userId: ownUserId(p.userId, self) }));
+      for (const player of linkedFirst(toAdd)) {
         try {
           const playerId = await api.liveSessions.addPlayer(sessionId, {
             displayName: player.displayName,
             color: player.color,
+            ...(player.userId ? { userId: player.userId } : {}),
           });
           if (playerId && typeof playerId === 'string') {
             addedPlayerIds.push(playerId);
+            playerIdByLocalId.set(player.id, playerId);
           }
         } catch (playerErr) {
           const failedName = player.displayName;
@@ -229,10 +293,13 @@ export function SessionWizardMobile({
         }
       }
 
-      // 3. Set turn order — order of addedPlayerIds matches user-defined order from step 3
-      if (addedPlayerIds.length > 1) {
+      // 3. Set turn order — the user-defined order from step 3
+      const orderedPlayerIds = players
+        .map(p => playerIdByLocalId.get(p.id))
+        .filter((id): id is string => !!id);
+      if (orderedPlayerIds.length > 1) {
         try {
-          await api.liveSessions.updateTurnOrder(sessionId, { playerIds: addedPlayerIds });
+          await api.liveSessions.updateTurnOrder(sessionId, { playerIds: orderedPlayerIds });
         } catch {
           // Non-blocking — session proceeds with default order
         }
@@ -258,11 +325,13 @@ export function SessionWizardMobile({
     } finally {
       setIsCreating(false);
     }
-  }, [selectedGameName, selectedGameId, players, phases, router]);
+  }, [selectedGameName, selectedGameId, players, self, phases, router]);
 
   // Navigation
   const canProceedStep1 = !!selectedGameName;
-  const canProceedStep2 = players.length > 0;
+  // The server refuses two players with the same name: say so before the session exists.
+  const duplicateName = findDuplicatePlayerName(players.map(p => p.displayName));
+  const canProceedStep2 = players.length > 0 && !duplicateName;
 
   return (
     <div className="flex flex-col min-h-[60vh]">
@@ -370,6 +439,7 @@ export function SessionWizardMobile({
             <div className="space-y-2" role="list" aria-label="Lista giocatori">
               {players.map(player => {
                 const colorInfo = COLOR_PALETTE.find(c => c.value === player.color);
+                const isSelf = !!self && player.userId === self.userId;
                 return (
                   <div
                     key={player.id}
@@ -384,10 +454,20 @@ export function SessionWizardMobile({
                       )}
                     />
 
-                    {/* Name */}
-                    <span className="flex-1 font-medium text-sm truncate">
-                      {player.displayName}
-                    </span>
+                    {/* Name — the creator's own entry carries «Tu» and the way out (#4750) */}
+                    {isSelf ? (
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm truncate">{player.displayName}</span>
+                          <SelfBadge />
+                        </div>
+                        <OptOutButton onClick={() => removePlayer(player.id)} />
+                      </div>
+                    ) : (
+                      <span className="flex-1 font-medium text-sm truncate">
+                        {player.displayName}
+                      </span>
+                    )}
 
                     {/* Color selector */}
                     <div className="flex gap-1">
@@ -411,15 +491,17 @@ export function SessionWizardMobile({
                         ))}
                     </div>
 
-                    {/* Remove */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removePlayer(player.id)}
-                      aria-label={`Rimuovi ${player.displayName}`}
-                    >
-                      <Trash2 className="h-4 w-4 text-muted-foreground" />
-                    </Button>
+                    {/* Remove — «Io non gioco» does this for the creator's own entry */}
+                    {!isSelf && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removePlayer(player.id)}
+                        aria-label={`Rimuovi ${player.displayName}`}
+                      >
+                        <Trash2 className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    )}
                   </div>
                 );
               })}
@@ -440,6 +522,15 @@ export function SessionWizardMobile({
                 Aggiungi
               </Button>
             </div>
+
+            {duplicateName && (
+              <p className="text-sm text-destructive" role="status">
+                {duplicatePlayerNameMessage(duplicateName)}
+              </p>
+            )}
+
+            {/* The creator opted out and wants back in (#4750) */}
+            {self && !selfInList && <AddSelfButton onClick={addSelf} className="w-full" />}
 
             {/* Navigation */}
             <div className="flex gap-3">

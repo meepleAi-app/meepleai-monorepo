@@ -38,6 +38,15 @@ export function useSelfPlayer(): SelfPlayer | null {
 }
 
 /**
+ * Il collegamento che un posto può mandare al server: solo se è dell'utente corrente. L'utente
+ * può cambiare dopo che il posto è stato seminato (un altro account dopo un refetch): il posto
+ * non è più suo, perde la targhetta e «Io non gioco», e non deve partire con lo userId di prima.
+ */
+export function ownUserId(userId: string | undefined, self: SelfPlayer | null): string | undefined {
+  return self && userId === self.userId ? userId : undefined;
+}
+
+/**
  * Il giocatore collegato va aggiunto per primo: `LiveGameSession.AddPlayer` dà il ruolo Host a
  * chi entra per primo, e il riepilogo e il toolkit leggono quel ruolo per indicare il
  * proprietario. L'ordine dei turni è un'altra cosa, e lo fissa `updateTurnOrder`.

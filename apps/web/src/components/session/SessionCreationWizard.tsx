@@ -24,7 +24,7 @@ import { AddSelfButton, OptOutButton, SelfBadge } from '@/components/session/Sel
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
-import { useSelfPlayer, type SelfPlayer } from '@/hooks/useSelfPlayer';
+import { ownUserId, useSelfPlayer, type SelfPlayer } from '@/hooks/useSelfPlayer';
 import { trackSessionCreated } from '@/lib/analytics/flywheel-events';
 import { api } from '@/lib/api';
 import type {
@@ -352,7 +352,7 @@ function AddPlayersStep({
       </div>
 
       {duplicateName && (
-        <p className="text-sm text-destructive" role="alert">
+        <p className="text-sm text-destructive" role="status">
           {duplicatePlayerNameMessage(duplicateName)}
         </p>
       )}
@@ -510,10 +510,11 @@ export function SessionCreationWizard() {
       // Add players after session creation. The linked creator is first in the list (seeded, and
       // re-added, at the front), so the server makes them the Host (#4750).
       for (const player of players) {
+        const userId = ownUserId(player.userId, self);
         await api.liveSessions.addPlayer(sessionId, {
           displayName: player.displayName,
           color: player.color,
-          ...(player.userId ? { userId: player.userId } : {}),
+          ...(userId ? { userId } : {}),
         });
       }
 
@@ -532,7 +533,7 @@ export function SessionCreationWizard() {
       setError(err instanceof Error ? err.message : 'Errore nella creazione della sessione');
       setIsCreating(false);
     }
-  }, [gameName, selectedGame, dimensions, players, router]);
+  }, [gameName, selectedGame, dimensions, players, self, router]);
 
   return (
     <div className="mx-auto max-w-lg space-y-6">

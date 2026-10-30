@@ -41,7 +41,7 @@ import { GradientButton } from '@/components/ui/buttons/GradientButton';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { useKbGameDocuments } from '@/hooks/queries/useGameDocuments';
-import { linkedFirst, useSelfPlayer } from '@/hooks/useSelfPlayer';
+import { linkedFirst, ownUserId, useSelfPlayer } from '@/hooks/useSelfPlayer';
 import { api } from '@/lib/api';
 import type { PhaseTemplateDto } from '@/lib/api/clients/gamesClient';
 import type { PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
@@ -268,7 +268,8 @@ export function SessionWizardMobile({
       // set below from the list, whatever order the players were added in.
       const addedPlayerIds: string[] = [];
       const playerIdByLocalId = new Map<string, string>();
-      for (const player of linkedFirst(players)) {
+      const toAdd = players.map(p => ({ ...p, userId: ownUserId(p.userId, self) }));
+      for (const player of linkedFirst(toAdd)) {
         try {
           const playerId = await api.liveSessions.addPlayer(sessionId, {
             displayName: player.displayName,
@@ -324,7 +325,7 @@ export function SessionWizardMobile({
     } finally {
       setIsCreating(false);
     }
-  }, [selectedGameName, selectedGameId, players, phases, router]);
+  }, [selectedGameName, selectedGameId, players, self, phases, router]);
 
   // Navigation
   const canProceedStep1 = !!selectedGameName;
@@ -523,7 +524,7 @@ export function SessionWizardMobile({
             </div>
 
             {duplicateName && (
-              <p className="text-sm text-destructive" role="alert">
+              <p className="text-sm text-destructive" role="status">
                 {duplicatePlayerNameMessage(duplicateName)}
               </p>
             )}

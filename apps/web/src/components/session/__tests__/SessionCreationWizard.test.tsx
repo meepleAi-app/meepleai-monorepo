@@ -273,7 +273,7 @@ describe('SessionCreationWizard — #4750: seme e nomi', () => {
 
       addPlayerNamed(' marco rossi ');
 
-      expect(screen.getByRole('alert')).toHaveTextContent(
+      expect(screen.getByRole('status')).toHaveTextContent(
         'Due giocatori si chiamano «marco rossi»'
       );
       expect(screen.getByRole('button', { name: 'Avanti' })).toBeDisabled();
@@ -283,7 +283,7 @@ describe('SessionCreationWizard — #4750: seme e nomi', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Rimuovi marco rossi' }));
 
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Avanti' })).toBeEnabled();
     });
 
@@ -303,5 +303,45 @@ describe('SessionCreationWizard — #4750: seme e nomi', () => {
         userId: 'user-x',
       });
     });
+  });
+});
+
+// ── #4750 (secondo giro di revisione): l'utente cambia a metà wizard ───────────────
+
+describe('SessionCreationWizard — #4750: utente cambiato a metà', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    currentUser.value = undefined;
+    createSession.mockResolvedValue('live-1');
+    addPlayer.mockResolvedValue('player-1');
+    startSession.mockResolvedValue(undefined);
+  });
+
+  it('se l’utente cambia dopo il seme, il giocatore non parte più col vecchio userId', async () => {
+    // Un altro account dopo un refetch: la riga perde la targhetta e «Io non gioco» (non è più
+    // sua), e non deve partire con lo userId di prima.
+    currentUser.value = MARCO;
+    const ui = () => <SessionCreationWizard />;
+    const { rerender } = render(ui());
+    fireEvent.click(screen.getByText('mock-select-game'));
+    fireEvent.click(screen.getByText('Avanti')); // game → scoring
+    fireEvent.click(screen.getByText('Avanti')); // scoring → players
+
+    currentUser.value = {
+      id: 'user-anna',
+      email: 'anna@example.com',
+      displayName: 'Anna',
+      role: 'User',
+    };
+    rerender(ui());
+
+    expect(screen.getByText('Marco Rossi')).toBeInTheDocument();
+    expect(screen.queryByText('Tu')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Avanti')); // players → review
+    fireEvent.click(screen.getByText('Crea Sessione'));
+
+    await waitFor(() => expect(startSession).toHaveBeenCalled());
+    expect(addPlayer.mock.calls[0][1]).toMatchObject({ displayName: 'Marco Rossi' });
+    expect(addPlayer.mock.calls[0][1]).not.toHaveProperty('userId');
   });
 });

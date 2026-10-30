@@ -4,7 +4,7 @@
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { linkedFirst, selfDisplayName, useSelfPlayer } from '../useSelfPlayer';
+import { linkedFirst, ownUserId, selfDisplayName, useSelfPlayer } from '../useSelfPlayer';
 
 type TestUser = { id: string; email: string; displayName?: string | null; role: string };
 const currentUser = vi.hoisted(() => ({ value: undefined as TestUser | undefined }));
@@ -23,6 +23,25 @@ describe('selfDisplayName', () => {
     expect(selfDisplayName(null)).toBe('Giocatore 1');
     expect(selfDisplayName(undefined)).toBe('Giocatore 1');
     expect(selfDisplayName('   ')).toBe('Giocatore 1');
+  });
+});
+
+describe('ownUserId', () => {
+  const self = { userId: 'user-marco', displayName: 'Marco Rossi' };
+
+  it('dà il collegamento di un posto solo se è dell’utente corrente', () => {
+    expect(ownUserId('user-marco', self)).toBe('user-marco');
+  });
+
+  it('un posto collegato a un altro utente non manda nessun collegamento', () => {
+    // L'utente può cambiare dopo che il posto è stato seminato (un altro account dopo un refetch):
+    // il posto non è più suo, e non deve partire con lo userId di prima.
+    expect(ownUserId('user-anna', self)).toBeUndefined();
+  });
+
+  it('un posto senza collegamento, o senza utente noto, non ne manda', () => {
+    expect(ownUserId(undefined, self)).toBeUndefined();
+    expect(ownUserId('user-marco', null)).toBeUndefined();
   });
 });
 

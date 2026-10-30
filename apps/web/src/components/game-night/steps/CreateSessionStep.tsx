@@ -16,10 +16,14 @@ import { Loader2, Plus, Trash2, Users } from 'lucide-react';
 import { AddSelfButton, OptOutButton, SelfBadge } from '@/components/session/SelfPlayerControls';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
-import { linkedFirst, useSelfPlayer } from '@/hooks/useSelfPlayer';
+import { linkedFirst, ownUserId, useSelfPlayer } from '@/hooks/useSelfPlayer';
 import { api } from '@/lib/api';
 import { API_PLAYER_COLORS } from '@/lib/sessions/player-colors';
-import { duplicatePlayerNameMessage, findDuplicatePlayerName } from '@/lib/sessions/player-names';
+import {
+  duplicatePlayerNameMessage,
+  findDuplicatePlayerName,
+  playerNameKey,
+} from '@/lib/sessions/player-names';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -69,6 +73,9 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
   const validPlayers = players.filter(p => p.name.trim().length > 0);
   // The server refuses two players with the same name: say so before the session exists.
   const duplicateName = findDuplicatePlayerName(players.map(p => p.name));
+  const nameConflictId = `${formId}-name-conflict`;
+  const isInConflict = (seat: PlayerSlot) =>
+    !!duplicateName && playerNameKey(seat.name) === playerNameKey(duplicateName);
   const canCreate = validPlayers.length >= 2 && !duplicateName && !isCreating;
 
   // #4750: the creator is the first player, linked to their account. The link is a state of the
@@ -153,7 +160,7 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
       const entries = validPlayers.map((p, i) => ({
         name: p.name,
         color: PLAYER_COLORS[i % PLAYER_COLORS.length],
-        userId: p.userId,
+        userId: ownUserId(p.userId, self),
       }));
       for (const entry of linkedFirst(entries)) {
         await api.liveSessions.addPlayer(sessionId, {
@@ -171,7 +178,7 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
       setError('Errore nella creazione della sessione. Riprova.');
       setIsCreating(false);
     }
-  }, [canCreate, gameId, gameTitle, validPlayers, onSessionCreated]);
+  }, [canCreate, gameId, gameTitle, validPlayers, self, onSessionCreated]);
 
   return (
     <div className="space-y-4" data-testid="create-session-step">
@@ -214,6 +221,8 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
               onChange={e => handlePlayerChange(player.id, e.target.value)}
               data-testid={`player-input-${index}`}
               id={`${formId}-player-${index}`}
+              aria-invalid={isInConflict(player) ? true : undefined}
+              aria-describedby={isInConflict(player) ? nameConflictId : undefined}
             />
             {isSelfSeat(player) && (
               <>
@@ -237,7 +246,9 @@ export function CreateSessionStep({ gameId, gameTitle, onSessionCreated }: Creat
       </div>
 
       {duplicateName && (
-        <p className="text-sm text-destructive" role="alert">
+        // A status, not an alert: while typing, a name passes through names that clash («Luca»,
+        // «Luca »), and the field already says it is invalid.
+        <p id={nameConflictId} className="text-sm text-destructive" role="status">
           {duplicatePlayerNameMessage(duplicateName)}
         </p>
       )}

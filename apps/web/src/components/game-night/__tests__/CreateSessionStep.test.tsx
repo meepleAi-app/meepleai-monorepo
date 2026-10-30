@@ -283,6 +283,28 @@ describe('CreateSessionStep — #4750: seme, nomi e posti', () => {
     });
   });
 
+  describe('utente cambiato a metà', () => {
+    it('se l’utente cambia dopo il seme, il posto non parte più col vecchio userId', async () => {
+      // Un altro account dopo un refetch: il posto perde la targhetta e «Io non gioco» (non è più
+      // suo), e non deve partire con lo userId di prima.
+      const user = userEvent.setup();
+      currentUser.value = MARCO;
+      const { rerender, ui, onSessionCreated } = renderStep();
+
+      currentUser.value = ANNA;
+      rerender(ui());
+
+      expect(screen.getByTestId('player-input-0')).toHaveValue('Marco Rossi');
+      expect(screen.queryByText('Tu')).not.toBeInTheDocument();
+      await user.type(screen.getByTestId('player-input-1'), 'Luca');
+      await user.click(screen.getByTestId('create-session-button'));
+
+      await waitFor(() => expect(onSessionCreated).toHaveBeenCalled());
+      expect(addPlayerPayloads()[0]).toMatchObject({ displayName: 'Marco Rossi' });
+      expect(addPlayerPayloads().every(p => !('userId' in p))).toBe(true);
+    });
+  });
+
   describe('nomi', () => {
     it('due giocatori con lo stesso nome: messaggio accanto ai campi, «Inizia» spento, nessuna sessione', async () => {
       const user = userEvent.setup();
@@ -291,7 +313,7 @@ describe('CreateSessionStep — #4750: seme, nomi e posti', () => {
 
       setSeatName(1, ' marco rossi ');
 
-      expect(screen.getByRole('alert')).toHaveTextContent(
+      expect(screen.getByRole('status')).toHaveTextContent(
         'Due giocatori si chiamano «marco rossi»'
       );
       expect(screen.getByTestId('create-session-button')).toBeDisabled();
@@ -300,8 +322,53 @@ describe('CreateSessionStep — #4750: seme, nomi e posti', () => {
 
       setSeatName(1, 'Luca');
 
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
       expect(screen.getByTestId('create-session-button')).toBeEnabled();
+    });
+
+    it('i campi in conflitto sono non validi e puntano al messaggio; gli altri no', () => {
+      renderStep();
+      fireEvent.click(screen.getByTestId('add-player-button')); // tre posti
+      setSeatName(0, 'Anna');
+      setSeatName(1, ' anna');
+      setSeatName(2, 'Luca');
+
+      const message = screen.getByRole('status').textContent ?? '';
+      expect(message).toContain('Due giocatori si chiamano');
+      for (const index of [0, 1]) {
+        const input = screen.getByTestId(`player-input-${index}`);
+        expect(input).toHaveAttribute('aria-invalid', 'true');
+        expect(input).toHaveAccessibleDescription(message);
+      }
+      const luca = screen.getByTestId('player-input-2');
+      expect(luca).not.toHaveAttribute('aria-invalid');
+      expect(luca).not.toHaveAttribute('aria-describedby');
+
+      setSeatName(1, 'Marta');
+
+      for (const index of [0, 1, 2]) {
+        const input = screen.getByTestId(`player-input-${index}`);
+        expect(input).not.toHaveAttribute('aria-invalid');
+        expect(input).not.toHaveAttribute('aria-describedby');
+      }
+    });
+
+    it('con «Luca» in un posto, scrivere «Luca Rossi» nell’altro non dà mai un avviso assertivo', async () => {
+      // Per i nomi intermedi («Luca», «Luca ») il conflitto c'è davvero, ma non deve
+      // interrompere chi scrive: il messaggio è una regione di stato, non un avviso.
+      const user = userEvent.setup();
+      renderStep();
+      setSeatName(0, 'Luca');
+      const second = screen.getByTestId('player-input-1');
+      await user.click(second);
+
+      for (const key of 'Luca Rossi') {
+        await user.keyboard(key);
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      }
+
+      expect(second).toHaveValue('Luca Rossi');
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
     });
 
     it('senza nome del profilo il creatore è «Giocatore 1», non l’email', async () => {

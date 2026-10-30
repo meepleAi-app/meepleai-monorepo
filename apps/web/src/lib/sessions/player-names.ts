@@ -6,13 +6,18 @@
  * quando l'aggiunta fallisce, e resta a metà. I wizard lo controllano prima di crearla.
  */
 
+/** Come il server confronta i nomi: senza spazi ai bordi, senza badare alle maiuscole. */
+export function playerNameKey(name: string): string {
+  return name.trim().toLowerCase();
+}
+
 /** Il primo nome scritto due volte, come l'ha scritto l'utente; `null` se non ce ne sono. */
 export function findDuplicatePlayerName(names: readonly string[]): string | null {
   const seen = new Set<string>();
   for (const raw of names) {
     const name = raw.trim();
     if (!name) continue;
-    const key = name.toLowerCase();
+    const key = playerNameKey(name);
     if (seen.has(key)) return name;
     seen.add(key);
   }

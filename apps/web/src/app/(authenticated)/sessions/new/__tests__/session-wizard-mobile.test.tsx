@@ -555,7 +555,7 @@ describe('SessionWizardMobile — #4750: seme, id e nomi', () => {
 
       addPlayerNamed(' marco rossi ');
 
-      expect(screen.getByRole('alert')).toHaveTextContent(
+      expect(screen.getByRole('status')).toHaveTextContent(
         'Due giocatori si chiamano «marco rossi»'
       );
       expect(screen.getByRole('button', { name: 'Avanti' })).toBeDisabled();
@@ -565,7 +565,7 @@ describe('SessionWizardMobile — #4750: seme, id e nomi', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Rimuovi marco rossi' }));
 
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Avanti' })).toBeEnabled();
     });
 
@@ -583,5 +583,43 @@ describe('SessionWizardMobile — #4750: seme, id e nomi', () => {
         userId: 'user-x',
       });
     });
+  });
+});
+
+// ── #4750 (secondo giro di revisione): l'utente cambia a metà wizard ───────────────
+
+describe('SessionWizardMobile — #4750: utente cambiato a metà', () => {
+  it('se l’utente cambia dopo il seme, il giocatore non parte più col vecchio userId', async () => {
+    // Un altro account dopo un refetch: la riga perde la targhetta e «Io non gioco» (non è più
+    // sua), e non deve partire con lo userId di prima.
+    currentUser.value = MARCO;
+    const client = new QueryClient();
+    const ui = () => (
+      <QueryClientProvider client={client}>
+        <SessionWizardMobile prefilledGameId="game-abc" prefilledGameName="Catan" />
+      </QueryClientProvider>
+    );
+    const { rerender } = rtlRender(ui());
+
+    currentUser.value = {
+      id: 'user-anna',
+      email: 'anna@example.com',
+      displayName: 'Anna',
+      role: 'User',
+    };
+    rerender(ui());
+
+    expect(screen.getByText('Marco Rossi')).toBeInTheDocument();
+    expect(screen.queryByText('Tu')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Avanti')); // → step 3
+    fireEvent.click(screen.getByText('Avanti')); // → step 4
+    fireEvent.click(screen.getByText('Salta')); // → step 5
+    fireEvent.click(screen.getByText('Inizia a Giocare'));
+
+    await waitFor(() => expect(mockApi.liveSessions.addPlayer).toHaveBeenCalledTimes(1));
+    expect(mockApi.liveSessions.addPlayer.mock.calls[0][1]).toMatchObject({
+      displayName: 'Marco Rossi',
+    });
+    expect(mockApi.liveSessions.addPlayer.mock.calls[0][1]).not.toHaveProperty('userId');
   });
 });

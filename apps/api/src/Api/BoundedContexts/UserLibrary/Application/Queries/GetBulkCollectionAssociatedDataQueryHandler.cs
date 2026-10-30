@@ -50,7 +50,10 @@ internal class GetBulkCollectionAssociatedDataQueryHandler
             .Include(e => e.Sessions)
             .Include(e => e.Checklist)
             .Include(e => e.Labels)
-            .Where(e => e.UserId == query.UserId && query.EntityIds.Contains(e.GameId))
+            // #4749: SharedGameId is the mapped column; the GameId compatibility property is outside the EF model.
+            .Where(e => e.UserId == query.UserId
+                && e.SharedGameId != null
+                && query.EntityIds.Contains(e.SharedGameId.Value))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 

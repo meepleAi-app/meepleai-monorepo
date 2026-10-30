@@ -20,7 +20,8 @@ public class UserLibraryEntryEntity
     /// <summary>
     /// Reference to the SharedGame in the library.
     /// Issue #3662: Renamed from GameId to SharedGameId, made nullable to support private games.
-    /// For backwards compatibility, GameId is mapped to this column in the configuration.
+    /// This is the mapped column: filter and project on it in any LINQ-to-SQL query. The
+    /// <see cref="GameId"/> property below is NOT mapped (#4749).
     /// </summary>
     public Guid? SharedGameId { get; set; }
 
@@ -32,7 +33,11 @@ public class UserLibraryEntryEntity
 
     /// <summary>
     /// Gets or sets the game reference (backwards compatible with existing code).
-    /// Maps to SharedGameId. Will be removed once migration is complete.
+    /// Computed from <see cref="SharedGameId"/> and excluded from the EF model
+    /// (<c>builder.Ignore(e =&gt; e.GameId)</c>): usable on an entity already in memory, but EF cannot
+    /// translate it inside a query — that answered 500 on batch-status (#4749). The gate
+    /// <c>UserLibraryEntryGameIdQueryArchitectureTests</c> blocks it in queries. Will be removed
+    /// once migration is complete.
     /// </summary>
     public Guid GameId
     {

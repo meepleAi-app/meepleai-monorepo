@@ -157,11 +157,17 @@ internal static class GameNightImprovvisataEndpoints
     {
         var userId = httpContext.User.GetUserId();
 
+        // The role matters to the RAG ownership gate (ADR-096: administrators pass). A request without a
+        // session item (API-key authentication) has none, and the gate then treats the caller as a plain user.
+        var (hasSession, session, _) = httpContext.TryGetActiveSession();
+        var callerRole = hasSession ? session.Principal?.EffectiveActor.Role : null;
+
         var command = new SubmitRuleDisputeCommand(
             SessionId: sessionId,
             CallerUserId: userId,
             Description: request.Description,
-            RaisedByPlayerName: request.RaisedByPlayerName);
+            RaisedByPlayerName: request.RaisedByPlayerName,
+            CallerRole: callerRole);
 
         var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);

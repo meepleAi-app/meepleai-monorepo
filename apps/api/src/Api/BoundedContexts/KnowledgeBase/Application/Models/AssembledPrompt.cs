@@ -7,11 +7,17 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Models;
 /// Result of the RAG prompt assembly pipeline.
 /// Contains the fully constructed system/user prompts with RAG context and chat history.
 /// </summary>
+/// <remarks>
+/// #4751: <c>RetrievalFailed</c> says the retrieval did not run to the end (the query embedding failed, or a
+/// stage threw), as opposed to running and finding nothing. Both leave <see cref="Citations"/> empty; a caller
+/// that tells the user why there is no passage needs to tell the two apart.
+/// </remarks>
 internal sealed record AssembledPrompt(
     string SystemPrompt,
     string UserPrompt,
     List<ChunkCitation> Citations,
-    int EstimatedTokens);
+    int EstimatedTokens,
+    bool RetrievalFailed = false);
 
 /// <summary>
 /// Tracks which document chunks were used in the prompt (for debug/admin only).

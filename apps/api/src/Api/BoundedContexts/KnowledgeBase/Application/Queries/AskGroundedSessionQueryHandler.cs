@@ -129,6 +129,8 @@ internal sealed class AskGroundedSessionQueryHandler
             .ConfigureAwait(false);
 
         return new GroundedSessionAnswerDto(
-            grounded.ResponseText, grounded.CitationDtos, grounded.GroundingStatus, grounded.Confidence);
+            grounded.ResponseText, grounded.CitationDtos, grounded.GroundingStatus, grounded.Confidence,
+            RetrievalFailed: assembled.RetrievalFailed,
+            CopyrightSanitized: grounded.Sanitized);
     }
 }

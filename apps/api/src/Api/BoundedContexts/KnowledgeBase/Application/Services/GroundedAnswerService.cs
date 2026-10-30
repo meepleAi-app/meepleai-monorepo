@@ -139,6 +139,8 @@ internal sealed class GroundedAnswerService : IGroundedAnswerService
         var grounding = AnswerGrounding.Of(finalText, citationDtos.Count);
         var confidence = RagPromptAssemblyService.ComputeConfidence(resolvedCitations.ToList(), finalText);
 
-        return new GroundedAnswer(finalText, finalCitations, citationDtos, grounding, confidence, leakMatchCount);
+        return new GroundedAnswer(
+            finalText, finalCitations, citationDtos, grounding, confidence, leakMatchCount,
+            Sanitized: leakResult?.HasLeak == true);
     }
 }

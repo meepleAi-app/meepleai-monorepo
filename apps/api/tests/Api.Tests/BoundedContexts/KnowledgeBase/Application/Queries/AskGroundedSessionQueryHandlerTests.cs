@@ -182,19 +182,66 @@ public sealed class AskGroundedSessionQueryHandlerTests
         ex.ErrorCode.Should().BeNull();
     }
 
+    [Fact]
+    public async Task Handle_WhenTheRetrievalFailed_TheAnswerSaysSo_AsOpposedToFindingNothing()
+    {
+        // #4751: a retrieval that stopped on an error and one that found nothing both leave no citation; a caller
+        // that tells the user why there is no passage must be able to tell them apart.
+        var failed = await BuildHandler(new List<ChunkCitation>(), llmAnswer: "answer", retrievalFailed: true)
+            .Handle(
+                new AskGroundedSessionQuery(Guid.NewGuid(), "Question", GameStateContext: null, UserId: Guid.Empty),
+                TestContext.Current.CancellationToken);
+        var empty = await BuildHandler(new List<ChunkCitation>(), llmAnswer: "answer")
+            .Handle(
+                new AskGroundedSessionQuery(Guid.NewGuid(), "Question", GameStateContext: null, UserId: Guid.Empty),
+                TestContext.Current.CancellationToken);
+
+        failed.RetrievalFailed.Should().BeTrue();
+        failed.Citations.Should().BeEmpty();
+        empty.RetrievalFailed.Should().BeFalse();
+        empty.Citations.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheLeakGuardReplacedTheAnswer_TheAnswerSaysSo()
+    {
+        // #4751: GroundedAnswerService replaces the whole text with the copyright fallback message when the answer
+        // copies a run of a Protected passage. The caller must be able to tell that text is not the answer it
+        // asked for: the Arbitro was saving it as the verdict.
+        var protectedCitation = new ChunkCitation(
+            "doc-1", 4, 0.87f, "preview", CopyrightTier.Protected, IsPublic: false);
+
+        var sanitized = await BuildHandler(new List<ChunkCitation> { protectedCitation }, llmAnswer: "copied words", leak: true)
+            .Handle(
+                new AskGroundedSessionQuery(Guid.NewGuid(), "Question", GameStateContext: null, UserId: Guid.Empty),
+                TestContext.Current.CancellationToken);
+        var clean = await BuildHandler(new List<ChunkCitation> { protectedCitation }, llmAnswer: "own words")
+            .Handle(
+                new AskGroundedSessionQuery(Guid.NewGuid(), "Question", GameStateContext: null, UserId: Guid.Empty),
+                TestContext.Current.CancellationToken);
+
+        sanitized.CopyrightSanitized.Should().BeTrue();
+        sanitized.Answer.Should().Be("[copyright fallback]");
+        clean.CopyrightSanitized.Should().BeFalse();
+        clean.Answer.Should().Be("own words");
+    }
+
     private static AskGroundedSessionQueryHandler BuildHandler(
         IReadOnlyList<ChunkCitation> citations,
         string? llmAnswer,
         bool llmSuccess = true,
         List<string>? retrievalQueries = null,
         List<string>? systemPrompts = null,
-        IReadOnlyDictionary<string, string>? failureMetadata = null)
+        IReadOnlyDictionary<string, string>? failureMetadata = null,
+        bool retrievalFailed = false,
+        bool leak = false)
     {
         var assembled = new AssembledPrompt(
             SystemPrompt: "You are a helpful board game tutor.",
             UserPrompt: "Context...\n\nQuestion",
             Citations: citations.ToList(),
-            EstimatedTokens: 100);
+            EstimatedTokens: 100,
+            RetrievalFailed: retrievalFailed);
 
         var ragPrompt = new Mock<IRagPromptAssemblyService>();
         ragPrompt
@@ -228,7 +275,9 @@ public sealed class AskGroundedSessionQueryHandlerTests
         var leakGuard = new Mock<ICopyrightLeakGuard>();
         leakGuard
             .Setup(g => g.ScanAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<ChunkCitation>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new CopyrightLeakResult(HasLeak: false, Matches: Array.Empty<LeakMatch>()));
+            .ReturnsAsync(leak
+                ? new CopyrightLeakResult(HasLeak: true, Matches: new[] { new LeakMatch("doc-1", 4, 12, 0, "copied words") })
+                : new CopyrightLeakResult(HasLeak: false, Matches: Array.Empty<LeakMatch>()));
 
         var fallbackProvider = new Mock<ICopyrightFallbackMessageProvider>();
         fallbackProvider.Setup(f => f.GetMessage(It.IsAny<string>())).Returns("[copyright fallback]");

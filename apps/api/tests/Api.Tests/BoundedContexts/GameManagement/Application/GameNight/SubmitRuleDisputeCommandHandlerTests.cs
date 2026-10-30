@@ -4,10 +4,16 @@ using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.BoundedContexts.KnowledgeBase.Application.Configuration;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
+using Api.BoundedContexts.KnowledgeBase.Infrastructure.Services;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.GameManagement;
+using Api.Infrastructure.Entities.UserLibrary;
 using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Services;
@@ -18,6 +24,8 @@ using Api.Tests.TestHelpers;
 using FluentValidation.TestHelper;
 using MediatR;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
 using FluentAssertions;
@@ -41,7 +49,9 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
 
     private static readonly Guid TestGameId = Guid.NewGuid();
 
+    /// <summary>A realistic answer: the model says the passages cover the case, then rules.</summary>
     private const string DefaultLlmResponse =
+        "COPERTURA: SI\n" +
         "VERDETTO: Il giocatore A ha ragione. Si possono giocare 2 carte per turno.\n" +
         "NOTA: Se ci sono dubbi, consultare la FAQ ufficiale.";
 
@@ -52,6 +62,7 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
     private readonly Mock<ILiveSessionRepository> _sessionRepoMock;
     private readonly Mock<ILlmService> _llmServiceMock;
     private readonly Mock<IMediator> _mediatorMock;
+    private readonly Mock<IAnswerPreconditions> _preconditionsMock;
     private readonly Mock<ITierEnforcementService> _tierEnforcementMock;
     private readonly Mock<IPublisher> _publisherMock;
     private readonly SubmitRuleDisputeCommandHandler _sut;
@@ -62,8 +73,15 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         _sessionRepoMock = new Mock<ILiveSessionRepository>();
         _llmServiceMock = new Mock<ILlmService>();
         _mediatorMock = new Mock<IMediator>();
+        _preconditionsMock = new Mock<IAnswerPreconditions>();
         _tierEnforcementMock = new Mock<ITierEnforcementService>();
         _publisherMock = new Mock<IPublisher>();
+
+        // Default: the RAG ownership gate lets the caller through
+        _preconditionsMock
+            .Setup(p => p.EnsureCanAskAboutGameAsync(
+                It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         // Default: LLM always succeeds with structured response
         _llmServiceMock
@@ -85,30 +103,42 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
             .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GroundedAnswer(DefaultLlmResponse));
 
-        _sut = new SubmitRuleDisputeCommandHandler(
+        _sut = BuildHandler(preconditions: _preconditionsMock.Object);
+    }
+
+    private SubmitRuleDisputeCommandHandler BuildHandler(
+        IAnswerPreconditions preconditions,
+        TimeProvider? timeProvider = null,
+        int arbiterBudgetMs = 15_000)
+        => new(
             _sessionRepoMock.Object,
             _dbContext,
             _llmServiceMock.Object,
             _mediatorMock.Object,
+            preconditions,
             _tierEnforcementMock.Object,
             _publisherMock.Object,
-            TimeProvider.System,
+            Options.Create(new SessionAgentOptions { ArbiterBudgetMs = arbiterBudgetMs }),
+            timeProvider ?? TimeProvider.System,
             NullLogger<SubmitRuleDisputeCommandHandler>.Instance);
-    }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
     private static GroundedSessionAnswerDto GroundedAnswer(
         string answer,
         IReadOnlyList<CitationDto>? citations = null,
-        GroundingStatus? grounding = null)
+        GroundingStatus? grounding = null,
+        bool retrievalFailed = false,
+        bool copyrightSanitized = false)
     {
         var list = citations ?? Array.Empty<CitationDto>();
         return new GroundedSessionAnswerDto(
             answer,
             list,
             grounding ?? (list.Count > 0 ? GroundingStatus.Grounded : GroundingStatus.Ungrounded),
-            Confidence: null);
+            Confidence: null,
+            RetrievalFailed: retrievalFailed,
+            CopyrightSanitized: copyrightSanitized);
     }
 
     /// <summary>What the shared finalize step hands over: a Full citation keeps its text, a Protected one has none.</summary>
@@ -180,12 +210,14 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         Guid? sessionId = null,
         Guid? callerUserId = null,
         string description = "Posso giocare 2 carte per turno?",
-        string player = "Alice")
+        string player = "Alice",
+        string? role = null)
         => new(
             SessionId: sessionId ?? TestSessionId,
             CallerUserId: callerUserId ?? TestUserId,
             Description: description,
-            RaisedByPlayerName: player);
+            RaisedByPlayerName: player,
+            CallerRole: role);
 
     // ─── Happy path ───────────────────────────────────────────────────────────
 
@@ -406,6 +438,7 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         sent.ResponseInstructions.Should().NotBeNull();
         sent.ResponseInstructions.Should().ContainEquivalentOf("ARBITRO");
         sent.ResponseInstructions.Should().Contain("VERDETTO:").And.Contain("NOTA:");
+        sent.ResponseInstructions.Should().Contain("COPERTURA:", "the model declares on a line of its own whether the passages cover the case");
         sent.ResponseInstructions.Should().Contain("Wingspan");
         sent.ResponseInstructions.Should().Contain("Verdetti precedenti").And.Contain("Prima disputa?");
 
@@ -423,6 +456,7 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         _mediatorMock
             .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GroundedAnswer(
+                "COPERTURA: SI\n" +
                 "VERDETTO: Il giocatore A ha ragione.\n" +
                 "REGOLA: Manuale pag. 99, \"testo inventato dal modello\".\n" +
                 "NOTA: Nessuna.",
@@ -479,29 +513,28 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ManyPassages_KeepsTheMostRelevantPagesOnceEach()
+    public async Task Handle_ManyPassages_KeepsTheFirstOnesInTheOrderTheRetrievalReturnedThem()
     {
-        // Arrange — five retrieved passages over four pages; two on page 3
+        // Arrange — the list is in the reranker's order and RelevanceScore is the score BEFORE the rerank, so
+        // here the scores are not sorted: sorting by them would put page 9 first and undo the reranker.
+        // Page 3 comes twice, from the same document.
         CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
         _mediatorMock
             .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GroundedAnswer(DefaultLlmResponse, new[]
             {
-                new CitationDto("doc-rules", 3, 0.95f, null, "protected"),
-                new CitationDto("doc-rules", 3, 0.90f, null, "protected"),
-                new CitationDto("doc-rules", 8, 0.80f, null, "protected"),
-                new CitationDto("doc-rules", 5, 0.70f, null, "protected"),
-                new CitationDto("doc-rules", 9, 0.10f, null, "protected"),
+                new CitationDto("doc-rules", 8, 0.20f, null, "protected"),
+                new CitationDto("doc-rules", 3, 0.60f, null, "protected"),
+                new CitationDto("doc-rules", 3, 0.70f, null, "protected"),
+                new CitationDto("doc-rules", 5, 0.30f, null, "protected"),
+                new CitationDto("doc-rules", 9, 0.95f, null, "protected"),
             }));
 
         // Act
         var result = await _sut.Handle(BuildCommand(), CancellationToken.None);
 
         // Assert
-        result.RuleReferences.Should().HaveCount(3);
-        result.RuleReferences[0].Should().Contain("3");
-        result.RuleReferences[1].Should().Contain("8");
-        result.RuleReferences[2].Should().Contain("5");
+        result.RuleReferences.Should().Equal("Fonte, p. 8", "Fonte, p. 3", "Fonte, p. 5");
     }
 
     [Fact]
@@ -518,7 +551,7 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
 
         // Assert — the declaration is part of the verdict itself: it is what the table receives
         result.RuleReferences.Should().BeEmpty();
-        result.Verdict.Should().StartWith(SubmitRuleDisputeCommandHandler.NotFromRulebookNotice);
+        result.Verdict.Should().StartWith(ArbiterVerdictFormat.NoPassagesNotice);
         result.Verdict.Should().Contain("Il giocatore A ha ragione");
         session.Disputes.Should().ContainSingle().Which.Verdict.Should().Be(result.Verdict);
     }
@@ -541,24 +574,30 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
 
         // Assert
         result.RuleReferences.Should().BeEmpty();
-        result.Verdict.Should().StartWith(SubmitRuleDisputeCommandHandler.NotFromRulebookNotice);
+        result.Verdict.Should().StartWith(ArbiterVerdictFormat.NotCoveredNotice);
     }
 
     [Fact]
-    public async Task Handle_WithoutACatalogGame_AsksTheModelDirectly_AndSaysSo()
+    public async Task Handle_WithoutACatalogGame_AsksTheModelDirectly_AndSaysThereIsNoRulebook()
     {
-        // Arrange — an improvvisata session has no game id, so there is no rulebook to retrieve from
+        // Arrange — an improvvisata session has no game id, so there never was a rulebook to look in
         var session = CreateInProgressSession(withDbEntity: true);
 
         // Act
         var result = await _sut.Handle(BuildCommand(), CancellationToken.None);
 
-        // Assert
+        // Assert — the notice says what is true here: there is no rulebook. It used to say «nessun passaggio
+        // pertinente», as if a search had been made and had found nothing.
         result.RuleReferences.Should().BeEmpty();
-        result.Verdict.Should().StartWith(SubmitRuleDisputeCommandHandler.NotFromRulebookNotice);
+        result.Verdict.Should().StartWith(ArbiterVerdictFormat.NoGameNotice);
+        result.Verdict.Should().NotContain("passaggio pertinente").And.NotContain("passaggi pertinenti");
         session.Disputes.Should().ContainSingle();
         _mediatorMock.Verify(
             m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _preconditionsMock.Verify(
+            p => p.EnsureCanAskAboutGameAsync(
+                It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -571,7 +610,7 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         _mediatorMock
             .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GroundedAnswer(
-                "VERDETTO: [ref:doc-rules:12] Il giocatore A ha ragione.\nNOTA: [ref:doc-rules:13] Vale lo stesso per tutti.",
+                "COPERTURA: SI\nVERDETTO: [ref:doc-rules:12] Il giocatore A ha ragione.\nNOTA: [ref:doc-rules:13] Vale lo stesso per tutti.",
                 new[] { ProtectedCitation(12) }));
 
         // Act
@@ -686,6 +725,373 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         // Assert
         _mediatorMock.Verify(
             m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    // ─── #4751: the RAG ownership gate (ADR-096) protects the retrieval ────────
+
+    [Fact]
+    public async Task Handle_WhenTheGateDenies_NothingIsRetrieved_AndTheVerdictSaysOwnershipIsNotDeclared()
+    {
+        // Arrange — the copyright tier protects the ANSWER; the gate protects the RETRIEVAL. Without it a manual
+        // the caller may not read would go into the prompt, and the only defence would be what the model writes.
+        var session = CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+        _preconditionsMock
+            .Setup(p => p.EnsureCanAskAboutGameAsync(
+                It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new RagOwnershipRequiredException(TestGameId));
+
+        // Act
+        var result = await _sut.Handle(BuildCommand(), CancellationToken.None);
+
+        // Assert — not a 403: the verdict is given without the rulebook, and says why
+        _mediatorMock.Verify(
+            m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        result.RuleReferences.Should().BeEmpty();
+        result.Verdict.Should().StartWith(ArbiterVerdictFormat.OwnershipNotDeclaredNotice);
+        result.Verdict.Should().Contain("possesso del gioco non dichiarato");
+        result.Verdict.Should().Contain("nessun riferimento è citato");
+        session.Disputes.Should().ContainSingle();
+        _llmServiceMock.Verify(
+            s => s.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_AsksTheGateForTheCaller_WithTheRoleTheCommandCarries()
+    {
+        // Arrange
+        CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+
+        // Act
+        await _sut.Handle(BuildCommand(role: "Admin"), CancellationToken.None);
+
+        // Assert — whoever raised the dispute, at the single point every answering path uses
+        _preconditionsMock.Verify(
+            p => p.EnsureCanAskAboutGameAsync(TestUserId, "Admin", TestGameId, It.IsAny<CancellationToken>()),
+            Times.Once);
+        _mediatorMock.Verify(
+            m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_PrivateGameOfSomeoneElse_IsADenial_LikeAnyOther()
+    {
+        // Arrange — PrivateGameHub creates the session with gameId = the private game id, so a guest at the
+        // table could otherwise draw from the host's private PDF. The REAL gate here, over an in-memory database.
+        var session = CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+        _dbContext.PrivateGames.Add(PrivateGame(TestGameId, ownerId: Guid.NewGuid()));
+        _dbContext.SaveChanges();
+        var sut = BuildHandler(RealGate());
+
+        // Act
+        var result = await sut.Handle(BuildCommand(), CancellationToken.None);
+
+        // Assert
+        _mediatorMock.Verify(
+            m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        result.Verdict.Should().StartWith(ArbiterVerdictFormat.OwnershipNotDeclaredNotice);
+        result.RuleReferences.Should().BeEmpty();
+        session.Disputes.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Handle_OwnPrivateGame_PassesTheRealGate()
+    {
+        // Arrange
+        CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+        _dbContext.PrivateGames.Add(PrivateGame(TestGameId, ownerId: TestUserId));
+        _dbContext.SaveChanges();
+        var sut = BuildHandler(RealGate());
+
+        // Act
+        await sut.Handle(BuildCommand(), CancellationToken.None);
+
+        // Assert
+        _mediatorMock.Verify(
+            m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Theory]
+    [InlineData("Admin", true)]
+    [InlineData("SuperAdmin", true)]
+    [InlineData("User", false)]
+    [InlineData(null, false)]
+    [InlineData("not-a-role", false)]
+    public async Task Handle_TheRealGate_LetsAnAdministratorThroughWithoutOwnership_AndNobodyElse(
+        string? role, bool passes)
+    {
+        // Arrange — the game belongs to no one and is not public: only the role can open it. An unknown role
+        // or none counts as a plain user (when in doubt the gate checks).
+        CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+        var sut = BuildHandler(RealGate());
+
+        // Act
+        var result = await sut.Handle(BuildCommand(role: role), CancellationToken.None);
+
+        // Assert
+        _mediatorMock.Verify(
+            m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()),
+            passes ? Times.Once : Times.Never);
+        if (!passes)
+        {
+            result.Verdict.Should().StartWith(ArbiterVerdictFormat.OwnershipNotDeclaredNotice);
+        }
+    }
+
+    private IAnswerPreconditions RealGate()
+        => new AnswerPreconditions(
+            new RagAccessService(_dbContext),
+            _tierEnforcementMock.Object,
+            NullLogger<AnswerPreconditions>.Instance);
+
+    private static PrivateGameEntity PrivateGame(Guid id, Guid ownerId) => new()
+    {
+        Id = id,
+        OwnerId = ownerId,
+        Title = $"PrivateGame-{id:N}",
+        IsDeleted = false,
+        CreatedAt = DateTime.UtcNow,
+    };
+
+    // ─── #4751: the model declares whether the passages cover the case ────────
+
+    [Theory]
+    [InlineData("COPERTURA: SI")]
+    [InlineData("COPERTURA: Sì")]
+    [InlineData("**COPERTURA:** SI")]
+    [InlineData("## COPERTURA: si, i passaggi coprono il caso")]
+    public async Task Handle_WhenTheModelSaysThePassagesCoverTheCase_CitesThem(string coverageLine)
+    {
+        // Arrange — a realistic answer, through the parser: no state is built by hand
+        CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GroundedAnswer(
+                $"{coverageLine}\nVERDETTO: Ha ragione Sara.\nNOTA: Nessuna.", new[] { ProtectedCitation(7) }));
+
+        // Act
+        var result = await _sut.Handle(BuildCommand(), CancellationToken.None);
+
+        // Assert
+        result.RuleReferences.Should().Equal("Fonte, p. 7");
+        result.Verdict.Should().Be("Ha ragione Sara.");
+    }
+
+    [Theory]
+    [InlineData("COPERTURA: NO")]
+    [InlineData("**COPERTURA:** NO")]
+    [InlineData("COPERTURA: Non coperto")]
+    [InlineData("COPERTURA: forse")]
+    [InlineData("COPERTURA:")]
+    [InlineData(null)]
+    public async Task Handle_WhenTheModelSaysNoOrDoesNotSay_DeclaresItAndCitesNothing(string? coverageLine)
+    {
+        // Arrange — the prompt tells the model to say, on a line of its own, whether the passages cover the
+        // case; it will not emit the fixed refusal sentence, so grounding alone would never see this. «No», an
+        // answer that is not a clear «yes», and no line at all all land on the same side (fail-honest).
+        var session = CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+        var answer = (coverageLine is null ? string.Empty : coverageLine + "\n") +
+                     "VERDETTO: I passaggi non coprono il caso; l'interpretazione più ragionevole è che Sara abbia ragione.\n" +
+                     "NOTA: Interpretazione, non regola scritta.";
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GroundedAnswer(answer, new[] { ProtectedCitation(7), FullCitation(9, "Testo del passaggio.") }));
+
+        // Act
+        var result = await _sut.Handle(BuildCommand(), CancellationToken.None);
+
+        // Assert
+        result.RuleReferences.Should().BeEmpty();
+        result.Verdict.Should().StartWith(ArbiterVerdictFormat.NotCoveredNotice);
+        result.Verdict.Should().Contain("l'interpretazione più ragionevole");
+        session.Disputes.Should().ContainSingle().Which.RuleReferences.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheRetrievalFailed_SaysTheRulebookCouldNotBeConsulted_NotThatNothingWasFound()
+    {
+        // Arrange — a failure and an empty result both leave no passage; they are not the same thing, and
+        // «nessun passaggio pertinente» would be false for the first
+        CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GroundedAnswer(DefaultLlmResponse, citations: null, retrievalFailed: true));
+
+        // Act
+        var result = await _sut.Handle(BuildCommand(), CancellationToken.None);
+
+        // Assert
+        result.Verdict.Should().StartWith(ArbiterVerdictFormat.RetrievalUnavailableNotice);
+        result.Verdict.Should().NotContain("passaggi pertinenti");
+        result.RuleReferences.Should().BeEmpty();
+    }
+
+    // ─── #4751: the leak guard's fallback message is not a verdict ────────────
+
+    [Fact]
+    public async Task Handle_WhenTheLeakGuardReplacedTheAnswer_SavesChargesAndPublishesNothing()
+    {
+        // Arrange — the answer copied a run of words from a Protected passage: GroundedAnswerService replaced
+        // all of it with the copyright message. That message was saved as the verdict, with references, and
+        // charged to the quota.
+        var session = CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GroundedAnswer(
+                "Non posso riportare il testo protetto del regolamento.",
+                new[] { ProtectedCitation(12) },
+                copyrightSanitized: true));
+
+        // Act
+        var act = () => _sut.Handle(BuildCommand(), CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<ExternalServiceException>()).Which;
+
+        // Assert — a readable, retryable 503, like an empty answer
+        ex.StatusCode.Should().Be(503);
+        ex.ErrorCode.Should().Be(SubmitRuleDisputeCommandHandler.NoVerdictErrorCode);
+        ex.Message.Should().Contain("Riprova");
+        ex.Message.Should().NotContain("protetto");
+        session.Disputes.Should().BeEmpty();
+        _sessionRepoMock.Verify(
+            r => r.UpdateAsync(It.IsAny<LiveGameSession>(), It.IsAny<CancellationToken>()), Times.Never);
+        _tierEnforcementMock.Verify(
+            t => t.RecordUsageAsync(It.IsAny<Guid>(), It.IsAny<TierAction>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _publisherMock.Verify(
+            p => p.Publish(It.IsAny<DisputeResolvedEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+        _llmServiceMock.Verify(
+            s => s.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    // ─── #4751: a time budget on the grounded answer ──────────────────────────
+
+    [Fact]
+    public async Task Handle_WhenTheBudgetExpires_TheVerdictGoesWithoutTheRulebook_AndSaysSo()
+    {
+        // Arrange — the retrieval never answers: only the budget (on a controlled clock) ends the wait
+        var session = CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+        var clock = new FakeTimeProvider();
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var sentToken = CancellationToken.None;
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
+            .Returns<IRequest<GroundedSessionAnswerDto>, CancellationToken>(async (_, ct) =>
+            {
+                sentToken = ct;
+                started.SetResult();
+                await Task.Delay(Timeout.Infinite, ct);
+                return GroundedAnswer("unreachable");
+            });
+        var sut = BuildHandler(_preconditionsMock.Object, clock, arbiterBudgetMs: 5_000);
+
+        // Act
+        var pending = sut.Handle(BuildCommand(), CancellationToken.None);
+        await started.Task;
+        clock.Advance(TimeSpan.FromMilliseconds(4_999));
+        var firedTooEarly = sentToken.IsCancellationRequested;
+        clock.Advance(TimeSpan.FromMilliseconds(1));
+        var result = await pending.WaitAsync(TimeSpan.FromSeconds(10));
+
+        // Assert
+        firedTooEarly.Should().BeFalse("the budget is 5000 ms");
+        sentToken.IsCancellationRequested.Should().BeTrue();
+        result.Verdict.Should().StartWith(ArbiterVerdictFormat.RetrievalUnavailableNotice);
+        result.RuleReferences.Should().BeEmpty();
+        session.Disputes.Should().ContainSingle();
+        _llmServiceMock.Verify(
+            s => s.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenAGenerationFailsBecauseTheBudgetCutIt_TheVerdictStillGoesWithoutTheRulebook()
+    {
+        // Arrange — some clients report a cancelled call as a failed one: the failure is the budget's, not the provider's
+        CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+        var clock = new FakeTimeProvider();
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
+            .Returns<IRequest<GroundedSessionAnswerDto>, CancellationToken>(async (_, ct) =>
+            {
+                started.SetResult();
+                try
+                {
+                    await Task.Delay(Timeout.Infinite, ct);
+                }
+                catch (OperationCanceledException)
+                {
+                    // reported as a failure, not rethrown
+                }
+
+                throw new GroundedSessionGenerationException("generation cancelled");
+            });
+        var sut = BuildHandler(_preconditionsMock.Object, clock, arbiterBudgetMs: 5_000);
+
+        // Act
+        var pending = sut.Handle(BuildCommand(), CancellationToken.None);
+        await started.Task;
+        clock.Advance(TimeSpan.FromMilliseconds(5_000));
+        var result = await pending.WaitAsync(TimeSpan.FromSeconds(10));
+
+        // Assert
+        result.Verdict.Should().StartWith(ArbiterVerdictFormat.RetrievalUnavailableNotice);
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheCallerCancels_ItIsNotAnExpiredBudget()
+    {
+        // Arrange — a client that goes away is not a slow retrieval: no second call, nothing saved
+        var session = CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+        using var callerCancellation = new CancellationTokenSource();
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
+            .Returns<IRequest<GroundedSessionAnswerDto>, CancellationToken>(async (_, ct) =>
+            {
+                started.SetResult();
+                await Task.Delay(Timeout.Infinite, ct);
+                return GroundedAnswer("unreachable");
+            });
+
+        // Act
+        var pending = _sut.Handle(BuildCommand(), callerCancellation.Token);
+        await started.Task;
+        await callerCancellation.CancelAsync();
+        var act = () => pending.WaitAsync(TimeSpan.FromSeconds(10));
+
+        // Assert
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        session.Disputes.Should().BeEmpty();
+        _llmServiceMock.Verify(
+            s => s.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WithTheBudgetDisabled_StillAsksTheRulebook()
+    {
+        // Arrange — 0 or less turns the budget off
+        CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GroundedAnswer(DefaultLlmResponse, new[] { ProtectedCitation(12) }));
+        var sut = BuildHandler(_preconditionsMock.Object, arbiterBudgetMs: 0);
+
+        // Act
+        var result = await sut.Handle(BuildCommand(), CancellationToken.None);
+
+        // Assert
+        result.RuleReferences.Should().Equal("Fonte, p. 12");
     }
 
     // ─── Error cases ──────────────────────────────────────────────────────────
@@ -971,121 +1377,6 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         _tierEnforcementMock.Verify(
             t => t.RecordUsageAsync(TestUserId, TierAction.SessionAgentQuery, It.IsAny<CancellationToken>()),
             Times.Once);
-    }
-
-    // ─── Parsing edge cases ───────────────────────────────────────────────────
-
-    [Fact]
-    public void ParseArbitrationResponse_WithWellFormedResponse_ParsesVerdictAndNote()
-    {
-        // Arrange
-        const string response =
-            "VERDETTO: Giocatore A ha ragione.\n" +
-            "NOTA: In caso di dubbio usare la FAQ.";
-
-        // Act
-        var (verdict, note) = SubmitRuleDisputeCommandHandler.ParseArbitrationResponse(response);
-
-        // Assert
-        verdict.Should().Contain("Giocatore A");
-        note.Should().NotBeNull();
-        note.Should().Contain("FAQ");
-    }
-
-    [Fact]
-    public void ParseArbitrationResponse_ARegolaSectionFromTheModel_IsNeitherTheVerdictNorTheNote()
-    {
-        // #4751: the model is no longer asked for REGOLA — a quote it cannot have. If it writes one
-        // anyway (habit, or the earlier prompt in a long conversation), it is dropped, not shown as the
-        // text of the rulebook: the references come from the passages that were retrieved.
-        const string response =
-            "VERDETTO: Giocatore A ha ragione.\n" +
-            "REGOLA: Pag. 5, sezione Turni: \"testo inventato\".\n" +
-            "NOTA: In caso di dubbio usare la FAQ.";
-
-        var (verdict, note) = SubmitRuleDisputeCommandHandler.ParseArbitrationResponse(response);
-
-        verdict.Should().Be("Giocatore A ha ragione.");
-        note.Should().Be("In caso di dubbio usare la FAQ.");
-    }
-
-    [Fact]
-    public void ParseArbitrationResponse_WithMalformedResponse_UsesFullResponseAsVerdict()
-    {
-        // Arrange
-        const string response = "Il giocatore A ha torto perché le regole dicono altro.";
-
-        // Act
-        var (verdict, note) = SubmitRuleDisputeCommandHandler.ParseArbitrationResponse(response);
-
-        // Assert — fallback: full response as verdict
-        verdict.Should().Be(response);
-        note.Should().BeNull();
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("  \n ")]
-    public void ParseArbitrationResponse_WithEmptyResponse_FailsLoudlyInsteadOfInventingAVerdict(string empty)
-    {
-        // #4751: it used to return «Nessun verdetto disponibile.», which the handler saved as a real
-        // verdict. The handler refuses an empty answer before parsing; reaching this empty is a caller bug.
-        var act = () => SubmitRuleDisputeCommandHandler.ParseArbitrationResponse(empty);
-
-        act.Should().Throw<ArgumentException>();
-    }
-
-    [Theory]
-    [InlineData("VERDETTO:\nREGOLA:\nNOTA:")]
-    [InlineData("VERDETTO:")]
-    [InlineData("  verdetto:   \n\nregola:  \n")]
-    public void ParseArbitrationResponse_WithOnlyEmptySectionHeaders_YieldsAnEmptyVerdict(string skeleton)
-    {
-        var (verdict, note) = SubmitRuleDisputeCommandHandler.ParseArbitrationResponse(skeleton);
-
-        verdict.Should().BeEmpty("the bare skeleton is not an answer, and must not be saved as one");
-        note.Should().BeNull();
-    }
-
-    [Fact]
-    public void ParseArbitrationResponse_WithTextButNoVerdettoSection_KeepsTheTextAsTheVerdict()
-    {
-        var (verdict, _) = SubmitRuleDisputeCommandHandler.ParseArbitrationResponse(
-            "Ha ragione Sara: il ladro si sposta subito.");
-
-        verdict.Should().Be("Ha ragione Sara: il ladro si sposta subito.");
-    }
-
-    [Fact]
-    public void ParseArbitrationResponse_WithOnlyARegolaSection_HasNoVerdict()
-    {
-        // A quote is not a ruling, and it is the one thing the model cannot have
-        var (verdict, _) = SubmitRuleDisputeCommandHandler.ParseArbitrationResponse("REGOLA: pag. 3, «Il ladro»");
-
-        verdict.Should().BeEmpty();
-    }
-
-    [Fact]
-    public void ParseArbitrationResponse_WithAnUnheadedVerdictAndARegolaSection_KeepsOnlyTheVerdict()
-    {
-        var (verdict, _) = SubmitRuleDisputeCommandHandler.ParseArbitrationResponse(
-            "Ha ragione Sara.\nREGOLA: pag. 3, «Il ladro»");
-
-        verdict.Should().Be("Ha ragione Sara.");
-    }
-
-    [Fact]
-    public void ParseArbitrationResponse_WithNoNota_ReturnsNullNote()
-    {
-        // Arrange
-        const string response = "VERDETTO: Il giocatore B ha ragione.";
-
-        // Act
-        var (verdict, note) = SubmitRuleDisputeCommandHandler.ParseArbitrationResponse(response);
-
-        // Assert
-        verdict.Should().ContainEquivalentOf("giocatore B");
-        note.Should().BeNull();
     }
 }
 

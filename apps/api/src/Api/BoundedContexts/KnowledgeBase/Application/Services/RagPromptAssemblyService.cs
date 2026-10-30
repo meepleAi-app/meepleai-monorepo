@@ -116,7 +116,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
         var hasExpansions = expansionGameIds.Count > 0;
 
         // Step 1: Retrieve RAG context (includes expansion boost), passing pre-resolved expansion IDs
-        var (ragContext, citations) = await RetrieveRagContextAsync(userQuestion, gameId, expansionGameIds, userTier, ct, debugCollector, profileOverride, retrievalPolicy).ConfigureAwait(false);
+        var (ragContext, citations, retrievalFailed) = await RetrieveRagContextAsync(userQuestion, gameId, expansionGameIds, userTier, ct, debugCollector, profileOverride, retrievalPolicy).ConfigureAwait(false);
 
         // Step 2: Build system prompt (persona + RAG chunks + expansion priority + copyright instruction)
         var hasProtectedCitations = citations.Any(c => c.CopyrightTier == CopyrightTier.Protected);
@@ -160,10 +160,15 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
             activeMessageCount ?? 0,
             estimatedTokens);
 
-        return new AssembledPrompt(systemPrompt, userPrompt, citations, estimatedTokens);
+        return new AssembledPrompt(systemPrompt, userPrompt, citations, estimatedTokens, retrievalFailed);
     }
 
-    private async Task<(string ragContext, List<ChunkCitation> citations)> RetrieveRagContextAsync(
+    /// <returns>
+    /// The context and the citations; <c>retrievalFailed</c> (#4751) is true when the retrieval stopped on
+    /// an error (the primary query's embedding failed, or any stage threw) and false when it ran to the end,
+    /// even with no result. Both return an empty context: only this flag tells them apart.
+    /// </returns>
+    private async Task<(string ragContext, List<ChunkCitation> citations, bool retrievalFailed)> RetrieveRagContextAsync(
         string userQuestion, Guid gameId, IReadOnlyList<Guid> expansionGameIds, UserTier? userTier, CancellationToken ct,
         IRagDebugEventCollector? debugCollector = null,
         RetrievalProfile? profileOverride = null,
@@ -228,7 +233,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                 if (!complexity.RequiresRetrieval)
                 {
                     _logger.LogInformation("Adaptive RAG: skipping retrieval for simple query");
-                    return (string.Empty, citations);
+                    return (string.Empty, citations, false);
                 }
             }
 
@@ -282,7 +287,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                     if (string.Equals(query, userQuestion, StringComparison.Ordinal))
                     {
                         _logger.LogWarning("Embedding generation failed for primary query: {Error}", embeddingResult.ErrorMessage);
-                        return (string.Empty, citations);
+                        return (string.Empty, citations, true);
                     }
 
                     continue;
@@ -339,7 +344,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                 // SP5-b T3: single-source detection site — increment counter here, NOT in the handler.
                 // Guarded: metrics must never abort the retrieval path.
                 try { MeepleAiMetrics.RecordRetrievalEmpty(); } catch { /* metrics must not break retrieval */ }
-                return (string.Empty, citations);
+                return (string.Empty, citations, false);
             }
 
             _logger.LogInformation("Retrieved {Count} relevant chunks from {QueryCount} queries (scores: {MinScore:F2}-{MaxScore:F2})",
@@ -523,7 +528,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
                 }
             }
 
-            return (ragContext, citations);
+            return (ragContext, citations, false);
         }
         catch (Exception ex)
         {
@@ -533,7 +538,7 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
             MeepleAiMetrics.RecordRetrievalFallback(
                 MeepleAiMetrics.RagFallbackTypes.Unknown,
                 MeepleAiMetrics.RagFallbackSeverity.PartialLoss);
-            return (string.Empty, citations);
+            return (string.Empty, citations, true);
         }
     }
 

@@ -1,16 +1,17 @@
-using System.Text;
+using System.Globalization;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.BoundedContexts.KnowledgeBase.Application.Configuration;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
-using Api.Models;
+using Api.Observability;
 using Api.Services;
 using Api.SharedKernel.Domain.Enums;
 using Api.SharedKernel.Services;
@@ -18,6 +19,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using CitationDto = Api.Models.CitationDto;
 
 namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
@@ -29,11 +31,17 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
 /// session, and broadcasts a <see cref="DisputeResolvedEvent"/>.
 /// Game Night Improvvisata — E3: Arbitro mode.
 /// </summary>
+/// <remarks>
+/// <c>CallerRole</c> is the caller's role, as the session reports it. It matters to the RAG ownership gate
+/// (ADR-096), which lets administrators through. Null — an unknown role, or a request without a session —
+/// counts as a plain user: when in doubt the gate checks, it does not wave through.
+/// </remarks>
 public sealed record SubmitRuleDisputeCommand(
     Guid SessionId,
     Guid CallerUserId,
     string Description,
-    string RaisedByPlayerName) : IRequest<RuleDisputeResponse>;
+    string RaisedByPlayerName,
+    string? CallerRole = null) : IRequest<RuleDisputeResponse>;
 
 /// <summary>
 /// Response returned after the AI arbitro resolves a rule dispute.
@@ -78,18 +86,20 @@ public sealed class SubmitRuleDisputeCommandValidator : AbstractValidator<Submit
 /// Orchestrates the Arbitro AI pipeline:
 ///   1. Load LiveGameSession from the in-memory repository.
 ///   2. Verify session is InProgress.
-///   3. Ask for a verdict. With a catalog game, through KnowledgeBase's grounded path
-///      (<see cref="AskGroundedSessionQuery"/>, ADR-090): retrieval on the game's rulebook, copyright
-///      tiers, leak guard. Without one there is no rulebook, and the model is asked directly.
-///   4. Parse the VERDETTO / NOTA sections of the answer.
+///   3. Ask for a verdict. With a catalog game and a caller who may query its knowledge base (ADR-096), through
+///      KnowledgeBase's grounded path (<see cref="AskGroundedSessionQuery"/>, ADR-090) under a time budget:
+///      retrieval on the game's rulebook, copyright tiers, leak guard. In every other case the model is asked
+///      directly, with nothing of the rulebook in the prompt, and the verdict says why it does not rest on it.
+///   4. Parse the COPERTURA / VERDETTO / NOTA sections of the answer.
 ///   5. Persist <see cref="RuleDisputeEntry"/> to the session and DB.
 ///   6. Publish <see cref="DisputeResolvedEvent"/> for SignalR broadcast.
 /// </summary>
 /// <remarks>
 /// #4751: the verdict is saved and sent to the whole table, so it is written at the most restrictive
 /// copyright tier (<c>UserId = Guid.Empty</c>: verbatim text only for a free licence or an unprotected
-/// category), never at the tier of whoever asked. The rule references are the passages that were
-/// retrieved, not text the model wrote: without a rulebook the verdict says so instead of citing.
+/// category), never at the tier of whoever asked. That tier protects the answer; the retrieval is protected by
+/// the ownership gate, checked for whoever raised the dispute. The rule references are the passages that were
+/// retrieved, not text the model wrote, and only when the model declares they cover the case.
 /// </remarks>
 internal sealed class SubmitRuleDisputeCommandHandler
     : IRequestHandler<SubmitRuleDisputeCommand, RuleDisputeResponse>
@@ -102,46 +112,14 @@ internal sealed class SubmitRuleDisputeCommandHandler
     internal const string NoVerdictErrorCode = "arbitro_nessun_verdetto";
     private const string NoVerdictMessage = "L'Arbitro non è riuscito a emettere un verdetto. Riprova tra poco.";
 
-    /// <summary>
-    /// Opens a verdict that does not rest on the rulebook (no game, no indexed rulebook, nothing in it
-    /// that covers the case). It is part of the verdict itself, because the verdict and its references
-    /// are what the whole table receives: a note kept in the response would reach only who asked.
-    /// </summary>
-    internal const string NotFromRulebookNotice =
-        "Attenzione: questo verdetto non si basa sul regolamento (nessun passaggio pertinente), " +
-        "ma sul buon senso e sulle regole generali del gioco.";
-
-    private const int MaxRuleReferences = 3;
-    private const int MaxQuotedChars = 280;
-
-    private const string ArbiterPersona =
-        "Sei l'ARBITRO ufficiale di una partita da tavolo. " +
-        "Il tuo compito è emettere verdetti chiari, precisi e imparziali sulle dispute di regole. " +
-        "Rispondi SEMPRE in italiano nel formato strutturato richiesto.";
-
-    private const string VerdictFormat =
-        "Rispondi in formato strutturato:\n" +
-        "VERDETTO: [Chi ha ragione e perché — 1-2 frasi]\n" +
-        "NOTA: [Se ambigua, spiega perché e suggerisci come gestirla]";
-
-    /// <summary>Wire value of a Full-tier citation (<c>GroundedAnswerService</c> maps the tier name, lower-cased).</summary>
-    private const string FullTier = "full";
-
-    // For Protected sources the model is told to put [ref:documentId:pageNum] before each paraphrase
-    // (RagPromptAssemblyService): machine syntax, not something to show the table.
-    private static readonly Regex CopyrightMarker = new(
-        @"[ \t]*\[ref:[^:\]]+:\d+\][ \t]*",
-        RegexOptions.CultureInvariant,
-        TimeSpan.FromSeconds(1));
-
-    private static readonly Regex Whitespace = new(@"\s+", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
-
     private readonly ILiveSessionRepository _sessionRepository;
     private readonly MeepleAiDbContext _dbContext;
     private readonly ILlmService _llmService;
     private readonly IMediator _mediator;
+    private readonly IAnswerPreconditions _answerPreconditions;
     private readonly ITierEnforcementService _tierEnforcementService;
     private readonly IPublisher _publisher;
+    private readonly IOptions<SessionAgentOptions> _sessionAgentOptions;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<SubmitRuleDisputeCommandHandler> _logger;
 
@@ -150,8 +128,10 @@ internal sealed class SubmitRuleDisputeCommandHandler
         MeepleAiDbContext dbContext,
         ILlmService llmService,
         IMediator mediator,
+        IAnswerPreconditions answerPreconditions,
         ITierEnforcementService tierEnforcementService,
         IPublisher publisher,
+        IOptions<SessionAgentOptions> sessionAgentOptions,
         TimeProvider timeProvider,
         ILogger<SubmitRuleDisputeCommandHandler> logger)
     {
@@ -159,8 +139,10 @@ internal sealed class SubmitRuleDisputeCommandHandler
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _mediator = mediator ?? throw new ArgumentNullException(nameof(mediator));
+        _answerPreconditions = answerPreconditions ?? throw new ArgumentNullException(nameof(answerPreconditions));
         _tierEnforcementService = tierEnforcementService ?? throw new ArgumentNullException(nameof(tierEnforcementService));
         _publisher = publisher ?? throw new ArgumentNullException(nameof(publisher));
+        _sessionAgentOptions = sessionAgentOptions ?? throw new ArgumentNullException(nameof(sessionAgentOptions));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -213,17 +195,18 @@ internal sealed class SubmitRuleDisputeCommandHandler
                 $"Hai raggiunto il limite di domande alla sessione ({usage.SessionQueries}/{usage.SessionQueriesMax}). Riprova domani.");
         }
 
-        // 5–6. Ask for the verdict: from the game's rulebook when there is one, else from the model alone
+        // 5–6. Ask for the verdict: from the game's rulebook when there is one and the caller may read it,
+        // else from the model alone
         var answer = await AskForVerdictAsync(session, request, cancellationToken).ConfigureAwait(false);
 
         // #4751: a model that answers with nothing has not given a verdict. It used to be parsed into
         // «Nessun verdetto disponibile.», saved as the verdict, broadcast and counted against the quota.
         // An empty answer is a failure like !Success: nothing is saved, charged or published, and the
         // caller gets a readable 503 (the model's error text goes to the log, never to the response).
-        var text = StripCopyrightMarkers(answer.Text);
+        var text = ArbiterVerdictFormat.StripCopyrightMarkers(answer.Text);
         if (string.IsNullOrWhiteSpace(text))
         {
-            throw NoVerdict(request.SessionId, answer, "the model answered with no text");
+            throw NoVerdict(request.SessionId, "the model answered with no text", answer.FinishReason, answer.CompletionTokens);
         }
 
         _logger.LogDebug(
@@ -231,27 +214,27 @@ internal sealed class SubmitRuleDisputeCommandHandler
             request.SessionId, text);
 
         // 7. Parse the structured response
-        var (verdict, note) = ParseArbitrationResponse(text);
+        var parsed = ArbiterVerdictFormat.Parse(text);
 
         // The bare skeleton («VERDETTO:\nNOTA:», or an answer cut right after a header) parses to
         // an empty verdict: same case as an empty answer, not a verdict to save.
-        if (string.IsNullOrWhiteSpace(verdict))
+        if (string.IsNullOrWhiteSpace(parsed.Verdict))
         {
-            throw NoVerdict(request.SessionId, answer, "the answer holds only empty section headers");
+            throw NoVerdict(request.SessionId, "the answer holds no verdict", answer.FinishReason, answer.CompletionTokens);
         }
 
         // #4751: the references are the passages that were retrieved — never text the model wrote, which
-        // is a quote it cannot have. A verdict that does not rest on the rulebook says so, in the verdict
-        // itself, and cites nothing.
-        var ruleReferences = new List<string>();
-        if (answer.RestsOnTheRulebook)
-        {
-            ruleReferences = BuildRuleReferences(answer.Citations);
-        }
-        else
-        {
-            verdict = $"{NotFromRulebookNotice} {verdict}";
-        }
+        // is a quote it cannot have — and only if the model declared that they cover the case. A verdict
+        // that does not rest on the rulebook says so, in the verdict itself, and cites nothing. A missing
+        // COPERTURA line counts as «no»: fail-honest.
+        var basis = answer.Basis == VerdictBasis.Rulebook && !parsed.RulebookCoversTheCase
+            ? VerdictBasis.NotCovered
+            : answer.Basis;
+        var notice = ArbiterVerdictFormat.NoticeFor(basis);
+        var verdict = notice is null ? parsed.Verdict : $"{notice} {parsed.Verdict}";
+        var ruleReferences = notice is null
+            ? ArbiterVerdictFormat.BuildReferences(answer.Citations)
+            : new List<string>();
 
         // 8. Create and attach the RuleDisputeEntry
         var now = _timeProvider.GetUtcNow().UtcDateTime;
@@ -282,43 +265,76 @@ internal sealed class SubmitRuleDisputeCommandHandler
             .ConfigureAwait(false);
 
         _logger.LogInformation(
-            "Rule dispute resolved: SessionId={SessionId}, DisputeId={DisputeId}, Verdict={Verdict}",
-            session.Id, entry.Id, verdict);
+            "Rule dispute resolved: SessionId={SessionId}, DisputeId={DisputeId}, Basis={Basis}, Verdict={Verdict}",
+            session.Id, entry.Id, basis, verdict);
 
         return new RuleDisputeResponse(
             Id: entry.Id,
             Verdict: entry.Verdict,
             RuleReferences: entry.RuleReferences,
-            Note: note);
+            Note: parsed.Note);
     }
 
     // ── Asking for the verdict ─────────────────────────────────────────────────
 
-    /// <summary>What came back from the model, and whether the rulebook is what it rests on.</summary>
+    /// <summary>What came back from the model, and what the verdict rests on.</summary>
     /// <param name="Text">The raw answer, markers and all.</param>
     /// <param name="Citations">The passages retrieved, after KnowledgeBase's tier-nulling; empty on the direct path.</param>
-    /// <param name="RestsOnTheRulebook">True only when a passage was retrieved and the answer is not the refusal.</param>
+    /// <param name="Basis">
+    /// <see cref="VerdictBasis.Rulebook"/> only when passages were retrieved and the answer is not the refusal; the
+    /// model's COPERTURA line can still downgrade it.
+    /// </param>
     /// <param name="FinishReason">Only the direct path reports it; for the log.</param>
     /// <param name="CompletionTokens">Only the direct path reports it; for the log.</param>
     private sealed record VerdictAnswer(
         string Text,
         IReadOnlyList<CitationDto> Citations,
-        bool RestsOnTheRulebook,
+        VerdictBasis Basis,
         string? FinishReason = null,
         int? CompletionTokens = null);
 
-    private Task<VerdictAnswer> AskForVerdictAsync(
+    private async Task<VerdictAnswer> AskForVerdictAsync(
         LiveGameSession session,
         SubmitRuleDisputeCommand request,
         CancellationToken cancellationToken)
-        => session.GameId is { } gameId
-            ? AskTheRulebookAsync(session, request, gameId, cancellationToken)
-            : AskTheModelAloneAsync(session, request, cancellationToken);
+    {
+        // No catalog game (an improvvisata session): there was never a rulebook to look in.
+        if (session.GameId is not { } gameId)
+        {
+            return await AskTheModelAloneAsync(session, request, VerdictBasis.NoGame, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        // ADR-096: the ownership gate protects the RETRIEVAL, and the copyright tier below protects only the
+        // ANSWER — a tier does nothing for a manual that already went into the prompt. The check is made for
+        // whoever raised the dispute, at the single point every answering path uses (IAnswerPreconditions),
+        // not as a copy of it. A private game of someone else is a denial like any other. A denial is not a
+        // 403 here: the verdict is given without the rulebook and says why.
+        try
+        {
+            await _answerPreconditions
+                .EnsureCanAskAboutGameAsync(request.CallerUserId, request.CallerRole, gameId, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (RagOwnershipRequiredException denial)
+        {
+            _logger.LogInformation(
+                denial,
+                "Rule dispute of SessionId={SessionId}: the RAG ownership gate denied GameId={GameId} to UserId={UserId}; " +
+                "the verdict is given without the rulebook",
+                request.SessionId, gameId, request.CallerUserId);
+
+            return await AskTheModelAloneAsync(session, request, VerdictBasis.OwnershipNotDeclared, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return await AskTheRulebookAsync(session, request, gameId, cancellationToken).ConfigureAwait(false);
+    }
 
     /// <summary>
-    /// The game has a catalog id: KnowledgeBase retrieves from its rulebook and finalizes the answer
-    /// (copyright tiers, leak guard, citation mapping — ADR-090). <c>UserId = Guid.Empty</c> is the most
-    /// restrictive tier: the verdict is saved and sent to every player at the table, so it must not be
+    /// The caller may read the rulebook of the game: KnowledgeBase retrieves from it and finalizes the answer
+    /// (copyright tiers, leak guard, citation mapping — ADR-090), under a time budget. <c>UserId = Guid.Empty</c>
+    /// is the most restrictive tier: the verdict is saved and sent to every player at the table, so it must not be
     /// written at the level of whoever asked (who may have uploaded the file and own the game).
     /// </summary>
     private async Task<VerdictAnswer> AskTheRulebookAsync(
@@ -327,6 +343,14 @@ internal sealed class SubmitRuleDisputeCommandHandler
         Guid gameId,
         CancellationToken cancellationToken)
     {
+        // The embedding client alone defaults to a 120 s timeout with retries: without a bound a verdict can
+        // wait minutes. On expiry the verdict goes the no-rulebook way and says the rulebook could not be consulted.
+        var budgetMs = _sessionAgentOptions.Value.ArbiterBudgetMs;
+        using var budget = budgetMs > 0
+            ? new CancellationTokenSource(TimeSpan.FromMilliseconds(budgetMs), _timeProvider)
+            : new CancellationTokenSource();
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, budget.Token);
+
         try
         {
             // The dispute alone is the question, and so the retrieval query; the persona and the format
@@ -339,16 +363,28 @@ internal sealed class SubmitRuleDisputeCommandHandler
                         GameStateContext: null,
                         UserId: Guid.Empty,
                         AgentLanguage: "it",
-                        ResponseInstructions: BuildResponseInstructions(session)),
-                    cancellationToken)
+                        ResponseInstructions: ArbiterVerdictFormat.ResponseInstructions(session)),
+                    linked.Token)
                 .ConfigureAwait(false);
 
-            // Grounded only if a passage was retrieved and the answer is not the refusal (a refusal
-            // «does not say anything from the sources», so the passages it came with are not its basis).
-            var restsOnTheRulebook = grounded.GroundingStatus != GroundingStatus.Ungrounded
-                && grounded.Citations.Count > 0;
+            // The leak guard found a verbatim run of a Protected passage and replaced the whole answer with
+            // its fallback message. That message is not the verdict that was asked for: it is treated like an
+            // empty answer — nothing saved, charged or published, and the player may retry.
+            if (grounded.CopyrightSanitized)
+            {
+                throw NoVerdict(request.SessionId, "the copyright guard replaced the answer with its fallback message");
+            }
 
-            return new VerdictAnswer(grounded.Answer, grounded.Citations, restsOnTheRulebook);
+            return new VerdictAnswer(grounded.Answer, grounded.Citations, BasisOf(grounded));
+        }
+        catch (OperationCanceledException) when (BudgetExpired(budget, cancellationToken))
+        {
+            return await FallBackWithoutTheRulebookAsync(session, request, cancellationToken).ConfigureAwait(false);
+        }
+        catch (GroundedSessionGenerationException) when (BudgetExpired(budget, cancellationToken))
+        {
+            // A generation that failed because the budget cut it (some clients report a cancelled call as a failure).
+            return await FallBackWithoutTheRulebookAsync(session, request, cancellationToken).ConfigureAwait(false);
         }
         catch (GroundedSessionGenerationException ex)
         {
@@ -357,16 +393,57 @@ internal sealed class SubmitRuleDisputeCommandHandler
     }
 
     /// <summary>
-    /// No catalog game (an improvvisata session): there is no rulebook to retrieve from, so the model is
-    /// asked directly, told it has none, and the verdict says so. It used to be told to «base its verdicts
-    /// exclusively on the rulebook» and to quote it — which it did not have.
+    /// What a grounded answer rests on. «Failed» and «found nothing» both leave no citation and are not the same
+    /// thing; neither is a refusal, which says nothing from the sources and so cannot be cited.
     /// </summary>
-    private async Task<VerdictAnswer> AskTheModelAloneAsync(
+    private static VerdictBasis BasisOf(GroundedSessionAnswerDto grounded)
+    {
+        if (grounded.RetrievalFailed)
+        {
+            return VerdictBasis.RetrievalUnavailable;
+        }
+
+        if (grounded.Citations.Count == 0)
+        {
+            return VerdictBasis.NoPassages;
+        }
+
+        return grounded.GroundingStatus == GroundingStatus.Ungrounded
+            ? VerdictBasis.NotCovered
+            : VerdictBasis.Rulebook;
+    }
+
+    private static bool BudgetExpired(CancellationTokenSource budget, CancellationToken callerToken)
+        => budget.IsCancellationRequested && !callerToken.IsCancellationRequested;
+
+    private async Task<VerdictAnswer> FallBackWithoutTheRulebookAsync(
         LiveGameSession session,
         SubmitRuleDisputeCommand request,
         CancellationToken cancellationToken)
     {
-        var (systemPrompt, userPrompt) = BuildDirectPrompt(session, request);
+        _logger.LogWarning(
+            "Rule dispute of SessionId={SessionId}: the grounded answer exceeded its {BudgetMs} ms budget; " +
+            "the verdict is given without the rulebook",
+            request.SessionId, _sessionAgentOptions.Value.ArbiterBudgetMs);
+        MeepleAiMetrics.RecordRetrievalFallback(
+            MeepleAiMetrics.RagFallbackTypes.RetrievalBudget, MeepleAiMetrics.RagFallbackSeverity.PartialLoss);
+
+        return await AskTheModelAloneAsync(session, request, VerdictBasis.RetrievalUnavailable, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The rulebook is not in the prompt (no catalog game, the caller may not read it, or it could not be
+    /// consulted in time): the model is asked directly, told it has none, and the verdict says so. It used to be
+    /// told to «base its verdicts exclusively on the rulebook» and to quote it — which it did not have.
+    /// </summary>
+    private async Task<VerdictAnswer> AskTheModelAloneAsync(
+        LiveGameSession session,
+        SubmitRuleDisputeCommand request,
+        VerdictBasis basis,
+        CancellationToken cancellationToken)
+    {
+        var (systemPrompt, userPrompt) = ArbiterVerdictFormat.DirectPrompt(session, request.Description);
 
         var llmResult = await _llmService
             .GenerateCompletionAsync(systemPrompt, userPrompt, RequestSource.Manual, cancellationToken)
@@ -381,7 +458,7 @@ internal sealed class SubmitRuleDisputeCommandHandler
         return new VerdictAnswer(
             llmResult.Response ?? string.Empty,
             Array.Empty<CitationDto>(),
-            RestsOnTheRulebook: false,
+            basis,
             FinishReason: llmResult.Metadata.TryGetValue("finish_reason", out var finishReason) ? finishReason : null,
             CompletionTokens: llmResult.Usage.CompletionTokens);
     }
@@ -412,246 +489,17 @@ internal sealed class SubmitRuleDisputeCommandHandler
     /// to tell a truncated answer (<c>finish_reason=length</c>, the reasoning budget eaten) from a
     /// refusal; the response carries only the fixed message.
     /// </summary>
-    private ExternalServiceException NoVerdict(Guid sessionId, VerdictAnswer answer, string reason)
+    private ExternalServiceException NoVerdict(
+        Guid sessionId, string reason, string? finishReason = null, int? completionTokens = null)
     {
         _logger.LogError(
             "Arbitration produced no verdict for SessionId={SessionId}: {Reason} (FinishReason={FinishReason}, CompletionTokens={CompletionTokens})",
             sessionId,
             reason,
-            answer.FinishReason ?? "n/d",
-            answer.CompletionTokens?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "n/d");
+            finishReason ?? "n/d",
+            completionTokens?.ToString(CultureInfo.InvariantCulture) ?? "n/d");
 
         return new ExternalServiceException(NoVerdictMessage, NoVerdictErrorCode);
-    }
-
-    // ── Prompt Building ────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// For the grounded path: appended to the system prompt, after the rulebook passages. Not a
-    /// request for a quote, and no REGOLA section: the references are added from the passages found.
-    /// </summary>
-    private static string BuildResponseInstructions(LiveGameSession session)
-    {
-        var builder = new StringBuilder();
-        builder.AppendLine("## Modalità Arbitro");
-        builder.AppendLine(ArbiterPersona);
-        builder.AppendLine(
-            "Basa il verdetto sui passaggi del regolamento forniti sopra. " +
-            "Se non coprono il caso, dillo e proponi l'interpretazione più ragionevole.");
-        builder.AppendLine(
-            "Non scrivere citazioni tra virgolette né riferimenti a pagina o sezione: " +
-            "li aggiunge il sistema, solo da passaggi davvero trovati.");
-        builder.AppendLine(BuildContext(session));
-        builder.Append(VerdictFormat);
-        return builder.ToString();
-    }
-
-    /// <summary>For the direct path: there is no rulebook, and the model is told so.</summary>
-    private static (string SystemPrompt, string UserPrompt) BuildDirectPrompt(
-        LiveGameSession session,
-        SubmitRuleDisputeCommand request)
-    {
-        var systemPrompt =
-            ArbiterPersona + " " +
-            "Non hai accesso al regolamento di questo gioco: basa il verdetto sul buon senso e sulle regole " +
-            "generali del gioco, dichiaralo con chiarezza e non citare pagine, sezioni o testo del regolamento.";
-
-        var userPrompt = new StringBuilder();
-        userPrompt.AppendLine("MODALITÀ ARBITRO. Emetti un VERDETTO chiaro su questa disputa.");
-        userPrompt.AppendLine();
-        userPrompt.Append("Disputa: \"").Append(request.Description).AppendLine("\"");
-        userPrompt.AppendLine(BuildContext(session));
-        userPrompt.AppendLine();
-        userPrompt.Append(VerdictFormat);
-
-        return (systemPrompt, userPrompt.ToString());
-    }
-
-    /// <summary>The session context both prompts carry: game, players, turn and the latest verdicts.</summary>
-    private static string BuildContext(LiveGameSession session)
-    {
-        var playerNames = session.Players.Count > 0
-            ? string.Join(", ", session.Players.Where(p => p.IsActive).Select(p => p.DisplayName))
-            : "N/D";
-
-        var context = new StringBuilder();
-        context
-            .Append("Contesto: Sessione \"").Append(session.GameName)
-            .Append("\" con giocatori: ").Append(playerNames)
-            .Append(". Turno: ").Append(session.CurrentTurnIndex).Append('.');
-
-        var previousDisputesSummary = BuildPreviousDisputesSummary(session.Disputes);
-        if (!string.IsNullOrEmpty(previousDisputesSummary))
-        {
-            context.AppendLine().Append("Verdetti precedenti: ").Append(previousDisputesSummary);
-        }
-
-        return context.ToString();
-    }
-
-    private static string BuildPreviousDisputesSummary(IReadOnlyList<RuleDisputeEntry> disputes)
-    {
-        if (disputes.Count == 0)
-            return string.Empty;
-
-        // Only include the last 3 disputes to keep the prompt concise
-        var recent = disputes.TakeLast(3).ToList();
-        var parts = recent.Select((d, i) =>
-            $"{i + 1}. \"{d.Description}\" → {d.Verdict}");
-
-        return string.Join("; ", parts);
-    }
-
-    // ── Response Parsing ───────────────────────────────────────────────────────
-
-    /// <summary>
-    /// The VERDETTO and NOTA sections. #4751: REGOLA is recognized only to be left out — the model is no
-    /// longer asked for it (a quote it cannot have), and what it writes there is neither the verdict nor
-    /// the note nor a reference: those come from the passages that were retrieved.
-    /// </summary>
-    internal static (string Verdict, string? Note) ParseArbitrationResponse(string response)
-    {
-        // #4751: the handler turns an empty answer into a failure before it gets here. This used to
-        // invent «Nessun verdetto disponibile.», which the handler then saved as a real verdict; reaching
-        // this point empty is a bug in the caller, so it fails loudly instead of producing one.
-        ArgumentException.ThrowIfNullOrWhiteSpace(response);
-
-        var lines = response
-            .Split('\n', StringSplitOptions.RemoveEmptyEntries)
-            .Select(l => l.Trim())
-            .ToList();
-
-        var verdict = ExtractSection(lines, "VERDETTO:");
-        var nota = ExtractSection(lines, "NOTA:");
-
-        // No VERDETTO text: an unstructured answer is the verdict itself, minus any REGOLA section. The
-        // bare skeleton («VERDETTO:\nREGOLA:\nNOTA:», or an answer cut right after a header) is not an
-        // answer at all, and stays empty so that the handler can refuse it.
-        if (string.IsNullOrWhiteSpace(verdict))
-        {
-            var withoutRule = WithoutRuleSection(lines);
-            verdict = withoutRule.All(IsSectionHeaderOnly)
-                ? string.Empty
-                : withoutRule.Count == lines.Count ? response.Trim() : string.Join("\n", withoutRule);
-        }
-
-        return (verdict, string.IsNullOrWhiteSpace(nota) ? null : nota);
-    }
-
-    /// <summary>The lines of an unstructured answer without the REGOLA section (its header and what follows, up to the next header).</summary>
-    private static List<string> WithoutRuleSection(List<string> lines)
-    {
-        var kept = new List<string>(lines.Count);
-        var inRuleSection = false;
-
-        foreach (var line in lines)
-        {
-            if (line.StartsWith("REGOLA:", StringComparison.OrdinalIgnoreCase))
-            {
-                inRuleSection = true;
-                continue;
-            }
-
-            if (inRuleSection && SectionHeaders.Any(h => line.StartsWith(h, StringComparison.OrdinalIgnoreCase)))
-            {
-                inRuleSection = false;
-            }
-
-            if (!inRuleSection)
-            {
-                kept.Add(line);
-            }
-        }
-
-        return kept;
-    }
-
-    /// <summary>Takes the machine syntax of the copyright paraphrase (<c>[ref:documentId:pageNum]</c>) out of the text.</summary>
-    private static string StripCopyrightMarkers(string text)
-        => CopyrightMarker.Replace(text, " ");
-
-    // ── Rule references ────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// The references of a verdict that rests on the rulebook: the most relevant retrieved passages, one
-    /// per page, as a page and — only for a Full-tier passage — its text. A Protected passage is cited by
-    /// page alone: the verdict is the paraphrase, and the tier, not the presence of a snippet, decides
-    /// what may be quoted (the shared finalize step nulls a Protected preview; this does not rely on it).
-    /// </summary>
-    internal static List<string> BuildRuleReferences(IReadOnlyList<CitationDto> citations)
-        => citations
-            .OrderByDescending(c => c.RelevanceScore)
-            .DistinctBy(c => (c.DocumentId, c.PageNumber))
-            .Take(MaxRuleReferences)
-            .Select(ToRuleReference)
-            .ToList();
-
-    private static string ToRuleReference(CitationDto citation)
-    {
-        var label = citation.PageNumber > 0 ? $"Regolamento, p. {citation.PageNumber}" : "Regolamento";
-
-        if (string.Equals(citation.CopyrightTier, FullTier, StringComparison.OrdinalIgnoreCase)
-            && !string.IsNullOrWhiteSpace(citation.SnippetPreview))
-        {
-            return $"{label}: «{Shorten(citation.SnippetPreview)}»";
-        }
-
-        return label;
-    }
-
-    private static string Shorten(string text)
-    {
-        var collapsed = Whitespace.Replace(text, " ").Trim();
-        return collapsed.Length <= MaxQuotedChars ? collapsed : collapsed[..MaxQuotedChars].TrimEnd() + "…";
-    }
-
-    private static readonly string[] SectionHeaders = { "VERDETTO:", "REGOLA:", "NOTA:" };
-
-    /// <summary>A line that is nothing but a section header, with no text after it.</summary>
-    private static bool IsSectionHeaderOnly(string line)
-    {
-        foreach (var header in SectionHeaders)
-        {
-            if (line.StartsWith(header, StringComparison.OrdinalIgnoreCase))
-            {
-                return string.IsNullOrWhiteSpace(line[header.Length..]);
-            }
-        }
-
-        return string.IsNullOrWhiteSpace(line);
-    }
-
-    private static string ExtractSection(List<string> lines, string prefix)
-    {
-        var parts = new List<string>();
-        var capturing = false;
-
-        foreach (var line in lines)
-        {
-            if (line.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            {
-                capturing = true;
-                var remainder = line[prefix.Length..].Trim();
-                if (!string.IsNullOrWhiteSpace(remainder))
-                    parts.Add(remainder);
-                continue;
-            }
-
-            if (capturing)
-            {
-                // Stop at the next recognised section header
-                if (line.StartsWith("VERDETTO:", StringComparison.OrdinalIgnoreCase) ||
-                    line.StartsWith("REGOLA:", StringComparison.OrdinalIgnoreCase) ||
-                    line.StartsWith("NOTA:", StringComparison.OrdinalIgnoreCase))
-                {
-                    break;
-                }
-
-                parts.Add(line);
-            }
-        }
-
-        return string.Join(" ", parts).Trim();
     }
 
     // ── DB Persistence ─────────────────────────────────────────────────────────

@@ -36,6 +36,7 @@ describe('getBrowserTimeZone (#4754)', () => {
     ['vuoto', ''],
     ['un offset', '+01:00'],
     ['con uno spazio', 'Europe Rome'],
+    ['che comincia con una cifra', '1Europe/Rome'],
     ['con uno slash iniziale', '/Europe/Rome'],
     ['con più livelli di quanti ne abbia un id IANA', 'a/b/c/d/e'],
     ['più lungo della colonna', `Europe/${'a'.repeat(60)}`],

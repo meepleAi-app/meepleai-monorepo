@@ -47,9 +47,12 @@ public sealed class GetSessionDisputesHostFixture(SharedTestcontainersFixture sh
 /// Issue #3391 (finding C8): wire the existing (but unwired) GetSessionDisputesQuery so the
 /// Arbitro tab can hydrate its dispute history on reload (REST), not only via SignalR.
 ///
-/// Scope decision: per-session (not the pre-existing per-game /games/{gameId}/dispute-history),
+/// Scope decision: per-session (not the per-game /games/{gameId}/dispute-history),
 /// because the Arbitro tab is scoped to a single live session and cross-session history is a
 /// separate future concern (DisputeHistory.gameId prop is "reserved for future").
+/// The per-game route reads the disputes of every session of the game, so since #4769 it is
+/// admin-only (<see cref="GetGameDisputeHistoryEndpointTests"/>); this route, limited to the
+/// session's participants, is the one a user can reach.
 ///
 /// Test strategy mirrors LiveSessionDiaryEndpointTests:
 /// - IntegrationWebApplicationFactory + SharedTestcontainersFixture (isolated DB per class)

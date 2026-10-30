@@ -188,7 +188,7 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
                 It.IsAny<IReadOnlyList<string>>(),
                 $"{BaseUrl}/invites/{captured.Token}?action=accept",
                 $"{BaseUrl}/invites/{captured.Token}?action=decline",
-                $"{BaseUrl}/invites/{captured.Token}/unsubscribe",
+                GameNightEmailLocale.Unknown, // No organizer record and no stored zone: English, UTC.
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
@@ -290,7 +290,48 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
                 It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<DateTimeOffset>(), It.IsAny<string?>(), It.IsAny<IReadOnlyList<string>>(),
                 It.Is<string>(url => url.Contains(pending.Token, StringComparison.Ordinal)),
+                It.IsAny<string>(), It.IsAny<GameNightEmailLocale>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// #4754: the invitation says the time the organizer meant and speaks the organizer's language. The
+    /// guest is an address, not an account, so the organizer's language is the only one known.
+    /// </summary>
+    [Fact]
+    public async Task Handle_TheEmailCarriesTheOrganizersLanguageAndTheNightsTimeZone()
+    {
+        var organizer = new Api.Tests.BoundedContexts.Authentication.TestHelpers.UserBuilder().Build();
+        organizer.UpdatePreferences("it", "system", emailNotifications: true, dataRetentionDays: 90);
+        var gameNight = GameNightEvent.Create(
+            organizerId: organizer.Id,
+            title: "Venerdì Catan",
+            scheduledAt: UtcNow.AddDays(7),
+            timeZoneId: "Europe/Rome");
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _invitationRepoMock
+            .Setup(r => r.ExistsPendingByEmailAsync(
+                gameNight.Id, "guest@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _userRepoMock
+            .Setup(r => r.GetByIdAsync(organizer.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(organizer);
+
+        await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(gameNight.Id, "guest@example.com", organizer.Id),
+            CancellationToken.None);
+
+        _emailServiceMock.Verify(
+            e => e.SendGameNightInvitationEmailAsync(
+                "guest@example.com",
+                organizer.DisplayName,
+                It.IsAny<string>(), It.IsAny<DateTimeOffset>(), It.IsAny<string?>(),
+                It.IsAny<IReadOnlyList<string>>(),
                 It.IsAny<string>(), It.IsAny<string>(),
+                new GameNightEmailLocale("it", "Europe/Rome"),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -321,7 +362,7 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
             .Setup(s => s.SendGameNightInvitationEmailAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<DateTimeOffset>(), It.IsAny<string?>(), It.IsAny<IReadOnlyList<string>>(),
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameNightEmailLocale>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("smtp is down"));
 
@@ -384,7 +425,7 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
                 "other@example.com",
                 It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<DateTimeOffset>(), It.IsAny<string?>(), It.IsAny<IReadOnlyList<string>>(),
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameNightEmailLocale>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }

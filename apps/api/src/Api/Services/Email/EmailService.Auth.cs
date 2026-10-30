@@ -116,7 +116,7 @@ internal partial class EmailService
         {
             var verifyUrl = $"{_frontendBaseUrl}/verify-email?token={Uri.EscapeDataString(verificationToken)}";
             var subject = "Verify Your MeepleAI Email";
-            var body = BuildVerificationEmailBody(toName, verifyUrl);
+            var body = BuildVerificationEmailBody(toName, verifyUrl, _timeProvider.GetUtcNow().Year);
 
             using var message = new MailMessage();
             message.From = new MailAddress(_fromAddress, _fromName);
@@ -437,7 +437,9 @@ internal partial class EmailService
 
     // ===== Template builders =====
 
-    private static string BuildVerificationEmailBody(string userName, string verifyUrl)
+    // #4754: the footer year was the literal 2025. `internal` so a test can pin the year without a mail transport:
+    // this method sends through SmtpClient directly, not through IEmailSender.
+    internal static string BuildVerificationEmailBody(string userName, string verifyUrl, int year)
     {
         return $@"
 <!DOCTYPE html>
@@ -480,7 +482,7 @@ internal partial class EmailService
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
         <p>This is an automated message, please do not reply to this email.</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>&copy; {year} MeepleAI. All rights reserved.</p>
     </div>
 </body>
 </html>

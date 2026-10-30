@@ -164,7 +164,10 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
 
         var rsvpAcceptUrl = $"{baseUrl.TrimEnd('/')}/invites/{invitation.Token}?action=accept";
         var rsvpDeclineUrl = $"{baseUrl.TrimEnd('/')}/invites/{invitation.Token}?action=decline";
-        var unsubscribeUrl = $"{baseUrl.TrimEnd('/')}/invites/{invitation.Token}/unsubscribe";
+
+        // #4754: the email speaks the organizer's language (the guest is an address, not an account: their own
+        // language is not known) and writes the time on the night's zone.
+        var locale = new GameNightEmailLocale(organizer?.Language, gameNight.TimeZoneId);
 
         await _emailService.SendGameNightInvitationEmailAsync(
             toEmail: invitation.Email,
@@ -175,7 +178,7 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
             gameNames: gameNames,
             rsvpAcceptUrl: rsvpAcceptUrl,
             rsvpDeclineUrl: rsvpDeclineUrl,
-            unsubscribeUrl: unsubscribeUrl,
+            locale: locale,
             ct: cancellationToken).ConfigureAwait(false);
     }
 }

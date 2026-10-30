@@ -18,6 +18,7 @@ const h = vi.hoisted(() => ({
   mutateAsync: vi.fn(),
   push: vi.fn(),
   toast: vi.fn(),
+  timeZone: vi.fn(),
 }));
 
 vi.mock('next/navigation', () => ({
@@ -26,6 +27,7 @@ vi.mock('next/navigation', () => ({
 }));
 vi.mock('@/hooks/useTranslation', () => ({ useTranslation: () => ({ t: (k: string) => k }) }));
 vi.mock('@/hooks/useToast', () => ({ useToast: () => ({ toast: h.toast }) }));
+vi.mock('@/lib/utils/browserTimeZone', () => ({ getBrowserTimeZone: () => h.timeZone() }));
 vi.mock('@/hooks/queries/useCurrentUser', () => ({
   useCurrentUser: () => ({ data: { id: 'organizer-1', displayName: 'Organizzatore' } }),
 }));
@@ -93,6 +95,8 @@ describe('NewGameNightContent — invio con retry (#4692)', () => {
     h.mutateAsync.mockReset();
     h.push.mockReset();
     h.toast.mockReset();
+    h.timeZone.mockReset();
+    h.timeZone.mockReturnValue('Europe/Rome');
   });
 
   afterEach(() => {
@@ -127,6 +131,32 @@ describe('NewGameNightContent — invio con retry (#4692)', () => {
     expect(new Set(ids).size).toBe(1);
     expect(h.push).not.toHaveBeenCalled();
     expect(h.toast).toHaveBeenCalledWith(expect.objectContaining({ variant: 'destructive' }));
+  });
+
+  it("manda il fuso del browser insieme alla serata, perche' l'email dica 21:00 e non l'ora UTC (#4754)", async () => {
+    h.mutateAsync.mockResolvedValueOnce('night-1');
+    render(<NewGameNightContent />);
+
+    await submitAndLetTheRetriesRun();
+
+    expect(h.mutateAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        timeZoneId: 'Europe/Rome',
+        scheduledAt: '2030-01-01T20:00:00.000Z',
+      })
+    );
+  });
+
+  it('se il browser non sa dire un fuso, lascia fuori il campo e la serata si crea lo stesso (#4754)', async () => {
+    h.timeZone.mockReturnValue(undefined);
+    h.mutateAsync.mockResolvedValueOnce('night-1');
+    render(<NewGameNightContent />);
+
+    await submitAndLetTheRetriesRun();
+
+    expect(h.mutateAsync).toHaveBeenCalledTimes(1);
+    expect(h.mutateAsync.mock.calls[0][0]).not.toHaveProperty('timeZoneId');
+    expect(h.push).toHaveBeenCalledWith('/game-nights/night-1');
   });
 
   it("un invio nuovo e' una creazione nuova: un altro id", async () => {

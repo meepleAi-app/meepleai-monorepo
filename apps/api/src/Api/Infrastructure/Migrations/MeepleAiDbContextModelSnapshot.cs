@@ -5671,6 +5671,11 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(64)")
                         .HasColumnName("test_run_id");
 
+                    b.Property<string>("TimeZoneId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("time_zone_id");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)

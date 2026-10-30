@@ -431,6 +431,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             Title = domain.Title,
             Description = domain.Description,
             ScheduledAt = domain.ScheduledAt,
+            TimeZoneId = domain.TimeZoneId,
             Location = domain.Location,
             MaxPlayers = domain.MaxPlayers,
             GameIdsJson = JsonSerializer.Serialize(domain.GameIds),
@@ -514,7 +515,8 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             description: entity.Description,
             location: entity.Location,
             maxPlayers: entity.MaxPlayers,
-            gameIds: gameIds);
+            gameIds: gameIds,
+            timeZoneId: entity.TimeZoneId);
 
         // Restore state from persistence via reflection (same pattern as GameNightPlaylistRepository)
         var statusProp = typeof(GameNightEvent).GetProperty(nameof(GameNightEvent.Status));

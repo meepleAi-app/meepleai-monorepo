@@ -446,7 +446,8 @@ internal static class GameNightEndpoints
             GameIds: request.GameIds,
             InvitedUserIds: request.InvitedUserIds,
             InvitedEmails: request.InvitedEmails,
-            Id: request.Id);
+            Id: request.Id,
+            TimeZoneId: request.TimeZoneId);
 
         var id = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.Created($"/api/v1/game-nights/{id}", id);
@@ -470,7 +471,8 @@ internal static class GameNightEndpoints
             Description: request.Description,
             Location: request.Location,
             MaxPlayers: request.MaxPlayers,
-            GameIds: request.GameIds);
+            GameIds: request.GameIds,
+            TimeZoneId: request.TimeZoneId);
 
         // 🔴 Validazione a mano, come già fa `HandleRespondToInvitationByToken` poche righe sopra
         // e per la stessa ragione: `UpdateGameNightCommand` è un `ICommand`, cioè un `IRequest`
@@ -1044,7 +1046,8 @@ internal static class GameNightEndpoints
         List<Guid>? GameIds = null,
         List<Guid>? InvitedUserIds = null,
         List<string>? InvitedEmails = null,
-        Guid? Id = null);
+        Guid? Id = null,
+        string? TimeZoneId = null);
 
     private sealed record UpdateGameNightRequest(
         string Title,
@@ -1052,7 +1055,8 @@ internal static class GameNightEndpoints
         string? Description = null,
         string? Location = null,
         int? MaxPlayers = null,
-        List<Guid>? GameIds = null);
+        List<Guid>? GameIds = null,
+        string? TimeZoneId = null);
 
     private sealed record InviteToGameNightRequest(List<Guid> UserIds);
 

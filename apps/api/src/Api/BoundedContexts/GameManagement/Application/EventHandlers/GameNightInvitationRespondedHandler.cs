@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
@@ -37,6 +38,7 @@ internal sealed class GameNightInvitationRespondedHandler
 {
     private readonly IGameNightInvitationRepository _invitationRepository;
     private readonly IGameNightEventRepository _gameNightRepository;
+    private readonly IUserRepository _userRepository;
     private readonly IGameNightEmailService _emailService;
     private readonly HybridCache _cache;
     private readonly IUnitOfWork _unitOfWork;
@@ -45,6 +47,7 @@ internal sealed class GameNightInvitationRespondedHandler
     public GameNightInvitationRespondedHandler(
         IGameNightInvitationRepository invitationRepository,
         IGameNightEventRepository gameNightRepository,
+        IUserRepository userRepository,
         IGameNightEmailService emailService,
         HybridCache cache,
         IUnitOfWork unitOfWork,
@@ -52,6 +55,7 @@ internal sealed class GameNightInvitationRespondedHandler
     {
         _invitationRepository = invitationRepository ?? throw new ArgumentNullException(nameof(invitationRepository));
         _gameNightRepository = gameNightRepository ?? throw new ArgumentNullException(nameof(gameNightRepository));
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
@@ -129,14 +133,19 @@ internal sealed class GameNightInvitationRespondedHandler
             return;
         }
 
-        var unsubscribeUrl = $"/invites/{invitation.Token}/unsubscribe";
+        // #4754: same language and zone as the invitation the guest answered — the organizer's. (The footer used
+        // to carry an unsubscribe link built without the site's base URL, so it was relative and pointed
+        // at no page; a guest's confirmation now has no link at all.)
+        var organizer = await _userRepository
+            .GetByIdAsync(gameNight.OrganizerId, cancellationToken)
+            .ConfigureAwait(false);
 
         await _emailService.SendGameNightRsvpConfirmationEmailAsync(
             toEmail: invitation.Email,
             title: gameNight.Title,
             scheduledAt: gameNight.ScheduledAt,
             location: gameNight.Location,
-            unsubscribeUrl: unsubscribeUrl,
+            locale: new GameNightEmailLocale(organizer?.Language, gameNight.TimeZoneId),
             ct: cancellationToken).ConfigureAwait(false);
 
         // Mark and persist the confirmation-sent timestamp so a retried event short-circuits above.

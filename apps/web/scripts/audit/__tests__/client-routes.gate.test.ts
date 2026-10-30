@@ -35,7 +35,11 @@ const baseline: Baseline = JSON.parse(
   readFileSync(path.join(here, '../client-routes-baseline.json'), 'utf8')
 );
 
-const endpoints = extractApiEndpoints(path.resolve(webRoot, '../api/src/Api'));
+// Oltre a Routing/ ci sono rotte vere in BoundedContexts/*/Routing (KbQuality, GameManagement).
+const endpoints = extractApiEndpoints(path.resolve(webRoot, '../api/src/Api'), [
+  'Routing',
+  'BoundedContexts',
+]);
 const calls = extractClientCallsFromDir(path.join(webRoot, 'src/lib/api'), webRoot);
 const mismatches = compareCallsToEndpoints(calls, endpoints);
 
@@ -45,6 +49,26 @@ const keysOf = (kind: Mismatch['kind']): string[] =>
     .map(mismatchKey)
     .sort();
 
+const BASELINE_LIST: Record<Mismatch['kind'], keyof Baseline> = {
+  'wrong-verb': 'wrongVerb',
+  'unknown-path': 'unknownPath',
+};
+
+/** Dove cade la chiamata nel baseline, se in una lista che non è quella del suo rilievo di oggi. */
+const movedHint = (kind: Mismatch['kind'], key: string): string => {
+  const wasIn = (Object.keys(BASELINE_LIST) as Mismatch['kind'][]).find(
+    other => other !== kind && baseline[BASELINE_LIST[other]].includes(key)
+  );
+  if (!wasIn) return '';
+  return (
+    `  [la voce è già in "${BASELINE_LIST[wasIn]}": ` +
+    (kind === 'wrong-verb'
+      ? 'il percorso ora esiste, ma con un altro verbo'
+      : 'il percorso non è più registrato con nessun verbo') +
+    `; spostala in "${BASELINE_LIST[kind]}" nel baseline]`
+  );
+};
+
 const describeNew = (kind: Mismatch['kind'], keys: string[]): string =>
   keys
     .map(key => {
@@ -53,7 +77,7 @@ const describeNew = (kind: Mismatch['kind'], keys: string[]): string =>
         m.registeredMethods.length > 0
           ? ` (sul percorso il backend registra: ${m.registeredMethods.join(', ')})`
           : '';
-      return `  ${key}${registered}  <- ${m.file}:${m.line}`;
+      return `  ${key}${registered}  <- ${m.file}:${m.line}${movedHint(kind, key)}`;
     })
     .join('\n');
 
@@ -65,6 +89,12 @@ describe('chiamate dei client e rotte del backend', () => {
     expect(calls.length).toBeGreaterThan(0);
     expect(endpoints.length).toBeGreaterThan(0);
     expect(mismatches.length).toBeLessThan(calls.length / 2);
+  });
+
+  it('legge anche le rotte di BoundedContexts, non solo quelle di Routing', () => {
+    // Con la sola radice Routing, una chiamata a `/admin/kb/docs/{id}/evaluations` o a `/games/search`
+    // risultava «sconosciuta» benché la rotta esista: falsi positivi che spingono a gonfiare il baseline.
+    expect(endpoints.some(e => e.file.startsWith('BoundedContexts/'))).toBe(true);
   });
 
   it('nessuna chiamata nuova usa un verbo che il backend non registra su quel percorso', () => {
@@ -90,13 +120,12 @@ describe('chiamate dei client e rotte del backend', () => {
   });
 
   it('il baseline non contiene voci che non servono più', () => {
+    // Una voce che ha solo cambiato lista (il percorso ora esiste con un altro verbo, o non esiste più)
+    // non è superata: la segnalano i due test sopra, con l'azione giusta.
+    const current = new Set(mismatches.map(mismatchKey));
     const stale = [
-      ...baseline.wrongVerb
-        .filter(k => !keysOf('wrong-verb').includes(k))
-        .map(k => `wrongVerb: ${k}`),
-      ...baseline.unknownPath
-        .filter(k => !keysOf('unknown-path').includes(k))
-        .map(k => `unknownPath: ${k}`),
+      ...baseline.wrongVerb.filter(k => !current.has(k)).map(k => `wrongVerb: ${k}`),
+      ...baseline.unknownPath.filter(k => !current.has(k)).map(k => `unknownPath: ${k}`),
     ];
     expect(
       stale,

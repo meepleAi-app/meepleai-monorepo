@@ -81,6 +81,78 @@ describe('extractClientCalls', () => {
     ]);
   });
 
+  // #4752 (revisione): la chiamata riscritta dalla PR era `httpClient.post(GAME_SESSION_BASE, body)`, con la
+  // costante come argomento nudo: l'estrattore la risolveva solo dentro `${…}`, quindi il gate non la vedeva.
+  it('risolve una costante di file passata come argomento nudo', () => {
+    const source = [
+      "const SESSIONS = '/api/v1/games/x/sessions';",
+      'await httpClient.post(SESSIONS, body);',
+    ].join('\n');
+
+    expect(extractClientCalls(source, 'x.ts').map(c => `${c.method} ${c.path}`)).toEqual([
+      'POST /api/v1/games/x/sessions',
+    ]);
+  });
+
+  it('risolve una costante-template di file, con i parametri a {}', () => {
+    const source = [
+      'const url = `/api/v1/games/${id}/sessions`;',
+      'await httpClient.post(url, body);',
+    ].join('\n');
+
+    expect(extractClientCalls(source, 'x.ts').map(c => `${c.method} ${c.path}`)).toEqual([
+      'POST /api/v1/games/{}/sessions',
+    ]);
+  });
+
+  it('una costante può comporsi con altre costanti, anche dichiarate dopo', () => {
+    const source = [
+      'const LIST = `${BASE}/list`;',
+      "const BASE = '/api/v1/things';",
+      'await httpClient.get(LIST);',
+    ].join('\n');
+
+    expect(extractClientCalls(source, 'x.ts').map(c => c.path)).toEqual(['/api/v1/things/list']);
+  });
+
+  it('una costante dichiarata due volte con valori diversi è ambigua: la chiamata non si legge', () => {
+    const source = [
+      "function a() { const URL = '/api/v1/a'; return httpClient.get(URL); }",
+      "function b() { const URL = '/api/v1/b'; return httpClient.get(URL); }",
+    ].join('\n');
+
+    expect(extractClientCalls(source, 'x.ts')).toEqual([]);
+  });
+
+  it('un identificatore che non è una costante di file non si indovina', () => {
+    const source = ['function f(url: string) {', '  return httpClient.get(url);', '}'].join('\n');
+    expect(extractClientCalls(source, 'x.ts')).toEqual([]);
+  });
+
+  it('gli esempi nei commenti non sono chiamate', () => {
+    const source = [
+      '/**',
+      " * Esempio: httpClient.post('/api/v1/games/{id}/sessions', body)",
+      ' */',
+      "// httpClient.delete('/api/v1/old')",
+      "await httpClient.get('/api/v1/real');",
+    ].join('\n');
+
+    expect(extractClientCalls(source, 'x.ts').map(c => `${c.method} ${c.path}`)).toEqual([
+      'GET /api/v1/real',
+    ]);
+  });
+
+  it('un // dentro una stringa non apre un commento', () => {
+    const source = "const base = 'http://x'; await httpClient.get('/api/v1/after');";
+    expect(extractClientCalls(source, 'x.ts').map(c => c.path)).toEqual(['/api/v1/after']);
+  });
+
+  it('un ternario dentro l’interpolazione non taglia il percorso al ?', () => {
+    const source = "await httpClient.get(`/api/v1/a/${flag ? 'x' : 'y'}/b`);";
+    expect(extractClientCalls(source, 'x.ts').map(c => c.path)).toEqual(['/api/v1/a/{}/b']);
+  });
+
   it('ignora ciò che non è una chiamata a un percorso dell’API', () => {
     const source = [
       "params.get('page');",
@@ -162,6 +234,18 @@ describe('compareCallsToEndpoints', () => {
   it('un segmento di coda catch-all del backend assorbe il resto del percorso', () => {
     const catchAll = [endpoint('GET', '/api/v1/files/{**path}')];
     expect(compareCallsToEndpoints([call('GET', '/api/v1/files/a/b/c')], catchAll)).toEqual([]);
+  });
+
+  // #4752 (revisione): le rotte registrate da un metodo che riceve un sottogruppo già prefissato
+  // (`DocumentCollectionEndpoints`, `RagExecutionAdminEndpoints`) perdono il prefisso e diventano
+  // `/api/v1/{id}/replay`: un jolly che assorbiva `POST /api/v1/qualunque-cosa/replay`.
+  it('una rotta con un parametro come primo segmento (prefisso perso) non assorbe chiamate', () => {
+    const phantom = [endpoint('POST', '/api/v1/{executionId:guid}/replay')];
+    const [mismatch] = compareCallsToEndpoints(
+      [call('POST', '/api/v1/nonexistent-thing/replay')],
+      phantom
+    );
+    expect(mismatch).toMatchObject({ kind: 'unknown-path' });
   });
 
   it('una chiamata ripetuta dà un solo rilievo, con la prima posizione', () => {

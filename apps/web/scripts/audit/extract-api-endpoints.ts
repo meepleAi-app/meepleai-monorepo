@@ -196,7 +196,12 @@ export function parseRoutingFile(
 
     found.push({
       method: verb.toUpperCase(),
-      path: `${groupPrefix}${group?.prefix ?? ''}${routePath}`.replace(/\/{2,}/g, '/'),
+      // ASP.NET inserisce la '/' fra il prefisso del gruppo e un pattern relativo: `MapGet("{id:guid}")`
+      // sotto `/evaluations` è `/evaluations/{id:guid}`, non `/evaluations{id:guid}`.
+      path: `${groupPrefix}${group?.prefix ?? ''}${routePath === '' || routePath.startsWith('/') ? routePath : `/${routePath}`}`.replace(
+        /\/{2,}/g,
+        '/'
+      ),
       // Precedenza: catena dell'endpoint → corpo dell'handler → gruppo. Se
       // nessuno dei tre parla, il livello di protezione va letto a mano e
       // finisce nelle note del tracker.
@@ -223,8 +228,15 @@ export function registrarName(source: string): string {
   );
 }
 
-/** Percorre Routing/ applicando i prefissi dedotti da Program.cs. */
-export function extractApiEndpoints(apiDir: string): EndpointEntry[] {
+/**
+ * Percorre le radici indicate (default: solo `Routing/`, come l'audit) applicando i prefissi dedotti da
+ * Program.cs. Altre rotte vere stanno in `BoundedContexts/*\/Routing`: chi confronta le chiamate dei
+ * client con le rotte passa anche `BoundedContexts`, altrimenti vede come «sconosciute» rotte che esistono.
+ */
+export function extractApiEndpoints(
+  apiDir: string,
+  roots: readonly string[] = ['Routing']
+): EndpointEntry[] {
   const prefixes = parseProgramPrefixes(readFileSync(path.join(apiDir, 'Program.cs'), 'utf8'));
   const found: EndpointEntry[] = [];
 
@@ -243,6 +255,6 @@ export function extractApiEndpoints(apiDir: string): EndpointEntry[] {
     }
   };
 
-  walk(path.join(apiDir, 'Routing'));
+  for (const root of roots) walk(path.join(apiDir, root));
   return found.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
 }

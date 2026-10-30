@@ -62,11 +62,7 @@ internal sealed class CompleteGameNightSessionCommandHandler : ICommandHandler<C
         if (command.WinnerId.HasValue && session.Participants.All(p => p.Id != command.WinnerId.Value))
             throw new ConflictException("Winner must be a participant of the session.");
 
-        // FinalizeSessionCommand requires a rank for every participant: winner = 1, everyone else = 2;
-        // no winner → all 2 (no rank-1 → the finalize event records no winner).
-        var finalRanks = session.Participants.ToDictionary(
-            p => p.Id,
-            p => command.WinnerId.HasValue && p.Id == command.WinnerId.Value ? 1 : 2);
+        var finalRanks = BuildFinalRanks(session.Participants, command.WinnerId);
 
         // #3636: ExecuteInTransactionAsync — BeginTransactionAsync lancia sotto la retry strategy
         // attiva fuori da Testing. Rollback e commit sono ora della UoW, quindi `commitStarted` e i
@@ -93,7 +89,9 @@ internal sealed class CompleteGameNightSessionCommandHandler : ICommandHandler<C
             // authority was already enforced above (organizer check, line 49) — the FinalizeSessionCommand
             // IDOR guard targets direct HTTP callers, so we finalize on behalf of the tracking session's
             // owner to avoid spuriously blocking a legitimate game-night completion.
-                await _mediator.Send(new FinalizeSessionCommand(trackingSessionId, finalRanks, session.UserId), ct).ConfigureAwait(false);
+                await _mediator.Send(
+                    new FinalizeSessionCommand(trackingSessionId, finalRanks, session.UserId, NoWinner: !command.WinnerId.HasValue),
+                    ct).ConfigureAwait(false);
             }, cancellationToken).ConfigureAwait(false);
         }
         catch (DbUpdateConcurrencyException)
@@ -106,5 +104,34 @@ internal sealed class CompleteGameNightSessionCommandHandler : ICommandHandler<C
         }
 
         await _autoSaveScheduler.RemoveAsync(trackingSessionId, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// The ranks <see cref="FinalizeSessionCommand"/> needs: every participant, exactly 1..N with no gaps
+    /// (its validator rejects anything else). The winner is 1 and the rest follow in join order; with no
+    /// winner the order is just the join order, and <c>NoWinner</c> tells the finalize not to record rank 1
+    /// as one.
+    ///
+    /// <para>Before #4752 this gave the winner 1 and EVERYONE ELSE 2, and "all 2" with no winner. That is
+    /// 1..N only for exactly two participants: with three or more (<c>[1,2,2]</c>) or with no winner
+    /// (<c>[2,2]</c>) the finalize failed its own validation, so a night game could not be completed.
+    /// The unit tests mocked the finalize away and never saw it.</para>
+    /// </summary>
+    internal static Dictionary<Guid, int> BuildFinalRanks(
+        IEnumerable<Api.BoundedContexts.SessionTracking.Domain.Entities.Participant> participants, Guid? winnerId)
+    {
+        var ranks = new Dictionary<Guid, int>();
+        var next = 1;
+
+        if (winnerId is { } winner)
+            ranks[winner] = next++;
+
+        foreach (var participant in participants.OrderBy(p => p.JoinOrder).ThenBy(p => p.Id))
+        {
+            if (!ranks.ContainsKey(participant.Id))
+                ranks[participant.Id] = next++;
+        }
+
+        return ranks;
     }
 }

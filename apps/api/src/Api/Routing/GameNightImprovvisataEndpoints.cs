@@ -148,29 +148,35 @@ internal static class GameNightImprovvisataEndpoints
         return Results.Created($"/api/v1/game-night/private-games/{result.PrivateGameId}", result);
     }
 
-    private static async Task<IResult> HandleSubmitRuleDispute(
+    // internal, with the request record: the unit tests call the handler directly to see what command it builds.
+    internal static async Task<IResult> HandleSubmitRuleDispute(
         Guid sessionId,
         [FromBody] SubmitRuleDisputeRequest request,
         [FromServices] IMediator mediator,
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        var userId = httpContext.User.GetUserId();
-
-        // The role matters to the RAG ownership gate (ADR-096: administrators pass). A request without a
-        // session item (API-key authentication) has none, and the gate then treats the caller as a plain user.
-        var (hasSession, session, _) = httpContext.TryGetActiveSession();
-        var callerRole = hasSession ? session.Principal?.EffectiveActor.Role : null;
-
         var command = new SubmitRuleDisputeCommand(
             SessionId: sessionId,
-            CallerUserId: userId,
+            CallerUserId: httpContext.User.GetUserId(),
             Description: request.Description,
             RaisedByPlayerName: request.RaisedByPlayerName,
-            CallerRole: callerRole);
+            CallerRole: ResolveCallerRole(httpContext));
 
         var result = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
+    }
+
+    /// <summary>
+    /// The role the RAG ownership gate (ADR-096: administrators pass) is asked about: that of the session's
+    /// effective actor, as every authorization check reads it (<c>Principal.EffectiveActor</c>, the real admin
+    /// when impersonating). A request without a valid session item — API-key authentication, for one — has no
+    /// role: null, and the gate then treats the caller as a plain user. When in doubt it checks.
+    /// </summary>
+    internal static string? ResolveCallerRole(HttpContext httpContext)
+    {
+        var (hasSession, session, _) = httpContext.TryGetActiveSession();
+        return hasSession ? session.Principal?.EffectiveActor.Role : null;
     }
 
     private static async Task<IResult> HandleSaveSession(
@@ -215,7 +221,7 @@ internal static class GameNightImprovvisataEndpoints
 
     private sealed record StartImprovvisataSessionRequest(Guid PrivateGameId);
 
-    private sealed record SubmitRuleDisputeRequest(string Description, string RaisedByPlayerName);
+    internal sealed record SubmitRuleDisputeRequest(string Description, string RaisedByPlayerName);
 
     private sealed record SaveSessionRequest(List<Guid>? FinalPhotoIds = null);
 

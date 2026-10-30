@@ -34,14 +34,15 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
 /// <remarks>
 /// <c>CallerRole</c> is the caller's role, as the session reports it. It matters to the RAG ownership gate
 /// (ADR-096), which lets administrators through. Null — an unknown role, or a request without a session —
-/// counts as a plain user: when in doubt the gate checks, it does not wave through.
+/// counts as a plain user: when in doubt the gate checks, it does not wave through. It has no default on
+/// purpose: a second caller of this command must decide what to pass, not forget it.
 /// </remarks>
 public sealed record SubmitRuleDisputeCommand(
     Guid SessionId,
     Guid CallerUserId,
     string Description,
     string RaisedByPlayerName,
-    string? CallerRole = null) : IRequest<RuleDisputeResponse>;
+    string? CallerRole) : IRequest<RuleDisputeResponse>;
 
 /// <summary>
 /// Response returned after the AI arbitro resolves a rule dispute.
@@ -343,19 +344,21 @@ internal sealed class SubmitRuleDisputeCommandHandler
         Guid gameId,
         CancellationToken cancellationToken)
     {
-        // The embedding client alone defaults to a 120 s timeout with retries: without a bound a verdict can
-        // wait minutes. On expiry the verdict goes the no-rulebook way and says the rulebook could not be consulted.
+        // The embedding client has its own timeout and retries (see its options), which add up to far more than a
+        // player will wait: without a bound a verdict can take minutes. On expiry the verdict goes the no-rulebook
+        // way and says the rulebook could not be consulted. The key is ArbiterBudgetMs.
         var budgetMs = _sessionAgentOptions.Value.ArbiterBudgetMs;
         using var budget = budgetMs > 0
             ? new CancellationTokenSource(TimeSpan.FromMilliseconds(budgetMs), _timeProvider)
             : new CancellationTokenSource();
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, budget.Token);
 
+        GroundedSessionAnswerDto grounded;
         try
         {
             // The dispute alone is the question, and so the retrieval query; the persona and the format
             // are instructions for generation (they would be embedded and matched against the rulebook).
-            var grounded = await _mediator
+            grounded = await _mediator
                 .Send(
                     new AskGroundedSessionQuery(
                         GameId: gameId,
@@ -366,16 +369,6 @@ internal sealed class SubmitRuleDisputeCommandHandler
                         ResponseInstructions: ArbiterVerdictFormat.ResponseInstructions(session)),
                     linked.Token)
                 .ConfigureAwait(false);
-
-            // The leak guard found a verbatim run of a Protected passage and replaced the whole answer with
-            // its fallback message. That message is not the verdict that was asked for: it is treated like an
-            // empty answer — nothing saved, charged or published, and the player may retry.
-            if (grounded.CopyrightSanitized)
-            {
-                throw NoVerdict(request.SessionId, "the copyright guard replaced the answer with its fallback message");
-            }
-
-            return new VerdictAnswer(grounded.Answer, grounded.Citations, BasisOf(grounded));
         }
         catch (OperationCanceledException) when (BudgetExpired(budget, cancellationToken))
         {
@@ -390,6 +383,26 @@ internal sealed class SubmitRuleDisputeCommandHandler
         {
             throw FailedCall(request.SessionId, ex.ErrorCode, ex.Message);
         }
+
+        // The leak guard found a verbatim run of a Protected passage and replaced the whole answer with its
+        // fallback message, which is not the verdict that was asked for and is never saved as one. Failing here
+        // would trap a player whose dispute makes the model repeat the text — one who pastes a passage of the
+        // rulebook into it — in an error on every attempt, at two model calls each. The verdict is given ONCE
+        // more, without the rulebook, and says why. If that call fails too, the failure is the usual one: nothing
+        // saved, charged or published. The text the model may repeat now is the player's own, not the knowledge
+        // base's: nothing of the rulebook is in this prompt, so there is no copyright question.
+        if (grounded.CopyrightSanitized)
+        {
+            _logger.LogWarning(
+                "Rule dispute of SessionId={SessionId}: the copyright guard replaced the answer; " +
+                "the verdict is given once more without the rulebook",
+                request.SessionId);
+
+            return await AskTheModelAloneAsync(session, request, VerdictBasis.CopyrightWithheld, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        return new VerdictAnswer(grounded.Answer, grounded.Citations, BasisOf(grounded));
     }
 
     /// <summary>

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
@@ -14,6 +15,11 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.GameNight;
 /// from what was retrieved. The model's answer is parsed as the model writes it: markdown headers, a REGOLA line
 /// it was not asked for, a COPERTURA it may or may not give.
 /// </summary>
+/// <remarks>
+/// The rule the parser follows, and the tests pin: only the exact labels of the format (VERDETTO, NOTA,
+/// COPERTURA, REGOLA) are labels, and only as a whole line. Anything else is text of the verdict — including a
+/// line the model invented and left there. A smaller fault than a verdict truncated at it.
+/// </remarks>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "GameManagement")]
 public sealed class ArbiterVerdictFormatTests
@@ -40,19 +46,20 @@ public sealed class ArbiterVerdictFormatTests
     [InlineData("- VERDETTO: Ha ragione Sara.")]
     [InlineData("* **VERDETTO:** Ha ragione Sara.")]
     [InlineData("1. VERDETTO: Ha ragione Sara.")]
+    [InlineData("2) **VERDETTO:** Ha ragione Sara.")]
     [InlineData("> VERDETTO: Ha ragione Sara.")]
     [InlineData("verdetto: Ha ragione Sara.")]
     [InlineData("  Verdetto :  Ha ragione Sara.")]
-    public void Parse_RecognisesTheVerdictHeaderWhateverTheMarkdown(string line)
+    public void Parse_RecognisesTheVerdictLabelWhateverTheMarkdownAndCase(string line)
     {
         ArbiterVerdictFormat.Parse(line + "\nNOTA: Nessuna.").Verdict.Should().Be("Ha ragione Sara.");
     }
 
     [Fact]
-    public void Parse_WithBoldHeaders_DropsTheInventedRegolaQuote()
+    public void Parse_WithBoldLabels_DropsTheInventedRegolaQuote()
     {
-        // The model wrote the headers in bold and quoted a rulebook it does not have. Before, the bold prefix hid
-        // every header, the whole text became the verdict, and the quote went to disputes_json and SignalR.
+        // The model wrote the labels in bold and quoted a rulebook it does not have. Before, the bold prefix hid
+        // every label, the whole text became the verdict, and the quote went to disputes_json and SignalR.
         var parsed = ArbiterVerdictFormat.Parse(
             "**COPERTURA:** SI\n" +
             "**VERDETTO:** Il ladro si sposta subito.\n" +
@@ -64,59 +71,13 @@ public sealed class ArbiterVerdictFormatTests
         parsed.RulebookCoversTheCase.Should().BeTrue();
     }
 
-    [Theory]
-    [InlineData("Regola: il ladro si sposta subito dopo il sette.")]
-    [InlineData("REGOLA: Pag. 99, \"testo inventato\"")]
-    [InlineData("**Regola applicabile:** pag. 99")]
-    [InlineData("**REGOLA**: pag. 99")]
-    [InlineData("- Regola: pag. 99")]
-    [InlineData("### REGOLA: pag. 99")]
-    [InlineData("REGOLE: pag. 3; pag. 7")]
-    [InlineData("Regola del ladro: pag. 99")]
-    public void Parse_DropsAnyRegolaLine_InAnyForm_WithoutCuttingTheRest(string regolaLine)
+    [Fact]
+    public void Parse_StripsTheEmphasisThatClosesALabelledLine()
     {
-        // A REGOLA line in the middle of the answer is dropped and ends there: the NOTA after it is kept.
-        var parsed = ArbiterVerdictFormat.Parse(
-            "VERDETTO: Ha ragione Sara.\n" + regolaLine + "\nNOTA: Nessuna.");
+        var parsed = ArbiterVerdictFormat.Parse("**VERDETTO: Ha ragione Sara.**\n**NOTA: Nessuna.**");
 
         parsed.Verdict.Should().Be("Ha ragione Sara.");
         parsed.Note.Should().Be("Nessuna.");
-    }
-
-    [Fact]
-    public void Parse_DropsTheContinuationLinesOfARegolaSection()
-    {
-        var parsed = ArbiterVerdictFormat.Parse(
-            "VERDETTO: Ha ragione Sara.\n" +
-            "REGOLA: Pag. 99,\n" +
-            "\"testo inventato\", seconda riga.\n" +
-            "NOTA: Nessuna.");
-
-        parsed.Verdict.Should().NotContain("99").And.NotContain("inventato");
-        parsed.Note.Should().Be("Nessuna.");
-    }
-
-    [Fact]
-    public void Parse_AWordInsideALine_IsNotAHeader_AndTruncatesNothing()
-    {
-        // «regola:» and «nota:» in the middle of a sentence are text, not sections
-        var parsed = ArbiterVerdictFormat.Parse(
-            "VERDETTO: Vale la regola: il ladro si sposta subito. Nota: vale per tutti.\n" +
-            "NOTA: Nessuna.");
-
-        parsed.Verdict.Should().Be("Vale la regola: il ladro si sposta subito. Nota: vale per tutti.");
-        parsed.Note.Should().Be("Nessuna.");
-    }
-
-    [Fact]
-    public void Parse_AWordThatOnlyStartsLikeAHeader_IsNotOne()
-    {
-        // «Notare» and «Nota che» begin with NOTA but are not the header
-        var parsed = ArbiterVerdictFormat.Parse(
-            "VERDETTO: Ha ragione Sara.\nNotare che il ladro si sposta: subito.\nNota che vale per tutti: sempre.");
-
-        parsed.Verdict.Should().Be("Ha ragione Sara. Notare che il ladro si sposta: subito. Nota che vale per tutti: sempre.");
-        parsed.Note.Should().BeNull();
     }
 
     [Fact]
@@ -128,13 +89,159 @@ public sealed class ArbiterVerdictFormatTests
         parsed.Note.Should().Be("Una nota su due righe.");
     }
 
-    [Fact]
-    public void Parse_StripsTheEmphasisThatClosesAHeaderedLine()
+    // ─── Parse: REGOLA — the exact label is dropped, and only it ──────────────
+
+    [Theory]
+    [InlineData("REGOLA: Pag. 99, \"testo inventato\"")]
+    [InlineData("Regola: il ladro si sposta subito dopo il sette.")]
+    [InlineData("regola : pag. 99")]
+    [InlineData("**REGOLA**: pag. 99")]
+    [InlineData("**REGOLA:** pag. 99")]
+    [InlineData("- Regola: pag. 99")]
+    [InlineData("### REGOLA: pag. 99")]
+    [InlineData("1. REGOLA: pag. 99")]
+    public void Parse_DropsARegolaLine_InAnyMarkdown_AndCutsNothingAround(string regolaLine)
     {
-        var parsed = ArbiterVerdictFormat.Parse("**VERDETTO: Ha ragione Sara.**\n**NOTA: Nessuna.**");
+        var parsed = ArbiterVerdictFormat.Parse("VERDETTO: Ha ragione Sara.\n" + regolaLine + "\nNOTA: Nessuna.");
 
         parsed.Verdict.Should().Be("Ha ragione Sara.");
         parsed.Note.Should().Be("Nessuna.");
+    }
+
+    [Fact]
+    public void Parse_ARegolaInTheMiddleOfTheVerdict_LeavesTheRestOfTheVerdict()
+    {
+        // Before, it ended the verdict: the lines after it were thrown away, up to the next label
+        var parsed = ArbiterVerdictFormat.Parse(
+            "VERDETTO: Ha ragione Sara.\nREGOLA: pag. 99\nPerciò Marco deve restituire la carta.\nNOTA: Nessuna.");
+
+        parsed.Verdict.Should().Be("Ha ragione Sara. Perciò Marco deve restituire la carta.");
+        parsed.Note.Should().Be("Nessuna.");
+    }
+
+    [Theory]
+    [InlineData("\"testo inventato\", seconda riga.")]
+    [InlineData("«testo inventato», seconda riga.")]
+    [InlineData("“testo inventato”, seconda riga.")]
+    [InlineData("    seconda riga indentata del testo inventato.")]
+    [InlineData("\tseconda riga con tabulazione.")]
+    public void Parse_DropsTheQuotedOrIndentedLinesRightAfterARegola(string continuation)
+    {
+        var parsed = ArbiterVerdictFormat.Parse(
+            "VERDETTO: Ha ragione Sara.\nREGOLA: Pag. 99,\n" + continuation + "\nNOTA: Nessuna.");
+
+        parsed.Verdict.Should().Be("Ha ragione Sara.");
+        parsed.Note.Should().Be("Nessuna.");
+    }
+
+    [Fact]
+    public void Parse_ARegolaBeforeTheVerdict_IsDroppedWithItsQuotedContinuation()
+    {
+        var parsed = ArbiterVerdictFormat.Parse(
+            "REGOLA: Pag. 99,\n\"inventato\"\nVERDETTO: Sara ha ragione.\nNOTA: x");
+
+        parsed.Verdict.Should().Be("Sara ha ragione.");
+        parsed.Note.Should().Be("x");
+    }
+
+    [Fact]
+    public void Parse_AnUnquotedUnindentedLineAfterARegola_IsTheVerdict_NotPartOfTheRegola()
+    {
+        // Documented, and chosen: a line the model invented and left behind is a smaller fault than a verdict
+        // cut short, and a continuation without quotation marks or indent cannot be told from the verdict.
+        var parsed = ArbiterVerdictFormat.Parse(
+            "VERDETTO: Ha ragione Sara.\nREGOLA: Pag. 99,\nseconda riga senza virgolette né rientro.\nNOTA: Nessuna.");
+
+        parsed.Verdict.Should().Be("Ha ragione Sara. seconda riga senza virgolette né rientro.");
+    }
+
+    // ─── Parse: what looks like a label and is not one ────────────────────────
+
+    [Fact]
+    public void Parse_ALineThatStartsLikeARegolaButIsNotTheLabel_IsTheVerdict_AndCutsNothing()
+    {
+        // Executed by the reviewer: the verdict was saved as «Ha ragione Sara.», «Perciò…» lost
+        var parsed = ArbiterVerdictFormat.Parse(
+            "COPERTURA: SI\n" +
+            "VERDETTO: Ha ragione Sara.\n" +
+            "Regola del ladro: si sposta subito dopo il sette.\n" +
+            "Perciò Marco deve restituire la carta.\n" +
+            "NOTA: Nessuna.");
+
+        parsed.Verdict.Should().Be(
+            "Ha ragione Sara. Regola del ladro: si sposta subito dopo il sette. Perciò Marco deve restituire la carta.");
+        parsed.Note.Should().Be("Nessuna.");
+    }
+
+    [Fact]
+    public void Parse_ABulletedVerdictWithARegolaGeneraleItem_KeepsEveryItem()
+    {
+        var parsed = ArbiterVerdictFormat.Parse(
+            "COPERTURA: SI\n" +
+            "VERDETTO:\n" +
+            "- Sara ha ragione.\n" +
+            "- Regola generale: il ladro si sposta subito.\n" +
+            "- Marco restituisce la carta.\n" +
+            "NOTA: Nessuna.");
+
+        parsed.Verdict.Should().Be(
+            "- Sara ha ragione. - Regola generale: il ladro si sposta subito. - Marco restituisce la carta.");
+    }
+
+    [Fact]
+    public void Parse_AColonAtTheEndOfASentence_FollowedByRegoleLines_DoesNotEndTheVerdict()
+    {
+        var parsed = ArbiterVerdictFormat.Parse(
+            "VERDETTO: Ha ragione Sara perché valgono queste due condizioni:\n" +
+            "Regole di movimento: il ladro si sposta.\n" +
+            "Regole di furto: si ruba una carta.\n" +
+            "NOTA: x");
+
+        parsed.Verdict.Should().Be(
+            "Ha ragione Sara perché valgono queste due condizioni: Regole di movimento: il ladro si sposta. " +
+            "Regole di furto: si ruba una carta.");
+        parsed.Note.Should().Be("x");
+    }
+
+    [Theory]
+    [InlineData("Regola applicabile al nostro caso: pag. 99, \"testo inventato\".")]
+    [InlineData("Regola applicabile: pag. 99")]
+    [InlineData("Regole: pag. 3; pag. 7")]
+    [InlineData("**Regola applicabile:** pag. 99")]
+    [InlineData("Regola che vale per tutti i giocatori seduti al tavolo: il ladro si sposta subito.")]
+    [InlineData("Regolamento: pag. 99")]
+    [InlineData("Nota che vale per tutti: sempre.")]
+    [InlineData("Notare che il ladro si sposta: subito.")]
+    [InlineData("Verdetto finale: Sara.")]
+    public void Parse_OnlyTheExactLabelsAreLabels_EverythingElseIsTheVerdict(string notALabel)
+    {
+        // Documents what happens to the forms that are NOT the label — a «Regola applicabile…:» the model invented
+        // included: it stays in the verdict. Cutting it would cut text that cannot be told apart from a verdict.
+        var parsed = ArbiterVerdictFormat.Parse("VERDETTO: Ha ragione Sara.\n" + notALabel + "\nNOTA: x");
+
+        parsed.Verdict.Should().Be("Ha ragione Sara. " + notALabel);
+        parsed.Note.Should().Be("x");
+    }
+
+    [Fact]
+    public void Parse_ALabelInsideASentence_IsNotALabel_AndTruncatesNothing()
+    {
+        var parsed = ArbiterVerdictFormat.Parse(
+            "VERDETTO: Vale la regola: il ladro si sposta subito. Nota: vale per tutti.\nNOTA: Nessuna.");
+
+        parsed.Verdict.Should().Be("Vale la regola: il ladro si sposta subito. Nota: vale per tutti.");
+        parsed.Note.Should().Be("Nessuna.");
+    }
+
+    [Fact]
+    public void Parse_ACoperturaLineInTheMiddleOfTheVerdict_IsRead_AndLeavesTheVerdictWhole()
+    {
+        // Executed by the reviewer: it used to cut the verdict at it
+        var parsed = ArbiterVerdictFormat.Parse(
+            "VERDETTO: Ha ragione Sara perché\nCopertura: SI\nil ladro si sposta subito.\nNOTA: x");
+
+        parsed.Verdict.Should().Be("Ha ragione Sara perché il ladro si sposta subito.");
+        parsed.RulebookCoversTheCase.Should().BeTrue();
     }
 
     // ─── Parse: the answers that are not a verdict ────────────────────────────
@@ -171,7 +278,7 @@ public sealed class ArbiterVerdictFormatTests
     [InlineData("COPERTURA: SI")]
     [InlineData("REGOLA: pag. 3, «Il ladro»")]
     [InlineData("VERDETTO:\nNOTA: solo una nota")]
-    public void Parse_WithNothingButHeadersOrAQuote_YieldsAnEmptyVerdict(string skeleton)
+    public void Parse_WithNothingButLabelsOrAQuote_YieldsAnEmptyVerdict(string skeleton)
     {
         var parsed = ArbiterVerdictFormat.Parse(skeleton);
 
@@ -179,7 +286,7 @@ public sealed class ArbiterVerdictFormatTests
     }
 
     [Fact]
-    public void Parse_WithAnUnheadedVerdictAndARegolaSection_KeepsOnlyTheVerdict()
+    public void Parse_WithAnUnlabelledVerdictAndARegolaLine_KeepsOnlyTheVerdict()
     {
         var parsed = ArbiterVerdictFormat.Parse("Ha ragione Sara.\nREGOLA: pag. 3, «Il ladro»");
 
@@ -187,7 +294,7 @@ public sealed class ArbiterVerdictFormatTests
     }
 
     [Fact]
-    public void Parse_WithACoverageLineAndAnUnheadedVerdict_KeepsTheVerdict()
+    public void Parse_WithACoverageLineAndAnUnlabelledVerdict_KeepsTheVerdict()
     {
         // COPERTURA is one line: what follows it is not part of it
         var parsed = ArbiterVerdictFormat.Parse("COPERTURA: SI\nHa ragione Sara.");
@@ -196,32 +303,106 @@ public sealed class ArbiterVerdictFormatTests
         parsed.RulebookCoversTheCase.Should().BeTrue();
     }
 
-    // ─── Parse: COPERTURA ─────────────────────────────────────────────────────
+    // ─── Parse: COPERTURA — «yes» only when it is exactly yes ─────────────────
 
     [Theory]
-    [InlineData("COPERTURA: SI", true)]
-    [InlineData("COPERTURA: si", true)]
-    [InlineData("COPERTURA: Sì", true)]
-    [InlineData("COPERTURA: SÌ", true)]
-    [InlineData("COPERTURA: yes", true)]
-    [InlineData("**COPERTURA:** SI", true)]
-    [InlineData("**COPERTURA**: SI", true)]
-    [InlineData("COPERTURA: SI, i passaggi coprono il caso", true)]
-    [InlineData("COPERTURA: NO", false)]
-    [InlineData("COPERTURA: no", false)]
-    [InlineData("COPERTURA: Non coperto", false)]
-    [InlineData("COPERTURA: Sicuramente no", false)]
-    [InlineData("COPERTURA: forse", false)]
-    [InlineData("COPERTURA:", false)]
-    public void Parse_ReadsTheCoverageDeclaration_AndOnlyAClearYesCounts(string line, bool covers)
+    [InlineData("SI")]
+    [InlineData("si")]
+    [InlineData("Si")]
+    [InlineData("SÌ")]
+    [InlineData("Sì")]
+    [InlineData("sì")]
+    [InlineData("SI.")]
+    [InlineData("SI!")]
+    [InlineData("  SI  ")]
+    [InlineData("**SI**")]
+    [InlineData("`SI`")]
+    [InlineData("__Sì__")]
+    public void Parse_ACoverageOfExactlyYes_Covers(string value)
     {
-        ArbiterVerdictFormat.Parse(line + "\nVERDETTO: Ha ragione Sara.").RulebookCoversTheCase.Should().Be(covers);
+        ArbiterVerdictFormat.Parse($"COPERTURA: {value}\nVERDETTO: Ha ragione Sara.").RulebookCoversTheCase
+            .Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("NO")]
+    [InlineData("no")]
+    [InlineData("Non coperto")]
+    [InlineData("forse")]
+    [InlineData("")]
+    [InlineData("SÍ")] // acute accent: not the Italian word
+    [InlineData("Y")]
+    [InlineData("YES")]
+    [InlineData("yes")]
+    [InlineData("S")]
+    [InlineData("SI/NO")]
+    [InlineData("SI o NO")]
+    [InlineData("SI se i passaggi coprono; NO se non coprono")]
+    [InlineData("[SI se i passaggi ... NO se non lo coprono]")]
+    [InlineData("[SI]")]
+    [InlineData("Sì, ma solo in parte")]
+    [InlineData("SI (parziale)")]
+    [InlineData("si può dire di sì")]
+    [InlineData("NO, ma SI in parte")]
+    [InlineData("Sicuramente")]
+    public void Parse_AnyOtherCoverage_DoesNotCover(string value)
+    {
+        // The prompt says an ambiguous answer is a «no»: it used to count «SI/NO», «SI poi NO» and
+        // «Sì, ma solo in parte» as «yes». The verdict then cited passages on the strength of an ambiguity.
+        ArbiterVerdictFormat.Parse($"COPERTURA: {value}\nVERDETTO: Ha ragione Sara.").RulebookCoversTheCase
+            .Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData("COPERTURA: SI\nVERDETTO: Sara.\nCOPERTURA: NO\nNOTA: x")]
+    [InlineData("COPERTURA: NO\nVERDETTO: Sara.\nCOPERTURA: SI\nNOTA: x")]
+    [InlineData("COPERTURA: SI\nVERDETTO: Sara.\nCOPERTURA: SI\nNOTA: x")]
+    public void Parse_MoreThanOneCoverageLine_DoesNotCover(string answer)
+    {
+        // Two lines contradict each other, or repeat: neither is «a clear yes»
+        ArbiterVerdictFormat.Parse(answer).RulebookCoversTheCase.Should().BeFalse();
     }
 
     [Fact]
     public void Parse_WithoutACoverageLine_DoesNotCover()
     {
         ArbiterVerdictFormat.Parse("VERDETTO: Ha ragione Sara.\nNOTA: Nessuna.").RulebookCoversTheCase.Should().BeFalse();
+    }
+
+    // ─── Parse: lines no regular expression should be asked about ─────────────
+
+    [Theory]
+    [InlineData('*')]
+    [InlineData('-')]
+    [InlineData('_')]
+    [InlineData('#')]
+    [InlineData(' ')]
+    [InlineData('>')]
+    public void Parse_ADegenerateLine_IsReadInLinearTime(char c)
+    {
+        // The model's answer is not a thing to hand to a pattern that can backtrack: a line of tens of thousands
+        // of the same decoration character used to be quadratic. The bound is generous; the failure it catches
+        // is orders of magnitude over it.
+        var line = new string(c, 60_000);
+        var stopwatch = Stopwatch.StartNew();
+
+        var parsed = ArbiterVerdictFormat.Parse("VERDETTO: ok\n" + line + "\nNOTA: x");
+
+        stopwatch.Stop();
+        stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(3));
+        parsed.Note.Should().Be("x");
+    }
+
+    [Fact]
+    public void Parse_AHeadedLineWithAVeryLongEmphasisRun_IsReadInLinearTime()
+    {
+        var stopwatch = Stopwatch.StartNew();
+
+        var parsed = ArbiterVerdictFormat.Parse("VERDETTO: " + new string('*', 60_000) + "x");
+
+        stopwatch.Stop();
+        stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(3));
+        parsed.Verdict.Should().EndWith("x");
     }
 
     // ─── Copyright markers ────────────────────────────────────────────────────
@@ -233,12 +414,55 @@ public sealed class ArbiterVerdictFormatTests
             .Should().Be("VERDETTO: Ha ragione Sara. [Pagina 4]");
     }
 
+    [Theory]
+    [InlineData("[ref:doc-1:12] Ha ragione Sara.", "Ha ragione Sara.")]
+    [InlineData("Ha ragione Sara. [ref:doc-1:12]", "Ha ragione Sara.")]
+    [InlineData("Ha ragione[ref:doc-1:12]Sara.", "Ha ragione Sara.")]
+    [InlineData("A\n[ref:doc-1:12] B\nC [ref:doc-1:12]\nD", "A\nB\nC\nD")]
+    [InlineData("[ref:a:1][ref:b:2] testo", "testo")]
+    [InlineData("[ref:doc-1:12]", "")]
+    public void StripCopyrightMarkers_TidiesTheSpacesAroundTheMarker(string text, string expected)
+    {
+        ArbiterVerdictFormat.StripCopyrightMarkers(text).Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("[ref:]")]
+    [InlineData("[ref:doc]")]
+    [InlineData("[ref:doc:]")]
+    [InlineData("[ref:doc:x]")]
+    [InlineData("[ref:doc:12")]
+    [InlineData("[ref::12]")]
+    [InlineData("[ref: nota]")]
+    public void StripCopyrightMarkers_LeavesWhatIsNotAMarker(string text)
+    {
+        ArbiterVerdictFormat.StripCopyrightMarkers(text).Should().Be(text);
+    }
+
+    [Fact]
+    public void StripCopyrightMarkers_OnVeryLongInput_IsLinear()
+    {
+        var spaces = new string(' ', 60_000);
+        var openings = string.Concat(Enumerable.Repeat("[ref:", 20_000));
+        var stopwatch = Stopwatch.StartNew();
+
+        var stripped = ArbiterVerdictFormat.StripCopyrightMarkers(spaces + "[ref:d:1]" + spaces);
+        var unmatched = ArbiterVerdictFormat.StripCopyrightMarkers(openings);
+
+        stopwatch.Stop();
+        stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(3));
+        stripped.Should().NotContain("[ref");
+        unmatched.Should().Be(openings);
+    }
+
     // ─── References ───────────────────────────────────────────────────────────
 
     [Fact]
-    public void BuildReferences_FollowsTheOrderOfTheRetrieval_NotTheScores()
+    public void BuildReferences_KeepsTheOrderItIsGiven_NotTheOrderOfTheScores()
     {
-        // RelevanceScore is the score BEFORE the reranker; the list is in the reranker's order
+        // The method does not sort. What KnowledgeBase hands over is already in an order (after the sentence
+        // window, by the score from before the rerank), and this keeps it: scores here are not sorted, and sorting
+        // by them would put page 9 first.
         var references = ArbiterVerdictFormat.BuildReferences(new[]
         {
             Cite(8, 0.20f), Cite(3, 0.60f), Cite(5, 0.30f), Cite(9, 0.95f),
@@ -281,6 +505,37 @@ public sealed class ArbiterVerdictFormatTests
     }
 
     [Fact]
+    public void BuildReferences_AFullPassageFromAPdf_HasItsLineBreaksAndSpacesCollapsed()
+    {
+        // The preview is the start of a chunk of a PDF: line breaks and runs of spaces end up, raw, in
+        // disputes_json and in what every player receives. They are collapsed; nothing is cut.
+        var references = ArbiterVerdictFormat.BuildReferences(new[]
+        {
+            new CitationDto("doc-1", 4, 0.9f, "  Ogni giocatore\npuò  giocare\r\n\tfino a due carte.\n", "full"),
+        });
+
+        references.Should().Equal("Fonte, p. 4: «Ogni giocatore può giocare fino a due carte.»");
+    }
+
+    [Fact]
+    public void BuildReferences_AFullPassage_IsNotTruncated()
+    {
+        var text = string.Join(" ", Enumerable.Repeat("parola", 120));
+
+        var reference = ArbiterVerdictFormat.BuildReferences(new[] { new CitationDto("doc-1", 4, 0.9f, text, "full") })
+            .Single();
+
+        reference.Should().Be($"Fonte, p. 4: «{text}»", "the length is KnowledgeBase's to decide, not this method's");
+    }
+
+    [Fact]
+    public void BuildReferences_AFullPassageThatIsOnlyWhitespace_IsCitedByPage()
+    {
+        ArbiterVerdictFormat.BuildReferences(new[] { new CitationDto("doc-1", 4, 0.9f, " \n\t ", "full") })
+            .Should().Equal("Fonte, p. 4");
+    }
+
+    [Fact]
     public void BuildReferences_APageThatIsNotKnown_IsCitedWithoutOne()
     {
         ArbiterVerdictFormat.BuildReferences(new[] { Cite(0, 0.9f) }).Should().Equal("Fonte");
@@ -309,6 +564,7 @@ public sealed class ArbiterVerdictFormatTests
     [InlineData(nameof(VerdictBasis.RetrievalUnavailable), "non è stato possibile consultare il regolamento")]
     [InlineData(nameof(VerdictBasis.NoPassages), "nel regolamento non ho trovato passaggi pertinenti")]
     [InlineData(nameof(VerdictBasis.NotCovered), "non coprono questo caso")]
+    [InlineData(nameof(VerdictBasis.CopyrightWithheld), "non può riportare il testo del regolamento")]
     public void NoticeFor_EveryOtherBasis_SaysItsOwnReason_AndThatNothingIsCited(string basisName, string reason)
     {
         // the enum is internal: the case is named, not passed, so that the public test method does not expose it
@@ -319,14 +575,13 @@ public sealed class ArbiterVerdictFormatTests
     }
 
     [Fact]
-    public void NoticeFor_TheFiveReasonsAreDistinct_SoThatNoneSaysSomethingFalse()
+    public void NoticeFor_TheReasonsAreDistinct_SoThatNoneSaysSomethingFalse()
     {
-        // «nessun passaggio pertinente» used to open a verdict of a session that had no game at all
-        var notices = new[]
-        {
-            VerdictBasis.NoGame, VerdictBasis.OwnershipNotDeclared, VerdictBasis.RetrievalUnavailable,
-            VerdictBasis.NoPassages, VerdictBasis.NotCovered,
-        }.Select(b => ArbiterVerdictFormat.NoticeFor(b)!).ToList();
+        // «nessun passaggio pertinente» used to open the verdict of a session that had no game at all
+        var notices = Enum.GetValues<VerdictBasis>()
+            .Where(b => b != VerdictBasis.Rulebook)
+            .Select(b => ArbiterVerdictFormat.NoticeFor(b)!)
+            .ToList();
 
         notices.Should().OnlyHaveUniqueItems();
         ArbiterVerdictFormat.NoGameNotice.Should().NotContain("pertinent");

@@ -37,14 +37,14 @@ internal sealed class SessionAgentOptions
     /// #4751 — time budget (in milliseconds) for the whole grounded answer of a rule dispute (the Arbitro):
     /// retrieval, generation and the copyright scan. When it expires the verdict is given without the
     /// rulebook and says so. A separate key from <see cref="RetrievalBudgetMs"/> on purpose: that one is
-    /// 700 ms and documents a retrieval P95 of ~2500 ms, and the chat applies it only on a feature flag
-    /// that is off by default — copied here it would put almost every verdict on the no-rulebook branch.
-    /// A value of 0 or less disables the budget.
+    /// sized for the live image path and, by its own documentation, below the retrieval latency observed
+    /// there; the chat applies it only behind a feature flag that is off by default. Copied here it would
+    /// put almost every verdict on the no-rulebook branch. A value of 0 or less disables the budget.
     /// Default: 15 000 ms.
     ///
-    /// NEEDS TUNING: a guess, not a measurement. The embedding client alone defaults to a 120 s timeout
-    /// with retries, which is what this bound exists to cut. Observe how often the dispute falls back to
-    /// the no-rulebook branch before moving it.
+    /// NEEDS TUNING: a guess, not a measurement. What this bound exists to cut is the embedding client's own
+    /// timeout and retries (see its options), which add up to far more than a player will wait. Observe how
+    /// often the dispute falls back to the no-rulebook branch before moving it.
     /// </summary>
     public int ArbiterBudgetMs { get; set; } = 15_000;
 }

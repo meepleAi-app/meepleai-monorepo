@@ -38,6 +38,12 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.GameNight;
 /// Unit tests for <see cref="SubmitRuleDisputeCommandHandler"/>.
 /// Game Night Improvvisata — E3: Arbitro mode.
 /// </summary>
+/// <remarks>
+/// In the same collection as the files that build <c>RagPromptAssemblyService</c>: the two tests of the time
+/// budget record a retrieval fallback on <c>meepleai.rag.retrieval.fallbacks</c>, the process-wide counter that
+/// <c>RagPromptAssemblyServiceFallbackMetricsTests</c> listens to and expects to see move once (#3994).
+/// </remarks>
+[Collection("RetrievalEmptyMetrics")]
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "GameManagement")]
 public sealed class SubmitRuleDisputeCommandHandlerTests
@@ -501,7 +507,7 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
         _mediatorMock
             .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GroundedAnswer(
-                DefaultLlmResponse, new[] { FullCitation(7, "Ogni giocatore può giocare fino a due carte.") }));
+                DefaultLlmResponse, new[] { FullCitation(7, "Ogni giocatore può\ngiocare  fino a\r\ndue carte.") }));
 
         // Act
         var result = await _sut.Handle(BuildCommand(), CancellationToken.None);
@@ -513,11 +519,10 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ManyPassages_KeepsTheFirstOnesInTheOrderTheRetrievalReturnedThem()
+    public async Task Handle_ManyPassages_KeepsTheFirstOnesInTheOrderTheyAreHandedOver_OnceEach()
     {
-        // Arrange — the list is in the reranker's order and RelevanceScore is the score BEFORE the rerank, so
-        // here the scores are not sorted: sorting by them would put page 9 first and undo the reranker.
-        // Page 3 comes twice, from the same document.
+        // Arrange — the handler does not sort: the order is the one KnowledgeBase hands the citations over in.
+        // The scores here are not sorted, so a sort by them would put page 9 first. Page 3 comes twice.
         CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
         _mediatorMock
             .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
@@ -864,7 +869,7 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
     [InlineData("COPERTURA: SI")]
     [InlineData("COPERTURA: Sì")]
     [InlineData("**COPERTURA:** SI")]
-    [InlineData("## COPERTURA: si, i passaggi coprono il caso")]
+    [InlineData("## COPERTURA: si.")]
     public async Task Handle_WhenTheModelSaysThePassagesCoverTheCase_CitesThem(string coverageLine)
     {
         // Arrange — a realistic answer, through the parser: no state is built by hand
@@ -887,6 +892,10 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
     [InlineData("**COPERTURA:** NO")]
     [InlineData("COPERTURA: Non coperto")]
     [InlineData("COPERTURA: forse")]
+    [InlineData("COPERTURA: Sì, ma solo in parte")]
+    [InlineData("COPERTURA: SI/NO")]
+    [InlineData("COPERTURA: SI\nCOPERTURA: NO")]
+    [InlineData("COPERTURA: [SI se i passaggi coprono il caso; NO se non lo coprono]")]
     [InlineData("COPERTURA:")]
     [InlineData(null)]
     public async Task Handle_WhenTheModelSaysNoOrDoesNotSay_DeclaresItAndCitesNothing(string? coverageLine)
@@ -933,29 +942,92 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
 
     // ─── #4751: the leak guard's fallback message is not a verdict ────────────
 
-    [Fact]
-    public async Task Handle_WhenTheLeakGuardReplacedTheAnswer_SavesChargesAndPublishesNothing()
-    {
-        // Arrange — the answer copied a run of words from a Protected passage: GroundedAnswerService replaced
-        // all of it with the copyright message. That message was saved as the verdict, with references, and
-        // charged to the quota.
-        var session = CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
-        _mediatorMock
+    private void TheGroundedAnswerIsReplacedByTheLeakGuard()
+        => _mediatorMock
             .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GroundedAnswer(
                 "Non posso riportare il testo protetto del regolamento.",
                 new[] { ProtectedCitation(12) },
                 copyrightSanitized: true));
 
+    [Fact]
+    public async Task Handle_WhenTheLeakGuardReplacedTheAnswer_TheVerdictIsGivenOnceWithoutTheRulebook_AndSaysSo()
+    {
+        // Arrange — the answer repeated a run of a Protected passage and GroundedAnswerService replaced all of it
+        // with the copyright message. That message is not a verdict, and it must not be saved as one. Failing
+        // instead would trap a player whose dispute makes the model repeat the text (one who pastes a passage of
+        // the rulebook into it) in an error on every attempt, at two model calls each.
+        var session = CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+        TheGroundedAnswerIsReplacedByTheLeakGuard();
+
+        // Act
+        var result = await _sut.Handle(BuildCommand(), CancellationToken.None);
+
+        // Assert — a verdict without the rulebook, with the reason; the fallback message is nowhere in it
+        result.Verdict.Should().StartWith(ArbiterVerdictFormat.CopyrightWithheldNotice);
+        result.Verdict.Should().Contain("Il giocatore A ha ragione");
+        result.Verdict.Should().NotContain("Non posso riportare il testo protetto");
+        result.RuleReferences.Should().BeEmpty();
+        session.Disputes.Should().ContainSingle().Which.Verdict.Should().Be(result.Verdict);
+
+        // Once: the retrieval is not asked again, the quota is charged for one verdict, the table gets one event
+        _mediatorMock.Verify(
+            m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()), Times.Once);
+        _llmServiceMock.Verify(
+            s => s.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _tierEnforcementMock.Verify(
+            t => t.RecordUsageAsync(TestUserId, TierAction.SessionAgentQuery, It.IsAny<CancellationToken>()),
+            Times.Once);
+        _publisherMock.Verify(
+            p => p.Publish(It.IsAny<DisputeResolvedEvent>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheLeakGuardReplacedTheAnswer_TheSecondAttemptHasNothingOfTheRulebookInIt()
+    {
+        // The second model call is the direct one: no passage, no retrieval — only the dispute and the session
+        string? systemPrompt = null;
+        string? userPrompt = null;
+        CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+        TheGroundedAnswerIsReplacedByTheLeakGuard();
+        _llmServiceMock
+            .Setup(s => s.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, RequestSource, CancellationToken>((system, user, _, _) =>
+            {
+                systemPrompt = system;
+                userPrompt = user;
+            })
+            .ReturnsAsync(LlmCompletionResult.CreateSuccess(DefaultLlmResponse));
+
+        await _sut.Handle(BuildCommand(description: "Chi va per primo al turno 3?"), CancellationToken.None);
+
+        systemPrompt.Should().ContainEquivalentOf("non hai accesso al regolamento");
+        userPrompt.Should().Contain("Chi va per primo al turno 3?");
+        (systemPrompt + userPrompt).Should().NotContain("SYS-BASE").And.NotContain("COPERTURA");
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheLeakGuardReplacedTheAnswer_AndTheSecondAttemptFails_NothingIsSavedChargedOrPublished()
+    {
+        // Arrange — the failure semantics of #4764 apply to the branch that replaces the first attempt
+        var session = CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+        TheGroundedAnswerIsReplacedByTheLeakGuard();
+        _llmServiceMock
+            .Setup(s => s.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateFailure("LLM unavailable"));
+
         // Act
         var act = () => _sut.Handle(BuildCommand(), CancellationToken.None);
         var ex = (await act.Should().ThrowAsync<ExternalServiceException>()).Which;
 
-        // Assert — a readable, retryable 503, like an empty answer
+        // Assert
         ex.StatusCode.Should().Be(503);
         ex.ErrorCode.Should().Be(SubmitRuleDisputeCommandHandler.NoVerdictErrorCode);
-        ex.Message.Should().Contain("Riprova");
-        ex.Message.Should().NotContain("protetto");
+        ex.Message.Should().NotContain("LLM unavailable").And.NotContain("protetto");
         session.Disputes.Should().BeEmpty();
         _sessionRepoMock.Verify(
             r => r.UpdateAsync(It.IsAny<LiveGameSession>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -964,10 +1036,32 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
             Times.Never);
         _publisherMock.Verify(
             p => p.Publish(It.IsAny<DisputeResolvedEvent>(), It.IsAny<CancellationToken>()), Times.Never);
-        _llmServiceMock.Verify(
-            s => s.GenerateCompletionAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheLeakGuardReplacedTheAnswer_AndTheGatewayRefusesTheSecondAttempt_PassesItsCodeOn()
+    {
+        // Arrange
+        var session = CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+        TheGroundedAnswerIsReplacedByTheLeakGuard();
+        _llmServiceMock
+            .Setup(s => s.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateFailure("Il tetto di spesa giornaliero è stato raggiunto.") with
+            {
+                Metadata = new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["error_code"] = "AI_DAILY_BUDGET_EXCEEDED",
+                },
+            });
+
+        // Act
+        var act = () => _sut.Handle(BuildCommand(), CancellationToken.None);
+        var ex = (await act.Should().ThrowAsync<LlmCallRefusedException>()).Which;
+
+        // Assert
+        ex.ErrorCode.Should().Be("AI_DAILY_BUDGET_EXCEEDED");
+        session.Disputes.Should().BeEmpty();
     }
 
     // ─── #4751: a time budget on the grounded answer ──────────────────────────
@@ -1393,7 +1487,7 @@ public sealed class SubmitRuleDisputeCommandValidatorTests
     public void Validate_WithValidCommand_Passes()
     {
         var command = new SubmitRuleDisputeCommand(
-            Guid.NewGuid(), Guid.NewGuid(), "Posso giocare 2 carte?", "Alice");
+            Guid.NewGuid(), Guid.NewGuid(), "Posso giocare 2 carte?", "Alice", null);
         _validator.TestValidate(command).ShouldNotHaveAnyValidationErrors();
     }
 
@@ -1401,7 +1495,7 @@ public sealed class SubmitRuleDisputeCommandValidatorTests
     public void Validate_WithEmptySessionId_Fails()
     {
         var command = new SubmitRuleDisputeCommand(
-            Guid.Empty, Guid.NewGuid(), "Description", "Player");
+            Guid.Empty, Guid.NewGuid(), "Description", "Player", null);
         _validator.TestValidate(command).ShouldHaveValidationErrorFor(x => x.SessionId);
     }
 
@@ -1409,7 +1503,7 @@ public sealed class SubmitRuleDisputeCommandValidatorTests
     public void Validate_WithEmptyCallerUserId_Fails()
     {
         var command = new SubmitRuleDisputeCommand(
-            Guid.NewGuid(), Guid.Empty, "Description", "Player");
+            Guid.NewGuid(), Guid.Empty, "Description", "Player", null);
         _validator.TestValidate(command).ShouldHaveValidationErrorFor(x => x.CallerUserId);
     }
 
@@ -1417,7 +1511,7 @@ public sealed class SubmitRuleDisputeCommandValidatorTests
     public void Validate_WithEmptyDescription_Fails()
     {
         var command = new SubmitRuleDisputeCommand(
-            Guid.NewGuid(), Guid.NewGuid(), string.Empty, "Player");
+            Guid.NewGuid(), Guid.NewGuid(), string.Empty, "Player", null);
         _validator.TestValidate(command).ShouldHaveValidationErrorFor(x => x.Description);
     }
 
@@ -1425,7 +1519,7 @@ public sealed class SubmitRuleDisputeCommandValidatorTests
     public void Validate_WithDescriptionExceeding1000Chars_Fails()
     {
         var command = new SubmitRuleDisputeCommand(
-            Guid.NewGuid(), Guid.NewGuid(), new string('A', 1001), "Player");
+            Guid.NewGuid(), Guid.NewGuid(), new string('A', 1001), "Player", null);
         _validator.TestValidate(command).ShouldHaveValidationErrorFor(x => x.Description);
     }
 
@@ -1433,7 +1527,7 @@ public sealed class SubmitRuleDisputeCommandValidatorTests
     public void Validate_WithEmptyPlayerName_Fails()
     {
         var command = new SubmitRuleDisputeCommand(
-            Guid.NewGuid(), Guid.NewGuid(), "Description", string.Empty);
+            Guid.NewGuid(), Guid.NewGuid(), "Description", string.Empty, null);
         _validator.TestValidate(command).ShouldHaveValidationErrorFor(x => x.RaisedByPlayerName);
     }
 
@@ -1441,14 +1535,14 @@ public sealed class SubmitRuleDisputeCommandValidatorTests
     public void Validate_WithPlayerNameExceeding100Chars_Fails()
     {
         var command = new SubmitRuleDisputeCommand(
-            Guid.NewGuid(), Guid.NewGuid(), "Description", new string('B', 101));
+            Guid.NewGuid(), Guid.NewGuid(), "Description", new string('B', 101), null);
         _validator.TestValidate(command).ShouldHaveValidationErrorFor(x => x.RaisedByPlayerName);
     }
 
     [Fact]
     public void Validate_WithAllFieldsEmpty_FailsAllFields()
     {
-        var command = new SubmitRuleDisputeCommand(Guid.Empty, Guid.Empty, string.Empty, string.Empty);
+        var command = new SubmitRuleDisputeCommand(Guid.Empty, Guid.Empty, string.Empty, string.Empty, null);
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(x => x.SessionId);
         result.ShouldHaveValidationErrorFor(x => x.CallerUserId);

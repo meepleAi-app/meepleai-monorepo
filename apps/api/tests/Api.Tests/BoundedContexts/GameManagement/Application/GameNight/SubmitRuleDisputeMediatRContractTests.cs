@@ -175,7 +175,15 @@ public sealed class SubmitRuleDisputeMediatRContractTests
         => new("doc", LicenseType.Copyrighted, category, uploadedBy ?? Guid.NewGuid(), GameId, null, false);
 
     private static Task<RuleDisputeResponse> Submit(Harness h)
-        => h.Mediator.Send(new SubmitRuleDisputeCommand(SessionId, UserId, Dispute, "Alice"));
+        => h.Mediator.Send(new SubmitRuleDisputeCommand(SessionId, UserId, Dispute, "Alice", CallerRole: null));
+
+    /// <summary>The model answers twice: first with <paramref name="first"/>, then with <paramref name="second"/>.</summary>
+    private static void TheModelAnswersTwice(Harness h, LlmCompletionResult first, LlmCompletionResult second)
+        => h.Llm
+            .SetupSequence(l => l.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(first)
+            .ReturnsAsync(second);
 
     private static void NothingWasSavedChargedOrPublished(Harness h)
     {
@@ -261,35 +269,63 @@ public sealed class SubmitRuleDisputeMediatRContractTests
         result.RuleReferences.Should().Equal("Fonte, p. 12");
     }
 
-    // ─── The leak guard's fallback is not a verdict ───────────────────────────
+    // ─── The leak guard's fallback is not a verdict, and not a dead end ────────
 
-    [Fact]
-    public async Task AVerbatimRunOfAProtectedPassage_IsNotSavedChargedOrPublished_AsTheFallbackMessage()
+    [Theory]
+    [InlineData("COPERTURA: SI\nVERDETTO: " + ChunkA + "\nNOTA: Nessuna.")]
+    [InlineData("COPERTURA: SI\nVERDETTO: Si sposta subito.\nNOTA: " + ChunkA)]
+    public async Task AVerbatimRunOfAProtectedPassage_GivesTheVerdictOnceWithoutTheRulebook_NotTheFallbackMessage(
+        string answerThatRepeatsThePassage)
     {
+        // The real leak guard replaces the WHOLE answer when the run is in the verdict, or in the note alone. The
+        // fallback message used to be saved as the verdict and charged; failing instead would leave a player who
+        // pastes a passage into the dispute in an error on every attempt. The second answer is the direct one.
         var h = Build(
-            "COPERTURA: SI\nVERDETTO: " + ChunkA + "\nNOTA: Nessuna.",
+            answerThatRepeatsThePassage,
             new[] { Chunk("docA", 12) },
             new() { ["docA"] = Info(DocumentCategory.Rulebook) });
+        TheModelAnswersTwice(
+            h,
+            LlmCompletionResult.CreateSuccess(answerThatRepeatsThePassage),
+            LlmCompletionResult.CreateSuccess("VERDETTO: Si sposta subito.\nNOTA: Nessuna."));
+
+        var result = await Submit(h);
+
+        result.Verdict.Should().StartWith(ArbiterVerdictFormat.CopyrightWithheldNotice);
+        result.Verdict.Should().Contain("Si sposta subito.");
+        result.Verdict.Should().NotContain("sposta immediatamente il ladro su un altro esagono");
+        result.RuleReferences.Should().BeEmpty();
+        h.Session.Disputes.Should().ContainSingle();
+        h.Retrieval.Verify(
+            r => r.AssemblePromptAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameState?>(),
+                It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<ChatThread?>(),
+                It.IsAny<SharedUserTier?>(), It.IsAny<string>(), It.IsAny<CancellationToken>(),
+                It.IsAny<IRagDebugEventCollector?>(), It.IsAny<RetrievalProfile?>(), It.IsAny<RetrievalPolicy?>()),
+            Times.Once);
+        h.Quota.Verify(
+            t => t.RecordUsageAsync(UserId, TierAction.SessionAgentQuery, It.IsAny<CancellationToken>()), Times.Once);
+        h.Publisher.Verify(
+            p => p.Publish(It.IsAny<DisputeResolvedEvent>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task WhenTheSecondAttemptFailsToo_AfterAVerbatimRun_NothingIsSavedChargedOrPublished()
+    {
+        var h = Build(
+            "COPERTURA: SI\nVERDETTO: " + ChunkA,
+            new[] { Chunk("docA", 12) },
+            new() { ["docA"] = Info(DocumentCategory.Rulebook) });
+        TheModelAnswersTwice(
+            h,
+            LlmCompletionResult.CreateSuccess("COPERTURA: SI\nVERDETTO: " + ChunkA),
+            LlmCompletionResult.CreateFailure("LLM unavailable"));
 
         var act = () => Submit(h);
         var ex = (await act.Should().ThrowAsync<ExternalServiceException>()).Which;
 
         ex.StatusCode.Should().Be(503);
         ex.ErrorCode.Should().Be("arbitro_nessun_verdetto");
-        NothingWasSavedChargedOrPublished(h);
-    }
-
-    [Fact]
-    public async Task AVerbatimRunInTheNoteAlone_ReplacesTheWholeAnswerAndIsTreatedTheSame()
-    {
-        var h = Build(
-            "COPERTURA: SI\nVERDETTO: Si sposta subito.\nNOTA: " + ChunkA,
-            new[] { Chunk("docA", 12) },
-            new() { ["docA"] = Info(DocumentCategory.Rulebook) });
-
-        var act = () => Submit(h);
-
-        await act.Should().ThrowAsync<ExternalServiceException>();
         NothingWasSavedChargedOrPublished(h);
     }
 

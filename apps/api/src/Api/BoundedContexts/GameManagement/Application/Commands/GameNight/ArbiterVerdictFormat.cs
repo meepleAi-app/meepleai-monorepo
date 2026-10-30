@@ -1,5 +1,4 @@
 using System.Text;
-using System.Text.RegularExpressions;
 using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using CitationDto = Api.Models.CitationDto;
@@ -35,13 +34,21 @@ internal enum VerdictBasis
     /// refused, or did not say (fail-honest).
     /// </summary>
     NotCovered,
+
+    /// <summary>
+    /// The answer that rested on the rulebook repeated a run of a Protected passage, and the copyright guard
+    /// replaced it. The verdict is given once more without the rulebook, so that a player whose dispute makes
+    /// the model repeat the text does not get an error on every attempt.
+    /// </summary>
+    CopyrightWithheld,
 }
 
 /// <summary>A parsed answer of the Arbitro.</summary>
 /// <param name="Verdict">The VERDETTO section; empty when the answer holds no verdict.</param>
 /// <param name="Note">The NOTA section, if any.</param>
 /// <param name="RulebookCoversTheCase">
-/// True only when the answer has a COPERTURA line that says SI. A missing line, NO, or anything else is false.
+/// True only when the answer has exactly one COPERTURA line and its value is SI (or SÌ), nothing else. A missing
+/// line, two lines, NO, or any other value is false.
 /// </param>
 internal readonly record struct ParsedVerdict(string Verdict, string? Note, bool RulebookCoversTheCase);
 
@@ -50,13 +57,29 @@ internal readonly record struct ParsedVerdict(string Verdict, string? Note, bool
 /// rule references built from what was retrieved. Kept apart from the handler so that the format has one place.
 /// </summary>
 /// <remarks>
+/// <para>
 /// The model is asked for a COPERTURA line (does the rulebook cover the case), VERDETTO and NOTA. It is not
-/// asked for the rule: a quote is the one thing it cannot have, and what it writes under a REGOLA header, in
-/// any form, is dropped. The references come from the passages that were retrieved.
+/// asked for the rule: a quote is the one thing it cannot have.
+/// </para>
+/// <para>
+/// <b>What counts as a section label.</b> Only the exact labels of the format — VERDETTO, NOTA, COPERTURA and
+/// REGOLA — and only as a whole line: the label, then the colon, after the markdown around it (bold, heading,
+/// list item, number) and whatever the case. «Regola del ladro:», «Regole di movimento:», «Nota che…:» and
+/// «Regola applicabile al nostro caso:» are text of the verdict, not labels. The rule is chosen so that it never
+/// cuts a legitimate verdict: a line the model invented and left in the verdict is a smaller fault than a
+/// verdict truncated at it. Free text in the verdict cannot be verified anyway, and no reference comes from it.
+/// </para>
+/// <para>
+/// The parsing is a linear walk over the text, with no pattern that can backtrack: the model's answer is not
+/// something to hand to a regular expression on faith.
+/// </para>
 /// </remarks>
 internal static class ArbiterVerdictFormat
 {
     private const int MaxReferences = 3;
+
+    /// <summary>Longest document id the copyright marker is read for (ids are GUIDs).</summary>
+    private const int MaxMarkerDocumentIdLength = 128;
 
     /// <summary>Label of a reference. Neutral on purpose: the retrieval does not say whether a passage is from
     /// the rulebook, an expansion or an errata, and calling every one «Regolamento» would be false for some.</summary>
@@ -86,33 +109,6 @@ internal static class ArbiterVerdictFormat
         " Il verdetto non si basa sul regolamento (è buon senso e regole generali del gioco) " +
         "e nessun riferimento è citato.";
 
-    // For Protected sources the model is told to put [ref:documentId:pageNum] before each paraphrase
-    // (RagPromptAssemblyService): machine syntax, not something to show the table.
-    private static readonly Regex CopyrightMarker = new(
-        @"[ \t]*\[ref:[^:\]]+:\d+\][ \t]*",
-        RegexOptions.CultureInvariant,
-        TimeSpan.FromSeconds(1));
-
-    /// <summary>
-    /// A section header at the start of a line, in any of the forms a model writes: plain, bold
-    /// (<c>**VERDETTO:**</c>, <c>**VERDETTO**:</c>), a markdown heading, a list item, a numbered item. The
-    /// REGOLA header may carry up to three more words («Regola applicabile:»): whatever starts like it is dropped.
-    /// </summary>
-    private static readonly Regex Header = new(
-        @"^[\s>#*_`\-•]*(?:\d+[.)]\s*)?[*_`]*\s*(?:(?<name>VERDETTO|NOTA|COPERTURA)|(?<rule>REGOL[AE](?:[ \t]+[\p{L}']+){0,3}))[*_`]*\s*:\s*[*_`]*\s*(?<rest>.*)$",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
-        TimeSpan.FromSeconds(1));
-
-    private static readonly Regex TrailingEmphasis = new(
-        @"[\s*_`]*[*_`]{2,}\s*$",
-        RegexOptions.CultureInvariant,
-        TimeSpan.FromSeconds(1));
-
-    private static readonly Regex CoverageYes = new(
-        @"^\s*[*_`]*\s*(?:s[iì]|yes)\b",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
-        TimeSpan.FromSeconds(1));
-
     // ── Notices ────────────────────────────────────────────────────────────────
 
     internal const string NoGameNotice =
@@ -131,6 +127,9 @@ internal static class ArbiterVerdictFormat
     internal const string NotCoveredNotice =
         "Attenzione: i passaggi del regolamento trovati non coprono questo caso." + NoRulebookClause;
 
+    internal const string CopyrightWithheldNotice =
+        "Attenzione: il verdetto non può riportare il testo del regolamento." + NoRulebookClause;
+
     /// <summary>
     /// The notice that opens a verdict that does not rest on the rulebook; null for one that does. It is part of
     /// the verdict itself, because the verdict and its references are what the whole table receives: a note kept
@@ -144,6 +143,7 @@ internal static class ArbiterVerdictFormat
         VerdictBasis.RetrievalUnavailable => RetrievalUnavailableNotice,
         VerdictBasis.NoPassages => NoPassagesNotice,
         VerdictBasis.NotCovered => NotCoveredNotice,
+        VerdictBasis.CopyrightWithheld => CopyrightWithheldNotice,
         _ => throw new ArgumentOutOfRangeException(nameof(basis), basis, "Unknown verdict basis"),
     };
 
@@ -225,22 +225,108 @@ internal static class ArbiterVerdictFormat
         return string.Join("; ", parts);
     }
 
-    // ── Parsing ────────────────────────────────────────────────────────────────
+    // ── Copyright markers ──────────────────────────────────────────────────────
 
-    /// <summary>Takes the machine syntax of the copyright paraphrase (<c>[ref:documentId:pageNum]</c>) out of the text.</summary>
+    /// <summary>
+    /// Takes the machine syntax of the copyright paraphrase (<c>[ref:documentId:pageNum]</c>, which the prompt
+    /// of a Protected source tells the model to put before each paraphrase) out of the text, with the spaces
+    /// around it on the same line replaced by one — or by none at the start or the end of a line.
+    /// </summary>
     public static string StripCopyrightMarkers(string text)
     {
         ArgumentNullException.ThrowIfNull(text);
-        return CopyrightMarker.Replace(text, " ");
+
+        const string opening = "[ref:";
+        if (!text.Contains(opening, StringComparison.Ordinal))
+        {
+            return text;
+        }
+
+        var result = new StringBuilder(text.Length);
+        var position = 0;
+        while (position < text.Length)
+        {
+            var start = text.IndexOf(opening, position, StringComparison.Ordinal);
+            if (start < 0)
+            {
+                result.Append(text, position, text.Length - position);
+                break;
+            }
+
+            var end = MarkerEnd(text, start + opening.Length);
+            if (end < 0)
+            {
+                // «[ref:» that is not a marker: keep it as text and go on after it
+                result.Append(text, position, start + opening.Length - position);
+                position = start + opening.Length;
+                continue;
+            }
+
+            result.Append(text, position, start - position);
+            while (result.Length > 0 && result[^1] is ' ' or '\t')
+            {
+                result.Length--;
+            }
+
+            var next = end;
+            while (next < text.Length && text[next] is ' ' or '\t')
+            {
+                next++;
+            }
+
+            var atLineStart = result.Length == 0 || result[^1] == '\n';
+            var atLineEnd = next >= text.Length || text[next] is '\n' or '\r';
+            if (!atLineStart && !atLineEnd)
+            {
+                result.Append(' ');
+            }
+
+            position = next;
+        }
+
+        return result.ToString();
     }
 
-    private enum Section { Preamble, Verdict, Note, Rule }
+    /// <summary>The offset just past the <c>]</c> of a marker whose document id starts at <paramref name="from"/>; -1 if there is none.</summary>
+    private static int MarkerEnd(string text, int from)
+    {
+        var i = from;
+        while (i < text.Length && text[i] is not ':' and not ']' && i - from <= MaxMarkerDocumentIdLength)
+        {
+            i++;
+        }
+
+        if (i == from || i >= text.Length || text[i] != ':' || i - from > MaxMarkerDocumentIdLength)
+        {
+            return -1;
+        }
+
+        var digits = ++i;
+        while (i < text.Length && char.IsAsciiDigit(text[i]))
+        {
+            i++;
+        }
+
+        return i > digits && i < text.Length && text[i] == ']' ? i + 1 : -1;
+    }
+
+    // ── Parsing ────────────────────────────────────────────────────────────────
+
+    private enum Label { Verdict, Note, Coverage, Rule }
+
+    private enum Section { Preamble, Verdict, Note }
 
     /// <summary>
-    /// The COPERTURA, VERDETTO and NOTA sections. A header is recognised at the start of a line whatever the
-    /// markdown around it. A REGOLA section is dropped, header and the lines up to the next header, in any form:
-    /// the model has no quote to give. An occurrence inside a line (<c>«vale la regola: …»</c>) is not a header
-    /// and truncates nothing.
+    /// The COPERTURA, VERDETTO and NOTA sections.
+    /// <list type="bullet">
+    /// <item>VERDETTO and NOTA start their section; what follows, up to the next of them, belongs to it.</item>
+    /// <item>COPERTURA is one line and changes no section: a stray one in the middle of the verdict is read and
+    /// leaves the verdict whole.</item>
+    /// <item>A REGOLA line is dropped, and so are the lines right after it that start with a quotation mark or
+    /// are indented (the continuation of a quote). The next line that is neither is back in the section it was
+    /// in: nothing is cut for a REGOLA.</item>
+    /// <item>An answer with no label at all is the verdict itself.</item>
+    /// </list>
     /// </summary>
     public static ParsedVerdict Parse(string response)
     {
@@ -252,53 +338,56 @@ internal static class ArbiterVerdictFormat
         var preamble = new List<string>();
         var verdict = new List<string>();
         var note = new List<string>();
-        var coverage = new List<string>();
+        var coverageLines = new List<string>();
         var section = Section.Preamble;
-        var anyHeader = false;
+        var anyLabel = false;
+        var droppingQuoteContinuation = false;
 
         foreach (var raw in response.Split('\n'))
         {
-            var line = raw.Trim();
-            if (line.Length == 0)
+            var line = raw.TrimEnd();
+            var trimmed = line.TrimStart();
+            if (trimmed.Length == 0)
             {
                 continue;
             }
 
-            var header = Header.Match(line);
-            if (header.Success)
+            if (TryReadLabel(trimmed, out var label, out var rest))
             {
-                anyHeader = true;
-                var rest = TrailingEmphasis.Replace(header.Groups["rest"].Value, string.Empty).Trim();
+                anyLabel = true;
+                droppingQuoteContinuation = label == Label.Rule;
 
-                if (header.Groups["rule"].Success)
+                switch (label)
                 {
-                    section = Section.Rule;
-                    continue;
-                }
-
-                var name = header.Groups["name"].Value.ToUpperInvariant();
-                if (string.Equals(name, "COPERTURA", StringComparison.Ordinal))
-                {
-                    // One line, no continuation: what follows is not part of it.
-                    if (rest.Length > 0)
-                    {
-                        coverage.Add(rest);
-                    }
-
-                    section = Section.Preamble;
-                    continue;
-                }
-
-                section = string.Equals(name, "VERDETTO", StringComparison.Ordinal) ? Section.Verdict : Section.Note;
-                if (rest.Length > 0)
-                {
-                    (section == Section.Verdict ? verdict : note).Add(rest);
+                    case Label.Verdict:
+                        section = Section.Verdict;
+                        AddIfAny(verdict, rest);
+                        break;
+                    case Label.Note:
+                        section = Section.Note;
+                        AddIfAny(note, rest);
+                        break;
+                    case Label.Coverage:
+                        coverageLines.Add(rest);
+                        break;
                 }
 
                 continue;
             }
 
-            Target(section, preamble, verdict, note)?.Add(line);
+            if (droppingQuoteContinuation && (StartsIndented(line) || StartsWithQuotationMark(trimmed)))
+            {
+                continue;
+            }
+
+            droppingQuoteContinuation = false;
+            var target = section switch
+            {
+                Section.Verdict => verdict,
+                Section.Note => note,
+                _ => preamble,
+            };
+            target.Add(trimmed);
         }
 
         var verdictText = string.Join(" ", verdict).Trim();
@@ -306,37 +395,157 @@ internal static class ArbiterVerdictFormat
         {
             // No VERDETTO text. An unstructured answer is the verdict itself; the bare skeleton
             // («VERDETTO:\nREGOLA:\nNOTA:», or an answer cut right after a header) is not an answer at all,
-            // and stays empty so that the handler can refuse it. Text before the first header counts as the
-            // verdict only when nothing else gave one; a REGOLA section never does.
-            verdictText = anyHeader ? string.Join(" ", preamble).Trim() : response.Trim();
+            // and stays empty so that the handler can refuse it. Text before the first label counts as the
+            // verdict only when nothing else gave one.
+            verdictText = anyLabel ? string.Join(" ", preamble).Trim() : response.Trim();
         }
 
         var noteText = string.Join(" ", note).Trim();
-        var covers = coverage.Count > 0 && CoverageYes.IsMatch(coverage[0]);
+        var covers = coverageLines.Count == 1 && IsAPlainYes(coverageLines[0]);
 
         return new ParsedVerdict(verdictText, noteText.Length == 0 ? null : noteText, covers);
     }
 
-    /// <summary>The list a line of this section goes to; null for the section that is dropped.</summary>
-    private static List<string>? Target(
-        Section section, List<string> preamble, List<string> verdict, List<string> note)
-        => section switch
+    private static void AddIfAny(List<string> lines, string text)
+    {
+        if (text.Length > 0)
         {
-            Section.Preamble => preamble,
-            Section.Verdict => verdict,
-            Section.Note => note,
-            _ => null,
-        };
+            lines.Add(text);
+        }
+    }
+
+    private static bool StartsIndented(string line) => line.Length > 0 && line[0] is ' ' or '\t';
+
+    private static bool StartsWithQuotationMark(string trimmed) => trimmed[0] is '"' or '«' or '“' or '„' or '”' or '\'';
+
+    /// <summary>
+    /// Reads a section label at the start of a line: markdown around it (quote, heading, list item, number,
+    /// bold, backticks) is ignored, the case is ignored, and the label must be one of the four exact names, then
+    /// the colon. Linear: the line is walked once.
+    /// </summary>
+    private static bool TryReadLabel(string line, out Label label, out string rest)
+    {
+        label = default;
+        rest = string.Empty;
+
+        var i = SkipDecoration(line, 0);
+
+        // a numbered item: «1.» or «2)»
+        var digitsEnd = i;
+        while (digitsEnd < line.Length && char.IsAsciiDigit(line[digitsEnd]))
+        {
+            digitsEnd++;
+        }
+
+        if (digitsEnd > i && digitsEnd < line.Length && line[digitsEnd] is '.' or ')')
+        {
+            i = SkipDecoration(line, digitsEnd + 1);
+        }
+
+        if (!TryMatchName(line, i, out label, out var afterName))
+        {
+            return false;
+        }
+
+        // the colon, with only emphasis and spaces between it and the name: «**VERDETTO**:», «VERDETTO :»
+        var colon = SkipEmphasisAndSpaces(line, afterName);
+        if (colon >= line.Length || line[colon] != ':')
+        {
+            return false;
+        }
+
+        var start = SkipEmphasisAndSpaces(line, colon + 1);
+        rest = TrimClosingEmphasis(line[start..]);
+        return true;
+    }
+
+    private static readonly (string Name, Label Label)[] LabelNames =
+    [
+        ("VERDETTO", Label.Verdict), ("NOTA", Label.Note), ("COPERTURA", Label.Coverage), ("REGOLA", Label.Rule),
+    ];
+
+    private static bool TryMatchName(string line, int index, out Label label, out int end)
+    {
+        foreach (var (name, candidate) in LabelNames)
+        {
+            if (string.Compare(line, index, name, 0, name.Length, StringComparison.OrdinalIgnoreCase) == 0
+                && index + name.Length <= line.Length)
+            {
+                label = candidate;
+                end = index + name.Length;
+                return true;
+            }
+        }
+
+        label = default;
+        end = index;
+        return false;
+    }
+
+    /// <summary>Past the markdown that can precede a label: spaces, quote, heading, list marker, emphasis, backticks.</summary>
+    private static int SkipDecoration(string line, int from)
+    {
+        var i = from;
+        while (i < line.Length && (char.IsWhiteSpace(line[i]) || line[i] is '>' or '#' or '*' or '_' or '`' or '-' or '•'))
+        {
+            i++;
+        }
+
+        return i;
+    }
+
+    private static int SkipEmphasisAndSpaces(string line, int from)
+    {
+        var i = from;
+        while (i < line.Length && (char.IsWhiteSpace(line[i]) || line[i] is '*' or '_' or '`'))
+        {
+            i++;
+        }
+
+        return i;
+    }
+
+    /// <summary>Takes off the emphasis that closes a headed line («**VERDETTO: testo**») — a run of two or more.</summary>
+    private static string TrimClosingEmphasis(string text)
+    {
+        var end = text.Length;
+        while (end > 0 && char.IsWhiteSpace(text[end - 1]))
+        {
+            end--;
+        }
+
+        var run = end;
+        while (run > 0 && text[run - 1] is '*' or '_' or '`')
+        {
+            run--;
+        }
+
+        return end - run >= 2 ? text[..run].TrimEnd() : text[..end];
+    }
+
+    /// <summary>
+    /// A COPERTURA value that is a clear yes: «SI» or «SÌ» — after the case, the emphasis around it and the
+    /// punctuation at its end — and nothing else. «SÍ», «Y», «YES», «SI/NO», «SI se… NO se…», «Sì, ma solo in
+    /// parte», «SI (parziale)» and the template echoed back in square brackets are all «no».
+    /// </summary>
+    private static bool IsAPlainYes(string value)
+    {
+        var normalized = value.Trim().Trim('*', '_', '`').Trim().TrimEnd('.', '!', ';').Trim('*', '_', '`').Trim();
+        return normalized.Equals("SI", StringComparison.OrdinalIgnoreCase)
+            || normalized.Equals("SÌ", StringComparison.OrdinalIgnoreCase);
+    }
 
     // ── Rule references ────────────────────────────────────────────────────────
 
     /// <summary>
-    /// The references of a verdict that rests on the rulebook: the first passages the retrieval returned, in the
-    /// order it returned them (the reranker's: <c>RelevanceScore</c> is the score before the rerank, so sorting
-    /// by it would undo it), each as a page and — only for a Full-tier passage — its text. A Protected passage is
-    /// cited by page alone: the verdict is the paraphrase, and the tier, not the presence of a snippet, decides
-    /// what may be quoted (the shared finalize step nulls a Protected preview; this does not rely on it). Two
-    /// passages that give the same reference text appear once.
+    /// The references of a verdict that rests on the rulebook: the first passages in the order they are handed
+    /// over, each as a page and — only for a Full-tier passage — its text. That order is KnowledgeBase's, and it
+    /// is <b>not</b> the reranker's: after the rerank, the sentence-window expansion sorts the passages again by
+    /// their score from before it, so what arrives here is a score order (the reranker's only if the expansion
+    /// failed). This method keeps it as it is. A Protected passage is cited by page alone: the verdict is the
+    /// paraphrase, and the tier, not the presence of a snippet, decides what may be quoted (the shared finalize
+    /// step nulls a Protected preview; this does not rely on it). Two passages that give the same reference text
+    /// appear once.
     /// </summary>
     public static List<string> BuildReferences(IReadOnlyList<CitationDto> citations)
     {
@@ -353,14 +562,48 @@ internal static class ArbiterVerdictFormat
     {
         var label = citation.PageNumber > 0 ? $"{ReferenceLabel}, p. {citation.PageNumber}" : ReferenceLabel;
 
-        // SnippetPreview is the start of the chunk (KnowledgeBase caps it at 120 characters), not the
-        // sentence the verdict used.
-        if (string.Equals(citation.CopyrightTier, FullTier, StringComparison.OrdinalIgnoreCase)
-            && !string.IsNullOrWhiteSpace(citation.SnippetPreview))
+        // SnippetPreview is the start of the chunk (KnowledgeBase caps its length), not the sentence the
+        // verdict used. It comes from a PDF: line breaks and runs of spaces are collapsed, since the reference
+        // is stored in disputes_json and sent to every player as a line of text.
+        if (string.Equals(citation.CopyrightTier, FullTier, StringComparison.OrdinalIgnoreCase))
         {
-            return $"{label}: «{citation.SnippetPreview.Trim()}»";
+            var text = CollapseWhitespace(citation.SnippetPreview);
+            if (text.Length > 0)
+            {
+                return $"{label}: «{text}»";
+            }
         }
 
         return label;
+    }
+
+    /// <summary>Every run of whitespace (line breaks included) becomes one space; the ends are trimmed. Nothing is cut.</summary>
+    private static string CollapseWhitespace(string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return string.Empty;
+        }
+
+        var result = new StringBuilder(text.Length);
+        var pendingSpace = false;
+        foreach (var c in text)
+        {
+            if (char.IsWhiteSpace(c))
+            {
+                pendingSpace = result.Length > 0;
+                continue;
+            }
+
+            if (pendingSpace)
+            {
+                result.Append(' ');
+                pendingSpace = false;
+            }
+
+            result.Append(c);
+        }
+
+        return result.ToString();
     }
 }

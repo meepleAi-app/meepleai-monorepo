@@ -164,9 +164,11 @@ internal sealed class RagPromptAssemblyService : IRagPromptAssemblyService
     }
 
     /// <returns>
-    /// The context and the citations; <c>retrievalFailed</c> (#4751) is true when the retrieval stopped on
-    /// an error (the primary query's embedding failed, or any stage threw) and false when it ran to the end,
-    /// even with no result. Both return an empty context: only this flag tells them apart.
+    /// The context and the citations; <c>retrievalFailed</c> (#4751) is true when the retrieval stopped on an
+    /// error — the embedding of the primary query failed, or the retrieval as a whole threw — and false when it
+    /// ran to the end, even with no result. A stage with a fallback of its own (hybrid search, rerank, sentence
+    /// window) degrades without setting it. A failure and an empty result both return an empty context: only
+    /// this flag tells them apart.
     /// </returns>
     private async Task<(string ragContext, List<ChunkCitation> citations, bool retrievalFailed)> RetrieveRagContextAsync(
         string userQuestion, Guid gameId, IReadOnlyList<Guid> expansionGameIds, UserTier? userTier, CancellationToken ct,

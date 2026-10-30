@@ -91,10 +91,19 @@ describe('chiamate dei client e rotte del backend', () => {
     expect(mismatches.length).toBeLessThan(calls.length / 2);
   });
 
-  it('legge anche le rotte di BoundedContexts, non solo quelle di Routing', () => {
+  it('registra le rotte vere di BoundedContexts con il loro prefisso', () => {
     // Con la sola radice Routing, una chiamata a `/admin/kb/docs/{id}/evaluations` o a `/games/search`
     // risultava «sconosciuta» benché la rotta esista: falsi positivi che spingono a gonfiare il baseline.
-    expect(endpoints.some(e => e.file.startsWith('BoundedContexts/'))).toBe(true);
+    // `AdminKbQualityEndpoints` dichiara `var group = app` e va a capo prima di `.MapGroup(...)`: se
+    // l'estrattore perde il gruppo, le tre rotte escono come `POST /api/v1` e `GET /api/v1/{evaluationId}`.
+    // Una sola rotta letta da `BoundedContexts/` non lo proverebbe: `/games/search` basta da sola.
+    const registered = new Set(endpoints.map(e => `${e.method} ${e.path}`));
+    const evaluations = '/api/v1/admin/kb/docs/{docId:guid}/evaluations';
+
+    expect(registered).toContain(`POST ${evaluations}`);
+    expect(registered).toContain(`GET ${evaluations}`);
+    expect(registered).toContain(`GET ${evaluations}/{evaluationId:guid}`);
+    expect(registered).toContain('GET /api/v1/games/search');
   });
 
   it('nessuna chiamata nuova usa un verbo che il backend non registra su quel percorso', () => {

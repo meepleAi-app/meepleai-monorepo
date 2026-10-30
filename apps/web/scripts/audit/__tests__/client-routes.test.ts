@@ -115,13 +115,118 @@ describe('extractClientCalls', () => {
     expect(extractClientCalls(source, 'x.ts').map(c => c.path)).toEqual(['/api/v1/things/list']);
   });
 
-  it('una costante dichiarata due volte con valori diversi è ambigua: la chiamata non si legge', () => {
+  // #4752 (revisione): `const url = …` dichiarato in ogni metodo di un client (decine di casi in
+  // gamesClient.ts) rendeva ambigua la costante e invisibili le chiamate. Una costante locale vale
+  // dentro il blocco che la dichiara: la dichiarazione più vicina, ancora aperta alla chiamata, è la sua.
+  it('una costante locale si risolve con la dichiarazione del blocco che contiene la chiamata', () => {
     const source = [
       "function a() { const URL = '/api/v1/a'; return httpClient.get(URL); }",
       "function b() { const URL = '/api/v1/b'; return httpClient.get(URL); }",
     ].join('\n');
 
+    expect(extractClientCalls(source, 'x.ts').map(c => c.path)).toEqual(['/api/v1/a', '/api/v1/b']);
+  });
+
+  it('una costante-template locale si risolve anche dentro una funzione freccia', () => {
+    const source = [
+      'export const startGame = async (id: string) => {',
+      '  const url = `/api/v1/games/${id}/sessions`;',
+      '  return httpClient.post(url, {});',
+      '};',
+      'export const listGames = async () => {',
+      "  const url = '/api/v1/games';",
+      '  return httpClient.get(url);',
+      '};',
+    ].join('\n');
+
+    expect(extractClientCalls(source, 'x.ts').map(c => `${c.method} ${c.path}`)).toEqual([
+      'POST /api/v1/games/{}/sessions',
+      'GET /api/v1/games',
+    ]);
+  });
+
+  it('una dichiarazione in un blocco già chiuso non vale per le chiamate che seguono', () => {
+    const source = [
+      "function a() { const URL = '/api/v1/a'; return 1; }",
+      'function b(URL: string) { return httpClient.get(URL); }',
+    ].join('\n');
+
     expect(extractClientCalls(source, 'x.ts')).toEqual([]);
+  });
+
+  it('fra due dichiarazioni locali ancora aperte vince la più vicina alla chiamata', () => {
+    const source = [
+      'function f(flag: boolean) {',
+      "  const URL = '/api/v1/outer';",
+      '  if (flag) {',
+      "    const URL = '/api/v1/inner';",
+      '    return httpClient.get(URL);',
+      '  }',
+      '  return httpClient.get(URL);',
+      '}',
+    ].join('\n');
+
+    expect(extractClientCalls(source, 'x.ts').map(c => c.path)).toEqual([
+      '/api/v1/inner',
+      '/api/v1/outer',
+    ]);
+  });
+
+  it('una costante locale ha la precedenza su una di file con lo stesso nome', () => {
+    const source = [
+      "const URL = '/api/v1/top';",
+      "function f() { const URL = '/api/v1/local'; return httpClient.get(URL); }",
+      'function g() { return httpClient.get(URL); }',
+    ].join('\n');
+
+    expect(extractClientCalls(source, 'x.ts').map(c => c.path)).toEqual([
+      '/api/v1/local',
+      '/api/v1/top',
+    ]);
+  });
+
+  it('una costante di file dichiarata più sotto vale alla chiamata (la funzione gira dopo)', () => {
+    const source = [
+      'export async function load() { return httpClient.get(BASE); }',
+      "const BASE = '/api/v1/late';",
+    ].join('\n');
+
+    expect(extractClientCalls(source, 'x.ts').map(c => c.path)).toEqual(['/api/v1/late']);
+  });
+
+  it('due costanti di file con lo stesso nome e valori diversi sono ambigue: la chiamata non si legge', () => {
+    const source = [
+      "const URL = '/api/v1/a';",
+      "const URL = '/api/v1/b';",
+      'await httpClient.get(URL);',
+    ].join('\n');
+
+    expect(extractClientCalls(source, 'x.ts')).toEqual([]);
+  });
+
+  // #4752 (revisione): `http.post('/api/v1/admin/email-templates/' + id + '/publish')` si leggeva come
+  // `POST /api/v1/admin/email-templates` e passava per coincidenza: il letterale non è l'intero argomento.
+  it('un letterale seguito da + non è il percorso: la chiamata non si legge', () => {
+    const source = [
+      "await http.post('/api/v1/admin/email-templates/' + id + '/publish');",
+      'await http.get(`/api/v1/things/${id}` + suffix);',
+    ].join('\n');
+
+    expect(extractClientCalls(source, 'x.ts')).toEqual([]);
+  });
+
+  it('un letterale seguito da virgola o parentesi è il primo argomento', () => {
+    const source = [
+      "await http.get('/api/v1/a');",
+      "await http.post('/api/v1/b', body);",
+      "await http.put(\n  '/api/v1/c',\n  body\n);",
+    ].join('\n');
+
+    expect(extractClientCalls(source, 'x.ts').map(c => c.path)).toEqual([
+      '/api/v1/a',
+      '/api/v1/b',
+      '/api/v1/c',
+    ]);
   });
 
   it('un identificatore che non è una costante di file non si indovina', () => {

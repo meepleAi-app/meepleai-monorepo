@@ -62,6 +62,11 @@ describe('registrarName', () => {
 });
 
 describe('parseGroupPrefixes', () => {
+  it('risolve il prefisso anche se .MapGroup va a capo dopo il ricevente', () => {
+    const source = ['var group = app', '    .MapGroup("/a")', '    .WithTags("A");'].join('\n');
+    expect(parseGroupPrefixes(source).get('group')?.prefix).toBe('/a');
+  });
+
   it('risolve i prefissi annidati per variabile', () => {
     const source = `
       var group = app.MapGroup("/admin");
@@ -135,6 +140,24 @@ describe('parseRoutingFile', () => {
     expect(paths).toEqual([
       '/api/v1/admin/kb/docs/{docId:guid}/evaluations',
       '/api/v1/admin/kb/docs/{docId:guid}/evaluations/{evaluationId:guid}',
+    ]);
+  });
+
+  // #4752 (revisione): `AdminKbQualityEndpoints` scrive `var group = app` e va a capo prima di `.MapGroup(...)`.
+  // La regex non ammetteva spazi prima del punto: il gruppo si perdeva e le tre rotte uscivano come
+  // `POST /api/v1`, `GET /api/v1` e `GET /api/v1/{evaluationId}`.
+  it('riconosce una dichiarazione di gruppo con .MapGroup a capo', () => {
+    const source = `
+      var group = app
+          .MapGroup("/admin/kb/docs/{docId:guid}/evaluations")
+          .RequireAuthorization("RequireAdminOrAbove");
+
+      group.MapPost("", H);
+      group.MapGet("{evaluationId:guid}", H);
+    `;
+    expect(parseRoutingFile(source, 'f.cs', '/api/v1').map(e => `${e.method} ${e.path}`)).toEqual([
+      'POST /api/v1/admin/kb/docs/{docId:guid}/evaluations',
+      'GET /api/v1/admin/kb/docs/{docId:guid}/evaluations/{evaluationId:guid}',
     ]);
   });
 

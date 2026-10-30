@@ -16,7 +16,9 @@ import path from 'node:path';
 import type { EndpointEntry } from './types';
 
 const MAP_CALL = /(\w+)\.Map(Get|Post|Put|Delete|Patch)\(\s*"([^"]*)"/g;
-const GROUP_DECL = /var\s+(\w+)\s*=\s*(\w+)\.MapGroup\(\s*"([^"]+)"\s*\)/g;
+// `\s*\.\s*`: la dichiarazione può andare a capo prima del punto (`var group = app\n    .MapGroup(...)`,
+// come in AdminKbQualityEndpoints): senza, il gruppo si perde e le sue rotte escono senza prefisso.
+const GROUP_DECL = /var\s+(\w+)\s*=\s*(\w+)\s*\.\s*MapGroup\(\s*"([^"]+)"\s*\)/g;
 const PROGRAM_GROUP = /(\w+)\.MapGroup\(\s*"([^"]+)"\s*\)\s*\.\s*(Map\w+)\(/g;
 const PROGRAM_DIRECT = /(\w+)\.(Map\w+Endpoints|Map\w+Routes)\(\s*\)/g;
 const ADMIN_POLICY = /admin/i;

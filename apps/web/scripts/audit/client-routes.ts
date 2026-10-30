@@ -9,11 +9,13 @@
  *
  * L'estrattore è statico (regex e uno scanner di commenti e stringhe, non un parser), quindi sbaglia in
  * ENTRAMBI i versi. Falsi negativi (un difetto che il confronto non vede):
- *   - si leggono solo le chiamate il cui primo argomento è un letterale, o un identificatore che è una
- *     costante di file con un valore letterale (`const URL = '/api/…'`, anche composta da altre
- *     costanti): `httpClient.get(builder(x))`, le costanti importate da un altro file, gli oggetti di
- *     rotte (`ENDPOINTS.users`) e le `fetch()` dirette non si vedono;
- *   - una costante dichiarata più volte con valori diversi nello stesso file è ambigua e non si legge;
+ *   - si leggono solo le chiamate il cui primo argomento è un letterale INTERO (`'/a/' + id + '/b'` non
+ *     lo è), o un identificatore che è una costante con valore letterale (`const URL = '/api/…'`, anche
+ *     composta da altre costanti): `httpClient.get(builder(x))`, le costanti importate da un altro file,
+ *     gli oggetti di rotte (`ENDPOINTS.users`) e le `fetch()` dirette non si vedono;
+ *   - una costante di file (livello più alto) dichiarata più volte con valori diversi è ambigua e non si
+ *     legge; una locale vale nel blocco che la dichiara (vince la dichiarazione più vicina, ancora aperta
+ *     alla chiamata), come il `const url = …` ripetuto in ogni metodo di un client;
  *   - un parametro vale per qualunque segmento dall'altra parte, anche per un segmento letterale.
  * Falsi positivi (un rilievo che non è un difetto):
  *   - le rotte registrate da un metodo che riceve un SOTTOGRUPPO già prefissato
@@ -23,6 +25,11 @@
  *     scartano le rotte con un parametro come primo segmento (nessuna rotta vera comincia così: sono
  *     sempre un prefisso perso), che altrimenti assorbirebbero qualunque chiamata; le chiamate a
  *     quei percorsi restano nel baseline come falsi positivi noti;
+ *   - un parametro di funzione omonimo di una costante di file si legge come la costante: l'estrattore
+ *     non conosce i parametri (`function f(url)` accanto a un `const url` di file);
+ *   - le rotte registrate in catena senza una variabile di gruppo
+ *     (`group.MapGroup("/x").WithTags(…).MapPost("/clear", …)`, come in `AdminKBSettingsEndpoints` e
+ *     `AdminLlmConfigEndpoints`) non si vedono, e le chiamate ai loro percorsi risultano sconosciute;
  *   - le rotte vengono da `Routing/**` e `BoundedContexts/**` (`Routing`); chi registra altrove non c'è.
  */
 
@@ -176,45 +183,101 @@ function readLiteral(code: string, start: number): { parts: Part[]; end: number 
   return null;
 }
 
-type Constants = { values: Map<string, string>; ambiguous: Set<string> };
+/** Un'assegnazione `const NAME = <letterale>` e il blocco in cui vale. */
+type Declaration = {
+  name: string;
+  index: number;
+  /** Profondità di graffe alla dichiarazione: 0 è il livello più alto del file. */
+  depth: number;
+  /** Indice del carattere dopo la `}` che chiude il blocco della dichiarazione (infinito al livello più alto). */
+  end: number;
+  parts: Part[];
+};
+
+type Resolve = (name: string) => string | null;
+type Lookup = (name: string, at: number, exclude?: Declaration) => string | null;
 
 /** Il testo di un letterale: le costanti note si sostituiscono, ogni altra interpolazione diventa `{}`. */
-function evaluate(parts: Part[], constants: Constants): string {
+function evaluate(parts: Part[], resolve: Resolve): string {
   return parts
     .map(part => {
       if ('text' in part) return part.text;
       const name = part.expr.trim();
-      const known = IDENTIFIER.test(name) ? constants.values.get(name) : undefined;
-      return known ?? '{}';
+      return (IDENTIFIER.test(name) ? resolve(name) : null) ?? '{}';
     })
     .join('');
 }
 
-/** Costanti di file con valore letterale; quelle dichiarate più volte con valori diversi sono ambigue. */
-function fileConstants(code: string): Constants {
-  const declarations: Array<{ name: string; parts: Part[] }> = [];
+/** Profondità di graffe PRIMA di ogni carattere; le graffe dentro stringhe e template non contano. */
+function braceDepths(code: string): Int32Array {
+  const depths = new Int32Array(code.length + 1);
+  let depth = 0;
+  let i = 0;
+  while (i < code.length) {
+    const ch = code[i];
+    if (ch === "'" || ch === '"' || ch === '`') {
+      const literal = readLiteral(code, i);
+      const end = literal ? literal.end : i + 1;
+      for (; i < end; i++) depths[i] = depth;
+      continue;
+    }
+    depths[i] = depth;
+    if (ch === '{') depth++;
+    else if (ch === '}') depth--;
+    i++;
+  }
+  depths[code.length] = depth;
+  return depths;
+}
+
+/**
+ * Risolve le costanti con valore letterale (`const NAME = '…'`, o un template). Una costante locale vale nel
+ * blocco che la dichiara, dalla dichiarazione alla `}` che lo chiude: fra più dichiarazioni dello stesso nome
+ * vince la più vicina ancora aperta alla chiamata (`const url = …` ripetuto in ogni metodo di un client).
+ * Una costante di file (livello più alto) vale in tutto il file, anche sopra la dichiarazione: le funzioni
+ * girano dopo. Due di file con lo stesso nome e valori diversi sono ambigue e non si risolvono.
+ * L'estrattore non conosce i parametri: un `function f(url)` accanto a un `const url` di file si legge
+ * come la costante.
+ */
+function makeLookup(code: string): Lookup {
+  const depths = braceDepths(code);
+  const declarations: Declaration[] = [];
   for (const m of code.matchAll(CONST_DECL)) {
-    const literal = readLiteral(code, (m.index ?? 0) + m[0].length);
-    if (literal) declarations.push({ name: m[1], parts: literal.parts });
+    const index = m.index ?? 0;
+    const literal = readLiteral(code, index + m[0].length);
+    if (!literal) continue;
+    const depth = depths[index];
+    let end = Number.POSITIVE_INFINITY;
+    if (depth > 0) {
+      end = index;
+      while (end < code.length && depths[end] >= depth) end++;
+    }
+    declarations.push({ name: m[1], index, depth, end, parts: literal.parts });
   }
 
-  let constants: Constants = { values: new Map(), ambiguous: new Set() };
-  // Una costante può usarne altre, dichiarate prima o dopo: poche passate bastano alle basi che i client usano.
-  for (let pass = 0; pass < 3; pass++) {
-    const byName = new Map<string, Set<string>>();
-    for (const { name, parts } of declarations) {
-      const seen = byName.get(name) ?? new Set<string>();
-      seen.add(evaluate(parts, constants));
-      byName.set(name, seen);
-    }
-    const next: Constants = { values: new Map(), ambiguous: new Set() };
-    for (const [name, seen] of byName) {
-      if (seen.size > 1) next.ambiguous.add(name);
-      else next.values.set(name, [...seen][0]);
-    }
-    constants = next;
+  const cache = new Map<Declaration, string>();
+  const visiting = new Set<Declaration>();
+
+  function valueOf(declaration: Declaration): string {
+    const cached = cache.get(declaration);
+    if (cached !== undefined) return cached;
+    if (visiting.has(declaration)) return '{}';
+    visiting.add(declaration);
+    const value = evaluate(declaration.parts, name => lookup(name, declaration.index, declaration));
+    visiting.delete(declaration);
+    cache.set(declaration, value);
+    return value;
   }
-  return constants;
+
+  function lookup(name: string, at: number, exclude?: Declaration): string | null {
+    const named = declarations.filter(d => d.name === name && d !== exclude);
+    const local = named.filter(d => d.depth > 0 && d.index < at && at < d.end);
+    if (local.length > 0) return valueOf(local.reduce((a, b) => (b.index > a.index ? b : a)));
+    const values = new Set(named.filter(d => d.depth === 0).map(valueOf));
+    return values.size === 1 ? [...values][0] : null;
+  }
+
+  return lookup;
 }
 
 /** Percorso di una chiamata: senza query string, con il suffisso interpolato attaccato all'ultimo segmento tolto. */
@@ -227,33 +290,44 @@ function normalizeClientPath(raw: string): string {
   return segments.join('/').replace(/\/+$/, '');
 }
 
-/** Il primo argomento di una chiamata, se è leggibile: un letterale, o una costante di file. */
-function firstArgument(code: string, from: number, constants: Constants): string | null {
+const ENDS_ARGUMENT = /^\s*[,)]/;
+
+/**
+ * Il primo argomento di una chiamata, se è leggibile: un letterale INTERO, o una costante con valore
+ * letterale. `'/api/x/' + id + '/y'` non è `/api/x/`: il letterale deve finire con una virgola o una
+ * parentesi, altrimenti la chiamata si legge come «non letterale».
+ */
+function firstArgument(code: string, from: number, lookup: Lookup): string | null {
   let i = from;
   while (/\s/.test(code[i] ?? '')) i++;
+  const resolve: Resolve = name => lookup(name, from);
 
   const literal = readLiteral(code, i);
-  if (literal) return evaluate(literal.parts, constants);
+  if (literal) {
+    return ENDS_ARGUMENT.test(code.slice(literal.end, literal.end + 200))
+      ? evaluate(literal.parts, resolve)
+      : null;
+  }
 
   const identifier = /^[A-Za-z_$][\w$]*/.exec(code.slice(i, i + 120))?.[0];
   if (
     !identifier ||
-    !/^\s*[,)]/.test(code.slice(i + identifier.length, i + identifier.length + 40))
+    !ENDS_ARGUMENT.test(code.slice(i + identifier.length, i + identifier.length + 200))
   ) {
     return null;
   }
-  return constants.values.get(identifier) ?? null;
+  return resolve(identifier);
 }
 
 /** Chiamate `.get/.post/.put/.patch/.delete` con un percorso `/api/...` leggibile dal sorgente. */
 export function extractClientCalls(source: string, file: string): ClientCall[] {
   const code = stripComments(source);
-  const constants = fileConstants(code);
+  const lookup = makeLookup(code);
   const calls: ClientCall[] = [];
 
   for (const m of code.matchAll(CALL_OPEN)) {
     const index = m.index ?? 0;
-    const raw = firstArgument(code, index + m[0].length, constants);
+    const raw = firstArgument(code, index + m[0].length, lookup);
     if (raw === null) continue;
     const normalized = normalizeClientPath(raw);
     if (!normalized.startsWith('/api/')) continue;

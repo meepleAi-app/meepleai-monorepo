@@ -6,10 +6,10 @@ namespace Api.SharedKernel.Services;
 /// from here, so a deployment configures one value and every link follows it.
 /// </summary>
 /// <remarks>
-/// Before this existed, eight generators read <c>App:BaseUrl</c> (which no deployment sets, and which
-/// <c>appsettings.json</c> filled with <c>localhost:3000</c>) while the verification e-mail read
-/// <c>Frontend:BaseUrl</c> and then <c>FRONTEND_BASE_URL</c>: the same value under two keys with two
-/// different fallbacks, and a link to the developer's machine as the silent outcome.
+/// Before this existed, the invitation, share-link and session handlers read <c>App:BaseUrl</c> (which no
+/// deployment sets, and which <c>appsettings.json</c> filled with <c>localhost:3000</c>) while the
+/// verification e-mail read <c>Frontend:BaseUrl</c> and then <c>FRONTEND_BASE_URL</c>: the same value under
+/// two keys with two different fallbacks, and a link to the developer's machine as the silent outcome.
 /// </remarks>
 public interface IPublicBaseUrlProvider
 {

@@ -14,6 +14,19 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 public sealed class GroundedSessionGenerationException : Exception
 {
     public GroundedSessionGenerationException(string? message) : base(message) { }
+
+    public GroundedSessionGenerationException(string? message, string? errorCode) : base(message)
+    {
+        ErrorCode = errorCode;
+    }
+
+    /// <summary>
+    /// The <c>error_code</c> the LLM gateway attached to the failure, when it did (a refusal such as a
+    /// daily cap or a quota, or <c>AI_PROVIDER_UNAVAILABLE</c>); null for a failure without one. A caller
+    /// that shows the failure to a player needs it to tell a refusal, whose text is the gateway's own,
+    /// from a provider that just did not answer (#4751).
+    /// </summary>
+    public string? ErrorCode { get; }
 }
 
 /// <summary>
@@ -77,6 +90,13 @@ internal sealed class AskGroundedSessionQueryHandler
             systemPrompt += $"\n\nCurrent game state from board analysis:\n{request.GameStateContext}";
         }
 
+        // #4751: the caller's persona/answer format goes to generation only — never into the question,
+        // which is the retrieval query.
+        if (!string.IsNullOrWhiteSpace(request.ResponseInstructions))
+        {
+            systemPrompt += $"\n\n{request.ResponseInstructions}";
+        }
+
         // 4. Generate the answer (text-only; pixels already distilled into GameStateContext).
         var completion = await _llmService
             .GenerateCompletionAsync(systemPrompt, assembled.UserPrompt, RequestSource.AgentTask, cancellationToken)
@@ -85,7 +105,10 @@ internal sealed class AskGroundedSessionQueryHandler
         if (!completion.Success)
         {
             // Let SessionTracking degrade to the multimodal-only path (stays Ungrounded, #3388).
-            throw new GroundedSessionGenerationException(completion.ErrorMessage);
+            // The gateway's error_code travels with it, for callers that show the failure (#4751).
+            throw new GroundedSessionGenerationException(
+                completion.ErrorMessage,
+                completion.Metadata.TryGetValue("error_code", out var errorCode) ? errorCode : null);
         }
 
         var responseText = completion.Response;

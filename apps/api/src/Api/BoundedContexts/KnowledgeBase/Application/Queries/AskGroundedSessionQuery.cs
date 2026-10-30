@@ -25,9 +25,14 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 /// <param name="UserId">Resolved user id for copyright-tier gating of citations. Guest →
 /// <c>Guid.Empty</c> (most restrictive tier).</param>
 /// <param name="AgentLanguage">ISO 639-1 language for generation + copyright fallback copy.</param>
+/// <param name="ResponseInstructions">Optional instructions for the generation step only (persona and
+/// answer format, e.g. the Arbitro's VERDETTO/NOTA), appended to the system prompt. They never reach
+/// retrieval: <see cref="Question"/> is also the retrieval query, and a format pasted into it would be
+/// embedded and matched against the rulebook (#4751).</param>
 internal sealed record AskGroundedSessionQuery(
     Guid GameId,
     string Question,
     string? GameStateContext,
     Guid UserId,
-    string AgentLanguage = "en") : IQuery<GroundedSessionAnswerDto>;
+    string AgentLanguage = "en",
+    string? ResponseInstructions = null) : IQuery<GroundedSessionAnswerDto>;

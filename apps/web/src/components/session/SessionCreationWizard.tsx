@@ -24,7 +24,7 @@ import { AddSelfButton, OptOutButton, SelfBadge } from '@/components/session/Sel
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
-import { linkedFirst, useSelfPlayer, type SelfPlayer } from '@/hooks/useSelfPlayer';
+import { useSelfPlayer, type SelfPlayer } from '@/hooks/useSelfPlayer';
 import { trackSessionCreated } from '@/lib/analytics/flywheel-events';
 import { api } from '@/lib/api';
 import type {
@@ -495,9 +495,9 @@ export function SessionCreationWizard() {
 
       const sessionId = await api.liveSessions.createSession(request);
 
-      // Add players after session creation. The linked creator goes first: the server makes the
-      // first player the Host (#4750).
-      for (const player of linkedFirst(players)) {
+      // Add players after session creation. The linked creator is first in the list (seeded, and
+      // re-added, at the front), so the server makes them the Host (#4750).
+      for (const player of players) {
         await api.liveSessions.addPlayer(sessionId, {
           displayName: player.displayName,
           color: player.color,

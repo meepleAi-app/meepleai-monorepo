@@ -11,12 +11,14 @@ using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Application.Commands;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.BoundedContexts.UserLibrary.Domain.ValueObjects;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
+using Api.BoundedContexts.UserNotifications.Infrastructure.Scheduling;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Services;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Slack;
 using Api.Infrastructure.Entities;
@@ -31,21 +33,26 @@ using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using Quartz;
 using Xunit;
 using IUserRepository = Api.BoundedContexts.Authentication.Infrastructure.Persistence.IUserRepository;
 
 namespace Api.Tests.SharedKernel.Services;
 
 /// <summary>
-/// #4774: ogni generatore di link del backend compone la base dall'URL pubblico del front-end, e lo risolve
-/// attraverso un solo punto. Prima, inviti, condivisioni e disiscrizione leggevano <c>App:BaseUrl</c> (che in staging e produzione
-/// nessuno imposta, e che <c>appsettings.json</c> riempie con <c>localhost:3000</c>) mentre l'email di verifica
-/// leggeva <c>Frontend:BaseUrl</c>: gli stessi link, due chiavi, due ripieghi.
+/// #4774: i generatori di link del backend elencati in <c>Producers</c> compongono la base dall'URL pubblico
+/// del front-end, e lo risolvono attraverso un solo punto. Prima, inviti, condivisioni e disiscrizione leggevano
+/// <c>App:BaseUrl</c> (che in staging e produzione nessuno imposta, e che <c>appsettings.json</c> riempie con
+/// <c>localhost:3000</c>) mentre l'email di verifica leggeva <c>Frontend:BaseUrl</c>: gli stessi link, due
+/// chiavi, due ripieghi.
 /// </summary>
 /// <remarks>
-/// Un caso solo per scenario, eseguito su <b>ogni</b> generatore: un generatore nuovo che compone un link
-/// senza passare dal punto unico si aggiunge qui e cade nello scenario che lo riguarda. Ogni produttore
-/// restituisce il testo che porta il link (corpo dell'email, DTO, JSON del messaggio Slack).
+/// Un caso solo per scenario, eseguito su <b>ogni generatore in elenco</b>: un generatore nuovo che compone un
+/// link senza passare dal punto unico si aggiunge qui e cade nello scenario che lo riguarda. Ogni produttore
+/// restituisce il testo che porta il link (corpo dell'email, DTO, JSON del messaggio Slack). L'elenco è tenuto a
+/// mano: un generatore che non vi compare non è coperto da nessuno scenario. Il digest admin delle richieste di
+/// condivisione ne è rimasto fuori, con un dominio fisso scritto nel job, finché un <c>git grep</c> del dominio
+/// non l'ha trovato: cercare i domini scritti a mano resta il controllo che l'elenco non fa.
 /// </remarks>
 [Trait("Category", TestCategories.Unit)]
 public sealed class PublicBaseUrlLinkGeneratorsTests
@@ -73,6 +80,7 @@ public sealed class PublicBaseUrlLinkGeneratorsTests
         ["slack-share-request"] = ProduceShareRequestSlackLinkAsync,
         ["password-reset-url"] = ProducePasswordResetLinkAsync,
         ["oauth-frontend-redirect"] = ProduceOAuthRedirectAsync,
+        ["admin-share-request-digest-job"] = ProduceAdminDigestJobLinkAsync,
     };
 
     public static TheoryData<string> Generators() => new(Producers.Keys);
@@ -193,6 +201,32 @@ public sealed class PublicBaseUrlLinkGeneratorsTests
         var link = await ProduceAsync("password-reset-url", new() { ["Frontend:BaseUrl"] = FrontendUrl });
 
         link.Should().Be($"{FrontendUrl}/reset-password?token=reset-token");
+    }
+
+    [Fact]
+    public async Task TheAdminDigestJob_LinksToTheReviewQueueOfTheFrontend()
+    {
+        var run = await RunAdminDigestJobAsync(new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Frontend:BaseUrl"] = FrontendUrl + "/" })
+            .Build());
+
+        run.ReviewQueueUrls.Should().Equal($"{FrontendUrl}/admin/share-requests");
+    }
+
+    [Fact]
+    public async Task TheAdminDigestJob_WithNoKeyInADeployedEnvironment_SendsNoEmailAndSaysWhyItStopped()
+    {
+        // The job does not rethrow (Quartz would only log it): the outcome is no e-mail and a result that names
+        // the key to set. A digest with a made-up link would be a mail nobody could act on.
+        var run = await RunAdminDigestJobAsync(new ConfigurationBuilder().Build());
+
+        run.ReviewQueueUrls.Should().BeEmpty();
+        run.Email.Verify(
+            e => e.SendAdminShareRequestDigestEmailAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(),
+                It.IsAny<Dictionary<string, int>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        run.Failure.Should().NotBeNull().And.Contain("Frontend:BaseUrl");
     }
 
     // ------------------------------------------------------------------------------------------------------
@@ -454,5 +488,76 @@ public sealed class PublicBaseUrlLinkGeneratorsTests
 
         return Task.FromResult(JsonSerializer.Serialize(
             builder.BuildMessage(new ShareRequestPayload(Guid.NewGuid(), "Mario", "Catan", null), "/share-requests/1")));
+    }
+
+    private sealed record AdminDigestRun(
+        Mock<IEmailService> Email, IReadOnlyList<string> ReviewQueueUrls, string? Failure);
+
+    /// <summary>
+    /// Runs the real job over one pending request and one admin. <c>Failure</c> is the <c>Error</c> of the job's
+    /// result when it ended unsuccessfully: the job catches everything and reports through
+    /// <c>IJobExecutionContext.Result</c>.
+    /// </summary>
+    private static async Task<AdminDigestRun> RunAdminDigestJobAsync(IConfiguration configuration)
+    {
+        var shareRequests = new Mock<IShareRequestRepository>();
+        shareRequests
+            .Setup(r => r.GetPendingStatsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PendingShareRequestStats
+            {
+                TotalPending = 3,
+                CreatedToday = 1,
+                OldestPendingAge = TimeSpan.FromDays(2),
+            });
+
+        await using var db = TestDbContextFactory.CreateInMemoryDbContext();
+        db.Users.Add(new UserEntity
+        {
+            Id = Guid.NewGuid(),
+            Email = "admin@example.test",
+            PasswordHash = "hash",
+            Role = "admin",
+            CreatedAt = DateTime.UtcNow,
+        });
+        await db.SaveChangesAsync(CancellationToken.None);
+
+        var email = new Mock<IEmailService>();
+        var context = new Mock<IJobExecutionContext>();
+        context.SetupGet(c => c.FireTimeUtc).Returns(DateTimeOffset.UtcNow);
+        context.SetupGet(c => c.CancellationToken).Returns(CancellationToken.None);
+        context.SetupProperty(c => c.Result);
+
+        var job = new AdminShareRequestDigestJob(
+            shareRequests.Object,
+            db,
+            email.Object,
+            PublicBaseUrlTestSupport.ProviderFor(configuration),
+            NullLogger<AdminShareRequestDigestJob>.Instance);
+
+        await job.Execute(context.Object);
+
+        var urls = email.Invocations
+            .Where(i => i.Method.Name == nameof(IEmailService.SendAdminShareRequestDigestEmailAsync))
+            .Select(i => (string)i.Arguments[6])
+            .ToList();
+
+        // The result is an anonymous object: it carries Error (the message) when the job failed.
+        var result = context.Object.Result;
+        var failure = result?.GetType().GetProperty("Error")?.GetValue(result) as string;
+
+        return new AdminDigestRun(email, urls, failure);
+    }
+
+    private static async Task<string> ProduceAdminDigestJobLinkAsync(IConfiguration configuration)
+    {
+        var run = await RunAdminDigestJobAsync(configuration);
+
+        // The shared scenarios expect a generator with no address to fail: this one reports it in its result.
+        if (run.Failure is not null)
+        {
+            throw new InvalidOperationException(run.Failure);
+        }
+
+        return run.ReviewQueueUrls.Single();
     }
 }

@@ -45,6 +45,7 @@ import type { PlayRecordDraftState } from '@/lib/play-records/draft-types';
 import { usePlayRecordDraftPersist } from '@/lib/play-records/hooks/usePlayRecordDraftPersist';
 import { usePlayRecordsStore } from '@/lib/stores/play-records-store';
 import { cn } from '@/lib/utils';
+import { isoToDatetimeLocalValue } from '@/lib/utils/datetimeLocal';
 
 import { DraftAutosaveIndicator } from './DraftAutosaveIndicator';
 
@@ -451,9 +452,15 @@ function Step2Quando({ form, t }: Step2Props) {
             <FormControl>
               <Input
                 type="datetime-local"
-                value={field.value instanceof Date ? field.value.toISOString().slice(0, 16) : ''}
+                // #4785: a datetime-local string is a wall clock, and `onChange` reads it as local time,
+                // so the value and the cap are written as local time too.
+                value={
+                  field.value instanceof Date
+                    ? isoToDatetimeLocalValue(field.value.toISOString())
+                    : ''
+                }
                 onChange={e => field.onChange(new Date(e.target.value))}
-                max={new Date().toISOString().slice(0, 16)}
+                max={isoToDatetimeLocalValue(new Date().toISOString())}
               />
             </FormControl>
             <FormMessage />

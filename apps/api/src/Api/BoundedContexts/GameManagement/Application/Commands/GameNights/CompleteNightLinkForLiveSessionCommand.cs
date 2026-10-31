@@ -52,25 +52,31 @@ internal sealed class CompleteNightLinkForLiveSessionCommandHandler
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        var live = await _liveSessionRepository.GetByIdAsync(command.LiveSessionId, cancellationToken)
-            .ConfigureAwait(false);
-
-        // Only a completed live game that has a companion can have a night link: a wizard session's
-        // companion is in no night, and a game that is not completed has nothing to propagate.
-        if (live is null || live.Status != LiveSessionStatus.Completed || live.TrackingSessionId is not { } trackingSessionId)
-            return;
-
-        var gameNight = await _gameNightRepository.GetByLinkedSessionIdAsync(trackingSessionId, cancellationToken)
-            .ConfigureAwait(false);
-        var link = gameNight?.Sessions.FirstOrDefault(s => s.SessionId == trackingSessionId);
-
-        // Idempotent and loop-safe: act only while the night still holds the sitting open.
-        if (gameNight is null || link is null || link.Status != GameNightSessionStatus.InProgress)
-            return;
-
+        // Best-effort for the WHOLE command, the two reads included (see the summary): the endpoint that sends
+        // it has just completed the live game — or, on a repeated «Termina partita», is about to answer 409 for
+        // it — and a database hiccup while looking for the night must not turn that answer into a 500 for a
+        // game that is, in fact, over. Only a cancelled request propagates.
+        Guid? gameNightId = null;
 #pragma warning disable CA1031 // Best-effort by design: the live game is already completed (see the summary)
         try
         {
+            var live = await _liveSessionRepository.GetByIdAsync(command.LiveSessionId, cancellationToken)
+                .ConfigureAwait(false);
+
+            // Only a completed live game that has a companion can have a night link: a wizard session's
+            // companion is in no night, and a game that is not completed has nothing to propagate.
+            if (live is null || live.Status != LiveSessionStatus.Completed || live.TrackingSessionId is not { } trackingSessionId)
+                return;
+
+            var gameNight = await _gameNightRepository.GetByLinkedSessionIdAsync(trackingSessionId, cancellationToken)
+                .ConfigureAwait(false);
+            var link = gameNight?.Sessions.FirstOrDefault(s => s.SessionId == trackingSessionId);
+
+            // Idempotent and loop-safe: act only while the night still holds the sitting open.
+            if (gameNight is null || link is null || link.Status != GameNightSessionStatus.InProgress)
+                return;
+
+            gameNightId = gameNight.Id;
             var winnerId = await ResolveWinnerAsync(live, trackingSessionId, cancellationToken).ConfigureAwait(false);
 
             // The organizer is the caller the night's own completion authorizes; this is a system
@@ -83,9 +89,9 @@ internal sealed class CompleteNightLinkForLiveSessionCommandHandler
         {
             _logger.LogWarning(
                 ex,
-                "Live game {LiveSessionId} completed but its game night {GameNightId} link could not be completed; "
+                "The game night link of live game {LiveSessionId} (game night {GameNightId}) could not be completed; "
                 + "the organizer can complete it from the night view",
-                live.Id, gameNight.Id);
+                command.LiveSessionId, gameNightId);
         }
 #pragma warning restore CA1031
     }

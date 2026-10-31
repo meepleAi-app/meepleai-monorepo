@@ -641,7 +641,7 @@ public sealed class GameNightLiveGameBridgeIntegrationTests
         attempts.Count(a => a.Error is null).Should().Be(1, "only one of two concurrent starts may win");
         // The loser is told «a game is already live» — or, in the narrow window where both pass the guard
         // and the second's INSERT meets the unique index before the xmin check (a known gap: the start has
-        // no 23505 catch, tracked as a follow-up), a DbUpdateException. Never a second game.
+        // no 23505 catch, tracked in #4780), a DbUpdateException. Never a second game.
         attempts.Where(a => a.Error is not null).Select(a => a.Error)
             .Should().AllSatisfy(e => e.Should().Match<Exception>(x =>
                 x is MaxLiveSessionsExceededException || x is DbUpdateException || x is ConflictException));

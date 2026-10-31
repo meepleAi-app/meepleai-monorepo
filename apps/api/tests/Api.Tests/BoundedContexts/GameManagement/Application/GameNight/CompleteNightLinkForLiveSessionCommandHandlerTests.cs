@@ -255,6 +255,36 @@ public sealed class CompleteNightLinkForLiveSessionCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenReadingTheLiveGameFails_TheErrorIsLoggedAndNotPropagated()
+    {
+        // The reads come BEFORE the follow-up, and used to sit outside the best-effort guard: on a repeated
+        // «Termina partita» (the repair path, which answers 409) a failed read replaced that 409 with a 500,
+        // and on the first one it turned the answer for a game that is over into an error.
+        _liveRepo.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("the database went away"));
+
+        var act = () => Handle(Guid.NewGuid());
+
+        await act.Should().NotThrowAsync();
+        VerifyNightNotCompleted();
+    }
+
+    [Fact]
+    public async Task Handle_WhenReadingTheNightFails_TheErrorIsLoggedAndNotPropagated()
+    {
+        var tracking = Guid.NewGuid();
+        var live = Live(tracking, complete: true, (Guid.NewGuid(), "Marta", 3));
+        _liveRepo.Setup(r => r.GetByIdAsync(live.Id, It.IsAny<CancellationToken>())).ReturnsAsync(live);
+        _nightRepo.Setup(r => r.GetByLinkedSessionIdAsync(tracking, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("the database went away"));
+
+        var act = () => Handle(live.Id);
+
+        await act.Should().NotThrowAsync();
+        VerifyNightNotCompleted();
+    }
+
+    [Fact]
     public async Task Handle_ACancelledRequest_StillPropagatesTheCancellation()
     {
         var tracking = Guid.NewGuid();

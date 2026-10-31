@@ -110,8 +110,9 @@ public class GoLiveSessionLiveGameBridgeTests
     [Fact]
     public async Task Handle_TheLiveGameIsCreatedBeforeLiveModeOpens()
     {
-        // Live mode opens LAST (invariante #15). If the live game fails, the link is already
-        // InProgress and the retry takes the self-heal branch, which comes back to create it.
+        // Live mode opens LAST (invariante #15), after the promotion and the live game have committed
+        // together: if the live game fails, the whole transaction rolls back (link still Pending, no live
+        // game) and live mode never opens — covered by the atomicity tests below.
         var sessionId = Guid.NewGuid();
         var night = NightWithDraft(sessionId, out _);
         var calls = new List<string>();

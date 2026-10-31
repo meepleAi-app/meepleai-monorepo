@@ -135,9 +135,14 @@ internal sealed class GoLiveSessionCommandHandler : ICommandHandler<GoLiveSessio
         //
         // One transaction on purpose. The promotion used to commit alone and the live game was created
         // after it: a second go-live of the same draft that read the link InProgress in that window took
-        // the self-heal branch and created a SECOND live game. Now a link read as InProgress means the
-        // first go-live's whole transaction — live game included — has committed, and the idempotent
-        // CreateLiveSessionCommand (by tracking id) hands that one back.
+        // the self-heal branch and created a SECOND live game. Now, for a link this handler promoted, a link
+        // read as InProgress means the first go-live's whole transaction — live game included — has committed,
+        // and the idempotent CreateLiveSessionCommand (by tracking id) hands that one back.
+        //
+        // That reasoning does NOT hold for a link that became InProgress elsewhere (a gamebook campaign
+        // attached to the night, or data from before the bridge): it can be InProgress with no live game,
+        // and two go-lives of it at once are not serialized — nothing writes the night's aggregate in that
+        // branch, and the index on the tracking id is not unique. Tracked in #4780.
         var liveSessionId = await PromoteAndOpenLiveGameAsync(
             gameNight, command, targetLink, promote, cancellationToken).ConfigureAwait(false);
 

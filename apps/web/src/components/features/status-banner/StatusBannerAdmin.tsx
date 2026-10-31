@@ -18,6 +18,7 @@ import type {
   StatusBannerSeverity,
   UpdateStatusBannerCommand,
 } from '@/lib/api/schemas/status-banner.schemas';
+import { isoToDatetimeLocalValue } from '@/lib/utils/datetimeLocal';
 
 interface FormState {
   message: string;
@@ -48,16 +49,6 @@ const TEMPLATES = {
   },
 };
 
-function toDatetimeLocal(iso: string | null): string {
-  if (!iso) return '';
-  // Trim seconds/ms + trailing Z for input compatibility — keeps the date
-  // viewable in local format; backend round-trips as UTC ISO.
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return '';
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
 function fromDatetimeLocal(value: string): string | null {
   if (!value) return null;
   const d = new Date(value);
@@ -81,8 +72,8 @@ export function StatusBannerAdmin() {
         message: data.message,
         severity: data.severity,
         isActive: data.isActive,
-        startsAt: toDatetimeLocal(data.startsAt),
-        endsAt: toDatetimeLocal(data.endsAt),
+        startsAt: isoToDatetimeLocalValue(data.startsAt),
+        endsAt: isoToDatetimeLocalValue(data.endsAt),
       });
       setHydrated(true);
     }

@@ -19,9 +19,18 @@ describe('isoToDatetimeLocalValue', () => {
 
     expect(isoToDatetimeLocalValue(instant)).toBe('2026-11-07T21:00');
   });
+
+  it('pads the year to four digits, the only form a datetime-local input accepts', () => {
+    // Typing a year digit by digit makes the browser pass through 0002-…, 0020-…, 0202-… on the way to
+    // 2026. A controlled input that writes «2-11-07T21:00» back is cleared by the browser mid-typing.
+    const date = new Date(2026, 10, 7, 21, 0);
+    date.setFullYear(2);
+
+    expect(isoToDatetimeLocalValue(date.toISOString())).toBe('0002-11-07T21:00');
+  });
 });
 
-// The three tests above hold for `toISOString().slice(0, 16)` too whenever the process runs in UTC, as the CI
+// The tests above hold for `toISOString().slice(0, 16)` too whenever the process runs in UTC, as the CI
 // runner does. These set the zone themselves and check that it is in force: a case that quietly ran in UTC
 // would pass for nothing. TZ is re-read at runtime by the default (forks) pool, not by `--pool=threads`, where
 // the precondition fails instead of passing. `delete process.env.TZ` would keep the last zone assigned, so the

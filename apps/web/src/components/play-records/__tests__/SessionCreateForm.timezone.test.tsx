@@ -12,8 +12,8 @@
  * assigned, so the zone the process started in is captured by name and assigned back.
  */
 
-import { fireEvent, render } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { fireEvent, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { playRecordsNewMessages } from '@/__tests__/fixtures/i18n-test-messages';
@@ -143,7 +143,7 @@ function renderForm(props: Partial<React.ComponentProps<typeof SessionCreateForm
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-describe('SessionCreateForm — the date field in the browser’s time zone (#4785)', () => {
+describe('SessionCreateForm — the date field in the browser time zone (#4785)', () => {
   describe.each(CASES)('$name', ({ zone, offsetMinutes, instant, field }) => {
     it('shows a stored session date as the wall clock of the browser', () => {
       useZone(zone, instant, offsetMinutes);
@@ -167,6 +167,18 @@ describe('SessionCreateForm — the date field in the browser’s time zone (#47
       const input = renderForm();
 
       const typed = `${field.slice(0, 11)}18:45`;
+      fireEvent.change(input, { target: { value: typed } });
+
+      expect(input).toHaveValue(typed);
+    });
+
+    it('keeps a year typed digit by digit instead of clearing the field', () => {
+      useZone(zone, instant, offsetMinutes);
+      const input = renderForm();
+
+      // On the way to 2026 the browser passes through 0002-…: written back as «2-…» the input would be
+      // cleared under the user's fingers.
+      const typed = `0002-${field.slice(5)}`;
       fireEvent.change(input, { target: { value: typed } });
 
       expect(input).toHaveValue(typed);

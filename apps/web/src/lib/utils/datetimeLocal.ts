@@ -6,6 +6,10 @@
  * `toISOString().slice(0, 16)` writes the UTC ones instead, and the round trip then moves the time by the
  * browser's UTC offset every time the form is saved.
  *
+ * One hour a year cannot be written back faithfully: when the clocks go back, the repeated hour exists twice
+ * and the input carries no offset to tell the two apart, so the string reads as the first occurrence. A night
+ * at 02:30 on that morning would move by an hour; nobody schedules one there.
+ *
  * Returns `''` for a missing or invalid instant, which the input shows as empty.
  */
 export function isoToDatetimeLocalValue(iso: string | null | undefined): string {

@@ -10,14 +10,13 @@ import { GameNightForm } from '../GameNightForm';
 // the zone itself and checks that it is really in force before it trusts the result: a case that quietly ran
 // in UTC would pass for nothing. TZ is re-read at runtime by the default (forks) pool; `--pool=threads` cannot
 // switch it, and the precondition then fails instead of passing.
-const ORIGINAL_TZ = process.env.TZ;
+//
+// `delete process.env.TZ` does not make Node re-read the zone: it keeps the last one assigned. The zone the
+// process started in is therefore captured by name and assigned back.
+const ORIGINAL_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 afterEach(() => {
-  if (ORIGINAL_TZ === undefined) {
-    delete process.env.TZ;
-  } else {
-    process.env.TZ = ORIGINAL_TZ;
-  }
+  process.env.TZ = ORIGINAL_ZONE;
 });
 
 interface ZoneCase {
@@ -78,6 +77,13 @@ const CASES: readonly ZoneCase[] = [
     zone: 'Asia/Tokyo',
     offsetMinutes: -540,
     instant: '2026-11-07T12:00:00.000Z',
+    field: '2026-11-07T21:00',
+  },
+  {
+    name: 'Kolkata, an offset of half an hour',
+    zone: 'Asia/Kolkata',
+    offsetMinutes: -330,
+    instant: '2026-11-07T15:30:00.000Z',
     field: '2026-11-07T21:00',
   },
   {

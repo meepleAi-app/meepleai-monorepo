@@ -11,6 +11,7 @@
 import { useId, type ReactElement } from 'react';
 
 import type { ConflictResult } from '@/lib/game-nights/wizard-types';
+import { isoToDatetimeLocalValue } from '@/lib/utils/datetimeLocal';
 
 export interface GameNightDateTimePickerLabels {
   readonly label: string;
@@ -37,18 +38,6 @@ export interface GameNightDateTimePickerProps {
   readonly labels: GameNightDateTimePickerLabels;
 }
 
-/**
- * Converts an ISO string to the `YYYY-MM-DDTHH:MM` format expected by
- * `<input type="datetime-local">`. Returns `''` for null/invalid input.
- */
-function isoToInputValue(iso: string | null): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const pad = (n: number): string => n.toString().padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
 export function GameNightDateTimePicker({
   iso,
   onSetDate,
@@ -59,7 +48,7 @@ export function GameNightDateTimePicker({
   labels,
 }: GameNightDateTimePickerProps): ReactElement {
   const inputId = useId();
-  const value = isoToInputValue(iso);
+  const value = isoToDatetimeLocalValue(iso);
   const showWarning = !overrideAccepted && conflictResult?.hasConflict === true;
 
   return (

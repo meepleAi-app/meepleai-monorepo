@@ -35,7 +35,8 @@ public interface IPublicBaseUrlProvider
 /// <see cref="PublicBaseUrlProvider.LocalDefaultSource"/>; <c>null</c> when <paramref name="Url"/> is.
 /// </param>
 /// <param name="LocalEnvironment">
-/// The host runs on a developer machine or in the test harness, where <c>localhost</c> is a legitimate
+/// The host runs on a developer machine, a CI runner, the integration stack or the test harness
+/// (<c>Development</c>, <c>CI</c>, <c>Integration</c>, <c>Testing</c>), where <c>localhost</c> is a legitimate
 /// public URL. Everywhere else a URL that points at this machine is a misconfiguration.
 /// </param>
 public sealed record PublicBaseUrlResolution(string? Url, string? Source, bool LocalEnvironment);

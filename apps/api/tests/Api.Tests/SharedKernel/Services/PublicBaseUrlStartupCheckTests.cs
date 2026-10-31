@@ -77,6 +77,8 @@ public sealed class PublicBaseUrlStartupCheckTests
     [Theory]
     [InlineData("Development")]
     [InlineData("Testing")]
+    [InlineData("CI")]
+    [InlineData("Integration")]
     public void ALocalEnvironment_NeverRaisesTheError_WhateverTheValue(string environment)
     {
         Check(environment).Log.Entries.Should().NotContain(e => e.StartsWith("Error:", StringComparison.Ordinal));

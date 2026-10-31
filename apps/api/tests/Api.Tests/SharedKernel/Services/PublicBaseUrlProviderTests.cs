@@ -3,6 +3,8 @@ using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Xunit;
 
 namespace Api.Tests.SharedKernel.Services;
@@ -87,6 +89,9 @@ public sealed class PublicBaseUrlProviderTests
     [Theory]
     [InlineData("Development")]
     [InlineData("Testing")]
+    [InlineData("CI")]
+    [InlineData("Integration")]
+    [InlineData("ci")]
     public void ALocalEnvironmentWithNothingConfigured_GetsLocalhost(string environment)
     {
         var resolution = Resolve(new(), environment);
@@ -106,10 +111,11 @@ public sealed class PublicBaseUrlProviderTests
         resolution.Source.Should().Be("FRONTEND_BASE_URL");
     }
 
+    // `CI` (the hosts the CI workflows start on the runner) and `Integration` (compose.integration.yml) run on a
+    // machine no link ever leaves, and no workflow sets a front-end key for them: they are local, see above.
     [Theory]
     [InlineData("Production")]
     [InlineData("Staging")]
-    [InlineData("CI")]
     public void ADeployedEnvironmentWithNothingConfigured_HasNoUrl_AndNoLocalhostIsMadeUp(string environment)
     {
         var resolution = Resolve(new(), environment);
@@ -125,6 +131,34 @@ public sealed class PublicBaseUrlProviderTests
         var provider = new PublicBaseUrlProvider(new ConfigurationBuilder().Build());
 
         provider.Resolve().Url.Should().BeNull();
+    }
+
+    /// <summary>
+    /// The provider takes <c>IHostEnvironment?</c> with a default of <c>null</c>, and <c>null</c> counts as not
+    /// local. If the container did not hand the real environment over, <c>Development</c> would find no
+    /// <c>localhost</c> and <c>make dev</c> would break with nothing pointing at the registration. So the
+    /// registration is exercised over a real host, not over the fake of <see cref="PublicBaseUrlTestSupport"/>.
+    /// </summary>
+    [Theory]
+    [InlineData("Development", true, "http://localhost:3000")]
+    [InlineData("Production", false, null)]
+    public void TheRegisteredProvider_IsGivenTheEnvironmentOfARealHost(
+        string environmentName, bool expectedLocal, string? expectedUrl)
+    {
+        var builder = Host.CreateApplicationBuilder(new HostApplicationBuilderSettings
+        {
+            EnvironmentName = environmentName,
+            // No appsettings and no process environment: a FRONTEND_BASE_URL on the machine running the test
+            // must not decide the outcome. What is under test is the registration.
+            DisableDefaults = true,
+        });
+        builder.Services.AddPublicBaseUrl();
+        using var host = builder.Build();
+
+        var resolution = host.Services.GetRequiredService<IPublicBaseUrlProvider>().Resolve();
+
+        resolution.LocalEnvironment.Should().Be(expectedLocal);
+        resolution.Url.Should().Be(expectedUrl);
     }
 
     [Fact]

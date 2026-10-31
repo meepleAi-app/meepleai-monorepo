@@ -15,7 +15,10 @@ namespace Api.SharedKernel.Services;
 /// A blank value is not a value: <c>${VAR:-}</c> in a compose file hands the container a variable that is
 /// present and empty, and it must fall through to the next source instead of ending the search. Outside a
 /// local environment there is no last resort: a made-up <c>localhost</c> link in a production e-mail is
-/// worse than a failed send, because nobody sees it fail.
+/// worse than a failed send, because nobody sees it fail. A local environment is one where the API runs on
+/// the machine of a developer or of a test runner and no link reaches a person: <c>Development</c>,
+/// <c>Testing</c>, <c>CI</c> and <c>Integration</c>. Everything else, <c>Staging</c> and <c>Production</c>
+/// included, is a deployed one.
 /// </remarks>
 public sealed class PublicBaseUrlProvider : IPublicBaseUrlProvider
 {
@@ -37,6 +40,9 @@ public sealed class PublicBaseUrlProvider : IPublicBaseUrlProvider
 #pragma warning restore S1075
 
     private static readonly string[] OrderedKeys = [PrimaryKey, LegacyKey, EnvironmentVariableKey];
+
+    /// <summary>The environments in which <c>localhost</c> is an acceptable last resort. Compared case-insensitively.</summary>
+    private static readonly string[] LocalEnvironmentNames = ["Development", "Testing", "CI", "Integration"];
 
     private readonly IConfiguration _configuration;
     private readonly IHostEnvironment? _environment;
@@ -78,11 +84,14 @@ public sealed class PublicBaseUrlProvider : IPublicBaseUrlProvider
             + "for example 'https://meepleai.app'. Links to the front-end cannot be built without it.");
 
     /// <summary>
-    /// A local environment is a developer machine (<c>Development</c>) or the test harness
-    /// (<c>Testing</c>: its hosts clear every configuration source, so no key is there to read).
+    /// A local environment is one where the API runs on the machine of a developer or of a test runner, and
+    /// never in front of a person who opens a link: <c>Development</c> (a developer machine), <c>Testing</c>
+    /// (the in-process test harness: its hosts clear every configuration source, so no key is there to read),
+    /// <c>CI</c> (the hosts the CI workflows start on the runner) and <c>Integration</c> (the integration stack
+    /// of <c>compose.integration.yml</c>). <c>Staging</c> and <c>Production</c> are the deployed ones.
     /// </summary>
     private static bool IsLocalEnvironment(IHostEnvironment? environment) =>
-        environment is not null && (environment.IsDevelopment() || environment.IsEnvironment("Testing"));
+        environment is not null && LocalEnvironmentNames.Any(environment.IsEnvironment);
 
     private static string? Normalize(string? value)
     {

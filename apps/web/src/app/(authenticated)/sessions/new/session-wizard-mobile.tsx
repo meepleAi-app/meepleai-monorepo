@@ -44,6 +44,7 @@ import { useKbGameDocuments } from '@/hooks/queries/useGameDocuments';
 import { linkedFirst, ownUserId, useSelfPlayer } from '@/hooks/useSelfPlayer';
 import { api } from '@/lib/api';
 import type { PhaseTemplateDto } from '@/lib/api/clients/gamesClient';
+import { ConflictError } from '@/lib/api/core/errors';
 import type { PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
 import {
   duplicatePlayerNameMessage,
@@ -263,7 +264,13 @@ export function SessionWizardMobile({
     try {
       // A previous attempt got the session ready and only starting it failed: start that one
       // again instead of making a second session with the same players.
-      const attemptKey = JSON.stringify([selectedGameName, selectedGameId, players, phases]);
+      const attemptKey = JSON.stringify([
+        selectedGameName,
+        selectedGameId,
+        players,
+        phases,
+        self?.userId ?? null,
+      ]);
       const pending = pendingStartRef.current;
       let sessionId = pending !== null && pending.key === attemptKey ? pending.sessionId : null;
 
@@ -333,15 +340,25 @@ export function SessionWizardMobile({
       // 5. Start the session (#4781). Until it runs, scores, rule disputes and «Termina sessione»
       // answer 409. If this fails the session is kept, so the next try only starts it.
       pendingStartRef.current = { sessionId, key: attemptKey };
-      await api.liveSessions.startSession(sessionId);
+      try {
+        await api.liveSessions.startSession(sessionId);
+      } catch (startErr) {
+        // 409: the session can no longer be started — typically a start that did go through and
+        // whose answer was lost (the client retries POSTs on 502/503). Trying again would only
+        // meet the same 409; the live page shows the session as it really is.
+        const isConflict =
+          startErr instanceof ConflictError ||
+          (startErr as { statusCode?: number })?.statusCode === 409;
+        if (!isConflict) throw startErr;
+      }
       pendingStartRef.current = null;
 
-      // 6. Navigate to live session
+      // 6. Navigate to live session. `isCreating` stays on: router.push is not awaited, and a
+      // second tap before the page changes would make and start another session.
       router.push(`/sessions/${sessionId}/live`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Errore nella creazione della sessione';
       setError(msg);
-    } finally {
       setIsCreating(false);
     }
   }, [selectedGameName, selectedGameId, players, self, phases, router]);

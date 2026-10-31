@@ -334,8 +334,10 @@ describe('SessionWizardMobile — #4781: «Inizia a Giocare» avvia la partita',
     fireEvent.click(screen.getByText('Salta')); // → riepilogo
   }
 
+  // NaN when the call never happened: any comparison with it is false, so a missing call fails the
+  // test instead of sorting before everything.
   const lastCallOrder = (fn: { mock: { invocationCallOrder: number[] } }) =>
-    fn.mock.invocationCallOrder.at(-1) ?? 0;
+    fn.mock.invocationCallOrder.at(-1) ?? Number.NaN;
 
   it('avvia la sessione creata, dopo giocatori e ordine dei turni e prima di aprire la pagina live', async () => {
     playUpToTheStartButton({ withBob: true });
@@ -403,6 +405,30 @@ describe('SessionWizardMobile — #4781: «Inizia a Giocare» avvia la partita',
     // La sessione del primo tentativo non aveva Carla: non va avviata al suo posto.
     expect(mockApi.liveSessions.createSession).toHaveBeenCalledTimes(2);
     expect(mockApi.liveSessions.startSession).toHaveBeenLastCalledWith('session-456');
+  });
+
+  it('dopo l’avvio il pulsante resta spento mentre si apre la pagina live', async () => {
+    playUpToTheStartButton({ withBob: true });
+    fireEvent.click(screen.getByText('Inizia a Giocare'));
+    await waitFor(() => expect(routerPush).toHaveBeenCalledWith('/sessions/session-123/live'));
+
+    // router.push non si attende: un secondo tap qui creerebbe e avvierebbe un’altra partita.
+    expect(screen.getByText('Inizia a Giocare').closest('button')).toBeDisabled();
+  });
+
+  it('se il server risponde 409 all’avvio (partita già partita, risposta persa) apre la pagina live', async () => {
+    // Il client ritenta i POST su 502/503: l’avvio può essere riuscito e il ritentativo trovare 409.
+    mockApi.liveSessions.startSession.mockRejectedValueOnce(
+      Object.assign(new Error('Cannot start session from InProgress status.'), { statusCode: 409 })
+    );
+    playUpToTheStartButton({ withBob: true });
+
+    fireEvent.click(screen.getByText('Inizia a Giocare'));
+    await waitFor(() => expect(routerPush).toHaveBeenCalledWith('/sessions/session-123/live'));
+
+    expect(screen.queryByText(/Cannot start session/)).toBeNull();
+    expect(mockApi.liveSessions.createSession).toHaveBeenCalledTimes(1);
+    expect(mockApi.liveSessions.startSession).toHaveBeenCalledTimes(1);
   });
 });
 

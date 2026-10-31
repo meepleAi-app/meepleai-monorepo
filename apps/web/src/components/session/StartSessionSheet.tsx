@@ -20,6 +20,7 @@ import { BottomSheet } from '@/components/ui/overlays/BottomSheet';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { api } from '@/lib/api';
+import { ConflictError } from '@/lib/api/core/errors';
 import type { PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
 import { cn } from '@/lib/utils';
 
@@ -157,6 +158,9 @@ export function StartSessionSheet({
       const attemptKey = JSON.stringify([gameId, gameName, players]);
       const pending = pendingStartRef.current;
       let sessionId = pending !== null && pending.key === attemptKey ? pending.sessionId : null;
+      // Only a session with every player on it is worth starting again: with one missing, a retry
+      // would start it with fewer players than the list shows, so it is made again instead.
+      let everyPlayerAdded = true;
 
       if (sessionId === null) {
         sessionId = await api.liveSessions.createSession({
@@ -193,6 +197,7 @@ export function StartSessionSheet({
         }
 
         if (failCount > 0) {
+          everyPlayerAdded = false;
           // Partial failure: show warning but still navigate
           setError(`${failCount} giocatore/i non aggiunto/i. Continuo…`);
           await new Promise(r => setTimeout(r, 1500));
@@ -201,8 +206,18 @@ export function StartSessionSheet({
 
       // Start it (#4781). Until it runs, scores, rule disputes and «Termina sessione» answer 409.
       // If this fails the session is kept, so the next try only starts it.
-      pendingStartRef.current = { sessionId, key: attemptKey };
-      await api.liveSessions.startSession(sessionId);
+      pendingStartRef.current = everyPlayerAdded ? { sessionId, key: attemptKey } : null;
+      try {
+        await api.liveSessions.startSession(sessionId);
+      } catch (startErr) {
+        // 409: the session can no longer be started — typically a start that did go through and
+        // whose answer was lost (the client retries POSTs on 502/503). Trying again would only
+        // meet the same 409; the live page shows the session as it really is.
+        const isConflict =
+          startErr instanceof ConflictError ||
+          (startErr as { statusCode?: number })?.statusCode === 409;
+        if (!isConflict) throw startErr;
+      }
       pendingStartRef.current = null;
 
       router.push(`/sessions/${sessionId}/live`);

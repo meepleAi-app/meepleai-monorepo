@@ -99,7 +99,7 @@ describe('LiveTopBar — #4750: a concluded session', () => {
   });
 });
 
-// ─── SI-4 (#2635) — derived start-time chip ───────────────────────────────────
+// ─── #4781 — a session not started yet ────────────────────────────────────────
 
 describe('LiveTopBar — #4781: a session not started yet', () => {
   it('says «Non avviata», not «In corso», and carries the status on the slot', () => {
@@ -118,6 +118,8 @@ describe('LiveTopBar — #4781: a session not started yet', () => {
     expect(document.querySelector('[data-slot="session-live-top-bar-exit"]')).not.toBeNull();
   });
 });
+
+// ─── SI-4 (#2635) — derived start-time chip ───────────────────────────────────
 
 describe('LiveTopBar — SI-4 start-time chip', () => {
   it('renders the read-only start-time chip when startedAtLabel is provided', () => {

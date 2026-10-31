@@ -55,7 +55,7 @@ public class EmailNotificationProcessorJobTests : IDisposable
 
     private EmailNotificationProcessorJob CreateSut()
     {
-        var templateService = new EmailTemplateService(new ConfigurationBuilder().Build());
+        var templateService = new EmailTemplateService(PublicBaseUrlTestSupport.LocalProvider());
         var genericBuilder = new GenericEmailBuilder(templateService);
         var builderFactory = new EmailMessageBuilderFactory(
             Enumerable.Empty<IEmailMessageBuilder>(), genericBuilder);

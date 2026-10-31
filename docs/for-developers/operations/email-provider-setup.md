@@ -72,8 +72,26 @@ In `infra/secrets/email.secret`:
 EMAIL_PROVIDER=resend
 RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
 RESEND_FROM_EMAIL=noreply@meepleai.app
-FRONTEND_BASE_URL=http://localhost:3000   # staging/prod: public app URL
+FRONTEND_BASE_URL=http://localhost:3000   # dev only: staging/prod set Frontend__BaseUrl in the compose file
 ```
+
+#### Public front-end URL (links in e-mails, share links, OAuth redirects)
+
+Every link the API writes for a person to open takes its base from one resolver
+(`IPublicBaseUrlProvider`, #4774). First non-blank value wins:
+
+1. `Frontend:BaseUrl` — **the key to set** (`Frontend__BaseUrl` in `infra/compose.staging.yml` /
+   `compose.prod.yml`);
+2. `App:BaseUrl` — the old key, read only so an existing deployment keeps working;
+3. `FRONTEND_BASE_URL` — the variable above;
+4. `http://localhost:3000`, **only** in a local environment: `Development`, `Testing`, `CI` and
+   `Integration` (the API runs on a developer's or a runner's machine and no link reaches a person).
+
+Everywhere else (`Staging`, `Production`) there is no last resort: a link generator fails with a message naming the key, and
+at startup the API logs an **error** (it does not stop) when the resolved URL is missing or points at
+`localhost` / `127.0.0.1`. After a deploy, `docker logs meepleai-api | grep -i "public front-end URL"`
+tells which source won. `appsettings.json` deliberately defaults neither key: a default there would
+shadow `FRONTEND_BASE_URL`.
 
 Restart the API to pick up the new config:
 

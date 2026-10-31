@@ -8,6 +8,7 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Time.Testing;
@@ -43,7 +44,7 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["App:BaseUrl"] = BaseUrl,
+                ["Frontend:BaseUrl"] = BaseUrl,
             })
             .Build();
 
@@ -55,6 +56,7 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
             _emailServiceMock.Object,
             _unitOfWorkMock.Object,
             configuration,
+            PublicBaseUrlTestSupport.ProviderFor(configuration),
             _timeProvider);
     }
 
@@ -203,7 +205,7 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["App:BaseUrl"] = BaseUrl,
+                ["Frontend:BaseUrl"] = BaseUrl,
                 ["GameNight:InvitationExpiryDays"] = "30",
             })
             .Build();
@@ -216,6 +218,7 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
             _emailServiceMock.Object,
             _unitOfWorkMock.Object,
             configuration,
+            PublicBaseUrlTestSupport.ProviderFor(configuration),
             _timeProvider);
 
         var organizerId = Guid.NewGuid();

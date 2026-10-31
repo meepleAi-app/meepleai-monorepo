@@ -9,6 +9,7 @@ using Api.SharedKernel.Application;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.SharedKernel.Services;
 using Microsoft.Extensions.Configuration;
 
 namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
@@ -22,7 +23,6 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 internal sealed class CreateGameNightInvitationByEmailCommandHandler
     : ICommandHandler<CreateGameNightInvitationByEmailCommand, GameNightInvitationDto>
 {
-    private const string BaseUrlConfigKey = "App:BaseUrl";
     private const string ExpiryDaysConfigKey = "GameNight:InvitationExpiryDays";
     private const int DefaultExpiryDays = 14;
 
@@ -33,6 +33,7 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
     private readonly IGameNightEmailService _emailService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IConfiguration _configuration;
+    private readonly IPublicBaseUrlProvider _publicBaseUrl;
     private readonly TimeProvider _timeProvider;
 
     public CreateGameNightInvitationByEmailCommandHandler(
@@ -43,6 +44,7 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
         IGameNightEmailService emailService,
         IUnitOfWork unitOfWork,
         IConfiguration configuration,
+        IPublicBaseUrlProvider publicBaseUrl,
         TimeProvider timeProvider)
     {
         _invitationRepository = invitationRepository ?? throw new ArgumentNullException(nameof(invitationRepository));
@@ -52,6 +54,7 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
         _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _publicBaseUrl = publicBaseUrl ?? throw new ArgumentNullException(nameof(publicBaseUrl));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
 
@@ -84,6 +87,11 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
                 $"A pending invitation already exists for {normalizedEmail} on this game night.");
         }
 
+        // #4774: both paths below end by writing a link, so the address is resolved before either touches the
+        // repository: with none configured (a deployed host) the call fails here, not after an invitation has
+        // been saved that no e-mail will ever announce. The refusals above do not need it and keep their answer.
+        var baseUrl = _publicBaseUrl.GetBaseUrl();
+
         if (alreadyInvited)
         {
             // #4692: the same creation sent again. The invitation was saved by the earlier attempt, whose
@@ -100,7 +108,7 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
                 ?? throw new ConflictException(
                     $"A pending invitation already exists for {normalizedEmail} on this game night.");
 
-            await SendInvitationEmailAsync(gameNight, existing, cancellationToken).ConfigureAwait(false);
+            await SendInvitationEmailAsync(gameNight, existing, baseUrl, cancellationToken).ConfigureAwait(false);
             return ToDto(existing);
         }
 
@@ -120,7 +128,7 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
 
         // D1 a: emit invitation email synchronously after persistence so guests
         // receive the token-bearing accept/decline links.
-        await SendInvitationEmailAsync(gameNight, invitation, cancellationToken).ConfigureAwait(false);
+        await SendInvitationEmailAsync(gameNight, invitation, baseUrl, cancellationToken).ConfigureAwait(false);
 
         return ToDto(invitation);
     }
@@ -140,12 +148,9 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
     private async Task SendInvitationEmailAsync(
         GameNightEvent gameNight,
         GameNightInvitation invitation,
+        string baseUrl,
         CancellationToken cancellationToken)
     {
-        var baseUrl = _configuration[BaseUrlConfigKey]
-            ?? throw new InvalidOperationException(
-                $"Missing required configuration '{BaseUrlConfigKey}' for invitation URLs.");
-
         var organizer = await _userRepository
             .GetByIdAsync(gameNight.OrganizerId, cancellationToken)
             .ConfigureAwait(false);
@@ -162,8 +167,8 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
             }
         }
 
-        var rsvpAcceptUrl = $"{baseUrl.TrimEnd('/')}/invites/{invitation.Token}?action=accept";
-        var rsvpDeclineUrl = $"{baseUrl.TrimEnd('/')}/invites/{invitation.Token}?action=decline";
+        var rsvpAcceptUrl = $"{baseUrl}/invites/{invitation.Token}?action=accept";
+        var rsvpDeclineUrl = $"{baseUrl}/invites/{invitation.Token}?action=decline";
 
         // #4754: the email speaks the organizer's language (the guest is an address, not an account: their own
         // language is not known) and writes the time on the night's zone.

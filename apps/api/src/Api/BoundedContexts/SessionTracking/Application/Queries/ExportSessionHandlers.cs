@@ -7,10 +7,10 @@ using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.Middleware.Exceptions;
+using Api.SharedKernel.Services;
 
 using MediatR;
 
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace Api.BoundedContexts.SessionTracking.Application.Queries;
@@ -303,25 +303,20 @@ public sealed class GetShareableSessionQueryHandler : IRequestHandler<GetShareab
 
 public sealed class GenerateSessionShareLinkQueryHandler : IRequestHandler<GenerateSessionShareLinkQuery, SessionShareLinkResponse>
 {
-    // Default base URL used when App:BaseUrl is not configured (production URL)
-#pragma warning disable S1075 // URIs should not be hardcoded - this is a fallback default
-    private const string DefaultBaseUrl = "https://meepleai.com";
-#pragma warning restore S1075
-
     private readonly ISessionRepository _sessionRepository;
     private readonly IScoreEntryRepository _scoreEntryRepository;
-    private readonly IConfiguration _configuration;
+    private readonly IPublicBaseUrlProvider _publicBaseUrl;
     private readonly ILogger<GenerateSessionShareLinkQueryHandler> _logger;
 
     public GenerateSessionShareLinkQueryHandler(
         ISessionRepository sessionRepository,
         IScoreEntryRepository scoreEntryRepository,
-        IConfiguration configuration,
+        IPublicBaseUrlProvider publicBaseUrl,
         ILogger<GenerateSessionShareLinkQueryHandler> logger)
     {
         _sessionRepository = sessionRepository;
         _scoreEntryRepository = scoreEntryRepository;
-        _configuration = configuration;
+        _publicBaseUrl = publicBaseUrl;
         _logger = logger;
     }
 
@@ -339,7 +334,7 @@ public sealed class GenerateSessionShareLinkQueryHandler : IRequestHandler<Gener
             throw new ForbiddenException("You do not have access to this session.");
         }
 
-        var baseUrl = _configuration["App:BaseUrl"] ?? DefaultBaseUrl;
+        var baseUrl = _publicBaseUrl.GetBaseUrl();
         var shareUrl = $"{baseUrl}/sessions/share/{session.Id}";
 
         // Get winner for description

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Slack;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Xunit;
@@ -21,7 +22,7 @@ public sealed class GenericSlackBuilderTests
             })
             .Build();
 
-        _sut = new GenericSlackBuilder(config);
+        _sut = new GenericSlackBuilder(PublicBaseUrlTestSupport.ProviderFor(config));
     }
 
     [Fact]

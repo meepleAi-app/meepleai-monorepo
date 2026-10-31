@@ -1,6 +1,7 @@
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Email;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Services;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Xunit;
@@ -17,7 +18,7 @@ public class EmailMessageBuilderTests
 {
     private static GenericEmailBuilder CreateBuilder()
     {
-        var templateService = new EmailTemplateService(new ConfigurationBuilder().Build());
+        var templateService = new EmailTemplateService(PublicBaseUrlTestSupport.LocalProvider());
         return new GenericEmailBuilder(templateService);
     }
 

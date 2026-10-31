@@ -3,6 +3,7 @@ using Api.Extensions;
 using Api.Helpers;
 using Api.Middleware;
 using Api.Services;
+using Api.SharedKernel.Services;
 using MediatR;
 
 // DDD CQRS imports
@@ -17,6 +18,13 @@ namespace Api.Routing;
 /// </summary>
 internal static class OAuthEndpoints
 {
+    /// <summary>
+    /// An address on the web front-end, for the redirects the OAuth flow ends in. #4774: the base comes from the
+    /// one resolver of the public front-end URL, not from a key and a <c>localhost</c> fallback of its own.
+    /// </summary>
+    internal static string FrontendUrl(IPublicBaseUrlProvider publicBaseUrl, string pathAndQuery) =>
+        $"{publicBaseUrl.GetBaseUrl()}{pathAndQuery}";
+
     // AUTH-06: OAuth 2.0 endpoints (Google, Discord, GitHub)
     public static RouteGroupBuilder MapOAuthEndpoints(this RouteGroupBuilder group, Action<HttpContext, string, DateTime> writeSessionCookie)
     {
@@ -38,6 +46,7 @@ internal static class OAuthEndpoints
             HttpContext context,
             IRateLimitService rateLimiter,
             IConfigurationService configService,
+            IPublicBaseUrlProvider publicBaseUrl,
             CancellationToken ct) =>
         {
             // Alpha gate: check if OAuth login is enabled
@@ -45,8 +54,7 @@ internal static class OAuthEndpoints
 
             if (!oauthEnabled)
             {
-                var frontendUrl = context.RequestServices.GetRequiredService<IConfiguration>()["Frontend:BaseUrl"] ?? "http://localhost:3000";
-                return Results.Redirect($"{frontendUrl}/register?oauth_disabled=true");
+                return Results.Redirect(FrontendUrl(publicBaseUrl, "/register?oauth_disabled=true"));
             }
 
             // AUTH-06-P4: Rate limiting to prevent OAuth abuse (configurable via admin UI)
@@ -110,7 +118,7 @@ Rate limited to 10 requests per minute per IP address.
             IMediator mediator,
             HttpContext context,
             IConfigurationService configService,
-            IConfiguration config,
+            IPublicBaseUrlProvider publicBaseUrl,
             IRateLimitService rateLimiter,
             CancellationToken ct) =>
         {
@@ -121,9 +129,8 @@ Rate limited to 10 requests per minute per IP address.
                 logger.LogWarning("OAuth callback error from {Provider}: {Error} - {Description}",
                     LogSanitizer.Sanitize(provider), LogSanitizer.Sanitize(error ?? "missing_code"), LogSanitizer.Sanitize(error_description ?? "No authorization code received"));
 
-                var frontendUrl = config["Frontend:BaseUrl"] ?? "http://localhost:3000";
                 var errorParam = Uri.EscapeDataString(error ?? "missing_code");
-                return Results.Redirect($"{frontendUrl}/oauth-callback?error={errorParam}");
+                return Results.Redirect(FrontendUrl(publicBaseUrl, $"/oauth-callback?error={errorParam}"));
             }
 
             // AUTH-06-P4: Rate limiting on callback to prevent abuse (configurable via admin UI)
@@ -138,8 +145,7 @@ Rate limited to 10 requests per minute per IP address.
 
             if (!rateLimitResult.Allowed)
             {
-                var frontendUrl = config["Frontend:BaseUrl"] ?? "http://localhost:3000";
-                return Results.Redirect($"{frontendUrl}/oauth-callback?error=rate_limit");
+                return Results.Redirect(FrontendUrl(publicBaseUrl, "/oauth-callback?error=rate_limit"));
             }
 
             // Execute OAuth callback via CQRS handler
@@ -163,8 +169,7 @@ Rate limited to 10 requests per minute per IP address.
                 var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
                 logger.LogWarning("OAuth callback failed: {ErrorMessage}", result.ErrorMessage);
 
-                var frontendUrl = config["Frontend:BaseUrl"] ?? "http://localhost:3000";
-                return Results.Redirect($"{frontendUrl}/oauth-callback?error=oauth_failed");
+                return Results.Redirect(FrontendUrl(publicBaseUrl, "/oauth-callback?error=oauth_failed"));
             }
 
             // Set session cookie - get expiration from configuration
@@ -173,8 +178,7 @@ Rate limited to 10 requests per minute per IP address.
             writeSessionCookie(context, result.SessionToken ?? string.Empty, expiresAt);
 
             // Redirect to frontend with success
-            var successFrontendUrl = config["Frontend:BaseUrl"] ?? "http://localhost:3000";
-            var redirectUrl = $"{successFrontendUrl}/oauth-callback?success=true&new={result.IsNewUser}";
+            var redirectUrl = FrontendUrl(publicBaseUrl, $"/oauth-callback?success=true&new={result.IsNewUser}");
             return Results.Redirect(redirectUrl);
         })
         .WithName("HandleOAuthCallback")

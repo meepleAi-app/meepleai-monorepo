@@ -73,7 +73,7 @@ internal partial class EmailService
     {
         try
         {
-            var reviewUrl = $"{_frontendBaseUrl}/admin/approval-queue?gameId={gameId}";
+            var reviewUrl = $"{FrontendBaseUrl}/admin/approval-queue?gameId={gameId}";
             var subject = "New Game Submitted for Approval";
             var body = BuildSharedGameSubmittedEmailBody(toName, gameTitle, submitterName, reviewUrl);
 

@@ -1,5 +1,5 @@
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
-using Microsoft.Extensions.Configuration;
+using Api.SharedKernel.Services;
 
 namespace Api.BoundedContexts.UserNotifications.Infrastructure.Slack;
 
@@ -9,13 +9,11 @@ namespace Api.BoundedContexts.UserNotifications.Infrastructure.Slack;
 /// </summary>
 internal sealed class PdfProcessingSlackBuilder : ISlackMessageBuilder
 {
-    private readonly string _frontendBaseUrl;
+    private readonly IPublicBaseUrlProvider _publicBaseUrl;
 
-    public PdfProcessingSlackBuilder(IConfiguration configuration)
+    public PdfProcessingSlackBuilder(IPublicBaseUrlProvider publicBaseUrl)
     {
-#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
-        _frontendBaseUrl = configuration["Frontend:BaseUrl"] ?? "https://meepleai.app";
-#pragma warning restore S1075
+        _publicBaseUrl = publicBaseUrl;
     }
 
     public bool CanHandle(NotificationType type)
@@ -54,7 +52,7 @@ internal sealed class PdfProcessingSlackBuilder : ISlackMessageBuilder
         var safeDeepLinkPath = SlackDeepLinkValidator.Validate(deepLinkPath);
         if (safeDeepLinkPath is not null)
         {
-            var url = $"{_frontendBaseUrl.TrimEnd('/')}{safeDeepLinkPath}";
+            var url = $"{_publicBaseUrl.GetBaseUrl()}{safeDeepLinkPath}";
             blocks.Add(new
             {
                 type = "actions",

@@ -2,6 +2,7 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Services;
+using Api.SharedKernel.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Quartz;
@@ -18,17 +19,20 @@ internal sealed class AdminShareRequestDigestJob : IJob
     private readonly IShareRequestRepository _shareRequestRepository;
     private readonly MeepleAiDbContext _dbContext;
     private readonly IEmailService _emailService;
+    private readonly IPublicBaseUrlProvider _publicBaseUrl;
     private readonly ILogger<AdminShareRequestDigestJob> _logger;
 
     public AdminShareRequestDigestJob(
         IShareRequestRepository shareRequestRepository,
         MeepleAiDbContext dbContext,
         IEmailService emailService,
+        IPublicBaseUrlProvider publicBaseUrl,
         ILogger<AdminShareRequestDigestJob> logger)
     {
         _shareRequestRepository = shareRequestRepository ?? throw new ArgumentNullException(nameof(shareRequestRepository));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
+        _publicBaseUrl = publicBaseUrl ?? throw new ArgumentNullException(nameof(publicBaseUrl));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -56,6 +60,11 @@ internal sealed class AdminShareRequestDigestJob : IJob
                 return;
             }
 
+            // #4774: the review queue is a page of the front-end, whose address is configured in one place. Resolved
+            // once, before the admins are read and before the first send: with no address configured (a deployed
+            // host) the job ends in the catch below instead of mailing every admin a link that leads nowhere.
+            var reviewQueueUrl = $"{_publicBaseUrl.GetBaseUrl()}/admin/share-requests";
+
             // Get all admin users
             // NOTE: Can be refactored to IUserRepository.GetByRoleAsync when implemented
             var admins = await _dbContext.Set<UserEntity>()
@@ -74,7 +83,6 @@ internal sealed class AdminShareRequestDigestJob : IJob
 
             // Send digest email to each admin
             var sentCount = 0;
-            var reviewQueueUrl = $"https://app.meepleai.dev/admin/share-requests";
 
             foreach (var admin in admins)
             {

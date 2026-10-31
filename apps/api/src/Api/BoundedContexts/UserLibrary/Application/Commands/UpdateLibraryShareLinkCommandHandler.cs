@@ -6,7 +6,7 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
-using Microsoft.Extensions.Configuration;
+using Api.SharedKernel.Services;
 
 namespace Api.BoundedContexts.UserLibrary.Application.Commands;
 
@@ -17,18 +17,18 @@ internal class UpdateLibraryShareLinkCommandHandler : ICommandHandler<UpdateLibr
 {
     private readonly ILibraryShareLinkRepository _shareLinkRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IConfiguration _configuration;
+    private readonly IPublicBaseUrlProvider _publicBaseUrl;
     private readonly ILogger<UpdateLibraryShareLinkCommandHandler> _logger;
 
     public UpdateLibraryShareLinkCommandHandler(
         ILibraryShareLinkRepository shareLinkRepository,
         IUnitOfWork unitOfWork,
-        IConfiguration configuration,
+        IPublicBaseUrlProvider publicBaseUrl,
         ILogger<UpdateLibraryShareLinkCommandHandler> logger)
     {
         _shareLinkRepository = shareLinkRepository ?? throw new ArgumentNullException(nameof(shareLinkRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _publicBaseUrl = publicBaseUrl ?? throw new ArgumentNullException(nameof(publicBaseUrl));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -56,6 +56,11 @@ internal class UpdateLibraryShareLinkCommandHandler : ICommandHandler<UpdateLibr
         {
             throw new DomainException("Cannot update revoked or expired share link");
         }
+
+        // #4774: resolved before the link is changed and saved: with no address configured (a deployed host) the
+        // call fails here, not after the new settings are stored for a link whose URL cannot be written. The
+        // refusals above do not need the address and keep their answer.
+        var baseUrl = _publicBaseUrl.GetBaseUrl();
 
         // Update privacy level if provided
         if (!string.IsNullOrEmpty(command.PrivacyLevel))
@@ -86,13 +91,11 @@ internal class UpdateLibraryShareLinkCommandHandler : ICommandHandler<UpdateLibr
 
         _logger.LogInformation("Updated share link {LinkId} for user {UserId}", shareLink.Id, command.UserId);
 
-        return MapToDto(shareLink);
+        return MapToDto(shareLink, baseUrl);
     }
 
-    private LibraryShareLinkDto MapToDto(Domain.Entities.LibraryShareLink link)
+    private static LibraryShareLinkDto MapToDto(Domain.Entities.LibraryShareLink link, string baseUrl)
     {
-        var baseUrl = _configuration["App:BaseUrl"]
-            ?? throw new InvalidOperationException("App:BaseUrl configuration is not set");
         var shareUrl = $"{baseUrl}/library/shared/{link.ShareToken}";
 
         return new LibraryShareLinkDto(

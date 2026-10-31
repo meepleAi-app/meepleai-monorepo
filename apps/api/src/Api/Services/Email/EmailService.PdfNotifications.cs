@@ -150,7 +150,7 @@ internal partial class EmailService
         string fileName,
         Guid pdfDocumentId)
     {
-        var documentUrl = $"{_frontendBaseUrl}/documents/{pdfDocumentId}";
+        var documentUrl = $"{FrontendBaseUrl}/documents/{pdfDocumentId}";
 
         return $@"
 <!DOCTYPE html>
@@ -207,7 +207,7 @@ internal partial class EmailService
         string fileName,
         string errorMessage)
     {
-        var supportUrl = $"{_frontendBaseUrl}/support";
+        var supportUrl = $"{FrontendBaseUrl}/support";
 
         return $@"
 <!DOCTYPE html>
@@ -269,7 +269,7 @@ internal partial class EmailService
         string fileName,
         int retryCount)
     {
-        var libraryUrl = $"{_frontendBaseUrl}/library";
+        var libraryUrl = $"{FrontendBaseUrl}/library";
 
         return $@"
 <!DOCTYPE html>

@@ -1,10 +1,14 @@
+using Api.BoundedContexts.Authentication.Application.Queries;
+using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Exceptions;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
+using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.Infrastructure.EntityConfigurations.GameManagement;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Domain.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -17,8 +21,12 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 /// <see cref="StartGameNightSessionCommandHandler"/>, minus the cross-BC session create (the draft
 /// already exists).
 ///
-/// <para><b>#3218 self-healing:</b> the go-live is a multi-phase, multi-SaveChanges flow — phase 2
-/// (the link promotion <c>Pending → InProgress</c>) commits in its own transaction, then phase 3
+/// <para><b>#4752:</b> phase 2 now also creates and starts the draft's <c>LiveGameSession</c> (the night →
+/// live game bridge), in the SAME transaction as the link promotion. A link read as <c>InProgress</c>
+/// therefore means that transaction — live game included — has committed.</para>
+///
+/// <para><b>#3218 self-healing:</b> the go-live is a multi-phase flow — phase 2 (the link promotion
+/// <c>Pending → InProgress</c>, and the live game) commits in one transaction, then phase 3
 /// (<see cref="OpenSessionLiveModeCommand"/>) commits the tracking-Session live-mode transition in a
 /// second one. If phase 3 fails after phase 2 committed, the link is stuck <c>InProgress</c> while
 /// the tracking Session is not yet live — a split-brain. To let the natural retry affordance heal it,
@@ -96,12 +104,13 @@ internal sealed class GoLiveSessionCommandHandler : ICommandHandler<GoLiveSessio
         var targetLink = gameNight.Sessions.FirstOrDefault(s => s.SessionId == command.SessionId)
             ?? throw new NotFoundException("GameNightSession", command.SessionId.ToString());
 
+        bool promote;
         switch (targetLink.Status)
         {
             case GameNightSessionStatus.Pending:
                 // Normal path — promote (Pending → InProgress) + persist, with the xmin/23505 → 409
                 // and non-Pending → 409 catches scoped to THIS aggregate write.
-                await PromotePendingDraftAsync(gameNight, command.SessionId, cancellationToken).ConfigureAwait(false);
+                promote = true;
                 break;
 
             case GameNightSessionStatus.InProgress:
@@ -110,6 +119,7 @@ internal sealed class GoLiveSessionCommandHandler : ICommandHandler<GoLiveSessio
                 // already succeeded and this is a plain retry. Either way SKIP the promotion and the
                 // aggregate write, and fall through to dispatching OpenSessionLiveModeCommand below,
                 // which is idempotent: it brings a not-yet-live Session live and no-ops if already live.
+                promote = false;
                 break;
 
             default:
@@ -118,13 +128,33 @@ internal sealed class GoLiveSessionCommandHandler : ICommandHandler<GoLiveSessio
                     $"Cannot go live: session {command.SessionId} is {targetLink.Status} and cannot be started.");
         }
 
+        // #4752 (the night → live game bridge): the draft's tracking Session has no live game yet —
+        // the live game is where the table plays. It is created, and STARTED, in the SAME transaction as
+        // the promotion of the link (the Pending path), from the same funnel as the wizard, adopting THIS
+        // tracking Session as its companion and seating the draft's participants.
+        //
+        // One transaction on purpose. The promotion used to commit alone and the live game was created
+        // after it: a second go-live of the same draft that read the link InProgress in that window took
+        // the self-heal branch and created a SECOND live game. Now, for a link this handler promoted, a link
+        // read as InProgress means the first go-live's whole transaction — live game included — has committed,
+        // and the idempotent CreateLiveSessionCommand (by tracking id) hands that one back.
+        //
+        // That reasoning does NOT hold for a link that became InProgress elsewhere (a gamebook campaign
+        // attached to the night, or data from before the bridge): it can be InProgress with no live game,
+        // and two go-lives of it at once are not serialized — nothing writes the night's aggregate in that
+        // branch, and the index on the tracking id is not unique. Tracked in #4780.
+        var liveSessionId = await PromoteAndOpenLiveGameAsync(
+            gameNight, command, targetLink, promote, cancellationToken).ConfigureAwait(false);
+
         var promoted = gameNight.Sessions.First(s => s.SessionId == command.SessionId);
+
         var result = new GoLiveSessionResult(
             command.SessionId,
             gameNight.Id,
             promoted.Id,
             promoted.PlayOrder,
-            promoted.Status.ToString());
+            promoted.Status.ToString(),
+            liveSessionId);
 
         // Phase 3: open live mode LAST — AFTER the session↔night promotion is committed (Pending path)
         // or skipped (self-heal path) — so the SessionStartedDomainEvent resolves the parent
@@ -135,24 +165,54 @@ internal sealed class GoLiveSessionCommandHandler : ICommandHandler<GoLiveSessio
     }
 
     /// <summary>
-    /// Pending-path phase 2: promote the targeted draft (Pending → InProgress) and persist, mapping
-    /// the aggregate write's failure modes to 409 (never a 500). Only ever called for a link the
-    /// caller has already confirmed is <see cref="GameNightSessionStatus.Pending"/>.
+    /// Phase 2 (+ the live game, #4752), in ONE transaction: promote the targeted draft (Pending →
+    /// InProgress) and persist it — the Pending path only — then make sure the draft has its live game,
+    /// started, and return its id. The failure modes of the aggregate write map to 409 (never a 500).
+    ///
+    /// <para>Everything inside is rolled back together: a live game that cannot be created leaves the
+    /// link Pending, not InProgress with no game behind it.</para>
     /// </summary>
-    private async Task PromotePendingDraftAsync(
-        GameNightEvent gameNight, Guid sessionId, CancellationToken cancellationToken)
+    private async Task<Guid?> PromoteAndOpenLiveGameAsync(
+        GameNightEvent gameNight,
+        GoLiveSessionCommand command,
+        GameNightSession targetLink,
+        bool promote,
+        CancellationToken cancellationToken)
     {
+        Guid? liveSessionId = null;
         try
         {
-            // Promote the targeted draft (Pending → InProgress). MaxLive (another session already
-            // live) escapes this try uncaught (it already maps to 409); a corrupted-aggregate guard
-            // throws InvalidOperationException which the catch below normalises to a 409.
-            gameNight.StartSession(sessionId);
+            await _unitOfWork.ExecuteInTransactionAsync(async ct =>
+            {
+                if (promote)
+                {
+                    // Promote the targeted draft (Pending → InProgress). MaxLive (another session already
+                    // live) escapes uncaught (it already maps to 409); a corrupted-aggregate guard throws
+                    // InvalidOperationException, normalised to a 409 — but only for THIS call: an
+                    // InvalidOperationException from the writes below (EF, Npgsql) is not a conflict and
+                    // must not leak its message to the player. The retry strategy can run this delegate
+                    // again, and the aggregate has already moved in memory: promote only a Pending link.
+                    if (targetLink.Status == GameNightSessionStatus.Pending)
+                    {
+                        try
+                        {
+                            gameNight.StartSession(command.SessionId);
+                        }
+                        catch (InvalidOperationException ex)
+                        {
+                            throw new ConflictException(ex.Message);
+                        }
+                    }
 
-            await _repository.UpdateAsync(gameNight, cancellationToken).ConfigureAwait(false);
-            // The aggregate root's xmin write detects a concurrent go-live that already took the
-            // night's single live slot (0 rows updated → DbUpdateConcurrencyException).
-            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                    // The aggregate root's xmin write detects a concurrent go-live that already took the
+                    // night's single live slot (0 rows updated → DbUpdateConcurrencyException), raised by
+                    // the first SaveChanges below while the transaction is still open.
+                    await _repository.UpdateAsync(gameNight, ct).ConfigureAwait(false);
+                }
+
+                liveSessionId = await EnsureLiveGameAsync(
+                    command, targetLink.GameId, targetLink.GameTitle, ct).ConfigureAwait(false);
+            }, cancellationToken).ConfigureAwait(false);
         }
         catch (DbUpdateConcurrencyException)
         {
@@ -167,12 +227,57 @@ internal sealed class GoLiveSessionCommandHandler : ICommandHandler<GoLiveSessio
             // create-path catch in CreateSessionCommandHandler.
             throw new MaxLiveSessionsExceededException(gameNight.Id);
         }
-        catch (InvalidOperationException ex)
+        catch (QuotaExceededException ex)
         {
-            // Corrupted-aggregate guard (or any other domain conflict on the promotion) — a conflict,
-            // not a 500.
+            // #4752: the live game is started by StartLiveSessionCommand, which enforces the session quota
+            // by tier and role. The message is written for the player (limit and tier): a 409 with it, as
+            // the night's start answers; the promotion rolled back with the live game.
             throw new ConflictException(ex.Message);
         }
+
+        return liveSessionId;
+    }
+
+    /// <summary>
+    /// #4752: makes sure the draft has its live game — created and started — and returns its id. The
+    /// roster is the draft's tracking-Session participants in table order (the owner first, who becomes
+    /// the Host); a draft with none seats the organizer, so the game always has somebody to start it.
+    /// </summary>
+    private async Task<Guid?> EnsureLiveGameAsync(
+        GoLiveSessionCommand command, Guid gameId, string gameTitle, CancellationToken cancellationToken)
+    {
+        var details = await _mediator.Send(new GetSessionDetailsQuery(command.SessionId), cancellationToken)
+            .ConfigureAwait(false);
+
+        var players = (details?.Participants ?? [])
+            .OrderBy(p => p.IsOwner ? 0 : 1)
+            .ThenBy(p => p.JoinOrder)
+            .Select(p => new LiveSessionInitialPlayer(p.UserId, p.DisplayName))
+            .ToList();
+
+        if (players.Count == 0)
+        {
+            // A live game with nobody at the table cannot be started, and nothing in the front-end seats a
+            // player on a game it does not own yet: seat the organizer, who is the one going live.
+            var organizer = await _mediator.Send(new GetUserByIdQuery(command.UserId), cancellationToken)
+                .ConfigureAwait(false);
+            if (organizer is not null)
+            {
+                players.Add(new LiveSessionInitialPlayer(
+                    organizer.Id,
+                    RosterDisplayNames.Resolve(organizer.DisplayName, RosterDisplayNames.Organizer)));
+            }
+        }
+
+        var liveSessionId = await _mediator.Send(new CreateLiveSessionCommand(
+            command.UserId,
+            gameTitle,
+            gameId,
+            ExistingTrackingSessionId: command.SessionId,
+            InitialPlayers: players,
+            StartImmediately: true), cancellationToken).ConfigureAwait(false);
+
+        return liveSessionId == Guid.Empty ? null : liveSessionId;
     }
 
     // True iff the DbUpdateException is the partial-unique-index violation on the GameNight live slot

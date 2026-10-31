@@ -23,6 +23,10 @@ vi.mock('@/hooks/queries/useSharedGames', () => ({
   useSharedGames: () => ({ data: { items: [] } }),
   useSharedGamesByIds: () => ({ gamesById: {}, isLoading: false }),
 }));
+// #4752: the sessions of the night come from the night-live read (a query hook), not under test here.
+vi.mock('@/lib/game-nights/hooks/useGameNightSessions', () => ({
+  useGameNightSessions: () => ({ data: [] }),
+}));
 vi.mock('@/stores/game-night', () => ({
   useGameNightStore: () => ({
     addPlayer: vi.fn(),

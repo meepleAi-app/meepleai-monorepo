@@ -57,6 +57,7 @@ import type {
   GuestInvitationStatus,
   RsvpStatus,
 } from '@/lib/api/schemas/game-nights.schemas';
+import { useGameNightSessions } from '@/lib/game-nights/hooks/useGameNightSessions';
 import type { RsvpResponse } from '@/lib/game-nights/rsvp-state-machine';
 import { cn } from '@/lib/utils';
 import { useGameNightStore } from '@/stores/game-night';
@@ -148,7 +149,18 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
     true
   );
 
-  const { addPlayer, addGame, reset, activeSessions } = useGameNightStore();
+  const { addPlayer, addGame, reset } = useGameNightStore();
+
+  // #4752: the games of the night come from the night-live read — the one source that knows each sitting's
+  // status and its live game. They used to come from the planning store's `activeSessions`, which no
+  // production code ever filled: the list was always empty, `hasActiveSession` always false and «Concludi
+  // serata» always off. Once the first game starts the night is InProgress, not Published, so the read is
+  // enabled for every state in which games exist. A viewer the read refuses (403) just sees an empty list.
+  const hasGames =
+    event?.status === 'Published' ||
+    event?.status === 'InProgress' ||
+    event?.status === 'Completed';
+  const { data: sessions = [] } = useGameNightSessions(id, hasGames);
 
   // Sync accepted RSVPs and game IDs from the event into the planning store
   // (preserves legacy behaviour for Draft events).
@@ -283,6 +295,10 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
 
   const isCancelled = event.status === 'Cancelled';
   const isCompleted = event.status === 'Completed';
+  // `isLive` is Published (the night is open for RSVPs and voting); `isInProgress` is a night whose first
+  // game has started — the page must keep showing the games and «Aggiungi partita» / «Concludi serata» then
+  // (#4752: both used to vanish the moment the first game started).
+  const isInProgress = event.status === 'InProgress';
   const isLive = event.status === 'Published';
 
   // #2723: Published events surface a Dettagli|Votazione tab strip (ADR-061 tab-canonical),
@@ -290,7 +306,7 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   // shows the RSVP / session / roster body.
   const votingTabActive = isLive && searchParams.get('tab') === 'voting';
   const showDetailsContent = !votingTabActive;
-  const hasActiveSession = activeSessions.some(s => s.status === 'in_progress');
+  const hasActiveSession = sessions.some(s => s.status === 'in_progress');
 
   // Explicit status → i18n key map. Deriving the key via toLowerCase() produced
   // 'inprogress' for the 'InProgress' status, which did not match the camelCase
@@ -531,23 +547,19 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
         <VotingPanel gameNightId={id} isOrganizer={isHost} gameTitleById={gameTitleById} />
       )}
 
-      {/* Live / Completed: session flow sections under hero (details tab). */}
-      {(isLive || isCompleted) && showDetailsContent && (
+      {/* Live / In progress / Completed: session flow sections under hero (details tab). */}
+      {(isLive || isInProgress || isCompleted) && showDetailsContent && (
         <>
           {/* Organizer-only on the server (403 for anyone else): a guest would only meet the error after clicking. */}
           {isHost && (
             <GameNightActions
               gameNightId={id}
               hasActiveSession={hasActiveSession}
-              sessionCount={activeSessions.length}
+              sessionCount={sessions.length}
               isCompleted={isCompleted}
             />
           )}
-          <GameNightSessionsList
-            sessions={activeSessions}
-            gameNightId={id}
-            isCompleted={isCompleted}
-          />
+          <GameNightSessionsList sessions={sessions} gameNightId={id} isCompleted={isCompleted} />
           <GameNightDiaryPanel gameNightId={id} />
         </>
       )}

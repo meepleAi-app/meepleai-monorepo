@@ -45,11 +45,16 @@ public class CompleteGameNightSessionCommandHandlerTests
     }
 
     /// <summary>Builds a started night whose current session is a tracking Session with 2 participants.</summary>
-    private (GameNightEvent night, Session session) StartedNightWithTwoPlayers(Guid organizerId)
+    private (GameNightEvent night, Session session) StartedNightWithTwoPlayers(Guid organizerId) =>
+        StartedNightWithPlayers(organizerId, 2);
+
+    /// <summary>Builds a started night whose current session is a tracking Session with N participants.</summary>
+    private (GameNightEvent night, Session session) StartedNightWithPlayers(Guid organizerId, int playerCount)
     {
         var gameId = Guid.NewGuid();
         var session = Session.Create(organizerId, gameId, SessionType.GameSpecific); // owner participant
-        session.AddParticipant(ParticipantInfo.Create("Player Two", isOwner: false, joinOrder: 2), Guid.NewGuid());
+        for (var i = 2; i <= playerCount; i++)
+            session.AddParticipant(ParticipantInfo.Create($"Player {i}", isOwner: false, joinOrder: i), Guid.NewGuid());
 
         var night = GameNightEvent.Create(
             organizerId, "Serata", DateTimeOffset.UtcNow.AddHours(1), gameIds: [gameId]);
@@ -137,20 +142,66 @@ public class CompleteGameNightSessionCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_NoWinner_FinalizesWithEveryoneRankTwo()
+    public async Task Handle_NoWinner_FinalizesWithRanksInJoinOrder_AndRecordsNoWinner()
     {
+        // #4752: "everyone rank 2" is NOT 1..N, which is the one shape FinalizeSessionCommand's validator
+        // accepts, so the finalize rejected it. The ranks only order the participants; NoWinner tells the
+        // finalize that rank 1 is not a winner.
         var organizerId = Guid.NewGuid();
         var (night, session) = StartedNightWithTwoPlayers(organizerId);
 
         await _handler.Handle(
             new CompleteGameNightSessionCommand(night.Id, null, organizerId), CancellationToken.None);
 
+        night.Sessions[0].WinnerId.Should().BeNull();
         _mediator.Verify(m => m.Send(
             It.Is<FinalizeSessionCommand>(c =>
                 c.SessionId == session.Id &&
+                c.NoWinner &&
                 c.FinalRanks.Count == 2 &&
-                c.FinalRanks.Values.All(r => r == 2)),
+                c.FinalRanks.Values.OrderBy(r => r).SequenceEqual(new[] { 1, 2 })),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WithWinnerAndManyParticipants_FinalizesWithRanksTheValidatorAccepts()
+    {
+        // #4752: winner = 1 and everyone else = 2 is [1,2,2] with three participants — not 1..N. The
+        // handler's output must satisfy the REAL validator, not just a mocked finalize.
+        var organizerId = Guid.NewGuid();
+        var (night, session) = StartedNightWithPlayers(organizerId, 4);
+        var winner = session.Participants.ElementAt(2);
+        FinalizeSessionCommand? sent = null;
+        _mediator.Setup(m => m.Send(It.IsAny<FinalizeSessionCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<FinalizeSessionResult>, CancellationToken>((c, _) => sent = (FinalizeSessionCommand)c)
+            .ReturnsAsync(new FinalizeSessionResult(winner.Id, new Dictionary<Guid, decimal>()));
+
+        await _handler.Handle(
+            new CompleteGameNightSessionCommand(night.Id, winner.Id, organizerId), CancellationToken.None);
+
+        sent.Should().NotBeNull();
+        sent!.NoWinner.Should().BeFalse();
+        sent.FinalRanks[winner.Id].Should().Be(1);
+        sent.FinalRanks.Values.OrderBy(r => r).Should().Equal(1, 2, 3, 4);
+        new FinalizeSessionCommandValidator().Validate(sent).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Handle_NoWinnerAndManyParticipants_FinalizesWithRanksTheValidatorAccepts()
+    {
+        var organizerId = Guid.NewGuid();
+        var (night, _) = StartedNightWithPlayers(organizerId, 3);
+        FinalizeSessionCommand? sent = null;
+        _mediator.Setup(m => m.Send(It.IsAny<FinalizeSessionCommand>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<FinalizeSessionResult>, CancellationToken>((c, _) => sent = (FinalizeSessionCommand)c)
+            .ReturnsAsync(new FinalizeSessionResult(null, new Dictionary<Guid, decimal>()));
+
+        await _handler.Handle(
+            new CompleteGameNightSessionCommand(night.Id, null, organizerId), CancellationToken.None);
+
+        sent.Should().NotBeNull();
+        sent!.NoWinner.Should().BeTrue();
+        new FinalizeSessionCommandValidator().Validate(sent).IsValid.Should().BeTrue();
     }
 
     [Fact]

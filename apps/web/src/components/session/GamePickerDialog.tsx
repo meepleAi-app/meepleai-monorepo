@@ -35,6 +35,7 @@ import { TooltipProvider } from '@/components/ui/overlays/tooltip';
 import { Input } from '@/components/ui/primitives/input';
 import { useLibrarySearch } from '@/hooks/queries/useLibrarySearch';
 import { startGameErrorMessage, useStartNextGame } from '@/lib/game-nights/hooks/useStartNextGame';
+import { startedGameHref } from '@/lib/game-nights/liveGameHref';
 
 import { GamePickerItem, type GamePickerGame } from './GamePickerItem';
 
@@ -78,10 +79,11 @@ export function GamePickerDialog({ open, onOpenChange, gameNightEventId }: GameP
   // The way out sits on the hook, not on `mutate()`: a per-call callback is dropped when the mutation is reset
   // or the component unmounts, and the game would start with nothing happening here.
   const startGame = useStartNextGame(gameNightEventId, {
-    onSuccess: () => {
+    onSuccess: started => {
       if (!isMounted.current) return;
       onOpenChange(false);
-      router.push(`/game-nights/${gameNightEventId}/live`);
+      // #4752: the game is played on its live page; the night page only when the backend did not say.
+      router.push(startedGameHref(gameNightEventId, started));
     },
   });
   const { reset: resetStartGame } = startGame;

@@ -37,8 +37,10 @@ import {
   isKbNotReadyError,
   isMaxLiveBlockedError,
   KB_NOT_READY_MESSAGE,
+  startGameErrorMessage,
   useStartNextGame,
 } from '@/lib/game-nights/hooks/useStartNextGame';
+import { liveGameHref, startedGameHref } from '@/lib/game-nights/liveGameHref';
 import { mapDiary } from '@/lib/game-nights/mapDiary';
 
 export interface NightLiveClientViewProps {
@@ -62,8 +64,17 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
     router.push(`/game-nights/${nightId}`);
   }, [router, nightId]);
 
-  // #4156 (D7): the games of a night are SessionTracking sessions, with no LiveGameSession and so
-  // no page under /sessions/{id}: their page is this night page. No "jump to session" is offered.
+  // #4752 (the night → live game bridge, ADR-083 Direction A): a game started from a night IS a
+  // LiveGameSession — players, scores, turns, the assistant and «Termina partita» live at
+  // /sessions/{liveSessionId}/live. (#4156 D7 had it the other way round: the games of a night were bare
+  // tracking sessions with no page of their own, and "jump to session" was not offered.) This page is the
+  // night's dashboard; the jump is offered by the current-game card when the sitting has a live game.
+  const handleJumpToLiveGame = useCallback(
+    (liveSessionId: string) => {
+      router.push(liveGameHref(liveSessionId));
+    },
+    [router]
+  );
 
   const handleLogin = useCallback(() => {
     router.push('/login');
@@ -85,19 +96,26 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
       startNextGame.mutate(
         { gameId, gameTitle },
         {
+          // #4752: the game is played on its live page. A per-call callback is the right one here: it is
+          // dropped if this page is left while the request runs, so it never brings someone back.
+          onSuccess: started => {
+            router.push(startedGameHref(nightId, started));
+          },
           onError: err => {
             if (isMaxLiveBlockedError(err)) {
               setBlockedModalOpen(true);
             } else if (isKbNotReadyError(err)) {
               setStartError({ gameId, message: KB_NOT_READY_MESSAGE });
             } else {
-              setStartError({ gameId, message: 'Impossibile avviare la partita. Riprova.' });
+              // The same words the game picker uses: a refusal that cannot succeed on a second try (the plan's
+              // limit, a night that no longer takes games) must not tell the organizer to «Riprova».
+              setStartError({ gameId, message: startGameErrorMessage(err) });
             }
           },
         }
       );
     },
-    [startNextGame]
+    [startNextGame, router, nightId]
   );
 
   // #2634 C4: organizer completes the live game, optionally picking a winner from the guarded
@@ -231,6 +249,7 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
         diaryGames={diary.diaryGames}
         diaryPlayers={diary.diaryPlayers}
         onBack={handleBack}
+        onJumpToSession={handleJumpToLiveGame}
       />
 
       {showStartCta && nextGame ? (

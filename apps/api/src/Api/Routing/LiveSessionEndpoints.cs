@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNight;
+using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 using Api.Observability;
 using Api.BoundedContexts.GameManagement.Application.Commands.LiveSessions;
 using Api.BoundedContexts.GameManagement.Application.DTOs;
@@ -18,6 +19,7 @@ using Api.BoundedContexts.GameManagement.Domain.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.Extensions;
+using Api.Middleware.Exceptions;
 using Api.SharedKernel.Domain.ValueObjects;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -532,7 +534,25 @@ internal static class LiveSessionEndpoints
         [FromServices] IMediator mediator,
         CancellationToken cancellationToken)
     {
-        await mediator.Send(new CompleteLiveSessionCommand(sessionId), cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await mediator.Send(new CompleteLiveSessionCommand(sessionId), cancellationToken).ConfigureAwait(false);
+        }
+        catch (ConflictException)
+        {
+            // A second «Termina partita» on a game that is already completed answers 409, as it always
+            // did — but it must still repair a night whose first follow-up failed (#4752): the link stuck
+            // InProgress keeps «Concludi serata» and «Aggiungi partita» off, and without this nothing would
+            // ever close it. The follow-up is idempotent and best-effort: it acts only on a COMPLETED live
+            // game whose link is still open, so for any other conflict it does nothing.
+            await mediator.Send(new CompleteNightLinkForLiveSessionCommand(sessionId), cancellationToken).ConfigureAwait(false);
+            throw;
+        }
+
+        // #4752: a live game played from a game night closes that night's sitting too. A separate
+        // command (best-effort, see its summary) because it opens its own transaction; a game that
+        // belongs to no night is a no-op.
+        await mediator.Send(new CompleteNightLinkForLiveSessionCommand(sessionId), cancellationToken).ConfigureAwait(false);
         return Results.NoContent();
     }
 

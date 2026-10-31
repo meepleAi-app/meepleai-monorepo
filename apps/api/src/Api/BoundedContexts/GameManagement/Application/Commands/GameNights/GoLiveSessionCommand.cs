@@ -26,12 +26,18 @@ internal record GoLiveSessionCommand(Guid SessionId, Guid UserId) : ICommand<GoL
 /// <param name="GameNightSessionId">The promoted <c>GameNightSession</c> link id.</param>
 /// <param name="PlayOrder">The promoted session's play order within the night (1..5).</param>
 /// <param name="Status">The promoted session's link status (InProgress on success).</param>
+/// <param name="LiveSessionId">
+/// #4752: the <c>LiveGameSession</c> where the table plays this session
+/// (<c>/sessions/{LiveSessionId}/live</c>), created on go-live if the draft had none. Null only for
+/// a result built without one.
+/// </param>
 internal record GoLiveSessionResult(
     Guid SessionId,
     Guid GameNightId,
     Guid GameNightSessionId,
     int PlayOrder,
-    string Status);
+    string Status,
+    Guid? LiveSessionId = null);
 
 internal sealed class GoLiveSessionCommandValidator : AbstractValidator<GoLiveSessionCommand>
 {

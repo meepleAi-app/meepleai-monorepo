@@ -25,6 +25,11 @@ export interface NightLiveHubNight {
 export interface NightLiveHubCurrentGame {
   readonly id: string;
   readonly sessionId: string;
+  /**
+   * #4752: the `LiveGameSession` where the table plays this game (`/sessions/{liveSessionId}/live`).
+   * Absent for a sitting with no live game (it predates the bridge): the jump action is then not offered.
+   */
+  readonly liveSessionId?: string;
   readonly title: string;
   readonly emoji?: string;
   readonly cover?: readonly [string, string];
@@ -57,7 +62,11 @@ export interface NightLiveHubProps {
   readonly onPauseToggle?: () => void;
   readonly onTransition?: () => void;
   readonly onEnd?: () => void;
-  readonly onJumpToSession?: (sessionId: string) => void;
+  /**
+   * Open the live game of the current game. Receives the `LiveGameSession` id (#4752), not the tracking
+   * session id the night links to: the action is offered only when the current game has a live game.
+   */
+  readonly onJumpToSession?: (liveSessionId: string) => void;
   readonly onAddGame?: () => void;
   readonly className?: string;
 }
@@ -397,7 +406,7 @@ function ToolbarButton({ icon, label, tone, onClick }: ToolbarButtonProps): JSX.
 interface CurrentGameCardProps {
   readonly game: NightLiveHubCurrentGame | null;
   readonly score?: string;
-  readonly onJumpToSession?: (sessionId: string) => void;
+  readonly onJumpToSession?: (liveSessionId: string) => void;
   readonly compact?: boolean;
 }
 
@@ -417,6 +426,8 @@ function CurrentGameCard({
       </section>
     );
   }
+
+  const liveSessionId = game.liveSessionId;
 
   return (
     <section
@@ -462,16 +473,17 @@ function CurrentGameCard({
         </div>
         <div className="flex items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0 flex-1">
-            {/* #4752: the game is known by its name; the session id is an internal UUID (it is
-                still what the jump action below receives). */}
+            {/* #4752: the game is known by its name; no session id is shown (they are internal UUIDs). */}
             <h2 className="truncate font-display text-lg font-extrabold text-foreground">
               {game.title}
             </h2>
           </div>
-          {onJumpToSession ? (
+          {/* The game is played on its live page: the action exists only when the sitting has a live game
+              (one that predates the bridge has none, and there is nowhere to jump to). */}
+          {onJumpToSession && liveSessionId ? (
             <button
               type="button"
-              onClick={() => onJumpToSession(game.sessionId)}
+              onClick={() => onJumpToSession(liveSessionId)}
               className="shrink-0 rounded-md border border-entity-session/30 bg-entity-session/10 px-3 py-1.5 font-display text-[12.5px] font-extrabold text-entity-session cursor-pointer"
             >
               Apri sessione live →
@@ -490,7 +502,7 @@ interface MobileBodyProps {
   readonly diaryEvents: ReadonlyArray<DiaryEvent>;
   readonly diaryGames: ReadonlyArray<DiaryGameRef>;
   readonly diaryPlayers: ReadonlyArray<DiaryPlayerRef>;
-  readonly onJumpToSession?: (sessionId: string) => void;
+  readonly onJumpToSession?: (liveSessionId: string) => void;
   readonly onAddGame?: () => void;
 }
 

@@ -54,6 +54,11 @@ const PRODUCERS: Readonly<Record<string, readonly Site[]>> = {
   'components/library/SessionDrawerSheet.tsx': [{ live: D4 }],
   'components/session/BackToSessionFAB.tsx': [{ live: D4 }],
   'lib/library/hybrid-hub.mappers.ts': [{ live: D4 }],
+  'lib/game-nights/liveGameHref.ts': [
+    {
+      live: 'GameNightSessionDto.liveSessionId e StartGameNightSessionResult.liveSessionId, la live creata con la partita della serata (#4752)',
+    },
+  ],
   'app/(authenticated)/play-records/[id]/edit/page.tsx': [
     { live: 'liveSessionId della partita registrata' },
   ],

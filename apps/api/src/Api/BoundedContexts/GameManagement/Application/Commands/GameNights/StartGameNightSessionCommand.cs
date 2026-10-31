@@ -19,11 +19,17 @@ internal record StartGameNightSessionCommand(
     GameStateTier StateTier = GameStateTier.Minimal
 ) : ICommand<StartGameNightSessionResult>;
 
+/// <summary>
+/// The started sitting. #4752: <c>LiveSessionId</c> is the <c>LiveGameSession</c> created alongside
+/// the tracking Session — where the game is played (<c>/sessions/{LiveSessionId}/live</c>); null only
+/// for a result built without one.
+/// </summary>
 internal record StartGameNightSessionResult(
     Guid SessionId,
     Guid GameNightSessionId,
     string SessionCode,
-    int PlayOrder);
+    int PlayOrder,
+    Guid? LiveSessionId = null);
 
 internal sealed class StartGameNightSessionCommandValidator : AbstractValidator<StartGameNightSessionCommand>
 {

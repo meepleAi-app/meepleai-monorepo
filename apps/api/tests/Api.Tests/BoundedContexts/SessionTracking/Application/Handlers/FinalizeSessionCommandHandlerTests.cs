@@ -1,6 +1,7 @@
 using Api.BoundedContexts.SessionTracking.Infrastructure.Services;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
+using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.Infrastructure;
@@ -101,6 +102,42 @@ public class FinalizeSessionCommandHandlerTests
         Assert.NotNull(result);
         _sessionRepoMock.Verify(r => r.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_NoWinner_RecordsNoWinnerEvenThoughSomeoneHoldsRankOne()
+    {
+        // #4752: FinalRanks must be 1..N (the validator), so a session that ended with no winner decided
+        // (a tie, nobody scored) still has a participant ranked 1. NoWinner says that rank orders the
+        // participants and is NOT a win: the result must not name a winner.
+        var userId = Guid.NewGuid();
+        var session = Session.Create(userId, Guid.NewGuid(), SessionType.Generic);
+        var participantId = session.Participants.First().Id;
+        _sessionRepoMock.Setup(r => r.GetByIdAsync(session.Id, It.IsAny<CancellationToken>())).ReturnsAsync(session);
+        _scoreRepoMock.Setup(r => r.GetBySessionIdAsync(session.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Enumerable.Empty<ScoreEntry>());
+
+        var withWinner = await _handler.Handle(
+            new FinalizeSessionCommand(session.Id, new Dictionary<Guid, int> { { participantId, 1 } }, userId),
+            CancellationToken.None);
+
+        var freshSession = Session.Create(userId, Guid.NewGuid(), SessionType.Generic);
+        var freshParticipantId = freshSession.Participants.First().Id;
+        _sessionRepoMock.Setup(r => r.GetByIdAsync(freshSession.Id, It.IsAny<CancellationToken>())).ReturnsAsync(freshSession);
+        _scoreRepoMock.Setup(r => r.GetBySessionIdAsync(freshSession.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Enumerable.Empty<ScoreEntry>());
+
+        var noWinner = await _handler.Handle(
+            new FinalizeSessionCommand(
+                freshSession.Id, new Dictionary<Guid, int> { { freshParticipantId, 1 } }, userId, NoWinner: true),
+            CancellationToken.None);
+
+        Assert.Equal(participantId, withWinner.WinnerId);
+        Assert.Null(noWinner.WinnerId);
+
+        // The finalized event (what the SSE and the other bounded contexts consume) says the same.
+        Assert.Equal(participantId, session.DomainEvents.OfType<SessionFinalizedEvent>().Single().WinnerId);
+        Assert.Null(freshSession.DomainEvents.OfType<SessionFinalizedEvent>().Single().WinnerId);
     }
 
     [Fact]

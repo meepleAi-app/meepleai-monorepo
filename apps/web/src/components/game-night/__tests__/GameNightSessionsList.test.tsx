@@ -1,7 +1,10 @@
 /**
- * GameNightSessionsList — #4156 (D7): the sessions of a night are SessionTracking sessions, with no
- * LiveGameSession and so no page under `/sessions/{id}`. Each one links to the night page: the live
- * page while the night runs, the summary once it is completed.
+ * GameNightSessionsList — #4156 (D7): the id a night links to is a SessionTracking session, which has no
+ * page under `/sessions/{id}`; a sitting with no live game links to the night page: the live page while the
+ * night runs, the summary once it is completed.
+ *
+ * #4752 (the night → live game bridge): a sitting that HAS a live game links to where it is played,
+ * `/sessions/{liveSessionId}/live`, while the night runs.
  */
 
 import { render, screen } from '@testing-library/react';
@@ -46,9 +49,34 @@ describe('GameNightSessionsList — #4156 (D7)', () => {
     expect(hrefs()).toEqual(['/game-nights/night-1/summary', '/game-nights/night-1/summary']);
   });
 
-  it('never links to /sessions/{id}', () => {
+  it('never links to /sessions/{trackingSessionId}: that id has no page of its own', () => {
     render(<GameNightSessionsList sessions={SESSIONS} gameNightId="night-1" />);
     expect(hrefs().some(href => href?.startsWith('/sessions/'))).toBe(false);
+  });
+
+  // #4752: a sitting with a live game is played there, not on the night page.
+  it('links a sitting that has a live game to where it is played', () => {
+    const sessions: GameNightActiveSession[] = [
+      { ...SESSIONS[0], liveSessionId: 'live-1' },
+      { ...SESSIONS[1], liveSessionId: 'live-2' },
+    ];
+    render(<GameNightSessionsList sessions={sessions} gameNightId="night-1" />);
+    expect(hrefs()).toEqual(['/sessions/live-1/live', '/sessions/live-2/live']);
+  });
+
+  it('keeps the night page for a sitting with no live game, next to one that has it', () => {
+    const sessions: GameNightActiveSession[] = [
+      SESSIONS[0], // predates the bridge: no live game
+      { ...SESSIONS[1], liveSessionId: 'live-2' },
+    ];
+    render(<GameNightSessionsList sessions={sessions} gameNightId="night-1" />);
+    expect(hrefs()).toEqual(['/game-nights/night-1/live', '/sessions/live-2/live']);
+  });
+
+  it('links to the summary, not to a live game, once the night is completed', () => {
+    const sessions: GameNightActiveSession[] = [{ ...SESSIONS[0], liveSessionId: 'live-1' }];
+    render(<GameNightSessionsList sessions={sessions} gameNightId="night-1" isCompleted />);
+    expect(hrefs()).toEqual(['/game-nights/night-1/summary']);
   });
 
   // #4752: the night page was reachable only once a session existed, and a night with none yet is

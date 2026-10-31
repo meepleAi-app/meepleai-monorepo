@@ -116,6 +116,11 @@ export const GameNightSessionDtoSchema = z.object({
   winnerName: z.string().nullable(),
   startedAt: z.string().nullable(),
   completedAt: z.string().nullable(),
+  // #4752 (the night → live game bridge): the LiveGameSession where the table plays this sitting —
+  // `/sessions/{liveSessionId}/live`. Resolved BE-side from the tracking Session the link points at.
+  // OPTIONAL + nullable for graceful degradation: a sitting with no live game (a draft not yet taken
+  // live, or one that predates the bridge) has none, and an older BE payload omits the field.
+  liveSessionId: z.string().uuid().nullable().optional(),
 });
 export type GameNightSessionDto = z.infer<typeof GameNightSessionDtoSchema>;
 
@@ -138,6 +143,9 @@ export const StartGameNightSessionResultSchema = z.object({
   gameNightSessionId: z.string().uuid(),
   sessionCode: z.string(),
   playOrder: z.number().int(),
+  // #4752: the live game created with the start — where the game is played. Optional for graceful
+  // degradation (an older BE payload omits it): the caller then falls back to the night page.
+  liveSessionId: z.string().uuid().nullable().optional(),
 });
 export type StartGameNightSessionResult = z.infer<typeof StartGameNightSessionResultSchema>;
 

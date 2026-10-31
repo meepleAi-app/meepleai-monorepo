@@ -271,6 +271,16 @@ describe('GamePickerDialog — avvio di una partita della serata (#4752)', () =>
       }),
       /numero massimo di sessioni attive/i,
     ],
+    // La seconda quota di una partita di serata (#4752): le partite attive per piano, di GameManagement. Altro
+    // testo, stesso significato per chi gioca.
+    [
+      'la quota di partite attive è esaurita',
+      new ConflictError({
+        message:
+          'Session limit reached (1 active sessions for Free tier). Complete or abandon existing sessions, or upgrade your subscription.',
+      }),
+      /numero massimo di sessioni attive/i,
+    ],
     [
       'la serata è conclusa',
       new ConflictError({ message: 'Cannot add sessions to a Completed game night.' }),

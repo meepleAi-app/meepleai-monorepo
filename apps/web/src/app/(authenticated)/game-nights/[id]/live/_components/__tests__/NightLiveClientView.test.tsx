@@ -453,6 +453,26 @@ describe('NightLiveClientView — organizer interactive start (WS1 DEC-10)', () 
       expect(alert).not.toHaveTextContent(/regolamento/i);
     });
 
+    it('says the plan limit in plain words — and does not tell the organizer to retry — for the quota refusal (#4752)', async () => {
+      refuseWith(
+        new ConflictError({
+          message:
+            'Session limit reached (1 active sessions for Free tier). Complete or abandon existing sessions, or upgrade your subscription.',
+        })
+      );
+      mockQuery({
+        data: vm({ isViewerOrganizer: true, nextGame: NEXT_GAME, status: 'transition' }),
+      });
+      render(<NightLiveClientView nightId={NIGHT_ID} />);
+
+      await userEvent.click(screen.getByRole('button', { name: /Avvia: Catan/i }));
+
+      const alert = screen.getByTestId('start-next-error');
+      expect(alert).toHaveTextContent(/numero massimo di sessioni attive/i);
+      expect(alert).not.toHaveTextContent(/riprova/i);
+      expect(screen.queryByRole('dialog')).toBeNull();
+    });
+
     it('keeps showing the blocked modal, and no message, for the max-1-live 409', async () => {
       refuseWith(new ConflictError({ message: 'blocked', code: MAX_LIVE_SESSIONS_EXCEEDED }));
       mockQuery({

@@ -37,6 +37,7 @@ import {
   isKbNotReadyError,
   isMaxLiveBlockedError,
   KB_NOT_READY_MESSAGE,
+  startGameErrorMessage,
   useStartNextGame,
 } from '@/lib/game-nights/hooks/useStartNextGame';
 import { liveGameHref, startedGameHref } from '@/lib/game-nights/liveGameHref';
@@ -106,7 +107,9 @@ export function NightLiveClientView({ nightId }: NightLiveClientViewProps) {
             } else if (isKbNotReadyError(err)) {
               setStartError({ gameId, message: KB_NOT_READY_MESSAGE });
             } else {
-              setStartError({ gameId, message: 'Impossibile avviare la partita. Riprova.' });
+              // The same words the game picker uses: a refusal that cannot succeed on a second try (the plan's
+              // limit, a night that no longer takes games) must not tell the organizer to «Riprova».
+              setStartError({ gameId, message: startGameErrorMessage(err) });
             }
           },
         }

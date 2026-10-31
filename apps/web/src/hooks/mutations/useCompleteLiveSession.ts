@@ -20,9 +20,12 @@ export function useCompleteLiveSession(sessionId: string) {
     // #4752 (the night → live game bridge): a game played from a night closes that night's sitting too, and
     // the night's reads (the detail page's games list, the night-live page, its diary) must follow — or
     // «Concludi serata» stays off until their 30 s of staleness run out. It runs whether the call succeeded
-    // OR not: «Termina partita» repeated on a game that is already completed answers 409, but it is also
-    // what repairs a night whose first follow-up failed, and the user must see the night as it now is. A
-    // game that belongs to no night has no such queries cached: nothing refetches.
+    // OR not: «Termina partita» repeated on a game that is already completed answers 409, but the endpoint
+    // also repairs a night whose first follow-up failed, and a client that still shows the game as live (stale
+    // state, or a second device) must then see the night as it now is. From the UI that second tap is rare:
+    // once the game reads Completed the button is gone, and the organizer's way to close a night left open
+    // is «Completa partita» on the night view (#4780). A game that belongs to no night has no such queries
+    // cached: nothing refetches.
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: gameNightLiveKeys.all });
       void queryClient.invalidateQueries({ queryKey: nightLiveDiaryKeys.all });

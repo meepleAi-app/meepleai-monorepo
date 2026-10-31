@@ -75,7 +75,10 @@ const GENERIC_CONFLICT_MESSAGE = 'Non è possibile avviare la partita in questo 
 function conflictMessage(serverMessage: string): string {
   const text = serverMessage.trim();
 
-  if (/^Concurrent session limit reached/i.test(text)) {
+  // Two quotas, two texts, one meaning for the player: the tracking sessions' («Concurrent session limit
+  // reached», SessionTracking) and the active games' («Session limit reached», GameManagement — the one
+  // `StartLiveSessionCommand` enforces on a game started from a night, #4752).
+  if (/^(?:Concurrent session|Session) limit reached/i.test(text)) {
     return 'Hai raggiunto il numero massimo di sessioni attive del tuo piano: concludine una prima di avviarne un’altra.';
   }
 

@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import type { CreateGameNightInput } from '@/lib/api/schemas/game-nights.schemas';
 import { getBrowserTimeZone } from '@/lib/utils/browserTimeZone';
+import { isoToDatetimeLocalValue } from '@/lib/utils/datetimeLocal';
 
 interface GameNightFormProps {
   defaultValues?: Partial<CreateGameNightInput>;
@@ -32,8 +33,9 @@ export function GameNightForm({
 }: GameNightFormProps) {
   const [title, setTitle] = useState(defaultValues?.title ?? '');
   const [description, setDescription] = useState(defaultValues?.description ?? '');
+  // #4773: the field is a wall clock in the browser's zone, and `handleSubmit` reads it back the same way.
   const [scheduledAt, setScheduledAt] = useState(
-    defaultValues?.scheduledAt ? new Date(defaultValues.scheduledAt).toISOString().slice(0, 16) : ''
+    isoToDatetimeLocalValue(defaultValues?.scheduledAt)
   );
   const [location, setLocation] = useState(defaultValues?.location ?? '');
   const [maxPlayers, setMaxPlayers] = useState<string>(defaultValues?.maxPlayers?.toString() ?? '');

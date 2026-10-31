@@ -24,6 +24,7 @@ const LABELS: LiveTopBarLabels = {
   statusInProgress: 'In corso',
   statusPaused: 'In pausa',
   statusCompleted: 'Conclusa',
+  statusNotStarted: 'Non avviata',
   pauseCta: 'Pausa',
   resumeCta: 'Riprendi',
   endgameCta: 'Termina partita',
@@ -95,6 +96,26 @@ describe('LiveTopBar — #4750: a concluded session', () => {
     renderTopBar({ status: 'InProgress', viewerRole: 'Host' });
     expect(document.querySelector('[data-slot="session-live-top-bar-pause"]')).not.toBeNull();
     expect(document.querySelector('[data-slot="session-live-top-bar-endgame"]')).not.toBeNull();
+  });
+});
+
+// ─── #4781 — a session not started yet ────────────────────────────────────────
+
+describe('LiveTopBar — #4781: a session not started yet', () => {
+  it('says «Non avviata», not «In corso», and carries the status on the slot', () => {
+    renderTopBar({ status: 'NotStarted' });
+    const topBar = document.querySelector('[data-slot="session-live-top-bar"]');
+    expect(topBar).toHaveAttribute('data-status', 'NotStarted');
+    expect(screen.getByText('Non avviata')).toBeInTheDocument();
+    expect(screen.queryByText('In corso')).toBeNull();
+  });
+
+  it('offers the host neither pause, resume nor end — they would all answer 409', () => {
+    renderTopBar({ status: 'NotStarted', viewerRole: 'Host' });
+    expect(document.querySelector('[data-slot="session-live-top-bar-pause"]')).toBeNull();
+    expect(document.querySelector('[data-slot="session-live-top-bar-resume"]')).toBeNull();
+    expect(document.querySelector('[data-slot="session-live-top-bar-endgame"]')).toBeNull();
+    expect(document.querySelector('[data-slot="session-live-top-bar-exit"]')).not.toBeNull();
   });
 });
 

@@ -347,13 +347,18 @@ function deriveViewerRole(playerRole: string | undefined, isCreator: boolean): P
  * The header shows the server's `Completed` as such. `composeSessionLiveState` folds anything
  * that is not InProgress/Paused into 'Setup', so reading its status alone made a concluded
  * session look «In corso» with a timer still running (#4750).
+ *
+ * The same fold put a session that was never started (`Created`, `Setup`) under «In corso» too
+ * (#4781): it is `NotStarted` here, because scores, rule disputes and the end of the game all
+ * answer 409 until it runs.
  */
 function toHeaderStatus(
   dtoStatus: string,
   composedStatus: 'InProgress' | 'Paused' | 'Setup'
-): 'InProgress' | 'Paused' | 'Completed' {
+): 'NotStarted' | 'InProgress' | 'Paused' | 'Completed' {
   if (dtoStatus === 'Completed') return 'Completed';
-  return composedStatus === 'Paused' ? 'Paused' : 'InProgress';
+  if (composedStatus === 'Setup') return 'NotStarted';
+  return composedStatus;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -729,6 +734,7 @@ export function SessionLiveView(): ReactElement {
       statusInProgress: t('pages.sessionLive.topBar.statusInProgress'),
       statusPaused: t('pages.sessionLive.topBar.statusPaused'),
       statusCompleted: t('pages.sessionLive.topBar.statusCompleted'),
+      statusNotStarted: t('pages.sessionLive.topBar.statusNotStarted'),
       pauseCta: t('pages.sessionLive.topBar.pauseCta'),
       resumeCta: t('pages.sessionLive.topBar.resumeCta'),
       endgameCta: t('pages.sessionLive.topBar.endgameCta'),

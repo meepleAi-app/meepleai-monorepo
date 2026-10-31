@@ -18,7 +18,7 @@
 
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 import {
   Check,
@@ -44,6 +44,7 @@ import { useKbGameDocuments } from '@/hooks/queries/useGameDocuments';
 import { linkedFirst, ownUserId, useSelfPlayer } from '@/hooks/useSelfPlayer';
 import { api } from '@/lib/api';
 import type { PhaseTemplateDto } from '@/lib/api/clients/gamesClient';
+import { ConflictError } from '@/lib/api/core/errors';
 import type { PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
 import {
   duplicatePlayerNameMessage,
@@ -122,6 +123,10 @@ export function SessionWizardMobile({
   const [newPlayerName, setNewPlayerName] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // #4781: the session an earlier attempt created, filled and then failed to start, with the input
+  // it was made from — the next tap starts that one instead of creating another, but only while
+  // the game, the players and the phases are still the same.
+  const pendingStartRef = useRef<{ sessionId: string; key: string } | null>(null);
 
   // Phase templates
   const [phaseTemplates, setPhaseTemplates] = useState<PhaseTemplateDto[]>([]);
@@ -257,72 +262,103 @@ export function SessionWizardMobile({
     setError(null);
 
     try {
-      // 1. Create session
-      const sessionId = await api.liveSessions.createSession({
-        gameName: selectedGameName,
-        gameId: selectedGameId ?? undefined,
-      });
+      // A previous attempt got the session ready and only starting it failed: start that one
+      // again instead of making a second session with the same players.
+      const attemptKey = JSON.stringify([
+        selectedGameName,
+        selectedGameId,
+        players,
+        phases,
+        self?.userId ?? null,
+      ]);
+      const pending = pendingStartRef.current;
+      let sessionId = pending !== null && pending.key === attemptKey ? pending.sessionId : null;
 
-      // 2. Add all players — collect returned playerIds. The creator goes first wherever they sit
-      // in the turn order: the server makes the first player the Host (#4750). The turn order is
-      // set below from the list, whatever order the players were added in.
-      const addedPlayerIds: string[] = [];
-      const playerIdByLocalId = new Map<string, string>();
-      const toAdd = players.map(p => ({ ...p, userId: ownUserId(p.userId, self) }));
-      for (const player of linkedFirst(toAdd)) {
-        try {
-          const playerId = await api.liveSessions.addPlayer(sessionId, {
-            displayName: player.displayName,
-            color: player.color,
-            ...(player.userId ? { userId: player.userId } : {}),
-          });
-          if (playerId && typeof playerId === 'string') {
-            addedPlayerIds.push(playerId);
-            playerIdByLocalId.set(player.id, playerId);
+      if (sessionId === null) {
+        // 1. Create session
+        sessionId = await api.liveSessions.createSession({
+          gameName: selectedGameName,
+          gameId: selectedGameId ?? undefined,
+        });
+
+        // 2. Add all players — collect returned playerIds. The creator goes first wherever they sit
+        // in the turn order: the server makes the first player the Host (#4750). The turn order is
+        // set below from the list, whatever order the players were added in.
+        const addedPlayerIds: string[] = [];
+        const playerIdByLocalId = new Map<string, string>();
+        const toAdd = players.map(p => ({ ...p, userId: ownUserId(p.userId, self) }));
+        for (const player of linkedFirst(toAdd)) {
+          try {
+            const playerId = await api.liveSessions.addPlayer(sessionId, {
+              displayName: player.displayName,
+              color: player.color,
+              ...(player.userId ? { userId: player.userId } : {}),
+            });
+            if (playerId && typeof playerId === 'string') {
+              addedPlayerIds.push(playerId);
+              playerIdByLocalId.set(player.id, playerId);
+            }
+          } catch (playerErr) {
+            const failedName = player.displayName;
+            const remaining = players.length - addedPlayerIds.length;
+            const msg =
+              playerErr instanceof Error ? playerErr.message : 'Errore aggiunta giocatore';
+            setError(
+              `Errore aggiungendo "${failedName}" (${addedPlayerIds.length}/${players.length} aggiunti). ${msg}. ` +
+                (remaining > 1 ? `${remaining - 1} giocatori restanti non aggiunti.` : '')
+            );
+            router.push(`/sessions/${sessionId}/live`);
+            return;
           }
-        } catch (playerErr) {
-          const failedName = player.displayName;
-          const remaining = players.length - addedPlayerIds.length;
-          const msg = playerErr instanceof Error ? playerErr.message : 'Errore aggiunta giocatore';
-          setError(
-            `Errore aggiungendo "${failedName}" (${addedPlayerIds.length}/${players.length} aggiunti). ${msg}. ` +
-              (remaining > 1 ? `${remaining - 1} giocatori restanti non aggiunti.` : '')
-          );
-          router.push(`/sessions/${sessionId}/live`);
-          return;
+        }
+
+        // 3. Set turn order — the user-defined order from step 3
+        const orderedPlayerIds = players
+          .map(p => playerIdByLocalId.get(p.id))
+          .filter((id): id is string => !!id);
+        if (orderedPlayerIds.length > 1) {
+          try {
+            await api.liveSessions.updateTurnOrder(sessionId, { playerIds: orderedPlayerIds });
+          } catch {
+            // Non-blocking — session proceeds with default order
+          }
+        }
+
+        // 4. Configure phases if any defined
+        const validPhases = phases.filter(p => p.phaseName.trim().length > 0);
+        if (validPhases.length > 0) {
+          try {
+            await api.liveSessions.configurePhases(sessionId, {
+              phaseNames: validPhases.map(p => p.phaseName.trim()),
+            });
+          } catch {
+            // Non-blocking
+          }
         }
       }
 
-      // 3. Set turn order — the user-defined order from step 3
-      const orderedPlayerIds = players
-        .map(p => playerIdByLocalId.get(p.id))
-        .filter((id): id is string => !!id);
-      if (orderedPlayerIds.length > 1) {
-        try {
-          await api.liveSessions.updateTurnOrder(sessionId, { playerIds: orderedPlayerIds });
-        } catch {
-          // Non-blocking — session proceeds with default order
-        }
+      // 5. Start the session (#4781). Until it runs, scores, rule disputes and «Termina sessione»
+      // answer 409. If this fails the session is kept, so the next try only starts it.
+      pendingStartRef.current = { sessionId, key: attemptKey };
+      try {
+        await api.liveSessions.startSession(sessionId);
+      } catch (startErr) {
+        // 409: the session can no longer be started — typically a start that did go through and
+        // whose answer was lost (the client retries POSTs on 502/503). Trying again would only
+        // meet the same 409; the live page shows the session as it really is.
+        const isConflict =
+          startErr instanceof ConflictError ||
+          (startErr as { statusCode?: number })?.statusCode === 409;
+        if (!isConflict) throw startErr;
       }
+      pendingStartRef.current = null;
 
-      // 4. Configure phases if any defined
-      const validPhases = phases.filter(p => p.phaseName.trim().length > 0);
-      if (validPhases.length > 0) {
-        try {
-          await api.liveSessions.configurePhases(sessionId, {
-            phaseNames: validPhases.map(p => p.phaseName.trim()),
-          });
-        } catch {
-          // Non-blocking
-        }
-      }
-
-      // 5. Navigate to live session
+      // 6. Navigate to live session. `isCreating` stays on: router.push is not awaited, and a
+      // second tap before the page changes would make and start another session.
       router.push(`/sessions/${sessionId}/live`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Errore nella creazione della sessione';
       setError(msg);
-    } finally {
       setIsCreating(false);
     }
   }, [selectedGameName, selectedGameId, players, self, phases, router]);

@@ -83,6 +83,10 @@ export function StartSessionSheet({
   // Drag state for step 2
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // #4781: the session an earlier attempt created, filled and then failed to start, with the input
+  // it was made from — the next tap starts that one instead of creating another, but only while
+  // the game and the players are still the same.
+  const pendingStartRef = useRef<{ sessionId: string; key: string } | null>(null);
 
   // Cleanup close-animation timer on unmount
   useEffect(() => {
@@ -100,6 +104,7 @@ export function StartSessionSheet({
       setPlayers([{ id: `p-${Date.now()}`, name: 'Giocatore 1', color: 'Red' }]);
       setNewName('');
       setError(null);
+      pendingStartRef.current = null;
     }, 300);
   };
 
@@ -147,44 +152,58 @@ export function StartSessionSheet({
     setError(null);
 
     try {
-      const sessionId = await api.liveSessions.createSession({
-        gameName,
-        gameId,
-      });
+      // A previous attempt got the session ready and only starting it failed: start that one
+      // again instead of making a second session with the same players.
+      const attemptKey = JSON.stringify([gameId, gameName, players]);
+      const pending = pendingStartRef.current;
+      let sessionId = pending !== null && pending.key === attemptKey ? pending.sessionId : null;
 
-      // Add players in turn order; collect the server-assigned IDs
-      const addedPlayerIds: string[] = [];
-      let failCount = 0;
-      for (const player of players) {
+      if (sessionId === null) {
+        sessionId = await api.liveSessions.createSession({
+          gameName,
+          gameId,
+        });
+
+        // Add players in turn order; collect the server-assigned IDs
+        const addedPlayerIds: string[] = [];
+        let failCount = 0;
+        for (const player of players) {
+          try {
+            const playerId = await api.liveSessions.addPlayer(sessionId, {
+              displayName: player.name,
+              color: player.color,
+            });
+            addedPlayerIds.push(playerId);
+          } catch {
+            failCount++;
+          }
+        }
+
+        if (addedPlayerIds.length === 0) {
+          setError('Impossibile aggiungere i giocatori. Riprova.');
+          setIsCreating(false);
+          return;
+        }
+
+        // Persist the dragged turn order
         try {
-          const playerId = await api.liveSessions.addPlayer(sessionId, {
-            displayName: player.name,
-            color: player.color,
-          });
-          addedPlayerIds.push(playerId);
+          await api.liveSessions.updateTurnOrder(sessionId, { playerIds: addedPlayerIds });
         } catch {
-          failCount++;
+          // Non-blocking — session is still playable without persisted order
+        }
+
+        if (failCount > 0) {
+          // Partial failure: show warning but still navigate
+          setError(`${failCount} giocatore/i non aggiunto/i. Continuo…`);
+          await new Promise(r => setTimeout(r, 1500));
         }
       }
 
-      if (addedPlayerIds.length === 0) {
-        setError('Impossibile aggiungere i giocatori. Riprova.');
-        setIsCreating(false);
-        return;
-      }
-
-      // Persist the dragged turn order
-      try {
-        await api.liveSessions.updateTurnOrder(sessionId, { playerIds: addedPlayerIds });
-      } catch {
-        // Non-blocking — session is still playable without persisted order
-      }
-
-      if (failCount > 0) {
-        // Partial failure: show warning but still navigate
-        setError(`${failCount} giocatore/i non aggiunto/i. Continuo…`);
-        await new Promise(r => setTimeout(r, 1500));
-      }
+      // Start it (#4781). Until it runs, scores, rule disputes and «Termina sessione» answer 409.
+      // If this fails the session is kept, so the next try only starts it.
+      pendingStartRef.current = { sessionId, key: attemptKey };
+      await api.liveSessions.startSession(sessionId);
+      pendingStartRef.current = null;
 
       router.push(`/sessions/${sessionId}/live`);
     } catch (err) {

@@ -302,6 +302,7 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.topBar.statusInProgress': 'In corso',
   'pages.sessionLive.topBar.statusPaused': 'In pausa',
   'pages.sessionLive.topBar.statusCompleted': 'Conclusa',
+  'pages.sessionLive.topBar.statusNotStarted': 'Non avviata',
   'pages.sessionLive.topBar.pauseCta': 'Pausa',
   'pages.sessionLive.topBar.resumeCta': 'Riprendi',
   'pages.sessionLive.topBar.endgameCta': 'Termina sessione',
@@ -2507,6 +2508,39 @@ describe('SessionLiveView — #4750: creator as host, concluded session', () => 
       const { container } = mountWith(COMPLETED_DTO, CREATOR_ID);
 
       expect(slotIn(container, 'timer')?.textContent).toBe('00:30:00');
+    });
+  });
+
+  describe('while the session has not been started (#4781)', () => {
+    // `Created` is what a session is until someone starts it: scores, rule disputes and the end of
+    // the game all answer 409 from there, so the header must not say it is running.
+    const CREATED_DTO = {
+      ...MOCK_SESSION_DTO,
+      status: 'Created',
+      startedAt: null,
+    } as unknown as LiveSessionDto;
+
+    it('the header reads «Non avviata», not «In corso»', () => {
+      const { container } = mountWith(CREATED_DTO, CREATOR_ID);
+
+      expect(topBarOf(container)).toHaveAttribute('data-status', 'NotStarted');
+      expect(topBarOf(container)?.textContent).toContain('Non avviata');
+      expect(topBarOf(container)?.textContent).not.toContain('In corso');
+    });
+
+    it('not even its creator is offered pause or end, which would both answer 409', () => {
+      const { container } = mountWith(CREATED_DTO, CREATOR_ID);
+
+      expect(topBarOf(container)).toHaveAttribute('data-viewer-role', 'Host');
+      expect(slotIn(container, 'pause')).not.toBeInTheDocument();
+      expect(slotIn(container, 'resume')).not.toBeInTheDocument();
+      expect(slotIn(container, 'endgame')).not.toBeInTheDocument();
+    });
+
+    it('has no running timer, because nothing has started', () => {
+      const { container } = mountWith(CREATED_DTO, CREATOR_ID);
+
+      expect(slotIn(container, 'timer')).not.toBeInTheDocument();
     });
   });
 });

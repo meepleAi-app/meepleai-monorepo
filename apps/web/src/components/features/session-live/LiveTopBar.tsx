@@ -30,6 +30,8 @@ export interface LiveTopBarLabels {
   readonly statusPaused: string;
   /** #4750 — a concluded session: no longer «In corso», no controls. */
   readonly statusCompleted: string;
+  /** #4781 — a session still waiting to be started: not running, so nothing to pause or end. */
+  readonly statusNotStarted: string;
   readonly pauseCta: string;
   readonly resumeCta: string;
   readonly endgameCta: string;
@@ -52,7 +54,7 @@ export type LiveTopBarConnectionState = 'connected' | 'reconnecting' | 'failed';
 
 export interface LiveTopBarProps {
   readonly sessionName: string;
-  readonly status: 'InProgress' | 'Paused' | 'Completed';
+  readonly status: 'NotStarted' | 'InProgress' | 'Paused' | 'Completed';
   readonly viewerRole: ParticipantRole;
   readonly onPause?: () => void;
   readonly onResume?: () => void;
@@ -81,13 +83,15 @@ export interface LiveTopBarProps {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 const STATUS_LABEL_KEY = {
+  NotStarted: 'statusNotStarted',
   InProgress: 'statusInProgress',
   Paused: 'statusPaused',
   Completed: 'statusCompleted',
 } as const satisfies Record<LiveTopBarProps['status'], keyof LiveTopBarLabels>;
 
-// Status chip colors: running = emerald, paused = amber, concluded = muted (nothing is live).
+// Status chip colors: running = emerald, paused = amber, not started or concluded = muted (nothing is live).
 const STATUS_CHIP_CLASS: Record<LiveTopBarProps['status'], string> = {
+  NotStarted: 'bg-muted text-foreground',
   InProgress: 'bg-emerald-500/20 text-emerald-300',
   Paused: 'bg-amber-500/20 text-amber-300',
   Completed: 'bg-muted text-foreground',
@@ -114,8 +118,9 @@ export function LiveTopBar({
   connectionState,
 }: LiveTopBarProps): ReactElement {
   const isPaused = status === 'Paused';
-  // #4750: a concluded session has nothing left to pause, resume or end.
-  const canControl = viewerRole === 'Host' && status !== 'Completed';
+  // #4750: a concluded session has nothing left to pause, resume or end. #4781: neither does one
+  // that has not started — the server answers 409 to all three until it runs.
+  const canControl = viewerRole === 'Host' && status !== 'Completed' && status !== 'NotStarted';
 
   const statusLabel = labels[STATUS_LABEL_KEY[status]];
 

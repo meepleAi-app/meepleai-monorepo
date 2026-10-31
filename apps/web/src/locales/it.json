@@ -3584,6 +3584,7 @@
         "statusInProgress": "In corso",
         "statusPaused": "In pausa",
         "statusCompleted": "Conclusa",
+        "statusNotStarted": "Non avviata",
         "pauseCta": "Pausa",
         "resumeCta": "Riprendi",
         "endgameCta": "Termina sessione",

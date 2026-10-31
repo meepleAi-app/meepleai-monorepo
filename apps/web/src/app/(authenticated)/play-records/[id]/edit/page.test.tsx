@@ -97,9 +97,11 @@ vi.mock('@/components/play-records/SessionCreateForm', () => ({
         data-testid="session-form"
         onSubmit={e => {
           e.preventDefault();
-          // Simulate form submission with partial data
+          // Simulate form submission with partial data. The real form hands over a `Date`
+          // (`SessionCreateFormSchema.sessionDate` is `z.date()`), not a string: a mock that sent
+          // a string hid #4791 — the update request wants a string and the page never converted.
           onSubmit({
-            sessionDate: new Date().toISOString(),
+            sessionDate: new Date('2026-05-28T19:00:00.000Z'),
             notes: 'Test notes',
             location: 'Test location',
           });
@@ -306,6 +308,8 @@ describe('EditPlayRecordPage', () => {
   });
 
   it('AC-4.5: submits PUT request with only sessionDate/notes/location', async () => {
+    const mutateAsync = vi.fn(async () => ({ id: 'record-123' }));
+    mockUseUpdateRecord.mockReturnValue({ mutateAsync, isPending: false });
     const queryClient = new QueryClient();
     const user = userEvent.setup();
 
@@ -325,6 +329,18 @@ describe('EditPlayRecordPage', () => {
     // Verify onSubmit was called (would call PUT API in real implementation)
     await waitFor(() => {
       expect(mockRouterPush).toHaveBeenCalledWith('/play-records/record-123');
+    });
+
+    // #4791: the request carries the date as an ISO string — the form's `Date` is converted — and
+    // nothing but the three editable fields (plus the concurrency token).
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(mutateAsync).toHaveBeenCalledTimes(1);
+    const [request] = mutateAsync.mock.calls[0] as unknown as [Record<string, unknown>];
+    expect(request).toEqual({
+      sessionDate: '2026-05-28T19:00:00.000Z',
+      notes: 'Test notes',
+      location: 'Test location',
+      xmin: undefined,
     });
   });
 

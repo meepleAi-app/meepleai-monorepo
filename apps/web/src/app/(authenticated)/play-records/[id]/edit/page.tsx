@@ -52,7 +52,9 @@ export default function EditPlayRecordPage() {
 
   const submitUpdate = async (data: SessionCreateFormData, xmin?: number) => {
     const validated = UpdatePlayRecordRequestSchema.parse({
-      sessionDate: data.sessionDate,
+      // #4791: the form's `sessionDate` is a `Date` (`SessionCreateFormSchema`), the request's a string;
+      // handed over as it was, `parse` threw «expected string, received Date» and nothing was saved.
+      sessionDate: data.sessionDate.toISOString(),
       notes: data.notes,
       location: data.location,
       xmin,

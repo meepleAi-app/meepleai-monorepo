@@ -84,9 +84,10 @@ Every link the API writes for a person to open takes its base from one resolver
    `compose.prod.yml`);
 2. `App:BaseUrl` — the old key, read only so an existing deployment keeps working;
 3. `FRONTEND_BASE_URL` — the variable above;
-4. `http://localhost:3000`, **only** in `Development` and `Testing`.
+4. `http://localhost:3000`, **only** in a local environment: `Development`, `Testing`, `CI` and
+   `Integration` (the API runs on a developer's or a runner's machine and no link reaches a person).
 
-Outside those two there is no last resort: a link generator fails with a message naming the key, and
+Everywhere else (`Staging`, `Production`) there is no last resort: a link generator fails with a message naming the key, and
 at startup the API logs an **error** (it does not stop) when the resolved URL is missing or points at
 `localhost` / `127.0.0.1`. After a deploy, `docker logs meepleai-api | grep -i "public front-end URL"`
 tells which source won. `appsettings.json` deliberately defaults neither key: a default there would

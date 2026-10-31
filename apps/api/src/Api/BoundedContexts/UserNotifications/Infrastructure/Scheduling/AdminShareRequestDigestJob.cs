@@ -61,7 +61,7 @@ internal sealed class AdminShareRequestDigestJob : IJob
             }
 
             // #4774: the review queue is a page of the front-end, whose address is configured in one place. Resolved
-            // once, before anything else is read and before the first send: with no address configured (a deployed
+            // once, before the admins are read and before the first send: with no address configured (a deployed
             // host) the job ends in the catch below instead of mailing every admin a link that leads nowhere.
             var reviewQueueUrl = $"{_publicBaseUrl.GetBaseUrl()}/admin/share-requests";
 

@@ -57,6 +57,11 @@ internal class UpdateLibraryShareLinkCommandHandler : ICommandHandler<UpdateLibr
             throw new DomainException("Cannot update revoked or expired share link");
         }
 
+        // #4774: resolved before the link is changed and saved: with no address configured (a deployed host) the
+        // call fails here, not after the new settings are stored for a link whose URL cannot be written. The
+        // refusals above do not need the address and keep their answer.
+        var baseUrl = _publicBaseUrl.GetBaseUrl();
+
         // Update privacy level if provided
         if (!string.IsNullOrEmpty(command.PrivacyLevel))
         {
@@ -86,12 +91,11 @@ internal class UpdateLibraryShareLinkCommandHandler : ICommandHandler<UpdateLibr
 
         _logger.LogInformation("Updated share link {LinkId} for user {UserId}", shareLink.Id, command.UserId);
 
-        return MapToDto(shareLink);
+        return MapToDto(shareLink, baseUrl);
     }
 
-    private LibraryShareLinkDto MapToDto(Domain.Entities.LibraryShareLink link)
+    private static LibraryShareLinkDto MapToDto(Domain.Entities.LibraryShareLink link, string baseUrl)
     {
-        var baseUrl = _publicBaseUrl.GetBaseUrl();
         var shareUrl = $"{baseUrl}/library/shared/{link.ShareToken}";
 
         return new LibraryShareLinkDto(

@@ -52,6 +52,11 @@ internal class CreateLibraryShareLinkCommandHandler : ICommandHandler<CreateLibr
             throw new DomainException($"Maximum {MaxShareLinksPerDay} share links per day allowed");
         }
 
+        // #4774: resolved before the existing link is revoked and the new one saved: with no address configured
+        // (a deployed host) the call fails here, not after the person's working link has been revoked for a new
+        // one whose URL cannot be written.
+        var baseUrl = _publicBaseUrl.GetBaseUrl();
+
         // Revoke any existing active share link
         await RevokeActiveLinkAsync(command.UserId, cancellationToken).ConfigureAwait(false);
 
@@ -78,7 +83,7 @@ internal class CreateLibraryShareLinkCommandHandler : ICommandHandler<CreateLibr
             "Created library share link {LinkId} for user {UserId} with privacy {Privacy}",
             shareLink.Id, command.UserId, privacyLevel);
 
-        return MapToDto(shareLink);
+        return MapToDto(shareLink, baseUrl);
     }
 
     private async Task RevokeActiveLinkAsync(Guid userId, CancellationToken cancellationToken)
@@ -133,9 +138,8 @@ internal class CreateLibraryShareLinkCommandHandler : ICommandHandler<CreateLibr
         }
     }
 
-    private LibraryShareLinkDto MapToDto(LibraryShareLink link)
+    private static LibraryShareLinkDto MapToDto(LibraryShareLink link, string baseUrl)
     {
-        var baseUrl = _publicBaseUrl.GetBaseUrl();
         var shareUrl = $"{baseUrl}/library/shared/{link.ShareToken}";
 
         return new LibraryShareLinkDto(

@@ -47,6 +47,10 @@ internal sealed class CreateShareLinkCommandHandler : IRequestHandler<CreateShar
                 $"Chat thread {request.ThreadId} not found or does not belong to user {request.UserId}");
         }
 
+        // #4774: resolved before the link is saved: with no address configured (a deployed host) the call fails
+        // here, not after an audit row has been stored for a URL that cannot be written.
+        var baseUrl = _publicBaseUrl.GetBaseUrl();
+
         // Create the share link entity
         var shareLink = ShareLink.Create(
             threadId: request.ThreadId,
@@ -66,8 +70,6 @@ internal sealed class CreateShareLinkCommandHandler : IRequestHandler<CreateShar
         var token = shareLink.GenerateToken(secretKey);
 
         // Build shareable URL
-        var baseUrl = _publicBaseUrl.GetBaseUrl();
-
         var shareableUrl = $"{baseUrl}/shared/chat?token={token.Value}";
 
         return new CreateShareLinkResult(

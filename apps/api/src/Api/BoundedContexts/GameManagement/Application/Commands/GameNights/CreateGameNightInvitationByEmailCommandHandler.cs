@@ -87,6 +87,11 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
                 $"A pending invitation already exists for {normalizedEmail} on this game night.");
         }
 
+        // #4774: both paths below end by writing a link, so the address is resolved before either touches the
+        // repository: with none configured (a deployed host) the call fails here, not after an invitation has
+        // been saved that no e-mail will ever announce. The refusals above do not need it and keep their answer.
+        var baseUrl = _publicBaseUrl.GetBaseUrl();
+
         if (alreadyInvited)
         {
             // #4692: the same creation sent again. The invitation was saved by the earlier attempt, whose
@@ -103,7 +108,7 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
                 ?? throw new ConflictException(
                     $"A pending invitation already exists for {normalizedEmail} on this game night.");
 
-            await SendInvitationEmailAsync(gameNight, existing, cancellationToken).ConfigureAwait(false);
+            await SendInvitationEmailAsync(gameNight, existing, baseUrl, cancellationToken).ConfigureAwait(false);
             return ToDto(existing);
         }
 
@@ -123,7 +128,7 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
 
         // D1 a: emit invitation email synchronously after persistence so guests
         // receive the token-bearing accept/decline links.
-        await SendInvitationEmailAsync(gameNight, invitation, cancellationToken).ConfigureAwait(false);
+        await SendInvitationEmailAsync(gameNight, invitation, baseUrl, cancellationToken).ConfigureAwait(false);
 
         return ToDto(invitation);
     }
@@ -143,10 +148,9 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
     private async Task SendInvitationEmailAsync(
         GameNightEvent gameNight,
         GameNightInvitation invitation,
+        string baseUrl,
         CancellationToken cancellationToken)
     {
-        var baseUrl = _publicBaseUrl.GetBaseUrl();
-
         var organizer = await _userRepository
             .GetByIdAsync(gameNight.OrganizerId, cancellationToken)
             .ConfigureAwait(false);

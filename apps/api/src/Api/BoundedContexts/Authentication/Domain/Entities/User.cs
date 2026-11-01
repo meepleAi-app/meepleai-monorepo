@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Domain.Constants;
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.Middleware.Exceptions; // C3: ConflictException (HTTP 409 mapping)
@@ -98,7 +99,8 @@ public sealed class User : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Creates a new user.
+    /// Creates a new user. <paramref name="language"/> is the language the account starts with (#4783);
+    /// without it, or with one the product cannot write in, it is <see cref="UserLanguage.Default"/>.
     /// </summary>
     public User(
         Guid id,
@@ -106,7 +108,8 @@ public sealed class User : AggregateRoot<Guid>
         string displayName,
         PasswordHash passwordHash,
         Role role,
-        UserTier? tier = null) : base(id)
+        UserTier? tier = null,
+        string? language = null) : base(id)
     {
         Email = email ?? throw new ArgumentNullException(nameof(email));
         DisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
@@ -117,7 +120,7 @@ public sealed class User : AggregateRoot<Guid>
         CreatedAt = DateTime.UtcNow;
 
         // Default preferences
-        Language = "en";
+        Language = UserLanguage.Resolve(language);
         EmailNotifications = true;
         Theme = "system";
         DataRetentionDays = 90;
@@ -180,7 +183,7 @@ public sealed class User : AggregateRoot<Guid>
             EmailVerified = false,
 
             // Default preferences
-            Language = "en",
+            Language = UserLanguage.Default,
             EmailNotifications = true,
             Theme = "system",
             DataRetentionDays = 90,
@@ -227,7 +230,8 @@ public sealed class User : AggregateRoot<Guid>
         Role role,
         UserTier? tier,
         string oauthProvider,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        string? language = null)
     {
         ArgumentNullException.ThrowIfNull(email);
         ArgumentNullException.ThrowIfNull(displayName);
@@ -251,7 +255,7 @@ public sealed class User : AggregateRoot<Guid>
             VerificationGracePeriodEndsAt = null,
 
             // Default preferences (mirror standard User ctor defaults)
-            Language = "en",
+            Language = UserLanguage.Resolve(language),
             EmailNotifications = true,
             Theme = "system",
             DataRetentionDays = 90,

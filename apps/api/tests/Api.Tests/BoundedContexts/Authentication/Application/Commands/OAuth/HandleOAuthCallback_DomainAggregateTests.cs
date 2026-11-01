@@ -108,6 +108,27 @@ public sealed class HandleOAuthCallback_DomainAggregateTests : IDisposable
             "random Base64 string is removed by C3.");
     }
 
+    // #4783: the language is the caller's to choose, and a value the product cannot write in is not stored.
+    [Theory]
+    [InlineData(null, "en")]
+    [InlineData("it", "it")]
+    [InlineData("it-IT", "it")]
+    [InlineData("fr", "en")]
+    public void CreateForOAuth_StartsInTheLanguageItIsGiven(string? language, string expected)
+    {
+        var user = User.CreateForOAuth(
+            id: Guid.NewGuid(),
+            email: new Email("oauth-lang@test.local"),
+            displayName: "OAuth User",
+            role: Role.User,
+            tier: null,
+            oauthProvider: "google",
+            timeProvider: TimeProvider.System,
+            language: language);
+
+        user.Language.Should().Be(expected);
+    }
+
     [Fact]
     public void CreateForOAuth_HasActiveStatusAndVerifiedEmail()
     {

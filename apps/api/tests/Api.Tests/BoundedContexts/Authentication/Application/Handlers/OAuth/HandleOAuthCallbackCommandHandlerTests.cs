@@ -117,6 +117,34 @@ public sealed class HandleOAuthCallbackCommandHandlerTests : IDisposable
         createdAccount.Provider.Should().Be(command.Provider.ToLowerInvariant());
     }
 
+    // #4783: an account born through a provider starts in the language of the browser it came back in — an
+    // Italian speaker who signs up with Google is not invited to speak English. With no header, the default.
+    [Theory]
+    [InlineData("it-IT,it;q=0.9,en;q=0.8", "it")]
+    [InlineData("en-US,en;q=0.9", "en")]
+    [InlineData("de,fr;q=0.9", "en")]
+    [InlineData(null, "en")]
+    public async Task Handle_NewUser_StartsInTheLanguageOfTheBrowser(string? acceptLanguage, string expected)
+    {
+        // Arrange
+        var command = CreateTestCommand("google") with { AcceptLanguage = acceptLanguage };
+        SetupSuccessfulOAuthFlow(command, CreateTokenResponse(), CreateUserInfo());
+        _encryptionServiceMock
+            .Setup(e => e.EncryptAsync(It.IsAny<string>(), It.IsAny<string>()))
+            .ReturnsAsync("encrypted_token");
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<CreateSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateSessionResponse(Guid.NewGuid()));
+
+        // Act
+        var result = await _handler.Handle(command, TestCancellationToken);
+
+        // Assert
+        result.IsNewUser.Should().BeTrue();
+        var created = await _dbContext.Users.SingleAsync(u => u.Id == result.UserId, TestCancellationToken);
+        created.Language.Should().Be(expected);
+    }
+
     [Fact]
     public async Task Handle_ExistingUserByEmail_LinksOAuthAndCreatesSession()
     {

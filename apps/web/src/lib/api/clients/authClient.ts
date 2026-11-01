@@ -81,6 +81,8 @@ export interface RegisterRequest {
   // paths), but the backend rejects registration without it (400) — the register
   // form always sends `true`.
   termsAccepted?: boolean;
+  // #4783: the language the user is looking at ('it' | 'en'); sets the starting User.Language.
+  locale?: string;
 }
 
 export interface UpdateProfileRequest {

@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Domain.Constants;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Exceptions;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
@@ -181,7 +182,8 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
 
             // Step 3: Find or create user and link OAuth account
             var (user, isNewUser) = await FindOrCreateUserAsync(
-                command.Provider, oauthUserInfo, tokenResponse!, cancellationToken).ConfigureAwait(false);
+                command.Provider, oauthUserInfo, tokenResponse!, command.AcceptLanguage, cancellationToken)
+                .ConfigureAwait(false);
 
             // Step 4: Create session for authenticated user
             string sessionToken;
@@ -474,6 +476,7 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
         string provider,
         OAuthUserInfo? userInfo,
         OAuthTokenResponse tokenResponse,
+        string? acceptLanguage,
         CancellationToken cancellationToken)
     {
         // Find existing OAuth account
@@ -544,7 +547,8 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
                     role: Role.User,
                     tier: null,
                     oauthProvider: providerLower,
-                    timeProvider: _timeProvider);
+                    timeProvider: _timeProvider,
+                    language: UserLanguage.Resolve(null, acceptLanguage));
 
                 await _userRepository.AddAsync(domainUser, cancellationToken).ConfigureAwait(false);
                 await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

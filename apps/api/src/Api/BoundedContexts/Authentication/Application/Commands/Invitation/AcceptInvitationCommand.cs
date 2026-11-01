@@ -11,7 +11,10 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.Invitation;
 internal record AcceptInvitationCommand(
     string Token,
     string Password,
-    string ConfirmPassword
+    string ConfirmPassword,
+    // #4783: the language the new account starts with, from the header of the request (the page that
+    // takes the password does not send a locale). See UserLanguage.Resolve.
+    string? AcceptLanguage = null
 ) : ICommand<AcceptInvitationResponse>;
 
 /// <summary>

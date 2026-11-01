@@ -822,8 +822,9 @@ export function SessionCreateForm({
     }
     // Issue #2847 (#BB): pass the roster so the create flow can persist players +
     // scores + location. Await the (possibly async) submit BEFORE clearing so a
-    // failed save leaves the entered data intact for a retry (#4793: the pages
-    // catch their own errors and resolve, so «failed» is the answer `false`).
+    // failed save leaves the entered data intact for a retry. The pages catch their own errors and
+    // resolve, so «failed» is the answer `false`: only the edit page gives it (#4793); the create page
+    // still resolves after its toast, so the form clears and the draft goes (#4800).
     const saved = await onSubmit(data, players);
     if (saved === false) return;
     clear();

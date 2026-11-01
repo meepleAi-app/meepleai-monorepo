@@ -40,11 +40,13 @@ vi.mock('@/lib/hooks/useMediaQuery', () => ({
   useMediaQuery: () => true,
 }));
 
-// The last step (Punteggi) is the one from which the form really submits.
+// The last step (Punteggi, index 2) is the one from which the form really submits. The step is read at
+// render time, so a test can move the wizard (and `rerender`) to read a field on another step.
 const mockResetSessionCreation = vi.fn();
+let mockStep = 2;
 vi.mock('@/lib/stores/play-records-store', () => ({
   usePlayRecordsStore: () => ({
-    sessionCreation: { currentStep: 2 },
+    sessionCreation: { currentStep: mockStep },
     nextStep: vi.fn(),
     prevStep: vi.fn(),
     resetSessionCreation: mockResetSessionCreation,
@@ -66,28 +68,43 @@ vi.mock('@/components/library/AddPrivateGameForm', () => ({
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+const INITIAL_NOTES = 'Great match';
+const TYPED_NOTES = 'Notes typed before saving';
+
 function renderEditForm(onSubmit: () => unknown) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  const view = render(
+  const initialValues = {
+    gameType: 'catalog' as const,
+    gameName: 'Wingspan',
+    sessionDate: new Date('2026-05-17T20:00:00.000Z'),
+    notes: INITIAL_NOTES,
+    location: 'Padova',
+  };
+  const initialPlayers = [{ id: 'p1', name: 'Anna', score: '42' }];
+  // A new element each time: React skips `rerender` of the very same element object, and the step the
+  // store mock answers is only read when the form renders.
+  const tree = () => (
     <QueryClientProvider client={qc}>
       <SessionCreateForm
         mode="edit"
         onSubmit={onSubmit as never}
         onCancel={vi.fn()}
-        initialValues={{
-          gameType: 'catalog',
-          gameName: 'Wingspan',
-          sessionDate: new Date('2026-05-17T20:00:00.000Z'),
-          notes: 'Great match',
-          location: 'Padova',
-        }}
-        initialPlayers={[{ id: 'p1', name: 'Anna', score: '42' }]}
+        initialValues={initialValues}
+        initialPlayers={initialPlayers}
       />
     </QueryClientProvider>
   );
-  return view;
+  const view = render(tree());
+  return {
+    ...view,
+    /** Moves the wizard to another step and draws the form again, its state kept. */
+    goToStep: (step: number) => {
+      mockStep = step;
+      view.rerender(tree());
+    },
+  };
 }
 
 /** Submits from the last step and lets the continuation of `handleFormSubmit` run. */
@@ -102,6 +119,7 @@ async function submit(container: HTMLElement, onSubmit: ReturnType<typeof vi.fn>
 
 beforeEach(() => {
   mockResetSessionCreation.mockClear();
+  mockStep = 2;
 });
 
 describe('SessionCreateForm — the answer of onSubmit (#4793)', () => {
@@ -139,5 +157,38 @@ describe('SessionCreateForm — the answer of onSubmit (#4793)', () => {
     fireEvent.submit(container.querySelector('form') as HTMLFormElement);
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(mockResetSessionCreation).toHaveBeenCalledTimes(1));
+  });
+
+  describe('the values typed in the editable fields', () => {
+    // `resetSessionCreation` and the roster show that the wizard state survived; the fields have their own
+    // state, reset by `form.reset()`. Step 2 holds the notes, so the wizard is moved there to type and to read.
+    async function typeNotesThenSubmit(onSubmit: ReturnType<typeof vi.fn>) {
+      mockStep = 1;
+      const view = renderEditForm(onSubmit);
+      fireEvent.change(
+        screen.getByPlaceholderText(playRecordsNewMessages['step2.notesPlaceholder']),
+        {
+          target: { value: TYPED_NOTES },
+        }
+      );
+      view.goToStep(2);
+      await submit(view.container, onSubmit);
+      view.goToStep(1);
+      return screen.getByPlaceholderText(playRecordsNewMessages['step2.notesPlaceholder']);
+    }
+
+    it('are still in the field after a save that did not happen', async () => {
+      const notes = await typeNotesThenSubmit(vi.fn().mockResolvedValue(false));
+
+      expect(notes).toHaveValue(TYPED_NOTES);
+    });
+
+    it('go back to the values the form started with after a save that did happen', async () => {
+      // The other direction, on the same path: without it the test above would pass for a form that
+      // never resets anything.
+      const notes = await typeNotesThenSubmit(vi.fn().mockResolvedValue(undefined));
+
+      expect(notes).toHaveValue(INITIAL_NOTES);
+    });
   });
 });

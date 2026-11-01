@@ -15,7 +15,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
@@ -40,6 +40,7 @@ import {
   UpdatePlayRecordRequestSchema,
 } from '@/lib/api/schemas/play-records.schemas';
 import { usePlayRecord, useUpdateRecord, useDeleteRecord } from '@/lib/domain-hooks/usePlayRecords';
+import { usePlayRecordsStore } from '@/lib/stores/play-records-store';
 
 export default function EditPlayRecordPage() {
   const params = useParams();
@@ -65,6 +66,20 @@ export default function EditPlayRecordPage() {
   const base = baseState?.recordId === recordId ? baseState.record : null;
   const [formKey, setFormKey] = useState(0);
   const [isReloading, setIsReloading] = useState(false);
+  const [isOverwriting, setIsOverwriting] = useState(false);
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+  // The wizard's step lives in a module-level store that the create page reads too. A conflict used to be
+  // answered «saved», so the form reset the step itself; it is now answered «not saved» (#4805) and nothing
+  // would: after «Sovrascrivi», or «Continua a modificare» and then leaving, the next wizard would open on
+  // the last step. Leaving this page leaves the step where a new wizard starts.
+  const { resetSessionCreation } = usePlayRecordsStore();
+  useEffect(() => () => resetSessionCreation(), [resetSessionCreation]);
   if (record && base === null) setBaseState({ recordId, record });
   const updateMutation = useUpdateRecord(recordId);
   const deleteMutation = useDeleteRecord(recordId);
@@ -104,9 +119,11 @@ export default function EditPlayRecordPage() {
     router.push(`/play-records/${recordId}`);
   };
 
-  // `false` tells the form nothing was saved so it keeps what the user typed (#4793). A conflict is left
-  // out on purpose: the typed values are held in `conflictForm` for «overwrite», and «reload» is
-  // meant to drop them. Typed with the form's own contract so that what it answers is checked where
+  // `false` tells the form nothing was saved so it keeps what the user typed (#4793). A conflict answers
+  // `false` too (#4805): `conflictForm` is a snapshot for «overwrite», but the typed values stay in the form,
+  // so the dialog can be left without losing them. It used to answer «saved» because the form had to be
+  // wiped for «reload» to drop the old values; since #4801 «reload» draws the form again (`formKey`) and
+  // no longer needs that. Typed with the form's own contract so that what it answers is checked where
   // the contract is defined.
   const handleSubmit: SessionCreateFormProps['onSubmit'] = async data => {
     try {
@@ -114,7 +131,7 @@ export default function EditPlayRecordPage() {
     } catch (error) {
       if (error instanceof UpdatePlayRecordError && error.kind === 'conflict') {
         setConflictForm(data);
-        return;
+        return false;
       }
       toast.error(t('playRecords.edit.error.updateFailed'), {
         description: error instanceof Error ? error.message : 'Unknown error',
@@ -135,6 +152,8 @@ export default function EditPlayRecordPage() {
       const fresh = await playRecordsApi.getRecord(recordId);
       queryClient.setQueryData(['play-records', 'detail', recordId], fresh);
       setBaseState({ recordId, record: fresh });
+      // Drawn again from the top, as it was when a conflict reset the step (#4805).
+      resetSessionCreation();
       setFormKey(key => key + 1);
     } catch (error) {
       queryClient.invalidateQueries({ queryKey: ['play-records', 'detail', recordId] });
@@ -147,8 +166,16 @@ export default function EditPlayRecordPage() {
     }
   };
 
+  // «Continua a modificare», ESC and a click outside the dialog: leave it and keep editing. The form still
+  // holds what was typed (the conflict answered `false`) and the next «Salva» is checked against the `xmin`
+  // of `base`, so it meets the conflict again instead of overwriting anything (#4805).
+  const handleConflictContinue = () => setConflictForm(null);
+
+  // One «Sovrascrivi» at a time. The read that precedes the send is covered by neither
+  // `updateMutation.isPending` nor `isReloading`, so `isOverwriting` turns the buttons off for it too.
   const handleConflictOverwrite = async () => {
     if (!conflictForm) return;
+    setIsOverwriting(true);
     try {
       const fresh = await playRecordsApi.getRecord(recordId);
       await submitUpdate(conflictForm, fresh.xmin);
@@ -158,11 +185,14 @@ export default function EditPlayRecordPage() {
         toast.warning(t('playRecords.edit.conflict.stillConflict'));
         return;
       }
-      // The dialog stays and so does `conflictForm`: the form was already cleared when the conflict came
-      // back, so the typed values live only there, and dropping them here would lose them (#4801).
+      // The dialog stays and so does `conflictForm`, so it can be retried; «Continua a modificare» is the
+      // way out that keeps what was typed (#4805). «Ricarica» is the one that drops it.
       toast.error(t('playRecords.edit.error.updateFailed'), {
         description: error instanceof Error ? error.message : 'Unknown error',
       });
+    } finally {
+      // A successful save has already pushed the route: the page may be gone by now.
+      if (isMountedRef.current) setIsOverwriting(false);
     }
   };
 
@@ -315,15 +345,17 @@ export default function EditPlayRecordPage() {
       {/* #2437-1: Conflict resolution dialog */}
       <PlayRecordConflictDialog
         open={conflictForm !== null}
-        isOverwriting={updateMutation.isPending || isReloading}
+        isOverwriting={updateMutation.isPending || isReloading || isOverwriting}
         labels={{
           title: t('playRecords.edit.conflict.title'),
           description: t('playRecords.edit.conflict.description'),
           reload: t('playRecords.edit.conflict.reload'),
           overwrite: t('playRecords.edit.conflict.overwrite'),
+          continueEditing: t('playRecords.edit.conflict.continueEditing'),
         }}
         onReload={handleConflictReload}
         onOverwrite={handleConflictOverwrite}
+        onContinueEditing={handleConflictContinue}
       />
     </div>
   );

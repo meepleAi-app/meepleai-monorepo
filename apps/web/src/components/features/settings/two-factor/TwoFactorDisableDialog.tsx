@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AlertCircle, Loader2 } from 'lucide-react';
@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { api } from '@/lib/api';
+import { parseTwoFactorCode } from '@/lib/auth/twoFactorCode';
 
 interface Props {
   readonly open: boolean;
@@ -26,9 +27,19 @@ export function TwoFactorDisableDialog({ open, onClose }: Props): React.JSX.Elem
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const passwordId = useId();
+  const codeId = useId();
+  const codeHelpId = useId();
+
+  // The authenticator's 6 digits OR a backup code, in the shape the server compares (#4806). A person
+  // who lost the phone has only the backup codes, and the field used to take nothing but 6 digits.
+  const parsedCode = parseTwoFactorCode(code);
 
   const disable = useMutation({
-    mutationFn: () => api.auth.disable2FA(password, code),
+    mutationFn: () => {
+      if (parsedCode === null) throw new Error('Enter a 6-digit code or a backup code');
+      return api.auth.disable2FA(password, parsedCode.value);
+    },
     onSuccess: result => {
       if (result.success) {
         setError(null);
@@ -63,16 +74,21 @@ export function TwoFactorDisableDialog({ open, onClose }: Props): React.JSX.Elem
         <DialogHeader>
           <DialogTitle>Disable two-factor authentication</DialogTitle>
           <DialogDescription>
-            Conferma con la tua password e un codice TOTP corrente.
+            Confirm with your password and a current authenticator code, or one of your backup
+            codes.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
           <div>
-            <label className="text-xs font-mono font-bold uppercase text-muted-foreground tracking-wide">
+            <label
+              htmlFor={passwordId}
+              className="text-xs font-mono font-bold uppercase text-muted-foreground tracking-wide"
+            >
               Password
             </label>
             <Input
+              id={passwordId}
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
@@ -81,19 +97,29 @@ export function TwoFactorDisableDialog({ open, onClose }: Props): React.JSX.Elem
             />
           </div>
           <div>
-            <label className="text-xs font-mono font-bold uppercase text-muted-foreground tracking-wide">
-              Authenticator code
+            <label
+              htmlFor={codeId}
+              className="text-xs font-mono font-bold uppercase text-muted-foreground tracking-wide"
+            >
+              Authenticator or backup code
             </label>
             <Input
+              id={codeId}
               type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              maxLength={6}
               value={code}
-              onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
-              placeholder="123456"
+              onChange={e => setCode(e.target.value)}
+              placeholder="123456 or ABCD-2345"
+              autoComplete="one-time-code"
+              autoCapitalize="characters"
+              spellCheck={false}
+              maxLength={12}
+              aria-describedby={codeHelpId}
               className="font-mono tracking-widest"
             />
+            <p id={codeHelpId} className="mt-1 text-xs text-muted-foreground">
+              The 6 digits from your app. If you cannot reach it, one of your backup codes
+              (XXXX-XXXX) works too; each one only once.
+            </p>
           </div>
           {error && (
             <div
@@ -111,7 +137,7 @@ export function TwoFactorDisableDialog({ open, onClose }: Props): React.JSX.Elem
             <Button
               variant="destructive"
               onClick={() => disable.mutate()}
-              disabled={disable.isPending || password.length === 0 || code.length !== 6}
+              disabled={disable.isPending || password.length === 0 || parsedCode === null}
               className="flex-1"
             >
               {disable.isPending && <Loader2 className="h-3 w-3 animate-spin mr-1" />}

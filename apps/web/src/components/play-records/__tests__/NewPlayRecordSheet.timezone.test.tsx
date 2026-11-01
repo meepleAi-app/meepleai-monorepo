@@ -12,13 +12,25 @@
  * assigned, so the zone the process started in is captured by name and assigned back.
  */
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { NewPlayRecordSheet } from '../NewPlayRecordSheet';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
+}));
+
+// What the sheet sends to the server when it saves.
+const mockCreateRecord = vi.fn();
+vi.mock('@/lib/api/play-records.api', () => ({
+  playRecordsApi: {
+    createRecord: (request: unknown) => mockCreateRecord(request),
+    addPlayer: vi.fn(),
+    getRecord: vi.fn(),
+    recordScore: vi.fn(),
+    updateRecord: vi.fn(),
+  },
 }));
 
 vi.mock('@/components/features/game-picker', () => ({
@@ -29,6 +41,7 @@ const ORIGINAL_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
+  mockCreateRecord.mockReset();
 });
 
 afterEach(() => {
@@ -113,22 +126,59 @@ describe('NewPlayRecordSheet — «today» as the calendar date of the browser (
     });
 
     it('proposes the local date again when the sheet is reopened', () => {
-      // Closed at a moment long before, then reopened «now»: the reset on reopening must not use the UTC
-      // date either.
+      // Mounted closed on an earlier day, then reopened «now»: the date can only be right if the reset on
+      // reopening computes it again — and in the browser's zone.
       setNow(testCase);
+      vi.setSystemTime(new Date('2026-01-15T12:00:00.000Z'));
       const { rerender } = render(<NewPlayRecordSheet open={false} onOpenChange={vi.fn()} />);
 
+      vi.setSystemTime(new Date(testCase.now));
       rerender(<NewPlayRecordSheet open onOpenChange={vi.fn()} />);
 
       expect(dateInput()).toHaveValue(testCase.localDate);
     });
+
+    it('saves the proposed day as an instant the server does not take for the future', async () => {
+      // The server reads a bare `YYYY-MM-DD` as midnight UTC and refuses a date after «now»: east of UTC,
+      // «today» in the browser would be refused for the first hours of the day. What goes out is the
+      // instant at which the proposed day began in the browser's zone.
+      setNow(testCase);
+      mockCreateRecord.mockResolvedValue('record-1');
+      render(<NewPlayRecordSheet open onOpenChange={vi.fn()} preselectedGameName="Catan" />);
+
+      fireEvent.click(screen.getByTestId('next-step-btn')); // → players
+      fireEvent.click(screen.getByTestId('next-step-btn')); // → summary
+      fireEvent.click(screen.getByTestId('save-record-btn'));
+      await waitFor(() => expect(mockCreateRecord).toHaveBeenCalledTimes(1));
+
+      const { sessionDate } = mockCreateRecord.mock.calls[0][0] as { sessionDate: string };
+      const sent = new Date(sessionDate);
+      expect(sent.getTime()).toBeLessThanOrEqual(new Date(testCase.now).getTime());
+      expect(sent.toLocaleDateString('en-CA')).toBe(testCase.localDate);
+    });
+  });
+
+  it('refuses an emptied date with a message instead of saving or throwing', () => {
+    mockCreateRecord.mockReset();
+    render(<NewPlayRecordSheet open onOpenChange={vi.fn()} preselectedGameName="Catan" />);
+
+    fireEvent.change(dateInput(), { target: { value: '' } });
+    fireEvent.click(screen.getByTestId('next-step-btn')); // → players
+    fireEvent.click(screen.getByTestId('next-step-btn')); // → summary
+    fireEvent.click(screen.getByTestId('save-record-btn'));
+
+    expect(screen.getByTestId('save-error')).toHaveTextContent('Scegli la data della partita');
+    expect(mockCreateRecord).not.toHaveBeenCalled();
   });
 
   it('the cases really are moments at which the two dates differ (except the UTC control)', () => {
-    // Guards the table itself: a case whose UTC and local dates coincide would prove nothing.
-    for (const c of CASES.filter(c => c.zone !== 'UTC')) {
-      expect(c.localDate).not.toBe(c.utcDate);
+    // Guards the table itself, with an oracle that does not depend on the zone of the process: a case whose
+    // UTC and local dates coincide would prove nothing.
+    for (const c of CASES) {
+      const local = new Intl.DateTimeFormat('en-CA', { timeZone: c.zone }).format(new Date(c.now));
+      expect(local).toBe(c.localDate);
       expect(new Date(c.now).toISOString().slice(0, 10)).toBe(c.utcDate);
+      if (c.zone !== 'UTC') expect(c.localDate).not.toBe(c.utcDate);
     }
   });
 });

@@ -44,6 +44,17 @@ function todayAsDateInputValue(): string {
   return isoToDatetimeLocalValue(new Date().toISOString()).slice(0, 10);
 }
 
+/**
+ * The instant at which the calendar day of an `<input type="date">` began in the browser's zone.
+ *
+ * What goes to the server is an instant, not the bare `YYYY-MM-DD`: the server reads a bare date as
+ * midnight UTC and refuses a session date after «now», so for a browser east of UTC «today» would be
+ * refused for the first hours of the day (#4789) — and for one west of UTC it would land on the day before.
+ */
+function startOfLocalDay(dateInputValue: string): string {
+  return new Date(`${dateInputValue}T00:00:00`).toISOString();
+}
+
 // ── Step indicator ────────────────────────────────────────────────────────────
 
 function StepIndicator({ current, total }: { current: number; total: number }) {
@@ -159,6 +170,11 @@ export function NewPlayRecordSheet({
 
   const handleSave = async () => {
     if (!gameName.trim()) return;
+    // An emptied date input is `''`: say so instead of failing on it below.
+    if (!sessionDate) {
+      setErrorMsg('Scegli la data della partita.');
+      return;
+    }
     setSaving(true);
     setErrorMsg(null);
 
@@ -167,7 +183,7 @@ export function NewPlayRecordSheet({
       const recordId = await playRecordsApi.createRecord({
         gameId: gameId ?? undefined,
         gameName: gameName.trim(),
-        sessionDate,
+        sessionDate: startOfLocalDay(sessionDate),
         visibility,
       });
 

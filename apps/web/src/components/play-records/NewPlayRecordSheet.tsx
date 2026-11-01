@@ -18,6 +18,7 @@ import { GradientButton } from '@/components/ui/buttons/GradientButton';
 import { playRecordsApi } from '@/lib/api/play-records.api';
 import type { PlayRecordVisibility } from '@/lib/api/schemas/play-records.schemas';
 import { cn } from '@/lib/utils';
+import { isoToDatetimeLocalValue } from '@/lib/utils/datetimeLocal';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,6 +34,14 @@ export interface NewPlayRecordSheetProps {
   /** Pre-seleziona un gioco dalla library card */
   preselectedGameId?: string;
   preselectedGameName?: string;
+}
+
+/**
+ * Today as the value of an `<input type="date">`: the calendar date of the browser, not the UTC one,
+ * which differs from it for a few hours a day (#4789).
+ */
+function todayAsDateInputValue(): string {
+  return isoToDatetimeLocalValue(new Date().toISOString()).slice(0, 10);
 }
 
 // ── Step indicator ────────────────────────────────────────────────────────────
@@ -72,7 +81,7 @@ export function NewPlayRecordSheet({
   // Step 1 — Gioco
   const [gameId, setGameId] = useState<string | undefined>(preselectedGameId);
   const [gameName, setGameName] = useState(preselectedGameName ?? '');
-  const [sessionDate, setSessionDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [sessionDate, setSessionDate] = useState(todayAsDateInputValue);
   const [visibility, setVisibility] = useState<PlayRecordVisibility>('Private');
 
   // Step 2 — Giocatori
@@ -98,7 +107,7 @@ export function NewPlayRecordSheet({
       setSaving(false);
       setGameId(preselectedGameId);
       setGameName(preselectedGameName ?? '');
-      setSessionDate(new Date().toISOString().slice(0, 10));
+      setSessionDate(todayAsDateInputValue());
       setVisibility('Private');
       setPlayers([]);
       setNewPlayerName('');

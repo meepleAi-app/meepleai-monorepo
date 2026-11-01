@@ -13,6 +13,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from '@/lib/api';
+import { ApiError } from '@/lib/api/core/errors';
 
 import { TwoFactorDisableDialog } from '../two-factor/TwoFactorDisableDialog';
 
@@ -94,10 +95,14 @@ describe('TwoFactorDisableDialog', () => {
   });
 
   it('shows what the server said when it refuses the code, and stays open', async () => {
-    disable2FA.mockResolvedValue({
-      success: false,
-      errorMessage: 'Invalid verification code',
-    } as Awaited<ReturnType<typeof api.auth.disable2FA>>);
+    // A refusal is an error status with `{ error }`, not a resolved `{ success: false }` (#4806).
+    disable2FA.mockRejectedValue(
+      new ApiError({
+        message: 'Invalid verification code',
+        statusCode: 400,
+        endpoint: '/api/v1/auth/2fa/disable',
+      })
+    );
     const { user, onClose } = renderDialog();
 
     await user.type(passwordField(), ACCOUNT_SECRET);
@@ -106,6 +111,61 @@ describe('TwoFactorDisableDialog', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Invalid verification code');
     expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('says the password is wrong, not «failed with status 401», when the server refuses it', async () => {
+    // The 401 for a wrong password has no body, so its message is the generic one.
+    disable2FA.mockRejectedValue(
+      new ApiError({
+        message: 'API /api/v1/auth/2fa/disable failed with status 401',
+        statusCode: 401,
+        endpoint: '/api/v1/auth/2fa/disable',
+      })
+    );
+    const { user } = renderDialog();
+
+    await user.type(passwordField(), ACCOUNT_SECRET);
+    await user.type(codeField(), '123456');
+    await user.click(submit());
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('The password is not correct.');
+  });
+
+  it('keeps what was typed after a refusal, so only the wrong part has to be retyped', async () => {
+    disable2FA.mockRejectedValue(
+      new ApiError({ message: 'Invalid verification code', statusCode: 400, endpoint: '/x' })
+    );
+    const { user } = renderDialog();
+
+    await user.type(passwordField(), ACCOUNT_SECRET);
+    await user.type(codeField(), '654321');
+    await user.click(submit());
+    await screen.findByRole('alert');
+
+    expect(passwordField()).toHaveValue(ACCOUNT_SECRET);
+    expect(codeField()).toHaveValue('654321');
+  });
+
+  it('clears the password and the code when the dialog is cancelled', async () => {
+    const { user, onClose } = renderDialog();
+
+    await user.type(passwordField(), ACCOUNT_SECRET);
+    await user.type(codeField(), '654321');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(passwordField()).toHaveValue('');
+    expect(codeField()).toHaveValue('');
+  });
+
+  it('sends a code of eight digits as a backup code, the way the parser reads it', async () => {
+    const { user } = renderDialog();
+
+    await user.type(passwordField(), ACCOUNT_SECRET);
+    await user.type(codeField(), '23456789');
+    await user.click(submit());
+
+    await waitFor(() => expect(disable2FA).toHaveBeenCalledWith(ACCOUNT_SECRET, '2345-6789'));
   });
 
   it('closes once 2FA is off', async () => {

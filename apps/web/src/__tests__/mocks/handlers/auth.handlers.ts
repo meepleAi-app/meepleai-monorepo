@@ -22,14 +22,15 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 export const authHandlers = [
   // POST /api/v1/auth/register - User registration
   http.post(`${API_BASE}/api/v1/auth/register`, async ({ request }) => {
-    const body = await request.json() as { email: string; password: string; displayName?: string };
+    const body = (await request.json()) as {
+      email: string;
+      password: string;
+      displayName?: string;
+    };
 
     // Simulate email conflict
     if (body.email === 'existing@meepleai.dev') {
-      return HttpResponse.json(
-        { error: 'Email already registered' },
-        { status: 409 }
-      );
+      return HttpResponse.json({ error: 'Email already registered' }, { status: 409 });
     }
 
     // Success response
@@ -48,14 +49,11 @@ export const authHandlers = [
 
   // POST /api/v1/auth/login - User login
   http.post(`${API_BASE}/api/v1/auth/login`, async ({ request }) => {
-    const body = await request.json() as { email: string; password: string };
+    const body = (await request.json()) as { email: string; password: string };
 
     // Simulate invalid credentials
     if (body.password === 'wrongpassword') {
-      return HttpResponse.json(
-        { error: 'Invalid credentials' },
-        { status: 401 }
-      );
+      return HttpResponse.json({ error: 'Invalid credentials' }, { status: 401 });
     }
 
     // Return auth response based on email
@@ -107,14 +105,11 @@ export const authHandlers = [
 
   // POST /api/v1/auth/session/extend - Extend session
   http.post(`${API_BASE}/api/v1/auth/session/extend`, () => {
-    return HttpResponse.json(
-      createMockSessionStatus({ remainingMinutes: 30 }),
-      {
-        headers: {
-          'X-Correlation-Id': `test-correlation-${Date.now()}`,
-        },
-      }
-    );
+    return HttpResponse.json(createMockSessionStatus({ remainingMinutes: 30 }), {
+      headers: {
+        'X-Correlation-Id': `test-correlation-${Date.now()}`,
+      },
+    });
   }),
 
   // POST /api/v1/auth/2fa/enable - Enable 2FA
@@ -128,21 +123,19 @@ export const authHandlers = [
 
   // POST /api/v1/auth/2fa/verify - Verify 2FA code
   http.post(`${API_BASE}/api/v1/auth/2fa/verify`, async ({ request }) => {
-    const body = await request.json() as { code: string };
+    const body = (await request.json()) as { code: string };
 
     if (body.code === '123456') {
       return HttpResponse.json({ success: true });
     }
 
-    return HttpResponse.json(
-      { error: 'Invalid 2FA code' },
-      { status: 401 }
-    );
+    return HttpResponse.json({ error: 'Invalid 2FA code' }, { status: 401 });
   }),
 
   // POST /api/v1/auth/2fa/disable - Disable 2FA
   http.post(`${API_BASE}/api/v1/auth/2fa/disable`, () => {
-    return HttpResponse.json({ success: true });
+    // The real answer on success (#4806).
+    return HttpResponse.json({ message: 'Two-factor authentication disabled successfully' });
   }),
 
   // OAuth endpoints
@@ -159,16 +152,10 @@ export const authHandlers = [
 
   // Error simulation handlers (for testing error scenarios)
   http.post(`${API_BASE}/api/v1/auth/login-error-500`, () => {
-    return HttpResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return HttpResponse.json({ error: 'Internal server error' }, { status: 500 });
   }),
 
   http.get(`${API_BASE}/api/v1/auth/me-unauthorized`, () => {
-    return HttpResponse.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+    return HttpResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }),
 ];

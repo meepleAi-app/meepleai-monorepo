@@ -14,6 +14,11 @@ describe('parseTwoFactorCode (#4806)', () => {
     ['abcd 2345', 'backup', 'ABCD-2345'],
     ['ABCD2345', 'backup', 'ABCD-2345'],
     ['  ab cd - 23 45 ', 'backup', 'ABCD-2345'],
+    // Pasted from a chat or a note app: a typographic dash for the hyphen, an invisible character at the end.
+    ['ABCD\u20132345', 'backup', 'ABCD-2345'],
+    ['ABCD\u22122345', 'backup', 'ABCD-2345'],
+    ['123456\u200B', 'totp', '123456'],
+    ['\uFEFFABCD-2345', 'backup', 'ABCD-2345'],
   ])('reads %j as a %s code and hands the server %j', (input, kind, value) => {
     expect(parseTwoFactorCode(input)).toStrictEqual({ kind, value });
   });
@@ -28,6 +33,11 @@ describe('parseTwoFactorCode (#4806)', () => {
     ['ABC-12345'], // the dash in the wrong place
     ['ABCD_2345'], // not a dash
     ['AB!D-2345'], // a character that is no part of any code
+    // Non-ASCII letters that `toUpperCase` would turn into something else: they are not a code.
+    ['\u00dfbc2345'], // ß → SS
+    ['\ufb01cd2345'], // ﬁ → FI
+    ['\u017fBCD-2345'], // ſ → S
+    ['\u0131BCD-2345'], // ı → I
   ])('is not a code yet: %j', input => {
     expect(parseTwoFactorCode(input)).toBeNull();
   });

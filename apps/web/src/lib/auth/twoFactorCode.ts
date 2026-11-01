@@ -18,19 +18,27 @@ export type TwoFactorCode =
   | { readonly kind: 'backup'; readonly value: string };
 
 const TOTP = /^\d{6}$/;
-const BACKUP = /^([A-Z0-9]{4})-?([A-Z0-9]{4})$/;
+// Case-insensitive WITHOUT the `u` flag on purpose: in that mode `ſ` (long s), `ı` (dotless i) and the
+// Kelvin sign do not match `[a-z]`, so no non-ASCII letter can pass for one and be turned into another by
+// `toUpperCase` (`ß` → `SS`, `ﬁ` → `FI`) into a code the person never typed.
+const BACKUP = /^([a-z0-9]{4})-?([a-z0-9]{4})$/i;
+
+// What pasting from a chat, a word processor or a note app brings along: zero-width characters and soft
+// hyphens that are invisible, and typographic dashes in place of the hyphen.
+const INVISIBLE = /[\u200B-\u200F\u2060\u00AD\uFEFF]/g;
+const DASHES = /[\u2010-\u2015\u2212]/g;
 
 /**
  * Reads what was typed into the code field. Returns the code as the server wants it, or `null` while
  * it is not (yet) one of the two shapes.
  */
 export function parseTwoFactorCode(input: string): TwoFactorCode | null {
-  const compact = input.toUpperCase().replace(/\s+/g, '');
+  const compact = input.replace(INVISIBLE, '').replace(DASHES, '-').replace(/\s+/g, '');
 
   if (TOTP.test(compact)) return { kind: 'totp', value: compact };
 
   const backup = BACKUP.exec(compact);
-  if (backup) return { kind: 'backup', value: `${backup[1]}-${backup[2]}` };
+  if (backup) return { kind: 'backup', value: `${backup[1]}-${backup[2]}`.toUpperCase() };
 
   return null;
 }

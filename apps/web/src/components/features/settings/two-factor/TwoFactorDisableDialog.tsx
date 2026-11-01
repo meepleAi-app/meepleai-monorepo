@@ -15,6 +15,7 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
 import { api } from '@/lib/api';
+import { ApiError } from '@/lib/api/core/errors';
 import { parseTwoFactorCode } from '@/lib/auth/twoFactorCode';
 
 interface Props {
@@ -40,16 +41,19 @@ export function TwoFactorDisableDialog({ open, onClose }: Props): React.JSX.Elem
       if (parsedCode === null) throw new Error('Enter a 6-digit code or a backup code');
       return api.auth.disable2FA(password, parsedCode.value);
     },
-    onSuccess: result => {
-      if (result.success) {
-        setError(null);
-        void queryClient.invalidateQueries({ queryKey: ['2fa-status'] });
-        handleClose();
-      } else {
-        setError(result.errorMessage ?? 'Failed to disable 2FA');
-      }
+    // A refusal is an error status, not `{ success: false }` (#4806): it lands in `onError`.
+    onSuccess: () => {
+      setError(null);
+      void queryClient.invalidateQueries({ queryKey: ['2fa-status'] });
+      handleClose();
     },
-    onError: (err: Error) => setError(err.message ?? 'Failed to disable 2FA'),
+    onError: (err: Error) =>
+      // A wrong password is a bare 401 with no body, whose message would be «API … failed with status 401».
+      setError(
+        err instanceof ApiError && err.statusCode === 401
+          ? 'The password is not correct.'
+          : (err.message ?? 'Failed to disable 2FA')
+      ),
   });
 
   function reset(): void {

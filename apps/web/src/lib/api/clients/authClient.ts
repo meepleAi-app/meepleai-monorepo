@@ -20,7 +20,7 @@ import {
   TotpSetupResponseSchema,
   TwoFactorStatusDtoSchema,
   Enable2FAResultSchema,
-  Disable2FAResultSchema,
+  Disable2FAResponseSchema,
   UserProfileSchema,
   UpdateProfileResponseSchema,
   ChangePasswordResponseSchema,
@@ -360,11 +360,14 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
      * Disable 2FA
      */
     async disable2FA(password: string, code: string): Promise<Disable2FAResult> {
-      return httpClient.post(
+      // The server answers `{ message }` on success and an error status otherwise (#4806): a failure
+      // throws, so reaching the next line IS the success.
+      await httpClient.post(
         '/api/v1/auth/2fa/disable',
         { password, code },
-        Disable2FAResultSchema
+        Disable2FAResponseSchema
       );
+      return { success: true };
     },
 
     // ========== User Profile ==========

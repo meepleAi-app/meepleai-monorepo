@@ -46,6 +46,45 @@ public sealed class GetDocumentsWithUnreliablePageNumbersQueryHandlerTests
     }
 
     [Fact]
+    public async Task Handle_OneStrayPageDoesNotRestoreBeliefInADocumentWhoseBodyAllSaysPageOne()
+    {
+        // Tables extracted after the indexing are written with the page of their region: one of them next to forty
+        // passages that still say page 1 must not make a «two distinct pages» rule believe the forty.
+        var rulebook = await SeedAsync(pageCount: 12, chunkPages: [.. Enumerable.Repeat<int?>(1, 40), 7]);
+
+        var result = await _sut.Handle(new GetDocumentsWithUnreliablePageNumbersQuery([rulebook]), CancellationToken.None);
+
+        result.Should().Equal(rulebook);
+    }
+
+    [Fact]
+    public async Task Handle_TheMostClaimedPageHoldingMoreThanHalf_IsUnreliable_ExactlyHalfIsNot()
+    {
+        var threeOfFour = await SeedAsync(pageCount: 10, chunkPages: [1, 1, 1, 2]);
+        var twoOfFour = await SeedAsync(pageCount: 10, chunkPages: [1, 1, 2, 3]);
+
+        var result = await _sut.Handle(
+            new GetDocumentsWithUnreliablePageNumbersQuery([threeOfFour, twoOfFour]),
+            CancellationToken.None);
+
+        result.Should().Equal(threeOfFour);
+    }
+
+    [Fact]
+    public async Task Handle_APageNumberOfZeroIsNoPage_SoItDoesNotMakeADocumentTellPagesApart()
+    {
+        // The indexing paths write chunk.Page as it comes (0 when unset), and the citation clamps it to 1.
+        var rulebook = await SeedAsync(pageCount: 12, chunkPages: [0, 0, 1, 1]);
+        var onlyZeros = await SeedAsync(pageCount: 12, chunkPages: [0, 0, 0]);
+
+        var result = await _sut.Handle(
+            new GetDocumentsWithUnreliablePageNumbersQuery([rulebook, onlyZeros]),
+            CancellationToken.None);
+
+        result.Should().BeEquivalentTo(new[] { rulebook, onlyZeros });
+    }
+
+    [Fact]
     public async Task Handle_TwoPagesTwoNumbers_IsReliable_TheSmallestDocumentThatCanTellThemApart()
     {
         var leaflet = await SeedAsync(pageCount: 2, chunkPages: [1, 2]);

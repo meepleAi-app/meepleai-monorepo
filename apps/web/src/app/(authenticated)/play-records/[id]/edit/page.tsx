@@ -57,10 +57,15 @@ export default function EditPlayRecordPage() {
   // by then: a refetch (window focus, «Ricarica») moves `record.xmin` while the form still shows the old
   // values, and saving the old values with the new `xmin` passes the concurrency check and overwrites the
   // other edit without anyone choosing to. Set once, when the record first arrives; «Ricarica» replaces it
-  // and draws the form again (`formKey`).
-  const [base, setBase] = useState<PlayRecordDto | null>(null);
+  // and draws the form again (`formKey`). It carries the route id it was taken for, so it can never be
+  // read as the record of another id.
+  const [baseState, setBaseState] = useState<{ recordId: string; record: PlayRecordDto } | null>(
+    null
+  );
+  const base = baseState?.recordId === recordId ? baseState.record : null;
   const [formKey, setFormKey] = useState(0);
-  if (record && base === null) setBase(record);
+  const [isReloading, setIsReloading] = useState(false);
+  if (record && base === null) setBaseState({ recordId, record });
   const updateMutation = useUpdateRecord(recordId);
   const deleteMutation = useDeleteRecord(recordId);
 
@@ -119,19 +124,26 @@ export default function EditPlayRecordPage() {
   };
 
   // «Ricarica» reads the record and draws the form again from it: the old values are dropped on purpose,
-  // and the next «Salva» is checked against the `xmin` of what the form now shows. If the read fails the
-  // dialog stays, so the choice can be made again.
+  // and the next «Salva» is checked against the `xmin` of what the form now shows. The buttons are off
+  // while it reads, so a second click cannot draw the form twice and «Sovrascrivi» cannot run beside it.
+  // If the read fails the dialog closes anyway, as it always did, and the query is invalidated: a record
+  // that is gone ends in the page's own error state, with a way back. The form keeps its old `base`, so a
+  // «Salva» from there is still checked against the old `xmin`.
   const handleConflictReload = async () => {
+    setIsReloading(true);
     try {
       const fresh = await playRecordsApi.getRecord(recordId);
       queryClient.setQueryData(['play-records', 'detail', recordId], fresh);
-      setBase(fresh);
+      setBaseState({ recordId, record: fresh });
       setFormKey(key => key + 1);
-      setConflictForm(null);
     } catch (error) {
+      queryClient.invalidateQueries({ queryKey: ['play-records', 'detail', recordId] });
       toast.error(t('playRecords.edit.error.loadFailed'), {
         description: error instanceof Error ? error.message : 'Unknown error',
       });
+    } finally {
+      setConflictForm(null);
+      setIsReloading(false);
     }
   };
 
@@ -303,7 +315,7 @@ export default function EditPlayRecordPage() {
       {/* #2437-1: Conflict resolution dialog */}
       <PlayRecordConflictDialog
         open={conflictForm !== null}
-        isOverwriting={updateMutation.isPending}
+        isOverwriting={updateMutation.isPending || isReloading}
         labels={{
           title: t('playRecords.edit.conflict.title'),
           description: t('playRecords.edit.conflict.description'),

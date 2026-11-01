@@ -19,8 +19,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mocks (must be registered before component import)
 // ---------------------------------------------------------------------------
 
+// The language the page is shown in (#4783): a test moves it to see that the register call carries it.
+let mockLocale = 'it';
 vi.mock('@/hooks/useTranslation', () => ({
-  useTranslation: () => ({ t: (k: string) => k }),
+  useTranslation: () => ({ t: (k: string) => k, locale: mockLocale }),
 }));
 
 const pushMock = vi.fn().mockResolvedValue(undefined);
@@ -79,6 +81,7 @@ function resolveMode(mode: { publicRegistrationEnabled: boolean; oauthEnabled?: 
 }
 
 beforeEach(() => {
+  mockLocale = 'it';
   vi.clearAllMocks();
   // default: public registration with OAuth enabled
   resolveMode({ publicRegistrationEnabled: true, oauthEnabled: true });
@@ -168,6 +171,28 @@ describe('RegisterPageContent (v2 AuthCard)', () => {
       expect(link).toHaveAttribute('href', '/login');
     });
 
+    it('sends the language the page is shown in, whichever it is (#4783)', async () => {
+      mockLocale = 'en';
+      mockAuth.register.mockResolvedValueOnce({ id: 'u1', email: 'new@example.com', role: 'User' });
+
+      await renderAndWait('public');
+
+      fireEvent.change(screen.getByLabelText(/auth\.register\.emailLabel/i), {
+        target: { value: 'new@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText(/auth\.register\.passwordLabel/i), {
+        target: { value: 'StrongPassword1' },
+      });
+      fireEvent.click(screen.getByTestId('register-terms'));
+      fireEvent.submit(screen.getByTestId('register-form'));
+
+      await waitFor(() => {
+        expect(mockAuth.register).toHaveBeenCalledWith(expect.objectContaining({ locale: 'en' }));
+      });
+      // The page redirects a moment after registering: wait for it, or it lands in the next test.
+      await waitFor(() => expect(pushMock).toHaveBeenCalled());
+    });
+
     it('submits the register form, tracks sign-up, and redirects to /verification-pending', async () => {
       mockAuth.register.mockResolvedValueOnce({
         id: 'u1',
@@ -191,6 +216,7 @@ describe('RegisterPageContent (v2 AuthCard)', () => {
           email: 'new@example.com',
           password: 'StrongPassword1',
           termsAccepted: true,
+          locale: 'it',
         });
       });
 

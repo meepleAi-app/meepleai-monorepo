@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.Authentication.Domain.Constants;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
@@ -87,7 +88,8 @@ internal sealed class ActivateInvitedAccountCommandHandler
         var passwordHash = PasswordHash.Create(command.Password);
 
         // 7. Activate user (sets password, status → Active, email verified)
-        user.ActivateFromInvitation(passwordHash, _timeProvider);
+        user.ActivateFromInvitation(
+            passwordHash, _timeProvider, UserLanguage.Resolve(null, command.AcceptLanguage));
 
         // 8. Mark token as accepted
         invitation.MarkAccepted(user.Id);

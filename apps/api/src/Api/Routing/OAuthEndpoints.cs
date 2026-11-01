@@ -158,7 +158,8 @@ Rate limited to 10 requests per minute per IP address.
                 Code = code,
                 State = state,
                 IpAddress = sessionIpAddress,
-                UserAgent = userAgent
+                UserAgent = userAgent,
+                AcceptLanguage = context.Request.Headers.AcceptLanguage.ToString()
             };
 
             var result = await mediator.Send(command, ct).ConfigureAwait(false);

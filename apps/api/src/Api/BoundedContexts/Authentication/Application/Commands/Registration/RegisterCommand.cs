@@ -25,7 +25,11 @@ internal record RegisterCommand(
     // #2954 F1: whether the user accepted the ToS on the register form. When true,
     // the handler records an append-only TermsAcceptance (Context=Registration) in
     // the same transaction as the new user. Enforced server-side at the endpoint.
-    bool TermsAccepted = false
+    bool TermsAccepted = false,
+    // #4783: the language the new account starts with. `Locale` is what the client says the user sees,
+    // `AcceptLanguage` the raw header; see UserLanguage.Resolve. Both optional.
+    string? Locale = null,
+    string? AcceptLanguage = null
 ) : ICommand<RegisterResponse>;
 
 /// <summary>

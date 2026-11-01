@@ -117,7 +117,9 @@ internal class RegisterCommandHandler : ICommandHandler<RegisterCommand, Registe
             email: email,
             displayName: command.DisplayName.Trim(),
             passwordHash: passwordHash,
-            role: role
+            role: role,
+            // #4783: what the user sees, or what their browser asks for; never a blind "en".
+            language: UserLanguage.Resolve(command.Locale, command.AcceptLanguage)
         );
 
         // Set 7-day grace period for email verification

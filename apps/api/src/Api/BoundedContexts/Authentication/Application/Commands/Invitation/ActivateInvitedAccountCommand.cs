@@ -9,5 +9,9 @@ namespace Api.BoundedContexts.Authentication.Application.Commands.Invitation;
 /// </summary>
 internal sealed record ActivateInvitedAccountCommand(
     string Token,
-    string Password
+    string Password,
+    // #4783: the invitee's browser is the first evidence of the language they read. The account was created
+    // by an admin, with no browser in front of it, and starts in the default; the activation is where a
+    // browser appears. See UserLanguage.Resolve.
+    string? AcceptLanguage = null
 ) : ICommand<ActivationResultDto>;

@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using Api.BoundedContexts.Authentication.Application.DTOs;
+using Api.BoundedContexts.Authentication.Domain.Constants;
 using Api.BoundedContexts.Authentication.Domain.Entities;
 using Api.BoundedContexts.Authentication.Domain.Repositories;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
@@ -74,7 +75,8 @@ internal sealed class AcceptInvitationCommandHandler : ICommandHandler<AcceptInv
             email: email,
             displayName: displayName,
             passwordHash: passwordHash,
-            role: role);
+            role: role,
+            language: UserLanguage.Resolve(null, command.AcceptLanguage));
 
         // Email is trusted (admin-supplied), mark as verified
         user.VerifyEmail();

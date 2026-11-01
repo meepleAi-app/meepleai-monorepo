@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Domain.Constants;
 using Api.BoundedContexts.Authentication.Domain.Events;
 using Api.BoundedContexts.Authentication.Domain.ValueObjects;
 using Api.Middleware.Exceptions; // C3: ConflictException (HTTP 409 mapping)
@@ -98,7 +99,8 @@ public sealed class User : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Creates a new user.
+    /// Creates a new user. <paramref name="language"/> is the language the account starts with (#4783);
+    /// without it, or with one the product cannot write in, it is <see cref="UserLanguage.Default"/>.
     /// </summary>
     public User(
         Guid id,
@@ -106,7 +108,8 @@ public sealed class User : AggregateRoot<Guid>
         string displayName,
         PasswordHash passwordHash,
         Role role,
-        UserTier? tier = null) : base(id)
+        UserTier? tier = null,
+        string? language = null) : base(id)
     {
         Email = email ?? throw new ArgumentNullException(nameof(email));
         DisplayName = displayName ?? throw new ArgumentNullException(nameof(displayName));
@@ -117,7 +120,7 @@ public sealed class User : AggregateRoot<Guid>
         CreatedAt = DateTime.UtcNow;
 
         // Default preferences
-        Language = "en";
+        Language = UserLanguage.Resolve(language);
         EmailNotifications = true;
         Theme = "system";
         DataRetentionDays = 90;
@@ -180,7 +183,7 @@ public sealed class User : AggregateRoot<Guid>
             EmailVerified = false,
 
             // Default preferences
-            Language = "en",
+            Language = UserLanguage.Default,
             EmailNotifications = true,
             Theme = "system",
             DataRetentionDays = 90,
@@ -227,7 +230,8 @@ public sealed class User : AggregateRoot<Guid>
         Role role,
         UserTier? tier,
         string oauthProvider,
-        TimeProvider timeProvider)
+        TimeProvider timeProvider,
+        string? language = null)
     {
         ArgumentNullException.ThrowIfNull(email);
         ArgumentNullException.ThrowIfNull(displayName);
@@ -251,7 +255,7 @@ public sealed class User : AggregateRoot<Guid>
             VerificationGracePeriodEndsAt = null,
 
             // Default preferences (mirror standard User ctor defaults)
-            Language = "en",
+            Language = UserLanguage.Resolve(language),
             EmailNotifications = true,
             Theme = "system",
             DataRetentionDays = 90,
@@ -282,8 +286,13 @@ public sealed class User : AggregateRoot<Guid>
     /// </summary>
     /// <param name="passwordHash">The user's chosen password hash.</param>
     /// <param name="timeProvider">Time provider for testability.</param>
+    /// <param name="language">
+    /// The language of the person activating the account (#4783), or null to leave the one the account
+    /// was provisioned with.
+    /// </param>
     /// <exception cref="InvalidOperationException">Thrown when user is not in Pending status.</exception>
-    public void ActivateFromInvitation(PasswordHash passwordHash, TimeProvider timeProvider)
+    public void ActivateFromInvitation(
+        PasswordHash passwordHash, TimeProvider timeProvider, string? language = null)
     {
         ArgumentNullException.ThrowIfNull(passwordHash);
         ArgumentNullException.ThrowIfNull(timeProvider);
@@ -293,6 +302,10 @@ public sealed class User : AggregateRoot<Guid>
 
         PasswordHash = passwordHash;
         Status = UserAccountStatus.Active;
+        // #4783: the account was provisioned with the default language, with no browser in front of it; the
+        // person activating it has one. A caller that knows nothing leaves what is there.
+        if (language is not null)
+            Language = UserLanguage.Resolve(language);
         EmailVerified = true;
         EmailVerifiedAt = timeProvider.GetUtcNow().UtcDateTime;
         VerificationGracePeriodEndsAt = null;

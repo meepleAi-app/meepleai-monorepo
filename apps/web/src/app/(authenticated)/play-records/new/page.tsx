@@ -31,6 +31,9 @@ import type { SessionCreateForm as SessionFormData } from '@/lib/api/schemas/pla
 import { useGameNightPrefill } from '@/lib/domain-hooks/useGameNightPrefill';
 import { useCreatePlayRecord } from '@/lib/domain-hooks/usePlayRecords';
 
+/** A player's name the way the server compares it: trimmed and lowercased (`PlayRecord.AddPlayer`). */
+const norm = (name: string): string => name.trim().toLowerCase();
+
 /**
  * What a record is, for the purpose of resuming a save that stopped half way: the fields `CreatePlayRecord`
  * takes. They cannot all be corrected on the record afterwards (the game, the visibility, the scoring
@@ -67,9 +70,16 @@ async function persistFollowUps(
 
   // Persist the roster. addPlayer returns 204 (no id), so re-fetch afterwards
   // to resolve the created player ids before recording scores.
-  const alreadyThere = new Set((existing?.players ?? []).map(p => p.displayName.toLowerCase()));
+  const alreadyThere = new Set((existing?.players ?? []).map(p => norm(p.displayName)));
+  // A name that is in the form twice is the server's to refuse, as it always was: counting the second one
+  // as «already there» too would turn that error into a silent success on the retry.
+  const taken = new Set<string>();
   for (const player of players) {
-    if (alreadyThere.has(player.name.toLowerCase())) continue;
+    const name = norm(player.name);
+    if (alreadyThere.has(name) && !taken.has(name)) {
+      taken.add(name);
+      continue;
+    }
     await playRecordsApi.addPlayer(recordId, { displayName: player.name });
   }
 
@@ -83,14 +93,17 @@ async function persistFollowUps(
     const unit = data.dimensionUnits?.[dimension];
     const record = await playRecordsApi.getRecord(recordId);
     for (const player of scoredPlayers) {
-      const persisted = record.players.find(rp => rp.displayName === player.name);
+      const persisted = record.players.find(rp => norm(rp.displayName) === norm(player.name));
       if (!persisted) continue;
-      // Recorded by the attempt that stopped half way.
-      if (persisted.scores.some(score => score.dimension === dimension)) continue;
+      const value = Number(player.score);
+      // Already recorded with this very value by the attempt that stopped half way: sending it again would
+      // only repeat the event. A different value is a correction made since, and goes through: the server
+      // replaces the score of a dimension (`RecordPlayer.RecordScore`).
+      if (persisted.scores.find(score => score.dimension === dimension)?.value === value) continue;
       await playRecordsApi.recordScore(recordId, {
         playerId: persisted.id,
         dimension,
-        value: Number(player.score),
+        value,
         unit,
       });
     }
@@ -115,8 +128,11 @@ function NewPlayRecordContent() {
   // stays disabled for the whole sequence.
   const [isSaving, setIsSaving] = useState(false);
   // A save that created the record and then stopped (#4800): the next save with the same inputs finishes that
-  // record instead of creating another one. Not state: nothing is drawn from it.
-  const stoppedHalfWay = useRef<{ key: string; recordId: string } | null>(null);
+  // record instead of creating another one. Not state: nothing is drawn from it, and it does not survive a
+  // reload of the page (the half record stays in the list, as it would after any other abandoned save).
+  const stoppedHalfWay = useRef<{ key: string; recordId: string; roster: Set<string> } | null>(
+    null
+  );
   // The save ends with a navigation: the page may be gone by the time `finally` runs.
   const isMountedRef = useRef(true);
   useEffect(() => {
@@ -130,15 +146,22 @@ function NewPlayRecordContent() {
   // It used to catch every error and resolve, which the form took for «saved»: wizard back to the first
   // step, roster gone and the draft — the safety net for exactly this — deleted.
   //
-  // Two kinds of failure. If the record could not be created, nothing exists and a retry is a normal second
-  // attempt. If it was created and a later step failed, the record is on the server: the retry resumes it
-  // (`persistFollowUps` does only what is missing) as long as the inputs that define it are the same.
+  // Two kinds of failure. If the record could not be created, a retry is a normal second attempt (an error
+  // that arrives after the server committed is indistinguishable from this one: `CreatePlayRecord` takes no
+  // id from the caller, so that retry makes a second record). If it was created and a later step failed, the
+  // record is on the server: the retry resumes it (`persistFollowUps` does only what is missing) as long as
+  // what the record is made of is the same — the inputs that define it, and a roster that only grew: the
+  // server has no way to remove or rename a player, so a player taken out or renamed since is a new record.
   const handleSubmit: SessionCreateFormProps['onSubmit'] = async (data, players) => {
     setIsSaving(true);
     try {
       const key = createKey(data);
+      const roster = new Set(players.map(p => norm(p.name)));
       const earlier = stoppedHalfWay.current;
-      if (earlier && earlier.key !== key) {
+      if (
+        earlier &&
+        (earlier.key !== key || ![...earlier.roster].every(name => roster.has(name)))
+      ) {
         // Changed after a save that stopped half way: that record cannot be corrected into this one, and
         // deleting it on the user's behalf is not ours to do. Say it is still there.
         stoppedHalfWay.current = null;
@@ -152,6 +175,7 @@ function NewPlayRecordContent() {
       }
 
       const resumed = stoppedHalfWay.current !== null;
+      if (stoppedHalfWay.current) stoppedHalfWay.current.roster = roster;
       let recordId = stoppedHalfWay.current?.recordId;
       if (recordId === undefined) {
         try {
@@ -173,7 +197,7 @@ function NewPlayRecordContent() {
           });
           return false;
         }
-        stoppedHalfWay.current = { key, recordId };
+        stoppedHalfWay.current = { key, recordId, roster };
       }
 
       try {

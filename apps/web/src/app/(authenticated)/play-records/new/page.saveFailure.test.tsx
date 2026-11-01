@@ -129,6 +129,8 @@ async function submit(container: HTMLElement) {
 }
 
 const rosterIsDrawn = () => screen.getByTestId('player-score-Marco');
+const saveButton = () =>
+  screen.getByRole('button', { name: playRecordsNewMessages['actions.save'] });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -153,6 +155,8 @@ describe('NewPlayRecordPage — the real form after a save that does not complet
     expect(mockClearDraft).not.toHaveBeenCalled();
     expect(rosterIsDrawn()).toBeInTheDocument();
     expect(mockRouterPush).not.toHaveBeenCalled();
+    // And the way to try again is there: «Salva» is not left disabled by the failed attempt.
+    await waitFor(() => expect(saveButton()).toBeEnabled());
   });
 
   it('keeps them too when the record exists and a later step fails, and the retry finishes that record', async () => {

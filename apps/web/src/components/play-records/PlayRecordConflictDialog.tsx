@@ -13,6 +13,7 @@ export interface PlayRecordConflictDialogLabels {
   description: string;
   reload: string;
   overwrite: string;
+  continueEditing: string;
 }
 
 export interface PlayRecordConflictDialogProps {
@@ -21,6 +22,8 @@ export interface PlayRecordConflictDialogProps {
   isOverwriting: boolean;
   onReload: () => void;
   onOverwrite: () => void;
+  /** Leave the dialog without choosing: the form keeps what the user typed (#4805). */
+  onContinueEditing: () => void;
 }
 
 export function PlayRecordConflictDialog({
@@ -29,13 +32,24 @@ export function PlayRecordConflictDialog({
   isOverwriting,
   onReload,
   onOverwrite,
+  onContinueEditing,
 }: PlayRecordConflictDialogProps): React.JSX.Element {
   return (
-    <Dialog open={open}>
+    // ESC and a click outside are the same way out as the explicit button — except while a read or a save
+    // is in flight, when leaving would orphan it.
+    <Dialog
+      open={open}
+      onOpenChange={next => {
+        if (!next && !isOverwriting) onContinueEditing();
+      }}
+    >
       <DialogContent hideCloseButton>
         <DialogTitle>⚠️ {labels.title}</DialogTitle>
         <DialogDescription>{labels.description}</DialogDescription>
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex flex-wrap justify-end gap-2 pt-2">
+          <Button variant="ghost" onClick={onContinueEditing} disabled={isOverwriting}>
+            {labels.continueEditing}
+          </Button>
           <Button variant="outline" onClick={onReload} disabled={isOverwriting}>
             {labels.reload}
           </Button>

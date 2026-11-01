@@ -88,18 +88,29 @@ vi.mock('@/components/play-records/PlayRecordConflictDialog', () => ({
     isOverwriting,
     onReload,
     onOverwrite,
+    onContinueEditing,
   }: {
     open: boolean;
-    labels: { title: string; description: string; reload: string; overwrite: string };
+    labels: {
+      title: string;
+      description: string;
+      reload: string;
+      overwrite: string;
+      continueEditing: string;
+    };
     isOverwriting: boolean;
     onReload: () => void;
     onOverwrite: () => void;
+    onContinueEditing: () => void;
   }) =>
     open ? (
       <div role="dialog" aria-label={labels.title}>
         <span>{labels.title}</span>
         <span>{labels.description}</span>
-        {/* The real dialog turns both buttons off while `isOverwriting`. */}
+        {/* The real dialog turns all three buttons off while `isOverwriting`. */}
+        <button type="button" onClick={onContinueEditing} disabled={isOverwriting}>
+          {labels.continueEditing}
+        </button>
         <button type="button" onClick={onReload} disabled={isOverwriting}>
           {labels.reload}
         </button>
@@ -650,7 +661,7 @@ describe('EditPlayRecordPage', () => {
       expect(mockRouterPush).toHaveBeenCalledWith('/play-records/record-123');
     });
 
-    it('does not say «not saved» on a conflict: the typed values are held for «overwrite»', async () => {
+    it('says «not saved» on a conflict too: the form keeps the typed values, the page keeps a copy for «overwrite» (#4805)', async () => {
       mockUseUpdateRecord.mockReturnValue({
         mutateAsync: vi
           .fn()
@@ -663,7 +674,7 @@ describe('EditPlayRecordPage', () => {
       await submitOnce(userEvent.setup());
 
       expect(await screen.findByRole('dialog')).toBeInTheDocument();
-      expect(submitAnswers).toEqual([undefined]);
+      expect(submitAnswers).toEqual([false]);
     });
   });
 

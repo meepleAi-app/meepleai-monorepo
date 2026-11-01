@@ -295,6 +295,7 @@ export const playRecordsEditMessages = {
     'Qualcuno ha modificato questa partita mentre la stavi modificando. Ricarica i dati aggiornati o sovrascrivi con le tue modifiche.',
   'conflict.reload': 'Ricarica',
   'conflict.overwrite': 'Sovrascrivi comunque',
+  'conflict.continueEditing': 'Continua a modificare',
   'conflict.stillConflict':
     "Anche il tuo salvataggio è stato battuto da un'altra modifica. Riprova.",
 

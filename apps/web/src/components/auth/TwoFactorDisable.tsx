@@ -8,7 +8,7 @@
  * - Loading and error states
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -63,6 +63,16 @@ export function TwoFactorDisable({
 }: TwoFactorDisableProps) {
   const { t, formatMessage } = useTranslation();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // #4796: `onFormSubmit` awaits `onDisable` and then updates state. If the component is unmounted while
+  // that is still in flight the update is dispatched on a dead tree — invisible while `window` exists,
+  // a `ReferenceError` outside any test once jsdom is torn down (same shape as #4132).
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Validation schema
   const disableSchema = z.object({
@@ -96,7 +106,9 @@ export function TwoFactorDisable({
       try {
         await onDisable(data);
       } finally {
-        setIsSubmitting(false);
+        if (isMountedRef.current) {
+          setIsSubmitting(false);
+        }
       }
     },
     [onDisable, onErrorDismiss]

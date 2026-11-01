@@ -240,8 +240,15 @@ internal sealed class GoLiveSessionCommandHandler : ICommandHandler<GoLiveSessio
 
     /// <summary>
     /// #4752: makes sure the draft has its live game — created and started — and returns its id. The
-    /// roster is the draft's tracking-Session participants in table order (the owner first, who becomes
-    /// the Host); a draft with none seats the organizer, so the game always has somebody to start it.
+    /// roster is the draft's tracking-Session participants in table order (the owner first, who takes the
+    /// Host role of the first seat); a draft with none seats the organizer, so the game always has
+    /// somebody to start it.
+    /// <para>
+    /// Who CONTROLS the game is a different thing (#4780): it is the creator of the live game, and that is
+    /// the organizer — the only caller this handler lets through — whoever planned the draft. The server
+    /// checks <c>CreatedByUserId</c> and the live view treats the creator as host (#4750), so a draft
+    /// planned by someone else does not leave the organizer without the controls.
+    /// </para>
     /// </summary>
     private async Task<Guid?> EnsureLiveGameAsync(
         GoLiveSessionCommand command, Guid gameId, string gameTitle, CancellationToken cancellationToken)

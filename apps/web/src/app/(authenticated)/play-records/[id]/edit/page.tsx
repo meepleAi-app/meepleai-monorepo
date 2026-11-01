@@ -86,6 +86,9 @@ export default function EditPlayRecordPage() {
     router.push(`/play-records/${recordId}`);
   };
 
+  // `false` tells the form nothing was saved so it keeps what the user typed (#4793). A conflict is left
+  // out on purpose: the typed values are held in `conflictForm` for «overwrite», and «reload» is
+  // meant to drop them.
   const handleSubmit = async (data: SessionCreateFormData) => {
     try {
       await submitUpdate(data, record?.xmin);
@@ -97,6 +100,7 @@ export default function EditPlayRecordPage() {
       toast.error(t('playRecords.edit.error.updateFailed'), {
         description: error instanceof Error ? error.message : 'Unknown error',
       });
+      return false;
     }
   };
 

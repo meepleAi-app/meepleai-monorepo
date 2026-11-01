@@ -57,9 +57,15 @@ export interface SessionCreateFormProps {
    * component state (not a react-hook-form field), so it is passed as a second
    * argument — the create flow persists players + their scores + location, which
    * the form-data alone omitted. `onSubmit` may be async; the form waits for it
-   * before clearing the draft/state so a failed create keeps the entered data.
+   * before clearing the draft/state. Answer `false` when the data was NOT saved
+   * (the caller has already told the user why): the form then keeps what was
+   * typed, for a retry. Any other answer, `undefined` included, means saved.
+   * Rejecting is not the way: `form.handleSubmit` would rethrow it unhandled.
    */
-  onSubmit: (data: SessionCreateFormData, players: PlayerEntry[]) => void | Promise<void>;
+  onSubmit: (
+    data: SessionCreateFormData,
+    players: PlayerEntry[]
+  ) => void | boolean | Promise<void | boolean>;
   onCancel?: () => void;
   isSubmitting?: boolean;
   /**
@@ -816,8 +822,10 @@ export function SessionCreateForm({
     }
     // Issue #2847 (#BB): pass the roster so the create flow can persist players +
     // scores + location. Await the (possibly async) submit BEFORE clearing so a
-    // failed create leaves the entered data intact for a retry.
-    await onSubmit(data, players);
+    // failed save leaves the entered data intact for a retry (#4793: the pages
+    // catch their own errors and resolve, so «failed» is the answer `false`).
+    const saved = await onSubmit(data, players);
+    if (saved === false) return;
     clear();
     resetSessionCreation();
     form.reset();

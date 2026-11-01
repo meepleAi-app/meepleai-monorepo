@@ -13,6 +13,7 @@
  * Issue #1488: Play Records reskin — Task 4
  */
 
+import { useState } from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -50,9 +51,10 @@ vi.mock('@/hooks/useTranslation', () => ({
 
 // next/navigation
 const mockRouterPush = vi.fn();
+const mockParams = { id: 'record-123' };
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockRouterPush }),
-  useParams: () => ({ id: 'record-123' }),
+  useParams: () => mockParams,
 }));
 
 // usePlayRecord — provide fixture data
@@ -83,6 +85,8 @@ vi.mock('@/components/play-records/PlayRecordConflictDialog', () => ({
   PlayRecordConflictDialog: ({
     open,
     labels,
+    isOverwriting,
+    onReload,
     onOverwrite,
   }: {
     open: boolean;
@@ -95,7 +99,11 @@ vi.mock('@/components/play-records/PlayRecordConflictDialog', () => ({
       <div role="dialog" aria-label={labels.title}>
         <span>{labels.title}</span>
         <span>{labels.description}</span>
-        <button type="button" onClick={onOverwrite}>
+        {/* The real dialog turns both buttons off while `isOverwriting`. */}
+        <button type="button" onClick={onReload} disabled={isOverwriting}>
+          {labels.reload}
+        </button>
+        <button type="button" onClick={onOverwrite} disabled={isOverwriting}>
           {labels.overwrite}
         </button>
       </div>
@@ -111,6 +119,9 @@ const capturedFormProps: { initialValues?: unknown; initialPlayers?: unknown } =
 // What `onSubmit` answered, one entry per submit. The real form acts on it: `false` means «not saved»
 // and it keeps what was typed (#4793), anything else and it clears itself.
 const submitAnswers: unknown[] = [];
+// How many times the fake form has been mounted: the real one takes `initialValues` only when it mounts, so
+// whether the page draws it again (a new `key`) is what decides if it shows a record that changed (#4801).
+const formMounts = { count: 0 };
 vi.mock('@/components/play-records/SessionCreateForm', () => ({
   SessionCreateForm: ({
     mode,
@@ -122,9 +133,14 @@ vi.mock('@/components/play-records/SessionCreateForm', () => ({
   }: any) => {
     capturedFormProps.initialValues = initialValues;
     capturedFormProps.initialPlayers = initialPlayers;
+    const [instance] = useState(() => {
+      formMounts.count += 1;
+      return formMounts.count;
+    });
     return (
       <form
         data-testid="session-form"
+        data-instance={instance}
         onSubmit={e => {
           e.preventDefault();
           // Simulate form submission with partial data. The real form hands over a `Date`
@@ -239,6 +255,7 @@ describe('EditPlayRecordPage', () => {
     capturedFormProps.initialValues = undefined;
     capturedFormProps.initialPlayers = undefined;
     submitAnswers.length = 0;
+    mockParams.id = 'record-123';
     mockUsePlayRecord.mockReturnValue({
       data: playRecordFixture,
       isLoading: false,
@@ -691,6 +708,235 @@ describe('EditPlayRecordPage', () => {
       notes: 'Test notes',
       location: 'Test location',
       xmin: 9,
+    });
+  });
+
+  // #4801: the form takes its values when it mounts, so what «Salva» is checked against has to be the
+  // record those values come from. Two tabs, B saves first, then A (opened before) hits the conflict and
+  // chooses «Ricarica»: A's form kept the old values while `record.xmin` moved to the new one, and the next
+  // «Salva» passed the concurrency check with the old values and overwrote B's edit, silently.
+  describe('#4801: the record the form was drawn from', () => {
+    const OTHERS_EDIT = { ...playRecordFixture, xmin: 9, notes: 'MODIFICA DI B' };
+    const conflict = () =>
+      new UpdatePlayRecordError(
+        'Modifica concorrente rilevata.',
+        'conflict',
+        409,
+        'concurrent-edit'
+      );
+
+    function renderPage(queryClient = new QueryClient()) {
+      const page = () => (
+        <QueryClientProvider client={queryClient}>
+          <EditPlayRecordPage />
+        </QueryClientProvider>
+      );
+      const view = render(page());
+      return { ...view, again: () => view.rerender(page()) };
+    }
+    const submit = (user: ReturnType<typeof userEvent.setup>) =>
+      user.click(screen.getByTestId('session-form').querySelector('button[type="submit"]')!);
+    const instance = () => screen.getByTestId('session-form').getAttribute('data-instance');
+
+    it('saves with the xmin of the record the form shows, even when the cache has moved on', async () => {
+      const mutateAsync = vi.fn(async (_request: Record<string, unknown>) => ({
+        id: 'record-123',
+      }));
+      mockUseUpdateRecord.mockReturnValue({ mutateAsync, isPending: false });
+      const user = userEvent.setup();
+      const view = renderPage();
+      await screen.findByTestId('session-form');
+
+      // Somebody else saves and a refetch (window focus) hands the page their record; the form still
+      // shows what it was drawn with.
+      mockUsePlayRecord.mockReturnValue({ data: OTHERS_EDIT, isLoading: false, error: null });
+      const reads = mockUsePlayRecord.mock.calls.length;
+      view.again();
+      // The page did render again with the moved record (a case that never re-rendered would pass).
+      expect(mockUsePlayRecord.mock.calls.length).toBeGreaterThan(reads);
+      expect(capturedFormProps.initialValues).toMatchObject({ notes: 'gg' });
+      await submit(user);
+
+      await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+      expect(mutateAsync.mock.calls[0][0]).toMatchObject({ xmin: 7 });
+    });
+
+    it('«Ricarica» draws the form again from the fresh record, and the next save is checked against it', async () => {
+      const mutateAsync = vi
+        .fn(async (_request: Record<string, unknown>) => ({ id: 'record-123' }))
+        .mockRejectedValueOnce(conflict());
+      mockUseUpdateRecord.mockReturnValue({ mutateAsync, isPending: false });
+      mockGetRecord.mockResolvedValue(OTHERS_EDIT);
+      const user = userEvent.setup();
+      const queryClient = new QueryClient();
+      renderPage(queryClient);
+      await screen.findByTestId('session-form');
+      const drawnFirst = instance();
+      await submit(user);
+      await user.click(
+        await screen.findByRole('button', { name: playRecordsEditMessages['conflict.reload'] })
+      );
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(instance()).not.toBe(drawnFirst);
+      expect(capturedFormProps.initialValues).toMatchObject({ notes: 'MODIFICA DI B' });
+      // The cache holds what was read, so the page and the form speak of the same record.
+      expect(queryClient.getQueryData(['play-records', 'detail', 'record-123'])).toEqual(
+        OTHERS_EDIT
+      );
+
+      await submit(user);
+      await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(2));
+      expect(mutateAsync.mock.calls[1][0]).toMatchObject({ xmin: 9 });
+    });
+
+    it('when «Ricarica» cannot read the record it says so, closes the dialog and invalidates the query', async () => {
+      // The dialog has no way out but its two buttons: a record that is gone (404) must not trap the
+      // user in it. The invalidation sends such a record to the page's own error state, with a way back.
+      const mutateAsync = vi
+        .fn(async (_request: Record<string, unknown>) => ({ id: 'record-123' }))
+        .mockRejectedValueOnce(conflict());
+      mockUseUpdateRecord.mockReturnValue({ mutateAsync, isPending: false });
+      mockGetRecord.mockRejectedValue(new Error('rete assente'));
+      const user = userEvent.setup();
+      const queryClient = new QueryClient();
+      const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+      renderPage(queryClient);
+      await screen.findByTestId('session-form');
+      const drawnFirst = instance();
+      await submit(user);
+      await user.click(
+        await screen.findByRole('button', { name: playRecordsEditMessages['conflict.reload'] })
+      );
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(toast.error).toHaveBeenCalledWith(
+        playRecordsEditMessages['error.loadFailed'],
+        expect.objectContaining({ description: 'rete assente' })
+      );
+      expect(invalidate).toHaveBeenCalledWith({
+        queryKey: ['play-records', 'detail', 'record-123'],
+      });
+      expect(instance()).toBe(drawnFirst);
+
+      // Nothing was drawn again, so a «Salva» from here is still checked against the old token: it
+      // meets the conflict again instead of overwriting.
+      await submit(user);
+      await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(2));
+      expect(mutateAsync.mock.calls[1][0]).toMatchObject({ xmin: 7 });
+    });
+
+    it('a second click on «Ricarica» while it is reading does nothing, and «Sovrascrivi» is off too', async () => {
+      mockUseUpdateRecord.mockReturnValue({
+        mutateAsync: vi.fn().mockRejectedValue(conflict()),
+        isPending: false,
+      });
+      let release: (record: unknown) => void = () => {};
+      mockGetRecord.mockReturnValue(
+        new Promise(resolve => {
+          release = resolve;
+        })
+      );
+      const user = userEvent.setup();
+      renderPage();
+      await screen.findByTestId('session-form');
+      const mountsBefore = formMounts.count;
+      await submit(user);
+      const reload = await screen.findByRole('button', {
+        name: playRecordsEditMessages['conflict.reload'],
+      });
+      await user.click(reload);
+
+      await waitFor(() => expect(reload).toBeDisabled());
+      expect(
+        screen.getByRole('button', { name: playRecordsEditMessages['conflict.overwrite'] })
+      ).toBeDisabled();
+      await user.click(reload);
+      expect(mockGetRecord).toHaveBeenCalledTimes(1);
+
+      release(OTHERS_EDIT);
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      // Drawn again once, not twice.
+      expect(formMounts.count).toBe(mountsBefore + 1);
+    });
+
+    it('keeps the dialog when «Sovrascrivi comunque» fails for another reason, so it can be retried', async () => {
+      const mutateAsync = vi
+        .fn(async (_request: Record<string, unknown>) => ({ id: 'record-123' }))
+        .mockRejectedValueOnce(conflict())
+        .mockRejectedValueOnce(new UpdatePlayRecordError('Forbidden', 'forbidden', 403));
+      mockUseUpdateRecord.mockReturnValue({ mutateAsync, isPending: false });
+      mockGetRecord.mockResolvedValue(OTHERS_EDIT);
+      const user = userEvent.setup();
+      renderPage();
+      await screen.findByTestId('session-form');
+      await submit(user);
+      const overwrite = playRecordsEditMessages['conflict.overwrite'];
+      await user.click(await screen.findByRole('button', { name: overwrite }));
+
+      await waitFor(() => expect(toast.error).toHaveBeenCalledTimes(1));
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: overwrite }));
+      await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(3));
+      // The retry sends the same edit the user made, with the token read back.
+      expect(mutateAsync.mock.calls[2][0]).toStrictEqual({
+        sessionDate: '2026-06-02T21:30:00.000Z',
+        notes: 'Test notes',
+        location: 'Test location',
+        xmin: 9,
+      });
+    });
+
+    it('takes the record when it arrives after the first render (a cold cache)', async () => {
+      // The real path: the first render has no record and shows the skeleton, the second has it and has to
+      // fix `base` then, not at the first render.
+      const mutateAsync = vi.fn(async (_request: Record<string, unknown>) => ({
+        id: 'record-123',
+      }));
+      mockUseUpdateRecord.mockReturnValue({ mutateAsync, isPending: false });
+      mockUsePlayRecord.mockReturnValue({ data: undefined, isLoading: true, error: null });
+      const user = userEvent.setup();
+      const view = renderPage();
+      expect(screen.queryByTestId('session-form')).not.toBeInTheDocument();
+
+      mockUsePlayRecord.mockReturnValue({ data: playRecordFixture, isLoading: false, error: null });
+      view.again();
+      await screen.findByTestId('session-form');
+      expect(capturedFormProps.initialValues).toMatchObject({ gameName: 'Wingspan', notes: 'gg' });
+      await submit(user);
+
+      await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+      expect(mutateAsync.mock.calls[0][0]).toMatchObject({ xmin: 7 });
+    });
+
+    it('never reads the record of one id as the record of another', async () => {
+      // `base` is tied to the route id it was taken for. If the page is reused for another id, the form is
+      // drawn from that record and saved against its token, not against the first record's.
+      const mutateAsync = vi.fn(async (_request: Record<string, unknown>) => ({
+        id: 'record-456',
+      }));
+      mockUseUpdateRecord.mockReturnValue({ mutateAsync, isPending: false });
+      const user = userEvent.setup();
+      const view = renderPage();
+      await screen.findByTestId('session-form');
+      expect(capturedFormProps.initialValues).toMatchObject({ gameName: 'Wingspan' });
+
+      mockParams.id = 'record-456';
+      mockUsePlayRecord.mockImplementation((id: string) => ({
+        data:
+          id === 'record-456'
+            ? { ...playRecordFixture, id, gameName: 'Catan', xmin: 3 }
+            : undefined,
+        isLoading: false,
+        error: null,
+      }));
+      view.again();
+      await submit(user);
+
+      await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+      expect(capturedFormProps.initialValues).toMatchObject({ gameName: 'Catan' });
+      expect(mutateAsync.mock.calls[0][0]).toMatchObject({ xmin: 3 });
     });
   });
 });

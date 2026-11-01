@@ -286,8 +286,13 @@ public sealed class User : AggregateRoot<Guid>
     /// </summary>
     /// <param name="passwordHash">The user's chosen password hash.</param>
     /// <param name="timeProvider">Time provider for testability.</param>
+    /// <param name="language">
+    /// The language of the person activating the account (#4783), or null to leave the one the account
+    /// was provisioned with.
+    /// </param>
     /// <exception cref="InvalidOperationException">Thrown when user is not in Pending status.</exception>
-    public void ActivateFromInvitation(PasswordHash passwordHash, TimeProvider timeProvider)
+    public void ActivateFromInvitation(
+        PasswordHash passwordHash, TimeProvider timeProvider, string? language = null)
     {
         ArgumentNullException.ThrowIfNull(passwordHash);
         ArgumentNullException.ThrowIfNull(timeProvider);
@@ -297,6 +302,10 @@ public sealed class User : AggregateRoot<Guid>
 
         PasswordHash = passwordHash;
         Status = UserAccountStatus.Active;
+        // #4783: the account was provisioned with the default language, with no browser in front of it; the
+        // person activating it has one. A caller that knows nothing leaves what is there.
+        if (language is not null)
+            Language = UserLanguage.Resolve(language);
         EmailVerified = true;
         EmailVerifiedAt = timeProvider.GetUtcNow().UtcDateTime;
         VerificationGracePeriodEndsAt = null;

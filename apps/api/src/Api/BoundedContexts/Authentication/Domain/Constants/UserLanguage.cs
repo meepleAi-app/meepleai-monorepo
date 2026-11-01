@@ -59,24 +59,30 @@ internal static class UserLanguage
             return null;
 
         if (header.Length > MaxHeaderLength)
-            header = header[..MaxHeaderLength];
+        {
+            // Cut where a tag ends, not in the middle of one: `it;q=0.1` cut to `it;q=` would read as `q=1`.
+            var lastComma = header.LastIndexOf(',', MaxHeaderLength - 1);
+            header = lastComma > 0 ? header[..lastComma] : header[..MaxHeaderLength];
+        }
 
         var ranked = new List<(string Tag, double Quality, int Order)>();
         foreach (var part in header.Split(',').Take(MaxTags))
         {
-            var pieces = part.Split(';', 2);
+            var pieces = part.Split(';');
             var quality = 1.0;
-            if (pieces.Length > 1)
+            var valid = true;
+            foreach (var parameter in pieces.Skip(1).Select(p => p.Trim()))
             {
-                var parameter = pieces[1].Trim();
-                if (parameter.StartsWith("q=", StringComparison.OrdinalIgnoreCase)
-                    && double.TryParse(parameter[2..], NumberStyles.Float, CultureInfo.InvariantCulture, out var parsed))
-                {
-                    quality = parsed;
-                }
+                if (!parameter.StartsWith("q=", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                // A `q` that is not a number in [0, 1] makes the tag unusable: it is dropped, not read as 1.
+                valid = double.TryParse(parameter[2..], NumberStyles.Float, CultureInfo.InvariantCulture, out quality)
+                    && quality is >= 0 and <= 1;
             }
 
-            if (quality > 0)
+            // `q=0` is «not acceptable».
+            if (valid && quality > 0)
                 ranked.Add((pieces[0].Trim(), quality, ranked.Count));
         }
 

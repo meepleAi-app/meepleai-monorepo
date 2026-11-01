@@ -50,9 +50,23 @@ public class UserLanguageTests
     // Nothing supported at all → the default, not an error.
     [InlineData("de,fr;q=0.9", "en")]
     [InlineData("*", "en")]
-    // Garbage in a header must not throw.
-    [InlineData("it;q=abc", "it")]
+    // Garbage in a header must not throw — and a `q` that is not a number in [0, 1] drops the tag instead of
+    // being read as 1 (a malformed weight is not the highest one).
+    [InlineData("it;q=abc, en;q=0.5", "en")]
+    [InlineData("it;q=abc", "en")]
+    [InlineData("it;q=5, en;q=0.5", "en")]
+    [InlineData("it;q=-1, en;q=0.5", "en")]
+    [InlineData("it;q=NaN, en;q=0.5", "en")]
+    [InlineData("it;q=Infinity, en;q=0.5", "en")]
     [InlineData(";;;,,,", "en")]
+    // The ways a real `q` is written.
+    [InlineData("en;q=0.1, it;q=1.0", "it")]
+    [InlineData("en;q=.1, it;q=.5", "it")]
+    [InlineData("en;q=1e-1, it;q=0.5", "it")]
+    [InlineData("en;q=0.1, it ; q=0.9", "it")]
+    // Other parameters beside `q` do not hide it.
+    [InlineData("it;q=0.5;x=y, en;q=0.4", "it")]
+    [InlineData("it;x=y;q=0.2, en;q=0.4", "en")]
     public void Resolve_TheAcceptLanguageHeader_PicksTheBestSupportedLanguage(string header, string expected) =>
         UserLanguage.Resolve(null, header).Should().Be(expected);
 
@@ -73,11 +87,34 @@ public class UserLanguageTests
     }
 
     [Fact]
-    public void Resolve_AHeaderFarLongerThanAnyRealOne_IsBoundedNotRejected()
+    public void Resolve_MoreTagsThanTheBound_AreNotRead_EvenInAShortHeader()
     {
-        // The supported tag sits past the bound, so it is not read: the result is the default, and the call
-        // returns instead of parsing an unbounded string.
-        var header = string.Concat(Enumerable.Repeat("xx;q=0.1,", 100)) + "it";
+        // Sixteen tags are read; the seventeenth is not. The header is 50 bytes: only the tag bound can stop it.
+        var fifteenThenIt = string.Concat(Enumerable.Repeat("de,", 15)) + "it";
+        var sixteenThenIt = string.Concat(Enumerable.Repeat("de,", 16)) + "it";
+
+        UserLanguage.Resolve(null, fifteenThenIt).Should().Be("it");
+        UserLanguage.Resolve(null, sixteenThenIt).Should().Be("en");
+    }
+
+    [Fact]
+    public void Resolve_ALongerHeaderThanTheBound_IsNotRead_EvenWithFewTags()
+    {
+        // Two tags only; the supported one sits past the byte bound. Only the length bound can stop it.
+        var header = new string('x', 300) + ",it";
+
+        UserLanguage.Resolve(null, header).Should().Be("en");
+    }
+
+    [Fact]
+    public void Resolve_TheCutFallsWhereATagEnds_NotInTheMiddleOfOne()
+    {
+        // `it;q=0.1` is cut by the bound right after `q=`: read as it stands it would be «q empty», and a
+        // `q` that cannot be read must not rank above `en;q=0.9`. The header is cut at the last comma
+        // before the bound, so the half tag is never seen.
+        var prefix = "en;q=0.9," + new string('x', 251 - "en;q=0.9,".Length - 1) + ",";
+        prefix.Length.Should().Be(251);
+        var header = prefix + "it;q=0.1,fr";
 
         UserLanguage.Resolve(null, header).Should().Be("en");
     }

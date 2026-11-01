@@ -748,7 +748,8 @@ internal static class AuthenticationEndpoints
 
             logger.LogInformation("Account activation attempt via invitation token");
 
-            var command = new ActivateInvitedAccountCommand(payload.Token, payload.Password);
+            var command = new ActivateInvitedAccountCommand(
+                payload.Token, payload.Password, context.Request.Headers.AcceptLanguage.ToString());
             var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
             // Set auth cookie for immediate login (follows existing login pattern)

@@ -5,7 +5,7 @@
  * - Auto-focus on mount
  * - Auto-submit when 6 digits entered
  * - Remember device option
- * - Recovery code fallback
+ * - Recovery code fallback (`allowBackupCode`, #4817)
  * - Accessible form controls
  * - Loading and error states
  */
@@ -20,6 +20,7 @@ import { LoadingButton } from '@/components/loading/LoadingButton';
 import { Checkbox } from '@/components/ui/primitives/checkbox';
 import { Label } from '@/components/ui/primitives/label';
 import { useTranslation } from '@/hooks/useTranslation';
+import { parseTwoFactorCode, typeTwoFactorCode } from '@/lib/auth/twoFactorCode';
 
 // ============================================================================
 // Types
@@ -49,6 +50,12 @@ export interface TwoFactorVerificationProps {
   onErrorDismiss?: () => void;
   /** Auto-submit when 6 digits entered */
   autoSubmit?: boolean;
+  /**
+   * The field takes a backup code (`XXXX-XXXX`) as well as the 6 digits, and hands `onVerify` the form the
+   * server compares EXACTLY (#4817). Only for a verification the server answers with a backup code too —
+   * the login does, the step-up of a protected action does not.
+   */
+  allowBackupCode?: boolean;
   /** Show remember device option */
   showRememberDevice?: boolean;
   /** Custom title */
@@ -69,6 +76,7 @@ export function TwoFactorVerification({
   error,
   onErrorDismiss,
   autoSubmit = true,
+  allowBackupCode = false,
   showRememberDevice = true,
   title,
   subtitle,
@@ -76,6 +84,8 @@ export function TwoFactorVerification({
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // The letters keyboard on a phone: the numeric one is right for the usual 6 digits and has no letters.
+  const [backupMode, setBackupMode] = useState(false);
 
   // #4134: una verifica riuscita porta via dalla pagina, e `onVerify` si risolve a componente
   // smontato. Vedi la stessa guardia in app/(auth)/login/_content.tsx.
@@ -90,12 +100,18 @@ export function TwoFactorVerification({
   const autoSubmittedCodeRef = useRef<string | null>(null);
 
   // Validation schema
+  const codeSchema = allowBackupCode
+    ? z
+        .string()
+        .min(6, t('auth.twoFactor.codeRequired'))
+        .refine(value => parseTwoFactorCode(value) !== null, t('auth.twoFactor.codeInvalid'))
+    : z
+        .string()
+        .min(6, t('auth.twoFactor.codeRequired'))
+        .max(8, t('auth.twoFactor.codeInvalid'))
+        .regex(/^[0-9A-Za-z-]+$/, t('auth.twoFactor.codeInvalid'));
   const verificationSchema = z.object({
-    code: z
-      .string()
-      .min(6, t('auth.twoFactor.codeRequired'))
-      .max(8, t('auth.twoFactor.codeInvalid')) // Allow backup codes (8 chars)
-      .regex(/^[0-9A-Za-z-]+$/, t('auth.twoFactor.codeInvalid')),
+    code: codeSchema,
     rememberDevice: z.boolean().default(false),
   });
 
@@ -124,14 +140,16 @@ export function TwoFactorVerification({
       }
       setIsSubmitting(true);
       try {
-        await onVerify(data);
+        // A backup code goes to the server as it generated it (`ABCD-2345`), not as it was typed.
+        const parsed = allowBackupCode ? parseTwoFactorCode(data.code) : null;
+        await onVerify(parsed ? { ...data, code: parsed.value } : data);
       } finally {
         if (isMountedRef.current) {
           setIsSubmitting(false);
         }
       }
     },
-    [onVerify, onErrorDismiss]
+    [onVerify, onErrorDismiss, allowBackupCode]
   );
 
   // Auto-focus input on mount
@@ -158,9 +176,29 @@ export function TwoFactorVerification({
 
   // Handle input change - only allow digits and format
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/[^0-9A-Za-z-]/g, '').slice(0, 8);
+    const value = allowBackupCode
+      ? typeTwoFactorCode(e.target.value)
+      : e.target.value.replace(/[^0-9A-Za-z-]/g, '').slice(0, 8);
     setValue('code', value, { shouldValidate: true });
   };
+
+  const handleUseBackupCode = () => {
+    setBackupMode(true);
+    onUseBackupCode?.();
+  };
+
+  // Changing `inputMode` under a focused field does not change the keyboard on a phone: focus it again.
+  useEffect(() => {
+    if (backupMode && inputRef.current) {
+      inputRef.current.blur();
+      inputRef.current.focus();
+    }
+  }, [backupMode]);
+
+  const showBackupCodeLink = allowBackupCode ? !backupMode : Boolean(onUseBackupCode);
+  const canSubmit = allowBackupCode
+    ? parseTwoFactorCode(codeValue) !== null
+    : codeValue.length >= 6;
 
   // Header rendering: AuthCard / Dialog wrappers already supply h1 + subtitle.
   // The component renders an optional inline header ONLY when `title` is
@@ -196,10 +234,14 @@ export function TwoFactorVerification({
             }}
             id="2fa-code"
             type="text"
-            inputMode="numeric"
+            inputMode={backupMode ? 'text' : 'numeric'}
             autoComplete="one-time-code"
-            placeholder="000000"
-            maxLength={8}
+            autoCapitalize={allowBackupCode ? 'characters' : undefined}
+            spellCheck={allowBackupCode ? false : undefined}
+            placeholder={backupMode ? 'XXXX-XXXX' : '000000'}
+            // With backup codes the cap is applied by `typeTwoFactorCode`: a `maxLength` here would cut
+            // a pasted `abcd 2345 ` before it is cleaned up.
+            maxLength={allowBackupCode ? 32 : 8}
             onChange={handleCodeChange}
             disabled={isLoading}
             aria-invalid={!!errors.code}
@@ -251,18 +293,18 @@ export function TwoFactorVerification({
           className="w-full"
           isLoading={isLoading}
           loadingText={t('auth.twoFactor.submitting')}
-          disabled={codeValue.length < 6}
+          disabled={!canSubmit}
           data-testid="2fa-verify-button"
         >
           {t('auth.twoFactor.submit')}
         </LoadingButton>
 
         {/* Backup Code Link */}
-        {onUseBackupCode && (
+        {showBackupCodeLink && (
           <div className="text-center">
             <button
               type="button"
-              onClick={onUseBackupCode}
+              onClick={allowBackupCode ? handleUseBackupCode : onUseBackupCode}
               disabled={isLoading}
               className="text-sm text-primary hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="use-backup-code-link"

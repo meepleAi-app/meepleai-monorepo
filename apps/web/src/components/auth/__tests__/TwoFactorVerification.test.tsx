@@ -301,4 +301,103 @@ describe('TwoFactorVerification', () => {
       expect(onVerify).not.toHaveBeenCalled();
     });
   });
+
+  // #4817: at login the field is the way in for someone who lost the phone, so it has to take a backup
+  // code (`XXXX-XXXX`, nine characters) and hand the server the form it compares EXACTLY.
+  describe('Backup codes (allowBackupCode, #4817)', () => {
+    const renderBackup = (onVerify = vi.fn()) => {
+      renderWithIntl(<TwoFactorVerification onVerify={onVerify} allowBackupCode />);
+      return { onVerify, input: screen.getByTestId('2fa-code-input') };
+    };
+
+    it('holds a whole backup code, dash included', async () => {
+      const user = userEvent.setup();
+      const { input } = renderBackup();
+
+      await user.type(input, 'abcd-2345');
+
+      expect(input).toHaveValue('ABCD-2345');
+    });
+
+    it('sends a backup code typed as read off the sheet in the form the server compares', async () => {
+      const user = userEvent.setup();
+      const { onVerify, input } = renderBackup();
+
+      await user.type(input, 'abcd 2345');
+      await user.click(screen.getByTestId('2fa-verify-button'));
+
+      await waitFor(() => {
+        expect(onVerify).toHaveBeenCalledWith({ code: 'ABCD-2345', rememberDevice: false });
+      });
+    });
+
+    it('sends a pasted backup code with a typographic dash and a trailing space', async () => {
+      const user = userEvent.setup();
+      const { onVerify, input } = renderBackup();
+
+      await user.click(input);
+      await user.paste('abcd–2345 ');
+      await user.click(screen.getByTestId('2fa-verify-button'));
+
+      await waitFor(() => {
+        expect(onVerify).toHaveBeenCalledWith({ code: 'ABCD-2345', rememberDevice: false });
+      });
+    });
+
+    it('keeps submitting six digits on its own, as the authenticator code is the usual case', async () => {
+      const user = userEvent.setup();
+      const { onVerify, input } = renderBackup();
+
+      await user.type(input, '123456');
+
+      await waitFor(() => {
+        expect(onVerify).toHaveBeenCalledTimes(1);
+      });
+      expect(onVerify).toHaveBeenCalledWith({ code: '123456', rememberDevice: false });
+    });
+
+    it('does not submit a backup code that is still being typed', async () => {
+      const user = userEvent.setup();
+      const { onVerify, input } = renderBackup();
+
+      await user.type(input, 'ABCD-234');
+
+      expect(screen.getByTestId('2fa-verify-button')).toBeDisabled();
+      expect(onVerify).not.toHaveBeenCalled();
+    });
+
+    it('offers the backup-code link without a callback, and it brings up the letters keyboard', async () => {
+      const user = userEvent.setup();
+      const { input } = renderBackup();
+
+      expect(input).toHaveAttribute('inputMode', 'numeric');
+      await user.click(screen.getByTestId('use-backup-code-link'));
+
+      expect(input).toHaveAttribute('inputMode', 'text');
+      expect(input).toHaveAttribute('placeholder', 'XXXX-XXXX');
+    });
+
+    it('still tells the parent when the backup-code link is used', async () => {
+      const user = userEvent.setup();
+      const onUseBackupCode = vi.fn();
+      renderWithIntl(
+        <TwoFactorVerification
+          onVerify={vi.fn()}
+          onUseBackupCode={onUseBackupCode}
+          allowBackupCode
+        />
+      );
+
+      await user.click(screen.getByTestId('use-backup-code-link'));
+
+      expect(onUseBackupCode).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves the authenticator-only field (step-up) as it was', () => {
+      renderWithIntl(<TwoFactorVerification onVerify={vi.fn()} />);
+
+      expect(screen.queryByTestId('use-backup-code-link')).not.toBeInTheDocument();
+      expect(screen.getByTestId('2fa-code-input')).toHaveAttribute('maxLength', '8');
+    });
+  });
 });

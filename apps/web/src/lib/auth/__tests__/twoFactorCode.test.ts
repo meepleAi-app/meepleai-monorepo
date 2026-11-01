@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseTwoFactorCode } from '../twoFactorCode';
+import { parseTwoFactorCode, typeTwoFactorCode } from '../twoFactorCode';
 
 describe('parseTwoFactorCode (#4806)', () => {
   it.each([
@@ -46,5 +46,39 @@ describe('parseTwoFactorCode (#4806)', () => {
     expect(parseTwoFactorCode('123456')?.kind).toBe('totp');
     expect(parseTwoFactorCode('A23456')?.kind).toBeUndefined(); // six characters, not six digits
     expect(parseTwoFactorCode('1234-5678')?.kind).toBe('backup'); // eight characters of a backup code
+  });
+});
+
+describe('typeTwoFactorCode (#4817)', () => {
+  it.each([
+    ['', ''],
+    ['123456', '123456'],
+    // A backup code is nine characters with the dash: the field must hold all of them.
+    ['abcd-2345', 'ABCD-2345'],
+    ['ABCD-2345', 'ABCD-2345'],
+    // Spaces are dropped, the dash is not invented: `parseTwoFactorCode` adds it on submit.
+    ['abcd 2345', 'ABCD2345'],
+    ['  ab cd - 23 45 ', 'ABCD-2345'],
+    // From a chat or a note app.
+    ['ABCD\u20132345', 'ABCD-2345'],
+    ['123456\u200b', '123456'],
+    // Characters that are no part of any code are not kept, nor turned into one.
+    ['abc!@#', 'ABC'],
+    ['\u00dfbc', 'BC'],
+    ['\u017fBCD-2345', 'BCD-2345'],
+  ])('shows %j as %j', (input, shown) => {
+    expect(typeTwoFactorCode(input)).toBe(shown);
+  });
+
+  it('stops at nine characters, the length of XXXX-XXXX', () => {
+    expect(typeTwoFactorCode('ABCD-23456789')).toBe('ABCD-2345');
+  });
+
+  it('shows what parseTwoFactorCode reads: every shape it accepts survives typing', () => {
+    for (const input of ['123456', 'abcd-2345', 'abcd 2345', 'ABCD2345', 'ABCD\u20132345 ']) {
+      const parsed = parseTwoFactorCode(input);
+      expect(parsed).not.toBeNull();
+      expect(parseTwoFactorCode(typeTwoFactorCode(input))).toStrictEqual(parsed);
+    }
   });
 });

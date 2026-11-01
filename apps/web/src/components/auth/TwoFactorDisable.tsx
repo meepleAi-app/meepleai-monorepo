@@ -106,7 +106,9 @@ export function TwoFactorDisable({
       try {
         await onDisable(data);
       } finally {
-        if (isMountedRef.current) setIsSubmitting(false);
+        if (isMountedRef.current) {
+          setIsSubmitting(false);
+        }
       }
     },
     [onDisable, onErrorDismiss]

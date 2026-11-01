@@ -28,12 +28,34 @@ const BACKUP = /^([a-z0-9]{4})-?([a-z0-9]{4})$/i;
 const INVISIBLE = /[\u200B-\u200F\u2060\u00AD\uFEFF]/g;
 const DASHES = /[\u2010-\u2015\u2212]/g;
 
+function compactCode(input: string): string {
+  return input.replace(INVISIBLE, '').replace(DASHES, '-').replace(/\s+/g, '');
+}
+
+const NOT_PART_OF_A_CODE = /[^0-9A-Za-z-]/g;
+
+/**
+ * What the code field shows while the person types or pastes (#4817): the same clean-up as
+ * {@link parseTwoFactorCode} (invisible characters gone, typographic dashes made into the hyphen, spaces
+ * dropped), then only the characters a code is made of, in capitals.
+ *
+ * It does NOT put the dash in: someone typing `ABCD2345` is not corrected under their fingers, and
+ * `parseTwoFactorCode` adds the dash when the code is sent. It does NOT cut the value to the nine characters of
+ * `XXXX-XXXX` either: a pasted `1. ABCD-2345` is shown whole so the person can see what is wrong and delete the
+ * `1`, where a cut would drop the end of the code for good. The field's `maxLength` bounds what can be pasted.
+ * The filter runs before `toUpperCase`, so no non-ASCII letter can reach it (`ß` → `SS`) and be shown as a
+ * code the person never typed.
+ */
+export function typeTwoFactorCode(input: string): string {
+  return compactCode(input).replace(NOT_PART_OF_A_CODE, '').toUpperCase();
+}
+
 /**
  * Reads what was typed into the code field. Returns the code as the server wants it, or `null` while
  * it is not (yet) one of the two shapes.
  */
 export function parseTwoFactorCode(input: string): TwoFactorCode | null {
-  const compact = input.replace(INVISIBLE, '').replace(DASHES, '-').replace(/\s+/g, '');
+  const compact = compactCode(input);
 
   if (TOTP.test(compact)) return { kind: 'totp', value: compact };
 

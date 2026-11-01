@@ -107,6 +107,42 @@ public class GoLiveSessionLiveGameBridgeTests
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    // #4780: a draft planned by someone else. Two different things are called «host» and they come apart here:
+    // the CONTROL of the live game belongs to its creator (the server checks `CreatedByUserId`, and the live
+    // view treats the creator as host, #4750), while the first seat carries the Host ROLE of a player. The
+    // organizer is the only one who can take a night's draft live, so they are the creator — and so the host
+    // in the sense that matters — whoever planned it; the planner keeps the first seat.
+    [Fact]
+    public async Task Handle_ADraftPlannedBySomeoneElse_IsCreatedByTheOrganizer_WhoSeesItAsTheHost()
+    {
+        var sessionId = Guid.NewGuid();
+        var night = NightWithDraft(sessionId, out _);
+        var organizer = night.OrganizerId;
+        var planner = Guid.NewGuid();
+        var liveSessionId = Guid.NewGuid();
+
+        _repository.Setup(r => r.GetByLinkedSessionIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(night);
+        _mediator.Setup(m => m.Send(It.Is<GetSessionDetailsQuery>(q => q.SessionId == sessionId), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(DetailsWith(
+                new ParticipantDto { Id = Guid.NewGuid(), UserId = planner, DisplayName = "Marta", IsOwner = true, JoinOrder = 0 },
+                new ParticipantDto { Id = Guid.NewGuid(), UserId = organizer, DisplayName = "Luca", IsOwner = false, JoinOrder = 1 }));
+        _mediator.Setup(m => m.Send(It.IsAny<CreateLiveSessionCommand>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(liveSessionId);
+
+        var result = await _handler.Handle(new GoLiveSessionCommand(sessionId, organizer), CancellationToken.None);
+
+        result.LiveSessionId.Should().Be(liveSessionId);
+        _mediator.Verify(m => m.Send(
+            It.Is<CreateLiveSessionCommand>(c =>
+                // The creator is the organizer, not the planner: this is who the server lets control the game.
+                c.UserId == organizer
+                // The planner keeps the first seat, the organizer is still at the table.
+                && c.InitialPlayers != null
+                && c.InitialPlayers.Select(p => p.UserId).SequenceEqual(new Guid?[] { planner, organizer })),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     [Fact]
     public async Task Handle_TheLiveGameIsCreatedBeforeLiveModeOpens()
     {

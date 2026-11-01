@@ -32,24 +32,22 @@ function compactCode(input: string): string {
   return input.replace(INVISIBLE, '').replace(DASHES, '-').replace(/\s+/g, '');
 }
 
-/** `XXXX-XXXX`: the longest thing the field can hold. */
-const MAX_TYPED_LENGTH = 9;
 const NOT_PART_OF_A_CODE = /[^0-9A-Za-z-]/g;
 
 /**
  * What the code field shows while the person types or pastes (#4817): the same clean-up as
  * {@link parseTwoFactorCode} (invisible characters gone, typographic dashes made into the hyphen, spaces
- * dropped), then only the characters a code is made of, in capitals, up to the nine of `XXXX-XXXX`.
+ * dropped), then only the characters a code is made of, in capitals.
  *
  * It does NOT put the dash in: someone typing `ABCD2345` is not corrected under their fingers, and
- * `parseTwoFactorCode` adds the dash when the code is sent. The filter runs before `toUpperCase`, so no
- * non-ASCII letter can reach it (`ß` → `SS`) and be shown as a code the person never typed.
+ * `parseTwoFactorCode` adds the dash when the code is sent. It does NOT cut the value to the nine characters of
+ * `XXXX-XXXX` either: a pasted `1. ABCD-2345` is shown whole so the person can see what is wrong and delete the
+ * `1`, where a cut would drop the end of the code for good. The field's `maxLength` bounds what can be pasted.
+ * The filter runs before `toUpperCase`, so no non-ASCII letter can reach it (`ß` → `SS`) and be shown as a
+ * code the person never typed.
  */
 export function typeTwoFactorCode(input: string): string {
-  return compactCode(input)
-    .replace(NOT_PART_OF_A_CODE, '')
-    .toUpperCase()
-    .slice(0, MAX_TYPED_LENGTH);
+  return compactCode(input).replace(NOT_PART_OF_A_CODE, '').toUpperCase();
 }
 
 /**

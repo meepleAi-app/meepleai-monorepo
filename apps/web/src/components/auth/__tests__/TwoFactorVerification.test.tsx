@@ -393,6 +393,57 @@ describe('TwoFactorVerification', () => {
       expect(onUseBackupCode).toHaveBeenCalledTimes(1);
     });
 
+    // Six digits are also the start of a backup code made of digits (the server's alphabet has 2-9), and
+    // every wrong attempt counts toward the lockout.
+    it('does not send six digits that are the start of a longer backup code', async () => {
+      const user = userEvent.setup();
+      const { onVerify, input } = renderBackup();
+
+      await user.type(input, '2345 6789');
+      await new Promise(resolve => setTimeout(resolve, 700)); // longer than the wait before an automatic submit
+
+      expect(input).toHaveValue('23456789');
+      expect(onVerify).not.toHaveBeenCalled();
+    });
+
+    it('does not send six digits on its own once the person said it is a backup code', async () => {
+      const user = userEvent.setup();
+      const { onVerify, input } = renderBackup();
+
+      await user.click(screen.getByTestId('use-backup-code-link'));
+      await user.type(input, '234567');
+      await new Promise(resolve => setTimeout(resolve, 700));
+
+      expect(onVerify).not.toHaveBeenCalled();
+      await user.click(screen.getByTestId('2fa-verify-button'));
+      await waitFor(() => {
+        expect(onVerify).toHaveBeenCalledWith({ code: '234567', rememberDevice: false });
+      });
+    });
+
+    it('shows no error while a valid backup code is being typed', async () => {
+      const user = userEvent.setup();
+      const { input } = renderBackup();
+
+      for (const typed of ['ABCD', '-', '2', '34']) {
+        await user.type(input, typed);
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      }
+      expect(input).toHaveValue('ABCD-234');
+    });
+
+    it('says in words, to a screen reader, that the field now takes a backup code', async () => {
+      const user = userEvent.setup();
+      renderBackup();
+
+      const linkLabel = screen.getByTestId('use-backup-code-link').textContent ?? '';
+      expect(linkLabel).not.toBe('');
+      expect(screen.getByTestId('2fa-mode-status')).toBeEmptyDOMElement();
+      await user.click(screen.getByTestId('use-backup-code-link'));
+
+      expect(screen.getByTestId('2fa-mode-status')).toHaveTextContent(linkLabel);
+    });
+
     it('leaves the authenticator-only field (step-up) as it was', () => {
       renderWithIntl(<TwoFactorVerification onVerify={vi.fn()} />);
 

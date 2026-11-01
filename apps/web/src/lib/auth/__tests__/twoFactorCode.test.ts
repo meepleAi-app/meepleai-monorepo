@@ -70,8 +70,10 @@ describe('typeTwoFactorCode (#4817)', () => {
     expect(typeTwoFactorCode(input)).toBe(shown);
   });
 
-  it('stops at nine characters, the length of XXXX-XXXX', () => {
-    expect(typeTwoFactorCode('ABCD-23456789')).toBe('ABCD-2345');
+  it('does not cut what it cannot read: the person sees the whole value and can fix it', () => {
+    // A cut at nine characters would drop the end of the code for good once a stray prefix took the slots.
+    expect(typeTwoFactorCode('1. ABCD-2345')).toBe('1ABCD-2345');
+    expect(typeTwoFactorCode('ABCD-23456789')).toBe('ABCD-23456789');
   });
 
   it('shows what parseTwoFactorCode reads: every shape it accepts survives typing', () => {

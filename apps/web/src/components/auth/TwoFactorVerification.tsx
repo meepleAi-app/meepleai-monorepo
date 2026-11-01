@@ -26,6 +26,9 @@ import { parseTwoFactorCode, typeTwoFactorCode } from '@/lib/auth/twoFactorCode'
 // Types
 // ============================================================================
 
+/** How long six digits wait before they are sent on their own, where they may be the start of a backup code. */
+const AUTO_SUBMIT_DELAY_MS = 400;
+
 export interface TwoFactorVerificationData {
   code: string;
   rememberDevice?: boolean;
@@ -103,7 +106,8 @@ export function TwoFactorVerification({
   const codeSchema = allowBackupCode
     ? z
         .string()
-        .min(6, t('auth.twoFactor.codeRequired'))
+        // Not «a 6-digit code»: this field also takes a backup code, which is nine characters.
+        .min(1, t('auth.twoFactor.codeRequired'))
         .refine(value => parseTwoFactorCode(value) !== null, t('auth.twoFactor.codeInvalid'))
     : z
         .string()
@@ -162,24 +166,40 @@ export function TwoFactorVerification({
   // Auto-submit when 6 digits entered
   // Uses ref to prevent duplicate submissions when isLoading state changes
   useEffect(() => {
-    if (
+    const isSixDigits =
       autoSubmit &&
       codeValue.length === 6 &&
       !isLoading &&
       /^\d{6}$/.test(codeValue) &&
-      autoSubmittedCodeRef.current !== codeValue
-    ) {
+      autoSubmittedCodeRef.current !== codeValue;
+    if (!isSixDigits) return undefined;
+
+    const submit = () => {
       autoSubmittedCodeRef.current = codeValue;
       handleSubmit(onFormSubmit)();
+    };
+
+    if (!allowBackupCode) {
+      submit();
+      return undefined;
     }
-  }, [autoSubmit, codeValue, isLoading, handleSubmit, onFormSubmit]);
+
+    // #4817: six digits are also the start of a backup code made of digits (the server's alphabet has 2-9), and
+    // every attempt counts toward the lockout. Whoever said it is a backup code presses Verify; for the rest the
+    // submit waits a moment and a seventh character cancels it.
+    if (backupMode) return undefined;
+    const timer = setTimeout(submit, AUTO_SUBMIT_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [autoSubmit, allowBackupCode, backupMode, codeValue, isLoading, handleSubmit, onFormSubmit]);
 
   // Handle input change - only allow digits and format
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = allowBackupCode
       ? typeTwoFactorCode(e.target.value)
       : e.target.value.replace(/[^0-9A-Za-z-]/g, '').slice(0, 8);
-    setValue('code', value, { shouldValidate: true });
+    // A backup code is valid only when it is whole: validating on every keystroke would flash an error at
+    // `ABCD-2`. The button waits for a valid code; an error already shown is cleared the moment it is.
+    setValue('code', value, { shouldValidate: allowBackupCode ? Boolean(errors.code) : true });
   };
 
   const handleUseBackupCode = () => {
@@ -237,10 +257,10 @@ export function TwoFactorVerification({
             inputMode={backupMode ? 'text' : 'numeric'}
             autoComplete="one-time-code"
             autoCapitalize={allowBackupCode ? 'characters' : undefined}
+            autoCorrect={allowBackupCode ? 'off' : undefined}
             spellCheck={allowBackupCode ? false : undefined}
             placeholder={backupMode ? 'XXXX-XXXX' : '000000'}
-            // With backup codes the cap is applied by `typeTwoFactorCode`: a `maxLength` here would cut
-            // a pasted `abcd 2345 ` before it is cleaned up.
+            // With backup codes a `maxLength` of 8 would cut a pasted `abcd 2345 ` before it is cleaned up.
             maxLength={allowBackupCode ? 32 : 8}
             onChange={handleCodeChange}
             disabled={isLoading}
@@ -249,6 +269,13 @@ export function TwoFactorVerification({
             className="w-full px-4 py-3 border border-input rounded-md text-center text-3xl font-mono tracking-widest focus:ring-2 focus:ring-ring focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed bg-background"
             data-testid="2fa-code-input"
           />
+          {allowBackupCode && (
+            // The switch to a backup code changes the keyboard and the placeholder, neither of which a screen
+            // reader announces.
+            <p className="sr-only" role="status" data-testid="2fa-mode-status">
+              {backupMode ? t('auth.twoFactor.backupCode') : ''}
+            </p>
+          )}
           {errors.code && (
             <p id="2fa-code-error" className="text-sm text-destructive" role="alert">
               {errors.code.message}

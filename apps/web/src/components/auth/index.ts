@@ -16,9 +16,6 @@ export { VerificationError } from './VerificationError';
 
 // Two-Factor Authentication Components (Issue #3077)
 export { TwoFactorVerification } from './TwoFactorVerification';
-export { TwoFactorSetup } from './TwoFactorSetup';
-export { TwoFactorRecoveryCodes } from './TwoFactorRecoveryCodes';
-export { TwoFactorDisable } from './TwoFactorDisable';
 
 export type { LoginFormProps, LoginFormData } from './LoginForm';
 export type { RegisterFormProps, RegisterFormData } from './RegisterForm';
@@ -29,6 +26,3 @@ export type {
   TwoFactorVerificationProps,
   TwoFactorVerificationData,
 } from './TwoFactorVerification';
-export type { TwoFactorSetupProps, TwoFactorSetupData } from './TwoFactorSetup';
-export type { TwoFactorRecoveryCodesProps } from './TwoFactorRecoveryCodes';
-export type { TwoFactorDisableProps, TwoFactorDisableData } from './TwoFactorDisable';

@@ -46,8 +46,9 @@ vi.mock('next/navigation', () => ({
 }));
 
 const mockUseUpdateRecord = vi.fn();
+const mockUsePlayRecord = vi.fn();
 vi.mock('@/lib/domain-hooks/usePlayRecords', () => ({
-  usePlayRecord: () => ({ data: RECORD, isLoading: false, error: null }),
+  usePlayRecord: () => mockUsePlayRecord(),
   useUpdateRecord: () => mockUseUpdateRecord(),
   useDeleteRecord: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
@@ -162,6 +163,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mockStep = 2;
   mockGetRecord.mockResolvedValue(OTHERS_EDIT);
+  mockUsePlayRecord.mockReturnValue({ data: RECORD, isLoading: false, error: null });
 });
 
 describe('EditPlayRecordPage — the way out of the conflict dialog (#4805)', () => {
@@ -201,13 +203,17 @@ describe('EditPlayRecordPage — the way out of the conflict dialog (#4805)', ()
     await user.click(button('continueEditing'));
 
     await waitFor(() => expect(dialog()).not.toBeInTheDocument());
+    // The cache moves on while the user keeps editing (a refetch on window focus): the other tab's record
+    // is now `xmin` 9, but the form still shows the values drawn from the record with `xmin` 7.
+    mockUsePlayRecord.mockReturnValue({ data: OTHERS_EDIT, isLoading: false, error: null });
     view.goToStep(1);
     expect(screen.getByPlaceholderText(notesPlaceholder())).toHaveValue(TYPED_NOTES);
     view.goToStep(2);
     submitForm();
 
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(2));
-    // Checked against the record the form was drawn from, not a fresh read: nothing was overwritten.
+    // Checked against the record the form was drawn from, not the cache and not a fresh read: nothing was
+    // overwritten.
     expect(mutateAsync.mock.calls[1][0]).toMatchObject({ notes: TYPED_NOTES, xmin: 7 });
     expect(mockGetRecord).not.toHaveBeenCalled();
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
@@ -288,5 +294,61 @@ describe('EditPlayRecordPage — the way out of the conflict dialog (#4805)', ()
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(2));
     expect(mockGetRecord).toHaveBeenCalledTimes(1);
     expect(mutateAsync.mock.calls[1][0]).toMatchObject({ notes: TYPED_NOTES, xmin: 9 });
+  });
+
+  // The wizard's step lives in a store the create page reads too. A conflict used to be answered «saved»
+  // and the form reset it; now it is answered «not saved», so the page has to leave it where a new wizard
+  // starts, or the next create opens on the last step.
+  describe('the wizard step it leaves behind', () => {
+    it('is reset when the page goes away after a successful «Sovrascrivi»', async () => {
+      const mutateAsync = vi
+        .fn()
+        .mockRejectedValueOnce(conflict())
+        .mockResolvedValue({ id: 'record-123' });
+      mockUseUpdateRecord.mockReturnValue({ mutateAsync, isPending: false });
+      const user = userEvent.setup();
+      const view = await typeNotesAndSubmit(user);
+      await screen.findByRole('dialog');
+      await user.click(button('overwrite'));
+      await waitFor(() => expect(mockRouterPush).toHaveBeenCalledWith('/play-records/record-123'));
+      expect(mockResetSessionCreation).not.toHaveBeenCalled();
+
+      view.unmount();
+
+      expect(mockResetSessionCreation).toHaveBeenCalledTimes(1);
+    });
+
+    it('is reset when the page goes away after «Continua a modificare»', async () => {
+      mockUseUpdateRecord.mockReturnValue({
+        mutateAsync: vi.fn().mockRejectedValue(conflict()),
+        isPending: false,
+      });
+      const user = userEvent.setup();
+      const view = await typeNotesAndSubmit(user);
+      await screen.findByRole('dialog');
+      await user.click(button('continueEditing'));
+      await waitFor(() => expect(dialog()).not.toBeInTheDocument());
+      // Staying on the page keeps the step: the user is still in the middle of the edit.
+      expect(mockResetSessionCreation).not.toHaveBeenCalled();
+
+      view.unmount();
+
+      expect(mockResetSessionCreation).toHaveBeenCalledTimes(1);
+    });
+
+    it('is reset by «Ricarica», which draws the form again from the top', async () => {
+      mockUseUpdateRecord.mockReturnValue({
+        mutateAsync: vi.fn().mockRejectedValue(conflict()),
+        isPending: false,
+      });
+      const user = userEvent.setup();
+      await typeNotesAndSubmit(user);
+      await screen.findByRole('dialog');
+
+      await user.click(button('reload'));
+
+      await waitFor(() => expect(dialog()).not.toBeInTheDocument());
+      expect(mockResetSessionCreation).toHaveBeenCalledTimes(1);
+    });
   });
 });

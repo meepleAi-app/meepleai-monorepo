@@ -40,6 +40,7 @@ import {
   UpdatePlayRecordRequestSchema,
 } from '@/lib/api/schemas/play-records.schemas';
 import { usePlayRecord, useUpdateRecord, useDeleteRecord } from '@/lib/domain-hooks/usePlayRecords';
+import { usePlayRecordsStore } from '@/lib/stores/play-records-store';
 
 export default function EditPlayRecordPage() {
   const params = useParams();
@@ -66,7 +67,6 @@ export default function EditPlayRecordPage() {
   const [formKey, setFormKey] = useState(0);
   const [isReloading, setIsReloading] = useState(false);
   const [isOverwriting, setIsOverwriting] = useState(false);
-  const overwriteInFlight = useRef(false);
   const isMountedRef = useRef(true);
   useEffect(() => {
     isMountedRef.current = true;
@@ -74,6 +74,12 @@ export default function EditPlayRecordPage() {
       isMountedRef.current = false;
     };
   }, []);
+  // The wizard's step lives in a module-level store that the create page reads too. A conflict used to be
+  // answered «saved», so the form reset the step itself; it is now answered «not saved» (#4805) and nothing
+  // would: after «Sovrascrivi», or «Continua a modificare» and then leaving, the next wizard would open on
+  // the last step. Leaving this page leaves the step where a new wizard starts.
+  const { resetSessionCreation } = usePlayRecordsStore();
+  useEffect(() => () => resetSessionCreation(), [resetSessionCreation]);
   if (record && base === null) setBaseState({ recordId, record });
   const updateMutation = useUpdateRecord(recordId);
   const deleteMutation = useDeleteRecord(recordId);
@@ -146,6 +152,8 @@ export default function EditPlayRecordPage() {
       const fresh = await playRecordsApi.getRecord(recordId);
       queryClient.setQueryData(['play-records', 'detail', recordId], fresh);
       setBaseState({ recordId, record: fresh });
+      // Drawn again from the top, as it was when a conflict reset the step (#4805).
+      resetSessionCreation();
       setFormKey(key => key + 1);
     } catch (error) {
       queryClient.invalidateQueries({ queryKey: ['play-records', 'detail', recordId] });
@@ -163,12 +171,10 @@ export default function EditPlayRecordPage() {
   // of `base`, so it meets the conflict again instead of overwriting anything (#4805).
   const handleConflictContinue = () => setConflictForm(null);
 
-  // One «Sovrascrivi» at a time. `isOverwriting` turns the buttons off, but a state update lands after the
-  // click; the ref closes the gap in which a second click would read the record and send the edit twice.
-  // The read that precedes the send is covered by neither `updateMutation.isPending` nor `isReloading`.
+  // One «Sovrascrivi» at a time. The read that precedes the send is covered by neither
+  // `updateMutation.isPending` nor `isReloading`, so `isOverwriting` turns the buttons off for it too.
   const handleConflictOverwrite = async () => {
-    if (!conflictForm || overwriteInFlight.current) return;
-    overwriteInFlight.current = true;
+    if (!conflictForm) return;
     setIsOverwriting(true);
     try {
       const fresh = await playRecordsApi.getRecord(recordId);
@@ -185,7 +191,6 @@ export default function EditPlayRecordPage() {
         description: error instanceof Error ? error.message : 'Unknown error',
       });
     } finally {
-      overwriteInFlight.current = false;
       // A successful save has already pushed the route: the page may be gone by now.
       if (isMountedRef.current) setIsOverwriting(false);
     }

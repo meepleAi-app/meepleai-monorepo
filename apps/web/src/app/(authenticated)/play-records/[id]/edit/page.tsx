@@ -25,7 +25,10 @@ import { toast } from 'sonner';
 import { FormPageContainer } from '@/components/layout/PageContainer';
 import { EditGateBanner } from '@/components/play-records/EditGateBanner';
 import { PlayRecordConflictDialog } from '@/components/play-records/PlayRecordConflictDialog';
-import { SessionCreateForm } from '@/components/play-records/SessionCreateForm';
+import {
+  SessionCreateForm,
+  type SessionCreateFormProps,
+} from '@/components/play-records/SessionCreateForm';
 import { Alert, AlertDescription } from '@/components/ui/feedback/alert';
 import { Button } from '@/components/ui/primitives/button';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -86,7 +89,11 @@ export default function EditPlayRecordPage() {
     router.push(`/play-records/${recordId}`);
   };
 
-  const handleSubmit = async (data: SessionCreateFormData) => {
+  // `false` tells the form nothing was saved so it keeps what the user typed (#4793). A conflict is left
+  // out on purpose: the typed values are held in `conflictForm` for «overwrite», and «reload» is
+  // meant to drop them. Typed with the form's own contract so that what it answers is checked where
+  // the contract is defined.
+  const handleSubmit: SessionCreateFormProps['onSubmit'] = async data => {
     try {
       await submitUpdate(data, record?.xmin);
     } catch (error) {
@@ -97,6 +104,7 @@ export default function EditPlayRecordPage() {
       toast.error(t('playRecords.edit.error.updateFailed'), {
         description: error instanceof Error ? error.message : 'Unknown error',
       });
+      return false;
     }
   };
 

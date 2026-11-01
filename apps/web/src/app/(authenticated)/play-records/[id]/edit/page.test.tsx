@@ -108,6 +108,9 @@ vi.mock('@/components/play-records/PlayRecordConflictDialog', () => ({
 // always stay editable. The mock mirrors that contract.
 // #2349 AC-4.2: capturedFormProps lets individual tests assert on initialValues/initialPlayers.
 const capturedFormProps: { initialValues?: unknown; initialPlayers?: unknown } = {};
+// What `onSubmit` answered, one entry per submit. The real form acts on it: `false` means «not saved»
+// and it keeps what was typed (#4793), anything else and it clears itself.
+const submitAnswers: unknown[] = [];
 vi.mock('@/components/play-records/SessionCreateForm', () => ({
   SessionCreateForm: ({
     mode,
@@ -127,7 +130,9 @@ vi.mock('@/components/play-records/SessionCreateForm', () => ({
           // Simulate form submission with partial data. The real form hands over a `Date`
           // (`SessionCreateFormSchema.sessionDate` is `z.date()`), not a string: a mock that sent
           // a string hid #4791 — the update request wants a string and the page never converted.
-          onSubmit(FORM_SUBMISSION);
+          void Promise.resolve(onSubmit(FORM_SUBMISSION)).then(answer => {
+            submitAnswers.push(answer);
+          });
         }}
       >
         {/* Editable fields (Step 2) — never disabled */}
@@ -233,6 +238,7 @@ describe('EditPlayRecordPage', () => {
     // Reset captured form props for each test
     capturedFormProps.initialValues = undefined;
     capturedFormProps.initialPlayers = undefined;
+    submitAnswers.length = 0;
     mockUsePlayRecord.mockReturnValue({
       data: playRecordFixture,
       isLoading: false,
@@ -584,6 +590,63 @@ describe('EditPlayRecordPage', () => {
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
       expect(screen.getByText(playRecordsEditMessages['conflict.title'])).toBeInTheDocument();
+    });
+  });
+
+  // #4793: the form keeps what the user typed only when told the data was not saved. The page used to
+  // catch every error and resolve, which the form took for «saved» and wiped the wizard.
+  describe('#4793: the answer the page gives the form', () => {
+    async function submitOnce(user: ReturnType<typeof userEvent.setup>) {
+      render(
+        <QueryClientProvider client={new QueryClient()}>
+          <EditPlayRecordPage />
+        </QueryClientProvider>
+      );
+      await waitFor(() => {
+        expect(screen.getByTestId('session-form')).toBeInTheDocument();
+      });
+      await user.click(screen.getByTestId('session-form').querySelector('button[type="submit"]')!);
+      await waitFor(() => {
+        expect(submitAnswers).toHaveLength(1);
+      });
+    }
+
+    it('says «not saved» when the update fails for a reason other than a conflict', async () => {
+      mockUseUpdateRecord.mockReturnValue({
+        mutateAsync: vi
+          .fn()
+          .mockRejectedValue(new UpdatePlayRecordError('Forbidden', 'forbidden', 403)),
+        isPending: false,
+      });
+
+      await submitOnce(userEvent.setup());
+
+      expect(toast.error).toHaveBeenCalledTimes(1);
+      expect(submitAnswers).toEqual([false]);
+      expect(mockRouterPush).not.toHaveBeenCalled();
+    });
+
+    it('does not say «not saved» when the update went through', async () => {
+      await submitOnce(userEvent.setup());
+
+      expect(submitAnswers).toEqual([undefined]);
+      expect(mockRouterPush).toHaveBeenCalledWith('/play-records/record-123');
+    });
+
+    it('does not say «not saved» on a conflict: the typed values are held for «overwrite»', async () => {
+      mockUseUpdateRecord.mockReturnValue({
+        mutateAsync: vi
+          .fn()
+          .mockRejectedValue(
+            new UpdatePlayRecordError('Concurrent edit', 'conflict', 409, 'concurrent-edit')
+          ),
+        isPending: false,
+      });
+
+      await submitOnce(userEvent.setup());
+
+      expect(await screen.findByRole('dialog')).toBeInTheDocument();
+      expect(submitAnswers).toEqual([undefined]);
     });
   });
 

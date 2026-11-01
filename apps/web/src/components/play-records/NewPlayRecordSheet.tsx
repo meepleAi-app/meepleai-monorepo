@@ -18,6 +18,7 @@ import { GradientButton } from '@/components/ui/buttons/GradientButton';
 import { playRecordsApi } from '@/lib/api/play-records.api';
 import type { PlayRecordVisibility } from '@/lib/api/schemas/play-records.schemas';
 import { cn } from '@/lib/utils';
+import { isoToDatetimeLocalValue } from '@/lib/utils/datetimeLocal';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,6 +34,25 @@ export interface NewPlayRecordSheetProps {
   /** Pre-seleziona un gioco dalla library card */
   preselectedGameId?: string;
   preselectedGameName?: string;
+}
+
+/**
+ * Today as the value of an `<input type="date">`: the calendar date of the browser, not the UTC one,
+ * which differs from it for a few hours a day (#4789).
+ */
+function todayAsDateInputValue(): string {
+  return isoToDatetimeLocalValue(new Date().toISOString()).slice(0, 10);
+}
+
+/**
+ * The instant at which the calendar day of an `<input type="date">` began in the browser's zone.
+ *
+ * What goes to the server is an instant, not the bare `YYYY-MM-DD`: the server reads a bare date as
+ * midnight UTC and refuses a session date after «now», so for a browser east of UTC «today» would be
+ * refused for the first hours of the day (#4789) — and for one west of UTC it would land on the day before.
+ */
+function startOfLocalDay(dateInputValue: string): string {
+  return new Date(`${dateInputValue}T00:00:00`).toISOString();
 }
 
 // ── Step indicator ────────────────────────────────────────────────────────────
@@ -72,7 +92,7 @@ export function NewPlayRecordSheet({
   // Step 1 — Gioco
   const [gameId, setGameId] = useState<string | undefined>(preselectedGameId);
   const [gameName, setGameName] = useState(preselectedGameName ?? '');
-  const [sessionDate, setSessionDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [sessionDate, setSessionDate] = useState(todayAsDateInputValue);
   const [visibility, setVisibility] = useState<PlayRecordVisibility>('Private');
 
   // Step 2 — Giocatori
@@ -98,7 +118,7 @@ export function NewPlayRecordSheet({
       setSaving(false);
       setGameId(preselectedGameId);
       setGameName(preselectedGameName ?? '');
-      setSessionDate(new Date().toISOString().slice(0, 10));
+      setSessionDate(todayAsDateInputValue());
       setVisibility('Private');
       setPlayers([]);
       setNewPlayerName('');
@@ -150,6 +170,11 @@ export function NewPlayRecordSheet({
 
   const handleSave = async () => {
     if (!gameName.trim()) return;
+    // An emptied date input is `''`: say so instead of failing on it below.
+    if (!sessionDate) {
+      setErrorMsg('Scegli la data della partita.');
+      return;
+    }
     setSaving(true);
     setErrorMsg(null);
 
@@ -158,7 +183,7 @@ export function NewPlayRecordSheet({
       const recordId = await playRecordsApi.createRecord({
         gameId: gameId ?? undefined,
         gameName: gameName.trim(),
-        sessionDate,
+        sessionDate: startOfLocalDay(sessionDate),
         visibility,
       });
 

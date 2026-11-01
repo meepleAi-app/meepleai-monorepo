@@ -5001,6 +5001,11 @@
       "error": {
         "saveFailed": "Salvataggio non riuscito",
         "saveFailedDescription": "Impossibile salvare la partita. Riprova fra un momento.",
+        "partialSaveFailed": "Partita creata, ma salvataggio incompleto. Riprova per completarla.",
+        "partialSaveFailedDescription": "Impossibile completare la partita. Riprova fra un momento.",
+        "strayRecord": "Una partita a metà è rimasta nell'elenco",
+        "strayRecordDescription": "Il salvataggio precedente si era fermato a metà e poi hai cambiato i dati della partita: quella è rimasta com'era.",
+        "strayRecordOpen": "Aprila",
         "retry": "↻ Riprova salvataggio"
       },
       "loading": {

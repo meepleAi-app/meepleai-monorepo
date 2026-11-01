@@ -459,7 +459,13 @@ function Step2Quando({ form, t }: Step2Props) {
                     ? isoToDatetimeLocalValue(field.value.toISOString())
                     : ''
                 }
-                onChange={e => field.onChange(new Date(e.target.value))}
+                // #4788: an emptied input is «no date», not `new Date('')` — an invalid date that is still
+                // `instanceof Date` and made the line above throw. `z.date()` then asks for one. `null`,
+                // not `undefined`: react-hook-form answers an `undefined` value with the field's default
+                // (today), so the field would refill itself while the step still said the date was missing.
+                onChange={e =>
+                  field.onChange(e.target.value === '' ? null : new Date(e.target.value))
+                }
                 max={isoToDatetimeLocalValue(new Date().toISOString())}
               />
             </FormControl>

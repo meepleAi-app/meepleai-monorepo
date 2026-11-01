@@ -34,6 +34,7 @@ import { Button } from '@/components/ui/primitives/button';
 import { useTranslation } from '@/hooks/useTranslation';
 import { UpdatePlayRecordError, playRecordsApi } from '@/lib/api/play-records.api';
 import {
+  type PlayRecordDto,
   type SessionCreateForm as SessionCreateFormData,
   type UpdatePlayRecordRequest,
   UpdatePlayRecordRequestSchema,
@@ -51,6 +52,15 @@ export default function EditPlayRecordPage() {
   const [conflictForm, setConflictForm] = useState<SessionCreateFormData | null>(null);
 
   const { data: record, isLoading, error } = usePlayRecord(recordId);
+  // The record the form's values were drawn from (#4801). The form takes `initialValues` only when it
+  // mounts, so «Salva» has to be checked against THAT record's `xmin`, not against whatever the cache holds
+  // by then: a refetch (window focus, «Ricarica») moves `record.xmin` while the form still shows the old
+  // values, and saving the old values with the new `xmin` passes the concurrency check and overwrites the
+  // other edit without anyone choosing to. Set once, when the record first arrives; «Ricarica» replaces it
+  // and draws the form again (`formKey`).
+  const [base, setBase] = useState<PlayRecordDto | null>(null);
+  const [formKey, setFormKey] = useState(0);
+  if (record && base === null) setBase(record);
   const updateMutation = useUpdateRecord(recordId);
   const deleteMutation = useDeleteRecord(recordId);
 
@@ -95,7 +105,7 @@ export default function EditPlayRecordPage() {
   // the contract is defined.
   const handleSubmit: SessionCreateFormProps['onSubmit'] = async data => {
     try {
-      await submitUpdate(data, record?.xmin);
+      await submitUpdate(data, (base ?? record)?.xmin);
     } catch (error) {
       if (error instanceof UpdatePlayRecordError && error.kind === 'conflict') {
         setConflictForm(data);
@@ -108,9 +118,21 @@ export default function EditPlayRecordPage() {
     }
   };
 
-  const handleConflictReload = () => {
-    setConflictForm(null);
-    queryClient.invalidateQueries({ queryKey: ['play-records', 'detail', recordId] });
+  // «Ricarica» reads the record and draws the form again from it: the old values are dropped on purpose,
+  // and the next «Salva» is checked against the `xmin` of what the form now shows. If the read fails the
+  // dialog stays, so the choice can be made again.
+  const handleConflictReload = async () => {
+    try {
+      const fresh = await playRecordsApi.getRecord(recordId);
+      queryClient.setQueryData(['play-records', 'detail', recordId], fresh);
+      setBase(fresh);
+      setFormKey(key => key + 1);
+      setConflictForm(null);
+    } catch (error) {
+      toast.error(t('playRecords.edit.error.loadFailed'), {
+        description: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
   };
 
   const handleConflictOverwrite = async () => {
@@ -124,10 +146,11 @@ export default function EditPlayRecordPage() {
         toast.warning(t('playRecords.edit.conflict.stillConflict'));
         return;
       }
+      // The dialog stays and so does `conflictForm`: the form was already cleared when the conflict came
+      // back, so the typed values live only there, and dropping them here would lose them (#4801).
       toast.error(t('playRecords.edit.error.updateFailed'), {
         description: error instanceof Error ? error.message : 'Unknown error',
       });
-      setConflictForm(null);
     }
   };
 
@@ -203,16 +226,18 @@ export default function EditPlayRecordPage() {
 
   // AC-4.1: Layout identical to `new` using SessionCreateForm with mode='edit'
   // #2349 AC-4.2: map the loaded record into the form's initial shape.
+  // From `base`, not the live `record`: what the form is drawn with has to be what «Salva» is checked against.
+  const source = base ?? record;
   const initialValues: Partial<SessionCreateFormData> = {
-    gameType: record.gameId ? 'catalog' : 'freeform',
-    gameId: record.gameId ?? undefined,
-    gameName: record.gameName,
-    sessionDate: new Date(record.sessionDate),
-    visibility: record.visibility,
-    notes: record.notes ?? '',
-    location: record.location ?? '',
+    gameType: source.gameId ? 'catalog' : 'freeform',
+    gameId: source.gameId ?? undefined,
+    gameName: source.gameName,
+    sessionDate: new Date(source.sessionDate),
+    visibility: source.visibility,
+    notes: source.notes ?? '',
+    location: source.location ?? '',
   };
-  const initialPlayers = record.players.map(p => ({
+  const initialPlayers = source.players.map(p => ({
     id: p.id,
     name: p.displayName,
     score: String(p.totalScore ?? p.scores.find(s => s.dimension === 'points')?.value ?? ''),
@@ -230,6 +255,7 @@ export default function EditPlayRecordPage() {
 
       {/* AC-4.1: SessionCreateForm with mode='edit' + editable fields whitelist */}
       <SessionCreateForm
+        key={formKey}
         mode="edit"
         initialValues={initialValues}
         initialPlayers={initialPlayers}

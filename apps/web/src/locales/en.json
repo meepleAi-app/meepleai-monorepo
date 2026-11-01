@@ -4989,6 +4989,11 @@
       "error": {
         "saveFailed": "Save failed",
         "saveFailedDescription": "Unable to save the game. Please try again.",
+        "partialSaveFailed": "Game created, but the save is incomplete. Try again to finish it.",
+        "partialSaveFailedDescription": "Unable to finish the game. Please try again in a moment.",
+        "strayRecord": "A half-saved game was left in your list",
+        "strayRecordDescription": "The previous save stopped half way and then you changed the game's details: that one was left as it was.",
+        "strayRecordOpen": "Open it",
         "retry": "↻ Retry save"
       },
       "loading": {
@@ -5144,6 +5149,11 @@
         "deleteFailed": "Delete failed",
         "saveFailed": "Save failed",
         "saveFailedDescription": "Unable to save the game. Please try again.",
+        "partialSaveFailed": "Game created, but the save is incomplete. Try again to finish it.",
+        "partialSaveFailedDescription": "Unable to finish the game. Please try again in a moment.",
+        "strayRecord": "A half-saved game was left in your list",
+        "strayRecordDescription": "The previous save stopped half way and then you changed the game's details: that one was left as it was.",
+        "strayRecordOpen": "Open it",
         "retry": "↻ Retry save"
       },
       "a11y": {

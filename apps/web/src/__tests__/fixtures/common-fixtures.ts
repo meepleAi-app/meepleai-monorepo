@@ -471,7 +471,8 @@ export type MockShareLink = {
  */
 export const createMockShareLink = (overrides?: Partial<MockShareLink>): MockShareLink => ({
   shareToken: overrides?.shareToken || `token-${Date.now()}`,
-  shareUrl: overrides?.shareUrl || `https://meepleai.dev/share/${overrides?.shareToken || 'abc123'}`,
+  shareUrl:
+    overrides?.shareUrl || `https://meepleai.dev/share/${overrides?.shareToken || 'abc123'}`,
   privacyLevel: overrides?.privacyLevel || 'unlisted',
   includeNotes: overrides?.includeNotes ?? false,
   expiresAt: overrides?.expiresAt !== undefined ? overrides.expiresAt : null,
@@ -501,7 +502,9 @@ export type MockAgentMessage = {
  * const userMsg = createMockAgentMessage({ type: 'user', content: 'Hello' });
  * const agentMsg = createMockAgentMessage({ type: 'agent', content: 'Hi there!' });
  */
-export const createMockAgentMessage = (overrides?: Partial<MockAgentMessage>): MockAgentMessage => ({
+export const createMockAgentMessage = (
+  overrides?: Partial<MockAgentMessage>
+): MockAgentMessage => ({
   id: overrides?.id || `msg-${Date.now()}`,
   type: overrides?.type || 'user',
   content: overrides?.content || 'Test message',
@@ -516,7 +519,10 @@ export const createMockConversation = (messageCount: number = 4): MockAgentMessa
     createMockAgentMessage({
       id: `${i + 1}`,
       type: i % 2 === 0 ? 'user' : 'agent',
-      content: i % 2 === 0 ? `User message ${Math.floor(i / 2) + 1}` : `Agent response ${Math.floor(i / 2) + 1}`,
+      content:
+        i % 2 === 0
+          ? `User message ${Math.floor(i / 2) + 1}`
+          : `Agent response ${Math.floor(i / 2) + 1}`,
     })
   );
 };
@@ -991,7 +997,6 @@ export const validateMockData = <T>(
 /**
  * English messages for IntlProvider in tests
  * Issue #1951: Minimal message set to support OAuthButtons and other i18n components
- * Issue #3077: Added 2FA messages for TwoFactorDisable/TwoFactorRecoveryCodes tests
  *
  * Messages are centralized in i18n-test-messages.ts to avoid magic strings.
  * Import `msg()` helper in tests for type-safe message assertions.

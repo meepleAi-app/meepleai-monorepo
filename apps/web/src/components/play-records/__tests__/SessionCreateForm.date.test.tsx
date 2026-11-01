@@ -60,13 +60,13 @@ vi.mock('@/components/library/AddPrivateGameForm', () => ({
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function renderForm() {
+function renderForm(props: Partial<React.ComponentProps<typeof SessionCreateForm>> = {}) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   render(
     <QueryClientProvider client={queryClient}>
-      <SessionCreateForm onSubmit={vi.fn()} onCancel={vi.fn()} isSubmitting={false} />
+      <SessionCreateForm onSubmit={vi.fn()} onCancel={vi.fn()} isSubmitting={false} {...props} />
     </QueryClientProvider>
   );
   return document.querySelector('input[type="datetime-local"]') as HTMLInputElement;
@@ -98,6 +98,52 @@ describe('SessionCreateForm — the date field emptied (#4788)', () => {
 
     clickNext();
 
+    expect(await screen.findByText('Scegli la data della partita')).toBeInTheDocument();
+    expect(mockNextStep).not.toHaveBeenCalled();
+  });
+
+  it('takes the message away as soon as a date is chosen, without waiting for «Avanti»', async () => {
+    // The form validates on «Avanti», not on change: left alone, the message would stay next to a filled
+    // field until the next click.
+    const input = renderForm();
+    fireEvent.change(input, { target: { value: '' } });
+    clickNext();
+    await screen.findByText('Scegli la data della partita');
+
+    fireEvent.change(input, { target: { value: '2026-10-30T20:00' } });
+
+    await waitFor(() =>
+      expect(screen.queryByText('Scegli la data della partita')).not.toBeInTheDocument()
+    );
+    expect(mockNextStep).not.toHaveBeenCalled();
+  });
+
+  it('a value that is not empty but is not a date either (a year of five digits) does not throw', () => {
+    // A datetime-local accepts a year of more than four digits, and `new Date('20271-10-30T20:00')` is an
+    // invalid date that is still `instanceof Date`: the field would have thrown again, as for `''`.
+    const input = renderForm();
+
+    expect(() => fireEvent.change(input, { target: { value: '20271-10-30T20:00' } })).not.toThrow();
+    expect(document.querySelector('input[type="datetime-local"]')).not.toBeNull();
+  });
+
+  it('is the same when an existing record is edited', async () => {
+    const input = renderForm({
+      mode: 'edit',
+      initialValues: {
+        gameType: 'catalog',
+        gameName: 'Wingspan',
+        sessionDate: new Date('2026-10-30T20:00:00.000Z'),
+        notes: '',
+        location: '',
+      },
+    });
+    expect(input.value).not.toBe('');
+
+    fireEvent.change(input, { target: { value: '' } });
+    clickNext();
+
+    expect(input).toHaveValue('');
     expect(await screen.findByText('Scegli la data della partita')).toBeInTheDocument();
     expect(mockNextStep).not.toHaveBeenCalled();
   });

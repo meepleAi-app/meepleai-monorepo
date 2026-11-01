@@ -229,7 +229,9 @@ export const SessionCreateFormSchema = z.object({
   gameId: GameIdString.optional(),
   // Allow empty string during multi-step navigation; per-step validation enforces non-empty.
   gameName: z.string().max(255),
-  // #4788: the field can be emptied, which leaves no date: say what is missing, in the form's language.
+  // #4788: the date field can be emptied, which leaves `null` here at runtime (the type says `Date`: read it
+  // with `instanceof Date`, as the form does) and asks for a date. The message is Italian and does not go
+  // through `t()`, like the one for an empty game name in `SessionCreateForm`.
   sessionDate: z.date({ error: 'Scegli la data della partita' }),
   visibility: PlayRecordVisibilitySchema,
   groupId: z.string().uuid().optional(),

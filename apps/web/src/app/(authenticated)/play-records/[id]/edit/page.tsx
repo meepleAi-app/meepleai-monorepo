@@ -32,6 +32,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { UpdatePlayRecordError, playRecordsApi } from '@/lib/api/play-records.api';
 import {
   type SessionCreateForm as SessionCreateFormData,
+  type UpdatePlayRecordRequest,
   UpdatePlayRecordRequestSchema,
 } from '@/lib/api/schemas/play-records.schemas';
 import { usePlayRecord, useUpdateRecord, useDeleteRecord } from '@/lib/domain-hooks/usePlayRecords';
@@ -51,14 +52,14 @@ export default function EditPlayRecordPage() {
   const deleteMutation = useDeleteRecord(recordId);
 
   const submitUpdate = async (data: SessionCreateFormData, xmin?: number) => {
+    // The form keeps `sessionDate` as a `Date`, the request wants an ISO string. `parse` takes
+    // `unknown`, so it is `satisfies` that makes a `Date` here a compile error (#4791).
     const validated = UpdatePlayRecordRequestSchema.parse({
-      // #4791: the form's `sessionDate` is a `Date` (`SessionCreateFormSchema`), the request's a string;
-      // handed over as it was, `parse` threw «expected string, received Date» and nothing was saved.
       sessionDate: data.sessionDate.toISOString(),
       notes: data.notes,
       location: data.location,
       xmin,
-    });
+    } satisfies UpdatePlayRecordRequest);
     const result = await updateMutation.mutateAsync(validated);
     queryClient.invalidateQueries({ queryKey: ['play-records', 'detail', recordId] });
     queryClient.invalidateQueries({ queryKey: ['play-records', 'history'] });

@@ -22,6 +22,21 @@ import { toast } from 'sonner';
 import EditPlayRecordPage from './page';
 import { playRecordsEditMessages } from '@/__tests__/fixtures/i18n-test-messages';
 import { UpdatePlayRecordError } from '@/lib/api/play-records.api';
+import { SessionCreateFormSchema } from '@/lib/api/schemas/play-records.schemas';
+
+// What the real form hands over, built with its own schema: if `sessionDate` stopped being a `Date`
+// there, this would throw instead of letting a stale fake keep the page test green (#4791). The date
+// is not the one in `playRecordFixture`, so a save that sent the record's date instead of the form's
+// would be told apart.
+const FORM_SUBMISSION = SessionCreateFormSchema.pick({
+  sessionDate: true,
+  notes: true,
+  location: true,
+}).parse({
+  sessionDate: new Date('2026-06-02T21:30:00.000Z'),
+  notes: 'Test notes',
+  location: 'Test location',
+});
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -55,11 +70,20 @@ vi.mock('@/lib/domain-hooks/usePlayRecords', () => ({
   }),
 }));
 
+// The page re-reads the record before overwriting after a conflict (`playRecordsApi.getRecord`);
+// everything else of the module, `UpdatePlayRecordError` included, stays real.
+const mockGetRecord = vi.fn();
+vi.mock('@/lib/api/play-records.api', async importOriginal => ({
+  ...(await importOriginal<typeof import('@/lib/api/play-records.api')>()),
+  playRecordsApi: { getRecord: (id: string) => mockGetRecord(id) },
+}));
+
 // PlayRecordConflictDialog — mock to avoid Radix portal issues in jsdom
 vi.mock('@/components/play-records/PlayRecordConflictDialog', () => ({
   PlayRecordConflictDialog: ({
     open,
     labels,
+    onOverwrite,
   }: {
     open: boolean;
     labels: { title: string; description: string; reload: string; overwrite: string };
@@ -71,6 +95,9 @@ vi.mock('@/components/play-records/PlayRecordConflictDialog', () => ({
       <div role="dialog" aria-label={labels.title}>
         <span>{labels.title}</span>
         <span>{labels.description}</span>
+        <button type="button" onClick={onOverwrite}>
+          {labels.overwrite}
+        </button>
       </div>
     ) : null,
 }));
@@ -100,11 +127,7 @@ vi.mock('@/components/play-records/SessionCreateForm', () => ({
           // Simulate form submission with partial data. The real form hands over a `Date`
           // (`SessionCreateFormSchema.sessionDate` is `z.date()`), not a string: a mock that sent
           // a string hid #4791 — the update request wants a string and the page never converted.
-          onSubmit({
-            sessionDate: new Date('2026-05-28T19:00:00.000Z'),
-            notes: 'Test notes',
-            location: 'Test location',
-          });
+          onSubmit(FORM_SUBMISSION);
         }}
       >
         {/* Editable fields (Step 2) — never disabled */}
@@ -196,6 +219,8 @@ const playRecordFixture = {
   startTime: null,
   endTime: null,
   createdByUserId: 'user-1',
+  // Optimistic-concurrency token the page must send back with the update (#2437-1).
+  xmin: 7,
   createdAt: new Date('2026-05-28T20:00:00Z').toISOString(),
   updatedAt: new Date('2026-05-28T20:00:00Z').toISOString(),
 };
@@ -308,7 +333,7 @@ describe('EditPlayRecordPage', () => {
   });
 
   it('AC-4.5: submits PUT request with only sessionDate/notes/location', async () => {
-    const mutateAsync = vi.fn(async () => ({ id: 'record-123' }));
+    const mutateAsync = vi.fn(async (_request: Record<string, unknown>) => ({ id: 'record-123' }));
     mockUseUpdateRecord.mockReturnValue({ mutateAsync, isPending: false });
     const queryClient = new QueryClient();
     const user = userEvent.setup();
@@ -331,16 +356,15 @@ describe('EditPlayRecordPage', () => {
       expect(mockRouterPush).toHaveBeenCalledWith('/play-records/record-123');
     });
 
-    // #4791: the request carries the date as an ISO string — the form's `Date` is converted — and
-    // nothing but the three editable fields (plus the concurrency token).
+    // #4791: the request carries the date the form handed over — converted from `Date` to an ISO
+    // string — and nothing but the three editable fields plus the record's concurrency token.
     expect(toast.error).not.toHaveBeenCalled();
     expect(mutateAsync).toHaveBeenCalledTimes(1);
-    const [request] = mutateAsync.mock.calls[0] as unknown as [Record<string, unknown>];
-    expect(request).toEqual({
-      sessionDate: '2026-05-28T19:00:00.000Z',
+    expect(mutateAsync.mock.calls[0][0]).toStrictEqual({
+      sessionDate: '2026-06-02T21:30:00.000Z',
       notes: 'Test notes',
       location: 'Test location',
-      xmin: undefined,
+      xmin: 7,
     });
   });
 
@@ -560,6 +584,50 @@ describe('EditPlayRecordPage', () => {
     await waitFor(() => {
       expect(screen.getByRole('dialog')).toBeInTheDocument();
       expect(screen.getByText(playRecordsEditMessages['conflict.title'])).toBeInTheDocument();
+    });
+  });
+
+  it('#4791: «sovrascrivi» after a conflict re-sends the same edit, as an ISO date, with the fresh xmin', async () => {
+    const user = userEvent.setup();
+    const mutateAsync = vi
+      .fn(async (_request: Record<string, unknown>) => ({ id: 'record-123' }))
+      .mockRejectedValueOnce(
+        new UpdatePlayRecordError(
+          'Modifica concorrente rilevata.',
+          'conflict',
+          409,
+          'concurrent-edit'
+        )
+      );
+    mockUseUpdateRecord.mockReturnValue({ mutateAsync, isPending: false });
+    // Somebody else saved in between: the record now carries a newer token.
+    mockGetRecord.mockResolvedValue({ ...playRecordFixture, xmin: 9 });
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <EditPlayRecordPage />
+      </QueryClientProvider>
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId('session-form')).toBeInTheDocument();
+    });
+    await user.click(screen.getByTestId('session-form').querySelector('button[type="submit"]')!);
+    await user.click(
+      await screen.findByRole('button', { name: playRecordsEditMessages['conflict.overwrite'] })
+    );
+
+    await waitFor(() => {
+      expect(mutateAsync).toHaveBeenCalledTimes(2);
+    });
+    expect(mockGetRecord).toHaveBeenCalledWith('record-123');
+    expect(toast.error).not.toHaveBeenCalled();
+    // Same edit as the first attempt — `conflictForm` keeps the form's `Date` and it is converted
+    // again — with the token read back, not the stale one.
+    expect(mutateAsync.mock.calls[1][0]).toStrictEqual({
+      sessionDate: '2026-06-02T21:30:00.000Z',
+      notes: 'Test notes',
+      location: 'Test location',
+      xmin: 9,
     });
   });
 });

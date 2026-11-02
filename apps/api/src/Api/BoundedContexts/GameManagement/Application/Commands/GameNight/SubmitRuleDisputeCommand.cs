@@ -234,7 +234,7 @@ internal sealed class SubmitRuleDisputeCommandHandler
         var notice = ArbiterVerdictFormat.NoticeFor(basis);
         var verdict = notice is null ? parsed.Verdict : $"{notice} {parsed.Verdict}";
         var ruleReferences = notice is null
-            ? ArbiterVerdictFormat.BuildReferences(answer.Citations)
+            ? await BuildReferencesAsync(answer.Citations, cancellationToken).ConfigureAwait(false)
             : new List<string>();
 
         // 8. Create and attach the RuleDisputeEntry
@@ -403,6 +403,66 @@ internal sealed class SubmitRuleDisputeCommandHandler
         }
 
         return new VerdictAnswer(grounded.Answer, grounded.Citations, BasisOf(grounded));
+    }
+
+    /// <summary>
+    /// #4782: the references of the passages, each with its page — except for a document KnowledgeBase says cannot tell
+    /// its pages apart (several pages, one page number across all its passages: it was indexed without the page of
+    /// each passage, so every one claims page 1). Those are cited as «Fonte» alone: better no page than a false one.
+    /// </summary>
+    /// <remarks>
+    /// If the question cannot be answered, no page is believed: a reader sent to the wrong page is worse off than one
+    /// who is not sent anywhere, and the verdict is not worth failing for it. A cancellation is not that case and
+    /// propagates.
+    /// </remarks>
+    private async Task<List<string>> BuildReferencesAsync(
+        IReadOnlyList<CitationDto> citations,
+        CancellationToken cancellationToken)
+    {
+        // Only a passage that names a page is in question, and only a document id KnowledgeBase wrote (a GUID).
+        var documentsNamingAPage = citations
+            .Where(c => c.PageNumber > 0)
+            .Select(c => c.DocumentId)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var asked = documentsNamingAPage
+            .Select(id => Guid.TryParse(id, out var guid) ? guid : (Guid?)null)
+            .OfType<Guid>()
+            .Distinct()
+            .ToList();
+        if (asked.Count == 0)
+        {
+            return ArbiterVerdictFormat.BuildReferences(citations);
+        }
+
+        HashSet<string> withoutAPage;
+        try
+        {
+            var unreliable = (await _mediator
+                    .Send(new GetDocumentsWithUnreliablePageNumbersQuery(asked), cancellationToken)
+                    .ConfigureAwait(false))
+                .ToHashSet();
+            withoutAPage = documentsNamingAPage
+                .Where(id => Guid.TryParse(id, out var guid) && unreliable.Contains(guid))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+#pragma warning disable CA1031 // The pages are an extra: failing the verdict for them would be the worse outcome
+        catch (Exception ex)
+#pragma warning restore CA1031
+        {
+            _logger.LogWarning(
+                ex,
+                "Rule dispute: could not tell whether the pages of {Count} cited document(s) can be believed; " +
+                "they are cited without a page",
+                asked.Count);
+            withoutAPage = documentsNamingAPage.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        }
+
+        return ArbiterVerdictFormat.BuildReferences(citations, withoutAPage);
     }
 
     /// <summary>

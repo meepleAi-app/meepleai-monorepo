@@ -109,6 +109,11 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
             .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(GroundedAnswer(DefaultLlmResponse));
 
+        // Default: KnowledgeBase believes every page it is asked about (#4782)
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<GetDocumentsWithUnreliablePageNumbersQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<Guid>)Array.Empty<Guid>());
+
         _sut = BuildHandler(preconditions: _preconditionsMock.Object);
     }
 
@@ -540,6 +545,164 @@ public sealed class SubmitRuleDisputeCommandHandlerTests
 
         // Assert
         result.RuleReferences.Should().Equal("Fonte, p. 8", "Fonte, p. 3", "Fonte, p. 5");
+    }
+
+    // ─── #4782: better no page than a false one ───────────────────────────────
+
+    [Fact]
+    public async Task Handle_APassageOfADocumentWhosePagesAreNotBelieved_IsCitedWithoutAPage_TheOthersKeepTheirs()
+    {
+        // Arrange — the flat document was indexed without the page of each passage, so it claims page 1 for all
+        var session = CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+        var flat = Guid.NewGuid();
+        var withPages = Guid.NewGuid();
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GroundedAnswer(DefaultLlmResponse, new[]
+            {
+                ProtectedCitation(1, document: flat.ToString()),
+                ProtectedCitation(5, document: withPages.ToString()),
+            }));
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<GetDocumentsWithUnreliablePageNumbersQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<Guid>)new[] { flat });
+
+        // Act
+        var result = await _sut.Handle(BuildCommand(), CancellationToken.None);
+
+        // Assert
+        result.RuleReferences.Should().Equal("Fonte", "Fonte, p. 5");
+        session.Disputes.Should().ContainSingle().Which.RuleReferences.Should().Equal("Fonte", "Fonte, p. 5");
+    }
+
+    [Fact]
+    public async Task Handle_AsksKnowledgeBaseOnlyAboutTheDocumentsThatNameAPage_ByTheirGuid()
+    {
+        // Arrange — a passage with no page (0) has nothing to doubt, and an id that is not a GUID is not one KB wrote
+        CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+        var naming = Guid.NewGuid();
+        var withoutPage = Guid.NewGuid();
+        GetDocumentsWithUnreliablePageNumbersQuery? asked = null;
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GroundedAnswer(DefaultLlmResponse, new[]
+            {
+                ProtectedCitation(3, document: naming.ToString()),
+                ProtectedCitation(7, document: naming.ToString().ToUpperInvariant()),
+                ProtectedCitation(0, document: withoutPage.ToString()),
+                ProtectedCitation(2, document: "doc-rules"),
+            }));
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<GetDocumentsWithUnreliablePageNumbersQuery>(), It.IsAny<CancellationToken>()))
+            .Callback<IRequest<IReadOnlyList<Guid>>, CancellationToken>((q, _) => asked = (GetDocumentsWithUnreliablePageNumbersQuery)q)
+            .ReturnsAsync((IReadOnlyList<Guid>)Array.Empty<Guid>());
+
+        // Act
+        await _sut.Handle(BuildCommand(), CancellationToken.None);
+
+        // Assert
+        asked.Should().NotBeNull();
+        asked!.DocumentIds.Should().Equal(naming);
+    }
+
+    [Fact]
+    public async Task Handle_TheSameDocumentWrittenInCapitals_IsStillTheDocumentKnowledgeBaseMeant()
+    {
+        CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+        var flat = Guid.NewGuid();
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GroundedAnswer(DefaultLlmResponse, new[]
+            {
+                ProtectedCitation(1, document: flat.ToString().ToUpperInvariant()),
+                ProtectedCitation(7, document: flat.ToString()),
+            }));
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<GetDocumentsWithUnreliablePageNumbersQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyList<Guid>)new[] { flat });
+
+        var result = await _sut.Handle(BuildCommand(), CancellationToken.None);
+
+        // Both spellings are the one document: neither keeps a page.
+        result.RuleReferences.Should().Equal("Fonte");
+    }
+
+    [Fact]
+    public async Task Handle_CitationsWithoutAGuidDocument_NeverAskKnowledgeBase_AndKeepTheirPages()
+    {
+        CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GroundedAnswer(DefaultLlmResponse, new[] { ProtectedCitation(12) }));
+
+        var result = await _sut.Handle(BuildCommand(), CancellationToken.None);
+
+        result.RuleReferences.Should().Equal("Fonte, p. 12");
+        _mediatorMock.Verify(
+            m => m.Send(It.IsAny<GetDocumentsWithUnreliablePageNumbersQuery>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_IfKnowledgeBaseCannotSayWhichPagesToBelieve_NoPageIsCited_AndTheVerdictIsStillGiven()
+    {
+        // Arrange — the pages are an extra: a failed check must not fail the verdict, nor let a doubtful page through
+        var session = CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+        var document = Guid.NewGuid().ToString();
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GroundedAnswer(DefaultLlmResponse, new[] { ProtectedCitation(4, document: document) }));
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<GetDocumentsWithUnreliablePageNumbersQuery>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("database unavailable"));
+
+        // Act
+        var result = await _sut.Handle(BuildCommand(), CancellationToken.None);
+
+        // Assert
+        result.Verdict.Should().Contain("Il giocatore A ha ragione");
+        result.RuleReferences.Should().Equal("Fonte");
+        session.Disputes.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Handle_ACancellationWhileCheckingThePages_Propagates()
+    {
+        CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+        using var cts = new CancellationTokenSource();
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GroundedAnswer(DefaultLlmResponse, new[] { ProtectedCitation(4, document: Guid.NewGuid().ToString()) }));
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<GetDocumentsWithUnreliablePageNumbersQuery>(), It.IsAny<CancellationToken>()))
+            .Returns<IRequest<IReadOnlyList<Guid>>, CancellationToken>((_, _) =>
+            {
+                cts.Cancel();
+                throw new OperationCanceledException(cts.Token);
+            });
+
+        var act = async () => await _sut.Handle(BuildCommand(), cts.Token);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    [Fact]
+    public async Task Handle_AVerdictThatDoesNotRestOnTheRulebook_CitesNothing_AndAsksNothingAboutPages()
+    {
+        CreateInProgressSession(withDbEntity: true, gameId: TestGameId);
+        _mediatorMock
+            .Setup(m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(GroundedAnswer(
+                "VERDETTO: Questa informazione non è disponibile nel regolamento fornito.",
+                new[] { ProtectedCitation(12, document: Guid.NewGuid().ToString()) },
+                GroundingStatus.Ungrounded));
+
+        var result = await _sut.Handle(BuildCommand(), CancellationToken.None);
+
+        result.RuleReferences.Should().BeEmpty();
+        _mediatorMock.Verify(
+            m => m.Send(It.IsAny<GetDocumentsWithUnreliablePageNumbersQuery>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]

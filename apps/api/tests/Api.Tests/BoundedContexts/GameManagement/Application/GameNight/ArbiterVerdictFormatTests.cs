@@ -541,6 +541,47 @@ public sealed class ArbiterVerdictFormatTests
         ArbiterVerdictFormat.BuildReferences(new[] { Cite(0, 0.9f) }).Should().Equal("Fonte");
     }
 
+    // #4782 — a document indexed without the page of each passage claims page 1 for all of them. Better no page
+    // than a false one.
+    [Fact]
+    public void BuildReferences_APassageOfADocumentWhosePagesAreNotBelieved_IsCitedWithoutThePage()
+    {
+        var references = ArbiterVerdictFormat.BuildReferences(
+            new[] { Cite(1, 0.9f, "doc-flat"), Cite(4, 0.8f, "doc-ok") },
+            new HashSet<string> { "doc-flat" });
+
+        references.Should().Equal("Fonte", "Fonte, p. 4");
+    }
+
+    [Fact]
+    public void BuildReferences_TwoPassagesOfADocumentWithoutPages_AppearOnce()
+    {
+        var references = ArbiterVerdictFormat.BuildReferences(
+            new[] { Cite(1, 0.9f, "doc-flat"), Cite(1, 0.8f, "doc-flat"), Cite(3, 0.7f, "doc-flat") },
+            new HashSet<string> { "doc-flat" });
+
+        references.Should().Equal("Fonte");
+    }
+
+    [Fact]
+    public void BuildReferences_AFullPassageOfADocumentWithoutPages_KeepsItsTextAndLosesThePage()
+    {
+        var references = ArbiterVerdictFormat.BuildReferences(
+            new[] { new CitationDto("doc-flat", 1, 0.9f, "Ogni giocatore pesca due carte.", "full") },
+            new HashSet<string> { "doc-flat" });
+
+        references.Should().Equal("Fonte: «Ogni giocatore pesca due carte.»");
+    }
+
+    [Fact]
+    public void BuildReferences_WithNoDocumentWithoutPages_CitesEveryPageItCarries()
+    {
+        var citations = new[] { Cite(1, 0.9f, "doc-1"), Cite(4, 0.8f, "doc-2") };
+
+        ArbiterVerdictFormat.BuildReferences(citations, new HashSet<string>()).Should().Equal("Fonte, p. 1", "Fonte, p. 4");
+        ArbiterVerdictFormat.BuildReferences(citations, null).Should().Equal("Fonte, p. 1", "Fonte, p. 4");
+    }
+
     [Fact]
     public void BuildReferences_WithNoPassage_IsEmpty()
     {

@@ -556,20 +556,29 @@ internal static class ArbiterVerdictFormat
     /// step nulls a Protected preview; this does not rely on it). Two passages that give the same reference text
     /// appear once.
     /// </summary>
-    public static List<string> BuildReferences(IReadOnlyList<CitationDto> citations)
+    /// <param name="citations">The passages, in the order they are handed over.</param>
+    /// <param name="documentsWithoutAPage">
+    /// #4782: the ids (as they are written in <see cref="CitationDto.DocumentId"/>) of the documents whose page numbers
+    /// are not to be believed: a passage of one of them is cited as «Fonte» alone, even if it carries a page. Better no
+    /// page than a false one. Null or empty: every page a passage carries is cited.
+    /// </param>
+    public static List<string> BuildReferences(
+        IReadOnlyList<CitationDto> citations,
+        IReadOnlySet<string>? documentsWithoutAPage = null)
     {
         ArgumentNullException.ThrowIfNull(citations);
 
         return citations
-            .Select(ToReference)
+            .Select(c => ToReference(c, documentsWithoutAPage))
             .Distinct(StringComparer.Ordinal)
             .Take(MaxReferences)
             .ToList();
     }
 
-    private static string ToReference(CitationDto citation)
+    private static string ToReference(CitationDto citation, IReadOnlySet<string>? documentsWithoutAPage)
     {
-        var label = citation.PageNumber > 0 ? $"{ReferenceLabel}, p. {citation.PageNumber}" : ReferenceLabel;
+        var pageIsKnown = citation.PageNumber > 0 && documentsWithoutAPage?.Contains(citation.DocumentId) != true;
+        var label = pageIsKnown ? $"{ReferenceLabel}, p. {citation.PageNumber}" : ReferenceLabel;
 
         // SnippetPreview is the start of the chunk (KnowledgeBase caps its length), not the sentence the
         // verdict used. It comes from a PDF: line breaks and runs of spaces are collapsed, since the reference

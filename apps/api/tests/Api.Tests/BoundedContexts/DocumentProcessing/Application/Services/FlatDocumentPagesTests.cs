@@ -140,6 +140,42 @@ public sealed class FlatDocumentPagesTests
         chunks.Select(c => c.Page).Distinct().Should().Equal(1);
     }
 
+    // Sentences and pages of uneven lengths slide the page boundaries across the steps of the chunker. The unevenness
+    // changes the layout; the layouts are deterministic.
+    private static PageTextChunk[] PagesOfUnevenLength(int unevenness) =>
+        Enumerable.Range(1, 40)
+            .Select(n =>
+            {
+                var text = string.Join(' ', Enumerable.Range(1, 30 + (n * 7 % 23)).Select(i =>
+                    $"Page {n} rule {i} resolves {new string('x', (i * 5 + n) % unevenness)} first."));
+                return new PageTextChunk(n, text, 0, text.Length);
+            })
+            .ToArray();
+
+    [Fact]
+    public async Task AChunkThatBeginsBeforeAPageBreakButHasItsWordsAfterIt_IsOnThePageOfItsWords()
+    {
+        // TextChunkingService trims the text of a chunk but reports where the span began BEFORE trimming: a chunk
+        // that begins on the blank line between two pages has a CharStart on the previous page and its words on the
+        // next one. Found on a real rulebook, where a chunk whose first words were on page 6 was given page 5.
+        // It is rare (the start of a chunk has to land on the two characters of the blank line), so the test looks
+        // for layouts that produce it, checks every chunk of every layout, and requires at least one such chunk.
+        var straddling = 0;
+        foreach (var unevenness in Enumerable.Range(3, 27))
+        {
+            var pages = PagesOfUnevenLength(unevenness);
+            var joined = PageTextJoiner.Join(pages);
+            var starts = TruePageStarts(pages);
+
+            var chunks = await BuildAsync(joined.Text, joined.Spans);
+
+            straddling += chunks.Count(c => starts.Last(s => s.Start <= c.CharStart).Page != TruePageOf(c, joined.Text, starts));
+            chunks.Should().OnlyContain(c => c.Page == TruePageOf(c, joined.Text, starts), "unevenness {0}", unevenness);
+        }
+
+        straddling.Should().BeGreaterThan(0, "no layout made a chunk begin before a page break, so this test proves nothing");
+    }
+
     [Fact]
     public async Task APageWithoutText_LeavesAGapInThePages_AndNoChunkIsPlacedOnIt()
     {

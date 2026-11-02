@@ -51,13 +51,16 @@ public class AdvancedChunkingServiceTests
         ],
     };
 
-    private void SetupTextChunks(params (int Start, string Text)[] pieces)
+    // Each piece is the span the chunker cut, from its start. The real TextChunkingService trims the text of a chunk but
+    // reports the start and end of the span BEFORE trimming, so a chunk cut at a blank line has a CharStart on the blank
+    // and a Text that no longer starts with one. The double reproduces that, as a Text that kept its blanks would hide it.
+    private void SetupTextChunks(params (int Start, string Span)[] pieces)
     {
         _textChunkingServiceMock
             .Setup(x => x.ChunkText(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<int>()))
             .Returns(pieces.Select((p, i) => new TextChunk
             {
-                Text = p.Text, Index = i, CharStart = p.Start, CharEnd = p.Start + p.Text.Length, Page = 1,
+                Text = p.Span.Trim(), Index = i, CharStart = p.Start, CharEnd = p.Start + p.Span.Length, Page = 1,
             }).ToList());
     }
 
@@ -75,12 +78,30 @@ public class AdvancedChunkingServiceTests
     [Fact]
     public async Task ChunkDocumentAsync_WithAPageMap_AChildStartingInTheBlankLineBetweenPages_IsOnThePageOfItsWords()
     {
-        // Offset 13 is the first "\n" after page 1: the text of the chunk is on page 2.
+        // Offset 13 is the first "\n" after page 1: the chunk starts on the blank line, its words are on page 2.
         SetupTextChunks((13, "\n\npage two text"));
 
         var chunks = await _service.ChunkDocumentAsync(SingleSectionDocument(PagedSpans));
 
         chunks.Single(c => !c.IsRoot).Metadata.Page.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task ChunkDocumentAsync_WithAPageMap_ASectionThatDoesNotBeginTheDocument_IsLookedUpAtItsOwnOffset()
+    {
+        // The map is over the text of the document: the section begins at 4, so its offsets are shifted by 4.
+        var document = new ExtractedDocument
+        {
+            Id = Guid.NewGuid(),
+            Content = "xx\n\n" + PagedContent,
+            PageSpans = [new(1, 0), new(2, 19), new(4, 34)],
+            Sections = [new() { Content = PagedContent, Page = 1, CharStart = 4, CharEnd = 4 + PagedContent.Length }],
+        };
+        SetupTextChunks((0, "page one text"), (15, "page two text"), (30, "page four text"));
+
+        var chunks = await _service.ChunkDocumentAsync(document);
+
+        chunks.Where(c => !c.IsRoot).Select(c => c.Metadata.Page).Should().Equal(1, 2, 4);
     }
 
     [Fact]

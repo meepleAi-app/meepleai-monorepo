@@ -47,6 +47,13 @@ public sealed class PageSpansTests
     }
 
     [Fact]
+    public void IsConsistentWith_ALastPageThatWouldBeEmpty_IsRefused()
+    {
+        // The second page starts exactly where the text ends.
+        PageSpans.IsConsistentWith([new(1, 0), new(2, 7)], "alpha\n\n").Should().BeFalse();
+    }
+
+    [Fact]
     public void IsConsistentWith_AStartThatIsNotPrecededByTheSeparator_IsRefused()
     {
         // Same length, other text: the offsets still fall inside it but no longer on a page break.

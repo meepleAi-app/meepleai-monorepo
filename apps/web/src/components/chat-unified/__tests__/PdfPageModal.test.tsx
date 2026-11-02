@@ -259,3 +259,66 @@ describe('PdfPageModal — citazione senza pagina (#4819)', () => {
     expect(screen.queryByTestId('page-unknown-note')).not.toBeInTheDocument();
   });
 });
+
+describe('PdfPageModal — la modale segue la citazione attiva (#4819)', () => {
+  it('starts again from the first page when the active citation becomes one without a page', () => {
+    const { rerender } = render(
+      <PdfPageModal citation={makeCitation({ pageNumber: 7 })} open onClose={vi.fn()} />
+    );
+    expect(screen.getByTestId('pdf-page')).toHaveAttribute('data-page', '7');
+
+    rerender(<PdfPageModal citation={makeCitation({ pageNumber: null })} open onClose={vi.fn()} />);
+
+    // The note says the rulebook opens from the start: the page shown has to be the first.
+    expect(screen.getByTestId('page-unknown-note')).toBeInTheDocument();
+    expect(screen.getByTestId('pdf-page')).toHaveAttribute('data-page', '1');
+  });
+
+  it('does not highlight the quote of a citation mounted without a page', () => {
+    render(
+      <PdfPageModal
+        citation={makeCitation({
+          pageNumber: null,
+          snippet: 'The player with the most points wins.',
+        })}
+        open
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId('pdf-page')).toHaveAttribute('data-render-text-layer', 'false');
+  });
+
+  it.each([null, 0])('draws no overlay for a citation whose page is %s', page => {
+    render(
+      <PdfPageModal
+        citation={makeCitation({
+          pageNumber: page,
+          copyrightTier: 'full',
+          regions: [{ page: 1, x: 0.1, y: 0.2, width: 0.3, height: 0.05 }],
+        })}
+        open
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByTestId('pdf-bbox-rect')).not.toBeInTheDocument();
+    expect(screen.getByTestId('pdf-page')).toHaveAttribute('data-page', '1');
+  });
+
+  it('draws the overlay of a citation that has a page', () => {
+    render(
+      <PdfPageModal
+        citation={makeCitation({
+          pageNumber: 1,
+          copyrightTier: 'full',
+          regions: [{ page: 1, x: 0.1, y: 0.2, width: 0.3, height: 0.05 }],
+        })}
+        open
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId('pdf-bbox-rect')).toBeInTheDocument();
+  });
+});

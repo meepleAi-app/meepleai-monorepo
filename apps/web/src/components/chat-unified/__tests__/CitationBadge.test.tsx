@@ -128,6 +128,19 @@ describe('CitationBadge — citazione senza pagina (#4819)', () => {
     expect(button).toHaveAttribute('title', 'Fonte nel regolamento');
   });
 
+  it('tells badges apart by what they quote when they have no page', () => {
+    render(
+      <CitationBadge
+        citation={makeCitation({ pageNumber: null, snippet: 'Si pescano 4 tessere.' })}
+      />
+    );
+
+    expect(screen.getByRole('button')).toHaveAttribute(
+      'aria-label',
+      'Apri citazione — "Si pescano 4 tessere."'
+    );
+  });
+
   it('still writes the page when there is one', () => {
     render(<CitationBadge citation={makeCitation({ pageNumber: 15, snippet: '' })} />);
 

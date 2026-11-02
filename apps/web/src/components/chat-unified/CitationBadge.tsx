@@ -24,6 +24,14 @@ export function CitationBadge({ citation, className }: CitationBadgeProps) {
   const [isOpen, setIsOpen] = useState(false);
   const page = citedPage(citation.pageNumber);
 
+  // Without a page the badge is told apart by what it quotes, not by a number it does not have.
+  const ariaLabel =
+    page !== null
+      ? `Apri citazione — pagina ${page}`
+      : citation.snippet
+        ? `Apri citazione — "${citation.snippet.slice(0, 60)}"`
+        : 'Apri citazione';
+
   const tooltip = citation.snippet
     ? `"${citation.snippet.slice(0, 120)}${citation.snippet.length > 120 ? '...' : ''}"`
     : page === null
@@ -36,7 +44,7 @@ export function CitationBadge({ citation, className }: CitationBadgeProps) {
         type="button"
         onClick={() => setIsOpen(true)}
         title={tooltip}
-        aria-label={page === null ? 'Apri citazione' : `Apri citazione — pagina ${page}`}
+        aria-label={ariaLabel}
         className={cn(
           'inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded',
           'bg-orange-500/20 text-orange-700 dark:text-orange-300',

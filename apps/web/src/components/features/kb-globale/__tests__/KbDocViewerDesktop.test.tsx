@@ -117,4 +117,24 @@ describe('KbDocViewerDesktop', () => {
     const activeCite = screen.getByText(/scout abilities/);
     expect(activeCite.closest('[data-active="true"]')).not.toBeNull();
   });
+
+  it('never marks a citation without a page as the active one (#4819)', () => {
+    const citations = [
+      { n: 1, docId: docMock.id, page: null, refText: 'Fonte', snippet: 'no page here' },
+      { n: 2, docId: docMock.id, page: 1, refText: 'p.1', snippet: 'first page' },
+    ];
+    render(
+      <KbDocViewerDesktop
+        doc={docMock}
+        activePage={1}
+        citations={citations}
+        labels={labels}
+        onPageChange={vi.fn()}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText(/no page here/).closest('[data-active="true"]')).toBeNull();
+    expect(screen.getByText(/first page/).closest('[data-active="true"]')).not.toBeNull();
+  });
 });

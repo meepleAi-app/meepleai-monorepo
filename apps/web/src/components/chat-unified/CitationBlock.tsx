@@ -61,7 +61,7 @@ export function CitationBlock({ snippets, excludeIndices }: CitationBlockProps) 
                 data-testid={`citation-chip-${snippet.originalIndex}`}
               >
                 <FileText className="h-3 w-3" />
-                {page === null ? 'Fonte' : `Pagina ${page}`}
+                {page === null ? `Fonte ${snippet.originalIndex + 1}` : `Pagina ${page}`}
                 {isExpanded ? (
                   <ChevronUp className="h-3 w-3" />
                 ) : (

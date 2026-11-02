@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -61,6 +61,12 @@ export function PdfPageModal({ citation, open, onClose }: PdfPageModalProps) {
   const [currentPage, setCurrentPage] = useState(startPage);
   const [loadError, setLoadError] = useState<string | null>(null);
 
+  // The modal stays mounted while closed and is shown for whichever citation is active: start again from the
+  // cited page whenever it opens or the citation changes, or the note below the title would be untrue.
+  useEffect(() => {
+    if (open) setCurrentPage(startPage);
+  }, [open, startPage, citation.documentId]);
+
   // Reset state when citation changes (different document/page)
   const pdfUrl = api.pdf.getPdfDownloadUrl(citation.documentId);
 
@@ -73,8 +79,11 @@ export function PdfPageModal({ citation, open, onClose }: PdfPageModalProps) {
 
   // SP-D (#3408): overlay bbox della regione (Pattern B), gated su copyright come l'highlight
   // verbatim. Le regions sono già Full-gated dal BE; qui belt-and-suspenders per "protected".
+  // #4819: no cited page, no overlay: a region is a claim about a page.
   const regions =
-    citation.copyrightTier === 'protected' ? undefined : (citation.regions ?? undefined);
+    citation.copyrightTier === 'protected' || citationPage === null
+      ? undefined
+      : (citation.regions ?? undefined);
   const hasRects = (regions?.length ?? 0) > 0;
   const pageRects = useMemo(
     () => (regions ?? []).filter(r => r.page === currentPage),

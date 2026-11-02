@@ -373,6 +373,15 @@ describe('RuleSourceCard — citazione senza pagina (#4819)', () => {
     ]);
   });
 
+  it('reads a page of 0 as no page', () => {
+    expand([noPage({ pageNumber: 0 }), noPage({ documentId: 'doc-002', pageNumber: 0 })]);
+
+    expect(screen.getAllByRole('tab').map(chip => chip.textContent)).toEqual([
+      'Fonte 1',
+      'Fonte 2',
+    ]);
+  });
+
   it('keeps the page on a chip that has one, next to one that has not', () => {
     expand([makeCitation({ pageNumber: 12 }), noPage({ documentId: 'doc-002' })]);
 
@@ -415,6 +424,7 @@ describe('RuleSourceCard — citazione senza pagina (#4819)', () => {
     expand([noPage()]);
 
     fireEvent.click(screen.getByTestId('view-pdf-btn'));
-    expect(screen.getByTestId('pdf-modal')).not.toHaveAttribute('data-page', '12');
+    // The modal is handed no page at all (the stub writes the attribute only when there is one).
+    expect(screen.getByTestId('pdf-modal')).not.toHaveAttribute('data-page');
   });
 });

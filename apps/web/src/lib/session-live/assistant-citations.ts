@@ -10,12 +10,15 @@ export function toRuleSourceCitations(
   citations: readonly WireCitation[] | null | undefined
 ): Citation[] {
   return (citations ?? []).flatMap(c => {
+    const pageNumber = citedPage(c.pageNumber ?? c.page);
+    // A source with neither a document nor a page points nowhere.
+    if (pageNumber === null && !c.documentId) return [];
     const full = c.copyrightTier === 'full';
     return [
       {
         documentId: c.documentId ?? '',
         // #4819: a citation without a page is still a citation: the page is left out, not the source.
-        pageNumber: citedPage(c.pageNumber ?? c.page),
+        pageNumber,
         snippet: full ? (c.snippetPreview ?? c.snippet ?? '') : '',
         relevanceScore: c.relevanceScore ?? c.score ?? 0,
         copyrightTier: c.copyrightTier,

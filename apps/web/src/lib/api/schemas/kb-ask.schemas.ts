@@ -29,8 +29,13 @@ import { TIER_LIMIT_EXCEEDED } from '@/lib/tier-limit';
 export const KbCitationSchema = z.object({
   docId: z.string(),
   source: z.string(),
-  // #4819: `null` when the server could not vouch for a page; read it with `citedPage`.
-  page: z.number().int().nonnegative().nullable(),
+  // #4819: null or absent when the server could not vouch for a page; read it with `citedPage`.
+  page: z
+    .number()
+    .int()
+    .nonnegative()
+    .nullish()
+    .transform(page => page ?? null),
   snippet: z.string(),
   score: z.number(),
   /**
@@ -61,7 +66,12 @@ const KbWireCitationSchema = z
   .object({
     text: z.string(),
     source: z.string(),
-    page: z.number().int().nonnegative().nullable(),
+    page: z
+      .number()
+      .int()
+      .nonnegative()
+      .nullish()
+      .transform(page => page ?? null),
     line: z.number().optional(),
     score: z.number(),
     chunkId: z.string().optional(),

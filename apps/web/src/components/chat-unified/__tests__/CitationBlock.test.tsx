@@ -97,10 +97,22 @@ describe('CitationBlock — citazione senza pagina (#4819)', () => {
       <CitationBlock snippets={[snippet(1, { page })]} excludeIndices={new Set()} />
     );
 
-    expect(getByTestId('citation-chip-0').textContent).toBe('Fonte');
+    expect(getByTestId('citation-chip-0').textContent).toBe('Fonte 1');
     const link = getByTestId('citation-pdf-link-0');
     expect(link.getAttribute('href')).toBe('/api/v1/pdfs/doc-1/download');
     expect(link.getAttribute('title')).toBe('Apri PDF');
+  });
+
+  it('tells the chips apart by position when none of them has a page', () => {
+    const { getByTestId } = render(
+      <CitationBlock
+        snippets={[snippet(1, { page: null }), snippet(2, { page: null })]}
+        excludeIndices={new Set()}
+      />
+    );
+
+    expect(getByTestId('citation-chip-0').textContent).toBe('Fonte 1');
+    expect(getByTestId('citation-chip-1').textContent).toBe('Fonte 2');
   });
 
   it('still writes the page and opens the PDF there when there is one', () => {

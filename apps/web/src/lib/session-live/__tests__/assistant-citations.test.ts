@@ -51,6 +51,16 @@ describe('toRuleSourceCitations (#4411)', () => {
     });
   });
 
+  it('drops a citation that points nowhere: no document and no page', () => {
+    expect(toRuleSourceCitations([wire({ documentId: undefined, pageNumber: null })])).toEqual([]);
+    expect(toRuleSourceCitations([wire({ documentId: '', pageNumber: 0 })])).toEqual([]);
+  });
+
+  it('keeps a citation that has a page but no document', () => {
+    const [citation] = toRuleSourceCitations([wire({ documentId: undefined, pageNumber: 3 })]);
+    expect(citation).toMatchObject({ documentId: '', pageNumber: 3 });
+  });
+
   it('falls back to the legacy `page` field when `pageNumber` is absent', () => {
     const [citation] = toRuleSourceCitations([wire({ pageNumber: undefined, page: 7 })]);
     expect(citation?.pageNumber).toBe(7);

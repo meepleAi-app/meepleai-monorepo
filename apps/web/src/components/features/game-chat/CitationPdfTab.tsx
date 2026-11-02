@@ -96,7 +96,7 @@ export function CitationPdfTab({
   const startPage = page ?? 1;
 
   // SP-D (#3408): Pattern B (bbox overlay) takes precedence over Pattern A (quote highlight).
-  const hasRects = !!regions && regions.length > 0;
+  const hasRects = page !== null && !!regions && regions.length > 0;
   const trimmedQuote = page === null ? undefined : quote?.trim();
 
   let viewer: ReactElement;

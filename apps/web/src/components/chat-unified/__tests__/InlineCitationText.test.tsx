@@ -62,6 +62,15 @@ describe('InlineCitationText — citazione senza pagina (#4819)', () => {
     expect(screen.getByTestId('citation-accordion-0').textContent).not.toContain('Pagina');
   });
 
+  it('reads a page of 0 as no page', () => {
+    const zero = [
+      { startOffset: 0, endOffset: 5, snippetIndex: 0, pageNumber: 0, pdfDocumentId: 'doc-1' },
+    ] as unknown as InlineCitationMatch[];
+    render(<InlineCitationText text="Hello world" citations={zero} snippets={snippets} />);
+
+    expect(screen.getByTestId('pdf-link-0')).toHaveAttribute('href', '/api/v1/pdfs/doc-1/download');
+  });
+
   it('still links to the cited page when there is one', () => {
     render(<InlineCitationText text="Hello world" citations={citations} snippets={snippets} />);
 

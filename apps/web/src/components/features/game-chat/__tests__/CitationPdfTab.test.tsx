@@ -249,3 +249,40 @@ describe('CitationPdfTab — citazione senza pagina (#4819)', () => {
     expect(document.querySelector('[data-slot="citation-page-unknown"]')).not.toBeInTheDocument();
   });
 });
+
+describe('CitationPdfTab — senza pagina non si disegna un riquadro (#4819)', () => {
+  const region = { page: 1, x: 0.1, y: 0.2, width: 0.3, height: 0.05 };
+
+  it.each([null, 0])('draws no overlay when the page is %s, and says so', async page => {
+    render(
+      <CitationPdfTab
+        documentId="pdf-public-1"
+        gameId="game-1"
+        initialPage={page}
+        isPublic
+        regions={[region]}
+      />,
+      { wrapper }
+    );
+
+    await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
+    expect(screen.queryByTestId('pdf-bbox-rect')).not.toBeInTheDocument();
+    expect(screen.getByTestId('pdf-page')).toHaveAttribute('data-page-number', '1');
+    expect(document.querySelector('[data-slot="citation-page-unknown"]')).toBeInTheDocument();
+  });
+
+  it('draws the overlay when there is a page', async () => {
+    render(
+      <CitationPdfTab
+        documentId="pdf-public-1"
+        gameId="game-1"
+        initialPage={1}
+        isPublic
+        regions={[region]}
+      />,
+      { wrapper }
+    );
+
+    await waitFor(() => expect(screen.getByTestId('pdf-bbox-rect')).toBeInTheDocument());
+  });
+});

@@ -226,6 +226,21 @@ describe('KbCitationSchema — pagina assente (#4819)', () => {
     expect(KbCitationSchema.parse(noPage).page).toBeNull();
   });
 
+  it('accepts a citation in the page shape that does not carry the page at all', () => {
+    const { page: _page, ...withoutKey } = noPage;
+    expect(KbCitationSchema.parse(withoutKey).page).toBeNull();
+  });
+
+  it('accepts a wire citation that does not carry the page at all, and reads it as no page', () => {
+    const wire = { text: 'rules', source: 'PDF:d', line: 0, score: 0.5 };
+    const parsed = KbAskEventSchema.parse({ type: 1, data: { citations: [wire] } }) as Extract<
+      KbAskEvent,
+      { type: 1 }
+    >;
+
+    expect(parsed.data.citations[0]?.page).toBeNull();
+  });
+
   it('accepts a Citations event whose wire citation has a null page, in both shapes', () => {
     const wire = { text: 'rules', source: 'PDF:d', page: null, line: 0, score: 0.5 };
     const parsed = KbAskEventSchema.parse({

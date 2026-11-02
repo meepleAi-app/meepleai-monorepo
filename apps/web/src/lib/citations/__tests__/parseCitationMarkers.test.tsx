@@ -323,3 +323,14 @@ describe('parseCitationMarkers — citazione senza pagina (#4819)', () => {
     ).toContain('p.14');
   });
 });
+
+describe('parseCitationMarkers — una pagina 0 non è una pagina (#4819)', () => {
+  it('names the pill "Fonte" for a citation whose page is 0', () => {
+    const nodes = parseCitationMarkers('Vedi [1]', [cite('d1', 0)], { formatAriaLabel });
+    const container = renderNodes(nodes);
+
+    const pill = container.querySelector('[data-slot="kb-globale-citation-pill"]');
+    expect(pill?.textContent).toContain('Fonte');
+    expect(pill?.textContent).not.toContain('p.');
+  });
+});

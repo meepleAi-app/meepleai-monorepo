@@ -10,8 +10,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 /// the first Title become a null-heading preamble. When no structured elements are available
 /// (degradation: SmolDocling/Docnet/malformed response) a single preamble section carries the flat
 /// text so the document content is never lost downstream. When the extractor measured its pages and a page
-/// map fits the flat text (#4782), the flat text gets one section per page instead, so its chunks sit on their
-/// true pages.
+/// map fits the flat text (#4782), the document carries the map: the section stays single (so the chunks are cut
+/// exactly as before) and the chunker reads each chunk's page from the map.
 /// </summary>
 internal static class ExtractedDocumentFactory
 {
@@ -25,8 +25,8 @@ internal static class ExtractedDocumentFactory
     /// <param name="flatText">The extracted text, used when there are no structured elements.</param>
     /// <param name="pageSpans">
     /// Where each page of the PDF begins in <paramref name="flatText"/> (#4782). Used only on the flat path, and only
-    /// when it fits the text (<see cref="PageSpans.IsConsistentWith"/>): the flat path then gets one section per
-    /// page instead of a single section on page 1.
+    /// when it fits the text (<see cref="PageSpans.IsConsistentWith"/>): the document then carries it, and its chunks
+    /// sit on the pages the map gives them instead of all on page 1.
     /// </param>
     public static ExtractedDocument FromExtraction(
         Guid documentId,
@@ -38,9 +38,10 @@ internal static class ExtractedDocumentFactory
         if (structuredElements is null || structuredElements.Count == 0)
         {
             flatText ??= string.Empty;
+            var flat = NullPathDocument(documentId, gameId, flatText);
             return PageSpans.IsConsistentWith(pageSpans, flatText)
-                ? PagedFlatDocument(documentId, gameId, flatText, pageSpans!)
-                : NullPathDocument(documentId, gameId, flatText);
+                ? flat with { PageSpans = pageSpans, PageCount = pageSpans!.Max(s => s.Page) }
+                : flat;
         }
 
         var sections = new List<DocumentSection>();
@@ -107,45 +108,6 @@ internal static class ExtractedDocumentFactory
                     CharEnd = flatText.Length,
                 },
             },
-        };
-    }
-
-    /// <summary>
-    /// The flat text of a document whose pages were measured: one heading-less section per page, on that page. The
-    /// chunker gives every chunk the page of its section, so this is what lets a flat document tell its pages apart;
-    /// the single section of <see cref="NullPathDocument"/> puts every chunk on page 1. The sections keep the layout
-    /// of the structured path: content is a substring of <c>Content</c> at [CharStart, CharEnd), and the separator
-    /// between two pages sits in the gap.
-    /// </summary>
-    private static ExtractedDocument PagedFlatDocument(
-        Guid documentId,
-        Guid? gameId,
-        string flatText,
-        IReadOnlyList<PageSpan> pageSpans)
-    {
-        var sections = new List<DocumentSection>(pageSpans.Count);
-        for (var i = 0; i < pageSpans.Count; i++)
-        {
-            var start = pageSpans[i].Start;
-            var end = PageSpans.EndOf(pageSpans, i, flatText.Length);
-            sections.Add(new DocumentSection
-            {
-                Heading = null,
-                Content = flatText[start..end],
-                Page = pageSpans[i].Page,
-                ElementType = "text",
-                CharStart = start,
-                CharEnd = end,
-            });
-        }
-
-        return new ExtractedDocument
-        {
-            Id = documentId,
-            GameId = gameId,
-            Content = flatText,
-            Sections = sections,
-            PageCount = pageSpans.Max(s => s.Page),
         };
     }
 

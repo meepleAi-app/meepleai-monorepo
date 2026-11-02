@@ -82,11 +82,37 @@ public sealed class PageSpansTests
     }
 
     [Fact]
-    public void EndOf_IsBeforeTheNextSeparator_AndTheEndOfTheTextForTheLastPage()
+    public void IsConsistentWith_ANegativeStart_IsRefused_NotAnException()
     {
-        PageSpans.EndOf(Spans, 0, Text.Length).Should().Be(5);
-        PageSpans.EndOf(Spans, 1, Text.Length).Should().Be(11);
-        PageSpans.EndOf(Spans, 2, Text.Length).Should().Be(Text.Length);
+        // A corrupted jsonb value: the arithmetic on the start would wrap around and the slice would throw.
+        PageSpans.IsConsistentWith([new(1, 0), new(1, int.MinValue)], Text).Should().BeFalse();
+        PageSpans.IsConsistentWith([new(1, 0), new(2, -5)], Text).Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(0, 1)] // first character of the first page
+    [InlineData(4, 1)] // last character of the first page
+    [InlineData(5, 1)] // inside the blank line after it: still the page before
+    [InlineData(6, 1)]
+    [InlineData(7, 2)] // first character of the second page
+    [InlineData(10, 2)]
+    [InlineData(13, 4)] // first character of the last page (page 3 had no text)
+    [InlineData(18, 4)] // past the end: the last page
+    public void PageAt_IsThePageOfTheLastSpanStartingAtOrBeforeTheOffset(int offset, int expectedPage)
+    {
+        PageSpans.PageAt(Spans, offset).Should().Be(expectedPage);
+    }
+
+    [Fact]
+    public void PageAt_AnOffsetBeforeTheFirstSpan_GetsTheFirstPage()
+    {
+        PageSpans.PageAt([new(3, 10), new(5, 20)], 2).Should().Be(3);
+    }
+
+    [Fact]
+    public void PageAt_PartsOfTheSamePage_GiveThatPage()
+    {
+        PageSpans.PageAt([new(1, 0), new(1, 7), new(2, 13)], 9).Should().Be(1);
     }
 
     [Fact]
@@ -98,9 +124,16 @@ public sealed class PageSpansTests
         PageSpans.Parse(json).Should().Equal(Spans);
     }
 
+    [Fact]
+    public void Parse_ReadsTheMapAsPostgresJsonbReturnsIt_WithSpacesAfterTheCommas()
+    {
+        PageSpans.Parse("[[1, 0], [2, 7], [4, 13]]").Should().Equal(Spans);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]
+    [InlineData("[[1,0],null]")]
     [InlineData("   ")]
     [InlineData("not json")]
     [InlineData("{\"page\":1}")]

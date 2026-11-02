@@ -196,39 +196,38 @@ public class ExtractedDocumentFactoryTests
     private static readonly PageSpan[] PagedSpans = [new(1, 0), new(2, 7), new(4, 13)];
 
     [Fact]
-    public void FlatTextWithAPageMap_GetsOneSectionPerPage_OnThatPage()
+    public void FlatTextWithAPageMap_KeepsTheSingleSection_AndCarriesTheMapOnTheDocument()
     {
+        // The section stays one, so the chunks are cut exactly as they were; only the page of each chunk changes,
+        // and the chunker reads it from the map.
         var doc = ExtractedDocumentFactory.FromExtraction(Doc, null, null, PagedText, PagedSpans);
 
-        doc.Sections.Select(s => (s.Page, s.Content)).Should().Equal((1, "alpha"), (2, "beta"), (4, "gamma"));
-        doc.Sections.Should().OnlyContain(s => s.Heading == null && s.ElementType == "text");
+        doc.Sections.Should().ContainSingle().Which.Should().Match<DocumentSection>(s =>
+            s.Content == PagedText && s.CharStart == 0 && s.CharEnd == PagedText.Length && s.Heading == null);
+        doc.PageSpans.Should().Equal(PagedSpans);
         doc.PageCount.Should().Be(4);
         doc.Content.Should().Be(PagedText);
     }
 
     [Fact]
-    public void FlatTextWithAPageMap_KeepsEachSectionASubstringOfTheContent()
+    public void FlatTextWithoutAPageMap_CarriesNone_AndIsOnePage()
     {
-        var doc = ExtractedDocumentFactory.FromExtraction(Doc, null, null, PagedText, PagedSpans);
+        var doc = ExtractedDocumentFactory.FromExtraction(Doc, null, null, PagedText);
 
-        foreach (var s in doc.Sections)
-        {
-            s.Content.Should().Be(doc.Content.Substring(s.CharStart, s.CharEnd - s.CharStart));
-        }
-
-        doc.Sections.Select(s => (s.CharStart, s.CharEnd)).Should().Equal((0, 5), (7, 11), (13, 18));
+        doc.PageSpans.Should().BeNull();
+        doc.PageCount.Should().Be(1);
     }
 
     [Fact]
     public void FlatTextWithAPageMapThatDoesNotFitTheText_IsTreatedAsFlatTextWithNoMap()
     {
-        // A text edited after the map was written: the offsets fall off the page breaks. Better the old single
-        // section than chunks put on the wrong page with the look of a measured one.
+        // A text edited after the map was written: the offsets fall off the page breaks. Better no map than chunks
+        // put on the wrong page with the look of a measured one.
         var doc = ExtractedDocumentFactory.FromExtraction(Doc, null, null, "alpha-\nbeta\n\ngamma", PagedSpans);
 
-        doc.Sections.Should().HaveCount(1);
-        doc.Sections[0].Page.Should().Be(1);
-        doc.Sections[0].Content.Should().Be("alpha-\nbeta\n\ngamma");
+        doc.PageSpans.Should().BeNull();
+        doc.PageCount.Should().Be(1);
+        doc.Sections.Should().ContainSingle().Which.Page.Should().Be(1);
     }
 
     [Fact]
@@ -238,8 +237,8 @@ public class ExtractedDocumentFactoryTests
             new[] { El("Setup", "Title", page: 5), El("Place the board.", "NarrativeText", page: 5) },
             PagedText, PagedSpans);
 
-        doc.Sections.Should().HaveCount(1);
-        doc.Sections[0].Heading.Should().Be("Setup");
+        doc.PageSpans.Should().BeNull();
+        doc.Sections.Should().ContainSingle().Which.Heading.Should().Be("Setup");
         doc.Sections[0].Page.Should().Be(5);
     }
 
@@ -250,5 +249,6 @@ public class ExtractedDocumentFactoryTests
 
         doc.Content.Should().BeEmpty();
         doc.Sections.Should().HaveCount(1);
+        doc.PageSpans.Should().BeNull();
     }
 }

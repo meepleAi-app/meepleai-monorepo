@@ -174,14 +174,14 @@ public sealed class PdfProcessingPipelineHeadingAwareTests : IDisposable
             .ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
 
         var chunked = ChunkedDocument();
-        chunked.Sections.Select(s => (s.Page, s.Content)).Should().Equal((1, "chunk1 text"), (2, "chunk2 text"));
+        chunked.PageSpans.Should().Equal(new PageSpan(1, 0), new PageSpan(2, 13));
         var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
         doc!.ExtractedText.Should().Be("chunk1 text\n\nchunk2 text");
         doc.PageSpansJson.Should().Be("[[1,0],[2,13]]");
     }
 
     [Fact]
-    public async Task ProcessAsync_FlatDocumentWithEstimatedPages_StaysOneSection_AndStoresNoPageMap()
+    public async Task ProcessAsync_FlatDocumentWithEstimatedPages_GivesTheChunkerNoMap_AndStoresNone()
     {
         SeedPdfDocument();
         SetupExtractorToReturn("chunk1. chunk2.", 2, structured: false, pagesAreEstimated: true);
@@ -192,9 +192,30 @@ public sealed class PdfProcessingPipelineHeadingAwareTests : IDisposable
         await CreatePipelineService(languageCode: "en")
             .ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
 
-        ChunkedDocument().Sections.Should().ContainSingle().Which.Page.Should().Be(1);
+        ChunkedDocument().PageSpans.Should().BeNull();
         var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
         doc!.PageSpansJson.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ProcessAsync_ReprocessingARow_ReplacesTheOldPageMap_NotKeepsIt()
+    {
+        // Quartz and the stale-recovery service run a row again: the map of the previous extraction describes a text
+        // that is gone, and next to the new one it would put chunks on pages they are not on.
+        var seeded = SeedPdfDocument();
+        seeded.PageSpansJson = "[[1,0],[9,99]]";
+        await _db.SaveChangesAsync();
+        SetupExtractorToReturn("chunk1. chunk2.", 2, structured: false, pagesAreEstimated: true);
+        SetupBlobStorageToReturn();
+        SetupHierarchicalChunking(out _);
+        SetupEmbeddingsToReturn(2);
+
+        await CreatePipelineService(languageCode: "en")
+            .ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
+
+        var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
+        doc!.PageSpansJson.Should().BeNull();
+        ChunkedDocument().PageSpans.Should().BeNull();
     }
 
     [Fact]
@@ -209,7 +230,9 @@ public sealed class PdfProcessingPipelineHeadingAwareTests : IDisposable
         await CreatePipelineService(languageCode: "en")
             .ProcessAsync(_pdfDocumentId, "/fake/path.pdf", Guid.NewGuid(), CancellationToken.None);
 
-        ChunkedDocument().Sections.Should().ContainSingle().Which.Heading.Should().Be("Setup");
+        var chunked = ChunkedDocument();
+        chunked.Sections.Should().ContainSingle().Which.Heading.Should().Be("Setup");
+        chunked.PageSpans.Should().BeNull("a structured document has its pages from its elements");
         var doc = await _db.PdfDocuments.FindAsync(_pdfDocumentId);
         doc!.PageSpansJson.Should().Be("[[1,0],[2,13]]");
     }

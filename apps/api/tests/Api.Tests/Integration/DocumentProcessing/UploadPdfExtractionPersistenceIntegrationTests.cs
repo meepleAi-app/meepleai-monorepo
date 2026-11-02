@@ -498,10 +498,9 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
         PageSpans.Parse(persisted.PageSpansJson).Should().Equal(new PageSpan(1, 0), new PageSpan(2, firstPage.Length + 2));
 
         // The harness mocks the chunker (FlatDocumentPagesTests runs the real one): what matters here is what the upload
-        // path hands it, i.e. one section per measured page instead of the single section on page 1.
-        _chunkedDocuments.Should().ContainSingle().Which.Sections
-            .Select(s => (s.Page, s.Content))
-            .Should().Equal((1, firstPage), (2, secondPage));
+        // path hands it, i.e. the page map of the pages the extractor measured.
+        _chunkedDocuments.Should().ContainSingle().Which.PageSpans
+            .Should().Equal(new PageSpan(1, 0), new PageSpan(2, firstPage.Length + 2));
     }
 
     /// <summary>

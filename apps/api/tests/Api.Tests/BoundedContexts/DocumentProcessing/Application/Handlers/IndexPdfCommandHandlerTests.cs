@@ -519,12 +519,13 @@ public class IndexPdfCommandHandlerTests
 
     // #4782: a re-index rebuilds the chunks from ExtractedText alone. The page map stored next to it is the only
     // thing that tells the chunker where each page begins; a document without structured elements would otherwise
-    // go back to a single section on page 1.
+    // go back to every chunk on page 1.
     [Theory]
-    [InlineData("[[1,0],[3,11]]", new[] { 1, 3 })] // "alpha one" (0..9), the blank line, "beta two" from 11
-    [InlineData(null, new[] { 1 })]
-    [InlineData("[[1,0],[3,9]]", new[] { 1 })] // 9 is not behind a blank line: ignored, not trusted
-    public async Task Handle_FlatDocument_ChunksTheTextPageByPage_WhenTheStoredPageMapFitsIt(string? pageSpansJson, int[] expectedPages)
+    [InlineData("[[1,0],[3,11]]", true)] // "alpha one" (0..9), the blank line, "beta two" from 11
+    [InlineData("[[1, 0], [3, 11]]", true)] // as Postgres jsonb returns it
+    [InlineData(null, false)]
+    [InlineData("[[1,0],[3,9]]", false)] // 9 is not behind a blank line: ignored, not trusted
+    public async Task Handle_FlatDocument_GivesTheChunkerTheStoredPageMap_OnlyWhenItFitsTheText(string? pageSpansJson, bool expectMap)
     {
         using var context = CreateFreshDbContext();
         var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
@@ -560,7 +561,15 @@ public class IndexPdfCommandHandlerTests
 
         result.Success.Should().BeTrue();
         chunked.Should().NotBeNull();
-        chunked!.Sections.Select(s => s.Page).Should().Equal(expectedPages);
+        if (expectMap)
+        {
+            chunked!.PageSpans.Should().Equal(new PageSpan(1, 0), new PageSpan(3, 11));
+            chunked.PageCount.Should().Be(3);
+        }
+        else
+        {
+            chunked!.PageSpans.Should().BeNull();
+        }
     }
 
     // Slice D robustness guard: HeadingAwareChunker can emit a Level-0 parent chunk whose Text is

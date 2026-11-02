@@ -39,7 +39,9 @@ public static class PageSpans
         for (var i = 0; i < spans.Count; i++)
         {
             var span = spans[i];
-            if (span.Page < 1 || span.Start >= text.Length)
+            // A negative start must be refused here: below it would wrap around in the arithmetic and then
+            // throw instead of answering false.
+            if (span.Page < 1 || span.Start < 0 || span.Start >= text.Length)
             {
                 return false;
             }
@@ -62,11 +64,33 @@ public static class PageSpans
         return true;
     }
 
-    /// <summary>The offset where the page of <c>spans[index]</c> ends: before the next separator, or at the end of the text.</summary>
-    public static int EndOf(IReadOnlyList<PageSpan> spans, int index, int textLength)
+    /// <summary>
+    /// The page that holds the character at <paramref name="offset"/>: that of the last span starting at or before it.
+    /// An offset inside the separator between two pages belongs to the page before. The map must be consistent with the
+    /// text (<see cref="IsConsistentWith"/>); an offset before the first span gets the first page.
+    /// </summary>
+    public static int PageAt(IReadOnlyList<PageSpan> spans, int offset)
     {
         ArgumentNullException.ThrowIfNull(spans);
-        return index + 1 < spans.Count ? spans[index + 1].Start - Separator.Length : textLength;
+
+        var found = 0;
+        var low = 0;
+        var high = spans.Count - 1;
+        while (low <= high)
+        {
+            var middle = low + ((high - low) / 2);
+            if (spans[middle].Start <= offset)
+            {
+                found = middle;
+                low = middle + 1;
+            }
+            else
+            {
+                high = middle - 1;
+            }
+        }
+
+        return spans[found].Page;
     }
 
     /// <summary>Stores the map as <c>[[page,start],…]</c>: a page per pair, in text order.</summary>

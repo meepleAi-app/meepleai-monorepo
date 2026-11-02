@@ -1,4 +1,3 @@
-using System.Text.RegularExpressions;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
@@ -17,9 +16,14 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Services;
 /// extractor gave no structured elements) produces chunks on distinct, true pages. Real chunker, no mocks: the unit
 /// tests of the pieces cannot show that the page survives the whole way down to the chunk.
 /// </summary>
+/// <remarks>
+/// A chunk is on the page where its text STARTS (as a structured section is on the page of its first element), and the
+/// chunks are cut exactly as they were before the page map existed. So the oracle here is the page that holds the first
+/// non-blank character of each chunk, computed from the lengths of the pages and not from the page map under test.
+/// </remarks>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "DocumentProcessing")]
-public sealed partial class FlatDocumentPagesTests
+public sealed class FlatDocumentPagesTests
 {
     private const int Pages = 12;
 
@@ -31,34 +35,74 @@ public sealed partial class FlatDocumentPagesTests
         new ChunkingStrategySelector(),
         NullLogger<AdvancedChunkingService>.Instance);
 
-    [GeneratedRegex(@"page (\d+)", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
-    private static partial Regex PageMarker();
-
-    // Every sentence of page N says "page N", so a chunk's own text tells which page it really came from.
+    // About 3,400 characters a page: longer than a chunk, as in a real rulebook, so every page has chunks starting on it.
     private static PageTextChunk[] RulebookPages() =>
         Enumerable.Range(1, Pages)
             .Select(n =>
             {
-                var text = string.Join(' ', Enumerable.Range(1, 14).Select(i =>
+                var text = string.Join(' ', Enumerable.Range(1, 40).Select(i =>
                     $"On page {n} the players resolve effect number {i} before the next round begins."));
                 return new PageTextChunk(n, text, 0, text.Length);
             })
             .ToArray();
 
-    private static int PageClaimedByText(string text) => int.Parse(PageMarker().Match(text).Groups[1].Value);
+    /// <summary>Where each non-empty page begins in the joined text, from the lengths of the pages alone.</summary>
+    private static List<(int Page, int Start)> TruePageStarts(IEnumerable<PageTextChunk> pages)
+    {
+        var starts = new List<(int Page, int Start)>();
+        var offset = 0;
+        foreach (var page in pages.Where(p => !p.IsEmpty))
+        {
+            starts.Add((page.PageNumber, offset));
+            offset += page.Text.Length + 2;
+        }
+
+        return starts;
+    }
+
+    private static int TruePageOf(DocumentChunk chunk, string text, List<(int Page, int Start)> starts)
+    {
+        var first = chunk.CharStart;
+        while (char.IsWhiteSpace(text[first]))
+        {
+            first++;
+        }
+
+        return starts.Last(s => s.Start <= first).Page;
+    }
+
+    private Task<List<DocumentChunk>> BuildAsync(string text, IReadOnlyList<PageSpan>? spans) =>
+        HeadingAwareChunker.BuildAsync(
+            structuredElements: null, text, DocumentId, gameId: null, _chunker, Token, pageSpans: spans);
 
     [Fact]
     public async Task AFlatDocumentWithMeasuredPages_ProducesChunksOnTheirTruePages()
     {
-        var joined = PageTextJoiner.Join(RulebookPages());
+        var pages = RulebookPages();
+        var joined = PageTextJoiner.Join(pages);
+        var starts = TruePageStarts(pages);
 
-        var chunks = await HeadingAwareChunker.BuildAsync(
-            structuredElements: null, joined.Text, DocumentId, gameId: null, _chunker, Token, pageSpans: joined.Spans);
+        var chunks = await BuildAsync(joined.Text, joined.Spans);
 
         chunks.Should().NotBeEmpty();
         chunks.Select(c => c.Page).Distinct().Should().BeEquivalentTo(Enumerable.Range(1, Pages));
-        chunks.Should().OnlyContain(c => c.Page == PageClaimedByText(c.Text),
-            "each chunk must sit on the page its own text comes from");
+        chunks.Should().OnlyContain(c => c.Page == TruePageOf(c, joined.Text, starts),
+            "each chunk must sit on the page where its text starts");
+    }
+
+    [Fact]
+    public async Task ThePageMapChangesOnlyThePageOfEachChunk_NotHowTheTextIsCut()
+    {
+        // The retrieval gates were measured on the way a flat document is cut: parents, children, offsets. A page
+        // map that moved those would move the index with it. It must only put the right page on each chunk.
+        var joined = PageTextJoiner.Join(RulebookPages());
+
+        var withMap = await BuildAsync(joined.Text, joined.Spans);
+        var withoutMap = await BuildAsync(joined.Text, spans: null);
+
+        withMap.Should().NotBeEmpty();
+        withMap.Select(c => (c.Text, c.CharStart, c.CharEnd, c.Level, c.Heading, c.ElementType))
+            .Should().Equal(withoutMap.Select(c => (c.Text, c.CharStart, c.CharEnd, c.Level, c.Heading, c.ElementType)));
     }
 
     [Fact]
@@ -66,8 +110,7 @@ public sealed partial class FlatDocumentPagesTests
     {
         var joined = PageTextJoiner.Join(RulebookPages());
 
-        var chunks = await HeadingAwareChunker.BuildAsync(
-            structuredElements: null, joined.Text, DocumentId, gameId: null, _chunker, Token);
+        var chunks = await BuildAsync(joined.Text, spans: null);
 
         chunks.Select(c => c.Page).Distinct().Should().Equal(1);
     }
@@ -75,14 +118,14 @@ public sealed partial class FlatDocumentPagesTests
     [Fact]
     public async Task ThePageMapSurvivesBeingStoredAndReadBack_SoAReindexKeepsThePages()
     {
-        var joined = PageTextJoiner.Join(RulebookPages());
+        var pages = RulebookPages();
+        var joined = PageTextJoiner.Join(pages);
+        var starts = TruePageStarts(pages);
         var stored = PageSpans.Serialize(joined.Spans!);
 
-        var chunks = await HeadingAwareChunker.BuildAsync(
-            structuredElements: null, joined.Text, DocumentId, gameId: null, _chunker, Token,
-            pageSpans: PageSpans.Parse(stored));
+        var chunks = await BuildAsync(joined.Text, PageSpans.Parse(stored));
 
-        chunks.Should().OnlyContain(c => c.Page == PageClaimedByText(c.Text));
+        chunks.Should().OnlyContain(c => c.Page == TruePageOf(c, joined.Text, starts));
         chunks.Select(c => c.Page).Distinct().Should().HaveCount(Pages);
     }
 
@@ -92,8 +135,7 @@ public sealed partial class FlatDocumentPagesTests
         var joined = PageTextJoiner.Join(RulebookPages());
         var staleSpans = joined.Spans!.Select(s => new PageSpan(s.Page, s.Start + 1)).ToList();
 
-        var chunks = await HeadingAwareChunker.BuildAsync(
-            structuredElements: null, joined.Text, DocumentId, gameId: null, _chunker, Token, pageSpans: staleSpans);
+        var chunks = await BuildAsync(joined.Text, staleSpans);
 
         chunks.Select(c => c.Page).Distinct().Should().Equal(1);
     }
@@ -103,11 +145,11 @@ public sealed partial class FlatDocumentPagesTests
     {
         PageTextChunk[] pages = [.. RulebookPages().Take(2), new PageTextChunk(3, "  ", 0, 2), .. RulebookPages().Skip(3).Take(2)];
         var joined = PageTextJoiner.Join(pages);
+        var starts = TruePageStarts(pages);
 
-        var chunks = await HeadingAwareChunker.BuildAsync(
-            structuredElements: null, joined.Text, DocumentId, gameId: null, _chunker, Token, pageSpans: joined.Spans);
+        var chunks = await BuildAsync(joined.Text, joined.Spans);
 
         chunks.Select(c => c.Page).Distinct().Should().BeEquivalentTo(new[] { 1, 2, 4, 5 });
-        chunks.Should().OnlyContain(c => c.Page == PageClaimedByText(c.Text));
+        chunks.Should().OnlyContain(c => c.Page == TruePageOf(c, joined.Text, starts));
     }
 }

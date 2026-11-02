@@ -103,7 +103,7 @@ type BusyLabels = { error: { busy: { title: string; body: string; action: string
 vi.mock('@/components/features/kb-globale/DrawerShell', () => ({
   DrawerShell: (props: Record<string, unknown>) => {
     const onCitationClick = props['onCitationClick'] as
-      ((link: { docId: string; page: number; chunkId?: string }) => void) | undefined;
+      ((link: { docId: string; page: number | null; chunkId?: string }) => void) | undefined;
     const labels = props['labels'] as BusyLabels | undefined;
     return (
       <div data-slot="kb-globale-drawer" data-testid="kb-globale-drawer">
@@ -115,6 +115,12 @@ vi.mock('@/components/features/kb-globale/DrawerShell', () => ({
           onClick={() => onCitationClick?.({ docId: 'doc-1', page: 5, chunkId: 'doc-1_3' })}
         >
           trigger citation
+        </button>
+        <button
+          data-testid="drawer-citation-no-page-trigger"
+          onClick={() => onCitationClick?.({ docId: 'doc-1', page: null })}
+        >
+          trigger citation without a page
         </button>
       </div>
     );
@@ -767,6 +773,23 @@ describe('KbGlobaleView (orchestrator)', () => {
       expect(mockRouterPush).toHaveBeenCalledWith(expect.stringContaining('docId=doc-1'));
       expect(mockRouterPush).toHaveBeenCalledWith(expect.stringContaining('page=5'));
       expect(mockRouterPush).toHaveBeenCalledWith(expect.stringContaining('chunkId=doc-1_3'));
+    });
+
+    it('opens the document without a page param when the citation has no page (#4819)', () => {
+      searchParamsMap = { ask: '1', docId: 'doc-1' };
+      useKbDocDetailMock.mockReturnValue({
+        data: readyEnvelope,
+        isLoading: false,
+        isSuccess: true,
+        isError: false,
+        error: null,
+      });
+      render(<KbGlobaleView />);
+
+      fireEvent.click(screen.getByTestId('drawer-citation-no-page-trigger'));
+
+      expect(mockRouterPush).toHaveBeenCalledWith(expect.stringContaining('docId=doc-1'));
+      expect(mockRouterPush).not.toHaveBeenCalledWith(expect.stringContaining('page='));
     });
 
     it('closeViewer deletes chunkId from URL to prevent stale deep-link', () => {

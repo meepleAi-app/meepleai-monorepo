@@ -32,17 +32,20 @@ internal sealed class GroundedAnswerService : IGroundedAnswerService
     private readonly ICopyrightLeakGuard _copyrightLeakGuard;
     private readonly ICopyrightFallbackMessageProvider _fallbackMessageProvider;
     private readonly IOptions<CopyrightLeakGuardOptions> _copyrightOptions;
+    private readonly ICitedPageTrust _pageTrust;
     private readonly ILogger<GroundedAnswerService> _logger;
 
     public GroundedAnswerService(
         ICopyrightLeakGuard copyrightLeakGuard,
         ICopyrightFallbackMessageProvider fallbackMessageProvider,
         IOptions<CopyrightLeakGuardOptions> copyrightOptions,
+        ICitedPageTrust pageTrust,
         ILogger<GroundedAnswerService> logger)
     {
         _copyrightLeakGuard = copyrightLeakGuard ?? throw new ArgumentNullException(nameof(copyrightLeakGuard));
         _fallbackMessageProvider = fallbackMessageProvider ?? throw new ArgumentNullException(nameof(fallbackMessageProvider));
         _copyrightOptions = copyrightOptions ?? throw new ArgumentNullException(nameof(copyrightOptions));
+        _pageTrust = pageTrust ?? throw new ArgumentNullException(nameof(pageTrust));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -123,9 +126,15 @@ internal sealed class GroundedAnswerService : IGroundedAnswerService
         }).ToList();
 
         // 3. Map to the wire CitationDto with Full-gated tier-nulling (identical to both former handlers).
+        //    #4819: a document that cannot tell its pages apart is cited without one (#4782). It is decided here, on
+        //    the way out, and not earlier: the paraphrase above matches the [ref:document:page] markers the model
+        //    wrote from the page it was shown in the prompt, so that step must still see the page.
+        var withoutAPage = await _pageTrust
+            .WithoutAPageAsync(finalCitations.Select(c => c.DocumentId), ct)
+            .ConfigureAwait(false);
         var citationDtos = finalCitations.Select(c => new CitationDto(
             c.DocumentId,
-            c.PageNumber,
+            withoutAPage.Contains(c.DocumentId) ? null : c.PageNumber,
             c.RelevanceScore,
             c.CopyrightTier == CopyrightTier.Full ? c.SnippetPreview : null,
             c.CopyrightTier.ToString().ToLowerInvariant(),

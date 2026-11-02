@@ -1,5 +1,6 @@
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.SharedKernel.Application.Interfaces;
 
@@ -15,13 +16,16 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Queries;
 internal class ExplainQueryHandler : IQueryHandler<ExplainQuery, ExplainResponseDto>
 {
     private readonly SearchQueryHandler _searchQueryHandler;
+    private readonly ICitedPageTrust _pageTrust;
     private readonly ILogger<ExplainQueryHandler> _logger;
 
     public ExplainQueryHandler(
         SearchQueryHandler searchQueryHandler,
+        ICitedPageTrust pageTrust,
         ILogger<ExplainQueryHandler> logger)
     {
         _searchQueryHandler = searchQueryHandler ?? throw new ArgumentNullException(nameof(searchQueryHandler));
+        _pageTrust = pageTrust ?? throw new ArgumentNullException(nameof(pageTrust));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -66,10 +70,14 @@ internal class ExplainQueryHandler : IQueryHandler<ExplainQuery, ExplainResponse
         // Step 3: Build script from chunks with proper structure
         var script = BuildScript(query.Topic, searchResults);
 
-        // Step 4: Create citations from search results
+        // Step 4: Create citations from search results. #4819: a document that cannot tell its pages apart
+        // (#4782) is cited without one. The PDF id is asked about, not the vector document id the citation carries.
+        var withoutAPage = await _pageTrust
+            .WithoutAPageAsync(searchResults.Select(sr => sr.PdfDocumentId ?? sr.VectorDocumentId), cancellationToken)
+            .ConfigureAwait(false);
         var citations = searchResults.Select(sr => new CitationDto(
             DocumentId: sr.VectorDocumentId,
-            PageNumber: sr.PageNumber,
+            PageNumber: withoutAPage.Contains(sr.PdfDocumentId ?? sr.VectorDocumentId) ? null : sr.PageNumber,
             Snippet: sr.TextContent.Length > 150
                 ? sr.TextContent.Substring(0, 150)
                 : sr.TextContent,

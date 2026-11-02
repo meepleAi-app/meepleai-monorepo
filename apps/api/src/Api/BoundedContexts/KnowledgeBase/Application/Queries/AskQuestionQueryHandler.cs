@@ -749,8 +749,9 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
 
         return new QaResponseDto(
             Answer: llmResponse,
-            // The legacy `sources` carry the page as a plain number, and 0 is how the clients already read «no
-            // page»: leaving the real one would contradict the citations of the same response.
+            // The legacy `sources` carry the page as a plain number (`SearchResultDto.PageNumber`), where 0 means none;
+            // leaving the real one would contradict the citations of the same response. The legacy endpoint turns it
+            // into `null` on the wire.
             Sources: searchResults
                 .Select(sr => withoutAPage.Contains(sr.PdfDocumentId ?? sr.VectorDocumentId) ? sr with { PageNumber = 0 } : sr)
                 .ToList(),

@@ -56,7 +56,7 @@ internal sealed class InlineCitationMatcherService
         return ResolveOverlaps(allMatches);
     }
 
-    private InlineCitationMatch? TryMatch(string answer, string phrase, int snippetIndex, int pageNumber, string pdfDocumentId)
+    private InlineCitationMatch? TryMatch(string answer, string phrase, int snippetIndex, int? pageNumber, string pdfDocumentId)
     {
         // Strategy 1: Exact substring match
         var exactIndex = answer.IndexOf(phrase, StringComparison.OrdinalIgnoreCase);
@@ -79,7 +79,7 @@ internal sealed class InlineCitationMatcherService
         return null;
     }
 
-    private static InlineCitationMatch? TryFuzzyMatch(string answer, string phrase, int snippetIndex, int pageNumber, string pdfDocumentId)
+    private static InlineCitationMatch? TryFuzzyMatch(string answer, string phrase, int snippetIndex, int? pageNumber, string pdfDocumentId)
     {
         if (phrase.Length < 10) // Too short for meaningful fuzzy matching
             return null;
@@ -103,7 +103,7 @@ internal sealed class InlineCitationMatcherService
         return null;
     }
 
-    private static InlineCitationMatch? TryNgramMatch(string answer, string phrase, int snippetIndex, int pageNumber, string pdfDocumentId)
+    private static InlineCitationMatch? TryNgramMatch(string answer, string phrase, int snippetIndex, int? pageNumber, string pdfDocumentId)
     {
         if (phrase.Length < NgramSize * 2) // Too short for n-gram analysis
             return null;

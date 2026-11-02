@@ -65,6 +65,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
     private readonly IAnswerPreconditions _preconditions;
     private readonly IMechanicCardProvider _mechanicCardProvider;
     private readonly IFeatureFlagService _featureFlags;
+    private readonly ICitedPageTrust _pageTrust;
     private readonly ILogger<AnswerPipeline> _logger;
     private readonly TimeProvider _timeProvider;
 
@@ -84,6 +85,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         IAnswerPreconditions preconditions,
         IMechanicCardProvider mechanicCardProvider,
         IFeatureFlagService featureFlags,
+        ICitedPageTrust pageTrust,
         ILogger<AnswerPipeline> logger,
         TimeProvider? timeProvider = null)
     {
@@ -102,6 +104,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         _preconditions = preconditions ?? throw new ArgumentNullException(nameof(preconditions));
         _mechanicCardProvider = mechanicCardProvider ?? throw new ArgumentNullException(nameof(mechanicCardProvider));
         _featureFlags = featureFlags ?? throw new ArgumentNullException(nameof(featureFlags));
+        _pageTrust = pageTrust ?? throw new ArgumentNullException(nameof(pageTrust));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -204,8 +207,12 @@ internal sealed class AnswerPipeline : IAnswerPipeline
             // Full-tier user's cached Full-gated regions must NOT be replayed to a later Protected-tier
             // user (DA-4). Regions are transient per-request data; fresh, correctly-gated regions are
             // emitted only on a cache MISS. Cache hits gracefully fall back to the text-quote highlight.
+            // #4819: the cache outlives the decision about a page (#4782). An entry written before it, or before a
+            // document was extracted again, would carry a page nobody can vouch for for a day: it is asked about again.
+            var servedSnippets = await WithoutUnreliablePagesAsync(cachedResponse.snippets, cancellationToken)
+                .ConfigureAwait(false);
             yield return CreateEvent(StreamingEventType.Citations,
-                new StreamingCitations(StripRegions(cachedResponse.snippets)));
+                new StreamingCitations(StripRegions(servedSnippets)));
 
             // Emit answer as tokens (simulate streaming for consistency).
             // #3850: le voci scritte prima della correzione portano la rinuncia in inglese.
@@ -488,6 +495,11 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         // SP-C (#3407): the citations carry the pdf id (Issue #W) and the copyright tier resolved for the
         // asker (TieredPassageSearch). Here the verbatim excerpt stays and the region overlay is gated to
         // Full — StreamQa previously emitted verbatim text with NO gate (a leak, #447/DA-4).
+        // #4819: a document that cannot tell its pages apart (#4782) is cited without one. The same list grounds
+        // the prompt below and feeds the inline-citation matcher, so neither writes a page it cannot vouch for.
+        var withoutAPage = await _pageTrust
+            .WithoutAPageAsync(passages.Citations.Select(c => c.DocumentId), cancellationToken)
+            .ConfigureAwait(false);
         var snippets = passages.Citations.Select(c =>
         {
             var isFull = c.CopyrightTier == CopyrightTier.Full;
@@ -500,7 +512,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
                 // LLM-prompt/FE-citation source split — out of SP-C scope.)
                 c.SnippetPreview,
                 $"PDF:{c.DocumentId}",
-                c.PageNumber,
+                withoutAPage.Contains(c.DocumentId) ? null : c.PageNumber,
                 0,
                 c.RelevanceScore)
             {
@@ -523,6 +535,24 @@ internal sealed class AnswerPipeline : IAnswerPipeline
     /// </summary>
     private static IReadOnlyList<Snippet> StripRegions(IReadOnlyList<Snippet> snippets) =>
         snippets.Select(s => s with { regions = null, charStart = null, charEnd = null }).ToList();
+
+    /// <summary>
+    /// #4819: the snippets as they can be shown, leaving out the page of those from a document that cannot vouch
+    /// for it (#4782). Used on what comes out of the cache; a fresh answer asks while it builds its citations.
+    /// </summary>
+    private async Task<IReadOnlyList<Snippet>> WithoutUnreliablePagesAsync(
+        IReadOnlyList<Snippet> snippets, CancellationToken cancellationToken)
+    {
+        var withoutAPage = await _pageTrust
+            .WithoutAPageAsync(snippets.Select(s => PdfIdOf(s.source)), cancellationToken)
+            .ConfigureAwait(false);
+        return snippets
+            .Select(s => withoutAPage.Contains(PdfIdOf(s.source)) ? s with { page = null } : s)
+            .ToList();
+    }
+
+    private static string PdfIdOf(string source) =>
+        source.StartsWith("PDF:", StringComparison.Ordinal) ? source["PDF:".Length..] : source;
 
     /// <summary>
     /// Loads chat thread context if ThreadId provided.
@@ -582,7 +612,9 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         VerifiedRulesBlock verifiedBlock)
     {
         var context = string.Join("\n\n", snippets.Select(s =>
-            $"[Page {s.page}] {s.text}"));
+            // #4819: said outright when the page is not known: a passage without any marker would read as part of
+            // the one before it, and the model, asked to cite pages, would have only the example to copy.
+            $"[Page {(s.page is { } page ? page.ToString(System.Globalization.CultureInfo.InvariantCulture) : "unknown")}] {s.text}"));
 
         // R1 (spec §7.1/D8): approved claims rank above raw RAG context (the stream path has no house rules).
         var hasVerifiedRules = verifiedBlock is { IsEmpty: false };

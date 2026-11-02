@@ -278,7 +278,7 @@ internal class StreamDebugQaQueryHandler : IStreamingQueryHandler<StreamDebugQaQ
         var retrievalItems = snippets.Select(s => new DebugRetrievalItem(
             DocumentId: s.source,
             Score: s.score,
-            PageNumber: s.page,
+            PageNumber: s.page ?? 0,
             SearchMethod: "hybrid")).ToList();
 
         yield return CreateEvent(StreamingEventType.DebugRetrievalResults,

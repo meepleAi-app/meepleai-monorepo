@@ -894,12 +894,14 @@ internal static class AiEndpoints
     /// <summary>
     /// Map QaResponseDto to legacy QaResponse format for backward compatibility.
     /// </summary>
-    private static QaResponse MapToLegacyQaResponse(QaResponseDto qaResponse)
+    internal static QaResponse MapToLegacyQaResponse(QaResponseDto qaResponse)
     {
         var snippets = qaResponse.Sources.Select(src => new Snippet(
             text: src.TextContent,
             source: $"PDF:{src.VectorDocumentId}",
-            page: src.PageNumber,
+            // #4819: `SearchResultDto.PageNumber` is a plain number and 0 means none (Ask writes it for a document that
+            // cannot vouch for its pages, #4782): on the wire that is `null`, as for the explanation.
+            page: src.PageNumber > 0 ? src.PageNumber : null,
             line: 0,
             score: (float)src.RelevanceScore
         )).ToList();

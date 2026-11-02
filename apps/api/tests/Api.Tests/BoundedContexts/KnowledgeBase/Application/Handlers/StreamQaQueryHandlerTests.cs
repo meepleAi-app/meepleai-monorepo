@@ -382,11 +382,20 @@ public partial class StreamQaQueryHandlerTests
     // ─── #4819: un documento che non sa dire la pagina dei suoi passaggi si cita senza pagina ───
 
     private async Task<(Snippet Citation, string? UserPrompt)> AskCitingADocumentAsync(
-        Guid vectorDocumentId, int page, Api.BoundedContexts.KnowledgeBase.Application.Services.ICitedPageTrust trust)
+        Guid vectorDocumentId, int page, Api.BoundedContexts.KnowledgeBase.Application.Services.ICitedPageTrust trust,
+        Guid? pdfDocumentId = null)
     {
         var gameId = Guid.NewGuid().ToString();
         var query = new StreamQaQuery(gameId, "how do I score?", TestUserId, "User", ThreadId: null);
         SetupHappyPathMocks(gameId, query.Query);
+        if (pdfDocumentId is { } pdfId)
+        {
+            // The search result is about the vector document and the citation about the PDF: the pipeline maps one
+            // to the other, and the question about the page has to be asked about the PDF.
+            _vectorDocumentRepositoryMock
+                .Setup(x => x.GetByGameIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<VectorDocument> { new(vectorDocumentId, Guid.Parse(gameId), pdfId, "en", 10) });
+        }
         _rrfFusionServiceMock
             .Setup(x => x.FuseResults(
                 It.IsAny<List<DomainSearchResult>>(),
@@ -419,29 +428,66 @@ public partial class StreamQaQueryHandlerTests
     public async Task Handle_CitesADocumentThatCannotVouchForItsPagesWithoutOne_AndDoesNotNameItToTheModel()
     {
         var flat = Guid.NewGuid();
+        var flatVector = Guid.NewGuid();
 
         var (citation, prompt) = await AskCitingADocumentAsync(
-            flat, page: 4, Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles.WithoutAPage(flat.ToString()));
+            flatVector, page: 4, Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles.WithoutAPage(flat.ToString()), pdfDocumentId: flat);
 
         citation.page.Should().BeNull();
         citation.text.Should().Be("Sample rule text");
-        // The same list grounds the prompt: the passage is still there, without a page the model could repeat.
-        prompt.Should().Contain("Sample rule text");
+        // The same list grounds the prompt: the passage is still there, and says its page is not known instead of
+        // being read as part of the passage before it, or with an empty marker.
+        prompt.Should().Contain("[Page unknown] Sample rule text");
         prompt.Should().NotContain("[Page 4]");
-        // ...and not an empty marker either: the marker is left out, not written with nothing in it.
-        prompt.Should().NotContain("[Page ] Sample rule text");
+        prompt.Should().NotContain("[Page ] ");
     }
 
     [Fact]
     public async Task Handle_CitesTheDeclaredPageOfADocumentThatCanVouchForIt_AndNamesItToTheModel()
     {
         var measured = Guid.NewGuid();
+        var measuredVector = Guid.NewGuid();
 
         var (citation, prompt) = await AskCitingADocumentAsync(
-            measured, page: 4, Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles.WithoutAPage(Guid.NewGuid().ToString()));
+            measuredVector, page: 4, Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles.WithoutAPage(Guid.NewGuid().ToString()), pdfDocumentId: measured);
 
         citation.page.Should().Be(4);
         prompt.Should().Contain("[Page 4] Sample rule text");
+    }
+
+    [Fact]
+    public async Task Handle_CachedResponse_LeavesOutThePageOfADocumentThatCannotVouchForIt()
+    {
+        // The cache outlives the decision: an entry written before it carries the false page for a day.
+        var gameId = Guid.NewGuid().ToString();
+        var flat = Guid.NewGuid();
+        var measured = Guid.NewGuid();
+        var query = new StreamQaQuery(gameId, "cached with pages?", TestUserId, "User", ThreadId: null);
+        var cachedResponse = new QaResponse(
+            answer: "cached answer",
+            snippets: new List<Snippet>
+            {
+                new Snippet("flat text", $"PDF:{flat}", 1, 0, 0.9f),
+                new Snippet("measured text", $"PDF:{measured}", 7, 0, 0.8f),
+            },
+            promptTokens: 10, completionTokens: 5, totalTokens: 15, confidence: 0.85, metadata: null);
+        _cacheMock
+            .Setup(x => x.GenerateQaCacheKey(It.IsAny<string>(), It.IsAny<string>()))
+            .Returns("test-cache-key");
+        _cacheMock
+            .Setup(x => x.GetAsync<QaResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(cachedResponse);
+        var handler = CreateHandlerWith(
+            CreatePermissiveRagAccessServiceMock(), pageTrust: Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles.WithoutAPage(flat.ToString()));
+
+        var events = new List<RagStreamingEvent>();
+        await foreach (var e in handler.Handle(query, TestContext.Current.CancellationToken))
+        {
+            events.Add(e);
+        }
+
+        var citations = ((StreamingCitations)events.First(e => e.Type == StreamingEventType.Citations).Data!).citations;
+        citations.Select(c => (c.text, c.page)).Should().Equal(("flat text", (int?)null), ("measured text", (int?)7));
     }
 
     private void SetupFusedResultWithRegion()

@@ -207,8 +207,12 @@ internal sealed class AnswerPipeline : IAnswerPipeline
             // Full-tier user's cached Full-gated regions must NOT be replayed to a later Protected-tier
             // user (DA-4). Regions are transient per-request data; fresh, correctly-gated regions are
             // emitted only on a cache MISS. Cache hits gracefully fall back to the text-quote highlight.
+            // #4819: the cache outlives the decision about a page (#4782). An entry written before it, or before a
+            // document was extracted again, would carry a page nobody can vouch for for a day: it is asked about again.
+            var servedSnippets = await WithoutUnreliablePagesAsync(cachedResponse.snippets, cancellationToken)
+                .ConfigureAwait(false);
             yield return CreateEvent(StreamingEventType.Citations,
-                new StreamingCitations(StripRegions(cachedResponse.snippets)));
+                new StreamingCitations(StripRegions(servedSnippets)));
 
             // Emit answer as tokens (simulate streaming for consistency).
             // #3850: le voci scritte prima della correzione portano la rinuncia in inglese.
@@ -533,6 +537,24 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         snippets.Select(s => s with { regions = null, charStart = null, charEnd = null }).ToList();
 
     /// <summary>
+    /// #4819: the snippets as they can be shown, leaving out the page of those from a document that cannot vouch
+    /// for it (#4782). Used on what comes out of the cache; a fresh answer asks while it builds its citations.
+    /// </summary>
+    private async Task<IReadOnlyList<Snippet>> WithoutUnreliablePagesAsync(
+        IReadOnlyList<Snippet> snippets, CancellationToken cancellationToken)
+    {
+        var withoutAPage = await _pageTrust
+            .WithoutAPageAsync(snippets.Select(s => PdfIdOf(s.source)), cancellationToken)
+            .ConfigureAwait(false);
+        return snippets
+            .Select(s => withoutAPage.Contains(PdfIdOf(s.source)) ? s with { page = null } : s)
+            .ToList();
+    }
+
+    private static string PdfIdOf(string source) =>
+        source.StartsWith("PDF:", StringComparison.Ordinal) ? source["PDF:".Length..] : source;
+
+    /// <summary>
     /// Loads chat thread context if ThreadId provided.
     /// </summary>
     private async Task<string> LoadChatThreadContextAsync(
@@ -590,7 +612,9 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         VerifiedRulesBlock verifiedBlock)
     {
         var context = string.Join("\n\n", snippets.Select(s =>
-            s.page is { } page ? $"[Page {page}] {s.text}" : s.text));
+            // #4819: said outright when the page is not known: a passage without any marker would read as part of
+            // the one before it, and the model, asked to cite pages, would have only the example to copy.
+            $"[Page {(s.page is { } page ? page.ToString(System.Globalization.CultureInfo.InvariantCulture) : "unknown")}] {s.text}"));
 
         // R1 (spec §7.1/D8): approved claims rank above raw RAG context (the stream path has no house rules).
         var hasVerifiedRules = verifiedBlock is { IsEmpty: false };

@@ -142,15 +142,27 @@ public sealed class FlatDocumentPagesTests
 
     // Sentences and pages of uneven lengths slide the page boundaries across the steps of the chunker. The unevenness
     // changes the layout; the layouts are deterministic.
-    private static PageTextChunk[] PagesOfUnevenLength(int unevenness) =>
+    private static PageTextChunk[] PagesOfUnevenLength(int unevenness, string trailing = "") =>
         Enumerable.Range(1, 40)
             .Select(n =>
             {
                 var text = string.Join(' ', Enumerable.Range(1, 30 + (n * 7 % 23)).Select(i =>
-                    $"Page {n} rule {i} resolves {new string('x', (i * 5 + n) % unevenness)} first."));
+                    $"Page {n} rule {i} resolves {new string('x', (i * 5 + n) % unevenness)} first.")) + trailing;
                 return new PageTextChunk(n, text, 0, text.Length);
             })
             .ToArray();
+
+    /// <summary>How many blank characters run from <paramref name="start"/> to the first word after it.</summary>
+    private static int BlanksBeforeTheWords(string text, int start)
+    {
+        var first = start;
+        while (char.IsWhiteSpace(text[first]))
+        {
+            first++;
+        }
+
+        return first - start;
+    }
 
     [Fact]
     public async Task AChunkThatBeginsBeforeAPageBreakButHasItsWordsAfterIt_IsOnThePageOfItsWords()
@@ -174,6 +186,33 @@ public sealed class FlatDocumentPagesTests
         }
 
         straddling.Should().BeGreaterThan(0, "no layout made a chunk begin before a page break, so this test proves nothing");
+    }
+
+    [Fact]
+    public async Task AChunkThatBeginsInALongRunOfBlanksAfterAPage_IsOnThePageOfItsWords()
+    {
+        // The text of a page often ends in blanks that are not newlines (a trailing space, a tab, a CRLF), so the run
+        // between the last word of a page and the first of the next is longer than the separator and is not made of
+        // "\n" alone. A chunk that begins at the head of that run has to be put where its words are, however long the
+        // run and whatever it is made of. As above the case is rare, so the test requires it to occur.
+        var deepStarts = 0;
+        foreach (var trailing in new[] { "   ", " \t ", "\r\n  " })
+        {
+            foreach (var unevenness in Enumerable.Range(3, 27))
+            {
+                var pages = PagesOfUnevenLength(unevenness, trailing);
+                var joined = PageTextJoiner.Join(pages);
+                var starts = TruePageStarts(pages);
+
+                var chunks = await BuildAsync(joined.Text, joined.Spans);
+
+                deepStarts += chunks.Count(c => BlanksBeforeTheWords(joined.Text, c.CharStart) >= 3);
+                chunks.Should().OnlyContain(c => c.Page == TruePageOf(c, joined.Text, starts),
+                    "unevenness {0}, {1} trailing blanks", unevenness, trailing.Length);
+            }
+        }
+
+        deepStarts.Should().BeGreaterThan(0, "no chunk began three or more blanks before its words, so this test proves nothing");
     }
 
     [Fact]

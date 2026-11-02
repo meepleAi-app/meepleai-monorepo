@@ -455,11 +455,12 @@ public sealed class UploadPdfExtractionPersistenceIntegrationTests : IAsyncLifet
     }
 
     /// <summary>
-    /// #4782: a document the extractor returned without structured elements is flat. With the pages it measured, its
-    /// chunks sit on those pages (before: a single section on page 1), and the map survives in the row for a re-index.
+    /// #4782: a document the extractor returned without structured elements is flat. With the pages it measured, the
+    /// upload path keeps the page map in the row (for a re-index) and hands it to the chunker. That the chunks then sit
+    /// on those pages is not shown here, where the chunker is a double: <c>FlatDocumentPagesTests</c> runs the real one.
     /// </summary>
     [Fact(Timeout = 90000)]
-    public async Task ProcessPdfAsync_FlatDocumentWithMeasuredPages_PersistsChunksOnTheirOwnPages()
+    public async Task ProcessPdfAsync_FlatDocumentWithMeasuredPages_PersistsThePageMap_AndHandsItToTheChunker()
     {
         const string firstPage = "Setup the board with three tiles before the first round.";
         const string secondPage = "Scoring happens at the end of every round for each player.";

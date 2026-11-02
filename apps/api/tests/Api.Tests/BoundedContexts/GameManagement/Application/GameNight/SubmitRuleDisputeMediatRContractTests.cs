@@ -104,6 +104,10 @@ public sealed class SubmitRuleDisputeMediatRContractTests
         services.AddSingleton<ICopyrightLeakGuard, NgramCopyrightLeakGuard>();
         services.AddSingleton<ICopyrightFallbackMessageProvider, DefaultCopyrightFallbackMessageProvider>();
         services.AddSingleton(Options.Create(new CopyrightLeakGuardOptions()));
+        // #4819: the finalize asks which cited documents cannot vouch for their pages; here every page is believed,
+        // and the rule dispute still asks the query for its own references.
+        services.AddSingleton(
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles.AllPagesBelieved());
         services.AddSingleton<IGroundedAnswerService, GroundedAnswerService>();
 
         var llm = new Mock<ILlmService>();

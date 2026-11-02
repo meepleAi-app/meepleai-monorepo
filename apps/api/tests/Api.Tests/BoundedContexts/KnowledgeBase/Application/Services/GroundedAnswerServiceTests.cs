@@ -195,6 +195,10 @@ public sealed class GroundedAnswerServiceTests
         result.CitationDtos
             .Select(c => (c.DocumentId, c.PageNumber))
             .Should().Equal(("doc-flat", (int?)null), ("doc-measured", (int?)3));
+        // Only the page goes: the source is still cited, with its text and its weight.
+        result.CitationDtos.Should().OnlyContain(c => c.SnippetPreview == "snippet" && c.RelevanceScore == 0.9f);
+        result.CitationDtos.Should().OnlyContain(c => c.CopyrightTier == "full");
+        result.FinalCitations.Select(c => c.PageNumber).Should().Equal(3, 3);
     }
 
     [Fact]

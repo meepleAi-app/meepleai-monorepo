@@ -14,13 +14,13 @@ internal interface ICitedPageTrust
     /// </summary>
     /// <param name="documentIds">
     /// The document ids as the citations carry them. Ids that are not a GUID are not documents KnowledgeBase wrote and
-    /// cannot be asked about; they are not reported.
+    /// cannot be asked about: when the question is answered they are not reported (their page stays).
     /// </param>
     /// <param name="cancellationToken">A cancellation propagates; it is not read as «cannot be asked».</param>
     /// <returns>
-    /// The subset to cite without a page, compared case-insensitively. If the question cannot be answered, every
-    /// document named: a reader sent to the wrong page is worse off than one who is not sent anywhere. A cancellation
-    /// is not that case and propagates.
+    /// The subset to cite without a page, compared case-insensitively. If the question cannot be answered, every id
+    /// named, GUID or not, as the rule dispute does: a reader sent to the wrong page is worse off than one who is not
+    /// sent anywhere. A cancellation is not that case and propagates.
     /// </returns>
     Task<IReadOnlySet<string>> WithoutAPageAsync(IEnumerable<string?> documentIds, CancellationToken cancellationToken);
 }

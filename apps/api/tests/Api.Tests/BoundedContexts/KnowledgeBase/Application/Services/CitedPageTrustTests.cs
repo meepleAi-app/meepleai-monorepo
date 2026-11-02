@@ -105,6 +105,19 @@ public sealed class CitedPageTrustTests
     }
 
     [Fact]
+    public async Task WhenTheQueryFails_EveryIdNamedIsReported_AlsoThoseThatAreNotDocuments()
+    {
+        _mediator
+            .Setup(m => m.Send(It.IsAny<GetDocumentsWithUnreliablePageNumbersQuery>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("database down"));
+
+        var result = await Sut().WithoutAPageAsync([Flat.ToString(), "doc-1"], CancellationToken.None);
+
+        // The same choice as the rule dispute: when nothing can be asked, nothing is believed.
+        result.Should().BeEquivalentTo([Flat.ToString(), "doc-1"]);
+    }
+
+    [Fact]
     public async Task ACancellationOfTheCaller_PropagatesInsteadOfBecomingAFailure()
     {
         using var cts = new CancellationTokenSource();

@@ -1269,6 +1269,8 @@ public class AskQuestionQueryHandlerPhase2Tests
             TestContext.Current.CancellationToken);
 
         result.Citations.Should().ContainSingle().Which.PageNumber.Should().BeNull();
+        // The legacy `sources` of the same response do not contradict the citations: 0 is «no page».
+        result.Sources.Should().ContainSingle().Which.PageNumber.Should().Be(0);
     }
 
     [Fact]
@@ -1286,6 +1288,7 @@ public class AskQuestionQueryHandlerPhase2Tests
             TestContext.Current.CancellationToken);
 
         result.Citations.Should().ContainSingle().Which.PageNumber.Should().Be(4);
+        result.Sources.Should().ContainSingle().Which.PageNumber.Should().Be(4);
     }
 
     private AskQuestionQueryHandler BuildHandler(

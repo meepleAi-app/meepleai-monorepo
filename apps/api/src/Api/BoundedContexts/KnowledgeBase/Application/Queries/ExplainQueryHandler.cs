@@ -64,20 +64,22 @@ internal class ExplainQueryHandler : IQueryHandler<ExplainQuery, ExplainResponse
                 $"No relevant information found about '{query.Topic}' in the rulebook.");
         }
 
+        // #4819: a document that cannot tell its pages apart (#4782) is cited without one, in the script as well as
+        // in the citations. The PDF id is asked about, not the vector document id the citation carries.
+        var withoutAPage = await _pageTrust
+            .WithoutAPageAsync(searchResults.Select(DocumentKey), cancellationToken)
+            .ConfigureAwait(false);
+
         // Step 2: Build outline from search results
         var outline = BuildOutline(query.Topic, searchResults);
 
         // Step 3: Build script from chunks with proper structure
-        var script = BuildScript(query.Topic, searchResults);
+        var script = BuildScript(query.Topic, searchResults, withoutAPage);
 
-        // Step 4: Create citations from search results. #4819: a document that cannot tell its pages apart
-        // (#4782) is cited without one. The PDF id is asked about, not the vector document id the citation carries.
-        var withoutAPage = await _pageTrust
-            .WithoutAPageAsync(searchResults.Select(sr => sr.PdfDocumentId ?? sr.VectorDocumentId), cancellationToken)
-            .ConfigureAwait(false);
+        // Step 4: Create citations from search results
         var citations = searchResults.Select(sr => new CitationDto(
             DocumentId: sr.VectorDocumentId,
-            PageNumber: withoutAPage.Contains(sr.PdfDocumentId ?? sr.VectorDocumentId) ? null : sr.PageNumber,
+            PageNumber: withoutAPage.Contains(DocumentKey(sr)) ? null : sr.PageNumber,
             Snippet: sr.TextContent.Length > 150
                 ? sr.TextContent.Substring(0, 150)
                 : sr.TextContent,
@@ -151,7 +153,9 @@ internal class ExplainQueryHandler : IQueryHandler<ExplainQuery, ExplainResponse
     /// Builds a structured script from search results.
     /// Creates a markdown-formatted explanation with citations.
     /// </summary>
-    private string BuildScript(string topic, List<SearchResultDto> results)
+    private static string DocumentKey(SearchResultDto result) => result.PdfDocumentId ?? result.VectorDocumentId;
+
+    private string BuildScript(string topic, List<SearchResultDto> results, IReadOnlySet<string> withoutAPage)
     {
         var scriptParts = new List<string>
         {
@@ -165,7 +169,10 @@ internal class ExplainQueryHandler : IQueryHandler<ExplainQuery, ExplainResponse
         for (int i = 0; i < results.Count; i++)
         {
             var result = results[i];
-            scriptParts.Add($"### Section {i + 1} (Page {result.PageNumber})");
+            // #4819: the heading names the page only when the document can vouch for it.
+            scriptParts.Add(withoutAPage.Contains(DocumentKey(result))
+                ? $"### Section {i + 1}"
+                : $"### Section {i + 1} (Page {result.PageNumber})");
             scriptParts.Add("");
             scriptParts.Add(result.TextContent.Trim());
             scriptParts.Add("");

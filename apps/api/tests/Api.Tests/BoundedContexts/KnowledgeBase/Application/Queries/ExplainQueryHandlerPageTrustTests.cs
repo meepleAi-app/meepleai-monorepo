@@ -110,6 +110,9 @@ public sealed class ExplainQueryHandlerPageTrustTests
             .Handle(Query(), TestContext.Current.CancellationToken);
 
         result.Citations.Should().ContainSingle().Which.PageNumber.Should().BeNull();
+        // The script is text built from the same passages: its heading does not name the page either.
+        result.Script.Should().Contain("### Section 1");
+        result.Script.Should().NotContain("Page ");
     }
 
     [Fact]
@@ -122,5 +125,6 @@ public sealed class ExplainQueryHandlerPageTrustTests
             .Handle(Query(), TestContext.Current.CancellationToken);
 
         result.Citations.Should().ContainSingle().Which.PageNumber.Should().Be(4);
+        result.Script.Should().Contain("### Section 1 (Page 4)");
     }
 }

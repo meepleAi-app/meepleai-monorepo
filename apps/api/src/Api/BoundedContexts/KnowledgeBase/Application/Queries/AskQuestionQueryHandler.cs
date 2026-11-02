@@ -46,6 +46,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
     private readonly IIntentClassifierService _intentClassifier;
     private readonly IMechanicCardProvider _mechanicCardProvider;
     private readonly IFeatureFlagService _featureFlags;
+    private readonly ICitedPageTrust _pageTrust;
     private readonly ILogger<AskQuestionQueryHandler> _logger;
 
     public AskQuestionQueryHandler(
@@ -68,6 +69,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         IIntentClassifierService intentClassifier,
         IMechanicCardProvider mechanicCardProvider,
         IFeatureFlagService featureFlags,
+        ICitedPageTrust pageTrust,
         ILogger<AskQuestionQueryHandler> logger)
     {
         _retrieval = retrieval ?? throw new ArgumentNullException(nameof(retrieval));
@@ -89,6 +91,7 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         _intentClassifier = intentClassifier ?? throw new ArgumentNullException(nameof(intentClassifier));
         _mechanicCardProvider = mechanicCardProvider ?? throw new ArgumentNullException(nameof(mechanicCardProvider));
         _featureFlags = featureFlags ?? throw new ArgumentNullException(nameof(featureFlags));
+        _pageTrust = pageTrust ?? throw new ArgumentNullException(nameof(pageTrust));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -683,10 +686,14 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
         var overallConfidence = _qualityTrackingService.CalculateOverallConfidence(searchConfidence, llmConfidence);
         var isLowQuality = _qualityTrackingService.IsLowQuality(overallConfidence);
 
-        // Extract citations
+        // Extract citations. #4819: a document that cannot tell its pages apart (#4782) is cited without one. The
+        // PDF id is asked about, not the vector document id the citation carries.
+        var withoutAPage = await _pageTrust
+            .WithoutAPageAsync(searchResults.Select(sr => sr.PdfDocumentId ?? sr.VectorDocumentId), cancellationToken)
+            .ConfigureAwait(false);
         var citations = searchResults.Select(sr => new CitationDto(
             DocumentId: sr.VectorDocumentId,
-            PageNumber: sr.PageNumber,
+            PageNumber: withoutAPage.Contains(sr.PdfDocumentId ?? sr.VectorDocumentId) ? null : sr.PageNumber,
             Snippet: sr.TextContent.Substring(0, Math.Min(150, sr.TextContent.Length)),
             RelevanceScore: sr.RelevanceScore
         )).ToList();
@@ -742,7 +749,11 @@ internal class AskQuestionQueryHandler : IQueryHandler<AskQuestionQuery, QaRespo
 
         return new QaResponseDto(
             Answer: llmResponse,
-            Sources: searchResults,
+            // The legacy `sources` carry the page as a plain number, and 0 is how the clients already read «no
+            // page»: leaving the real one would contradict the citations of the same response.
+            Sources: searchResults
+                .Select(sr => withoutAPage.Contains(sr.PdfDocumentId ?? sr.VectorDocumentId) ? sr with { PageNumber = 0 } : sr)
+                .ToList(),
             SearchConfidence: searchConfidence.Value,
             LlmConfidence: llmConfidence.Value,
             OverallConfidence: overallConfidence.Value,

@@ -1250,12 +1250,54 @@ public class AskQuestionQueryHandlerPhase2Tests
         prompt.Should().NotContain("Eccezione a");
     }
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // #4819 — un documento che non sa dire la pagina dei suoi passaggi (#4782) si cita senza pagina
+    // ─────────────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_CitesADocumentThatCannotVouchForItsPagesWithoutOne()
+    {
+        var gameId = Guid.NewGuid();
+        var flat = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "Answer [Page 4]", pdfDocumentId: flat, pageNumber: 4);
+        var handler = BuildHandler(
+            pageTrust: Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles
+                .WithoutAPage(flat.ToString()));
+
+        var result = await handler.Handle(
+            new AskQuestionQuery(GameId: gameId, Question: "Come si gioca?", UserId: Guid.NewGuid(), UserRole: "User"),
+            TestContext.Current.CancellationToken);
+
+        result.Citations.Should().ContainSingle().Which.PageNumber.Should().BeNull();
+        // The legacy `sources` of the same response do not contradict the citations: 0 is «no page».
+        result.Sources.Should().ContainSingle().Which.PageNumber.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Handle_CitesTheDeclaredPageOfADocumentThatCanVouchForIt()
+    {
+        var gameId = Guid.NewGuid();
+        var measured = Guid.NewGuid();
+        SetupDefaultMocksWithSearchResults(gameId, "Answer [Page 4]", pdfDocumentId: measured, pageNumber: 4);
+        var handler = BuildHandler(
+            pageTrust: Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles
+                .WithoutAPage(Guid.NewGuid().ToString()));
+
+        var result = await handler.Handle(
+            new AskQuestionQuery(GameId: gameId, Question: "Come si gioca?", UserId: Guid.NewGuid(), UserRole: "User"),
+            TestContext.Current.CancellationToken);
+
+        result.Citations.Should().ContainSingle().Which.PageNumber.Should().Be(4);
+        result.Sources.Should().ContainSingle().Which.PageNumber.Should().Be(4);
+    }
+
     private AskQuestionQueryHandler BuildHandler(
         IRagAccessService? ragAccessService = null,
         Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider? mechanicCardProvider = null,
         Api.Services.IFeatureFlagService? featureFlags = null,
         IRagQualityTracker? qualityTracker = null,
-        Api.SharedKernel.Services.ITierEnforcementService? tiers = null) =>
+        Api.SharedKernel.Services.ITierEnforcementService? tiers = null,
+        Api.BoundedContexts.KnowledgeBase.Application.Services.ICitedPageTrust? pageTrust = null) =>
         new(
             AnswerPipelineTestDoubles.Retrieval(_searchHandler, CreatePassthroughReranker()),
             AnswerPipelineTestDoubles.ProfileReader(),
@@ -1277,6 +1319,7 @@ public class AskQuestionQueryHandlerPhase2Tests
             new IntentClassifierService(),
             mechanicCardProvider ?? Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
             featureFlags ?? Mock.Of<Api.Services.IFeatureFlagService>(),
+            pageTrust ?? Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles.AllPagesBelieved(),
             _mockLogger.Object);
 
     private static Api.BoundedContexts.KnowledgeBase.Domain.Services.Reranking.ICrossEncoderReranker CreatePassthroughReranker()
@@ -1361,7 +1404,8 @@ public class AskQuestionQueryHandlerPhase2Tests
             });
     }
 
-    private void SetupDefaultMocksWithSearchResults(Guid gameId, string llmAnswer)
+    private void SetupDefaultMocksWithSearchResults(
+        Guid gameId, string llmAnswer, Guid pdfDocumentId = default, int pageNumber = 1)
     {
         SetupDefaultMocks(gameId);
 
@@ -1371,10 +1415,11 @@ public class AskQuestionQueryHandlerPhase2Tests
             new(id: Guid.NewGuid(),
                 vectorDocumentId: Guid.NewGuid(),
                 textContent: "Sample rulebook text for testing.",
-                pageNumber: 1,
+                pageNumber: pageNumber,
                 relevanceScore: new Confidence(0.85),
                 rank: 1,
-                searchMethod: "hybrid")
+                searchMethod: "hybrid",
+                pdfDocumentId: pdfDocumentId)
         };
         _mockRrfService
             .Setup(r => r.FuseResults(

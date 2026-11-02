@@ -288,6 +288,7 @@ public sealed class AskGroundedSessionQueryHandlerTests
             leakGuard.Object,
             fallbackProvider.Object,
             Options.Create(new CopyrightLeakGuardOptions()),
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles.AllPagesBelieved(),
             NullLogger<GroundedAnswerService>.Instance);
 
         return new AskGroundedSessionQueryHandler(

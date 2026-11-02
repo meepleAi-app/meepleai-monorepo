@@ -16,6 +16,9 @@ internal interface IGroundedAnswerService
     /// → paraphrase for Protected citations → <see cref="Api.Models.CitationDto"/> mapping with Full-gated
     /// tier-nulling → grounding from citation count (#3388) → confidence. The caller owns generation
     /// (stream vs one-shot) and orchestration (yields/persistence/broadcast).
+    /// #4819: the wire citations leave out the page of a document that cannot vouch for it (#4782); that is
+    /// decided after the paraphrase, which is matched on the page the model was shown. Asking costs one query
+    /// per answer that cites a document.
     /// </summary>
     /// <param name="responseText">The generated answer text.</param>
     /// <param name="resolvedCitations">Citations after copyright-tier resolution.</param>
@@ -39,6 +42,10 @@ internal interface IGroundedAnswerService
 /// #4751: <c>Sanitized</c> says the leak guard found a verbatim run of a Protected passage and replaced the whole
 /// answer with the copyright fallback message. A caller that stores or broadcasts the text must not take that
 /// message for the answer it asked for.
+/// <para>
+/// #4819: <c>FinalCitations</c> keep the page as the retrieval found it, for the leak guard and the paraphrase;
+/// the page to show is the one in <c>CitationDtos</c>, which leaves it out for a document that cannot vouch for it.
+/// </para>
 /// </remarks>
 internal sealed record GroundedAnswer(
     string ResponseText,

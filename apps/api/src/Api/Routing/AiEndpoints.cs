@@ -543,12 +543,11 @@ internal static class AiEndpoints
         var snippets = explainResponse.Citations.Select(c => new Snippet(
             text: c.Snippet,
             source: $"PDF:{c.DocumentId}",
-            // #3855: `CitationDto.PageNumber` e' nullable da quando una citazione servita dalla
-            // cache puo' non portare la pagina. Su questo percorso non accade — ExplainQueryHandler
-            // le costruisce dai search result, dove la pagina c'e' sempre — e `Snippet` e' un
-            // contratto di risposta pubblico (Api.Models.Contracts), quindi non lo si allarga per
-            // un caso che non si verifica qui. Lo zero e' un ripiego riconoscibile: una pagina 0
-            // non esiste, mentre un numero plausibile sarebbe indistinguibile da una fonte vera.
+            // `CitationDto.PageNumber` e' nullable (#3855: una citazione servita dalla cache puo' non
+            // portare la pagina; #4819: ExplainQueryHandler la toglie a un documento che non sa dirla,
+            // #4782). `Snippet.page` e' un numero in un contratto di risposta pubblico, e lo zero e' come
+            // i client leggono «nessuna pagina»: una pagina 0 non esiste, mentre un numero plausibile
+            // sarebbe indistinguibile da una fonte vera. Il passo 3 di #4819 rende `Snippet.page` nullable.
             page: c.PageNumber ?? 0,
             line: 0,
             score: (float)c.RelevanceScore

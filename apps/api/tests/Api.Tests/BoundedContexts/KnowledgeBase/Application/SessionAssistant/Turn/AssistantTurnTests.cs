@@ -704,6 +704,7 @@ public sealed class AssistantTurnTests
         new NgramCopyrightLeakGuard(Options.Create(new CopyrightLeakGuardOptions()), NullLogger<NgramCopyrightLeakGuard>.Instance),
         new DefaultCopyrightFallbackMessageProvider(),
         Options.Create(new CopyrightLeakGuardOptions()),
+        Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles.AllPagesBelieved(),
         NullLogger<GroundedAnswerService>.Instance);
 
     private const string Passage =

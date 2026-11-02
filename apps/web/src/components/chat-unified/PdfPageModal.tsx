@@ -11,6 +11,7 @@ import { PdfBBoxOverlay } from '@/components/pdf/PdfBBoxOverlay';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
+import { citedPage } from '@/lib/citations/citedPage';
 import type { Citation } from '@/types';
 
 // ─── react-pdf dynamic imports (avoids pdfjs SSR issues) ───────────────────
@@ -53,8 +54,11 @@ interface PdfPageModalProps {
  * Issue #4919: Citations as clickable links to source PDF page.
  */
 export function PdfPageModal({ citation, open, onClose }: PdfPageModalProps) {
+  // #4819: a citation without a page opens the rulebook at its first page, and says so below the title.
+  const citationPage = citedPage(citation.pageNumber);
+  const startPage = citationPage ?? 1;
   const [numPages, setNumPages] = useState<number | null>(null);
-  const [currentPage, setCurrentPage] = useState(citation.pageNumber);
+  const [currentPage, setCurrentPage] = useState(startPage);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   // Reset state when citation changes (different document/page)
@@ -65,7 +69,7 @@ export function PdfPageModal({ citation, open, onClose }: PdfPageModalProps) {
   // per "protected" nessun highlight (lo snippet parafrasato non è verbatim).
   const highlightQuote =
     citation.copyrightTier === 'protected' ? undefined : citation.snippet || undefined;
-  const isCitedPage = currentPage === citation.pageNumber;
+  const isCitedPage = currentPage === citationPage;
 
   // SP-D (#3408): overlay bbox della regione (Pattern B), gated su copyright come l'highlight
   // verbatim. Le regions sono già Full-gated dal BE; qui belt-and-suspenders per "protected".
@@ -104,7 +108,7 @@ export function PdfPageModal({ citation, open, onClose }: PdfPageModalProps) {
     if (!isOpen) {
       onClose();
     } else {
-      setCurrentPage(citation.pageNumber);
+      setCurrentPage(startPage);
       setLoadError(null);
     }
   };
@@ -118,8 +122,16 @@ export function PdfPageModal({ citation, open, onClose }: PdfPageModalProps) {
         {/* Header */}
         <DialogHeader className="px-6 pt-6 pb-3 flex-shrink-0">
           <DialogTitle className="font-quicksand text-base">
-            Sorgente — Pagina {citation.pageNumber}
+            {citationPage === null ? 'Sorgente — Regolamento' : `Sorgente — Pagina ${citationPage}`}
           </DialogTitle>
+          {citationPage === null && (
+            <p
+              className="text-xs text-muted-foreground font-nunito"
+              data-testid="page-unknown-note"
+            >
+              La pagina di questa citazione non è nota: il regolamento si apre dall&apos;inizio.
+            </p>
+          )}
         </DialogHeader>
 
         {/* PDF Viewer */}

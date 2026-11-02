@@ -202,3 +202,50 @@ describe('CitationPdfTab', () => {
     expect(screen.queryByTestId('pdf-bbox-rect')).not.toBeInTheDocument();
   });
 });
+
+describe('CitationPdfTab — citazione senza pagina (#4819)', () => {
+  it('opens the PDF at its first page and says the page is not known', async () => {
+    render(
+      <CitationPdfTab documentId="pdf-public-1" gameId="game-1" initialPage={null} isPublic />,
+      {
+        wrapper,
+      }
+    );
+
+    await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
+    expect(screen.getByTestId('pdf-page')).toHaveAttribute('data-page-number', '1');
+    expect(document.querySelector('[data-slot="citation-page-unknown"]')).toBeInTheDocument();
+  });
+
+  it('does not look for the quote: with no page there is nowhere to look', async () => {
+    const { container } = render(
+      <CitationPdfTab
+        documentId="pdf-public-1"
+        gameId="game-1"
+        initialPage={null}
+        isPublic
+        quote="regola X"
+      />,
+      { wrapper }
+    );
+
+    await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
+    expect(container.querySelector('[data-slot="pdf-quote-viewer"]')).not.toBeInTheDocument();
+  });
+
+  it('says nothing about an unknown page when the page is known', async () => {
+    render(
+      <CitationPdfTab
+        documentId="pdf-public-1"
+        gameId="game-1"
+        initialPage={7}
+        isPublic
+        quote="regola X"
+      />,
+      { wrapper }
+    );
+
+    await waitFor(() => expect(screen.getByTestId('pdf-page')).toBeInTheDocument());
+    expect(document.querySelector('[data-slot="citation-page-unknown"]')).not.toBeInTheDocument();
+  });
+});

@@ -4,12 +4,14 @@ import React, { useState } from 'react';
 
 import { FileText, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
 
+import { citedPage, pdfDownloadHref } from '@/lib/citations/citedPage';
 import { cn } from '@/lib/utils';
 
 interface SnippetData {
   text: string;
   source: string;
-  page: number;
+  /** `null`/absent when the server could not vouch for a page (#4819). */
+  page?: number | null;
   line: number;
   score: number;
 }
@@ -36,6 +38,7 @@ export function CitationBlock({ snippets, excludeIndices }: CitationBlockProps) 
     <div className="mt-3 flex flex-wrap gap-2" data-testid="citation-block">
       {visible.map(snippet => {
         const pdfId = extractPdfId(snippet.source);
+        const page = citedPage(snippet.page);
         const isExpanded = expanded === snippet.originalIndex;
 
         return (
@@ -58,7 +61,7 @@ export function CitationBlock({ snippets, excludeIndices }: CitationBlockProps) 
                 data-testid={`citation-chip-${snippet.originalIndex}`}
               >
                 <FileText className="h-3 w-3" />
-                Pagina {snippet.page}
+                {page === null ? 'Fonte' : `Pagina ${page}`}
                 {isExpanded ? (
                   <ChevronUp className="h-3 w-3" />
                 ) : (
@@ -66,11 +69,11 @@ export function CitationBlock({ snippets, excludeIndices }: CitationBlockProps) 
                 )}
               </button>
               <a
-                href={`/api/v1/pdfs/${pdfId}/download#page=${snippet.page}`}
+                href={pdfDownloadHref(pdfId, page)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-amber-600 hover:text-amber-700 dark:text-amber-400"
-                title={`Apri PDF — Pagina ${snippet.page}`}
+                title={page === null ? 'Apri PDF' : `Apri PDF — Pagina ${page}`}
                 data-testid={`citation-pdf-link-${snippet.originalIndex}`}
               >
                 <ExternalLink className="h-3 w-3" />

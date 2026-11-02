@@ -36,7 +36,8 @@ const ZOOM_LEVELS = [0.75, 1, 1.25, 1.5, 2] as const;
 export interface KbDocViewerCitation {
   n: number;
   docId: string;
-  page: number;
+  /** `null` when the citation has no page (#4819): it is never the active one. */
+  page: number | null;
   refText: string;
   snippet: string;
 }

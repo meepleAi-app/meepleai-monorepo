@@ -731,3 +731,55 @@ describe('DrawerShell — FSM state rendering', () => {
     });
   });
 });
+
+describe('DrawerShell — citazione senza pagina (#4819)', () => {
+  const renderCompleted = (partialText: string, page: number | null) => {
+    const state: KbAskStreamState = {
+      ...baseState,
+      status: 'completed',
+      partialText,
+      citations: [{ docId: 'd1', source: 'd1', page, snippet: 'cite uno', score: 0.9 }],
+      totalTokens: 100,
+      elapsedMs: 500,
+    };
+    return render(
+      <DrawerShell
+        state={state}
+        labels={labels}
+        suggestions={[]}
+        onAsk={vi.fn()}
+        onStop={vi.fn()}
+        onReset={vi.fn()}
+        onRetry={vi.fn()}
+        onClose={vi.fn()}
+        onEmptyCta={vi.fn()}
+      />
+    );
+  };
+
+  it('lists the citation without a page in the fallback list', () => {
+    renderCompleted('Risposta semplice senza marker.', null);
+
+    const row = screen.getByTestId('citation-list').querySelector('li');
+    expect(row).not.toBeNull();
+    expect(row?.textContent).toContain('cite uno');
+    expect(row?.textContent).not.toContain('p.');
+    expect(row).not.toHaveAttribute('data-citation-page');
+  });
+
+  it('still lists the page of a citation that has one', () => {
+    renderCompleted('Risposta semplice senza marker.', 14);
+
+    const row = screen.getByTestId('citation-list').querySelector('li');
+    expect(row?.textContent).toContain('p.14 · cite uno');
+    expect(row).toHaveAttribute('data-citation-page', '14');
+  });
+
+  it('names an inline pill "Fonte" when its citation has no page', () => {
+    renderCompleted('La classe Scout [1].', null);
+
+    const pill = screen.getByRole('button', { name: /citation 1/i });
+    expect(pill).toHaveTextContent('Fonte');
+    expect(pill).toHaveAttribute('aria-label', 'Citation 1, document d1');
+  });
+});

@@ -218,3 +218,44 @@ describe('PdfPageModal', () => {
     expect(screen.queryByTestId('pdf-bbox-rect')).not.toBeInTheDocument();
   });
 });
+
+// ─── #4819: citazione senza pagina ────────────────────────────────────────────
+
+describe('PdfPageModal — citazione senza pagina (#4819)', () => {
+  it('opens the rulebook at its first page and says the page is not known', () => {
+    render(<PdfPageModal citation={makeCitation({ pageNumber: null })} open onClose={vi.fn()} />);
+
+    expect(screen.getByText('Sorgente — Regolamento')).toBeInTheDocument();
+    expect(screen.getByTestId('page-unknown-note')).toBeInTheDocument();
+    expect(screen.getByTestId('pdf-page')).toHaveAttribute('data-page', '1');
+  });
+
+  it('does not highlight the quote: there is no cited page to look for it on', () => {
+    const quote = 'The player with the most points wins.';
+    const { rerender } = render(
+      <PdfPageModal
+        citation={makeCitation({ pageNumber: 5, snippet: quote })}
+        open
+        onClose={vi.fn()}
+      />
+    );
+    // The same citation with a page does highlight: this is what makes the next assertion mean something.
+    expect(screen.getByTestId('pdf-page')).toHaveAttribute('data-render-text-layer', 'true');
+
+    rerender(
+      <PdfPageModal
+        citation={makeCitation({ pageNumber: null, snippet: quote })}
+        open
+        onClose={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId('pdf-page')).toHaveAttribute('data-render-text-layer', 'false');
+  });
+
+  it('says nothing about an unknown page when the page is known', () => {
+    render(<PdfPageModal citation={makeCitation({ pageNumber: 5 })} open onClose={vi.fn()} />);
+
+    expect(screen.getByText('Sorgente — Pagina 5')).toBeInTheDocument();
+    expect(screen.queryByTestId('page-unknown-note')).not.toBeInTheDocument();
+  });
+});

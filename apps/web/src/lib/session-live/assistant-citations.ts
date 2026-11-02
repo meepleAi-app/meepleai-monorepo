@@ -1,4 +1,5 @@
 import type { Citation as WireCitation } from '@/lib/api/schemas/streaming.schemas';
+import { citedPage } from '@/lib/citations/citedPage';
 import type { Citation } from '@/types';
 
 /**
@@ -9,13 +10,12 @@ export function toRuleSourceCitations(
   citations: readonly WireCitation[] | null | undefined
 ): Citation[] {
   return (citations ?? []).flatMap(c => {
-    const pageNumber = c.pageNumber ?? c.page;
-    if (pageNumber == null) return [];
     const full = c.copyrightTier === 'full';
     return [
       {
         documentId: c.documentId ?? '',
-        pageNumber,
+        // #4819: a citation without a page is still a citation: the page is left out, not the source.
+        pageNumber: citedPage(c.pageNumber ?? c.page),
         snippet: full ? (c.snippetPreview ?? c.snippet ?? '') : '',
         relevanceScore: c.relevanceScore ?? c.score ?? 0,
         copyrightTier: c.copyrightTier,

@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 import { FileText } from 'lucide-react';
 
+import { citedPage } from '@/lib/citations/citedPage';
 import { cn } from '@/lib/utils';
 import type { Citation } from '@/types';
 
@@ -21,10 +22,13 @@ interface CitationBadgeProps {
  */
 export function CitationBadge({ citation, className }: CitationBadgeProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const page = citedPage(citation.pageNumber);
 
   const tooltip = citation.snippet
     ? `"${citation.snippet.slice(0, 120)}${citation.snippet.length > 120 ? '...' : ''}"`
-    : `Pagina ${citation.pageNumber}`;
+    : page === null
+      ? 'Fonte nel regolamento'
+      : `Pagina ${page}`;
 
   return (
     <>
@@ -32,7 +36,7 @@ export function CitationBadge({ citation, className }: CitationBadgeProps) {
         type="button"
         onClick={() => setIsOpen(true)}
         title={tooltip}
-        aria-label={`Apri citazione — pagina ${citation.pageNumber}`}
+        aria-label={page === null ? 'Apri citazione' : `Apri citazione — pagina ${page}`}
         className={cn(
           'inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded',
           'bg-orange-500/20 text-orange-700 dark:text-orange-300',
@@ -42,14 +46,10 @@ export function CitationBadge({ citation, className }: CitationBadgeProps) {
         )}
       >
         <FileText className="w-2.5 h-2.5 flex-shrink-0" />
-        p.{citation.pageNumber}
+        {page === null ? 'Fonte' : `p.${page}`}
       </button>
 
-      <PdfPageModal
-        citation={citation}
-        open={isOpen}
-        onClose={() => setIsOpen(false)}
-      />
+      <PdfPageModal citation={citation} open={isOpen} onClose={() => setIsOpen(false)} />
     </>
   );
 }

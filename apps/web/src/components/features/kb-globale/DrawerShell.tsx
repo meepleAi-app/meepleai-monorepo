@@ -51,7 +51,7 @@ export interface DrawerShellProps {
   onCopy?: () => void;
   onRegenerate?: () => void;
   /** Citation click handler receiving deep-link payload with optional chunkId (#1702) */
-  onCitationClick?: (link: { docId: string; page: number; chunkId?: string }) => void;
+  onCitationClick?: (link: { docId: string; page: number | null; chunkId?: string }) => void;
 }
 
 export function DrawerShell({

@@ -517,6 +517,52 @@ public class IndexPdfCommandHandlerTests
         vectorCount.Should().Be(savedChunks.Count);
     }
 
+    // #4782: a re-index rebuilds the chunks from ExtractedText alone. The page map stored next to it is the only
+    // thing that tells the chunker where each page begins; a document without structured elements would otherwise
+    // go back to a single section on page 1.
+    [Theory]
+    [InlineData("[[1,0],[3,11]]", new[] { 1, 3 })] // "alpha one" (0..9), the blank line, "beta two" from 11
+    [InlineData(null, new[] { 1 })]
+    [InlineData("[[1,0],[3,9]]", new[] { 1 })] // 9 is not behind a blank line: ignored, not trusted
+    public async Task Handle_FlatDocument_ChunksTheTextPageByPage_WhenTheStoredPageMapFitsIt(string? pageSpansJson, int[] expectedPages)
+    {
+        using var context = CreateFreshDbContext();
+        var (advancedChunkingServiceMock, embeddingServiceMock, loggerMock, indexingSettingsMock) = CreateMocks();
+
+        var pdfId = Guid.NewGuid();
+        var pdf = CreatePdfDocument(pdfId, Guid.NewGuid(), "completed", "alpha one\n\nbeta two");
+        pdf.PageSpansJson = pageSpansJson;
+        await context.PdfDocuments.AddAsync(pdf);
+        await context.SaveChangesAsync();
+
+        ExtractedDocument? chunked = null;
+        advancedChunkingServiceMock
+            .Setup(x => x.ChunkDocumentAsync(It.IsAny<ExtractedDocument>(), It.IsAny<ChunkingConfiguration?>(), It.IsAny<CancellationToken>()))
+            .Callback<ExtractedDocument, ChunkingConfiguration?, CancellationToken>((doc, _, _) => chunked = doc)
+            .ReturnsAsync([HierarchicalChunk.CreateParent("alpha one", new ChunkMetadata { Page = 1, ElementType = "text" })]);
+        embeddingServiceMock
+            .Setup(x => x.GenerateEmbeddingsAsync(It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((List<string> texts, CancellationToken ct) =>
+                new EmbeddingResult { Success = true, Embeddings = texts.Select(_ => GenerateRandomEmbedding(3072)).ToList() });
+        embeddingServiceMock.Setup(x => x.GetEmbeddingDimensions()).Returns(3072);
+        embeddingServiceMock.Setup(x => x.GetModelName()).Returns("text-embedding-3-large");
+
+        var handler = new IndexPdfCommandHandler(
+            context,
+            advancedChunkingServiceMock.Object,
+            embeddingServiceMock.Object,
+            loggerMock.Object,
+            indexingSettingsMock.Object,
+            Mock.Of<ISemanticResponseCache>(),
+            Mock.Of<IPdfIndexingPipeline>());
+
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), CancellationToken.None);
+
+        result.Success.Should().BeTrue();
+        chunked.Should().NotBeNull();
+        chunked!.Sections.Select(s => s.Page).Should().Equal(expectedPages);
+    }
+
     // Slice D robustness guard: HeadingAwareChunker can emit a Level-0 parent chunk whose Text is
     // a full document section (no ~512-char cap like the old flat chunker). EmbeddingService does
     // not truncate, so an oversized chunk risks failing the whole re-index if the embedding

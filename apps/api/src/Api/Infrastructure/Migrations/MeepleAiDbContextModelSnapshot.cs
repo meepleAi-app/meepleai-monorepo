@@ -9760,6 +9760,10 @@ namespace Api.Infrastructure.Migrations
                     b.Property<int?>("PageCount")
                         .HasColumnType("integer");
 
+                    b.Property<string>("PageSpansJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("page_spans_json");
+
                     b.Property<Guid?>("PrivateGameId")
                         .HasMaxLength(64)
                         .HasColumnType("uuid");

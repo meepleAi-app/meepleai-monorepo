@@ -399,7 +399,9 @@ internal class IndexPdfCommandHandler : ICommandHandler<IndexPdfCommand, Indexin
             Guid.Parse(pdfId),
             pdf.PrivateGameId ?? pdf.SharedGameId,
             _advancedChunkingService,
-            cancellationToken).ConfigureAwait(false);
+            cancellationToken,
+            // #4782: this is the only place a re-index can learn where the pages of a flat document begin.
+            pageSpans: PageSpans.Parse(pdf.PageSpansJson)).ConfigureAwait(false);
 
         if (chunks.Count == 0)
         {

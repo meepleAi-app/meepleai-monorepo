@@ -9,22 +9,38 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
 /// heading); elements from the Title up to the next Title form the section content. Elements before
 /// the first Title become a null-heading preamble. When no structured elements are available
 /// (degradation: SmolDocling/Docnet/malformed response) a single preamble section carries the flat
-/// text so the document content is never lost downstream.
+/// text so the document content is never lost downstream. When the extractor measured its pages and a page
+/// map fits the flat text (#4782), the flat text gets one section per page instead, so its chunks sit on their
+/// true pages.
 /// </summary>
 internal static class ExtractedDocumentFactory
 {
     private const string ElementSeparator = "\n\n";
     private const string TitleCategory = "Title";
 
+    /// <summary>Builds the document the chunker works on (see the class summary).</summary>
+    /// <param name="documentId">The document the sections belong to.</param>
+    /// <param name="gameId">The game the document belongs to, if any.</param>
+    /// <param name="structuredElements">The raw extraction elements; null or empty when the extractor gave none.</param>
+    /// <param name="flatText">The extracted text, used when there are no structured elements.</param>
+    /// <param name="pageSpans">
+    /// Where each page of the PDF begins in <paramref name="flatText"/> (#4782). Used only on the flat path, and only
+    /// when it fits the text (<see cref="PageSpans.IsConsistentWith"/>): the flat path then gets one section per
+    /// page instead of a single section on page 1.
+    /// </param>
     public static ExtractedDocument FromExtraction(
         Guid documentId,
         Guid? gameId,
         IReadOnlyList<ExtractedElement>? structuredElements,
-        string flatText)
+        string flatText,
+        IReadOnlyList<PageSpan>? pageSpans = null)
     {
         if (structuredElements is null || structuredElements.Count == 0)
         {
-            return NullPathDocument(documentId, gameId, flatText ?? string.Empty);
+            flatText ??= string.Empty;
+            return PageSpans.IsConsistentWith(pageSpans, flatText)
+                ? PagedFlatDocument(documentId, gameId, flatText, pageSpans!)
+                : NullPathDocument(documentId, gameId, flatText);
         }
 
         var sections = new List<DocumentSection>();
@@ -91,6 +107,45 @@ internal static class ExtractedDocumentFactory
                     CharEnd = flatText.Length,
                 },
             },
+        };
+    }
+
+    /// <summary>
+    /// The flat text of a document whose pages were measured: one heading-less section per page, on that page. The
+    /// chunker gives every chunk the page of its section, so this is what lets a flat document tell its pages apart;
+    /// the single section of <see cref="NullPathDocument"/> puts every chunk on page 1. The sections keep the layout
+    /// of the structured path: content is a substring of <c>Content</c> at [CharStart, CharEnd), and the separator
+    /// between two pages sits in the gap.
+    /// </summary>
+    private static ExtractedDocument PagedFlatDocument(
+        Guid documentId,
+        Guid? gameId,
+        string flatText,
+        IReadOnlyList<PageSpan> pageSpans)
+    {
+        var sections = new List<DocumentSection>(pageSpans.Count);
+        for (var i = 0; i < pageSpans.Count; i++)
+        {
+            var start = pageSpans[i].Start;
+            var end = PageSpans.EndOf(pageSpans, i, flatText.Length);
+            sections.Add(new DocumentSection
+            {
+                Heading = null,
+                Content = flatText[start..end],
+                Page = pageSpans[i].Page,
+                ElementType = "text",
+                CharStart = start,
+                CharEnd = end,
+            });
+        }
+
+        return new ExtractedDocument
+        {
+            Id = documentId,
+            GameId = gameId,
+            Content = flatText,
+            Sections = sections,
+            PageCount = pageSpans.Max(s => s.Page),
         };
     }
 

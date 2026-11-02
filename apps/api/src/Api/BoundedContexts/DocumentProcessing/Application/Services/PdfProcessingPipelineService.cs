@@ -635,14 +635,14 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                     extractResult.IsPermanentFailure);
             }
 
-            var fullText = string.Join("\n\n", extractResult.PageChunks
-                .Where(pc => !pc.IsEmpty)
-                .Select(pc => pc.Text));
+            var joinedText = PageTextJoiner.Join(extractResult.PageChunks);
+            var fullText = joinedText.Text;
 
             pdfDoc.ExtractedText = fullText;
             pdfDoc.StructuredElementsJson = extractResult.StructuredElements is null
                 ? null
                 : JsonSerializer.Serialize(extractResult.StructuredElements);
+            pdfDoc.PageSpansJson = joinedText.Spans is null ? null : PageSpans.Serialize(joinedText.Spans);
             pdfDoc.PageCount = extractResult.TotalPages;
             pdfDoc.CharacterCount = extractResult.TotalCharacters;
             try
@@ -853,7 +853,9 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 documentId,
                 gameId,
                 _advancedChunking,
-                cancellationToken).ConfigureAwait(false);
+                cancellationToken,
+                // #4782: the pages of a flat document (no structured elements) come from here.
+                pageSpans: PageTextJoiner.Join(extractResult.PageChunks).Spans).ConfigureAwait(false);
             return HeadingAwareChunkAdapter.ToChunkInputs(hierarchical);
         }
 

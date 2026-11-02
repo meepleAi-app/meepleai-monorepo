@@ -28,6 +28,7 @@ internal class PdfDocumentRepository : RepositoryBase, IPdfDocumentRepository
         nameof(Api.Infrastructure.Entities.PdfDocumentEntity.ExtractedText),
         nameof(Api.Infrastructure.Entities.PdfDocumentEntity.CharacterCount),
         nameof(Api.Infrastructure.Entities.PdfDocumentEntity.StructuredElementsJson),
+        nameof(Api.Infrastructure.Entities.PdfDocumentEntity.PageSpansJson),
         nameof(Api.Infrastructure.Entities.PdfDocumentEntity.ExtractedTables),
         nameof(Api.Infrastructure.Entities.PdfDocumentEntity.ExtractedDiagrams),
         nameof(Api.Infrastructure.Entities.PdfDocumentEntity.AtomicRules),

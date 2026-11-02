@@ -188,4 +188,67 @@ public class ExtractedDocumentFactoryTests
         doc.Sections.Should().HaveCount(1);
         doc.Sections[0].Content.Should().Be("flat");
     }
+
+    // ── #4782: the flat path with a page map ──────────────────────────────────
+
+    // "alpha" (0..5) \n\n "beta" (7..11) \n\n "gamma" (13..18); the pages are 1, 2 and 4 (page 3 had no text).
+    private const string PagedText = "alpha\n\nbeta\n\ngamma";
+    private static readonly PageSpan[] PagedSpans = [new(1, 0), new(2, 7), new(4, 13)];
+
+    [Fact]
+    public void FlatTextWithAPageMap_GetsOneSectionPerPage_OnThatPage()
+    {
+        var doc = ExtractedDocumentFactory.FromExtraction(Doc, null, null, PagedText, PagedSpans);
+
+        doc.Sections.Select(s => (s.Page, s.Content)).Should().Equal((1, "alpha"), (2, "beta"), (4, "gamma"));
+        doc.Sections.Should().OnlyContain(s => s.Heading == null && s.ElementType == "text");
+        doc.PageCount.Should().Be(4);
+        doc.Content.Should().Be(PagedText);
+    }
+
+    [Fact]
+    public void FlatTextWithAPageMap_KeepsEachSectionASubstringOfTheContent()
+    {
+        var doc = ExtractedDocumentFactory.FromExtraction(Doc, null, null, PagedText, PagedSpans);
+
+        foreach (var s in doc.Sections)
+        {
+            s.Content.Should().Be(doc.Content.Substring(s.CharStart, s.CharEnd - s.CharStart));
+        }
+
+        doc.Sections.Select(s => (s.CharStart, s.CharEnd)).Should().Equal((0, 5), (7, 11), (13, 18));
+    }
+
+    [Fact]
+    public void FlatTextWithAPageMapThatDoesNotFitTheText_IsTreatedAsFlatTextWithNoMap()
+    {
+        // A text edited after the map was written: the offsets fall off the page breaks. Better the old single
+        // section than chunks put on the wrong page with the look of a measured one.
+        var doc = ExtractedDocumentFactory.FromExtraction(Doc, null, null, "alpha-\nbeta\n\ngamma", PagedSpans);
+
+        doc.Sections.Should().HaveCount(1);
+        doc.Sections[0].Page.Should().Be(1);
+        doc.Sections[0].Content.Should().Be("alpha-\nbeta\n\ngamma");
+    }
+
+    [Fact]
+    public void StructuredElements_WinOverThePageMap()
+    {
+        var doc = ExtractedDocumentFactory.FromExtraction(Doc, null,
+            new[] { El("Setup", "Title", page: 5), El("Place the board.", "NarrativeText", page: 5) },
+            PagedText, PagedSpans);
+
+        doc.Sections.Should().HaveCount(1);
+        doc.Sections[0].Heading.Should().Be("Setup");
+        doc.Sections[0].Page.Should().Be(5);
+    }
+
+    [Fact]
+    public void NullFlatTextWithAPageMap_DoesNotThrow_AndGivesOneEmptySection()
+    {
+        var doc = ExtractedDocumentFactory.FromExtraction(Doc, null, null, null!, PagedSpans);
+
+        doc.Content.Should().BeEmpty();
+        doc.Sections.Should().HaveCount(1);
+    }
 }

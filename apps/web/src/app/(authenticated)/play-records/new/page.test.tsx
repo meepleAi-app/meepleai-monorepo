@@ -335,9 +335,21 @@ describe('NewPlayRecordPage — a save that does not complete (#4800)', () => {
     it('sends nothing for notes that are only spaces', async () => {
       const submit = await renderForm();
 
-      await submit({ ...SAVE_DATA, location: '', notes: '   ' }, SAVE_PLAYERS);
+      const answer = await submit({ ...SAVE_DATA, location: '', notes: '   ' }, SAVE_PLAYERS);
 
+      // The save went through to the end, and still had nothing to update.
+      expect(answer).toBeUndefined();
       expect(mockUpdateRecord).not.toHaveBeenCalled();
+    });
+
+    it('sends the location and no notes key when the notes are only spaces', async () => {
+      const submit = await renderForm();
+
+      await submit({ ...SAVE_DATA, notes: '   ' }, SAVE_PLAYERS);
+
+      expect(mockUpdateRecord.mock.calls).toStrictEqual([
+        ['rec-1', { location: 'HP-TEST location' }],
+      ]);
     });
 
     it('writes on the retry the notes the first attempt did not reach', async () => {
@@ -354,48 +366,61 @@ describe('NewPlayRecordPage — a save that does not complete (#4800)', () => {
       ]);
     });
 
-    it('does not rewrite notes that are already on the server, whatever the spaces around them', async () => {
-      mockAddPlayer.mockRejectedValueOnce(new Error('No'));
-      const submit = await renderForm();
+    // The update is the last step of `persistFollowUps`, so the server can hold the location or the notes while
+    // the client saw a failure only in one way: the update reached it and the answer was lost. `held` is what
+    // it then stores (trimmed, as `PlayRecord.UpdateDetails` does).
+    async function failAfterTheServerSavedIt(
+      submit: (data: unknown, players: unknown) => unknown,
+      held: { location?: string; notes?: string }
+    ) {
+      mockUpdateRecord.mockRejectedValueOnce(new Error('Network'));
       expect(await submit(WITH_NOTES, SAVE_PLAYERS)).toBe(false);
       mockUpdateRecord.mockClear();
-      // The server holds the text trimmed, as `PlayRecord.UpdateDetails` stores it.
-      mockGetRecord.mockResolvedValue({
-        ...SERVER_RECORD,
-        location: 'HP-TEST location',
-        notes: NOTES,
-      });
+      mockGetRecord.mockResolvedValue({ ...SERVER_RECORD, ...held });
+    }
 
-      await submit(WITH_NOTES, SAVE_PLAYERS);
+    it('does not rewrite notes that are already on the server, whatever the spaces around them', async () => {
+      const submit = await renderForm();
+      await failAfterTheServerSavedIt(submit, { location: 'HP-TEST location', notes: NOTES });
 
+      const answer = await submit(WITH_NOTES, SAVE_PLAYERS);
+
+      expect(answer).toBeUndefined();
       expect(mockUpdateRecord).not.toHaveBeenCalled();
     });
 
     it('writes only the notes when the location is already there', async () => {
-      mockAddPlayer.mockRejectedValueOnce(new Error('No'));
       const submit = await renderForm();
-      expect(await submit(WITH_NOTES, SAVE_PLAYERS)).toBe(false);
-      mockUpdateRecord.mockClear();
-      mockGetRecord.mockResolvedValue({ ...SERVER_RECORD, location: 'HP-TEST location' });
+      await failAfterTheServerSavedIt(submit, { location: 'HP-TEST location' });
 
-      await submit(WITH_NOTES, SAVE_PLAYERS);
+      const answer = await submit(WITH_NOTES, SAVE_PLAYERS);
 
+      expect(answer).toBeUndefined();
       expect(mockUpdateRecord.mock.calls).toStrictEqual([['rec-1', { notes: NOTES }]]);
     });
 
-    it('sends notes that were corrected after the failure, and not the location that is there', async () => {
-      mockAddPlayer.mockRejectedValueOnce(new Error('No'));
+    it('writes only the location when the notes are already there', async () => {
       const submit = await renderForm();
-      expect(await submit(WITH_NOTES, SAVE_PLAYERS)).toBe(false);
-      mockUpdateRecord.mockClear();
-      mockGetRecord.mockResolvedValue({
-        ...SERVER_RECORD,
+      await failAfterTheServerSavedIt(submit, { notes: NOTES });
+
+      const answer = await submit(WITH_NOTES, SAVE_PLAYERS);
+
+      expect(answer).toBeUndefined();
+      expect(mockUpdateRecord.mock.calls).toStrictEqual([
+        ['rec-1', { location: 'HP-TEST location' }],
+      ]);
+    });
+
+    it('sends notes that were corrected after the failure, and not the location that is there', async () => {
+      const submit = await renderForm();
+      await failAfterTheServerSavedIt(submit, {
         location: 'HP-TEST location',
         notes: 'Prima stesura',
       });
 
-      await submit(WITH_NOTES, SAVE_PLAYERS);
+      const answer = await submit(WITH_NOTES, SAVE_PLAYERS);
 
+      expect(answer).toBeUndefined();
       expect(mockUpdateRecord.mock.calls).toStrictEqual([['rec-1', { notes: NOTES }]]);
     });
   });

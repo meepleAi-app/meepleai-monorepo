@@ -64,8 +64,10 @@ public sealed class CitedPageTrustTests
                 (q, _) => asked = (GetDocumentsWithUnreliablePageNumbersQuery)q)
             .ReturnsAsync((IReadOnlyList<Guid>)[]);
 
+        // The same document, written three ways: upper case, and without the hyphens. They are three strings and one GUID.
         await Sut().WithoutAPageAsync(
-            [Flat.ToString(), Flat.ToString().ToUpperInvariant(), Measured.ToString()], CancellationToken.None);
+            [Flat.ToString(), Flat.ToString().ToUpperInvariant(), Flat.ToString("N"), Measured.ToString()],
+            CancellationToken.None);
 
         asked.Should().NotBeNull();
         asked!.DocumentIds.Should().BeEquivalentTo([Flat, Measured]);

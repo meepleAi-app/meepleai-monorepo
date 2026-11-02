@@ -157,6 +157,7 @@ public partial class StreamQaQueryHandlerTests
             Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Preconditions(CreatePermissiveRagAccessServiceMock()),
             Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
             Mock.Of<Api.Services.IFeatureFlagService>(),
+            Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles.AllPagesBelieved(),
             _loggerMock.Object,
             _fakeTimeProvider
         ));
@@ -376,6 +377,69 @@ public partial class StreamQaQueryHandlerTests
         snippet.regions.Should().BeNull();
         snippet.charStart.Should().BeNull();
         snippet.charEnd.Should().BeNull();
+    }
+
+    // ─── #4819: un documento che non sa dire la pagina dei suoi passaggi si cita senza pagina ───
+
+    private async Task<(Snippet Citation, string? UserPrompt)> AskCitingADocumentAsync(
+        Guid vectorDocumentId, int page, Api.BoundedContexts.KnowledgeBase.Application.Services.ICitedPageTrust trust)
+    {
+        var gameId = Guid.NewGuid().ToString();
+        var query = new StreamQaQuery(gameId, "how do I score?", TestUserId, "User", ThreadId: null);
+        SetupHappyPathMocks(gameId, query.Query);
+        _rrfFusionServiceMock
+            .Setup(x => x.FuseResults(
+                It.IsAny<List<DomainSearchResult>>(),
+                It.IsAny<List<DomainSearchResult>>(),
+                It.IsAny<int>(),
+                It.IsAny<GameBookRole>(),
+                It.IsAny<IReadOnlyList<string>?>(), It.IsAny<float>(), It.IsAny<float>()))
+            .Returns(new List<DomainSearchResult>
+            {
+                new(id: Guid.NewGuid(), vectorDocumentId: vectorDocumentId, textContent: "Sample rule text",
+                    pageNumber: page, relevanceScore: new Confidence(0.9), rank: 1, searchMethod: "hybrid"),
+            });
+        string? userPrompt = null;
+        _llmServiceMock
+            .Setup(x => x.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<LlmAnswerRequest, CancellationToken>((request, _) => userPrompt = request.UserPrompt)
+            .Returns(StreamTokensAsync(new[] { "This", " is", " the", " answer", "." }));
+
+        var handler = CreateHandlerWith(CreatePermissiveRagAccessServiceMock(), pageTrust: trust);
+        var events = new List<RagStreamingEvent>();
+        await foreach (var e in handler.Handle(query, TestContext.Current.CancellationToken))
+        {
+            events.Add(e);
+        }
+
+        return (FirstCitation(events), userPrompt);
+    }
+
+    [Fact]
+    public async Task Handle_CitesADocumentThatCannotVouchForItsPagesWithoutOne_AndDoesNotNameItToTheModel()
+    {
+        var flat = Guid.NewGuid();
+
+        var (citation, prompt) = await AskCitingADocumentAsync(
+            flat, page: 4, Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles.WithoutAPage(flat.ToString()));
+
+        citation.page.Should().BeNull();
+        citation.text.Should().Be("Sample rule text");
+        // The same list grounds the prompt: the passage is still there, without a page the model could repeat.
+        prompt.Should().Contain("Sample rule text");
+        prompt.Should().NotContain("[Page 4]");
+    }
+
+    [Fact]
+    public async Task Handle_CitesTheDeclaredPageOfADocumentThatCanVouchForIt_AndNamesItToTheModel()
+    {
+        var measured = Guid.NewGuid();
+
+        var (citation, prompt) = await AskCitingADocumentAsync(
+            measured, page: 4, Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles.WithoutAPage(Guid.NewGuid().ToString()));
+
+        citation.page.Should().Be(4);
+        prompt.Should().Contain("[Page 4] Sample rule text");
     }
 
     private void SetupFusedResultWithRegion()
@@ -2153,7 +2217,8 @@ public partial class StreamQaQueryHandlerTests
         IRagAccessService ragAccessService,
         Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider? mechanicCardProvider = null,
         Api.Services.IFeatureFlagService? featureFlags = null,
-        Api.SharedKernel.Services.ITierEnforcementService? tiers = null)
+        Api.SharedKernel.Services.ITierEnforcementService? tiers = null,
+        Api.BoundedContexts.KnowledgeBase.Application.Services.ICitedPageTrust? pageTrust = null)
     {
         return new StreamQaQueryHandler(new AnswerPipeline(
             Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.PassageSearch(Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Retrieval(
@@ -2173,6 +2238,7 @@ public partial class StreamQaQueryHandlerTests
             Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Preconditions(ragAccessService, tiers),
             mechanicCardProvider ?? Mock.Of<Api.BoundedContexts.KnowledgeBase.Application.Services.MechanicClaimInjection.IMechanicCardProvider>(),
             featureFlags ?? Mock.Of<Api.Services.IFeatureFlagService>(),
+            pageTrust ?? Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles.AllPagesBelieved(),
             _loggerMock.Object,
             _fakeTimeProvider));
     }

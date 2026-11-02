@@ -43,10 +43,10 @@ internal static class AiEndpoints
             {
                 Id = !string.IsNullOrWhiteSpace(s.chunkId)
                     ? s.chunkId!
-                    : $"{s.source}#{s.page}.{s.line}",
+                    : $"{s.source}#{s.page ?? 0}.{s.line}",
                 Score = s.score,
                 Text = s.text,
-                Page = s.page,
+                Page = s.page ?? 0,
                 ChunkIndex = s.chunkPosition ?? s.line,
                 PdfName = s.source,
                 Used = true,
@@ -545,10 +545,9 @@ internal static class AiEndpoints
             source: $"PDF:{c.DocumentId}",
             // `CitationDto.PageNumber` e' nullable (#3855: una citazione servita dalla cache puo' non
             // portare la pagina; #4819: ExplainQueryHandler la toglie a un documento che non sa dirla,
-            // #4782). `Snippet.page` e' un numero in un contratto di risposta pubblico, e lo zero e' come
-            // i client leggono «nessuna pagina»: una pagina 0 non esiste, mentre un numero plausibile
-            // sarebbe indistinguibile da una fonte vera. Il passo 3 di #4819 rende `Snippet.page` nullable.
-            page: c.PageNumber ?? 0,
+            // #4782) e `Snippet.page` lo e' dal passo 3 di #4819: nessuna pagina arriva come null, non come
+            // uno 0 che i client dovrebbero indovinare.
+            page: c.PageNumber,
             line: 0,
             score: (float)c.RelevanceScore
         )).ToList();

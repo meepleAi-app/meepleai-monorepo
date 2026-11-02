@@ -65,6 +65,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
     private readonly IAnswerPreconditions _preconditions;
     private readonly IMechanicCardProvider _mechanicCardProvider;
     private readonly IFeatureFlagService _featureFlags;
+    private readonly ICitedPageTrust _pageTrust;
     private readonly ILogger<AnswerPipeline> _logger;
     private readonly TimeProvider _timeProvider;
 
@@ -84,6 +85,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         IAnswerPreconditions preconditions,
         IMechanicCardProvider mechanicCardProvider,
         IFeatureFlagService featureFlags,
+        ICitedPageTrust pageTrust,
         ILogger<AnswerPipeline> logger,
         TimeProvider? timeProvider = null)
     {
@@ -102,6 +104,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         _preconditions = preconditions ?? throw new ArgumentNullException(nameof(preconditions));
         _mechanicCardProvider = mechanicCardProvider ?? throw new ArgumentNullException(nameof(mechanicCardProvider));
         _featureFlags = featureFlags ?? throw new ArgumentNullException(nameof(featureFlags));
+        _pageTrust = pageTrust ?? throw new ArgumentNullException(nameof(pageTrust));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _timeProvider = timeProvider ?? TimeProvider.System;
     }
@@ -488,6 +491,11 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         // SP-C (#3407): the citations carry the pdf id (Issue #W) and the copyright tier resolved for the
         // asker (TieredPassageSearch). Here the verbatim excerpt stays and the region overlay is gated to
         // Full — StreamQa previously emitted verbatim text with NO gate (a leak, #447/DA-4).
+        // #4819: a document that cannot tell its pages apart (#4782) is cited without one. The same list grounds
+        // the prompt below and feeds the inline-citation matcher, so neither writes a page it cannot vouch for.
+        var withoutAPage = await _pageTrust
+            .WithoutAPageAsync(passages.Citations.Select(c => c.DocumentId), cancellationToken)
+            .ConfigureAwait(false);
         var snippets = passages.Citations.Select(c =>
         {
             var isFull = c.CopyrightTier == CopyrightTier.Full;
@@ -500,7 +508,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
                 // LLM-prompt/FE-citation source split — out of SP-C scope.)
                 c.SnippetPreview,
                 $"PDF:{c.DocumentId}",
-                c.PageNumber,
+                withoutAPage.Contains(c.DocumentId) ? null : c.PageNumber,
                 0,
                 c.RelevanceScore)
             {
@@ -582,7 +590,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         VerifiedRulesBlock verifiedBlock)
     {
         var context = string.Join("\n\n", snippets.Select(s =>
-            $"[Page {s.page}] {s.text}"));
+            s.page is { } page ? $"[Page {page}] {s.text}" : s.text));
 
         // R1 (spec §7.1/D8): approved claims rank above raw RAG context (the stream path has no house rules).
         var hasVerifiedRules = verifiedBlock is { IsEmpty: false };

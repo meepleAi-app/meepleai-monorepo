@@ -12,6 +12,24 @@ public class InlineCitationMatcherServiceTests
 {
     private readonly InlineCitationMatcherService _service = new();
 
+    [Fact]
+    public void Match_SnippetWithoutAPage_YieldsAMatchWithoutAPage()
+    {
+        // #4819: the match carries the page of its snippet, and a snippet may have none.
+        var answer = "The player must roll two dice before moving any pieces on the board.";
+        var snippets = new List<Snippet>
+        {
+            new("The player must roll two dice before moving any pieces on the board.",
+                "PDF:d290f1ee-6c54-4b01-90e6-d701748f0851", null, 0, 0.95f)
+        };
+
+        var result = _service.Match(answer, snippets);
+
+        result.Should().NotBeEmpty();
+        result.Should().OnlyContain(m => m.PageNumber == null);
+        result[0].PdfDocumentId.Should().Be("d290f1ee-6c54-4b01-90e6-d701748f0851");
+    }
+
     // ========================================================================
     // Exact substring match
     // ========================================================================

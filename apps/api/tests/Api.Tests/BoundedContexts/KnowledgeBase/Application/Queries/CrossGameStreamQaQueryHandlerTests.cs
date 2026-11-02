@@ -41,12 +41,13 @@ public sealed class CrossGameStreamQaQueryHandlerTests
 
     // #4168: l'handler è un adattatore; la risposta sta nel flusso cross-game della pipeline, con il
     // profilo del seed e un reranker che non riordina.
-    private CrossGameStreamQaQueryHandler CreateSut() => new(new CrossGameAnswerFlow(
+    private CrossGameStreamQaQueryHandler CreateSut(ICitedPageTrust? pageTrust = null) => new(new CrossGameAnswerFlow(
         Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering.AnswerPipelineTestDoubles.Preconditions(_ragAccessService, _tiers.Object),
         AnswerPipelineTestDoubles.RetrievalAcrossGames(_searchService),
         AnswerPipelineTestDoubles.ProfileReader(),
         AnswerPipelineTestDoubles.UncertainLanguageDetection(),
         _llmService,
+        pageTrust ?? Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles.AllPagesBelieved(),
         NullLogger<CrossGameAnswerFlow>.Instance));
 
     // ── EC-1: no accessible games → Complete with no-context answer, LLM never called ──
@@ -146,6 +147,45 @@ public sealed class CrossGameStreamQaQueryHandlerTests
                 r.UserPrompt.Contains("[1] [Source: Document doc-1", StringComparison.Ordinal)
                 && r.UserPrompt.Contains("[2] [Source: Document doc-2", StringComparison.Ordinal)),
             Arg.Any<CancellationToken>());
+    }
+
+    // ── #4819: a document that cannot tell its pages apart is cited without one ──
+
+    [Fact]
+    public async Task Citations_OfADocumentThatCannotVouchForItsPages_CarryNoPage()
+    {
+        SetupTwoAccessibleGames();
+        SetupSearchResults(); // doc-1 and doc-2, both on page 1
+        SetupLlmStream("Answer text");
+
+        var events = await CollectEventsAsync(
+            CreateSut(Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.CitedPageTrustTestDoubles.WithoutAPage("doc-1")),
+            new CrossGameStreamQaQuery("Tell me about the game", UserId, UserRole.User));
+
+        var citations = ((StreamingCitations)events.Single(e => e.Type == StreamingEventType.Citations).Data!).citations;
+        citations.Select(c => (c.chunkId, c.page)).Should().Equal(("chunk-1", (int?)null), ("chunk-2", (int?)1));
+    }
+
+    [Fact]
+    public async Task Citations_OfAPassageThatComesWithoutAPage_CarryNoPage_NotPageZero()
+    {
+        SetupTwoAccessibleGames();
+        _searchService
+            .SearchAsync(Arg.Any<string>(), Arg.Any<IReadOnlyList<Guid>>(),
+                         Arg.Any<int>(), Arg.Any<PerGameRetrievalParameters>(), Arg.Any<SearchMode>(), Arg.Any<double>(),
+                         Arg.Any<IReadOnlyList<Guid>?>(),
+                         Arg.Any<CancellationToken>())
+            .Returns((IReadOnlyList<MultiGameSearchResultItem>)new[]
+            {
+                MakeSearchResult(GameId1, "chunk-1", "doc-1") with { PageNumber = null },
+            });
+        SetupLlmStream("Answer text");
+
+        var events = await CollectEventsAsync(
+            CreateSut(), new CrossGameStreamQaQuery("Tell me about the game", UserId, UserRole.User));
+
+        var citations = ((StreamingCitations)events.Single(e => e.Type == StreamingEventType.Citations).Data!).citations;
+        citations.Should().ContainSingle().Which.page.Should().BeNull();
     }
 
     // ── Each StreamChunk.Content from LLM → one Token event ─────────────────

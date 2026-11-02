@@ -162,7 +162,7 @@ internal class CitationValidationService : ICitationValidationService
             errors.Add(new CitationValidationError
             {
                 Source = snippet.source ?? "null",
-                Page = snippet.page,
+                Page = snippet.page ?? 0,
                 ErrorMessage = "Empty or null citation source",
                 ErrorType = CitationErrorType.MalformedSource
             });
@@ -175,7 +175,7 @@ internal class CitationValidationService : ICitationValidationService
             errors.Add(new CitationValidationError
             {
                 Source = snippet.source,
-                Page = snippet.page,
+                Page = snippet.page ?? 0,
                 ErrorMessage = $"Invalid source format (expected 'PDF:guid', got '{snippet.source}')",
                 ErrorType = CitationErrorType.MalformedSource
             });
@@ -190,7 +190,7 @@ internal class CitationValidationService : ICitationValidationService
             errors.Add(new CitationValidationError
             {
                 Source = snippet.source,
-                Page = snippet.page,
+                Page = snippet.page ?? 0,
                 ErrorMessage = $"PDF document not found: {pdfId}",
                 ErrorType = CitationErrorType.DocumentNotFound
             });
@@ -202,13 +202,13 @@ internal class CitationValidationService : ICitationValidationService
             return Task.FromResult(false);
         }
 
-        // Validate page number
-        if (snippet.page < 1 || snippet.page > totalPages)
+        // Validate page number. #4819: a citation that names no page has no page to be out of range.
+        if (snippet.page is { } citedPage && (citedPage < 1 || citedPage > totalPages))
         {
             errors.Add(new CitationValidationError
             {
                 Source = snippet.source,
-                Page = snippet.page,
+                Page = snippet.page ?? 0,
                 ErrorMessage = $"Invalid page number {snippet.page} (document has {totalPages} pages)",
                 ErrorType = CitationErrorType.InvalidPageNumber
             });

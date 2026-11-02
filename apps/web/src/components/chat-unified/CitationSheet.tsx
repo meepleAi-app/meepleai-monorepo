@@ -2,6 +2,7 @@
 
 import type { CitationData } from '@/components/chat/shared';
 import { BottomSheet } from '@/components/ui/overlays/BottomSheet';
+import { citedPage } from '@/lib/citations/citedPage';
 
 // Re-export for backward compatibility with `import type { CitationData } from './CitationSheet'`.
 // Canonical definition lives in `@/components/chat/shared/types.ts`.
@@ -26,9 +27,14 @@ export function CitationSheet({ open, citation, onOpenChange }: CitationSheetPro
       : citation.snippet;
 
   const relevancePercent = Math.round(citation.relevanceScore * 100);
+  const page = citedPage(citation.pageNumber);
 
   return (
-    <BottomSheet open={open} onOpenChange={onOpenChange} title={`Pagina ${citation.pageNumber}`}>
+    <BottomSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={page === null ? 'Fonte' : `Pagina ${page}`}
+    >
       <div className="flex flex-col gap-4">
         <blockquote className="rounded-lg border border-border bg-card/5 px-4 py-3 text-sm italic text-[var(--text,white)]">
           {displaySnippet}

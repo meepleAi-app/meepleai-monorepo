@@ -84,3 +84,45 @@ describe('CitationBlock — data-testid="citation" (#4120)', () => {
     expect(container.querySelectorAll('[data-testid="citation"]')).toHaveLength(4);
   });
 });
+
+// ─── #4819: citazione senza pagina ────────────────────────────────────────────
+
+describe('CitationBlock — citazione senza pagina (#4819)', () => {
+  it.each([
+    ['null', null],
+    ['absent', undefined],
+    ['zero', 0],
+  ])('writes no page and links to the whole PDF when the page is %s', (_label, page) => {
+    const { getByTestId } = render(
+      <CitationBlock snippets={[snippet(1, { page })]} excludeIndices={new Set()} />
+    );
+
+    expect(getByTestId('citation-chip-0').textContent).toBe('Fonte 1');
+    const link = getByTestId('citation-pdf-link-0');
+    expect(link.getAttribute('href')).toBe('/api/v1/pdfs/doc-1/download');
+    expect(link.getAttribute('title')).toBe('Apri PDF');
+  });
+
+  it('tells the chips apart by position when none of them has a page', () => {
+    const { getByTestId } = render(
+      <CitationBlock
+        snippets={[snippet(1, { page: null }), snippet(2, { page: null })]}
+        excludeIndices={new Set()}
+      />
+    );
+
+    expect(getByTestId('citation-chip-0').textContent).toBe('Fonte 1');
+    expect(getByTestId('citation-chip-1').textContent).toBe('Fonte 2');
+  });
+
+  it('still writes the page and opens the PDF there when there is one', () => {
+    const { getByTestId } = render(
+      <CitationBlock snippets={[snippet(25)]} excludeIndices={new Set()} />
+    );
+
+    expect(getByTestId('citation-chip-0').textContent).toBe('Pagina 25');
+    expect(getByTestId('citation-pdf-link-0').getAttribute('href')).toBe(
+      '/api/v1/pdfs/doc-25/download#page=25'
+    );
+  });
+});

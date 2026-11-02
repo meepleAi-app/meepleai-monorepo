@@ -375,7 +375,8 @@ export interface InlineCitationMatch {
   startOffset: number;
   endOffset: number;
   snippetIndex: number;
-  pageNumber: number;
+  /** `null`/absent when the server could not vouch for a page (#4819). */
+  pageNumber?: number | null;
   pdfDocumentId: string;
   confidence: number;
 }

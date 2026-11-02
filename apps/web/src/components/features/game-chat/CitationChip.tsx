@@ -8,8 +8,11 @@ import type { ReactElement } from 'react';
 
 import clsx from 'clsx';
 
+import { citedPage } from '@/lib/citations/citedPage';
+
 export interface CitationChipProps {
-  readonly pageNumber: number;
+  /** `null` when the citation has no page (#4819): the chip names the section alone. */
+  readonly pageNumber: number | null;
   readonly sectionTitle: string;
   readonly snippet?: string;
   readonly onClick: () => void;
@@ -23,6 +26,8 @@ export function CitationChip({
   onClick,
   className,
 }: CitationChipProps): ReactElement {
+  const page = citedPage(pageNumber);
+
   return (
     <button
       type="button"
@@ -40,8 +45,12 @@ export function CitationChip({
       )}
     >
       <span aria-hidden="true">📖</span>
-      <span>p. {pageNumber}</span>
-      <span aria-hidden="true">—</span>
+      {page !== null && (
+        <>
+          <span>p. {page}</span>
+          <span aria-hidden="true">—</span>
+        </>
+      )}
       <span>{sectionTitle}</span>
     </button>
   );

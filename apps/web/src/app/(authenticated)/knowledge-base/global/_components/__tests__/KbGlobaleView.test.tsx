@@ -27,11 +27,13 @@ import type { UseQueryResult } from '@tanstack/react-query';
 
 type SearchParamsRecord = Record<string, string | null>;
 let searchParamsMap: SearchParamsRecord = {};
+let searchParamsString = '';
 const mockRouterPush = vi.fn();
 
 vi.mock('next/navigation', () => ({
   useSearchParams: () => ({
     get: (key: string) => searchParamsMap[key] ?? null,
+    toString: () => searchParamsString,
   }),
   useRouter: () => ({
     push: mockRouterPush,
@@ -98,23 +100,43 @@ vi.mock('@/components/features/kb-globale/KbDocViewerDesktop', () => ({
   ),
 }));
 
-type BusyLabels = { error: { busy: { title: string; body: string; action: string } } };
+type BusyLabels = {
+  error: { busy: { title: string; body: string; action: string } };
+  completed: {
+    inlineCitationAriaLabel: (
+      c: { docId: string; page: number | null; snippet: string },
+      n: number
+    ) => string;
+  };
+};
 
 vi.mock('@/components/features/kb-globale/DrawerShell', () => ({
   DrawerShell: (props: Record<string, unknown>) => {
     const onCitationClick = props['onCitationClick'] as
-      ((link: { docId: string; page: number; chunkId?: string }) => void) | undefined;
+      ((link: { docId: string; page: number | null; chunkId?: string }) => void) | undefined;
     const labels = props['labels'] as BusyLabels | undefined;
     return (
       <div data-slot="kb-globale-drawer" data-testid="kb-globale-drawer">
         <span data-testid="drawer-busy-labels">
           {labels?.error.busy.title}|{labels?.error.busy.body}|{labels?.error.busy.action}
         </span>
+        <span data-testid="drawer-aria-without-page">
+          {labels?.completed.inlineCitationAriaLabel({ docId: 'd1', page: null, snippet: '' }, 1)}
+        </span>
+        <span data-testid="drawer-aria-with-page">
+          {labels?.completed.inlineCitationAriaLabel({ docId: 'd1', page: 5, snippet: '' }, 2)}
+        </span>
         <button
           data-testid="drawer-citation-trigger"
           onClick={() => onCitationClick?.({ docId: 'doc-1', page: 5, chunkId: 'doc-1_3' })}
         >
           trigger citation
+        </button>
+        <button
+          data-testid="drawer-citation-no-page-trigger"
+          onClick={() => onCitationClick?.({ docId: 'doc-1', page: null })}
+        >
+          trigger citation without a page
         </button>
       </div>
     );
@@ -270,6 +292,7 @@ describe('KbGlobaleView (orchestrator)', () => {
   beforeEach(() => {
     // Reset URL state to empty (home branch) by default.
     searchParamsMap = {};
+    searchParamsString = '';
     // Full reset (clears call counts + return values) then re-configure defaults.
     mockRouterPush.mockReset();
     useGlobalKbSearchMock.mockReset();
@@ -767,6 +790,55 @@ describe('KbGlobaleView (orchestrator)', () => {
       expect(mockRouterPush).toHaveBeenCalledWith(expect.stringContaining('docId=doc-1'));
       expect(mockRouterPush).toHaveBeenCalledWith(expect.stringContaining('page=5'));
       expect(mockRouterPush).toHaveBeenCalledWith(expect.stringContaining('chunkId=doc-1_3'));
+    });
+
+    it('takes a page already in the address off it when the citation has no page (#4819)', () => {
+      searchParamsMap = { ask: '1', docId: 'doc-0', page: '5' };
+      searchParamsString = 'ask=1&docId=doc-0&page=5';
+      useKbDocDetailMock.mockReturnValue({
+        data: readyEnvelope,
+        isLoading: false,
+        isSuccess: true,
+        isError: false,
+        error: null,
+      });
+      render(<KbGlobaleView />);
+
+      fireEvent.click(screen.getByTestId('drawer-citation-no-page-trigger'));
+
+      const pushed = mockRouterPush.mock.calls.at(-1)?.[0] as string;
+      expect(pushed).toContain('docId=doc-1');
+      expect(pushed).not.toContain('page=');
+    });
+
+    it('words the accessible name of an inline citation with and without a page (#4819)', () => {
+      searchParamsMap = { ask: '1' };
+      render(<KbGlobaleView />);
+
+      expect(screen.getByTestId('drawer-aria-without-page')).toHaveTextContent(
+        'Citazione 1, documento d1'
+      );
+      expect(screen.getByTestId('drawer-aria-without-page').textContent).not.toContain('pagina');
+      expect(screen.getByTestId('drawer-aria-with-page')).toHaveTextContent(
+        'Citazione 2, documento d1, pagina 5'
+      );
+    });
+
+    it('opens the document without a page param when the citation has no page (#4819)', () => {
+      searchParamsMap = { ask: '1', docId: 'doc-1' };
+      useKbDocDetailMock.mockReturnValue({
+        data: readyEnvelope,
+        isLoading: false,
+        isSuccess: true,
+        isError: false,
+        error: null,
+      });
+      render(<KbGlobaleView />);
+
+      fireEvent.click(screen.getByTestId('drawer-citation-no-page-trigger'));
+
+      expect(mockRouterPush).toHaveBeenCalledWith(expect.stringContaining('docId=doc-1'));
+      expect(mockRouterPush).not.toHaveBeenCalledWith(expect.stringContaining('page='));
     });
 
     it('closeViewer deletes chunkId from URL to prevent stale deep-link', () => {

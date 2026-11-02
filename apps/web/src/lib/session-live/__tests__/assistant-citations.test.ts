@@ -36,8 +36,34 @@ describe('toRuleSourceCitations (#4411)', () => {
     expect(citation?.paraphrasedSnippet).toBe('Quattro tessere.');
   });
 
-  it('drops a citation without a page', () => {
-    expect(toRuleSourceCitations([wire({ pageNumber: null })])).toEqual([]);
+  // #4819: the server leaves the page out for a document whose pages it cannot tell apart. The source
+  // is still worth showing: it loses its page, not its place.
+  it.each([
+    ['null', { pageNumber: null }],
+    ['absent', { pageNumber: undefined }],
+    ['zero (a server that still writes 0 for it)', { pageNumber: 0 }],
+  ])('keeps a citation whose page is %s, without a page', (_label, over) => {
+    const [citation] = toRuleSourceCitations([wire({ ...over, snippetPreview: 'Si pescano 4.' })]);
+    expect(citation).toMatchObject({
+      documentId: 'pdf-1',
+      pageNumber: null,
+      snippet: 'Si pescano 4.',
+    });
+  });
+
+  it('drops a citation that points nowhere: no document and no page', () => {
+    expect(toRuleSourceCitations([wire({ documentId: undefined, pageNumber: null })])).toEqual([]);
+    expect(toRuleSourceCitations([wire({ documentId: '', pageNumber: 0 })])).toEqual([]);
+  });
+
+  it('keeps a citation that has a page but no document', () => {
+    const [citation] = toRuleSourceCitations([wire({ documentId: undefined, pageNumber: 3 })]);
+    expect(citation).toMatchObject({ documentId: '', pageNumber: 3 });
+  });
+
+  it('falls back to the legacy `page` field when `pageNumber` is absent', () => {
+    const [citation] = toRuleSourceCitations([wire({ pageNumber: undefined, page: 7 })]);
+    expect(citation?.pageNumber).toBe(7);
   });
 
   it('treats no citations as none', () => {

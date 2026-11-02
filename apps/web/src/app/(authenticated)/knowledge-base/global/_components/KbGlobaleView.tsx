@@ -51,6 +51,7 @@ import { useUserKbDocs } from '@/hooks/queries/useUserKbDocs';
 import { useKbAskStream } from '@/hooks/useKbAskStream';
 import type { UserKbDocDto } from '@/lib/api/schemas/kb-docs.schemas';
 import type { GlobalKbSearchFilters, SearchMode } from '@/lib/api/schemas/kb-globale.schemas';
+import { citedPage } from '@/lib/citations/citedPage';
 import type { KbDoc } from '@/lib/library/hybrid-hub.mappers';
 
 // ---------------------------------------------------------------------------
@@ -208,8 +209,12 @@ const LABELS = {
         completedLabel: 'COMPLETED',
         copyLabel: 'Copia',
         regenerateLabel: 'Rigenera',
-        inlineCitationAriaLabel: (c: { docId: string; page: number }, n: number) =>
-          `Citazione ${n}, documento ${c.docId}, pagina ${c.page}`,
+        inlineCitationAriaLabel: (c: { docId: string; page: number | null }, n: number) => {
+          const page = citedPage(c.page);
+          return page === null
+            ? `Citazione ${n}, documento ${c.docId}`
+            : `Citazione ${n}, documento ${c.docId}, pagina ${page}`;
+        },
       },
       empty: {
         title: 'Nessun documento nella tua libreria',
@@ -338,10 +343,15 @@ export function KbGlobaleView(): JSX.Element {
 
   // ── Phase 2: viewer + drawer URL helpers ──────────────────────────────
   const openViewer = useCallback(
-    (result: { docId: string; page: number; chunkId?: string }) => {
+    (result: { docId: string; page: number | null; chunkId?: string }) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set('docId', result.docId);
-      params.set('page', String(result.page));
+      // #4819: a citation without a page opens the document at its first page (no `page` param).
+      if (result.page === null) {
+        params.delete('page');
+      } else {
+        params.set('page', String(result.page));
+      }
       if (result.chunkId) {
         params.set('chunkId', result.chunkId);
       } else {
@@ -465,7 +475,7 @@ export function KbGlobaleView(): JSX.Element {
     n: i + 1,
     docId: c.docId,
     page: c.page,
-    refText: `p.${c.page}`,
+    refText: citedPage(c.page) === null ? 'Fonte' : `p.${c.page}`,
     snippet: c.snippet,
   }));
 

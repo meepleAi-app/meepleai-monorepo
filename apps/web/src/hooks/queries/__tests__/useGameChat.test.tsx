@@ -730,3 +730,40 @@ describe('useGameChat', () => {
     expect(result2.current.messages[0].content).toBe('cached');
   });
 });
+
+describe('useGameChat — citazione senza pagina (#4819)', () => {
+  it.each([
+    ['absent', {}],
+    ['null', { page: null }],
+    ['zero', { page: 0 }],
+  ])('maps a citation whose page is %s to no page, not to page 0', async (_label, over) => {
+    const events = [
+      { type: 7, data: { token: 'Si pescano 4 tessere.' } },
+      {
+        type: 1,
+        data: {
+          citations: [
+            {
+              text: 'Si pescano 4 tessere.',
+              source: 'PDF:853f6dcc-aaaa',
+              line: 0,
+              score: 0.85,
+              ...over,
+            },
+          ],
+        },
+      },
+      { type: 4, data: { confidence: 0.8, citations: null } },
+    ];
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(events) as any);
+    const { result } = renderHook(() => useGameChat('azul'));
+
+    await act(async () => {
+      await result.current.ask('quante tessere si pescano?');
+    });
+
+    expect(result.current.messages[1].citations?.[0]).toEqual(
+      expect.objectContaining({ documentId: '853f6dcc-aaaa', pageNumber: null })
+    );
+  });
+});

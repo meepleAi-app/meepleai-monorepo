@@ -223,3 +223,34 @@ describe('TechnicalDetailsPanel', () => {
     expect(screen.getByTestId('technical-details-panel')).toBeInTheDocument();
   });
 });
+
+describe('TechnicalDetailsPanel — chunk senza pagina (#4819)', () => {
+  it('writes the page only on the chunks that have one', async () => {
+    const user = userEvent.setup();
+    const steps: DebugStep[] = [
+      // The panel only shows itself when it has a model, tokens or a typology to report.
+      {
+        type: 22,
+        name: 'Typology Profile',
+        payload: { typology: 'Tutor', searchStrategy: 'HybridSearch' },
+        timestamp: '2024-01-01T00:00:00Z',
+      },
+      {
+        type: 13,
+        name: 'Retrieval Results',
+        payload: {
+          totalResults: 3,
+          results: [{ score: 0.92, page: 3 }, { score: 0.85, page: 0 }, { score: 0.78 }],
+        },
+        timestamp: '2024-01-01T00:00:01Z',
+      },
+    ];
+    render(<TechnicalDetailsPanel debugSteps={steps} />);
+
+    await user.click(screen.getByTestId('technical-details-toggle'));
+
+    expect(screen.getByText('p.3')).toBeInTheDocument();
+    expect(screen.queryByText('p.0')).not.toBeInTheDocument();
+    expect(screen.getAllByText(/^p\./)).toHaveLength(1);
+  });
+});

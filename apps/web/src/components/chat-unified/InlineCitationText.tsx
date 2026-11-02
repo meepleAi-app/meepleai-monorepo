@@ -5,12 +5,13 @@ import React, { useState } from 'react';
 import { ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
 
 import type { InlineCitationMatch } from '@/lib/api/clients/chatClient';
+import { citedPage, pdfDownloadHref } from '@/lib/citations/citedPage';
 import { cn } from '@/lib/utils';
 
 interface SnippetData {
   text: string;
   source: string;
-  page: number;
+  page?: number | null;
   line: number;
   score: number;
 }
@@ -49,6 +50,7 @@ export function InlineCitationText({ text, citations, snippets }: InlineCitation
     const citedText = text.slice(citation.startOffset, citation.endOffset);
     const isExpanded = expandedCitations.has(idx);
     const snippet = snippets[citation.snippetIndex];
+    const page = citedPage(citation.pageNumber);
 
     segments.push(
       <React.Fragment key={`cite-${idx}`}>
@@ -70,7 +72,7 @@ export function InlineCitationText({ text, citations, snippets }: InlineCitation
               toggleCitation(idx);
             }
           }}
-          title={`Pagina ${citation.pageNumber}`}
+          title={page === null ? 'Fonte nel regolamento' : `Pagina ${page}`}
           data-testid={`citation-highlight-${idx}`}
         >
           {citedText}
@@ -83,12 +85,12 @@ export function InlineCitationText({ text, citations, snippets }: InlineCitation
           </span>
         </span>
         <a
-          href={`/api/v1/pdfs/${citation.pdfDocumentId}/download#page=${citation.pageNumber}`}
+          href={pdfDownloadHref(citation.pdfDocumentId, page)}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center ml-0.5 text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300"
           data-testid={`pdf-link-${idx}`}
-          title={`Apri PDF — Pagina ${citation.pageNumber}`}
+          title={page === null ? 'Apri PDF' : `Apri PDF — Pagina ${page}`}
         >
           <ExternalLink className="h-3 w-3" />
         </a>
@@ -98,7 +100,7 @@ export function InlineCitationText({ text, citations, snippets }: InlineCitation
             data-testid={`citation-accordion-${idx}`}
           >
             <div className="flex items-center gap-2 mb-1 text-xs text-amber-600 dark:text-amber-400 font-semibold font-nunito">
-              <span>Pagina {citation.pageNumber}</span>
+              <span>{page === null ? 'Fonte nel regolamento' : `Pagina ${page}`}</span>
             </div>
             <p className="text-muted-foreground font-nunito whitespace-pre-wrap">{snippet.text}</p>
           </div>

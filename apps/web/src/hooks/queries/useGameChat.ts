@@ -29,6 +29,7 @@ import type { AgentKind } from '@/components/features/game-chat/GameChatHeader';
 import { api } from '@/lib/api';
 import { qaStream } from '@/lib/api/clients/chatClient';
 import type { ChatThreadMessageDto } from '@/lib/api/schemas/chat.schemas';
+import { citedPage } from '@/lib/citations/citedPage';
 import { logger } from '@/lib/logger';
 import { readTierLimit, TIER_LIMIT_EXCEEDED, type TierLimit } from '@/lib/tier-limit';
 import type { Citation } from '@/types';
@@ -123,7 +124,7 @@ interface SseRegion {
 interface SseCitation {
   readonly text?: string;
   readonly source?: string;
-  readonly page?: number;
+  readonly page?: number | null;
   readonly score?: number;
   // SP-C (#3407): Full-gated region grounding emitted by the BE Snippet (camelCase wire).
   readonly regions?: ReadonlyArray<SseRegion> | null;
@@ -134,7 +135,7 @@ interface SseCitation {
 function mapSseCitation(c: SseCitation): Citation {
   return {
     documentId: (c.source ?? '').replace(/^PDF:/, ''),
-    pageNumber: c.page ?? 0,
+    pageNumber: citedPage(c.page),
     snippet: c.text ?? '',
     relevanceScore: c.score ?? 0,
     copyrightTier: 'full',

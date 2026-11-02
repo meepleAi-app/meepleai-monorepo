@@ -147,7 +147,8 @@ export interface CitationRegion {
  */
 export interface Citation {
   documentId: string;
-  pageNumber: number;
+  /** `null` when the server could not vouch for a page (#4819): show no page, read it with `citedPage`. */
+  pageNumber: number | null;
   snippet: string;
   relevanceScore: number;
   /** Copyright tier: 'full' shows verbatim snippet, 'protected' shows paraphrase. Defaults to 'full' for backward compat. */

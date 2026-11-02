@@ -428,6 +428,8 @@ public partial class StreamQaQueryHandlerTests
         // The same list grounds the prompt: the passage is still there, without a page the model could repeat.
         prompt.Should().Contain("Sample rule text");
         prompt.Should().NotContain("[Page 4]");
+        // ...and not an empty marker either: the marker is left out, not written with nothing in it.
+        prompt.Should().NotContain("[Page ] Sample rule text");
     }
 
     [Fact]

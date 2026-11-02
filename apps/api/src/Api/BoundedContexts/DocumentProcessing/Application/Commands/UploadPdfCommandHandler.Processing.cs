@@ -302,11 +302,11 @@ internal partial class UploadPdfCommandHandler
                 return (false, null, null);
             }
 
-            var fullText = string.Join("\n\n", extractResult.PageChunks
-                .Where(pc => !pc.IsEmpty)
-                .Select(pc => pc.Text));
+            var joinedText = PageTextJoiner.Join(extractResult.PageChunks);
+            var fullText = joinedText.Text;
 
             pdfDoc.ExtractedText = fullText;
+            pdfDoc.PageSpansJson = joinedText.Spans is null ? null : PageSpans.Serialize(joinedText.Spans);
             // Issue #3281: keep StructuredElementsJson in-memory on the (AsNoTracking) pdfDoc so the
             // tracked re-write in FinalizeProcessingAsync can copy it after the Ready transition. This
             // assignment + the SaveChangesAsync below are a no-op on the DB for this column (see the
@@ -441,7 +441,9 @@ internal partial class UploadPdfCommandHandler
                 pdfDoc.Id,
                 pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId,
                 advancedChunking,
-                cancellationToken).ConfigureAwait(false);
+                cancellationToken,
+                // #4782: the pages of a flat document (no structured elements) come from here.
+                pageSpans: PageTextJoiner.Join(extractResult.PageChunks).Spans).ConfigureAwait(false);
             allDocumentChunks = HeadingAwareChunkAdapter.ToChunkInputs(hierarchical);
         }
         else
@@ -907,6 +909,7 @@ internal partial class UploadPdfCommandHandler
         {
             tracked.ExtractedText = pdfDoc.ExtractedText;
             tracked.StructuredElementsJson = pdfDoc.StructuredElementsJson;
+            tracked.PageSpansJson = pdfDoc.PageSpansJson;
             tracked.PageCount = pdfDoc.PageCount;
             tracked.CharacterCount = pdfDoc.CharacterCount;
             tracked.ExtractedTables = pdfDoc.ExtractedTables;

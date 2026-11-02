@@ -748,11 +748,14 @@ internal class EnhancedPdfProcessingOrchestrator
 
             foreach (var sub in subChunks)
             {
-                result.Add(new PageTextChunk(
-                    PageNumber: chunk.PageNumber,
-                    Text: sub.Text,
-                    CharStartIndex: chunk.CharStartIndex + sub.CharStart,
-                    CharEndIndex: chunk.CharStartIndex + sub.CharEnd));
+                // `with`, not a new record: the sub-chunk is the same page, so everything but the text and the
+                // offsets (the page number, and whether it was measured, #4782) must be carried over as it is.
+                result.Add(chunk with
+                {
+                    Text = sub.Text,
+                    CharStartIndex = chunk.CharStartIndex + sub.CharStart,
+                    CharEndIndex = chunk.CharStartIndex + sub.CharEnd,
+                });
             }
 
             _logger.LogDebug(

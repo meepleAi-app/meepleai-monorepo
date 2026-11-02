@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
 using Api.Observability;
@@ -125,9 +126,8 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
             }
 
             // 5. Combine all page chunks into full text
-            var fullText = string.Join("\n\n", extractResult.PageChunks
-                .Where(pc => !pc.IsEmpty)
-                .Select(pc => pc.Text));
+            var joinedText = PageTextJoiner.Join(extractResult.PageChunks);
+            var fullText = joinedText.Text;
 
             // 6. Update PDF document with extracted text
             _logger.LogInformation("🔄 [EXTRACT-DEBUG] Updating PDF {PdfId} with extracted data: {Chars} chars, {Pages} pages",
@@ -137,6 +137,7 @@ internal class ExtractPdfTextCommandHandler : ICommandHandler<ExtractPdfTextComm
             pdf.StructuredElementsJson = extractResult.StructuredElements is null
                 ? null
                 : System.Text.Json.JsonSerializer.Serialize(extractResult.StructuredElements);
+            pdf.PageSpansJson = joinedText.Spans is null ? null : PageSpans.Serialize(joinedText.Spans);
             pdf.PageCount = extractResult.TotalPages;
             pdf.CharacterCount = extractResult.TotalCharacters;
             // B13: text-only extraction must NOT stamp a terminal Ready state (no chunk/embed/index

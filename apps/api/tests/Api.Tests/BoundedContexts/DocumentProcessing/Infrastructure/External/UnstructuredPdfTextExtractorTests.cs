@@ -424,6 +424,23 @@ public class UnstructuredPdfTextExtractorTests
     }
 
     [Fact]
+    public async Task ExtractPagedTextAsync_PageChunks_AreMarkedAsEstimated_BecauseTheyAreEqualSlicesOfTheText()
+    {
+        // #4782: the "pages" are the text cut into pageCount equal parts and numbered 1..N. Nothing built on the
+        // page of a chunk may take them for the pages of the PDF.
+        var extractor = CreateExtractor();
+        var pdfStream = CreateTestPdfStream();
+        _mockHttpMessageHandler.Protected()
+            .Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(new HttpResponseMessage { StatusCode = HttpStatusCode.OK, Content = new StringContent(CreateSuccessResponse()) });
+
+        var result = await extractor.ExtractPagedTextAsync(pdfStream, cancellationToken: TestCancellationToken);
+
+        result.PageChunks.Should().NotBeEmpty();
+        result.PageChunks.Should().OnlyContain(c => c.PageIsEstimated);
+    }
+
+    [Fact]
     public async Task ExtractTextAsync_SuccessfulExtraction_ReturnsSuccessResult()
     {
         // Arrange

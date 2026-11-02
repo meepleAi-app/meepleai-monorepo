@@ -304,6 +304,102 @@ describe('NewPlayRecordPage — a save that does not complete (#4800)', () => {
     expect(mockUpdateRecord).not.toHaveBeenCalled();
   });
 
+  // #4810: `CreatePlayRecord` takes no notes, so what was written in step 2 never left the page: the record
+  // was created, the wizard said «saved», and the record opened with empty notes. They go with the location,
+  // in one update (each update is a restorable version on the server), and the server keeps the text trimmed.
+  describe('the notes written in the wizard (#4810)', () => {
+    const NOTES = 'Serata di prova';
+    const WITH_NOTES = { ...SAVE_DATA, notes: `  ${NOTES}  ` };
+
+    it('writes the notes together with the location, in a single update', async () => {
+      const submit = await renderForm();
+
+      const answer = await submit(WITH_NOTES, SAVE_PLAYERS);
+
+      expect(answer).toBeUndefined();
+      expect(mockUpdateRecord).toHaveBeenCalledTimes(1);
+      expect(mockUpdateRecord.mock.calls[0]).toStrictEqual([
+        'rec-1',
+        { location: 'HP-TEST location', notes: NOTES },
+      ]);
+    });
+
+    it('writes the notes when there is no location, and sends no location', async () => {
+      const submit = await renderForm();
+
+      await submit({ ...WITH_NOTES, location: '' }, SAVE_PLAYERS);
+
+      expect(mockUpdateRecord.mock.calls).toStrictEqual([['rec-1', { notes: NOTES }]]);
+    });
+
+    it('sends nothing for notes that are only spaces', async () => {
+      const submit = await renderForm();
+
+      await submit({ ...SAVE_DATA, location: '', notes: '   ' }, SAVE_PLAYERS);
+
+      expect(mockUpdateRecord).not.toHaveBeenCalled();
+    });
+
+    it('writes on the retry the notes the first attempt did not reach', async () => {
+      mockUpdateRecord.mockRejectedValueOnce(new Error('No'));
+      const submit = await renderForm();
+      expect(await submit(WITH_NOTES, SAVE_PLAYERS)).toBe(false);
+      mockUpdateRecord.mockClear();
+
+      const answer = await submit(WITH_NOTES, SAVE_PLAYERS);
+
+      expect(answer).toBeUndefined();
+      expect(mockUpdateRecord.mock.calls).toStrictEqual([
+        ['rec-1', { location: 'HP-TEST location', notes: NOTES }],
+      ]);
+    });
+
+    it('does not rewrite notes that are already on the server, whatever the spaces around them', async () => {
+      mockAddPlayer.mockRejectedValueOnce(new Error('No'));
+      const submit = await renderForm();
+      expect(await submit(WITH_NOTES, SAVE_PLAYERS)).toBe(false);
+      mockUpdateRecord.mockClear();
+      // The server holds the text trimmed, as `PlayRecord.UpdateDetails` stores it.
+      mockGetRecord.mockResolvedValue({
+        ...SERVER_RECORD,
+        location: 'HP-TEST location',
+        notes: NOTES,
+      });
+
+      await submit(WITH_NOTES, SAVE_PLAYERS);
+
+      expect(mockUpdateRecord).not.toHaveBeenCalled();
+    });
+
+    it('writes only the notes when the location is already there', async () => {
+      mockAddPlayer.mockRejectedValueOnce(new Error('No'));
+      const submit = await renderForm();
+      expect(await submit(WITH_NOTES, SAVE_PLAYERS)).toBe(false);
+      mockUpdateRecord.mockClear();
+      mockGetRecord.mockResolvedValue({ ...SERVER_RECORD, location: 'HP-TEST location' });
+
+      await submit(WITH_NOTES, SAVE_PLAYERS);
+
+      expect(mockUpdateRecord.mock.calls).toStrictEqual([['rec-1', { notes: NOTES }]]);
+    });
+
+    it('sends notes that were corrected after the failure, and not the location that is there', async () => {
+      mockAddPlayer.mockRejectedValueOnce(new Error('No'));
+      const submit = await renderForm();
+      expect(await submit(WITH_NOTES, SAVE_PLAYERS)).toBe(false);
+      mockUpdateRecord.mockClear();
+      mockGetRecord.mockResolvedValue({
+        ...SERVER_RECORD,
+        location: 'HP-TEST location',
+        notes: 'Prima stesura',
+      });
+
+      await submit(WITH_NOTES, SAVE_PLAYERS);
+
+      expect(mockUpdateRecord.mock.calls).toStrictEqual([['rec-1', { notes: NOTES }]]);
+    });
+  });
+
   it('creates a new record when the inputs that define it changed, and says the half one is still there', async () => {
     mockAddPlayer.mockRejectedValueOnce(new Error('No'));
     const submit = await renderForm();

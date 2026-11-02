@@ -27,7 +27,10 @@ import {
 import { Button } from '@/components/ui/primitives/button';
 import { useTranslation } from '@/hooks/useTranslation';
 import { playRecordsApi } from '@/lib/api/play-records.api';
-import type { SessionCreateForm as SessionFormData } from '@/lib/api/schemas/play-records.schemas';
+import type {
+  SessionCreateForm as SessionFormData,
+  UpdatePlayRecordRequest,
+} from '@/lib/api/schemas/play-records.schemas';
 import { useGameNightPrefill } from '@/lib/domain-hooks/useGameNightPrefill';
 import { useCreatePlayRecord } from '@/lib/domain-hooks/usePlayRecords';
 
@@ -52,7 +55,7 @@ function createKey(data: SessionFormData): string {
 }
 
 /**
- * Issue #2847 (#BB): the create wizard collected players, per-player scores and a location, but
+ * Issue #2847 (#BB): the create wizard collected players, per-player scores, a location and notes, but
  * `CreatePlayRecord` does not accept them, so they are persisted with the dedicated follow-up endpoints
  * (addPlayer / recordScore / update) after the record exists.
  *
@@ -109,10 +112,16 @@ async function persistFollowUps(
     }
   }
 
-  // Location is not part of CreatePlayRecordRequest — persist it via update.
+  // Location and notes are not part of CreatePlayRecordRequest — persist them via update, in one call: each
+  // update leaves a restorable version on the server (#4810). The server stores both trimmed
+  // (`PlayRecord.UpdateDetails`), so what it holds is compared with the trimmed text.
   const location = data.location?.trim();
-  if (location && existing?.location !== location) {
-    await playRecordsApi.updateRecord(recordId, { location });
+  const notes = data.notes?.trim();
+  const details: UpdatePlayRecordRequest = {};
+  if (location && existing?.location !== location) details.location = location;
+  if (notes && existing?.notes !== notes) details.notes = notes;
+  if (Object.keys(details).length > 0) {
+    await playRecordsApi.updateRecord(recordId, details);
   }
 }
 

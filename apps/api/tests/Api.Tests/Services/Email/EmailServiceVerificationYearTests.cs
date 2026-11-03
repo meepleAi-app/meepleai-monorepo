@@ -15,9 +15,10 @@ namespace Api.Tests.Services.Email;
 /// Pinned here at the builder. #4812 gave the other five account templates (reset, two-factor disabled,
 /// suspended, reactivated, locked) the same argument, and pinned the wiring from every send method to the
 /// <see cref="TimeProvider"/> end to end — through the real <c>SmtpClient</c> against a loopback server — in
-/// <c>EmailServiceAuthLanguageTests</c>. This class keeps the builder's own contract. The other templates of
-/// <c>EmailService</c> — the two invitations, the access-request rejection, and the admin, gamification and PDF
-/// notification emails — still carry the literal.
+/// <c>EmailServiceAuthLanguageTests</c>. This class keeps the builder's own contract. The rest of the templates
+/// of <c>EmailService</c> (#4775) read the year from the injected clock too: <c>EmailServiceFooterYearTests</c>
+/// checks every <c>Build*EmailBody</c> against a fixed clock, and <c>EmailFooterYearArchitectureTests</c> fails
+/// on a literal year typed into any of them.
 /// </remarks>
 [Trait("Category", TestCategories.Unit)]
 [Trait("Issue", "4754")]

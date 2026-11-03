@@ -792,7 +792,7 @@ internal partial class EmailService
 ";
     }
 
-    private static string BuildInvitationEmailBody(string role, string inviteLink, string invitedByName)
+    private string BuildInvitationEmailBody(string role, string inviteLink, string invitedByName)
     {
         var roleDisplay = string.IsNullOrWhiteSpace(role) ? "user" : role;
 
@@ -836,14 +836,14 @@ internal partial class EmailService
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
         <p>This is an automated message, please do not reply to this email.</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>&copy; {FooterYear} MeepleAI. All rights reserved.</p>
     </div>
 </body>
 </html>
 ";
     }
 
-    private static string BuildEnhancedInvitationEmailBody(
+    private string BuildEnhancedInvitationEmailBody(
         string displayName,
         string role,
         string setupLink,
@@ -907,14 +907,14 @@ internal partial class EmailService
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
         <p>Questo &egrave; un messaggio automatico, non rispondere a questa email.</p>
-        <p>&copy; 2025 MeepleAI. Tutti i diritti riservati.</p>
+        <p>&copy; {FooterYear} MeepleAI. Tutti i diritti riservati.</p>
     </div>
 </body>
 </html>
 ";
     }
 
-    private static string BuildAccessRequestRejectedEmailBody(string? reason)
+    private string BuildAccessRequestRejectedEmailBody(string? reason)
     {
         var reasonSection = !string.IsNullOrWhiteSpace(reason)
             ? $@"
@@ -953,7 +953,7 @@ internal partial class EmailService
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
         <p>This is an automated message, please do not reply to this email.</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>&copy; {FooterYear} MeepleAI. All rights reserved.</p>
     </div>
 </body>
 </html>

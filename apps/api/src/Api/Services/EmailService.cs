@@ -24,6 +24,12 @@ internal partial class EmailService : IEmailService
     private readonly TimeProvider _timeProvider;
 
     /// <summary>
+    /// The year in the footer of every template that does not take it as an argument (#4775). It used to be a
+    /// literal «2025» typed into each of them; it is the injected clock's year, so a test can fix it.
+    /// </summary>
+    private int FooterYear => _timeProvider.GetUtcNow().Year;
+
+    /// <summary>
     /// Legacy ctor used by existing unit tests that mock EmailService directly without
     /// providing an <see cref="IEmailSender"/>. The transport falls back to in-method
     /// SmtpClient instantiation (original behaviour).

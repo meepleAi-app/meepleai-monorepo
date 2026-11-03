@@ -143,7 +143,7 @@ internal partial class EmailService
 
     // ===== Template builders =====
 
-    private static string BuildReportEmailBody(
+    private string BuildReportEmailBody(
         string reportName,
         string reportDescription,
         string fileName,
@@ -190,14 +190,14 @@ internal partial class EmailService
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
         <p>This is an automated message, please do not reply to this email.</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>&copy; {FooterYear} MeepleAI. All rights reserved.</p>
     </div>
 </body>
 </html>
 ";
     }
 
-    private static string BuildReportFailureEmailBody(string reportName, string errorMessage)
+    private string BuildReportFailureEmailBody(string reportName, string errorMessage)
     {
         var failedAt = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
 
@@ -237,7 +237,7 @@ internal partial class EmailService
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
         <p>This is an automated message, please do not reply to this email.</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>&copy; {FooterYear} MeepleAI. All rights reserved.</p>
     </div>
 </body>
 </html>

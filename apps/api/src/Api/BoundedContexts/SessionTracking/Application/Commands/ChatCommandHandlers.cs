@@ -133,6 +133,28 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
     private readonly IFeatureFlagService? _featureFlags;
     private readonly IOptions<SessionAgentOptions> _sessionAgentOptions;
 
+    /// <summary>
+    /// #4776: the line that opens an answer given WITHOUT the rulebook because the asker never declared owning
+    /// the game. It is part of the saved message — the one the whole table reads — and of the event published
+    /// with it, like the Arbiter's notice (a note kept in the HTTP response would reach only who asked, and the
+    /// rest of the table would read an ungrounded answer as if no passage had been found). The first sentence
+    /// is the Arbiter's, restated here: SessionTracking does not import GameManagement (ADR-090). Italian, like
+    /// every other user-facing line of the table.
+    /// </summary>
+    internal const string OwnershipNotDeclaredNotice =
+        "Attenzione: possesso del gioco non dichiarato, quindi il regolamento non è stato consultato. " +
+        "La risposta non si basa sul regolamento e nessun riferimento è citato.";
+
+    private const string NoticeSeparator = "\n\n";
+
+    /// <summary>
+    /// The column of the message content is <c>varchar(5000)</c> (<c>SessionChatMessageEntityConfiguration</c>) and
+    /// <see cref="SessionChatMessage.CreateAgentResponse"/> does not check the length: a text over it fails at the
+    /// save, after the player's question is already stored and the model already paid. The notice adds to the
+    /// answer, so it must not be what tips it over.
+    /// </summary>
+    internal const int MaxMessageLength = 5000;
+
     public AskSessionAgentCommandHandler(
         ISessionRepository sessionRepository,
         ISessionChatRepository chatRepository,
@@ -235,11 +257,15 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
         // for the chat: the question stays, no retrieval starts, and the answer is the model's alone, which
         // GroundingStatus.Ungrounded already says.
         var callerId = request.RequestedBy;
+        var rulebookDenied = false;
         if (liveImageRetrievalEnabled
             && !await MayConsultTheRulebookAsync(request.SessionId, session.GameId, callerId, cancellationToken).ConfigureAwait(false))
         {
             liveImageRetrievalEnabled = false;
+            rulebookDenied = true;
         }
+        // The model's own words, as opposed to the apologies below: only an answer can be qualified by a notice.
+        var answeredByModel = false;
 
         var groundedProduced = false;
         if (liveImageRetrievalEnabled)
@@ -336,6 +362,7 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
                     if (result.Success)
                     {
                         answer = result.Response;
+                        answeredByModel = !string.IsNullOrWhiteSpace(answer);
                         confidence = null; // #3388: no fabricated confidence — vision path is not grounded in retrieval
                     }
                     else
@@ -359,6 +386,7 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
                     if (result.Success)
                     {
                         answer = result.Response;
+                        answeredByModel = !string.IsNullOrWhiteSpace(answer);
                         confidence = null; // #3388: no fabricated confidence — text-only path is not grounded in retrieval
                     }
                     else
@@ -378,6 +406,24 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
                 confidence = null;
             }
         } // end if (!groundedProduced) — multimodal/text-only fallback (ungrounded)
+
+        // #4776: a denial is not an error for the chat, but it must not be silent either. GroundingStatus.Ungrounded
+        // also means «the rulebook was consulted and nothing relevant came up», so without this line whoever has
+        // not declared the game cannot tell the two apart. Only when the model answered (not on an apology), and
+        // only for a denial: a retrieval that is switched off or that failed is not the player's doing. An empty
+        // reply is not an answer either: it keeps failing at CreateAgentResponse, instead of being saved as a
+        // notice that qualifies nothing.
+        if (rulebookDenied && answeredByModel)
+        {
+            var room = MaxMessageLength - OwnershipNotDeclaredNotice.Length - NoticeSeparator.Length;
+            var kept = answer.Trim();
+            if (kept.Length > room)
+            {
+                kept = kept[..(room - 1)] + "…";
+            }
+
+            answer = OwnershipNotDeclaredNotice + NoticeSeparator + kept;
+        }
 
         var agentSeq = await _chatRepository.GetNextSequenceNumberAsync(request.SessionId, cancellationToken).ConfigureAwait(false);
         var agentMessage = SessionChatMessage.CreateAgentResponse(

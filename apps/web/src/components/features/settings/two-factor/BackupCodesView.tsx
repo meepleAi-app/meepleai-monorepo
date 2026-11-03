@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Copy, Download, Check } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface Props {
   readonly codes: readonly string[];
@@ -14,6 +15,7 @@ interface Props {
 
 export function BackupCodesView({ codes, acked, onAck }: Props): React.JSX.Element {
   const [copiedAt, setCopiedAt] = useState<number | null>(null);
+  const { t } = useTranslation();
 
   async function handleCopy(): Promise<void> {
     await navigator.clipboard.writeText(codes.join('\n'));
@@ -22,7 +24,7 @@ export function BackupCodesView({ codes, acked, onAck }: Props): React.JSX.Eleme
   }
 
   function handleDownload(): void {
-    const body = `MeepleAI · Recovery codes\n${new Date().toISOString()}\n\n${codes.join('\n')}\n`;
+    const body = `${t('settings.security.backupCodes.downloadFileTitle')}\n${new Date().toISOString()}\n\n${codes.join('\n')}\n`;
     const blob = new Blob([body], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -48,11 +50,13 @@ export function BackupCodesView({ codes, acked, onAck }: Props): React.JSX.Eleme
       <div className="flex gap-2 mt-3 flex-wrap">
         <Button size="sm" variant="outline" onClick={handleCopy}>
           {copiedAt ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
-          {copiedAt ? 'Copied!' : 'Copy all'}
+          {copiedAt
+            ? t('settings.security.backupCodes.copied')
+            : t('settings.security.backupCodes.copyAll')}
         </Button>
         <Button size="sm" variant="outline" onClick={handleDownload}>
           <Download className="h-3 w-3 mr-1" />
-          Download .txt
+          {t('settings.security.backupCodes.downloadTxt')}
         </Button>
       </div>
 
@@ -65,7 +69,7 @@ export function BackupCodesView({ codes, acked, onAck }: Props): React.JSX.Eleme
           style={{ accentColor: 'hsl(var(--c-success, 142 71% 45%))' }}
         />
         <span className="text-sm text-foreground">
-          Ho salvato i recovery codes in un posto sicuro
+          {t('settings.security.backupCodes.acknowledge')}
         </span>
       </label>
     </div>

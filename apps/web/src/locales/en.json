@@ -628,6 +628,76 @@
       "newPassword": "New password",
       "title": "Profile information"
     },
+    "security": {
+      "backupCodes": {
+        "acknowledge": "I have saved the recovery codes in a safe place",
+        "copied": "Copied!",
+        "copyAll": "Copy all",
+        "downloadFileTitle": "MeepleAI · Recovery codes",
+        "downloadTxt": "Download .txt"
+      },
+      "disable": {
+        "cancel": "Cancel",
+        "codeHelp": "The 6 digits from your app. If you cannot reach it, one of your backup codes (XXXX-XXXX) works too; each one only once.",
+        "codeLabel": "Authenticator or backup code",
+        "codePlaceholder": "123456 or ABCD-2345",
+        "confirm": "Disable 2FA",
+        "description": "Confirm with your password and a current authenticator code, or one of your backup codes.",
+        "errorFailed": "Failed to disable 2FA",
+        "errorInvalidCode": "Enter a 6-digit code or a backup code",
+        "errorWrongPassword": "The password is not correct.",
+        "passwordLabel": "Password",
+        "passwordPlaceholder": "Your account password",
+        "title": "Disable two-factor authentication"
+      },
+      "otp": {
+        "digit": "Digit {number}",
+        "group": "6-digit verification code"
+      },
+      "sessions": {
+        "current": "CURRENT",
+        "daysAgo": "{days} d ago",
+        "errorLoading": "Error loading sessions.",
+        "hoursAgo": "{hours} h ago",
+        "loading": "Loading",
+        "minutesAgo": "{minutes} min ago",
+        "now": "now",
+        "revoke": "Revoke",
+        "signOutOthers": "Sign out all other sessions",
+        "thisSession": "This session",
+        "title": "Active sessions",
+        "unknownDevice": "Unknown device",
+        "unknownIp": "unknown ip"
+      },
+      "setup": {
+        "description": "Complete all three steps to enable 2FA on your account.",
+        "title": "Set up two-factor authentication"
+      },
+      "statusCard": {
+        "disable": "Disable 2FA",
+        "disabledDescription": "Add a second layer of protection: even if your password is compromised, your account stays safe.",
+        "enabled": "Enabled",
+        "enabledDescription": "Verified through your authenticator app. Disable it only if you have lost access to the device.",
+        "notEnabled": "Not enabled",
+        "regenerateCodes": "Regenerate recovery codes",
+        "regenerateCodesSoon": "Regenerate recovery codes (coming soon)",
+        "setUp": "Set up two-factor authentication",
+        "title": "Two-factor authentication"
+      },
+      "wizard": {
+        "back": "Back",
+        "codesIntro": "Copy or download the codes before you continue. If you lose access to your authenticator app, you can use them to get back into your account.",
+        "continue": "Continue",
+        "done": "Done",
+        "enterCode": "Enter the code from your authenticator app",
+        "invalidCode": "Invalid code. Try again.",
+        "manualEntry": "Or enter this code manually:",
+        "qrAriaLabel": "2FA QR code — scan with your authenticator app",
+        "scanInstruction": "Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)",
+        "verificationFailed": "Verification failed",
+        "verifying": "verifying…"
+      }
+    },
     "tabs": {
       "advanced": "Advanced",
       "preferences": "Preferences",

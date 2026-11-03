@@ -11,6 +11,8 @@ import {
 
 import clsx from 'clsx';
 
+import { useTranslation } from '@/hooks/useTranslation';
+
 interface Props {
   /** Called once the 6 slots are filled. Receives the assembled digit string. */
   readonly onComplete: (code: string) => void;
@@ -30,6 +32,7 @@ export function OTPInput6Slot({
   const [digits, setDigits] = useState<string[]>(() => Array(SLOT_COUNT).fill(''));
   const [pendingFocus, setPendingFocus] = useState<number | null>(null);
   const refs = useRef<Array<HTMLInputElement | null>>([]);
+  const { t } = useTranslation();
 
   // Post-commit side effect: focus the scheduled slot. setState updaters must be pure;
   // DOM focus runs here so React strict mode + concurrent rendering stay correct.
@@ -88,7 +91,7 @@ export function OTPInput6Slot({
   return (
     <div
       role="group"
-      aria-label="6-digit verification code"
+      aria-label={t('settings.security.otp.group')}
       className={clsx('flex gap-2', error && 'animate-shake')}
     >
       {digits.map((digit, i) => (
@@ -105,7 +108,7 @@ export function OTPInput6Slot({
           maxLength={1}
           inputMode="numeric"
           pattern="[0-9]*"
-          aria-label={`Digit ${i + 1}`}
+          aria-label={t('settings.security.otp.digit', { number: i + 1 })}
           className={clsx(
             'w-12 h-14 text-center font-mono text-[22px] font-bold rounded-md bg-card text-foreground transition border-[1.5px]',
             error

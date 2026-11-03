@@ -7,7 +7,7 @@
  */
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { toast } from '@/components/layout/Toast';
 
@@ -34,10 +34,17 @@ const typeRaw = (input: HTMLInputElement, value: string): void => {
   fireEvent.change(input);
 };
 
+// `delete process.env.TZ` does not make Node re-read the zone: the one the process started in is assigned back.
+const ORIGINAL_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
 describe('ShareLibraryModal — an expiry that is not a date (#4840)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockCreateMutation.mutateAsync.mockResolvedValue({});
+  });
+
+  afterEach(() => {
+    process.env.TZ = ORIGINAL_ZONE;
   });
 
   it('does not save, and says why, when the expiry has a year of five digits', async () => {
@@ -53,7 +60,10 @@ describe('ShareLibraryModal — an expiry that is not a date (#4840)', () => {
   });
 
   it('still saves a real expiry, as the instant it names', async () => {
-    // The other direction: refusing what is not a date must not refuse what is.
+    // The other direction: refusing what is not a date must not refuse what is. In a zone that is not UTC (the CI
+    // runner is UTC, where reading the value as UTC would pass for nothing), with the zone checked first.
+    process.env.TZ = 'Europe/Rome';
+    expect(new Date(2099, 11, 31, 20, 0).getTimezoneOffset()).toBe(-60);
     render(<ShareLibraryModal isOpen onClose={vi.fn()} />);
     fireEvent.change(document.getElementById('expires-at') as HTMLInputElement, {
       target: { value: '2099-12-31T20:00' },
@@ -63,7 +73,7 @@ describe('ShareLibraryModal — an expiry that is not a date (#4840)', () => {
 
     await waitFor(() => expect(mockCreateMutation.mutateAsync).toHaveBeenCalledTimes(1));
     expect(mockCreateMutation.mutateAsync.mock.calls[0][0].expiresAt).toBe(
-      new Date(2099, 11, 31, 20, 0).toISOString()
+      '2099-12-31T19:00:00.000Z'
     );
     expect(toast.error).not.toHaveBeenCalled();
   });

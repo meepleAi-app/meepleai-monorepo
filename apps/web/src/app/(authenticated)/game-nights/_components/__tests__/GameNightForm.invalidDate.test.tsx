@@ -10,9 +10,16 @@
  */
 
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { GameNightForm } from '../GameNightForm';
+
+// `delete process.env.TZ` does not make Node re-read the zone: the one the process started in is assigned back.
+const ORIGINAL_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+afterEach(() => {
+  process.env.TZ = ORIGINAL_ZONE;
+});
 
 /** Hands the input to React with the string a browser would, which jsdom would otherwise blank. */
 const typeRaw = (input: HTMLInputElement, value: string): void => {
@@ -62,7 +69,10 @@ describe('GameNightForm — a date that is not one (#4840)', () => {
   });
 
   it('still submits a real date, as the instant it names', () => {
-    // The other direction: refusing what is not a date must not refuse what is.
+    // The other direction: refusing what is not a date must not refuse what is. In a zone that is not UTC (the CI
+    // runner is UTC, where reading the value as UTC would pass for nothing), with the zone checked first.
+    process.env.TZ = 'Europe/Rome';
+    expect(new Date(2026, 9, 30, 20, 0).getTimezoneOffset()).toBe(-60);
     const onSubmit = vi.fn();
     const { container } = render(<GameNightForm onSubmit={onSubmit} isSubmitting={false} />);
     fireEvent.change(container.querySelector('#scheduledAt') as HTMLInputElement, {
@@ -73,6 +83,6 @@ describe('GameNightForm — a date that is not one (#4840)', () => {
 
     expect(reported).toEqual([]);
     expect(onSubmit).toHaveBeenCalledTimes(1);
-    expect(onSubmit.mock.calls[0][0].scheduledAt).toBe(new Date(2026, 9, 30, 20, 0).toISOString());
+    expect(onSubmit.mock.calls[0][0].scheduledAt).toBe('2026-10-30T19:00:00.000Z');
   });
 });

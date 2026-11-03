@@ -74,6 +74,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   lazy,
   Suspense,
@@ -352,6 +353,11 @@ function deriveViewerRole(playerRole: string | undefined, isCreator: boolean): P
  * (#4781): it is `NotStarted` here, because scores, rule disputes and the end of the game all
  * answer 409 until it runs.
  */
+/** A session the server has not started yet: still waiting for its start (#4787). */
+function isUnstarted(dtoStatus: string | undefined): boolean {
+  return dtoStatus === 'Created' || dtoStatus === 'Setup';
+}
+
 function toHeaderStatus(
   dtoStatus: string,
   composedStatus: 'InProgress' | 'Paused' | 'Setup'
@@ -735,6 +741,7 @@ export function SessionLiveView(): ReactElement {
       statusPaused: t('pages.sessionLive.topBar.statusPaused'),
       statusCompleted: t('pages.sessionLive.topBar.statusCompleted'),
       statusNotStarted: t('pages.sessionLive.topBar.statusNotStarted'),
+      startCta: t('pages.sessionLive.topBar.startCta'),
       pauseCta: t('pages.sessionLive.topBar.pauseCta'),
       resumeCta: t('pages.sessionLive.topBar.resumeCta'),
       endgameCta: t('pages.sessionLive.topBar.endgameCta'),
@@ -1010,6 +1017,50 @@ export function SessionLiveView(): ReactElement {
     liveSessionDto != null &&
     currentUser?.id != null &&
     liveSessionDto.createdByUserId === currentUser.id;
+
+  // #4787: a session left `Created` (the start failed after its retry, a player did not get in, or it
+  // predates #4781) had no way to start from here. Only its creator may: `StartLiveSessionCommandHandler`
+  // answers 403 to anyone else, and `viewerRole` `Host` also covers whoever merely holds the first seat.
+  // The ref, not the state, is the guard: two taps in the same frame both read the old state.
+  const [startPending, setStartPending] = useState(false);
+  const startInFlightRef = useRef(false);
+  const handleStart = useCallback(async (): Promise<void> => {
+    if (sessionId == null || !isSessionOwner || startInFlightRef.current) return;
+    // Nobody to play: the server refuses, and not always in a way that says why (a 409 for a session
+    // opened from a typed game name, a validation error for one from the catalog). Say it here.
+    if (!(liveSessionDto?.players ?? []).some(p => p.isActive)) {
+      toast.error(t('pages.sessionLive.topBar.startNeedsPlayerToast'), {
+        id: 'session-start-error',
+      });
+      return;
+    }
+    startInFlightRef.current = true;
+    setStartPending(true);
+    try {
+      let conflict = false;
+      try {
+        await api.liveSessions.startSession(sessionId);
+      } catch (err) {
+        if (err instanceof ConflictError || (err as { statusCode?: number })?.statusCode === 409) {
+          conflict = true;
+        } else {
+          toast.error(t('pages.sessionLive.topBar.startErrorToast'), { id: 'session-start-error' });
+          return;
+        }
+      }
+      // `refetch` does not throw: it resolves with the result, `data` being what the server now says.
+      const refreshed = await sessionQuery.refetch();
+      // A 409 means "cannot be started from here". Often that is a start that went through and whose
+      // answer was lost (the client retries POSTs on 502/503): the session is no longer unstarted, and
+      // there is nothing to report. If it still is, the start was refused: do not stay silent.
+      if (conflict && isUnstarted(refreshed?.data?.status)) {
+        toast.error(t('pages.sessionLive.topBar.startErrorToast'), { id: 'session-start-error' });
+      }
+    } finally {
+      startInFlightRef.current = false;
+      setStartPending(false);
+    }
+  }, [sessionId, isSessionOwner, liveSessionDto, sessionQuery, t]);
 
   // ── G6a #2787: per-game Catan flavor (conditional tab) ────────────────────
   const showFlavorTab = hasFlavor(liveSessionDto?.gameSlug);
@@ -1390,6 +1441,8 @@ export function SessionLiveView(): ReactElement {
         status={activeSession.status}
         viewerRole={activeSession.viewerRole}
         onExit={handleExit}
+        onStart={isSessionOwner ? () => void handleStart() : undefined}
+        startPending={startPending}
         onEndgame={
           hasRequiredRole(activeSession.viewerRole, 'Host') ? handleRequestEndgame : undefined
         }

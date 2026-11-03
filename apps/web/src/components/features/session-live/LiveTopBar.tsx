@@ -32,6 +32,8 @@ export interface LiveTopBarLabels {
   readonly statusCompleted: string;
   /** #4781 — a session still waiting to be started: not running, so nothing to pause or end. */
   readonly statusNotStarted: string;
+  /** #4787 — start a session that has not started («Avvia partita»). */
+  readonly startCta: string;
   readonly pauseCta: string;
   readonly resumeCta: string;
   readonly endgameCta: string;
@@ -56,6 +58,14 @@ export interface LiveTopBarProps {
   readonly sessionName: string;
   readonly status: 'NotStarted' | 'InProgress' | 'Paused' | 'Completed';
   readonly viewerRole: ParticipantRole;
+  /**
+   * #4787 — start a session that has not started. Passed only to a caller the server lets start it
+   * (its creator, `StartLiveSessionCommandHandler`): `viewerRole` `Host` also covers whoever merely holds
+   * the first seat, so the bar does not decide this from the role.
+   */
+  readonly onStart?: () => void;
+  /** #4787 — the start is in flight: the command is inert, so a second tap does not send another. */
+  readonly startPending?: boolean;
   readonly onPause?: () => void;
   readonly onResume?: () => void;
   readonly onEndgame?: () => void;
@@ -108,6 +118,8 @@ export function LiveTopBar({
   sessionName,
   status,
   viewerRole,
+  onStart,
+  startPending,
   onPause,
   onResume,
   onEndgame,
@@ -121,6 +133,8 @@ export function LiveTopBar({
   // #4750: a concluded session has nothing left to pause, resume or end. #4781: neither does one
   // that has not started — the server answers 409 to all three until it runs.
   const canControl = viewerRole === 'Host' && status !== 'Completed' && status !== 'NotStarted';
+  // #4787: a session left unstarted can be started from here, by whoever the caller says may.
+  const canStart = status === 'NotStarted' && onStart != null;
 
   const statusLabel = labels[STATUS_LABEL_KEY[status]];
 
@@ -206,6 +220,22 @@ export function LiveTopBar({
 
       {/* Right: role-based CTAs */}
       <div className="flex items-center gap-2">
+        {/* Start (#4787): only while not started, and only when the caller offers it */}
+        {canStart && (
+          <button
+            type="button"
+            data-slot="session-live-top-bar-start"
+            onClick={startPending ? undefined : onStart}
+            aria-disabled={startPending ? 'true' : undefined}
+            className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-medium text-white
+              hover:bg-emerald-600 focus-visible:outline-none focus-visible:ring-2
+              focus-visible:ring-emerald-400
+              aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+          >
+            {labels.startCta}
+          </button>
+        )}
+
         {/* Host-only: Pause (shown when InProgress) */}
         {canControl && !isPaused && (
           <button

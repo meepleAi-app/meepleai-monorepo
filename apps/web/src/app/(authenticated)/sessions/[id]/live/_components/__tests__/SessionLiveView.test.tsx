@@ -245,6 +245,7 @@ vi.mock('@/lib/session-live/use-resolve-play-record', () => ({
 
 const getHistoryMock = vi.hoisted(() => vi.fn());
 const resumeSessionMock = vi.hoisted(() => vi.fn());
+const startSessionMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/api', () => ({
   api: {
@@ -253,6 +254,7 @@ vi.mock('@/lib/api', () => ({
     },
     liveSessions: {
       resumeSession: resumeSessionMock,
+      startSession: startSessionMock,
     },
   },
 }));
@@ -303,6 +305,10 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.topBar.statusPaused': 'In pausa',
   'pages.sessionLive.topBar.statusCompleted': 'Conclusa',
   'pages.sessionLive.topBar.statusNotStarted': 'Non avviata',
+  'pages.sessionLive.topBar.startCta': 'Avvia partita',
+  'pages.sessionLive.topBar.startErrorToast': 'Impossibile avviare la partita. Riprova.',
+  'pages.sessionLive.topBar.startNeedsPlayerToast':
+    'Aggiungi almeno un giocatore per avviare la partita.',
   'pages.sessionLive.topBar.pauseCta': 'Pausa',
   'pages.sessionLive.topBar.resumeCta': 'Riprendi',
   'pages.sessionLive.topBar.endgameCta': 'Termina sessione',
@@ -2541,6 +2547,183 @@ describe('SessionLiveView — #4750: creator as host, concluded session', () => 
       const { container } = mountWith(CREATED_DTO, CREATOR_ID);
 
       expect(slotIn(container, 'timer')).not.toBeInTheDocument();
+    });
+  });
+
+  // #4787: a session left `Created` (the start failed after the retry, a player did not get in)
+  // had no way to start from the live page. The server lets only its creator start it.
+  describe('starting a session that has not been started (#4787)', () => {
+    const CREATED_DTO = {
+      ...MOCK_SESSION_DTO,
+      status: 'Created',
+      startedAt: null,
+    } as unknown as LiveSessionDto;
+    const refetchMock = vi.fn();
+
+    function mountStartable(dto: LiveSessionDto, userId: string | null) {
+      useCurrentUserMock.mockReturnValue({ data: userId == null ? null : { id: userId } });
+      useLiveSessionMock.mockReturnValue({
+        data: dto,
+        isLoading: false,
+        isError: false,
+        isSuccess: true,
+        error: null,
+        refetch: refetchMock,
+      } as unknown as MockSessionReturn);
+      return renderWithIntl(<SessionLiveView />);
+    }
+
+    beforeEach(() => {
+      startSessionMock.mockReset();
+      startSessionMock.mockResolvedValue(undefined);
+      refetchMock.mockReset();
+      refetchMock.mockResolvedValue(undefined);
+    });
+
+    it('the creator starts it with one call, and the view is refreshed afterwards', async () => {
+      const { container } = mountStartable(CREATED_DTO, CREATOR_ID);
+      expect(slotIn(container, 'start')).toHaveTextContent('Avvia partita');
+
+      await act(async () => {
+        fireEvent.click(slotIn(container, 'start') as HTMLElement);
+      });
+
+      expect(startSessionMock).toHaveBeenCalledTimes(1);
+      expect(startSessionMock).toHaveBeenCalledWith('session-abc-123');
+      expect(refetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('whoever only holds the first seat is not offered it: the server answers 403 to them', () => {
+      // Linked to a player with the Host role, but not the creator: `viewerRole` reads `Host`.
+      const seatHolderDto = {
+        ...CREATED_DTO,
+        players: [
+          { ...CREATED_DTO.players[0], userId: 'seat-holder', role: 'Host' },
+          ...CREATED_DTO.players.slice(1),
+        ],
+      } as unknown as LiveSessionDto;
+
+      const { container } = mountStartable(seatHolderDto, 'seat-holder');
+
+      expect(topBarOf(container)).toHaveAttribute('data-viewer-role', 'Host');
+      expect(slotIn(container, 'start')).not.toBeInTheDocument();
+    });
+
+    it('a plain player, and a visitor, are not offered it', () => {
+      expect(slotIn(mountStartable(CREATED_DTO, 'someone-else').container, 'start')).toBeNull();
+    });
+
+    it('is not offered once the session runs', () => {
+      const { container } = mountStartable(
+        { ...MOCK_SESSION_DTO, status: 'InProgress' } as unknown as LiveSessionDto,
+        CREATOR_ID
+      );
+
+      expect(slotIn(container, 'start')).not.toBeInTheDocument();
+    });
+
+    it('a second tap while the start is in flight does not send another', async () => {
+      let finishStart: () => void = () => undefined;
+      startSessionMock.mockReturnValue(
+        new Promise<void>(resolve => {
+          finishStart = resolve;
+        })
+      );
+      const { container } = mountStartable(CREATED_DTO, CREATOR_ID);
+
+      // Both taps in the same frame: neither has seen the re-render the first one causes, so the
+      // bar's own «pending» guard cannot help; only the handler's in-flight ref does.
+      await act(async () => {
+        fireEvent.click(slotIn(container, 'start') as HTMLElement);
+        fireEvent.click(slotIn(container, 'start') as HTMLElement);
+      });
+      expect(startSessionMock).toHaveBeenCalledTimes(1);
+      expect(slotIn(container, 'start')).toHaveAttribute('aria-disabled', 'true');
+
+      await act(async () => {
+        finishStart();
+      });
+      expect(refetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('a 409 is not an error when the session turns out started: an answer that was lost', async () => {
+      const { ConflictError } = await import('@/lib/api/core/errors');
+      startSessionMock.mockRejectedValue(new ConflictError({ message: 'already started' }));
+      refetchMock.mockResolvedValue({ data: { ...CREATED_DTO, status: 'InProgress' } });
+      const { container } = mountStartable(CREATED_DTO, CREATOR_ID);
+
+      await act(async () => {
+        fireEvent.click(slotIn(container, 'start') as HTMLElement);
+      });
+
+      const { toast } = await import('sonner');
+      expect(toast.error).not.toHaveBeenCalled();
+      expect(refetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(['Created', 'Setup'])(
+      'a 409 IS an error when the session is still %s afterwards: the start was refused',
+      async status => {
+        // The server answers 409 for a wrong status and also for "no active players" (a session opened
+        // from a typed game name). Swallowing it left a button that did nothing and said nothing.
+        const { ConflictError } = await import('@/lib/api/core/errors');
+        startSessionMock.mockRejectedValue(
+          new ConflictError({ message: 'Cannot start session without any active players' })
+        );
+        refetchMock.mockResolvedValue({ data: { ...CREATED_DTO, status } });
+        const { container } = mountStartable(CREATED_DTO, CREATOR_ID);
+
+        await act(async () => {
+          fireEvent.click(slotIn(container, 'start') as HTMLElement);
+        });
+
+        const { toast } = await import('sonner');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Impossibile avviare la partita. Riprova.',
+          expect.anything()
+        );
+        expect(slotIn(container, 'start')).not.toHaveAttribute('aria-disabled');
+      }
+    );
+
+    it('with no active player it says so, without asking the server', async () => {
+      const emptyDto = {
+        ...CREATED_DTO,
+        players: CREATED_DTO.players.map(p => ({ ...p, isActive: false })),
+      } as unknown as LiveSessionDto;
+      const { container } = mountStartable(emptyDto, CREATOR_ID);
+
+      await act(async () => {
+        fireEvent.click(slotIn(container, 'start') as HTMLElement);
+      });
+
+      const { toast } = await import('sonner');
+      expect(toast.error).toHaveBeenCalledWith(
+        'Aggiungi almeno un giocatore per avviare la partita.',
+        expect.anything()
+      );
+      expect(startSessionMock).not.toHaveBeenCalled();
+    });
+
+    it('any other failure reads in Italian, and the command stays available', async () => {
+      startSessionMock.mockRejectedValue(new Error('Internal Server Error'));
+      const { container } = mountStartable(CREATED_DTO, CREATOR_ID);
+
+      await act(async () => {
+        fireEvent.click(slotIn(container, 'start') as HTMLElement);
+      });
+
+      const { toast } = await import('sonner');
+      expect(toast.error).toHaveBeenCalledWith(
+        'Impossibile avviare la partita. Riprova.',
+        expect.anything()
+      );
+      expect(slotIn(container, 'start')).toBeInTheDocument();
+      expect(slotIn(container, 'start')).not.toHaveAttribute('aria-disabled');
+      // A start that failed is not a start that went through: nothing to refresh.
+      expect(refetchMock).not.toHaveBeenCalled();
+      // The server's own text never reaches the user.
+      expect(document.body.textContent).not.toContain('Internal Server Error');
     });
   });
 });

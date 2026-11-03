@@ -130,6 +130,9 @@ const capturedFormProps: { initialValues?: unknown; initialPlayers?: unknown } =
 // What `onSubmit` answered, one entry per submit. The real form acts on it: `false` means «not saved»
 // and it keeps what was typed (#4793), anything else and it clears itself.
 const submitAnswers: unknown[] = [];
+// What the fake form hands to `onSubmit`. The real form hands over whatever the user left in its fields, so a
+// test about untouched or changed fields sets this; `beforeEach` puts `FORM_SUBMISSION` back.
+const submission = { current: FORM_SUBMISSION };
 // How many times the fake form has been mounted: the real one takes `initialValues` only when it mounts, so
 // whether the page draws it again (a new `key`) is what decides if it shows a record that changed (#4801).
 const formMounts = { count: 0 };
@@ -157,7 +160,7 @@ vi.mock('@/components/play-records/SessionCreateForm', () => ({
           // Simulate form submission with partial data. The real form hands over a `Date`
           // (`SessionCreateFormSchema.sessionDate` is `z.date()`), not a string: a mock that sent
           // a string hid #4791 — the update request wants a string and the page never converted.
-          void Promise.resolve(onSubmit(FORM_SUBMISSION)).then(answer => {
+          void Promise.resolve(onSubmit(submission.current)).then(answer => {
             submitAnswers.push(answer);
           });
         }}
@@ -266,6 +269,7 @@ describe('EditPlayRecordPage', () => {
     capturedFormProps.initialValues = undefined;
     capturedFormProps.initialPlayers = undefined;
     submitAnswers.length = 0;
+    submission.current = FORM_SUBMISSION;
     mockParams.id = 'record-123';
     mockUsePlayRecord.mockReturnValue({
       data: playRecordFixture,
@@ -399,6 +403,68 @@ describe('EditPlayRecordPage', () => {
       notes: 'Test notes',
       location: 'Test location',
       xmin: 7,
+    });
+  });
+
+  describe('the fields of the request (#4798)', () => {
+    // The form is drawn with `notes ?? ''` and `location ?? ''`, so a record stored with `null` comes back from
+    // an untouched form as `''`. The server reads `null` as «leave it» and any string, the empty one included, as
+    // a value: sending the `''` turned the stored `null` into `''`. What the user did not touch is not sent.
+    const saveWith = async (
+      record: Record<string, unknown>,
+      typed: { notes: string; location: string }
+    ): Promise<Record<string, unknown>> => {
+      const mutateAsync = vi.fn(async (_request: Record<string, unknown>) => ({
+        id: 'record-123',
+      }));
+      mockUseUpdateRecord.mockReturnValue({ mutateAsync, isPending: false });
+      mockUsePlayRecord.mockReturnValue({
+        data: { ...playRecordFixture, ...record },
+        isLoading: false,
+        error: null,
+      });
+      submission.current = { ...FORM_SUBMISSION, ...typed };
+      const user = userEvent.setup();
+
+      render(
+        <QueryClientProvider client={new QueryClient()}>
+          <EditPlayRecordPage />
+        </QueryClientProvider>
+      );
+      const form = await screen.findByTestId('session-form');
+      await user.click(form.querySelector('button[type="submit"]')!);
+      await waitFor(() => expect(mockRouterPush).toHaveBeenCalledWith('/play-records/record-123'));
+
+      expect(mutateAsync).toHaveBeenCalledTimes(1);
+      // What goes on the wire: a key set to `undefined` is not sent, one that is absent is not either.
+      return JSON.parse(JSON.stringify(mutateAsync.mock.calls[0][0])) as Record<string, unknown>;
+    };
+
+    it('does not send notes or location that were null and are still empty', async () => {
+      const request = await saveWith({ notes: null, location: null }, { notes: '', location: '' });
+
+      expect(Object.keys(request).sort()).toEqual(['sessionDate', 'xmin']);
+    });
+
+    it('sends only the field that was changed', async () => {
+      const request = await saveWith(
+        { notes: 'gg', location: 'Padova' },
+        { notes: 'rivincita', location: 'Padova' }
+      );
+
+      expect(request).toMatchObject({ notes: 'rivincita' });
+      expect(request).not.toHaveProperty('location');
+    });
+
+    it('sends the empty text for a field that was filled and has been cleared', async () => {
+      // The other direction: not sending what was not touched must not take away the way to empty a field.
+      const request = await saveWith(
+        { notes: 'gg', location: 'Padova' },
+        { notes: '', location: 'Padova' }
+      );
+
+      expect(request).toMatchObject({ notes: '' });
+      expect(request).not.toHaveProperty('location');
     });
   });
 

@@ -536,7 +536,7 @@ internal sealed class HandleOAuthCallbackCommandHandler : ICommandHandler<Handle
                 // send a display name, fall back to a random Player-{ShortGuid}
                 // — never to the email local-part. The user can change it
                 // later via /users/profile.
-                var fallbackDisplayName = $"Player-{Guid.NewGuid():N}"[..14];
+                var fallbackDisplayName = GeneratedDisplayName.Create();
 
                 var domainUser = User.CreateForOAuth(
                     id: Guid.NewGuid(),

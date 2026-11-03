@@ -22,3 +22,18 @@ export function isoToDatetimeLocalValue(iso: string | null | undefined): string 
   const year = date.getFullYear().toString().padStart(4, '0');
   return `${year}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
+
+/**
+ * The instant, as an ISO string, that the value of an `<input type="datetime-local">` names (#4840), or `null`
+ * when the value is empty or is not a date.
+ *
+ * The input lets the user make up a string the browser's own parser does not read: a year of more than four digits
+ * is accepted, and `new Date('12345-10-30T20:00')` is an invalid `Date` whose `toISOString()` throws `RangeError`.
+ * A caller that converts the raw value therefore throws in its handler (or, if it keeps the `Date`, in a later
+ * render). The value is read as a wall clock in the zone of the browser, the inverse of `isoToDatetimeLocalValue`.
+ */
+export function datetimeLocalValueToIso(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}

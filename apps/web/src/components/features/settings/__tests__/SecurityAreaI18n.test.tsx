@@ -56,6 +56,7 @@ const MINUTE = 60_000;
 const SESSIONS = [
   session('s1', 'Mozilla/5.0 (Macintosh) Chrome/124', '1.2.3.4', Date.now() - MINUTE),
   session('s2', 'iPhone iOS 17', '5.6.7.8', Date.now() - 3 * 60 * MINUTE),
+  session('s4', 'Firefox/120.0', '9.9.9.9', Date.now() - 2 * 24 * 60 * MINUTE),
   session('s3', null, null, null),
 ];
 
@@ -306,6 +307,37 @@ describe('setup wizard', () => {
     expect(screen.getByLabelText('Digit 1')).toBeInTheDocument();
     expect(screen.getByText(/enter the code/i)).toBeInTheDocument();
   });
+
+  it('ends on the English "Done" the e2e clicks, once the backup codes are shown', async () => {
+    vi.mocked(api.auth.enable2FA).mockResolvedValue({
+      success: true,
+      backupCodes: null,
+      errorMessage: null,
+    });
+    renderWizard(EnglishIntl);
+
+    fireEvent.click(screen.getByRole('button', { name: /continue/i }));
+    fireEvent.paste(screen.getAllByRole('textbox')[0], {
+      clipboardData: { getData: () => '123456' },
+    });
+
+    expect(await screen.findByRole('button', { name: 'Done' })).toBeDisabled();
+  });
+
+  it.each([
+    [ItalianIntl, 'Continua', 'verifica in corso…'],
+    [EnglishIntl, 'Continue', 'verifying…'],
+  ])('says the code is being checked, while it is', async (wrapper, next, checking) => {
+    vi.mocked(api.auth.enable2FA).mockReturnValue(new Promise<never>(() => {}));
+    renderWizard(wrapper);
+
+    fireEvent.click(screen.getByRole('button', { name: next }));
+    fireEvent.paste(screen.getAllByRole('textbox')[0], {
+      clipboardData: { getData: () => '123456' },
+    });
+
+    expect(await screen.findByText(checking)).toBeInTheDocument();
+  });
 });
 
 describe('backup codes', () => {
@@ -331,6 +363,35 @@ describe('backup codes', () => {
       screen.getByLabelText('I have saved the recovery codes in a safe place')
     ).toBeInTheDocument();
   });
+
+  it.each([
+    [ItalianIntl, 'Scarica .txt', 'MeepleAI · Codici di backup'],
+    [EnglishIntl, 'Download .txt', 'MeepleAI · Recovery codes'],
+  ])(
+    'writes the downloaded file in the language of the interface',
+    async (wrapper, button, title) => {
+      let written: Blob | undefined;
+      Object.assign(URL, {
+        createObjectURL: vi.fn((blob: Blob) => {
+          written = blob;
+          return 'blob:backup-codes';
+        }),
+        revokeObjectURL: vi.fn(),
+      });
+      render(<BackupCodesView codes={['AAAA-1111']} acked={false} onAck={() => {}} />, { wrapper });
+
+      fireEvent.click(screen.getByRole('button', { name: button }));
+
+      const text = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsText(written as Blob);
+      });
+      expect(text.startsWith(title)).toBe(true);
+      expect(text).toContain('AAAA-1111');
+    }
+  );
 });
 
 describe('code input', () => {
@@ -354,9 +415,10 @@ describe('active sessions', () => {
     await waitFor(() => expect(screen.getByText(/Chrome/)).toBeInTheDocument());
     expect(screen.getByText('ATTUALE')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Questa sessione' })).toBeDisabled();
-    expect(screen.getAllByRole('button', { name: 'Revoca' })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Revoca' })).toHaveLength(3);
     expect(screen.getByText(/1 min fa · 1\.2\.3\.4/)).toBeInTheDocument();
     expect(screen.getByText(/3 h fa · 5\.6\.7\.8/)).toBeInTheDocument();
+    expect(screen.getByText(/2 g fa · 9\.9\.9\.9/)).toBeInTheDocument();
     expect(screen.getByText('Dispositivo sconosciuto')).toBeInTheDocument();
     expect(screen.getByText(/— · IP sconosciuto/)).toBeInTheDocument();
     expect(
@@ -376,12 +438,24 @@ describe('active sessions', () => {
     expect(await screen.findByText('Error loading sessions.')).toBeInTheDocument();
   });
 
+  it.each([
+    [ItalianIntl, 'Caricamento'],
+    [EnglishIntl, 'Loading'],
+  ])('names the spinner, while the sessions load', async (wrapper, label) => {
+    vi.mocked(api.auth.getUserSessions).mockReturnValue(new Promise<never>(() => {}));
+
+    render(inQueryClient(<ActiveSessionsCard />), { wrapper });
+
+    expect(await screen.findByLabelText(label)).toBeInTheDocument();
+  });
+
   it('keeps its English words when the interface is in English', async () => {
     render(inQueryClient(<ActiveSessionsCard />), { wrapper: EnglishIntl });
 
     expect(await screen.findByRole('heading', { name: 'Active sessions' })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText('CURRENT')).toBeInTheDocument());
     expect(screen.getByText(/1 min ago · 1\.2\.3\.4/)).toBeInTheDocument();
+    expect(screen.getByText(/2 d ago · 9\.9\.9\.9/)).toBeInTheDocument();
     expect(screen.getByText('Unknown device')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign out all other sessions' })).toBeInTheDocument();
   });

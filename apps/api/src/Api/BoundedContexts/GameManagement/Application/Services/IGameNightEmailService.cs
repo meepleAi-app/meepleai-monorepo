@@ -5,8 +5,9 @@ namespace Api.BoundedContexts.GameManagement.Application.Services;
 /// Issue #44/#47: Game night notification types and email templates.
 /// Issue #4754: every method takes the <see cref="GameNightEmailLocale"/> (the organizer's language and the
 /// night's time zone) so the text and the time are written the way the organizer meant them. The emails
-/// that go to a guest — the invitation and the RSVP confirmation — take no unsubscribe link: the address is
-/// not an account, there is no preference page behind it, and the link the footer used to carry had no page.
+/// that go to a guest — the invitation, the RSVP confirmation and (#4853) the cancellation — take no
+/// unsubscribe link: the address is not an account, there is no preference page behind it, and the link the
+/// footer used to carry had no page.
 /// </summary>
 internal interface IGameNightEmailService
 {
@@ -38,7 +39,6 @@ internal interface IGameNightEmailService
         string organizerName,
         string title,
         DateTimeOffset scheduledAt,
-        string unsubscribeUrl,
         GameNightEmailLocale locale,
         CancellationToken ct = default);
 

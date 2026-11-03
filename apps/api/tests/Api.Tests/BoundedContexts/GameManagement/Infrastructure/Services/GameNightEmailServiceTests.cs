@@ -262,16 +262,41 @@ public sealed class GameNightEmailServiceTests
     }
 
     [Fact]
-    public async Task Cancelled_ToAMember_InItalian_WritesTheLocalTimeAndTheItalianFooter()
+    public async Task Cancelled_ToAGuest_InItalian_WritesTheLocalTimeAndSaysWhyItArrives()
     {
         await _sut.SendGameNightCancelledEmailAsync(
-            "member@example.com", "Marco", "Venerdì Catan", RomeNineOclock,
-            "https://meepleai.test/unsub?t=1", new GameNightEmailLocale("it", "Europe/Rome"));
+            "guest@example.com", "Marco", "Venerdì Catan", RomeNineOclock,
+            new GameNightEmailLocale("it", "Europe/Rome"));
 
         _subject.Should().Be("Annullata: Venerdì Catan - MeepleAI");
+        _body.Should().Contain("Marco ha annullato questa serata di gioco.");
         _body.Should().Contain("Era prevista per: <strong>venerdì 30 ottobre 2026 alle 21:00 (Europe/Rome, UTC+1)</strong>");
-        _body.Should().Contain("Hai ricevuto questa email perché hai un account MeepleAI.");
-        _body.Should().Contain("Gestisci le preferenze di notifica");
+        _body.Should().Contain("Hai ricevuto questa email perché Marco ti aveva invitato a una serata di gioco su MeepleAI.");
+    }
+
+    [Fact]
+    public async Task Cancelled_ToAGuest_InEnglish_SaysWhyItArrives()
+    {
+        await _sut.SendGameNightCancelledEmailAsync(
+            "guest@example.com", "Marco", "Friday Catan", RomeNineOclock,
+            new GameNightEmailLocale("en", "Europe/Rome"));
+
+        _subject.Should().Be("Cancelled: Friday Catan - MeepleAI");
+        _body.Should().Contain("You received this email because Marco invited you to a game night on MeepleAI.");
+    }
+
+    [Fact]
+    public async Task Cancelled_ToAGuest_PromisesNoAccountAndOffersNoLink()
+    {
+        // The address is not an account: no «you have a MeepleAI account», no preferences page, and no link at
+        // all in the footer — the one the member footer carries would point at a page a guest cannot use.
+        await _sut.SendGameNightCancelledEmailAsync(
+            "guest@example.com", "Marco", "Friday Catan", RomeNineOclock,
+            new GameNightEmailLocale("en", "Europe/Rome"));
+
+        _body.Should().NotContain("you have a MeepleAI account");
+        _body.Should().NotContain("Manage notification preferences");
+        _body.Should().NotContain("<a ");
     }
 
     [Fact]

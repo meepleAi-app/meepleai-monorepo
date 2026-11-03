@@ -34,12 +34,13 @@ internal sealed class GameNightEmailTexts
     public required string ConfirmedAttendeesLabel { get; init; }
     public required string ReminderPendingPrompt { get; init; }
 
-    // Cancellation
+    // Cancellation (a guest: it reaches the addresses the night was announced to, #4853)
     public required Func<string, string> CancelledSubject { get; init; }
     public required string CancelledHeading { get; init; }
     public required Func<string, string> CancelledIntro { get; init; }
     public required string WasScheduledForLabel { get; init; }
     public required string CancelledClosing { get; init; }
+    public required Func<string, string> CancelledGuestFooter { get; init; }
 
     // RSVP confirmation (a guest again: the token flow, no account implied)
     public required Func<string, string> RsvpSubject { get; init; }
@@ -90,6 +91,8 @@ internal sealed class GameNightEmailTexts
         CancelledIntro = organizer => $"{organizer} has cancelled the following game night.",
         WasScheduledForLabel = "Was scheduled for",
         CancelledClosing = "We hope to see you at the next one!",
+        CancelledGuestFooter = organizer =>
+            $"You received this email because {organizer} invited you to a game night on MeepleAI.",
         RsvpSubject = title => $"RSVP Confirmed: {title} - MeepleAI",
         RsvpHeading = "You're In!",
         RsvpIntro = "Your RSVP has been confirmed for the game night.",
@@ -123,6 +126,8 @@ internal sealed class GameNightEmailTexts
         CancelledIntro = organizer => $"{organizer} ha annullato questa serata di gioco.",
         WasScheduledForLabel = "Era prevista per",
         CancelledClosing = "Speriamo di vederti alla prossima!",
+        CancelledGuestFooter = organizer =>
+            $"Hai ricevuto questa email perché {organizer} ti aveva invitato a una serata di gioco su MeepleAI.",
         RsvpSubject = title => $"Partecipazione confermata: {title} - MeepleAI",
         RsvpHeading = "Ci sei!",
         RsvpIntro = "La tua partecipazione alla serata di gioco è confermata.",

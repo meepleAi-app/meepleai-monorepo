@@ -128,7 +128,7 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
     // construction can leave out, and then the retrieval below starts for anyone.
     private readonly IAnswerPreconditions _answerPreconditions;
     private readonly ILogger<AskSessionAgentCommandHandler> _logger;
-    // #3390 Slice 2: optional (null-safe) so existing 7-arg test construction keeps compiling —
+    // #3390 Slice 2: optional (null-safe) so existing test constructions keep compiling —
     // null feature flags means the flag is treated as OFF (current multimodal-only behavior).
     private readonly IFeatureFlagService? _featureFlags;
     private readonly IOptions<SessionAgentOptions> _sessionAgentOptions;
@@ -227,13 +227,16 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
 
         // #4776 (ADR-096): the ownership gate protects the RETRIEVAL on the rulebook, and the copyright tier
         // below protects only the ANSWER — a tier does nothing for passages that already went into the prompt.
-        // It is asked for the user behind the participant who writes (a guest has none: Guid.Empty), and OUTSIDE
-        // the try below, which degrades fail-open on any error: inside it, "could not check" would read as
-        // "allowed". A denial is not an error for the chat: the question stays, no retrieval starts, and the
-        // answer is the model's alone, which GroundingStatus.Ungrounded already says.
-        var userId = session.Participants.FirstOrDefault(p => p.Id == request.SenderId)?.UserId ?? Guid.Empty;
+        // It is asked for the AUTHENTICATED CALLER, not for the user behind SenderId: the participant is picked by
+        // the client, its id is readable by everyone at the table, and a guest has no account — judged on it, the
+        // gate would let anyone borrow the ownership of whoever they name. No caller (Guid.Empty) is nobody: denied.
+        // The same identity sets the copyright tier below. The check is OUTSIDE the try below, which degrades
+        // fail-open on any error: inside it, "could not check" would read as "allowed". A denial is not an error
+        // for the chat: the question stays, no retrieval starts, and the answer is the model's alone, which
+        // GroundingStatus.Ungrounded already says.
+        var callerId = request.RequestedBy;
         if (liveImageRetrievalEnabled
-            && !await MayConsultTheRulebookAsync(request.SessionId, session.GameId, userId, cancellationToken).ConfigureAwait(false))
+            && !await MayConsultTheRulebookAsync(request.SessionId, session.GameId, callerId, cancellationToken).ConfigureAwait(false))
         {
             liveImageRetrievalEnabled = false;
         }
@@ -249,7 +252,7 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
                 // (DDD Customer/Supplier), never by injecting a KB service. Vision stays as state
                 // context (gameState); the turn text is the retrieval query.
                 var grounded = await _mediator.Send(
-                    new AskGroundedSessionQuery(session.GameId, retrievalQuery, gameState, userId),
+                    new AskGroundedSessionQuery(session.GameId, retrievalQuery, gameState, callerId),
                     retrievalCts.Token).ConfigureAwait(false);
 
                 if (hasImages && grounded.Citations.Count == 0)

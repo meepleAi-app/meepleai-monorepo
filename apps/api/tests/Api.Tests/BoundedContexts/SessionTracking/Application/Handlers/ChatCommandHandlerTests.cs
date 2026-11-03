@@ -599,11 +599,12 @@ public class AskSessionAgentCommandHandlerTests
         Guid SessionId,
         Guid SenderId);
 
-    private static GateRig BuildGateRig(bool retrievalFlagOn, Guid? senderUserId, Action<Mock<IAnswerPreconditions>>? configureGate = null)
+    /// <param name="participantUserId">The account behind the participant the message is written as (null: a guest).</param>
+    private static GateRig BuildGateRig(bool retrievalFlagOn, Guid? participantUserId = null, Action<Mock<IAnswerPreconditions>>? configureGate = null)
     {
         var sessionId = Guid.NewGuid();
         var senderId = Guid.NewGuid();
-        var session = CreateSessionWithParticipant(sessionId, senderId, senderUserId);
+        var session = CreateSessionWithParticipant(sessionId, senderId, participantUserId);
 
         var sessionRepo = new Mock<ISessionRepository>();
         sessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
@@ -640,6 +641,12 @@ public class AskSessionAgentCommandHandlerTests
         return new GateRig(handler, gate, mediator, llm, chatRepo, session, sessionId, senderId);
     }
 
+    /// <summary>The question goes out as the participant of the rig, from the authenticated <paramref name="caller"/>.</summary>
+    private static Task<AskSessionAgentResult> AskAs(GateRig rig, Guid caller) =>
+        rig.Handler.Handle(
+            new AskSessionAgentCommand(rig.SessionId, rig.SenderId, "How do I start my turn?", 1, RequestedBy: caller),
+            TestContext.Current.CancellationToken);
+
     private static void VerifyNoRetrieval(GateRig rig) =>
         rig.Mediator.Verify(
             m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -649,15 +656,13 @@ public class AskSessionAgentCommandHandlerTests
     {
         // Arrange — the asker never declared owning the game. The mediator WOULD return a grounded answer
         // with the rulebook's text: if the retrieval started, the test would see it.
-        var rig = BuildGateRig(retrievalFlagOn: true, senderUserId: Guid.NewGuid(), gate => gate
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: Guid.NewGuid(), configureGate: gate => gate
             .Setup(g => g.EnsureCanAskAboutGameAsync(
                 It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new RagOwnershipRequiredException(Guid.NewGuid())));
 
         // Act
-        var result = await rig.Handler.Handle(
-            new AskSessionAgentCommand(rig.SessionId, rig.SenderId, "How do I start my turn?", 1),
-            TestContext.Current.CancellationToken);
+        var result = await AskAs(rig, Guid.NewGuid());
 
         // Assert — no passage of the rulebook went anywhere; the answer is the model's alone, and says so.
         VerifyNoRetrieval(rig);
@@ -671,38 +676,81 @@ public class AskSessionAgentCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_FlagOn_AsksTheGateForTheUserBehindTheSender_AndForTheGameOfTheSession_ThenRetrieves()
+    public async Task Handle_FlagOn_AsksTheGateForTheAuthenticatedCaller_AndForTheGameOfTheSession_ThenRetrieves()
     {
-        // Arrange
-        var senderUserId = Guid.NewGuid();
-        var rig = BuildGateRig(retrievalFlagOn: true, senderUserId);
+        // Arrange — the caller is also the account behind the participant: the ordinary case.
+        var callerId = Guid.NewGuid();
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: callerId);
 
         // Act
-        var result = await rig.Handler.Handle(
-            new AskSessionAgentCommand(rig.SessionId, rig.SenderId, "How do I start my turn?", 1),
-            TestContext.Current.CancellationToken);
+        var result = await AskAs(rig, callerId);
 
-        // Assert — the gate is asked about whoever writes (not about the owner of the session), for this game,
-        // and an open gate lets the grounded answer through.
+        // Assert — the gate is asked about the caller (not about the owner of the session), for this game,
+        // and an open gate lets the grounded answer through, at the tier of that same caller.
         rig.Gate.Verify(
             g => g.EnsureCanAskAboutGameAsync(
-                senderUserId, It.IsAny<string?>(), rig.Session.GameId, It.IsAny<CancellationToken>()),
+                callerId, It.IsAny<string?>(), rig.Session.GameId, It.IsAny<CancellationToken>()),
             Times.Once);
         rig.Mediator.Verify(
-            m => m.Send(It.IsAny<AskGroundedSessionQuery>(), It.IsAny<CancellationToken>()), Times.Once);
+            m => m.Send(It.Is<AskGroundedSessionQuery>(q => q.UserId == callerId), It.IsAny<CancellationToken>()),
+            Times.Once);
         result.GroundingStatus.Should().Be(GroundingStatus.Grounded);
     }
 
     [Fact]
-    public async Task Handle_FlagOn_GuestSender_IsAskedAboutAsNoOne()
+    public async Task Handle_FlagOn_ChoosingAnotherParticipant_DoesNotBorrowTheirOwnership()
     {
-        // Arrange — a guest has no account, so no ownership to declare.
-        var rig = BuildGateRig(retrievalFlagOn: true, senderUserId: null);
+        // Arrange — H owns the game and declared it; F did not. F writes AS H's participant: SenderId is picked
+        // by the client and a participant id is readable by everyone at the table. The gate says yes to H only.
+        var hostUserId = Guid.NewGuid();
+        var friendUserId = Guid.NewGuid();
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: hostUserId, configureGate: gate => gate
+            .Setup(g => g.EnsureCanAskAboutGameAsync(
+                It.Is<Guid>(u => u != hostUserId), It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new RagOwnershipRequiredException(Guid.NewGuid())));
+
+        // Act — the caller is F, the participant is H's.
+        var result = await AskAs(rig, friendUserId);
+
+        // Assert — judged on F: denied, and no passage of the rulebook is retrieved.
+        rig.Gate.Verify(
+            g => g.EnsureCanAskAboutGameAsync(
+                friendUserId, It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        rig.Gate.Verify(
+            g => g.EnsureCanAskAboutGameAsync(
+                hostUserId, It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        VerifyNoRetrieval(rig);
+        result.GroundingStatus.Should().Be(GroundingStatus.Ungrounded);
+    }
+
+    [Fact]
+    public async Task Handle_FlagOn_GuestParticipant_IsJudgedOnTheCallerWhoWritesForThem()
+    {
+        // Arrange — a guest has no account: whoever types on their behalf is judged on their own.
+        var callerId = Guid.NewGuid();
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: null);
 
         // Act
-        await rig.Handler.Handle(
-            new AskSessionAgentCommand(rig.SessionId, rig.SenderId, "How do I start my turn?", 1),
-            TestContext.Current.CancellationToken);
+        await AskAs(rig, callerId);
+
+        // Assert
+        rig.Gate.Verify(
+            g => g.EnsureCanAskAboutGameAsync(
+                callerId, It.IsAny<string?>(), rig.Session.GameId, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_FlagOn_NoAuthenticatedCaller_IsAskedAboutAsNoOne()
+    {
+        // Arrange — a command that did not come through the endpoint carries no caller: nobody, never a
+        // participant's account by default.
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: Guid.NewGuid());
+
+        // Act
+        await AskAs(rig, Guid.Empty);
 
         // Assert
         rig.Gate.Verify(
@@ -715,12 +763,10 @@ public class AskSessionAgentCommandHandlerTests
     public async Task Handle_FlagOff_DoesNotAskTheGate_ThereIsNoRetrievalToProtect()
     {
         // Arrange
-        var rig = BuildGateRig(retrievalFlagOn: false, senderUserId: Guid.NewGuid());
+        var rig = BuildGateRig(retrievalFlagOn: false, participantUserId: Guid.NewGuid());
 
         // Act
-        await rig.Handler.Handle(
-            new AskSessionAgentCommand(rig.SessionId, rig.SenderId, "How do I start my turn?", 1),
-            TestContext.Current.CancellationToken);
+        await AskAs(rig, Guid.NewGuid());
 
         // Assert
         VerifyNoRetrieval(rig);
@@ -735,15 +781,13 @@ public class AskSessionAgentCommandHandlerTests
     {
         // Arrange — the access check itself broke (database down). The retrieval below degrades fail-open
         // on ANY error, so a gate inside that try would turn "could not check" into "allowed".
-        var rig = BuildGateRig(retrievalFlagOn: true, senderUserId: Guid.NewGuid(), gate => gate
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: Guid.NewGuid(), configureGate: gate => gate
             .Setup(g => g.EnsureCanAskAboutGameAsync(
                 It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("access store unavailable")));
 
         // Act
-        var act = () => rig.Handler.Handle(
-            new AskSessionAgentCommand(rig.SessionId, rig.SenderId, "How do I start my turn?", 1),
-            TestContext.Current.CancellationToken);
+        var act = () => AskAs(rig, Guid.NewGuid());
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>();

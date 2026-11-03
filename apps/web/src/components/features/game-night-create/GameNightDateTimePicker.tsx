@@ -73,7 +73,11 @@ export function GameNightDateTimePicker({
           if (!next) return;
           // Convert local datetime-local back to ISO; the reducer stores the
           // canonical UTC form so conflict checks dedupe deterministically.
-          onSetDate(new Date(next).toISOString());
+          const date = new Date(next);
+          // #4803: the input lets the year run past four digits, and `new Date('12345-10-30T20:00')` is not a
+          // date: `toISOString()` would throw. What is not a date is no choice, as in SessionCreateForm (#4788).
+          if (Number.isNaN(date.getTime())) return;
+          onSetDate(date.toISOString());
         }}
         className="rounded-md border border-border bg-card px-3 py-2 text-foreground"
       />

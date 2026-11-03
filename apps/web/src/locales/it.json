@@ -619,6 +619,76 @@
       "newPassword": "Nuova password",
       "title": "Informazioni profilo"
     },
+    "security": {
+      "backupCodes": {
+        "acknowledge": "Ho salvato i codici di backup in un posto sicuro",
+        "copied": "Copiato!",
+        "copyAll": "Copia tutti",
+        "downloadFileTitle": "MeepleAI · Codici di backup",
+        "downloadTxt": "Scarica .txt"
+      },
+      "disable": {
+        "cancel": "Annulla",
+        "codeHelp": "Le 6 cifre della tua app. Se non puoi usarla, va bene anche uno dei tuoi codici di backup (XXXX-XXXX); ognuno vale una sola volta.",
+        "codeLabel": "Codice dell'app o codice di backup",
+        "codePlaceholder": "123456 oppure ABCD-2345",
+        "confirm": "Disabilita 2FA",
+        "description": "Conferma con la tua password e un codice attuale dell'app di autenticazione, oppure con uno dei tuoi codici di backup.",
+        "errorFailed": "Impossibile disabilitare la 2FA",
+        "errorInvalidCode": "Inserisci un codice di 6 cifre o un codice di backup",
+        "errorWrongPassword": "La password non è corretta.",
+        "passwordLabel": "Password",
+        "passwordPlaceholder": "La password del tuo account",
+        "title": "Disabilita l'autenticazione a due fattori"
+      },
+      "otp": {
+        "digit": "Cifra {number}",
+        "group": "Codice di verifica a 6 cifre"
+      },
+      "sessions": {
+        "current": "ATTUALE",
+        "daysAgo": "{days} g fa",
+        "errorLoading": "Errore caricamento sessioni.",
+        "hoursAgo": "{hours} h fa",
+        "loading": "Caricamento",
+        "minutesAgo": "{minutes} min fa",
+        "now": "ora",
+        "revoke": "Revoca",
+        "signOutOthers": "Esci da tutte le altre sessioni",
+        "thisSession": "Questa sessione",
+        "title": "Sessioni attive",
+        "unknownDevice": "Dispositivo sconosciuto",
+        "unknownIp": "IP sconosciuto"
+      },
+      "setup": {
+        "description": "Completa tutti e tre i passaggi per abilitare la 2FA sul tuo account.",
+        "title": "Configura l'autenticazione a due fattori"
+      },
+      "statusCard": {
+        "disable": "Disabilita 2FA",
+        "disabledDescription": "Aggiungi un secondo livello di protezione: anche se la password viene compromessa, l'account resta al sicuro.",
+        "enabled": "Abilitata",
+        "enabledDescription": "Verifica tramite app di autenticazione. Disabilitala solo se hai perso l'accesso al dispositivo.",
+        "notEnabled": "Non abilitata",
+        "regenerateCodes": "Rigenera i codici di backup",
+        "regenerateCodesSoon": "Rigenera i codici di backup (in arrivo)",
+        "setUp": "Configura l'autenticazione a due fattori",
+        "title": "Autenticazione a due fattori"
+      },
+      "wizard": {
+        "back": "Indietro",
+        "codesIntro": "Copia o scarica i codici prima di continuare. Se perdi l'accesso all'app di autenticazione, potrai usarli per rientrare nel tuo account.",
+        "continue": "Continua",
+        "done": "Fine",
+        "enterCode": "Inserisci il codice della tua app di autenticazione",
+        "invalidCode": "Codice non valido. Riprova.",
+        "manualEntry": "Oppure inserisci questo codice a mano:",
+        "qrAriaLabel": "Codice QR per la 2FA: scansionalo con la tua app di autenticazione",
+        "scanInstruction": "Scansiona questo codice QR con la tua app di autenticazione (Google Authenticator, Authy, ecc.)",
+        "verificationFailed": "Verifica non riuscita",
+        "verifying": "verifica in corso…"
+      }
+    },
     "tabs": {
       "advanced": "Avanzate",
       "preferences": "Preferenze",

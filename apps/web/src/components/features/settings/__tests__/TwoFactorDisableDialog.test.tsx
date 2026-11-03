@@ -8,12 +8,13 @@
  */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { api } from '@/lib/api';
 import { ApiError } from '@/lib/api/core/errors';
+import { renderInEnglish as render } from '@/test-utils/intl-wrapper';
 
 import { TwoFactorDisableDialog } from '../two-factor/TwoFactorDisableDialog';
 

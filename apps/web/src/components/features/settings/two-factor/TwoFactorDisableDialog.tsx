@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
+import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 import { ApiError } from '@/lib/api/core/errors';
 import { parseTwoFactorCode } from '@/lib/auth/twoFactorCode';
@@ -28,6 +29,7 @@ export function TwoFactorDisableDialog({ open, onClose }: Props): React.JSX.Elem
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const passwordId = useId();
   const codeId = useId();
   const codeHelpId = useId();
@@ -38,7 +40,7 @@ export function TwoFactorDisableDialog({ open, onClose }: Props): React.JSX.Elem
 
   const disable = useMutation({
     mutationFn: () => {
-      if (parsedCode === null) throw new Error('Enter a 6-digit code or a backup code');
+      if (parsedCode === null) throw new Error(t('settings.security.disable.errorInvalidCode'));
       return api.auth.disable2FA(password, parsedCode.value);
     },
     // A refusal is an error status, not `{ success: false }` (#4806): it lands in `onError`.
@@ -51,8 +53,8 @@ export function TwoFactorDisableDialog({ open, onClose }: Props): React.JSX.Elem
       // A wrong password is a bare 401 with no body, whose message would be «API … failed with status 401».
       setError(
         err instanceof ApiError && err.statusCode === 401
-          ? 'The password is not correct.'
-          : (err.message ?? 'Failed to disable 2FA')
+          ? t('settings.security.disable.errorWrongPassword')
+          : (err.message ?? t('settings.security.disable.errorFailed'))
       ),
   });
 
@@ -76,11 +78,8 @@ export function TwoFactorDisableDialog({ open, onClose }: Props): React.JSX.Elem
     >
       <DialogContent className="max-w-sm" data-testid="disable-2fa-confirm">
         <DialogHeader>
-          <DialogTitle>Disable two-factor authentication</DialogTitle>
-          <DialogDescription>
-            Confirm with your password and a current authenticator code, or one of your backup
-            codes.
-          </DialogDescription>
+          <DialogTitle>{t('settings.security.disable.title')}</DialogTitle>
+          <DialogDescription>{t('settings.security.disable.description')}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
@@ -89,14 +88,14 @@ export function TwoFactorDisableDialog({ open, onClose }: Props): React.JSX.Elem
               htmlFor={passwordId}
               className="text-xs font-mono font-bold uppercase text-muted-foreground tracking-wide"
             >
-              Password
+              {t('settings.security.disable.passwordLabel')}
             </label>
             <Input
               id={passwordId}
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder="Your account password"
+              placeholder={t('settings.security.disable.passwordPlaceholder')}
               autoComplete="current-password"
             />
           </div>
@@ -105,14 +104,14 @@ export function TwoFactorDisableDialog({ open, onClose }: Props): React.JSX.Elem
               htmlFor={codeId}
               className="text-xs font-mono font-bold uppercase text-muted-foreground tracking-wide"
             >
-              Authenticator or backup code
+              {t('settings.security.disable.codeLabel')}
             </label>
             <Input
               id={codeId}
               type="text"
               value={code}
               onChange={e => setCode(e.target.value)}
-              placeholder="123456 or ABCD-2345"
+              placeholder={t('settings.security.disable.codePlaceholder')}
               autoComplete="one-time-code"
               autoCapitalize="characters"
               spellCheck={false}
@@ -121,8 +120,7 @@ export function TwoFactorDisableDialog({ open, onClose }: Props): React.JSX.Elem
               className="font-mono tracking-widest"
             />
             <p id={codeHelpId} className="mt-1 text-xs text-muted-foreground">
-              The 6 digits from your app. If you cannot reach it, one of your backup codes
-              (XXXX-XXXX) works too; each one only once.
+              {t('settings.security.disable.codeHelp')}
             </p>
           </div>
           {error && (
@@ -136,7 +134,7 @@ export function TwoFactorDisableDialog({ open, onClose }: Props): React.JSX.Elem
           )}
           <div className="flex gap-2 pt-2">
             <Button variant="outline" onClick={handleClose} className="flex-1">
-              Cancel
+              {t('settings.security.disable.cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -145,7 +143,7 @@ export function TwoFactorDisableDialog({ open, onClose }: Props): React.JSX.Elem
               className="flex-1"
             >
               {disable.isPending && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
-              Disable 2FA
+              {t('settings.security.disable.confirm')}
             </Button>
           </div>
         </div>

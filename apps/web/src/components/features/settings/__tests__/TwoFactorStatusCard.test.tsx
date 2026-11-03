@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
+import { renderInEnglish as render } from '@/test-utils/intl-wrapper';
 import { describe, it, expect, vi } from 'vitest';
 import { TwoFactorStatusCard } from '../two-factor/TwoFactorStatusCard';
 

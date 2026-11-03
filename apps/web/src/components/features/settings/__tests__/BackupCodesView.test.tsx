@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
+import { renderInEnglish as render } from '@/test-utils/intl-wrapper';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { BackupCodesView } from '../two-factor/BackupCodesView';
 

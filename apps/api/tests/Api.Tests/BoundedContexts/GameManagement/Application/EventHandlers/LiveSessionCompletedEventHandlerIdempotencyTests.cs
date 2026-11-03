@@ -4,8 +4,11 @@ using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
+using System.Diagnostics.Metrics;
 using Api.Infrastructure;
+using Api.Infrastructure.DomainEventLog;
 using Api.Infrastructure.Entities.GameManagement;
+using Api.Observability;
 using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
@@ -70,8 +73,11 @@ public sealed class LiveSessionCompletedEventHandlerIdempotencyTests
     }
 
     private LiveSessionCompletedEventHandler CreateHandler(
-        MeepleAiDbContext db, IPlayRecordRepository repository, IDomainEventCollector collector) =>
-        new(db, new Mock<ILogger<LiveSessionCompletedEventHandler>>().Object, _timeProvider, repository, collector);
+        MeepleAiDbContext db,
+        IPlayRecordRepository repository,
+        IDomainEventCollector collector,
+        ILogger<LiveSessionCompletedEventHandler>? logger = null) =>
+        new(db, logger ?? new Mock<ILogger<LiveSessionCompletedEventHandler>>().Object, _timeProvider, repository, collector);
 
     // ── The common case: the session already has its record ─────────────────────────────────────
 
@@ -175,6 +181,125 @@ public sealed class LiveSessionCompletedEventHandlerIdempotencyTests
         db.ChangeTracker.Entries().Where(e => e.State == EntityState.Added).Select(e => e.Entity)
             .Should().ContainSingle().Which.Should().BeSameAs(stagedByTheCaller, "only what the caller had staged stays");
         collector.PeekEvents().Should().ContainSingle().Which.Should().BeSameAs(queuedByTheCaller, "the events of the record that was not written must not stay queued for the next save");
+    }
+
+    // ── #4839 — a failure that is swallowed is still SEEN ───────────────────────────────────────
+    //
+    // The handler swallows what it cannot do, on purpose: MediatR runs the handlers of an event in sequence
+    // (ForeachAwaitPublisher, no custom NotificationPublisher), so an exception here would stop the ones after it
+    // and, on every retry of the outbox row, run again the ones before it (the player statistics among them, whose
+    // guard on EventId does not hold while EventId does not survive the outbox). Swallowing it in silence lost the
+    // record without a trace in the counters.
+
+    [Fact]
+    public async Task Handle_WhenTheInsertFailsForAnyOtherReason_IsCountedAndNamesTheSession()
+    {
+        using var failures = new DispatchFailureCapture();
+        var logger = new CapturingLogger<LiveSessionCompletedEventHandler>();
+        var collector = new DomainEventCollector();
+        var db = new RefusesEverySaveDbContext(InMemoryOptions(), collector, AnyOtherFailure());
+        var handler = CreateHandler(db, new PlayRecordRepository(db, collector), collector, logger);
+        var sessionId = Guid.NewGuid();
+        var @event = CompletedEvent(sessionId);
+
+        var act = () => handler.Handle(@event, CancellationToken.None);
+
+        await act.Should().NotThrowAsync("the other handlers of the event must still run");
+        failures.Events.Should().ContainSingle()
+            .Which.Should().Be((EventTypeRegistry.ResolveOrFullName(@event), nameof(LiveSessionCompletedEventHandler)));
+        logger.Entries.Should().ContainSingle(e => e.Level == LogLevel.Error && e.Message.Contains(sessionId.ToString()));
+    }
+
+    [Fact]
+    public async Task Handle_WhenItLosesTheRace_IsNotCountedAsAFailure()
+    {
+        // The other direction: a duplicate is a success (the record exists), not a dispatch failure.
+        using var failures = new DispatchFailureCapture();
+        var collector = new DomainEventCollector();
+        var db = new RefusesEverySaveDbContext(InMemoryOptions(), collector, LostTheRace());
+        var handler = CreateHandler(db, new PlayRecordRepository(db, collector), collector);
+
+        await handler.Handle(CompletedEvent(Guid.NewGuid()), CancellationToken.None);
+
+        failures.Events.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheCallIsCancelled_PutsTheContextBack_AndPropagatesWithoutCountingAFailure()
+    {
+        // A cancelled call (the outbox processor shutting down, a request aborted in Hybrid) is not a failure to
+        // swallow, nor one to count: the cancellation goes on, after the context is put back as the caller left it.
+        using var failures = new DispatchFailureCapture();
+        var collector = new DomainEventCollector();
+        var db = new RefusesEverySaveDbContext(InMemoryOptions(), collector, new OperationCanceledException());
+        var handler = CreateHandler(db, new PlayRecordRepository(db, collector), collector);
+
+        var act = () => handler.Handle(CompletedEvent(Guid.NewGuid()), CancellationToken.None);
+
+        await act.Should().ThrowAsync<OperationCanceledException>("a cancelled call is not swallowed");
+        failures.Events.Should().BeEmpty("a cancellation is not a dispatch failure");
+        db.AddedWhenTheSaveWasRefused.Should().BeGreaterThan(1, "the record and its player were staged: otherwise this test proves nothing");
+        db.ChangeTracker.Entries().Where(e => e.State == EntityState.Added).Should().BeEmpty();
+        collector.PeekEvents().Should().BeEmpty();
+    }
+
+    /// <summary>Collects the measurements of the dispatch-failure counter that carry this handler's name.</summary>
+    private sealed class DispatchFailureCapture : IDisposable
+    {
+        private const string CounterName = "meepleai.domain_event_log.dispatch_failures.total";
+        private readonly MeterListener _listener;
+        private readonly object _gate = new();
+        private readonly List<(string EventType, string HandlerName)> _events = new();
+
+        // The counter is process-wide and other tests may count their own handlers: only this handler's are kept.
+        public IReadOnlyList<(string EventType, string HandlerName)> Events
+        {
+            get { lock (_gate) { return _events.ToList(); } }
+        }
+
+        public DispatchFailureCapture()
+        {
+            _listener = new MeterListener
+            {
+                InstrumentPublished = (instrument, listener) =>
+                {
+                    if (instrument.Meter.Name == MeepleAiMetrics.MeterName && instrument.Name == CounterName)
+                    {
+                        listener.EnableMeasurementEvents(instrument);
+                    }
+                },
+            };
+            _listener.SetMeasurementEventCallback<long>((_, _, tags, _) =>
+            {
+                string eventType = "<missing>";
+                string handlerName = "<missing>";
+                foreach (var tag in tags)
+                {
+                    if (tag.Key == "event_type") eventType = tag.Value?.ToString() ?? "";
+                    else if (tag.Key == "handler_name") handlerName = tag.Value?.ToString() ?? "";
+                }
+
+                if (handlerName != nameof(LiveSessionCompletedEventHandler)) return;
+                lock (_gate) { _events.Add((eventType, handlerName)); }
+            });
+            _listener.Start();
+        }
+
+        public void Dispose() => _listener.Dispose();
+    }
+
+    private sealed class CapturingLogger<T> : ILogger<T>
+    {
+        public List<(LogLevel Level, string Message)> Entries { get; } = new();
+
+        public IDisposable? BeginScope<TState>(TState state)
+            where TState : notnull => null;
+
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(
+            LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter) =>
+            Entries.Add((logLevel, formatter(state, exception)));
     }
 
     /// <summary>A context whose every save is refused, as the second of two deliveries' is by the unique index.</summary>

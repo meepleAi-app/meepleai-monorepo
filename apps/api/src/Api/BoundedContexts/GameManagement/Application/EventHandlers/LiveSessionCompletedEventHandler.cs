@@ -3,6 +3,8 @@ using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Infrastructure.DomainEventLog;
+using Api.Observability;
 using Api.SharedKernel.Application.EventHandlers;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
@@ -130,14 +132,28 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
                 "Skipping duplicate PlayRecord for LiveSession {SessionId}: EventId={EventId} (already recorded)",
                 domainEvent.SessionId, domainEvent.EventId);
         }
+        catch (OperationCanceledException)
+        {
+            // A cancelled call (the outbox processor shutting down, a request aborted in Hybrid) is not a failure to
+            // swallow or to count: the context is put back as the caller left it, and the cancellation goes on.
+            ForgetWhatWasStaged(stagedBefore, queuedBefore);
+            throw;
+        }
 #pragma warning disable CA1031 // Do not catch general exception types
         // SERVICE BOUNDARY: EVENT HANDLER PATTERN - Background event processing
-        // PlayRecord generation failure must not block session completion.
+        // PlayRecord generation failure must not block the OTHER handlers of the event.
         catch (Exception ex)
         {
-            // Swallowed so the completion is not blocked, which only holds if the failed insert is not
-            // left staged for the caller's next save to throw again.
+            // Swallowed on purpose (#4839): MediatR runs the handlers of an event in sequence (ForeachAwaitPublisher,
+            // no custom NotificationPublisher), so an exception here would stop the ones after it (stream forwarder,
+            // proposal expiry, player statistics, audit) and, on every retry of the outbox row, run again the ones
+            // before it. That holds only if the failed insert is not left staged for the caller's next save to
+            // throw again, and it must not be silent: it is counted where every other handler failure is counted.
             ForgetWhatWasStaged(stagedBefore, queuedBefore);
+            MeepleAiMetrics.DomainEventDispatchFailures.Add(
+                1,
+                new KeyValuePair<string, object?>("event_type", EventTypeRegistry.ResolveOrFullName(domainEvent)),
+                new KeyValuePair<string, object?>("handler_name", nameof(LiveSessionCompletedEventHandler)));
             Logger.LogError(ex,
                 "Failed to generate PlayRecord from completed LiveSession {SessionId}",
                 domainEvent.SessionId);

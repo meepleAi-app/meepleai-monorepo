@@ -25,6 +25,9 @@ internal static partial class MeepleAiMetrics
     ///                  handler name is not available here; set to the event CLR type name
     ///                  to keep the tag cardinality bounded (only SessionFinalizedEvent has &gt;1
     ///                  handler — acceptable for v1 without a custom INotificationPublisher).
+    ///                  A handler that swallows a failure ON PURPOSE counts it itself, under its OWN
+    ///                  name (LiveSessionCompletedEventHandler, #4839): it does not throw, so the
+    ///                  dispatcher never sees it, and the same event_type can carry both kinds of value.
     /// </summary>
     public static readonly Counter<long> DomainEventDispatchFailures = Meter.CreateCounter<long>(
         name: "meepleai.domain_event_log.dispatch_failures.total",

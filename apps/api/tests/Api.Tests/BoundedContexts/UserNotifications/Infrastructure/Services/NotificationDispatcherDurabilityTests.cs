@@ -116,7 +116,36 @@ public sealed class NotificationDispatcherDurabilityTests
         // The in-app insert is refused by the unique index (a concurrent caller won). The deliveries are
         // staged together with it, so they must be dropped with it: a later save of this context must not
         // create emails for a notification this caller never created.
-        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+        using var db = new RefusesTheFirstSaveDbContext(InMemoryOptions(), Mock.Of<IDomainEventCollector>(), LostTheRace());
+
+        await BuildDispatcher(db).DispatchAsync(Message(Guid.NewGuid(), Guid.NewGuid()));
+
+        db.SavesAttempted.Should().Be(1, "the in-app insert was attempted and refused");
+        db.QueueItemsStagedWhenRefused.Should().Be(1,
+            "the delivery was staged together with the in-app row: without this the assertion below proves nothing");
+        db.ChangeTracker.Entries().Where(e => e.State == EntityState.Added).Should().BeEmpty(
+            "nothing of this caller may stay staged: the next SaveChangesAsync on this context would persist it");
+    }
+
+    [Fact]
+    public async Task A_save_that_fails_for_another_reason_propagates_and_leaves_nothing_staged()
+    {
+        // A timeout, a value the column refuses, a cancelled call. The outbox processor shares its context with
+        // the handlers and saves once more outside its per-row try/catch: whatever stayed staged would be sent
+        // again there, fail again, and roll the whole batch back at every poll (same wedge as #4848).
+        using var db = new RefusesTheFirstSaveDbContext(
+            InMemoryOptions(), Mock.Of<IDomainEventCollector>(), new InvalidOperationException("the database went away"));
+
+        var act = async () => await BuildDispatcher(db).DispatchAsync(Message(Guid.NewGuid(), Guid.NewGuid()));
+
+        await act.Should().ThrowAsync<InvalidOperationException>("the failure is the caller's to retry, not ours to swallow");
+        db.QueueItemsStagedWhenRefused.Should().Be(1, "the delivery was staged together with the in-app row");
+        db.ChangeTracker.Entries().Where(e => e.State == EntityState.Added).Should().BeEmpty(
+            "neither the in-app row nor its deliveries may stay staged for a later save of this context");
+    }
+
+    private static DbContextOptions<MeepleAiDbContext> InMemoryOptions() =>
+        new DbContextOptionsBuilder<MeepleAiDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .ConfigureWarnings(w =>
             {
@@ -124,30 +153,30 @@ public sealed class NotificationDispatcherDurabilityTests
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning);
             })
             .Options;
-        using var db = new RefusesTheFirstSaveDbContext(options, Mock.Of<IDomainEventCollector>());
 
-        await BuildDispatcher(db).DispatchAsync(Message(Guid.NewGuid(), Guid.NewGuid()));
-
-        db.SavesAttempted.Should().Be(1, "the in-app insert was attempted and refused");
-        db.ChangeTracker.Entries().Where(e => e.State == EntityState.Added).Should().BeEmpty(
-            "nothing of this caller may stay staged: the next SaveChangesAsync on this context would persist it");
-    }
+    private static Exception LostTheRace() =>
+        new DbUpdateException(
+            "duplicate key value violates unique constraint",
+            new PostgresException("duplicate key value", "ERROR", "ERROR", "23505"));
 
     private sealed class RefusesTheFirstSaveDbContext(
         DbContextOptions<MeepleAiDbContext> options,
-        IDomainEventCollector collector)
+        IDomainEventCollector collector,
+        Exception failure)
         : MeepleAiDbContext(options, new Mock<IMediator>().Object, collector)
     {
         public int SavesAttempted { get; private set; }
+
+        public int QueueItemsStagedWhenRefused { get; private set; }
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             SavesAttempted++;
             if (SavesAttempted == 1)
             {
-                throw new DbUpdateException(
-                    "duplicate key value violates unique constraint",
-                    new PostgresException("duplicate key value", "ERROR", "ERROR", "23505"));
+                QueueItemsStagedWhenRefused = ChangeTracker.Entries<NotificationQueueEntity>()
+                    .Count(e => e.State == EntityState.Added);
+                throw failure;
             }
 
             return base.SaveChangesAsync(cancellationToken);

@@ -197,8 +197,10 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
                         // event type does not keep it across the JSON round trip, and any dedupe keyed on
                         // EventId (LastProcessedEventId, SourceEventId under a unique index) will not
                         // recognise a second delivery. Not fatal: the event is still delivered. The
-                        // architecture test over every IDomainEvent is the real guard; this catches what it
-                        // cannot construct.
+                        // architecture test over every IDomainEvent measures EventId and OccurredAt for the
+                        // events it can construct; this catches a type it cannot, for EventId only (OccurredAt
+                        // is not compared with the row's: the column is a Postgres timestamptz, which keeps
+                        // microseconds, while the event keeps 100 ns ticks).
                         _logger.LogWarning(
                             "Domain event {EventId} ({EventType}) was rebuilt with EventId {RebuiltEventId}: its type does not keep the EventId across the outbox, dedupe keyed on it will not work for this event",
                             row.Id, row.EventType, evt.EventId);

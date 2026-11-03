@@ -220,7 +220,20 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
         // INotificationHandler implementations have no catch-all, so a
         // bubbling DbUpdateException would surface as an unhandled exception
         // in the MediatR pipeline.
-        var committed = await _notificationRepository.AddAndCommitAsync(notification, ct).ConfigureAwait(false);
+        bool committed;
+        try
+        {
+            committed = await _notificationRepository.AddAndCommitAsync(notification, ct).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            // The failed save took the staged deliveries down with the in-app row (the repository detaches
+            // the row itself): drop them too, so a later save of this context does not persist deliveries
+            // for a notification that does not exist.
+            _notificationQueueRepository.DiscardUnsavedAdditions();
+            throw;
+        }
+
         if (!committed)
         {
             // The refused save took the staged deliveries down with the in-app row; they must not be

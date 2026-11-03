@@ -705,6 +705,25 @@ public class NotificationDispatcherTests
     }
 
     [Fact]
+    public async Task DispatchAsync_WhenAddAndCommitThrows_DiscardsTheStagedQueueItemsAndPropagates()
+    {
+        // #4841: a save that fails for any reason other than the unique index took the staged deliveries down
+        // with the in-app row. They are dropped here (the repository detaches the row itself) and the failure
+        // is the caller's to retry.
+        var userId = Guid.NewGuid();
+        var failure = new InvalidOperationException("the database went away");
+        _notificationRepoMock
+            .Setup(r => r.AddAndCommitAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(failure);
+
+        var act = async () => await CreateSut().DispatchAsync(
+            CreateMessage(recipientUserId: userId) with { SourceEventId = Guid.NewGuid() });
+
+        (await act.Should().ThrowAsync<InvalidOperationException>()).Which.Should().BeSameAs(failure);
+        _queueRepoMock.Verify(r => r.DiscardUnsavedAdditions(), Times.Once);
+    }
+
+    [Fact]
     public async Task DispatchAsync_WhenAddAndCommitLosesRace_LogsDedupReasonAtInformation()
     {
         // Arrange

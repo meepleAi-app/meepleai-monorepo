@@ -74,18 +74,77 @@ public sealed class DomainEventIdentitySurvivesOutboxTests
         public DateTime OccurredAt { get; } = DateTime.UtcNow;
     }
 
+    // ── The shape check for events the test cannot construct ─────────────────────────────────────
+
+    public sealed class Unbuildable;
+
+    /// <summary>Cannot be built with default arguments, and takes "occurredAt" as a constructor parameter.</summary>
+    private sealed class UnbuildableWithOccurredAtParameter : IDomainEvent
+    {
+        public Guid EventId { get; init; } = Guid.NewGuid();
+        public DateTime OccurredAt { get; init; }
+
+        public UnbuildableWithOccurredAtParameter(Unbuildable dependency, DateTime occurredAt)
+        {
+            ArgumentNullException.ThrowIfNull(dependency);
+            OccurredAt = occurredAt;
+        }
+    }
+
+    private sealed class UnbuildableWithOnlyTheSetter : IDomainEvent
+    {
+        public Guid EventId { get; init; } = Guid.NewGuid();
+        public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+
+        public UnbuildableWithOnlyTheSetter(Unbuildable dependency) => ArgumentNullException.ThrowIfNull(dependency);
+    }
+
+    [Fact]
+    public void Shape_check__an_unbuildable_event_with_a_constructor_parameter_named_like_the_property_is_rejected()
+    {
+        TryConstruct(typeof(UnbuildableWithOccurredAtParameter), out _).Should().BeFalse("the premise: it cannot be measured");
+
+        var act = () => AssertShapeSurvivesDeserialization(typeof(UnbuildableWithOccurredAtParameter), "OccurredAt");
+
+        act.Should().Throw<Exception>("whether the constructor assigns the parameter cannot be seen from the shape");
+    }
+
+    [Fact]
+    public void Shape_check__an_unbuildable_event_with_only_the_setter_is_accepted()
+    {
+        TryConstruct(typeof(UnbuildableWithOnlyTheSetter), out _).Should().BeFalse("the premise: it cannot be measured");
+
+        AssertShapeSurvivesDeserialization(typeof(UnbuildableWithOnlyTheSetter), "EventId");
+        AssertShapeSurvivesDeserialization(typeof(UnbuildableWithOnlyTheSetter), "OccurredAt");
+    }
+
+    [Fact]
+    public void Shape_check__an_unbuildable_event_without_a_setter_is_rejected()
+    {
+        var act = () => AssertShapeSurvivesDeserialization(typeof(GetOnlyEvent), "EventId");
+
+        act.Should().Throw<Exception>();
+    }
+
     private static void AssertShapeSurvivesDeserialization(Type eventType, string propertyName)
     {
         var property = eventType.GetProperty(propertyName, BindingFlags.Public | BindingFlags.Instance);
         property.Should().NotBeNull($"{eventType.Name} espone {propertyName} tramite IDomainEvent");
 
         var hasSetter = property!.SetMethod is { IsPublic: true };
-        var hasCtorParameter = eventType.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
-            .Any(c => c.GetParameters().Any(p => string.Equals(p.Name, propertyName, StringComparison.OrdinalIgnoreCase)
-                && p.ParameterType == property.PropertyType));
 
-        (hasSetter || hasCtorParameter).Should().BeTrue(
-            $"{eventType.Name}.{propertyName} non ha né setter né parametro di costruttore omonimo: il deserializzatore dell'outbox rigenera il valore (#4841)");
+        // A constructor parameter with the property's name takes the JSON value away from the setter, and
+        // whether the constructor then assigns it cannot be seen from the shape (#4841: GameStateChangedEvent
+        // and GameSessionRecordedEvent took "occurredAt" and dropped it). Such an event must be constructible
+        // here, so that the round trip above measures it.
+        var shadowedByCtorParameter = eventType.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
+            .Any(c => c.GetParameters().Any(p => string.Equals(p.Name, propertyName, StringComparison.OrdinalIgnoreCase)));
+
+        hasSetter.Should().BeTrue(
+            $"{eventType.Name}.{propertyName} non ha un setter pubblico (nemmeno init): il deserializzatore dell'outbox rigenera il valore (#4841)");
+        shadowedByCtorParameter.Should().BeFalse(
+            $"{eventType.Name} ha un parametro di costruttore chiamato come {propertyName} e non si riesce a costruirlo con argomenti di default: " +
+            "non si può sapere se lo assegna. Rendilo costruibile nel test (DefaultFor) così il giro lo misura");
     }
 
     private static bool TryConstruct(Type eventType, out object instance)

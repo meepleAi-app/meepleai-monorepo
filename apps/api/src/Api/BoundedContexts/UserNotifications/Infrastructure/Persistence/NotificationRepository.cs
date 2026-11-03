@@ -179,6 +179,14 @@ internal class NotificationRepository : RepositoryBase, INotificationRepository
             DbContext.Entry(notificationEntity).State = EntityState.Detached;
             return false;
         }
+        catch (Exception)
+        {
+            // Any other failure took the whole save down. Leaving the row staged would have the next
+            // SaveChangesAsync of this context re-send it: the outbox processor shares the context with
+            // its handlers and saves once more outside its per-row try/catch (#4841, same wedge as #4848).
+            DbContext.Entry(notificationEntity).State = EntityState.Detached;
+            throw;
+        }
 
         // Side-effects fire only after the row is durably persisted so a lost
         // race doesn't leave a phantom metric/SSE broadcast for a notification

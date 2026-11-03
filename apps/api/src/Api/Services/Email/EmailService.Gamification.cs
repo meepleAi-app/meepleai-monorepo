@@ -195,7 +195,7 @@ internal partial class EmailService
 
     // ===== Template builders =====
 
-    private static string BuildBadgeEarnedEmailBody(
+    private string BuildBadgeEarnedEmailBody(
         string userName,
         string badgeName,
         string badgeDescription,
@@ -257,14 +257,14 @@ internal partial class EmailService
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
         <p>Keep up the great work! We look forward to celebrating more achievements with you.</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>&copy; {FooterYear} MeepleAI. All rights reserved.</p>
     </div>
 </body>
 </html>
 ";
     }
 
-    private static string BuildMilestoneBadgeEarnedEmailBody(
+    private string BuildMilestoneBadgeEarnedEmailBody(
         string userName,
         string badgeName,
         string badgeDescription,
@@ -334,14 +334,14 @@ internal partial class EmailService
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
         <p>You're making MeepleAI better for everyone. Thank you!</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>&copy; {FooterYear} MeepleAI. All rights reserved.</p>
     </div>
 </body>
 </html>
 ";
     }
 
-    private static string BuildCooldownEndedEmailBody(
+    private string BuildCooldownEndedEmailBody(
         string userName,
         int remainingMonthly,
         int remainingPending,
@@ -395,7 +395,7 @@ internal partial class EmailService
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
         <p>Happy sharing!</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>&copy; {FooterYear} MeepleAI. All rights reserved.</p>
     </div>
 </body>
 </html>

@@ -101,8 +101,8 @@ public sealed class PasswordResetServiceIntegrationTests : SharedDatabaseTestBas
         string? captured = null;
         _email
             .Setup(e => e.SendPasswordResetEmailAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Callback<string, string, string, CancellationToken>((_, _, token, _) => captured = token)
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
+            .Callback<string, string, string, string?, CancellationToken>((_, _, token, _, _) => captured = token)
             .Returns(Task.CompletedTask);
 
         (await CreateService().RequestPasswordResetAsync(email, Ct)).Should().BeTrue();

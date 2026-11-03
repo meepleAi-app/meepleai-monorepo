@@ -1,4 +1,5 @@
 using Api.Services;
+using Api.Services.Email;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Xunit;
@@ -11,11 +12,10 @@ namespace Api.Tests.Services.Email;
 /// <see cref="TimeProvider"/>.
 /// </summary>
 /// <remarks>
-/// Scope: only this template. The other auth/admin templates carry the same literal; they are separate
-/// templates with their own builders and were not part of the report. Pinned here at the builder, not through
-/// <c>SendVerificationEmailAsync</c>, because that method sends through <c>SmtpClient</c> directly and has no
-/// transport seam to capture the body from — so that the year really comes from the <see cref="TimeProvider"/>
-/// is a one-line wiring that no test here covers.
+/// Pinned here at the builder. #4812 gave the other five account templates (reset, two-factor disabled,
+/// suspended, reactivated, locked) the same argument, and pinned the wiring from every send method to the
+/// <see cref="TimeProvider"/> end to end — through the real <c>SmtpClient</c> against a loopback server — in
+/// <c>EmailServiceAuthLanguageTests</c>. This class keeps the builder's own contract.
 /// </remarks>
 [Trait("Category", TestCategories.Unit)]
 [Trait("Issue", "4754")]
@@ -26,7 +26,7 @@ public sealed class EmailServiceVerificationYearTests
     [InlineData(2031)]
     public void TheFooterShowsTheYearItIsGiven(int year)
     {
-        var body = EmailService.BuildVerificationEmailBody("Marco", "https://meepleai.test/verify-email?token=t", year);
+        var body = EmailService.BuildVerificationEmailBody(AuthEmailTexts.For(null), "Marco", "https://meepleai.test/verify-email?token=t", year);
 
         body.Should().Contain($"&copy; {year} MeepleAI");
         body.Should().NotContain("&copy; 2025", "the year used to be a literal");
@@ -35,7 +35,7 @@ public sealed class EmailServiceVerificationYearTests
     [Fact]
     public void TheRestOfTheTemplateIsUnchanged()
     {
-        var body = EmailService.BuildVerificationEmailBody("Marco", "https://meepleai.test/verify-email?token=t", 2026);
+        var body = EmailService.BuildVerificationEmailBody(AuthEmailTexts.For(null), "Marco", "https://meepleai.test/verify-email?token=t", 2026);
 
         body.Should().Contain("Hello Marco,");
         body.Should().Contain("href=\"https://meepleai.test/verify-email?token=t\"");

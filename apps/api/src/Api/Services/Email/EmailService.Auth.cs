@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Net;
 using System.Net.Mail;
 using Api.Infrastructure.Security;
+using Api.Services.Email;
 
 namespace Api.Services;
 
@@ -11,13 +12,15 @@ internal partial class EmailService
         string toEmail,
         string toName,
         string resetToken,
+        string? language,
         CancellationToken ct = default)
     {
         try
         {
+            var texts = AuthEmailTexts.For(language);
             var resetUrl = BuildPasswordResetUrl(resetToken);
-            var subject = "Reset Your MeepleAI Password";
-            var body = BuildPasswordResetEmailBody(toName, resetUrl);
+            var subject = texts.ResetSubject;
+            var body = BuildPasswordResetEmailBody(texts, toName, resetUrl, _timeProvider.GetUtcNow().Year);
 
             using var message = new MailMessage();
             message.From = new MailAddress(_fromAddress, _fromName);
@@ -60,12 +63,14 @@ internal partial class EmailService
         string toEmail,
         string toName,
         bool wasAdminOverride,
+        string? language,
         CancellationToken ct = default)
     {
         try
         {
-            var subject = "Two-Factor Authentication Disabled";
-            var body = BuildTwoFactorDisabledEmailBody(toName, wasAdminOverride);
+            var texts = AuthEmailTexts.For(language);
+            var subject = texts.TwoFactorSubject;
+            var body = BuildTwoFactorDisabledEmailBody(texts, toName, wasAdminOverride, _timeProvider.GetUtcNow().Year);
 
             using var message = new MailMessage();
             message.From = new MailAddress(_fromAddress, _fromName);
@@ -110,13 +115,15 @@ internal partial class EmailService
         string toEmail,
         string toName,
         string verificationToken,
+        string? language,
         CancellationToken ct = default)
     {
         try
         {
             var verifyUrl = $"{FrontendBaseUrl}/verify-email?token={Uri.EscapeDataString(verificationToken)}";
-            var subject = "Verify Your MeepleAI Email";
-            var body = BuildVerificationEmailBody(toName, verifyUrl, _timeProvider.GetUtcNow().Year);
+            var texts = AuthEmailTexts.For(language);
+            var subject = texts.VerifySubject;
+            var body = BuildVerificationEmailBody(texts, toName, verifyUrl, _timeProvider.GetUtcNow().Year);
 
             using var message = new MailMessage();
             message.From = new MailAddress(_fromAddress, _fromName);
@@ -160,12 +167,14 @@ internal partial class EmailService
         string toEmail,
         string userName,
         string? reason,
+        string? language,
         CancellationToken ct = default)
     {
         try
         {
-            var subject = "Your MeepleAI Account Has Been Suspended";
-            var body = BuildAccountSuspendedEmailBody(userName, reason);
+            var texts = AuthEmailTexts.For(language);
+            var subject = texts.SuspendedSubject;
+            var body = BuildAccountSuspendedEmailBody(texts, userName, reason, _timeProvider.GetUtcNow().Year);
 
             using var message = new MailMessage();
             message.From = new MailAddress(_fromAddress, _fromName);
@@ -207,12 +216,14 @@ internal partial class EmailService
     public async Task SendAccountReactivatedEmailAsync(
         string toEmail,
         string userName,
+        string? language,
         CancellationToken ct = default)
     {
         try
         {
-            var subject = "Your MeepleAI Account Has Been Reactivated";
-            var body = BuildAccountReactivatedEmailBody(userName);
+            var texts = AuthEmailTexts.For(language);
+            var subject = texts.ReactivatedSubject;
+            var body = BuildAccountReactivatedEmailBody(texts, userName, _timeProvider.GetUtcNow().Year);
 
             using var message = new MailMessage();
             message.From = new MailAddress(_fromAddress, _fromName);
@@ -258,6 +269,7 @@ internal partial class EmailService
         int failedAttempts,
         DateTime lockedUntil,
         string? ipAddress,
+        string? language,
         CancellationToken ct = default)
     {
         // Ensure lockedUntil is UTC for consistent timezone display
@@ -271,8 +283,9 @@ internal partial class EmailService
 
         try
         {
-            var subject = "Security Alert: Your MeepleAI Account Has Been Locked";
-            var body = BuildAccountLockedEmailBody(userName, failedAttempts, lockedUntil, ipAddress);
+            var texts = AuthEmailTexts.For(language);
+            var subject = texts.LockedSubject;
+            var body = BuildAccountLockedEmailBody(texts, userName, failedAttempts, lockedUntil, ipAddress, _timeProvider.GetUtcNow().Year);
 
             using var message = new MailMessage();
             message.From = new MailAddress(_fromAddress, _fromName);
@@ -436,18 +449,21 @@ internal partial class EmailService
     }
 
     // ===== Template builders =====
+    //
+    // #4812: the six account emails take their words from AuthEmailTexts, in the recipient's language. The
+    // markup is the same for both; only the text differs, and only the text is in AuthEmailTexts.
 
     // #4754: the footer year was the literal 2025. `internal` so a test can pin the year without a mail transport:
     // this method sends through SmtpClient directly, not through IEmailSender.
-    internal static string BuildVerificationEmailBody(string userName, string verifyUrl, int year)
+    internal static string BuildVerificationEmailBody(AuthEmailTexts t, string userName, string verifyUrl, int year)
     {
         return $@"
 <!DOCTYPE html>
-<html>
+<html lang=""{t.HtmlLang}"">
 <head>
     <meta charset=""utf-8"">
     <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
-    <title>Verify Your Email</title>
+    <title>{t.VerifyTitle}</title>
 </head>
 <body style=""font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"">
     <div style=""background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;"">
@@ -455,49 +471,49 @@ internal partial class EmailService
     </div>
 
     <div style=""background-color: #d4edda; padding: 20px; border-radius: 5px; border: 2px solid #28a745; margin-bottom: 20px;"">
-        <h2 style=""color: #155724; margin-top: 0;"">Welcome to MeepleAI!</h2>
-        <p style=""margin: 0; color: #155724;"">Please verify your email address to get started.</p>
+        <h2 style=""color: #155724; margin-top: 0;"">{t.VerifyBannerHeading}</h2>
+        <p style=""margin: 0; color: #155724;"">{t.VerifyBannerText}</p>
     </div>
 
     <div style=""background-color: #ffffff; padding: 30px; border-radius: 5px; border: 1px solid #e0e0e0;"">
-        <p>Hello {userName},</p>
+        <p>{t.Greeting(userName)}</p>
 
-        <p>Thank you for registering with MeepleAI! To complete your registration and access all features, please verify your email address by clicking the button below:</p>
+        <p>{t.VerifyBody}</p>
 
         <div style=""text-align: center; margin: 30px 0;"">
-            <a href=""{verifyUrl}"" style=""background-color: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;"">Verify Email Address</a>
+            <a href=""{verifyUrl}"" style=""background-color: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;"">{t.VerifyButton}</a>
         </div>
 
-        <p>Or copy and paste this link into your browser:</p>
+        <p>{t.CopyLinkPrompt}</p>
         <p style=""word-break: break-all; color: #3498db;"">{verifyUrl}</p>
 
         <p style=""margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 14px; color: #666;"">
-            This verification link will expire in 24 hours for security reasons.
+            {t.VerifyExpiry}
         </p>
 
         <p style=""font-size: 14px; color: #666;"">
-            If you didn't create a MeepleAI account, you can safely ignore this email.
+            {t.VerifyIgnore}
         </p>
     </div>
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
-        <p>This is an automated message, please do not reply to this email.</p>
-        <p>&copy; {year} MeepleAI. All rights reserved.</p>
+        <p>{t.AutomatedFooter}</p>
+        <p>{t.Copyright(year)}</p>
     </div>
 </body>
 </html>
 ";
     }
 
-    private static string BuildPasswordResetEmailBody(string userName, string resetUrl)
+    private static string BuildPasswordResetEmailBody(AuthEmailTexts t, string userName, string resetUrl, int year)
     {
         return $@"
 <!DOCTYPE html>
-<html>
+<html lang=""{t.HtmlLang}"">
 <head>
     <meta charset=""utf-8"">
     <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
-    <title>Reset Your Password</title>
+    <title>{t.ResetTitle}</title>
 </head>
 <body style=""font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"">
     <div style=""background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;"">
@@ -505,56 +521,51 @@ internal partial class EmailService
     </div>
 
     <div style=""background-color: #ffffff; padding: 30px; border-radius: 5px; border: 1px solid #e0e0e0;"">
-        <h2 style=""color: #2c3e50; margin-top: 0;"">Password Reset Request</h2>
+        <h2 style=""color: #2c3e50; margin-top: 0;"">{t.ResetHeading}</h2>
 
-        <p>Hello {userName},</p>
+        <p>{t.Greeting(userName)}</p>
 
-        <p>We received a request to reset your password for your MeepleAI account. If you didn't make this request, you can safely ignore this email.</p>
+        <p>{t.ResetIntro}</p>
 
-        <p>To reset your password, click the button below:</p>
+        <p>{t.ResetPrompt}</p>
 
         <div style=""text-align: center; margin: 30px 0;"">
-            <a href=""{resetUrl}"" style=""background-color: #3498db; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;"">Reset Password</a>
+            <a href=""{resetUrl}"" style=""background-color: #3498db; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;"">{t.ResetButton}</a>
         </div>
 
-        <p>Or copy and paste this link into your browser:</p>
+        <p>{t.CopyLinkPrompt}</p>
         <p style=""word-break: break-all; color: #3498db;"">{resetUrl}</p>
 
         <p style=""margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 14px; color: #666;"">
-            This password reset link will expire in 30 minutes for security reasons.
+            {t.ResetExpiry}
         </p>
 
         <p style=""font-size: 14px; color: #666;"">
-            If you continue to have problems, please contact our support team.
+            {t.ResetSupport}
         </p>
     </div>
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
-        <p>This is an automated message, please do not reply to this email.</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>{t.AutomatedFooter}</p>
+        <p>{t.Copyright(year)}</p>
     </div>
 </body>
 </html>
 ";
     }
 
-    private static string BuildTwoFactorDisabledEmailBody(string userName, bool wasAdminOverride)
+    private static string BuildTwoFactorDisabledEmailBody(AuthEmailTexts t, string userName, bool wasAdminOverride, int year)
     {
-        var reason = wasAdminOverride
-            ? "An administrator has disabled two-factor authentication on your account, likely due to a support request for lost authenticator access."
-            : "Two-factor authentication has been disabled on your account.";
-
-        var warning = wasAdminOverride
-            ? "If you did not request this change, please contact our support team immediately and consider re-enabling two-factor authentication."
-            : "If you did not make this change, please contact our support team immediately and secure your account.";
+        var reason = wasAdminOverride ? t.TwoFactorReasonByAdmin : t.TwoFactorReasonBySelf;
+        var warning = wasAdminOverride ? t.TwoFactorWarningByAdmin : t.TwoFactorWarningBySelf;
 
         return $@"
 <!DOCTYPE html>
-<html>
+<html lang=""{t.HtmlLang}"">
 <head>
     <meta charset=""utf-8"">
     <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
-    <title>Two-Factor Authentication Disabled</title>
+    <title>{t.TwoFactorSubject}</title>
 </head>
 <body style=""font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"">
     <div style=""background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;"">
@@ -562,61 +573,61 @@ internal partial class EmailService
     </div>
 
     <div style=""background-color: #fff3cd; padding: 20px; border-radius: 5px; border: 2px solid #ffc107; margin-bottom: 20px;"">
-        <h2 style=""color: #856404; margin-top: 0;"">Security Alert</h2>
-        <p style=""margin: 0; color: #856404; font-weight: bold;"">Two-Factor Authentication Disabled</p>
+        <h2 style=""color: #856404; margin-top: 0;"">{t.TwoFactorBannerHeading}</h2>
+        <p style=""margin: 0; color: #856404; font-weight: bold;"">{t.TwoFactorSubject}</p>
     </div>
 
     <div style=""background-color: #ffffff; padding: 30px; border-radius: 5px; border: 1px solid #e0e0e0;"">
-        <p>Hello {userName},</p>
+        <p>{t.Greeting(userName)}</p>
 
         <p>{reason}</p>
 
         <p style=""margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-left: 4px solid #ffc107; border-radius: 3px;"">
-            <strong>Important:</strong> {warning}
+            <strong>{t.TwoFactorImportantLabel}</strong> {warning}
         </p>
 
-        <p style=""margin-top: 30px;"">To re-enable two-factor authentication:</p>
+        <p style=""margin-top: 30px;"">{t.TwoFactorReenablePrompt}</p>
         <ol>
-            <li>Log in to your MeepleAI account</li>
-            <li>Go to Settings &gt; Privacy &gt; Two-Factor Authentication</li>
-            <li>Follow the setup instructions</li>
+            <li>{t.TwoFactorReenableStepLogin}</li>
+            <li>{t.TwoFactorReenableStepSettings}</li>
+            <li>{t.TwoFactorReenableStepSetup}</li>
         </ol>
 
         <p style=""margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 14px; color: #666;"">
-            This notification was sent for security purposes to keep you informed of changes to your account.
+            {t.TwoFactorNotice}
         </p>
 
         <p style=""font-size: 14px; color: #666;"">
-            If you have any questions or concerns, please contact our support team.
+            {t.TwoFactorQuestions}
         </p>
     </div>
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
-        <p>This is an automated security notification, please do not reply to this email.</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>{t.AutomatedSecurityFooter}</p>
+        <p>{t.Copyright(year)}</p>
     </div>
 </body>
 </html>
 ";
     }
 
-    private static string BuildAccountSuspendedEmailBody(string userName, string? reason)
+    private static string BuildAccountSuspendedEmailBody(AuthEmailTexts t, string userName, string? reason, int year)
     {
         var reasonSection = !string.IsNullOrWhiteSpace(reason)
             ? $@"
         <div style=""margin: 20px 0; padding: 15px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 3px;"">
-            <p style=""margin: 5px 0;""><strong>Reason for suspension:</strong></p>
+            <p style=""margin: 5px 0;""><strong>{t.SuspendedReasonLabel}</strong></p>
             <p style=""margin: 10px 0;"">{reason}</p>
         </div>"
             : string.Empty;
 
         return $@"
 <!DOCTYPE html>
-<html>
+<html lang=""{t.HtmlLang}"">
 <head>
     <meta charset=""utf-8"">
     <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
-    <title>Account Suspended</title>
+    <title>{t.SuspendedTitle}</title>
 </head>
 <body style=""font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"">
     <div style=""background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;"">
@@ -624,44 +635,44 @@ internal partial class EmailService
     </div>
 
     <div style=""background-color: #f8d7da; padding: 20px; border-radius: 5px; border: 2px solid #dc3545; margin-bottom: 20px;"">
-        <h2 style=""color: #721c24; margin-top: 0;"">🚨 Account Suspended</h2>
-        <p style=""margin: 0; color: #721c24; font-weight: bold;"">Your account access has been temporarily suspended</p>
+        <h2 style=""color: #721c24; margin-top: 0;"">{t.SuspendedBannerHeading}</h2>
+        <p style=""margin: 0; color: #721c24; font-weight: bold;"">{t.SuspendedBannerText}</p>
     </div>
 
     <div style=""background-color: #ffffff; padding: 30px; border-radius: 5px; border: 1px solid #e0e0e0;"">
-        <p>Hello {userName},</p>
+        <p>{t.Greeting(userName)}</p>
 
-        <p>Your MeepleAI account has been suspended by an administrator. You will not be able to log in until your account is reactivated.</p>
+        <p>{t.SuspendedBody}</p>
 {reasonSection}
-        <p>If you believe this suspension was made in error or would like to appeal, please contact our support team.</p>
+        <p>{t.SuspendedAppeal}</p>
 
         <div style=""text-align: center; margin: 30px 0;"">
-            <a href=""mailto:support@meepleai.dev"" style=""background-color: #dc3545; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;"">Contact Support</a>
+            <a href=""mailto:support@meepleai.dev"" style=""background-color: #dc3545; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;"">{t.SuspendedContactButton}</a>
         </div>
 
         <p style=""margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 14px; color: #666;"">
-            We take account security and community standards seriously. Thank you for your understanding.
+            {t.SuspendedClosing}
         </p>
     </div>
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
-        <p>This is an automated message, please do not reply to this email.</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>{t.AutomatedFooter}</p>
+        <p>{t.Copyright(year)}</p>
     </div>
 </body>
 </html>
 ";
     }
 
-    private static string BuildAccountReactivatedEmailBody(string userName)
+    private static string BuildAccountReactivatedEmailBody(AuthEmailTexts t, string userName, int year)
     {
         return $@"
 <!DOCTYPE html>
-<html>
+<html lang=""{t.HtmlLang}"">
 <head>
     <meta charset=""utf-8"">
     <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
-    <title>Account Reactivated</title>
+    <title>{t.ReactivatedTitle}</title>
 </head>
 <body style=""font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"">
     <div style=""background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;"">
@@ -669,54 +680,55 @@ internal partial class EmailService
     </div>
 
     <div style=""background-color: #d4edda; padding: 20px; border-radius: 5px; border: 2px solid #28a745; margin-bottom: 20px;"">
-        <h2 style=""color: #155724; margin-top: 0;"">✅ Account Reactivated</h2>
-        <p style=""margin: 0; color: #155724; font-weight: bold;"">Welcome back! Your account is now active</p>
+        <h2 style=""color: #155724; margin-top: 0;"">{t.ReactivatedBannerHeading}</h2>
+        <p style=""margin: 0; color: #155724; font-weight: bold;"">{t.ReactivatedBannerText}</p>
     </div>
 
     <div style=""background-color: #ffffff; padding: 30px; border-radius: 5px; border: 1px solid #e0e0e0;"">
-        <p>Hello {userName},</p>
+        <p>{t.Greeting(userName)}</p>
 
-        <p>Good news! Your MeepleAI account has been reactivated by an administrator. You can now log in and access all features again.</p>
+        <p>{t.ReactivatedBody}</p>
 
-        <p>We're glad to have you back in the MeepleAI community!</p>
+        <p>{t.ReactivatedWelcome}</p>
 
         <div style=""margin: 20px 0; padding: 15px; background-color: #d1ecf1; border-left: 4px solid #17a2b8; border-radius: 3px;"">
-            <p style=""margin: 0;""><strong>💡 Next Steps:</strong></p>
+            <p style=""margin: 0;""><strong>{t.ReactivatedNextStepsLabel}</strong></p>
             <ul style=""margin: 10px 0; padding-left: 20px;"">
-                <li>Log in to your account</li>
-                <li>Review our community guidelines</li>
-                <li>Continue discovering and enjoying board games!</li>
+                <li>{t.ReactivatedStepLogin}</li>
+                <li>{t.ReactivatedStepGuidelines}</li>
+                <li>{t.ReactivatedStepEnjoy}</li>
             </ul>
         </div>
 
         <p style=""margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 14px; color: #666;"">
-            Thank you for being part of the MeepleAI community!
+            {t.ReactivatedClosing}
         </p>
     </div>
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
-        <p>This is an automated message, please do not reply to this email.</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>{t.AutomatedFooter}</p>
+        <p>{t.Copyright(year)}</p>
     </div>
 </body>
 </html>
 ";
     }
 
-    private static string BuildAccountLockedEmailBody(string userName, int failedAttempts, DateTime lockedUntil, string? ipAddress)
+    private static string BuildAccountLockedEmailBody(AuthEmailTexts t, string userName, int failedAttempts, DateTime lockedUntil, string? ipAddress, int year)
     {
         var lockDurationMinutes = (int)Math.Ceiling((lockedUntil - DateTime.UtcNow).TotalMinutes);
+        var unlocksAt = lockedUntil.ToString(t.LockedUnlocksAtFormat, CultureInfo.InvariantCulture);
         var ipSection = !string.IsNullOrWhiteSpace(ipAddress)
-            ? $"<li>IP Address: {ipAddress}</li>"
+            ? $"<li>{t.LockedIpItem(ipAddress)}</li>"
             : string.Empty;
 
         return $@"
 <!DOCTYPE html>
-<html>
+<html lang=""{t.HtmlLang}"">
 <head>
     <meta charset=""utf-8"">
     <meta name=""viewport"" content=""width=device-width, initial-scale=1.0"">
-    <title>Account Locked</title>
+    <title>{t.LockedTitle}</title>
 </head>
 <body style=""font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"">
     <div style=""background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin-bottom: 20px;"">
@@ -724,52 +736,52 @@ internal partial class EmailService
     </div>
 
     <div style=""background-color: #fff3cd; padding: 20px; border-radius: 5px; border: 2px solid #ffc107; margin-bottom: 20px;"">
-        <h2 style=""color: #856404; margin-top: 0;"">🔒 Account Temporarily Locked</h2>
-        <p style=""margin: 0; color: #856404; font-weight: bold;"">Too many failed login attempts detected</p>
+        <h2 style=""color: #856404; margin-top: 0;"">{t.LockedBannerHeading}</h2>
+        <p style=""margin: 0; color: #856404; font-weight: bold;"">{t.LockedBannerText}</p>
     </div>
 
     <div style=""background-color: #ffffff; padding: 30px; border-radius: 5px; border: 1px solid #e0e0e0;"">
-        <p>Hello {userName},</p>
+        <p>{t.Greeting(userName)}</p>
 
-        <p>Your MeepleAI account has been temporarily locked due to <strong>{failedAttempts} consecutive failed login attempts</strong>.</p>
+        <p>{t.LockedBody(failedAttempts)}</p>
 
         <div style=""margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-left: 4px solid #6c757d; border-radius: 3px;"">
-            <p style=""margin: 5px 0;""><strong>Details:</strong></p>
+            <p style=""margin: 5px 0;""><strong>{t.LockedDetailsLabel}</strong></p>
             <ul style=""margin: 10px 0; padding-left: 20px;"">
-                <li>Failed attempts: {failedAttempts}</li>
-                <li>Account locked for: {lockDurationMinutes} minutes</li>
-                <li>Unlocks at: {lockedUntil:yyyy-MM-dd HH:mm} UTC</li>
+                <li>{t.LockedFailedAttemptsItem(failedAttempts)}</li>
+                <li>{t.LockedDurationItem(lockDurationMinutes)}</li>
+                <li>{t.LockedUnlocksAtItem(unlocksAt)}</li>
                 {ipSection}
             </ul>
         </div>
 
         <div style=""margin: 20px 0; padding: 15px; background-color: #d1ecf1; border-left: 4px solid #17a2b8; border-radius: 3px;"">
-            <p style=""margin: 0;""><strong>💡 What to do:</strong></p>
+            <p style=""margin: 0;""><strong>{t.LockedWhatToDoLabel}</strong></p>
             <ul style=""margin: 10px 0; padding-left: 20px;"">
-                <li>Wait for the lockout period to expire, then try again</li>
-                <li>Make sure you're using the correct password</li>
-                <li>If you've forgotten your password, use the ""Forgot Password"" link</li>
+                <li>{t.LockedStepWait}</li>
+                <li>{t.LockedStepPassword}</li>
+                <li>{t.LockedStepForgotPassword}</li>
             </ul>
         </div>
 
         <div style=""margin: 20px 0; padding: 15px; background-color: #f8d7da; border-left: 4px solid #dc3545; border-radius: 3px;"">
-            <p style=""margin: 0;""><strong>⚠️ Security Notice:</strong></p>
-            <p style=""margin: 10px 0;"">If you did not attempt these logins, someone may be trying to access your account. We recommend:</p>
+            <p style=""margin: 0;""><strong>{t.LockedSecurityLabel}</strong></p>
+            <p style=""margin: 10px 0;"">{t.LockedSecurityIntro}</p>
             <ul style=""margin: 10px 0; padding-left: 20px;"">
-                <li>Change your password immediately after regaining access</li>
-                <li>Enable two-factor authentication if available</li>
-                <li>Review your recent account activity</li>
+                <li>{t.LockedAdviceChangePassword}</li>
+                <li>{t.LockedAdviceTwoFactor}</li>
+                <li>{t.LockedAdviceReviewActivity}</li>
             </ul>
         </div>
 
         <p style=""margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0; font-size: 14px; color: #666;"">
-            If you need immediate assistance, please contact our support team.
+            {t.LockedSupport}
         </p>
     </div>
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
-        <p>This is an automated security notification, please do not reply to this email.</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>{t.AutomatedSecurityFooter}</p>
+        <p>{t.Copyright(year)}</p>
     </div>
 </body>
 </html>

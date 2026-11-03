@@ -8,14 +8,14 @@ namespace Api.Tests.TestHelpers;
 /// </summary>
 internal class NoOpEmailService : IEmailService
 {
-    public Task SendPasswordResetEmailAsync(string toEmail, string toName, string resetToken, CancellationToken ct = default)
+    public Task SendPasswordResetEmailAsync(string toEmail, string toName, string resetToken, string? language, CancellationToken ct = default)
         => Task.CompletedTask;
 
-    public Task SendTwoFactorDisabledEmailAsync(string toEmail, string toName, bool wasAdminOverride, CancellationToken ct = default)
+    public Task SendTwoFactorDisabledEmailAsync(string toEmail, string toName, bool wasAdminOverride, string? language, CancellationToken ct = default)
         => Task.CompletedTask;
 
     // ISSUE-3071: Email verification
-    public Task SendVerificationEmailAsync(string toEmail, string toName, string verificationToken, CancellationToken ct = default)
+    public Task SendVerificationEmailAsync(string toEmail, string toName, string verificationToken, string? language, CancellationToken ct = default)
         => Task.CompletedTask;
 
     public Task SendReportEmailAsync(
@@ -122,12 +122,14 @@ internal class NoOpEmailService : IEmailService
         string toEmail,
         string userName,
         string? reason,
+        string? language,
         CancellationToken ct = default)
         => Task.CompletedTask;
 
     public Task SendAccountReactivatedEmailAsync(
         string toEmail,
         string userName,
+        string? language,
         CancellationToken ct = default)
         => Task.CompletedTask;
 
@@ -138,6 +140,7 @@ internal class NoOpEmailService : IEmailService
         int failedAttempts,
         DateTime lockedUntil,
         string? ipAddress,
+        string? language,
         CancellationToken ct = default)
         => Task.CompletedTask;
 

@@ -57,6 +57,7 @@ public class EmailVerificationServiceTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
@@ -75,6 +76,7 @@ public class EmailVerificationServiceTests
             "test@example.com",
             "Test User",
             It.IsAny<string>(),
+            It.IsAny<string?>(),
             It.IsAny<CancellationToken>()), Times.Once);
 
         // Verify token was created in database
@@ -118,6 +120,7 @@ public class EmailVerificationServiceTests
             It.IsAny<string>(),
             It.IsAny<string>(),
             It.IsAny<string>(),
+            It.IsAny<string?>(),
             It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -321,6 +324,7 @@ public class EmailVerificationServiceTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
@@ -335,7 +339,75 @@ public class EmailVerificationServiceTests
             "test@example.com",
             It.IsAny<string>(),
             It.IsAny<string>(),
+            It.IsAny<string?>(),
             It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    // #4812: the verification email goes out in the language the account was born with (#4783), at
+    // registration and on every resend — the service reads it from the user it loads, not from the caller.
+    [Theory]
+    [InlineData("it")]
+    [InlineData("en")]
+    public async Task SendVerificationEmailAsync_HandsTheUsersLanguageToTheEmail(string language)
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        var userId = await AddUnverifiedUserAsync(dbContext, language);
+        var service = CreateService(dbContext);
+
+        var result = await service.SendVerificationEmailAsync(
+            userId, "test@example.com", "Test User", TestCancellationToken);
+
+        result.Should().BeTrue();
+        _mockEmailService.Verify(x => x.SendVerificationEmailAsync(
+            "test@example.com",
+            "Test User",
+            It.IsAny<string>(),
+            language,
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData("it")]
+    [InlineData("en")]
+    public async Task ResendVerificationEmailAsync_HandsTheUsersLanguageToTheEmail(string language)
+    {
+        using var dbContext = CreateInMemoryDbContext();
+        await AddUnverifiedUserAsync(dbContext, language);
+        _mockRateLimitService
+            .Setup(x => x.CheckRateLimitAsync(
+                It.IsAny<string>(),
+                It.IsAny<int>(),
+                It.IsAny<double>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RateLimitResult(Allowed: true, TokensRemaining: 1, RetryAfterSeconds: 0));
+        var service = CreateService(dbContext);
+
+        var result = await service.ResendVerificationEmailAsync("test@example.com", TestCancellationToken);
+
+        result.Should().BeTrue();
+        _mockEmailService.Verify(x => x.SendVerificationEmailAsync(
+            "test@example.com",
+            It.IsAny<string>(),
+            It.IsAny<string>(),
+            language,
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    private async Task<Guid> AddUnverifiedUserAsync(MeepleAiDbContext dbContext, string language)
+    {
+        var userId = Guid.NewGuid();
+        dbContext.Users.Add(new UserEntity
+        {
+            Id = userId,
+            Email = "test@example.com",
+            DisplayName = "Test User",
+            Role = "user",
+            CreatedAt = DateTime.UtcNow,
+            EmailVerified = false,
+            Language = language,
+        });
+        await dbContext.SaveChangesAsync(TestCancellationToken);
+        return userId;
     }
 
     [Fact]
@@ -398,6 +470,7 @@ public class EmailVerificationServiceTests
             It.IsAny<string>(),
             It.IsAny<string>(),
             It.IsAny<string>(),
+            It.IsAny<string?>(),
             It.IsAny<CancellationToken>()), Times.Never);
     }
 

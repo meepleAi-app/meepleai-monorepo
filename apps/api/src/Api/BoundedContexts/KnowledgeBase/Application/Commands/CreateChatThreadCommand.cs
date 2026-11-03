@@ -6,6 +6,8 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// <summary>
 /// Command to create a new chat thread.
 /// PrivateGameId and GameId name the game of the thread; PrivateGameId wins when both are sent.
+/// One of the two is REQUIRED (#4730): a thread with no game has no rulebook to answer from, and the handler
+/// refuses it with a 400 instead of storing a conversation that never answers.
 /// The handler checks the game before storing anything (issue #4230): a shared game is accepted,
 /// the caller's own private game is refused with a 422 until the thread can hold one (#4244),
 /// anything else is not found.

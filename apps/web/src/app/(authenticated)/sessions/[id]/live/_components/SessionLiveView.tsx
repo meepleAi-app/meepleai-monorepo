@@ -74,6 +74,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   lazy,
   Suspense,
@@ -735,6 +736,7 @@ export function SessionLiveView(): ReactElement {
       statusPaused: t('pages.sessionLive.topBar.statusPaused'),
       statusCompleted: t('pages.sessionLive.topBar.statusCompleted'),
       statusNotStarted: t('pages.sessionLive.topBar.statusNotStarted'),
+      startCta: t('pages.sessionLive.topBar.startCta'),
       pauseCta: t('pages.sessionLive.topBar.pauseCta'),
       resumeCta: t('pages.sessionLive.topBar.resumeCta'),
       endgameCta: t('pages.sessionLive.topBar.endgameCta'),
@@ -1010,6 +1012,43 @@ export function SessionLiveView(): ReactElement {
     liveSessionDto != null &&
     currentUser?.id != null &&
     liveSessionDto.createdByUserId === currentUser.id;
+
+  // #4787: a session left `Created` (the start failed after its retry, a player did not get in, or it
+  // predates #4781) had no way to start from here. Only its creator may: `StartLiveSessionCommandHandler`
+  // answers 403 to anyone else, and `viewerRole` `Host` also covers whoever merely holds the first seat.
+  // The ref, not the state, is the guard: two taps in the same frame both read the old state.
+  const [startPending, setStartPending] = useState(false);
+  const startInFlightRef = useRef(false);
+  const handleStart = useCallback(async (): Promise<void> => {
+    if (sessionId == null || !isSessionOwner || startInFlightRef.current) return;
+    startInFlightRef.current = true;
+    setStartPending(true);
+    try {
+      let started = true;
+      try {
+        await api.liveSessions.startSession(sessionId);
+      } catch (err) {
+        // 409: it can no longer be started — typically a start that went through and whose answer was
+        // lost (the client retries POSTs on 502/503). Nothing to report: the view refreshes to what it is.
+        if (!(
+          err instanceof ConflictError || (err as { statusCode?: number })?.statusCode === 409
+        )) {
+          started = false;
+          toast.error(t('pages.sessionLive.topBar.startErrorToast'), { id: 'session-start-error' });
+        }
+      }
+      if (started) {
+        try {
+          await sessionQuery.refetch();
+        } catch {
+          // The start went through; the live stream or the next poll brings the new state.
+        }
+      }
+    } finally {
+      startInFlightRef.current = false;
+      setStartPending(false);
+    }
+  }, [sessionId, isSessionOwner, sessionQuery, t]);
 
   // ── G6a #2787: per-game Catan flavor (conditional tab) ────────────────────
   const showFlavorTab = hasFlavor(liveSessionDto?.gameSlug);
@@ -1390,6 +1429,8 @@ export function SessionLiveView(): ReactElement {
         status={activeSession.status}
         viewerRole={activeSession.viewerRole}
         onExit={handleExit}
+        onStart={isSessionOwner ? () => void handleStart() : undefined}
+        startPending={startPending}
         onEndgame={
           hasRequiredRole(activeSession.viewerRole, 'Host') ? handleRequestEndgame : undefined
         }

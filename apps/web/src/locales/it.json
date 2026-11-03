@@ -3624,6 +3624,8 @@
         "statusPaused": "In pausa",
         "statusCompleted": "Conclusa",
         "statusNotStarted": "Non avviata",
+        "startCta": "Avvia partita",
+        "startErrorToast": "Impossibile avviare la partita. Riprova.",
         "pauseCta": "Pausa",
         "resumeCta": "Riprendi",
         "endgameCta": "Termina sessione",

@@ -10,7 +10,7 @@
  * @see docs/superpowers/specs/2026-06-14-issue-2281-session-skeleton-g2-g4-g7-scope.md §G4
  */
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { LiveTopBarLabels, LiveTopBarProps } from '../LiveTopBar';
@@ -25,6 +25,7 @@ const LABELS: LiveTopBarLabels = {
   statusPaused: 'In pausa',
   statusCompleted: 'Conclusa',
   statusNotStarted: 'Non avviata',
+  startCta: 'Avvia partita',
   pauseCta: 'Pausa',
   resumeCta: 'Riprendi',
   endgameCta: 'Termina partita',
@@ -116,6 +117,47 @@ describe('LiveTopBar — #4781: a session not started yet', () => {
     expect(document.querySelector('[data-slot="session-live-top-bar-resume"]')).toBeNull();
     expect(document.querySelector('[data-slot="session-live-top-bar-endgame"]')).toBeNull();
     expect(document.querySelector('[data-slot="session-live-top-bar-exit"]')).not.toBeNull();
+  });
+});
+
+describe('LiveTopBar — #4787: starting a session that has not started', () => {
+  const startSlot = () => document.querySelector('[data-slot="session-live-top-bar-start"]');
+
+  it('offers «Avvia partita» when it has not started and the caller can start it', () => {
+    renderTopBar({ status: 'NotStarted', onStart: vi.fn() });
+    expect(startSlot()).not.toBeNull();
+    expect(startSlot()).toHaveTextContent('Avvia partita');
+    expect(startSlot()).not.toHaveAttribute('aria-disabled');
+  });
+
+  it('calls onStart once per click', () => {
+    const onStart = vi.fn();
+    renderTopBar({ status: 'NotStarted', onStart });
+    fireEvent.click(startSlot() as HTMLElement);
+    expect(onStart).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers nothing to start without onStart: who may start is the caller’s call, not the role’s', () => {
+    // `viewerRole` Host also covers whoever merely holds the first seat; the server lets only the
+    // creator start, so the bar shows the command only to a caller that passes the handler.
+    renderTopBar({ status: 'NotStarted', viewerRole: 'Host' });
+    expect(startSlot()).toBeNull();
+  });
+
+  it.each(['InProgress', 'Paused', 'Completed'] as const)(
+    'does not offer it once the session is %s',
+    status => {
+      renderTopBar({ status, onStart: vi.fn() });
+      expect(startSlot()).toBeNull();
+    }
+  );
+
+  it('while the start is pending it is inert: a second tap does not send another', () => {
+    const onStart = vi.fn();
+    renderTopBar({ status: 'NotStarted', onStart, startPending: true });
+    expect(startSlot()).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(startSlot() as HTMLElement);
+    expect(onStart).not.toHaveBeenCalled();
   });
 });
 

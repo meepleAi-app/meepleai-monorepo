@@ -23,6 +23,10 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: routerPush }),
 }));
 
+// #4787: l’avviso per chi non è entrato è un toast, che resta quando la pagina cambia.
+const toastWarning = vi.hoisted(() => vi.fn());
+vi.mock('sonner', () => ({ toast: { warning: toastWarning, error: vi.fn() } }));
+
 // #4227: the game step uses the canonical GamePicker, which asks the library itself.
 vi.mock('@/hooks/useDebounce', () => ({
   useDebounce: (value: string) => value,
@@ -429,6 +433,89 @@ describe('SessionWizardMobile — #4781: «Inizia a Giocare» avvia la partita',
     expect(screen.queryByText(/Cannot start session/)).toBeNull();
     expect(mockApi.liveSessions.createSession).toHaveBeenCalledTimes(1);
     expect(mockApi.liveSessions.startSession).toHaveBeenCalledTimes(1);
+  });
+
+  // #4787: un giocatore che non entra faceva `setError` e subito `router.push` verso la live senza
+  // avviare. L’errore spariva con la pagina e la partita restava `Created`. Ora come lo sheet:
+  // chi è entrato gioca, chi no è segnalato, e l’avvio parte.
+  describe('quando un giocatore non riesce a entrare (#4787)', () => {
+    it('con uno su due entrato, avvisa di chi manca e va avanti fino all’avvio', async () => {
+      mockApi.liveSessions.addPlayer.mockReset();
+      mockApi.liveSessions.addPlayer
+        .mockResolvedValueOnce('player-uuid-1')
+        .mockRejectedValueOnce(new Error('Nome già usato'));
+      playUpToTheStartButton({ withBob: true });
+
+      fireEvent.click(screen.getByText('Inizia a Giocare'));
+      await waitFor(() => expect(routerPush).toHaveBeenCalledWith('/sessions/session-123/live'));
+
+      expect(mockApi.liveSessions.startSession).toHaveBeenCalledTimes(1);
+      expect(mockApi.liveSessions.startSession).toHaveBeenCalledWith('session-123');
+      // L’avviso sopravvive al cambio di pagina (un toast), e nomina chi manca.
+      expect(toastWarning).toHaveBeenCalledTimes(1);
+      expect(toastWarning.mock.calls[0]?.[0]).toContain('Bob');
+    });
+
+    it('l’ordine dei turni e le fasi riguardano chi è entrato', async () => {
+      mockApi.liveSessions.addPlayer.mockReset();
+      mockApi.liveSessions.addPlayer
+        .mockResolvedValueOnce('player-uuid-1')
+        .mockRejectedValueOnce(new Error('Nome già usato'));
+      playUpToTheStartButton({ withBob: true });
+
+      fireEvent.click(screen.getByText('Inizia a Giocare'));
+      await waitFor(() => expect(routerPush).toHaveBeenCalled());
+
+      // Un solo giocatore: niente ordine da fissare.
+      expect(mockApi.liveSessions.updateTurnOrder).not.toHaveBeenCalled();
+    });
+
+    it('se non entra nessuno resta nel wizard con l’errore, senza avviare né aprire la live', async () => {
+      mockApi.liveSessions.addPlayer.mockReset();
+      mockApi.liveSessions.addPlayer.mockRejectedValue(new Error('Server non raggiungibile'));
+      playUpToTheStartButton({ withBob: true });
+
+      fireEvent.click(screen.getByText('Inizia a Giocare'));
+
+      expect(await screen.findByText(/Server non raggiungibile/)).toBeInTheDocument();
+      expect(mockApi.liveSessions.startSession).not.toHaveBeenCalled();
+      expect(routerPush).not.toHaveBeenCalled();
+      // Il pulsante torna disponibile: l’utente può riprovare.
+      expect(screen.getByText('Inizia a Giocare').closest('button')).not.toBeDisabled();
+    });
+
+    it('se poi l’avvio fallisce, il nuovo tentativo riparte da una sessione nuova: non riavvia quella senza il giocatore', async () => {
+      mockApi.liveSessions.addPlayer.mockReset();
+      mockApi.liveSessions.addPlayer
+        .mockResolvedValueOnce('player-uuid-1')
+        .mockRejectedValueOnce(new Error('Nome già usato'))
+        .mockResolvedValueOnce('player-uuid-2')
+        .mockResolvedValueOnce('player-uuid-3');
+      mockApi.liveSessions.createSession
+        .mockResolvedValueOnce('session-monca')
+        .mockResolvedValueOnce('session-intera');
+      mockApi.liveSessions.startSession.mockRejectedValueOnce(new Error('Rete non raggiungibile'));
+      playUpToTheStartButton({ withBob: true });
+
+      fireEvent.click(screen.getByText('Inizia a Giocare'));
+      expect(await screen.findByText(/Rete non raggiungibile/)).toBeInTheDocument();
+      expect(routerPush).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByText('Inizia a Giocare'));
+      await waitFor(() => expect(routerPush).toHaveBeenCalledWith('/sessions/session-intera/live'));
+
+      expect(mockApi.liveSessions.createSession).toHaveBeenCalledTimes(2);
+      expect(mockApi.liveSessions.startSession).toHaveBeenLastCalledWith('session-intera');
+    });
+
+    it('con tutti i giocatori entrati non c’è nessun avviso', async () => {
+      playUpToTheStartButton({ withBob: true });
+
+      fireEvent.click(screen.getByText('Inizia a Giocare'));
+      await waitFor(() => expect(routerPush).toHaveBeenCalledWith('/sessions/session-123/live'));
+
+      expect(toastWarning).not.toHaveBeenCalled();
+    });
   });
 });
 

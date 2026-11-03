@@ -34,6 +34,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 import { GamePicker } from '@/components/features/game-picker';
 import { AddSelfButton, OptOutButton, SelfBadge } from '@/components/session/SelfPlayerControls';
@@ -273,6 +274,10 @@ export function SessionWizardMobile({
       ]);
       const pending = pendingStartRef.current;
       let sessionId = pending !== null && pending.key === attemptKey ? pending.sessionId : null;
+      // #4787: false when a player did not get in. Such a session is not remembered for a retry, which
+      // would start it again without them (the sheet does the same).
+      let everyPlayerAdded = true;
+      const failedPlayers: Array<{ name: string; reason: string }> = [];
 
       if (sessionId === null) {
         // 1. Create session
@@ -299,17 +304,31 @@ export function SessionWizardMobile({
               playerIdByLocalId.set(player.id, playerId);
             }
           } catch (playerErr) {
-            const failedName = player.displayName;
-            const remaining = players.length - addedPlayerIds.length;
-            const msg =
-              playerErr instanceof Error ? playerErr.message : 'Errore aggiunta giocatore';
-            setError(
-              `Errore aggiungendo "${failedName}" (${addedPlayerIds.length}/${players.length} aggiunti). ${msg}. ` +
-                (remaining > 1 ? `${remaining - 1} giocatori restanti non aggiunti.` : '')
-            );
-            router.push(`/sessions/${sessionId}/live`);
-            return;
+            // #4787: one player that cannot get in no longer ends the setup. This used to `setError` and
+            // `router.push` to the live page without starting: the error vanished with the page and the
+            // session stayed `Created`. Keep adding the others, like StartSessionSheet.
+            failedPlayers.push({
+              name: player.displayName,
+              reason: playerErr instanceof Error ? playerErr.message : 'Errore aggiunta giocatore',
+            });
           }
+        }
+
+        if (addedPlayerIds.length === 0) {
+          // Nobody got in, so there is nothing to start: stay here with the reason. (The empty session
+          // stays behind, as after any failure past its creation.)
+          const first = failedPlayers[0];
+          throw new Error(
+            `Errore aggiungendo "${first?.name}" (0/${players.length} aggiunti). ${first?.reason}`
+          );
+        }
+        if (failedPlayers.length > 0) {
+          everyPlayerAdded = false;
+          // A toast, not `setError`: it outlives the move to the live page, where the Host can add them.
+          toast.warning(
+            `Non sono entrati: ${failedPlayers.map(f => f.name).join(', ')}. Puoi aggiungerli dalla partita.`,
+            { id: 'session-wizard-players-not-added' }
+          );
         }
 
         // 3. Set turn order — the user-defined order from step 3
@@ -339,7 +358,7 @@ export function SessionWizardMobile({
 
       // 5. Start the session (#4781). Until it runs, scores, rule disputes and «Termina sessione»
       // answer 409. If this fails the session is kept, so the next try only starts it.
-      pendingStartRef.current = { sessionId, key: attemptKey };
+      pendingStartRef.current = everyPlayerAdded ? { sessionId, key: attemptKey } : null;
       try {
         await api.liveSessions.startSession(sessionId);
       } catch (startErr) {

@@ -3560,6 +3560,8 @@
         "statusPaused": "Paused",
         "statusCompleted": "Completed",
         "statusNotStarted": "Not started",
+        "startCta": "Start game",
+        "startErrorToast": "Could not start the game. Try again.",
         "pauseCta": "Pause",
         "resumeCta": "Resume",
         "endgameCta": "End session",

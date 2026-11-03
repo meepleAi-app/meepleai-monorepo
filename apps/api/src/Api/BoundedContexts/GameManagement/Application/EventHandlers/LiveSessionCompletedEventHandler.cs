@@ -4,6 +4,8 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.EventHandlers;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Domain.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -21,14 +23,17 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
     private readonly MeepleAiDbContext _dbContext;
     private readonly IPlayRecordRepository _playRecordRepository;
     private readonly TimeProvider _timeProvider;
+    private readonly IDomainEventCollector _eventCollector;
 
     public LiveSessionCompletedEventHandler(
         MeepleAiDbContext dbContext,
         ILogger<LiveSessionCompletedEventHandler> logger,
         TimeProvider timeProvider,
-        IPlayRecordRepository playRecordRepository)
+        IPlayRecordRepository playRecordRepository,
+        IDomainEventCollector eventCollector)
         : base(dbContext, logger)
     {
+        _eventCollector = eventCollector ?? throw new ArgumentNullException(nameof(eventCollector));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _playRecordRepository = playRecordRepository ?? throw new ArgumentNullException(nameof(playRecordRepository));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
@@ -38,8 +43,30 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
         LiveSessionCompletedEvent domainEvent,
         CancellationToken cancellationToken)
     {
+        // The context (and the event collector next to it) is SHARED with whoever delivers the event: the outbox
+        // processor saves it once more at the end of its batch. What this handler stages and fails to save must
+        // not stay staged, so remember what the caller had there, to forget only the rest.
+        var stagedBefore = StagedInserts();
+        var queuedBefore = _eventCollector.PeekEvents() ?? Array.Empty<IDomainEvent>();
+
         try
         {
+            // #4753: the record is keyed by the session, so a second delivery meets the unique index. The common
+            // case is answered with a read, before anything is staged. IgnoreQueryFilters: the index also counts
+            // the soft-deleted rows, and a replay must not bring back a record the user deleted.
+            var alreadyRecorded = await _dbContext.PlayRecords
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .AnyAsync(r => r.SourceEventId == domainEvent.SessionId, cancellationToken)
+                .ConfigureAwait(false);
+            if (alreadyRecorded)
+            {
+                Logger.LogInformation(
+                    "Skipping PlayRecord for LiveSession {SessionId}: already recorded (EventId={EventId})",
+                    domainEvent.SessionId, domainEvent.EventId);
+                return;
+            }
+
             var playRecord = CreatePlayRecordFromEvent(domainEvent);
 
             // Add players from session snapshot
@@ -93,10 +120,14 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
             // CF-2 / #1938: outbox replay (#1535 at-least-once delivery) for a session
             // already mapped to a PlayRecord. The partial UNIQUE index on
             // play_records.source_event_id blocked the duplicate insert at the DB.
+            // #4753: since the key is the session this branch is live (two deliveries at the same
+            // instant both pass the read above). The rows that were staged stay Added after a failed
+            // save, and the next SaveChangesAsync on this context would send them again.
             // Log at Information — legitimate replays are not failures.
+            ForgetWhatWasStaged(stagedBefore, queuedBefore);
             Logger.LogInformation(
                 ex,
-                "Skipping duplicate PlayRecord for LiveSession {SessionId}: SourceEventId={SourceEventId} (already recorded)",
+                "Skipping duplicate PlayRecord for LiveSession {SessionId}: EventId={EventId} (already recorded)",
                 domainEvent.SessionId, domainEvent.EventId);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -104,6 +135,9 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
         // PlayRecord generation failure must not block session completion.
         catch (Exception ex)
         {
+            // Swallowed so the completion is not blocked, which only holds if the failed insert is not
+            // left staged for the caller's next save to throw again.
+            ForgetWhatWasStaged(stagedBefore, queuedBefore);
             Logger.LogError(ex,
                 "Failed to generate PlayRecord from completed LiveSession {SessionId}",
                 domainEvent.SessionId);
@@ -111,12 +145,45 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
 #pragma warning restore CA1031
     }
 
+    private HashSet<object> StagedInserts() =>
+        _dbContext.ChangeTracker.Entries()
+            .Where(e => e.State == EntityState.Added)
+            .Select(e => e.Entity)
+            .ToHashSet(ReferenceEqualityComparer.Instance);
+
+    /// <summary>
+    /// Puts the shared context and the event collector back as the caller left them. The rows go back to
+    /// <c>Detached</c>; and the collector is restored too, because the repository queued the record's events
+    /// when it was asked to add it, and they stay queued after a failed save: the next save would write them
+    /// (and an outbox row each) for a record that was never written.
+    /// </summary>
+    private void ForgetWhatWasStaged(HashSet<object> stagedBefore, IReadOnlyList<IDomainEvent> queuedBefore)
+    {
+        foreach (var entry in _dbContext.ChangeTracker.Entries()
+                     .Where(e => e.State == EntityState.Added && !stagedBefore.Contains(e.Entity))
+                     .ToList())
+        {
+            entry.State = EntityState.Detached;
+        }
+
+        _eventCollector.Clear();
+        foreach (var queued in queuedBefore)
+        {
+            _eventCollector.Collect(queued);
+        }
+    }
+
     private PlayRecord CreatePlayRecordFromEvent(LiveSessionCompletedEvent domainEvent)
     {
         var scoringConfig = ScoringConfigOf(domainEvent);
 
-        // Issue #1938 / CF-2: propagate EventId so the resulting PlayRecord row carries the
-        // source event id and the UNIQUE partial index blocks duplicate inserts on retry/replay.
+        // Issue #1938 / CF-2: the PlayRecord row carries a source key and the UNIQUE partial index on
+        // play_records.source_event_id blocks a second insert for it. #4753: the key is the SESSION, not
+        // domainEvent.EventId. EventId is a Guid.NewGuid() of each event INSTANCE and does not survive the
+        // outbox (the event is rebuilt through its constructor), so the same completion delivered twice —
+        // in-process and from the outbox, or an outbox replay — carried two keys and produced two records.
+        // A live session completes once (Complete() refuses a session that is not in progress or paused).
+        var sourceKey = domainEvent.SessionId;
         if (domainEvent.GameId.HasValue)
         {
             return PlayRecord.CreateWithGame(
@@ -128,7 +195,7 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
                 visibility: domainEvent.Visibility,
                 timeProvider: _timeProvider,
                 groupId: domainEvent.GroupId,
-                sourceEventId: domainEvent.EventId,
+                sourceEventId: sourceKey,
                 scoringConfig: scoringConfig);
         }
 
@@ -141,7 +208,7 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
             scoringConfig: scoringConfig,
             timeProvider: _timeProvider,
             groupId: domainEvent.GroupId,
-            sourceEventId: domainEvent.EventId);
+            sourceEventId: sourceKey);
     }
 
     /// <summary>

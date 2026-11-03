@@ -20,6 +20,7 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { MessageSquarePlus } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+import { stashPendingFirstMessage } from '@/components/chat/shared';
 import { trackRulesChatStarted } from '@/lib/analytics/flywheel-events';
 import { cn } from '@/lib/utils';
 import type { Game } from '@/types';
@@ -98,6 +99,10 @@ export function ChatEntryOrchestrator({ className }: ChatEntryOrchestratorProps)
           gameId: selectedGameId && selectedGameId !== '' ? selectedGameId : undefined,
           promptType,
         });
+
+        // #4740: the server drops `initialMessage`, so the thread view has to ask the question;
+        // it must be waiting there before the thread opens.
+        if (initialMessage) stashPendingFirstMessage(threadId, initialMessage);
 
         router.push(`/chat/${threadId}`);
       } catch {

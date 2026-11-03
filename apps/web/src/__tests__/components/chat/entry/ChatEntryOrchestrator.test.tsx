@@ -10,6 +10,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ChatEntryOrchestrator } from '@/components/chat/entry/ChatEntryOrchestrator';
+import { takePendingFirstMessage } from '@/components/chat/shared';
 
 const mockPush = vi.fn();
 const mockCreateThread = vi.fn();
@@ -50,8 +51,10 @@ vi.mock('@/components/chat/entry/GameSelector', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  window.sessionStorage.clear();
   searchParams = new URLSearchParams();
   mockCreateThread.mockResolvedValue({ id: 'thread-1' });
+  mockPush.mockReset();
 });
 
 describe('ChatEntryOrchestrator — a chat needs a game (#4715)', () => {
@@ -123,6 +126,44 @@ describe('ChatEntryOrchestrator — a chat needs a game (#4715)', () => {
     expect(mockCreateThread).toHaveBeenCalledWith(
       expect.objectContaining({ gameId: 'g1', initialMessage: 'Come si gioca a Catan?' })
     );
+  });
+
+  // #4740: the server drops `initialMessage`, so the question has to reach the thread another way.
+  it('hands the quick start question to the thread it opens, before navigating there (#4740)', async () => {
+    // Letta nel momento della navigazione: dopo, la prima lettura la consumerebbe la vista del thread.
+    let handedOverAtNavigation: string | null = null;
+    mockPush.mockImplementation((url: string) => {
+      handedOverAtNavigation = takePendingFirstMessage(url.split('/').pop() ?? '');
+    });
+    render(<ChatEntryOrchestrator />);
+    fireEvent.click(screen.getByTestId('pick-catan'));
+
+    fireEvent.click(screen.getByText('Come si gioca a Catan'));
+
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/chat/thread-1'));
+    expect(handedOverAtNavigation).toBe('Come si gioca a Catan?');
+  });
+
+  it('hands nothing over when the chat starts without a question', async () => {
+    render(<ChatEntryOrchestrator />);
+    fireEvent.click(screen.getByTestId('pick-catan'));
+
+    fireEvent.click(screen.getByTestId('start-chat-btn'));
+
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/chat/thread-1'));
+    expect(takePendingFirstMessage('thread-1')).toBeNull();
+  });
+
+  it('hands nothing over when the thread could not be created', async () => {
+    mockCreateThread.mockRejectedValue(new Error('boom'));
+    render(<ChatEntryOrchestrator />);
+    fireEvent.click(screen.getByTestId('pick-catan'));
+
+    fireEvent.click(screen.getByText('Come si gioca a Catan'));
+
+    await screen.findByTestId('new-chat-error');
+    expect(mockPush).not.toHaveBeenCalled();
+    expect(window.sessionStorage.length).toBe(0);
   });
 
   it('with the game already in the URL, offers the quick starts and starts at once: there is no persona to pick (#4730)', async () => {

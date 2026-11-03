@@ -279,7 +279,7 @@ public sealed class LiveSessionCompletedEventHandlerTests
         await CreateHandler().Handle(first, CancellationToken.None);
         await CreateHandler().Handle(second, CancellationToken.None);
 
-        persisted.Should().HaveCount(2, "the handler writes whatever it is given: refusing the second is the database's job");
+        persisted.Should().HaveCount(2, "each handler here reads its own empty database: skipping a session that already has its record is covered by LiveSessionCompletedEventHandlerIdempotencyTests");
         persisted.Select(r => r.SourceEventId).Distinct().Should().ContainSingle();
         persisted[0].SourceEventId.Should().Be(sessionId);
     }
@@ -293,6 +293,10 @@ public sealed class LiveSessionCompletedEventHandlerTests
         var json = JsonSerializer.Serialize(original, DomainEventJsonOptions.Default);
         var rebuilt = JsonSerializer.Deserialize<LiveSessionCompletedEvent>(json, DomainEventJsonOptions.Default)!;
         rebuilt.SessionId.Should().Be(original.SessionId, "the round trip must give back the same session");
+        rebuilt.EventId.Should().NotBe(
+            original.EventId,
+            "the outbox rebuilds the event through its constructor, which draws a new EventId: this is the case under test. " +
+            "If it ever fails, the outbox preserves EventId and this test no longer proves anything");
 
         await CreateHandler().Handle(original, CancellationToken.None);
         await CreateHandler().Handle(rebuilt, CancellationToken.None);

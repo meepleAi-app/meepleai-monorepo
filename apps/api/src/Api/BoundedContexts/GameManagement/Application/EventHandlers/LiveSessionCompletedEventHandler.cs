@@ -38,8 +38,29 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
         LiveSessionCompletedEvent domainEvent,
         CancellationToken cancellationToken)
     {
+        // The context is SHARED with whoever delivers the event (the outbox processor saves it once more at the
+        // end of its batch), so what this handler stages and fails to save must not stay staged: remember what
+        // the caller had staged, to forget only the rest.
+        var stagedBefore = StagedInserts();
+
         try
         {
+            // #4753: the record is keyed by the session, so a second delivery meets the unique index. The common
+            // case is answered with a read, before anything is staged. IgnoreQueryFilters: the index also counts
+            // the soft-deleted rows, and a replay must not bring back a record the user deleted.
+            var alreadyRecorded = await _dbContext.PlayRecords
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .AnyAsync(r => r.SourceEventId == domainEvent.SessionId, cancellationToken)
+                .ConfigureAwait(false);
+            if (alreadyRecorded)
+            {
+                Logger.LogInformation(
+                    "Skipping PlayRecord for LiveSession {SessionId}: already recorded (EventId={EventId})",
+                    domainEvent.SessionId, domainEvent.EventId);
+                return;
+            }
+
             var playRecord = CreatePlayRecordFromEvent(domainEvent);
 
             // Add players from session snapshot
@@ -93,7 +114,11 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
             // CF-2 / #1938: outbox replay (#1535 at-least-once delivery) for a session
             // already mapped to a PlayRecord. The partial UNIQUE index on
             // play_records.source_event_id blocked the duplicate insert at the DB.
+            // #4753: since the key is the session this branch is live (two deliveries at the same
+            // instant both pass the read above). The rows that were staged stay Added after a failed
+            // save, and the next SaveChangesAsync on this context would send them again.
             // Log at Information — legitimate replays are not failures.
+            ForgetInsertsStagedSince(stagedBefore);
             Logger.LogInformation(
                 ex,
                 "Skipping duplicate PlayRecord for LiveSession {SessionId}: EventId={EventId} (already recorded)",
@@ -104,11 +129,30 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
         // PlayRecord generation failure must not block session completion.
         catch (Exception ex)
         {
+            // Swallowed so the completion is not blocked, which only holds if the failed insert is not
+            // left staged for the caller's next save to throw again.
+            ForgetInsertsStagedSince(stagedBefore);
             Logger.LogError(ex,
                 "Failed to generate PlayRecord from completed LiveSession {SessionId}",
                 domainEvent.SessionId);
         }
 #pragma warning restore CA1031
+    }
+
+    private HashSet<object> StagedInserts() =>
+        _dbContext.ChangeTracker.Entries()
+            .Where(e => e.State == EntityState.Added)
+            .Select(e => e.Entity)
+            .ToHashSet(ReferenceEqualityComparer.Instance);
+
+    private void ForgetInsertsStagedSince(HashSet<object> stagedBefore)
+    {
+        foreach (var entry in _dbContext.ChangeTracker.Entries()
+                     .Where(e => e.State == EntityState.Added && !stagedBefore.Contains(e.Entity))
+                     .ToList())
+        {
+            entry.State = EntityState.Detached;
+        }
     }
 
     private PlayRecord CreatePlayRecordFromEvent(LiveSessionCompletedEvent domainEvent)

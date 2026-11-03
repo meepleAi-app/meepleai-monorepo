@@ -96,7 +96,7 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
             // Log at Information — legitimate replays are not failures.
             Logger.LogInformation(
                 ex,
-                "Skipping duplicate PlayRecord for LiveSession {SessionId}: SourceEventId={SourceEventId} (already recorded)",
+                "Skipping duplicate PlayRecord for LiveSession {SessionId}: EventId={EventId} (already recorded)",
                 domainEvent.SessionId, domainEvent.EventId);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
@@ -115,8 +115,13 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
     {
         var scoringConfig = ScoringConfigOf(domainEvent);
 
-        // Issue #1938 / CF-2: propagate EventId so the resulting PlayRecord row carries the
-        // source event id and the UNIQUE partial index blocks duplicate inserts on retry/replay.
+        // Issue #1938 / CF-2: the PlayRecord row carries a source key and the UNIQUE partial index on
+        // play_records.source_event_id blocks a second insert for it. #4753: the key is the SESSION, not
+        // domainEvent.EventId. EventId is a Guid.NewGuid() of each event INSTANCE and does not survive the
+        // outbox (the event is rebuilt through its constructor), so the same completion delivered twice —
+        // in-process and from the outbox, or an outbox replay — carried two keys and produced two records.
+        // A live session completes once (Complete() refuses a session that is not in progress or paused).
+        var sourceKey = domainEvent.SessionId;
         if (domainEvent.GameId.HasValue)
         {
             return PlayRecord.CreateWithGame(
@@ -128,7 +133,7 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
                 visibility: domainEvent.Visibility,
                 timeProvider: _timeProvider,
                 groupId: domainEvent.GroupId,
-                sourceEventId: domainEvent.EventId,
+                sourceEventId: sourceKey,
                 scoringConfig: scoringConfig);
         }
 
@@ -141,7 +146,7 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
             scoringConfig: scoringConfig,
             timeProvider: _timeProvider,
             groupId: domainEvent.GroupId,
-            sourceEventId: domainEvent.EventId);
+            sourceEventId: sourceKey);
     }
 
     /// <summary>

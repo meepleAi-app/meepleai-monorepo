@@ -3,8 +3,10 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.Infrastructure.DomainEventOutbox;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
@@ -246,6 +248,80 @@ public sealed class LiveSessionCompletedEventHandlerTests
         persisted.Should().NotBeNull();
         persisted!.Players.Single(p => p.DisplayName == "Marco").GetScore("points")!.Value.Should().Be(20);
         persisted.Players.Single(p => p.DisplayName == "Giulia").GetScore("points")!.Value.Should().Be(10);
+    }
+
+    // ── #4753 — one completed session is one play record, however many times the event arrives ──
+    //
+    // The play record carries a key that the partial UNIQUE index on play_records.source_event_id turns into
+    // «this was already recorded». It was the EventId of the event, a Guid.NewGuid() of each INSTANCE: the same
+    // completion delivered twice (in-process and from the outbox, or an outbox replay, which rebuilds the event
+    // through its constructor) carried two keys, and the index saw two different records.
+
+    private List<PlayRecord> CapturePersistedRecords()
+    {
+        var persisted = new List<PlayRecord>();
+        _playRecordRepository
+            .Setup(r => r.AddAsync(It.IsAny<PlayRecord>(), It.IsAny<CancellationToken>()))
+            .Callback<PlayRecord, CancellationToken>((record, _) => persisted.Add(record))
+            .Returns(Task.CompletedTask);
+        return persisted;
+    }
+
+    [Fact]
+    public async Task Handle_TheSameCompletionAsTwoInstances_CarriesOneKey()
+    {
+        var persisted = CapturePersistedRecords();
+        var sessionId = Guid.NewGuid();
+        var first = CreateCompletedEvent(sessionId: sessionId, gameId: Guid.NewGuid());
+        var second = CreateCompletedEvent(sessionId: sessionId, gameId: Guid.NewGuid());
+        first.EventId.Should().NotBe(second.EventId, "two instances of the event have two EventIds: this is the case under test");
+
+        await CreateHandler().Handle(first, CancellationToken.None);
+        await CreateHandler().Handle(second, CancellationToken.None);
+
+        persisted.Should().HaveCount(2, "the handler writes whatever it is given: refusing the second is the database's job");
+        persisted.Select(r => r.SourceEventId).Distinct().Should().ContainSingle();
+        persisted[0].SourceEventId.Should().Be(sessionId);
+    }
+
+    [Fact]
+    public async Task Handle_TheSameCompletionRebuiltByTheOutbox_CarriesTheKeyOfTheOriginal()
+    {
+        // What the outbox does with the row: JSON with its options, then the type's constructor.
+        var persisted = CapturePersistedRecords();
+        var original = CreateCompletedEvent(gameId: Guid.NewGuid());
+        var json = JsonSerializer.Serialize(original, DomainEventJsonOptions.Default);
+        var rebuilt = JsonSerializer.Deserialize<LiveSessionCompletedEvent>(json, DomainEventJsonOptions.Default)!;
+        rebuilt.SessionId.Should().Be(original.SessionId, "the round trip must give back the same session");
+
+        await CreateHandler().Handle(original, CancellationToken.None);
+        await CreateHandler().Handle(rebuilt, CancellationToken.None);
+
+        persisted.Select(r => r.SourceEventId).Distinct().Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Handle_TwoDifferentSessions_CarryDifferentKeys()
+    {
+        // The other direction: the key must not collapse two sessions into one record.
+        var persisted = CapturePersistedRecords();
+
+        await CreateHandler().Handle(CreateCompletedEvent(gameId: Guid.NewGuid()), CancellationToken.None);
+        await CreateHandler().Handle(CreateCompletedEvent(gameId: Guid.NewGuid()), CancellationToken.None);
+
+        persisted.Select(r => r.SourceEventId).Distinct().Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task Handle_AFreeFormSession_CarriesTheSameKey()
+    {
+        // `GameId` null takes the other factory (`CreateFreeForm`): the key has to be set there too.
+        var persisted = CapturePersistedRecords();
+        var sessionId = Guid.NewGuid();
+
+        await CreateHandler().Handle(CreateCompletedEvent(sessionId: sessionId, gameId: null), CancellationToken.None);
+
+        persisted.Should().ContainSingle().Which.SourceEventId.Should().Be(sessionId);
     }
 
     [Fact]

@@ -360,7 +360,7 @@ public sealed class PlayRecordChildRowsTests(PlayRecordMigratedDatabase database
         {
             // Il gestore inghiotte gli errori di scrittura: se la partita non c'è, il difetto è prima di questo test.
             recordId = await db.PlayRecords.AsNoTracking()
-                .Where(r => r.SourceEventId == liveEvent.EventId)
+                .Where(r => r.SourceEventId == liveEvent.SessionId)
                 .Select(r => r.Id)
                 .SingleAsync(Ct);
         }

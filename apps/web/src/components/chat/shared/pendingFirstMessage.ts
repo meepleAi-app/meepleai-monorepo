@@ -20,8 +20,13 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 const KEY_PREFIX = 'meepleai:chat:first-message:';
 
-/** Tailwind `lg`: from here up the page shows `ChatThreadView`, below it `ChatMobile`. */
-const DESKTOP_VIEW_QUERY = '(min-width: 1024px)';
+/**
+ * Tailwind `lg`: from here up the page shows `ChatThreadView`, below it `ChatMobile`. In `rem`, like the
+ * CSS it has to agree with (`lg:` is `width >= 64rem` in Tailwind 4, and `--breakpoint-lg` in
+ * design-tokens.css is a reference value that Tailwind does not read): with `1024px` the two part ways as
+ * soon as the browser's default font size is not 16px, and the view that is hidden would send.
+ */
+const DESKTOP_VIEW_QUERY = '(min-width: 64rem)';
 
 /**
  * Leaves `message` for the thread `threadId` to ask when it opens. Storage that refuses the write

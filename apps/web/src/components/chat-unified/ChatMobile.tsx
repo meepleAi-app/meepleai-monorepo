@@ -251,11 +251,16 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
   useEffect(() => {
     // L'avviso di un thread non deve restare sull'altro: la pagina non rimonta la vista.
     setTierLimit(null);
+    // #4740: un caricamento superato (cambio di thread, o il doppio montaggio di StrictMode in sviluppo) non
+    // deve scrivere dopo quello che l'ha sostituito: con la domanda di un Quick Start appena spedita, un
+    // caricamento tardivo cancellerebbe le bolle già a schermo.
+    let cancelled = false;
     async function loadThread() {
       setIsLoading(true);
       setLoadError(null);
       try {
         const threadData = await api.chat.getThreadById(threadId);
+        if (cancelled) return;
         if (!threadData) {
           setLoadError('Thread non trovato');
           return;
@@ -273,13 +278,16 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
         );
         setMessages(mapped);
       } catch {
-        setLoadError('Errore nel caricamento della conversazione');
+        if (!cancelled) setLoadError('Errore nel caricamento della conversazione');
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     }
 
     void loadThread();
+    return () => {
+      cancelled = true;
+    };
   }, [threadId]);
 
   // Handle continuation — append more content to the last assistant message

@@ -20,7 +20,7 @@ function setViewport(desktop: boolean) {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: vi.fn().mockImplementation((query: string) => ({
-      matches: desktop && query === '(min-width: 1024px)',
+      matches: desktop && query === '(min-width: 64rem)',
       media: query,
       onchange: null,
       addListener: vi.fn(),

@@ -240,11 +240,16 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
     setOwnershipDenied(false);
     setNoManualNotice(false);
     setTierLimit(null);
+    // #4740: un caricamento superato (cambio di thread, o il doppio montaggio di StrictMode in sviluppo) non
+    // deve scrivere dopo quello che l'ha sostituito. Prima non contava: nessuno spediva nulla appena
+    // caricato; con la domanda di un Quick Start sì, e un caricamento tardivo cancellava bolle già a schermo.
+    let cancelled = false;
     async function loadThread() {
       setIsLoading(true);
       setError(null);
       try {
         const threadData = await api.chat.getThreadById(threadId);
+        if (cancelled) return;
         if (!threadData) {
           setError('Thread non trovato');
           return;
@@ -279,7 +284,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
             const found = threadData.privateGameId
               ? await api.library.getPrivateGame(threadData.privateGameId)
               : await api.games.getById(threadData.gameId);
-            if (found) {
+            if (found && !cancelled) {
               gameName = found.title;
               setGame({
                 id: found.id,
@@ -290,6 +295,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
             // Non-critical: game info not found
           }
         }
+        if (cancelled) return;
 
         // Issue #4780: Inject welcome message when thread is new (empty) and has an agent
         if (mappedMessages.length === 0 && agentId && gameName) {
@@ -307,13 +313,16 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           replaceMessagesInHook(mappedMessages);
         }
       } catch {
-        setError('Errore nel caricamento della conversazione');
+        if (!cancelled) setError('Errore nel caricamento della conversazione');
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     }
 
     void loadThread();
+    return () => {
+      cancelled = true;
+    };
   }, [threadId, replaceMessagesInHook, abortCurrent]);
 
   // Handle continuation — append more content to the last assistant message

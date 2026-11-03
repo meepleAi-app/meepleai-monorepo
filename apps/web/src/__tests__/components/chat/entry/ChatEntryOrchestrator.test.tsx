@@ -130,11 +130,10 @@ describe('ChatEntryOrchestrator — a chat needs a game (#4715)', () => {
 
   // #4740: the server drops `initialMessage`, so the question has to reach the thread another way.
   it('hands the quick start question to the thread it opens, before navigating there (#4740)', async () => {
+    // Letta nel momento della navigazione: dopo, la prima lettura la consumerebbe la vista del thread.
     let handedOverAtNavigation: string | null = null;
     mockPush.mockImplementation((url: string) => {
-      handedOverAtNavigation = window.sessionStorage.getItem(
-        `meepleai:chat:first-message:${url.split('/').pop()}`
-      );
+      handedOverAtNavigation = takePendingFirstMessage(url.split('/').pop() ?? '');
     });
     render(<ChatEntryOrchestrator />);
     fireEvent.click(screen.getByTestId('pick-catan'));
@@ -143,7 +142,6 @@ describe('ChatEntryOrchestrator — a chat needs a game (#4715)', () => {
 
     await waitFor(() => expect(mockPush).toHaveBeenCalledWith('/chat/thread-1'));
     expect(handedOverAtNavigation).toBe('Come si gioca a Catan?');
-    expect(takePendingFirstMessage('thread-1')).toBe('Come si gioca a Catan?');
   });
 
   it('hands nothing over when the chat starts without a question', async () => {

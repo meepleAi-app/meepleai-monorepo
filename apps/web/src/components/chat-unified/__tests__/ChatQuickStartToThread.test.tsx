@@ -16,7 +16,7 @@ import React from 'react';
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 
 import { ChatEntryOrchestrator } from '@/components/chat/entry/ChatEntryOrchestrator';
-import { stashPendingFirstMessage } from '@/components/chat/shared';
+import { stashPendingFirstMessage, takePendingFirstMessage } from '@/components/chat/shared';
 
 import { ChatMobile } from '../ChatMobile';
 import { ChatThreadView } from '../ChatThreadView';
@@ -154,7 +154,7 @@ function setViewport(desktop: boolean) {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: vi.fn().mockImplementation((query: string) => ({
-      matches: desktop && query === '(min-width: 1024px)',
+      matches: desktop && query === '(min-width: 64rem)',
       media: query,
       onchange: null,
       addListener: vi.fn(),
@@ -293,4 +293,78 @@ describe('Quick Start → thread (#4740)', () => {
       expect.objectContaining({ gameId: 'game-2', query: QUESTION, chatId: 'thread-2' }),
     ]);
   });
+
+  it('does not take the question into a thread that has no game: nothing could answer it', async () => {
+    setViewport(true);
+    const { api } = await import('@/lib/api');
+    (api.chat.getThreadById as Mock).mockResolvedValue({ ...emptyThread, gameId: null });
+    stashPendingFirstMessage('thread-1', QUESTION);
+
+    openThreadPage();
+
+    await waitFor(() => expect(screen.getAllByTestId('message-input').length).toBeGreaterThan(0));
+    expect(qa.asked).toEqual([]);
+    expect(takePendingFirstMessage('thread-1')).toBe(QUESTION);
+  });
+
+  it('asks after the welcome message of a new thread with an agent, and keeps it', async () => {
+    setViewport(true);
+    const { api } = await import('@/lib/api');
+    (api.chat.getThreadById as Mock).mockResolvedValue({
+      ...emptyThread,
+      agentId: 'agent-1',
+      agentType: 'tutor',
+    });
+    stashPendingFirstMessage('thread-1', QUESTION);
+
+    openThreadPage();
+
+    await screen.findByText('Si tirano i dadi.');
+    const kinds = within(screen.getByTestId('desktop-view'))
+      .getAllByTestId(/^message-(user|assistant)$/)
+      .map(el => el.getAttribute('data-testid'));
+    // Il benvenuto del thread, la domanda, la risposta: nell'ordine, nessuno cancellato dagli altri.
+    expect(kinds).toEqual(['message-assistant', 'message-user', 'message-assistant']);
+    expect(qa.asked).toHaveLength(1);
+  });
+
+  /**
+   * In sviluppo (`reactStrictMode`) ogni vista carica il thread due volte, e le due risposte arrivano
+   * una dopo l'altra. La domanda parte alla prima, e la seconda non deve cancellare ciò che la prima ha
+   * già messo a schermo: la risposta arriverebbe al server e non si vedrebbe.
+   */
+  it.each([
+    ['wide', true, 'desktop-view'],
+    ['narrow', false, 'mobile-view'],
+  ])(
+    'on a %s screen the question and its answer stay on screen when the thread is loaded twice, one after the other (StrictMode)',
+    async (_label, desktop, viewOnScreen) => {
+      setViewport(desktop);
+      const { api } = await import('@/lib/api');
+      let started = 0;
+      let resolved = 0;
+      (api.chat.getThreadById as Mock).mockImplementation(async () => {
+        const order = ++started;
+        await new Promise(resolve => setTimeout(resolve, order * 25));
+        resolved += 1;
+        return emptyThread;
+      });
+      stashPendingFirstMessage('thread-1', QUESTION);
+
+      render(
+        <React.StrictMode>
+          <ThreadPage threadId="thread-1" />
+        </React.StrictMode>
+      );
+
+      // Ogni vista carica due volte: aspettare che tutti i caricamenti siano finiti, perché l'ultimo è
+      // quello che potrebbe cancellare le bolle.
+      await waitFor(() => expect(started).toBeGreaterThanOrEqual(4));
+      await waitFor(() => expect(resolved).toBe(started));
+      const view = within(screen.getByTestId(viewOnScreen));
+      expect(await view.findByText('Si tirano i dadi.')).toBeInTheDocument();
+      expect(view.getByText(QUESTION)).toBeInTheDocument();
+      expect(qa.asked).toHaveLength(1);
+    }
+  );
 });

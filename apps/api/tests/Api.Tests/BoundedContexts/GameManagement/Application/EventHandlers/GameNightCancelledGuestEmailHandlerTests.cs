@@ -6,6 +6,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.Observability;
+using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
@@ -29,14 +30,18 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
     private readonly Mock<IGameNightEventRepository> _nights = new();
     private readonly Mock<IUserRepository> _users = new();
     private readonly Mock<IGameNightEmailService> _email = new();
+    private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly FakeTimeProvider _time = new(Now);
     private readonly Mock<ILogger<GameNightCancelledGuestEmailHandler>> _logger = new();
 
     private GameNightCancelledGuestEmailHandler CreateHandler() =>
-        new(_invitations.Object, _nights.Object, _users.Object, _email.Object, _time, _logger.Object);
+        new(_invitations.Object, _nights.Object, _users.Object, _email.Object, _unitOfWork.Object, _time, _logger.Object);
 
     private static GameNightInvitation Invitation(
-        string email, GameNightInvitationStatus status, DateTimeOffset? expiresAt = null) =>
+        string email,
+        GameNightInvitationStatus status,
+        DateTimeOffset? expiresAt = null,
+        DateTimeOffset? noticeSentAt = null) =>
         GameNightInvitation.Reconstitute(
             id: Guid.NewGuid(),
             token: Guid.NewGuid().ToString("N")[..22],
@@ -47,7 +52,8 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
             respondedAt: null,
             respondedByUserId: null,
             createdAt: Now.AddDays(-2),
-            createdBy: Guid.NewGuid());
+            createdBy: Guid.NewGuid(),
+            cancellationNoticeSentAt: noticeSentAt);
 
     private static GameNightEvent Night(Guid organizerId, string title = "Friday Catan", string? zone = null) =>
         GameNightEvent.Create(
@@ -157,29 +163,90 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
     }
 
     [Fact]
-    public async Task Handle_TheSameAddressTwice_WritesOnce()
+    public async Task Handle_TheSameAddressTwice_WritesOnce_AndMarksBothInvitations()
     {
         // Arrange — an address that accepted and was invited again: one person, one email.
         var night = Night(Guid.NewGuid());
-        Given(night,
-            Invitation("guest@example.com", GameNightInvitationStatus.Accepted),
-            Invitation("Guest@Example.com", GameNightInvitationStatus.Pending));
+        var first = Invitation("guest@example.com", GameNightInvitationStatus.Accepted);
+        var second = Invitation("Guest@Example.com", GameNightInvitationStatus.Pending);
+        Given(night, first, second);
 
         // Act
         await CreateHandler().Handle(Cancelled(night), CancellationToken.None);
 
         // Assert
         _email.Invocations.Should().ContainSingle();
+        first.CancellationNoticeSentAt.Should().Be(Now);
+        second.CancellationNoticeSentAt.Should().Be(Now);
     }
 
     [Fact]
-    public async Task Handle_OneSendFails_TheOthersGoOut_NothingIsThrown_AndTheFailureIsCounted()
+    public async Task Handle_RightAfterTheEmail_MarksTheInvitationAndSaves_PerAddress()
     {
-        // Arrange — the first address is refused by the transport.
+        // Arrange
+        var night = Night(Guid.NewGuid());
+        var first = Invitation("first@example.com", GameNightInvitationStatus.Accepted);
+        var second = Invitation("second@example.com", GameNightInvitationStatus.Pending);
+        Given(night, first, second);
+
+        // Act
+        await CreateHandler().Handle(Cancelled(night), CancellationToken.None);
+
+        // Assert — each invitation is marked with the time of the send and written back; the save is per address, so
+        // a failure further down the list does not take the marks of the addresses already written to with it.
+        first.CancellationNoticeSentAt.Should().Be(Now);
+        second.CancellationNoticeSentAt.Should().Be(Now);
+        _invitations.Verify(
+            r => r.UpdateAsync(It.Is<GameNightInvitation>(i => i.CancellationNoticeSentAt == Now), It.IsAny<CancellationToken>()),
+            Times.Exactly(2));
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task Handle_TheEventIsDeliveredTwice_TheSecondDeliveryWritesNothing()
+    {
+        // Arrange — Hybrid dispatch publishes inline AND through the outbox seconds later; OutboxOnly redelivers a
+        // batch that failed to commit. The repository hands back the same invitations, now carrying their marks.
         var night = Night(Guid.NewGuid());
         Given(night,
             Invitation("first@example.com", GameNightInvitationStatus.Accepted),
-            Invitation("second@example.com", GameNightInvitationStatus.Accepted));
+            Invitation("second@example.com", GameNightInvitationStatus.Pending));
+        var handler = CreateHandler();
+
+        // Act
+        await handler.Handle(Cancelled(night), CancellationToken.None);
+        await handler.Handle(Cancelled(night), CancellationToken.None);
+
+        // Assert — SMTP has no remote dedup: two emails in all, one per address.
+        _email.Invocations.Should().HaveCount(2);
+        VerifySentTo("first@example.com", Times.Once());
+        VerifySentTo("second@example.com", Times.Once());
+    }
+
+    [Fact]
+    public async Task Handle_AnAddressAlreadyWrittenTo_IsNotWrittenToAgain_EvenThroughAnotherInvitation()
+    {
+        // Arrange — one invitation of the address carries the mark; the other does not. The person was told.
+        var night = Night(Guid.NewGuid());
+        Given(night,
+            Invitation("guest@example.com", GameNightInvitationStatus.Accepted, noticeSentAt: Now.AddMinutes(-1)),
+            Invitation("guest@example.com", GameNightInvitationStatus.Pending));
+
+        // Act
+        await CreateHandler().Handle(Cancelled(night), CancellationToken.None);
+
+        // Assert
+        _email.Invocations.Should().BeEmpty();
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_OneSendFails_TheOthersGoOut_NothingIsThrown_TheFailureIsCounted_AndLeavesNoMark()
+    {
+        // Arrange — the first address is refused by the transport.
+        var night = Night(Guid.NewGuid());
+        var refused = Invitation("first@example.com", GameNightInvitationStatus.Accepted);
+        Given(night, refused, Invitation("second@example.com", GameNightInvitationStatus.Accepted));
         _email
             .Setup(e => e.SendGameNightCancelledEmailAsync(
                 "first@example.com", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTimeOffset>(),
@@ -192,15 +259,41 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
 
         // Assert — MediatR runs the handlers of an event in sequence, so a throw would stop the ones after this
         // (and the in-app notification for the registered users). It is counted instead, under this handler's name.
+        // The refused address carries no mark: a later delivery tries it again.
         await act.Should().NotThrowAsync();
         VerifySentTo("second@example.com", Times.Once());
         failures.Count.Should().Be(1);
+        refused.CancellationNoticeSentAt.Should().BeNull();
     }
 
     [Fact]
-    public async Task Handle_TheRequestIsCancelled_CarriesOn_AndCountsNothing()
+    public async Task Handle_TheMarkCannotBeSaved_IsCounted_AndTheNextAddressIsStillWrittenTo()
     {
-        // Arrange — a cancellation is the caller leaving, not a failure to swallow.
+        // Arrange — the email went out, the save of its mark failed once.
+        var night = Night(Guid.NewGuid());
+        Given(night,
+            Invitation("first@example.com", GameNightInvitationStatus.Accepted),
+            Invitation("second@example.com", GameNightInvitationStatus.Accepted));
+        _unitOfWork
+            .SetupSequence(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("db down"))
+            .ReturnsAsync(1);
+        using var failures = new DispatchFailureCapture();
+
+        // Act
+        var act = () => CreateHandler().Handle(Cancelled(night), CancellationToken.None);
+
+        // Assert
+        await act.Should().NotThrowAsync();
+        failures.Count.Should().Be(1);
+        _email.Invocations.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task Handle_TheRequestIsCancelled_CarriesOn_AndCountsNothing_EvenWhenTheEmailServiceWrapsIt()
+    {
+        // Arrange — EmailService.SendRawEmailAsync wraps EVERY exception, a cancellation included, in an
+        // InvalidOperationException: the type says nothing, the token does. A caller that left is not a failure.
         var night = Night(Guid.NewGuid());
         Given(night, Invitation("guest@example.com", GameNightInvitationStatus.Accepted));
         using var cts = new CancellationTokenSource();
@@ -208,15 +301,46 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
             .Setup(e => e.SendGameNightCancelledEmailAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTimeOffset>(),
                 It.IsAny<GameNightEmailLocale>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new OperationCanceledException(cts.Token));
+            .Returns(() =>
+            {
+                cts.Cancel();
+                throw new InvalidOperationException("Failed to send raw email", new OperationCanceledException(cts.Token));
+            });
         using var failures = new DispatchFailureCapture();
+
+        // Act
+        var act = () => CreateHandler().Handle(Cancelled(night), cts.Token);
+
+        // Assert — it goes on to the caller, and the event is not counted as a failure of this handler.
+        await act.Should().ThrowAsync<Exception>();
+        failures.Count.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Handle_TheRequestIsCancelledBetweenTwoAddresses_StopsInsteadOfWritingToTheRest()
+    {
+        // Arrange
+        var night = Night(Guid.NewGuid());
+        Given(night,
+            Invitation("first@example.com", GameNightInvitationStatus.Accepted),
+            Invitation("second@example.com", GameNightInvitationStatus.Accepted));
+        using var cts = new CancellationTokenSource();
+        _email
+            .Setup(e => e.SendGameNightCancelledEmailAsync(
+                "first@example.com", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTimeOffset>(),
+                It.IsAny<GameNightEmailLocale>(), It.IsAny<CancellationToken>()))
+            .Returns(() =>
+            {
+                cts.Cancel();
+                return Task.CompletedTask;
+            });
 
         // Act
         var act = () => CreateHandler().Handle(Cancelled(night), cts.Token);
 
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
-        failures.Count.Should().Be(0);
+        VerifySentTo("second@example.com", Times.Never());
     }
 
     [Fact]

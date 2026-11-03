@@ -286,6 +286,22 @@ public sealed class GameNightEmailServiceTests
     }
 
     [Fact]
+    public async Task Cancelled_EncodesTheOrganizersNameAndTheTitle_WhereverTheyAppear()
+    {
+        // The organizer's name and the title come from the client: in the intro, in the heading and in the footer
+        // they must reach the HTML as text, never as markup.
+        await _sut.SendGameNightCancelledEmailAsync(
+            "guest@example.com", "Mario & <Co>", "Catan <b>x</b>", RomeNineOclock,
+            new GameNightEmailLocale("en", "Europe/Rome"));
+
+        _body.Should().Contain("Mario &amp; &lt;Co&gt; has cancelled the following game night.");
+        _body.Should().Contain("Catan &lt;b&gt;x&lt;/b&gt;");
+        _body.Should().Contain("because Mario &amp; &lt;Co&gt; invited you to a game night on MeepleAI.");
+        _body.Should().NotContain("<Co>");
+        _body.Should().NotContain("<b>x</b>");
+    }
+
+    [Fact]
     public async Task Cancelled_ToAGuest_PromisesNoAccountAndOffersNoLink()
     {
         // The address is not an account: no «you have a MeepleAI account», no preferences page, and no link at

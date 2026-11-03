@@ -3,10 +3,10 @@ using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
-using Api.Helpers;
 using Api.Infrastructure.DomainEventLog;
 using Api.Infrastructure.Security;
 using Api.Observability;
+using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 
 namespace Api.BoundedContexts.GameManagement.Application.EventHandlers;
@@ -25,17 +25,26 @@ namespace Api.BoundedContexts.GameManagement.Application.EventHandlers;
 /// them, the event has to carry the addresses: this handler would then see them all as withdrawn.
 /// </para>
 /// <para>
+/// <b>Delivered more than once, written once.</b> The event is queued in the outbox for every event type, not
+/// only the registered ones (<c>EventTypeRegistry</c> governs the event LOG): in <c>Hybrid</c> mode (the
+/// development setting) it is published inline AND by the outbox processor seconds later, and in
+/// <c>OutboxOnly</c> a batch that failed to commit is redelivered whole. SMTP has no remote dedup, so each
+/// invitation carries <see cref="GameNightInvitation.CancellationNoticeSentAt"/>, set and saved right after the
+/// email goes out (the precedent is <c>RsvpConfirmationSentAt</c>, #1940). A second delivery finds the mark and
+/// writes nothing. The narrow window left is two deliveries running at the very same moment; the mark is not a
+/// lock. Do not key on <c>EventId</c>: it does not survive the outbox (#4841).
+/// </para>
+/// <para>
 /// <b>Failures are swallowed on purpose, and counted</b> (the choice of #4839). MediatR runs the handlers of an
 /// event in sequence, so a throw would stop the ones after it — the in-app notification of the registered users
 /// among them. It is counted in <see cref="MeepleAiMetrics.DomainEventDispatchFailures"/> under this handler's
-/// name, because a handler that does not throw is invisible to the dispatcher that usually counts. A
-/// cancellation of the request is not a failure and goes on.
+/// name, because a handler that does not throw is invisible to the dispatcher that usually counts. A failed
+/// send leaves no mark, so a later delivery tries that address again.
 /// </para>
 /// <para>
-/// <b>No marker of what was sent.</b> The event is not in the outbox registry, so it is published once, in
-/// memory, after the save: there is no redelivery to guard against. If it ever moves to the outbox, the
-/// precedent for a per-invitation marker is <c>RsvpConfirmationSentAt</c> (#1940); it costs a column and a
-/// migration. Do not key on <c>EventId</c> until it survives the outbox (#4841).
+/// <b>A cancellation of the request is not a failure.</b> <c>EmailService.SendRawEmailAsync</c> wraps EVERY
+/// exception, cancellation included, in an <see cref="InvalidOperationException"/>, so the exception type says
+/// nothing: what says it is the token. While it is cancelled nothing is swallowed or counted.
 /// </para>
 /// </remarks>
 internal sealed class GameNightCancelledGuestEmailHandler : INotificationHandler<GameNightCancelledEvent>
@@ -47,6 +56,7 @@ internal sealed class GameNightCancelledGuestEmailHandler : INotificationHandler
     private readonly IGameNightEventRepository _nights;
     private readonly IUserRepository _users;
     private readonly IGameNightEmailService _emailService;
+    private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<GameNightCancelledGuestEmailHandler> _logger;
 
@@ -55,6 +65,7 @@ internal sealed class GameNightCancelledGuestEmailHandler : INotificationHandler
         IGameNightEventRepository nights,
         IUserRepository users,
         IGameNightEmailService emailService,
+        IUnitOfWork unitOfWork,
         TimeProvider timeProvider,
         ILogger<GameNightCancelledGuestEmailHandler> logger)
     {
@@ -62,6 +73,7 @@ internal sealed class GameNightCancelledGuestEmailHandler : INotificationHandler
         _nights = nights ?? throw new ArgumentNullException(nameof(nights));
         _users = users ?? throw new ArgumentNullException(nameof(users));
         _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
+        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -85,15 +97,16 @@ internal sealed class GameNightCancelledGuestEmailHandler : INotificationHandler
             }
 
             var utcNow = _timeProvider.GetUtcNow();
-            var addresses = (await _invitations
+            var pending = (await _invitations
                     .GetByGameNightIdAsync(notification.GameNightEventId, cancellationToken)
                     .ConfigureAwait(false))
                 .Where(i => IsExpectingTheNight(i, utcNow))
-                .Select(i => i.Email)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .GroupBy(i => i.Email, StringComparer.OrdinalIgnoreCase)
+                // An address already written to (any of its invitations carries the mark) is not written again.
+                .Where(g => g.All(i => i.CancellationNoticeSentAt is null))
                 .ToList();
 
-            if (addresses.Count == 0)
+            if (pending.Count == 0)
             {
                 return;
             }
@@ -104,20 +117,18 @@ internal sealed class GameNightCancelledGuestEmailHandler : INotificationHandler
             var organizerName = organizer?.DisplayName ?? FallbackOrganizerName;
             var locale = new GameNightEmailLocale(organizer?.Language, night.TimeZoneId);
 
-            foreach (var address in addresses)
+            foreach (var address in pending)
             {
-                await SendToAsync(notification, night, address, organizerName, locale, cancellationToken).ConfigureAwait(false);
+                cancellationToken.ThrowIfCancellationRequested();
+                await SendToAsync(notification, night, address.Key, address, organizerName, locale, cancellationToken)
+                    .ConfigureAwait(false);
             }
-        }
-        catch (OperationCanceledException)
-        {
-            // The caller leaving (a shutdown, an aborted request in the in-memory path) is not a failure to
-            // swallow or to count.
-            throw;
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         // SERVICE BOUNDARY: EVENT HANDLER PATTERN - the guests' email must not block the OTHER handlers of the event.
-        catch (Exception ex)
+        // While the token is cancelled nothing is caught: a cancellation is the caller leaving, and it can arrive
+        // wrapped (see the remarks), so the token is asked, not the exception type.
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             CountFailure(notification);
             _logger.LogError(ex,
@@ -131,6 +142,7 @@ internal sealed class GameNightCancelledGuestEmailHandler : INotificationHandler
         GameNightCancelledEvent notification,
         GameNightEvent night,
         string address,
+        IEnumerable<GameNightInvitation> invitationsOfTheAddress,
         string organizerName,
         GameNightEmailLocale locale,
         CancellationToken cancellationToken)
@@ -144,14 +156,21 @@ internal sealed class GameNightCancelledGuestEmailHandler : INotificationHandler
                 scheduledAt: night.ScheduledAt,
                 locale: locale,
                 ct: cancellationToken).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-            throw;
+
+            // Marked and saved per address, right after the email: a failure further on in the list does not
+            // take the marks of the addresses already written to with it.
+            var sentAt = _timeProvider.GetUtcNow();
+            foreach (var invitation in invitationsOfTheAddress)
+            {
+                invitation.MarkCancellationNoticeSent(sentAt);
+                await _invitations.UpdateAsync(invitation, cancellationToken).ConfigureAwait(false);
+            }
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         // One address refused by the transport must not keep the others from being written to.
-        catch (Exception ex)
+        catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
             CountFailure(notification);
             _logger.LogError(ex,

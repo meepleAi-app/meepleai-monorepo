@@ -61,6 +61,14 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
     /// </summary>
     public DateTimeOffset? RsvpConfirmationSentAt { get; private set; }
 
+    /// <summary>
+    /// When the «the night is cancelled» email was sent to this invitation (#4853). When non-null the
+    /// <c>GameNightCancelledGuestEmailHandler</c> MUST NOT write again: the event reaches handlers more than
+    /// once (Hybrid dispatch publishes inline AND through the outbox; OutboxOnly redelivers a batch that failed
+    /// to commit), and SMTP has no remote dedup.
+    /// </summary>
+    public DateTimeOffset? CancellationNoticeSentAt { get; private set; }
+
 #pragma warning disable CS8618
     private GameNightInvitation() : base() { } // EF Core
 #pragma warning restore CS8618
@@ -77,7 +85,8 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
         string? respondedByName,
         DateTimeOffset createdAt,
         Guid createdBy,
-        DateTimeOffset? rsvpConfirmationSentAt = null) : base(id)
+        DateTimeOffset? rsvpConfirmationSentAt = null,
+        DateTimeOffset? cancellationNoticeSentAt = null) : base(id)
     {
         Token = token;
         GameNightId = gameNightId;
@@ -90,6 +99,7 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
         CreatedAt = createdAt;
         CreatedBy = createdBy;
         RsvpConfirmationSentAt = rsvpConfirmationSentAt;
+        CancellationNoticeSentAt = cancellationNoticeSentAt;
     }
 
     /// <summary>
@@ -162,7 +172,8 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
         DateTimeOffset createdAt,
         Guid createdBy,
         string? respondedByName = null,
-        DateTimeOffset? rsvpConfirmationSentAt = null)
+        DateTimeOffset? rsvpConfirmationSentAt = null,
+        DateTimeOffset? cancellationNoticeSentAt = null)
     {
         return new GameNightInvitation(
             id: id,
@@ -176,7 +187,8 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
             respondedByName: respondedByName,
             createdAt: createdAt,
             createdBy: createdBy,
-            rsvpConfirmationSentAt: rsvpConfirmationSentAt);
+            rsvpConfirmationSentAt: rsvpConfirmationSentAt,
+            cancellationNoticeSentAt: cancellationNoticeSentAt);
     }
 
     /// <summary>
@@ -186,6 +198,14 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
     public void MarkConfirmationSent(DateTimeOffset utcNow)
     {
         RsvpConfirmationSentAt = utcNow;
+    }
+
+    /// <summary>
+    /// Records that the «the night is cancelled» email has been sent to this invitation (#4853).
+    /// </summary>
+    public void MarkCancellationNoticeSent(DateTimeOffset utcNow)
+    {
+        CancellationNoticeSentAt = utcNow;
     }
 
     /// <summary>

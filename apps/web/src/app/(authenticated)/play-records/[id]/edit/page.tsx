@@ -40,6 +40,7 @@ import {
   UpdatePlayRecordRequestSchema,
 } from '@/lib/api/schemas/play-records.schemas';
 import { usePlayRecord, useUpdateRecord, useDeleteRecord } from '@/lib/domain-hooks/usePlayRecords';
+import { sendIfChanged } from '@/lib/play-records/sendIfChanged';
 import { usePlayRecordsStore } from '@/lib/stores/play-records-store';
 
 export default function EditPlayRecordPage() {
@@ -87,10 +88,14 @@ export default function EditPlayRecordPage() {
   const submitUpdate = async (data: SessionCreateFormData, xmin?: number) => {
     // The form keeps `sessionDate` as a `Date`, the request wants an ISO string. `parse` takes
     // `unknown`, so it is `satisfies` that makes a `Date` here a compile error (#4791).
+    // #4798: the form was drawn with `?? ''`, so a field stored as `null` and left alone comes back as `''`, which
+    // the server would store. A field the user did not touch is compared with the record the form was drawn from
+    // (the same one `xmin` is taken from) and left out of the request.
+    const drawnFrom = base ?? record;
     const validated = UpdatePlayRecordRequestSchema.parse({
       sessionDate: data.sessionDate.toISOString(),
-      notes: data.notes,
-      location: data.location,
+      notes: sendIfChanged(data.notes, drawnFrom?.notes),
+      location: sendIfChanged(data.location, drawnFrom?.location),
       xmin,
     } satisfies UpdatePlayRecordRequest);
     const result = await updateMutation.mutateAsync(validated);

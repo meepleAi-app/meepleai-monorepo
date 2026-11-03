@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/primitives/label';
 import { Textarea } from '@/components/ui/primitives/textarea';
 import type { CreateGameNightInput } from '@/lib/api/schemas/game-nights.schemas';
 import { getBrowserTimeZone } from '@/lib/utils/browserTimeZone';
-import { isoToDatetimeLocalValue } from '@/lib/utils/datetimeLocal';
+import { datetimeLocalValueToIso, isoToDatetimeLocalValue } from '@/lib/utils/datetimeLocal';
 
 interface GameNightFormProps {
   defaultValues?: Partial<CreateGameNightInput>;
@@ -37,18 +37,26 @@ export function GameNightForm({
   const [scheduledAt, setScheduledAt] = useState(
     isoToDatetimeLocalValue(defaultValues?.scheduledAt)
   );
+  const [scheduledAtInvalid, setScheduledAtInvalid] = useState(false);
   const [location, setLocation] = useState(defaultValues?.location ?? '');
   const [maxPlayers, setMaxPlayers] = useState<string>(defaultValues?.maxPlayers?.toString() ?? '');
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // #4840: the field is `required` and lets the year run past four digits, which the native check accepts and
+    // `new Date(...)` does not read: converting the raw string threw here, with nothing sent and nothing shown.
+    const scheduledIso = datetimeLocalValueToIso(scheduledAt);
+    if (scheduledIso === null) {
+      setScheduledAtInvalid(true);
+      return;
+    }
     // #4754: the zone the time was typed in. Sent with every save so that moving the time does not leave the
     // night with the zone of an earlier edit; left out when the browser cannot name one (the server then keeps
     // the stored zone).
     const timeZoneId = getBrowserTimeZone();
     const data: CreateGameNightInput = {
       title: title.trim(),
-      scheduledAt: new Date(scheduledAt).toISOString(),
+      scheduledAt: scheduledIso,
       ...(timeZoneId && { timeZoneId }),
       ...(description.trim() && { description: description.trim() }),
       ...(location.trim() && { location: location.trim() }),
@@ -99,11 +107,20 @@ export function GameNightForm({
                 id="scheduledAt"
                 type="datetime-local"
                 value={scheduledAt}
-                onChange={e => setScheduledAt(e.target.value)}
+                onChange={e => {
+                  setScheduledAt(e.target.value);
+                  setScheduledAtInvalid(false);
+                }}
                 className="pl-10"
                 required
+                aria-invalid={scheduledAtInvalid || undefined}
               />
             </div>
+            {scheduledAtInvalid && (
+              <p role="alert" className="text-sm text-destructive">
+                La data non è valida.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">

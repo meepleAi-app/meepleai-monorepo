@@ -4,6 +4,8 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.EventHandlers;
+using Api.SharedKernel.Application.Services;
+using Api.SharedKernel.Domain.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -21,14 +23,17 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
     private readonly MeepleAiDbContext _dbContext;
     private readonly IPlayRecordRepository _playRecordRepository;
     private readonly TimeProvider _timeProvider;
+    private readonly IDomainEventCollector _eventCollector;
 
     public LiveSessionCompletedEventHandler(
         MeepleAiDbContext dbContext,
         ILogger<LiveSessionCompletedEventHandler> logger,
         TimeProvider timeProvider,
-        IPlayRecordRepository playRecordRepository)
+        IPlayRecordRepository playRecordRepository,
+        IDomainEventCollector eventCollector)
         : base(dbContext, logger)
     {
+        _eventCollector = eventCollector ?? throw new ArgumentNullException(nameof(eventCollector));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _playRecordRepository = playRecordRepository ?? throw new ArgumentNullException(nameof(playRecordRepository));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
@@ -38,10 +43,11 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
         LiveSessionCompletedEvent domainEvent,
         CancellationToken cancellationToken)
     {
-        // The context is SHARED with whoever delivers the event (the outbox processor saves it once more at the
-        // end of its batch), so what this handler stages and fails to save must not stay staged: remember what
-        // the caller had staged, to forget only the rest.
+        // The context (and the event collector next to it) is SHARED with whoever delivers the event: the outbox
+        // processor saves it once more at the end of its batch. What this handler stages and fails to save must
+        // not stay staged, so remember what the caller had there, to forget only the rest.
         var stagedBefore = StagedInserts();
+        var queuedBefore = _eventCollector.PeekEvents() ?? Array.Empty<IDomainEvent>();
 
         try
         {
@@ -118,7 +124,7 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
             // instant both pass the read above). The rows that were staged stay Added after a failed
             // save, and the next SaveChangesAsync on this context would send them again.
             // Log at Information — legitimate replays are not failures.
-            ForgetInsertsStagedSince(stagedBefore);
+            ForgetWhatWasStaged(stagedBefore, queuedBefore);
             Logger.LogInformation(
                 ex,
                 "Skipping duplicate PlayRecord for LiveSession {SessionId}: EventId={EventId} (already recorded)",
@@ -131,7 +137,7 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
         {
             // Swallowed so the completion is not blocked, which only holds if the failed insert is not
             // left staged for the caller's next save to throw again.
-            ForgetInsertsStagedSince(stagedBefore);
+            ForgetWhatWasStaged(stagedBefore, queuedBefore);
             Logger.LogError(ex,
                 "Failed to generate PlayRecord from completed LiveSession {SessionId}",
                 domainEvent.SessionId);
@@ -145,13 +151,25 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
             .Select(e => e.Entity)
             .ToHashSet(ReferenceEqualityComparer.Instance);
 
-    private void ForgetInsertsStagedSince(HashSet<object> stagedBefore)
+    /// <summary>
+    /// Puts the shared context and the event collector back as the caller left them. The rows go back to
+    /// <c>Detached</c>; and the collector is restored too, because the repository queued the record's events
+    /// when it was asked to add it, and they stay queued after a failed save: the next save would write them
+    /// (and an outbox row each) for a record that was never written.
+    /// </summary>
+    private void ForgetWhatWasStaged(HashSet<object> stagedBefore, IReadOnlyList<IDomainEvent> queuedBefore)
     {
         foreach (var entry in _dbContext.ChangeTracker.Entries()
                      .Where(e => e.State == EntityState.Added && !stagedBefore.Contains(e.Entity))
                      .ToList())
         {
             entry.State = EntityState.Detached;
+        }
+
+        _eventCollector.Clear();
+        foreach (var queued in queuedBefore)
+        {
+            _eventCollector.Collect(queued);
         }
     }
 

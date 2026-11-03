@@ -8,6 +8,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.GameManagement;
+using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using FluentAssertions;
 using MediatR;
@@ -351,7 +352,8 @@ public sealed class PlayRecordChildRowsTests(PlayRecordMigratedDatabase database
                 scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>(),
                 NullLogger<LiveSessionCompletedEventHandler>.Instance,
                 database.Time,
-                scope.ServiceProvider.GetRequiredService<IPlayRecordRepository>());
+                scope.ServiceProvider.GetRequiredService<IPlayRecordRepository>(),
+                scope.ServiceProvider.GetRequiredService<IDomainEventCollector>());
             await handler.Handle(liveEvent, Ct);
         }
 

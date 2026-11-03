@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Infrastructure.DomainEventOutbox;
+using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using System.Text.Json;
@@ -44,7 +45,7 @@ public sealed class LiveSessionCompletedEventHandlerTests
         dbContext ??= TestDbContextFactory.CreateInMemoryDbContext();
         logger ??= new Mock<ILogger<LiveSessionCompletedEventHandler>>();
         return new LiveSessionCompletedEventHandler(
-            dbContext, logger.Object, _timeProvider, _playRecordRepository.Object);
+            dbContext, logger.Object, _timeProvider, _playRecordRepository.Object, new DomainEventCollector());
     }
 
     private LiveSessionCompletedEvent CreateCompletedEvent(
@@ -337,7 +338,7 @@ public sealed class LiveSessionCompletedEventHandlerTests
         // Act & Assert
         var act = () =>
             new LiveSessionCompletedEventHandler(
-                null!, logger.Object, _timeProvider, _playRecordRepository.Object);
+                null!, logger.Object, _timeProvider, _playRecordRepository.Object, new DomainEventCollector());
         act.Should().Throw<ArgumentNullException>();
     }
 
@@ -351,7 +352,7 @@ public sealed class LiveSessionCompletedEventHandlerTests
         // Act & Assert
         var act = () =>
             new LiveSessionCompletedEventHandler(
-                dbContext, logger.Object, null!, _playRecordRepository.Object);
+                dbContext, logger.Object, null!, _playRecordRepository.Object, new DomainEventCollector());
         act.Should().Throw<ArgumentNullException>();
     }
 
@@ -365,7 +366,21 @@ public sealed class LiveSessionCompletedEventHandlerTests
         // Act & Assert
         var act = () =>
             new LiveSessionCompletedEventHandler(
-                dbContext, logger.Object, _timeProvider, null!);
+                dbContext, logger.Object, _timeProvider, null!, new DomainEventCollector());
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Constructor_NullEventCollector_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = new Mock<ILogger<LiveSessionCompletedEventHandler>>();
+
+        // Act & Assert
+        var act = () =>
+            new LiveSessionCompletedEventHandler(
+                dbContext, logger.Object, _timeProvider, _playRecordRepository.Object, null!);
         act.Should().Throw<ArgumentNullException>();
     }
 }

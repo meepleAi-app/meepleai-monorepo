@@ -412,7 +412,7 @@ describe('EditPlayRecordPage', () => {
     // a value: sending the `''` turned the stored `null` into `''`. What the user did not touch is not sent.
     const saveWith = async (
       record: Record<string, unknown>,
-      typed: { notes: string; location: string }
+      changed: { notes?: string; location?: string } = {}
     ): Promise<Record<string, unknown>> => {
       const mutateAsync = vi.fn(async (_request: Record<string, unknown>) => ({
         id: 'record-123',
@@ -423,7 +423,6 @@ describe('EditPlayRecordPage', () => {
         isLoading: false,
         error: null,
       });
-      submission.current = { ...FORM_SUBMISSION, ...typed };
       const user = userEvent.setup();
 
       render(
@@ -432,6 +431,15 @@ describe('EditPlayRecordPage', () => {
         </QueryClientProvider>
       );
       const form = await screen.findByTestId('session-form');
+      // An untouched form hands over what the PAGE drew it with (`?? ''` for a `null`), so that premise comes
+      // from the page and is not written here; only what the user changed differs.
+      const drawn = capturedFormProps.initialValues as { notes?: string; location?: string };
+      submission.current = {
+        ...FORM_SUBMISSION,
+        notes: drawn.notes,
+        location: drawn.location,
+        ...changed,
+      };
       await user.click(form.querySelector('button[type="submit"]')!);
       await waitFor(() => expect(mockRouterPush).toHaveBeenCalledWith('/play-records/record-123'));
 
@@ -441,16 +449,13 @@ describe('EditPlayRecordPage', () => {
     };
 
     it('does not send notes or location that were null and are still empty', async () => {
-      const request = await saveWith({ notes: null, location: null }, { notes: '', location: '' });
+      const request = await saveWith({ notes: null, location: null });
 
       expect(Object.keys(request).sort()).toEqual(['sessionDate', 'xmin']);
     });
 
     it('sends only the field that was changed', async () => {
-      const request = await saveWith(
-        { notes: 'gg', location: 'Padova' },
-        { notes: 'rivincita', location: 'Padova' }
-      );
+      const request = await saveWith({ notes: 'gg', location: 'Padova' }, { notes: 'rivincita' });
 
       expect(request).toMatchObject({ notes: 'rivincita' });
       expect(request).not.toHaveProperty('location');
@@ -458,10 +463,7 @@ describe('EditPlayRecordPage', () => {
 
     it('sends the empty text for a field that was filled and has been cleared', async () => {
       // The other direction: not sending what was not touched must not take away the way to empty a field.
-      const request = await saveWith(
-        { notes: 'gg', location: 'Padova' },
-        { notes: '', location: 'Padova' }
-      );
+      const request = await saveWith({ notes: 'gg', location: 'Padova' }, { notes: '' });
 
       expect(request).toMatchObject({ notes: '' });
       expect(request).not.toHaveProperty('location');
@@ -786,6 +788,46 @@ describe('EditPlayRecordPage', () => {
       location: 'Test location',
       xmin: 9,
     });
+  });
+
+  it('#4798: «sovrascrivi» does not send a field the user did not touch, so the other edit of it survives', async () => {
+    // A conflict, then «Sovrascrivi». The user changed `notes` and left `location` as drawn; somebody else saved a
+    // new `location` in between. Re-sending the old `location` would undo their edit on a field the user never
+    // meant to change. The comparison is with the record the form was drawn from, not with the fresh one.
+    const user = userEvent.setup();
+    const mutateAsync = vi
+      .fn(async (_request: Record<string, unknown>) => ({ id: 'record-123' }))
+      .mockRejectedValueOnce(
+        new UpdatePlayRecordError(
+          'Modifica concorrente rilevata.',
+          'conflict',
+          409,
+          'concurrent-edit'
+        )
+      );
+    mockUseUpdateRecord.mockReturnValue({ mutateAsync, isPending: false });
+    mockGetRecord.mockResolvedValue({ ...playRecordFixture, xmin: 9, location: 'Verona (di B)' });
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <EditPlayRecordPage />
+      </QueryClientProvider>
+    );
+    const form = await screen.findByTestId('session-form');
+    const drawn = capturedFormProps.initialValues as { notes?: string; location?: string };
+    submission.current = { ...FORM_SUBMISSION, notes: 'rivincita', location: drawn.location };
+    await user.click(form.querySelector('button[type="submit"]')!);
+    await user.click(
+      await screen.findByRole('button', { name: playRecordsEditMessages['conflict.overwrite'] })
+    );
+
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(2));
+    const second = JSON.parse(JSON.stringify(mutateAsync.mock.calls[1][0])) as Record<
+      string,
+      unknown
+    >;
+    expect(second).toMatchObject({ notes: 'rivincita', xmin: 9 });
+    expect(second).not.toHaveProperty('location');
   });
 
   // #4801: the form takes its values when it mounts, so what «Salva» is checked against has to be the

@@ -25,6 +25,7 @@ import { ActiveSessionsCard } from '../two-factor/ActiveSessionsCard';
 import { BackupCodesView } from '../two-factor/BackupCodesView';
 import { OTPInput6Slot } from '../two-factor/OTPInput6Slot';
 import { TwoFactorDisableDialog } from '../two-factor/TwoFactorDisableDialog';
+import { TwoFactorBottomSheet } from '../two-factor/TwoFactorBottomSheet';
 import { TwoFactorSetupModal } from '../two-factor/TwoFactorSetupModal';
 import { TwoFactorStatusCard } from '../two-factor/TwoFactorStatusCard';
 
@@ -43,6 +44,9 @@ vi.mock('@/lib/api', () => ({
 }));
 
 // Words that exist in English and not in Italian. Not a dictionary: a tripwire for a string left behind.
+// Known gap, outside this area: the dialog primitive (`components/ui/overlays/dialog.tsx`) labels its own
+// close button "Close dialog" / "Close" in English for every dialog of the app, so the words are not in the
+// list below — adding them would fail on a string this change does not own.
 const ENGLISH_WORD =
   /\b(the|your|you|please|this|for|and|with|are|is|if|not|can|now|to|of|our|we|enable|enabled|disable|continue|back|done|cancel|copy|download|revoke|active|unknown|device|current|digit|verification|recovery|scan|enter|ago|sign out|all other)\b/i;
 
@@ -53,12 +57,15 @@ const SETUP = {
 };
 
 const MINUTE = 60_000;
-const SESSIONS = [
-  session('s1', 'Mozilla/5.0 (Macintosh) Chrome/124', '1.2.3.4', Date.now() - MINUTE),
-  session('s2', 'iPhone iOS 17', '5.6.7.8', Date.now() - 3 * 60 * MINUTE),
-  session('s4', 'Firefox/120.0', '9.9.9.9', Date.now() - 2 * 24 * 60 * MINUTE),
-  session('s3', null, null, null),
-];
+// Built per test, not once at import: the relative times are counted from "now", at one-minute resolution.
+function sessions() {
+  return [
+    session('s1', 'Mozilla/5.0 (Macintosh) Chrome/124', '1.2.3.4', Date.now() - MINUTE),
+    session('s2', 'iPhone iOS 17', '5.6.7.8', Date.now() - 3 * 60 * MINUTE),
+    session('s4', 'Firefox/120.0', '9.9.9.9', Date.now() - 2 * 24 * 60 * MINUTE),
+    session('s3', null, null, null),
+  ];
+}
 
 function session(
   id: string,
@@ -104,7 +111,7 @@ beforeEach(() => {
     value: { writeText: vi.fn().mockResolvedValue(undefined) },
     configurable: true,
   });
-  vi.mocked(api.auth.getUserSessions).mockResolvedValue(SESSIONS);
+  vi.mocked(api.auth.getUserSessions).mockResolvedValue(sessions());
   vi.mocked(api.auth.getTwoFactorStatus).mockResolvedValue({
     isEnabled: false,
     enabledAt: null,
@@ -114,7 +121,8 @@ beforeEach(() => {
 
 describe('status card', () => {
   const off = { isEnabled: false, enabledAt: null, unusedBackupCodesCount: 0 };
-  // Midday UTC: the same calendar day in every time zone.
+  // Mid-month at midday UTC: month and year are the same in every time zone; the day can shift by one in the
+  // extreme zones, so the tests do not pin it.
   const on = { isEnabled: true, enabledAt: '2026-01-15T12:00:00Z', unusedBackupCodesCount: 10 };
 
   it('speaks Italian when it is off', () => {
@@ -138,7 +146,7 @@ describe('status card', () => {
       wrapper: ItalianIntl,
     });
 
-    expect(screen.getByTestId('2fa-status')).toHaveTextContent(/Abilitata · 15 gen 2026/);
+    expect(screen.getByTestId('2fa-status')).toHaveTextContent(/Abilitata · \d{2} gen 2026/);
     expect(screen.getByTestId('disable-2fa')).toHaveTextContent('Disabilita 2FA');
     expect(screen.getByRole('button', { name: 'Rigenera i codici di backup' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Rigenera i codici di backup' })).toHaveAttribute(
@@ -166,7 +174,7 @@ describe('status card', () => {
       wrapper: EnglishIntl,
     });
 
-    expect(screen.getByTestId('2fa-status')).toHaveTextContent(/Enabled · Jan 15, 2026/);
+    expect(screen.getByTestId('2fa-status')).toHaveTextContent(/Enabled · Jan \d{2}, 2026/);
     expect(screen.getByTestId('disable-2fa')).toHaveTextContent('Disable 2FA');
   });
 });
@@ -185,7 +193,7 @@ describe('disable dialog', () => {
       '123456 oppure ABCD-2345'
     );
     expect(screen.getByPlaceholderText('La password del tuo account')).toBeInTheDocument();
-    expect(screen.getByText(/ognuno vale una sola volta/)).toBeInTheDocument();
+    expect(screen.getByText(/ciascuno può essere usato una sola volta/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Annulla' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Disabilita 2FA' })).toBeDisabled();
     expectNoEnglishLeft();
@@ -272,11 +280,37 @@ describe('setup wizard', () => {
     expect(
       screen.getByLabelText('Ho salvato i codici di backup in un posto sicuro')
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Fine' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Fatto' })).toBeDisabled();
     expectNoEnglishLeft();
   });
 
-  it('says a refused code in Italian', async () => {
+  it('speaks Italian in the mobile sheet too', () => {
+    render(inQueryClient(<TwoFactorBottomSheet open setupData={SETUP} onClose={() => {}} />), {
+      wrapper: ItalianIntl,
+    });
+
+    expect(screen.getByText("Configura l'autenticazione a due fattori")).toBeInTheDocument();
+    expect(screen.getByText(/Completa tutti e tre i passaggi/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Continua' })).toBeInTheDocument();
+  });
+
+  it('shows the text the server sends when it refuses a code, as it is: that text is not in the catalogue', async () => {
+    // What the backend really answers to a wrong code: HTTP 400 with `{ error: "<text>" }` — the text can
+    // also be a lock-out notice — so the interface cannot replace it with a sentence of its own.
+    vi.mocked(api.auth.enable2FA).mockRejectedValue(
+      new ApiError({ message: 'Invalid verification code', statusCode: 400, endpoint: '/x' })
+    );
+    renderWizard(ItalianIntl);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Continua' }));
+    fireEvent.paste(screen.getAllByRole('textbox')[0], {
+      clipboardData: { getData: () => '000000' },
+    });
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Invalid verification code');
+  });
+
+  it('says a refused code in Italian when the answer carries no text', async () => {
     vi.mocked(api.auth.enable2FA).mockResolvedValue({
       success: false,
       backupCodes: null,
@@ -431,7 +465,7 @@ describe('active sessions', () => {
     vi.mocked(api.auth.getUserSessions).mockRejectedValue(new Error('network'));
 
     const { unmount } = render(inQueryClient(<ActiveSessionsCard />), { wrapper: ItalianIntl });
-    expect(await screen.findByText('Errore caricamento sessioni.')).toBeInTheDocument();
+    expect(await screen.findByText('Impossibile caricare le sessioni.')).toBeInTheDocument();
     unmount();
 
     render(inQueryClient(<ActiveSessionsCard />), { wrapper: EnglishIntl });

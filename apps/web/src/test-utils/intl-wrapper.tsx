@@ -37,5 +37,6 @@ export function ItalianIntl({ children }: WrapperProps): React.JSX.Element {
  */
 export const renderInEnglish = (
   ui: ReactElement,
-  options?: Omit<RenderOptions, 'queries'>
+  // No `wrapper`: one passed here would replace the provider instead of composing with it.
+  options?: Omit<RenderOptions, 'queries' | 'wrapper'>
 ): RenderResult => render(ui, { wrapper: EnglishIntl, ...options });

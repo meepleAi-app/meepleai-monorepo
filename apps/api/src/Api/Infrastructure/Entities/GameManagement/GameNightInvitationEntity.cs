@@ -75,4 +75,11 @@ public class GameNightInvitationEntity
     /// </summary>
     [Column("rsvp_confirmation_sent_at")]
     public DateTimeOffset? RsvpConfirmationSentAt { get; set; }
+
+    /// <summary>
+    /// #4853: timestamp of the «the night is cancelled» email sent to this invitation.
+    /// Non-null = the handler MUST NOT write again when the event is delivered a second time.
+    /// </summary>
+    [Column("cancellation_notice_sent_at")]
+    public DateTimeOffset? CancellationNoticeSentAt { get; set; }
 }

@@ -128,7 +128,6 @@ internal sealed class GameNightEmailService : IGameNightEmailService
         string organizerName,
         string title,
         DateTimeOffset scheduledAt,
-        string unsubscribeUrl,
         GameNightEmailLocale locale,
         CancellationToken ct = default)
     {
@@ -148,7 +147,7 @@ internal sealed class GameNightEmailService : IGameNightEmailService
             </div>
 
             <p style="color:#6b7280;font-size:14px;text-align:center;">{texts.CancelledClosing}</p>
-        """, MemberFooter(texts, unsubscribeUrl), texts);
+        """, GuestFooter(texts.CancelledGuestFooter(Encode(organizerName))), texts);
 
         await _emailService.SendRawEmailAsync(toEmail, subject, body, ct).ConfigureAwait(false);
         _logger.LogInformation("Game night cancelled email sent to {Email} for event {Title}", DataMasking.MaskEmail(toEmail), LogSanitizer.Sanitize(title));

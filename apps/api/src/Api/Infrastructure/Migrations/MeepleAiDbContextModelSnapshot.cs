@@ -5718,6 +5718,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<DateTimeOffset?>("CancellationNoticeSentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancellation_notice_sent_at");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");

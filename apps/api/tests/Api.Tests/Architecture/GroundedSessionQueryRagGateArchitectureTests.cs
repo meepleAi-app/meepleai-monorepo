@@ -67,12 +67,9 @@ public sealed class GroundedSessionQueryRagGateArchitectureTests
     {
         ["BoundedContexts/GameManagement/Application/Commands/GameNight/SubmitRuleDisputeCommand.cs"] = null,
 
-        ["BoundedContexts/SessionTracking/Application/Commands/ChatCommandHandlers.cs"] =
-            "NOT GATED: the chat of a session sends the query with the tier of the participant who writes and never " +
-            "asks the ownership gate (no call to it in the file). It sits behind the feature flag " +
-            "rag.live-image-retrieval, off by default. Inventoried so that it stays visible: it is a gap in ADR-096 " +
-            "to close separately — whether the gate is checked upstream, by whoever opens the session, is not " +
-            "something this test can see.",
+        // #4776: the chat of a session asks the gate for the user behind the participant who writes, before the
+        // retrieval, outside the fail-open try that wraps it.
+        ["BoundedContexts/SessionTracking/Application/Commands/ChatCommandHandlers.cs"] = null,
     };
 
     // -----------------------------------------------------------------------
@@ -111,6 +108,36 @@ public sealed class GroundedSessionQueryRagGateArchitectureTests
                 $"{file} must reach the gate through {SharedStep}, the single point the answering paths share, " +
                 "and not through a copy of the check");
         }
+    }
+
+    /// <summary>
+    /// #4776 — the gate of the session chat is judged on the authenticated CALLER, and only the endpoint knows who
+    /// that is: <c>senderId</c> names the participant the message is written as, the client picks it, and the id of
+    /// every participant is readable at the table. The handler cannot tell a command built from the principal from
+    /// one built from the body, so this reads the endpoint. A handler test proves the gate follows
+    /// <c>RequestedBy</c>; this proves <c>RequestedBy</c> is the principal's.
+    /// </summary>
+    /// <remarks>
+    /// Limit, admitted: a source scan sees that the two lines are in the endpoint, not that the send uses the
+    /// command they build. The send is a single statement a few lines below; an endpoint test on a running host
+    /// is the stronger proof and needs Docker (L1), which this suite does not.
+    /// </remarks>
+    [Fact]
+    public void TheAskAgentEndpoint_TakesTheCallerFromThePrincipal_AndSendsTheCommandWithIt()
+    {
+        var apiSrc = LocateApiSrc();
+        var text = File.ReadAllText(PathOf(apiSrc, "Routing/SessionTracking/SessionPlayerActionsEndpoints.cs"));
+        var start = text.IndexOf("/chat/ask-agent", StringComparison.Ordinal);
+        start.Should().BeGreaterThan(-1, "the endpoint of the session chat moved: update this test with it");
+        var end = text.IndexOf(".WithName(\"AskSessionAgent\")", start, StringComparison.Ordinal);
+        end.Should().BeGreaterThan(start);
+        var endpoint = text[start..end];
+
+        SourceScanner.FindCodeOccurrences(endpoint, "User.GetUserId()").Should().NotBeEmpty(
+            "the caller of ask-agent comes from the principal: without it the gate is judged on a participant " +
+            "the client chose, and anyone can borrow the ownership of whoever they name");
+        SourceScanner.FindCodeOccurrences(endpoint, "RequestedBy = callerId").Should().NotBeEmpty(
+            "the command that goes to the handler must carry the principal's id over whatever the body said");
     }
 
     [Fact]

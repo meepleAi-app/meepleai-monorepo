@@ -2,6 +2,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Services;
 using MediatR;
 using Api.BoundedContexts.KnowledgeBase.Application.Configuration;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
@@ -123,8 +124,11 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
     private readonly ILlmService _llmService;
     private readonly IImagePreprocessor _imagePreprocessor;
     private readonly IGameStateExtractor _gameStateExtractor;
+    // #4776 (ADR-096): required, unlike the flag below — a gate that is null-safe is a gate that a
+    // construction can leave out, and then the retrieval below starts for anyone.
+    private readonly IAnswerPreconditions _answerPreconditions;
     private readonly ILogger<AskSessionAgentCommandHandler> _logger;
-    // #3390 Slice 2: optional (null-safe) so existing 7-arg test construction keeps compiling —
+    // #3390 Slice 2: optional (null-safe) so existing test constructions keep compiling —
     // null feature flags means the flag is treated as OFF (current multimodal-only behavior).
     private readonly IFeatureFlagService? _featureFlags;
     private readonly IOptions<SessionAgentOptions> _sessionAgentOptions;
@@ -136,6 +140,7 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
         ILlmService llmService,
         IImagePreprocessor imagePreprocessor,
         IGameStateExtractor gameStateExtractor,
+        IAnswerPreconditions answerPreconditions,
         ILogger<AskSessionAgentCommandHandler> logger,
         IFeatureFlagService? featureFlags = null,
         IOptions<SessionAgentOptions>? sessionAgentOptions = null)
@@ -146,6 +151,7 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
         _llmService = llmService;
         _imagePreprocessor = imagePreprocessor;
         _gameStateExtractor = gameStateExtractor;
+        _answerPreconditions = answerPreconditions ?? throw new ArgumentNullException(nameof(answerPreconditions));
         _logger = logger;
         _featureFlags = featureFlags;
         _sessionAgentOptions = sessionAgentOptions ?? Options.Create(new SessionAgentOptions());
@@ -219,10 +225,25 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
             && !string.IsNullOrWhiteSpace(retrievalQuery)
             && await _featureFlags.IsEnabledAsync(FeatureFlagConstants.LiveImageRetrievalKey).ConfigureAwait(false);
 
+        // #4776 (ADR-096): the ownership gate protects the RETRIEVAL on the rulebook, and the copyright tier
+        // below protects only the ANSWER — a tier does nothing for passages that already went into the prompt.
+        // It is asked for the AUTHENTICATED CALLER, not for the user behind SenderId: the participant is picked by
+        // the client, its id is readable by everyone at the table, and a guest has no account — judged on it, the
+        // gate would let anyone borrow the ownership of whoever they name. No caller (Guid.Empty) is nobody: denied.
+        // The same identity sets the copyright tier below. The check is OUTSIDE the try below, which degrades
+        // fail-open on any error: inside it, "could not check" would read as "allowed". A denial is not an error
+        // for the chat: the question stays, no retrieval starts, and the answer is the model's alone, which
+        // GroundingStatus.Ungrounded already says.
+        var callerId = request.RequestedBy;
+        if (liveImageRetrievalEnabled
+            && !await MayConsultTheRulebookAsync(request.SessionId, session.GameId, callerId, cancellationToken).ConfigureAwait(false))
+        {
+            liveImageRetrievalEnabled = false;
+        }
+
         var groundedProduced = false;
         if (liveImageRetrievalEnabled)
         {
-            var userId = session.Participants.FirstOrDefault(p => p.Id == request.SenderId)?.UserId ?? Guid.Empty;
             using var retrievalCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             retrievalCts.CancelAfter(TimeSpan.FromMilliseconds(_sessionAgentOptions.Value.RetrievalBudgetMs));
             try
@@ -231,7 +252,7 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
                 // (DDD Customer/Supplier), never by injecting a KB service. Vision stays as state
                 // context (gameState); the turn text is the retrieval query.
                 var grounded = await _mediator.Send(
-                    new AskGroundedSessionQuery(session.GameId, retrievalQuery, gameState, userId),
+                    new AskGroundedSessionQuery(session.GameId, retrievalQuery, gameState, callerId),
                     retrievalCts.Token).ConfigureAwait(false);
 
                 if (hasImages && grounded.Citations.Count == 0)
@@ -399,6 +420,34 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
         }
 
         return new AskSessionAgentResult(agentMessage.Id, answer, agentType, agentMessage.Confidence, citationsJson, groundingStatus);
+    }
+
+    /// <summary>
+    /// Whether the user behind the participant may consult the rulebook of <paramref name="gameId"/> — the
+    /// single gate every answering path shares (<see cref="IAnswerPreconditions"/>, ADR-096). Only a denial
+    /// (<see cref="RagOwnershipRequiredException"/>) answers "no"; any other failure propagates, so that an
+    /// access check that could not be made never reads as a yes.
+    /// </summary>
+    private async Task<bool> MayConsultTheRulebookAsync(
+        Guid sessionId, Guid gameId, Guid userId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // No role: the command does not carry one, and an unrecognized role counts as a plain user.
+            await _answerPreconditions
+                .EnsureCanAskAboutGameAsync(userId, null, gameId, cancellationToken)
+                .ConfigureAwait(false);
+            return true;
+        }
+        catch (RagOwnershipRequiredException denial)
+        {
+            _logger.LogInformation(
+                denial,
+                "Session chat of SessionId={SessionId}: the RAG ownership gate denied GameId={GameId} to UserId={UserId}; " +
+                "the answer is given without the rulebook",
+                sessionId, gameId, userId);
+            return false;
+        }
     }
 
     // #3390 Slice 3: default retrieval query when the turn has no text and no usable vision state.

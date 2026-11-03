@@ -112,6 +112,7 @@ function KbDocItem({ doc }: { doc: KbDocumentPreview }) {
 function AgentChatArea({
   agentId,
   agentName,
+  gameId,
   selectedThreadId,
   onThreadCreated,
   readiness,
@@ -119,6 +120,8 @@ function AgentChatArea({
 }: {
   agentId: string;
   agentName: string;
+  /** The game the thread is created for (#4730): without one the server has no rulebook to answer from. */
+  gameId: string | undefined;
   selectedThreadId: string | null;
   onThreadCreated: (id: string) => void;
   readiness: ReturnType<typeof useAgentStatus>['status'];
@@ -140,7 +143,7 @@ function AgentChatArea({
     setCreateError(null);
 
     api.chat
-      .createThread({ agentId, title: `Chat con ${agentName}` })
+      .createThread({ agentId, gameId, title: `Chat con ${agentName}` })
       .then(thread => {
         if (!cancelled && thread?.id) onThreadCreatedRef.current(thread.id);
       })
@@ -156,7 +159,7 @@ function AgentChatArea({
     return () => {
       cancelled = true;
     };
-  }, [selectedThreadId, agentId, agentName]); // onThreadCreated via ref, stabile
+  }, [selectedThreadId, agentId, agentName, gameId]); // onThreadCreated via ref, stabile
 
   // 1. Loading readiness
   if (readinessLoading) {
@@ -256,27 +259,31 @@ export const AgentChatDrawerLayout = React.memo(function AgentChatDrawerLayout({
       >
         <AgentContextCard gameId={data.gameId} gameName={data.gameName} />
 
-        <button
-          data-testid="new-chat-button"
-          disabled={buttonDisabled}
-          title={
-            buttonDisabled
-              ? readinessLoading
-                ? 'Verifica disponibilità agente…'
-                : (readiness?.blockingReason ?? 'Configura la KB per abilitare la chat')
-              : undefined
-          }
-          onClick={() => setSelectedThreadId('new')}
-          className={cn(
-            'flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold font-nunito',
-            buttonDisabled
-              ? 'cursor-not-allowed bg-muted text-muted-foreground'
-              : 'bg-blue-600 text-white hover:bg-blue-700'
-          )}
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Nuova chat
-        </button>
+        {/* #4730: a chat answers from the rulebook of a game. With no game the thread would open as a dead end,
+            so the button is not offered; the card above already says «Nessun gioco collegato». */}
+        {data.gameId && (
+          <button
+            data-testid="new-chat-button"
+            disabled={buttonDisabled}
+            title={
+              buttonDisabled
+                ? readinessLoading
+                  ? 'Verifica disponibilità agente…'
+                  : (readiness?.blockingReason ?? 'Configura la KB per abilitare la chat')
+                : undefined
+            }
+            onClick={() => setSelectedThreadId('new')}
+            className={cn(
+              'flex w-full items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold font-nunito',
+              buttonDisabled
+                ? 'cursor-not-allowed bg-muted text-muted-foreground'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+            )}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Nuova chat
+          </button>
+        )}
 
         <SidebarSection label="CHAT RECENTI">
           {threadsLoading ? (
@@ -317,6 +324,7 @@ export const AgentChatDrawerLayout = React.memo(function AgentChatDrawerLayout({
         <AgentChatArea
           agentId={data.id}
           agentName={data.name}
+          gameId={data.gameId}
           selectedThreadId={selectedThreadId}
           onThreadCreated={id => setSelectedThreadId(id)}
           readiness={readiness}

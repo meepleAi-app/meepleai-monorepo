@@ -19,15 +19,15 @@ namespace Api.Tests.Services.Email;
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>Why reflection over the builders.</b> The templates are private builders reached through ~25 send
-/// methods with different dependencies. A test per builder is 25 tests that a new template silently escapes;
-/// a test that discovers every <c>Build*EmailBody</c> catches the next one without being touched. A non-empty
-/// list of known names guards against the discovery matching nothing.
+/// <b>Why reflection over the builders.</b> The templates are private builders reached through send methods
+/// with different dependencies. A test per builder is a list that a new template silently escapes; a test
+/// that discovers every <c>Build*EmailBody</c> catches the next one without being touched. A non-empty list
+/// of known names, one per family, guards against the discovery matching nothing.
 /// </para>
 /// <para>
 /// <b>Time.</b> The clock is a <see cref="FakeTimeProvider"/> set far from the machine's own year, so a year
 /// read from <see cref="DateTime.UtcNow"/> instead of the injected provider gives a different number, not by
-/// luck the same one. The five account builders that take the year as an argument are given the same year:
+/// luck the same one. The account builders that take the year as an argument are given the same year:
 /// how their send methods read it from the clock is pinned in <c>EmailServiceAuthLanguageTests</c>.
 /// </para>
 /// </remarks>

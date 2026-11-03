@@ -191,6 +191,19 @@ internal sealed class DomainEventOutboxProcessor : BackgroundService
                         continue;
                     }
 
+                    if (evt.EventId != row.Id)
+                    {
+                        // #4841: the row's Id IS the event's EventId (Enqueue), so a mismatch means this
+                        // event type does not keep it across the JSON round trip, and any dedupe keyed on
+                        // EventId (LastProcessedEventId, SourceEventId under a unique index) will not
+                        // recognise a second delivery. Not fatal: the event is still delivered. The
+                        // architecture test over every IDomainEvent is the real guard; this catches what it
+                        // cannot construct.
+                        _logger.LogWarning(
+                            "Domain event {EventId} ({EventType}) was rebuilt with EventId {RebuiltEventId}: its type does not keep the EventId across the outbox, dedupe keyed on it will not work for this event",
+                            row.Id, row.EventType, evt.EventId);
+                    }
+
                     await mediator.Publish(evt, cancellationToken).ConfigureAwait(false);
                     row.MarkSent(now);
                     dispatchedEventTypes.Add(row.EventType);

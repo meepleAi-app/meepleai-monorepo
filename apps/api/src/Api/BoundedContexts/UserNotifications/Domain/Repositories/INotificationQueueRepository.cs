@@ -7,6 +7,13 @@ internal interface INotificationQueueRepository
 {
     Task AddAsync(NotificationQueueItem item, CancellationToken ct = default);
     Task AddRangeAsync(IEnumerable<NotificationQueueItem> items, CancellationToken ct = default);
+
+    /// <summary>
+    /// Detaches the queue items that were added but not saved, so a later save of the same context does
+    /// not persist them. For a caller whose staged items were taken down by a refused save (#4841).
+    /// </summary>
+    void DiscardUnsavedAdditions();
+
     Task UpdateAsync(NotificationQueueItem item, CancellationToken ct = default);
 
     /// <summary>

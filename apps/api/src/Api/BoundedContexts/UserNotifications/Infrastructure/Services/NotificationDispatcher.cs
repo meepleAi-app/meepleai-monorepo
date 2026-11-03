@@ -81,27 +81,6 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
             correlationId: correlationId,
             sourceEventId: message.SourceEventId);
 
-        // Issue #2383 / ADR-068/072 follow-up: route the in-app insert through
-        // an atomic add-and-commit so the Postgres 23505 unique_violation that
-        // surfaces when ExistsBySourceEventIdAsync false-negatives under
-        // concurrent dispatch is caught at the repository boundary (mirrors
-        // LedgerEntryRepository.AddAndCommitAsync, CF-2 #1938). 10 of 25
-        // INotificationHandler implementations have no catch-all, so a
-        // bubbling DbUpdateException would surface as an unhandled exception
-        // in the MediatR pipeline.
-        var committed = await _notificationRepository.AddAndCommitAsync(notification, ct).ConfigureAwait(false);
-        if (!committed)
-        {
-            _logger.LogInformation(
-                "Skipping channel dispatch for race-window dedup: user={UserId}, type={Type}, sourceEventId={SourceEventId} (concurrent caller already persisted the in-app row)",
-                message.RecipientUserId, message.Type, message.SourceEventId);
-            return;
-        }
-
-        _logger.LogInformation(
-            "Created in-app notification {NotificationId} for user {UserId}, type={Type}, correlationId={CorrelationId}",
-            notification.Id, message.RecipientUserId, message.Type, correlationId);
-
         // 2. Resolve user preferences (default if none configured)
         var queueItems = new List<NotificationQueueItem>();
 
@@ -223,11 +202,43 @@ internal sealed class NotificationDispatcher : INotificationDispatcher
         }
 #pragma warning restore CA1031
 
-        // 6. Persist all queue items
+        // 6. Stage the channel deliveries BEFORE committing the in-app row, so that one SaveChangesAsync
+        // persists the row that carries SourceEventId (the dedup marker) together with its deliveries.
+        // #4841: they used to be staged after the commit, and no caller saves afterwards, so a redelivery
+        // of the same event (Hybrid: inline first, then the outbox) found the marker and skipped, while
+        // the deliveries were still unsaved on the first caller's context.
         if (queueItems.Count > 0)
         {
             await _notificationQueueRepository.AddRangeAsync(queueItems, ct).ConfigureAwait(false);
+        }
 
+        // Issue #2383 / ADR-068/072 follow-up: route the in-app insert through
+        // an atomic add-and-commit so the Postgres 23505 unique_violation that
+        // surfaces when ExistsBySourceEventIdAsync false-negatives under
+        // concurrent dispatch is caught at the repository boundary (mirrors
+        // LedgerEntryRepository.AddAndCommitAsync, CF-2 #1938). 10 of 25
+        // INotificationHandler implementations have no catch-all, so a
+        // bubbling DbUpdateException would surface as an unhandled exception
+        // in the MediatR pipeline.
+        var committed = await _notificationRepository.AddAndCommitAsync(notification, ct).ConfigureAwait(false);
+        if (!committed)
+        {
+            // The refused save took the staged deliveries down with the in-app row; they must not be
+            // picked up by a later save of this context (the notification belongs to the other caller).
+            _notificationQueueRepository.DiscardUnsavedAdditions();
+
+            _logger.LogInformation(
+                "Skipping channel dispatch for race-window dedup: user={UserId}, type={Type}, sourceEventId={SourceEventId} (concurrent caller already persisted the in-app row)",
+                message.RecipientUserId, message.Type, message.SourceEventId);
+            return;
+        }
+
+        _logger.LogInformation(
+            "Created in-app notification {NotificationId} for user {UserId}, type={Type}, correlationId={CorrelationId}",
+            notification.Id, message.RecipientUserId, message.Type, correlationId);
+
+        if (queueItems.Count > 0)
+        {
             _logger.LogInformation(
                 "Enqueued {Count} channel notification(s) for user {UserId}, correlationId={CorrelationId}",
                 queueItems.Count, message.RecipientUserId, correlationId);

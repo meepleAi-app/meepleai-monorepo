@@ -1,3 +1,4 @@
+using Api.BoundedContexts.Authentication.Domain.Constants;
 using Api.Configuration;
 using Api.Extensions;
 using Api.Infrastructure.Entities;
@@ -113,7 +114,7 @@ internal static class AuthenticationEndpoints
             // fallback is opaque and the user can change it later via
             // /users/profile.
             var displayName = string.IsNullOrWhiteSpace(payload.DisplayName)
-                ? $"Player-{Guid.NewGuid():N}"[..14]
+                ? GeneratedDisplayName.Create()
                 : payload.DisplayName.Trim();
 
             var command = new DddRegisterCommand(

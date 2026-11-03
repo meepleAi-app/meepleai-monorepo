@@ -126,7 +126,7 @@ internal sealed class AuthEmailTexts
     {
         HtmlLang = "en",
 
-        Greeting = name => $"Hello {name},",
+        Greeting = name => GeneratedDisplayName.IsGenerated(name) ? "Hello," : $"Hello {name},",
         CopyLinkPrompt = "Or copy and paste this link into your browser:",
         AutomatedFooter = "This is an automated message, please do not reply to this email.",
         AutomatedSecurityFooter = "This is an automated security notification, please do not reply to this email.",
@@ -213,7 +213,7 @@ internal sealed class AuthEmailTexts
     {
         HtmlLang = "it",
 
-        Greeting = name => $"Ciao {name},",
+        Greeting = name => GeneratedDisplayName.IsGenerated(name) ? "Ciao," : $"Ciao {name},",
         CopyLinkPrompt = "Oppure copia e incolla questo link nel tuo browser:",
         AutomatedFooter = "Questo è un messaggio automatico, non rispondere a questa email.",
         AutomatedSecurityFooter = "Questa è una notifica di sicurezza automatica, non rispondere a questa email.",

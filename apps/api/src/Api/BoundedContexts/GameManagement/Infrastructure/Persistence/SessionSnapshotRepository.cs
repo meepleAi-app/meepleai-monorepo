@@ -131,6 +131,28 @@ internal sealed class SessionSnapshotRepository : RepositoryBase, ISessionSnapsh
         await DbContext.SessionSnapshots.AddAsync(entity, cancellationToken).ConfigureAwait(false);
     }
 
+    public async Task<SessionSnapshot?> GetBySourceEventIdAsync(
+        Guid sourceEventId, CancellationToken cancellationToken = default)
+    {
+        var entity = await DbContext.SessionSnapshots
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(s => s.SourceEventId == sourceEventId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return entity == null ? null : MapToDomain(entity);
+    }
+
+    public void DiscardUnsavedAdditions()
+    {
+        foreach (var entry in DbContext.ChangeTracker.Entries<SessionSnapshotEntity>()
+                     .Where(e => e.State == EntityState.Added)
+                     .ToList())
+        {
+            entry.State = EntityState.Detached;
+        }
+    }
+
     private static SessionSnapshot MapToDomain(SessionSnapshotEntity entity)
     {
         return new SessionSnapshot(

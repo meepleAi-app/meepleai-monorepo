@@ -7,6 +7,7 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.GameManagement.Application.Commands.SessionSnapshot;
 
@@ -40,6 +41,21 @@ internal class CreateSnapshotCommandHandler
         CreateSnapshotCommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(command);
+
+        // #4848: a snapshot asked for by an event (the auto-snapshot on pause) is keyed by that event, under a UNIQUE
+        // partial index. A replay of the same event must not work out a next index and insert again: it gets the
+        // snapshot the event already made. Manual snapshots carry no event and are never looked up.
+        if (command.SourceEventId is { } sourceEventId)
+        {
+            var already = await _snapshotRepository.GetBySourceEventIdAsync(sourceEventId, cancellationToken)
+                .ConfigureAwait(false);
+            if (already is not null)
+            {
+                var alreadyAttachments = await _attachmentRepository.GetBySnapshotAsync(
+                    already.SessionId, already.SnapshotIndex, cancellationToken).ConfigureAwait(false);
+                return SessionSnapshotMapper.ToDto(already, alreadyAttachments.Count);
+            }
+        }
 
         // Get the live session to capture current state
         var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken)
@@ -96,7 +112,19 @@ internal class CreateSnapshotCommandHandler
             sourceEventId: command.SourceEventId);
 
         await _snapshotRepository.AddAsync(snapshot, cancellationToken).ConfigureAwait(false);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (DbUpdateException ex) when (CounterTableIdempotency.IsUniqueViolation(ex))
+        {
+            // #4848: the race the lookup above cannot close (two deliveries at the same instant). The refused insert
+            // stays Added on the context, which the outbox processor shares with its handlers and saves once more
+            // at the end of its batch: it would send the same insert again, outside its per-row try/catch. Forget it,
+            // and let the duplicate go on: the caller reads it as «already recorded».
+            _snapshotRepository.DiscardUnsavedAdditions();
+            throw;
+        }
 
         return SessionSnapshotMapper.ToDto(snapshot, attachments.Count);
     }

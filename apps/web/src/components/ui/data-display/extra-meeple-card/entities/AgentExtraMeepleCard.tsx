@@ -170,6 +170,7 @@ export const AgentExtraMeepleCard = React.memo(function AgentExtraMeepleCard({
               <AgentChatTab
                 agentId={data.id}
                 agentName={data.name}
+                gameId={data.gameId}
                 readiness={chatReadiness}
                 readinessLoading={readinessLoading}
                 readinessError={readinessError}
@@ -317,7 +318,9 @@ export const AgentExtraMeepleCard = React.memo(function AgentExtraMeepleCard({
             ) : docs.length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-8 text-center">
                 <FileText className="h-8 w-8 text-slate-300" aria-hidden="true" />
-                <p className="font-nunito text-xs text-muted-foreground mb-2">Nessun documento KB</p>
+                <p className="font-nunito text-xs text-muted-foreground mb-2">
+                  Nessun documento KB
+                </p>
                 <a
                   href={`/library/${data.gameId}/agent`}
                   className="font-nunito text-xs text-blue-600 underline hover:text-blue-700"
@@ -365,6 +368,8 @@ export const AgentExtraMeepleCard = React.memo(function AgentExtraMeepleCard({
 interface AgentChatTabProps {
   agentId: string;
   agentName: string;
+  /** The game the thread is created for (#4730): without one the server has no rulebook to answer from. */
+  gameId: string | undefined;
   readiness: {
     isReady: boolean;
     documentCount: number;
@@ -382,6 +387,7 @@ interface AgentChatTabProps {
 function AgentChatTab({
   agentId,
   agentName,
+  gameId,
   readiness,
   readinessLoading,
   readinessError,
@@ -476,6 +482,28 @@ function AgentChatTab({
       );
     }
 
+    // #4730: a chat answers from the rulebook of a game. A thread created without one opens as a dead end
+    // («i messaggi vengono salvati ma non ricevono risposta»), so no conversation is offered.
+    if (!gameId) {
+      return (
+        <div
+          data-testid="chat-no-game"
+          className="flex flex-1 flex-col items-center justify-center text-center p-6"
+        >
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
+            <MessageSquare className="h-8 w-8 text-muted-foreground" />
+          </div>
+          <h4 className="mb-2 font-quicksand text-lg font-semibold text-foreground">
+            Chat con {agentName}
+          </h4>
+          <p className="max-w-xs font-nunito text-sm text-muted-foreground">
+            Nessun gioco collegato a questo agente: senza un gioco la chat non ha un regolamento da
+            cui rispondere.
+          </p>
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-1 flex-col items-center justify-center text-center p-6">
         <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50">
@@ -497,6 +525,7 @@ function AgentChatTab({
             try {
               const thread = await api.chat.createThread({
                 agentId,
+                gameId,
                 title: `Chat con ${agentName}`,
               });
               if (thread?.id) {
@@ -558,7 +587,9 @@ function ThreadItem({ thread, accentColor }: { thread: ChatThreadPreview; accent
           <p className="font-nunito text-[10px] text-muted-foreground">{date}</p>
           <p className="font-nunito text-[10px] text-muted-foreground">{thread.messageCount} msg</p>
         </div>
-        {preview && <p className="font-nunito text-xs text-muted-foreground leading-relaxed">{preview}</p>}
+        {preview && (
+          <p className="font-nunito text-xs text-muted-foreground leading-relaxed">{preview}</p>
+        )}
       </div>
       <a
         href={`/chat/${thread.id}`}

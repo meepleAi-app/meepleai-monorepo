@@ -67,12 +67,9 @@ public sealed class GroundedSessionQueryRagGateArchitectureTests
     {
         ["BoundedContexts/GameManagement/Application/Commands/GameNight/SubmitRuleDisputeCommand.cs"] = null,
 
-        ["BoundedContexts/SessionTracking/Application/Commands/ChatCommandHandlers.cs"] =
-            "NOT GATED: the chat of a session sends the query with the tier of the participant who writes and never " +
-            "asks the ownership gate (no call to it in the file). It sits behind the feature flag " +
-            "rag.live-image-retrieval, off by default. Inventoried so that it stays visible: it is a gap in ADR-096 " +
-            "to close separately — whether the gate is checked upstream, by whoever opens the session, is not " +
-            "something this test can see.",
+        // #4776: the chat of a session asks the gate for the user behind the participant who writes, before the
+        // retrieval, outside the fail-open try that wraps it.
+        ["BoundedContexts/SessionTracking/Application/Commands/ChatCommandHandlers.cs"] = null,
     };
 
     // -----------------------------------------------------------------------

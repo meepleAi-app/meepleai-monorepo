@@ -307,6 +307,8 @@ const MESSAGES: Record<string, string> = {
   'pages.sessionLive.topBar.statusNotStarted': 'Non avviata',
   'pages.sessionLive.topBar.startCta': 'Avvia partita',
   'pages.sessionLive.topBar.startErrorToast': 'Impossibile avviare la partita. Riprova.',
+  'pages.sessionLive.topBar.startNeedsPlayerToast':
+    'Aggiungi almeno un giocatore per avviare la partita.',
   'pages.sessionLive.topBar.pauseCta': 'Pausa',
   'pages.sessionLive.topBar.resumeCta': 'Riprendi',
   'pages.sessionLive.topBar.endgameCta': 'Termina sessione',
@@ -2644,9 +2646,10 @@ describe('SessionLiveView — #4750: creator as host, concluded session', () => 
       expect(refetchMock).toHaveBeenCalledTimes(1);
     });
 
-    it('a 409 is not an error: a start that went through and whose answer was lost', async () => {
+    it('a 409 is not an error when the session turns out started: an answer that was lost', async () => {
       const { ConflictError } = await import('@/lib/api/core/errors');
       startSessionMock.mockRejectedValue(new ConflictError({ message: 'already started' }));
+      refetchMock.mockResolvedValue({ data: { ...CREATED_DTO, status: 'InProgress' } });
       const { container } = mountStartable(CREATED_DTO, CREATOR_ID);
 
       await act(async () => {
@@ -2656,6 +2659,50 @@ describe('SessionLiveView — #4750: creator as host, concluded session', () => 
       const { toast } = await import('sonner');
       expect(toast.error).not.toHaveBeenCalled();
       expect(refetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(['Created', 'Setup'])(
+      'a 409 IS an error when the session is still %s afterwards: the start was refused',
+      async status => {
+        // The server answers 409 for a wrong status and also for "no active players" (a session opened
+        // from a typed game name). Swallowing it left a button that did nothing and said nothing.
+        const { ConflictError } = await import('@/lib/api/core/errors');
+        startSessionMock.mockRejectedValue(
+          new ConflictError({ message: 'Cannot start session without any active players' })
+        );
+        refetchMock.mockResolvedValue({ data: { ...CREATED_DTO, status } });
+        const { container } = mountStartable(CREATED_DTO, CREATOR_ID);
+
+        await act(async () => {
+          fireEvent.click(slotIn(container, 'start') as HTMLElement);
+        });
+
+        const { toast } = await import('sonner');
+        expect(toast.error).toHaveBeenCalledWith(
+          'Impossibile avviare la partita. Riprova.',
+          expect.anything()
+        );
+        expect(slotIn(container, 'start')).not.toHaveAttribute('aria-disabled');
+      }
+    );
+
+    it('with no active player it says so, without asking the server', async () => {
+      const emptyDto = {
+        ...CREATED_DTO,
+        players: CREATED_DTO.players.map(p => ({ ...p, isActive: false })),
+      } as unknown as LiveSessionDto;
+      const { container } = mountStartable(emptyDto, CREATOR_ID);
+
+      await act(async () => {
+        fireEvent.click(slotIn(container, 'start') as HTMLElement);
+      });
+
+      const { toast } = await import('sonner');
+      expect(toast.error).toHaveBeenCalledWith(
+        'Aggiungi almeno un giocatore per avviare la partita.',
+        expect.anything()
+      );
+      expect(startSessionMock).not.toHaveBeenCalled();
     });
 
     it('any other failure reads in Italian, and the command stays available', async () => {

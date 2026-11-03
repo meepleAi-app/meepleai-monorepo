@@ -324,11 +324,6 @@ export function SessionWizardMobile({
         }
         if (failedPlayers.length > 0) {
           everyPlayerAdded = false;
-          // A toast, not `setError`: it outlives the move to the live page, where the Host can add them.
-          toast.warning(
-            `Non sono entrati: ${failedPlayers.map(f => f.name).join(', ')}. Puoi aggiungerli dalla partita.`,
-            { id: 'session-wizard-players-not-added' }
-          );
         }
 
         // 3. Set turn order — the user-defined order from step 3
@@ -371,6 +366,16 @@ export function SessionWizardMobile({
         if (!isConflict) throw startErr;
       }
       pendingStartRef.current = null;
+
+      // Who did not get in is said only once the start has gone through, i.e. when we really leave for
+      // the live page, where the Host can add them. A toast and not `setError`: it outlives the move. If the
+      // start failed we stay here with that error instead, and «dalla partita» would point nowhere.
+      if (failedPlayers.length > 0) {
+        toast.warning(
+          `Non sono entrati: ${failedPlayers.map(f => f.name).join(', ')}. Puoi aggiungerli dalla partita.`,
+          { id: 'session-wizard-players-not-added' }
+        );
+      }
 
       // 6. Navigate to live session. `isCreating` stays on: router.push is not awaited, and a
       // second tap before the page changes would make and start another session.

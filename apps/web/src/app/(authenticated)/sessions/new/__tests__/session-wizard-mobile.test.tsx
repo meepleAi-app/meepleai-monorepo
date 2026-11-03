@@ -456,7 +456,7 @@ describe('SessionWizardMobile — #4781: «Inizia a Giocare» avvia la partita',
       expect(toastWarning.mock.calls[0]?.[0]).toContain('Bob');
     });
 
-    it('l’ordine dei turni e le fasi riguardano chi è entrato', async () => {
+    it('con un solo giocatore entrato non c’è un ordine dei turni da fissare', async () => {
       mockApi.liveSessions.addPlayer.mockReset();
       mockApi.liveSessions.addPlayer
         .mockResolvedValueOnce('player-uuid-1')
@@ -499,6 +499,8 @@ describe('SessionWizardMobile — #4781: «Inizia a Giocare» avvia la partita',
 
       fireEvent.click(screen.getByText('Inizia a Giocare'));
       expect(await screen.findByText(/Rete non raggiungibile/)).toBeInTheDocument();
+      // Qui si resta nel wizard: «dalla partita» non porterebbe da nessuna parte, quindi nessun avviso.
+      expect(toastWarning).not.toHaveBeenCalled();
       expect(routerPush).not.toHaveBeenCalled();
 
       fireEvent.click(screen.getByText('Inizia a Giocare'));

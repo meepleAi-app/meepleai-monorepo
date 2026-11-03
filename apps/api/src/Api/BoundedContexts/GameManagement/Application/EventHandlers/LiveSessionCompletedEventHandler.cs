@@ -132,6 +132,13 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
                 "Skipping duplicate PlayRecord for LiveSession {SessionId}: EventId={EventId} (already recorded)",
                 domainEvent.SessionId, domainEvent.EventId);
         }
+        catch (OperationCanceledException)
+        {
+            // A cancelled call (the outbox processor shutting down, a request aborted in Hybrid) is not a failure to
+            // swallow or to count: the context is put back as the caller left it, and the cancellation goes on.
+            ForgetWhatWasStaged(stagedBefore, queuedBefore);
+            throw;
+        }
 #pragma warning disable CA1031 // Do not catch general exception types
         // SERVICE BOUNDARY: EVENT HANDLER PATTERN - Background event processing
         // PlayRecord generation failure must not block the OTHER handlers of the event.

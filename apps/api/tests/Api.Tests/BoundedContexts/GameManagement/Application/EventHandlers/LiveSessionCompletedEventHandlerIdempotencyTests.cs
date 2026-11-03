@@ -224,6 +224,25 @@ public sealed class LiveSessionCompletedEventHandlerIdempotencyTests
         failures.Events.Should().BeEmpty();
     }
 
+    [Fact]
+    public async Task Handle_WhenTheCallIsCancelled_PutsTheContextBack_AndPropagatesWithoutCountingAFailure()
+    {
+        // A cancelled call (the outbox processor shutting down, a request aborted in Hybrid) is not a failure to
+        // swallow, nor one to count: the cancellation goes on, after the context is put back as the caller left it.
+        using var failures = new DispatchFailureCapture();
+        var collector = new DomainEventCollector();
+        var db = new RefusesEverySaveDbContext(InMemoryOptions(), collector, new OperationCanceledException());
+        var handler = CreateHandler(db, new PlayRecordRepository(db, collector), collector);
+
+        var act = () => handler.Handle(CompletedEvent(Guid.NewGuid()), CancellationToken.None);
+
+        await act.Should().ThrowAsync<OperationCanceledException>("a cancelled call is not swallowed");
+        failures.Events.Should().BeEmpty("a cancellation is not a dispatch failure");
+        db.AddedWhenTheSaveWasRefused.Should().BeGreaterThan(1, "the record and its player were staged: otherwise this test proves nothing");
+        db.ChangeTracker.Entries().Where(e => e.State == EntityState.Added).Should().BeEmpty();
+        collector.PeekEvents().Should().BeEmpty();
+    }
+
     /// <summary>Collects the measurements of the dispatch-failure counter that carry this handler's name.</summary>
     private sealed class DispatchFailureCapture : IDisposable
     {

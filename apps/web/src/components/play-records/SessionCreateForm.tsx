@@ -755,17 +755,6 @@ export function SessionCreateForm({
     enabled: mode === 'create',
   });
 
-  // #4802: the step lives in the wizard store, shared by the create and the edit form. An edit starts on the
-  // first step and leaves the store there, so the next form does not open on a step it never reached. The
-  // reset is tied to the edit form on purpose: one tied to every unmount would also wipe the step the draft
-  // restores below, because StrictMode unmounts the create form once right after mounting it.
-  useEffect(() => {
-    if (mode !== 'edit') return undefined;
-    setSessionField('currentStep', 0);
-    return () => setSessionField('currentStep', 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- tied to the mode, not to the store action
-  }, [mode]);
-
   // AC-A3: restore the persisted draft once on mount, unless a gameNight
   // prefill (initialValues) is present — the prefill takes precedence.
   const restoredRef = useRef(false);

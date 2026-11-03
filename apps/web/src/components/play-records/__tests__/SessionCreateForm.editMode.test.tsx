@@ -1,20 +1,19 @@
 /**
- * SessionCreateForm — what correcting a record leaves behind for the next new one (#4802).
+ * SessionCreateForm — «Annulla» of an edit and the draft of a new record (#4802).
  *
- * The edit form is the create form in another mode, so it shares two things with it: the wizard store (the
- * step) and the localStorage draft of a NEW record. Both used to cross over: «Annulla» in edit deleted the
- * draft of a record being created, and the step an edit was left on was still there for the next form.
+ * The edit form is the create form in another mode, so it shares the localStorage draft of a NEW record with
+ * it. «Annulla» in edit used to delete that draft: the hook is switched off in edit (`enabled: false`), but
+ * `clear()` removed the stored draft without looking at it.
  *
- * Real store and real hook: the other tests of this form replace the store with a double that keeps no
- * state, and a double like that cannot show a step that outlives the form it was set by.
+ * Real hook and real storage: the draft test of this form replaces the store with a double and never presses
+ * «Annulla» from the edit mode.
  */
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PLAY_RECORD_DRAFT_SCHEMA_VERSION } from '@/lib/play-records/draft-types';
-import { usePlayRecordsStore } from '@/lib/stores/play-records-store';
 
 import { SessionCreateForm } from '../SessionCreateForm';
 
@@ -36,8 +35,6 @@ vi.mock('@/components/library/AddPrivateGameForm', () => ({
 const DRAFT_KEY = 'meepleai:play-record-create-draft:user-1';
 // The translation double answers the whole key, prefixed by the mode («playRecords.edit.actions.cancel»).
 const CANCEL_LABEL = /actions\.cancel$/;
-
-const stepInTheStore = (): number => usePlayRecordsStore.getState().sessionCreation.currentStep;
 
 function seedDraftOfANewRecord(): string {
   const stored = JSON.stringify({
@@ -90,7 +87,6 @@ function renderForm(mode: 'create' | 'edit') {
 
 beforeEach(() => {
   localStorage.clear();
-  usePlayRecordsStore.getState().resetSessionCreation();
 });
 
 describe('SessionCreateForm — «Annulla» and the draft of a new record (#4802)', () => {
@@ -111,36 +107,5 @@ describe('SessionCreateForm — «Annulla» and the draft of a new record (#4802
     fireEvent.click(screen.getByRole('button', { name: CANCEL_LABEL }));
 
     expect(localStorage.getItem(DRAFT_KEY)).toBeNull();
-  });
-});
-
-describe('SessionCreateForm — the wizard step between one form and the next (#4802)', () => {
-  it('an edit left on a later step does not leave the next new record there', () => {
-    const { unmount } = renderForm('edit');
-    act(() => usePlayRecordsStore.getState().nextStep());
-    expect(stepInTheStore()).toBe(1);
-
-    unmount();
-
-    expect(stepInTheStore()).toBe(0);
-  });
-
-  it('an edit opens on the first step even if the store was left on another', () => {
-    usePlayRecordsStore.getState().setSessionField('currentStep', 2);
-
-    renderForm('edit');
-
-    expect(stepInTheStore()).toBe(0);
-  });
-
-  it('a new record closed on a later step keeps it, so the draft can bring the user back', () => {
-    // The step is reset where an edit comes and goes, not for every form: a reset when the NEW form is
-    // unmounted would also wipe the step the draft restores, because StrictMode unmounts it once on mount.
-    usePlayRecordsStore.getState().setSessionField('currentStep', 1);
-    const { unmount } = renderForm('create');
-
-    unmount();
-
-    expect(stepInTheStore()).toBe(1);
   });
 });

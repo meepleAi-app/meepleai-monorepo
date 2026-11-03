@@ -147,7 +147,7 @@ public sealed class LiveSessionCompletedEventHandlerIdempotencyTests
     /// one event before delivering; the handler adds the whole graph of the record and its events.
     /// </summary>
     private async Task<(RefusesEverySaveDbContext Db, DomainEventCollector Collector, PlayRecordEntity StagedByTheCaller, LiveSessionCompletedEvent QueuedByTheCaller)>
-        DeliverWhenTheSaveIsRefusedAsync(Exception failure)
+        DeliverWhenTheSaveIsRefusedAsync(Exception failure, bool failureIsForTheOutboxToRetry)
     {
         var collector = new DomainEventCollector();
         var db = new RefusesEverySaveDbContext(InMemoryOptions(), collector, failure);
@@ -159,17 +159,30 @@ public sealed class LiveSessionCompletedEventHandlerIdempotencyTests
 
         var act = () => handler.Handle(CompletedEvent(Guid.NewGuid()), CancellationToken.None);
 
-        await act.Should().NotThrowAsync("losing the race is a duplicate to skip, and any other failure must not block the completion");
+        if (failureIsForTheOutboxToRetry)
+        {
+            // #4839: both delivery paths take an exception from a handler (the in-process one logs it and counts
+            // it in DomainEventDispatchFailures, the outbox retries the row and ends in Failed), and the retry is
+            // idempotent now that the record is keyed by the session. Swallowing it lost the record in silence.
+            await act.Should().ThrowAsync<InvalidOperationException>("any failure other than the duplicate is for the outbox to retry");
+        }
+        else
+        {
+            await act.Should().NotThrowAsync("losing the race is a duplicate to skip, not a failure");
+        }
+
         return (db, collector, stagedByTheCaller, queuedByTheCaller);
     }
 
     [Theory]
     [InlineData(true)]   // lost the race at the unique index
-    [InlineData(false)]  // any other failure of the save, swallowed by the generic catch
+    [InlineData(false)]  // any other failure of the save: cleaned up, then rethrown for the outbox to retry
     public async Task Handle_WhenTheInsertDoesNotGoThrough_LeavesTheSharedContextAsTheCallerHadIt(bool lostTheRace)
     {
         var (db, collector, stagedByTheCaller, queuedByTheCaller) =
-            await DeliverWhenTheSaveIsRefusedAsync(lostTheRace ? LostTheRace() : AnyOtherFailure());
+            await DeliverWhenTheSaveIsRefusedAsync(
+                lostTheRace ? LostTheRace() : AnyOtherFailure(),
+                failureIsForTheOutboxToRetry: !lostTheRace);
 
         db.AddedWhenTheSaveWasRefused.Should().BeGreaterThan(2, "the record, its player and the caller's own row were all staged: otherwise this test proves nothing");
         db.ChangeTracker.Entries().Where(e => e.State == EntityState.Added).Select(e => e.Entity)

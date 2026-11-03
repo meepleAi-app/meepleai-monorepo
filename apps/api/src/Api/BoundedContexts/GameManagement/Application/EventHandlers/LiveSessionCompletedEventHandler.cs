@@ -130,19 +130,19 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
                 "Skipping duplicate PlayRecord for LiveSession {SessionId}: EventId={EventId} (already recorded)",
                 domainEvent.SessionId, domainEvent.EventId);
         }
-#pragma warning disable CA1031 // Do not catch general exception types
-        // SERVICE BOUNDARY: EVENT HANDLER PATTERN - Background event processing
-        // PlayRecord generation failure must not block session completion.
-        catch (Exception ex)
+        catch (Exception)
         {
-            // Swallowed so the completion is not blocked, which only holds if the failed insert is not
-            // left staged for the caller's next save to throw again.
+            // #4839: rethrown, after putting the shared context back. This used to be swallowed so that a
+            // PlayRecord failure would "not block session completion", but neither delivery path is blocked by
+            // a throwing handler: the in-process one (MeepleAiDbContext, step 5) catches it, logs it and counts it
+            // in DomainEventDispatchFailures; the outbox processor catches per row, retries with backoff and ends
+            // in Failed (visible in /admin/event-outbox/failed). Swallowing it lost the record in silence, and the
+            // retry is idempotent now that the record is keyed by the session. DomainEventHandlerBase logs it.
+            // A failure of the domain itself (a Conflict/Validation exception) is permanent: it costs the retries
+            // and then shows up as a Failed row, instead of vanishing.
             ForgetWhatWasStaged(stagedBefore, queuedBefore);
-            Logger.LogError(ex,
-                "Failed to generate PlayRecord from completed LiveSession {SessionId}",
-                domainEvent.SessionId);
+            throw;
         }
-#pragma warning restore CA1031
     }
 
     private HashSet<object> StagedInserts() =>

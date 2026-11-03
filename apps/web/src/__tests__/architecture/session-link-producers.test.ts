@@ -65,8 +65,8 @@ const PRODUCERS: Readonly<Record<string, readonly Site[]>> = {
   'app/(authenticated)/sessions/new/page.tsx': [
     { live: 'id restituito dal wizard desktop, che crea la live' },
   ],
+  // One site since #4787: a player that cannot get in no longer sends the user to the live page on its own.
   'app/(authenticated)/sessions/new/session-wizard-mobile.tsx': [
-    { live: 'api.liveSessions.createSession' },
     { live: 'api.liveSessions.createSession' },
   ],
   'app/(authenticated)/sessions/join/page.tsx': [{ live: 'api.liveSessions.getByCode' }],

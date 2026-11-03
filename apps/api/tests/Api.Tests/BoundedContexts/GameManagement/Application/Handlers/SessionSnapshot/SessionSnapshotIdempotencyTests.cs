@@ -121,20 +121,32 @@ public sealed class SessionSnapshotIdempotencyTests
         _snapshotRepo.Verify(r => r.AddAsync(It.IsAny<Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot.SessionSnapshot>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact]
-    public async Task CreateSnapshot_WhenTheInsertLosesTheRace_ForgetsIt_AndLetsTheDuplicateThrough()
+    private static Exception AnyOtherFailure() => new TimeoutException("the database did not answer");
+
+    [Theory]
+    [InlineData(true)]   // two deliveries at the same instant: the second is refused by the unique index (23505)
+    [InlineData(false)]  // any other failure of the save: a timeout, data the column refuses
+    public async Task CreateSnapshot_WhenTheSaveFails_ForgetsTheInsert_AndLetsTheExceptionThrough(bool lostTheRace)
     {
-        // Two deliveries at the same instant both pass the lookup, and the second is refused by the index. The
-        // exception goes on (the notification handler reads it as «already recorded»), but not before the insert is
-        // forgotten.
+        // The exception goes on (the notification handler reads a duplicate as «already recorded» and swallows the
+        // rest), but not before the insert is forgotten: whatever the reason the save failed, the insert stays Added on
+        // the shared context, and the final save of the outbox processor would send it again.
         var sessionId = Guid.NewGuid();
         _sessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>())).ReturnsAsync(LiveSession(sessionId));
-        _uow.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ThrowsAsync(LostTheRace());
+        _uow.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ThrowsAsync(lostTheRace ? LostTheRace() : AnyOtherFailure());
         var command = new CreateSnapshotCommand(sessionId, SnapshotTrigger.SessionPaused, "Auto", null, SourceEventId: Guid.NewGuid());
 
         var act = () => Handler().Handle(command, CancellationToken.None);
 
-        await act.Should().ThrowAsync<DbUpdateException>();
+        if (lostTheRace)
+        {
+            await act.Should().ThrowAsync<DbUpdateException>();
+        }
+        else
+        {
+            await act.Should().ThrowAsync<TimeoutException>();
+        }
+
         _snapshotRepo.Verify(r => r.DiscardUnsavedAdditions(), Times.Once);
     }
 
@@ -190,10 +202,12 @@ public sealed class SessionSnapshotIdempotencyTests
         db.Entry(otherRow).State.Should().Be(EntityState.Added, "another aggregate's staged row is not a snapshot");
     }
 
-    // ── Everything real: a save that the unique index refuses leaves nothing behind ─────────────
+    // ── Everything real: a save the database refuses, for any reason, leaves nothing behind ─────
 
-    [Fact]
-    public async Task CreateSnapshot_WhenTheDatabaseRefusesTheInsert_LeavesNoSnapshotStagedOnTheSharedContext()
+    [Theory]
+    [InlineData(true)]   // refused by the unique index on the source event (23505)
+    [InlineData(false)]  // refused for another reason: a timeout
+    public async Task CreateSnapshot_WhenTheDatabaseRefusesTheInsert_LeavesNoSnapshotStagedOnTheSharedContext(bool lostTheRace)
     {
         var sessionId = Guid.NewGuid();
         var collector = new DomainEventCollector();
@@ -205,14 +219,22 @@ public sealed class SessionSnapshotIdempotencyTests
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning);
             })
             .Options;
-        var db = new RefusesEverySaveDbContext(options, collector, LostTheRace());
+        var db = new RefusesEverySaveDbContext(options, collector, lostTheRace ? LostTheRace() : AnyOtherFailure());
         _sessionRepo.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>())).ReturnsAsync(LiveSession(sessionId));
         var handler = Handler(new SessionSnapshotRepository(db, collector), new UnitOfWork(db));
         var command = new CreateSnapshotCommand(sessionId, SnapshotTrigger.SessionPaused, "Auto", null, SourceEventId: Guid.NewGuid());
 
         var act = () => handler.Handle(command, CancellationToken.None);
 
-        await act.Should().ThrowAsync<DbUpdateException>();
+        if (lostTheRace)
+        {
+            await act.Should().ThrowAsync<DbUpdateException>();
+        }
+        else
+        {
+            await act.Should().ThrowAsync<TimeoutException>();
+        }
+
         db.AddedWhenTheSaveWasRefused.Should().BeGreaterThan(0, "the snapshot was staged: otherwise this test proves nothing");
         db.ChangeTracker.Entries<SessionSnapshotEntity>().Where(e => e.State == EntityState.Added)
             .Should().BeEmpty("the final save of the outbox processor would send the same insert again");

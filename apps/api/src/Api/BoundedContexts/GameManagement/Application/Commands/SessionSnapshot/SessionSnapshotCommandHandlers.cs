@@ -7,7 +7,6 @@ using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
 using Api.SharedKernel.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
 
 namespace Api.BoundedContexts.GameManagement.Application.Commands.SessionSnapshot;
 
@@ -116,12 +115,13 @@ internal class CreateSnapshotCommandHandler
         {
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
-        catch (DbUpdateException ex) when (CounterTableIdempotency.IsUniqueViolation(ex))
+        catch (Exception)
         {
-            // #4848: the race the lookup above cannot close (two deliveries at the same instant). The refused insert
-            // stays Added on the context, which the outbox processor shares with its handlers and saves once more
-            // at the end of its batch: it would send the same insert again, outside its per-row try/catch. Forget it,
-            // and let the duplicate go on: the caller reads it as «already recorded».
+            // #4848: whatever the reason the save failed (the race the lookup above cannot close, two deliveries at
+            // the same instant, or a timeout, or data the column refuses), the insert stays Added on the context,
+            // which the outbox processor shares with its handlers and saves once more at the end of its batch: it
+            // would send the same insert again, outside its per-row try/catch. Forget it, and let the exception go
+            // on: the caller reads a duplicate as «already recorded» and swallows the rest.
             _snapshotRepository.DiscardUnsavedAdditions();
             throw;
         }

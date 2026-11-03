@@ -95,6 +95,7 @@ internal sealed class AccountLockedEventHandler : INotificationHandler<AccountLo
                     failedAttempts: notification.FailedAttempts,
                     lockedUntil: notification.LockedUntil,
                     ipAddress: notification.IpAddress,
+                    language: user.Language,
                     ct: cancellationToken
                 ).ConfigureAwait(false);
 

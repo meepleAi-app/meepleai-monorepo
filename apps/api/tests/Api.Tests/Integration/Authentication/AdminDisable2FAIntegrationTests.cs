@@ -93,6 +93,7 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<bool>(),
+                It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         services.RemoveAll(typeof(IEmailService));
@@ -170,6 +171,7 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
                 targetUser.Email.Value,
                 It.IsAny<string>(),
                 true, // wasAdminOverride should be true
+                It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()),
             Times.Once,
             "Email notification should be sent exactly once with wasAdminOverride=true");
@@ -213,6 +215,7 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
         _mockEmailService!.Verify(
             x => x.SendTwoFactorDisabledEmailAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<bool>(),
+                It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -238,6 +241,7 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 true, // WasAdminOverride flag from domain event
+                It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
@@ -275,6 +279,7 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<bool>(),
+                It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()),
             Times.Never,
             "Email should not be sent for unauthorized attempts");
@@ -398,6 +403,7 @@ public sealed class AdminDisable2FAIntegrationTests : IAsyncLifetime
                 adminUser.Email.Value,
                 It.IsAny<string>(),
                 true,
+                It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
 

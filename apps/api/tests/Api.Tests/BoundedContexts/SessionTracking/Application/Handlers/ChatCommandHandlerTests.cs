@@ -2,6 +2,7 @@ using Api.Tests.TestHelpers;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
+using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
@@ -664,15 +665,96 @@ public class AskSessionAgentCommandHandlerTests
         // Act
         var result = await AskAs(rig, Guid.NewGuid());
 
-        // Assert — no passage of the rulebook went anywhere; the answer is the model's alone, and says so.
+        // Assert — no passage of the rulebook went anywhere; the answer is the model's alone, and says WHY.
         VerifyNoRetrieval(rig);
         result.GroundingStatus.Should().Be(GroundingStatus.Ungrounded);
         result.CitationsJson.Should().BeNull();
-        result.Answer.Should().Be("Answer without the rulebook");
+        result.Answer.Should().Be(
+            AskSessionAgentCommandHandler.OwnershipNotDeclaredNotice + "\n\nAnswer without the rulebook");
         // The question is still part of the chat: the gate protects the rulebook, not the conversation.
         rig.Chat.Verify(
             r => r.AddAsync(It.IsAny<Api.BoundedContexts.SessionTracking.Domain.Entities.SessionChatMessage>(), It.IsAny<CancellationToken>()),
             Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task Handle_FlagOn_OwnershipDenied_TheNoticeIsInTheSavedAndBroadcastMessage_NotOnlyInTheResponse()
+    {
+        // Arrange — the answer is saved and sent to the whole table, like the Arbiter's verdict: a notice kept in
+        // the HTTP response alone would reach only who asked, and the others would read an ungrounded answer.
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: Guid.NewGuid(), configureGate: gate => gate
+            .Setup(g => g.EnsureCanAskAboutGameAsync(
+                It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new RagOwnershipRequiredException(Guid.NewGuid())));
+        var saved = new List<SessionChatMessage>();
+        rig.Chat
+            .Setup(r => r.AddAsync(It.IsAny<SessionChatMessage>(), It.IsAny<CancellationToken>()))
+            .Callback<SessionChatMessage, CancellationToken>((m, _) => saved.Add(m));
+
+        // Act
+        await AskAs(rig, Guid.NewGuid());
+
+        // Assert — the agent's message (the second one) opens with the notice, and so does the event.
+        saved.Should().HaveCount(2);
+        saved[1].Content.Should().StartWith(AskSessionAgentCommandHandler.OwnershipNotDeclaredNotice);
+        saved[0].Content.Should().NotContain(AskSessionAgentCommandHandler.OwnershipNotDeclaredNotice,
+            "the notice qualifies the answer, never the player's question");
+        rig.Mediator.Verify(
+            m => m.Publish(
+                It.Is<SessionChatMessageSentEvent>(e => e.Content.StartsWith(AskSessionAgentCommandHandler.OwnershipNotDeclaredNotice, StringComparison.Ordinal)),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_FlagOn_OwnershipDenied_ModelFails_TheApologyIsNotQualifiedByANotice()
+    {
+        // Arrange — there is no answer to qualify: «the answer does not rest on the rulebook» would describe
+        // an apology. The player reads the apology and asks again.
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: Guid.NewGuid(), configureGate: gate => gate
+            .Setup(g => g.EnsureCanAskAboutGameAsync(
+                It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new RagOwnershipRequiredException(Guid.NewGuid())));
+        rig.Llm
+            .Setup(l => l.GenerateCompletionAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(LlmCompletionResult.CreateFailure("provider down"));
+
+        // Act
+        var result = await AskAs(rig, Guid.NewGuid());
+
+        // Assert
+        result.Answer.Should().NotContain(AskSessionAgentCommandHandler.OwnershipNotDeclaredNotice);
+        result.Answer.Should().StartWith("I'm sorry");
+    }
+
+    [Fact]
+    public async Task Handle_FlagOn_GateOpen_TheAnswerCarriesNoNotice()
+    {
+        // Arrange — the asker declared owning the game: the grounded answer goes out as it is.
+        var callerId = Guid.NewGuid();
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: callerId);
+
+        // Act
+        var result = await AskAs(rig, callerId);
+
+        // Assert
+        result.Answer.Should().NotContain(AskSessionAgentCommandHandler.OwnershipNotDeclaredNotice);
+        result.Answer.Should().Be("You take turns placing settlements. [Page 2]");
+    }
+
+    [Fact]
+    public async Task Handle_FlagOff_TheAnswerCarriesNoNotice_NobodyWasDeniedAnything()
+    {
+        // Arrange — with the retrieval switched off the rulebook is not consulted for ANYONE: that is not a
+        // denial, and a notice about ownership on every answer would blame the player for a switch they did not flip.
+        var rig = BuildGateRig(retrievalFlagOn: false, participantUserId: Guid.NewGuid());
+
+        // Act
+        var result = await AskAs(rig, Guid.NewGuid());
+
+        // Assert
+        result.Answer.Should().Be("Answer without the rulebook");
     }
 
     [Fact]

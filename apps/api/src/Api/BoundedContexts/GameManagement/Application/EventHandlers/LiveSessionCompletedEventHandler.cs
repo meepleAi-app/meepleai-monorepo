@@ -3,6 +3,8 @@ using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Infrastructure.DomainEventLog;
+using Api.Observability;
 using Api.SharedKernel.Application.EventHandlers;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Domain.Interfaces;
@@ -130,19 +132,26 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
                 "Skipping duplicate PlayRecord for LiveSession {SessionId}: EventId={EventId} (already recorded)",
                 domainEvent.SessionId, domainEvent.EventId);
         }
-        catch (Exception)
+#pragma warning disable CA1031 // Do not catch general exception types
+        // SERVICE BOUNDARY: EVENT HANDLER PATTERN - Background event processing
+        // PlayRecord generation failure must not block the OTHER handlers of the event.
+        catch (Exception ex)
         {
-            // #4839: rethrown, after putting the shared context back. This used to be swallowed so that a
-            // PlayRecord failure would "not block session completion", but neither delivery path is blocked by
-            // a throwing handler: the in-process one (MeepleAiDbContext, step 5) catches it, logs it and counts it
-            // in DomainEventDispatchFailures; the outbox processor catches per row, retries with backoff and ends
-            // in Failed (visible in /admin/event-outbox/failed). Swallowing it lost the record in silence, and the
-            // retry is idempotent now that the record is keyed by the session. DomainEventHandlerBase logs it.
-            // A failure of the domain itself (a Conflict/Validation exception) is permanent: it costs the retries
-            // and then shows up as a Failed row, instead of vanishing.
+            // Swallowed on purpose (#4839): MediatR runs the handlers of an event in sequence (ForeachAwaitPublisher,
+            // no custom NotificationPublisher), so an exception here would stop the ones after it (stream forwarder,
+            // proposal expiry, player statistics, audit) and, on every retry of the outbox row, run again the ones
+            // before it. That holds only if the failed insert is not left staged for the caller's next save to
+            // throw again, and it must not be silent: it is counted where every other handler failure is counted.
             ForgetWhatWasStaged(stagedBefore, queuedBefore);
-            throw;
+            MeepleAiMetrics.DomainEventDispatchFailures.Add(
+                1,
+                new KeyValuePair<string, object?>("event_type", EventTypeRegistry.ResolveOrFullName(domainEvent)),
+                new KeyValuePair<string, object?>("handler_name", nameof(LiveSessionCompletedEventHandler)));
+            Logger.LogError(ex,
+                "Failed to generate PlayRecord from completed LiveSession {SessionId}",
+                domainEvent.SessionId);
         }
+#pragma warning restore CA1031
     }
 
     private HashSet<object> StagedInserts() =>

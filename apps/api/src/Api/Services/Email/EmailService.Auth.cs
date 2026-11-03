@@ -285,7 +285,8 @@ internal partial class EmailService
         {
             var texts = AuthEmailTexts.For(language);
             var subject = texts.LockedSubject;
-            var body = BuildAccountLockedEmailBody(texts, userName, failedAttempts, lockedUntil, ipAddress, _timeProvider.GetUtcNow().Year);
+            var now = _timeProvider.GetUtcNow();
+            var body = BuildAccountLockedEmailBody(texts, userName, failedAttempts, lockedUntil, ipAddress, now.UtcDateTime, now.Year);
 
             using var message = new MailMessage();
             message.From = new MailAddress(_fromAddress, _fromName);
@@ -450,8 +451,9 @@ internal partial class EmailService
 
     // ===== Template builders =====
     //
-    // #4812: the six account emails take their words from AuthEmailTexts, in the recipient's language. The
-    // markup is the same for both; only the text differs, and only the text is in AuthEmailTexts.
+    // #4812: the account emails (reset, verification, two-factor disabled, suspended, reactivated, locked) take
+    // their words from AuthEmailTexts, in the recipient's language. The markup is the same for both languages;
+    // only the text differs, and only the text is in AuthEmailTexts.
 
     // #4754: the footer year was the literal 2025. `internal` so a test can pin the year without a mail transport:
     // this method sends through SmtpClient directly, not through IEmailSender.
@@ -714,9 +716,11 @@ internal partial class EmailService
 ";
     }
 
-    private static string BuildAccountLockedEmailBody(AuthEmailTexts t, string userName, int failedAttempts, DateTime lockedUntil, string? ipAddress, int year)
+    private static string BuildAccountLockedEmailBody(AuthEmailTexts t, string userName, int failedAttempts, DateTime lockedUntil, string? ipAddress, DateTime now, int year)
     {
-        var lockDurationMinutes = (int)Math.Ceiling((lockedUntil - DateTime.UtcNow).TotalMinutes);
+        // `now` is the injected clock's, like the footer year: the length of the lock is counted from the same
+        // instant the email is composed at, not from the machine's clock.
+        var lockDurationMinutes = (int)Math.Ceiling((lockedUntil - now).TotalMinutes);
         var unlocksAt = lockedUntil.ToString(t.LockedUnlocksAtFormat, CultureInfo.InvariantCulture);
         var ipSection = !string.IsNullOrWhiteSpace(ipAddress)
             ? $"<li>{t.LockedIpItem(ipAddress)}</li>"

@@ -24,6 +24,7 @@ internal sealed class FakeSmtpServer : IAsyncDisposable
     private readonly CancellationTokenSource _stop = new();
     private readonly object _gate = new();
     private readonly List<ReceivedEmail> _received = [];
+    private readonly List<Exception> _serverErrors = [];
     private readonly List<Task> _connections = [];
     private readonly Task _accepting;
 
@@ -43,6 +44,21 @@ internal sealed class FakeSmtpServer : IAsyncDisposable
             lock (_gate)
             {
                 return [.. _received];
+            }
+        }
+    }
+
+    /// <summary>
+    /// What went wrong inside the server itself, for instance a message it could not decode. The client only
+    /// sees the connection fail, so a test that reads <see cref="Received"/> checks this first.
+    /// </summary>
+    public IReadOnlyList<Exception> ServerErrors
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return [.. _serverErrors];
             }
         }
     }
@@ -143,6 +159,13 @@ internal sealed class FakeSmtpServer : IAsyncDisposable
         catch (Exception ex) when (ex is OperationCanceledException or IOException or ObjectDisposedException)
         {
             // The client went away, or the server is being disposed.
+        }
+        catch (Exception ex)
+        {
+            lock (_gate)
+            {
+                _serverErrors.Add(ex);
+            }
         }
     }
 

@@ -107,7 +107,7 @@ internal class EmailVerificationService : IEmailVerificationService
                 normalizedEmail,
                 displayName ?? normalizedEmail,
                 verificationTokenValue,
-                user.Language,
+                language: user.Language,
                 ct).ConfigureAwait(false);
 
             _logger.LogInformation(

@@ -13,6 +13,12 @@ namespace Api.Services.Email;
 /// account belongs to: the language is the recipient's own.
 /// </para>
 /// <para>
+/// Why in code and not in <c>EmailTemplateRepository</c> or the web <c>it.json</c>: these emails never read
+/// the template table, so moving them there would also mean seeding rows and a migration; and a catalogue of
+/// <c>required</c> members makes the compiler refuse a language that lacks one string, which a JSON file and a
+/// table cannot. The same shape as <c>GameNightEmailTexts</c>.
+/// </para>
+/// <para>
 /// Which languages exist is <see cref="UserLanguage"/>'s to say, so a stored <c>fr</c> or a malformed value
 /// gets English, the same ripiego the interface bundle has. Strings that carry a name, a number or a date are
 /// functions. Nothing here is HTML-encoded: values reach the template exactly as the caller passed them,
@@ -224,9 +230,9 @@ internal sealed class AuthEmailTexts
 
         VerifySubject = "Verifica la tua email di MeepleAI",
         VerifyTitle = "Verifica la tua email",
-        VerifyBannerHeading = "Benvenuto su MeepleAI!",
+        VerifyBannerHeading = "Ti diamo il benvenuto su MeepleAI!",
         VerifyBannerText = "Verifica il tuo indirizzo email per iniziare.",
-        VerifyBody = "Grazie per esserti registrato su MeepleAI! Per completare la registrazione e usare tutte le funzionalità, verifica il tuo indirizzo email cliccando sul pulsante qui sotto:",
+        VerifyBody = "Grazie per aver creato un account su MeepleAI! Per completare la registrazione e usare tutte le funzionalità, verifica il tuo indirizzo email cliccando sul pulsante qui sotto:",
         VerifyButton = "Verifica l'indirizzo email",
         VerifyExpiry = "Questo link di verifica scade tra 24 ore, per motivi di sicurezza.",
         VerifyIgnore = "Se non hai creato un account MeepleAI, puoi ignorare questa email.",
@@ -242,7 +248,7 @@ internal sealed class AuthEmailTexts
         TwoFactorReenableStepLogin = "Accedi al tuo account MeepleAI",
         TwoFactorReenableStepSettings = "Vai su Impostazioni &gt; Privacy &gt; Autenticazione a due fattori",
         TwoFactorReenableStepSetup = "Segui le istruzioni di configurazione",
-        TwoFactorNotice = "Questa notifica è stata inviata per motivi di sicurezza, per tenerti informato sulle modifiche al tuo account.",
+        TwoFactorNotice = "Ti inviamo questa notifica per motivi di sicurezza, così resti sempre al corrente delle modifiche al tuo account.",
         TwoFactorQuestions = "Per qualsiasi domanda o dubbio, contatta il nostro supporto.",
 
         SuspendedSubject = "Il tuo account MeepleAI è stato sospeso",
@@ -258,7 +264,7 @@ internal sealed class AuthEmailTexts
         ReactivatedSubject = "Il tuo account MeepleAI è stato riattivato",
         ReactivatedTitle = "Account riattivato",
         ReactivatedBannerHeading = "✅ Account riattivato",
-        ReactivatedBannerText = "Bentornato! Il tuo account è di nuovo attivo",
+        ReactivatedBannerText = "Che bello riaverti con noi! Il tuo account è di nuovo attivo",
         ReactivatedBody = "Buone notizie! Il tuo account MeepleAI è stato riattivato da un amministratore. Ora puoi accedere e usare di nuovo tutte le funzionalità.",
         ReactivatedWelcome = "Siamo felici di riaverti nella community di MeepleAI!",
         ReactivatedNextStepsLabel = "💡 Prossimi passi:",
@@ -275,18 +281,18 @@ internal sealed class AuthEmailTexts
         LockedDetailsLabel = "Dettagli:",
         LockedFailedAttemptsItem = attempts => $"Tentativi falliti: {attempts}",
         LockedDurationItem = minutes => minutes == 1 ? "Account bloccato per: 1 minuto" : $"Account bloccato per: {minutes} minuti",
-        LockedUnlocksAtItem = when => $"Si sblocca alle: {when} UTC",
+        LockedUnlocksAtItem = when => $"Sblocco previsto: {when} UTC",
         LockedUnlocksAtFormat = "dd/MM/yyyy HH:mm",
         LockedIpItem = ip => $"Indirizzo IP: {ip}",
         LockedWhatToDoLabel = "💡 Cosa fare:",
         LockedStepWait = "Aspetta che il blocco termini, poi riprova",
-        LockedStepPassword = "Controlla di usare la password giusta",
+        LockedStepPassword = "Assicurati di usare la password corretta",
         LockedStepForgotPassword = "Se hai dimenticato la password, usa il link \"Password dimenticata?\"",
         LockedSecurityLabel = "⚠️ Avviso di sicurezza:",
-        LockedSecurityIntro = "Se non hai provato tu questi accessi, qualcuno potrebbe star cercando di entrare nel tuo account. Ti consigliamo di:",
-        LockedAdviceChangePassword = "Cambiare subito la password appena riottieni l'accesso",
+        LockedSecurityIntro = "Se non hai tentato tu questi accessi, qualcuno potrebbe stare cercando di entrare nel tuo account. Ti consigliamo di:",
+        LockedAdviceChangePassword = "Cambiare subito la password non appena riottieni l'accesso",
         LockedAdviceTwoFactor = "Attivare l'autenticazione a due fattori, se disponibile",
         LockedAdviceReviewActivity = "Controllare l'attività recente del tuo account",
-        LockedSupport = "Se hai bisogno di assistenza immediata, contatta il nostro supporto.",
+        LockedSupport = "Se hai bisogno di aiuto immediato, contatta il nostro supporto.",
     };
 }

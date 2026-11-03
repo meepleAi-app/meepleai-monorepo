@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Runtime.ExceptionServices;
 using System.Text.RegularExpressions;
 using Api.Services;
 using Api.Tests.Constants;
@@ -19,15 +20,21 @@ namespace Api.Tests.Services.Email;
 /// <remarks>
 /// <para>
 /// These go through the real <see cref="System.Net.Mail.SmtpClient"/> to a loopback <see cref="FakeSmtpServer"/>,
-/// not through a builder: <c>EmailService</c> builds the client by hand for these six, so the subject and
+/// not through a builder: <c>EmailService</c> builds the client by hand for these emails, so the subject and
 /// body a recipient reads exist only on the wire. A test at the builder would pass with the language never
 /// handed from the send method to it.
 /// </para>
 /// <para>
 /// "In Italian" is checked three ways, because each alone passes a half-translated email: the exact subject,
 /// distinctive sentences from the heading, the body and the footer, and the absence of English function words
-/// in what is left once the markup is stripped. Whether English is "unchanged" is pinned the same way
-/// (exact subject and the sentences), against the text as it was before the change.
+/// in what is left once the markup is stripped. That every Italian string differs from its English one is
+/// pinned in <c>AuthEmailTextsTests</c>. Whether English is "unchanged" is pinned by the exact subject and the
+/// sentences below, against the text as it was before the change — not by a snapshot of the whole body, so a
+/// typo in an English sentence that is not quoted here would go unnoticed.
+/// </para>
+/// <para>
+/// Time comes from a <see cref="FakeTimeProvider"/>: the footer year and the length of a lock are counted from
+/// it, so no assertion here depends on the machine's clock.
 /// </para>
 /// </remarks>
 [Trait("Category", TestCategories.Unit)]
@@ -37,6 +44,10 @@ public sealed class EmailServiceAuthLanguageTests
 {
     private const string BaseUrl = "https://app.meepleai.test";
     private const string Reason = "Spam nei commenti";
+
+    // Far from the machine's own date on purpose: a lock counted from the real clock instead of this one would
+    // give a wildly different number of minutes, not by luck the same.
+    private static readonly DateTimeOffset Now = new(2031, 5, 17, 9, 0, 0, TimeSpan.Zero);
 
     // The language part decides: case, region and separator do not matter, and surrounding spaces are ignored.
     private static readonly string?[] ItalianTags = ["it", "it-IT", "IT", "it_IT", " it "];
@@ -53,13 +64,15 @@ public sealed class EmailServiceAuthLanguageTests
         RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
         TimeSpan.FromSeconds(2));
 
+    /// <param name="Shared">What both languages carry unchanged: a link, a reason an administrator typed.</param>
     private sealed record AuthEmail(
         string Name,
         Func<EmailService, string?, Task> Send,
         string EnglishSubject,
         string ItalianSubject,
         string[] EnglishPhrases,
-        string[] ItalianPhrases);
+        string[] ItalianPhrases,
+        string[] Shared);
 
     private static readonly AuthEmail[] Cases =
     [
@@ -70,14 +83,13 @@ public sealed class EmailServiceAuthLanguageTests
             "Reimposta la tua password di MeepleAI",
             [
                 "Password Reset Request", "We received a request to reset your password", "Reset Password",
-                "will expire in 30 minutes", $"{BaseUrl}/reset-password?token=tok-reset",
-                "This is an automated message, please do not reply to this email.",
+                "will expire in 30 minutes", "This is an automated message, please do not reply to this email.",
             ],
             [
                 "Richiesta di reimpostazione della password", "Abbiamo ricevuto una richiesta di reimpostazione", "Reimposta la password",
-                "scade tra 30 minuti", $"{BaseUrl}/reset-password?token=tok-reset",
-                "Questo è un messaggio automatico, non rispondere a questa email.",
-            ]),
+                "scade tra 30 minuti", "Questo è un messaggio automatico, non rispondere a questa email.",
+            ],
+            [$"{BaseUrl}/reset-password?token=tok-reset"]),
         new(
             "verify",
             (s, lang) => s.SendVerificationEmailAsync("marco@example.test", "Marco", "tok-verify", lang, Ct),
@@ -85,14 +97,13 @@ public sealed class EmailServiceAuthLanguageTests
             "Verifica la tua email di MeepleAI",
             [
                 "Welcome to MeepleAI!", "Thank you for registering with MeepleAI", "Verify Email Address",
-                "will expire in 24 hours", $"{BaseUrl}/verify-email?token=tok-verify",
-                "This is an automated message, please do not reply to this email.",
+                "will expire in 24 hours", "This is an automated message, please do not reply to this email.",
             ],
             [
-                "Benvenuto su MeepleAI!", "Grazie per esserti registrato su MeepleAI", "Verifica l'indirizzo email",
-                "scade tra 24 ore", $"{BaseUrl}/verify-email?token=tok-verify",
-                "Questo è un messaggio automatico, non rispondere a questa email.",
-            ]),
+                "Ti diamo il benvenuto su MeepleAI!", "Grazie per aver creato un account su MeepleAI", "Verifica l'indirizzo email",
+                "scade tra 24 ore", "Questo è un messaggio automatico, non rispondere a questa email.",
+            ],
+            [$"{BaseUrl}/verify-email?token=tok-verify"]),
         new(
             "two-factor-by-user",
             (s, lang) => s.SendTwoFactorDisabledEmailAsync("marco@example.test", "Marco", false, lang, Ct),
@@ -109,7 +120,8 @@ public sealed class EmailServiceAuthLanguageTests
                 "Se non hai fatto tu questa modifica", "Per riattivare l'autenticazione a due fattori:",
                 "Vai su Impostazioni &gt; Privacy &gt; Autenticazione a due fattori",
                 "Questa è una notifica di sicurezza automatica, non rispondere a questa email.",
-            ]),
+            ],
+            []),
         new(
             "two-factor-by-admin",
             (s, lang) => s.SendTwoFactorDisabledEmailAsync("marco@example.test", "Marco", true, lang, Ct),
@@ -122,27 +134,30 @@ public sealed class EmailServiceAuthLanguageTests
             [
                 "Avviso di sicurezza", "Un amministratore ha disattivato l'autenticazione a due fattori sul tuo account",
                 "Se non hai richiesto questa modifica", "Segui le istruzioni di configurazione",
-            ]),
+            ],
+            []),
         new(
             "suspended-with-reason",
             (s, lang) => s.SendAccountSuspendedEmailAsync("marco@example.test", "Marco", Reason, lang, Ct),
             "Your MeepleAI Account Has Been Suspended",
             "Il tuo account MeepleAI è stato sospeso",
             [
-                "Account Suspended", "has been suspended by an administrator", "Reason for suspension:", Reason,
+                "Account Suspended", "has been suspended by an administrator", "Reason for suspension:",
                 "Contact Support", "Thank you for your understanding.",
             ],
             [
-                "Account sospeso", "è stato sospeso da un amministratore", "Motivo della sospensione:", Reason,
+                "Account sospeso", "è stato sospeso da un amministratore", "Motivo della sospensione:",
                 "Contatta il supporto", "Grazie per la comprensione.",
-            ]),
+            ],
+            [Reason]),
         new(
             "suspended-without-reason",
             (s, lang) => s.SendAccountSuspendedEmailAsync("marco@example.test", "Marco", null, lang, Ct),
             "Your MeepleAI Account Has Been Suspended",
             "Il tuo account MeepleAI è stato sospeso",
             ["Account Suspended", "has been suspended by an administrator", "Contact Support"],
-            ["Account sospeso", "è stato sospeso da un amministratore", "Contatta il supporto"]),
+            ["Account sospeso", "è stato sospeso da un amministratore", "Contatta il supporto"],
+            []),
         new(
             "reactivated",
             (s, lang) => s.SendAccountReactivatedEmailAsync("marco@example.test", "Marco", lang, Ct),
@@ -153,12 +168,13 @@ public sealed class EmailServiceAuthLanguageTests
                 "Review our community guidelines", "Thank you for being part of the MeepleAI community!",
             ],
             [
-                "Account riattivato", "Bentornato! Il tuo account è di nuovo attivo", "Prossimi passi:",
+                "Account riattivato", "Che bello riaverti con noi! Il tuo account è di nuovo attivo", "Prossimi passi:",
                 "Rileggi le linee guida della community", "Grazie di far parte della community di MeepleAI!",
-            ]),
+            ],
+            []),
         new(
             "locked-with-ip",
-            (s, lang) => s.SendAccountLockedEmailAsync("marco@example.test", "Marco", 5, DateTime.UtcNow.AddMinutes(14.5), "203.0.113.7", lang, Ct),
+            (s, lang) => s.SendAccountLockedEmailAsync("marco@example.test", "Marco", 5, Now.UtcDateTime.AddMinutes(14.5), "203.0.113.7", lang, Ct),
             "Security Alert: Your MeepleAI Account Has Been Locked",
             "Avviso di sicurezza: il tuo account MeepleAI è stato bloccato",
             [
@@ -168,14 +184,16 @@ public sealed class EmailServiceAuthLanguageTests
             [
                 "Account bloccato temporaneamente", "5 tentativi di accesso consecutivi falliti", "Account bloccato per: 15 minuti",
                 "Indirizzo IP: 203.0.113.7", "Aspetta che il blocco termini", "Controllare l'attività recente del tuo account",
-            ]),
+            ],
+            []),
         new(
             "locked-without-ip",
-            (s, lang) => s.SendAccountLockedEmailAsync("marco@example.test", "Marco", 5, DateTime.UtcNow.AddMinutes(14.5), null, lang, Ct),
+            (s, lang) => s.SendAccountLockedEmailAsync("marco@example.test", "Marco", 5, Now.UtcDateTime.AddMinutes(14.5), null, lang, Ct),
             "Security Alert: Your MeepleAI Account Has Been Locked",
             "Avviso di sicurezza: il tuo account MeepleAI è stato bloccato",
             ["Account Temporarily Locked", "5 consecutive failed login attempts", "Make sure you're using the correct password"],
-            ["Account bloccato temporaneamente", "5 tentativi di accesso consecutivi falliti", "Controlla di usare la password giusta"]),
+            ["Account bloccato temporaneamente", "5 tentativi di accesso consecutivi falliti", "Assicurati di usare la password corretta"],
+            []),
     ];
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
@@ -208,7 +226,7 @@ public sealed class EmailServiceAuthLanguageTests
 
         mail.Subject.Should().Be(email.ItalianSubject);
         mail.Body.Should().Contain("Ciao Marco,");
-        foreach (var phrase in email.ItalianPhrases)
+        foreach (var phrase in email.ItalianPhrases.Concat(email.Shared))
             mail.Body.Should().Contain(phrase);
 
         EnglishWordsIn(mail.Body).Should().BeEmpty("nothing of an Italian email may be left in English");
@@ -224,11 +242,12 @@ public sealed class EmailServiceAuthLanguageTests
 
         mail.Subject.Should().Be(email.EnglishSubject);
         mail.Body.Should().Contain("Hello Marco,");
-        foreach (var phrase in email.EnglishPhrases)
+        foreach (var phrase in email.EnglishPhrases.Concat(email.Shared))
             mail.Body.Should().Contain(phrase);
 
-        mail.Body.Should().NotContain(email.ItalianSubject);
         mail.Body.Should().NotContain("Ciao Marco,");
+        foreach (var phrase in email.ItalianPhrases)
+            mail.Body.Should().NotContain(phrase);
     }
 
     [Theory]
@@ -248,9 +267,9 @@ public sealed class EmailServiceAuthLanguageTests
     {
         var email = Cases.Single(c => c.Name == name);
 
-        var mail = await SendAsync(service => email.Send(service, language), new DateTimeOffset(2031, 3, 4, 0, 0, 0, TimeSpan.Zero));
+        var mail = await SendAsync(service => email.Send(service, language), new DateTimeOffset(2033, 3, 4, 0, 0, 0, TimeSpan.Zero));
 
-        mail.Body.Should().Contain("&copy; 2031 MeepleAI");
+        mail.Body.Should().Contain("&copy; 2033 MeepleAI");
         mail.Body.Should().NotContain("2025", "the year used to be a literal in the template");
     }
 
@@ -258,13 +277,13 @@ public sealed class EmailServiceAuthLanguageTests
     public async Task The_Italian_lock_duration_says_one_minute_in_the_singular()
     {
         var mail = await SendAsync(service => service.SendAccountLockedEmailAsync(
-            "marco@example.test", "Marco", 5, DateTime.UtcNow.AddSeconds(50), null, "it", Ct));
+            "marco@example.test", "Marco", 5, Now.UtcDateTime.AddSeconds(50), null, "it", Ct));
 
         mail.Body.Should().Contain("Account bloccato per: 1 minuto<");
     }
 
     [Theory]
-    [InlineData("it", "Si sblocca alle: 07/03/2030 14:05 UTC")]
+    [InlineData("it", "Sblocco previsto: 07/03/2030 14:05 UTC")]
     [InlineData("en", "Unlocks at: 2030-03-07 14:05 UTC")]
     public async Task The_unlock_time_is_written_the_way_the_recipients_language_writes_dates(string language, string expected)
     {
@@ -282,7 +301,7 @@ public sealed class EmailServiceAuthLanguageTests
     public async Task A_lockout_without_an_address_does_not_list_one(string language, string label)
     {
         var mail = await SendAsync(service => service.SendAccountLockedEmailAsync(
-            "marco@example.test", "Marco", 5, DateTime.UtcNow.AddMinutes(14.5), "   ", language, Ct));
+            "marco@example.test", "Marco", 5, Now.UtcDateTime.AddMinutes(14.5), "   ", language, Ct));
 
         mail.Body.Should().NotContain(label);
     }
@@ -326,10 +345,24 @@ public sealed class EmailServiceAuthLanguageTests
                 ["Frontend:BaseUrl"] = BaseUrl,
             })
             .Build();
-        var clock = new FakeTimeProvider(now ?? new DateTimeOffset(2026, 11, 3, 9, 0, 0, TimeSpan.Zero));
+        var clock = new FakeTimeProvider(now ?? Now);
         var service = new EmailService(configuration, NullLogger<EmailService>.Instance, sender: null, clock);
 
-        await send(service);
+        Exception? sendFailure = null;
+        try
+        {
+            await send(service);
+        }
+        catch (InvalidOperationException ex)
+        {
+            sendFailure = ex;
+        }
+
+        // A failure inside the server (a message it could not decode) must surface as itself, not as the
+        // client's "failed to send" that it causes.
+        smtp.ServerErrors.Should().BeEmpty();
+        if (sendFailure is not null)
+            ExceptionDispatchInfo.Capture(sendFailure).Throw();
 
         return smtp.Received.Should().ContainSingle().Subject;
     }

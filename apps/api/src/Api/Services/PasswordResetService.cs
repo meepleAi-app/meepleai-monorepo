@@ -117,7 +117,7 @@ internal class PasswordResetService : IPasswordResetService
                 user.Email,
                 user.DisplayName ?? user.Email,
                 resetTokenValue,
-                user.Language,
+                language: user.Language,
                 ct).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types

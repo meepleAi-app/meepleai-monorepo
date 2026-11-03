@@ -13,6 +13,12 @@ export type {
 export { collectCitations, getSuggestedQuestions } from './messages';
 export { useChatScroll, type UseChatScrollResult } from './useChatScroll';
 export {
+  stashPendingFirstMessage,
+  takePendingFirstMessage,
+  usePendingFirstMessage,
+  type UsePendingFirstMessageOptions,
+} from './pendingFirstMessage';
+export {
   useThreadMessages,
   threadMessagesReducer,
   initialThreadMessagesState,

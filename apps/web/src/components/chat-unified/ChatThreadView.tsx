@@ -25,6 +25,7 @@ import {
   collectCitations,
   getSuggestedQuestions,
   useChatScroll,
+  usePendingFirstMessage,
   useThreadMessages,
 } from '@/components/chat/shared';
 import { PageViewerPanel } from '@/components/chat/viewer/PageViewerPanel';
@@ -647,6 +648,14 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
 
   // Keep ref in sync for voice onTranscript callback
   handleSendRef.current = handleSendMessage;
+
+  // #4740: the question of a Quick Start, left by the start page, goes out once the thread is open.
+  usePendingFirstMessage({
+    threadId,
+    view: 'desktop',
+    ready: !isLoading && thread?.id === threadId && !!thread.gameId && thread.messages.length === 0,
+    send: message => void handleSendMessage(message),
+  });
 
   // Title change
   const handleTitleChange = useCallback(

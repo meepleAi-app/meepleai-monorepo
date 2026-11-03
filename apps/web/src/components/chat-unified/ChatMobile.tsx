@@ -13,6 +13,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Send } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import { usePendingFirstMessage } from '@/components/chat/shared';
 import { MobileHeader } from '@/components/ui/navigation/MobileHeader';
 import { useAgentChatStream } from '@/hooks/useAgentChatStream';
 import { api } from '@/lib/api';
@@ -560,6 +561,18 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
     },
     [handleSend]
   );
+
+  // #4740: the question of a Quick Start, left by the start page, goes out once the thread is open.
+  usePendingFirstMessage({
+    threadId,
+    view: 'mobile',
+    ready:
+      !isLoading &&
+      thread?.id === threadId &&
+      !!thread.gameId &&
+      (thread.messages ?? []).length === 0,
+    send: handleSend,
+  });
 
   // Header title
   const headerTitle = thread?.title ?? 'Chat';

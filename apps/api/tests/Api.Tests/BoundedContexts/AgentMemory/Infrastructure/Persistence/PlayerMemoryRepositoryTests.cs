@@ -40,9 +40,14 @@ public sealed class PlayerMemoryRepositoryTests : IDisposable
         new { GameId = StatsGameId, Wins = 3, Losses = 2, TotalPlayed = 5, BestScore = (int?)42 },
     });
 
+    // #4839, option C: la colonna delle sessioni già contate è un array JSON di Guid.
+    private static readonly Guid CountedSessionId = Guid.Parse("a1b2c3d4-e5f6-4708-8192-a3b4c5d6e7f8");
+    private static readonly string ProcessedSessionIdsJson = JsonSerializer.Serialize(new[] { CountedSessionId });
+
     private static readonly Dictionary<string, object?> LegalSentinels = new(StringComparer.Ordinal)
     {
         [nameof(PlayerMemoryEntity.GameStatsJson)] = GameStatsJson,
+        [nameof(PlayerMemoryEntity.ProcessedSessionIdsJson)] = ProcessedSessionIdsJson,
     };
 
     // Colonne che il dominio non porta, con il perché. UpdatedAt non ha una proprietà sull'aggregato e nessun
@@ -120,6 +125,9 @@ public sealed class PlayerMemoryRepositoryTests : IDisposable
                 .Select(s => new { s.GameId, s.Wins, s.Losses, s.TotalPlayed, s.BestScore })
                 .ToArray());
         }
+
+        if (string.Equals(column, nameof(PlayerMemoryEntity.ProcessedSessionIdsJson), StringComparison.Ordinal))
+            return JsonSerializer.Serialize(memory.ProcessedSessionIds);
 
         var property = typeof(PlayerMemory).GetProperty(column);
         return property is null ? "<assente dall'aggregato>" : property.GetValue(memory);

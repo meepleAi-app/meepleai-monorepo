@@ -19,4 +19,7 @@ public class GroupMemoryEntity
     /// Last domain event id processed against this aggregate (issue #1939 / CF-3).
     /// </summary>
     public Guid? LastProcessedEventId { get; set; }
+
+    /// <summary>JSONB array of the session ids already counted (#4839, option C); null on rows older than the column.</summary>
+    public string? ProcessedSessionIdsJson { get; set; }
 }

@@ -62,8 +62,7 @@ public sealed class ProcessedSessionsTests
 
         var sessions = new ProcessedSessions(stored);
 
-        sessions.Ids.Should().HaveCount(ProcessedSessions.Capacity);
-        sessions.Ids.Should().NotContain(Guid.Empty);
+        sessions.Ids.Should().Equal(kept, "the empty id and the repeats are dropped, and the oldest of the rest is the one that goes");
     }
 
     [Fact]

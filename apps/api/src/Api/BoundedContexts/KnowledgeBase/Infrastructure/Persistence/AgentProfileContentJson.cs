@@ -42,7 +42,8 @@ internal static class AgentProfileContentJson
             content.KeywordWeight,
             content.RerankerEnabled,
             content.AllowedCategories.ToArray(),
-            ToDocument(content.SessionAssistant));
+            ToDocument(content.SessionAssistant),
+            content.IntentInstructions.Count == 0 ? null : content.IntentInstructions.ToDictionary(StringComparer.Ordinal));
         return JsonSerializer.Serialize(document, Options);
     }
 
@@ -68,7 +69,8 @@ internal static class AgentProfileContentJson
             d.KeywordWeight,
             d.RerankerEnabled,
             d.AllowedCategories,
-            ToSettings(d.SessionAssistant));
+            ToSettings(d.SessionAssistant),
+            d.IntentInstructions ?? AgentProfileContent.NoIntentInstructions);
     }
 
     private static SessionAssistantDocument? ToDocument(SessionAssistantSettings assistant) =>
@@ -120,5 +122,8 @@ internal static class AgentProfileContentJson
         DocumentCategory[] AllowedCategories,
         // Opzionale e in coda: le versioni scritte prima della fetta A2 non hanno la chiave, e una sezione
         // spenta non la scrive, così il jsonb delle versioni esistenti non cambia.
-        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] SessionAssistantDocument? SessionAssistant = null);
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] SessionAssistantDocument? SessionAssistant = null,
+        // Come l'assistente in partita (#4404): opzionale e in coda. Le versioni scritte prima non hanno la chiave, e un
+        // contenuto senza sezioni non la scrive, cosi' il jsonb delle versioni esistenti non cambia.
+        [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] Dictionary<string, string>? IntentInstructions = null);
 }

@@ -137,5 +137,6 @@ internal static class ProbeProfiles
         keywordWeight: keywordWeight,
         rerankerEnabled: rerankerEnabled,
         Enum.GetValues<DocumentCategory>(),
-        SessionAssistantSettings.Disabled);
+        SessionAssistantSettings.Disabled,
+        AgentProfileContent.NoIntentInstructions);
 }

@@ -14,6 +14,16 @@ public sealed class AgentProfileContent : ValueObject
 {
     public const int MaxResponseTokensLimit = 32000;
 
+    /// <summary>La lunghezza massima del testo di una sezione di intento (#4404): è prompt, non un documento.</summary>
+    public const int MaxIntentInstructionLength = 2000;
+
+    /// <summary>
+    /// Nessuna sezione di intento. Un argomento da passare, non un default: come l'assistente in partita, chi
+    /// ricostruisce un contenuto campo per campo deve dire che cosa ne fa, invece di perdere le sezioni per omissione.
+    /// </summary>
+    public static IReadOnlyDictionary<string, string> NoIntentInstructions { get; } =
+        new SortedDictionary<string, string>(StringComparer.Ordinal).AsReadOnly();
+
     public string Name { get; }
     public string Description { get; }
     public string Persona { get; }
@@ -35,6 +45,14 @@ public sealed class AgentProfileContent : ValueObject
     /// <summary>La sezione «Assistente in partita» (spec 2026-10-11 §3.2). Mai nulla: assente vale spenta.</summary>
     public SessionAssistantSettings SessionAssistant { get; }
 
+    /// <summary>
+    /// Le sezioni degli intenti della risposta (#4404, ADR-098 §5): per ogni intento che ne ha una (<c>tutor</c>,
+    /// <c>secca</c>), il testo che la pipeline aggiunge al prompt. Un intento senza sezione usa l'istruzione
+    /// predefinita (<see cref="AnswerIntent.DefaultInstructionFor"/>); una versione scritta prima di questa
+    /// sezione non ne ha nessuna. Mai nulla.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> IntentInstructions { get; }
+
     private AgentProfileContent(
         string name,
         string description,
@@ -53,7 +71,8 @@ public sealed class AgentProfileContent : ValueObject
         decimal keywordWeight,
         bool rerankerEnabled,
         IReadOnlyList<DocumentCategory> allowedCategories,
-        SessionAssistantSettings sessionAssistant)
+        SessionAssistantSettings sessionAssistant,
+        IReadOnlyDictionary<string, string> intentInstructions)
     {
         Name = name;
         Description = description;
@@ -73,6 +92,7 @@ public sealed class AgentProfileContent : ValueObject
         RerankerEnabled = rerankerEnabled;
         AllowedCategories = allowedCategories;
         SessionAssistant = sessionAssistant;
+        IntentInstructions = intentInstructions;
     }
 
     public static AgentProfileContent Create(
@@ -93,9 +113,11 @@ public sealed class AgentProfileContent : ValueObject
         decimal keywordWeight,
         bool rerankerEnabled,
         IReadOnlyCollection<DocumentCategory> allowedCategories,
-        SessionAssistantSettings sessionAssistant)
+        SessionAssistantSettings sessionAssistant,
+        IReadOnlyDictionary<string, string> intentInstructions)
     {
         ArgumentNullException.ThrowIfNull(sessionAssistant);
+        ArgumentNullException.ThrowIfNull(intentInstructions);
         Require(!string.IsNullOrWhiteSpace(name), nameof(name), "Name is required.");
         Require(!string.IsNullOrWhiteSpace(primaryModelId), nameof(primaryModelId), "Primary model is required.");
         Require(fallbackModelId is null || !string.IsNullOrWhiteSpace(fallbackModelId),
@@ -137,6 +159,8 @@ public sealed class AgentProfileContent : ValueObject
         Require(!sessionAssistant.Enabled || sessionAssistant.PromptFor(language) is not null, nameof(sessionAssistant),
             $"The session assistant needs a system prompt for the fallback language '{language}'.");
 
+        var instructions = NormalizeIntentInstructions(intentInstructions);
+
         return new AgentProfileContent(
             name.Trim(),
             description?.Trim() ?? string.Empty,
@@ -155,7 +179,45 @@ public sealed class AgentProfileContent : ValueObject
             keywordWeight,
             rerankerEnabled,
             allowedCategories.Distinct().Order().ToArray(),
-            sessionAssistant);
+            sessionAssistant,
+            instructions);
+    }
+
+    /// <summary>
+    /// Le sezioni degli intenti (#4404) in forma canonica: l'id in minuscolo e senza spazi, il testo senza spazi
+    /// ai lati. Solo gli intenti che hanno una sezione (non <c>auto</c>, che è la risposta di oggi e non aggiunge
+    /// nulla) e solo testi non vuoti; lo stesso intento due volte è un errore, non una scelta silenziosa.
+    /// </summary>
+    private static IReadOnlyDictionary<string, string> NormalizeIntentInstructions(
+        IReadOnlyDictionary<string, string> intentInstructions)
+    {
+        var normalized = new SortedDictionary<string, string>(StringComparer.Ordinal);
+
+        foreach (var (intent, text) in intentInstructions)
+        {
+            var id = intent?.Trim().ToLowerInvariant() ?? string.Empty;
+            Require(
+                AnswerIntent.All.Contains(id, StringComparer.Ordinal) && !string.Equals(id, AnswerIntent.Auto, StringComparison.Ordinal),
+                nameof(intentInstructions),
+                $"'{intent}' is not an answer intent with a section (valid: {string.Join(", ", AnswerIntent.All.Where(i => !string.Equals(i, AnswerIntent.Auto, StringComparison.Ordinal)))}).");
+            Require(!string.IsNullOrWhiteSpace(text), nameof(intentInstructions), $"The instruction for '{id}' is empty.");
+            var trimmed = text.Trim();
+            Require(trimmed.Length <= MaxIntentInstructionLength, nameof(intentInstructions),
+                $"The instruction for '{id}' cannot exceed {MaxIntentInstructionLength} characters.");
+            Require(normalized.TryAdd(id, trimmed), nameof(intentInstructions), $"The instruction for '{id}' is declared twice.");
+        }
+
+        return normalized.AsReadOnly();
+    }
+
+    /// <summary>
+    /// L'istruzione che un intento aggiunge al prompt (#4404): la sezione di questa versione se ce l'ha,
+    /// altrimenti quella predefinita; <c>null</c> per <c>auto</c> o per un id fuori elenco.
+    /// </summary>
+    public string? InstructionForIntent(string intent)
+    {
+        var id = AnswerIntent.FromStored(intent);
+        return IntentInstructions.TryGetValue(id, out var own) ? own : AnswerIntent.DefaultInstructionFor(id);
     }
 
     /// <summary>
@@ -182,7 +244,8 @@ public sealed class AgentProfileContent : ValueObject
         decimal keywordWeight,
         bool rerankerEnabled,
         IReadOnlyCollection<DocumentCategory> allowedCategories,
-        SessionAssistantSettings sessionAssistant) =>
+        SessionAssistantSettings sessionAssistant,
+        IReadOnlyDictionary<string, string> intentInstructions) =>
         new(
             name,
             description,
@@ -203,7 +266,12 @@ public sealed class AgentProfileContent : ValueObject
             // Normalizzare non è validare: le categorie sono un insieme, e l'uguaglianza le confronta
             // in ordine, quindi un jsonb scritto in un altro ordine deve tornare uguale a Create.
             allowedCategories.Distinct().Order().ToArray(),
-            sessionAssistant);
+            sessionAssistant,
+            // Come per le categorie: normalizzare non è validare. Una chiave che non è più un intento si carica
+            // (la storia è immutabile) e semplicemente non viene mai chiesta.
+            new SortedDictionary<string, string>(
+                intentInstructions.ToDictionary(StringComparer.Ordinal),
+                StringComparer.Ordinal).AsReadOnly());
 
     /// <summary>
     /// Spec 2026-10-11 §3.2: perché l'assistente in partita non può girare con i modelli di questo
@@ -272,6 +340,14 @@ public sealed class AgentProfileContent : ValueObject
         }
 
         yield return SessionAssistant;
+
+        // Il conteggio tiene allineata la sequenza, come per i prompt.
+        yield return IntentInstructions.Count;
+        foreach (var (intent, text) in IntentInstructions)
+        {
+            yield return intent;
+            yield return text;
+        }
     }
 
     private static string NormalizeLanguage(string language) => language.Trim().ToLowerInvariant();

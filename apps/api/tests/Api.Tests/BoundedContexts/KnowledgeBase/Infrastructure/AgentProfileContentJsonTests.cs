@@ -127,4 +127,68 @@ public sealed class AgentProfileContentJsonTests
         assistant.TurnTimeoutSeconds.Should().Be(15);
         assistant.UseReserveModel.Should().BeFalse();
     }
+
+    // ── La sezione degli intenti della risposta (#4404) ──────────────────────
+
+    [Fact]
+    public void ASectionOfIntentInstructions_SurvivesARoundTrip()
+    {
+        var content = AgentProfileTests.Content(intents: new Dictionary<string, string>
+        {
+            ["tutor"] = "Teach it like a patient friend.",
+            ["secca"] = "One line, then the page.",
+        });
+
+        var restored = AgentProfileContentJson.Deserialize(AgentProfileContentJson.Serialize(content));
+
+        restored.Should().Be(content);
+        restored.IntentInstructions["tutor"].Should().Be("Teach it like a patient friend.");
+    }
+
+    /// <summary>
+    /// Come per l'assistente in partita: una versione senza la sezione non comincia a scriverla, cosi' il jsonb
+    /// delle versioni esistenti resta byte per byte quello di prima.
+    /// </summary>
+    [Fact]
+    public void AContentWithoutTheSection_DoesNotWriteTheKey()
+    {
+        var json = JsonNode.Parse(AgentProfileContentJson.Serialize(AgentProfileTests.Content()))!;
+
+        json.AsObject().ContainsKey("intentInstructions").Should().BeFalse();
+    }
+
+    [Fact]
+    public void ASectionIsWrittenInCamelCase_UnderTheIdOfTheIntent()
+    {
+        var json = JsonNode.Parse(AgentProfileContentJson.Serialize(
+            AgentProfileTests.Content(intents: new Dictionary<string, string> { ["secca"] = "One line." })))!;
+
+        json["intentInstructions"]!["secca"]!.GetValue<string>().Should().Be("One line.");
+    }
+
+    [Fact]
+    public void AVersionStoredBeforeTheSectionExisted_LoadsWithNone()
+    {
+        var json = JsonNode.Parse(AgentProfileContentJson.Serialize(AgentProfileTests.Content()))!;
+        json.AsObject().Remove("intentInstructions");
+
+        var restored = AgentProfileContentJson.Deserialize(json.ToJsonString());
+
+        restored.IntentInstructions.Should().BeEmpty();
+        restored.Should().Be(AgentProfileTests.Content());
+    }
+
+    [Fact]
+    public void ASectionStoredUnderOlderRules_IsNotRevalidated_ButIsNotAnIntentEither()
+    {
+        // A key that is no longer an intent (here a retired id) loads, because history is immutable; the pipeline
+        // only ever asks for tutor and secca, so it is never read.
+        var json = JsonNode.Parse(AgentProfileContentJson.Serialize(AgentProfileTests.Content()))!;
+        json["intentInstructions"] = new JsonObject { ["decisore"] = "Old." };
+
+        var restored = AgentProfileContentJson.Deserialize(json.ToJsonString());
+
+        restored.IntentInstructions.Should().ContainKey("decisore");
+        restored.InstructionForIntent("decisore").Should().BeNull();
+    }
 }

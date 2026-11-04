@@ -1151,7 +1151,8 @@ public sealed class AgentProfileFieldEffectTests
             c.KeywordWeight,
             rerankerEnabled ?? c.RerankerEnabled,
             c.AllowedCategories.ToList(),
-            c.SessionAssistant);
+            c.SessionAssistant,
+            c.IntentInstructions);
 
     private async Task<List<JsonElement>> AskAsync(
         string query, string? acceptLanguage = null, Guid? chatId = null, string? token = null,

@@ -79,6 +79,8 @@ public sealed class AgentProfileContentSessionAssistantTests
             .GetParameters();
 
         parameters.Should().NotContain(p => p.IsOptional);
-        parameters[^1].ParameterType.Should().Be(typeof(SessionAssistantSettings));
+        parameters.Should().Contain(p => p.ParameterType == typeof(SessionAssistantSettings));
+        // #4404: the section that came after it follows the same rule, for the same reason.
+        parameters[^1].Name.Should().Be("intentInstructions");
     }
 }

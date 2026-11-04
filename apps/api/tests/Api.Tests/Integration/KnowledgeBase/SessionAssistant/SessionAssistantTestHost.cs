@@ -314,7 +314,8 @@ internal static class SessionAssistantTestData
             c.Name, c.Description, c.Persona, c.PrimaryModelId, c.FallbackModelId, c.Temperature, c.MaxResponseTokens,
             c.CitationStyle, c.SystemPrompts, c.FallbackLanguage, c.CandidatePoolSize, c.FinalTopK, c.MinScore,
             c.VectorWeight, c.KeywordWeight, c.RerankerEnabled, c.AllowedCategories.ToList(),
-            assistant));
+            assistant,
+            c.IntentInstructions));
         var toolCallingModels = await services.GetRequiredService<IToolCallingModelCatalog>().GetToolCallingModelIdsAsync(ct);
         var version = profile.PublishDraft(AgentProfileTests.PricingTheModelsOf(profile.Draft!.Content, toolCallingModels));
         await services.GetRequiredService<IUnitOfWork>().SaveChangesAsync(ct);

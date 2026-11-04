@@ -182,10 +182,11 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         // #4279: the history of the thread, read BEFORE the cache. It goes into the prompt, so it
         // goes into the key: the cache is shared by every user, and an answer shaped by one
         // conversation must not be served to a question asked in another, or in none.
-        var chatHistoryContext = await LoadChatThreadContextAsync(
+        var thread = await LoadChatThreadContextAsync(
             query.ThreadId, query.GameId, query.UserId, cancellationToken).ConfigureAwait(false);
+        var chatHistoryContext = thread.History;
 
-        var cacheKey = QaCacheKey(query, profile, language.Language, chatHistoryContext);
+        var cacheKey = QaCacheKey(query, profile, language.Language, chatHistoryContext, thread.Intent);
         // #4169 (6c-3): una bozza cambia contenuto tenendo lo stesso id, quindi la sua prova non legge
         // né scrive la cache: una risposta salvata sotto quell'id sarebbe di un contenuto vecchio.
         var skipCache = injectClaims || query.Trial is not null;
@@ -253,7 +254,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
 
         // Stream fresh QA response
         await foreach (var evt in AskStreamInternalAsync(
-            query, profile, language.Language, verifiedBlock, chatHistoryContext, cacheKey, quota, cancellationToken).ConfigureAwait(false))
+            query, profile, language.Language, verifiedBlock, thread, cacheKey, quota, cancellationToken).ConfigureAwait(false))
         {
             yield return evt;
         }
@@ -264,7 +265,7 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         PublishedAgentProfile profile,
         string language,
         VerifiedRulesBlock verifiedBlock,
-        string chatHistoryContext,
+        ChatThreadContext thread,
         string cacheKey,
         AnswerQuota quota,
         [EnumeratorCancellation] CancellationToken cancellationToken)
@@ -330,8 +331,8 @@ internal sealed class AnswerPipeline : IAnswerPipeline
             new StreamingStateUpdate("Generating answer..."));
 
         var (systemPrompt, userPrompt) = BuildLlmPrompts(
-            profile.Content, language, query.Query, ragSnippets, chatHistoryContext,
-            query.ResponseStyle, query.ContinuationContext, verifiedBlock);
+            profile.Content, language, query.Query, ragSnippets, thread.History,
+            query.ResponseStyle, query.ContinuationContext, verifiedBlock, thread.Intent);
 
         // Step 4: Stream tokens from LLM.
         // #3850: la rinuncia esce nella lingua della risposta. Il localizzatore trattiene solo ciò che
@@ -555,22 +556,35 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         source.StartsWith("PDF:", StringComparison.Ordinal) ? source["PDF:".Length..] : source;
 
     /// <summary>
+    /// What the pipeline takes from the chat thread named by the request: the history for the prompt and, since
+    /// #4404, the intent of the answer. Both come from the same thread and both obey the same rule — it must be
+    /// the asker's own, on the same game (#4242) — so a thread that is not theirs shapes nothing.
+    /// </summary>
+    /// <param name="History">The history to put in the prompt, or empty.</param>
+    /// <param name="Intent">One of <see cref="AnswerIntent.All"/>; <c>auto</c> when there is no usable thread.</param>
+    private sealed record ChatThreadContext(string History, string Intent)
+    {
+        public static ChatThreadContext None { get; } = new(string.Empty, AnswerIntent.Auto);
+    }
+
+    /// <summary>
     /// Loads chat thread context if ThreadId provided.
     /// </summary>
-    private async Task<string> LoadChatThreadContextAsync(
+    private async Task<ChatThreadContext> LoadChatThreadContextAsync(
         Guid? threadId,
         string gameId,
         Guid userId,
         CancellationToken cancellationToken)
     {
         if (!threadId.HasValue)
-            return string.Empty;
+            return ChatThreadContext.None;
 
         var thread = await _chatThreadRepository.GetByIdAsync(threadId.Value, cancellationToken).ConfigureAwait(false);
         if (thread == null)
-            return string.Empty;
+            return ChatThreadContext.None;
 
-        // Security (#4242): the history is used only for its owner, and only for its game.
+        // Security (#4242): the history is used only for its owner, and only for its game. The intent of the
+        // thread is lent on the same terms (#4404).
         Guid? questionGameId = Guid.TryParse(gameId, out var parsedGameId) ? parsedGameId : null;
         switch (ChatThreadHistoryPolicy.WhyNot(thread, userId, questionGameId))
         {
@@ -578,23 +592,26 @@ internal sealed class AnswerPipeline : IAnswerPipeline
                 _logger.LogWarning(
                     "Thread {ThreadId} does not belong to user {UserId}. Ignoring chat history.",
                     threadId.Value, userId);
-                return string.Empty;
+                return ChatThreadContext.None;
             case ChatThreadHistoryRefusal.AnotherGame:
                 _logger.LogWarning(
                     "Thread {ThreadId} belongs to game {ThreadGameId} but query is for game {QueryGameId}. Ignoring chat history.",
                     threadId.Value, thread.GameId, gameId);
-                return string.Empty;
+                return ChatThreadContext.None;
         }
+
+        // A value outside the list (a retired id, another feature's type) answers as «auto».
+        var intent = AnswerIntent.FromStored(thread.AgentType);
 
         if (_chatContextService.ShouldIncludeChatHistory(thread))
         {
             _logger.LogInformation(
                 "Including chat history from thread {ThreadId}: {MessageCount} messages",
                 threadId.Value, thread.MessageCount);
-            return _chatContextService.BuildChatHistoryContext(thread);
+            return new ChatThreadContext(_chatContextService.BuildChatHistoryContext(thread), intent);
         }
 
-        return string.Empty;
+        return new ChatThreadContext(string.Empty, intent);
     }
 
     /// <summary>
@@ -609,7 +626,8 @@ internal sealed class AnswerPipeline : IAnswerPipeline
         string chatHistoryContext,
         string? responseStyle,
         string? continuationContext,
-        VerifiedRulesBlock verifiedBlock)
+        VerifiedRulesBlock verifiedBlock,
+        string intent)
     {
         var context = string.Join("\n\n", snippets.Select(s =>
             // #4819: said outright when the page is not known: a passage without any marker would read as part of
@@ -627,7 +645,8 @@ internal sealed class AnswerPipeline : IAnswerPipeline
 
         // La chat ha sempre uno stile: senza una scelta dell'utente, sintetico.
         var prompt = AnswerPromptBuilder.Build(
-            profile, language, context, queryText, responseStyle ?? "concise", continuationContext, hasVerifiedRules);
+            profile, language, context, queryText, responseStyle ?? "concise", continuationContext, hasVerifiedRules,
+            intent: intent);
 
         // Enrich with chat history if available
         var userPrompt = !string.IsNullOrWhiteSpace(chatHistoryContext)
@@ -811,13 +830,16 @@ internal sealed class AnswerPipeline : IAnswerPipeline
     /// continuano a condividere la risposta in cache.
     /// </remarks>
     private string QaCacheKey(
-        AnswerRequest query, PublishedAgentProfile profile, string language, string chatHistoryContext)
+        AnswerRequest query, PublishedAgentProfile profile, string language, string chatHistoryContext, string intent)
     {
         var shape = string.Join(
             '|',
             language,
             profile.VersionId.ToString("N"),
             $"style:{NormalizedResponseStyle(query.ResponseStyle)}",
+            // #4404: la forma della risposta scelta nella chat (auto, tutor, secca) entra nel prompt, quindi nella chiave:
+            // la risposta del tutor non deve tornare a chi ha chiesto «auto».
+            $"intent:{intent}",
             $"history:{Fingerprint(chatHistoryContext)}",
             $"documents:{Fingerprint(DocumentFilterOf(query.DocumentIds))}",
             $"continues:{Fingerprint(query.ContinuationContext)}",

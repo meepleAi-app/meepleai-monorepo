@@ -1152,6 +1152,108 @@ public partial class StreamQaQueryHandlerTests
             Times.Once);
     }
 
+    // ─── Intento della risposta (#4404, ADR-098 §5) ──────────────────────────────
+
+    /// <summary>The system prompt of the one model call a question to <paramref name="thread"/> makes.</summary>
+    private async Task<string> SystemPromptOfAnAnswerInAsync(ChatThread thread, string gameId)
+    {
+        var query = new StreamQaQuery(gameId, "Quante carte si pescano?", TestUserId, "User", ThreadId: thread.Id);
+        _chatThreadRepositoryMock
+            .Setup(x => x.GetByIdAsync(thread.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(thread);
+        SetupHappyPathMocks(gameId, query.Query);
+
+        await foreach (var _ in _handler.Handle(query, TestContext.Current.CancellationToken))
+        {
+        }
+
+        var request = _llmServiceMock.Invocations
+            .Where(i => i.Method.Name == nameof(ILlmService.GenerateAnswerStreamAsync))
+            .Select(i => (LlmAnswerRequest)i.Arguments[0])
+            .Should().ContainSingle("the question went all the way to the model").Subject;
+        return request.SystemPrompt;
+    }
+
+    [Fact]
+    public async Task Handle_AThreadOnTheTutorIntent_AsksTheModelForTheTutorShape_AndAnAutoThreadDoesNot()
+    {
+        var gameId = Guid.NewGuid().ToString();
+        var tutorThread = CreateChatThread(Guid.NewGuid(), gameId, messageCount: 1);
+        tutorThread.SwitchAgent("tutor");
+
+        var tutorPrompt = await SystemPromptOfAnAnswerInAsync(tutorThread, gameId);
+
+        tutorPrompt.Should().Contain(AnswerIntent.DefaultInstructionFor("tutor")!);
+        tutorPrompt.Should().NotContain(AnswerIntent.DefaultInstructionFor("secca")!);
+    }
+
+    [Fact]
+    public async Task Handle_AThreadOnTheSeccaIntent_AsksTheModelForOneLineAndTheCitation()
+    {
+        var gameId = Guid.NewGuid().ToString();
+        var thread = CreateChatThread(Guid.NewGuid(), gameId, messageCount: 1);
+        thread.SwitchAgent("secca");
+
+        var prompt = await SystemPromptOfAnAnswerInAsync(thread, gameId);
+
+        prompt.Should().Contain(AnswerIntent.DefaultInstructionFor("secca")!);
+        prompt.Should().NotContain(AnswerIntent.DefaultInstructionFor("tutor")!);
+    }
+
+    [Theory]
+    [InlineData("auto")]
+    [InlineData("arbitro")]
+    [InlineData("decisore")]
+    public async Task Handle_AThreadOnAutoOrOnARetiredId_AnswersAsToday_WithNoIntentSection(string stored)
+    {
+        var gameId = Guid.NewGuid().ToString();
+        var thread = CreateChatThread(Guid.NewGuid(), gameId, messageCount: 1);
+        thread.SwitchAgent(stored);
+
+        var prompt = await SystemPromptOfAnAnswerInAsync(thread, gameId);
+
+        prompt.Should().NotContain(AnswerIntent.DefaultInstructionFor("tutor")!);
+        prompt.Should().NotContain(AnswerIntent.DefaultInstructionFor("secca")!);
+    }
+
+    [Fact]
+    public async Task Handle_TheIntentOfSomeoneElsesThread_IsNotLentToTheAsker()
+    {
+        // The same rule as for the history (#4242): a thread that is not the asker's does not shape their answer.
+        var gameId = Guid.NewGuid().ToString();
+        var someoneElses = CreateChatThread(Guid.NewGuid(), gameId, messageCount: 1, ownerId: Guid.NewGuid());
+        someoneElses.SwitchAgent("secca");
+
+        var prompt = await SystemPromptOfAnAnswerInAsync(someoneElses, gameId);
+
+        prompt.Should().NotContain(AnswerIntent.DefaultInstructionFor("secca")!);
+    }
+
+    [Fact]
+    public async Task Handle_TheCacheKey_SeparatesTheAnswersOfTwoIntents()
+    {
+        // The cache is shared by every user: what enters the prompt and not the key is an answer served to someone
+        // who asked for another shape. Without the intent in the key, a tutor answer replays to an auto asker.
+        var gameId = Guid.NewGuid().ToString();
+        var shapes = new List<string>();
+        _cacheMock
+            .Setup(x => x.GenerateQaCacheKey(It.IsAny<string>(), It.IsAny<string>()))
+            .Callback<string, string>((_, shape) => shapes.Add(shape))
+            .Returns<string, string>((game, shape) => $"{game}:{shape.GetHashCode()}");
+
+        foreach (var intent in new[] { "auto", "tutor", "secca" })
+        {
+            var thread = CreateChatThread(Guid.NewGuid(), gameId, messageCount: 1);
+            thread.SwitchAgent(intent);
+            _llmServiceMock.Invocations.Clear();
+            await SystemPromptOfAnAnswerInAsync(thread, gameId);
+        }
+
+        shapes.Should().HaveCount(3);
+        shapes.Select(s => s.Split('|').Single(p => p.StartsWith("intent:", StringComparison.Ordinal)))
+            .Should().Equal("intent:auto", "intent:tutor", "intent:secca");
+    }
+
     [Fact]
     public async Task Handle_ThreadIdWithDifferentGame_IgnoresChatHistory()
     {
@@ -2310,5 +2412,6 @@ public partial class StreamQaQueryHandlerTests
         keywordWeight: 0.3m,
         rerankerEnabled: true,
         Enum.GetValues<DocumentCategory>(),
-            Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.SessionAssistantSettings.Disabled);
+            Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.SessionAssistantSettings.Disabled,
+            AgentProfileContent.NoIntentInstructions);
 }

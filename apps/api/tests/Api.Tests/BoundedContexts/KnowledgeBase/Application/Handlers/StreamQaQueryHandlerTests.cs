@@ -1223,8 +1223,8 @@ public partial class StreamQaQueryHandlerTests
     public async Task Handle_AThreadOnAutoOrOnARetiredId_AnswersAsToday_WithNoIntentSection(string stored)
     {
         var gameId = Guid.NewGuid().ToString();
-        var thread = CreateChatThread(Guid.NewGuid(), gameId, messageCount: 1);
-        thread.SwitchAgent(stored);
+        // Created with the stored value, not switched to it: the retired ids are no longer written, only read.
+        var thread = CreateChatThread(Guid.NewGuid(), gameId, messageCount: 1, agentType: stored);
 
         var prompt = await SystemPromptOfAnAnswerInAsync(thread, gameId);
 
@@ -2352,13 +2352,15 @@ public partial class StreamQaQueryHandlerTests
     // #4242: the thread belongs to the user who asks, unless a test says otherwise. It used to be
     // created for a random user, so Handle_WithThreadId_IncludesChatHistory asserted that a
     // stranger's history entered the prompt.
-    private ChatThread CreateChatThread(Guid threadId, string gameId, int messageCount, Guid? ownerId = null)
+    private ChatThread CreateChatThread(
+        Guid threadId, string gameId, int messageCount, Guid? ownerId = null, string? agentType = null)
     {
         var thread = new ChatThread(
             id: threadId,
             userId: ownerId ?? TestUserId,
             gameId: Guid.Parse(gameId),
-            title: "Test Thread"
+            title: "Test Thread",
+            agentType: agentType
         );
 
         // Add messages if needed for testing

@@ -20,9 +20,9 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 /// <para>
 /// <b>Expand, then contract.</b> What is READ is strict from the start: anything outside <see cref="All"/>
 /// answers as <c>auto</c>, so values stored under the old list (and by other features that use the same column)
-/// keep loading and answering as before. What is WRITTEN accepts, for now, the three intents plus the two retired
-/// ids that older web clients still send (<see cref="IsAcceptedWhenSwitching"/>); they stop being accepted in the
-/// last step, once the web no longer offers them.
+/// keep loading and answering as before. What is WRITTEN went through the same two steps: first the three intents
+/// plus the two retired ids that older web clients still sent, while the web changed; now that the web offers the
+/// three and nothing else, only the three are accepted (<see cref="IsAcceptedWhenSwitching"/>).
 /// </para>
 /// <para>
 /// This is not the <c>IntentClassifierService</c> of the pipeline: that one classifies the QUESTION; this is the
@@ -37,9 +37,6 @@ public static class AnswerIntent
 
     /// <summary>The intents of the chat, in the order the selector shows them.</summary>
     public static IReadOnlyList<string> All { get; } = [Auto, Tutor, Secca];
-
-    // Ids the old selector sent and a thread can still be switched to until the contract step (#4404).
-    private static readonly string[] RetiredButStillAcceptedWhenSwitching = ["arbitro", "decisore"];
 
     // Both end by leaving two things to the rest of the prompt: what to answer when the context does not hold the
     // answer (the refusal sentence, which only counts as a refusal when it is the WHOLE answer), and how to cite
@@ -69,8 +66,9 @@ public static class AnswerIntent
     }
 
     /// <summary>
-    /// Whether a thread may be switched to <paramref name="value"/>: the three intents, and for now the two
-    /// retired ids. See the remarks on the type.
+    /// Whether a thread may be switched to <paramref name="value"/>: the three intents and nothing else. The
+    /// retired ids (<c>arbitro</c>, <c>decisore</c>) stored before still READ as <c>auto</c>, but are not written
+    /// any more. See the remarks on the type.
     /// </summary>
     public static bool IsAcceptedWhenSwitching(string? value)
     {
@@ -80,8 +78,7 @@ public static class AnswerIntent
         }
 
         var normalized = value.Trim().ToLowerInvariant();
-        return All.Contains(normalized, StringComparer.Ordinal)
-            || RetiredButStillAcceptedWhenSwitching.Contains(normalized, StringComparer.Ordinal);
+        return All.Contains(normalized, StringComparer.Ordinal);
     }
 
     /// <summary>

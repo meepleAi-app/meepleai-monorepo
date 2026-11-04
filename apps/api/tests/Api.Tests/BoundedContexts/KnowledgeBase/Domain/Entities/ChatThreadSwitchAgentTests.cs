@@ -8,10 +8,10 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Domain.Entities;
 
 /// <summary>
 /// #4404 (ADR-098 §5). The selector of the chat chooses the intent of the answer, and the thread stores it in
-/// <c>AgentType</c>. The list the thread accepts is the intents plus, for now, the two ids older clients still
-/// send (<c>arbitro</c>, <c>decisore</c>): the backend accepts the UNION first, the web changes next, and the
-/// retired ids stop being accepted last (expand → contract). <c>stratega</c> and <c>narratore</c> were never
-/// accepted and still are not.
+/// <c>AgentType</c>. The list the thread accepts is the three intents: the backend accepted the UNION with the two
+/// ids older clients sent (<c>arbitro</c>, <c>decisore</c>) first, the web changed next, and the retired ids stopped
+/// being accepted last (expand → contract). <c>stratega</c> and <c>narratore</c> were never accepted. A value of the
+/// old list that is already stored still loads and reads as <c>auto</c>.
 /// </summary>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
@@ -36,13 +36,25 @@ public sealed class ChatThreadSwitchAgentTests
     [Theory]
     [InlineData("arbitro")]
     [InlineData("decisore")]
-    public void TheRetiredIdsOlderClientsSend_AreStillAccepted_UntilTheContractStep(string retired)
+    public void TheRetiredIds_AreNotWrittenAnyMore_AndLeaveTheThreadAsItWas(string retired)
     {
         var thread = NewThread();
+        thread.SwitchAgent("tutor");
 
         var act = () => thread.SwitchAgent(retired);
 
-        act.Should().NotThrow();
+        act.Should().Throw<ArgumentException>();
+        thread.AgentType.Should().Be("tutor");
+    }
+
+    [Theory]
+    [InlineData("arbitro")]
+    [InlineData("decisore")]
+    public void AThreadCreatedWithARetiredId_StillLoadsWithIt(string retired)
+    {
+        // What is already stored is history: it is read as «auto» by the pipeline, not rewritten or refused.
+        var thread = new ChatThread(Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), agentType: retired);
+
         thread.AgentType.Should().Be(retired);
     }
 

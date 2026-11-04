@@ -29,19 +29,24 @@ namespace Api.BoundedContexts.GameManagement.Application.EventHandlers;
 /// after it would contradict it.
 /// </para>
 /// <para>
-/// <b>Delivered more than once, written once.</b> The event is queued in the outbox for every event type: in
-/// <c>Hybrid</c> mode it is published inline AND by the outbox processor seconds later, and in <c>OutboxOnly</c> a
-/// batch that failed to commit is redelivered whole. SMTP has no remote dedup, so each invitation carries
-/// <see cref="GameNightInvitation.Reminder24hSentAt"/>, set and saved right after the email goes out (the same
-/// device as <c>CancellationNoticeSentAt</c>, #4853, and <c>RsvpConfirmationSentAt</c>, #1940). A second delivery
-/// finds the mark and writes nothing. The mark is not a lock: two deliveries at the very same moment can still
-/// both write. Do not key on <c>EventId</c>: it does not survive the outbox for events built before #4841.
+/// <b>Delivered more than once, written once.</b> Unlike the cancellation, this event does NOT go through the
+/// outbox: <c>GameNightReminderJob</c> builds it, calls <c>Publish</c> directly and only then stamps the night with
+/// <c>ExecuteUpdate</c>. A second delivery therefore comes from the job running again between the two (a
+/// <c>Publish</c> that threw because another handler of the event threw, a restart in that gap). SMTP has no remote
+/// dedup, so each invitation carries <see cref="GameNightInvitation.Reminder24hSentAt"/>, set and saved right after
+/// the email goes out (the same device as <c>CancellationNoticeSentAt</c>, #4853, and <c>RsvpConfirmationSentAt</c>,
+/// #1940). A second delivery finds the mark and writes nothing. The mark is not a lock: two deliveries at the very
+/// same moment can still both write.
 /// </para>
 /// <para>
 /// <b>Failures are swallowed on purpose, and counted</b> (the choice of #4839): a throw would stop the handlers
 /// that come after this one in the same event, among them the in-app reminder of the registered users. They are
 /// counted in <see cref="MeepleAiMetrics.DomainEventDispatchFailures"/> under this handler's name. A failed send
-/// leaves no mark, so a later delivery tries that address again. A cancellation of the request is not a failure:
+/// leaves no mark, so a later delivery WOULD try that address again, but the job does not republish a night whose
+/// <c>Publish</c> returned normally, and this handler never throws: a transient SMTP failure inside the 30 minute
+/// window is a reminder lost for that address, visible only in the counter. Throwing would make the job retry on its
+/// next run, and would also stop the in-app reminder of the registered users and send it again on the retry; that
+/// trade is not made here. A cancellation of the request is not a failure:
 /// <c>EmailService.SendRawEmailAsync</c> wraps EVERY exception, cancellation included, in an
 /// <see cref="InvalidOperationException"/>, so the token is asked, not the exception type.
 /// </para>
@@ -214,12 +219,20 @@ internal sealed class GameNightReminder24hGuestEmailHandler : INotificationHandl
                 ct: cancellationToken).ConfigureAwait(false);
 
             // Marked and saved per address, right after the email: a failure further on in the list does not take
-            // the marks of the addresses already written to with it.
+            // the marks of the addresses already written to with it. The row is read again just before it is
+            // written: UpdateAsync rewrites the WHOLE invitation, and the list was read before the first email, so
+            // writing that copy back could undo an answer or a withdrawal that arrived while the emails went out.
             var sentAt = _timeProvider.GetUtcNow();
             foreach (var invitation in invitationsOfTheAddress)
             {
-                invitation.MarkReminder24hSent(sentAt);
-                await _invitations.UpdateAsync(invitation, cancellationToken).ConfigureAwait(false);
+                var current = await _invitations.GetByIdAsync(invitation.Id, cancellationToken).ConfigureAwait(false);
+                if (current is null)
+                {
+                    continue;
+                }
+
+                current.MarkReminder24hSent(sentAt);
+                await _invitations.UpdateAsync(current, cancellationToken).ConfigureAwait(false);
             }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);

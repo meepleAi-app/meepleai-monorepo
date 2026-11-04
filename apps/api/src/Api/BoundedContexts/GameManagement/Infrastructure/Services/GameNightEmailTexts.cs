@@ -27,7 +27,7 @@ internal sealed class GameNightEmailTexts
     public required string DeclineLabel { get; init; }
     public required Func<string, string> InvitationGuestFooter { get; init; }
 
-    // 24h reminder (a member: it reaches people who answered from their account)
+    // 24h reminder (to a guest invited by address; the registered members are reminded in the app)
     public required Func<string, string> ReminderSubject { get; init; }
     public required string ReminderHeading { get; init; }
     public required string ReminderIntro { get; init; }

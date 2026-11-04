@@ -25,8 +25,9 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.EventHandlers;
 /// </summary>
 /// <remarks>
 /// Given a night at 20:00 tomorrow and a guest who accepted, when it is 20:00 today the guest gets the reminder ONCE,
-/// even if the event is delivered twice: the outbox queues every event, and in <c>Hybrid</c> mode a handler runs
-/// inline AND again from the outbox. The mark on the invitation is what makes it once.
+/// even if the event is delivered twice (the job publishes it directly and stamps the night afterwards, so a gap
+/// between the two, or another handler of the event throwing, runs it again). The mark on the invitation is what
+/// makes it once.
 /// </remarks>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "GameManagement")]
@@ -96,6 +97,14 @@ public sealed class GameNightReminder24hGuestEmailHandlerTests
         _invitations
             .Setup(r => r.GetByGameNightIdAsync(night.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(invitations);
+
+        // The handler reads each row again just before it writes it: here, the same one.
+        foreach (var invitation in invitations)
+        {
+            _invitations
+                .Setup(r => r.GetByIdAsync(invitation.Id, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(invitation);
+        }
     }
 
     private void VerifySentTo(string address, Times times) =>
@@ -313,6 +322,102 @@ public sealed class GameNightReminder24hGuestEmailHandlerTests
         _email.Invocations.Should().HaveCount(2, "SMTP has no remote dedup: one email per address in all");
         VerifySentTo("first@example.com", Times.Once());
         VerifySentTo("second@example.com", Times.Once());
+        // What the second delivery relies on is the SAVED mark, not the objects the mock hands back: one save per
+        // address in the first delivery, none in the second.
+        _invitations.Verify(r => r.UpdateAsync(It.IsAny<GameNightInvitation>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task Handle_TheRowIsReadAgainBeforeItIsWritten_SoAnAnswerThatArrivedMeanwhileIsNotUndone()
+    {
+        // UpdateAsync rewrites the whole invitation. The list was read before the first email went out: if the guest
+        // accepted in the meantime, writing that copy back would put them at Pending again.
+        var night = PublishedNight(Guid.NewGuid());
+        var stale = Invitation("guest@example.com", GameNightInvitationStatus.Pending);
+        Given(night, stale);
+        var acceptedMeanwhile = GameNightInvitation.Reconstitute(
+            id: stale.Id, token: stale.Token, gameNightId: stale.GameNightId, email: stale.Email,
+            status: GameNightInvitationStatus.Accepted, expiresAt: stale.ExpiresAt, respondedAt: Now,
+            respondedByUserId: null, createdAt: stale.CreatedAt, createdBy: stale.CreatedBy,
+            unsubscribeKey: stale.UnsubscribeKey);
+        _invitations
+            .Setup(r => r.GetByIdAsync(stale.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(acceptedMeanwhile);
+
+        await CreateHandler().Handle(Reminder(night), CancellationToken.None);
+
+        _invitations.Verify(
+            r => r.UpdateAsync(
+                It.Is<GameNightInvitation>(i => i.Status == GameNightInvitationStatus.Accepted && i.Reminder24hSentAt == Now),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+        _invitations.Verify(
+            r => r.UpdateAsync(
+                It.Is<GameNightInvitation>(i => i.Status == GameNightInvitationStatus.Pending),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_AnInvitationRemovedMeanwhile_IsSkippedWhenTheMarkIsWritten()
+    {
+        var night = PublishedNight(Guid.NewGuid());
+        var gone = Invitation("gone@example.com", GameNightInvitationStatus.Accepted);
+        Given(night, gone);
+        _invitations
+            .Setup(r => r.GetByIdAsync(gone.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((GameNightInvitation?)null);
+
+        var act = () => CreateHandler().Handle(Reminder(night), CancellationToken.None);
+
+        await act.Should().NotThrowAsync();
+        _invitations.Verify(r => r.UpdateAsync(It.IsAny<GameNightInvitation>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ADraftNight_SendsNoReminder()
+    {
+        // Only a Published night is on: a draft is not (the status test is «is published», not «is not cancelled»).
+        var draft = GameNightEvent.Create(
+            organizerId: Guid.NewGuid(), title: "Friday Catan", scheduledAt: Now.AddHours(24));
+        Given(draft, Invitation("guest@example.com", GameNightInvitationStatus.Accepted));
+
+        await CreateHandler().Handle(Reminder(draft), CancellationToken.None);
+
+        _email.Invocations.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_APendingInvitationThatExpiresRightNow_IsNotReminded()
+    {
+        var night = PublishedNight(Guid.NewGuid());
+        Given(night, Invitation("late@example.com", GameNightInvitationStatus.Pending, expiresAt: Now));
+
+        await CreateHandler().Handle(Reminder(night), CancellationToken.None);
+
+        VerifySentTo("late@example.com", Times.Never());
+    }
+
+    [Fact]
+    public async Task Handle_ConfirmedAttendees_StillCountsAGuestWhoWasRemindedAlready()
+    {
+        // The second delivery: «one» has the mark, «waiting» does not. The count is of who said yes, not of who is
+        // being written to now.
+        var night = PublishedNight(Guid.NewGuid());
+        Given(night,
+            Invitation("one@example.com", GameNightInvitationStatus.Accepted, remindedAt: Now.AddMinutes(-5)),
+            Invitation("two@example.com", GameNightInvitationStatus.Accepted),
+            Invitation("waiting@example.com", GameNightInvitationStatus.Pending));
+
+        await CreateHandler().Handle(Reminder(night), CancellationToken.None);
+
+        _email.Verify(
+            e => e.SendGameNightReminder24hEmailAsync(
+                "waiting@example.com", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTimeOffset>(),
+                It.IsAny<string?>(), 2, It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<GameNightEmailLocale>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -373,10 +478,14 @@ public sealed class GameNightReminder24hGuestEmailHandlerTests
         _nights
             .Setup(r => r.GetByIdAsync(night.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync((GameNightEvent?)null);
+        using var failures = new DispatchFailureCapture();
 
         await CreateHandler().Handle(Reminder(night), CancellationToken.None);
 
         _email.Invocations.Should().BeEmpty();
+        // Not a failure that the catch-all swallowed (a missing check would end in a NullReferenceException, which
+        // is counted): it is a night that is no longer there, and the handler says so and goes.
+        failures.Count.Should().Be(0);
     }
 
     [Fact]

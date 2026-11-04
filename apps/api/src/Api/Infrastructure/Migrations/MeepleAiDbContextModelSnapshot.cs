@@ -5712,6 +5712,35 @@ namespace Api.Infrastructure.Migrations
                     b.ToTable("game_night_events", (string)null);
                 });
 
+            modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameNightGuestEmailOptOutEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("email");
+
+                    b.Property<DateTimeOffset>("OptedOutAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("opted_out_at");
+
+                    b.Property<Guid>("SourceInvitationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("source_invitation_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique()
+                        .HasDatabaseName("IX_game_night_guest_email_opt_outs_email");
+
+                    b.ToTable("game_night_guest_email_opt_outs", (string)null);
+                });
+
             modelBuilder.Entity("Api.Infrastructure.Entities.GameManagement.GameNightInvitationEntity", b =>
                 {
                     b.Property<Guid>("Id")

@@ -258,6 +258,7 @@ public sealed class PublicBaseUrlLinkGeneratorsTests
             new Mock<IUserRepository>().Object,
             new Mock<IGameCoreDataProvider>().Object,
             email.Object,
+            new Mock<IGameNightGuestEmailOptOutRepository>().Object,
             new Mock<IUnitOfWork>().Object,
             configuration,
             PublicBaseUrlTestSupport.ProviderFor(configuration),

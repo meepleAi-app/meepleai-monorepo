@@ -31,6 +31,7 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
     private readonly IUserRepository _userRepository;
     private readonly IGameCoreDataProvider _gameCoreData;
     private readonly IGameNightEmailService _emailService;
+    private readonly IGameNightGuestEmailOptOutRepository _optOutRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IConfiguration _configuration;
     private readonly IPublicBaseUrlProvider _publicBaseUrl;
@@ -42,6 +43,7 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
         IUserRepository userRepository,
         IGameCoreDataProvider gameCoreData,
         IGameNightEmailService emailService,
+        IGameNightGuestEmailOptOutRepository optOutRepository,
         IUnitOfWork unitOfWork,
         IConfiguration configuration,
         IPublicBaseUrlProvider publicBaseUrl,
@@ -52,6 +54,7 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _gameCoreData = gameCoreData ?? throw new ArgumentNullException(nameof(gameCoreData));
         _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
+        _optOutRepository = optOutRepository ?? throw new ArgumentNullException(nameof(optOutRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _publicBaseUrl = publicBaseUrl ?? throw new ArgumentNullException(nameof(publicBaseUrl));
@@ -151,6 +154,13 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
         string baseUrl,
         CancellationToken cancellationToken)
     {
+        // #4846: an address that asked to stop is not written to. The invitation is still recorded and the
+        // organizer's answer is the same as for anyone, so the answer does not tell who opted out.
+        if (await _optOutRepository.ExistsAsync(invitation.Email, cancellationToken).ConfigureAwait(false))
+        {
+            return;
+        }
+
         var organizer = await _userRepository
             .GetByIdAsync(gameNight.OrganizerId, cancellationToken)
             .ConfigureAwait(false);
@@ -169,6 +179,7 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
 
         var rsvpAcceptUrl = $"{baseUrl}/invites/{invitation.Token}?action=accept";
         var rsvpDeclineUrl = $"{baseUrl}/invites/{invitation.Token}?action=decline";
+        var unsubscribeUrl = GameNightGuestLinks.Unsubscribe(baseUrl, invitation.Token);
 
         // #4754: the email speaks the organizer's language (the guest is an address, not an account: their own
         // language is not known) and writes the time on the night's zone.
@@ -183,6 +194,7 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
             gameNames: gameNames,
             rsvpAcceptUrl: rsvpAcceptUrl,
             rsvpDeclineUrl: rsvpDeclineUrl,
+            unsubscribeUrl: unsubscribeUrl,
             locale: locale,
             ct: cancellationToken).ConfigureAwait(false);
     }

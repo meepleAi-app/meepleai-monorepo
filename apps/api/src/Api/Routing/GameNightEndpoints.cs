@@ -208,6 +208,16 @@ internal static class GameNightEndpoints
             .WithSummary("Respond to a game night invitation by token")
             .WithDescription("Public endpoint to submit an Accepted or Declined response, optionally with a guest display name (issue #1169). Optional auth: authenticated callers have their UserId attached. Idempotent on same-state; conflicts on switching across statuses. Rate-limited at 10 req/min per IP.");
 
+        gameNights.MapPost("/invitations/{token}/unsubscribe", HandleOptOutGameNightGuestEmail)
+            .AllowAnonymous()
+            .RequireRateLimiting("GameNightTokenRespond")
+            .Produces(204)
+            .Produces(404)
+            .Produces(429)
+            .WithName("OptOutGameNightGuestEmail")
+            .WithSummary("Stop receiving game night emails at the address behind an invitation")
+            .WithDescription("Public endpoint (#4846). The invitation token is the credential: the address it names goes on the opt-out list and gets no more game night emails. Works whatever the state of the invitation (answered, cancelled, expired). Idempotent. Rate-limited at 10 req/min per IP.");
+
         gameNights.MapPost("/{gameNightId:guid}/invitations", HandleCreateGameNightInvitationByEmail)
             .RequireAuthenticatedUser()
             .Produces<GameNightInvitationDto>(201)
@@ -804,6 +814,15 @@ internal static class GameNightEndpoints
             new GetGameNightInvitationByTokenQuery(token), cancellationToken).ConfigureAwait(false);
 
         return updated is null ? Results.NotFound() : Results.Ok(updated);
+    }
+
+    private static async Task<IResult> HandleOptOutGameNightGuestEmail(
+        string token,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        await mediator.Send(new OptOutGameNightGuestEmailCommand(token), cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
     }
 
     private static async Task<IResult> HandleStartGameNightSession(

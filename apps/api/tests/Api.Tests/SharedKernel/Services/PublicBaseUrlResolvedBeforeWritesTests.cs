@@ -88,6 +88,7 @@ public sealed class PublicBaseUrlResolvedBeforeWritesTests
                 new Mock<IUserRepository>().Object,
                 new Mock<IGameCoreDataProvider>().Object,
                 Email.Object,
+                new Mock<IGameNightGuestEmailOptOutRepository>().Object,
                 UnitOfWork.Object,
                 new ConfigurationBuilder().Build(),
                 NoAddressConfigured(),

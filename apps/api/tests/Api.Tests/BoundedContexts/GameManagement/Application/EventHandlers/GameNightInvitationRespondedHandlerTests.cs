@@ -6,10 +6,12 @@ using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -33,6 +35,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.EventHandlers;
 public sealed class GameNightInvitationRespondedHandlerTests
 {
     private const string Token = "abcdefghijklmnopqrstuv";
+    private const string BaseUrl = "https://meepleai.test";
     private static readonly DateTimeOffset UtcNow = new(2026, 5, 1, 12, 0, 0, TimeSpan.Zero);
 
     private readonly Mock<IGameNightInvitationRepository> _invitationRepoMock = new();
@@ -57,6 +60,9 @@ public sealed class GameNightInvitationRespondedHandlerTests
         _gameNightRepoMock.Object,
         _userRepoMock.Object,
         _emailServiceMock.Object,
+        PublicBaseUrlTestSupport.ProviderFor(new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Frontend:BaseUrl"] = BaseUrl })
+            .Build()),
         cache,
         _unitOfWorkMock.Object,
         _loggerMock.Object);
@@ -148,6 +154,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
                 gameNight.Title,
                 gameNight.ScheduledAt,
                 gameNight.Location,
+                $"{BaseUrl}/invites/{Token}/unsubscribe",
                 GameNightEmailLocale.Unknown,
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -188,6 +195,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
                 gameNight.Title,
                 gameNight.ScheduledAt,
                 gameNight.Location,
+                $"{BaseUrl}/invites/{Token}/unsubscribe",
                 new GameNightEmailLocale("it", "Europe/Rome"),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -210,6 +218,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<DateTimeOffset>(),
+                It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<GameNightEmailLocale>(),
                 It.IsAny<CancellationToken>()),
@@ -243,6 +252,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<DateTimeOffset>(),
+                It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<GameNightEmailLocale>(),
                 It.IsAny<CancellationToken>()),
@@ -278,6 +288,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
                 It.IsAny<string>(),
                 It.IsAny<DateTimeOffset>(),
                 It.IsAny<string>(),
+                It.IsAny<string>(),
                 It.IsAny<GameNightEmailLocale>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
@@ -310,6 +321,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<DateTimeOffset>(),
+                It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<GameNightEmailLocale>(),
                 It.IsAny<CancellationToken>()),

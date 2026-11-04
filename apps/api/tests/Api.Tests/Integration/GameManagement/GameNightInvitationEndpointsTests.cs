@@ -55,7 +55,7 @@ public sealed class GameNightInvitationHostFixture(SharedTestcontainersFixture s
             .Setup(s => s.SendGameNightInvitationEmailAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<DateTimeOffset>(), It.IsAny<string?>(), It.IsAny<IReadOnlyList<string>>(),
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameNightEmailLocale>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameNightEmailLocale>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
@@ -746,5 +746,90 @@ public sealed class GameNightInvitationEndpointsTests
         // FluentValidation pipeline surfaces invalid email as 400 BadRequest or 422 UnprocessableEntity
         // depending on configuration; both indicate validation failure.
         ((int)response.StatusCode).Should().BeOneOf(400, 422);
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // POST /game-nights/invitations/{token}/unsubscribe — #4846
+    // ────────────────────────────────────────────────────────────────────
+
+    private async Task<string[]> OptedOutAddressesAsync()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        return await dbContext.GameNightGuestEmailOptOuts
+            .AsNoTracking()
+            .Select(o => o.Email)
+            .ToArrayAsync();
+    }
+
+    [Theory]
+    [InlineData("Pending")]
+    [InlineData("Accepted")]
+    [InlineData("Declined")]
+    [InlineData("Cancelled")]
+    [InlineData("Expired")]
+    public async Task UnsubscribeByToken_Anonymous_Returns204AndPutsTheAddressOnTheList_WhateverTheInvitationState(
+        string status)
+    {
+        var organizerId = Guid.NewGuid();
+        var gameNightId = await SeedGameNightAsync(organizerId);
+        var invitation = await SeedInvitationAsync(
+            gameNightId, organizerId,
+            email: "Stop.Me@Example.com",
+            status: status,
+            expiresAt: status == "Expired" ? DateTimeOffset.UtcNow.AddDays(-1) : null);
+
+        var response = await _client.PostAsync(
+            $"/api/v1/game-nights/invitations/{invitation.Token}/unsubscribe", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await OptedOutAddressesAsync()).Should().Equal("stop.me@example.com");
+    }
+
+    [Fact]
+    public async Task UnsubscribeByToken_TwiceForTheSameAddress_StaysOnSuccessAndKeepsOneEntry()
+    {
+        var organizerId = Guid.NewGuid();
+        var firstNight = await SeedGameNightAsync(organizerId, "First");
+        var secondNight = await SeedGameNightAsync(organizerId, "Second");
+        var first = await SeedInvitationAsync(firstNight, organizerId, email: "guest@example.com");
+        var second = await SeedInvitationAsync(secondNight, organizerId, email: "guest@example.com");
+
+        var one = await _client.PostAsync($"/api/v1/game-nights/invitations/{first.Token}/unsubscribe", content: null);
+        var two = await _client.PostAsync($"/api/v1/game-nights/invitations/{second.Token}/unsubscribe", content: null);
+
+        one.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        two.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await OptedOutAddressesAsync()).Should().Equal("guest@example.com");
+    }
+
+    [Fact]
+    public async Task UnsubscribeByToken_UnknownToken_Returns404AndStoresNothing()
+    {
+        var response = await _client.PostAsync(
+            "/api/v1/game-nights/invitations/UnknownTokenAbcdef1234/unsubscribe", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await OptedOutAddressesAsync()).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task UnsubscribeByToken_DoesNotTouchTheInvitationItself()
+    {
+        // «Stop writing to me» is not «decline»: a guest who accepted and then stopped the emails still holds
+        // their seat, and the organizer's view of the night does not change.
+        var organizerId = Guid.NewGuid();
+        var gameNightId = await SeedGameNightAsync(organizerId);
+        var invitation = await SeedInvitationAsync(
+            gameNightId, organizerId, status: "Accepted", respondedAt: DateTimeOffset.UtcNow);
+
+        var response = await _client.PostAsync(
+            $"/api/v1/game-nights/invitations/{invitation.Token}/unsubscribe", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var persisted = await dbContext.GameNightInvitations.AsNoTracking().FirstAsync(i => i.Id == invitation.Id);
+        persisted.Status.Should().Be("Accepted");
     }
 }

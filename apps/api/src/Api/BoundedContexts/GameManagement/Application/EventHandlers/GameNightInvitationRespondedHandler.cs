@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.SharedKernel.Services;
 using MediatR;
 using Microsoft.Extensions.Caching.Hybrid;
 
@@ -40,6 +41,7 @@ internal sealed class GameNightInvitationRespondedHandler
     private readonly IGameNightEventRepository _gameNightRepository;
     private readonly IUserRepository _userRepository;
     private readonly IGameNightEmailService _emailService;
+    private readonly IPublicBaseUrlProvider _publicBaseUrl;
     private readonly HybridCache _cache;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<GameNightInvitationRespondedHandler> _logger;
@@ -49,6 +51,7 @@ internal sealed class GameNightInvitationRespondedHandler
         IGameNightEventRepository gameNightRepository,
         IUserRepository userRepository,
         IGameNightEmailService emailService,
+        IPublicBaseUrlProvider publicBaseUrl,
         HybridCache cache,
         IUnitOfWork unitOfWork,
         ILogger<GameNightInvitationRespondedHandler> logger)
@@ -57,6 +60,7 @@ internal sealed class GameNightInvitationRespondedHandler
         _gameNightRepository = gameNightRepository ?? throw new ArgumentNullException(nameof(gameNightRepository));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
+        _publicBaseUrl = publicBaseUrl ?? throw new ArgumentNullException(nameof(publicBaseUrl));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -135,7 +139,7 @@ internal sealed class GameNightInvitationRespondedHandler
 
         // #4754: same language and zone as the invitation the guest answered — the organizer's. (The footer used
         // to carry an unsubscribe link built without the site's base URL, so it was relative and pointed
-        // at no page; a guest's confirmation now has no link at all.)
+        // at no page; since #4846 it carries the one-tap opt-out, built on the public address.)
         var organizer = await _userRepository
             .GetByIdAsync(gameNight.OrganizerId, cancellationToken)
             .ConfigureAwait(false);
@@ -145,6 +149,7 @@ internal sealed class GameNightInvitationRespondedHandler
             title: gameNight.Title,
             scheduledAt: gameNight.ScheduledAt,
             location: gameNight.Location,
+            unsubscribeUrl: GameNightGuestLinks.Unsubscribe(_publicBaseUrl.GetBaseUrl(), invitation.Token),
             locale: new GameNightEmailLocale(organizer?.Language, gameNight.TimeZoneId),
             ct: cancellationToken).ConfigureAwait(false);
 

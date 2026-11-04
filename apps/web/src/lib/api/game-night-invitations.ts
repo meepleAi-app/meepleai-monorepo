@@ -368,3 +368,57 @@ export async function respondToInvitation(
     `Respond request failed with status ${response.status}`
   );
 }
+
+// ========== Unsubscribe (#4846) ==========
+
+export type UnsubscribeFromInvitationEmailsResult =
+  | { readonly kind: 'unsubscribed' }
+  | { readonly kind: 'rate-limited'; readonly retryAfter: number | null };
+
+/**
+ * POST the one-tap opt-out behind the link in every game night email to a guest. The invitation token is the
+ * credential: the address it names goes on the list the sends consult, whatever became of the invitation
+ * (answered, cancelled, expired), so there is no 409/410 to handle. Idempotent on the server.
+ *
+ * Resolves `unsubscribed` on 204 and `rate-limited` on 429 (backend cap: 10 req/min/IP). Throws
+ * `InvitationNotFoundError` for a token nobody knows (404) and `InvitationFetchError` on 5xx / network / any
+ * other status. Direct `fetch`, like the rest of this file: the route is public and the shared retry layer would
+ * add nothing to a call whose only inputs are the token.
+ */
+export async function unsubscribeFromInvitationEmails(
+  token: string
+): Promise<UnsubscribeFromInvitationEmailsResult> {
+  const base = getApiBase();
+  const url = `${base}/api/v1/game-nights/invitations/${encodeURIComponent(token)}/unsubscribe`;
+
+  let response: Response;
+  try {
+    response = await fetch(url, { method: 'POST', credentials: 'include' });
+  } catch (cause) {
+    throw new InvitationFetchError(null, 'Network error unsubscribing from invitation emails', {
+      cause,
+    });
+  }
+
+  if (response.status === 204) {
+    return { kind: 'unsubscribed' };
+  }
+
+  if (response.status === 429) {
+    const retryAfterRaw = response.headers.get('Retry-After');
+    const retryAfter =
+      retryAfterRaw && /^\d+$/.test(retryAfterRaw.trim())
+        ? Number.parseInt(retryAfterRaw.trim(), 10)
+        : null;
+    return { kind: 'rate-limited', retryAfter };
+  }
+
+  if (response.status === 404) {
+    throw new InvitationNotFoundError(token);
+  }
+
+  throw new InvitationFetchError(
+    response.status,
+    `Unsubscribe request failed with status ${response.status}`
+  );
+}

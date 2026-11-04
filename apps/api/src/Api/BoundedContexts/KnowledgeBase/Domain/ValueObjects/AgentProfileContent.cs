@@ -217,7 +217,19 @@ public sealed class AgentProfileContent : ValueObject
     public string? InstructionForIntent(string intent)
     {
         var id = AnswerIntent.FromStored(intent);
-        return IntentInstructions.TryGetValue(id, out var own) ? own : AnswerIntent.DefaultInstructionFor(id);
+
+        // <c>auto</c> is the answer of today and adds nothing, whatever a stored section says: Create refuses the
+        // key, but Restore does not revalidate, and a jsonb edited by hand must not give every answer an instruction.
+        if (string.Equals(id, AnswerIntent.Auto, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        // A blank text (also stored, also not revalidated) is no section: it falls back to the built-in one
+        // instead of silencing it.
+        return IntentInstructions.TryGetValue(id, out var own) && !string.IsNullOrWhiteSpace(own)
+            ? own
+            : AnswerIntent.DefaultInstructionFor(id);
     }
 
     /// <summary>

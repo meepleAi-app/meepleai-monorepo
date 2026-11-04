@@ -41,14 +41,20 @@ public static class AnswerIntent
     // Ids the old selector sent and a thread can still be switched to until the contract step (#4404).
     private static readonly string[] RetiredButStillAcceptedWhenSwitching = ["arbitro", "decisore"];
 
+    // Both end by leaving two things to the rest of the prompt: what to answer when the context does not hold the
+    // answer (the refusal sentence, which only counts as a refusal when it is the WHOLE answer), and how to cite
+    // (a profile can ask for no page numbers in the text). An instruction that said «then give the citation» would
+    // contradict the second and, on a refusal, turn the first into a grounded-looking answer.
     private const string TutorInstruction =
         "Explain the rule step by step, the way a patient tutor teaches a new player: say what the rule is for, "
         + "walk through how it works in order, and finish with a short worked example from play. Everything you say "
-        + "must still come from the context and be cited as instructed above.";
+        + "must still come from the context and be cited as instructed above. If the context does not contain the "
+        + "answer, do not teach: reply as instructed above for that case, and nothing else.";
 
     private const string SeccaInstruction =
-        "Answer in a single sentence, then give the citation. No introduction, no explanation, no example. "
-        + "This overrides any length or format instruction above.";
+        "Answer in a single sentence. No introduction, no explanation, no example; cite only as instructed above. "
+        + "This overrides any length or format instruction above, but not the case where the context does not "
+        + "contain the answer: then reply as instructed above for that case, and nothing else.";
 
     /// <summary>The intent stored on a thread, as the pipeline reads it: anything outside the list is <c>auto</c>.</summary>
     public static string FromStored(string? stored)

@@ -191,4 +191,30 @@ public sealed class AgentProfileContentJsonTests
         restored.IntentInstructions.Should().ContainKey("decisore");
         restored.InstructionForIntent("decisore").Should().BeNull();
     }
+
+    [Fact]
+    public void AnAutoSectionInTheStoredJson_NeverReachesAnAnswer()
+    {
+        // Create refuses the key, Restore does not revalidate: a jsonb edited by hand must not hand every
+        // «auto» answer an instruction.
+        var json = JsonNode.Parse(AgentProfileContentJson.Serialize(AgentProfileTests.Content()))!;
+        json["intentInstructions"] = new JsonObject { ["auto"] = "Always shout." };
+
+        var restored = AgentProfileContentJson.Deserialize(json.ToJsonString());
+
+        restored.InstructionForIntent("auto").Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("   ")]
+    [InlineData("")]
+    public void ABlankSectionInTheStoredJson_FallsBackToTheBuiltInInstruction(string blank)
+    {
+        var json = JsonNode.Parse(AgentProfileContentJson.Serialize(AgentProfileTests.Content()))!;
+        json["intentInstructions"] = new JsonObject { ["tutor"] = blank };
+
+        var restored = AgentProfileContentJson.Deserialize(json.ToJsonString());
+
+        restored.InstructionForIntent("tutor").Should().Be(AnswerIntent.DefaultInstructionFor("tutor"));
+    }
 }

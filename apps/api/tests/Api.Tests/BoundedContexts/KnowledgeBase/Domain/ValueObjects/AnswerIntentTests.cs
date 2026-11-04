@@ -83,7 +83,22 @@ public sealed class AnswerIntentTests
     {
         AnswerIntent.DefaultInstructionFor("auto").Should().BeNull("auto is today's answer: it adds nothing");
         AnswerIntent.DefaultInstructionFor("tutor").Should().Contain("step by step").And.Contain("example");
-        AnswerIntent.DefaultInstructionFor("secca").Should().Contain("single").And.Contain("citation");
+        AnswerIntent.DefaultInstructionFor("secca").Should().Contain("single sentence").And.Contain("cite");
+    }
+
+    [Theory]
+    [InlineData("tutor")]
+    [InlineData("secca")]
+    public void TheDefaultInstructions_LeaveTheRefusalAndTheCitationStyleToTheRestOfThePrompt(string intent)
+    {
+        // The refusal only counts as one when it is the WHOLE answer, and a profile can ask for no pages in the
+        // text: an instruction that added its own «give the citation» would break both. This pins the wording, not
+        // what a model does with it, which only a run against a model can show.
+        var text = AnswerIntent.DefaultInstructionFor(intent)!;
+
+        text.Should().Contain("does not contain the answer").And.Contain("and nothing else");
+        text.Should().Contain("as instructed above");
+        text.Should().NotContain("give the citation");
     }
 
     [Fact]

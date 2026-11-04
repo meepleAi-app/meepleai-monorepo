@@ -1154,13 +1154,27 @@ public partial class StreamQaQueryHandlerTests
 
     // ─── Intento della risposta (#4404, ADR-098 §5) ──────────────────────────────
 
-    /// <summary>The system prompt of the one model call a question to <paramref name="thread"/> makes.</summary>
-    private async Task<string> SystemPromptOfAnAnswerInAsync(ChatThread thread, string gameId)
+    /// <summary>
+    /// The system prompt of the one model call a question to <paramref name="thread"/> makes.
+    /// <paramref name="withHistory"/> makes the thread one whose history joins the prompt: the pipeline has two
+    /// returns that carry the intent, with and without history, and the mock of the history policy answers «no»
+    /// unless told otherwise, so without it only the second is ever reached.
+    /// </summary>
+    private async Task<string> SystemPromptOfAnAnswerInAsync(ChatThread thread, string gameId, bool withHistory = false)
     {
         var query = new StreamQaQuery(gameId, "Quante carte si pescano?", TestUserId, "User", ThreadId: thread.Id);
         _chatThreadRepositoryMock
             .Setup(x => x.GetByIdAsync(thread.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(thread);
+        if (withHistory)
+        {
+            _chatContextServiceMock.Setup(x => x.ShouldIncludeChatHistory(thread)).Returns(true);
+            _chatContextServiceMock.Setup(x => x.BuildChatHistoryContext(thread)).Returns("Earlier in this chat");
+            _chatContextServiceMock
+                .Setup(x => x.EnrichPromptWithHistory(It.IsAny<string>(), It.IsAny<string>()))
+                .Returns<string, string>((prompt, history) => $"{history}\n{prompt}");
+        }
+
         SetupHappyPathMocks(gameId, query.Query);
 
         await foreach (var _ in _handler.Handle(query, TestContext.Current.CancellationToken))
@@ -1174,14 +1188,16 @@ public partial class StreamQaQueryHandlerTests
         return request.SystemPrompt;
     }
 
-    [Fact]
-    public async Task Handle_AThreadOnTheTutorIntent_AsksTheModelForTheTutorShape_AndAnAutoThreadDoesNot()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Handle_AThreadOnTheTutorIntent_AsksTheModelForTheTutorShape_WithOrWithoutHistory(bool withHistory)
     {
         var gameId = Guid.NewGuid().ToString();
         var tutorThread = CreateChatThread(Guid.NewGuid(), gameId, messageCount: 1);
         tutorThread.SwitchAgent("tutor");
 
-        var tutorPrompt = await SystemPromptOfAnAnswerInAsync(tutorThread, gameId);
+        var tutorPrompt = await SystemPromptOfAnAnswerInAsync(tutorThread, gameId, withHistory);
 
         tutorPrompt.Should().Contain(AnswerIntent.DefaultInstructionFor("tutor")!);
         tutorPrompt.Should().NotContain(AnswerIntent.DefaultInstructionFor("secca")!);
@@ -1229,8 +1245,10 @@ public partial class StreamQaQueryHandlerTests
         prompt.Should().NotContain(AnswerIntent.DefaultInstructionFor("secca")!);
     }
 
-    [Fact]
-    public async Task Handle_TheCacheKey_SeparatesTheAnswersOfTwoIntents()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Handle_TheCacheKey_SeparatesTheAnswersOfTwoIntents(bool withHistory)
     {
         // The cache is shared by every user: what enters the prompt and not the key is an answer served to someone
         // who asked for another shape. Without the intent in the key, a tutor answer replays to an auto asker.
@@ -1246,7 +1264,7 @@ public partial class StreamQaQueryHandlerTests
             var thread = CreateChatThread(Guid.NewGuid(), gameId, messageCount: 1);
             thread.SwitchAgent(intent);
             _llmServiceMock.Invocations.Clear();
-            await SystemPromptOfAnAnswerInAsync(thread, gameId);
+            await SystemPromptOfAnAnswerInAsync(thread, gameId, withHistory);
         }
 
         shapes.Should().HaveCount(3);

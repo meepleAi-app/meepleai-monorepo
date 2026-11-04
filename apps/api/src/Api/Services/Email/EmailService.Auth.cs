@@ -57,22 +57,7 @@ internal partial class EmailService
             var subject = texts.TwoFactorSubject;
             var body = BuildTwoFactorDisabledEmailBody(texts, toName, wasAdminOverride, _timeProvider.GetUtcNow().Year);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, toName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "two_factor_disabled", ct, toName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Two-factor authentication disabled email sent successfully to {Email} (Admin override: {AdminOverride})",
@@ -146,22 +131,7 @@ internal partial class EmailService
             var subject = texts.SuspendedSubject;
             var body = BuildAccountSuspendedEmailBody(texts, userName, reason, _timeProvider.GetUtcNow().Year);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "account_suspended", ct, userName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Account suspended email sent successfully to {Email}",
@@ -195,22 +165,7 @@ internal partial class EmailService
             var subject = texts.ReactivatedSubject;
             var body = BuildAccountReactivatedEmailBody(texts, userName, _timeProvider.GetUtcNow().Year);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "account_reactivated", ct, userName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Account reactivated email sent successfully to {Email}",
@@ -258,22 +213,7 @@ internal partial class EmailService
             var now = _timeProvider.GetUtcNow();
             var body = BuildAccountLockedEmailBody(texts, userName, failedAttempts, lockedUntil, ipAddress, now.UtcDateTime, now.Year);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "account_locked", ct, userName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Account locked email sent successfully to {Email}",
@@ -382,22 +322,7 @@ internal partial class EmailService
             var subject = "MeepleAI — Access Request Update";
             var body = BuildAccessRequestRejectedEmailBody(reason);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "access_request_rejected", ct).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Access request rejected email sent successfully to {Email}",

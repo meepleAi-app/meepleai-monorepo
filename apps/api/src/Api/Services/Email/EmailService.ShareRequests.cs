@@ -22,22 +22,7 @@ internal partial class EmailService
             var subject = "Share Request Submitted";
             var body = BuildShareRequestCreatedEmailBody(userName, gameTitle, contributionType, shareRequestId);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "share_request_created", ct, userName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Share request created email sent to {Email} for game {GameTitle}",
@@ -69,22 +54,7 @@ internal partial class EmailService
             var subject = "Contribution Approved! 🎉";
             var body = BuildShareRequestApprovedEmailBody(userName, gameTitle, sharedGameId, userId);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "share_request_approved", ct, userName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Share request approved email sent to {Email} for game {GameTitle}",
@@ -115,22 +85,7 @@ internal partial class EmailService
             var subject = "Share Request Not Approved";
             var body = BuildShareRequestRejectedEmailBody(userName, gameTitle, reason);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "share_request_rejected", ct, userName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Share request rejected email sent to {Email} for game {GameTitle}",
@@ -162,22 +117,7 @@ internal partial class EmailService
             var subject = "Changes Requested for Your Contribution";
             var body = BuildShareRequestChangesRequestedEmailBody(userName, gameTitle, feedback, shareRequestId);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "share_request_changes_requested", ct, userName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Share request changes requested email sent to {Email} for game {GameTitle}",
@@ -209,22 +149,7 @@ internal partial class EmailService
             var subject = "Your Game Proposal Is Now Under Review";
             var body = BuildShareRequestReviewStartedEmailBody(userName, gameTitle, shareRequestId);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "share_request_review_started", ct, userName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Review started email sent to {Email} for game {GameTitle}",
@@ -255,22 +180,7 @@ internal partial class EmailService
             var subject = "Your Game Proposal Has Been Merged";
             var body = BuildShareRequestKbMergedEmailBody(userName, gameTitle, sharedGameId);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "share_request_kb_merged", ct, userName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "KB merged email sent to {Email} for game {GameTitle}",

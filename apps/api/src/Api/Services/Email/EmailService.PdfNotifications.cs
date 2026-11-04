@@ -20,22 +20,7 @@ internal partial class EmailService
             var subject = "Your PDF is Ready - MeepleAI";
             var body = BuildPdfReadyEmailBody(userName, fileName, pdfDocumentId);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "pdf_ready", ct, userName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "PDF ready email sent successfully to {Email}",
@@ -65,22 +50,7 @@ internal partial class EmailService
             var subject = "PDF Processing Failed - MeepleAI";
             var body = BuildPdfFailedEmailBody(userName, fileName, errorMessage);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "pdf_failed", ct, userName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "PDF failed email sent successfully to {Email}",
@@ -110,22 +80,7 @@ internal partial class EmailService
             var subject = "PDF Processing Retry - MeepleAI";
             var body = BuildPdfRetryEmailBody(userName, fileName, retryCount);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "pdf_retry", ct, userName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "PDF retry email sent successfully to {Email}",

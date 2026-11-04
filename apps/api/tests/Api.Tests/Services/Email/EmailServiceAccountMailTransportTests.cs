@@ -36,28 +36,164 @@ public sealed class EmailServiceAccountMailTransportTests
 
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
+    /// <param name="Marker">Something the body must carry, so the test sees the mail it asked for and not just any mail.</param>
+    /// <param name="ToName">What the <c>To:</c> line shows next to the address; <c>null</c> for the mails that go to a bare address.</param>
     private sealed record AccountMail(
         string Kind,
         Func<EmailService, string?, CancellationToken, Task> Send,
         string Subject,
-        string Link,
-        string FailureMessage);
+        string Marker,
+        string FailureMessage,
+        string? ToName = "Marco");
+
+    private const string To = "marco@example.test";
+    private static readonly Guid SomeId = Guid.Parse("33333333-3333-3333-3333-333333333333");
 
     // "kind" is the label the failure counter carries, so an operator can tell which mail did not leave.
     private static readonly AccountMail[] Mails =
     [
+        // ── Authentication: the ones without which an account is locked out ──
         new(
             "password_reset",
-            (s, lang, ct) => s.SendPasswordResetEmailAsync("marco@example.test", "Marco", "tok-reset", lang, ct),
+            (s, lang, ct) => s.SendPasswordResetEmailAsync(To, "Marco", "tok-reset", lang, ct),
             "Reimposta la tua password di MeepleAI",
             $"{BaseUrl}/reset-password?token=tok-reset",
             "Failed to send password reset email"),
         new(
             "email_verification",
-            (s, lang, ct) => s.SendVerificationEmailAsync("marco@example.test", "Marco", "tok-verify", lang, ct),
+            (s, lang, ct) => s.SendVerificationEmailAsync(To, "Marco", "tok-verify", lang, ct),
             "Verifica la tua email di MeepleAI",
             $"{BaseUrl}/verify-email?token=tok-verify",
             "Failed to send verification email"),
+
+        // ── Authentication: security notices ──
+        new(
+            "two_factor_disabled",
+            (s, lang, ct) => s.SendTwoFactorDisabledEmailAsync(To, "Marco", false, lang, ct),
+            "Autenticazione a due fattori disattivata",
+            "L'autenticazione a due fattori è stata disattivata sul tuo account.",
+            "Failed to send two-factor authentication disabled email"),
+        new(
+            "account_suspended",
+            (s, lang, ct) => s.SendAccountSuspendedEmailAsync(To, "Marco", "SospesoPerSpam", lang, ct),
+            "Il tuo account MeepleAI è stato sospeso",
+            "SospesoPerSpam",
+            "Failed to send account suspended email"),
+        new(
+            "account_reactivated",
+            (s, lang, ct) => s.SendAccountReactivatedEmailAsync(To, "Marco", lang, ct),
+            "Il tuo account MeepleAI è stato riattivato",
+            "riattivato",
+            "Failed to send account reactivated email"),
+        new(
+            "account_locked",
+            (s, lang, ct) => s.SendAccountLockedEmailAsync(To, "Marco", 5, Now.UtcDateTime.AddMinutes(14.5), "203.0.113.7", lang, ct),
+            "Avviso di sicurezza: il tuo account MeepleAI è stato bloccato",
+            "203.0.113.7",
+            "Failed to send account locked email"),
+        new(
+            "access_request_rejected",
+            (s, _, ct) => s.SendAccessRequestRejectedEmailAsync(To, "NessunPostoMarker", ct),
+            "MeepleAI — Access Request Update",
+            "NessunPostoMarker",
+            "Failed to send access request rejected email",
+            ToName: null),
+
+        // ── Administration ──
+        new(
+            "admin_share_digest",
+            (s, _, ct) => s.SendAdminShareRequestDigestEmailAsync(
+                To, "Marco", 7, 3, 2, new Dictionary<string, int> { ["NewGame"] = 4 }, "https://app.meepleai.test/admin/queue-marker", ct),
+            "[MeepleAI Admin] Share Request Digest - 7 Pending",
+            "https://app.meepleai.test/admin/queue-marker",
+            "Failed to send admin digest email"),
+        new(
+            "shared_game_submitted",
+            (s, _, ct) => s.SendSharedGameSubmittedForApprovalEmailAsync(To, "Marco", "CatanMarker", "Anna", SomeId, ct),
+            "New Game Submitted for Approval",
+            "CatanMarker",
+            "Failed to send shared game approval notification email"),
+
+        // ── Gamification ──
+        new(
+            "badge_earned",
+            (s, _, ct) => s.SendBadgeEarnedEmailAsync(
+                To, "Marco", "Esploratore", "Hai esplorato", null, "Gold", "#FFD700", "https://app.meepleai.test/u/marco", "Ho vinto!", ct),
+            "🎉 Badge Earned: Esploratore!",
+            "https://app.meepleai.test/u/marco",
+            "Failed to send badge earned email for Esploratore"),
+        new(
+            "milestone_badge_earned",
+            (s, _, ct) => s.SendMilestoneBadgeEarnedEmailAsync(
+                To, "Marco", "Centurione", "Cento contributi", null, "Platinum", "Che traguardo", 100,
+                "https://app.meepleai.test/u/marco", "https://app.meepleai.test/leaderboard-marker", ct),
+            "🌟 Milestone Achievement: Centurione!",
+            "https://app.meepleai.test/leaderboard-marker",
+            "Failed to send milestone badge email for Centurione"),
+        new(
+            "cooldown_ended",
+            (s, _, ct) => s.SendCooldownEndedEmailAsync(To, "Marco", 3, 1, "https://app.meepleai.test/library-marker", ct),
+            "Ready to Contribute Again! 🎉",
+            "https://app.meepleai.test/library-marker",
+            "Failed to send cooldown ended email"),
+
+        // ── PDF notifications ──
+        new(
+            "pdf_ready",
+            (s, _, ct) => s.SendPdfReadyEmailAsync(To, "Marco", "regoleMarker.pdf", SomeId, ct),
+            "Your PDF is Ready - MeepleAI",
+            "regoleMarker.pdf",
+            "Failed to send PDF ready email"),
+        new(
+            "pdf_failed",
+            (s, _, ct) => s.SendPdfFailedEmailAsync(To, "Marco", "regoleMarker.pdf", "OcrFallitoMarker", ct),
+            "PDF Processing Failed - MeepleAI",
+            "OcrFallitoMarker",
+            "Failed to send PDF failed email"),
+        new(
+            "pdf_retry",
+            (s, _, ct) => s.SendPdfRetryEmailAsync(To, "Marco", "regoleMarker.pdf", 2, ct),
+            "PDF Processing Retry - MeepleAI",
+            "regoleMarker.pdf",
+            "Failed to send PDF retry email"),
+
+        // ── Share requests ──
+        new(
+            "share_request_created",
+            (s, _, ct) => s.SendShareRequestCreatedEmailAsync(To, "Marco", "CatanMarker", "Rulebook", SomeId, ct),
+            "Share Request Submitted",
+            "CatanMarker",
+            "Failed to send share request created email"),
+        new(
+            "share_request_approved",
+            (s, _, ct) => s.SendShareRequestApprovedEmailAsync(To, "Marco", "CatanMarker", SomeId, SomeId, ct),
+            "Contribution Approved! 🎉",
+            "CatanMarker",
+            "Failed to send share request approved email"),
+        new(
+            "share_request_rejected",
+            (s, _, ct) => s.SendShareRequestRejectedEmailAsync(To, "Marco", "CatanMarker", "TroppoSimileMarker", ct),
+            "Share Request Not Approved",
+            "TroppoSimileMarker",
+            "Failed to send share request rejected email"),
+        new(
+            "share_request_changes_requested",
+            (s, _, ct) => s.SendShareRequestChangesRequestedEmailAsync(To, "Marco", "CatanMarker", "ServeLaPaginaMarker", SomeId, ct),
+            "Changes Requested for Your Contribution",
+            "ServeLaPaginaMarker",
+            "Failed to send share request changes requested email"),
+        new(
+            "share_request_review_started",
+            (s, _, ct) => s.SendShareRequestReviewStartedEmailAsync(To, "Marco", "CatanMarker", SomeId, ct),
+            "Your Game Proposal Is Now Under Review",
+            "CatanMarker",
+            "Failed to send review started email"),
+        new(
+            "share_request_kb_merged",
+            (s, _, ct) => s.SendShareRequestKbMergedEmailAsync(To, "Marco", "CatanMarker", SomeId, ct),
+            "Your Game Proposal Has Been Merged",
+            "CatanMarker",
+            "Failed to send KB merged email"),
     ];
 
     public static TheoryData<string> MailKinds => new(Mails.Select(m => m.Kind));
@@ -108,12 +244,12 @@ public sealed class EmailServiceAccountMailTransportTests
         await mail.Send(ServiceWith(sender), "it", Ct);
 
         var sent = sender.Sent.Should().ContainSingle().Subject;
-        sent.ToEmail.Should().Be("marco@example.test");
-        sent.ToName.Should().Be("Marco", "the display name is part of the To: line the recipient sees");
+        sent.ToEmail.Should().Be(To);
+        sent.ToName.Should().Be(mail.ToName, "the display name is part of the To: line the recipient sees");
         sent.FromEmail.Should().Be("noreply@meepleai.test");
         sent.FromName.Should().Be("MeepleAI Test");
         sent.Subject.Should().Be(mail.Subject);
-        sent.HtmlBody.Should().Contain(mail.Link);
+        sent.HtmlBody.Should().Contain(mail.Marker);
     }
 
     [Theory]
@@ -136,7 +272,7 @@ public sealed class EmailServiceAccountMailTransportTests
     public async Task ASenderFailure_IsCountedUnderTheProviderAndTheKindOfMail(string kind)
     {
         var mail = Mail(kind);
-        var other = Mails.Single(m => m.Kind != kind);
+        var other = Mails.First(m => m.Kind != kind);
         using var failures = new SendFailureCapture();
         var service = ServiceWith(new RecordingSender { Failure = new InvalidOperationException("transport down") });
 

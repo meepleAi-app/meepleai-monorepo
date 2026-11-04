@@ -1,5 +1,3 @@
-using System.Net;
-using System.Net.Mail;
 using Api.Helpers;
 using Api.Infrastructure.Security;
 

@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.Infrastructure.DomainEventOutbox;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Services;
@@ -10,9 +11,11 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
 using Xunit;
@@ -128,9 +131,10 @@ public sealed class GameNightInvitationHandlerConcurrencyTests : IAsyncLifetime
     /// The real repository of the handler's own context, with one addition: the first read is followed by
     /// <paramref name="afterTheFirstRead"/>, i.e. the competing write lands exactly between read and save.
     /// </summary>
-    private Mock<IGameNightInvitationRepository> RacingRepository(MeepleAiDbContext db, Func<Task> afterTheFirstRead)
+    private Mock<IGameNightInvitationRepository> RacingRepository(
+        MeepleAiDbContext db, Func<Task> afterTheFirstRead, GameNightInvitationRepository? repository = null)
     {
-        var real = RepositoryOn(db);
+        var real = repository ?? RepositoryOn(db);
         var raced = false;
         var wrapper = new Mock<IGameNightInvitationRepository>();
 
@@ -259,4 +263,54 @@ public sealed class GameNightInvitationHandlerConcurrencyTests : IAsyncLifetime
         row.RespondedByName.Should().Be("Marco", "la risposta dell'ospite non è stata cancellata, è stata ritirata dopo");
         events.Verify(e => e.Clear(), Times.Once);
     }
+
+    /// <summary>
+    /// A context like production's: a real event collector and the outbox mode of staging and production. (The
+    /// fixture's own contexts have a collector with no events, so they never write a log or an outbox row.)
+    /// </summary>
+    private (MeepleAiDbContext Db, DomainEventCollector Collector) OutboxOnlyContext()
+    {
+        var options = new DbContextOptionsBuilder<MeepleAiDbContext>()
+            .UseNpgsql(_connectionString, o => o.UseVector())
+            .Options;
+        var collector = new DomainEventCollector();
+        var db = new MeepleAiDbContext(
+            options,
+            new Mock<IMediator>().Object,
+            collector,
+            domainEventOutboxOptions: Options.Create(new DomainEventOutboxOptions { Mode = DomainEventDispatchMode.OutboxOnly }));
+        _contexts.Add(db);
+        return (db, collector);
+    }
+
+    [Fact(DisplayName = "Inviti: una risposta ritentata mette in coda il suo evento una volta sola")]
+    public async Task Respond_WhenTheFirstSaveIsRefused_QueuesItsEventOnce_NotOncePerAttempt()
+    {
+        // The refused attempt had already added its log and outbox rows to the change tracker (they are added before
+        // the save). Left there, the retry inserted them next to the second attempt's: the same answer, published
+        // twice by the outbox processor.
+        var seeded = await SeedPendingInvitationAsync();
+        var (db, collector) = OutboxOnlyContext();
+        var repository = new GameNightInvitationRepository(db, collector, NullLogger<GameNightInvitationRepository>.Instance);
+        var handler = new RespondToGameNightInvitationByTokenCommandHandler(
+            RacingRepository(
+                db,
+                // A mark: it moves the row version but does not change what the answer decides.
+                async () => await RepositoryOn(NewContext()).MarkReminder24hSentAsync(seeded.Id, Now.AddMinutes(10), CancellationToken.None),
+                repository).Object,
+            new Mock<IGameNightEventRepository>().Object,
+            new EfCoreUnitOfWork(db),
+            collector,
+            new FakeTimeProvider(Now.AddHours(1)));
+
+        await handler.Handle(Accept(seeded), CancellationToken.None);
+
+        var verify = NewContext();
+        (await verify.GameNightInvitations.AsNoTracking().SingleAsync(i => i.Id == seeded.Id))
+            .Status.Should().Be(nameof(GameNightInvitationStatus.Accepted));
+        (await verify.DomainEventOutbox.AsNoTracking().CountAsync(o => o.EventType.Contains("InvitationResponded")))
+            .Should().Be(1, "one answer, one queued event: the refused attempt's rows must not survive into the retry");
+        collector.PeekEvents().Should().BeEmpty("the successful save drained the collector");
+    }
 }
+

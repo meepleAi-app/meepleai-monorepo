@@ -47,18 +47,21 @@ public sealed class AskSessionAgentAccessGuardTests
     private readonly Mock<IMediator> _mediator = new();
     private readonly Mock<ILlmService> _llm = new();
     private readonly Mock<IGameStateExtractor> _extractor = new();
+    private readonly Session _session;
+
+    private void AddParticipant(Participant participant) =>
+        ((List<Participant>)typeof(Session)
+            .GetField("_participants", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+            .GetValue(_session)!).Add(participant);
 
     public AskSessionAgentAccessGuardTests()
     {
-        var session = Session.Create(_ownerId, Guid.NewGuid(), SessionType.GameSpecific);
-        typeof(Session).GetProperty("Id")!.SetValue(session, _sessionId);
-        var participants = (List<Participant>)typeof(Session)
-            .GetField("_participants", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
-            .GetValue(session)!;
-        participants.Add(new Participant { Id = _registeredParticipantId, SessionId = _sessionId, UserId = _registeredUserId });
-        participants.Add(new Participant { Id = _guestParticipantId, SessionId = _sessionId, UserId = null });
+        _session = Session.Create(_ownerId, Guid.NewGuid(), SessionType.GameSpecific);
+        typeof(Session).GetProperty("Id")!.SetValue(_session, _sessionId);
+        AddParticipant(new Participant { Id = _registeredParticipantId, SessionId = _sessionId, UserId = _registeredUserId });
+        AddParticipant(new Participant { Id = _guestParticipantId, SessionId = _sessionId, UserId = null });
 
-        _sessions.Setup(r => r.GetByIdAsync(_sessionId, It.IsAny<CancellationToken>())).ReturnsAsync(session);
+        _sessions.Setup(r => r.GetByIdAsync(_sessionId, It.IsAny<CancellationToken>())).ReturnsAsync(_session);
         _llm.Setup(s => s.GenerateCompletionAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(LlmCompletionResult.CreateSuccess("Test agent response"));
@@ -118,8 +121,12 @@ public sealed class AskSessionAgentAccessGuardTests
     [Fact]
     public async Task Handle_WithNoCaller_IsRefused_NotTakenForSomebodyAtTheTable()
     {
-        // RequestedBy is Guid.Empty when an endpoint forgets to take it from the principal; a guest participant has a
-        // null UserId, so an empty id must not match anything.
+        // RequestedBy is Guid.Empty when an endpoint forgets to take it from the principal. A row whose UserId is
+        // itself Guid.Empty (a participant that was written with an empty id) would match it by equality: the empty
+        // id has to be refused BEFORE the comparison. A null UserId (a guest) never equals Guid.Empty, so a guest
+        // alone would not prove it.
+        AddParticipant(new Participant { Id = Guid.NewGuid(), SessionId = _sessionId, UserId = Guid.Empty });
+
         var act = () => HandlerWithTheRealGuard().Handle(
             Ask(senderId: _guestParticipantId, requestedBy: Guid.Empty), TestContext.Current.CancellationToken);
 

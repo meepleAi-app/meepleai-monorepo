@@ -164,6 +164,17 @@ internal sealed class GameNightInvitationRespondedHandler
             return;
         }
 
+        // #4856: the answer is refused once the night is cancelled, but this event reaches the handler seconds after
+        // it. A guest who accepted just before the cancellation must not be written «you're in» for a night that is
+        // off: the cancellation email is the one that tells them. Not marked: the mark says «written to».
+        if (gameNight.Status == Domain.Enums.GameNightStatus.Cancelled)
+        {
+            _logger.LogInformation(
+                "Skipping RSVP confirmation email for invitation {InvitationId}: game night {GameNightId} was cancelled",
+                invitation.Id, gameNight.Id);
+            return;
+        }
+
         // #4754: same language and zone as the invitation the guest answered — the organizer's. (The footer used
         // to carry an unsubscribe link built without the site's base URL, so it was relative and pointed
         // at no page; since #4846 it carries the one-tap opt-out, built on the public address.)

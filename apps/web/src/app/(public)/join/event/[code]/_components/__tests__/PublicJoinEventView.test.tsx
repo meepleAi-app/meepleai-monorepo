@@ -9,7 +9,7 @@
  * exercise the FSM in isolation without spinning up TanStack Query.
  */
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { ReactNode } from 'react';
 
@@ -271,6 +271,30 @@ describe('PublicJoinEventView (issue #1169)', () => {
       expect(screen.getByText(/Game night cancelled/i)).toBeInTheDocument();
     });
 
+    // #4856: the NIGHT was cancelled; the invitation keeps its own state, which may be Pending or Accepted.
+    it.each(['Pending', 'Accepted'])(
+      'routes to token-cancelled when the night was cancelled, whatever the invitation says (%s)',
+      status => {
+        vi.mocked(useGameNightInvitation).mockReturnValue(
+          mockInvitationHook({
+            data: {
+              ...FIXTURE,
+              status,
+              alreadyRespondedAs: status === 'Accepted' ? 'Accepted' : null,
+              nightCancelled: true,
+            },
+          })
+        );
+        vi.mocked(useRespondToInvitation).mockReturnValue(mockRespondHook());
+
+        renderWithIntl(<PublicJoinEventView code="tok-1169" />);
+
+        const main = screen.getByRole('main');
+        expect(main).toHaveAttribute('data-surface', 'token-cancelled');
+        expect(screen.getByText(/Game night cancelled/i)).toBeInTheDocument();
+      }
+    );
+
     it('routes to token-expired when invitation.status === "Expired"', () => {
       vi.mocked(useGameNightInvitation).mockReturnValue(
         mockInvitationHook({ data: { ...FIXTURE, status: 'Expired' } })
@@ -328,6 +352,35 @@ describe('PublicJoinEventView (issue #1169)', () => {
 
       const main = screen.getByRole('main');
       expect(main).toHaveAttribute('data-surface', 'token-expired');
+    });
+  });
+
+  describe('a 410 after the guest pressed the button (#4856)', () => {
+    it('says the night is cancelled when the invitation read again after the 410 says so', () => {
+      // The 410 carries no reason: the page refetches, and the fresh invitation says whether the NIGHT was cancelled.
+      vi.mocked(useGameNightInvitation).mockReturnValue(
+        mockInvitationHook({ data: { ...FIXTURE, status: 'Pending', nightCancelled: true } })
+      );
+      vi.mocked(useRespondToInvitation).mockReturnValue(
+        mockRespondHook({ state: 'gone', result: { kind: 'gone', reason: 'expired' } })
+      );
+
+      renderWithIntl(<PublicJoinEventView code="tok-1169" />);
+
+      expect(screen.getByRole('main')).toHaveAttribute('data-surface', 'token-cancelled');
+    });
+
+    it('reads the invitation again after a 410, to learn why the link is gone', async () => {
+      const refetch = vi.fn().mockResolvedValue(undefined);
+      const submit = vi.fn().mockResolvedValue({ kind: 'gone', reason: 'expired' });
+      vi.mocked(useGameNightInvitation).mockReturnValue(mockInvitationHook({ refetch }));
+      vi.mocked(useRespondToInvitation).mockReturnValue(mockRespondHook({ submit }));
+
+      renderWithIntl(<PublicJoinEventView code="tok-1169" />);
+      fireEvent.click(screen.getByRole('button', { name: /I'm in/i }));
+
+      await waitFor(() => expect(refetch).toHaveBeenCalledTimes(1));
+      expect(submit).toHaveBeenCalledTimes(1);
     });
   });
 

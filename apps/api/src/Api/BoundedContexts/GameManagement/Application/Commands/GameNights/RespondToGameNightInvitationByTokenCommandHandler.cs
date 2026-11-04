@@ -20,15 +20,18 @@ internal sealed class RespondToGameNightInvitationByTokenCommandHandler
     : ICommandHandler<RespondToGameNightInvitationByTokenCommand>
 {
     private readonly IGameNightInvitationRepository _invitationRepository;
+    private readonly IGameNightEventRepository _gameNightRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
 
     public RespondToGameNightInvitationByTokenCommandHandler(
         IGameNightInvitationRepository invitationRepository,
+        IGameNightEventRepository gameNightRepository,
         IUnitOfWork unitOfWork,
         TimeProvider timeProvider)
     {
         _invitationRepository = invitationRepository ?? throw new ArgumentNullException(nameof(invitationRepository));
+        _gameNightRepository = gameNightRepository ?? throw new ArgumentNullException(nameof(gameNightRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
     }
@@ -58,6 +61,19 @@ internal sealed class RespondToGameNightInvitationByTokenCommandHandler
         if (invitation.IsExpired(utcNow))
         {
             throw new GoneException("This invitation has expired.");
+        }
+
+        // 410 Gone: the night was cancelled (#4856). The cancellation does not touch the invitations (another
+        // aggregate), so their own state cannot say it: before this, a guest who opened an old link could still
+        // «accept» a night that was off, and be written «you're in». An unknown night is not blocked here: the
+        // public page answers 404 for it, and this endpoint has never depended on it.
+        var gameNight = await _gameNightRepository
+            .GetByIdAsync(invitation.GameNightId, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (gameNight?.Status == GameNightStatus.Cancelled)
+        {
+            throw new GoneException("This game night was cancelled: the invitation can no longer be answered.");
         }
 
         bool transitioned;

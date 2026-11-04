@@ -189,11 +189,10 @@ internal static class GameNightEndpoints
             .RequireRateLimiting("GameNightTokenRead")
             .Produces<PublicGameNightInvitationDto>(200)
             .Produces(404)
-            .Produces(410)
             .Produces(429)
             .WithName("GetGameNightInvitationByToken")
             .WithSummary("Get a game night invitation by token")
-            .WithDescription("Public endpoint to retrieve a game night invitation by its opaque token. Returns 410 Gone for terminal states (Expired, Cancelled). Rate-limited at 60 req/min per IP (issue #1169).");
+            .WithDescription("Public endpoint to retrieve a game night invitation by its opaque token. A link that is no longer alive (withdrawn, expired, or the night was cancelled) answers 200 with only its state, the host name and, for a cancelled night, nightCancelled=true: title, time, place, game and counts are empty (#4745, #4856). The respond endpoint answers 410 for those. Rate-limited at 60 req/min per IP (issue #1169).");
 
         gameNights.MapPost("/invitations/{token}/respond", HandleRespondToGameNightInvitationByToken)
             .AllowAnonymous()
@@ -206,7 +205,7 @@ internal static class GameNightEndpoints
             .Produces(429)
             .WithName("RespondToGameNightInvitationByToken")
             .WithSummary("Respond to a game night invitation by token")
-            .WithDescription("Public endpoint to submit an Accepted or Declined response, optionally with a guest display name (issue #1169). Optional auth: authenticated callers have their UserId attached. Idempotent on same-state; conflicts on switching across statuses. Rate-limited at 10 req/min per IP.");
+            .WithDescription("Public endpoint to submit an Accepted or Declined response, optionally with a guest display name (issue #1169). Optional auth: authenticated callers have their UserId attached. Idempotent on same-state; conflicts on switching across statuses; 410 when the invitation is withdrawn or expired, or the night was cancelled (#4856). Rate-limited at 10 req/min per IP.");
 
         gameNights.MapPost("/guest-unsubscribe/{unsubscribeKey}", HandleOptOutGameNightGuestEmail)
             .AllowAnonymous()

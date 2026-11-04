@@ -15,6 +15,7 @@ import { Spinner } from '@/components/loading';
 import { Button } from '@/components/ui/primitives/button';
 import { usePdfUploadLimits } from '@/hooks/queries/usePdfUploadLimits';
 import { useAddGameWizard } from '@/hooks/useAddGameWizard';
+import { PdfIngestResponseSchema, type PdfIngestOutcome } from '@/lib/api/schemas/pdf.schemas';
 import { formatSizeLimit } from '@/lib/format/file-size';
 
 export function UploadPrivatePDF() {
@@ -82,46 +83,51 @@ export function UploadPrivatePDF() {
       // Use XHR for progress tracking (same pattern as admin wizard)
       const xhr = new XMLHttpRequest();
 
-      const uploadPromise = new Promise<{ documentId: string; fileName: string }>(
-        (resolve, reject) => {
-          xhr.upload.addEventListener('progress', e => {
-            if (e.lengthComputable) {
-              setUploadProgress(Math.round((e.loaded / e.total) * 100));
+      const uploadPromise = new Promise<PdfIngestOutcome>((resolve, reject) => {
+        xhr.upload.addEventListener('progress', e => {
+          if (e.lengthComputable) {
+            setUploadProgress(Math.round((e.loaded / e.total) * 100));
+          }
+        });
+
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              resolve(PdfIngestResponseSchema.parse(JSON.parse(xhr.responseText)));
+            } catch {
+              reject(new Error('Invalid response from server'));
             }
-          });
-
-          xhr.addEventListener('load', () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              try {
-                const response = JSON.parse(xhr.responseText);
-                resolve(response);
-              } catch {
-                reject(new Error('Invalid response from server'));
-              }
-            } else {
-              try {
-                const error = JSON.parse(xhr.responseText);
-                reject(new Error(error.error || 'Upload failed'));
-              } catch {
-                reject(new Error(`Upload failed: ${xhr.statusText}`));
-              }
+          } else {
+            try {
+              const error = JSON.parse(xhr.responseText);
+              reject(new Error(error.error || 'Upload failed'));
+            } catch {
+              reject(new Error(`Upload failed: ${xhr.statusText}`));
             }
-          });
+          }
+        });
 
-          xhr.addEventListener('error', () => {
-            reject(new Error('Network error during upload'));
-          });
+        xhr.addEventListener('error', () => {
+          reject(new Error('Network error during upload'));
+        });
 
-          // Upload to ingest endpoint (private PDF, not public library)
-          xhr.open('POST', '/api/v1/ingest/pdf');
-          xhr.withCredentials = true;
-          xhr.send(formData);
-        }
-      );
+        // Upload to ingest endpoint (private PDF, not public library)
+        xhr.open('POST', '/api/v1/ingest/pdf');
+        xhr.withCredentials = true;
+        xhr.send(formData);
+      });
 
       const result = await uploadPromise;
 
-      toast.success('PDF uploaded successfully!');
+      // #4893: the same content already stored answers 200 with `existingKb` and no `documentId`.
+      // Nothing was uploaded: say so, and keep the document that is already there.
+      if (result.kind === 'existing') {
+        toast.info(
+          `This PDF was already uploaded (status: ${result.existingKb.processingState}): using the existing one`
+        );
+      } else {
+        toast.success('PDF uploaded successfully!');
+      }
       setUploadedPdf(result.documentId, file.name);
       goNext(); // Automatically advance to review step
     } catch (err) {

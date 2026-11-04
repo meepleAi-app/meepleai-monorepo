@@ -17,6 +17,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FileUp, X, FileText, CheckCircle2, AlertCircle, Loader2, Zap } from 'lucide-react';
 import { toast } from 'sonner';
+import { z } from 'zod';
 
 import { KbCardStatusRow } from '@/components/documents/KbCardStatusRow';
 import { CoverPagePicker } from '@/components/shared-games/CoverPagePicker';
@@ -37,7 +38,12 @@ import {
 } from '@/components/ui/overlays/select';
 import { Button } from '@/components/ui/primitives/button';
 import { usePdfUploadLimits } from '@/hooks/queries/usePdfUploadLimits';
-import type { PdfDocumentDto } from '@/lib/api/schemas/pdf.schemas';
+import {
+  PdfIngestResponseSchema,
+  type PdfDocumentDto,
+  type PdfExistingKbInfo,
+  type PdfIngestOutcome,
+} from '@/lib/api/schemas/pdf.schemas';
 import { formatSizeLimit } from '@/lib/format/file-size';
 
 // ========== Types ==========
@@ -63,6 +69,15 @@ export interface PdfUploadSectionProps {
   showPrioritySelector?: boolean;
 }
 
+/**
+ * What the link of a PDF to the game ended with: `already-linked` is a PDF the game already had (no request
+ * was made: `POST …/documents` is not idempotent, it answers 400 "Version 1.0 already exists").
+ */
+type LinkOutcome = 'linked' | 'already-linked' | 'failed';
+
+/** The documents of the game (`GET /admin/shared-games/{id}/documents`): only the PDF each one links. */
+const LinkedDocumentsSchema = z.array(z.object({ pdfDocumentId: z.string() }));
+
 // ========== Component ==========
 
 export function PdfUploadSection({
@@ -80,6 +95,11 @@ export function PdfUploadSection({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // #4893: the upload stored nothing because the same content was already there.
+  const [existingNotice, setExistingNotice] = useState<{
+    kb: PdfExistingKbInfo;
+    link?: LinkOutcome;
+  } | null>(null);
 
   // Processing status polling (Issue #5196 → refactored to useQuery in #2246 Block B)
   const [processingDoc, setProcessingDoc] = useState<PdfDocumentDto | null>(null);
@@ -204,10 +224,38 @@ export function PdfUploadSection({
     setDragActive(false);
   }, []);
 
-  // Link PDF to SharedGame
-  const linkPdfToGame = useCallback(
-    async (targetGameId: string, pdfId: string) => {
+  // Is this PDF already one of the documents of the game? Any failure answers "no": the link request
+  // then decides, exactly as it did before this check existed.
+  const isPdfLinkedToGame = useCallback(
+    async (targetGameId: string, pdfId: string): Promise<boolean> => {
       try {
+        const response = await fetch(
+          `${API_BASE}/api/v1/admin/shared-games/${targetGameId}/documents`,
+          { credentials: 'include' }
+        );
+        if (!response.ok) return false;
+        const documents = LinkedDocumentsSchema.safeParse(await response.json());
+        return documents.success && documents.data.some(d => d.pdfDocumentId === pdfId);
+      } catch {
+        return false;
+      }
+    },
+    [API_BASE]
+  );
+
+  // Link PDF to SharedGame. `checkLinked`: the PDF was already stored (#4893), so the game may have it too.
+  const linkPdfToGame = useCallback(
+    async (
+      targetGameId: string,
+      pdfId: string,
+      { checkLinked = false }: { checkLinked?: boolean } = {}
+    ): Promise<LinkOutcome> => {
+      try {
+        if (checkLinked && (await isPdfLinkedToGame(targetGameId, pdfId))) {
+          toast.info('Il PDF era già collegato al gioco');
+          return 'already-linked';
+        }
+
         const response = await fetch(
           `${API_BASE}/api/v1/admin/shared-games/${targetGameId}/documents`,
           {
@@ -229,12 +277,14 @@ export function PdfUploadSection({
         }
 
         toast.success('PDF collegato al gioco');
+        return 'linked';
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Errore sconosciuto';
         toast.error(`Collegamento fallito: ${message}`);
+        return 'failed';
       }
     },
-    [API_BASE]
+    [API_BASE, isPdfLinkedToGame]
   );
 
   // Upload PDF
@@ -248,6 +298,7 @@ export function PdfUploadSection({
     setUploadProgress(0);
     setError(null);
     setCoverPromptDismissed(false);
+    setExistingNotice(null);
 
     try {
       const formData = new FormData();
@@ -260,45 +311,47 @@ export function PdfUploadSection({
       // Use XHR for progress tracking
       const xhr = new XMLHttpRequest();
 
-      const uploadPromise = new Promise<{ documentId: string; fileName: string }>(
-        (resolve, reject) => {
-          xhr.upload.addEventListener('progress', e => {
-            if (e.lengthComputable) {
-              setUploadProgress(Math.round((e.loaded / e.total) * 100));
+      const uploadPromise = new Promise<PdfIngestOutcome>((resolve, reject) => {
+        xhr.upload.addEventListener('progress', e => {
+          if (e.lengthComputable) {
+            setUploadProgress(Math.round((e.loaded / e.total) * 100));
+          }
+        });
+
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              resolve(PdfIngestResponseSchema.parse(JSON.parse(xhr.responseText)));
+            } catch {
+              reject(new Error('Risposta server non valida'));
             }
-          });
-
-          xhr.addEventListener('load', () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              try {
-                const response = JSON.parse(xhr.responseText);
-                resolve(response);
-              } catch {
-                reject(new Error('Risposta server non valida'));
-              }
-            } else {
-              try {
-                const errorResponse = JSON.parse(xhr.responseText);
-                reject(new Error(errorResponse.error || 'Upload fallito'));
-              } catch {
-                reject(new Error(`Upload fallito: ${xhr.statusText}`));
-              }
+          } else {
+            try {
+              const errorResponse = JSON.parse(xhr.responseText);
+              reject(new Error(errorResponse.error || 'Upload fallito'));
+            } catch {
+              reject(new Error(`Upload fallito: ${xhr.statusText}`));
             }
-          });
+          }
+        });
 
-          xhr.addEventListener('error', () => {
-            reject(new Error("Errore di rete durante l'upload"));
-          });
+        xhr.addEventListener('error', () => {
+          reject(new Error("Errore di rete durante l'upload"));
+        });
 
-          const uploadUrl =
-            priority === 'urgent' ? '/api/v1/ingest/pdf?priority=urgent' : '/api/v1/ingest/pdf';
-          xhr.open('POST', uploadUrl);
-          xhr.withCredentials = true;
-          xhr.send(formData);
-        }
-      );
+        const uploadUrl =
+          priority === 'urgent' ? '/api/v1/ingest/pdf?priority=urgent' : '/api/v1/ingest/pdf';
+        xhr.open('POST', uploadUrl);
+        xhr.withCredentials = true;
+        xhr.send(formData);
+      });
 
       const result = await uploadPromise;
+
+      // #4893: the same content already stored answers 200 with `existingKb` and NO `documentId`: nothing
+      // was uploaded, and the document to link and follow is the existing one (`result.documentId` is
+      // `existingKb.pdfDocumentId` for it).
+      const existingKb = result.kind === 'existing' ? result.existingKb : null;
 
       const uploaded: UploadedPdf = {
         id: result.documentId,
@@ -309,12 +362,24 @@ export function PdfUploadSection({
       setUploadedPdf(uploaded);
       setFile(null);
       setPriority('normal');
-      toast.success('PDF caricato con successo!');
+      if (existingKb) {
+        setExistingNotice({ kb: existingKb });
+        toast.info(
+          `PDF già presente: "${existingKb.fileName}" (stato: ${existingKb.processingState})`
+        );
+      } else {
+        toast.success('PDF caricato con successo!');
+      }
       onPdfUploaded?.(uploaded);
 
       // If we have a gameId, link the PDF to the game and start polling
       if (gameId) {
-        await linkPdfToGame(gameId, result.documentId);
+        const link = await linkPdfToGame(gameId, result.documentId, {
+          checkLinked: existingKb !== null,
+        });
+        if (existingKb) {
+          setExistingNotice({ kb: existingKb, link });
+        }
         // Issue #2246 Block A: invalidate admin caches immediately so the
         // freshly-uploaded document shows up in admin lists / queue / KB cards.
         invalidateAdminCaches(gameId);
@@ -322,7 +387,7 @@ export function PdfUploadSection({
         setProcessingDoc({
           id: result.documentId,
           gameId,
-          fileName: file.name,
+          fileName: existingKb ? existingKb.fileName : file.name,
           filePath: '',
           fileSizeBytes: file.size,
           uploadedAt: new Date().toISOString(),
@@ -330,8 +395,9 @@ export function PdfUploadSection({
           pageCount: null,
           documentType: 'base',
           isPublic: false,
-          processingState: 'Uploading',
-          progressPercentage: 0,
+          // An existing document starts from the state it is in: the polling below takes it from there.
+          processingState: existingKb ? existingKb.processingState : 'Uploading',
+          progressPercentage: existingKb?.processingState === 'Ready' ? 100 : 0,
           retryCount: 0,
           maxRetries: 3,
           canRetry: false,
@@ -360,6 +426,7 @@ export function PdfUploadSection({
     setError(null);
     setProcessingDoc(null);
     setCoverPromptDismissed(false);
+    setExistingNotice(null);
     onPdfRemoved?.();
   }, [onPdfRemoved]);
 
@@ -405,6 +472,24 @@ export function PdfUploadSection({
             >
               <X className="h-4 w-4" />
             </Button>
+          </div>
+        )}
+
+        {/* The upload stored nothing: the same content was already there (#4893) */}
+        {existingNotice && (
+          <div
+            data-testid="pdf-existing-notice"
+            role="status"
+            className="p-3 bg-muted/50 border rounded-lg text-sm"
+          >
+            <p className="font-medium">
+              Questo PDF era già presente: non è stato caricato di nuovo.
+            </p>
+            <p className="text-muted-foreground">
+              {existingNotice.kb.fileName} • Stato: {existingNotice.kb.processingState}
+              {existingNotice.link === 'already-linked' && ' • già collegato al gioco'}
+              {existingNotice.link === 'linked' && ' • collegato al gioco'}
+            </p>
           </div>
         )}
 

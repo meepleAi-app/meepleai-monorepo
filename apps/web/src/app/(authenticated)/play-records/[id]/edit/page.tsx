@@ -81,10 +81,10 @@ export default function EditPlayRecordPage() {
   // the last step. Leaving this page leaves the step where a new wizard starts.
   const { resetSessionCreation, setSessionField } = usePlayRecordsStore();
   useEffect(() => () => resetSessionCreation(), [resetSessionCreation]);
-  // And the other way round (#4842): the create page does not reset the step when it unmounts (its half-done
-  // data is still on its way to the draft), so an edit opened after one starts on the step the creation was
-  // left on. Only the step is brought back, not `resetSessionCreation()`, which would erase that data. A layout
-  // effect, so the form is never painted on the wrong step when the record comes from the cache.
+  // And the other way round (#4842): the create page does not reset the step when it unmounts, so an edit opened
+  // after a creation left half done starts on the step the creation was left on. The step is the only field of the
+  // store that the forms write or read (`currentStep`), so only it is brought back. A layout effect, so the form
+  // is never painted on the wrong step when the record comes from the cache.
   useLayoutEffect(() => {
     setSessionField('currentStep', 0);
   }, [setSessionField]);

@@ -117,19 +117,6 @@ describe('EditPlayRecordPage — the step it opens on (#4842)', () => {
     expect(usePlayRecordsStore.getState().sessionCreation.currentStep).toBe(0);
   });
 
-  it('keeps what the creation had typed: only the step is brought back', () => {
-    const store = usePlayRecordsStore.getState();
-    store.setSessionField('currentStep', 2);
-    store.setSessionField('gameName', 'Catan, not yet in the draft');
-
-    renderPage();
-
-    // `resetSessionCreation()` here would erase the half-done creation before its autosave (800 ms debounce) saw it.
-    expect(usePlayRecordsStore.getState().sessionCreation.gameName).toBe(
-      'Catan, not yet in the draft'
-    );
-  });
-
   it('still lets the user move on from the first step', async () => {
     usePlayRecordsStore.getState().setSessionField('currentStep', 2);
     renderPage();

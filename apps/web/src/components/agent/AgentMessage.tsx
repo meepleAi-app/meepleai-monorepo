@@ -14,6 +14,7 @@ import React, { useState } from 'react';
 import { Copy, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
+import { citedPage } from '@/lib/citations/citedPage';
 import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 import { AgentMessage as AgentMessageType } from '@/types/agent';
@@ -138,8 +139,8 @@ export const AgentMessage = React.memo(function AgentMessage({ message }: AgentM
                   }}
                 >
                   <span className="text-[#1a73e8]">{citation.source || 'Source'}</span>
-                  {citation.pageNumber && (
-                    <span className="text-[#5f6368]">p.{citation.pageNumber}</span>
+                  {citedPage(citation.pageNumber) !== null && (
+                    <span className="text-[#5f6368]">p.{citedPage(citation.pageNumber)}</span>
                   )}
                   {citation.score && (
                     <span className="text-[#94a3b8] text-[10px]">

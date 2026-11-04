@@ -184,6 +184,19 @@ public sealed class PdfProcessingQuartzJob : IJob
             // worker or already terminal), a vanished row, a concurrency abort. Treating that
             // silence as success stamped Completed on the job AND all five steps, a terminal state
             // no retry reclaims, and fed step metrics/ETA with durations for work never performed.
+            if (outcome == PdfPipelineOutcome.SkippedNotClaimed)
+            {
+                // #4443 R4: the document was not Pending — another owner holds it (an upload's
+                // background task, the admin unblock, recovery at startup) or it already finished.
+                // This job had nothing to do, which is not a failure: Failed made the queue report
+                // an error for a document that reached Ready a minute later.
+                _logger.LogInformation(
+                    "Job {JobId} cancelled: PDF {PdfId} was not pending (owned elsewhere or already finished)",
+                    jobEntity.Id, pdfDoc.Id);
+                await CancelJobAsync(jobEntity, NotClaimedReason, ct).ConfigureAwait(false);
+                return;
+            }
+
             if (outcome != PdfPipelineOutcome.Processed)
             {
                 _logger.LogWarning(
@@ -334,6 +347,40 @@ public sealed class PdfProcessingQuartzJob : IJob
         });
 
         await _dbContext.SaveChangesAsync(ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// #4443 R4: the reason recorded on a job whose document was not pending. Also matched by the
+    /// cleanup of the jobs that the earlier behaviour left <c>Failed</c>.
+    /// </summary>
+    internal const string NotClaimedReason =
+        "Not processed: the document was not pending (being processed elsewhere or already finished).";
+
+    private async Task CancelJobAsync(ProcessingJobEntity jobEntity, string reason, CancellationToken ct)
+    {
+        var now = _timeProvider.GetUtcNow();
+        jobEntity.Status = nameof(JobStatus.Cancelled);
+        jobEntity.CompletedAt = now;
+        jobEntity.CurrentStep = null;
+        jobEntity.ErrorMessage = reason;
+
+        try
+        {
+            var saveCt = ct.IsCancellationRequested ? CancellationToken.None : ct;
+            await _dbContext.SaveChangesAsync(saveCt).ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // Best-effort persistence, like FailJobAsync
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to persist cancellation for job {JobId}", jobEntity.Id);
+        }
+#pragma warning restore CA1031
+
+        // The same event CancelJobCommandHandler produces (JobCancelledStreamHandler).
+        await PublishEventSafeAsync(new QueueStreamEvent(
+            QueueStreamEventType.JobRemoved, jobEntity.Id,
+            new JobRemovedData("Cancelled"),
+            now), ct).ConfigureAwait(false);
     }
 
     private async Task FailJobAsync(ProcessingJobEntity jobEntity, string error, CancellationToken ct)

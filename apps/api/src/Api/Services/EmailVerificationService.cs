@@ -65,7 +65,12 @@ internal class EmailVerificationService : IEmailVerificationService
 
         // Invalidate any existing active tokens for this user
         // Use InvalidatedAt (not VerifiedAt) to distinguish superseded tokens from verified tokens
+        // #3866: `.AsTracking()` is REQUIRED — the DbContext default is NoTracking (PERF-06), so
+        // without it the InvalidatedAt assignment below reached no change tracker and the superseded
+        // tokens stayed active. Every resend left the previous link usable, and a user could
+        // accumulate any number of live verification tokens.
         var existingTokens = await _db.EmailVerifications
+            .AsTracking()
             .Where(t => t.UserId == userId && t.VerifiedAt == null && t.InvalidatedAt == null && t.ExpiresAt > now)
             .ToListAsync(ct).ConfigureAwait(false);
 
@@ -102,6 +107,7 @@ internal class EmailVerificationService : IEmailVerificationService
                 normalizedEmail,
                 displayName ?? normalizedEmail,
                 verificationTokenValue,
+                language: user.Language,
                 ct).ConfigureAwait(false);
 
             _logger.LogInformation(
@@ -136,6 +142,8 @@ internal class EmailVerificationService : IEmailVerificationService
 
         var verification = await _db.EmailVerifications
             .Include(v => v.User)
+            // #3866: tracked on purpose — the mutation below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+            .AsTracking()
             .FirstOrDefaultAsync(v => v.TokenHash == tokenHash, ct).ConfigureAwait(false);
 
         if (verification == null)

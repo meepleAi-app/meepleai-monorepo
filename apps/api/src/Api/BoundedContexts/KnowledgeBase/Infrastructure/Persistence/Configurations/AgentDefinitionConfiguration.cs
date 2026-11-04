@@ -30,17 +30,27 @@ public sealed class AgentDefinitionConfiguration : IEntityTypeConfiguration<Agen
             .HasColumnName("description")
             .HasMaxLength(1000);
 
-        // AgentType (Issue #3708) - stored as value + description, computed property ignored
-        builder.Ignore(a => a.Type);
-        builder.Property<string>("_typeValue")
+        // Issue #4138 — EXPAND step of the expand → migrate → contract pattern
+        // (rollback-runbook §8.3). `type_value` / `type_description` were mapped to the entity
+        // FIELDS `_typeValue` / `_typeDescription`, both `IsRequired()`, with an index over the
+        // first. The entity no longer carries a type, but the columns MUST stay for one deploy:
+        //
+        //   - dropping them in the same deploy that stops reading them is NOT rollback-safe
+        //     (§8.2): the previous code version mapped them as required, so rolling the code
+        //     back against the new schema breaks every query on this table;
+        //   - and `type_value` is NOT NULL with no default, so simply unmapping it would make
+        //     every INSERT fail with 23502.
+        //
+        // So they are kept as NULLABLE SHADOW properties: present in the model, absent from the
+        // aggregate, written as NULL, read by nobody. The index is dropped now because an index
+        // is not part of any code contract. The CONTRACT deploy drops the two columns, and it is
+        // the one that carries the `-- safe:` directive plus the evidence that nothing reads them.
+        builder.Property<string?>("type_value")
             .HasColumnName("type_value")
-            .HasMaxLength(50)
-            .IsRequired();
-
-        builder.Property<string>("_typeDescription")
+            .HasMaxLength(50);
+        builder.Property<string?>("type_description")
             .HasColumnName("type_description")
-            .HasMaxLength(200)
-            .IsRequired();
+            .HasMaxLength(200);
 
         // AgentDefinitionConfig value object (owned)
         builder.OwnsOne(a => a.Config, config =>
@@ -107,7 +117,6 @@ public sealed class AgentDefinitionConfiguration : IEntityTypeConfiguration<Agen
         // Indexes for search performance
         builder.HasIndex(a => a.IsActive);
         builder.HasIndex(a => a.CreatedAt);
-        builder.HasIndex("_typeValue").HasDatabaseName("ix_agent_definitions_type_value");
 
         // New columns from agent system simplification
         builder.Property<bool>("_isSystemDefined")

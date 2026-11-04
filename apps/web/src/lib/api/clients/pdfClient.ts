@@ -5,6 +5,8 @@
  * Covers: PDF processing progress, cancellation, download
  */
 
+import { z } from 'zod';
+
 import { getApiBase, type HttpClient } from '../core/httpClient';
 import {
   ProcessingProgressSchema,
@@ -19,6 +21,33 @@ import {
   type IndexerVersionList,
 } from '../schemas/indexer-versions.schemas';
 
+/**
+ * #4449: GET /api/v1/ingest/pdf/limits — the PDF upload limits for the current user.
+ * `maxFileSizeBytes` is their effective limit: the smaller of the single technical limit
+ * (PdfProcessing:MaxFileSizeBytes) and their plan's PDF size.
+ */
+export const PdfUploadLimitsSchema = z.object({
+  maxFileSizeBytes: z.number().int().positive(),
+  maxConcurrentChunkedUploads: z.number().int().positive(),
+});
+
+export type PdfUploadLimits = z.infer<typeof PdfUploadLimitsSchema>;
+
+/**
+ * #4683: body of `DELETE /api/v1/pdf/{id}` when the PDF was NOT deleted because other games still
+ * link it (#4627): `unlinked` = this game's link was removed, `kept` = there was none to remove.
+ * A deleted PDF answers 204 with no body, so `deleted` is not a value of the wire format.
+ */
+export const PdfDeleteOutcomeSchema = z.object({
+  outcome: z.enum(['unlinked', 'kept']),
+  message: z.string().optional(),
+});
+
+export interface DeletePdfResult {
+  outcome: 'deleted' | 'unlinked' | 'kept';
+  message?: string;
+}
+
 export interface CreatePdfClientParams {
   httpClient: HttpClient;
 }
@@ -28,6 +57,16 @@ export interface CreatePdfClientParams {
  */
 export function createPdfClient({ httpClient }: CreatePdfClientParams) {
   return {
+    // ========== Upload limits (#4449) ==========
+
+    /**
+     * The PDF upload limits for the current user. Upload zones read the size limit from here
+     * instead of carrying their own constant (they had 50, 150 and 500 MB).
+     */
+    async getUploadLimits(): Promise<PdfUploadLimits | null> {
+      return httpClient.get('/api/v1/ingest/pdf/limits', PdfUploadLimitsSchema);
+    },
+
     // ========== PDF Processing ==========
 
     /**
@@ -78,16 +117,19 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
      * @param gameId Game ID to associate the PDF with
      * @param file PDF file to upload
      * @param onProgress Optional progress callback (0-100) via XMLHttpRequest
+     * @param options.priority Processing priority (#4443): admin and editor only, a user gets 403.
+     *   An admin upload is queued by the backend with it — do not enqueue it again.
      * @returns Upload result with documentId and fileName
      */
     async uploadPdf(
       gameId: string,
       file: File,
       onProgress?: (percent: number) => void,
-      options?: { isPrivateGame?: boolean }
+      options?: { isPrivateGame?: boolean; priority?: 'normal' | 'urgent' }
     ): Promise<{ documentId: string; fileName: string }> {
       const baseUrl = getApiBase();
-      const url = `${baseUrl}/api/v1/ingest/pdf`;
+      const query = options?.priority ? `?priority=${options.priority}` : '';
+      const url = `${baseUrl}/api/v1/ingest/pdf${query}`;
 
       return new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
@@ -206,15 +248,17 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
      * Complete a chunked upload session, assembling all chunks.
      * POST /api/v1/ingest/pdf/chunked/complete
      * @param sessionId Chunked upload session ID
+     * @param priority Processing priority of the job the backend creates (#4443)
      */
     async completeChunkedUpload(
-      sessionId: string
+      sessionId: string,
+      priority?: 'normal' | 'urgent'
     ): Promise<{ success: boolean; documentId: string; fileName: string }> {
       const result = await httpClient.post<{
         success: boolean;
         documentId: string;
         fileName: string;
-      }>('/api/v1/ingest/pdf/chunked/complete', { sessionId });
+      }>('/api/v1/ingest/pdf/chunked/complete', priority ? { sessionId, priority } : { sessionId });
       return result ?? { success: false, documentId: '', fileName: '' };
     },
 
@@ -285,10 +329,15 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
     },
 
     /**
-     * Delete a PDF document (admin)
+     * Delete a PDF document (admin). The PDF is only removed when no other game links it: the result
+     * says what happened (204 → `deleted`, 200 → `unlinked` | `kept`).
      */
-    async adminDeletePdf(pdfId: string): Promise<void> {
-      return httpClient.delete(`/api/v1/pdf/${encodeURIComponent(pdfId)}`);
+    async adminDeletePdf(pdfId: string): Promise<DeletePdfResult> {
+      const result = await httpClient.deleteWithResult(
+        `/api/v1/pdf/${encodeURIComponent(pdfId)}`,
+        PdfDeleteOutcomeSchema
+      );
+      return result ?? { outcome: 'deleted' };
     },
 
     /**

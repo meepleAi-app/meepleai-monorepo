@@ -25,6 +25,7 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
 [Trait("Category", TestCategories.Unit)]
+[Collection("SharedGameDetailMetrics")]
 public class GetSharedGameByIdQueryHandlerTests
 {
     private readonly Mock<ISharedGameRepository> _repositoryMock;

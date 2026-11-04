@@ -120,3 +120,22 @@ describe('CitationPill', () => {
     expect(onClick).toHaveBeenCalledWith({ docId: 'doc-2', page: 3 });
   });
 });
+
+describe('CitationPill — citazione senza pagina (#4819)', () => {
+  it('hands the caller a null page, never a made-up one', async () => {
+    const onClick = vi.fn();
+    render(
+      <CitationPill
+        n={1}
+        refText="Fonte"
+        docId={refMock.docId}
+        page={null}
+        ariaLabel="Citazione 1"
+        onClick={onClick}
+      />
+    );
+
+    await userEvent.setup().click(screen.getByRole('button', { name: /citazione 1/i }));
+    expect(onClick).toHaveBeenCalledWith({ docId: refMock.docId, page: null });
+  });
+});

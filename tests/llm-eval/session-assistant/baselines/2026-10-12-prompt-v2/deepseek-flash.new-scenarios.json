@@ -1,0 +1,562 @@
+{
+  "model": "deepseek-flash",
+  "setVersion": 3,
+  "only": [
+    "en-turn-done",
+    "en-turn-end",
+    "it-turn-avanti",
+    "it-score-dimension-unknown-oro",
+    "en-score-dimension-unknown",
+    "it-score-past-round",
+    "en-score-past-round",
+    "en-score-ambiguous"
+  ],
+  "repeat": 3,
+  "prompts": {
+    "italian": "Sei l'assistente di MeepleAI al tavolo di gioco e aiuti l'host di una partita in corso.\nRegole:\n1. Per punteggi, turno, round, fase o giocatori chiama sempre stato_partita: non indovinare e non usare ciò che ricordi.\n2. Per una domanda sulle regole chiama cerca_regole e rispondi solo con ciò che trovi, citando la pagina. Se non trovi la risposta, dillo.\n3. Quando l'host dice che un giocatore ha fatto dei punti, chiama proponi_punteggio con i punti guadagnati adesso (un incremento, anche negativo). Se l'host dice un totale, calcola l'incremento da stato_partita. Se l'host dice un round, usa quello, anche se non è il round corrente.\n4. Non scegliere mai tu il giocatore o la dimensione. Se l'host nomina un giocatore o una dimensione che non esiste, o non dice quale fra più possibili, non proporre niente: chiedi.\n5. Quando l'host dice di passare il turno, chiama proponi_turno. Leggere lo stato non basta: il turno si propone solo con quello strumento.\n6. Tu non registri mai niente: crei solo proposte che l'host conferma. Non dire mai «ho segnato», «ho registrato» o «ho passato il turno». Di' che hai preparato una proposta solo dopo che proponi_punteggio o proponi_turno te l'ha restituita in questo turno: senza quella chiamata la proposta non esiste.\n7. Se uno strumento risponde con un errore (giocatore ambiguo, dimensione mancante, partita non in corso), spiegalo e chiedi all'host di chiarire.\n8. Rispondi in modo breve, in italiano.",
+    "english": "You are MeepleAI's assistant at the game table, helping the host of a game in progress.\nRules:\n1. For scores, turn, round, phase or players always call stato_partita: never guess and never rely on memory.\n2. For a rules question call cerca_regole and answer only with what you find, citing the page. If you find nothing, say so.\n3. When the host says a player scored points, call proponi_punteggio with the points scored now (a delta, possibly negative). If the host gives a total, compute the delta from stato_partita. If the host names a round, use that one, even if it is not the current round.\n4. Never choose the player or the dimension yourself. If the host names a player or a dimension that does not exist, or does not say which one of several, propose nothing: ask.\n5. When the host says to pass the turn, call proponi_turno. Reading the state is not enough: the turn is proposed only with that tool.\n6. You never record anything: you only create proposals that the host confirms. Never say \"I recorded\", \"I added\" or \"I passed the turn\". Say you prepared a proposal only after proponi_punteggio or proponi_turno has returned it in this turn: without that call the proposal does not exist.\n7. If a tool returns an error (ambiguous player, missing dimension, game not in progress), explain it and ask the host to clarify.\n8. Answer briefly, in English."
+  },
+  "stopped": null,
+  "scenarios": 24,
+  "passed": 24,
+  "scenariosWithExtraProposals": 0,
+  "scenariosWithMissingProposals": 0,
+  "claimedActionsWithoutProposal": 0,
+  "toolErrors": 0,
+  "invalidArguments": 0,
+  "gatewayErrors": 0,
+  "averageRoundTrips": 2.25,
+  "averageCostPerTurnUsd": 0.0008960416666666666,
+  "totalCostUsd": 0.021505,
+  "latencyP95Ms": 2229,
+  "byScenario": [
+    {
+      "id": "en-turn-done",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "id": "en-turn-end",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "id": "it-turn-avanti",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "id": "it-score-dimension-unknown-oro",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "id": "en-score-dimension-unknown",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "id": "it-score-past-round",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "id": "en-score-past-round",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "id": "en-score-ambiguous",
+      "passed": 3,
+      "runs": 3
+    }
+  ],
+  "results": [
+    {
+      "id": "en-turn-done",
+      "category": "turno",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000711,
+      "latencyMs": 1608,
+      "errorCode": null,
+      "finalText": "I'll propose passing the turn.\nI've prepared a proposal to pass the turn (proposal 8fdedec0). It's not registered yet — please confirm it.",
+      "pass": 1
+    },
+    {
+      "id": "en-turn-end",
+      "category": "turno",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001199,
+      "latencyMs": 1967,
+      "errorCode": null,
+      "finalText": "I'll check the current state first.\nI prepared a proposal to pass the turn (from Marco to the next player). It's pending your confirmation — nothing is recorded yet.",
+      "pass": 1
+    },
+    {
+      "id": "it-turn-avanti",
+      "category": "turno",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000763,
+      "latencyMs": 1462,
+      "errorCode": null,
+      "finalText": "Ho preparato la proposta per passare il turno al giocatore successivo. Confermi?",
+      "pass": 1
+    },
+    {
+      "id": "it-score-dimension-unknown-oro",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000832,
+      "latencyMs": 1449,
+      "errorCode": null,
+      "finalText": "«Punti oro» non è una delle dimensioni di questa partita: ci sono solo **prestigio** e **nobili**. In quale delle due devo proporre i 2 punti per Bruno?",
+      "pass": 1
+    },
+    {
+      "id": "en-score-dimension-unknown",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000759,
+      "latencyMs": 1485,
+      "errorCode": null,
+      "finalText": "I'll check the game state first.\nThe game has two scoring dimensions: **prestige** and **nobles**. \"Gem points\" doesn't match either — which dimension should I use for Anna's 3 points?",
+      "pass": 1
+    },
+    {
+      "id": "it-score-past-round",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000843,
+      "latencyMs": 1509,
+      "errorCode": null,
+      "finalText": "Ho preparato la proposta: +4 punti a Luca, round 2. Confermi?",
+      "pass": 1
+    },
+    {
+      "id": "en-score-past-round",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001285,
+      "latencyMs": 2229,
+      "errorCode": null,
+      "finalText": "I'll check the current state first.\nI prepared a proposal: +2 points to Marco (points, round 1). It's pending your confirmation — nothing is recorded yet.",
+      "pass": 1
+    },
+    {
+      "id": "en-score-ambiguous",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.00077,
+      "latencyMs": 1368,
+      "errorCode": null,
+      "finalText": "I need to check the state first, since there are two players named Marco.\nThere are two players named Marco: **Marco Rossi** and **Marco Bianchi**. Which one scored the 4 points?",
+      "pass": 1
+    },
+    {
+      "id": "en-turn-done",
+      "category": "turno",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000696,
+      "latencyMs": 1470,
+      "errorCode": null,
+      "finalText": "I prepared a proposal to pass the turn to the next player. It's awaiting your confirmation — nothing is recorded yet.",
+      "pass": 2
+    },
+    {
+      "id": "en-turn-end",
+      "category": "turno",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001199,
+      "latencyMs": 2207,
+      "errorCode": null,
+      "finalText": "I'll check the current state first.\nI prepared a proposal to pass the turn (from Marco to the next player). It's not recorded yet — confirm it to apply.",
+      "pass": 2
+    },
+    {
+      "id": "it-turn-avanti",
+      "category": "turno",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000764,
+      "latencyMs": 1242,
+      "errorCode": null,
+      "finalText": "Ho preparato la proposta per passare il turno al giocatore successivo. Confermi?",
+      "pass": 2
+    },
+    {
+      "id": "it-score-dimension-unknown-oro",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000808,
+      "latencyMs": 1571,
+      "errorCode": null,
+      "finalText": "Bruno ha due dimensioni possibili: **prestigio** o **nobili**. Quale delle due?",
+      "pass": 2
+    },
+    {
+      "id": "en-score-dimension-unknown",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.0008,
+      "latencyMs": 2050,
+      "errorCode": null,
+      "finalText": "I need to check the state first, since \"gem points\" isn't one of the scoring dimensions (prestige, nobles).\nThe game has only two scoring dimensions: **prestige** and **nobles**. There is no \"gem points\" dimension, so I can't propose anything yet.\n\nWhich dimension should Anna's 3 points go to — prestige or nobles?",
+      "pass": 2
+    },
+    {
+      "id": "it-score-past-round",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000849,
+      "latencyMs": 1955,
+      "errorCode": null,
+      "finalText": "Ho preparato la proposta: +4 punti a Luca, dimensione \"punti\", round 2. Confermi?",
+      "pass": 2
+    },
+    {
+      "id": "en-score-past-round",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001285,
+      "latencyMs": 2196,
+      "errorCode": null,
+      "finalText": "I'll check the current state first.\nI prepared a proposal: +2 points to Marco (points, round 1). It's not recorded yet — please confirm it.",
+      "pass": 2
+    },
+    {
+      "id": "en-score-ambiguous",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.00077,
+      "latencyMs": 1609,
+      "errorCode": null,
+      "finalText": "I need to check the state first, since there are two players named Marco.\nThere are two players named Marco: **Marco Rossi** and **Marco Bianchi**. Which one scored the 4 points?",
+      "pass": 2
+    },
+    {
+      "id": "en-turn-done",
+      "category": "turno",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000696,
+      "latencyMs": 1171,
+      "errorCode": null,
+      "finalText": "I prepared a proposal to pass the turn to the next player. It's pending your confirmation — nothing is recorded yet.",
+      "pass": 3
+    },
+    {
+      "id": "en-turn-end",
+      "category": "turno",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.0012,
+      "latencyMs": 2229,
+      "errorCode": null,
+      "finalText": "I'll check the current state first.\nI prepared a proposal to pass the turn (from Marco to the next player). It's pending your confirmation — nothing has been recorded yet.",
+      "pass": 3
+    },
+    {
+      "id": "it-turn-avanti",
+      "category": "turno",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000764,
+      "latencyMs": 1497,
+      "errorCode": null,
+      "finalText": "Ho preparato la proposta per passare il turno al giocatore successivo. Confermi?",
+      "pass": 3
+    },
+    {
+      "id": "it-score-dimension-unknown-oro",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000815,
+      "latencyMs": 1936,
+      "errorCode": null,
+      "finalText": "Bruno ha due dimensioni possibili: **prestigio** e **nobili**. In quale delle due metto i 2 punti?",
+      "pass": 3
+    },
+    {
+      "id": "en-score-dimension-unknown",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.0008,
+      "latencyMs": 1658,
+      "errorCode": null,
+      "finalText": "I need to check the state first, since \"gem points\" isn't one of the scoring dimensions (prestige, nobles).\nThe game has only two scoring dimensions: **prestige** and **nobles**. There's no \"gem points\" dimension, so I can't propose anything yet.\n\nWhich dimension should Anna's 3 points go to — prestige or nobles?",
+      "pass": 3
+    },
+    {
+      "id": "it-score-past-round",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000843,
+      "latencyMs": 1437,
+      "errorCode": null,
+      "finalText": "Ho preparato una proposta: +4 punti a Luca nel round 2. Confermi?",
+      "pass": 3
+    },
+    {
+      "id": "en-score-past-round",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001284,
+      "latencyMs": 2061,
+      "errorCode": null,
+      "finalText": "I'll check the current state first.\nI prepared a proposal: +2 points to Marco (points, round 1). It's not recorded yet — please confirm it.",
+      "pass": 3
+    },
+    {
+      "id": "en-score-ambiguous",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.00077,
+      "latencyMs": 1733,
+      "errorCode": null,
+      "finalText": "I need to check the state first, since there are two players named Marco.\nThere are two players named Marco: **Marco Rossi** and **Marco Bianchi**. Which one scored the 4 points?",
+      "pass": 3
+    }
+  ]
+}

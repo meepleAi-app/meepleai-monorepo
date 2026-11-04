@@ -28,6 +28,12 @@ export interface LiveTopBarLabels {
   readonly turnLabelResolved: string;
   readonly statusInProgress: string;
   readonly statusPaused: string;
+  /** #4750 — a concluded session: no longer «In corso», no controls. */
+  readonly statusCompleted: string;
+  /** #4781 — a session still waiting to be started: not running, so nothing to pause or end. */
+  readonly statusNotStarted: string;
+  /** #4787 — start a session that has not started («Avvia partita»). */
+  readonly startCta: string;
   readonly pauseCta: string;
   readonly resumeCta: string;
   readonly endgameCta: string;
@@ -50,8 +56,16 @@ export type LiveTopBarConnectionState = 'connected' | 'reconnecting' | 'failed';
 
 export interface LiveTopBarProps {
   readonly sessionName: string;
-  readonly status: 'InProgress' | 'Paused';
+  readonly status: 'NotStarted' | 'InProgress' | 'Paused' | 'Completed';
   readonly viewerRole: ParticipantRole;
+  /**
+   * #4787 — start a session that has not started. Passed only to a caller the server lets start it
+   * (its creator, `StartLiveSessionCommandHandler`): `viewerRole` `Host` also covers whoever merely holds
+   * the first seat, so the bar does not decide this from the role.
+   */
+  readonly onStart?: () => void;
+  /** #4787 — the start is in flight: the command is inert, so a second tap does not send another. */
+  readonly startPending?: boolean;
   readonly onPause?: () => void;
   readonly onResume?: () => void;
   readonly onEndgame?: () => void;
@@ -78,6 +92,21 @@ export interface LiveTopBarProps {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+const STATUS_LABEL_KEY = {
+  NotStarted: 'statusNotStarted',
+  InProgress: 'statusInProgress',
+  Paused: 'statusPaused',
+  Completed: 'statusCompleted',
+} as const satisfies Record<LiveTopBarProps['status'], keyof LiveTopBarLabels>;
+
+// Status chip colors: running = emerald, paused = amber, not started or concluded = muted (nothing is live).
+const STATUS_CHIP_CLASS: Record<LiveTopBarProps['status'], string> = {
+  NotStarted: 'bg-muted text-foreground',
+  InProgress: 'bg-emerald-500/20 text-emerald-300',
+  Paused: 'bg-amber-500/20 text-amber-300',
+  Completed: 'bg-muted text-foreground',
+};
+
 // G4 — pip color tokens per connection state (entity colors).
 const PIP_COLOR: Record<LiveTopBarConnectionState, string> = {
   connected: 'bg-emerald-400',
@@ -89,6 +118,8 @@ export function LiveTopBar({
   sessionName,
   status,
   viewerRole,
+  onStart,
+  startPending,
   onPause,
   onResume,
   onEndgame,
@@ -98,10 +129,14 @@ export function LiveTopBar({
   startedAtLabel,
   connectionState,
 }: LiveTopBarProps): ReactElement {
-  const isHost = viewerRole === 'Host';
   const isPaused = status === 'Paused';
+  // #4750: a concluded session has nothing left to pause, resume or end. #4781: neither does one
+  // that has not started — the server answers 409 to all three until it runs.
+  const canControl = viewerRole === 'Host' && status !== 'Completed' && status !== 'NotStarted';
+  // #4787: a session left unstarted can be started from here, by whoever the caller says may.
+  const canStart = status === 'NotStarted' && onStart != null;
 
-  const statusLabel = isPaused ? labels.statusPaused : labels.statusInProgress;
+  const statusLabel = labels[STATUS_LABEL_KEY[status]];
 
   // G4 — derive timer + pip render state (defensive: only render if both prop + label provided).
   const showTimer = elapsedMs != null;
@@ -129,7 +164,7 @@ export function LiveTopBar({
         <span
           className={[
             'shrink-0 rounded-full px-2 py-0.5 text-xs font-medium',
-            isPaused ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300',
+            STATUS_CHIP_CLASS[status],
           ].join(' ')}
         >
           {statusLabel}
@@ -185,8 +220,24 @@ export function LiveTopBar({
 
       {/* Right: role-based CTAs */}
       <div className="flex items-center gap-2">
+        {/* Start (#4787): only while not started, and only when the caller offers it */}
+        {canStart && (
+          <button
+            type="button"
+            data-slot="session-live-top-bar-start"
+            onClick={startPending ? undefined : onStart}
+            aria-disabled={startPending ? 'true' : undefined}
+            className="rounded-lg bg-emerald-700 px-3 py-1.5 text-xs font-medium text-white
+              hover:bg-emerald-600 focus-visible:outline-none focus-visible:ring-2
+              focus-visible:ring-emerald-400
+              aria-disabled:cursor-not-allowed aria-disabled:opacity-50"
+          >
+            {labels.startCta}
+          </button>
+        )}
+
         {/* Host-only: Pause (shown when InProgress) */}
-        {isHost && !isPaused && (
+        {canControl && !isPaused && (
           <button
             type="button"
             data-slot="session-live-top-bar-pause"
@@ -203,7 +254,7 @@ export function LiveTopBar({
         )}
 
         {/* Host-only: Resume (shown when Paused) */}
-        {isHost && isPaused && (
+        {canControl && isPaused && (
           <button
             type="button"
             data-slot="session-live-top-bar-resume"
@@ -219,8 +270,8 @@ export function LiveTopBar({
           </button>
         )}
 
-        {/* Host-only: End game */}
-        {isHost && (
+        {/* Host-only: End game (not once the session is concluded) */}
+        {canControl && (
           <button
             type="button"
             data-slot="session-live-top-bar-endgame"

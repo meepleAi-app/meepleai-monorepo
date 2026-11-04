@@ -50,7 +50,8 @@ internal static class EntityLinkAdminEndpoints
                 parsedLinkType = lt;
             }
 
-            // Admin queries with no scope restriction (sees all scopes)
+            // Admin queries with no scope restriction (sees all scopes). #4637: RequestingUserId null is what keeps the
+            // listing unfiltered; with a user, the User-scope links of other users would be left out.
             var query = new GetEntityLinksQuery(
                 EntityType: parsedEntityType,
                 EntityId: sourceId,
@@ -67,8 +68,7 @@ internal static class EntityLinkAdminEndpoints
         .Produces(403)
         .WithTags("EntityLinks", "Admin")
         .WithSummary("Get entity links (admin — all scopes)")
-        .WithDescription("Returns all links for an entity regardless of scope. Issue #5138.")
-        .WithOpenApi();
+        .WithDescription("Returns all links for an entity regardless of scope. Issue #5138.");
     }
 
     // POST /admin/entity-links
@@ -117,8 +117,7 @@ internal static class EntityLinkAdminEndpoints
         .Produces(409)
         .WithTags("EntityLinks", "Admin")
         .WithSummary("Create entity link (admin — shared scope)")
-        .WithDescription("Creates a Shared-scope link between two entities. Admin approval required. Issue #5138.")
-        .WithOpenApi();
+        .WithDescription("Creates a Shared-scope link between two entities. Admin approval required. Issue #5138.");
     }
 
     // DELETE /admin/entity-links/{linkId}
@@ -156,8 +155,7 @@ internal static class EntityLinkAdminEndpoints
         .Produces(404)
         .WithTags("EntityLinks", "Admin")
         .WithSummary("Delete entity link (admin)")
-        .WithDescription("Admin soft-deletes any entity link including BGG-imported ones. Issue #5138.")
-        .WithOpenApi();
+        .WithDescription("Admin soft-deletes any entity link including BGG-imported ones. Issue #5138.");
     }
 
     // POST /admin/entity-links/import-bgg/{sharedGameId}
@@ -190,7 +188,6 @@ internal static class EntityLinkAdminEndpoints
         .WithDescription(
             "Fetches the BGG XML API for a SharedGame and creates EntityLinks " +
             "for boardgameexpansion and boardgameimplementation relationships. " +
-            "Idempotent — skips already-existing links. Issue #5141.")
-        .WithOpenApi();
+            "Idempotent — skips already-existing links. Issue #5141.");
     }
 }

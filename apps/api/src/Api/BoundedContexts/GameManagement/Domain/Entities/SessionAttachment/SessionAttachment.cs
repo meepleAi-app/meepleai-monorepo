@@ -90,6 +90,46 @@ public class SessionAttachment
     }
 
     /// <summary>
+    /// Ricostituisce un allegato letto dal database, così com'è (#4552).
+    /// </summary>
+    /// <remarks>
+    /// Solo per il repository. <see cref="Create"/> è la factory di un allegato nuovo: genera l'id e lo data ad
+    /// "adesso". Usata per ricostruire una riga, ogni lettura restituiva un id che nel database non esiste: gli id
+    /// in elenco non si potevano cancellare, finivano così nello snapshot salvato, e il job di pulizia cancellava
+    /// la riga per un id inesistente, quindi rileggeva lo stesso lotto senza fine. Nessuna validazione: la riga
+    /// è già stata scritta.
+    /// </remarks>
+    internal static SessionAttachment Reconstitute(
+        Guid id,
+        Guid sessionId,
+        int? snapshotIndex,
+        Guid playerId,
+        AttachmentType attachmentType,
+        string blobUrl,
+        string? thumbnailUrl,
+        string? caption,
+        string contentType,
+        long fileSizeBytes,
+        DateTime createdAt,
+        bool isDeleted,
+        DateTime? deletedAt) => new()
+        {
+            Id = id,
+            SessionId = sessionId,
+            SnapshotIndex = snapshotIndex,
+            PlayerId = playerId,
+            AttachmentType = attachmentType,
+            BlobUrl = blobUrl,
+            ThumbnailUrl = thumbnailUrl,
+            Caption = caption,
+            ContentType = contentType,
+            FileSizeBytes = fileSizeBytes,
+            CreatedAt = createdAt,
+            IsDeleted = isDeleted,
+            DeletedAt = deletedAt,
+        };
+
+    /// <summary>
     /// Sets the thumbnail URL after thumbnail generation.
     /// </summary>
     public void SetThumbnail(string thumbnailUrl)

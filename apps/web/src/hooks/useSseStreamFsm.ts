@@ -12,8 +12,21 @@ export interface SseStreamFsmConfig<TInput, TEvent, TState, TError> {
   initialState: TState;
   /** Pure reducer: applies one event to state. Called inside the streaming loop. */
   eventReducer: (state: TState, event: TEvent) => TState;
-  /** Maps raw thrown errors (or special "error" events) to consumer's TError shape. */
+  /**
+   * Maps raw thrown errors (or special "error" events) to consumer's TError shape.
+   * Two sentinels come from the FSM itself, as `{ __sseStreamFsmReason }`: `'timeout'` (watchdog)
+   * and `'interrupted'` (the stream ended without a terminal event, see `isTerminalEvent`).
+   */
   errorMapper: (err: unknown) => TError;
+  /**
+   * #4335: the event that concludes a response (e.g. `Complete` or `Error`). When given, a stream
+   * that ends cleanly WITHOUT one of these — the backend or a proxy closing the connection halfway —
+   * is an interruption: it goes through `errorMapper` as `{ __sseStreamFsmReason: 'interrupted' }`,
+   * and from there to retry or to `error` like any thrown error. An error thrown AFTER a terminal
+   * event is ignored: the response was already closed. When omitted, the end of the stream means
+   * nothing, as before.
+   */
+  isTerminalEvent?: (event: TEvent) => boolean;
   retryPolicy: {
     maxRetries: number;
     /** Backoff schedule. Must have length >= maxRetries. Example: [1000, 3000, 9000] for maxRetries=3. */
@@ -23,6 +36,16 @@ export interface SseStreamFsmConfig<TInput, TEvent, TState, TError> {
     /**
      * String-kind whitelist. The errorMapper output is checked by reading the error's `kind`
      * property — if it matches one of these, the FSM schedules a retry.
+     *
+     * A retry starts from the ACCUMULATED state, not from `initialState`: the events of the new
+     * attempt are reduced on top of those of the failed one. So map an error to a retryable kind
+     * only when the failed attempt reduced nothing that the new one would repeat — in particular
+     * `'interrupted'` and any error thrown mid-stream, once tokens have arrived (they would be
+     * appended twice). `useAgentChatStream` does it with its `currentAnswerRef` guard.
+     *
+     * Not reset on purpose: between attempts the state still shows the reduced "connection lost,
+     * retrying" event (`useAgentChatStream`), and a reset would drop it and flip the view to "not
+     * streaming" in the middle of the backoff, re-enabling inputs while a retry is pending.
      */
     retryableErrorKinds: readonly string[];
   };
@@ -83,19 +106,7 @@ export function useSseStreamFsm<TInput, TEvent, TState, TError>(
         }, config.retryPolicy.timeoutMs);
       };
 
-      try {
-        for await (const event of config.transport(input, controller.signal)) {
-          if (controller.signal.aborted) return;
-          if (!watchdogStarted) {
-            watchdogStarted = true;
-            armWatchdog();
-          } else armWatchdog();
-          flushSync(() => {
-            setState(s => config.eventReducer(s, event));
-          });
-        }
-      } catch (rawErr) {
-        if (controller.signal.aborted) return;
+      const fail = (rawErr: unknown) => {
         const mapped = config.errorMapper(rawErr);
         const mappedKind = (mapped as { kind?: string } | null)?.kind;
         const isRetryable =
@@ -114,12 +125,41 @@ export function useSseStreamFsm<TInput, TEvent, TState, TError>(
             setError(mapped);
           });
         }
+      };
+
+      let sawTerminalEvent = false;
+      let interrupted = false;
+      try {
+        for await (const event of config.transport(input, controller.signal)) {
+          if (controller.signal.aborted) return;
+          if (!watchdogStarted) {
+            watchdogStarted = true;
+            armWatchdog();
+          } else armWatchdog();
+          if (config.isTerminalEvent?.(event)) sawTerminalEvent = true;
+          flushSync(() => {
+            setState(s => config.eventReducer(s, event));
+          });
+        }
+        // #4335: the transport returned without throwing. A stop by the user ends here too (the
+        // transport returns on the signal), and that is not an interruption.
+        interrupted =
+          !controller.signal.aborted && config.isTerminalEvent != null && !sawTerminalEvent;
+      } catch (rawErr) {
+        // Review of #4509: after the terminal event the response is closed. What the stream does
+        // after it (the backend keeps the connection open for the follow-up questions) can fail,
+        // but it is not a failure of the response.
+        if (controller.signal.aborted || sawTerminalEvent) return;
+        fail(rawErr);
       } finally {
         if (watchdogRef.current) {
           clearTimeout(watchdogRef.current);
           watchdogRef.current = null;
         }
       }
+      // The interruption takes the same road as any other failure: errorMapper, then retry or
+      // error, as the consumer decides.
+      if (interrupted) fail({ __sseStreamFsmReason: 'interrupted' });
     },
     [config]
   );

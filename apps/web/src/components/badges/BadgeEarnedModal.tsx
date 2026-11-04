@@ -14,7 +14,7 @@ import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Confetti from 'react-confetti';
 
-import { Dialog, DialogContent } from '@/components/ui/overlays/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { cn } from '@/lib/utils';
 import {
@@ -106,9 +106,12 @@ export function BadgeEarnedModal({ badge, onClose, onShare }: BadgeEarnedModalPr
                 transition={{ delay: 0.2 }}
                 className="text-center"
               >
-                <h2 className="text-foreground text-2xl font-bold">
+                {/* #3836 — Radix pretende un DialogTitle: senza, il contenuto del dialog non
+                    e' annunciabile da uno screen reader. Il titolo visibile c'era gia', ma
+                    come <h2> qualunque: e' il titolo del dialog, e ora lo dichiara. */}
+                <DialogTitle className="text-foreground text-2xl font-bold">
                   {getCelebratoryTitle(badge.tier)}
-                </h2>
+                </DialogTitle>
               </motion.div>
 
               {/* Badge Icon with Special Animation */}

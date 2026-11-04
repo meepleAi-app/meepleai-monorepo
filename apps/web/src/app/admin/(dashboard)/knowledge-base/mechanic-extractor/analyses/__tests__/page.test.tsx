@@ -9,6 +9,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
+import { ConflictError } from '@/lib/api/core/errors';
 
 const mockGetAll = vi.hoisted(() => vi.fn());
 const mockGetAllPdfs = vi.hoisted(() => vi.fn());
@@ -293,6 +294,55 @@ describe('MechanicAnalysesPage', () => {
       mockGetMechanicAnalysisStatus.mockResolvedValue(SAMPLE_STATUS_DRAFT_EMPTY);
       renderWithQuery(<MechanicAnalysesPage />);
       await waitFor(() => expect(mockGetAllPdfs).toHaveBeenCalled());
+    });
+  });
+
+  // #4144: one non-Rejected analysis per (game, PDF, prompt). Regenerate on an analysis that still
+  // holds the slot answers 409 with what to do; the page must show that message, not a generic one.
+  describe('regenerate conflict (#4144)', () => {
+    const CONFLICT_MESSAGE =
+      "Esiste già un'analisi in revisione per questo PDF con il prompt v1.0.0: rifiutala prima di rigenerare. Analisi esistente: 11111111-1111-1111-1111-111111111111.";
+
+    it('shows the server message when Rigenera answers 409', async () => {
+      mockSearchParamsRef.current = new URLSearchParams(
+        'analysisId=11111111-1111-1111-1111-111111111111'
+      );
+      mockGetMechanicAnalysisStatus.mockResolvedValue({ ...SAMPLE_STATUS_DRAFT_EMPTY, status: 1 });
+      mockGenerateMechanicAnalysis.mockRejectedValue(
+        new ConflictError({
+          message: CONFLICT_MESSAGE,
+          endpoint: '/api/v1/admin/mechanic-analyses',
+        })
+      );
+
+      renderWithQuery(<MechanicAnalysesPage />);
+
+      fireEvent.click(await screen.findByRole('button', { name: /Rigenera/ }));
+
+      expect(await screen.findByText(CONFLICT_MESSAGE)).toBeInTheDocument();
+      expect(mockGenerateMechanicAnalysis).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sharedGameId: SAMPLE_STATUS_DRAFT_EMPTY.sharedGameId,
+          pdfDocumentId: SAMPLE_STATUS_DRAFT_EMPTY.pdfDocumentId,
+          forceRegenerate: true,
+        })
+      );
+    });
+
+    it('does not promise a new analysis while one already exists', async () => {
+      mockSearchParamsRef.current = new URLSearchParams(
+        'analysisId=11111111-1111-1111-1111-111111111111'
+      );
+      mockGetMechanicAnalysisStatus.mockResolvedValue({ ...SAMPLE_STATUS_DRAFT_EMPTY, status: 1 });
+
+      renderWithQuery(<MechanicAnalysesPage />);
+
+      const checkboxLabel = screen.getByTestId('force-regen-checkbox').closest('label')!;
+      expect(checkboxLabel).not.toHaveTextContent(/anche se ne esiste già una/);
+      expect(checkboxLabel).toHaveTextContent(/rifiutata/);
+
+      const regenerate = await screen.findByRole('button', { name: /Rigenera/ });
+      expect(regenerate).toHaveAttribute('title', expect.stringMatching(/rifiutata/));
     });
   });
 

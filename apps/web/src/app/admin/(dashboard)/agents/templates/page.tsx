@@ -76,7 +76,7 @@ function ReviewCard({
             </Badge>
           )}
           {toolCount === 0 && (
-            <Badge variant="secondary" className="text-xs text-muted-foreground">
+            <Badge variant="outline" className="text-xs text-muted-foreground">
               No tools configured
             </Badge>
           )}

@@ -60,6 +60,74 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
             _mockBlobStorage.Object);
     }
 
+    // ─── #4187: la risposta dichiara la pagina che il repository ha davvero applicato ───
+
+    private void SetupEmptyPage(int total)
+    {
+        _mockLibraryRepo
+            .Setup(r => r.GetUserLibraryPaginatedAsync(
+                It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<bool?>(), It.IsAny<string[]?>(),
+                It.IsAny<bool?>(),
+                It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<int>(), It.IsAny<int>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((new List<UserLibraryEntry>(), total));
+    }
+
+    [Fact]
+    public async Task Handle_PageSizeOverTheCap_ReportsTheServedPageSize_AndTheRealPages()
+    {
+        // Il repository tronca a 100. Prima la risposta diceva PageSize 500 e TotalPages 1 su
+        // 150 giochi: il client vedeva "una pagina, niente dopo" e ne riceveva 100.
+        SetupEmptyPage(total: 150);
+
+        var result = await _handler.Handle(
+            new GetUserLibraryQuery(UserId: Guid.NewGuid(), Page: 1, PageSize: 500),
+            TestContext.Current.CancellationToken);
+
+        result.PageSize.Should().Be(100);
+        result.TotalPages.Should().Be(2);
+        result.HasNextPage.Should().BeTrue();
+        _mockLibraryRepo.Verify(r => r.GetUserLibraryPaginatedAsync(
+            It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<bool?>(), It.IsAny<string[]?>(),
+            It.IsAny<bool?>(),
+            It.IsAny<string?>(), It.IsAny<bool>(), 1, 100, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    [InlineData(null)]
+    public async Task Handle_PassesTheKbFilter_ToTheRepository(bool? hasKb)
+    {
+        // #4227: il filtro va applicato nella query, non sulla pagina ricevuta dal client.
+        SetupEmptyPage(total: 0);
+
+        await _handler.Handle(
+            new GetUserLibraryQuery(UserId: Guid.NewGuid(), HasKb: hasKb),
+            TestContext.Current.CancellationToken);
+
+        _mockLibraryRepo.Verify(r => r.GetUserLibraryPaginatedAsync(
+            It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<bool?>(), It.IsAny<string[]?>(),
+            hasKb,
+            It.IsAny<string?>(), It.IsAny<bool>(), It.IsAny<int>(), It.IsAny<int>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_NonPositivePaging_ReportsTheDefaults_InsteadOfDividingByZero()
+    {
+        SetupEmptyPage(total: 45);
+
+        var result = await _handler.Handle(
+            new GetUserLibraryQuery(UserId: Guid.NewGuid(), Page: 0, PageSize: 0),
+            TestContext.Current.CancellationToken);
+
+        result.Page.Should().Be(1);
+        result.PageSize.Should().Be(20);
+        result.TotalPages.Should().Be(3);
+        result.HasPreviousPage.Should().BeFalse();
+    }
+
     [Fact]
     public async Task Handle_WithReadyPdf_SetsHasKbTrue()
     {
@@ -106,6 +174,7 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
                 It.IsAny<string?>(),
                 It.IsAny<bool?>(),
                 It.IsAny<string[]?>(),
+                It.IsAny<bool?>(),
                 It.IsAny<string?>(),
                 It.IsAny<bool>(),
                 It.IsAny<int>(),
@@ -169,6 +238,7 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
                 It.IsAny<string?>(),
                 It.IsAny<bool?>(),
                 It.IsAny<string[]?>(),
+                It.IsAny<bool?>(),
                 It.IsAny<string?>(),
                 It.IsAny<bool>(),
                 It.IsAny<int>(),
@@ -197,94 +267,6 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
         item.KbIndexedCount.Should().Be(0);
     }
 
-    [Fact]
-    public async Task Handle_WithPrivateGameAndReadyPdf_SetsHasKbTrue()
-    {
-        // Arrange
-        // Fix #private-game-kb-stats: private game PDFs are stored with GameId = PrivateGameId
-        // AND PrivateGameId = PrivateGameId. The handler must query via PrivateGameId column,
-        // not via the domain entry's GameId (which equals Guid.Empty from the EF computed property).
-        var userId = Guid.NewGuid();
-        var entryId = Guid.NewGuid();
-        var privateGameId = Guid.NewGuid();
-
-        // Add PrivateGame entity to in-memory DB
-        _dbContext.PrivateGames.Add(new PrivateGameEntity
-        {
-            Id = privateGameId,
-            OwnerId = userId,
-            Title = "My Private Game",
-            MinPlayers = 2,
-            MaxPlayers = 4,
-            Source = PrivateGameSource.Manual
-        });
-
-        // Add UserLibraryEntry entity with PrivateGameId (no SharedGameId)
-        _dbContext.UserLibraryEntries.Add(new UserLibraryEntryEntity
-        {
-            Id = entryId,
-            UserId = userId,
-            PrivateGameId = privateGameId
-            // SharedGameId = null (private game — GameId computed property returns Guid.Empty)
-        });
-
-        // Add PDF for private game: PrivateGameId set directly (GameId column dropped)
-        _dbContext.PdfDocuments.Add(new PdfDocumentEntity
-        {
-            Id = Guid.NewGuid(),
-            PrivateGameId = privateGameId,
-            FileName = "private-rules.pdf",
-            FilePath = "/pdfs/private-rules.pdf",
-            FileSizeBytes = 2048,
-            UploadedByUserId = userId,
-            ProcessingState = "Ready"    // Fully indexed in RAG
-        });
-        await _dbContext.SaveChangesAsync();
-
-        // Mock library repo: return entry with privateGameId as GameId
-        // (In production the EF entity's computed GameId = Guid.Empty for private games,
-        // which would crash the domain constructor. Here we use the real GUID so the handler
-        // falls into the private game branch via the EF-loaded privateGameEntries dictionary.)
-        var libraryEntry = new UserLibraryEntry(entryId, userId, privateGameId);
-
-        _mockLibraryRepo
-            .Setup(r => r.GetUserLibraryPaginatedAsync(
-                It.IsAny<Guid>(),
-                It.IsAny<string?>(),
-                It.IsAny<bool?>(),
-                It.IsAny<string[]?>(),
-                It.IsAny<string?>(),
-                It.IsAny<bool>(),
-                It.IsAny<int>(),
-                It.IsAny<int>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync((new[] { libraryEntry }, 1));
-
-        // No shared game matches — forces handler into the private game branch
-        _mockSharedGameRepo
-            .Setup(r => r.GetByIdsAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Dictionary<Guid, Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates.SharedGame>());
-
-        var query = new GetUserLibraryQuery(userId);
-
-        // Act
-        var result = await _handler.Handle(query, CancellationToken.None);
-
-        // Assert
-        result.Should().NotBeNull();
-        result.Items.Should().ContainSingle();
-        var item = result.Items.First();
-        item.GameId.Should().Be(privateGameId);
-        item.HasKb.Should().BeTrue("Private game with a Ready PDF should have hasKb=true");
-        item.KbCardCount.Should().Be(1);
-        item.KbIndexedCount.Should().Be(1);
-        item.KbProcessingCount.Should().Be(0);
-    }
-
-    /// <summary>
-    /// Issue #1566: Verify TimesPlayed and LastPlayed are surfaced on the list DTO.
-    /// The domain entry's Stats are already materialized from DB columns (no migration needed).
-    /// </summary>
     [Fact]
     public async Task Handle_WithRecordedSession_SetsTimesPlayedAndLastPlayed()
     {
@@ -326,6 +308,7 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
                 It.IsAny<string?>(),
                 It.IsAny<bool?>(),
                 It.IsAny<string[]?>(),
+                It.IsAny<bool?>(),
                 It.IsAny<string?>(),
                 It.IsAny<bool>(),
                 It.IsAny<int>(),
@@ -410,6 +393,7 @@ public sealed class GetUserLibraryQueryHandlerTests : IDisposable
                 It.IsAny<string?>(),
                 It.IsAny<bool?>(),
                 It.IsAny<string[]?>(),
+                It.IsAny<bool?>(),
                 It.IsAny<string?>(),
                 It.IsAny<bool>(),
                 It.IsAny<int>(),

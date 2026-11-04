@@ -318,4 +318,39 @@ public sealed class GameStateTests
     }
 
     #endregion
+
+    #region Reconstitute Tests (#4499)
+
+    [Fact]
+    public void Reconstitute_KeepsTheStoredChangeDate()
+    {
+        var stored = new DateTime(2025, 3, 14, 9, 26, 53, DateTimeKind.Utc);
+
+        var state = GameState.Reconstitute(GameStateType.InPrestito, stored, "  Prestato a Marco  ");
+
+        state.Value.Should().Be(GameStateType.InPrestito);
+        state.ChangedAt.Should().Be(stored, "una riga riletta non è un cambio di stato");
+        state.StateNotes.Should().Be("Prestato a Marco");
+    }
+
+    [Fact]
+    public void Reconstitute_WithoutStoredDate_DoesNotInventOne()
+    {
+        var state = GameState.Reconstitute(GameStateType.Owned, changedAt: null, stateNotes: null);
+
+        state.ChangedAt.Should().BeNull(
+            "una data assente diventerebbe \"adesso\" a ogni lettura, e ogni update la salverebbe");
+    }
+
+    [Fact]
+    public void Reconstitute_EqualsTheStateItWasReadFrom()
+    {
+        var original = GameState.Wishlist("regalo");
+
+        var reread = GameState.Reconstitute(original.Value, original.ChangedAt, original.StateNotes);
+
+        reread.Should().Be(original);
+    }
+
+    #endregion
 }

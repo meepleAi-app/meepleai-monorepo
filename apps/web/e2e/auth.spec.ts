@@ -14,11 +14,10 @@
  * 3. Role-based authorization (admin-only pages)
  * 4. Profile update functionality
  * 5. Password change functionality
- * 6. Logout flow
- * 7. **NEW Week 3**: 2FA flows (enable, disable, backup codes)
- * 8. **NEW Week 3**: Session management (multiple devices, revoke)
- * 9. **NEW Week 3**: OAuth complete journeys
- * 10. **NEW Week 3**: API key management flows
+ * 6. **NEW Week 3**: 2FA flows (enable, disable, backup codes)
+ * 7. **NEW Week 3**: Session management (multiple devices, revoke)
+ * 8. **NEW Week 3**: OAuth complete journeys
+ * 9. **NEW Week 3**: API key management flows
  *
  * Real APIs Used:
  * - GET /api/v1/games (games list)
@@ -85,48 +84,9 @@ test.describe('Authentication Flows', () => {
     const pageContent = await page.content();
     expect(pageContent.toLowerCase()).toMatch(/invalid|error|failed|incorrect/);
   });
-
-  test('should logout successfully and redirect to home', async ({ page }) => {
-    const authHelper = new AuthHelper(page);
-
-    // Use real authentication for protected route access
-    await authHelper.setupRealSession('admin');
-    await authHelper.mockLogoutEndpoint();
-
-    // Navigate to a protected page first
-    await page.goto('/upload');
-
-    // Find and click logout button
-    const logoutButton = page
-      .locator('button:has-text("Logout"), button:has-text("Log out"), a:has-text("Logout")')
-      .first();
-
-    if (await logoutButton.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await logoutButton.click();
-
-      // Should redirect to home or login
-      await expect(page).toHaveURL(/\/(login|)$/, { timeout: 3000 });
-    }
-  });
 });
 
 test.describe('SSR Auth Protection', () => {
-  test('should redirect unauthenticated users from /upload to /login', async ({ page }) => {
-    const authHelper = new AuthHelper(page);
-
-    await authHelper.mockUnauthenticatedSession();
-
-    // Attempt to access protected route
-    await page.goto('/upload');
-
-    // Should redirect to login
-    await authHelper.verifyRedirectToLogin();
-    expect(page.url()).toContain('/login');
-
-    // Should preserve return URL
-    expect(page.url()).toContain('from=');
-  });
-
   test('should redirect unauthenticated users from /editor to /login', async ({ page }) => {
     const authHelper = new AuthHelper(page);
 
@@ -147,30 +107,6 @@ test.describe('SSR Auth Protection', () => {
     // Should redirect to login
     await authHelper.verifyRedirectToLogin();
     expect(page.url()).toContain('/login');
-  });
-
-  test('should allow authenticated admin to access /upload', async ({ page }) => {
-    const authHelper = new AuthHelper(page);
-
-    // Use real authentication - middleware validates session server-side
-    await authHelper.setupRealSession('admin');
-
-    await page.goto('/upload');
-
-    // Should stay on /upload page (real session passes middleware validation)
-    await expect(page).toHaveURL(/\/upload/, { timeout: 5000 });
-  });
-
-  test('should allow authenticated editor to access /upload', async ({ page }) => {
-    const authHelper = new AuthHelper(page);
-
-    // Use real authentication - middleware validates session server-side
-    await authHelper.setupRealSession('editor');
-
-    await page.goto('/upload');
-
-    // Should stay on /upload page (real session passes middleware validation)
-    await expect(page).toHaveURL(/\/upload/, { timeout: 5000 });
   });
 
   test('should allow authenticated editor to access /editor', async ({ page }) => {
@@ -655,7 +591,7 @@ test.describe('Session Management', () => {
     const sessionInfo = page
       .locator('[data-testid="session-item"], [data-testid="session-row"], .session-card')
       .first();
-    if (await sessionInfo.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await sessionInfo.isVisible({ timeout: 2000 })) {
       await expect(sessionInfo).toContainText(/windows|mac|linux|chrome|firefox|safari/i);
     }
   });
@@ -673,14 +609,14 @@ test.describe('Session Management', () => {
     const revokeButton = page
       .locator('button:has-text("Revoke"), button:has-text("Sign Out")')
       .nth(1); // Second session
-    if (await revokeButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await revokeButton.isVisible({ timeout: 2000 })) {
       await revokeButton.click();
 
       // Confirm revoke
       const confirmButton = page
         .locator('button:has-text("Confirm"), button:has-text("Revoke")')
         .first();
-      if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await confirmButton.isVisible({ timeout: 2000 })) {
         await confirmButton.click();
       }
 
@@ -706,14 +642,14 @@ test.describe('Session Management', () => {
         'button:has-text("Revoke All"), button:has-text("Sign Out All"), button:has-text("Sign out all")'
       )
       .first();
-    if (await revokeAllButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await revokeAllButton.isVisible({ timeout: 2000 })) {
       await revokeAllButton.click();
 
       // Confirm bulk revoke
       const confirmButton = page
         .locator('button:has-text("Confirm"), button:has-text("Revoke")')
         .first();
-      if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await confirmButton.isVisible({ timeout: 2000 })) {
         await confirmButton.click();
       }
 
@@ -737,7 +673,7 @@ test.describe('Session Management', () => {
     const extendButton = page
       .locator('button:has-text("Extend"), button:has-text("Keep Alive")')
       .first();
-    if (await extendButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await extendButton.isVisible({ timeout: 2000 })) {
       await extendButton.click();
 
       // Should show success (real API)
@@ -781,7 +717,7 @@ test.describe('OAuth Account Management', () => {
     const linkGoogleButton = page
       .locator('button:has-text("Link Google"), button:has-text("Connect Google")')
       .first();
-    if (await linkGoogleButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await linkGoogleButton.isVisible({ timeout: 2000 })) {
       await linkGoogleButton.click();
 
       // Real OAuth flow would open popup or redirect
@@ -803,14 +739,14 @@ test.describe('OAuth Account Management', () => {
     const unlinkButton = page
       .locator('button:has-text("Unlink"), button:has-text("Disconnect")')
       .first();
-    if (await unlinkButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await unlinkButton.isVisible({ timeout: 2000 })) {
       await unlinkButton.click();
 
       // Confirm unlink
       const confirmButton = page
         .locator('button:has-text("Confirm"), button:has-text("Unlink")')
         .first();
-      if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await confirmButton.isVisible({ timeout: 2000 })) {
         await confirmButton.click();
       }
 
@@ -829,7 +765,7 @@ test.describe('OAuth Account Management', () => {
 
     // Find GitHub OAuth button
     const githubButton = page.locator('button:has-text("GitHub"), a:has-text("GitHub")').first();
-    if (await githubButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await githubButton.isVisible({ timeout: 2000 })) {
       await githubButton.click();
 
       // Real OAuth flow would redirect to GitHub
@@ -867,7 +803,7 @@ test.describe('OAuth Account Management', () => {
     const unlinkButton = page
       .locator('button:has-text("Unlink"), button:has-text("Disconnect")')
       .first();
-    if (await unlinkButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await unlinkButton.isVisible({ timeout: 2000 })) {
       await unlinkButton.click();
 
       // Should show warning that password is required first
@@ -885,7 +821,7 @@ test.describe('OAuth Account Management', () => {
 
     // Find Discord OAuth button
     const discordButton = page.locator('button:has-text("Discord"), a:has-text("Discord")').first();
-    if (await discordButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await discordButton.isVisible({ timeout: 2000 })) {
       await discordButton.click();
 
       // Real OAuth flow would redirect to Discord
@@ -908,12 +844,12 @@ test.describe('API Key Management', () => {
     const createButton = page
       .locator('button:has-text("Create"), button:has-text("New Key")')
       .first();
-    if (await createButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await createButton.isVisible({ timeout: 2000 })) {
       await createButton.click();
 
       // Fill API key name
       const nameInput = page.locator('input[name="name"], input[placeholder*="name" i]').first();
-      if (await nameInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await nameInput.isVisible({ timeout: 2000 })) {
         await nameInput.fill('Test API Key');
 
         const submitButton = page
@@ -953,14 +889,14 @@ test.describe('API Key Management', () => {
     const revokeButton = page
       .locator('button:has-text("Revoke"), button:has-text("Delete")')
       .first();
-    if (await revokeButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await revokeButton.isVisible({ timeout: 2000 })) {
       await revokeButton.click();
 
       // Confirm revoke
       const confirmButton = page
         .locator('button:has-text("Confirm"), button:has-text("Revoke")')
         .first();
-      if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await confirmButton.isVisible({ timeout: 2000 })) {
         await confirmButton.click();
       }
 
@@ -981,11 +917,11 @@ test.describe('API Key Management', () => {
     const createButton = page
       .locator('button:has-text("Create"), button:has-text("New Key")')
       .first();
-    if (await createButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await createButton.isVisible({ timeout: 2000 })) {
       await createButton.click();
 
       const nameInput = page.locator('input[name="name"]').first();
-      if (await nameInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await nameInput.isVisible({ timeout: 2000 })) {
         await nameInput.fill('Copy Test Key');
 
         const submitButton = page.locator('button[type="submit"]').first();
@@ -999,7 +935,7 @@ test.describe('API Key Management', () => {
         const copyButton = page
           .locator('button:has-text("Copy"), button[aria-label*="copy" i]')
           .first();
-        if (await copyButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await copyButton.isVisible({ timeout: 2000 })) {
           await copyButton.click();
 
           // Should show "Copied" confirmation

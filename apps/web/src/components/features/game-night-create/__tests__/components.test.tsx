@@ -8,7 +8,7 @@
  * components are exercised in their realistic compositions.
  */
 
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -150,6 +150,56 @@ describe('GameNightDateTimePicker', () => {
     );
     await user.click(screen.getByRole('button', { name: dateLabels.continueAnyway }));
     expect(onContinueAnyway).toHaveBeenCalledOnce();
+  });
+
+  describe('a typed value (#4803)', () => {
+    const renderPicker = (onSetDate: (iso: string) => void): HTMLInputElement => {
+      render(
+        <GameNightDateTimePicker
+          iso="2099-12-31T20:00:00Z"
+          onSetDate={onSetDate}
+          conflictResult={null}
+          labels={dateLabels}
+        />
+      );
+      return document.querySelector('input[type="datetime-local"]') as HTMLInputElement;
+    };
+
+    it('that is not a date (a year of five digits) is ignored, and nothing is thrown', () => {
+      // A browser lets the year of a `datetime-local` run past four digits; jsdom blanks such a value, so the
+      // handler would see `''` and return before the line under test. The value is therefore put on the
+      // element the way the browser hands it over. The throw happens inside a React event handler, which
+      // reports it on `window` instead of rethrowing it from `fireEvent`: that is where it has to be looked for.
+      const onSetDate = vi.fn();
+      const input = renderPicker(onSetDate);
+      Object.defineProperty(input, 'value', { configurable: true, get: () => '12345-10-30T20:00' });
+      const reported: unknown[] = [];
+      const onError = (event: ErrorEvent): void => {
+        reported.push(event.error);
+        event.preventDefault();
+      };
+      window.addEventListener('error', onError);
+
+      try {
+        fireEvent.change(input);
+      } finally {
+        window.removeEventListener('error', onError);
+      }
+
+      expect(reported).toEqual([]);
+      expect(onSetDate).not.toHaveBeenCalled();
+    });
+
+    it('that is a date is reported as the instant it names', () => {
+      // The other direction: the guard must not swallow the value the picker exists to pass on.
+      const onSetDate = vi.fn();
+      const input = renderPicker(onSetDate);
+
+      fireEvent.change(input, { target: { value: '2026-10-30T20:00' } });
+
+      expect(onSetDate).toHaveBeenCalledTimes(1);
+      expect(onSetDate).toHaveBeenCalledWith(new Date(2026, 9, 30, 20, 0).toISOString());
+    });
   });
 });
 
@@ -305,6 +355,67 @@ describe('GameCandidatesPicker', () => {
     );
     await user.click(screen.getByRole('button', { name: gameLabels.selectGame('Catan') }));
     expect(onToggleGame).toHaveBeenCalledWith('00000000-0000-4000-8000-000000000201');
+  });
+});
+
+describe('GameCandidatesPicker — ricerca nella libreria (#4187)', () => {
+  const searchLabels = {
+    ...gameLabels,
+    searchLabel: 'Cerca nella tua libreria',
+    searchEmpty: (query: string) => `Nessun gioco per «${query}»`,
+  };
+
+  it('mostra il campo di ricerca e inoltra quello che si scrive', async () => {
+    const user = userEvent.setup();
+    const onSearchChange = vi.fn();
+    render(
+      <GameCandidatesPicker
+        games={[]}
+        selected={[]}
+        decideAtGroup={false}
+        onToggleGame={vi.fn()}
+        onToggleDecideAtGroup={vi.fn()}
+        labels={searchLabels}
+        search=""
+        onSearchChange={onSearchChange}
+      />
+    );
+
+    await user.type(screen.getByRole('searchbox', { name: 'Cerca nella tua libreria' }), 'W');
+    expect(onSearchChange).toHaveBeenCalledWith('W');
+  });
+
+  it('con una ricerca senza risultati non dice che la libreria è vuota', () => {
+    render(
+      <GameCandidatesPicker
+        games={[]}
+        selected={[]}
+        decideAtGroup={false}
+        onToggleGame={vi.fn()}
+        onToggleDecideAtGroup={vi.fn()}
+        labels={searchLabels}
+        search="Zzz"
+        onSearchChange={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText('Nessun gioco per «Zzz»')).toBeInTheDocument();
+    expect(screen.queryByText(gameLabels.libraryEmpty)).not.toBeInTheDocument();
+  });
+
+  it('senza onSearchChange non mostra il campo (comportamento di prima)', () => {
+    render(
+      <GameCandidatesPicker
+        games={[]}
+        selected={[]}
+        decideAtGroup={false}
+        onToggleGame={vi.fn()}
+        onToggleDecideAtGroup={vi.fn()}
+        labels={gameLabels}
+      />
+    );
+
+    expect(screen.queryByRole('searchbox')).not.toBeInTheDocument();
   });
 });
 

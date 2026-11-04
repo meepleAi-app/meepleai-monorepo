@@ -19,6 +19,7 @@ import type { ReactElement, ReactNode } from 'react';
 import clsx from 'clsx';
 
 import { CitationPdfTab } from '@/components/features/game-chat/CitationPdfTab';
+import { citedPage } from '@/lib/citations/citedPage';
 import type { Citation } from '@/types';
 
 export interface CitationModalProps {
@@ -59,6 +60,8 @@ export function CitationModal({
   }, [open, onClose]);
 
   if (!open || !citation) return null;
+
+  const page = citedPage(citation.pageNumber);
 
   const handleTabChange = (tab: TabKind) => {
     setActiveTab(tab);
@@ -104,7 +107,7 @@ export function CitationModal({
         {/* Header */}
         <header className="flex items-center gap-3 border-b border-border-light px-4 py-3">
           <h2 id="citation-modal-title" className="text-lg font-bold">
-            📖 p. {citation.pageNumber}
+            {page === null ? '📖 Fonte' : `📖 p. ${page}`}
           </h2>
           <span className="flex-1" />
           <button

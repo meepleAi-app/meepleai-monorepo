@@ -5,7 +5,6 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createLibraryClient } from '../clients/libraryClient';
-import { createAgentsClient } from '../clients/agentsClient';
 import type { HttpClient } from '../core/httpClient';
 
 describe('ownership API methods', () => {
@@ -54,54 +53,12 @@ describe('ownership API methods', () => {
     });
   });
 
-  describe('agents.quickCreateTutor', () => {
-    const client = createAgentsClient({ httpClient: mockHttpClient });
-
-    it('should POST to quick-create endpoint with gameId', async () => {
-      const mockResult = {
-        agentId: 'agent-1',
-        chatThreadId: 'thread-1',
-        agentName: 'Catan Tutor',
-        kbCardCount: 2,
-      };
-
-      vi.mocked(mockHttpClient.post).mockResolvedValueOnce(mockResult);
-
-      const result = await client.quickCreateTutor('game-123');
-
-      expect(mockHttpClient.post).toHaveBeenCalledWith(
-        '/api/v1/agents/quick-create',
-        { gameId: 'game-123' },
-        expect.any(Object)
-      );
-      expect(result).toEqual(mockResult);
-    });
-
-    it('should include sharedGameId when provided', async () => {
-      const mockResult = {
-        agentId: 'agent-1',
-        chatThreadId: 'thread-1',
-        agentName: 'Catan Tutor',
-        kbCardCount: 2,
-      };
-
-      vi.mocked(mockHttpClient.post).mockResolvedValueOnce(mockResult);
-
-      await client.quickCreateTutor('game-123', 'shared-456');
-
-      expect(mockHttpClient.post).toHaveBeenCalledWith(
-        '/api/v1/agents/quick-create',
-        { gameId: 'game-123', sharedGameId: 'shared-456' },
-        expect.any(Object)
-      );
-    });
-
-    it('should throw when server returns null', async () => {
-      vi.mocked(mockHttpClient.post).mockResolvedValueOnce(null);
-
-      await expect(client.quickCreateTutor('game-123')).rejects.toThrow(
-        'Failed to quick-create tutor'
-      );
-    });
-  });
+  // Issue #4138: a describe block for `agents.quickCreateTutor` stood here, with 3
+  // tests asserting `post` was called with '/api/v1/agents/quick-create'. That route
+  // is retired, and the tests were of the shape that let the #4139 defect survive a
+  // green suite: a mocked client asserted against itself, never against the server.
+  //
+  // No replacement here. On the frontend the guard is the type system - the method does
+  // not exist, so no test can call it. The route's absence is asserted server-side, by
+  // `RetiredRoutes` in Api.Tests/Routing/EndpointContractTests.cs, against the real host.
 });

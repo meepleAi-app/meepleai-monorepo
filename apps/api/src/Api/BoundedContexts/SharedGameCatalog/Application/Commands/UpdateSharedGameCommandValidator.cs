@@ -46,13 +46,15 @@ internal sealed class UpdateSharedGameCommandValidator : AbstractValidator<Updat
             .When(x => x.AverageRating.HasValue)
             .WithMessage("Average rating must be between 1.0 and 10.0");
 
+        // #4090: empty is allowed — see ValidateImageUrl in the SharedGame aggregate. A value, when
+        // present, must still be an absolute URL.
         RuleFor(x => x.ImageUrl)
-            .NotEmpty().WithMessage("Image URL is required")
-            .Must(BeValidUrl).WithMessage("Image URL must be a valid absolute URL");
+            .Must(BeValidUrl).WithMessage("Image URL must be a valid absolute URL")
+            .When(x => !string.IsNullOrWhiteSpace(x.ImageUrl));
 
         RuleFor(x => x.ThumbnailUrl)
-            .NotEmpty().WithMessage("Thumbnail URL is required")
-            .Must(BeValidUrl).WithMessage("Thumbnail URL must be a valid absolute URL");
+            .Must(BeValidUrl).WithMessage("Thumbnail URL must be a valid absolute URL")
+            .When(x => !string.IsNullOrWhiteSpace(x.ThumbnailUrl));
 
         RuleFor(x => x.ModifiedBy)
             .NotEqual(Guid.Empty).WithMessage("ModifiedBy is required");

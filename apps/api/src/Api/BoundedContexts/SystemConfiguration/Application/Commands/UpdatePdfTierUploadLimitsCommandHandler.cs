@@ -43,18 +43,15 @@ internal class UpdatePdfTierUploadLimitsCommandHandler : ICommandHandler<UpdateP
     {
         ArgumentNullException.ThrowIfNull(command);
 
-        // Process all six tier limits in parallel
-        var tasks = new[]
-        {
-            UpsertConfigurationAsync(FreeDailyKey, command.FreeDailyLimit, "Free tier daily PDF upload limit", command.UpdatedByUserId, cancellationToken),
-            UpsertConfigurationAsync(FreeWeeklyKey, command.FreeWeeklyLimit, "Free tier weekly PDF upload limit", command.UpdatedByUserId, cancellationToken),
-            UpsertConfigurationAsync(NormalDailyKey, command.NormalDailyLimit, "Normal tier daily PDF upload limit", command.UpdatedByUserId, cancellationToken),
-            UpsertConfigurationAsync(NormalWeeklyKey, command.NormalWeeklyLimit, "Normal tier weekly PDF upload limit", command.UpdatedByUserId, cancellationToken),
-            UpsertConfigurationAsync(PremiumDailyKey, command.PremiumDailyLimit, "Premium tier daily PDF upload limit", command.UpdatedByUserId, cancellationToken),
-            UpsertConfigurationAsync(PremiumWeeklyKey, command.PremiumWeeklyLimit, "Premium tier weekly PDF upload limit", command.UpdatedByUserId, cancellationToken)
-        };
-
-        await Task.WhenAll(tasks).ConfigureAwait(false);
+        // Sequential on purpose: each upsert goes through the request-scoped DbContext,
+        // which EF Core forbids using concurrently. Task.WhenAll here started every write
+        // at once on the same context (#3843).
+        await UpsertConfigurationAsync(FreeDailyKey, command.FreeDailyLimit, "Free tier daily PDF upload limit", command.UpdatedByUserId, cancellationToken).ConfigureAwait(false);
+        await UpsertConfigurationAsync(FreeWeeklyKey, command.FreeWeeklyLimit, "Free tier weekly PDF upload limit", command.UpdatedByUserId, cancellationToken).ConfigureAwait(false);
+        await UpsertConfigurationAsync(NormalDailyKey, command.NormalDailyLimit, "Normal tier daily PDF upload limit", command.UpdatedByUserId, cancellationToken).ConfigureAwait(false);
+        await UpsertConfigurationAsync(NormalWeeklyKey, command.NormalWeeklyLimit, "Normal tier weekly PDF upload limit", command.UpdatedByUserId, cancellationToken).ConfigureAwait(false);
+        await UpsertConfigurationAsync(PremiumDailyKey, command.PremiumDailyLimit, "Premium tier daily PDF upload limit", command.UpdatedByUserId, cancellationToken).ConfigureAwait(false);
+        await UpsertConfigurationAsync(PremiumWeeklyKey, command.PremiumWeeklyLimit, "Premium tier weekly PDF upload limit", command.UpdatedByUserId, cancellationToken).ConfigureAwait(false);
 
         // Return updated limits
         return new PdfTierUploadLimitsDto(

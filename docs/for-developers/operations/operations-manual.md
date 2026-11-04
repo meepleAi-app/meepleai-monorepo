@@ -90,8 +90,8 @@
 | cadvisor | gcr.io/cadvisor/cadvisor:v0.49.1 | meepleai-cadvisor | monitoring | 8080 | 0.5 | 512M |
 | n8n | n8nio/n8n:1.114.4 | meepleai-n8n | automation | 5678 | 1.0 | 1G |
 | mailpit | axllent/mailpit:v1.22 | mailpit | automation | 8025, 1025 | 0.5 | 128M |
-| minio | minio/minio:RELEASE.2024-11-07T00-52-20Z | meepleai-minio | storage | 9000, 9001 | 0.5 | 512M |
-| minio-init | minio/mc:RELEASE.2024-11-17T19-35-25Z | meepleai-minio-init | storage | - | - | - |
+| minio | ghcr.io/meepleai-app/meepleai-monorepo/mirror/minio:RELEASE.2025-10-15 | meepleai-minio | storage | 9000, 9001 | 0.5 | 512M |
+| minio-init | ghcr.io/meepleai-app/meepleai-monorepo/mirror/minio-client:2025.7.21 | meepleai-minio-init | storage | - | - | - |
 
 ### Named Volumes (13)
 
@@ -2122,16 +2122,23 @@ The storage stack runs under the `storage` profile.
 
 | Property | Value |
 |----------|-------|
-| Image | `minio/minio:RELEASE.2024-11-07T00-52-20Z` |
+| Image | `ghcr.io/meepleai-app/meepleai-monorepo/mirror/minio:RELEASE.2025-10-15` |
 | Container | `meepleai-minio` |
 | Ports | 9000 (S3 API), 9001 (Web Console) |
 | Profile | `storage` |
 | Volume | `minio_data` → `/data` |
 | Command | `server /data --console-address ":9001"` |
+| User | `root` — **obbligatorio**, vedi sotto |
 | CPU / RAM Limit | 0.5 / 512M |
-| Health Check | `mc ready local` |
+| Health Check | `wget -q --spider http://localhost:9000/minio/health/ready` |
 
-**Init container** (`minio-init`): Uses `minio/mc:RELEASE.2024-11-17T19-35-25Z` to create the `meepleai-uploads` bucket on first startup. Runs once and exits.
+**Perché un mirror GHCR e non `minio/minio`** (#3978): nel 2026-09 le immagini MinIO sono scomparse da Docker Hub a livello di *repository*, non di tag — `minio/minio` e `minio/mc` rispondono `denied` su qualunque tag, e lo stesso vale su quay.io, ghcr.io/minio e mirror.gcr.io. Le immagini sono ora copiate nel GHCR del progetto da `.github/workflows/mirror-upstream-images.yml`, pinnate per digest, e sono leggibili senza `docker login`.
+
+**Perché `user: root`** (#3978): la ripubblicazione `alpine/minio` gira come utente `minio`, mentre la vecchia `minio/minio` girava come root. Un volume Docker nasce `root:root` 755, quindi il processo non-root non può scrivere in `/data` e il server muore con `FATAL Unable to initialize backend`. Succede **anche su un volume vuoto**, quindi non è un problema della sola migrazione: senza quella riga lo stack non parte nemmeno da zero.
+
+**Perché la health check non usa più `mc ready local`** (#3978): quel `mc` veniva dal binario bundlato nell'immagine *server* di MinIO, e `alpine/minio` non lo contiene (`command -v mc` → assente). La probe passa all'endpoint HTTP di readiness, che è anche quello che i due workflow E2E interrogano dall'esterno. `wget` e non `curl`: nell'immagine c'è il wget di busybox, curl no.
+
+**Init container** (`minio-init`): Uses `ghcr.io/meepleai-app/meepleai-monorepo/mirror/minio-client:2025.7.21` to create the `meepleai-uploads` bucket on first startup. Runs once and exits. Il suo entrypoint **verifica** il bucket con `mc ls` dopo `mc mb`: `mc mb --ignore-existing` stampa «Bucket created successfully» e ritorna 0 anche con l'alias non autenticato, quindi il suo codice di uscita non è evidenza che il bucket esista. L'immagine del client è **solo amd64** (il server è multi-arch): basta per il `minio-init` di sviluppo locale, non basterebbe su un host arm64.
 
 #### Daily Operations
 
@@ -2321,7 +2328,7 @@ dmesg | grep -i "oom\|killed" | tail -20
 
 ### LLM Provider Outage Recovery — Reset Circuit Breakers
 
-**When to use**: All LLM circuits stuck in `Open` after upstream provider outage is resolved. Default cooldown is `circuitBreakerOpenDurationSeconds` (configured in `/admin/ai` LLM config, typically 30s). If you can't wait — or if the cooldown was misconfigured to a high value — manually reset.
+**When to use**: All LLM circuits stuck in `Open` after upstream provider outage is resolved. Default cooldown is 30s: the LLM provider registry takes it from `AI:CircuitBreaker:OpenDurationSeconds` in appsettings, the Polly breakers of the HTTP clients have it fixed in code. The admin page no longer edits it (#4169): the saved value never reached the runtime. If you can't wait — or if the cooldown was misconfigured to a high value — manually reset.
 
 > 🟡 **Note (2026-06-03 per #1834 spec-panel review)**: There is NO admin UI button for "Reset all circuit breakers". The Polly circuit breaker state is in-memory per API process — restarting the `api` container is the simplest reset. Direct in-process reset via admin endpoint is tracked separately if/when on-call composition justifies it.
 
@@ -2342,11 +2349,19 @@ Trade-off: brief (~5s) API unavailability while container restarts. No data loss
 
 #### Option B — Force-trip a single circuit manually
 
-Not currently supported. If a single provider needs to be ejected from the routing chain (e.g. compromised key suspected), use `/admin/ai` → LLM config → `fallbackChainJson` to remove the entry, save, then restart `api`.
+Not currently supported. ⚠️ The procedure documented here until #4169 — editing `fallbackChainJson` in `/admin/ai` — **never worked**: the runtime does not read that field. The real fallback order comes from the active models of the model catalog (`AiModelConfiguration`, by `Priority`), then `AI:FallbackChain` in appsettings, then any other registered client. Deactivating a provider's models moves it to the back, it does not eject it. To eject a provider whose key may be compromised, **revoke the key in the provider's console**: its calls fail, the circuit opens, and the fallback moves on.
 
 #### Verify recovery
 
 Visit `/admin/providers` (admin role required). The `CircuitBreakerGrid` section should show all chips `closed` (green) and the cooldown bar should disappear. The KPI `Circuit health` in the hero should read `N/N` (all healthy).
+
+### LLM — «servizio AI in pausa» (tetto di spesa)
+
+**Quando**: gli utenti ricevono «Il servizio AI è in pausa…», oppure sale `meepleai_llm_budget_rejected_calls_total`. Dalla fetta 3 di ADR-095 (#4166) il gateway rifiuta prima di spendere le chiamate oltre il tetto giornaliero o mensile, oltre la quota di background e valutazioni, o verso un modello fuori catalogo. Il motivo è nell'etichetta `reason` e nel warning dell'API.
+
+**Prima del tetto** (fetta 3b): oltre la soglia di degrado, l'80% del tetto giornaliero, le risposte passano al modello di riserva del profilo agente e il background e le valutazioni si fermano con `reason=BackgroundPaused`. Le risposte continuano. Nel log dell'API compare «Budget degrade: …».
+
+**Cosa fare**: se il tetto è giusto, la pausa è il comportamento voluto. Per alzarlo: `/admin/ai` → tab **Budget**, tetti giornaliero e mensile; vale entro un minuto. La stessa pagina mostra il consumo per classe e se il degrado è attivo. Dettagli, quote e codici d'errore: [`llm-budget-cap.md`](./llm-budget-cap.md).
 
 ### Communication Template
 

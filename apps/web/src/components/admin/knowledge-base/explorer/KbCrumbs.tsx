@@ -10,6 +10,7 @@ const LABELS: ReadonlyArray<readonly [string, string]> = [
   [`${KB_BASE}/pipeline`, 'RAG Pipeline'],
   [`${KB_BASE}/embedding`, 'Embedding'],
   [`${KB_BASE}/feedback`, 'Feedback'],
+  [`${KB_BASE}/reference-questions`, 'Domande di riferimento'], // #4470
   [`${KB_BASE}/settings`, 'Settings'],
   [`${KB_BASE}/snapshots`, 'Snapshots'],
   [`${KB_BASE}/upload`, 'Upload'],

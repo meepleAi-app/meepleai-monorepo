@@ -182,12 +182,16 @@ test.describe('Library State Filters (Issue #2866, #2870)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Wait for game cards to load
-    await expect(userPage.locator('[data-testid="game-card"]').first()).toBeVisible({
+    await expect(
+      userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+    ).toBeVisible({
       timeout: 10000,
     });
 
     // Verify initial count shows all games
-    const initialCount = await userPage.locator('[data-testid="game-card"]').count();
+    const initialCount = await userPage
+      .locator('[data-testid="meeple-card"][data-entity="game"]')
+      .count();
     expect(initialCount).toBe(mockGames.length);
 
     // Click on "Nuovo" filter chip
@@ -199,7 +203,9 @@ test.describe('Library State Filters (Issue #2866, #2870)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Verify only Nuovo games are shown
-    const filteredCount = await userPage.locator('[data-testid="game-card"]').count();
+    const filteredCount = await userPage
+      .locator('[data-testid="meeple-card"][data-entity="game"]')
+      .count();
     expect(filteredCount).toBe(nuovoGames.length);
 
     // Verify chip is active (has active color class)
@@ -214,7 +220,9 @@ test.describe('Library State Filters (Issue #2866, #2870)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Wait for game cards to load
-    await expect(userPage.locator('[data-testid="game-card"]').first()).toBeVisible({
+    await expect(
+      userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -227,11 +235,13 @@ test.describe('Library State Filters (Issue #2866, #2870)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Verify only InPrestito games are shown
-    const filteredCount = await userPage.locator('[data-testid="game-card"]').count();
+    const filteredCount = await userPage
+      .locator('[data-testid="meeple-card"][data-entity="game"]')
+      .count();
     expect(filteredCount).toBe(inPrestitoGames.length);
 
     // Verify the game card has state border (red for InPrestito)
-    const firstCard = userPage.locator('[data-testid="game-card"]').first();
+    const firstCard = userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first();
     await expect(firstCard).toHaveAttribute('data-game-state', 'InPrestito');
   });
 
@@ -243,7 +253,9 @@ test.describe('Library State Filters (Issue #2866, #2870)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Wait for game cards to load
-    await expect(userPage.locator('[data-testid="game-card"]').first()).toBeVisible({
+    await expect(
+      userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -256,7 +268,9 @@ test.describe('Library State Filters (Issue #2866, #2870)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Verify only Wishlist games are shown
-    const filteredCount = await userPage.locator('[data-testid="game-card"]').count();
+    const filteredCount = await userPage
+      .locator('[data-testid="meeple-card"][data-entity="game"]')
+      .count();
     expect(filteredCount).toBe(wishlistGames.length);
   });
 
@@ -268,7 +282,9 @@ test.describe('Library State Filters (Issue #2866, #2870)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Wait for game cards to load
-    await expect(userPage.locator('[data-testid="game-card"]').first()).toBeVisible({
+    await expect(
+      userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -281,7 +297,9 @@ test.describe('Library State Filters (Issue #2866, #2870)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Verify only favorite games are shown
-    const filteredCount = await userPage.locator('[data-testid="game-card"]').count();
+    const filteredCount = await userPage
+      .locator('[data-testid="meeple-card"][data-entity="game"]')
+      .count();
     expect(filteredCount).toBe(favoriteGames.length);
   });
 
@@ -292,7 +310,9 @@ test.describe('Library State Filters (Issue #2866, #2870)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Wait for game cards to load
-    await expect(userPage.locator('[data-testid="game-card"]').first()).toBeVisible({
+    await expect(
+      userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -310,7 +330,7 @@ test.describe('Library State Filters (Issue #2866, #2870)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Verify all games are shown
-    const count = await userPage.locator('[data-testid="game-card"]').count();
+    const count = await userPage.locator('[data-testid="meeple-card"][data-entity="game"]').count();
     expect(count).toBe(mockGames.length);
 
     // Verify "Tutti" chip is active
@@ -324,7 +344,9 @@ test.describe('Library State Filters (Issue #2866, #2870)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Wait for game cards to load
-    await expect(userPage.locator('[data-testid="game-card"]').first()).toBeVisible({
+    await expect(
+      userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -355,12 +377,14 @@ test.describe('Library View Mode Toggle (Issue #2866, #2867, #2870)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Wait for game cards to load
-    await expect(userPage.locator('[data-testid="game-card"]').first()).toBeVisible({
+    await expect(
+      userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+    ).toBeVisible({
       timeout: 10000,
     });
 
     // Verify initial view is grid (default)
-    const firstCard = userPage.locator('[data-testid="game-card"]').first();
+    const firstCard = userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first();
     await expect(firstCard).toHaveAttribute('data-view-mode', 'grid');
 
     // Click list view toggle button
@@ -393,7 +417,9 @@ test.describe('Library View Mode Toggle (Issue #2866, #2867, #2870)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Wait for game cards to load
-    await expect(userPage.locator('[data-testid="game-card"]').first()).toBeVisible({
+    await expect(
+      userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -403,7 +429,7 @@ test.describe('Library View Mode Toggle (Issue #2866, #2867, #2870)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Verify game card shows "Nuovo" state badge
-    const firstCard = userPage.locator('[data-testid="game-card"]').first();
+    const firstCard = userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first();
     const stateBadge = firstCard.locator('text=Nuovo').first();
     await expect(stateBadge).toBeVisible();
   });
@@ -415,7 +441,9 @@ test.describe('Library View Mode Toggle (Issue #2866, #2867, #2870)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Wait for game cards to load
-    await expect(userPage.locator('[data-testid="game-card"]').first()).toBeVisible({
+    await expect(
+      userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -429,7 +457,7 @@ test.describe('Library View Mode Toggle (Issue #2866, #2867, #2870)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Verify game card shows "In Prestito" state badge
-    const firstCard = userPage.locator('[data-testid="game-card"]').first();
+    const firstCard = userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first();
     const stateBadge = firstCard.locator('text=In Prestito');
     await expect(stateBadge).toBeVisible();
   });
@@ -441,7 +469,9 @@ test.describe('Library View Mode Toggle (Issue #2866, #2867, #2870)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Wait for game cards to load
-    await expect(userPage.locator('[data-testid="game-card"]').first()).toBeVisible({
+    await expect(
+      userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -450,7 +480,9 @@ test.describe('Library View Mode Toggle (Issue #2866, #2867, #2870)', () => {
     await nuovoChip.click();
     await userPage.waitForLoadState('networkidle');
 
-    const nuovoCard = userPage.locator('[data-testid="game-card"][data-game-state="Nuovo"]').first();
+    const nuovoCard = userPage
+      .locator('[data-testid="meeple-card"][data-entity="game"][data-game-state="Nuovo"]')
+      .first();
     await expect(nuovoCard).toBeVisible();
     // Verify it has the border-l-green-500 class (state-coded border)
     await expect(nuovoCard).toHaveClass(/border-l-green-500/);
@@ -461,7 +493,7 @@ test.describe('Library View Mode Toggle (Issue #2866, #2867, #2870)', () => {
     await userPage.waitForLoadState('networkidle');
 
     const inPrestitoCard = userPage
-      .locator('[data-testid="game-card"][data-game-state="InPrestito"]')
+      .locator('[data-testid="meeple-card"][data-entity="game"][data-game-state="InPrestito"]')
       .first();
     await expect(inPrestitoCard).toBeVisible();
     await expect(inPrestitoCard).toHaveClass(/border-l-red-500/);
@@ -476,13 +508,17 @@ test.describe('Library Quick Actions Menu (Issue #2867, #2870)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Wait for game cards to load
-    await expect(userPage.locator('[data-testid="game-card"]').first()).toBeVisible({
+    await expect(
+      userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+    ).toBeVisible({
       timeout: 10000,
     });
 
     // Find and click the more actions button (3 dots)
-    const firstCard = userPage.locator('[data-testid="game-card"]').first();
-    const moreButton = firstCard.locator('button').filter({ has: userPage.locator('svg.lucide-more-vertical') });
+    const firstCard = userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first();
+    const moreButton = firstCard
+      .locator('button')
+      .filter({ has: userPage.locator('svg.lucide-more-vertical') });
     await expect(moreButton).toBeVisible();
     await moreButton.click();
 
@@ -500,7 +536,9 @@ test.describe('Library Quick Actions Menu (Issue #2867, #2870)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Wait for game cards to load
-    await expect(userPage.locator('[data-testid="game-card"]').first()).toBeVisible({
+    await expect(
+      userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -509,8 +547,10 @@ test.describe('Library Quick Actions Menu (Issue #2867, #2870)', () => {
     await listViewButton.click();
 
     // Find and click the more actions button (3 dots)
-    const firstCard = userPage.locator('[data-testid="game-card"]').first();
-    const moreButton = firstCard.locator('button').filter({ has: userPage.locator('svg.lucide-more-vertical') });
+    const firstCard = userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first();
+    const moreButton = firstCard
+      .locator('button')
+      .filter({ has: userPage.locator('svg.lucide-more-vertical') });
     await expect(moreButton).toBeVisible();
     await moreButton.click();
 
@@ -528,7 +568,9 @@ test.describe('Library Visual Regression (Issue #2870)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Wait for game cards to load
-    await expect(userPage.locator('[data-testid="game-card"]').first()).toBeVisible({
+    await expect(
+      userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -548,7 +590,9 @@ test.describe('Library Visual Regression (Issue #2870)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Wait for game cards to load
-    await expect(userPage.locator('[data-testid="game-card"]').first()).toBeVisible({
+    await expect(
+      userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+    ).toBeVisible({
       timeout: 10000,
     });
 
@@ -572,7 +616,9 @@ test.describe('Library Visual Regression (Issue #2870)', () => {
     await userPage.waitForLoadState('networkidle');
 
     // Wait for game cards to load
-    await expect(userPage.locator('[data-testid="game-card"]').first()).toBeVisible({
+    await expect(
+      userPage.locator('[data-testid="meeple-card"][data-entity="game"]').first()
+    ).toBeVisible({
       timeout: 10000,
     });
 

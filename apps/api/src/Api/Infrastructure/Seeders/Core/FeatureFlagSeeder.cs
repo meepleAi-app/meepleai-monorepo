@@ -47,6 +47,9 @@ internal static class FeatureFlagSeeder
         // R1 (issue #3416, ADR-088): approved mechanic-card claim injection into RAG. Default OFF (all tiers).
         new("rag.mechanic-card-injection", "Inject approved mechanic-card claims into RAG answers", false, false, false, false),
 
+        // Spec 2026-10-08 §9: order injected Verified Rules by priority / override chain (card schema v3). Default OFF (all tiers).
+        new("rag.mechanic-claims.v3-ordering", "Order injected Verified Rules by priority and override chain (mechanic claims v3)", false, false, false, false),
+
         // #3390 Slice 2: route the in-session image agent path through RAG retrieval (grounded). Default OFF (all tiers).
         new("rag.live-image-retrieval", "Route the in-session image agent path through grounded RAG retrieval", false, false, false, false),
 

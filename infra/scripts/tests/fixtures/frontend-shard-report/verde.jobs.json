@@ -1,0 +1,84 @@
+{
+  "jobs": [
+    {
+      "completed_at": "2026-10-16T06:04:34Z",
+      "conclusion": "success",
+      "id": 116837092333,
+      "name": "Detect Changes",
+      "started_at": "2026-10-16T06:04:02Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-10-16T06:10:52Z",
+      "conclusion": "success",
+      "id": 116837272114,
+      "name": "Frontend Tests (shard 4/4)",
+      "started_at": "2026-10-16T06:04:36Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-10-16T06:05:31Z",
+      "conclusion": "success",
+      "id": 116837272120,
+      "name": "Infra Scripts (bats + Pester)",
+      "started_at": "2026-10-16T06:04:36Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-10-16T06:11:27Z",
+      "conclusion": "success",
+      "id": 116837272164,
+      "name": "Frontend Tests (shard 1/4)",
+      "started_at": "2026-10-16T06:04:37Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-10-16T06:13:56Z",
+      "conclusion": "success",
+      "id": 116837272176,
+      "name": "Migration Safety Gate",
+      "started_at": "2026-10-16T06:05:32Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-10-16T06:11:59Z",
+      "conclusion": "success",
+      "id": 116837272178,
+      "name": "Frontend Tests (shard 3/4)",
+      "started_at": "2026-10-16T06:04:43Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-10-16T06:12:19Z",
+      "conclusion": "success",
+      "id": 116837272202,
+      "name": "Frontend Tests (shard 2/4)",
+      "started_at": "2026-10-16T06:05:06Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-10-16T06:15:14Z",
+      "conclusion": "success",
+      "id": 116837272215,
+      "name": "Backend Fast (build + unit)",
+      "started_at": "2026-10-16T06:06:39Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": "2026-10-16T06:06:55Z",
+      "conclusion": "success",
+      "id": 116837272237,
+      "name": "Frontend Static (lint + typecheck)",
+      "started_at": "2026-10-16T06:04:37Z",
+      "status": "completed"
+    },
+    {
+      "completed_at": null,
+      "conclusion": null,
+      "id": 116839538465,
+      "name": "Frontend Fast (lint + typecheck + unit)",
+      "started_at": "2026-10-16T06:12:21Z",
+      "status": "in_progress"
+    }
+  ]
+}

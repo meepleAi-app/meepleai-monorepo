@@ -1,0 +1,5 @@
+{"jobs":[
+ {"id":1,"name":"Frontend Tests (shard 1/2)","status":"completed","conclusion":"success","started_at":"2026-10-16T06:00:00Z","completed_at":"2026-10-16T06:08:00Z"},
+ {"id":2,"name":"Frontend Tests (shard 2/2)","status":"completed","conclusion":"success","started_at":"2026-10-16T06:00:00Z","completed_at":"2026-10-16T06:05:00Z"},
+ {"id":3,"name":"Frontend Fast (lint + typecheck + unit)","status":"in_progress","conclusion":null,"started_at":"2026-10-16T06:09:00Z","completed_at":null}
+]}

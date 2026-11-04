@@ -85,8 +85,8 @@ public class CopyrightLeakGuardE2EScenarios
     {
         // Documents the fail-open contract: guard that throws is wrapped by handler try-catch.
         // This test verifies the mock can throw without crashing the test process — the actual
-        // try-catch behavior lives in ChatWithSessionAgentCommandHandler and is covered by
-        // existing handler tests.
+        // try-catch behavior lives in GroundedAnswerService.FinalizeAsync and is covered by
+        // GroundedAnswerServiceTests.
         var mockGuard = new Mock<ICopyrightLeakGuard>();
         mockGuard.Setup(g => g.ScanAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<ChunkCitation>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("simulated guard failure"));

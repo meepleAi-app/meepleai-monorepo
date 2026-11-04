@@ -63,9 +63,11 @@ internal sealed class SuppressMechanicAnalysisCommandHandler
 
         var utcNow = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // Normalize any incoming Unspecified timestamps to UTC to keep the audit column honest.
-        DateTime? normalizedRequestedAt = request.RequestedAt.HasValue
-            ? DateTime.SpecifyKind(request.RequestedAt.Value, DateTimeKind.Utc)
+        // Bring RequestedAt to UTC without moving the instant, whatever its Kind, to keep the audit
+        // column honest. #4519: a Local value is converted, not re-labelled — SpecifyKind on a Local
+        // value would shift it by the server offset, which is why the validator used to reject it.
+        DateTime? normalizedRequestedAt = request.RequestedAt is { } requestedAt
+            ? ToUtc(requestedAt)
             : null;
 
         try
@@ -118,4 +120,14 @@ internal sealed class SuppressMechanicAnalysisCommandHandler
             SuppressionReason: analysis.SuppressionReason,
             SuppressionRequestSource: analysis.SuppressionRequestSource);
     }
+
+    /// <summary>
+    /// Unspecified keeps the written clock and is read as UTC (the rule of #4063); Local is converted.
+    /// </summary>
+    private static DateTime ToUtc(DateTime value) => value.Kind switch
+    {
+        DateTimeKind.Local => value.ToUniversalTime(),
+        DateTimeKind.Unspecified => DateTime.SpecifyKind(value, DateTimeKind.Utc),
+        _ => value,
+    };
 }

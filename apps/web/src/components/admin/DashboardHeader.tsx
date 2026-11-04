@@ -19,7 +19,7 @@ import { Bell, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { useAuthUser } from '@/hooks/useAuthUser';
+import { useAuthUser } from '@/components/auth/AuthProvider';
 import { useNotificationStore, selectUnreadCount } from '@/stores/notification/store';
 
 // ============================================================================

@@ -6,7 +6,7 @@ namespace Api.Tests.BoundedContexts.SessionTracking;
 [Trait("BoundedContext", "KnowledgeBase")]
 public class GamebookGoldenEvalTests
 {
-    [Fact(Skip = "Aaron-validated locally — requires Nanolith Press Start + Rules indexed and Nanolith Tutor agent active. See design doc §0.1 (actionable) and §0.4 (confidence binning).")]
+    [Fact(Skip = "PREVISTO: validato localmente — requires Nanolith Press Start + Rules indexed and Nanolith Tutor agent active. See design doc §0.1 (actionable) and §0.4 (confidence binning).")]
     public void GoldenSet_N1AndN2_MeetsConfidenceFloor()
     {
         // Validation pattern (manual, post-session):

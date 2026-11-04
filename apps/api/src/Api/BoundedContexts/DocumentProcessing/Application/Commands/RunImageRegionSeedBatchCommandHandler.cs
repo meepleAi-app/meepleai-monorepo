@@ -91,8 +91,8 @@ internal sealed class RunImageRegionSeedBatchCommandHandler
         var readyState = nameof(PdfProcessingState.Ready);
         var demoPrefix = PdfDocumentEntity.DemoMockFilePathPrefix;
 
-        // Select candidates NoTracking (id + path only): the entities are NOT kept tracked across the
-        // loop. Each item re-loads its PDF AsTracking and ChangeTracker.Clear()s in a finally, so a
+        // Select candidates NoTracking (id, path and the three language columns, #4435): the entities
+        // are NOT kept tracked across the loop. Each item re-loads its PDF AsTracking and ChangeTracker.Clear()s in a finally, so a
         // failed item can't poison later items via the shared scoped DbContext (#534 / PR #2830).
         // Filter: Ready, never-seeded, still within the retry budget (dead-letter after MaxSeedAttempts),
         // in the current KB corpus (IndexerVersion set), excluding demo-mock shells. NB: this slice has
@@ -108,7 +108,7 @@ internal sealed class RunImageRegionSeedBatchCommandHandler
                 && !p.FilePath.StartsWith(demoPrefix))
             .OrderBy(p => p.UploadedAt)
             .Take(batchSize)
-            .Select(p => new { p.Id, p.FilePath })
+            .Select(p => new { p.Id, p.FilePath, p.LanguageOverride, p.Language, p.LanguageConfidence })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -150,8 +150,13 @@ internal sealed class RunImageRegionSeedBatchCommandHandler
                 string? hiResJson;
                 using (var stream = new MemoryStream(bytes))
                 {
+                    // #4435: these PDFs are Ready, so their language has been detected — hand it to the
+                    // hi_res pass, the one where OCR reads the page (it used to read every page as "ita").
                     hiResJson = await _rawHiResExtractor
-                        .ExtractRawHiResAsync(stream, cancellationToken)
+                        .ExtractRawHiResAsync(
+                            stream,
+                            new DocumentLanguageHint(candidate.LanguageOverride, candidate.Language, candidate.LanguageConfidence),
+                            cancellationToken)
                         .ConfigureAwait(false);
                 }
 

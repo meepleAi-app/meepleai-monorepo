@@ -92,6 +92,14 @@ jobs:
       # --- 3. i nomi metrica, che promtool non puo' verificare ------------------------------
       # `input_series` DICHIARA il nome: un test promtool passa anche su una metrica che non
       # esiste. Questo script confronta invece le regole con le dichiarazioni C#.
+      #
+      # Dal #3814 legge le regole con un parser YAML invece che per righe: le espressioni sono
+      # blocchi multi-riga (`expr: |`), e un estrattore che guarda le sole righe `expr:` ne vede
+      # una frazione. PyYAML e' preinstallato sulle immagini ubuntu-latest, ma dichiararlo costa
+      # pochi secondi ed evita che il gate muoia per una dipendenza implicita.
+      - name: Dipendenza del gate (PyYAML)
+        run: python3 -c "import yaml" || pip install --quiet pyyaml
+
       - name: verify-alert-metric-names
         run: bash infra/scripts/verify-alert-metric-names.sh
 
@@ -112,6 +120,12 @@ jobs:
                 # quello del codice C#, mai esposto, quindi la regola sarebbe cieca.
                 - alert: GateSelfTestBlindRule
                   expr: rate(meepleai_bgg_url_attempted_render_total[5m]) > 0
+                # Il caso di #3814, che e' diverso e per cui il gate precedente NON falliva: un
+                # TERZO nome, ne' quello del C# ne' quello esposto, nato applicando «appendi
+                # l'unit» a un nome che il `.total` ce l'aveva gia'. Un self-test che prova solo
+                # la riga sopra passerebbe per la ragione sbagliata.
+                - alert: GateSelfTestThirdNameRule
+                  expr: rate(meepleai_bgg_url_attempted_render_attempts_total[5m]) > 0
           EOF
           # GitHub Actions esegue gli step con `bash -e`: un comando che esce != 0 terminerebbe
           # lo step PRIMA di questa riga. Qui l'exit 1 e' il risultato atteso, quindi va

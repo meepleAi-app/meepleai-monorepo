@@ -39,6 +39,8 @@ internal class SeedPdfImageRegionsCommandHandler : ICommandHandler<SeedPdfImageR
 
         var existing = await _dbContext.PdfImageRegions
             .Where(r => r.PdfDocumentId == command.PdfId)
+            // #3866: tracked on purpose — the write below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+            .AsTracking()
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
         if (existing.Count > 0)

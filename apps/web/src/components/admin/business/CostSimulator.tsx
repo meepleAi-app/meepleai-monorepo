@@ -10,8 +10,8 @@
  * modello + traffic profile. La modalità "what-if" inversa (delta vs baseline)
  * è derivata in `useMemo` confrontando la stima corrente con un baseline opzionale.
  *
- * Confronto vs budget: se `useBudget` ritorna un AppBudget configurato,
- * mostriamo warning quando `monthlyProjection > monthlyLimit`.
+ * Confronto con il tetto mensile del gateway LLM (#4169, ADR-095 D6): è l'unico budget che il
+ * runtime applica. Prima si confrontava con `AppBudget`, che il gateway ignorava.
  */
 
 import { useEffect, useMemo, useState } from 'react';
@@ -20,7 +20,7 @@ import { useMutation } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 
 import { Label } from '@/components/ui/primitives/label';
-import { useBudget } from '@/hooks/useBudget';
+import { useLlmSystemConfig } from '@/hooks/queries/useProviders';
 import { costCalculatorApi } from '@/lib/api/cost-calculator.api';
 import type {
   AgentCostEstimationResult,
@@ -60,7 +60,8 @@ function formatCurrency(value: number): string {
 }
 
 export function CostSimulator({ className }: CostSimulatorProps) {
-  const { budget } = useBudget();
+  const { data: llmConfig } = useLlmSystemConfig();
+  const monthlyCap = llmConfig?.monthlyBudgetUsd ?? null;
 
   const [strategy, setStrategy] = useState<string>('Balanced');
   const [modelId, setModelId] = useState<string>('deepseek/deepseek-chat');
@@ -115,13 +116,13 @@ export function CostSimulator({ className }: CostSimulatorProps) {
   const projection = result?.monthlyProjection ?? 0;
   const baselineProjection = baseline?.monthlyProjection ?? 0;
   const delta = projection - baselineProjection;
-  const overBudget = budget != null && projection > budget.monthlyLimit;
+  const overBudget = monthlyCap != null && monthlyCap > 0 && projection > monthlyCap;
 
   const budgetPctLabel = useMemo(() => {
-    if (!budget) return null;
-    const pct = (projection / budget.monthlyLimit) * 100;
-    return `${pct.toFixed(0)}% del budget`;
-  }, [budget, projection]);
+    if (monthlyCap == null || monthlyCap <= 0) return null;
+    const pct = (projection / monthlyCap) * 100;
+    return `${pct.toFixed(0)}% del tetto AI mensile`;
+  }, [monthlyCap, projection]);
 
   return (
     <section
@@ -299,7 +300,8 @@ export function CostSimulator({ className }: CostSimulatorProps) {
               role="status"
             >
               <span aria-hidden className="h-2 w-2 rounded-full bg-rose-500 dark:bg-rose-400" />
-              Proiezione supera il budget mensile ({formatCurrency(budget?.monthlyLimit ?? 0)})
+              Proiezione supera il tetto AI mensile ({formatCurrency(monthlyCap ?? 0)}): il gateway
+              fermerebbe le chiamate prima
             </p>
           )}
 

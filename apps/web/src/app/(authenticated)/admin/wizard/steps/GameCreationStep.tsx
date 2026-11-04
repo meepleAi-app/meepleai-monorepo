@@ -376,11 +376,13 @@ export function GameCreationStep({
       )}
 
       {/* Actions */}
-      <div className="flex justify-between gap-3">
+      {/* Wraps on a phone: [← Indietro] [Salta PDF →] [Crea e Continua →] is 512px wide, and the page clips sideways
+          overflow, so the primary button used to sit mostly off screen. */}
+      <div className="flex flex-wrap justify-between gap-3">
         <Button variant="outline" onClick={onBack} disabled={creating}>
           ← Indietro
         </Button>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {allowSkipPdf && onSkipPdf && (
             <Button variant="outline" onClick={onSkipPdf} disabled={creating}>
               Salta PDF →

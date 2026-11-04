@@ -46,7 +46,7 @@ async function gotoMobileLive(page: Page, search = ''): Promise<void> {
 }
 
 test.describe('Session live — mobile bottom-sheet @mobile', () => {
-  test('default mobile renders main content full-width (ChatAgentPanel + ActionLogTimeline)', async ({
+  test('default mobile renders main content full-width (ActionLogTimeline, no agent chat)', async ({
     page,
   }) => {
     await gotoMobileLive(page);
@@ -55,9 +55,9 @@ test.describe('Session live — mobile bottom-sheet @mobile', () => {
     await expect(mobileBody).toBeVisible();
     await expect(mobileBody).toHaveAttribute('data-layout', 'mobile-sheet');
 
-    // Main column = full-width LEFT-equivalent.
-    await expect(mobileBody.locator('[data-slot="chat-agent-panel"]')).toBeVisible();
+    // Main column = full-width LEFT-equivalent; the legacy agent chat is gone (#4156 D5).
     await expect(mobileBody.locator('[data-slot="action-log-timeline"]')).toBeVisible();
+    await expect(mobileBody.locator('[data-slot="chat-agent-panel"]')).toHaveCount(0);
 
     // No legacy bottom-nav.
     await expect(page.locator('[data-slot="mobile-body-tab"]')).toHaveCount(0);

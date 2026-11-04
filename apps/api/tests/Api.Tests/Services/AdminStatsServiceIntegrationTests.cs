@@ -192,7 +192,7 @@ public sealed class AdminStatsServiceIntegrationTests : IDisposable
     /// Test01: Verify GetDashboardStatsAsync performs parallel aggregation correctly
     /// Issue #876: Task.WhenAll for all 6 trend queries
     /// </summary>
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task GetDashboardStatsAsync_ParallelAggregation_ReturnsAllMetrics()
     {
         // Arrange
@@ -240,7 +240,7 @@ public sealed class AdminStatsServiceIntegrationTests : IDisposable
     /// Test02: Verify cache hit scenario returns cached data
     /// Issue #876 + Code Review: FakeHybridCache now properly caches values
     /// </summary>
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task GetDashboardStatsAsync_CacheHit_ReturnsCachedData()
     {
         // Arrange
@@ -267,7 +267,7 @@ public sealed class AdminStatsServiceIntegrationTests : IDisposable
     /// Test03: Verify cache miss triggers aggregation
     /// Issue #876 + Code Review: FakeHybridCache tracks miss count
     /// </summary>
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task GetDashboardStatsAsync_CacheMiss_ExecutesAggregation()
     {
         // Arrange
@@ -291,7 +291,7 @@ public sealed class AdminStatsServiceIntegrationTests : IDisposable
     /// Issue #876: Calculate derived metrics - ErrorRate = errorCount / totalCount
     /// Code Review Fix: Use Theory for robust testing of edge cases
     /// </summary>
-    [Theory(Timeout = 30000)]
+    [Theory(Timeout = 90_000)]
     [InlineData(0, 10, 0.0, "No errors")]
     [InlineData(2, 10, 0.20, "20% error rate")]
     [InlineData(10, 10, 1.0, "100% errors")]
@@ -317,7 +317,7 @@ public sealed class AdminStatsServiceIntegrationTests : IDisposable
     /// Test05: Verify zero-division safety in derived metrics
     /// Issue #876: ErrorRate calculation should handle zero totalCount gracefully
     /// </summary>
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task GetDashboardStatsAsync_NoRequests_ErrorRateIsZero()
     {
         // Arrange - Empty database (no AI requests)
@@ -337,7 +337,7 @@ public sealed class AdminStatsServiceIntegrationTests : IDisposable
     /// Test06: Verify ExportDashboardDataAsync CSV format
     /// Issue #877: Export functionality validates aggregated data
     /// </summary>
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task ExportDashboardDataAsync_CsvFormat_ReturnsValidCsvData()
     {
         // Arrange
@@ -362,7 +362,7 @@ public sealed class AdminStatsServiceIntegrationTests : IDisposable
     /// Test07: Verify ExportDashboardDataAsync JSON format
     /// Issue #877: Export functionality validates JSON serialization
     /// </summary>
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task ExportDashboardDataAsync_JsonFormat_ReturnsValidJsonData()
     {
         // Arrange

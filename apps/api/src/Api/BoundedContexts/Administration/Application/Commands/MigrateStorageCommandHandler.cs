@@ -121,8 +121,11 @@ internal sealed class MigrateStorageCommandHandler : IRequestHandler<MigrateStor
                             InputStream = fileStream,
                             ContentType = "application/pdf",
                             AutoCloseStream = false,
-                            // R2 doesn't support STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER
-                            DisablePayloadSigning = true
+                            // #4085/#4016 causa A: R2 doesn't support STREAMING-AWS4-HMAC-SHA256-
+                            // PAYLOAD-TRAILER, ma solo su HTTPS — era hardcoded `true`, che AWS SDK
+                            // rifiuta contro un endpoint in chiaro (MinIO locale). Stessa logica
+                            // condizionale di S3BlobStorageService.DisablePayloadSigningForEndpoint.
+                            DisablePayloadSigning = !BlobStorageServiceFactory.UsesPlainHttp(s3Service.Options.Endpoint)
                         };
 
                         if (s3Service.Options.EnableEncryption)

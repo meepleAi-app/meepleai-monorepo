@@ -187,8 +187,12 @@ export function SharedGamesFilters({
               key={chip.key}
               type="button"
               role="switch"
+              // `aria-checked` is the state attribute for role="switch".
+              // `aria-pressed` belongs to role="button" and is *not allowed*
+              // here — axe reports it as a critical `aria-allowed-attr`
+              // violation on all 5 chips. Uncovered once the a11y gate stopped
+              // scanning a 404 and started reaching this page (#3917).
               aria-checked={active}
-              aria-pressed={active}
               data-chip={chip.key}
               data-active={active}
               onClick={() => onChipToggle(chip.key)}

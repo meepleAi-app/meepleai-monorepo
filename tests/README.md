@@ -5,7 +5,7 @@ The .NET unit/integration suite is the bulk; the rest are runnable harnesses.
 
 | Folder | What | Run |
 |--------|------|-----|
-| `Api.Tests/` | .NET 9 xUnit suite — unit, integration (Testcontainers), E2E | `dotnet test tests/Api.Tests/Api.Tests.csproj` |
+| `Api.Tests/` | .NET 10 xUnit suite — unit, integration (Testcontainers), E2E | `dotnet test tests/Api.Tests/Api.Tests.csproj` |
 | `api-smoke/` | Bruno collection + runners + `agent-endpoints-smoke.http` | `tests/api-smoke/run-smoke.sh --env local` |
 | `k6/` | Load/performance scenarios + utils | `k6 run tests/k6/scenarios/<scenario>.js` |
 | `llm-eval/` | LLM evaluation harness (`golden-set/`, `ocr-validation/`) | `python tests/llm-eval/<harness>/run_validation.py` |

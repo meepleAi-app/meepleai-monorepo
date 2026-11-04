@@ -35,6 +35,12 @@ internal class PdfDocumentEntityConfiguration : IEntityTypeConfiguration<PdfDocu
             .HasColumnType("jsonb")
             .IsRequired(false);
 
+        // #4782: page map of ExtractedText (jsonb), kept next to the text so a re-index can still tell the pages apart.
+        builder.Property(e => e.PageSpansJson)
+            .HasColumnName("page_spans_json")
+            .HasColumnType("jsonb")
+            .IsRequired(false);
+
         // Issue #4216: Retry tracking configuration
         builder.Property(e => e.RetryCount)
             .IsRequired()

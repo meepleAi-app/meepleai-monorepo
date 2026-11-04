@@ -1,11 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SessionDrawerContent } from '../SessionDrawerContent';
 import type { SessionDetailData } from '../../types';
 
 // Mock next/navigation
+const routerPush = vi.hoisted(() => vi.fn());
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: routerPush }),
 }));
 
 // Mock useSessionDetail hook
@@ -145,5 +146,46 @@ describe('SessionDrawerContent', () => {
     render(<SessionDrawerContent entityId="s1" initialTabId="toolkit" />);
     const toolkitTab = screen.getByRole('tab', { name: /toolkit/i });
     expect(toolkitTab).toHaveAttribute('aria-selected', 'true');
+  });
+});
+
+// ─── #4156 (D4) — the session pages live under the LiveGameSession id ────────
+
+describe('SessionDrawerContent — #4156 (D4): links use the live session', () => {
+  function withData(data: Partial<SessionDetailData>) {
+    vi.mocked(useSessionDetail).mockReturnValue({
+      data: { ...mockData, ...data },
+      loading: false,
+      error: null,
+      retry: vi.fn(),
+    });
+  }
+
+  beforeEach(() => {
+    routerPush.mockClear();
+  });
+
+  it('resumes and opens the correlated live session, not the GameSession', () => {
+    withData({ status: 'InProgress', liveSessionId: 'live-1' });
+    render(<SessionDrawerContent entityId="s1" />);
+    fireEvent.click(screen.getByRole('button', { name: /Riprendi/ }));
+    expect(routerPush).toHaveBeenLastCalledWith('/sessions/live-1/live');
+    fireEvent.click(screen.getByRole('button', { name: /Apri/ }));
+    expect(routerPush).toHaveBeenLastCalledWith('/sessions/live-1');
+  });
+
+  it('opens the scoreboard of the live session for a completed session', () => {
+    withData({ status: 'Completed', liveSessionId: 'live-1' });
+    render(<SessionDrawerContent entityId="s1" />);
+    fireEvent.click(screen.getByRole('button', { name: /Risultati/ }));
+    expect(routerPush).toHaveBeenLastCalledWith('/sessions/live-1/scoreboard');
+  });
+
+  it('offers no navigation when the session has no live session', () => {
+    withData({ status: 'InProgress', liveSessionId: undefined });
+    render(<SessionDrawerContent entityId="s1" />);
+    expect(screen.queryByRole('button', { name: /Riprendi/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Apri/ })).not.toBeInTheDocument();
+    expect(screen.getByText('Catan Pro')).toBeInTheDocument();
   });
 });

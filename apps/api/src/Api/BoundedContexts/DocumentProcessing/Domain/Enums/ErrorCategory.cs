@@ -39,6 +39,23 @@ public enum ErrorCategory
     PayloadTooLarge = 5,
 
     /// <summary>
+    /// The stored object is not at the key recorded in <c>FilePath</c>: the upload never reached the
+    /// bucket, or the object was removed out of band.
+    /// Retry strategy: Never — an absent object does not reappear on its own. Requires re-uploading
+    /// the file or an operator restoring it. Issue #3846.
+    /// </summary>
+    StorageObjectMissing = 6,
+
+    /// <summary>
+    /// The user asked to stop the processing (<c>CancelPdfProcessingCommand</c> cancels the task's token).
+    /// Retry strategy: Never automatically — the user chose to stop, so <c>RetryFailedPdfsJob</c> leaves it
+    /// alone and the failure notification is not sent. A manual retry stays possible. A timeout that surfaces
+    /// as <see cref="OperationCanceledException"/> while the token is NOT cancelled is not this category
+    /// (it is <see cref="Unknown"/>, transient). Issue #4531, #4610.
+    /// </summary>
+    Cancelled = 7,
+
+    /// <summary>
     /// Unclassified error: unexpected exception, unknown failure mode.
     /// Retry strategy: Treat as transient, allow retry with caution.
     /// </summary>

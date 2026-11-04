@@ -57,16 +57,14 @@ internal static class IntegrationServiceCollectionBuilder
     /// because the default Moq mock returns null without invoking the factory and the read
     /// would miss the write. See issue #2162 follow-up.
     /// </param>
-    /// <param name="useNoTrackingDefault">
-    /// When true, configures <c>UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)</c> on
-    /// the test <see cref="MeepleAiDbContext"/>, matching the production default set in
-    /// <c>InfrastructureServiceExtensions.cs</c> (PERF-06). By default this builder leaves EF Core's
-    /// tracking-by-default behavior in place, which SILENTLY MASKS handler bugs where a query is
-    /// missing an explicit <c>.AsTracking()</c> call — mutations on the returned entity would be
-    /// saved in a tracking-by-default test DbContext but silently dropped in production. Set this
-    /// to true for any test whose whole point is proving persistence of field mutations after a
-    /// plain (non-<c>.AsTracking()</c>) query. See issue #3269 follow-up (NoTracking gotcha).
-    /// </param>
+    /// <remarks>
+    /// Issue #3866: the former <c>useNoTrackingDefault</c> parameter is gone. The parity with
+    /// production is now unconditional — <c>MeepleAiDbContext</c>'s constructor defaults the
+    /// ChangeTracker to <c>QueryTrackingBehavior.NoTracking</c> — so the flag was at best redundant
+    /// and at worst misleading: its <c>false</c> default suggested a tracking context that callers
+    /// no longer get. A fixture that genuinely needs tracking opts out on the instance:
+    /// <c>db.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.TrackAll;</c>
+    /// </remarks>
     /// <param name="useRetryOnFailure">
     /// Quando false disattiva <c>EnableRetryOnFailure</c> sul DbContext di test (#3633).
     ///
@@ -86,7 +84,6 @@ internal static class IntegrationServiceCollectionBuilder
     public static ServiceCollection CreateBase(
         string connectionString,
         bool useHybridCachePassthrough = false,
-        bool useNoTrackingDefault = false,
         bool useRetryOnFailure = true)
     {
         var services = new ServiceCollection();
@@ -125,11 +122,6 @@ internal static class IntegrationServiceCollectionBuilder
             options.ConfigureWarnings(w =>
                 w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
             options.AddInterceptors(sp.GetRequiredService<AuditingSaveChangesInterceptor>());
-
-            if (useNoTrackingDefault)
-            {
-                options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
-            }
         });
 
         // Core infrastructure
@@ -160,6 +152,13 @@ internal static class IntegrationServiceCollectionBuilder
             services.AddScoped(_ =>
                 Mock.Of<Api.Services.IHybridCacheService>());
         }
+
+        // #4587: anche HybridCache di Microsoft, come in produzione (InfrastructureServiceExtensions).
+        // Da #4567 UserActivityCacheInvalidationEventHandler la chiede, e gestisce eventi come
+        // SessionFinalizedEvent: senza, gli handler di quegli eventi non si costruiscono, la
+        // pubblicazione si interrompe e il dispatch inghiotte l'eccezione. Nessun handler parte e
+        // nessun test se ne accorge, salvo chi asserisce l'invocazione.
+        services.AddHybridCache();
         services.AddScoped(_ =>
             Mock.Of<Api.Services.IEmbeddingService>());
         services.AddScoped(_ =>
@@ -176,11 +175,16 @@ internal static class IntegrationServiceCollectionBuilder
         tierMock.Setup(t => t.GetLimitsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(TierLimits.Unlimited);
         tierMock.Setup(t => t.GetUsageAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new UsageSnapshot(0, 100, 0, 100, 0, 100, 0, 100, 0, 100, 0, 100, true, 0, 100));
+            .ReturnsAsync(new UsageSnapshot(0, 100, 0, 100, 0, 100, 0, 100, 0, 100, true, 0, 100));
         services.AddScoped<ITierEnforcementService>(_ => tierMock.Object);
 
         // TimeProvider — required by handlers like SubmitValidationFeedbackCommandHandler
         services.AddSingleton(TimeProvider.System);
+
+        // #4774: the one resolver of the public front-end URL, needed by the handlers that write links
+        // (share links, invitations). It reads IConfiguration at call time, so a test that registers its own
+        // configuration after this call is still honoured.
+        services.AddPublicBaseUrl();
 
         // AuditService — required by handlers/workers that emit audit log entries
         // (e.g. MechanicRecalcBackgroundService.WriteCompletionAuditAsync — ADR-051 Sprint 2 / Task 12).

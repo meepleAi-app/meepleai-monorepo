@@ -97,7 +97,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
     expect(gameOptions).toBeGreaterThan(0);
 
     // Games skeleton should be gone (if it appeared)
-    if (await gamesSkeleton.isVisible().catch(() => false)) {
+    if (await gamesSkeleton.isVisible()) {
       await expect(gamesSkeleton).not.toBeVisible({ timeout: 5000 });
     }
   });
@@ -114,7 +114,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
 
     // Check if skeleton appears (may be very brief with fast backend)
     const gamesSkeleton = page.locator('[aria-label="Caricamento giochi"]');
-    const skeletonVisible = await gamesSkeleton.isVisible().catch(() => false);
+    const skeletonVisible = await gamesSkeleton.isVisible();
 
     if (skeletonVisible) {
       // Verify skeleton has correct role and aria attributes when visible
@@ -153,7 +153,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
 
       // Check if agents skeleton appears (may be brief with fast backend)
       const agentsSkeleton = page.locator('[aria-label="Caricamento agenti"]');
-      const skeletonVisible = await agentsSkeleton.isVisible().catch(() => false);
+      const skeletonVisible = await agentsSkeleton.isVisible();
 
       if (skeletonVisible) {
         // Verify skeleton has correct attributes when visible
@@ -186,7 +186,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
 
     // Check if chat history skeleton appears (may be brief)
     const chatSkeleton = page.locator('[aria-label="Caricamento cronologia chat"]');
-    const isVisible = await chatSkeleton.isVisible().catch(() => false);
+    const isVisible = await chatSkeleton.isVisible();
 
     if (isVisible) {
       // Verify skeleton has correct attributes and count
@@ -224,12 +224,12 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
 
       // Click the chat in history to reload it
       const chatItem = page.locator('li[role="button"]').first();
-      if (await chatItem.isVisible().catch(() => false)) {
+      if (await chatItem.isVisible()) {
         await chatItem.click({ force: true });
 
         // Check if messages skeleton appears (may be brief with real backend)
         const messagesSkeleton = page.locator('[aria-label="Caricamento messaggi"]');
-        const isVisible = await messagesSkeleton.isVisible().catch(() => false);
+        const isVisible = await messagesSkeleton.isVisible();
 
         if (isVisible) {
           // Verify skeleton has correct role attribute
@@ -271,11 +271,11 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       const typingIndicator = page.locator(
         '[aria-label*="is typing"], [aria-label*="sta scrivendo"]'
       );
-      const hasTypingIndicator = await typingIndicator.isVisible().catch(() => false);
+      const hasTypingIndicator = await typingIndicator.isVisible();
 
       // Also check for the "Sto pensando..." fallback state
       const thinkingText = page.locator('text=Sto pensando...');
-      const hasThinkingText = await thinkingText.isVisible().catch(() => false);
+      const hasThinkingText = await thinkingText.isVisible();
 
       // Either typing indicator or thinking text should be visible during streaming
       expect(hasTypingIndicator || hasThinkingText).toBe(true);
@@ -416,7 +416,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
 
       // Get the chat ID by clicking on it to trigger reload
       const firstChat = page.locator('li[role="button"]').first();
-      if (await firstChat.isVisible().catch(() => false)) {
+      if (await firstChat.isVisible()) {
         await firstChat.click({ force: true });
         await page.waitForTimeout(500);
 
@@ -465,15 +465,12 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       await expect(sendButton).toBeDisabled({ timeout: 500 });
 
       // Verify loading text appears
-      const hasLoadingText = await sendButton
-        .locator('text=Invio...')
-        .isVisible()
-        .catch(() => false);
+      const hasLoadingText = await sendButton.locator('text=Invio...').isVisible();
       expect(hasLoadingText).toBe(true);
 
       // Verify spinner appears
       const spinner = sendButton.locator('svg[aria-hidden="true"]');
-      const hasSpinner = await spinner.isVisible().catch(() => false);
+      const hasSpinner = await spinner.isVisible();
       expect(hasSpinner).toBe(true);
 
       // Wait for real backend to complete
@@ -505,15 +502,12 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       await expect(newChatButton).toBeDisabled({ timeout: 500 });
 
       // Verify loading text appears
-      const hasLoadingText = await newChatButton
-        .locator('text=Creazione...')
-        .isVisible()
-        .catch(() => false);
+      const hasLoadingText = await newChatButton.locator('text=Creazione...').isVisible();
       expect(hasLoadingText).toBe(true);
 
       // Verify spinner appears
       const spinner = newChatButton.locator('svg[aria-hidden="true"]');
-      const hasSpinner = await spinner.isVisible().catch(() => false);
+      const hasSpinner = await spinner.isVisible();
       expect(hasSpinner).toBe(true);
 
       // Wait for real backend to complete
@@ -594,7 +588,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
 
     // Check skeleton loaders don't have animate-pulse when visible
     const gamesSkeleton = page.locator('[aria-label="Caricamento giochi"]');
-    if (await gamesSkeleton.isVisible().catch(() => false)) {
+    if (await gamesSkeleton.isVisible()) {
       const hasPulse = await gamesSkeleton.evaluate((el: HTMLElement) => {
         return el.classList.contains('animate-pulse');
       });
@@ -616,11 +610,11 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
       const typingIndicator = page.locator(
         '[aria-label*="is typing"], [aria-label*="sta scrivendo"]'
       );
-      if (await typingIndicator.isVisible().catch(() => false)) {
+      if (await typingIndicator.isVisible()) {
         const dots = typingIndicator.locator('span[class*="rounded-full"]');
         const firstDot = dots.first();
 
-        if (await firstDot.isVisible().catch(() => false)) {
+        if (await firstDot.isVisible()) {
           // Check that animation is disabled or minimal
           const transform = await firstDot.evaluate((el: HTMLElement) => {
             const style = window.getComputedStyle(el);
@@ -752,7 +746,7 @@ test.describe('Chat Loading States and Animations (CHAT-04)', () => {
 
       // Look for stop button during streaming
       const stopButton = page.locator('button:has-text("Stop"), button:has-text("⏹")');
-      const hasStopButton = await stopButton.isVisible().catch(() => false);
+      const hasStopButton = await stopButton.isVisible();
 
       if (hasStopButton) {
         // Verify stop button is enabled during streaming

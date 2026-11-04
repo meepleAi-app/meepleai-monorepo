@@ -39,6 +39,31 @@ describe('GameNightRsvpRow', () => {
     expect(screen.getByText('host')).toBeInTheDocument();
   });
 
+  it('renders the subtitle under the name when given (#4706)', () => {
+    render(<GameNightRsvpRow {...baseProps} subtitle="carla@example.com" />);
+    const row = screen.getByTestId('game-night-rsvp-row');
+    expect(within(row).getByTestId('game-night-rsvp-row-subtitle')).toHaveTextContent(
+      'carla@example.com'
+    );
+  });
+
+  it('renders an action at the end of the row when given (#4721)', () => {
+    render(<GameNightRsvpRow {...baseProps} action={<button type="button">Ritira</button>} />);
+    const row = screen.getByTestId('game-night-rsvp-row');
+    expect(within(row).getByRole('button', { name: 'Ritira' })).toBeInTheDocument();
+  });
+
+  it('renders no action when none is given', () => {
+    render(<GameNightRsvpRow {...baseProps} />);
+    const row = screen.getByTestId('game-night-rsvp-row');
+    expect(within(row).queryByRole('button')).toBeNull();
+  });
+
+  it('renders no subtitle line when none is given', () => {
+    render(<GameNightRsvpRow {...baseProps} />);
+    expect(screen.queryByTestId('game-night-rsvp-row-subtitle')).toBeNull();
+  });
+
   it('does not render host pill when hostLabel is missing', () => {
     render(<GameNightRsvpRow {...baseProps} isHost />);
     expect(screen.queryByText('host')).toBeNull();

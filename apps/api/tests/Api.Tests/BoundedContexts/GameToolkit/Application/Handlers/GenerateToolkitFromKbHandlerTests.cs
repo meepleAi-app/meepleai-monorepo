@@ -131,6 +131,59 @@ public class GenerateToolkitFromKbHandlerTests
         result.RequiresHumanReview.Should().BeTrue();
     }
 
+    /// <summary>
+    /// Issue #4243. The KB card ids are <c>vector_documents</c> ids: they say whether there is
+    /// anything to read. The search's document filter is a list of PDF ids, another table. Passed
+    /// there (fifth argument, by position) they emptied the keyword arm, and after the filter got a
+    /// single identity they would have emptied both. The search is already scoped to the game.
+    /// </summary>
+    [Fact]
+    public async Task Handle_DoesNotPassTheKbCardIdsAsADocumentFilter()
+    {
+        SetupGameCoreData("Catan");
+        SetupRagAccess([KbCardId]);
+        SetupHybridSearch(new HybridSearchResult
+        {
+            ChunkId = "chunk-1",
+            Content = "Players roll two D6 dice on their turn.",
+            PdfDocumentId = Guid.NewGuid().ToString(),
+            GameId = GameId,
+            ChunkIndex = 0,
+            HybridScore = 0.85f,
+            Mode = SearchMode.Hybrid
+        });
+        _llmMock
+            .Setup(l => l.GenerateJsonAsync<AiToolkitSuggestionDto>(
+                It.IsAny<string>(), It.IsAny<string>(),
+                RequestSource.RagPipeline, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AiToolkitSuggestionDto(
+                ToolkitName: "Catan Toolkit",
+                DiceTools: [new("Dadi", DiceType.D6, 2, null, false, null)],
+                CounterTools: [],
+                TimerTools: [],
+                ScoringTemplate: new(["VP"], "points", ScoreType.Points),
+                TurnTemplate: new(TurnOrderType.RoundRobin, []),
+                Overrides: new(false, false, false),
+                Reasoning: "Players use 2xD6 as stated in the rules."));
+
+        await _handler.Handle(new GenerateToolkitFromKbCommand(GameId, UserId), TestContext.Current.CancellationToken);
+
+        // the search ran …
+        _hybridSearchMock.Verify(
+            s => s.SearchAsync(
+                It.IsAny<string>(), GameId, SearchMode.Hybrid, It.IsAny<int>(),
+                It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
+                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()),
+            Times.AtLeastOnce);
+        // … and never with a document filter
+        _hybridSearchMock.Verify(
+            s => s.SearchAsync(
+                It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(), It.IsAny<int>(),
+                It.Is<List<Guid>?>(ids => ids != null), It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
+                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
     [Fact]
     public async Task Handle_LlmReturnsNull_RetriesAndThrowsIfBothFail()
     {

@@ -59,14 +59,18 @@ internal sealed class SharedGameSubmittedForApprovalNotificationHandler
             return;
         }
 
-        // Get all admin users to notify
-        var adminDomainEntities = await _userRepository.GetAdminUsersAsync(cancellationToken).ConfigureAwait(false);
+        // Get the admin users to notify. GetAdminUsersAsync scopes by role only, so it also returns an admin who is
+        // suspended, banned or not yet activated. They cannot sign in (the same CanAuthenticate that the login checks,
+        // one definition), so an in-app notification or an email to them is of no use to anyone.
+        var adminUsers = await _userRepository.GetAdminUsersAsync(cancellationToken).ConfigureAwait(false);
+        var adminDomainEntities = adminUsers.Where(admin => admin.CanAuthenticate()).ToList();
 
         if (adminDomainEntities.Count == 0)
         {
             Logger.LogWarning(
-                "No admin users found to notify for shared game {GameId} submission",
-                domainEvent.GameId);
+                "No admin users who can sign in found to notify for shared game {GameId} submission ({AdminCount} admins in total)",
+                domainEvent.GameId,
+                adminUsers.Count);
             return;
         }
 

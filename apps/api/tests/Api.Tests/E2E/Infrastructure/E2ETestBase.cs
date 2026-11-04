@@ -241,23 +241,46 @@ public abstract class E2ETestBase : IAsyncLifetime
         return $"la risposta e' {(int)response.StatusCode} {response.StatusCode} con corpo: {body}";
     }
 
-    protected static async Task AssertSuccessOrSkipIfServiceUnavailable(
+    /// <summary>
+    /// Asserisce che la risposta sia un 2xx. Un errore è un <b>fallimento</b>, qualunque sia lo
+    /// status.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// #4023 / spec R1.6 — questo metodo si chiamava
+    /// <c>AssertSuccessOrSkipIfServiceUnavailable</c> e su un <c>500</c> faceva
+    /// <c>Assert.Skip("… returned 500 (external service likely unavailable)")</c>.
+    /// </para>
+    /// <para>
+    /// 🔴 Perché era sbagliato: un <c>500</c> è anche — e soprattutto — ciò che produce un <b>bug del
+    /// prodotto</b>. Quel ramo nascondeva quindi esattamente i difetti che un test E2E esiste per
+    /// trovare: una regressione che fa esplodere l'endpoint rendeva la suite <b>gialla invece che
+    /// rossa</b>. L'assenza di un servizio non si deduce da una risposta ricevuta: si accerta prima,
+    /// con <see cref="E2EServiceProbe.SkipUnlessHealthyAsync"/>, che interroga <c>/health</c> dell'app
+    /// sotto test con lo stesso client.
+    /// </para>
+    /// <para>
+    /// Il messaggio usa <see cref="DescribeResponseAsync"/>, che esiste dal #3662 proprio perché «un
+    /// 403 senza corpo non dice se a rifiutare è una policy, un middleware, un limite di
+    /// configurazione o un feature flag»: la stessa ragione vale per un 500.
+    /// </para>
+    /// </remarks>
+    protected static async Task AssertSuccessAsync(
         HttpResponseMessage response,
         string context = "")
     {
         if (response.IsSuccessStatusCode)
-            return;
-
-        if (response.StatusCode == System.Net.HttpStatusCode.InternalServerError)
         {
-            var body = await response.Content.ReadAsStringAsync();
-            Assert.Skip(
-                $"Skipped: {context} returned 500 (external service likely unavailable). " +
-                $"Body: {body[..Math.Min(body.Length, 200)]}");
+            return;
         }
 
-        // For non-500 failures, fail the test properly
-        response.EnsureSuccessStatusCode();
+        var described = await DescribeResponseAsync(response).ConfigureAwait(false);
+        Assert.Fail(
+            $"{(string.IsNullOrEmpty(context) ? "la chiamata" : context)} non è riuscita: {described}" +
+            $"{Environment.NewLine}Se il motivo è che un servizio non è disponibile in questo " +
+            "ambiente, la via corretta NON è saltare qui: sonda il prerequisito in testa al test con " +
+            "E2EServiceProbe.SkipUnlessHealthyAsync(Client, <check>, \"<come abilitarlo>\"). " +
+            "Un errore del codice sotto test deve restare un fallimento.");
     }
 
     /// <summary>
@@ -336,9 +359,11 @@ internal static class E2ESharedInfrastructure
                 return;
             }
 
-            // Disable custom rate limiting middleware for E2E tests
-            // The middleware checks these env vars directly (not from configuration)
-            // Setting both DISABLE_RATE_LIMITING and ASPNETCORE_ENVIRONMENT for defense in depth
+            // Disable rate limiting for E2E tests.
+            // #3887: the authoritative switch is ["RateLimiting:Enabled"] = "false" in the in-memory
+            // configuration below — WebApplicationExtensions reads it after Build() and skips
+            // UseRateLimiter(). These process variables are kept only as defence in depth; they are
+            // set once and never restored, so they open no window for a parallel collection.
             Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", "true");
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "CI");
 
@@ -622,10 +647,9 @@ internal sealed class E2EWebApplicationFactory : WebApplicationFactory<Program>
                 services.Remove(descriptor);
             }
 
-            // Rate limiting is disabled via environment variable RateLimiting__Enabled=false
-            // which is set in EnsureInitializedAsync() BEFORE the factory is created.
-            // The AddRateLimitingServices method in Program.cs reads this and uses NoLimiter policies.
-            // Additionally, the custom RateLimitingMiddleware checks DISABLE_RATE_LIMITING env var.
+            // #3887: rate limiting is disabled by ["RateLimiting:Enabled"] = "false" in this
+            // factory's in-memory configuration, which WebApplicationExtensions reads after Build()
+            // to decide whether to add UseRateLimiter() at all.
 
             // Remove any existing DbContext registrations first
             services.RemoveAll<DbContextOptions<MeepleAiDbContext>>();

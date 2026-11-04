@@ -18,7 +18,7 @@ namespace Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 public sealed record MechanicCardContent
 {
     /// <summary>Current on-disk JSONB schema version.</summary>
-    public const int CurrentSchemaVersion = 2; // #2782: real validations projected; write-only until a card reader (#528) exists.
+    public const int CurrentSchemaVersion = 3; // spec 2026-10-08: kind/priority/overrides/trigger projected (additive keys only, ADR-084 §3)
 
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
@@ -87,7 +87,13 @@ public sealed record MechanicCardContent
                         Passed = string.Equals(v.Outcome, MechanicClaimValidationOutcomes.Pass, StringComparison.Ordinal),
                         Score = v.Score
                     })
-                    .ToList()
+                    .ToList(),
+                Kind = c.Kind.ToString(),
+                Priority = c.Priority.ToString(),
+                Overrides = c.Overrides.ToList(),
+                Trigger = c.Trigger is null
+                    ? null
+                    : new MechanicCardTriggerSnapshot { Phase = c.Trigger.Phase, Action = c.Trigger.Action, Component = c.Trigger.Component }
             })
             .ToList();
 
@@ -132,6 +138,31 @@ public sealed record MechanicCardClaimSnapshot
 
     [JsonPropertyName("validations")]
     public IReadOnlyList<MechanicCardValidationSnapshot> Validations { get; init; } = Array.Empty<MechanicCardValidationSnapshot>();
+
+    [JsonPropertyName("kind")]
+    public string Kind { get; init; } = "Rule";
+
+    [JsonPropertyName("priority")]
+    public string Priority { get; init; } = "Base";
+
+    [JsonPropertyName("overrides")]
+    public IReadOnlyList<Guid> Overrides { get; init; } = Array.Empty<Guid>();
+
+    [JsonPropertyName("trigger")]
+    public MechanicCardTriggerSnapshot? Trigger { get; init; }
+}
+
+/// <summary>Trigger snapshot (spec 2026-10-08 §5). Null = always applies.</summary>
+public sealed record MechanicCardTriggerSnapshot
+{
+    [JsonPropertyName("phase")]
+    public string? Phase { get; init; }
+
+    [JsonPropertyName("action")]
+    public string? Action { get; init; }
+
+    [JsonPropertyName("component")]
+    public string? Component { get; init; }
 }
 
 /// <summary>Per-citation snapshot (source page + verbatim quote).</summary>

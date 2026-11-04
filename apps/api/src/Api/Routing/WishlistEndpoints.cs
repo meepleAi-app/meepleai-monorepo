@@ -52,8 +52,7 @@ internal static class WishlistEndpoints
         .Produces(401)
         .WithTags("Wishlist")
         .WithSummary("Get user's wishlist")
-        .WithDescription("Returns the complete wishlist for the authenticated user, ordered by priority (high first) then by date added.")
-        .WithOpenApi();
+        .WithDescription("Returns the complete wishlist for the authenticated user, ordered by priority (high first) then by date added.");
     }
 
     private static void MapGetWishlistHighlightsEndpoint(RouteGroupBuilder group)
@@ -81,8 +80,7 @@ internal static class WishlistEndpoints
         .Produces(401)
         .WithTags("Wishlist")
         .WithSummary("Get wishlist highlights")
-        .WithDescription("Returns the top 5 highest-priority wishlist items for the authenticated user.")
-        .WithOpenApi();
+        .WithDescription("Returns the top 5 highest-priority wishlist items for the authenticated user.");
     }
 
     private static void MapAddToWishlistEndpoint(RouteGroupBuilder group)
@@ -125,8 +123,7 @@ internal static class WishlistEndpoints
         .Produces(409)
         .WithTags("Wishlist")
         .WithSummary("Add game to wishlist")
-        .WithDescription("Adds a game to the user's wishlist with priority, optional target price and notes. Returns 409 if game is already on wishlist.")
-        .WithOpenApi();
+        .WithDescription("Adds a game to the user's wishlist with priority, optional target price and notes. Returns 409 if game is already on wishlist.");
     }
 
     private static void MapUpdateWishlistItemEndpoint(RouteGroupBuilder group)
@@ -180,8 +177,7 @@ internal static class WishlistEndpoints
         .Produces(404)
         .WithTags("Wishlist")
         .WithSummary("Update wishlist item")
-        .WithDescription("Updates priority, target price, and/or notes for a wishlist item. Use clearTargetPrice/clearNotes to set those fields to null.")
-        .WithOpenApi();
+        .WithDescription("Updates priority, target price, and/or notes for a wishlist item. Use clearTargetPrice/clearNotes to set those fields to null.");
     }
 
     private static void MapRemoveFromWishlistEndpoint(RouteGroupBuilder group)
@@ -226,8 +222,7 @@ internal static class WishlistEndpoints
         .Produces(404)
         .WithTags("Wishlist")
         .WithSummary("Remove from wishlist")
-        .WithDescription("Removes a game from the user's wishlist. Returns 404 if not found, 403 if not owned.")
-        .WithOpenApi();
+        .WithDescription("Removes a game from the user's wishlist. Returns 404 if not found, 403 if not owned.");
     }
 
     private static bool TryGetUserId(HttpContext context, SessionStatusDto? session, out Guid userId)

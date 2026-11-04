@@ -2,56 +2,54 @@
 /**
  * ScoreboardPage — /sessions/{id}/scoreboard
  *
- * Dedicated full-page scoreboard that fetches session data via
- * api.sessions.getById and renders a ranked player list.
+ * #4156: l'id della rotta è quello di una `LiveGameSession` (decisione D4). La classifica legge
+ * la live e ordina i giocatori per totale decrescente; i totali sono quelli di `RoundScores`
+ * (ADR-089 §1). Prima leggeva la `GameSession` con l'id di una live e riceveva 404, e anche
+ * quando la trovava ordinava per ordine di ingresso, perché quella DTO non porta punteggi.
  *
- * Since GameSessionDto.players contains playerName/playerOrder/color
- * but no individual scores, players are ranked by playerOrder.
- * The winnerName field is highlighted with a trophy badge.
+ * I punteggi non si registrano qui: il pulsante porta alla scheda Score della pagina live. Il
+ * modulo che stava al suo posto non salvava niente, chiudeva e basta.
  *
  * Task 3 — Sessions Redesign
  */
 
 'use client';
 
-import { useState } from 'react';
-
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Trophy, Users } from 'lucide-react';
 import Link from 'next/link';
 
 import { SessionStateRenderer } from '@/components/features/session-live';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/navigation/sheet';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
+import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
+import { PLAYER_COLOR_HEX } from '@/lib/constants/player-colors';
 
 interface ScoreboardPageProps {
   sessionId: string;
 }
 
-// Map backend status strings to Italian UI labels
-const STATUS_LABELS: Record<string, string> = {
-  Active: 'Attiva',
+type LivePlayer = LiveSessionDto['players'][number];
+
+const STATUS_LABELS: Record<LiveSessionDto['status'], string> = {
+  Created: 'In preparazione',
+  Setup: 'In preparazione',
+  InProgress: 'In corso',
   Paused: 'In pausa',
-  Finalized: 'Completata',
   Completed: 'Completata',
 };
 
-// Map backend status strings to Tailwind badge colors
-const STATUS_COLORS: Record<string, string> = {
-  Active: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400',
+const NEUTRAL_BADGE = 'bg-muted text-foreground dark:bg-card dark:text-muted-foreground';
+
+const STATUS_COLORS: Record<LiveSessionDto['status'], string> = {
+  Created: NEUTRAL_BADGE,
+  Setup: NEUTRAL_BADGE,
+  InProgress: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400',
   Paused: 'bg-amber-100 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400',
-  Finalized: 'bg-muted text-foreground dark:bg-card dark:text-muted-foreground',
-  Completed: 'bg-muted text-foreground dark:bg-card dark:text-muted-foreground',
+  Completed: NEUTRAL_BADGE,
 };
 
-// Avatar colors cycling for players that don't have a color set
+// Avatar colors cycling for players whose color has no mapping
 const FALLBACK_COLORS = [
   '#ef4444',
   '#3b82f6',
@@ -63,9 +61,31 @@ const FALLBACK_COLORS = [
   '#eab308',
 ];
 
-export function ScoreboardPage({ sessionId }: ScoreboardPageProps) {
-  const [scoreSheetOpen, setScoreSheetOpen] = useState(false);
+const RANK_MEDAL: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
 
+interface RankedPlayer {
+  player: LivePlayer;
+  /** Classifica a competizione: a pari punti, stessa posizione. */
+  rank: number;
+}
+
+/**
+ * Chi gioca, per totale decrescente; a pari punti nell'ordine di ingresso. Gli spettatori non
+ * segnano punti e non sono in classifica.
+ */
+function rankPlayers(session: LiveSessionDto): RankedPlayer[] {
+  const ordered = session.players
+    .filter(p => p.role !== 'Spectator')
+    .map((player, joinIndex) => ({ player, joinIndex }))
+    .sort((a, b) => b.player.totalScore - a.player.totalScore || a.joinIndex - b.joinIndex)
+    .map(entry => entry.player);
+  return ordered.map(player => ({
+    player,
+    rank: 1 + ordered.filter(other => other.totalScore > player.totalScore).length,
+  }));
+}
+
+export function ScoreboardPage({ sessionId }: ScoreboardPageProps) {
   const {
     data: session,
     isPending,
@@ -73,8 +93,8 @@ export function ScoreboardPage({ sessionId }: ScoreboardPageProps) {
     error,
     refetch,
   } = useQuery({
-    queryKey: ['session', sessionId],
-    queryFn: () => api.sessions.getById(sessionId),
+    queryKey: ['live-session-scoreboard', sessionId],
+    queryFn: () => api.liveSessions.getSession(sessionId),
     refetchInterval: query => (query.state.status === 'error' ? false : 10_000),
     retry: false,
   });
@@ -121,16 +141,11 @@ export function ScoreboardPage({ sessionId }: ScoreboardPageProps) {
   }
 
   // ----------- Data prep -----------
-  const statusLabel = STATUS_LABELS[session.status] ?? session.status;
-  const statusColor =
-    STATUS_COLORS[session.status] ??
-    'bg-muted text-foreground dark:bg-card dark:text-muted-foreground';
-
-  // Players ranked by playerOrder (ascending)
-  const rankedPlayers = [...session.players].sort((a, b) => a.playerOrder - b.playerOrder);
-
-  // Rank medal labels for positions 1–3
-  const rankMedal: Record<number, string> = { 1: '🥇', 2: '🥈', 3: '🥉' };
+  const ranked = rankPlayers(session);
+  const isCompleted = session.status === 'Completed';
+  const leaders = ranked.filter(entry => entry.rank === 1);
+  // Un vincitore solo a partita chiusa e con il primo posto non condiviso.
+  const winnerName = isCompleted && leaders.length === 1 ? leaders[0].player.displayName : null;
 
   // ----------- Render -----------
   return (
@@ -157,28 +172,31 @@ export function ScoreboardPage({ sessionId }: ScoreboardPageProps) {
                 {/* Status badge */}
                 <span
                   data-testid="status-badge"
-                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${statusColor}`}
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[session.status]}`}
                 >
-                  {statusLabel}
+                  {STATUS_LABELS[session.status]}
                 </span>
 
                 {/* Player count */}
-                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                <span
+                  data-testid="player-count"
+                  className="flex items-center gap-1 text-xs text-muted-foreground"
+                >
                   <Users className="h-3 w-3" />
-                  {session.playerCount}
+                  {ranked.length}
                 </span>
               </div>
             </div>
           </div>
 
           {/* Winner banner */}
-          {session.winnerName && (
+          {winnerName && (
             <div
               data-testid="winner-badge"
               className="mt-3 flex items-center gap-2 rounded-xl border border-amber-200 dark:border-amber-900/40 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/10 px-3 py-2 text-sm font-semibold text-amber-900 dark:text-amber-300"
             >
               <Trophy className="h-4 w-4 text-amber-600 dark:text-amber-400" aria-hidden="true" />
-              <span>Vincitore: {session.winnerName}</span>
+              <span>Vincitore: {winnerName}</span>
             </div>
           )}
         </div>
@@ -186,15 +204,17 @@ export function ScoreboardPage({ sessionId }: ScoreboardPageProps) {
 
       {/* ===== Player List ===== */}
       <div className="mx-auto max-w-lg space-y-3 p-4">
-        {rankedPlayers.map((player, idx) => {
-          const rank = idx + 1;
-          const avatarColor = player.color ?? FALLBACK_COLORS[idx % FALLBACK_COLORS.length];
-          const isWinner = session.winnerName?.toLowerCase() === player.playerName.toLowerCase();
-          const medal = rankMedal[rank];
+        {ranked.map(({ player, rank }, idx) => {
+          const avatarColor =
+            PLAYER_COLOR_HEX[player.color] ?? FALLBACK_COLORS[idx % FALLBACK_COLORS.length];
+          const isWinner = winnerName !== null && player.displayName === winnerName;
+          const medal = RANK_MEDAL[rank];
 
           return (
             <div
-              key={player.playerName}
+              key={player.id}
+              data-testid="scoreboard-row"
+              data-rank={rank}
               className={`flex items-center gap-4 rounded-xl border p-4 transition-colors ${
                 isWinner
                   ? 'border-amber-200 dark:border-amber-900/40 bg-amber-50/60 dark:bg-amber-950/10'
@@ -220,7 +240,7 @@ export function ScoreboardPage({ sessionId }: ScoreboardPageProps) {
                 }}
                 aria-hidden="true"
               >
-                {player.playerName
+                {player.displayName
                   .split(' ')
                   .map(n => n[0])
                   .join('')
@@ -231,7 +251,7 @@ export function ScoreboardPage({ sessionId }: ScoreboardPageProps) {
               {/* Name */}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-foreground">
-                  {player.playerName}
+                  {player.displayName}
                 </p>
                 {isWinner && (
                   <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">
@@ -239,79 +259,38 @@ export function ScoreboardPage({ sessionId }: ScoreboardPageProps) {
                   </p>
                 )}
               </div>
+
+              {/* Total */}
+              <p
+                data-testid="player-total"
+                className="shrink-0 text-lg font-bold tabular-nums text-foreground"
+              >
+                {player.totalScore}
+              </p>
             </div>
           );
         })}
 
         {/* Empty state */}
-        {rankedPlayers.length === 0 && (
+        {ranked.length === 0 && (
           <div className="py-12 text-center text-sm text-muted-foreground">
             Nessun giocatore in questa sessione
           </div>
         )}
       </div>
 
-      {/* ===== Action bar ===== */}
-      <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-card/80 backdrop-blur-sm p-4">
-        <div className="mx-auto max-w-lg">
-          <Button
-            className="w-full bg-amber-500 hover:bg-amber-600 text-white"
-            onClick={() => setScoreSheetOpen(true)}
-          >
-            Registra Punteggio
-          </Button>
-        </div>
-      </div>
-
-      {/* ===== Score Sheet ===== */}
-      <Sheet open={scoreSheetOpen} onOpenChange={setScoreSheetOpen}>
-        <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto px-4 pb-8 pt-2">
-          <SheetHeader className="pb-4">
-            <div className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-muted-foreground/30" />
-            <SheetTitle>Registra Punteggio</SheetTitle>
-            <SheetDescription>Seleziona il giocatore e inserisci il punteggio</SheetDescription>
-          </SheetHeader>
-
-          {/* Simple score entry form */}
-          <div className="space-y-4">
-            {rankedPlayers.map(player => {
-              const avatarColor =
-                player.color ?? FALLBACK_COLORS[player.playerOrder % FALLBACK_COLORS.length];
-
-              return (
-                <div
-                  key={player.playerName}
-                  className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3"
-                >
-                  <div
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-xs font-bold text-white"
-                    style={{ backgroundColor: avatarColor }}
-                    aria-hidden="true"
-                  >
-                    {player.playerName.slice(0, 2).toUpperCase()}
-                  </div>
-                  <span className="flex-1 text-sm font-medium text-foreground">
-                    {player.playerName}
-                  </span>
-                  <input
-                    type="number"
-                    placeholder="0"
-                    aria-label={`Punteggio per ${player.playerName}`}
-                    className="w-20 rounded-md border border-border bg-background px-3 py-1.5 text-right text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  />
-                </div>
-              );
-            })}
-
-            <Button
-              className="w-full bg-amber-500 hover:bg-amber-600 text-white mt-2"
-              onClick={() => setScoreSheetOpen(false)}
-            >
-              Salva Punteggi
+      {/* ===== Action bar: i punteggi si registrano nella scheda Score della pagina live ===== */}
+      {!isCompleted && (
+        <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-card/80 backdrop-blur-sm p-4">
+          <div className="mx-auto max-w-lg">
+            <Button className="w-full bg-amber-500 hover:bg-amber-600 text-white" asChild>
+              <Link href={`/sessions/${sessionId}/live?tab=score`} data-testid="record-score-link">
+                Registra Punteggio
+              </Link>
             </Button>
           </div>
-        </SheetContent>
-      </Sheet>
+        </div>
+      )}
     </div>
   );
 }

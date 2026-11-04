@@ -10,7 +10,7 @@ import { Page } from '@playwright/test';
 export async function dismissCookieConsent(page: Page, label = '[cookie]'): Promise<void> {
   const cookieBtn = page.getByRole('button', { name: /essential only|accept all/i }).first();
 
-  const visible = await cookieBtn.isVisible({ timeout: 2_000 }).catch(() => false);
+  const visible = await cookieBtn.isVisible({ timeout: 2_000 });
 
   if (visible) {
     await cookieBtn.click();

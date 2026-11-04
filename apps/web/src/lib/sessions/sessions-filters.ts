@@ -51,6 +51,11 @@ export interface SessionScoreEntry {
 export interface SessionListItem {
   /** UUID from GameSessionDto.id. */
   readonly id: string;
+  /**
+   * Id of the LiveGameSession correlated to this GameSession (#4156 D4). The session's pages live
+   * under `/sessions/{liveSessionId}`; `null` means the session has no detail page.
+   */
+  readonly liveSessionId: string | null;
   /** Human-readable game name from game catalog join. Falls back to gameId. */
   readonly gameName: string;
   /** Formatted display date, e.g. "23 apr 2026". */
@@ -97,6 +102,7 @@ export interface SessionListItem {
 export function transformSessionsToItems(
   sessions: ReadonlyArray<{
     id: string;
+    liveSessionId?: string | null;
     gameId: string;
     status: string;
     startedAt: string;
@@ -123,6 +129,7 @@ export function transformSessionsToItems(
 
     return {
       id: dto.id,
+      liveSessionId: dto.liveSessionId ?? null,
       gameName,
       date: formatDate(dto.startedAt),
       when: formatRelativeTime(dto.startedAt),

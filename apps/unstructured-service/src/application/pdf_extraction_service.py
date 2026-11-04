@@ -30,7 +30,7 @@ class PdfExtractionService:
         file_content: BinaryIO,
         filename: str,
         strategy: Literal["fast", "hi_res"] = "fast",
-        language: str = "ita",
+        language: str = "eng+ita+deu",
     ) -> ExtractionResult:
         """
         Extract text from PDF asynchronously

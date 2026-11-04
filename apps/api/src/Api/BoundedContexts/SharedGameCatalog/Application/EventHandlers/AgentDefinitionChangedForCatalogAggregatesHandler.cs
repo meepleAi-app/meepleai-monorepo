@@ -87,6 +87,11 @@ internal sealed class AgentDefinitionChangedForCatalogAggregatesHandler
     private async Task InvalidateAsync(string eventName, Guid agentDefinitionId, CancellationToken ct)
     {
         // Always invalidate the catalog list cache (Issue #613: bounded retry).
+        // #4659: this one still rethrows when the retry policy gives up, on purpose. The event comes from the
+        // outbox, which (OutboxOnly: staging, production) retries it when the handler throws, and the eviction
+        // is idempotent: the rethrow is the retry. The handlers that run inline after a saved write
+        // (VectorDocumentIndexedForKbFlagHandler) are the ones that log and carry on, see
+        // CacheInvalidationRetryPolicyExtensions.
         await _retryPolicy.ExecuteAsync(
             token => _cache.RemoveByTagAsync(SearchGamesTag, token),
             "shared-games.list",

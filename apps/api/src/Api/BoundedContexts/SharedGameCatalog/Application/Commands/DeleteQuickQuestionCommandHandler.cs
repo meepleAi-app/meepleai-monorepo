@@ -43,8 +43,8 @@ internal sealed class DeleteQuickQuestionCommandHandler : ICommandHandler<Delete
             .ConfigureAwait(false)
             ?? throw new NotFoundException("QuickQuestion", command.QuestionId.ToString());
 
-        // Fetch aggregate to maintain domain invariants
-        var game = await _gameRepository.GetByIdAsync(questionEntity.SharedGameId, cancellationToken)
+        // Fetch aggregate to maintain domain invariants, with its quick questions (#4596)
+        var game = await _gameRepository.GetByIdWithQuickQuestionsAsync(questionEntity.SharedGameId, cancellationToken)
             .ConfigureAwait(false)
             ?? throw new NotFoundException("SharedGame", questionEntity.SharedGameId.ToString());
 

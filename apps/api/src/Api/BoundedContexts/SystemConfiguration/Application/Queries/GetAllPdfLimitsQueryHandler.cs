@@ -49,16 +49,11 @@ internal sealed class GetAllPdfLimitsQueryHandler : IQueryHandler<GetAllPdfLimit
         var weeklyKey = $"UploadLimits:{tier}:WeeklyLimit";
         var perGameKey = $"UploadLimits:{tier}:PerGameLimit";
 
-        // Fetch all three configs in parallel
-        var dailyTask = _configService.GetConfigurationByKeyAsync(dailyKey, null, cancellationToken);
-        var weeklyTask = _configService.GetConfigurationByKeyAsync(weeklyKey, null, cancellationToken);
-        var perGameTask = _configService.GetConfigurationByKeyAsync(perGameKey, null, cancellationToken);
-
-        await Task.WhenAll(dailyTask, weeklyTask, perGameTask).ConfigureAwait(false);
-
-        var dailyConfig = await dailyTask.ConfigureAwait(false);
-        var weeklyConfig = await weeklyTask.ConfigureAwait(false);
-        var perGameConfig = await perGameTask.ConfigureAwait(false);
+        // Sequential on purpose: these reads share the request-scoped DbContext, which EF Core
+        // forbids using concurrently — running them under Task.WhenAll returned 500 (#3843).
+        var dailyConfig = await _configService.GetConfigurationByKeyAsync(dailyKey, null, cancellationToken).ConfigureAwait(false);
+        var weeklyConfig = await _configService.GetConfigurationByKeyAsync(weeklyKey, null, cancellationToken).ConfigureAwait(false);
+        var perGameConfig = await _configService.GetConfigurationByKeyAsync(perGameKey, null, cancellationToken).ConfigureAwait(false);
 
         // Use defaults if not configured
         var defaults = DefaultLimits[tier];

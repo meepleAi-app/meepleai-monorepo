@@ -258,6 +258,13 @@ public sealed class BackfillPdfCoversJobTests : IDisposable
         // exception type name and the resourceKey operators must inspect for orphan blobs.
         refreshedFirst.CoverGenerationError.Should().Contain(nameof(InvalidOperationException));
         refreshedFirst.CoverGenerationError.Should().Contain($"covers/pdf/{first.Id:D}/cover-preview.webp");
+        // #4085: it must ALSO contain the real exception message. Before this fix the handler
+        // discarded ex.Message entirely — this exact assertion would have failed, because
+        // "boom" never reached CoverGenerationError, only the type name and the orphan hint
+        // did. Measured impact: 116 of 124 real Failed rows carried that same uninformative
+        // string while the actual AWS SDK error (DisablePayloadSigning rejected over HTTP,
+        // #4016 causa A) never made it to the database.
+        refreshedFirst.CoverGenerationError.Should().Contain("boom");
 
         var refreshedSecond = _db.PdfDocuments.AsNoTracking().Single(p => p.Id == second.Id);
         refreshedSecond.CoverGenerationStatus.Should().Be(nameof(PdfCoverGenerationStatus.Skipped));

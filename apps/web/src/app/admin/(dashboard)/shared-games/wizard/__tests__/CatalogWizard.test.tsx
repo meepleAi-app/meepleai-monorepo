@@ -42,6 +42,18 @@ describe('CatalogWizard', () => {
     expect(screen.getByText('Select Game')).toBeInTheDocument();
     expect(screen.getByText('Upload PDFs')).toBeInTheDocument();
     expect(screen.getByText('Review')).toBeInTheDocument();
+    expect(screen.getByText('RAG Test')).toBeInTheDocument();
+  });
+
+  // Issue #4138: the wizard had a fourth step, "Agent Setup", hosting
+  // AgentSetupPanel - a per-game agent created via POST /agents/create-with-setup.
+  // Both are retired: one system agent, not tied to a game. This asserts the step
+  // is gone, which the test above could not: it listed only the first three labels,
+  // so it stayed green whatever came after them.
+  it('has no agent setup step', () => {
+    render(<CatalogWizard />);
+    expect(screen.queryByText('Agent Setup')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Setup Agent/i)).not.toBeInTheDocument();
   });
 
   it('searches for games when search is triggered', async () => {

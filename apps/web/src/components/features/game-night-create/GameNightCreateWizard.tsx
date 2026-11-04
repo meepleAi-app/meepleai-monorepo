@@ -80,6 +80,9 @@ export interface GameNightCreateWizardProps {
 
   // Step 4 data
   readonly libraryGames: readonly GameCandidateOption[];
+  /** Step 4 search text; with `onGameSearchChange` the picker shows a search box (#4187). */
+  readonly gameSearch?: string;
+  readonly onGameSearchChange?: (q: string) => void;
 
   // Submit flow
   readonly onSubmit: () => void;
@@ -103,6 +106,8 @@ export function GameNightCreateWizard({
   isSearchingPlayers = false,
   regulars,
   libraryGames,
+  gameSearch,
+  onGameSearchChange,
   onSubmit,
   isSubmitting = false,
   isCheckingConflict = false,
@@ -226,6 +231,8 @@ export function GameNightCreateWizard({
               onToggleGame={gameId => dispatch({ type: 'toggleGame', gameId })}
               onToggleDecideAtGroup={() => dispatch({ type: 'toggleDecideAtGroup' })}
               labels={labels.step4}
+              search={gameSearch}
+              onSearchChange={onGameSearchChange}
             />
           )}
         </div>

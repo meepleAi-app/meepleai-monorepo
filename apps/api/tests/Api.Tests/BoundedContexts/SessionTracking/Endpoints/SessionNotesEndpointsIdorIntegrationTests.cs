@@ -16,6 +16,28 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.SessionTracking.Endpoints;
 
 /// <summary>
+/// La fixture di <see cref="SessionNotesEndpointsIdorIntegrationTests"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// #4050. Database per test, non condiviso per classe, benche' i test non asseriscano su conteggi
+/// globali: il seeding sta in <c>InitializeAsync</c>, che xUnit chiama una volta per METODO, quindi
+/// un database condiviso accumulerebbe N copie di utenti, gioco e sessione.
+/// </para>
+/// <para>
+/// Quelle copie sarebbero inerti — gli helper generano GUID freschi, le email portano un GUID, e
+/// l'unico indice unico in gioco (<c>ix_shared_games_bgg_id</c>) e' filtrato su
+/// <c>bgg_id IS NOT NULL</c> mentre il seeder lascia <c>BggId</c> nullo. Ma la condivisione
+/// comprerebbe soltanto il clone del database (~0,11s per test, perche' il seeding si paga in ogni
+/// caso) al prezzo di quella catena di tre verifiche: se un domani qualcuno rende unico il titolo,
+/// o il seeder inizia a scrivere un <c>BggId</c>, la classe si rompe per un motivo che non
+/// riguarda cio' che testa. Il guadagno vero di #4050 e' l'host, ed e' condiviso comunque.
+/// </para>
+/// </remarks>
+public sealed class SessionNotesEndpointsIdorHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "session_notes_idor");
+
+/// <summary>
 /// HTTP-layer IDOR tests for the private-notes endpoints (Issue #3263).
 /// The endpoints must derive the caller identity from the authenticated principal,
 /// NOT from a client-supplied <c>requesterId</c>/<c>participantId</c>. A second
@@ -26,10 +48,10 @@ namespace Api.Tests.BoundedContexts.SessionTracking.Endpoints;
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SessionTracking")]
 [Trait("Issue", "3263")]
-public sealed class SessionNotesEndpointsIdorIntegrationTests : IAsyncLifetime
+public sealed class SessionNotesEndpointsIdorIntegrationTests
+    : IClassFixture<SessionNotesEndpointsIdorHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
+    private readonly SessionNotesEndpointsIdorHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _ownerClient = null!;
     private HttpClient _otherClient = null!;
@@ -38,20 +60,25 @@ public sealed class SessionNotesEndpointsIdorIntegrationTests : IAsyncLifetime
     private string _otherToken = null!;
     private Guid _sessionId;
 
-    public SessionNotesEndpointsIdorIntegrationTests(SharedTestcontainersFixture fixture)
+    public SessionNotesEndpointsIdorIntegrationTests(SessionNotesEndpointsIdorHostFixture hostFixture)
     {
-        _fixture = fixture;
-        _testDbName = $"sessionnotes_idor_{Guid.NewGuid():N}";
+        _hostFixture = hostFixture;
     }
 
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
+        // #4050. L'host viene dalla fixture (una volta per classe); qui resta un database clonato
+        // dal template, piu' il seeding che questa classe aveva gia'.
+        //
+        // 🔴 BeginTestAsync DEVE precedere l'uso di _factory: lo scope qui sotto semina, e con
+        // l'ordine invertito scriverebbe nel database di avvio mentre le richieste HTTP leggono
+        // quello per test — note introvabili, cioe' un fallimento che somiglia a un bug di authz
+        // invece che a un errore di cablaggio.
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await db.Database.MigrateAsync();
 
         (_ownerId, _ownerToken) = await TestSessionHelper.CreateUserSessionAsync(db);
         (_, _otherToken) = await TestSessionHelper.CreateUserSessionAsync(db);
@@ -72,16 +99,18 @@ public sealed class SessionNotesEndpointsIdorIntegrationTests : IAsyncLifetime
         await db.SaveChangesAsync();
         _sessionId = gameSession.Id;
 
+        // Due client restano due client: i test distinguono i chiamanti con l'header di
+        // autenticazione, non con l'istanza, ma crearli dall'host gia' avviato non costa un host.
         _ownerClient = _factory.CreateClient();
         _otherClient = _factory.CreateClient();
     }
 
-    public async ValueTask DisposeAsync()
+    // I client sono di questa istanza e si dispongono; host e database sono della fixture.
+    public ValueTask DisposeAsync()
     {
         _ownerClient?.Dispose();
         _otherClient?.Dispose();
-        _factory?.Dispose();
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
+        return ValueTask.CompletedTask;
     }
 
     private string SessionNotesUrl => $"/api/v1/game-sessions/{_sessionId}/private-notes";

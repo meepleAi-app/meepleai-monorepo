@@ -166,14 +166,21 @@ public sealed class UserLibraryE2ETests : E2ETestBase
         var statusPayload = new { newState = "Owned" };
         var response = await Client.PatchAsJsonAsync($"/api/v1/library/games/{_testGameId}", statusPayload);
 
-        // Assert - Skip if endpoint has missing dependencies in test environment
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("UpdateGameStatus returned 500 — service likely unavailable");
-        response.StatusCode.Should().BeOneOf(
-            HttpStatusCode.OK,
-            HttpStatusCode.NoContent,
-            HttpStatusCode.BadRequest,
-            HttpStatusCode.NotFound);
+        // Assert
+        // #4023: un 500 e un difetto del prodotto, non l assenza di un servizio. Se un
+        // prerequisito manca davvero, si accerta in testa al test con
+        // E2EServiceProbe.SkipUnlessHealthyAsync — non si deduce da questa risposta.
+        // #4253: la rotta manda due comandi nella stessa richiesta; il secondo falliva con
+        // «already being tracked» e la risposta era 500. Il gioco e' appena stato aggiunto
+        // (stato Nuovo) e Nuovo -> Owned e' una transizione valida, quindi l'unico esito
+        // corretto e' 200 con lo stato nuovo nel corpo: 400 e 404 qui sarebbero difetti.
+        response.StatusCode.Should().Be(HttpStatusCode.OK,
+            "UpdateGameStatus deve riuscire: " + await DescribeResponseAsync(response));
+
+        var updated = await response.Content.ReadFromJsonAsync<UpdatedEntryResponse>();
+        updated.Should().NotBeNull();
+        updated!.CurrentState.Should().Be("Owned",
+            "il corpo e' riletto dal database dopo il cambio di stato: deve riportare Owned");
     }
 
     #endregion
@@ -364,7 +371,78 @@ public sealed class UserLibraryE2ETests : E2ETestBase
 
     #endregion
 
+    #region Sessions and Labels Tests (#4505)
+
+    [Fact]
+    public async Task RecordGameSession_IsSavedAndCountedInTheStatus()
+    {
+        // Arrange
+        var email = $"library_session_{Guid.NewGuid():N}@example.com";
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
+        SetSessionCookie(sessionToken);
+        await Client.PostAsJsonAsync($"/api/v1/library/games/{_testGameId}", new { });
+
+        // Act
+        var response = await Client.PostAsJsonAsync(
+            $"/api/v1/library/games/{_testGameId}/sessions",
+            new { playedAt = DateTime.UtcNow.AddHours(-2), durationMinutes = 45, didWin = true, players = "Anna, Bruno" });
+
+        // Assert
+        // #4505: la sessione nuova finiva Modified invece di Added — un UPDATE di una riga che non
+        // esiste, DbUpdateConcurrencyException, che il middleware traduce in 409 concurrent_edit:
+        // a ogni tentativo, non per una scrittura concorrente.
+        response.StatusCode.Should().Be(HttpStatusCode.Created,
+            "registrare una partita deve riuscire: " + await DescribeResponseAsync(response));
+
+        var status = await Client.GetFromJsonAsync<GameStatusWithDataResponse>($"/api/v1/library/games/{_testGameId}/status");
+        status!.AssociatedData!.GameSessionsCount.Should().Be(1, "la partita registrata è nel database");
+    }
+
+    [Fact]
+    public async Task AddAndRemoveLabel_AreSavedAndReadBack()
+    {
+        // Arrange
+        var email = $"library_label_{Guid.NewGuid():N}@example.com";
+        var (sessionToken, _) = await RegisterUserAsync(email, "ValidUnusualPwd123!");
+        SetSessionCookie(sessionToken);
+        await Client.PostAsJsonAsync($"/api/v1/library/games/{_testGameId}", new { });
+
+        var created = await Client.PostAsJsonAsync("/api/v1/library/labels", new { name = "Da rigiocare", color = "#3366ff" });
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await DescribeResponseAsync(created));
+        var label = await created.Content.ReadFromJsonAsync<LabelResponse>();
+
+        // Act + Assert: aggiunta. #4505: la rotta rispondeva 200 con l'etichetta senza salvarla.
+        var added = await Client.PostAsync($"/api/v1/library/games/{_testGameId}/labels/{label!.Id}", content: null);
+        added.StatusCode.Should().Be(HttpStatusCode.OK, await DescribeResponseAsync(added));
+        (await GetGameLabelIdsAsync()).Should().BeEquivalentTo([label.Id], "l'etichetta aggiunta si rilegge");
+
+        var status = await Client.GetFromJsonAsync<GameStatusWithDataResponse>($"/api/v1/library/games/{_testGameId}/status");
+        status!.AssociatedData!.LabelsCount.Should().Be(1, "lo stato in libreria conta le etichette assegnate");
+
+        var addedAgain = await Client.PostAsync($"/api/v1/library/games/{_testGameId}/labels/{label.Id}", content: null);
+        addedAgain.StatusCode.Should().Be(HttpStatusCode.Conflict, await DescribeResponseAsync(addedAgain));
+
+        // Act + Assert: rimozione. #4505: la lettura non caricava le etichette, quindi 404.
+        var removed = await Client.DeleteAsync($"/api/v1/library/games/{_testGameId}/labels/{label.Id}");
+        removed.StatusCode.Should().Be(HttpStatusCode.NoContent, await DescribeResponseAsync(removed));
+        (await GetGameLabelIdsAsync()).Should().BeEmpty("l'etichetta tolta non si rilegge più");
+    }
+
+    private async Task<List<Guid>> GetGameLabelIdsAsync()
+    {
+        var labels = await Client.GetFromJsonAsync<List<LabelResponse>>($"/api/v1/library/games/{_testGameId}/labels");
+        return labels!.Select(l => l.Id).ToList();
+    }
+
+    #endregion
+
     #region Response DTOs
+
+    private sealed record LabelResponse(Guid Id, string Name, string Color);
+
+    private sealed record GameStatusWithDataResponse(bool InLibrary, AssociatedDataResponse? AssociatedData);
+
+    private sealed record AssociatedDataResponse(int GameSessionsCount, int ChecklistItemsCount, int LabelsCount);
 
     private sealed record LibraryResponse(
         List<LibraryItemDto> Items,
@@ -380,6 +458,8 @@ public sealed class UserLibraryE2ETests : E2ETestBase
         bool IsFavorite,
         string Status,
         DateTime AddedAt);
+
+    private sealed record UpdatedEntryResponse(string CurrentState);
 
     private sealed record LibraryStatsResponse(
         int TotalGames,

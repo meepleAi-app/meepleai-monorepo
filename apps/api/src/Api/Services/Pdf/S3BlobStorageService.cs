@@ -32,6 +32,20 @@ internal sealed class S3BlobStorageService : IBlobStorageService
     }
 
     /// <summary>
+    /// Issue #3846: <c>DisablePayloadSigning</c> exists for S3-compatible providers that reject
+    /// <c>STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER</c>, but AWSSDK refuses to send an UNSIGNED
+    /// payload over cleartext: every PutObject against an <c>http://</c> endpoint fails with
+    /// "When DisablePayloadSigning is true, the request must be sent over HTTPS." — i.e. no upload
+    /// at all could reach a MinIO dev/E2E bucket. Keep the payload signed on cleartext endpoints
+    /// (the only ones where that error is possible) and unsigned on HTTPS, which is what production
+    /// (R2/AWS) uses: behaviour there is unchanged.
+    ///
+    /// The <c>UsesPlainHttp</c> predicate is the same gate as the presign scheme realignment
+    /// (#3498), so an operator opts into cleartext once and both paths follow.
+    /// </summary>
+    private bool DisablePayloadSigningForEndpoint => !BlobStorageServiceFactory.UsesPlainHttp(_options.Endpoint);
+
+    /// <summary>
     /// Exposes the S3 client for health check connectivity verification.
     /// </summary>
     internal IAmazonS3 S3Client => _s3Client;
@@ -83,7 +97,7 @@ internal sealed class S3BlobStorageService : IBlobStorageService
                 InputStream = uploadStream,
                 ContentType = "application/pdf",
                 AutoCloseStream = false, // Caller owns the original stream; we own `buffer` and dispose it below.
-                DisablePayloadSigning = true, // Required for S3-compatible providers (MinIO, R2) that don't support STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER
+                DisablePayloadSigning = DisablePayloadSigningForEndpoint, // Required for S3-compatible providers (MinIO, R2) that don't support STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER — but only over HTTPS, see the field.
                 DisableDefaultChecksumValidation = true, // Issue #2271: ContentLength is explicit; skip the checksum re-read of the stream.
             };
             request.Headers.ContentLength = contentLength; // Issue #2271: explicit header required by R2 strict validation.
@@ -105,7 +119,8 @@ internal sealed class S3BlobStorageService : IBlobStorageService
         catch (AmazonS3Exception ex)
         {
             _logger.LogError(ex, "S3 error storing file in {Category}/{ResourceKey}: {ErrorCode}", category, resourceKey, ex.ErrorCode);
-            return new BlobStorageResult(false, null, null, 0, $"S3 error: {ex.Message}");
+            // #4660: the exception is logged above; what reaches the uploader is the fixed text.
+            return new BlobStorageResult(false, null, null, 0, BlobStorageFailureText.S3);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         catch (Exception ex)
@@ -116,7 +131,7 @@ internal sealed class S3BlobStorageService : IBlobStorageService
             // We must catch all exceptions to return error results instead of crashing the service.
             // Context: S3 operations can fail in unpredictable ways across different network conditions
             _logger.LogError(ex, "Unexpected error storing file in {Category}/{ResourceKey}", category, resourceKey);
-            return new BlobStorageResult(false, null, null, 0, ex.Message);
+            return new BlobStorageResult(false, null, null, 0, BlobStorageFailureText.Generic);
         }
 #pragma warning restore CA1031 // Do not catch general exception types
         finally
@@ -564,7 +579,7 @@ internal sealed class S3BlobStorageService : IBlobStorageService
                 InputStream = uploadStream,
                 ContentType = contentType,
                 AutoCloseStream = false,
-                DisablePayloadSigning = true,
+                DisablePayloadSigning = DisablePayloadSigningForEndpoint,
             };
 
             await _s3Client.PutObjectAsync(request, ct).ConfigureAwait(false);

@@ -21,6 +21,12 @@ internal interface IGameNightInvitationRepository : IRepository<GameNightInvitat
     Task<GameNightInvitation?> GetByTokenAsync(string token, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Looks up an invitation by its unsubscribe key (#4846), whatever the invitation's state: the key sits in an
+    /// email that may outlive the invitation. Returns <c>null</c> for a key nobody holds, and for the RSVP token.
+    /// </summary>
+    Task<GameNightInvitation?> GetByUnsubscribeKeyAsync(string unsubscribeKey, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns all invitations belonging to a single game night, regardless of
     /// status. Used by the organizer-facing list and by the
     /// <c>AcceptedSoFar</c> aggregate when reading by token.

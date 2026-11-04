@@ -299,13 +299,13 @@ internal static class ConfigurationEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} performing bulk update on {Count} configurations",
-            session!.Principal!.Subject.Id, request.Updates.Count);
+            session!.Principal!.Subject.Id, request.Updates?.Count ?? 0);
 
-        var invalidIds = request.Updates.Where(u => !Guid.TryParse(u.Id, out _)).Select(u => u.Id).ToList();
+        var invalidIds = (request.Updates ?? []).Where(u => !Guid.TryParse(u.Id, out _)).Select(u => u.Id).ToList();
         if (invalidIds.Count > 0)
             return Results.BadRequest(new { error = $"Invalid configuration IDs: {string.Join(", ", invalidIds)}" });
 
-        var updates = request.Updates.Select(u => new BoundedContexts.SystemConfiguration.Application.Commands.ConfigurationUpdate(
+        var updates = (request.Updates ?? []).Select(u => new BoundedContexts.SystemConfiguration.Application.Commands.ConfigurationUpdate(
             Id: Guid.Parse(u.Id),
             Value: u.Value
         )).ToList();
@@ -359,9 +359,9 @@ internal static class ConfigurationEndpoints
         if (!authorized) return error!;
 
         logger.LogInformation("Admin {AdminId} importing {Count} configurations",
-            session!.Principal!.Subject.Id, request.Configurations.Count);
+            session!.Principal!.Subject.Id, request.Configurations?.Count ?? 0);
 
-        var items = request.Configurations.Select(c => new ConfigurationImportItem(
+        var items = (request.Configurations ?? []).Select(c => new ConfigurationImportItem(
             Key: c.Key,
             Value: c.Value,
             ValueType: c.ValueType,
@@ -373,10 +373,20 @@ internal static class ConfigurationEndpoints
         )).ToList();
 
         var command = new ImportConfigsCommand(items, request.OverwriteExisting, session!.Principal!.Subject.Id);
-        var importedCount = await mediator.Send(command, ct).ConfigureAwait(false);
+        var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
-        logger.LogInformation("Successfully imported {Count} configurations", importedCount);
-        return Results.Json(new { importedCount });
+        logger.LogInformation("Successfully imported {Count} configurations", result.ImportedCount);
+
+        // #4612: le chiavi riservate si saltano senza fallire l'import; il chiamante le trova qui.
+        if (result.SkippedKeys.Count > 0)
+        {
+            logger.LogWarning(
+                "Import skipped {Count} reserved configuration key(s): {Keys}",
+                result.SkippedKeys.Count,
+                string.Join(", ", result.SkippedKeys));
+        }
+
+        return Results.Json(new { importedCount = result.ImportedCount, skippedKeys = result.SkippedKeys });
     }
 
     private static async Task<IResult> HandleGetConfigurationHistory(

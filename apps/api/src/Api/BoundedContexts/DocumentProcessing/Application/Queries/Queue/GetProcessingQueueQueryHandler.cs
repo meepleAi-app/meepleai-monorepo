@@ -36,14 +36,25 @@ internal class GetProcessingQueueQueryHandler : IQueryHandler<GetProcessingQueue
             dbQuery = dbQuery.Where(j => j.Status == query.StatusFilter);
         }
 
-        // Filter by date range
+        // Filter by date range.
+        // Issue #4055: fromDate/toDate are bound from the query string as DateTimeOffset, so they
+        // carry the client's offset, and they become Npgsql parameters compared against a
+        // `timestamptz` column — which Npgsql refuses unless the offset is 0 ("Cannot write
+        // DateTimeOffset with Offset=01:00:00 ..."). Measured against the local stack on
+        // 2026-10-04: GET /api/v1/admin/queue?fromDate=2026-01-01T00:00:00Z → 200, the same value
+        // with +01:00 → 400 `bad_request` whose stack trace is
+        // DateTimeOffsetConverter.WriteCore → GetProcessingQueueQueryHandler.Handle. Same for
+        // GET /api/v1/admin/kb/processing-queue, which reuses this query.
+        // Converting preserves the instant, so the filter semantics do not change.
         if (query.FromDate.HasValue)
         {
-            dbQuery = dbQuery.Where(j => j.CreatedAt >= query.FromDate.Value);
+            var fromDate = query.FromDate.Value.ToUniversalTime();
+            dbQuery = dbQuery.Where(j => j.CreatedAt >= fromDate);
         }
         if (query.ToDate.HasValue)
         {
-            dbQuery = dbQuery.Where(j => j.CreatedAt <= query.ToDate.Value);
+            var toDate = query.ToDate.Value.ToUniversalTime();
+            dbQuery = dbQuery.Where(j => j.CreatedAt <= toDate);
         }
 
         // Filter by game ID (matches PdfDocument.SharedGameId)
@@ -62,10 +73,12 @@ internal class GetProcessingQueueQueryHandler : IQueryHandler<GetProcessingQueue
         // Total count for pagination
         var total = await dbQuery.CountAsync(cancellationToken).ConfigureAwait(false);
 
-        // Sort: active jobs first (Queued/Processing by priority), then completed/failed by date
+        // Sort: active jobs first, then by priority DESCENDING — the order PdfProcessingQuartzJob picks
+        // them in (#4443 R5: ascending put a priority-10 upload below the priority-0 jobs, off the
+        // first page of the panel). Same priority: newest first.
         var jobs = await dbQuery
             .OrderByDescending(j => j.Status == "Queued" || j.Status == "Processing" ? 1 : 0)
-            .ThenBy(j => j.Priority)
+            .ThenByDescending(j => j.Priority)
             .ThenByDescending(j => j.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)

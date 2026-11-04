@@ -44,7 +44,12 @@ internal sealed class CompleteGameNightCommandHandler
         CancellationToken cancellationToken)
     {
         // ── 1. Load GameNightEvent entity ──────────────────────────────
+        // Issue #3866: `.AsTracking()` is REQUIRED on all three reads in this handler. The
+        // DbContext default is NoTracking (PERF-06), so they came back DETACHED: the night stayed
+        // InProgress, its sessions stayed Active and their links stayed open, while the handler
+        // returned a result describing a completion that never happened.
         var nightEntity = await _db.GameNightEvents
+            .AsTracking()
             .FirstOrDefaultAsync(e => e.Id == request.GameNightEventId, cancellationToken)
             .ConfigureAwait(false)
             ?? throw new NotFoundException(
@@ -69,6 +74,7 @@ internal sealed class CompleteGameNightCommandHandler
 
         // ── 2. Discover sessions linked to this night ──────────────────
         var links = await _db.GameNightSessions
+            .AsTracking()
             .Where(gns => gns.GameNightEventId == nightEntity.Id)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -79,6 +85,7 @@ internal sealed class CompleteGameNightCommandHandler
         // ── 3. Cascade-finalize non-finalized sessions ─────────────────
 #pragma warning disable MA0006 // EF LINQ expression — string.Equals does not translate to SQL
         var nonFinalizedSessions = await _db.SessionTrackingSessions
+            .AsTracking()
             .Where(s => linkSessionIds.Contains(s.Id) && s.Status != "Finalized")
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);

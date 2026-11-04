@@ -211,10 +211,16 @@ public sealed class WizardEndpointsIntegrationTests : IAsyncLifetime
         var response = await _client.PostAsJsonAsync("/api/v1/admin/shared-games/wizard/create", request);
 
         // Assert
-        // Note: Without PDF document seeding, handler throws NotFoundException → 404
-        // Full implementation requires DocumentProcessing BC test setup
-        // 422 UnprocessableEntity is returned when FluentValidation or model binding rejects the payload
-        response.StatusCode.Should().BeOneOf(HttpStatusCode.Created, HttpStatusCode.BadRequest, HttpStatusCode.UnprocessableEntity, HttpStatusCode.NotFound);
+        // #3886: l'asserzione era `201 | 400 | 422 | 404` — quattro esiti accettati non provano
+        // granche', e infatti hanno coperto per mesi un 500. Il contratto e' uno solo: un
+        // PdfDocumentId inesistente e' un 404, perche' il command handler solleva NotFoundException
+        // e il middleware la mappa (ApiExceptionHandlerMiddleware:402).
+        //
+        // Il 500 non veniva dall'handler: la risoluzione DI del suo IBggCoverDownloader costruiva
+        // IBggCoverUploadPipeline, la cui factory pretendeva le S3_* e lanciava PRIMA di entrare
+        // nell'handler. Registrazione ora condizionata a STORAGE_PROVIDER=s3, come in #3363.
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound,
+            "un PdfDocumentId inesistente e' una risorsa mancante, non un errore del server");
     }
 
     [Fact]

@@ -19,6 +19,27 @@
 'use strict';
 
 /**
+ * Mappa un'origine HTTP sulla sua controparte WebSocket.
+ *
+ * 🔴 #4059 — per la CSP `ws:` e `http:` sono **schemi distinti**: un'origine elencata come
+ * `http://localhost:8080` in `connect-src` NON autorizza `ws://localhost:8080`. Il trasporto
+ * WebSockets di SignalR veniva quindi bloccato dopo un negotiate andato a buon fine, e il
+ * browser lo diceva a chiare lettere:
+ *
+ *   Connecting to 'ws://localhost:8080/hubs/gamestate?id=...' violates the following Content
+ *   Security Policy directive: "connect-src 'self' http://api:8080 http://localhost:8080 ..."
+ *
+ * @param {string} httpOrigin - es. `http://localhost:8080` o `https://api.example.test`
+ * @returns {string | null} `ws://`/`wss://` equivalente, o null se non e' un'origine http(s)
+ */
+function toWebSocketOrigin(httpOrigin) {
+  if (typeof httpOrigin !== 'string' || httpOrigin.length === 0) return null;
+  if (httpOrigin.startsWith('https://')) return 'wss://' + httpOrigin.slice('https://'.length);
+  if (httpOrigin.startsWith('http://')) return 'ws://' + httpOrigin.slice('http://'.length);
+  return null;
+}
+
+/**
  * Build the `Content-Security-Policy` header value.
  *
  * @param {object} opts
@@ -54,6 +75,12 @@ function buildCspHeader(opts) {
     imgSources.push('http://localhost:9000');
   }
 
+  const connectSources = ["'self'", apiBaseUrl];
+  const apiWsOrigin = toWebSocketOrigin(apiBaseUrl);
+  if (apiWsOrigin) {
+    connectSources.push(apiWsOrigin);
+  }
+
   return [
     "default-src 'self'",
     "script-src 'self' 'unsafe-inline'",
@@ -61,7 +88,12 @@ function buildCspHeader(opts) {
     `img-src ${imgSources.join(' ')}`,
     "font-src 'self' data:",
     `manifest-src ${manifestSources.join(' ')}`,
-    `connect-src 'self' ${apiBaseUrl}`,
+    // #4059 — l'origine WebSocket accanto a quella HTTP: SignalR usa il trasporto WebSockets
+    // verso lo stesso host dell'API, e per la CSP i due schemi non si implicano.
+    // ⚠️ Questa non e' la sola CSP che il browser riceve: `src/proxy.ts` emette la propria, e
+    // il browser applica l'INTERSEZIONE. Allargare solo una delle due non cambia nulla — la
+    // gemella e' stata allargata nello stesso commit.
+    `connect-src ${connectSources.join(' ')}`,
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -93,6 +125,7 @@ function isLocalBlobAllowed(envValue) {
 
 module.exports = {
   buildCspHeader,
+  toWebSocketOrigin,
   isCfAccessAllowed,
   isLocalBlobAllowed,
 };

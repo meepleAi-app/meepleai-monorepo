@@ -3,7 +3,6 @@ using System.Text.Json.Serialization;
 using Api.BoundedContexts.KnowledgeBase.Application.Commands;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Infrastructure.Entities;
-using Api.Middleware.Exceptions;
 using MediatR;
 
 namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
@@ -35,10 +34,8 @@ internal class TutorQueryCommandHandler : IRequestHandler<TutorQueryCommand, Tut
         {
             var userRole = Enum.TryParse<UserRole>(request.UserRole, ignoreCase: true, out var parsedRole)
                 ? parsedRole : UserRole.User;
-            var canAccess = await _ragAccessService.CanAccessRagAsync(
+            await _ragAccessService.EnsureRagAccessAsync(
                 request.UserId.Value, request.GameId, userRole, cancellationToken).ConfigureAwait(false);
-            if (!canAccess)
-                throw new ForbiddenException("Accesso RAG non autorizzato");
         }
 
         try

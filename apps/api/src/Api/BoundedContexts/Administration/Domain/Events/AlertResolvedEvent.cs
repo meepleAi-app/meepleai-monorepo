@@ -21,6 +21,6 @@ public sealed record AlertResolvedEvent(
     TimeSpan Duration,
     bool IsTest) : IDomainEvent
 {
-    public DateTime OccurredAt { get; } = DateTime.UtcNow;
-    public Guid EventId { get; } = Guid.NewGuid();
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+    public Guid EventId { get; init; } = Guid.NewGuid();
 }

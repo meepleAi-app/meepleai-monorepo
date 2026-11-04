@@ -37,7 +37,12 @@ interface AiModelsTableProps {
 type SortField = 'name' | 'provider' | 'cost' | 'usage' | 'status';
 type SortOrder = 'asc' | 'desc';
 
-export function AiModelsTable({ models, onSetPrimary, onConfigure, isLoading: _isLoading }: AiModelsTableProps) {
+export function AiModelsTable({
+  models,
+  onSetPrimary,
+  onConfigure,
+  isLoading: _isLoading,
+}: AiModelsTableProps) {
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
@@ -63,14 +68,14 @@ export function AiModelsTable({ models, onSetPrimary, onConfigure, isLoading: _i
         comparison = a.provider.localeCompare(b.provider);
         break;
       case 'cost':
-        comparison = a.cost.inputCostPer1kTokens - b.cost.inputCostPer1kTokens;
+        comparison =
+          a.settings.pricing.inputPricePerMillion - b.settings.pricing.inputPricePerMillion;
         break;
       case 'usage':
-        comparison =
-          (a.usageStats?.totalRequests || 0) - (b.usageStats?.totalRequests || 0);
+        comparison = a.usage.totalRequests - b.usage.totalRequests;
         break;
       case 'status':
-        comparison = a.status.localeCompare(b.status);
+        comparison = Number(b.isActive) - Number(a.isActive);
         break;
     }
 
@@ -94,7 +99,9 @@ export function AiModelsTable({ models, onSetPrimary, onConfigure, isLoading: _i
                 className="flex items-center cursor-pointer hover:underline focus:outline-none focus:ring-2 focus:ring-primary rounded px-1"
                 onClick={() => handleSort('name')}
                 aria-label={`Sort by model ${sortField === 'name' ? (sortOrder === 'asc' ? 'descending' : 'ascending') : ''}`}
-                aria-sort={sortField === 'name' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
+                aria-sort={
+                  sortField === 'name' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'
+                }
               >
                 Model
                 <SortIndicator field="name" />
@@ -106,7 +113,13 @@ export function AiModelsTable({ models, onSetPrimary, onConfigure, isLoading: _i
                 className="flex items-center cursor-pointer hover:underline focus:outline-none focus:ring-2 focus:ring-primary rounded px-1"
                 onClick={() => handleSort('provider')}
                 aria-label={`Sort by provider ${sortField === 'provider' ? (sortOrder === 'asc' ? 'descending' : 'ascending') : ''}`}
-                aria-sort={sortField === 'provider' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
+                aria-sort={
+                  sortField === 'provider'
+                    ? sortOrder === 'asc'
+                      ? 'ascending'
+                      : 'descending'
+                    : 'none'
+                }
               >
                 Provider
                 <SortIndicator field="provider" />
@@ -118,7 +131,9 @@ export function AiModelsTable({ models, onSetPrimary, onConfigure, isLoading: _i
                 className="flex items-center cursor-pointer hover:underline focus:outline-none focus:ring-2 focus:ring-primary rounded px-1"
                 onClick={() => handleSort('cost')}
                 aria-label={`Sort by cost ${sortField === 'cost' ? (sortOrder === 'asc' ? 'descending' : 'ascending') : ''}`}
-                aria-sort={sortField === 'cost' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
+                aria-sort={
+                  sortField === 'cost' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'
+                }
               >
                 Cost/1K Tokens
                 <SortIndicator field="cost" />
@@ -130,7 +145,13 @@ export function AiModelsTable({ models, onSetPrimary, onConfigure, isLoading: _i
                 className="flex items-center cursor-pointer hover:underline focus:outline-none focus:ring-2 focus:ring-primary rounded px-1"
                 onClick={() => handleSort('usage')}
                 aria-label={`Sort by usage ${sortField === 'usage' ? (sortOrder === 'asc' ? 'descending' : 'ascending') : ''}`}
-                aria-sort={sortField === 'usage' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
+                aria-sort={
+                  sortField === 'usage'
+                    ? sortOrder === 'asc'
+                      ? 'ascending'
+                      : 'descending'
+                    : 'none'
+                }
               >
                 Usage
                 <SortIndicator field="usage" />
@@ -142,7 +163,13 @@ export function AiModelsTable({ models, onSetPrimary, onConfigure, isLoading: _i
                 className="flex items-center cursor-pointer hover:underline focus:outline-none focus:ring-2 focus:ring-primary rounded px-1"
                 onClick={() => handleSort('status')}
                 aria-label={`Sort by status ${sortField === 'status' ? (sortOrder === 'asc' ? 'descending' : 'ascending') : ''}`}
-                aria-sort={sortField === 'status' ? (sortOrder === 'asc' ? 'ascending' : 'descending') : 'none'}
+                aria-sort={
+                  sortField === 'status'
+                    ? sortOrder === 'asc'
+                      ? 'ascending'
+                      : 'descending'
+                    : 'none'
+                }
               >
                 Status
                 <SortIndicator field="status" />
@@ -159,7 +186,7 @@ export function AiModelsTable({ models, onSetPrimary, onConfigure, isLoading: _i
               </TableCell>
             </TableRow>
           ) : (
-            sortedModels.map((model) => (
+            sortedModels.map(model => (
               <TableRow key={model.id} className={model.isPrimary ? 'bg-primary/5' : ''}>
                 {/* Model Name */}
                 <TableCell className="font-medium">
@@ -172,7 +199,7 @@ export function AiModelsTable({ models, onSetPrimary, onConfigure, isLoading: _i
                       </Badge>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground font-mono">{model.modelIdentifier}</p>
+                  <p className="text-xs text-muted-foreground font-mono">{model.modelId}</p>
                 </TableCell>
 
                 {/* Provider */}
@@ -181,45 +208,34 @@ export function AiModelsTable({ models, onSetPrimary, onConfigure, isLoading: _i
                 {/* Cost */}
                 <TableCell>
                   <div className="text-sm">
-                    <p>In: ${model.cost.inputCostPer1kTokens.toFixed(2)}</p>
-                    <p>Out: ${model.cost.outputCostPer1kTokens.toFixed(2)}</p>
+                    {/* #4093: il backend espone prezzi per MILIONE di token; lo schema
+                        precedente diceva per mille, quindi l'etichetta era sbagliata di 1000x. */}
+                    <p>In: ${model.settings.pricing.inputPricePerMillion.toFixed(2)}/1M</p>
+                    <p>Out: ${model.settings.pricing.outputPricePerMillion.toFixed(2)}/1M</p>
                   </div>
                 </TableCell>
 
                 {/* Usage */}
                 <TableCell>
-                  {model.usageStats ? (
-                    <div className="text-sm">
-                      <p>{model.usageStats.totalRequests.toLocaleString()} req</p>
-                      <p className="text-muted-foreground">
-                        ${model.usageStats.estimatedCost.toFixed(2)}
-                      </p>
-                    </div>
-                  ) : (
-                    <span className="text-muted-foreground text-sm">No usage</span>
-                  )}
+                  <div className="text-sm">
+                    <p>{model.usage.totalRequests.toLocaleString()} req</p>
+                    <p className="text-muted-foreground">${model.usage.totalCostUsd.toFixed(2)}</p>
+                  </div>
                 </TableCell>
 
                 {/* Status */}
                 <TableCell>
-                  <Badge
-                    variant={
-                      model.status === 'active'
-                        ? 'default'
-                        : model.status === 'deprecated'
-                          ? 'destructive'
-                          : 'secondary'
-                    }
-                  >
-                    {model.status === 'active' ? '✅' : model.status === 'deprecated' ? '⚠️' : '○'}{' '}
-                    {model.status}
+                  {/* #4093: `isActive` booleano al posto di un enum a tre valori; lo stato
+                      "deprecated" non esiste nel contratto del backend. */}
+                  <Badge variant={model.isActive ? 'default' : 'secondary'}>
+                    {model.isActive ? '✅ attivo' : '○ inattivo'}
                   </Badge>
                 </TableCell>
 
                 {/* Actions */}
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
-                    {!model.isPrimary && model.status === 'active' && (
+                    {!model.isPrimary && model.isActive && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -229,11 +245,7 @@ export function AiModelsTable({ models, onSetPrimary, onConfigure, isLoading: _i
                         Set Primary
                       </Button>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onConfigure(model.id, model)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => onConfigure(model.id, model)}>
                       <Settings className="h-3 w-3" />
                     </Button>
                   </div>

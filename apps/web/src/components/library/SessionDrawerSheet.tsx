@@ -52,9 +52,10 @@ export function SessionDrawerSheet({
     window.location.href = `/sessions/new?gameId=${encodeURIComponent(gameId)}&gameName=${encodeURIComponent(gameTitle)}`;
   };
 
-  const handleOpenSession = (sessionId: string) => {
+  // #4156 (D4): the session pages live under the LiveGameSession id, not the GameSession one.
+  const handleOpenSession = (liveSessionId: string) => {
     onOpenChange(false);
-    window.location.href = `/sessions/${sessionId}`;
+    window.location.href = `/sessions/${liveSessionId}`;
   };
 
   return (
@@ -136,11 +137,16 @@ export function SessionDrawerSheet({
               <button
                 key={session.id}
                 type="button"
-                onClick={() => handleOpenSession(session.id)}
+                disabled={session.liveSessionId == null}
+                onClick={() => {
+                  if (session.liveSessionId != null) handleOpenSession(session.liveSessionId);
+                }}
                 className={cn(
                   'flex items-center gap-3 rounded-xl p-3 text-left',
-                  'bg-[rgba(45,42,38,0.04)] hover:bg-[rgba(45,42,38,0.06)]',
-                  'transition-colors cursor-pointer w-full'
+                  'bg-[rgba(45,42,38,0.04)] w-full',
+                  session.liveSessionId == null
+                    ? 'cursor-default'
+                    : 'hover:bg-[rgba(45,42,38,0.06)] transition-colors cursor-pointer'
                 )}
               >
                 <span className={cn('h-2.5 w-2.5 rounded-full flex-shrink-0', status.dot)} />

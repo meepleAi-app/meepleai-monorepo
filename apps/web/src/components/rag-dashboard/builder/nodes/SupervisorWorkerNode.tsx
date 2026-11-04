@@ -68,10 +68,7 @@ function SupervisorWorkerNodeComponent(props: BaseBlockNodeProps) {
           <div className="p-2 bg-muted/50 rounded">
             <div className="flex flex-col items-center gap-1">
               {/* Supervisor */}
-              <Badge
-                variant="default"
-                className="text-[9px] px-2 py-0.5 bg-purple-600"
-              >
+              <Badge variant="default" className="text-[9px] px-2 py-0.5 bg-purple-600 text-white">
                 👔 Supervisor
               </Badge>
 

@@ -390,6 +390,49 @@ public sealed class SharedGameTests
         evt.ModifiedBy.Should().Be(modifiedBy);
     }
 
+    /// <summary>
+    /// Issue #4090: the #2123 nullify migration made these columns nullable and MapToDomain coerces
+    /// a null row value to "". The aggregate rejecting empty meant a game loaded from a nullified
+    /// row could not be saved at all, so every admin save had to invent a URL.
+    /// </summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void UpdateInfo_WithEmptyImageUrls_Succeeds(string url)
+    {
+        // Arrange
+        var game = CreateValidGame();
+
+        // Act
+        var action = () => game.UpdateInfo(
+            "Updated Title", 2022, "Updated description", 2, 6, 120, 12,
+            2.5m, 7.5m, url, url, null, Guid.NewGuid());
+
+        // Assert
+        action.Should().NotThrow();
+        game.ImageUrl.Should().Be(url);
+        game.ThumbnailUrl.Should().Be(url);
+    }
+
+    /// <summary>
+    /// Issue #4090: accepting empty must not accept garbage — a value that is present still has to
+    /// be an absolute URL.
+    /// </summary>
+    [Fact]
+    public void UpdateInfo_WithNonEmptyInvalidImageUrl_ThrowsArgumentException()
+    {
+        // Arrange
+        var game = CreateValidGame();
+
+        // Act
+        var action = () => game.UpdateInfo(
+            "Updated Title", 2022, "Updated description", 2, 6, 120, 12,
+            2.5m, 7.5m, "not-a-url", "https://example.com/thumb.jpg", null, Guid.NewGuid());
+
+        // Assert
+        action.Should().Throw<ArgumentException>();
+    }
+
     [Fact]
     public void UpdateInfo_WithEmptyModifiedBy_ThrowsArgumentException()
     {
@@ -873,22 +916,6 @@ public sealed class SharedGameTests
     }
 
     [Fact]
-    public void UpvoteFaq_IncreasesUpvoteCount()
-    {
-        // Arrange
-        var game = CreateValidGame();
-        var faq = new GameFaq(Guid.NewGuid(), game.Id, "Question", "Answer", 1, 0, DateTime.UtcNow, null);
-        game.AddFaq(faq);
-
-        // Act
-        var newCount = game.UpvoteFaq(faq.Id);
-
-        // Assert
-        newCount.Should().Be(1);
-        game.Faqs.First().UpvoteCount.Should().Be(1);
-    }
-
-    [Fact]
     public void RemoveFaq_RemovesFaqFromCollection()
     {
         // Arrange
@@ -1029,6 +1056,38 @@ public sealed class SharedGameTests
         game.QuickQuestions.Should().NotContain(oldQuestion);
         game.QuickQuestions.Should().Contain(newQuestions[0]);
         game.QuickQuestions.Should().Contain(newQuestions[1]);
+    }
+
+    [Fact]
+    public void ReplaceQuickQuestions_KeepsTheManualQuestions()
+    {
+        // #4596: una rigenerazione sostituisce le domande generate, non quelle scritte a mano.
+        var game = CreateValidGame();
+        var oldGenerated = new QuickQuestion(Guid.NewGuid(), game.Id, "Old generated?", "❓", QuestionCategory.Rules, 0, true, DateTime.UtcNow, true);
+        var manual = new QuickQuestion(Guid.NewGuid(), game.Id, "Written by an admin?", "🎲", QuestionCategory.Rules, 1, false, DateTime.UtcNow, true);
+        game.AddQuickQuestion(oldGenerated);
+        game.AddQuickQuestion(manual);
+
+        var generated = new QuickQuestion(Guid.NewGuid(), game.Id, "New generated?", "❓", QuestionCategory.Setup, 0, true, DateTime.UtcNow, true);
+
+        game.ReplaceQuickQuestions([generated]);
+
+        game.QuickQuestions.Should().BeEquivalentTo([manual, generated]);
+        game.QuickQuestions.Should().NotContain(oldGenerated);
+    }
+
+    [Fact]
+    public void ReplaceQuickQuestions_WithAnEmptySet_RemovesOnlyTheGeneratedOnes()
+    {
+        var game = CreateValidGame();
+        var oldGenerated = new QuickQuestion(Guid.NewGuid(), game.Id, "Old generated?", "❓", QuestionCategory.Rules, 0, true, DateTime.UtcNow, true);
+        var manual = new QuickQuestion(Guid.NewGuid(), game.Id, "Written by an admin?", "🎲", QuestionCategory.Rules, 1, false, DateTime.UtcNow, true);
+        game.AddQuickQuestion(oldGenerated);
+        game.AddQuickQuestion(manual);
+
+        game.ReplaceQuickQuestions([]);
+
+        game.QuickQuestions.Should().BeEquivalentTo([manual]);
     }
 
     #endregion
@@ -1223,94 +1282,6 @@ public sealed class SharedGameTests
             thumbnailUrl,
             null,
             createdBy ?? Guid.NewGuid());
-    }
-
-    #endregion
-
-    #region Agent Linking Tests (Issue #4228)
-
-    [Fact]
-    public void LinkAgent_WithValidAgentId_LinksAgent()
-    {
-        // Arrange
-        var game = CreateValidGame();
-        var agentId = Guid.NewGuid();
-
-        // Act
-        game.LinkAgent(agentId);
-
-        // Assert
-        game.AgentDefinitionId.Should().Be(agentId);
-        game.DomainEvents.Should().ContainSingle(e => e is AgentLinkedToSharedGameEvent);
-        var domainEvent = game.DomainEvents.OfType<AgentLinkedToSharedGameEvent>().Single();
-        domainEvent.GameId.Should().Be(game.Id);
-        domainEvent.AgentDefinitionId.Should().Be(agentId);
-    }
-
-    [Fact]
-    public void LinkAgent_WhenAgentAlreadyLinked_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var game = CreateValidGame();
-        var firstAgentId = Guid.NewGuid();
-        var secondAgentId = Guid.NewGuid();
-        game.LinkAgent(firstAgentId);
-
-        // Act
-        var act = () => game.LinkAgent(secondAgentId);
-
-        // Assert
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("An agent is already linked to this game");
-        game.AgentDefinitionId.Should().Be(firstAgentId); // Should not change
-    }
-
-    [Fact]
-    public void LinkAgent_WithEmptyGuid_ThrowsArgumentException()
-    {
-        // Arrange
-        var game = CreateValidGame();
-
-        // Act
-        var act = () => game.LinkAgent(Guid.Empty);
-
-        // Assert
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*AgentId cannot be empty*");
-    }
-
-    [Fact]
-    public void UnlinkAgent_WhenAgentLinked_UnlinksAgent()
-    {
-        // Arrange
-        var game = CreateValidGame();
-        var agentId = Guid.NewGuid();
-        game.LinkAgent(agentId);
-        game.ClearDomainEvents(); // Clear link event
-
-        // Act
-        game.UnlinkAgent();
-
-        // Assert
-        game.AgentDefinitionId.Should().BeNull();
-        game.DomainEvents.Should().ContainSingle(e => e is AgentUnlinkedFromSharedGameEvent);
-        var domainEvent = game.DomainEvents.OfType<AgentUnlinkedFromSharedGameEvent>().Single();
-        domainEvent.GameId.Should().Be(game.Id);
-        domainEvent.AgentDefinitionId.Should().Be(agentId);
-    }
-
-    [Fact]
-    public void UnlinkAgent_WhenNoAgentLinked_ThrowsInvalidOperationException()
-    {
-        // Arrange
-        var game = CreateValidGame();
-
-        // Act
-        var act = () => game.UnlinkAgent();
-
-        // Assert
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("No agent is currently linked to this game");
     }
 
     #endregion

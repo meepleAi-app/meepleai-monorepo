@@ -263,13 +263,30 @@ public sealed class PdfRowVersionConcurrencyIntegrationTests : IAsyncLifetime
         // misurato in #3633 era l'interleaving (b). Ciò che regge in ENTRAMBI gli ordinamenti è
         // qui sotto — stessa forma di Scenario 3, che l'asimmetria l'aveva già riconosciuta.
 
+        //   (c) #3866 — il DELETE committa prima che il reindex LEGGA. E' l'immagine speculare di
+        //       (b), e il reindex trova una riga che non c'e' piu': NotFoundException, cioe' un 404.
+        //       E' la risposta corretta — reindicizzare un documento cancellato deve dare 404, non
+        //       500 — ma il commento sopra ne elencava due su tre e la guardia qui sotto ammetteva
+        //       solo ConflictException. Non e' emerso finora perche' DeleteKbDocumentCommandHandler
+        //       leggeva senza tracciare (#3866): la cancellazione poteva morire su un conflitto di
+        //       identita' invece di completare, e questo ordinamento restava raro.
         results.Should().OnlyContain(
-            r => r.Exception == null || r.Exception is ConflictException,
-            "l'unico fallimento ammesso è il conflitto di concorrenza");
+            r => r.Exception == null
+              || r.Exception is ConflictException
+              || (r.Op == "reindex" && r.Exception is NotFoundException),
+            "i soli fallimenti ammessi sono il conflitto di concorrenza e il 404 del reindex su un documento gia' cancellato");
 
         var conflictCount = results.Count(r => r.Exception is ConflictException);
         conflictCount.Should().BeLessThanOrEqualTo(1,
             "al più una delle due operazioni può conflittare, mai entrambe");
+
+        // (c) non e' un esito qualsiasi: se il reindex ha visto 404, il delete DEVE essere passato.
+        // Senza questo accoppiamento la guardia allargata ammetterebbe anche un 404 spurio.
+        if (results.Any(r => r.Op == "reindex" && r.Exception is NotFoundException))
+        {
+            results.Single(r => r.Op == "delete").Exception
+                .Should().BeNull("il reindex ha trovato 404 solo perche' il delete aveva gia' cancellato");
+        }
 
         var stillExists = await _dbContext!.PdfDocuments.AsNoTracking()
             .AnyAsync(p => p.Id == pdf.Id, TestCancellationToken);

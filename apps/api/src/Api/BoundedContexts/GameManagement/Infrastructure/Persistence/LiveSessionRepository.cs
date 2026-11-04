@@ -47,6 +47,25 @@ internal sealed class LiveSessionRepository : RepositoryBase, ILiveSessionReposi
         return entity != null ? LiveGameSessionMapper.ToDomain(entity) : null;
     }
 
+    public async Task<LiveGameSession?> GetByTrackingSessionIdAsync(
+        Guid trackingSessionId, CancellationToken cancellationToken = default)
+    {
+        var entity = await DbContext.LiveGameSessions
+            .AsNoTracking()
+            .Include(e => e.Players)
+            .Include(e => e.Teams)
+            .Include(e => e.RoundScores)
+            .Include(e => e.TurnRecords)
+            .Include(e => e.DiaryEntries)
+            .Where(e => e.TrackingSessionId == trackingSessionId)
+            .OrderBy(e => e.CreatedAt)
+            .ThenBy(e => e.Id)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        return entity != null ? LiveGameSessionMapper.ToDomain(entity) : null;
+    }
+
     public async Task<LiveGameSession?> GetByCodeAsync(string sessionCode, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionCode);

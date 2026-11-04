@@ -276,7 +276,37 @@ public static class TestcontainersConfiguration
     /// <summary>
     /// MinIO container image for S3-compatible storage integration testing.
     /// </summary>
-    public const string MinioImage = "minio/minio:latest";
+    /// <remarks>
+    /// #3978 — era <c>minio/minio:latest</c>, che dal 2026-09 non esiste piu': Docker Hub nega
+    /// l'accesso al REPOSITORY (<c>pull access denied for minio/minio … denied</c>), non al solo tag.
+    /// Punta al mirror nel GHCR del progetto, popolato da
+    /// <c>.github/workflows/mirror-upstream-images.yml</c> e leggibile senza <c>docker login</c>.
+    /// <para>
+    /// Le due suite che usano questa costante NON stavano fallendo: il loro <c>catch</c> intorno a
+    /// <c>StartAsync</c> impostava <c>_skipTests = true</c> e la suite restava verde, con il motivo
+    /// scritto da una <c>Console.WriteLine</c> di fixture che xUnit non mostra. Da settembre non
+    /// testavano nulla, in silenzio.
+    /// </para>
+    /// <para>
+    /// 🔴 Chi usa questa immagine deve girare come root: vedi <see cref="MinioContainerUser"/>.
+    /// </para>
+    /// </remarks>
+    public const string MinioImage =
+        "ghcr.io/meepleai-app/meepleai-monorepo/mirror/minio:RELEASE.2025-10-15";
+
+    /// <summary>
+    /// User the MinIO container must run as.
+    /// </summary>
+    /// <remarks>
+    /// #3978 — la ripubblicazione <c>alpine/minio</c> gira come utente <c>minio</c> (la vecchia
+    /// <c>minio/minio</c> girava come root) e dichiara <c>/data</c> come VOLUME: Testcontainers lo
+    /// soddisfa con un volume anonimo, che Docker crea <c>root:root</c> 755. Il processo non-root
+    /// non puo' scrivere e il server muore con
+    /// <c>FATAL Unable to initialize backend: file access denied</c> — che il <c>catch</c> delle
+    /// suite tradurrebbe in uno skip silenzioso invece che in un fallimento.
+    /// Stessa ragione del <c>user: root</c> nel servizio minio di <c>infra/docker-compose.yml</c>.
+    /// </remarks>
+    public const string MinioContainerUser = "root";
 
     /// <summary>
     /// MinIO S3 API port.

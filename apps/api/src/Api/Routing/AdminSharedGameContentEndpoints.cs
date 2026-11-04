@@ -2,7 +2,6 @@ using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands.BulkUploadPdfs;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
-using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetDocumentOverview;
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetRecentlyProcessedDocuments;
 using Api.Extensions;
 using Api.Filters;
@@ -36,23 +35,6 @@ internal static class AdminSharedGameContentEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden);
-
-        // GET /api/v1/admin/shared-games/{sharedGameId}/documents/overview
-        // Issue #119: Per-SharedGame Document Overview
-        contentGroup.MapGet("/{sharedGameId:guid}/documents/overview", async (
-                Guid sharedGameId,
-                IMediator mediator,
-                CancellationToken ct) =>
-            {
-                var result = await mediator.Send(new GetDocumentOverviewQuery(sharedGameId), ct)
-                    .ConfigureAwait(false);
-                return Results.Ok(result);
-            })
-            .WithName("GetSharedGameDocumentOverview")
-            .WithSummary("Get consolidated document overview for a shared game (Admin)")
-            .WithDescription("Returns processing status breakdown, per-document details, agent linkage, and RAG readiness assessment.")
-            .Produces<DocumentOverviewResult>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status404NotFound);
 
         // GET /api/v1/admin/shared-games/recently-processed
         // Recently processed PDF documents widget

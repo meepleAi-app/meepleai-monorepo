@@ -111,7 +111,8 @@ describe('useSessionSync', () => {
     );
 
     expect(global.EventSource).toHaveBeenCalledWith(
-      expect.stringContaining(`/api/v1/game-sessions/${mockSessionId}/stream`),
+      // #4114: the toolkit pages hold a live session id; /game-sessions/{id}/stream was a 404.
+      expect.stringContaining(`/api/v1/live-sessions/${mockSessionId}/stream`),
       expect.objectContaining({ withCredentials: true })
     );
   });
@@ -193,5 +194,96 @@ describe('useSessionSync', () => {
     // Exactly one EventSource must ever be constructed for a stable
     // (sessionId, apiBaseUrl) pair.
     expect(trackedEventSourceInstances).toHaveLength(1);
+  });
+});
+
+// ─── #4114 — the events of the live session stream ────────────────────────────
+
+describe('useSessionSync — #4114: the events of the live stream', () => {
+  beforeEach(() => {
+    trackedEventSourceInstances = [];
+    global.EventSource = TrackedEventSource as unknown as typeof EventSource;
+  });
+
+  /** Delivers an SSE frame: the SSE event name is the type, the data is the bare payload. */
+  function deliver(type: string, payload: unknown) {
+    const source = trackedEventSourceInstances.at(-1)!;
+    const call = source.addEventListener.mock.calls.find(([name]) => name === type);
+    expect(call, `no listener for ${type}`).toBeDefined();
+    const handler = call![1] as (event: MessageEvent<string>) => void;
+    act(() => handler({ type, data: JSON.stringify(payload) } as MessageEvent<string>));
+  }
+
+  it('turns session:score into a score entry of the RoundScores cell', () => {
+    const onScoreUpdate = vi.fn();
+    const { result } = renderHook(() => useSessionSync({ sessionId: 'live-1', onScoreUpdate }));
+
+    deliver('session:score', { playerId: 'marco', round: 2, dimension: 'points', value: 7 });
+
+    expect(onScoreUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        participantId: 'marco',
+        roundNumber: 2,
+        category: 'points',
+        scoreValue: 7,
+      })
+    );
+    expect(result.current.scores).toHaveLength(1);
+  });
+
+  it('ignores a session:score that is not a RoundScores cell', () => {
+    const onScoreUpdate = vi.fn();
+    renderHook(() => useSessionSync({ sessionId: 'live-1', onScoreUpdate }));
+
+    deliver('session:score', { participantId: 'marco', newScore: 7 });
+
+    expect(onScoreUpdate).not.toHaveBeenCalled();
+  });
+
+  it('maps pause, resume and endgame to their callbacks', () => {
+    const onPaused = vi.fn();
+    const onResumed = vi.fn();
+    const onFinalized = vi.fn();
+    renderHook(() => useSessionSync({ sessionId: 'live-1', onPaused, onResumed, onFinalized }));
+
+    deliver('session:pause', { pausedAt: '2026-10-14T10:00:00Z' });
+    deliver('session:resume', { resumedAt: '2026-10-14T10:05:00Z' });
+    deliver('session:endgame', { completedAt: '2026-10-14T11:00:00Z', totalTurns: 9 });
+
+    expect(onPaused).toHaveBeenCalledTimes(1);
+    expect(onResumed).toHaveBeenCalledTimes(1);
+    expect(onFinalized).toHaveBeenCalledTimes(1);
+  });
+
+  it('passes a turn advance on session:toolkit, and only a turn advance', () => {
+    const onTurnAdvanced = vi.fn();
+    renderHook(() => useSessionSync({ sessionId: 'live-1', onTurnAdvanced }));
+
+    deliver('session:toolkit', { diceType: 'd6', results: [4] });
+    expect(onTurnAdvanced).not.toHaveBeenCalled();
+
+    const turn = {
+      currentPlayerName: 'Giulia',
+      previousPlayerName: 'Marco',
+      nextPlayerName: 'Marco',
+      roundNumber: 1,
+    };
+    deliver('session:toolkit', turn);
+    expect(onTurnAdvanced).toHaveBeenCalledWith(turn);
+  });
+
+  it('no longer listens to the CLR names of the SessionTracking stream', () => {
+    renderHook(() => useSessionSync({ sessionId: 'live-1' }));
+    const names = trackedEventSourceInstances.at(-1)!.addEventListener.mock.calls.map(([n]) => n);
+    expect(names).not.toContain('ScoreUpdatedEvent');
+    expect(names).toEqual(
+      expect.arrayContaining([
+        'session:score',
+        'session:pause',
+        'session:resume',
+        'session:endgame',
+        'session:toolkit',
+      ])
+    );
   });
 });

@@ -29,6 +29,7 @@ vi.mock('@/lib/api', () => ({
 const mockSessions = [
   {
     id: 'session-1',
+    liveSessionId: 'live-1',
     gameId: 'game-123',
     status: 'Completed',
     startedAt: '2026-01-10T10:00:00Z',
@@ -41,6 +42,7 @@ const mockSessions = [
   },
   {
     id: 'session-2',
+    liveSessionId: null,
     gameId: 'game-123',
     status: 'Completed',
     startedAt: '2026-01-15T14:00:00Z',
@@ -66,6 +68,21 @@ describe('GameSessionsPage', () => {
     await waitFor(() => {
       expect(screen.getByText('2 Sessions')).toBeInTheDocument();
     });
+  });
+
+  it('#4156 (D4): links to the live session, and not at all without one', async () => {
+    mockGetSessions.mockResolvedValue(mockSessions);
+
+    renderWithQuery(<GameSessionsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('2 Sessions')).toBeInTheDocument();
+    });
+    const sessionLinks = screen
+      .getAllByRole('link')
+      .map(link => link.getAttribute('href'))
+      .filter(href => href?.startsWith('/sessions/'));
+    expect(sessionLinks).toEqual(['/sessions/live-1']);
   });
 
   it('shows winner name', async () => {

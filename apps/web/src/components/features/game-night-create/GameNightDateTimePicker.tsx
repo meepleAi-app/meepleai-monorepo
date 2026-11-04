@@ -11,6 +11,7 @@
 import { useId, type ReactElement } from 'react';
 
 import type { ConflictResult } from '@/lib/game-nights/wizard-types';
+import { isoToDatetimeLocalValue } from '@/lib/utils/datetimeLocal';
 
 export interface GameNightDateTimePickerLabels {
   readonly label: string;
@@ -37,18 +38,6 @@ export interface GameNightDateTimePickerProps {
   readonly labels: GameNightDateTimePickerLabels;
 }
 
-/**
- * Converts an ISO string to the `YYYY-MM-DDTHH:MM` format expected by
- * `<input type="datetime-local">`. Returns `''` for null/invalid input.
- */
-function isoToInputValue(iso: string | null): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const pad = (n: number): string => n.toString().padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
 export function GameNightDateTimePicker({
   iso,
   onSetDate,
@@ -59,7 +48,7 @@ export function GameNightDateTimePicker({
   labels,
 }: GameNightDateTimePickerProps): ReactElement {
   const inputId = useId();
-  const value = isoToInputValue(iso);
+  const value = isoToDatetimeLocalValue(iso);
   const showWarning = !overrideAccepted && conflictResult?.hasConflict === true;
 
   return (
@@ -84,7 +73,11 @@ export function GameNightDateTimePicker({
           if (!next) return;
           // Convert local datetime-local back to ISO; the reducer stores the
           // canonical UTC form so conflict checks dedupe deterministically.
-          onSetDate(new Date(next).toISOString());
+          const date = new Date(next);
+          // #4803: the input lets the year run past four digits, and `new Date('12345-10-30T20:00')` is not a
+          // date: `toISOString()` would throw. What is not a date is no choice, as in SessionCreateForm (#4788).
+          if (Number.isNaN(date.getTime())) return;
+          onSetDate(date.toISOString());
         }}
         className="rounded-md border border-border bg-card px-3 py-2 text-foreground"
       />

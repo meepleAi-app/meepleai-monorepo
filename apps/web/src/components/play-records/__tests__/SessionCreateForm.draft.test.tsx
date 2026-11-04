@@ -25,8 +25,8 @@ vi.mock('@/lib/stores/play-records-store', () => ({
     setSessionField: mockSetSessionField,
   }),
 }));
-vi.mock('@/components/play-records/GameCombobox', () => ({
-  GameCombobox: () => <div data-testid="game-combobox" />,
+vi.mock('@/components/features/game-picker', () => ({
+  GamePicker: () => <div data-testid="play-record-game-stub" />,
 }));
 vi.mock('@/hooks/queries/useCurrentUser', () => ({
   useCurrentUser: () => ({ data: { id: 'user-1' } }),

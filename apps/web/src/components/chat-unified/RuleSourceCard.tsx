@@ -10,6 +10,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/data-display/collapsible';
 import { useAppMode } from '@/hooks/useAppMode';
+import { citedPage } from '@/lib/citations/citedPage';
 import type { AppMode } from '@/lib/stores/user-preferences';
 import { cn } from '@/lib/utils';
 import type { Citation } from '@/types';
@@ -54,14 +55,17 @@ function getTier(citation: Citation): 'full' | 'protected' {
 
 interface CitationChipProps {
   citation: Citation;
+  /** Position among the citations: names the chip when the citation has no page (#4819). */
+  index: number;
   isActive: boolean;
   isPowerMode: boolean;
   onClick: () => void;
 }
 
-function CitationChip({ citation, isActive, isPowerMode, onClick }: CitationChipProps) {
+function CitationChip({ citation, index, isActive, isPowerMode, onClick }: CitationChipProps) {
   const tier = getTier(citation);
   const isFull = tier === 'full';
+  const page = citedPage(citation.pageNumber);
 
   return (
     <button
@@ -84,7 +88,7 @@ function CitationChip({ citation, isActive, isPowerMode, onClick }: CitationChip
         isPowerMode && isFull && !isActive && getRelevanceColor(citation.relevanceScore)
       )}
     >
-      <span>p.{citation.pageNumber}</span>
+      <span>{page === null ? `Fonte ${index + 1}` : `p.${page}`}</span>
       {isPowerMode && (
         <span className="text-[10px] opacity-75">{formatRelevance(citation.relevanceScore)}</span>
       )}
@@ -144,6 +148,7 @@ export function RuleSourceCard({
   const activeCitation = citations[activeIndex] ?? citations[0];
   const isSingle = citations.length === 1;
   const activeTier = getTier(activeCitation);
+  const activePage = citedPage(activeCitation.pageNumber);
   const isFull = activeTier === 'full';
   const hasAnyProtected = citations.some(c => getTier(c) === 'protected');
 
@@ -214,6 +219,7 @@ export function RuleSourceCard({
                   <CitationChip
                     key={`${c.documentId}-${c.pageNumber}-${i}`}
                     citation={c}
+                    index={i}
                     isActive={i === activeIndex}
                     isPowerMode={isPowerMode}
                     onClick={() => setActiveIndex(i)}
@@ -251,12 +257,12 @@ export function RuleSourceCard({
                   <>
                     <p>&ldquo;{activeCitation.snippet}&rdquo;</p>
                     <p className="mt-1 text-xs not-italic text-muted-foreground">
-                      — Regolamento, p.{activeCitation.pageNumber}
+                      — Regolamento{activePage === null ? '' : `, p.${activePage}`}
                     </p>
                   </>
                 ) : (
                   <p className="not-italic text-muted-foreground">
-                    Pagina {activeCitation.pageNumber}
+                    {activePage === null ? 'Fonte nel regolamento' : `Pagina ${activePage}`}
                   </p>
                 )
               ) : // Protected tier: paraphrase or page-only fallback
@@ -264,12 +270,14 @@ export function RuleSourceCard({
                 <>
                   <p>{quoteContent}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    — Regolamento, p.{activeCitation.pageNumber}
+                    — Regolamento{activePage === null ? '' : `, p.${activePage}`}
                   </p>
                 </>
               ) : (
                 <p className="text-muted-foreground">
-                  Vedi pagina {activeCitation.pageNumber} del regolamento
+                  {activePage === null
+                    ? 'Vedi il regolamento'
+                    : `Vedi pagina ${activePage} del regolamento`}
                 </p>
               )}
             </blockquote>

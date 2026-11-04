@@ -317,22 +317,19 @@ describe('AuthClient - Sessions & 2FA', () => {
 
     describe('disable2FA', () => {
       it('should disable 2FA with password and code', async () => {
+        // What the server answers (TwoFactorEndpoints, Disable2FA): `{ message }`, not `{ success }`. The test
+        // used to feed the client the shape its schema wanted, which is how the real answer was rejected
+        // for as long as the endpoint has existed (#4806).
         mockFetch.mockResolvedValueOnce({
           ok: true,
           status: 200,
-          json: async () => ({
-            success: true,
-            errorMessage: null,
-          }),
+          json: async () => ({ message: 'Two-factor authentication disabled successfully' }),
           headers: new Headers(),
         });
 
         const result = await authClient.disable2FA('password123', '123456');
 
-        expect(result).toEqual({
-          success: true,
-          errorMessage: null,
-        });
+        expect(result).toEqual({ success: true });
         expect(mockFetch).toHaveBeenCalledWith(
           expect.stringContaining('/api/v1/auth/2fa/disable'),
           expect.objectContaining({
@@ -342,6 +339,47 @@ describe('AuthClient - Sessions & 2FA', () => {
               code: '123456',
             }),
           })
+        );
+      });
+
+      it('does not report a failure for a success that carries no body fields it knows', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: async () => ({}),
+          headers: new Headers(),
+        });
+
+        await expect(authClient.disable2FA('password123', '123456')).resolves.toEqual({
+          success: true,
+        });
+      });
+
+      it('rejects, with the status, when the server refuses the password (401, no body)', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 401,
+          json: async () => {
+            throw new SyntaxError('Unexpected end of JSON input');
+          },
+          headers: new Headers(),
+        });
+
+        await expect(authClient.disable2FA('wrong', '123456')).rejects.toMatchObject({
+          statusCode: 401,
+        });
+      });
+
+      it('rejects, with the server message, when the code is wrong (400 {error})', async () => {
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          json: async () => ({ error: 'Invalid verification code' }),
+          headers: new Headers(),
+        });
+
+        await expect(authClient.disable2FA('password123', '000000')).rejects.toThrow(
+          'Invalid verification code'
         );
       });
     });

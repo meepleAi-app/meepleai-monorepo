@@ -31,7 +31,7 @@ public sealed class MultiGameHybridSearchServiceTuningLogTests
         // La proprietà che conta in produzione: la guardia IsEnabled precede ogni allocazione.
         var (sut, logger) = CreateSut(debugEnabled: false);
 
-        await sut.SearchAsync("how do I set up Catan?", new[] { Guid.NewGuid() }, limit: 5);
+        await sut.SearchAsync("how do I set up Catan?", new[] { Guid.NewGuid() }, 5, PerGameSearchStub.Seed);
 
         LogCallsAt(logger, LogLevel.Debug).Should().Be(0);
     }
@@ -41,7 +41,7 @@ public sealed class MultiGameHybridSearchServiceTuningLogTests
     {
         var (sut, logger) = CreateSut(debugEnabled: true);
 
-        await sut.SearchAsync("how do I set up Catan?", new[] { Guid.NewGuid() }, limit: 5);
+        await sut.SearchAsync("how do I set up Catan?", new[] { Guid.NewGuid() }, 5, PerGameSearchStub.Seed);
 
         LogCallsAt(logger, LogLevel.Debug).Should().Be(1,
             "il consumatore estrae una riga per query: due righe romperebbero l'associazione query -> aggregato");
@@ -56,7 +56,7 @@ public sealed class MultiGameHybridSearchServiceTuningLogTests
         // colonna e si perdeva due volte: non era nella SELECT dell'adapter e non era nel dump.
         var (sut, logger) = CreateSut(debugEnabled: true, candidateLanguage: "it");
 
-        await sut.SearchAsync("come si prepara il tabellone di Catan?", new[] { Guid.NewGuid() }, limit: 5);
+        await sut.SearchAsync("come si prepara il tabellone di Catan?", new[] { Guid.NewGuid() }, 5, PerGameSearchStub.Seed);
 
         TuningPayload(logger).Should().Contain("\"l\":\"it\"");
     }
@@ -92,41 +92,10 @@ public sealed class MultiGameHybridSearchServiceTuningLogTests
         logger.Setup(l => l.IsEnabled(LogLevel.Debug)).Returns(debugEnabled);
         logger.Setup(l => l.IsEnabled(It.Is<LogLevel>(lv => lv != LogLevel.Debug))).Returns(true);
 
-        var hybrid = new Mock<IHybridSearchService>();
-        hybrid
-            .Setup(h => h.SearchAsync(
-                It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<SearchMode>(), It.IsAny<int>(),
-                It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(),
-                It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<HybridSearchResult>
-            {
-                new()
-                {
-                    ChunkId = $"{Guid.NewGuid()}_0",
-                    Content = "chunk",
-                    PdfDocumentId = Guid.NewGuid().ToString(),
-                    GameId = Guid.NewGuid(),
-                    ChunkIndex = 0,
-                    PageNumber = 1,
-                    HybridScore = 0.02f,
-                    VectorScore = 0.83f,
-                    KeywordScore = 0.10f,
-                    VectorRank = 1,
-                    KeywordRank = 1,
-                    MatchedTerms = new List<string>(),
-                    Mode = SearchMode.Hybrid,
-                    RoleTags = GameBookRole.None,
-                    Language = candidateLanguage
-                }
-            });
+        var perGame = new PerGameSearchStub();
+        perGame.ReturnsForAnyGame(PerGameSearchStub.Passage(
+            hybridScore: 0.02f, vectorScore: 0.83f, keywordScore: 0.10f, language: candidateLanguage, content: "chunk"));
 
-        var provider = new Mock<IServiceProvider>();
-        provider.Setup(p => p.GetService(typeof(IHybridSearchService))).Returns(hybrid.Object);
-        var scope = new Mock<IServiceScope>();
-        scope.SetupGet(s => s.ServiceProvider).Returns(provider.Object);
-        var scopeFactory = new Mock<IServiceScopeFactory>();
-        scopeFactory.Setup(f => f.CreateScope()).Returns(scope.Object);
-
-        return (new MultiGameHybridSearchService(scopeFactory.Object, new MockEmbeddingService(), logger.Object), logger);
+        return (new MultiGameHybridSearchService(perGame.ScopeFactory(), new MockEmbeddingService(), logger.Object), logger);
     }
 }

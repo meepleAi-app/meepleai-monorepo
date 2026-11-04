@@ -36,15 +36,23 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     // Test PDF paths
-    private const string BarragePdfPath = "../../../../data/rulebook/barrage_rulebook.pdf";
-    private const string TerraformingMarsPdfPath = "../../../../data/rulebook/terraforming-mars_rulebook.pdf";
+    // #4044: risolto dalla radice del repository, non con una risalita a conteggio fisso.
+    // La forma precedente — "../../../../data/rulebook/barrage_rulebook.pdf" — dalla working directory dei test
+    // (bin/Debug/net10.0) porta a apps/api/tests/, che non contiene data/: la guardia
+    // File.Exists qui sotto saltava SEMPRE, su un PDF committato e presente.
+    private static readonly string BarragePdfPath = PdfCorpus.Resolve("data/rulebook/barrage_rulebook.pdf");
+    // #4044: risolto dalla radice del repository, non con una risalita a conteggio fisso.
+    // La forma precedente — "../../../../data/rulebook/terraforming-mars_rulebook.pdf" — dalla working directory dei test
+    // (bin/Debug/net10.0) porta a apps/api/tests/, che non contiene data/: la guardia
+    // File.Exists qui sotto saltava SEMPRE, su un PDF committato e presente.
+    private static readonly string TerraformingMarsPdfPath = PdfCorpus.Resolve("data/rulebook/terraforming-mars_rulebook.pdf");
 
     // Helper to check if tests can run
     private void EnsureTestInfrastructureAvailable()
     {
         if (_extractor == null)
         {
-            Assert.Skip("PDF services not enabled. Set TEST_PDF_SERVICES=true and ensure Docker images are built:\n" +
+            Assert.Skip("PREVISTO: servizi PDF non abilitati. Imposta TEST_PDF_SERVICES=true and ensure Docker images are built:\n" +
                        "  cd apps/smoldocling-service && docker build -t infra-smoldocling-service:latest .");
         }
     }
@@ -118,7 +126,9 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange - Use Barrage rulebook (21MB, Italian, moderate complexity)
-        if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
+        if (!File.Exists(BarragePdfPath)) Assert.Skip(
+                $"GUASTO: il PDF di test non esiste in {BarragePdfPath}. Quei file sono COMMITTATI "
+                + "in data/rulebook/: se manca, controlla il nome prima dell'ambiente (#4044).");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
         var fileSize = new FileInfo(BarragePdfPath).Length;
@@ -147,7 +157,9 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange - Use small PDF to ensure normal completion (testing timeout requires cancellation)
-        if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
+        if (!File.Exists(BarragePdfPath)) Assert.Skip(
+                $"GUASTO: il PDF di test non esiste in {BarragePdfPath}. Quei file sono COMMITTATI "
+                + "in data/rulebook/: se manca, controlla il nome prima dell'ambiente (#4044).");
 
         await using var pdfStream = File.OpenRead(BarragePdfPath);
 
@@ -169,7 +181,9 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange
-        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"Test PDF not found: {TerraformingMarsPdfPath}");
+        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip(
+                $"GUASTO: il PDF di test non esiste in {TerraformingMarsPdfPath}. Quei file sono COMMITTATI "
+                + "in data/rulebook/: se manca, controlla il nome prima dell'ambiente (#4044).");
 
         await using var pdfStream = File.OpenRead(TerraformingMarsPdfPath);
 
@@ -227,7 +241,9 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
 
         unavailableClient.Dispose();
     }
-    [Fact(Timeout = 60000)] // 1 minute
+    // #3887: deliberately NOT raised to the suite's 90s — see PdfExtractionRealBackendValidationTests.
+    // The 60s bound is the performance ceiling under test, not incidental scaffolding.
+    [Fact(Timeout = 60_000)] // 1 minute ceiling — this bound IS the guardrail
     public async Task InvalidPdf_ErrorHandling()
     {
         EnsureTestInfrastructureAvailable();
@@ -269,7 +285,9 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
         EnsureTestInfrastructureAvailable();
 
         // Arrange - Terraforming Mars is larger (38MB, 20+ pages, complex layout)
-        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip($"Test PDF not found: {TerraformingMarsPdfPath}");
+        if (!File.Exists(TerraformingMarsPdfPath)) Assert.Skip(
+                $"GUASTO: il PDF di test non esiste in {TerraformingMarsPdfPath}. Quei file sono COMMITTATI "
+                + "in data/rulebook/: se manca, controlla il nome prima dell'ambiente (#4044).");
 
         await using var pdfStream = File.OpenRead(TerraformingMarsPdfPath);
         var fileSize = new FileInfo(TerraformingMarsPdfPath).Length;
@@ -294,7 +312,9 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     {
         EnsureTestInfrastructureAvailable();
         // Arrange - Use Barrage PDF for concurrent processing
-        if (!File.Exists(BarragePdfPath)) Assert.Skip($"Test PDF not found: {BarragePdfPath}");
+        if (!File.Exists(BarragePdfPath)) Assert.Skip(
+                $"GUASTO: il PDF di test non esiste in {BarragePdfPath}. Quei file sono COMMITTATI "
+                + "in data/rulebook/: se manca, controlla il nome prima dell'ambiente (#4044).");
 
         const int concurrentRequests = 3;
         _output($"Testing {concurrentRequests} concurrent requests");
@@ -327,7 +347,7 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     public async Task ServiceRestart_RecoveryAfterTemporaryFailure()
     {
         // Skip when using SharedTestcontainersFixture (cannot restart shared container)
-        Assert.Skip("Service restart test incompatible with shared containers. " +
+        Assert.Skip("LIMITE: il test di restart del servizio non e esprimibile con container condivisi. " +
                    "This test validates infrastructure resilience (container stop/start), " +
                    "which requires a dedicated container instance. " +
                    "Consider testing service recovery behavior through circuit breaker simulation instead.");

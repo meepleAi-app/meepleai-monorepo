@@ -5,7 +5,6 @@ import {
   SessionHelper,
   MOCK_LIVE_SESSION,
   MOCK_SESSION_ID,
-  MOCK_SCORE_PARSE_RECORDED,
   MOCK_NOTIFICATION_AGENT_READY,
 } from './pages/helpers/SessionHelper';
 
@@ -36,11 +35,7 @@ test.describe('Game Night Improvvisata — Complete Journey', () => {
       await page.goto('/games/bgg-search');
       await page.waitForLoadState('domcontentloaded');
 
-      const pageVisible = await page
-        .getByText(/cerca/i)
-        .first()
-        .isVisible({ timeout: 5000 })
-        .catch(() => false);
+      const pageVisible = await page.getByText(/cerca/i).first().isVisible({ timeout: 5000 });
       expect(pageVisible || (await page.title()).length > 0).toBe(true);
     });
   });
@@ -62,17 +57,16 @@ test.describe('Game Night Improvvisata — Complete Journey', () => {
       await page.waitForLoadState('domcontentloaded');
 
       const bell = page.getByTestId('notification-bell-button').first();
-      const bellVisible = await bell.isVisible({ timeout: 5000 }).catch(() => false);
+      const bellVisible = await bell.isVisible({ timeout: 5000 });
       expect(bellVisible || (await page.title()).length > 0).toBe(true);
     });
   });
 
-  test.describe('Step 6-7: Live Session + ScoreAssistant', () => {
-    test('should render live session with score assistant', async ({ page }) => {
+  test.describe('Step 6-7: Live Session', () => {
+    test('should render the live session', async ({ page }) => {
       await sessionHelper.mockLiveSession();
       await sessionHelper.mockScoresList();
       await sessionHelper.mockPlayersList();
-      await sessionHelper.mockScoreParse(MOCK_SCORE_PARSE_RECORDED);
       await sessionHelper.mockSessionCatchAll();
       await page
         .context()
@@ -83,15 +77,10 @@ test.describe('Game Night Improvvisata — Complete Journey', () => {
       await page.goto(`/sessions/${MOCK_SESSION_ID}/live`);
       await page.waitForLoadState('domcontentloaded');
 
-      const sessionLoaded = await page
-        .getByText(/catan/i)
-        .first()
-        .isVisible({ timeout: 5000 })
-        .catch(() => false);
+      const sessionLoaded = await page.getByText(/catan/i).first().isVisible({ timeout: 5000 });
       const loadingVisible = await page
         .getByTestId('live-session-loading')
-        .isVisible({ timeout: 2000 })
-        .catch(() => false);
+        .isVisible({ timeout: 2000 });
       expect(sessionLoaded || loadingVisible || (await page.title()).length > 0).toBe(true);
     });
   });
@@ -113,7 +102,7 @@ test.describe('Game Night Improvvisata — Complete Journey', () => {
       await page.waitForLoadState('domcontentloaded');
 
       const arbitroBtn = page.getByTestId('quick-action-arbiter').first();
-      const arbitroVisible = await arbitroBtn.isVisible({ timeout: 5000 }).catch(() => false);
+      const arbitroVisible = await arbitroBtn.isVisible({ timeout: 5000 });
       expect(arbitroVisible || (await page.title()).length > 0).toBe(true);
     });
   });
@@ -142,9 +131,9 @@ test.describe('Game Night Improvvisata — Complete Journey', () => {
       await page.waitForLoadState('domcontentloaded');
 
       const resumePanel = page.getByTestId('resume-session-panel').first();
-      const resumeVisible = await resumePanel.isVisible({ timeout: 5000 }).catch(() => false);
+      const resumeVisible = await resumePanel.isVisible({ timeout: 5000 });
       const recapText = page.getByText(/riepilogo|riprendi partita/i).first();
-      const recapVisible = await recapText.isVisible({ timeout: 3000 }).catch(() => false);
+      const recapVisible = await recapText.isVisible({ timeout: 3000 });
       expect(resumeVisible || recapVisible || (await page.title()).length > 0).toBe(true);
     });
   });

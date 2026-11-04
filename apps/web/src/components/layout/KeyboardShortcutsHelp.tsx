@@ -78,14 +78,6 @@ const DEFAULT_SHORTCUTS: KeyboardShortcut[] = [
     category: 'navigation',
   },
   {
-    key: 'u',
-    ctrl: true,
-    meta: true,
-    description: 'Upload PDF',
-    action: () => {},
-    category: 'navigation',
-  },
-  {
     key: 'k',
     ctrl: true,
     meta: true,

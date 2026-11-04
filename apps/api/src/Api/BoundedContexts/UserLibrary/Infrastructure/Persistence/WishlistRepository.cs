@@ -133,30 +133,22 @@ internal class WishlistRepository : RepositoryBase, IWishlistRepository
             .ConfigureAwait(false);
     }
 
-    private static WishlistItem MapToDomain(WishlistItemEntity entity)
-    {
-        var item = WishlistItem.Create(
+    /// <remarks>
+    /// Passa da <see cref="WishlistItem.Reconstitute"/>, non dalla factory di creazione: quella rende privato ogni
+    /// elemento, e la visibilità salvata non tornava (#4552). Ogni colonna scritta da <see cref="MapToPersistence"/>
+    /// torna qui (vedi <c>WishlistRepositoryTests</c>).
+    /// </remarks>
+    private static WishlistItem MapToDomain(WishlistItemEntity entity) =>
+        WishlistItem.Reconstitute(
+            id: entity.Id,
             userId: entity.UserId,
             gameId: entity.GameId,
             priority: (WishlistPriority)entity.Priority,
             targetPrice: entity.TargetPrice,
-            notes: entity.Notes);
-
-        // Override Id, AddedAt, and UpdatedAt from DB using reflection
-        var idProp = typeof(WishlistItem).BaseType?.BaseType?.GetProperty("Id");
-        idProp?.SetValue(item, entity.Id);
-
-        var addedAtProp = typeof(WishlistItem).GetProperty("AddedAt");
-        addedAtProp?.SetValue(item, entity.AddedAt);
-
-        var updatedAtProp = typeof(WishlistItem).GetProperty("UpdatedAt");
-        updatedAtProp?.SetValue(item, entity.UpdatedAt);
-
-        // Clear domain events from Create method
-        item.ClearDomainEvents();
-
-        return item;
-    }
+            notes: entity.Notes,
+            addedAt: entity.AddedAt,
+            visibility: (WishlistVisibility)entity.Visibility,
+            updatedAt: entity.UpdatedAt);
 
     private static WishlistItemEntity MapToPersistence(WishlistItem domainEntity)
     {

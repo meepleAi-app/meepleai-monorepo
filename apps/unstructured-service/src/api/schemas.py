@@ -11,7 +11,10 @@ class PdfExtractionRequest(BaseModel):
     strategy: Literal["fast", "hi_res"] = Field(
         default="fast", description="Unstructured extraction strategy"
     )
-    language: str = Field(default="ita", description="Document language (ISO 639-3)")
+    language: str = Field(
+        default="eng+ita+deu",
+        description="OCR languages: Tesseract codes joined by '+', the first is the primary",
+    )
 
 
 # Response Schemas
@@ -91,7 +94,7 @@ class PdfExtractionResponse(BaseModel):
                 "metadata": {
                     "extraction_duration_ms": 1250,
                     "strategy_used": "fast",
-                    "language": "ita",
+                    "language": "ita+eng+deu",
                     "detected_tables": 3,
                     "detected_structures": ["Title", "Paragraph", "Table"],
                     "quality_breakdown": {

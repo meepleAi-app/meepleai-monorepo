@@ -33,10 +33,11 @@ public sealed class GroundedAnswerServiceTests
             .ReturnsAsync(new CopyrightLeakResult(HasLeak: false, Matches: Array.Empty<LeakMatch>()));
     }
 
-    private GroundedAnswerService BuildService() => new(
+    private GroundedAnswerService BuildService(ICitedPageTrust? pageTrust = null) => new(
         _leakGuard.Object,
         _fallback.Object,
         Options.Create(new CopyrightLeakGuardOptions()),
+        pageTrust ?? CitedPageTrustTestDoubles.AllPagesBelieved(),
         NullLogger<GroundedAnswerService>.Instance);
 
     private static ChunkCitation Cite(CopyrightTier tier, string doc = "doc-1", string preview = "snippet") =>
@@ -90,6 +91,21 @@ public sealed class GroundedAnswerServiceTests
         result.CitationDtos.Should().ContainSingle();
         result.CitationDtos[0].SnippetPreview.Should().BeNull("Protected must not leak the verbatim preview");
         result.CitationDtos[0].ParaphrasedSnippet.Should().NotBeNull("FinalizeAsync extracts a paraphrase for Protected citations");
+    }
+
+    [Fact]
+    public async Task Finalize_TheRefusal_WithCitations_IsUngrounded()
+    {
+        // #4481: la stessa regola della chat — una rinuncia non è ancorata, anche con le fonti.
+        var svc = BuildService();
+
+        var result = await svc.FinalizeAsync(
+            "Questa informazione non è disponibile nel regolamento fornito.",
+            new List<ChunkCitation> { Cite(CopyrightTier.Full) },
+            "Si può?", "it", CancellationToken.None);
+
+        result.GroundingStatus.Should().Be(GroundingStatus.Ungrounded);
+        result.CitationDtos.Should().ContainSingle("the sources found are still shown");
     }
 
     [Fact]
@@ -158,5 +174,69 @@ public sealed class GroundedAnswerServiceTests
             "answer", new List<ChunkCitation> { Cite(CopyrightTier.Protected) }, "q", "en", cts.Token);
 
         await act.Should().ThrowAsync<OperationCanceledException>();
+    }
+
+    // ── #4819: a document that cannot vouch for its pages is cited without one ──
+
+    [Fact]
+    public async Task Finalize_DocumentWithoutAPage_IsCitedWithoutOne_AndTheOthersKeepTheirs()
+    {
+        var svc = BuildService(CitedPageTrustTestDoubles.WithoutAPage("doc-flat"));
+
+        var result = await svc.FinalizeAsync(
+            "answer",
+            new List<ChunkCitation>
+            {
+                Cite(CopyrightTier.Full, doc: "doc-flat"),
+                Cite(CopyrightTier.Full, doc: "doc-measured"),
+            },
+            "q", "en", CancellationToken.None);
+
+        result.CitationDtos
+            .Select(c => (c.DocumentId, c.PageNumber))
+            .Should().Equal(("doc-flat", (int?)null), ("doc-measured", (int?)3));
+        // Only the page goes: the source is still cited, with its text and its weight.
+        result.CitationDtos.Should().OnlyContain(c => c.SnippetPreview == "snippet" && c.RelevanceScore == 0.9f);
+        result.CitationDtos.Should().OnlyContain(c => c.CopyrightTier == "full");
+        result.FinalCitations.Select(c => c.PageNumber).Should().Equal(3, 3);
+    }
+
+    [Fact]
+    public async Task Finalize_DocumentWithoutAPage_StillMatchesTheParaphraseMarkerOnTheRealPage()
+    {
+        // The model wrote [ref:doc-1:3] from the page it was shown in the prompt. The paraphrase is matched on it
+        // BEFORE the page is left out of the citation; if the page went first the paraphrase would be lost.
+        var svc = BuildService(CitedPageTrustTestDoubles.WithoutAPage("doc-1"));
+
+        var result = await svc.FinalizeAsync(
+            "According to the rules, [ref:doc-1:3] you gain one victory point per settlement.",
+            new List<ChunkCitation> { Cite(CopyrightTier.Protected, doc: "doc-1", preview: "verbatim protected text") },
+            "How do I score?", "en", CancellationToken.None);
+
+        result.CitationDtos.Should().ContainSingle();
+        result.CitationDtos[0].PageNumber.Should().BeNull();
+        result.CitationDtos[0].ParaphrasedSnippet.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Finalize_AsksAboutEveryCitedDocument_InOneQuestion()
+    {
+        List<string?>? asked = null;
+        var trust = new Mock<ICitedPageTrust>();
+        trust
+            .Setup(t => t.WithoutAPageAsync(It.IsAny<IEnumerable<string?>>(), It.IsAny<CancellationToken>()))
+            .Callback<IEnumerable<string?>, CancellationToken>((ids, _) => asked = ids.ToList())
+            .ReturnsAsync(new HashSet<string>());
+        var svc = BuildService(trust.Object);
+
+        await svc.FinalizeAsync(
+            "answer",
+            new List<ChunkCitation> { Cite(CopyrightTier.Full, doc: "doc-1"), Cite(CopyrightTier.Full, doc: "doc-2") },
+            "q", "en", CancellationToken.None);
+
+        asked.Should().BeEquivalentTo(new[] { "doc-1", "doc-2" });
+        trust.Verify(
+            t => t.WithoutAPageAsync(It.IsAny<IEnumerable<string?>>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 }

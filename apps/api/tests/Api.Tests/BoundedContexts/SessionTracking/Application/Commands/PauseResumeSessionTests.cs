@@ -353,10 +353,16 @@ public sealed class PauseResumeSessionTests : IAsyncLifetime
         var first = await _createHandler!.Handle(BuildCreateCommand(userId, gameId), TestCancellationToken);
         _dbContext!.ChangeTracker.Clear();
 
-        var link1 = await _dbContext.GameNightSessions
-            .FirstAsync(l => l.SessionId == first.SessionId, TestCancellationToken);
-        link1.Status = nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightSessionStatus.InProgress);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        // Issue #3866: promoting the link used to be an assignment on the entity read back from the
+        // context followed by SaveChangesAsync. With the production NoTracking default (PERF-06)
+        // that read is DETACHED: the link stayed Pending, no InProgress slot existed, and the
+        // partial unique index this test is about had nothing to reject.
+        var promoted = await _dbContext.GameNightSessions
+            .Where(l => l.SessionId == first.SessionId)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(l => l.Status, nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightSessionStatus.InProgress)),
+                TestCancellationToken);
+        promoted.Should().Be(1, "the first session must hold the night's live slot");
         _dbContext.ChangeTracker.Clear();
 
         var act = async () => await SeedAdditionalActiveSessionInNightAsync(userId, gameId, first.GameNightEventId);
@@ -428,11 +434,16 @@ public sealed class PauseResumeSessionTests : IAsyncLifetime
         _dbContext!.ChangeTracker.Clear();
 
         // Simulate go-live: promote the draft link Pending → InProgress.
-        var link0 = await _dbContext.GameNightSessions
-            .FirstAsync(l => l.SessionId == created.SessionId, TestCancellationToken);
-        link0.Status = nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightSessionStatus.InProgress);
-        link0.StartedAt = DateTimeOffset.UtcNow;
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        // #3866: set-based — an assignment on a detached read wrote nothing, so the "live" link
+        // this test needs never existed and the finalize had a Pending link to close instead.
+        var wentLive = await _dbContext.GameNightSessions
+            .Where(l => l.SessionId == created.SessionId)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(l => l.Status, nameof(Api.BoundedContexts.GameManagement.Domain.Enums.GameNightSessionStatus.InProgress))
+                    .SetProperty(l => l.StartedAt, DateTimeOffset.UtcNow),
+                TestCancellationToken);
+        wentLive.Should().Be(1, "the draft link must exist before it can go live");
         _dbContext.ChangeTracker.Clear();
 
         var ownerParticipantId = await _dbContext.Set<Api.Infrastructure.Entities.SessionTracking.ParticipantEntity>()

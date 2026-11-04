@@ -392,6 +392,51 @@ public sealed class TranslateGamebookSegmentQueryHandlerTests
             Times.Never);
     }
 
+    /// <summary>
+    /// #4166: con il gateway che rifiuta la chiamata, la traduzione vuota finiva in un errore di
+    /// validazione («translatedIt required»). Ora arriva il motivo, come 503.
+    /// </summary>
+    [Fact]
+    public async Task Handle_GatewayRefusesTheCall_ThrowsTheReason_AndRecordsNoQuota()
+    {
+        var campaignRepo = new FakeCampaignRepo();
+        var artifactRepo = new FakeArtifactRepo();
+        var ownerId = Guid.NewGuid();
+        var campaign = GamebookCampaignSession.Create(GameRef.Shared(Guid.NewGuid()), ownerId, "Refused Campaign");
+        campaignRepo.Store.Add(campaign);
+        var bookId = Guid.NewGuid();
+        var artifact = GamebookPhotoArtifact.Create(campaign.Id, bookId, $"gamebook-photos/{campaign.Id}/photo1");
+        artifact.RecordSegments(new[] { GamebookSegment.Create(47, "The Hive awakens.", null) }, "The Hive awakens.");
+        artifactRepo.Store.Add(artifact);
+
+        var llm = new Mock<ILlmService>();
+        llm.Setup(l => l.GenerateCompletionStreamAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<RequestSource>(), It.IsAny<CancellationToken>()))
+            .Returns(RefusedStream());
+        var tierService = new Mock<ITierEnforcementService>();
+        var handler = BuildHandler(
+            campaignRepo, artifactRepo, new FakeParagraphRepo(), new FakeGlossaryRepo(), new FakeProgressRepo(),
+            tierService: tierService.Object, llm: llm.Object);
+
+        var act = async () =>
+        {
+            await foreach (var _ in handler.Handle(new TranslateGamebookSegmentQuery(campaign.Id, artifact.Id, 47, ownerId, bookId), CancellationToken.None)) { }
+        };
+
+        var thrown = await act.Should().ThrowAsync<Api.Middleware.Exceptions.LlmCallRefusedException>();
+        thrown.Which.StatusCode.Should().Be(503);
+        thrown.Which.ErrorCode.Should().Be("AI_BUDGET_DAILY_EXHAUSTED");
+        tierService.Verify(
+            s => s.RecordUsageAsync(It.IsAny<Guid>(), It.IsAny<TierAction>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    private static async IAsyncEnumerable<StreamChunk> RefusedStream()
+    {
+        await Task.Yield();
+        yield return new StreamChunk(null, IsFinal: true, ErrorCode: "AI_BUDGET_DAILY_EXHAUSTED",
+            ErrorMessage: "Il servizio AI è in pausa fino a domani: è stato raggiunto il budget di spesa del giorno.");
+    }
+
     private sealed class ThrowingOwnershipGuard : ICampaignOwnershipGuard
     {
         public Task AssertOwnedByAsync(Guid campaignId, Guid userId, CancellationToken cancellationToken)

@@ -1,7 +1,9 @@
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
+using Api.Infrastructure.Entities;
 using Api.Models;
 using Api.Services;
 using Api.SharedKernel.Application.Interfaces;
@@ -29,6 +31,7 @@ internal class StreamSetupGuideQueryHandler : IStreamingQueryHandler<StreamSetup
     private readonly IEmbeddingRepository _embeddingRepository;
     private readonly ILlmService _llmService;
     private readonly IPromptTemplateService _promptTemplateService;
+    private readonly IRagAccessService _ragAccessService;
     private readonly IConfiguration _configuration;
     private readonly ILogger<StreamSetupGuideQueryHandler> _logger;
     private readonly TimeProvider _timeProvider;
@@ -64,6 +67,7 @@ etc.";
         IEmbeddingRepository embeddingRepository,
         ILlmService llmService,
         IPromptTemplateService promptTemplateService,
+        IRagAccessService ragAccessService,
         IConfiguration configuration,
         ILogger<StreamSetupGuideQueryHandler> logger,
         TimeProvider? timeProvider = null)
@@ -72,6 +76,7 @@ etc.";
         _embeddingRepository = embeddingRepository ?? throw new ArgumentNullException(nameof(embeddingRepository));
         _llmService = llmService ?? throw new ArgumentNullException(nameof(llmService));
         _promptTemplateService = promptTemplateService ?? throw new ArgumentNullException(nameof(promptTemplateService));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _timeProvider = timeProvider ?? TimeProvider.System;
@@ -85,6 +90,17 @@ etc.";
             yield return CreateEvent(StreamingEventType.Error,
                 new StreamingError("Game ID is required.", "EMPTY_GAME_ID"));
             yield break;
+        }
+
+        // #4206: la guida cerca nella KB del gioco e passa i frammenti all'LLM, quindi passa dal
+        // cancello RAG (ADR-096) prima di qualunque evento. Come in StreamQaQueryHandler, il controllo
+        // vale per gli id GUID: i vettori sono indicizzati per GUID, e l'endpoint rifiuta gli altri.
+        if (Guid.TryParse(query.GameId, out var accessGameId))
+        {
+            var userRole = Enum.TryParse<UserRole>(query.UserRole, ignoreCase: true, out var parsedRole)
+                ? parsedRole : UserRole.User;
+            await _ragAccessService.EnsureRagAccessAsync(
+                query.UserId, accessGameId, userRole, cancellationToken).ConfigureAwait(false);
         }
 
         _logger.LogInformation("Starting streaming setup guide generation for game {GameId} with {PlayerCount} players", query.GameId, query.PlayerCount);
@@ -241,7 +257,7 @@ etc.";
             new Vector(queryEmbedding),
             SetupSearchTopK,
             SetupSearchMinScore,
-            documentIds: null,
+            pdfDocumentIds: null,
             cancellationToken).ConfigureAwait(false);
 
         if (embeddings == null || embeddings.Count == 0)
@@ -360,7 +376,7 @@ TASK: Generate a step-by-step setup guide for this board game. Focus on the init
         // own `references`, so this reflects what the caller receives even though no
         // separate StreamingCitations event is emitted). Mirrors the sibling handlers'
         // `snippets.Count > 0 ? "Grounded" : "Ungrounded"` pattern (StreamQaQueryHandler,
-        // StreamExplainQueryHandler, ChatWithSessionAgentCommandHandler). Default/fallback
+        // StreamExplainQueryHandler). Default/fallback
         // steps always carry empty reference lists (CreateDefaultSetupStepsStatic), so
         // that path stays Ungrounded.
         var hasGroundedReferences = steps.Any(s => s.references.Count > 0);

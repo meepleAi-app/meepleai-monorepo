@@ -52,7 +52,6 @@ internal static class KnowledgeBaseEndpoints
         MapContextEngineeringEndpoints(group);
         MapSharedGameKbStatusEndpoint(group);
         MapGameDocumentsEndpoint(group);
-        MapLinkKbEndpoint(group);
         MapKbDocumentEndpoints(group);
         MapUserKbDocsEndpoint(group);
 
@@ -159,6 +158,7 @@ internal static class KnowledgeBaseEndpoints
         // DDD-PHASE3: RAG Q&amp;A endpoint using MediatR
         group.MapPost("/knowledge-base/ask", HandleAsk)
         .WithName("KnowledgeBaseAsk")
+        .RequireRateLimiting(RateLimitingServiceExtensions.AnswerOpenRequestsPolicy) // #4388: at most 2 open answers per user
         .RequireSession()
         .WithTags("KnowledgeBase");
     }
@@ -171,6 +171,7 @@ internal static class KnowledgeBaseEndpoints
         // Emits text/event-stream; honors EC-3 client-disconnect via CancellationToken.
         group.MapPost("/knowledge-base/ask/global", HandleGlobalAskStream)
             .WithName("GlobalKbAskStream")
+            .RequireRateLimiting(RateLimitingServiceExtensions.AnswerOpenRequestsPolicy) // #4388: at most 2 open answers per user
             .RequireSession()
             .WithTags("KnowledgeBase")
             .WithSummary("Cross-game knowledge base SSE ask (RBAC-filtered)")
@@ -224,8 +225,8 @@ internal static class KnowledgeBaseEndpoints
                 Query: request.Query,
                 UserId: userId,
                 Role: userRole,
-                AgentLanguage: request.Language ?? "it",
-                TopK: request.TopK ?? 8);
+                AgentLanguage: request.Language,
+                AcceptLanguage: context.Request.Headers.AcceptLanguage.ToString()); // #4168
 
             await foreach (var evt in mediator.CreateStream(query, streamCt).ConfigureAwait(false))
             {
@@ -394,7 +395,10 @@ internal static class KnowledgeBaseEndpoints
         logger.LogDebug("GetKnowledgeBaseStatus for game {GameId} by user {UserId}",
             gameId, session!.Principal!.Subject.Id);
 
-        var query = new GetKnowledgeBaseStatusQuery(gameId);
+        var query = new GetKnowledgeBaseStatusQuery(
+            gameId,
+            session.Principal!.Subject.Id,
+            session.Principal!.EffectiveActor.Role);
         var result = await mediator.Send(query, ct).ConfigureAwait(false);
 
         if (result is null)
@@ -432,12 +436,11 @@ internal static class KnowledgeBaseEndpoints
         var query = new SearchQuery(
             GameId: gameId,
             Query: req.query,
+            Access: SearchAccess.OfUser(session!.Principal!.Subject.Id, session.Principal!.EffectiveActor.Role),
             TopK: req.topK ?? 5,
             MinScore: req.minScore ?? 0.55,
             SearchMode: req.searchMode ?? "hybrid",
-            Language: req.language ?? "en",
-            UserId: session!.Principal!.Subject.Id,
-            UserRole: session.Principal!.EffectiveActor.Role
+            Language: req.language ?? "en"
         );
 
         var results = await mediator.Send(query, ct).ConfigureAwait(false);
@@ -488,10 +491,11 @@ internal static class KnowledgeBaseEndpoints
         var query = new AskQuestionQuery(
             GameId: gameId,
             Question: req.query!,  // Already validated by QueryValidator above
-            Language: req.language ?? "en",
+            Language: req.language,
             BypassCache: req.bypassCache ?? false,
             UserId: session!.Principal!.Subject.Id,
-            UserRole: session.Principal!.EffectiveActor.Role
+            UserRole: session.Principal!.EffectiveActor.Role,
+            AcceptLanguage: context.Request.Headers.AcceptLanguage.ToString() // #4168
         );
 
         logger.LogDebug("[KnowledgeBase.Ask] Sending AskQuestionQuery to mediator...");
@@ -512,7 +516,9 @@ internal static class KnowledgeBaseEndpoints
             llmConfidence = response.LlmConfidence,
             overallConfidence = response.OverallConfidence,
             isLowQuality = response.IsLowQuality,
-            citations = response.Citations
+            citations = response.Citations,
+            profileVersionId = response.ProfileVersionId, // #4168
+            language = response.Language
         });
     }
 
@@ -885,7 +891,9 @@ internal static class KnowledgeBaseEndpoints
         var command = new AddMessageCommand(
             ThreadId: threadId,
             Content: req.Content,
-            Role: req.Role
+            Role: req.Role,
+            ProfileVersionId: req.ProfileVersionId,
+            Language: req.Language
         );
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
@@ -1381,35 +1389,6 @@ internal static class KnowledgeBaseEndpoints
         return Results.Ok(result);
     }
 
-    private static void MapLinkKbEndpoint(RouteGroupBuilder group)
-    {
-        group.MapPost("/games/{gameId:guid}/knowledge-base/link", HandleLinkKb)
-            .WithName("LinkExistingKbToGame")
-            .RequireSession()
-            .WithTags("KnowledgeBase")
-            .WithSummary("Link an existing KB to a game")
-            .WithDescription("Creates a VectorDocument clone linking an existing processed PDF to a different game. The pgvector embeddings are shared.");
-    }
-
-    private static async Task<IResult> HandleLinkKb(
-        Guid gameId,
-        LinkKbRequest request,
-        HttpContext context,
-        IMediator mediator,
-        CancellationToken ct)
-    {
-        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-
-        var result = await mediator.Send(new LinkExistingKbToGameCommand(
-            UserId: session.Principal!.Subject.Id,
-            TargetGameId: gameId,
-            SourcePdfDocumentId: request.PdfDocumentId), ct).ConfigureAwait(false);
-
-        return string.Equals(result.Status, "linked", StringComparison.Ordinal)
-            ? Results.Ok(result)
-            : Results.Accepted(value: result);
-    }
-
     private static async Task<IResult> HandleGetGameDocuments(
         Guid gameId,
         HttpContext context,
@@ -1492,11 +1471,6 @@ internal record AssembleContextRequest(
 );
 
 /// <summary>
-/// Request model for linking an existing KB (processed PDF) to a different game.
-/// </summary>
-internal record LinkKbRequest(Guid PdfDocumentId);
-
-/// <summary>
 /// Request body for POST /api/v1/kb-docs/{id}/chunks/search (G3 in-document FTS).
 /// </summary>
 internal sealed record SearchKbChunksRequest(string Query, int? Skip, int? Take);
@@ -1540,9 +1514,8 @@ internal sealed record GlobalKbSearchRequest(
 /// User/Role are NOT in the request — they are resolved from the authenticated session.
 /// </summary>
 /// <param name="Query">The natural-language question to ask across all accessible games.</param>
-/// <param name="Language">ISO 639-1 language code for the LLM prompt (default: "it").</param>
-/// <param name="TopK">Max chunks to retrieve cross-game (default: 8, capped by handler).</param>
+/// <param name="Language">ISO 639-1 language the client asks for; used when the question is too short to detect it (#4168).</param>
+/// <remarks>#4168: the number of chunks comes from the published agent profile; a `topK` in the body is ignored.</remarks>
 internal sealed record GlobalKbAskRequest(
     string Query,
-    string? Language = null,
-    int? TopK = null);
+    string? Language = null);

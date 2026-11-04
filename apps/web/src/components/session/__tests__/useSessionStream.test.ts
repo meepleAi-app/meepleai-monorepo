@@ -50,11 +50,13 @@ class MockEventSource {
     this.onopen?.();
   }
 
-  simulateMessage(data: unknown) {
-    const event = new MessageEvent('message', {
-      data: JSON.stringify(data),
-    });
-    this.onmessage?.(event);
+  /**
+   * #4114: a named SSE event, as the live session stream sends it — the SSE event name is the
+   * type, the data is the bare payload, delivered to the listener registered for that name.
+   */
+  simulateEvent(type: string, payload: unknown) {
+    const event = new MessageEvent(type, { data: JSON.stringify(payload) });
+    (this.listeners[type] ?? []).forEach(listener => listener(event));
   }
 
   simulateError() {
@@ -98,7 +100,8 @@ describe('useSessionStream', () => {
 
     expect(result.current.connectionStatus).toBe('connecting');
     expect(MockEventSource._instances).toHaveLength(1);
-    expect(MockEventSource.latest.url).toContain('/api/v1/game-sessions/session-123/stream');
+    // #4114: the callers hold a live session id; /game-sessions/{id}/stream answered 404 to it.
+    expect(MockEventSource.latest.url).toContain('/api/v1/live-sessions/session-123/stream');
   });
 
   it('should transition to connected on open', async () => {
@@ -176,16 +179,12 @@ describe('useSessionStream', () => {
     });
 
     act(() => {
-      MockEventSource.latest.simulateMessage({
-        type: 'session:player',
-        data: {
-          sessionId: 'session-123',
-          participantId: 'p-1',
-          displayName: 'Alice',
-          isOwner: false,
-          joinOrder: 2,
-        },
-        timestamp: new Date().toISOString(),
+      MockEventSource.latest.simulateEvent('session:player', {
+        sessionId: 'session-123',
+        participantId: 'p-1',
+        displayName: 'Alice',
+        isOwner: false,
+        joinOrder: 2,
       });
     });
 
@@ -206,19 +205,29 @@ describe('useSessionStream', () => {
     });
 
     act(() => {
-      MockEventSource.latest.simulateMessage({
-        type: 'session:score',
-        data: {
-          sessionId: 'session-123',
-          participantId: 'p-1',
-          scoreEntryId: 'se-1',
-          newScore: 42,
-        },
-        timestamp: new Date().toISOString(),
+      MockEventSource.latest.simulateEvent('session:score', {
+        sessionId: 'session-123',
+        participantId: 'p-1',
+        scoreEntryId: 'se-1',
+        newScore: 42,
       });
     });
 
     expect(onScoreUpdated).toHaveBeenCalledWith(expect.objectContaining({ newScore: 42 }));
+  });
+
+  it('#4114: passes a session:timer event of the live stream to onTimerEvent', () => {
+    const onTimerEvent = vi.fn();
+    renderHook(() => useSessionStream('session-123', { onTimerEvent }));
+
+    act(() => {
+      MockEventSource.latest.simulateOpen();
+    });
+    act(() => {
+      MockEventSource.latest.simulateEvent('session:timer', { durationSeconds: 90 });
+    });
+
+    expect(onTimerEvent).toHaveBeenCalledWith({ durationSeconds: 90 });
   });
 
   it('should call onRoleChanged for role change events', () => {
@@ -230,17 +239,13 @@ describe('useSessionStream', () => {
     });
 
     act(() => {
-      MockEventSource.latest.simulateMessage({
-        type: 'session:player',
-        data: {
-          sessionId: 'session-123',
-          participantId: 'p-1',
-          displayName: 'Bob',
-          previousRole: 'Player',
-          newRole: 'Host',
-          changedBy: 'host-id',
-        },
-        timestamp: new Date().toISOString(),
+      MockEventSource.latest.simulateEvent('session:player', {
+        sessionId: 'session-123',
+        participantId: 'p-1',
+        displayName: 'Bob',
+        previousRole: 'Player',
+        newRole: 'Host',
+        changedBy: 'host-id',
       });
     });
 

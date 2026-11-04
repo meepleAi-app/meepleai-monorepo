@@ -9,6 +9,37 @@ import type {
 const httpClient = new HttpClient({});
 const BASE_URL = '/api/v1/admin/agent-definitions';
 
+/**
+ * 🔴 #4059 — rifiuta un id inutilizzabile PRIMA di interpolarlo nel path.
+ *
+ * Il difetto che questa guardia rende impossibile: la pagina di edit leggeva `params.id` da una
+ * Promise, otteneva `undefined`, e il valore finiva nel path — misurato con un id reale nella
+ * URL del browser: `404 /api/v1/admin/agent-definitions/undefined`. Nessuno dei due strati
+ * protestava: l'interpolazione accetta qualunque cosa, e il 404 che tornava era
+ * indistinguibile da «questo id non esiste», tanto che la pagina mostrava «Agent not found».
+ *
+ * La guardia serve proprio per quella indistinguibilita': un 404 e' un esito legittimo
+ * dell'API, un id assente e' un difetto del chiamante, e i due vanno separati **prima** della
+ * richiesta. Copre anche le stringhe letterali `"undefined"` e `"null"`, che sono quello che si
+ * ottiene interpolando quei valori — non valori assenti ma stringhe, quindi un controllo di
+ * verita' da solo non le vedrebbe.
+ *
+ * ⚠️ Volutamente locale a questo client, non in `HttpClient`: la versione generale cambierebbe
+ * la superficie d'errore di ogni chiamata dell'applicazione (da 404 a eccezione) e va misurata
+ * contro gli E2E, non introdotta di passaggio.
+ */
+function requireId(id: string, operation: string): string {
+  const trimmed = typeof id === 'string' ? id.trim() : '';
+  if (trimmed.length === 0 || trimmed === 'undefined' || trimmed === 'null') {
+    throw new Error(
+      `agentDefinitionsApi.${operation}: id non utilizzabile (${JSON.stringify(id)}). ` +
+        'Il chiamante non ha risolto il parametro di rotta — in un Client Component `params` e' +
+        ' una Promise e va letta con `use(params)`.'
+    );
+  }
+  return trimmed;
+}
+
 // ============================================================================
 // Agent Catalog Stats Types (Issue #3713)
 // ============================================================================
@@ -76,7 +107,8 @@ export const agentDefinitionsApi = {
    * Get agent definition by ID
    */
   async getById(id: string): Promise<AgentDefinitionDto> {
-    const result = await httpClient.get<AgentDefinitionDto>(`${BASE_URL}/${id}`);
+    const safeId = requireId(id, 'getById');
+    const result = await httpClient.get<AgentDefinitionDto>(`${BASE_URL}/${safeId}`);
     if (!result) throw new Error(`Agent definition ${id} not found`);
     return result;
   },
@@ -94,7 +126,8 @@ export const agentDefinitionsApi = {
    * Update existing agent definition
    */
   async update(id: string, data: Omit<UpdateAgentDefinition, 'id'>): Promise<AgentDefinitionDto> {
-    const result = await httpClient.put<AgentDefinitionDto>(`${BASE_URL}/${id}`, data);
+    const safeId = requireId(id, 'update');
+    const result = await httpClient.put<AgentDefinitionDto>(`${BASE_URL}/${safeId}`, data);
     if (!result) throw new Error(`Failed to update agent definition ${id}`);
     return result;
   },
@@ -103,14 +136,16 @@ export const agentDefinitionsApi = {
    * Delete agent definition
    */
   async delete(id: string): Promise<void> {
-    await httpClient.delete(`${BASE_URL}/${id}`);
+    const safeId = requireId(id, 'delete');
+    await httpClient.delete(`${BASE_URL}/${safeId}`);
   },
 
   /**
    * Toggle agent definition active status
    */
   async toggleActive(id: string): Promise<AgentDefinitionDto> {
-    const current = await this.getById(id);
+    const safeId = requireId(id, 'toggleActive');
+    const current = await this.getById(safeId);
     const updateData = {
       name: current.name,
       description: current.description,
@@ -122,7 +157,7 @@ export const agentDefinitionsApi = {
       kbCardIds: current.kbCardIds,
       chatLanguage: current.chatLanguage ?? 'auto',
     };
-    return this.update(id, updateData);
+    return this.update(safeId, updateData);
   },
 
   /**
@@ -149,21 +184,24 @@ export const agentDefinitionsApi = {
    * Start testing an agent definition (Draft → Testing)
    */
   async startTesting(id: string): Promise<void> {
-    await httpClient.post(`${BASE_URL}/${id}/start-testing`, {});
+    const safeId = requireId(id, 'startTesting');
+    await httpClient.post(`${BASE_URL}/${safeId}/start-testing`, {});
   },
 
   /**
    * Publish an agent definition (Testing → Published)
    */
   async publish(id: string): Promise<void> {
-    await httpClient.post(`${BASE_URL}/${id}/publish`, {});
+    const safeId = requireId(id, 'publish');
+    await httpClient.post(`${BASE_URL}/${safeId}/publish`, {});
   },
 
   /**
    * Unpublish an agent definition (Published → Draft)
    */
   async unpublish(id: string): Promise<void> {
-    await httpClient.post(`${BASE_URL}/${id}/unpublish`, {});
+    const safeId = requireId(id, 'unpublish');
+    await httpClient.post(`${BASE_URL}/${safeId}/unpublish`, {});
   },
 
   /**
@@ -171,7 +209,8 @@ export const agentDefinitionsApi = {
    * Issue #3713: Agent Catalog actions
    */
   async clone(id: string): Promise<AgentDefinitionDto> {
-    const source = await this.getById(id);
+    const safeId = requireId(id, 'clone');
+    const source = await this.getById(safeId);
     return this.create({
       name: `${source.name} (Copy)`,
       description: source.description,

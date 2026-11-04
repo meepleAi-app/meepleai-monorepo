@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -14,15 +15,18 @@ internal sealed class RejectSharedGamePublicationCommandHandler : ICommandHandle
 {
     private readonly ISharedGameRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ISharedGameCacheInvalidator _cacheInvalidator;
     private readonly ILogger<RejectSharedGamePublicationCommandHandler> _logger;
 
     public RejectSharedGamePublicationCommandHandler(
         ISharedGameRepository repository,
         IUnitOfWork unitOfWork,
+        ISharedGameCacheInvalidator cacheInvalidator,
         ILogger<RejectSharedGamePublicationCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _cacheInvalidator = cacheInvalidator ?? throw new ArgumentNullException(nameof(cacheInvalidator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -42,6 +46,12 @@ internal sealed class RejectSharedGamePublicationCommandHandler : ICommandHandle
 
         _repository.Update(game);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // #4603: il dettaglio e la lista del catalogo in cache portano lo stato del gioco (la lista, la sua
+        // stessa presenza), e l'endpoint pubblico nasconde i non pubblicati DOPO la cache: senza questa
+        // evizione il pubblico vedeva lo stato di prima fino alla scadenza della voce. Dopo il salvataggio,
+        // mai prima. Vedi ISharedGameCacheInvalidator.
+        await _cacheInvalidator.EvictDetailAndListAsync(command.GameId, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Shared game publication rejected successfully: {GameId}",

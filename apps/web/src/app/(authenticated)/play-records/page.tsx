@@ -56,7 +56,19 @@ function RecordsListView() {
       </div>
 
       {/* CTA sticky sopra la bottom nav */}
-      <div className="fixed bottom-[calc(var(--size-mobile-nav,56px)+8px)] left-0 right-0 px-4 z-20">
+      {/*
+        🔴 #4060 — due difetti in una `bottom`, e il secondo spiega il primo.
+
+        (1) Il banner cookie (`fixed bottom-0 z-50`) copriva questa CTA: misurato con
+            `elementFromPoint` sia a 1366x768 sia a 390x844. A z-20 non c'e` ordine di
+            DOM che la salvi.
+
+        (2) `--size-mobile-nav` **non esiste**: il token definito in design-tokens.css e`
+            `--size-mobile-nav-height` (4.5rem). Il `var()` ricadeva quindi SEMPRE su
+            56px mentre la barra ne misura 68 — la CTA finiva 4px dentro la barra.
+            Misurato a 390x844: nav top = 776, CTA bottom = 780.
+      */}
+      <div className="fixed bottom-[calc(var(--size-mobile-nav-height,4.5rem)+8px+var(--cookie-banner-height,0px))] left-0 right-0 px-4 z-20">
         <GradientButton
           fullWidth
           size="lg"

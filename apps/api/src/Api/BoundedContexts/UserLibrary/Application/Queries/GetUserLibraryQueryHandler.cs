@@ -14,8 +14,8 @@ namespace Api.BoundedContexts.UserLibrary.Application.Queries;
 
 /// <summary>
 /// Handler for getting paginated user library.
-/// Fetches game details from SharedGameCatalog and PrivateGames.
-/// Issue #3663: Updated to support PrivateGame references.
+/// Fetches game details from SharedGameCatalog. Private games are not part of this list: the
+/// repository returns catalog entries only, and the PrivateGames endpoints serve the rest (#4235).
 /// </summary>
 internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, PaginatedLibraryResponseDto>
 {
@@ -40,60 +40,46 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
     {
         ArgumentNullException.ThrowIfNull(query);
 
+        // #4187: the page actually served. The response used to echo the requested size, so a
+        // client asking for 500 got 100 entries and "1 page, nothing after".
+        var page = UserLibraryPaging.NormalizePage(query.Page);
+        var pageSize = UserLibraryPaging.NormalizePageSize(query.PageSize);
+
         var (entries, total) = await _libraryRepository.GetUserLibraryPaginatedAsync(
             query.UserId,
             query.Search,
             query.FavoritesOnly,
             query.StateFilter,
+            query.HasKb,
             query.SortBy,
             query.Descending,
-            query.Page,
-            query.PageSize,
+            page,
+            pageSize,
             cancellationToken
         ).ConfigureAwait(false);
 
-        // Issue #4998: Load PrivateGame entries FIRST — needed to resolve correct PrivateGameIds before the PDF query.
-        // For private game library entries, the domain UserLibraryEntry.GameId = Guid.Empty
-        // (computed from UserLibraryEntryEntity.SharedGameId ?? Guid.Empty), so we cannot use
-        // entry.GameId to find their PDFs. Private game PDFs are stored with GameId = PrivateGameId.
+        // The repository returns only catalog (shared) entries: GetUserLibraryPaginatedAsync filters
+        // SharedGameId != null, and private games are served by the PrivateGames endpoints. A
+        // branch for private entries lived here and could not be reached; removed with #4235.
         var entryIds = entries.Select(e => e.Id).ToList();
-        var privateGameEntries = await _dbContext.UserLibraryEntries
-            .AsNoTracking()
-            .Include(e => e.PrivateGame)
-            .Where(e => entryIds.Contains(e.Id) && e.PrivateGameId.HasValue)
-            .ToDictionaryAsync(e => e.Id, cancellationToken)
-            .ConfigureAwait(false);
-
-        // Build ID lists for the PDF batch query.
-        // Shared game IDs: exclude Guid.Empty (private game placeholder in the domain model).
-        // Private game IDs: resolved from the EF entities loaded above.
         var sharedGameIds = entries.Select(e => e.GameId).Where(id => id != Guid.Empty).ToList();
-        var privateGameIds = privateGameEntries.Values
-            .Where(e => e.PrivateGameId.HasValue)
-            .Select(e => e.PrivateGameId!.Value)
-            .Distinct()
-            .ToList();
 
-        // Issue #4998: Batch load KB stats for both shared and private games in a single query.
+        // Issue #4998: Batch load KB stats for the shared games in a single query.
         // ProcessingState is stored as string (HasConversion<string>()), so group in memory.
         //
         // PDF -> SharedGame migration: pdf_documents.GameId removed. PDFs now reference
-        // SharedGames.Id directly via pdf_documents.SharedGameId (for shared library PDFs)
-        // or PrivateGames.Id via pdf_documents.PrivateGameId (for custom private PDFs).
+        // SharedGames.Id directly via pdf_documents.SharedGameId.
         var pdfDocumentsRaw = await _dbContext.PdfDocuments
-            .Where(p => (p.SharedGameId.HasValue && sharedGameIds.Contains(p.SharedGameId.Value)) ||
-                        (p.PrivateGameId.HasValue && privateGameIds.Contains(p.PrivateGameId.Value)))
+            .Where(p => p.SharedGameId.HasValue && sharedGameIds.Contains(p.SharedGameId.Value))
             .Select(p => new { p.SharedGameId, p.PrivateGameId, p.ProcessingState })
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         // ProcessingState is stored as the enum member name (e.g., "Ready", "Failed")
         // because PdfDocumentEntity.ProcessingState is a string property (HasConversion<string>()).
-        // Legacy data may contain "Indexed" instead of "Ready" — treat both as completed.
-        static bool IsCompleted(string? state) =>
-            string.Equals(state, nameof(PdfProcessingState.Ready), StringComparison.OrdinalIgnoreCase)
-            || string.Equals(state, "Indexed", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(state, "completed", StringComparison.OrdinalIgnoreCase);
+        // Which states count as completed lives in LibraryKbStates, shared with the hasKb filter
+        // of the repository (#4227).
+        static bool IsCompleted(string? state) => LibraryKbStates.IsCompleted(state);
 
         static bool IsFailed(string? state) =>
             string.Equals(state, nameof(PdfProcessingState.Failed), StringComparison.OrdinalIgnoreCase);
@@ -112,21 +98,7 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                     KbProcessingCount = g.Count(p => !IsCompleted(p.ProcessingState) && !IsFailed(p.ProcessingState)),
                 });
 
-        // Private game PDFs: PrivateGameId IS NOT NULL. Keyed by PrivateGameId.
-        var kbStatsByPrivateGame = pdfDocumentsRaw
-            .Where(p => p.PrivateGameId.HasValue)
-            .GroupBy(p => p.PrivateGameId!.Value)
-            .ToDictionary(
-                g => g.Key,
-                g => new
-                {
-                    KbCardCount = g.Count(),
-                    KbIndexedCount = g.Count(p => IsCompleted(p.ProcessingState)),
-                    KbProcessingCount = g.Count(p => !IsCompleted(p.ProcessingState) && !IsFailed(p.ProcessingState)),
-                });
-
         // Batch load: Get all SharedGames in a single query (prevents N+1).
-        // Exclude Guid.Empty (private game placeholder) — consistent with sharedGameIds above.
         var gameIds = entries.Select(e => e.GameId).Where(id => id != Guid.Empty).ToList();
         var sharedGames = await _sharedGameRepository.GetByIdsAsync(gameIds, cancellationToken).ConfigureAwait(false);
 
@@ -152,7 +124,7 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
             .ToDictionaryAsync(sg => sg.Id, cancellationToken)
             .ConfigureAwait(false);
 
-        // Issue #1852 (Gap A): Batch-load UserLibraryEntryEntity for all entries (shared + private)
+        // Issue #1852 (Gap A): Batch-load UserLibraryEntryEntity for all entries
         // to access CustomCoverR2Key (L3 user-custom cover layer used by CoverUrlResolver).
         var entryEntityMap = await _dbContext.UserLibraryEntries
             .AsNoTracking()
@@ -174,7 +146,6 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
         var entryDtos = new List<UserLibraryEntryDto>();
         foreach (var entry in entries)
         {
-            // Try SharedGame first (most common)
             if (sharedGames.TryGetValue(entry.GameId, out var sharedGame))
             {
                 // Issue #4998: Compute KB stats for this game
@@ -224,53 +195,16 @@ internal class GetUserLibraryQueryHandler : IQueryHandler<GetUserLibraryQuery, P
                     CoverUrl: coverUrl
                 ));
             }
-            // Check PrivateGame entries (batch-loaded above)
-            else if (privateGameEntries.TryGetValue(entry.Id, out var libraryEntity) &&
-                     libraryEntity.PrivateGame != null)
-            {
-                var privateGame = libraryEntity.PrivateGame;
-                // Issue #4998: Use kbStatsByPrivateGame (keyed by PrivateGameId) for private game KB stats.
-                // kbStatsByGame only covers shared game PDFs (PrivateGameId IS NULL in DB).
-                kbStatsByPrivateGame.TryGetValue(libraryEntity.PrivateGameId!.Value, out var privateKbStats);
-                // Issue #1852: private-game L4 cover deferred to #1824 follow-up.
-                string? privateCoverUrl = null;
-                entryDtos.Add(new UserLibraryEntryDto(
-                    Id: entry.Id,
-                    UserId: entry.UserId,
-                    GameId: libraryEntity.PrivateGameId!.Value,
-                    GameTitle: privateGame.Title,
-                    GamePublisher: null, // Private games don't have publishers
-                    GameYearPublished: privateGame.YearPublished,
-                    GameIconUrl: privateGame.ThumbnailUrl,
-                    GameImageUrl: privateGame.ImageUrl,
-                    AddedAt: entry.AddedAt,
-                    Notes: entry.Notes?.Value,
-                    IsFavorite: entry.IsFavorite,
-                    CurrentState: entry.CurrentState.Value.ToString(),
-                    StateChangedAt: entry.CurrentState.ChangedAt,
-                    StateNotes: entry.CurrentState.StateNotes,
-                    HasKb: privateKbStats?.KbIndexedCount > 0,
-                    KbCardCount: privateKbStats?.KbCardCount ?? 0,
-                    KbIndexedCount: privateKbStats?.KbIndexedCount ?? 0,
-                    KbProcessingCount: privateKbStats?.KbProcessingCount ?? 0,
-                    AgentIsOwned: true, // Always true in library context
-                    OwnershipDeclaredAt: entry.OwnershipDeclaredAt,
-                    HasRagAccess: isAdmin || entry.OwnershipDeclaredAt != null,
-                    TimesPlayed: entry.Stats.TimesPlayed,
-                    LastPlayed: entry.Stats.LastPlayed,
-                    CoverUrl: privateCoverUrl
-                ));
-            }
         }
 
-        var totalPages = (int)Math.Ceiling((double)total / query.PageSize);
-        var hasNextPage = query.Page < totalPages;
-        var hasPreviousPage = query.Page > 1;
+        var totalPages = (int)Math.Ceiling((double)total / pageSize);
+        var hasNextPage = page < totalPages;
+        var hasPreviousPage = page > 1;
 
         return new PaginatedLibraryResponseDto(
             Items: entryDtos,
-            Page: query.Page,
-            PageSize: query.PageSize,
+            Page: page,
+            PageSize: pageSize,
             TotalCount: total,
             TotalPages: totalPages,
             HasNextPage: hasNextPage,

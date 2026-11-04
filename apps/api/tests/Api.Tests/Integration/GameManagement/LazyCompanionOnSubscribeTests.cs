@@ -15,6 +15,19 @@ using Xunit;
 namespace Api.Tests.Integration.GameManagement;
 
 /// <summary>
+/// La fixture di <see cref="LazyCompanionOnSubscribeTests"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// #4050. Host condiviso per la classe, database fresco per test. Prima questa classe
+/// costruiva l'host dentro il proprio <c>InitializeAsync</c>, che xUnit chiama una volta per
+/// METODO: ~24s a test, contro ~0,1s per il clone del database.
+/// </para>
+/// </remarks>
+public sealed class LazyCompanionOnSubscribeTestsHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "lazy_companion");
+
+/// <summary>
 /// Integration tests for SP5-c (#2600) Task 2 — lazy companion provisioning on first
 /// <c>GET /api/v1/live-sessions/{id}/stream</c> subscribe.
 ///
@@ -28,36 +41,25 @@ namespace Api.Tests.Integration.GameManagement;
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
-public sealed class LazyCompanionOnSubscribeTests : IAsyncLifetime
+public sealed class LazyCompanionOnSubscribeTests
+    : IClassFixture<LazyCompanionOnSubscribeTestsHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _databaseName = $"lazy_companion_{Guid.NewGuid():N}";
+    private readonly LazyCompanionOnSubscribeTestsHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
 
-    public LazyCompanionOnSubscribeTests(SharedTestcontainersFixture fixture)
+    public LazyCompanionOnSubscribeTests(LazyCompanionOnSubscribeTestsHostFixture hostFixture)
     {
-        _fixture = fixture;
+        _hostFixture = hostFixture;
     }
 
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
-        await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(connectionString);
-
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await db.Database.MigrateAsync();
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        if (_factory != null)
-            await _factory.DisposeAsync();
-
-        await _fixture.DropIsolatedDatabaseAsync(_databaseName);
-    }
+    // Host, client e database appartengono alla fixture.
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     // ──────────────────────────────────────────────────────────────────────────
     // Test 1: GameId-backed legacy session (TrackingSessionId == null)

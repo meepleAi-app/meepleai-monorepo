@@ -6,6 +6,7 @@
  */
 
 import { setStoredApiKey, clearStoredApiKey } from '../core/apiKeyStore';
+import { globalRequestCache } from '../core/requestCache';
 import {
   LoginResponseSchema,
   RegisterResponseSchema,
@@ -19,7 +20,7 @@ import {
   TotpSetupResponseSchema,
   TwoFactorStatusDtoSchema,
   Enable2FAResultSchema,
-  Disable2FAResultSchema,
+  Disable2FAResponseSchema,
   UserProfileSchema,
   UpdateProfileResponseSchema,
   ChangePasswordResponseSchema,
@@ -80,6 +81,8 @@ export interface RegisterRequest {
   // paths), but the backend rejects registration without it (400) — the register
   // form always sends `true`.
   termsAccepted?: boolean;
+  // #4783: the language the user is looking at ('it' | 'en'); sets the starting User.Language.
+  locale?: string;
 }
 
 export interface UpdateProfileRequest {
@@ -117,7 +120,11 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
      * If requiresTwoFactor is true, use verify2FALogin() to complete authentication.
      */
     async login(request: LoginRequest): Promise<LoginResponse> {
-      return httpClient.post('/api/v1/auth/login', request, LoginResponseSchema);
+      const response = await httpClient.post('/api/v1/auth/login', request, LoginResponseSchema);
+      // #4190: la requestCache deduplica le GET con una chiave che non dipende dai cookie: senza
+      // svuotarla, un /auth/me anonimo appena letto poteva essere servito a chi ha fatto login.
+      globalRequestCache.clear();
+      return response;
     },
 
     /**
@@ -142,6 +149,7 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
       if (!response?.user) {
         throw new Error('2FA verification failed');
       }
+      globalRequestCache.clear(); // #4190: è cambiata l'identità
       return response.user;
     },
 
@@ -155,6 +163,7 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
         request,
         RegisterResponseSchema
       );
+      globalRequestCache.clear(); // #4190: è cambiata l'identità
       return response.user;
     },
 
@@ -164,6 +173,7 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
      */
     async logout(): Promise<void> {
       await httpClient.post('/api/v1/auth/logout', {}, LogoutResponseSchema);
+      globalRequestCache.clear(); // #4190: è cambiata l'identità
     },
 
     /**
@@ -352,11 +362,14 @@ export function createAuthClient({ httpClient }: CreateAuthClientParams) {
      * Disable 2FA
      */
     async disable2FA(password: string, code: string): Promise<Disable2FAResult> {
-      return httpClient.post(
+      // The server answers `{ message }` on success and an error status otherwise (#4806): a failure
+      // throws, so reaching the next line IS the success.
+      await httpClient.post(
         '/api/v1/auth/2fa/disable',
         { password, code },
-        Disable2FAResultSchema
+        Disable2FAResponseSchema
       );
+      return { success: true };
     },
 
     // ========== User Profile ==========

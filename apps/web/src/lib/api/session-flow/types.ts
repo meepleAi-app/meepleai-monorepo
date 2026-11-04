@@ -8,20 +8,6 @@
 
 // ─── Create Session ─────────────────────────────────────────────────────────
 
-export interface CreateSessionRequest {
-  sessionType: string;
-  sessionDate?: string;
-  location?: string;
-  participants: CreateSessionParticipant[];
-  gameNightEventId?: string;
-  guestNames?: string[];
-}
-
-export interface CreateSessionParticipant {
-  displayName: string;
-  isOwner: boolean;
-}
-
 export interface CreateSessionResult {
   sessionId: string;
   sessionCode: string;

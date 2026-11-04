@@ -108,7 +108,7 @@ export function AgentSelectorBadge({
                   className={cn(
                     'h-8 px-2 gap-1.5',
                     isActive && cfg.color,
-                    !isActive && 'hover:bg-accent'
+                    !isActive && 'hover:bg-accent hover:text-accent-foreground'
                   )}
                 >
                   <AgentIcon className="h-3.5 w-3.5" />

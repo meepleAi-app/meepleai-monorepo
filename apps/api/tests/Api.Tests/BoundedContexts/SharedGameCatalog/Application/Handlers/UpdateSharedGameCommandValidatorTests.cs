@@ -16,6 +16,50 @@ public class UpdateSharedGameCommandValidatorTests
         _validator = new UpdateSharedGameCommandValidator();
     }
 
+    /// <summary>
+    /// Issue #4090: ImageUrl/ThumbnailUrl are the #2123 deprecation tombstone and empty is their
+    /// normal state. Requiring a value made EditGameDrawer fabricate a placeholder URL on save.
+    /// </summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void Validate_WithEmptyImageUrls_PassesValidation(string url)
+    {
+        // Arrange
+        var command = new UpdateSharedGameCommand(
+            Guid.NewGuid(), "Catan", 1995, "Updated description", 3, 4, 90, 10,
+            2.5m, 7.5m, url, url,
+            null, Guid.NewGuid());
+
+        // Act
+        var result = _validator.TestValidate(command);
+
+        // Assert
+        result.ShouldNotHaveValidationErrorFor(x => x.ImageUrl);
+        result.ShouldNotHaveValidationErrorFor(x => x.ThumbnailUrl);
+    }
+
+    /// <summary>
+    /// Issue #4090: relaxing empty must not relax a value that is present — a non-empty
+    /// non-absolute URL is still rejected.
+    /// </summary>
+    [Fact]
+    public void Validate_WithNonEmptyInvalidImageUrls_FailsValidation()
+    {
+        // Arrange
+        var command = new UpdateSharedGameCommand(
+            Guid.NewGuid(), "Catan", 1995, "Updated description", 3, 4, 90, 10,
+            2.5m, 7.5m, "not-a-url", "also-not-a-url",
+            null, Guid.NewGuid());
+
+        // Act
+        var result = _validator.TestValidate(command);
+
+        // Assert
+        result.ShouldHaveValidationErrorFor(x => x.ImageUrl);
+        result.ShouldHaveValidationErrorFor(x => x.ThumbnailUrl);
+    }
+
     [Fact]
     public void Validate_WithValidCommand_PassesValidation()
     {

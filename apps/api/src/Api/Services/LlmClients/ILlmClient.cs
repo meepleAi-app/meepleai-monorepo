@@ -87,4 +87,16 @@ internal interface ILlmClient
         double temperature,
         int maxTokens,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// ADR-097: una chiamata di chat con strumenti, non in streaming. Il risultato porta il testo
+    /// (vuoto se il modello chiede solo strumenti) e le chiamate in <see cref="LlmCompletionResult.ToolCalls"/>.
+    /// </summary>
+    Task<LlmCompletionResult> ChatAsync(
+        string model,
+        IReadOnlyList<LlmChatMessage> messages,
+        IReadOnlyList<LlmToolDefinition> tools,
+        double temperature,
+        int maxTokens,
+        CancellationToken ct = default);
 }

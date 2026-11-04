@@ -254,8 +254,7 @@ export class LibraryPage extends BasePage {
     const gameVisible = await this.page
       .getByText(gameTitle, { exact: false })
       .first()
-      .isVisible({ timeout: 10_000 })
-      .catch(() => false);
+      .isVisible({ timeout: 10_000 });
     if (!gameVisible) {
       // Fallback: check that collection is not empty
       const countText = await this.page

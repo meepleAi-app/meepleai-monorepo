@@ -160,21 +160,22 @@ describe('AdvancedFilterPanel', () => {
   // ==========================================================================
 
   describe('Reset Button', () => {
-    it('resets draft filters to defaults when clicked', async () => {
-      const activeFilters: SearchFilters = {
-        ...defaultFilters,
-        categoryIds: ['cat-strategy'],
-        minPlayers: 2,
-        maxPlayers: 4,
-      };
+    const activeFilters: SearchFilters = {
+      ...defaultFilters,
+      categoryIds: ['cat-strategy'],
+      minPlayers: 2,
+      maxPlayers: 4,
+    };
 
+    it('resets draft filters to defaults when clicked', async () => {
       render(<AdvancedFilterPanel {...defaultProps} filters={activeFilters} />);
 
+      // Issue #4324: Reset is disabled while the reference data loads, and a click on a disabled
+      // button is dropped. Wait for the button to be enabled, not merely to be in the document.
+      const resetButton = await screen.findByRole('button', { name: /Resetta/i });
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /Resetta/i })).toBeInTheDocument();
+        expect(resetButton).toBeEnabled();
       });
-
-      const resetButton = screen.getByRole('button', { name: /Resetta/i });
       await act(async () => {
         fireEvent.click(resetButton);
       });
@@ -186,6 +187,46 @@ describe('AdvancedFilterPanel', () => {
       });
 
       expect(mockOnApplyFilters).toHaveBeenCalledWith(DEFAULT_FILTERS);
+    });
+
+    // Issue #4324: what made the test above fail now and then in CI. It used to click as soon as
+    // the button was there; when the reference data finished loading between the two clicks, Apply
+    // sent the draft as it was. Here the load is held on purpose, so the order is not left to chance.
+    it('ignores a click on Reset while the reference data is still loading', async () => {
+      let finishLoading: () => void = () => {};
+      const loading = new Promise<void>(resolve => {
+        finishLoading = resolve;
+      });
+      mockGetCategories.mockImplementation(async () => {
+        await loading;
+        return mockCategories;
+      });
+      mockGetMechanics.mockImplementation(async () => {
+        await loading;
+        return mockMechanics;
+      });
+
+      render(<AdvancedFilterPanel {...defaultProps} filters={activeFilters} />);
+
+      const resetButton = await screen.findByRole('button', { name: /Resetta/i });
+      expect(resetButton).toBeDisabled();
+      await act(async () => {
+        fireEvent.click(resetButton);
+      });
+
+      await act(async () => {
+        finishLoading();
+      });
+      const applyButton = screen.getByRole('button', { name: /Applica Filtri/i });
+      await waitFor(() => {
+        expect(applyButton).toBeEnabled();
+      });
+      await act(async () => {
+        fireEvent.click(applyButton);
+      });
+
+      // The click never reached the handler: the draft is still the one the panel opened with.
+      expect(mockOnApplyFilters).toHaveBeenCalledWith(activeFilters);
     });
   });
 

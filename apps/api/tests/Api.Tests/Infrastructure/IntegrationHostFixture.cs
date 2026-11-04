@@ -84,8 +84,33 @@ public abstract class IntegrationHostFixture : IAsyncLifetime
     protected IntegrationHostFixture(SharedTestcontainersFixture shared, string databasePrefix)
     {
         _shared = shared;
+        // Qui non c'è suffisso: il nome è prefisso + GUID. Il budget è quindi più generoso che in
+        // SharedHostPerTestDatabaseFixture, ma il limite dei 63 byte è lo stesso e vale controllarlo
+        // dove il nome nasce — vedi TestDatabaseName per cosa rompe un troncamento.
+        TestDatabaseName.ValidatePrefix(databasePrefix, longestSuffixLength: 0, nameof(databasePrefix));
+
         _databaseName = $"{databasePrefix}_{Guid.NewGuid():N}";
     }
+
+    /// <summary>
+    /// Chiavi di configurazione aggiuntive per l'host, oltre a quelle di default. Lo stesso aggancio di
+    /// <see cref="SharedHostPerTestDatabaseFixture"/>; passa a <c>IntegrationWebApplicationFactory.Create</c>.
+    /// </summary>
+    protected virtual Dictionary<string, string?>? ExtraConfiguration => null;
+
+    /// <summary>
+    /// Ultimo passaggio sull'host: qui la fixture concreta sostituisce o decora servizi. Lo stesso
+    /// aggancio di <see cref="SharedHostPerTestDatabaseFixture"/>.
+    /// </summary>
+    /// <remarks>
+    /// Tipicamente <c>factory.WithWebHostBuilder(b =&gt; b.ConfigureTestServices(...))</c>, che
+    /// restituisce un oggetto NUOVO: la fixture dispone anche l'originale. 🔴 Un doppio registrato qui
+    /// vive quanto la classe, come il database: se ha stato, lo deve isolare per test da sé.
+    /// </remarks>
+    protected virtual WebApplicationFactory<Program> ConfigureHost(
+        WebApplicationFactory<Program> factory) => factory;
+
+    private WebApplicationFactory<Program>? _baseFactory;
 
     // Il tempo speso qui NON viene attribuito da xUnit ad alcun test: nel .trx non esiste. Senza
     // strumentazione, convertire le classi farebbe uscire dalla misura il costo dominante del gate
@@ -109,6 +134,7 @@ public abstract class IntegrationHostFixture : IAsyncLifetime
     {
         var started = Stopwatch.GetTimestamp();
         long afterDb;
+        long afterCreate;
         long afterHost;
 
         try
@@ -127,7 +153,9 @@ public abstract class IntegrationHostFixture : IAsyncLifetime
             await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(connectionString);
             afterDb = Stopwatch.GetTimestamp();
 
-            Factory = IntegrationWebApplicationFactory.Create(connectionString);
+            _baseFactory = IntegrationWebApplicationFactory.Create(connectionString, extraConfig: ExtraConfiguration);
+            Factory = ConfigureHost(_baseFactory);
+            afterCreate = Stopwatch.GetTimestamp();
 
             // `WithWebHostBuilder` e' PIGRO: l'host si costruisce al primo accesso a `.Services`.
             // Senza questa riga il tempo dell'host finirebbe nel campo `migrate=` e la
@@ -159,6 +187,14 @@ public abstract class IntegrationHostFixture : IAsyncLifetime
             $"db={Stopwatch.GetElapsedTime(started, afterDb).TotalSeconds:F1} " +
             $"host={Stopwatch.GetElapsedTime(afterDb, afterHost).TotalSeconds:F1} " +
             $"migrate={Stopwatch.GetElapsedTime(afterHost).TotalSeconds:F1}");
+
+        // #4572: la fase `host=` divisa come in SharedHostPerTestDatabaseFixture, per confrontarle.
+        TestContext.Current?.SendDiagnosticMessage(
+            HostStartupDiagnostics.Format(
+                GetType().Name,
+                services: Stopwatch.GetElapsedTime(afterCreate, afterHost),
+                Factory.Services,
+                ("create", Stopwatch.GetElapsedTime(afterDb, afterCreate))));
     }
 
     public ValueTask DisposeAsync() => SafeDisposeAsync();
@@ -171,6 +207,12 @@ public abstract class IntegrationHostFixture : IAsyncLifetime
             if (Factory is not null)
             {
                 await Factory.DisposeAsync();
+            }
+
+            // ConfigureHost puo' aver restituito un oggetto diverso: l'originale va chiuso a parte.
+            if (_baseFactory is not null && !ReferenceEquals(_baseFactory, Factory))
+            {
+                await _baseFactory.DisposeAsync();
             }
         }
         finally

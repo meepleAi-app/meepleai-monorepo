@@ -5,8 +5,8 @@ import { useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Library, Bot, Gamepad2, Globe, PartyPopper, Rocket } from 'lucide-react';
 
+import { useAuthUser } from '@/components/auth/AuthProvider';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/overlays/dialog';
-import { useAuthUser } from '@/hooks/useAuthUser';
 
 import { ONBOARDING_STEPS } from './onboarding-steps';
 import { useOnboardingStatus } from './use-onboarding-status';

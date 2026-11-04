@@ -76,8 +76,13 @@ public sealed class ProviderCredentialXminConcurrencyTests : IAsyncLifetime
         await using var dbA = _fixture.CreateDbContext(_connectionString);
         await using var dbB = _fixture.CreateDbContext(_connectionString);
 
-        var credentialA = await dbA.ProviderCredentials.FirstAsync(c => c.Id == credentialId);
-        var credentialB = await dbB.ProviderCredentials.FirstAsync(c => c.Id == credentialId);
+        // Issue #3866: `.AsTracking()` is REQUIRED here. The DbContext default is NoTracking
+        // (PERF-06), so a plain read hands back a DETACHED entity: the mutations below would reach
+        // no change tracker, SaveChangesAsync would write nothing, and the concurrency token this
+        // test exists to exercise would never even be compared. This is the documented opt-out for
+        // a fixture whose subject IS a tracked read-modify-write.
+        var credentialA = await dbA.ProviderCredentials.AsTracking().FirstAsync(c => c.Id == credentialId);
+        var credentialB = await dbB.ProviderCredentials.AsTracking().FirstAsync(c => c.Id == credentialId);
 
         credentialA.Should().NotBeSameAs(credentialB);
 

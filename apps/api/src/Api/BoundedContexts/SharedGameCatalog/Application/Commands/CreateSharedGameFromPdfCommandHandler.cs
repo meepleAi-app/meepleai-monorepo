@@ -166,9 +166,18 @@ internal sealed class CreateSharedGameFromPdfCommandHandler : ICommandHandler<Cr
         // authoritative display source; ImageUrl is legacy fallback for direct-projection consumers.
         if (bggCoverR2Key is not null)
         {
-            var entity = await _dbContext.Set<SharedGameEntity>()
-                .FirstOrDefaultAsync(e => e.Id == sharedGame.Id, cancellationToken)
-                .ConfigureAwait(false);
+            // #3866: the aggregate was just handed to the repository and is tracked as Added — it is
+            // NOT in the database yet, so a LINQ query cannot see it whatever the tracking behavior.
+            // Look in the change tracker first (Local), and fall back to a tracked query for the
+            // pre-existing-row case. Before this the lookup relied on the context tracking by
+            // default; under the production NoTracking default it returned null and the cover key
+            // was dropped on the warning branch below.
+            var entity = _dbContext.Set<SharedGameEntity>().Local
+                .FirstOrDefault(e => e.Id == sharedGame.Id)
+                ?? await _dbContext.Set<SharedGameEntity>()
+                    .AsTracking()
+                    .FirstOrDefaultAsync(e => e.Id == sharedGame.Id, cancellationToken)
+                    .ConfigureAwait(false);
 
             if (entity is not null)
             {

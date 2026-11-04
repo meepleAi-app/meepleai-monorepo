@@ -102,6 +102,18 @@ public record LlmCostCalculation
     public bool IsFree => TotalCost == 0;
 
     /// <summary>
+    /// #4164: come è stato prezzato il calcolo. <c>null</c> quando non c'è nulla da prezzare
+    /// (una chiamata fallita, senza token), oppure per una riga scritta prima di #4164.
+    /// </summary>
+    public LlmPricingStatus? PricingStatus { get; init; }
+
+    /// <summary>
+    /// #4168 (ADR-095 D2): la versione del profilo dell'agente che ha prodotto la risposta;
+    /// <c>null</c> per le chiamate che non vengono dalla pipeline.
+    /// </summary>
+    public Guid? ProfileVersionId { get; init; }
+
+    /// <summary>
     /// Empty cost calculation (zero cost, zero tokens)
     /// </summary>
     public static readonly LlmCostCalculation Empty = new()
@@ -113,4 +125,21 @@ public record LlmCostCalculation
         InputCost = 0,
         OutputCost = 0
     };
+}
+
+/// <summary>
+/// #4164 (ADR-095): da dove viene il costo registrato di una chiamata. Distingue un costo zero vero
+/// (modello gratuito o in casa) da un costo zero per mancanza di prezzo, che prima di #4164 erano
+/// indistinguibili nel registro.
+/// </summary>
+public enum LlmPricingStatus
+{
+    /// <summary>Il modello ha un prezzo nel catalogo, e il costo viene da lì.</summary>
+    Priced = 0,
+
+    /// <summary>Il modello costa zero: gratuito nel catalogo, oppure eseguito in casa (Ollama).</summary>
+    Free = 1,
+
+    /// <summary>Il catalogo non conosce il modello: il costo registrato (zero) non è un costo vero.</summary>
+    Unpriced = 2
 }

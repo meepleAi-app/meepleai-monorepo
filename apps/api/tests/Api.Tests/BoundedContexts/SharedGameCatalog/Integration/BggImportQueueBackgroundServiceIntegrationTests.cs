@@ -267,10 +267,13 @@ public sealed class BggImportQueueBackgroundServiceIntegrationTests : IAsyncLife
         await _queueService.MarkAsCompletedAsync(oldEntity.Id, Guid.NewGuid());
 
         // Update ProcessedAt to 40 days ago
-        var dbEntry = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == oldEntity.Id);
-        dbEntry.Should().NotBeNull();
-        dbEntry.ProcessedAt = DateTime.UtcNow.AddDays(-40);
-        await _dbContext.SaveChangesAsync();
+        // Issue #3866: assegnare ProcessedAt su un'entita' riletta e salvare non scriveva nulla —
+        // con il default NoTracking (PERF-06) quella lettura e' staccata. La riga restava recente,
+        // la retention non trovava niente da cancellare e il test misurava altro.
+        var aged = await _dbContext.BggImportQueue
+            .Where(q => q.Id == oldEntity.Id)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(q => q.ProcessedAt, DateTime.UtcNow.AddDays(-40)));
+        aged.Should().Be(1, "the queued job must exist before it can age out");
 
         var config = CreateTestConfiguration(enabled: true, processingIntervalSeconds: 1, autoCleanupDays: 30);
         var mockLogger = new Mock<ILogger<BggImportQueueBackgroundService>>();

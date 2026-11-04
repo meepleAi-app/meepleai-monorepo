@@ -63,6 +63,7 @@ public class TwoFactorDisabledEventHandlerTests : IDisposable
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<bool>(),
+                It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
@@ -75,6 +76,36 @@ public class TwoFactorDisabledEventHandlerTests : IDisposable
                 "test@example.com",
                 "Test User",
                 false,
+                It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    // #4812: the alert is written in the language of the user whose 2FA was turned off.
+    [Theory]
+    [InlineData("it")]
+    [InlineData("en")]
+    public async Task Handle_HandsTheUsersLanguageToTheEmail(string language)
+    {
+        var userId = Guid.NewGuid();
+        var testUser = new UserBuilder()
+            .WithId(userId)
+            .WithEmail("test@example.com")
+            .WithDisplayName("Test User")
+            .WithLanguage(language)
+            .Build();
+        _mockUserRepository
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(testUser);
+
+        await _handler.Handle(new TwoFactorDisabledEvent(userId, wasAdminOverride: false), CancellationToken.None);
+
+        _mockEmailService.Verify(
+            e => e.SendTwoFactorDisabledEmailAsync(
+                "test@example.com",
+                "Test User",
+                false,
+                language,
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -101,6 +132,7 @@ public class TwoFactorDisabledEventHandlerTests : IDisposable
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<bool>(),
+                It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
@@ -113,6 +145,7 @@ public class TwoFactorDisabledEventHandlerTests : IDisposable
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 true, // wasAdminOverride should be true
+                It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -137,6 +170,7 @@ public class TwoFactorDisabledEventHandlerTests : IDisposable
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<bool>(),
+                It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
     }
@@ -163,6 +197,7 @@ public class TwoFactorDisabledEventHandlerTests : IDisposable
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<bool>(),
+                It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("Email service unavailable"));
 

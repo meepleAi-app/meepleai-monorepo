@@ -12,7 +12,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 import Link from 'next/link';
 
@@ -60,6 +60,63 @@ export function useCookieConsent() {
   return { consent, updateConsent, resetConsent, hasConsented: consent !== null };
 }
 
+/**
+ * CSS custom property through which the banner tells the rest of the layout how
+ * much vertical space it is occupying. Read by `body { padding-bottom }`
+ * (globals.css) and by `BackToSessionFAB`; its 0px default lives in
+ * design-tokens.css.
+ */
+const BANNER_HEIGHT_VAR = '--cookie-banner-height';
+
+/**
+ * Publishes the banner's own height to {@link BANNER_HEIGHT_VAR} for as long as
+ * it is on screen, so the layout can reserve space instead of being overlapped.
+ *
+ * The height has to be measured rather than hardcoded: the same banner is 169px
+ * tall at 1366px of viewport width and 281px at 390px (the action row wraps),
+ * and it grows again when "Customize" expands the three checkboxes — a constant
+ * would be wrong in at least two of those three states. The ResizeObserver
+ * covers all of them with one mechanism (resize, wrap, expand).
+ */
+function usePublishedBannerHeight(isVisible: boolean) {
+  const bannerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = bannerRef.current;
+    // `isVisible` is in the dep array precisely so this cleanup runs the moment
+    // the banner stops rendering (consent given): otherwise the reserved space
+    // would outlive the banner as a permanent dead strip at the page bottom.
+    const release = () => document.documentElement.style.removeProperty(BANNER_HEIGHT_VAR);
+    if (!isVisible || !el) {
+      release();
+      return;
+    }
+
+    // `offsetHeight` rather than getBoundingClientRect(): both report the same
+    // number here — `slide-in-from-bottom` is a pure translation, so it moves the
+    // rect's position but leaves its `height` at the layout height. offsetHeight is
+    // chosen because it is the layout box by definition and rounds to an integer
+    // pixel, which is what a CSS length consumer wants; a future entrance animation
+    // that scales instead of translating would make the rect's height wrong, and
+    // this one would not notice.
+    const publish = () => {
+      document.documentElement.style.setProperty(BANNER_HEIGHT_VAR, `${el.offsetHeight}px`);
+    };
+
+    publish();
+
+    if (typeof ResizeObserver === 'undefined') return release;
+    const observer = new ResizeObserver(publish);
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      release();
+    };
+  }, [isVisible]);
+
+  return bannerRef;
+}
+
 interface CookieConsentBannerProps {
   className?: string;
   /** Force show even if user already consented (for "Manage Cookies" flow) */
@@ -93,7 +150,10 @@ export function CookieConsentBanner({ className, forceShow, onDismiss }: CookieC
 
   // Don't render anything until mounted (avoid hydration mismatch)
   // Don't render if user already consented (unless forceShow)
-  if (!mounted || (hasConsented && !forceShow)) return null;
+  const isVisible = mounted && (!hasConsented || Boolean(forceShow));
+  const bannerRef = usePublishedBannerHeight(isVisible);
+
+  if (!isVisible) return null;
 
   const handleAcceptAll = () => {
     updateConsent({ analytics: true, functional: true });
@@ -112,6 +172,7 @@ export function CookieConsentBanner({ className, forceShow, onDismiss }: CookieC
 
   return (
     <div
+      ref={bannerRef}
       className={cn(
         'fixed bottom-0 inset-x-0 z-50 p-4 md:p-6',
         'bg-background/95 backdrop-blur-sm border-t shadow-lg',

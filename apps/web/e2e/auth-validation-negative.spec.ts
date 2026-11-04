@@ -62,7 +62,7 @@ test.describe('Authentication Validation Negative Scenarios - Issue #1494', () =
 
         // HTML5 validation or custom error should appear
         const isInvalid = await emailInput.evaluate((el: HTMLInputElement) => !el.validity.valid);
-        const hasError = await errorMessage.isVisible({ timeout: 2000 }).catch(() => false);
+        const hasError = await errorMessage.isVisible({ timeout: 2000 });
 
         expect(isInvalid || hasError).toBe(true);
       }
@@ -91,7 +91,7 @@ test.describe('Authentication Validation Negative Scenarios - Issue #1494', () =
       expect(isRequired).toBe(true);
 
       const errorMessage = page.locator('text=/required|obbligatorio|campo richiesto/i').first();
-      const hasError = await errorMessage.isVisible({ timeout: 2000 }).catch(() => false);
+      const hasError = await errorMessage.isVisible({ timeout: 2000 });
 
       // Either HTML5 required or custom validation
       expect(hasError || isRequired).toBe(true);
@@ -137,20 +137,20 @@ test.describe('Authentication Validation Negative Scenarios - Issue #1494', () =
       const passwordInput = page.locator('input[name="password"], input[type="password"]').first();
       const submitButton = page.locator('button[type="submit"]').first();
 
-      if (await emailInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await emailInput.isVisible({ timeout: 5000 })) {
         await emailInput.fill('existing@example.com');
         await passwordInput.fill('ValidPassword123!');
 
         // Try additional fields if they exist
         const confirmPasswordInput = page.locator('input[name="confirmPassword"]').first();
-        if (await confirmPasswordInput.isVisible({ timeout: 1000 }).catch(() => false)) {
+        if (await confirmPasswordInput.isVisible({ timeout: 1000 })) {
           await confirmPasswordInput.fill('ValidPassword123!');
         }
 
         const displayNameInput = page
           .locator('input[name="displayName"], input[name="name"]')
           .first();
-        if (await displayNameInput.isVisible({ timeout: 1000 }).catch(() => false)) {
+        if (await displayNameInput.isVisible({ timeout: 1000 })) {
           await displayNameInput.fill('Test User');
         }
 
@@ -174,7 +174,7 @@ test.describe('Authentication Validation Negative Scenarios - Issue #1494', () =
       const passwordInput = page.locator('input[name="password"], input[type="password"]').first();
       const confirmPasswordInput = page.locator('input[name="confirmPassword"]').first();
 
-      if (await confirmPasswordInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await confirmPasswordInput.isVisible({ timeout: 5000 })) {
         await passwordInput.fill('ValidPassword123!');
         await confirmPasswordInput.fill('DifferentPassword456!');
 
@@ -199,7 +199,7 @@ test.describe('Authentication Validation Negative Scenarios - Issue #1494', () =
       const emailInput = page.locator('input[name="email"], input[type="email"]').first();
       const passwordInput = page.locator('input[name="password"], input[type="password"]').first();
 
-      if (await passwordInput.isVisible({ timeout: 5000 }).catch(() => false)) {
+      if (await passwordInput.isVisible({ timeout: 5000 })) {
         const weakPasswords = [
           '123', // Too short
           'password', // No numbers or special chars
@@ -219,7 +219,7 @@ test.describe('Authentication Validation Negative Scenarios - Issue #1494', () =
             .locator('text=/weak.*password|password.*strong|password.*requirements|requisiti/i')
             .first();
 
-          const hasError = await errorMessage.isVisible({ timeout: 2000 }).catch(() => false);
+          const hasError = await errorMessage.isVisible({ timeout: 2000 });
 
           // May have client-side or server-side validation
           if (hasError) {

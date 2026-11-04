@@ -25,9 +25,15 @@ internal interface IQuickQuestionGenerator
 /// </summary>
 /// <param name="Questions">The generated questions with their categories.</param>
 /// <param name="ConfidenceScore">Overall confidence score (0-1).</param>
+/// <param name="IsFallback">
+/// True when the generator could not produce questions (the LLM failed, answered with something
+/// unreadable, or returned none) and <paramref name="Questions"/> holds a fixed generic set instead.
+/// A fallback is not a result: callers must not save it over the questions already stored (#4596).
+/// </param>
 public record QuickQuestionGenerationResult(
     IReadOnlyCollection<GeneratedQuestion> Questions,
-    decimal ConfidenceScore
+    decimal ConfidenceScore,
+    bool IsFallback = false
 );
 
 /// <summary>

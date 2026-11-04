@@ -269,7 +269,18 @@ public sealed class LlmRequestLogRepository : RepositoryBase, ILlmRequestLogRepo
 
         while (true)
         {
+            // Issue #3866: `.AsTracking()` is REQUIRED, and here its absence was not a silent
+            // no-op — it was an INFINITE LOOP. The DbContext default is NoTracking (PERF-06), so
+            // the batch came back detached: the two assignments below reached no change tracker,
+            // SaveChangesAsync wrote nothing, `IsAnonymized` stayed false, and the very same rows
+            // were re-read on the next iteration. This drain loop only ever terminated when the
+            // predicate matched ZERO rows to begin with — i.e. when there was nothing to do.
+            //
+            // The same defect is a dropped write anywhere else in the codebase; inside a
+            // `while (true)` that re-reads its own exit condition it becomes a hang. It burned a
+            // CI test host for 39 minutes before the blame collector killed it.
             var batch = await DbContext.LlmRequestLogs
+                .AsTracking()
                 .Where(x => x.RequestedAt < cutoff
                           && !x.IsAnonymized
                           && x.UserId != null)

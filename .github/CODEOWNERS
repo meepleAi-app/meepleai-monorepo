@@ -118,5 +118,8 @@
 # ============================================
 # These affect the entire project and need careful review
 /apps/web/pnpm-lock.yaml            @meepleAi-app
+# I 37 pin di sicurezza su dipendenze transitive vivono qui da #3891:
+# la review su di essi vale quanto quella sul lockfile.
+/apps/web/pnpm-workspace.yaml       @meepleAi-app
 /apps/api/**/packages.lock.json     @meepleAi-app
 /.github/dependabot.yml             @meepleAi-app

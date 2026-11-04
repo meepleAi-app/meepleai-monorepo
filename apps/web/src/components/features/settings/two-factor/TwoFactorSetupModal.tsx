@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/overlays/dialog';
+import { useTranslation } from '@/hooks/useTranslation';
 
 import { TwoFactorWizardBody } from './TwoFactorWizardBody';
 
@@ -29,6 +30,7 @@ export function TwoFactorSetupModal({
   onClose,
   onEnabled,
 }: Props): React.JSX.Element {
+  const { t } = useTranslation();
   if (!setupData) return <></>;
 
   function handleEnabled(): void {
@@ -45,10 +47,8 @@ export function TwoFactorSetupModal({
     >
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Set up two-factor authentication</DialogTitle>
-          <DialogDescription>
-            Complete all three steps to enable 2FA on your account.
-          </DialogDescription>
+          <DialogTitle>{t('settings.security.setup.title')}</DialogTitle>
+          <DialogDescription>{t('settings.security.setup.description')}</DialogDescription>
         </DialogHeader>
         <TwoFactorWizardBody setupData={setupData} onEnabled={handleEnabled} resetKey={open} />
       </DialogContent>

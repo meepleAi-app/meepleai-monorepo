@@ -40,6 +40,7 @@ public class EdgeCaseTests : IAsyncLifetime
     {
         _client = _factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
         {
+            BaseAddress = FrontendSdkTestFactory.HttpsBaseAddress,
             AllowAutoRedirect = false,
             HandleCookies = true
         });
@@ -49,7 +50,7 @@ public class EdgeCaseTests : IAsyncLifetime
         var scope = _factory.Services.CreateScope();
         _dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
-        await ResetDatabaseAsync();
+        await _factory.ResetDatabaseAsync();
     }
 
     public async ValueTask DisposeAsync()
@@ -58,32 +59,6 @@ public class EdgeCaseTests : IAsyncLifetime
         if (_dbContext != null) await _dbContext.DisposeAsync();
     }
 
-    private async Task ResetDatabaseAsync()
-    {
-        var tableNames = await _dbContext.Database
-            .SqlQueryRaw<string>(
-                @"SELECT tablename
-                  FROM pg_tables
-                  WHERE schemaname = 'public'
-                  AND tablename != '__EFMigrationsHistory'")
-            .ToListAsync();
-
-        if (tableNames.Count > 0)
-        {
-            await _dbContext.Database.ExecuteSqlRawAsync("SET session_replication_role = 'replica';");
-            try
-            {
-                foreach (var tableName in tableNames)
-                {
-                    await _dbContext.Database.ExecuteSqlRawAsync($"TRUNCATE TABLE \"{tableName}\" CASCADE;");
-                }
-            }
-            finally
-            {
-                await _dbContext.Database.ExecuteSqlRawAsync("SET session_replication_role = 'origin';");
-            }
-        }
-    }
     [Fact(DisplayName = "POST /chat with streaming should accept SSE request")]
     public async Task Chat_WithStreaming_AcceptsSSERequest()
     {

@@ -1,5 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using FluentValidation;
+using Microsoft.Extensions.Options;
 
 namespace Api.BoundedContexts.DocumentProcessing.Application.Validators;
 
@@ -9,12 +11,15 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Validators;
 /// </summary>
 internal sealed class UploadPrivatePdfCommandValidator : AbstractValidator<UploadPrivatePdfCommand>
 {
-    private const long MaxFileSizeBytes = 104_857_600; // 100 MB
     private const string AllowedContentType = "application/pdf";
     private const string AllowedExtension = ".pdf";
 
-    public UploadPrivatePdfCommandValidator()
+    public UploadPrivatePdfCommandValidator(IOptions<PdfProcessingOptions> pdfOptions)
     {
+        ArgumentNullException.ThrowIfNull(pdfOptions);
+        // #4449: the single PDF size limit (PdfProcessing:MaxFileSizeBytes), not a number of its own.
+        var maxFileSizeBytes = pdfOptions.Value.MaxFileSizeBytes;
+
         RuleFor(x => x.UserId)
             .NotEmpty()
             .WithMessage("User ID is required.");
@@ -32,8 +37,8 @@ internal sealed class UploadPrivatePdfCommandValidator : AbstractValidator<Uploa
             RuleFor(x => x.PdfFile.Length)
                 .GreaterThan(0)
                 .WithMessage("PDF file cannot be empty.")
-                .LessThanOrEqualTo(MaxFileSizeBytes)
-                .WithMessage($"PDF file size cannot exceed {MaxFileSizeBytes / 1024 / 1024} MB.");
+                .LessThanOrEqualTo(maxFileSizeBytes)
+                .WithMessage($"PDF file size cannot exceed {PdfSizeLimit.Describe(maxFileSizeBytes)}.");
 
             RuleFor(x => x.PdfFile.ContentType)
                 .Equal(AllowedContentType)

@@ -263,7 +263,9 @@ export function SessionsLibraryView(): ReactElement {
 
   const handleItemClick = useCallback(
     (item: SessionListItem) => {
-      router.push(`/sessions/${item.id}`);
+      // #4156 (D4): the session pages live under the LiveGameSession id; without one, no page.
+      if (item.liveSessionId == null) return;
+      router.push(`/sessions/${item.liveSessionId}`);
     },
     [router]
   );

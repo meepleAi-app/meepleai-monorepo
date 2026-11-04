@@ -10,6 +10,7 @@ using Api.Configuration;
 using Api.Extensions;
 using Api.Helpers;
 using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -42,10 +43,10 @@ internal static class AiEndpoints
             {
                 Id = !string.IsNullOrWhiteSpace(s.chunkId)
                     ? s.chunkId!
-                    : $"{s.source}#{s.page}.{s.line}",
+                    : $"{s.source}#{s.page ?? 0}.{s.line}",
                 Score = s.score,
                 Text = s.text,
-                Page = s.page,
+                Page = s.page ?? 0,
                 ChunkIndex = s.chunkPosition ?? s.line,
                 PdfName = s.source,
                 Used = true,
@@ -79,8 +80,6 @@ internal static class AiEndpoints
 
         MapPlayerModeSuggestionEndpoint(group);
 
-        MapUserAgentSlotsEndpoint(group);
-
         // UI-01: Chat management endpoints
         return group;
     }
@@ -88,6 +87,7 @@ internal static class AiEndpoints
     private static void MapQaEndpoint(RouteGroupBuilder group)
     {
         group.MapPost("/agents/qa", HandleQaRequest)
+        .RequireRateLimiting(RateLimitingServiceExtensions.AnswerOpenRequestsPolicy) // #4388: at most 2 open answers per user
         .WithName("QaAgent")
         .WithDescription("Ask a question about game rules using RAG (Retrieval-Augmented Generation)")
         .WithTags("AI Agents")
@@ -143,7 +143,9 @@ internal static class AiEndpoints
     {
         // CHAT-01: Streaming QA endpoint (SSE)
         // Migrated to CQRS: Uses StreamQaQuery via MediatR (Issue #1186)
-        group.MapPost("/agents/qa/stream", HandleQaStreamAsync);
+        // #4388: at most 2 open answers per user, shared with the other answer routes.
+        group.MapPost("/agents/qa/stream", HandleQaStreamAsync)
+            .RequireRateLimiting(RateLimitingServiceExtensions.AnswerOpenRequestsPolicy);
     }
 
     private static async Task<IResult> HandleQaStreamAsync(
@@ -205,6 +207,18 @@ internal static class AiEndpoints
             streamContext.StreamStatus = "Cancelled";
             streamContext.StreamErrorMessage = "Client disconnected";
         }
+        catch (RagOwnershipRequiredException ex)
+        {
+            // #4155: un diniego atteso, non un guasto. Gli header SSE sono gia' partiti, quindi non
+            // puo' essere un 403: viaggia come evento Error con il proprio codice e il gioco, che la
+            // chat usa per offrire la dichiarazione di possesso.
+            logger.LogInformation(
+                ex, "Streaming QA denied for game {GameId}: RAG ownership not declared", ex.GameId);
+            streamContext.StreamStatus = "Error";
+            streamContext.StreamErrorMessage = ex.Message;
+            await TryWriteStreamErrorAsync(
+                context, new StreamingError(ex.Message, ex.ErrorCode, ex.GameId), ct).ConfigureAwait(false);
+        }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out
         // STREAMING BOUNDARY: Streaming generator boundary - must handle all errors gracefully without throwing
@@ -218,33 +232,39 @@ internal static class AiEndpoints
             streamContext.StreamStatus = "Error";
             streamContext.StreamErrorMessage = ex.Message;
 
-            // Send error event if possible
-            try
-            {
-                var errorEvent = new RagStreamingEvent(
-                    StreamingEventType.Error,
-                    new StreamingError($"An error occurred: {ex.Message}", "INTERNAL_ERROR"),
-                    DateTime.UtcNow);
-                var json = System.Text.Json.JsonSerializer.Serialize(errorEvent, SseJsonOptions);
-                await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
-                await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-#pragma warning disable S125 // Sections of code should not be commented out
-            // CLEANUP PATTERN: Cleanup operation - must not throw during disposal/cleanup
-            // Error event sending failure is logged but suppressed to ensure graceful stream termination
-#pragma warning restore S125
-            catch
-            {
-                // If we can't send error event, client connection is likely broken
-            }
-#pragma warning restore CA1031
+            await TryWriteStreamErrorAsync(
+                context, new StreamingError($"An error occurred: {ex.Message}", "INTERNAL_ERROR"), ct).ConfigureAwait(false);
         }
 #pragma warning restore CA1031
 
         await LogQaRequestAsync(req, context, mediator, session, startTime, streamContext).ConfigureAwait(false);
 
         return Results.Empty;
+    }
+
+    /// <summary>
+    /// Scrive un evento Error sullo stream gia' aperto. Se la scrittura fallisce il client se n'e'
+    /// andato e non c'e' nessuno a cui dirlo: l'errore si ignora, lo stream si chiude comunque.
+    /// </summary>
+    private static async Task TryWriteStreamErrorAsync(HttpContext context, StreamingError error, CancellationToken ct)
+    {
+        try
+        {
+            var errorEvent = new RagStreamingEvent(StreamingEventType.Error, error, DateTime.UtcNow);
+            var json = System.Text.Json.JsonSerializer.Serialize(errorEvent, SseJsonOptions);
+            await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
+            await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
+        }
+#pragma warning disable CA1031 // Do not catch general exception types
+#pragma warning disable S125 // Sections of code should not be commented out
+        // CLEANUP PATTERN: Cleanup operation - must not throw during disposal/cleanup
+        // Error event sending failure is suppressed to ensure graceful stream termination
+#pragma warning restore S125
+        catch
+        {
+            // If we can't send error event, client connection is likely broken
+        }
+#pragma warning restore CA1031
     }
 
     private static async Task ExecuteQaStreamingAsync(
@@ -283,9 +303,19 @@ internal static class AiEndpoints
         // Bug B5: thread the authenticated identity into the streaming query so the handler enforces
         // per-game RAG access (mirror the non-stream AskQuestion path). Subject.Id = the acting user;
         // EffectiveActor.Role = the role used for authorization (admin bypass), per Principal semantics.
+        // Issue #4137: named arguments. The identity moved ahead of the optional
+        // parameters when it became required, and a positional call would have silently
+        // reshuffled every argument past it.
         var query = new StreamQaQuery(
-            req.gameId, req.query, req.chatId, req.documentIds, responseStyle, continuationContext, // Issue #2051
-            session.Principal!.Subject.Id, session.Principal!.EffectiveActor.Role);
+            GameId: req.gameId,
+            Query: req.query,
+            UserId: session.Principal!.Subject.Id,
+            UserRole: session.Principal!.EffectiveActor.Role,
+            ThreadId: req.chatId,
+            DocumentIds: req.documentIds,
+            ResponseStyle: responseStyle,
+            ContinuationContext: continuationContext, // Issue #2051
+            AcceptLanguage: context.Request.Headers.AcceptLanguage.ToString()); // #4168: lingua delle domande brevi
         await foreach (var evt in mediator.CreateStream(query, ct).ConfigureAwait(false))
         {
             // Serialize event as JSON
@@ -309,6 +339,9 @@ internal static class AiEndpoints
             {
                 streamContext.TotalTokens = completeData.totalTokens;
                 streamContext.Confidence = completeData.confidence;
+                // #4168: la versione del profilo e la lingua della risposta, per il registro.
+                streamContext.ProfileVersionId = completeData.ProfileVersionId;
+                streamContext.Language = completeData.Language;
 
                 // CHAT-02: Start follow-up generation in parallel (fire-and-forget)
                 if (generateFollowUps && followUpTask == null)
@@ -354,7 +387,9 @@ internal static class AiEndpoints
             CompletionTokens: streamContext.TotalTokens,
             // #1728: drill payload (chunks from retrieved snippets; breakdown
             // pending pipeline instrumentation)
-            Chunks: MapSnippetsToChunks(streamContext.Snippets)
+            Chunks: MapSnippetsToChunks(streamContext.Snippets),
+            ProfileVersionId: streamContext.ProfileVersionId,
+            Language: streamContext.Language
         );
         await mediator.Send(logCommand, CancellationToken.None).ConfigureAwait(false);
     }
@@ -402,13 +437,13 @@ internal static class AiEndpoints
             Question: req.query,
             ThreadId: null, // No thread context for legacy endpoint
             SearchMode: req.searchMode.ToString(),
-            Language: "en",
             BypassCache: bypassCache,
             // Bug B5 (QA endpoints, plural): thread the authenticated identity so the handler's
             // per-game RAG access check fires (mirror the stream path + KnowledgeBaseEndpoints).
             // Subject.Id = acting user; EffectiveActor.Role = role for authz (admin bypass).
             UserId: session.Principal!.Subject.Id,
-            UserRole: session.Principal!.EffectiveActor.Role
+            UserRole: session.Principal!.EffectiveActor.Role,
+            AcceptLanguage: context.Request.Headers.AcceptLanguage.ToString() // #4168
         );
 
         var qaResponse = await mediator.Send(askQuery, ct).ConfigureAwait(false);
@@ -437,7 +472,9 @@ internal static class AiEndpoints
             resp.totalTokens,
             resp.confidence,
             resp.metadata,
-            followUpQuestions); // CHAT-02
+            followUpQuestions, // CHAT-02
+            qaResponse.ProfileVersionId, // #4168
+            qaResponse.Language);
 
         logger.LogInformation("QA response delivered for game {GameId}", req.gameId);
 
@@ -454,7 +491,7 @@ internal static class AiEndpoints
             qualityScores.IsLowQuality);
 
         // ADM-01: Log AI request with AI-11 quality scores (using CQRS)
-        await LogQaRequestAsync(session.Principal!.Subject.Id.ToString(), req.gameId, req.query, resp, latencyMs,
+        await LogQaRequestAsync(session.Principal!.Subject.Id.ToString(), req.gameId, req.query, finalResponse, latencyMs,
             context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             context.Request.Headers.UserAgent.ToString(),
             qualityScores, mediator, ct).ConfigureAwait(false);
@@ -485,6 +522,8 @@ internal static class AiEndpoints
         var explainQuery = new BoundedContexts.KnowledgeBase.Application.Queries.ExplainQuery(
             GameId: gameGuid,
             Topic: req.topic,
+            UserId: session.Principal!.Subject.Id,
+            UserRole: session.Principal!.EffectiveActor.Role,
             Language: "en"
         );
 
@@ -504,6 +543,10 @@ internal static class AiEndpoints
         var snippets = explainResponse.Citations.Select(c => new Snippet(
             text: c.Snippet,
             source: $"PDF:{c.DocumentId}",
+            // `CitationDto.PageNumber` e' nullable (#3855: una citazione servita dalla cache puo' non
+            // portare la pagina; #4819: ExplainQueryHandler la toglie a un documento che non sa dirla,
+            // #4782) e `Snippet.page` lo e' dal passo 3 di #4819: nessuna pagina arriva come null, non come
+            // uno 0 che i client dovrebbero indovinare.
             page: c.PageNumber,
             line: 0,
             score: (float)c.RelevanceScore
@@ -593,7 +636,13 @@ internal static class AiEndpoints
 
         try
         {
-            var query = new StreamSetupGuideQuery(req.gameId, req.playerCount);
+            // #4206: l'identità serve al cancello RAG dell'handler (ADR-096). Argomenti con nome, come
+            // per StreamQaQuery: un parametro obbligatorio aggiunto non rimescola quelli dopo.
+            var query = new StreamSetupGuideQuery(
+                GameId: req.gameId,
+                UserId: session.Principal!.Subject.Id,
+                UserRole: session.Principal!.EffectiveActor.Role,
+                PlayerCount: req.playerCount);
             await ExecuteSetupGuideStreamingAsync(query, context, mediator, streamContext, ct).ConfigureAwait(false);
 
             logger.LogInformation("Setup guide streaming completed for game {GameId}, {StepCount} steps, estimated {Minutes} min",
@@ -604,6 +653,17 @@ internal static class AiEndpoints
             logger.LogInformation(ex, "Setup guide streaming cancelled by client for game {GameId}", req.gameId);
             streamContext.StreamStatus = "Cancelled";
             streamContext.StreamErrorMessage = "Client disconnected";
+        }
+        catch (RagOwnershipRequiredException ex)
+        {
+            // #4206: un diniego atteso, non un guasto. Come nello stream della chat, gli header SSE sono
+            // già partiti: viaggia come evento Error con il proprio codice e il gioco.
+            logger.LogInformation(
+                ex, "Setup guide denied for game {GameId}: RAG ownership not declared", ex.GameId);
+            streamContext.StreamStatus = "Error";
+            streamContext.StreamErrorMessage = ex.Message;
+            await TryWriteStreamErrorAsync(
+                context, new StreamingError(ex.Message, ex.ErrorCode, ex.GameId), ct).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out
@@ -701,7 +761,9 @@ internal static class AiEndpoints
             GameId = req.gameId,
             GameState = req.gameState,
             Query = req.query,
-            ChatThreadId = req.chatThreadId
+            ChatThreadId = req.chatThreadId,
+            UserId = session.Principal!.Subject.Id,
+            UserRole = session.Principal!.EffectiveActor.Role
         }, ct).ConfigureAwait(false);
 
         logger.LogInformation(
@@ -785,6 +847,8 @@ internal static class AiEndpoints
         public StringBuilder AnswerBuilder { get; } = new();
         public int TotalTokens { get; set; }
         public double? Confidence { get; set; }
+        public Guid? ProfileVersionId { get; set; }
+        public string? Language { get; set; }
         public List<Snippet> Snippets { get; set; } = new();
         public string StreamStatus { get; set; } = "Success";
         public string? StreamErrorMessage { get; set; }
@@ -830,12 +894,14 @@ internal static class AiEndpoints
     /// <summary>
     /// Map QaResponseDto to legacy QaResponse format for backward compatibility.
     /// </summary>
-    private static QaResponse MapToLegacyQaResponse(QaResponseDto qaResponse)
+    internal static QaResponse MapToLegacyQaResponse(QaResponseDto qaResponse)
     {
         var snippets = qaResponse.Sources.Select(src => new Snippet(
             text: src.TextContent,
             source: $"PDF:{src.VectorDocumentId}",
-            page: src.PageNumber,
+            // #4819: `SearchResultDto.PageNumber` is a plain number and 0 means none (Ask writes it for a document that
+            // cannot vouch for its pages, #4782): on the wire that is `null`, as for the explanation.
+            page: src.PageNumber > 0 ? src.PageNumber : null,
             line: 0,
             score: (float)src.RelevanceScore
         )).ToList();
@@ -927,7 +993,9 @@ internal static class AiEndpoints
             FinishReason: finishReason,
             QualityScores: qualityScores,
             // #1728: drill payload (snippets as chunks)
-            Chunks: MapSnippetsToChunks(resp.snippets)
+            Chunks: MapSnippetsToChunks(resp.snippets),
+            ProfileVersionId: resp.profileVersionId,
+            Language: resp.language
         );
         await mediator.Send(logCommand, ct).ConfigureAwait(false);
     }
@@ -1081,33 +1149,5 @@ internal static class AiEndpoints
             await context.Response.WriteAsync($"data: {json}\n\n", ct).ConfigureAwait(false);
             await context.Response.Body.FlushAsync(ct).ConfigureAwait(false);
         }
-    }
-
-    // ─── Agent Slots ─────────────────────────────────────────────────────
-
-    private static void MapUserAgentSlotsEndpoint(RouteGroupBuilder group)
-    {
-        group.MapGet("/user/agent-slots", HandleGetUserAgentSlots)
-            .WithName("GetUserAgentSlots")
-            .WithDescription("Get user's agent slot allocation and usage (Issue #4771)")
-            .WithTags("AI Agents")
-            .Produces<UserAgentSlotsDto>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .RequireSession();
-    }
-
-    private static async Task<IResult> HandleGetUserAgentSlots(
-        HttpContext context,
-        IMediator mediator,
-        CancellationToken ct)
-    {
-        var session = (SessionStatusDto)context.Items[nameof(SessionStatusDto)]!;
-        var userId = session.Principal!.Subject.Id;
-        var userTier = session.Principal!.Subject.Tier;
-        var userRole = session.Principal!.EffectiveActor.Role;
-
-        var query = new GetUserAgentSlotsQuery(userId, userTier, userRole);
-        var result = await mediator.Send(query, ct).ConfigureAwait(false);
-        return Results.Ok(result);
     }
 }

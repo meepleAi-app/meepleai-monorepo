@@ -58,7 +58,7 @@ test.describe.skip('Admin Analytics - Quality Metrics', () => {
 
     // Check if "Back to Users" link exists
     const backLink = page.locator('a:has-text("Back to Users")');
-    if (await backLink.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await backLink.isVisible({ timeout: 2000 })) {
       console.log('✓ Back to Users link found');
       expect(await backLink.getAttribute('href')).toContain('/admin/users');
     } else {

@@ -28,25 +28,45 @@ import type { ScoreEntry, TurnAdvancedPayload } from '@/components/session/types
 import { logger } from '@/lib/logger';
 
 /**
- * SSE Event Types (from GST-003 backend)
+ * The events the toolkit pages use, named as the live session stream names them (#4114).
+ *
+ * The hook used to open `/game-sessions/{id}/stream` with a live session id (a 404), listen to
+ * `ScoreUpdatedEvent`, `SessionPausedEvent`, … — the CLR names of the SessionTracking stream — and
+ * read a `type` field that none of those events carries: score, pause, resume and finalize never
+ * fired, on either stream. The live stream names its events `session:*` and sends the bare payload.
  */
-enum SessionEventType {
-  ScoreUpdatedEvent = 'ScoreUpdatedEvent',
-  SessionPausedEvent = 'SessionPausedEvent',
-  SessionResumedEvent = 'SessionResumedEvent',
-  SessionFinalizedEvent = 'SessionFinalizedEvent',
+const SESSION_EVENTS = {
+  score: 'session:score',
+  paused: 'session:pause',
+  resumed: 'session:resume',
+  finalized: 'session:endgame',
+  toolkit: 'session:toolkit',
+} as const;
+
+/** `session:score` of the live stream: one cell of the session's RoundScores. */
+interface LiveScorePayload {
+  playerId: string;
+  round: number;
+  dimension: string;
+  value: number;
 }
 
-/**
- * SSE Event Data
- */
-interface SessionEvent {
-  type: SessionEventType;
-  data: unknown;
+function isLiveScorePayload(value: unknown): value is LiveScorePayload {
+  if (typeof value !== 'object' || value === null) return false;
+  const data = value as Record<string, unknown>;
+  return (
+    typeof data.playerId === 'string' &&
+    typeof data.round === 'number' &&
+    typeof data.dimension === 'string' &&
+    typeof data.value === 'number'
+  );
 }
 
-interface ScoreUpdatedEventData {
-  scoreEntry: ScoreEntry;
+/** `session:toolkit` carries dice, cards, notes and widgets too: only a turn advance has these. */
+function isTurnAdvancedPayload(value: unknown): value is TurnAdvancedPayload {
+  if (typeof value !== 'object' || value === null) return false;
+  const data = value as Record<string, unknown>;
+  return typeof data.currentPlayerName === 'string' && typeof data.roundNumber === 'number';
 }
 
 /**
@@ -147,39 +167,48 @@ export function useSessionSync(options: UseSessionSyncOptions): SessionSyncState
   });
 
   /**
-   * Handle SSE event
+   * Handle an SSE event: the SSE event name is the type, the data is the bare payload.
    */
   const handleEvent = useCallback((event: MessageEvent<string>) => {
     try {
-      const parsedEvent: SessionEvent = JSON.parse(event.data);
+      const data: unknown = JSON.parse(event.data);
 
-      switch (parsedEvent.type) {
-        case SessionEventType.ScoreUpdatedEvent: {
-          const data = parsedEvent.data as ScoreUpdatedEventData;
-          const scoreEntry = {
-            ...data.scoreEntry,
-            timestamp: new Date(data.scoreEntry.timestamp),
+      switch (event.type) {
+        case SESSION_EVENTS.score: {
+          if (!isLiveScorePayload(data)) {
+            logger.error(`[useSessionSync] Unexpected session:score payload: ${event.data}`);
+            break;
+          }
+          const scoreEntry: ScoreEntry = {
+            id: `${data.playerId}-${data.round}-${data.dimension}`,
+            participantId: data.playerId,
+            roundNumber: data.round,
+            category: data.dimension,
+            scoreValue: data.value,
+            timestamp: new Date(),
+            createdBy: data.playerId,
           };
-
           setScores(prev => [...prev, scoreEntry]);
           onScoreUpdateRef.current?.(scoreEntry);
           break;
         }
 
-        case SessionEventType.SessionPausedEvent: {
+        case SESSION_EVENTS.paused:
           onPausedRef.current?.();
           break;
-        }
 
-        case SessionEventType.SessionResumedEvent: {
+        case SESSION_EVENTS.resumed:
           onResumedRef.current?.();
           break;
-        }
 
-        case SessionEventType.SessionFinalizedEvent: {
+        case SESSION_EVENTS.finalized:
           onFinalizedRef.current?.();
           break;
-        }
+
+        case SESSION_EVENTS.toolkit:
+          // Turn-order events (Issue #4975); the other toolkit events are not this hook's.
+          if (isTurnAdvancedPayload(data)) onTurnAdvancedRef.current?.(data);
+          break;
       }
     } catch (err) {
       logger.error(
@@ -194,7 +223,10 @@ export function useSessionSync(options: UseSessionSyncOptions): SessionSyncState
    */
   const connect = useCallback(() => {
     const baseUrl = apiBaseUrl || process.env.NEXT_PUBLIC_API_BASE || '';
-    const endpoint = `${baseUrl}/api/v1/game-sessions/${sessionId}/stream`;
+    // #4114: the toolkit pages hold the id of a LiveGameSession. Its stream fans in the companion
+    // SessionTracking channel too, so it carries `session:toolkit` (dice, cards, notes, timers)
+    // as well as the live session's own events.
+    const endpoint = `${baseUrl}/api/v1/live-sessions/${sessionId}/stream`;
 
     try {
       const eventSource = new EventSource(endpoint, {
@@ -235,20 +267,9 @@ export function useSessionSync(options: UseSessionSyncOptions): SessionSyncState
         }
       };
 
-      // Listen to all score/session event types
-      Object.values(SessionEventType).forEach(eventType => {
+      // The callbacks are invoked through refs, so `connect` stays stable across renders.
+      Object.values(SESSION_EVENTS).forEach(eventType => {
         eventSource.addEventListener(eventType, handleEvent);
-      });
-
-      // Listen to turn-order toolkit events (Issue #4975). Always registered; the
-      // callback is invoked through a ref so `connect` stays stable across renders.
-      eventSource.addEventListener('session:toolkit', (event: MessageEvent<string>) => {
-        try {
-          const payload = JSON.parse(event.data) as TurnAdvancedPayload;
-          onTurnAdvancedRef.current?.(payload);
-        } catch (err) {
-          logger.error('[useSessionSync] session:toolkit parse error:', err);
-        }
       });
 
       eventSourceRef.current = eventSource;

@@ -4,7 +4,6 @@
 
 export { ActivityFeed } from './ActivityFeed';
 export type { ActivityEvent } from './ActivityFeed';
-export { RulesExplainer, type RulesExplainerProps } from './RulesExplainer';
 export { SetupWizard, type SetupWizardResult } from './SetupWizard';
 export { PlayerSetup, type SetupPlayer, type PlayerRole, PLAYER_COLORS } from './PlayerSetup';
 export { PhysicalSetup } from './PhysicalSetup';
@@ -17,7 +16,6 @@ export { QuickActions } from './QuickActions';
 export type { QuickActionsProps } from './QuickActions';
 export { SessionChatWidget } from './SessionChatWidget';
 export type { SessionChatWidgetProps, ChatMessage } from './SessionChatWidget';
-export { ScoreAssistant } from './ScoreAssistant';
 export { SaveCompleteDialog } from './SaveCompleteDialog';
 export { ResumeSessionPanel } from './ResumeSessionPanel';
 export { GameNightWizard } from './GameNightWizard';

@@ -136,7 +136,9 @@ export function DiscoverHub({ pathnameOverride }: DiscoverHubProps = {}) {
       (trending.data ?? []).map(g => ({
         id: g.gameId,
         name: g.title,
-        imageUrl: g.thumbnailUrl,
+        // #4085: `thumbnailUrl` is the #2123 tombstone, always empty. `coverUrl` is what
+        // CoverUrlResolver actually resolves.
+        imageUrl: g.coverUrl,
         hasKnowledgeBase: g.hasKnowledgeBase,
       })),
     [trending.data]

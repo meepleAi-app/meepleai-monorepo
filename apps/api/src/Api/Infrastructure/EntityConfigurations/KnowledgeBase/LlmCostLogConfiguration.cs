@@ -124,6 +124,15 @@ internal class LlmCostLogConfiguration : IEntityTypeConfiguration<LlmCostLogEnti
             .HasMaxLength(50)
             .HasDefaultValue("Manual")
             .IsRequired();
+
+        // #4164: nullable — le righe esistenti non hanno uno stato del prezzo.
+        builder.Property(x => x.PricingStatus)
+            .HasColumnName("pricing_status")
+            .HasMaxLength(16);
+
+        // #4168: nullable — solo le risposte della pipeline hanno una versione del profilo.
+        builder.Property(x => x.ProfileVersionId)
+            .HasColumnName("profile_version_id");
     }
 
     private static void ConfigureIndexes(EntityTypeBuilder<LlmCostLogEntity> builder)

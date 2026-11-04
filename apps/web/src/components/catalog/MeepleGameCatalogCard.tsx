@@ -47,10 +47,6 @@ const KbDrawerSheet = dynamic(
   () => import('@/components/library/KbDrawerSheet').then(m => m.KbDrawerSheet),
   { ssr: false }
 );
-const AgentDrawerSheet = dynamic(
-  () => import('@/components/library/AgentDrawerSheet').then(m => m.AgentDrawerSheet),
-  { ssr: false }
-);
 const ChatDrawerSheet = dynamic(
   () => import('@/components/library/ChatDrawerSheet').then(m => m.ChatDrawerSheet),
   { ssr: false }
@@ -168,7 +164,6 @@ export function MeepleGameCatalogCard({
 
   // Drawer states
   const [kbDrawerOpen, setKbDrawerOpen] = useState(false);
-  const [agentDrawerOpen, setAgentDrawerOpen] = useState(false);
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
   const [sessionDrawerOpen, setSessionDrawerOpen] = useState(false);
 
@@ -228,17 +223,14 @@ export function MeepleGameCatalogCard({
     return buildGameConnections(
       {
         kbCount: kbDocuments?.length ?? 0,
-        agentCount: 0,
         chatCount: 0,
         sessionCount: 0,
       },
       {
         onKbClick: () => setKbDrawerOpen(true),
-        onAgentClick: () => setAgentDrawerOpen(true),
         onChatClick: () => setChatDrawerOpen(true),
         onSessionClick: () => setSessionDrawerOpen(true),
         onKbPlus: () => setKbDrawerOpen(true),
-        onAgentPlus: () => setAgentDrawerOpen(true),
         onChatPlus: () => setChatDrawerOpen(true),
         onSessionPlus: () => setSessionDrawerOpen(true),
       }
@@ -276,12 +268,6 @@ export function MeepleGameCatalogCard({
           <KbDrawerSheet
             open={kbDrawerOpen}
             onOpenChange={setKbDrawerOpen}
-            gameId={game.id}
-            gameTitle={game.title}
-          />
-          <AgentDrawerSheet
-            open={agentDrawerOpen}
-            onOpenChange={setAgentDrawerOpen}
             gameId={game.id}
             gameTitle={game.title}
           />

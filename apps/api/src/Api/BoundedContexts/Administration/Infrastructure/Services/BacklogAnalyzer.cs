@@ -35,14 +35,21 @@ internal sealed class BacklogAnalyzer : IBacklogAnalyzer
             var thresholdDate = DateTime.UtcNow.AddDays(-BacklogThresholdDays);
 
             // Find games added but never played or not played recently
-            var backlogGames = await _dbContext.Set<UserLibraryEntry>()
+            // UserLibraryEntries e' il DbSet mappato. L'aggregato di dominio UserLibraryEntry
+            // non e' nel modello — MeepleAiDbContext lo dichiara Ignore<>() — quindi
+            // Set<UserLibraryEntry>() falliva a runtime con "Cannot create a DbSet for
+            // 'UserLibraryEntry' because this type is not included in the model" (#3839).
+            //
+            // Si proietta SharedGameId, non GameId: quest'ultima e' una proprieta' calcolata con
+            // un corpo (SharedGameId ?? Guid.Empty) e EF non sa tradurla in SQL.
+            var backlogGames = await _dbContext.UserLibraryEntries
                 .AsNoTracking()
                 .Where(e => e.UserId == userId)
                 .Where(e => e.AddedAt < thresholdDate) // Game in library for 30+ days
                 .Where(e => !e.Sessions.Any() || e.Sessions.Max(s => s.PlayedAt) < thresholdDate) // Not played or last play >30d ago
                 .OrderBy(e => e.AddedAt) // Oldest first
                 .Take(MaxInsights)
-                .Select(e => new { e.Id, e.GameId })
+                .Select(e => new { e.Id, e.SharedGameId })
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
 
@@ -72,7 +79,7 @@ internal sealed class BacklogAnalyzer : IBacklogAnalyzer
                     title: "Gioco da riscoprire",
                     description: $"Hai un gioco non giocato da oltre {BacklogThresholdDays} giorni. Che ne dici di una partita?",
                     actionLabel: "Vedi Dettagli →",
-                    actionUrl: $"/library/games/{game.GameId}",
+                    actionUrl: $"/library/games/{game.SharedGameId}",
                     priority: 6
                 ));
             }

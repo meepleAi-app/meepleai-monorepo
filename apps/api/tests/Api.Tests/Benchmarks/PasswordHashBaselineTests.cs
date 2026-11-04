@@ -20,7 +20,7 @@ public class PasswordHashBaselineTests
     private const string TestPassword = "BaselineUnusualPwd123!";
     private const int Samples = 5;
 
-    [Fact(Skip = "Performance baseline — run locally to capture timings; do not run in CI.")]
+    [Fact(Skip = "PREVISTO: baseline di performance — run locally to capture timings; do not run in CI.")]
     public void Create_PBKDF2_210k_Iterations_BaselineSample()
     {
         // Warm-up.
@@ -41,7 +41,7 @@ public class PasswordHashBaselineTests
         avg.Should().BeGreaterThan(0);
     }
 
-    [Fact(Skip = "Performance baseline — run locally to capture timings; do not run in CI.")]
+    [Fact(Skip = "PREVISTO: baseline di performance — run locally to capture timings; do not run in CI.")]
     public void Verify_PBKDF2_210k_Iterations_BaselineSample()
     {
         var hash = PasswordHash.Create(TestPassword);

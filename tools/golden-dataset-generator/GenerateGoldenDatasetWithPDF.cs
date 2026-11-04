@@ -15,7 +15,7 @@ public class Program
     {
         new GameConfig("terraforming-mars", "Terraforming Mars", "terraforming-mars_rulebook.pdf", "it"),
         new GameConfig("wingspan", "Wingspan", "wingspan_en_rulebook.pdf", "en"),
-        new GameConfig("catan", "Catan", "cantan_en_rulebook.pdf", "en"),
+        new GameConfig("catan", "Catan", "catan_en_rulebook.pdf", "en"),
         new GameConfig("ticket-to-ride", "Ticket to Ride", "ticket-to-ride_rulebook.pdf", "it"),
         new GameConfig("carcassonne", "Carcassonne", "carcassone_rulebook.pdf", "it"),
         new GameConfig("7-wonders", "7 Wonders", "7-wonders_rulebook.pdf", "it"),

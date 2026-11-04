@@ -2,6 +2,7 @@
 import { type JSX } from 'react';
 
 import { parseCitationMarkers } from '@/lib/citations';
+import { citedPage } from '@/lib/citations/citedPage';
 
 import type { KbCitation } from '../../../lib/api/schemas/kb-ask.schemas';
 
@@ -12,7 +13,7 @@ export interface DrawerCompletedLabels {
   /** Optional i18n template for inline pill aria-label. If omitted, defaults to:
    *  "Citation N, document {docId}, page {page}" (English-y, but works in any locale). */
   inlineCitationAriaLabel?: (
-    citation: { docId: string; page: number; snippet: string },
+    citation: { docId: string; page: number | null; snippet: string },
     n: number
   ) => string;
 }
@@ -35,10 +36,14 @@ export function DrawerCompleted({
   onRegenerate?: () => void;
   labels: DrawerCompletedLabels;
   /** Citation click handler receiving deep-link payload with optional chunkId (#1702) */
-  onCitationClick?: (link: { docId: string; page: number; chunkId?: string }) => void;
+  onCitationClick?: (link: { docId: string; page: number | null; chunkId?: string }) => void;
 }): JSX.Element {
-  const defaultAriaLabel = (c: { docId: string; page: number }, n: number): string =>
-    `Citation ${n}, document ${c.docId}, page ${c.page}`;
+  const defaultAriaLabel = (c: { docId: string; page: number | null }, n: number): string => {
+    const page = citedPage(c.page);
+    return page === null
+      ? `Citation ${n}, document ${c.docId}`
+      : `Citation ${n}, document ${c.docId}, page ${page}`;
+  };
   const ariaLabelBuilder = labels.inlineCitationAriaLabel ?? defaultAriaLabel;
 
   const parsedNodes = parseCitationMarkers(text, citations, {
@@ -69,12 +74,13 @@ export function DrawerCompleted({
               <li
                 key={`${c.docId}-${c.page}-${idx}`}
                 data-citation-index={String(idx + 1)}
-                data-citation-page={String(c.page)}
+                data-citation-page={citedPage(c.page) === null ? undefined : String(c.page)}
                 className="text-xs text-muted-foreground flex gap-2"
               >
                 <span className="font-mono font-bold text-entity-kb">{idx + 1}</span>
                 <span>
-                  p.{c.page} · {c.snippet}
+                  {citedPage(c.page) === null ? '' : `p.${c.page} · `}
+                  {c.snippet}
                 </span>
               </li>
             ))}

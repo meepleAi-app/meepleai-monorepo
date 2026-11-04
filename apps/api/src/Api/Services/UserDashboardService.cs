@@ -90,7 +90,7 @@ internal class UserDashboardService : IUserDashboardService
                 .OrderByDescending(e => e.AddedAt)
                 .Take(MaxRecentGames)
                 .Select(e => new RecentGameDto(
-                    e.GameId,
+                    e.SharedGameId ?? Guid.Empty, // #4749: GameId is a compatibility property outside the EF model
                     e.SharedGame!.Title, // Safe after null filter in Where clause
                     e.SharedGame!.ImageUrl,
                     e.AddedAt,

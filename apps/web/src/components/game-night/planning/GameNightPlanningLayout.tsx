@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { Plus, Users } from 'lucide-react';
+import { Plus, Search, Users } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { useGameNightStore } from '@/stores/game-night';
@@ -23,11 +23,19 @@ interface GameNightPlanningLayoutProps {
     minPlayers?: number;
     maxPlayers?: number;
   }>;
+  /**
+   * #4187: la ricerca nel catalogo, fatta sul server da chi monta il layout. Senza
+   * `onCatalogSearchChange` il selettore offre solo `availableGames`, come prima.
+   */
+  catalogSearch?: string;
+  onCatalogSearchChange?: (term: string) => void;
 }
 
 export function GameNightPlanningLayout({
   title,
   availableGames = [],
+  catalogSearch = '',
+  onCatalogSearchChange,
 }: GameNightPlanningLayoutProps) {
   const { players, selectedGames, timeline, removeGame, addGame } = useGameNightStore();
   const [showPicker, setShowPicker] = useState(false);
@@ -103,6 +111,25 @@ export function GameNightPlanningLayout({
             </div>
           )}
         </div>
+
+        {/* #4187: ricerca nel catalogo sopra il selettore */}
+        {showPicker && onCatalogSearchChange && (
+          <div className="relative">
+            <Search
+              aria-hidden="true"
+              className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+            />
+            <input
+              type="search"
+              value={catalogSearch}
+              onChange={e => onCatalogSearchChange(e.target.value)}
+              placeholder="Cerca un gioco nel catalogo…"
+              aria-label="Cerca un gioco nel catalogo"
+              className="w-full rounded-md border border-input bg-background py-2 pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              data-testid="planning-catalog-search"
+            />
+          </div>
+        )}
 
         {/* Inline picker */}
         {showPicker && (

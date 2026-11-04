@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
@@ -9,6 +10,7 @@ using Api.Services.Pdf;
 using Api.SharedKernel.Domain.Covers;
 using Api.SharedKernel.Infrastructure.Persistence;
 using FluentAssertions;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
@@ -32,6 +34,7 @@ public sealed class AssignCoverCommandHandlerTests
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IHybridCacheService> _cache = new();
     private readonly Mock<ICacheInvalidationRetryPolicy> _cacheRetryPolicy = new();
+    private readonly Mock<HybridCache> _hybridCache = new();
     // #3611 — unused by these Card-context tests (the Social-only render path is
     // covered by AssignCoverSocialCropTests), but required by the constructor.
     private readonly Mock<IWebpVariantGenerator> _webpGenerator = new();
@@ -50,8 +53,7 @@ public sealed class AssignCoverCommandHandlerTests
         new(
             _repository.Object,
             _unitOfWork.Object,
-            _cache.Object,
-            _cacheRetryPolicy.Object,
+            new SharedGameCacheInvalidator(_cache.Object, _cacheRetryPolicy.Object, _hybridCache.Object),
             _webpGenerator.Object,
             _blobStorage.Object,
             NullLogger<AssignCoverCommandHandler>.Instance);
@@ -59,7 +61,7 @@ public sealed class AssignCoverCommandHandlerTests
     // #3615: the remove path deletes the removed assignment's rendered crop from R2, so it now
     // takes the blob storage too (shared with the assign handler above).
     private RemoveCoverAssignmentCommandHandler CreateRemoveHandler() =>
-        new(_repository.Object, _unitOfWork.Object, _cache.Object, _cacheRetryPolicy.Object,
+        new(_repository.Object, _unitOfWork.Object, new SharedGameCacheInvalidator(_cache.Object, _cacheRetryPolicy.Object, _hybridCache.Object),
             _blobStorage.Object, NullLogger<RemoveCoverAssignmentCommandHandler>.Instance);
 
     private static SharedGame NewGame() => SharedGame.Create(

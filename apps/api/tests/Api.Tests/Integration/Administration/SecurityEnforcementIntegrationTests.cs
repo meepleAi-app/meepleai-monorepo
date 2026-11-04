@@ -238,7 +238,7 @@ public sealed class SecurityEnforcementIntegrationTests : IAsyncLifetime
 
         // In real endpoint, this would return 403 Forbidden
         // Here we verify the role check logic works at entity level
-        var isAdmin = regularUser.Role.IsAdmin() || regularUser.Role.IsSuperAdmin() || regularUser.Role.IsEditor();
+        var isAdmin = regularUser.Role.IsExactlyAdmin() || regularUser.Role.IsSuperAdmin() || regularUser.Role.IsEditor();
         isAdmin.Should().BeFalse("Regular users should not have admin privileges");
     }
 

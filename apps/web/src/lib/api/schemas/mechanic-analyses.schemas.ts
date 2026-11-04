@@ -277,6 +277,24 @@ export const MechanicClaimValidationDtoSchema = z.object({
 });
 export type MechanicClaimValidationDto = z.infer<typeof MechanicClaimValidationDtoSchema>;
 
+export const MechanicClaimKindSchema = z.enum(['Rule', 'Exception', 'Clarification', 'Example']);
+export type MechanicClaimKind = z.infer<typeof MechanicClaimKindSchema>;
+export const MechanicRulePrioritySchema = z.enum(['Base', 'Expansion', 'Card', 'Scenario']);
+export type MechanicRulePriority = z.infer<typeof MechanicRulePrioritySchema>;
+export const MechanicTriggerDtoSchema = z.object({
+  phase: z.string().nullable(),
+  action: z.string().nullable(),
+  component: z.string().nullable(),
+});
+export type MechanicTriggerDto = z.infer<typeof MechanicTriggerDtoSchema>;
+export const MechanicClaimStructureDtoSchema = z.object({
+  kind: MechanicClaimKindSchema,
+  priority: MechanicRulePrioritySchema,
+  overrides: z.array(z.string().uuid()),
+  trigger: MechanicTriggerDtoSchema.nullable(),
+});
+export type MechanicClaimStructureDto = z.infer<typeof MechanicClaimStructureDtoSchema>;
+
 export const MechanicClaimDtoSchema = z.object({
   id: z.string().uuid(),
   analysisId: z.string().uuid(),
@@ -290,6 +308,10 @@ export const MechanicClaimDtoSchema = z.object({
   citations: z.array(MechanicCitationDtoSchema),
   reviewNote: z.string().nullable(),
   validations: z.array(MechanicClaimValidationDtoSchema),
+  kind: MechanicClaimKindSchema.default('Rule'),
+  priority: MechanicRulePrioritySchema.default('Base'),
+  overrides: z.array(z.string().uuid()).default([]),
+  trigger: MechanicTriggerDtoSchema.nullable().default(null),
 });
 export type MechanicClaimDto = z.infer<typeof MechanicClaimDtoSchema>;
 
@@ -437,6 +459,8 @@ export const MECHANIC_ANALYSES_ROUTES = {
   claims: (id: string) => `/api/v1/admin/mechanic-analyses/${id}/claims`,
   approveClaim: (id: string, claimId: string) =>
     `/api/v1/admin/mechanic-analyses/${id}/claims/${claimId}/approve`,
+  claimStructure: (id: string, claimId: string) =>
+    `/api/v1/admin/mechanic-analyses/${id}/claims/${claimId}/structure`,
   rejectClaim: (id: string, claimId: string) =>
     `/api/v1/admin/mechanic-analyses/${id}/claims/${claimId}/reject`,
   bulkApproveClaims: (id: string) => `/api/v1/admin/mechanic-analyses/${id}/claims/bulk-approve`,

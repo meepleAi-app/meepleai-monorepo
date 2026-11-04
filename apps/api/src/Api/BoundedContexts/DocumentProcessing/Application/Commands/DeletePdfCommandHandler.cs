@@ -19,7 +19,9 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
     private readonly MeepleAiDbContext _db;
     private readonly IBlobStorageService _blobStorageService;
     private readonly IAiResponseCacheService _cacheService;
+    private readonly Api.BoundedContexts.KnowledgeBase.Application.Services.ISemanticResponseCache _semanticCache;
     private readonly IEntityLinkRepository _entityLinkRepository;
+    private readonly IHybridCacheService _hybridCache;
     private readonly IMediator? _mediator;
     private readonly ILogger<DeletePdfCommandHandler> _logger;
 
@@ -27,14 +29,18 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
         MeepleAiDbContext db,
         IBlobStorageService blobStorageService,
         IAiResponseCacheService cacheService,
+        Api.BoundedContexts.KnowledgeBase.Application.Services.ISemanticResponseCache semanticCache,
         ILogger<DeletePdfCommandHandler> logger,
         IEntityLinkRepository entityLinkRepository,
+        IHybridCacheService hybridCache,
         IMediator? mediator = null)
     {
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _blobStorageService = blobStorageService ?? throw new ArgumentNullException(nameof(blobStorageService));
         _cacheService = cacheService ?? throw new ArgumentNullException(nameof(cacheService));
+        _semanticCache = semanticCache ?? throw new ArgumentNullException(nameof(semanticCache));
         _entityLinkRepository = entityLinkRepository ?? throw new ArgumentNullException(nameof(entityLinkRepository));
+        _hybridCache = hybridCache ?? throw new ArgumentNullException(nameof(hybridCache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _mediator = mediator;
     }
@@ -47,7 +53,14 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
         try
         {
             var pdfGuid = Guid.Parse(pdfId);
+            // Issue #3866: `.AsTracking()` is REQUIRED on both reads of this handler. The DbContext
+            // default is NoTracking (PERF-06), so each `Remove()` below had to ATTACH what the read
+            // returned. When the same row was reachable more than once in the scope that threw
+            // "cannot be tracked because another instance with the same key value is already being
+            // tracked" — wrapped as a PdfStorageException, i.e. a 500 on a delete that should
+            // succeed. A delete path needs one instance per row, which is what tracking gives.
             var pdfDoc = await _db.PdfDocuments
+                .AsTracking()
                 .FirstOrDefaultAsync(p => p.Id == pdfGuid, cancellationToken).ConfigureAwait(false);
 
             if (pdfDoc == null)
@@ -57,6 +70,7 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
 
             var gameId = pdfDoc.SharedGameId;
             var coverR2Key = pdfDoc.CoverR2Key;
+            var uploadedByUserId = pdfDoc.UploadedByUserId;
 
             var storageGameIdForUnlink = (pdfDoc.PrivateGameId ?? pdfDoc.SharedGameId)?.ToString() ?? string.Empty;
 
@@ -64,30 +78,73 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
             // multiple games (Task 2 of #2943 introduced dedup reuse via EntityLink).
             // Deleting the record/blob/vectors while another game still links it would
             // orphan those games' KB cards. Gate the destructive path on the last link.
-            var linkCount = await _entityLinkRepository
-                .GetCountForEntityAsync(MeepleEntityType.KbCard, pdfGuid, cancellationToken)
+            //
+            // #4325: the question is "does another game use it?", and only the links that stand up answer it
+            // (KbCardLinkRule, the same rule as the purge of a deleted private game). It used to be a count of
+            // every link of anyone from any id, with the threshold "more than one" standing for "the uploader's
+            // own link plus one": POST /library/entity-links writes a link between any two ids, so a stranger's
+            // links could keep the owner from deleting a PDF, with a success answer. And a count of the links
+            // that stand up can drop the caller's own (its game is gone), so the threshold would read a PDF
+            // that another game still uses as unused. The game letting go of the PDF is the one the caller names,
+            // else the one it was uploaded for.
+            //
+            // Asking twice changes nothing the second time while another game uses the PDF: the first call removes
+            // the link of the game it was uploaded for, that game is still the one letting go, and the other game
+            // still uses it. The old threshold deleted it on the second call, taking the PDF from the game that
+            // used it. What to answer to someone who asked to delete is #4627, decided on 2026-10-28: the game the PDF
+            // belongs to lets go of it, and the answer says "unlinked" or "kept" (PdfDeleteOutcome), never "deleted".
+            var letGoGameId = command.CallerGameId ?? pdfDoc.SharedGameId ?? pdfDoc.PrivateGameId ?? Guid.Empty;
+            var usingGames = await _db.LiveLinksToPdfs()
+                .Where(l => l.TargetEntityId == pdfGuid)
+                .Select(l => l.SourceEntityId)
+                .Distinct()
+                .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
 
-            if (linkCount > 1)
+            // A PDF with no game of its own and no named caller (a legacy row) has nobody letting go of it: one game
+            // using it is its only use, which is what the old threshold said. With a game letting go, it is everyone
+            // else.
+            var otherGames = letGoGameId == Guid.Empty
+                ? Math.Max(usingGames.Count - 1, 0)
+                : usingGames.Count(g => g != letGoGameId);
+
+            if (otherGames > 0)
             {
-                // Issue #2949 finding #1: catalog dedup is GLOBAL, so pdfDoc.SharedGameId
-                // stays pinned to the original uploader game even after other games link
-                // the same PDF via reuse. When the command carries an explicit caller game
+                // Issue #2949 finding #1: pdfDoc.SharedGameId stays pinned to the original
+                // uploader game even after other users link the same PDF via reuse (or other
+                // games, through links the global dedup wrote before #4326). When the
+                // command carries an explicit caller game
                 // (e.g. RemoveRagFromSharedGameCommandHandler cleaning up that specific
-                // game), remove THAT game's link. Only fall back to SharedGameId for call
-                // sites where caller == uploader's game (no distinct game context exists).
+                // game), remove THAT game's links, whoever wrote them: the flow decides for the game.
+                // Only fall back to the game the PDF was uploaded for where caller == uploader's game (no
+                // distinct game context exists): there the uploader is letting go, and only the links
+                // the uploader wrote go (#4641). A second user who declared the same file keeps theirs.
+                //
+                // #4627: the game the PDF was uploaded for is the SAME one the count above reads as letting go,
+                // `letGoGameId`. This used to look in `SharedGameId` only, which is null for the PDF of a private
+                // game: nothing was removed and the answer was still a success, so the client believed the PDF gone
+                // while it stayed linked, indexed and queryable. No game of its own (a legacy row) means nobody lets go.
                 var linkRemoved = await RemoveCallerLinkAsync(
                     pdfGuid,
-                    command.CallerGameId ?? pdfDoc.SharedGameId,
+                    letGoGameId == Guid.Empty ? null : letGoGameId,
+                    command.CallerGameId is null ? uploadedByUserId : null,
                     cancellationToken).ConfigureAwait(false);
 
-                var remainingLinks = linkRemoved ? linkCount - 1 : linkCount;
-
                 _logger.LogInformation(
-                    "PDF {PdfId} still referenced by {RemainingLinks} game link(s) after unlink — record/blob/vectors preserved",
-                    pdfId, remainingLinks);
+                    "PDF {PdfId} still used by {OtherGames} other game(s) (caller link removed: {LinkRemoved}) — record/blob/vectors preserved",
+                    pdfId, otherGames, linkRemoved);
 
-                return new PdfDeleteResult(true, "PDF unlinked from game (still referenced by other games)", storageGameIdForUnlink);
+                return linkRemoved
+                    ? new PdfDeleteResult(
+                        true,
+                        "PDF unlinked from game (still referenced by other games)",
+                        storageGameIdForUnlink,
+                        PdfDeleteOutcome.Unlinked)
+                    : new PdfDeleteResult(
+                        true,
+                        "PDF kept (still used by other games, no link of the caller left to remove)",
+                        storageGameIdForUnlink,
+                        PdfDeleteOutcome.Kept);
             }
 
             // Delete associated vector document and vectors from pgvector
@@ -98,6 +155,19 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
             _logger.LogInformation("Deleted PDF document record {PdfId}", pdfId);
+
+            // #4308: what the hybrid cache still holds of the document — the uploader's «my documents»
+            // list (5 minutes), the document, its chunks. Only on this branch: when the PDF is still linked
+            // from other games the row survives and the list does not change. The same rule as
+            // DeleteKbDocumentCommandHandler, in one place.
+            //
+            // Right after the commit, before the steps below: the event publication, the blob and the AI
+            // caches let a cancellation through, and a client that aborts the request there would leave the
+            // row deleted and the list stale for 5 minutes. Neither this command nor the commands that send
+            // it are [AtomicAudit], so the delete is already committed and no read can slip in between.
+            await DeletedKbDocumentCaches
+                .InvalidateSafelyAsync(_hybridCache, _logger, uploadedByUserId, pdfGuid, cancellationToken)
+                .ConfigureAwait(false);
 
             // Issue #1831 AC: raise PdfDeletedDomainEvent so PdfDeletedEventHandler
             // evicts the L4 cover thumb/preview from R2. Published AFTER
@@ -155,6 +225,7 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
     private async Task DeleteVectorDocumentAsync(Guid pdfGuid, string pdfId, CancellationToken cancellationToken)
     {
         var vectorDoc = await _db.VectorDocuments
+            .AsTracking()
             .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfGuid, cancellationToken).ConfigureAwait(false);
 
         if (vectorDoc == null)
@@ -167,17 +238,20 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
     }
 
     /// <summary>
-    /// Removes only the calling game's Game→KbCard link (the last-link case is
+    /// Removes only the calling game's Game→KbCard links (the last-link case is
     /// handled by the destructive path in <see cref="Handle"/>). Used when other
-    /// games still reference this PDF, so the record must survive.
+    /// games still reference this PDF, so the record must survive. A game can hold one
+    /// link for each user who declared the file (#4641). With <paramref name="onlyLinksOfUser"/>
+    /// only that user's links go; without it the game lets go of all of them.
     /// </summary>
     /// <returns><c>true</c> if a matching link was found and removed; otherwise <c>false</c>.</returns>
-    private async Task<bool> RemoveCallerLinkAsync(Guid pdfGuid, Guid? callerGameId, CancellationToken cancellationToken)
+    private async Task<bool> RemoveCallerLinkAsync(
+        Guid pdfGuid, Guid? callerGameId, Guid? onlyLinksOfUser, CancellationToken cancellationToken)
     {
         if (callerGameId is null || callerGameId.Value == Guid.Empty)
         {
             // No owning-game link to remove for this call; the record survives
-            // because other links exist (linkCount > 1 already established).
+            // because other games use it (established by the caller).
             return false;
         }
 
@@ -189,20 +263,49 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
                 cancellationToken: cancellationToken)
             .ConfigureAwait(false);
 
-        var callerLink = links.FirstOrDefault(l =>
-            l.SourceEntityType == MeepleEntityType.Game &&
-            l.SourceEntityId == callerGameId.Value &&
-            l.TargetEntityType == MeepleEntityType.KbCard &&
-            l.TargetEntityId == pdfGuid);
+        var callerLinks = links
+            .Where(l =>
+                l.SourceEntityType == MeepleEntityType.Game &&
+                l.SourceEntityId == callerGameId.Value &&
+                l.TargetEntityType == MeepleEntityType.KbCard &&
+                l.TargetEntityId == pdfGuid &&
+                (onlyLinksOfUser is null || l.OwnerUserId == onlyLinksOfUser))
+            .ToList();
 
-        if (callerLink is null)
+        if (callerLinks.Count == 0)
         {
             return false;
         }
 
-        // Follow-up: this hard-deletes the link (Remove) instead of the aggregate's
-        // soft-delete (link.Delete()) used by DeleteEntityLinkCommandHandler.
-        _entityLinkRepository.Remove(callerLink);
+        // Issue #3866: `GetForEntityAsync` is a read query and — correctly — does not track, so
+        // `Remove()` had to ATTACH the instance it returned. When the same row was already tracked
+        // elsewhere in the scope that threw "cannot be tracked because another instance with the
+        // same key value is already being tracked", wrapped as a PdfStorageException: a 500 on a
+        // delete that should succeed. `GetByIdAsync` is the tracked read the repository documents
+        // for exactly this purpose (#3858), so the delete goes through it.
+        var removed = false;
+        foreach (var callerLink in callerLinks)
+        {
+            var trackedLink = await _entityLinkRepository
+                .GetByIdAsync(callerLink.Id, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (trackedLink is null)
+            {
+                continue;
+            }
+
+            // Follow-up: this hard-deletes the link (Remove) instead of the aggregate's
+            // soft-delete (link.Delete()) used by DeleteEntityLinkCommandHandler.
+            _entityLinkRepository.Remove(trackedLink);
+            removed = true;
+        }
+
+        if (!removed)
+        {
+            return false;
+        }
+
         await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         return true;
     }
@@ -233,6 +336,39 @@ internal class DeletePdfCommandHandler : ICommandHandler<DeletePdfCommand, PdfDe
         try
         {
             await _cacheService.InvalidateGameAsync(gameId, cancellationToken).ConfigureAwait(false);
+        // #3982 — anche la cache SEMANTICA, non solo quella delle risposte AI.
+        //
+        // Finora la cancellazione invalidava `IAiResponseCacheService` e lasciava intatta
+        // `ISemanticResponseCache`: le risposte costruite sul manuale cancellato continuavano a
+        // essere servite per le 24h del suo TTL, citazioni comprese. Il caso che lo rende netto e'
+        // la rimozione per copyright o su richiesta — la cancellazione viene dichiarata compiuta
+        // mentre il contenuto e' ancora rispondibile.
+        //
+        // L'iniezione attraversa il confine verso KnowledgeBase, e segue un precedente dello stesso
+        // bounded context: `IndexPdfCommandHandler` (DocumentProcessing) inietta
+        // `ISemanticResponseCache` dal 2026-09. Non e' un pattern nuovo introdotto qui.
+        //
+        // `Guid.TryParse` e non `Parse`: l'interfaccia AI lavora su `string`, quella semantica su
+        // `Guid`, e un id non parsabile non deve fare esplodere una cancellazione gia' avvenuta.
+        if (Guid.TryParse(gameId, out var semanticGameId))
+        {
+            try
+            {
+                await _semanticCache.InvalidateGameAsync(semanticGameId, cancellationToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+#pragma warning disable CA1031 // Do not catch general exception types — best-effort, come sopra
+            catch (Exception ex)
+#pragma warning restore CA1031
+            {
+                _logger.LogWarning(ex,
+                    "Invalid operation invalidating the semantic cache for game {GameId} after {Operation} — stale answers may be served until the TTL expires",
+                    gameId, operation);
+            }
+        }
         }
         catch (OperationCanceledException)
         {

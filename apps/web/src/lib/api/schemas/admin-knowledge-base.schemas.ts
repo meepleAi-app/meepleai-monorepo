@@ -153,6 +153,103 @@ export type VectorStats = z.infer<typeof VectorStatsSchema>;
 export type VectorSearchResultItem = z.infer<typeof VectorSearchResultItemSchema>;
 export type VectorSemanticSearchResult = z.infer<typeof VectorSemanticSearchResultSchema>;
 
+// ========== Orphan Cleanup (#4511) ==========
+
+/**
+ * POST /api/v1/admin/pdfs/maintenance/cleanup-orphans (CleanupOrphansResult). It was validated
+ * with MaintenanceResultSchema, whose `affected` and `message` this endpoint never sends: every
+ * field optional, so it passed with nothing in it. `orphanedVectors` is always 0 for now: the
+ * handler deletes chunks only.
+ */
+export const CleanupOrphansResultSchema = z.object({
+  orphanedChunks: z.number(),
+  orphanedVectors: z.number(),
+});
+
+export type CleanupOrphansResult = z.infer<typeof CleanupOrphansResultSchema>;
+
+// ========== Pipeline Health (#4511) ==========
+
+/** The three values AdminPipelineEndpoints writes; there is no `degraded` or `down`. */
+export const PipelineStageStatusSchema = z.enum(['healthy', 'warning', 'error']);
+
+export const PipelineStageSchema = z.object({
+  name: z.string(),
+  status: PipelineStageStatusSchema,
+  // Per stage and not uniform: `avgDurationMs` is a string on Extract and Chunk, a number on Embed.
+  metrics: z.record(z.string(), z.unknown()),
+});
+
+export const PipelineRecentActivitySchema = z.object({
+  jobId: z.string(),
+  fileName: z.string(),
+  status: z.string(),
+  completedAt: z.string().nullable(),
+  durationMs: z.number().nullable(),
+});
+
+export const PipelineDistributionSchema = z.object({
+  totalDocuments: z.number(),
+  totalChunks: z.number(),
+  vectorCount: z.number(),
+  totalFiles: z.number(),
+  storageSizeFormatted: z.string(),
+});
+
+/** GET /api/v1/admin/kb/pipeline/health. */
+export const PipelineHealthResponseSchema = z.object({
+  stages: z.array(PipelineStageSchema),
+  summary: z.object({
+    healthyCount: z.number(),
+    warningCount: z.number(),
+    errorCount: z.number(),
+  }),
+  recentActivity: z.array(PipelineRecentActivitySchema),
+  distribution: PipelineDistributionSchema,
+  checkedAt: z.string(),
+});
+
+export type PipelineStageStatus = z.infer<typeof PipelineStageStatusSchema>;
+export type PipelineStage = z.infer<typeof PipelineStageSchema>;
+export type PipelineRecentActivity = z.infer<typeof PipelineRecentActivitySchema>;
+export type PipelineDistribution = z.infer<typeof PipelineDistributionSchema>;
+export type PipelineHealthResponse = z.infer<typeof PipelineHealthResponseSchema>;
+
+// ========== Embedding Service Info (#4446) ==========
+
+/**
+ * GET /api/v1/admin/embedding/info. No consumer validated it, and each read it its own way: one
+ * showed `dimension` (a 1024 written in the endpoint), one read `dimensions`, which the API never
+ * sent, and showed "—". Model, device and languages are null or empty when the service is down;
+ * `dimension` is the API's and always known; `maxInputChars` is null when the service does not say.
+ */
+export const EmbeddingServiceInfoSchema = z.object({
+  status: z.string(),
+  model: z.string().nullable(),
+  device: z.string().nullable(),
+  supportedLanguages: z.array(z.string()),
+  dimension: z.number().int().nonnegative(),
+  maxInputChars: z.number().int().positive().nullable(),
+});
+
+export type EmbeddingServiceInfo = z.infer<typeof EmbeddingServiceInfoSchema>;
+
+/**
+ * GET /api/v1/admin/embedding/metrics: the service's Prometheus counters as JSON, zeros when it
+ * does not answer. `failureRate` is already a percentage (0-100). The RAG pipeline read other names
+ * (`totalRequests`, `throughputPerSecond`), and its queue sidebar crashed on the missing throughput.
+ */
+export const EmbeddingServiceMetricsSchema = z.object({
+  requestsTotal: z.number().int().nonnegative(),
+  failuresTotal: z.number().int().nonnegative(),
+  durationMsSum: z.number().nonnegative(),
+  totalCharsSum: z.number().nonnegative(),
+  avgDurationMs: z.number().nonnegative(),
+  failureRate: z.number().min(0).max(100),
+});
+
+export type EmbeddingServiceMetrics = z.infer<typeof EmbeddingServiceMetricsSchema>;
+
 // ========== PDF List (Admin) ==========
 
 export const PdfListItemSchema = z.object({

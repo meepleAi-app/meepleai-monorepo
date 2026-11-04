@@ -5,7 +5,7 @@ import * as React from 'react';
 import { Command as CommandPrimitive } from 'cmdk';
 import { Search } from 'lucide-react';
 
-import { Dialog, DialogContent } from '@/components/ui/overlays/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/overlays/dialog';
 import { cn } from '@/lib/utils';
 
 import type { DialogProps } from '@radix-ui/react-dialog';
@@ -30,7 +30,11 @@ interface CommandDialogProps extends DialogProps {}
 const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
   return (
     <Dialog {...props}>
-      <DialogContent className="overflow-hidden p-0" hideCloseButton>
+      <DialogContent className="overflow-hidden p-0" hideCloseButton aria-describedby={undefined}>
+        {/* #3836 — la palette non ha un titolo visibile, ma Radix ne pretende uno e senza il
+            dialog non e' annunciabile. Essendo montata a livello di applicazione, l'avviso
+            compariva su ogni pagina — e' cosi' che l'audit lo ha visto su /onboarding. */}
+        <DialogTitle className="sr-only">Comandi rapidi</DialogTitle>
         <Command className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
           {children}
         </Command>
@@ -96,7 +100,11 @@ const CommandSeparator = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Separator>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Separator>
 >(({ className, ...props }, ref) => (
-  <CommandPrimitive.Separator ref={ref} className={cn('-mx-1 h-px bg-border', className)} {...props} />
+  <CommandPrimitive.Separator
+    ref={ref}
+    className={cn('-mx-1 h-px bg-border', className)}
+    {...props}
+  />
 ));
 CommandSeparator.displayName = CommandPrimitive.Separator.displayName;
 

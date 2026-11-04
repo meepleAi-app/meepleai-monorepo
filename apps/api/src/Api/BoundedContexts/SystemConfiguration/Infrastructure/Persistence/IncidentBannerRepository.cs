@@ -50,7 +50,11 @@ public sealed class IncidentBannerRepository : RepositoryBase, IIncidentBannerRe
     {
         ArgumentNullException.ThrowIfNull(entity);
 
+        // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06),
+        // quindi senza di esso questa lettura e' DETACHED: le mutazioni sotto non raggiungono
+        // il change tracker e SaveChangesAsync non scrive, e non solleva.
         var existing = await DbContext.Set<IncidentBannerStateEntity>()
+            .AsTracking()
             .FirstOrDefaultAsync(e => e.Id == IncidentBannerState.SingletonId, cancellationToken)
             .ConfigureAwait(false);
 

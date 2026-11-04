@@ -174,8 +174,11 @@ public sealed class GameEndpointsIntegrationTests : IClassFixture<GameEndpointsH
     [Fact]
     public async Task CreateGame_WithoutAuth_ReturnsUnauthorized()
     {
-        // Act
-        var response = await _client.PostAsJsonAsync("/api/v1/games", new
+        // Issue #3883: POST /api/v1/games non esiste piu' — #1320 (P2c) ha spostato la gestione del
+        // catalogo su SharedGameCatalog. Il test chiedeva 401 e riceveva 405 (path esistente, verbo
+        // no), quindi non provava piu' nulla sulla protezione dell'endpoint. Ora interroga la rotta
+        // viva, e l'asserzione resta quella forte: senza credenziali si deve prendere 401.
+        var response = await _client.PostAsJsonAsync("/api/v1/admin/shared-games", new
         {
             Title = "Test Game",
             MinPlayers = 2,
@@ -194,19 +197,22 @@ public sealed class GameEndpointsIntegrationTests : IClassFixture<GameEndpointsH
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (userId, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
+        // #3883: rotta viva (#1320 P2c). L'endpoint richiede admin o editor
+        // (RequireAdminOrEditorSession), quindi un utente semplice non deve poter creare un gioco:
+        // l'asserzione e' ristretta ai due esiti di rifiuto invece di ammettere anche Created.
         var request = TestSessionHelper.CreateAuthenticatedRequest(
             HttpMethod.Post,
-            "/api/v1/games",
+            "/api/v1/admin/shared-games",
             sessionToken,
             new { Title = "Test Game", MinPlayers = 2, MaxPlayers = 4 });
 
         // Act
         var response = await _client.SendAsync(request);
 
-        // Assert - Regular users may not have permission to create games
-        (response.StatusCode == HttpStatusCode.Created ||
-            response.StatusCode == HttpStatusCode.Forbidden ||
-            response.StatusCode == HttpStatusCode.Unauthorized).Should().BeTrue($"Expected Created, Forbidden, or Unauthorized, got {response.StatusCode}");
+        // Assert
+        response.StatusCode.Should().BeOneOf(
+            new[] { HttpStatusCode.Forbidden, HttpStatusCode.Unauthorized },
+            "un utente senza ruolo admin o editor non puo' creare un gioco di catalogo");
     }
 
     // ========================================
@@ -219,14 +225,120 @@ public sealed class GameEndpointsIntegrationTests : IClassFixture<GameEndpointsH
         // Arrange
         var gameId = Guid.NewGuid();
 
-        // Act
-        var response = await _client.PutAsJsonAsync($"/api/v1/games/{gameId}", new
+        // Act — #3883: rotta spostata su SharedGameCatalog da #1320 (P2c).
+        var response = await _client.PutAsJsonAsync($"/api/v1/admin/shared-games/{gameId}", new
         {
             Title = "Updated Game Name"
         });
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    /// <summary>
+    /// Issue #4090: the command, its validator and the handler's Replace*Async methods all supported
+    /// taxonomy, but UpdateSharedGameRequest did not declare the fields, so no HTTP caller could reach
+    /// them. This covers the omission: the five arguments are optional, so dropping them from the
+    /// mapping compiles cleanly and every handler-level test stays green while no taxonomy ever
+    /// arrives. Swapping two of them is a different matter and needs no test — SonarAnalyzer S2234
+    /// is a build error here and rejects it (verified: it caught exactly that mistake in this PR).
+    /// </summary>
+    [Fact]
+    public async Task UpdateGame_WithCategories_ReplacesThem_AndOmittingThemLeavesThemAlone()
+    {
+        // Arrange
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateAdminSessionAsync(dbContext);
+
+        var gameId = Guid.NewGuid();
+        dbContext.SharedGames.Add(new SharedGameEntity
+        {
+            Id = gameId,
+            Title = "Taxonomy Mapping Probe",
+            Description = "Seeded by #4090",
+            YearPublished = 2019,
+            MinPlayers = 1,
+            MaxPlayers = 5,
+            PlayingTimeMinutes = 60,
+            MinAge = 10,
+            CreatedAt = DateTime.UtcNow
+        });
+        await dbContext.SaveChangesAsync();
+
+        var body = new
+        {
+            title = "Taxonomy Mapping Probe",
+            yearPublished = 2019,
+            description = "Seeded by #4090",
+            minPlayers = 1,
+            maxPlayers = 5,
+            playingTimeMinutes = 60,
+            minAge = 10,
+            imageUrl = "",
+            thumbnailUrl = "",
+            categories = new[] { "Strategy", "Negotiation" },
+            mechanics = new[] { "Dice Rolling" }
+        };
+
+        // Act — a PUT that carries taxonomy
+        var withTaxonomy = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Put, $"/api/v1/admin/shared-games/{gameId}", sessionToken, body));
+
+        // Assert — it landed, and in the right collections
+        withTaxonomy.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        using (var verifyScope = _factory.Services.CreateScope())
+        {
+            var verifyDb = verifyScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var reloaded = await verifyDb.SharedGames
+                .AsNoTracking()
+                .Include(g => g.Categories)
+                .Include(g => g.Mechanics)
+                .FirstAsync(g => g.Id == gameId);
+
+            reloaded.Categories.Select(c => c.Name)
+                .Should().BeEquivalentTo(new[] { "Strategy", "Negotiation" });
+            reloaded.Mechanics.Select(m => m.Name)
+                .Should().BeEquivalentTo(new[] { "Dice Rolling" });
+        }
+
+        // Act — a PUT that omits taxonomy entirely (the shape EditGameDrawer sends)
+        var withoutTaxonomy = await _client.SendAsync(TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Put,
+            $"/api/v1/admin/shared-games/{gameId}",
+            sessionToken,
+            new
+            {
+                title = "Taxonomy Mapping Probe Renamed",
+                yearPublished = 2019,
+                description = "Seeded by #4090",
+                minPlayers = 1,
+                maxPlayers = 5,
+                playingTimeMinutes = 60,
+                minAge = 10,
+                imageUrl = "",
+                thumbnailUrl = ""
+            }));
+
+        // Assert — "null means do not change" holds across HTTP, not just in the handler
+        withoutTaxonomy.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        using (var verifyScope = _factory.Services.CreateScope())
+        {
+            var verifyDb = verifyScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var reloaded = await verifyDb.SharedGames
+                .AsNoTracking()
+                .Include(g => g.Categories)
+                .Include(g => g.Mechanics)
+                .FirstAsync(g => g.Id == gameId);
+
+            reloaded.Title.Should().Be("Taxonomy Mapping Probe Renamed");
+            reloaded.Categories.Select(c => c.Name)
+                .Should().BeEquivalentTo(new[] { "Strategy", "Negotiation" });
+            reloaded.Mechanics.Select(m => m.Name)
+                .Should().BeEquivalentTo(new[] { "Dice Rolling" });
+        }
     }
 
     // ========================================
@@ -680,8 +792,9 @@ public sealed class GameEndpointsIntegrationTests : IClassFixture<GameEndpointsH
         var gameId = Guid.NewGuid();
         var publishRequest = new { Status = 2 }; // Approved = 2
 
-        // Act
-        var response = await _client.PutAsJsonAsync($"/api/v1/games/{gameId}/publish", publishRequest);
+        // Act — #3883: la pubblicazione e' passata a SharedGameCatalog (#1320 P2c).
+        var response = await _client.PostAsJsonAsync(
+            $"/api/v1/admin/shared-games/{gameId}/quick-publish", publishRequest);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);

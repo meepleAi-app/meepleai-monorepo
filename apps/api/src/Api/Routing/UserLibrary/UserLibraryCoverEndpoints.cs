@@ -67,8 +67,7 @@ internal static class UserLibraryCoverEndpoints
         .Produces(403)
         .WithTags("Library")
         .WithSummary("Upload custom cover (L3)")
-        .WithDescription("Uploads a user-custom cover image (200x300 webp ≤200KB) for a game in user's library.")
-        .WithOpenApi();
+        .WithDescription("Uploads a user-custom cover image (200x300 webp ≤200KB) for a game in user's library.");
     }
 
     private static void MapRemoveCustomCoverEndpoint(RouteGroupBuilder group)
@@ -110,7 +109,6 @@ internal static class UserLibraryCoverEndpoints
         .Produces(404)
         .WithTags("Library")
         .WithSummary("Remove custom cover (L3)")
-        .WithDescription("Removes the user's custom cover for a game in their library. Falls back to L4/L1 chain.")
-        .WithOpenApi();
+        .WithDescription("Removes the user's custom cover for a game in their library. Falls back to L4/L1 chain.");
     }
 }

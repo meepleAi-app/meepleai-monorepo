@@ -6,16 +6,10 @@ export type UserTier = 'free' | 'normal' | 'premium' | 'pro' | 'enterprise';
 export type UserRole = 'user' | 'editor' | 'creator' | 'admin' | 'superadmin';
 export type UserAccountStatus = 'Active' | 'Suspended' | 'Banned' | 'Pending';
 
-export interface CollectionLimits {
-  maxGames: number;
-  storageQuotaMB: number;
-}
-
 export interface UserPermissions {
   tier: UserTier;
   role: UserRole;
   status: UserAccountStatus;
-  limits: CollectionLimits;
   accessibleFeatures: string[];
 }
 

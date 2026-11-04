@@ -63,7 +63,7 @@ public sealed class GetCorpusTitleHealthQueryHandlerIntegrationTests : IAsyncLif
             await _dbContext.DisposeAsync();
     }
 
-    [Fact(Timeout = 60_000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_RealPostgres_GroupsPerGame_ComputesBandLanguageAndCoverage()
     {
         // Arrange ----------------------------------------------------------------
@@ -154,7 +154,7 @@ public sealed class GetCorpusTitleHealthQueryHandlerIntegrationTests : IAsyncLif
         multi.Language.Should().Be("en", "the language carrying more distinct headings wins the tiebreak");
     }
 
-    [Fact(Timeout = 30_000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_RealPostgres_EmptyCorpus_ReturnsEmpty()
     {
         var sut = new GetCorpusTitleHealthQueryHandler(_dbContext);

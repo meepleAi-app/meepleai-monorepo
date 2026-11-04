@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -14,6 +15,22 @@ using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Api.Tests.Integration.Discover;
+
+/// <summary>
+/// La fixture di <see cref="DiscoverEndpointsIntegrationTests"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// Ogni test semina il proprio catalogo e poi conta cio' che l'endpoint Discover restituisce: i
+/// conteggi di un test vedrebbero le righe di un altro, quindi serve un database per test.
+/// </para>
+/// <para>
+/// #4050. Il verdetto di isolamento e' stato stabilito leggendo gli ENDPOINT, non i nomi dei
+/// test, e confermato da una refutazione ostile che cercava il falso negativo.
+/// </para>
+/// </remarks>
+public sealed class DiscoverEndpointsIntegrationTestsHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "discover");
 
 /// <summary>
 /// Integration tests for the Wave 3 Phase 1 /discover quick-win endpoints
@@ -41,36 +58,35 @@ namespace Api.Tests.Integration.Discover;
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
 [Trait("Wave", "3-Phase-1")]
-public sealed class DiscoverEndpointsIntegrationTests : IAsyncLifetime
+public sealed class DiscoverEndpointsIntegrationTests
+    : IClassFixture<DiscoverEndpointsIntegrationTestsHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
+    private readonly DiscoverEndpointsIntegrationTestsHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _client = null!;
 
-    public DiscoverEndpointsIntegrationTests(SharedTestcontainersFixture fixture)
+    public DiscoverEndpointsIntegrationTests(DiscoverEndpointsIntegrationTestsHostFixture hostFixture)
     {
-        _fixture = fixture;
-        _testDbName = $"discover_{Guid.NewGuid():N}";
+        _hostFixture = hostFixture;
     }
 
+    // #4050. L'host viene dalla fixture (una volta per classe); qui resta solo un database
+    // clonato dal template, ~0,11s.
+    //
+    // 🔴 BeginTestAsync DEVE girare prima che _factory venga usato. I test aprono uno scope
+    // come prima istruzione, e invertendo l'ordine il seed finirebbe nel database di avvio
+    // mentre la richiesta HTTP legge quello per test: conteggi a zero, cioe' un fallimento
+    // che somiglia a un bug dell'endpoint invece che a un errore di cablaggio.
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync();
-        }
-        _client = _factory.CreateClient();
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
+        _client = _hostFixture.Client;
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        _client?.Dispose();
-        await _factory.DisposeAsync();
-    }
+    // Host, client e database appartengono alla fixture: disporli qui li toglierebbe
+    // ai test successivi.
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     // ──────────────────────────────────────────────────────────────────────
     //  GET /api/v1/catalog/games/new (PR #732 §4.3.2)
@@ -164,6 +180,38 @@ public sealed class DiscoverEndpointsIntegrationTests : IAsyncLifetime
         items[0].GetProperty("name").GetString().Should().Be("Visible");
     }
 
+    /// <summary>
+    /// #4659. Un utente autenticato qualunque apre la rail, e la card porta a un dettaglio che risponde 404
+    /// per ciò che non è pubblicato: bozze, giochi in approvazione e archiviati restano fuori. Prima la rail
+    /// filtrava solo i cancellati.
+    /// </summary>
+    [Fact]
+    public async Task NewGames_ExcludesGamesThatAreNotPublished()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
+
+        var now = DateTime.UtcNow;
+        await SeedSharedGameAsync(dbContext, "Published", createdAt: now.AddDays(-4));
+        await SeedSharedGameAsync(dbContext, "Draft", createdAt: now.AddDays(-1), status: GameStatus.Draft);
+        await SeedSharedGameAsync(dbContext, "Pending", createdAt: now.AddDays(-2), status: GameStatus.PendingApproval);
+        await SeedSharedGameAsync(dbContext, "Archived", createdAt: now.AddDays(-3), status: GameStatus.Archived);
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get,
+            "/api/v1/catalog/games/new?limit=10",
+            sessionToken);
+
+        var response = await _client.SendAsync(request);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var items = body.GetProperty("items");
+        items.GetArrayLength().Should().Be(1);
+        items[0].GetProperty("name").GetString().Should().Be("Published");
+    }
+
     [Fact]
     public async Task NewGames_RespectsLimitParameter()
     {
@@ -221,6 +269,7 @@ public sealed class DiscoverEndpointsIntegrationTests : IAsyncLifetime
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var (_, sessionToken) = await TestSessionHelper.CreateUserSessionAsync(dbContext);
 
+        // The game carries a value only in the #2123 tombstone column, and no stored cover.
         await SeedSharedGameAsync(
             dbContext,
             "Wingspan",
@@ -241,7 +290,13 @@ public sealed class DiscoverEndpointsIntegrationTests : IAsyncLifetime
         item.GetProperty("id").GetString().Should().NotBeNullOrEmpty();
         item.GetProperty("name").GetString().Should().Be("Wingspan");
         item.GetProperty("year").GetInt32().Should().Be(2019);
-        item.GetProperty("imageUrl").GetString().Should().Be("https://example.com/wingspan.jpg");
+        // #4085: `imageUrl` is the cover resolved from storage, never the tombstone column.
+        // This test asserted the opposite and went red when the projection was corrected;
+        // the resolved-cover case is in GetNewGamesQueryHandlerTests, where storage is a double.
+        item.TryGetProperty("imageUrl", out var imageUrl).Should().BeTrue();
+        imageUrl.ValueKind.Should().Be(
+            JsonValueKind.Null,
+            "a game with no stored cover has no image: the tombstone URL must not reach the response");
         item.GetProperty("createdAt").GetDateTime().Should().BeCloseTo(
             DateTime.UtcNow.AddDays(-2),
             TimeSpan.FromMinutes(1));
@@ -649,7 +704,8 @@ public sealed class DiscoverEndpointsIntegrationTests : IAsyncLifetime
         DateTime createdAt,
         int yearPublished = 0,
         string? imageUrl = null,
-        bool isDeleted = false)
+        bool isDeleted = false,
+        GameStatus status = GameStatus.Published)
     {
         var id = Guid.NewGuid();
         dbContext.SharedGames.Add(new SharedGameEntity
@@ -664,7 +720,7 @@ public sealed class DiscoverEndpointsIntegrationTests : IAsyncLifetime
             MaxPlayers = 4,
             PlayingTimeMinutes = 45,
             MinAge = 8,
-            Status = 1,
+            Status = (int)status,
             CreatedBy = Guid.NewGuid(),
             CreatedAt = createdAt,
             IsDeleted = isDeleted

@@ -58,7 +58,6 @@ internal static class ActivityFeedEndpoints
             "Events are scoped to the authenticated user, filtered to the last 90 days, " +
             "ordered by loggedAt DESC. " +
             "?limit (1-100, default 20), ?since (cursor: only events before this timestamp). " +
-            "BE-3 #1590.")
-        .WithOpenApi();
+            "BE-3 #1590.");
     }
 }

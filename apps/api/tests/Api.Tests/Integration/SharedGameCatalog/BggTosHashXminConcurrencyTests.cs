@@ -86,9 +86,16 @@ public sealed class BggTosHashXminConcurrencyTests : IAsyncLifetime
         await using var first = _fixture.CreateDbContext(_connectionString);
         await using var second = _fixture.CreateDbContext(_connectionString);
 
+        // Issue #3866: `.AsTracking()` is REQUIRED here. The DbContext default is NoTracking
+        // (PERF-06), so a plain read hands back a DETACHED entity: the mutations below would reach
+        // no change tracker, SaveChangesAsync would write nothing, and the concurrency token this
+        // test exists to exercise would never even be compared. This is the documented opt-out for
+        // a fixture whose subject IS a tracked read-modify-write.
         var rowSeenByFirst = await first.BggTosHashes
+            .AsTracking()
             .FirstAsync(x => x.Id == BggTosHashEntity.SingletonId);
         var rowSeenBySecond = await second.BggTosHashes
+            .AsTracking()
             .FirstAsync(x => x.Id == BggTosHashEntity.SingletonId);
 
         rowSeenByFirst.CurrentHash = new string('b', 64);
@@ -117,7 +124,7 @@ public sealed class BggTosHashXminConcurrencyTests : IAsyncLifetime
         // una conversione a xmin fallisce quando il write-path non porta il token (#3688).
         await using var context = _fixture.CreateDbContext(_connectionString);
 
-        var row = await context.BggTosHashes.FirstAsync(x => x.Id == BggTosHashEntity.SingletonId);
+        var row = await context.BggTosHashes.AsTracking().FirstAsync(x => x.Id == BggTosHashEntity.SingletonId); // #3866
         row.CurrentHash = new string('d', 64);
         row.LastCheckedAt = DateTime.UtcNow;
 

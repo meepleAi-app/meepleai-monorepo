@@ -13,7 +13,9 @@ import { useState, useCallback } from 'react';
 import { toast } from '@/components/layout';
 import { Spinner } from '@/components/loading';
 import { Button } from '@/components/ui/primitives/button';
+import { usePdfUploadLimits } from '@/hooks/queries/usePdfUploadLimits';
 import { useAddGameWizard } from '@/hooks/useAddGameWizard';
+import { formatSizeLimit } from '@/lib/format/file-size';
 
 export function UploadPrivatePDF() {
   const { setUploadedPdf, goNext, goBack } = useAddGameWizard();
@@ -22,19 +24,24 @@ export function UploadPrivatePDF() {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
+  // #4449: the backend's size limit for this user, not a constant of this component.
+  const { data: uploadLimits } = usePdfUploadLimits();
+  const maxSizeBytes = uploadLimits?.maxFileSizeBytes;
 
-  const handleFileSelect = useCallback((selectedFile: File) => {
-    if (selectedFile.type !== 'application/pdf') {
-      toast.error('Please select a PDF file');
-      return;
-    }
-    if (selectedFile.size > 50 * 1024 * 1024) {
-      // 50MB limit
-      toast.error('File must be less than 50MB');
-      return;
-    }
-    setFile(selectedFile);
-  }, []);
+  const handleFileSelect = useCallback(
+    (selectedFile: File) => {
+      if (selectedFile.type !== 'application/pdf') {
+        toast.error('Please select a PDF file');
+        return;
+      }
+      if (maxSizeBytes !== undefined && selectedFile.size > maxSizeBytes) {
+        toast.error(`File exceeds the ${formatSizeLimit(maxSizeBytes)} limit`);
+        return;
+      }
+      setFile(selectedFile);
+    },
+    [maxSizeBytes]
+  );
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -170,7 +177,9 @@ export function UploadPrivatePDF() {
           <div className="space-y-2">
             <div className="text-4xl">📄</div>
             <p className="font-medium text-foreground dark:text-white">{file.name}</p>
-            <p className="text-sm text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+            <p className="text-sm text-muted-foreground">
+              {(file.size / 1024 / 1024).toFixed(2)} MB
+            </p>
             <Button
               variant="outline"
               size="sm"
@@ -188,7 +197,9 @@ export function UploadPrivatePDF() {
             <p className="font-medium text-foreground dark:text-white">
               Drag PDF here or click to select
             </p>
-            <p className="text-sm text-muted-foreground">PDF up to 50MB</p>
+            <p className="text-sm text-muted-foreground">
+              {maxSizeBytes !== undefined ? `PDF up to ${formatSizeLimit(maxSizeBytes)}` : 'PDF'}
+            </p>
           </div>
         )}
       </div>

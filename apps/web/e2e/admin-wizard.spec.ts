@@ -150,6 +150,15 @@ test.describe('Admin Game Setup Wizard', () => {
       // ✅ REMOVED MOCK: Use real auth API via AuthHelper
       const authHelper = new AuthHelper(page);
       await authHelper.mockAuthenticatedSession(USER_FIXTURES.admin);
+      // #4449: the size limit is the backend's. A relative glob, because the browser calls the
+      // API through the Next proxy with relative paths.
+      await page.route('**/api/v1/ingest/pdf/limits', route =>
+        route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ maxFileSizeBytes: 104857600, maxConcurrentChunkedUploads: 3 }),
+        })
+      );
 
       // Navigate to wizard page
       await page.goto('/admin/wizard');
@@ -160,7 +169,7 @@ test.describe('Admin Game Setup Wizard', () => {
       // Verify PDF upload elements are visible
       await expect(page.getByText('Carica il Regolamento PDF')).toBeVisible({ timeout: 5000 });
       await expect(page.getByText('Trascina qui il PDF o clicca per selezionare')).toBeVisible();
-      await expect(page.getByText('PDF fino a 50MB')).toBeVisible();
+      await expect(page.getByText('PDF fino a 100 MB')).toBeVisible();
     });
 
     test('Shows public library checkbox', async ({ page }) => {

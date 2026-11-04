@@ -5,6 +5,7 @@
  * Covers: ChatThreads, Messages, RuleSpec Comments, Cache Management, Export
  */
 
+import { throwIfQaTooManyRequests } from '@/components/chat-unified/qaStreamErrors';
 import type { FeedbackOutcome } from '@/lib/constants/feedback';
 
 import { downloadFile, getApiBase } from '../core/httpClient';
@@ -36,6 +37,9 @@ export interface CreateChatThreadRequest {
 export interface AddMessageRequest {
   content: string;
   role: string;
+  /** #4168: per una risposta, la versione del profilo e la lingua dal completamento dello stream. */
+  profileVersionId?: string | null;
+  language?: string | null;
 }
 
 export interface CreateRuleSpecCommentRequest {
@@ -371,7 +375,8 @@ export interface InlineCitationMatch {
   startOffset: number;
   endOffset: number;
   snippetIndex: number;
-  pageNumber: number;
+  /** `null`/absent when the server could not vouch for a page (#4819). */
+  pageNumber?: number | null;
   pdfDocumentId: string;
   confidence: number;
 }
@@ -409,6 +414,8 @@ export async function* qaStream(
     signal,
   });
 
+  // #4388: due risposte aperte per utente; la terza riceve 429 e la vista lo dice.
+  throwIfQaTooManyRequests(response);
   if (!response.ok) {
     throw new Error(`QA stream failed: HTTP ${response.status}`);
   }

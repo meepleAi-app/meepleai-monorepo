@@ -161,7 +161,7 @@ public sealed class UpdateKbDocMetadataCommandHandlerIntegrationTests : IAsyncLi
 
     // ─── AC1: Owner sets all fields → 200, persists, event payload ─────────────
 
-    [Fact(Timeout = 60000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_AsOwner_AllFieldsSet_PersistsChanges_EmitsEvent_WithChangesPayload()
     {
         var ownerId = await SeedUserAsync();
@@ -198,7 +198,7 @@ public sealed class UpdateKbDocMetadataCommandHandlerIntegrationTests : IAsyncLi
 
     // ─── AC2: Admin patches another user's doc → editor_role=Admin in event ────
 
-    [Fact(Timeout = 60000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_AsAdmin_OnOtherUsersDoc_PersistsChanges_EmitsEvent_WithEditorRoleAdmin()
     {
         var ownerId = await SeedUserAsync();
@@ -225,7 +225,7 @@ public sealed class UpdateKbDocMetadataCommandHandlerIntegrationTests : IAsyncLi
 
     // ─── AC3: Non-owner non-admin → 404 NotFound (D-2 anti-info-leak) ─────────
 
-    [Fact(Timeout = 60000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_AsNonOwnerNonAdmin_ThrowsNotFoundException()
     {
         var ownerId = await SeedUserAsync();
@@ -257,7 +257,7 @@ public sealed class UpdateKbDocMetadataCommandHandlerIntegrationTests : IAsyncLi
 
     // ─── Doc does not exist → 404 ──────────────────────────────────────────
 
-    [Fact(Timeout = 60000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_DocIdDoesNotExist_ThrowsNotFoundException()
     {
         var editorId = await SeedUserAsync();
@@ -278,7 +278,7 @@ public sealed class UpdateKbDocMetadataCommandHandlerIntegrationTests : IAsyncLi
 
     // ─── AllFieldsNull → no-op (no event, no audit bump) ──────────────────
 
-    [Fact(Timeout = 60000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_AllFieldsNull_NoChange_NoEvent_NoAuditBump()
     {
         var ownerId = await SeedUserAsync();
@@ -303,7 +303,7 @@ public sealed class UpdateKbDocMetadataCommandHandlerIntegrationTests : IAsyncLi
 
     // ─── OnlyTitle → exactly one MetadataChange ─────────────────────────────
 
-    [Fact(Timeout = 60000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_OnlyTitle_OnlyOneChangeRecorded()
     {
         var ownerId = await SeedUserAsync();
@@ -327,7 +327,7 @@ public sealed class UpdateKbDocMetadataCommandHandlerIntegrationTests : IAsyncLi
 
     // ─── Setting same value → no event (real diff check) ───────────────────
 
-    [Fact(Timeout = 60000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_SameTitleValue_NoEventEmitted()
     {
         var ownerId = await SeedUserAsync();

@@ -38,7 +38,7 @@ function SourceBadge({ source }: { source: HouseRule['source'] }) {
     return (
       <Badge
         variant="outline"
-        className="bg-red-50 border-red-200 text-red-700 gap-1 text-xs font-nunito"
+        className="bg-red-50 border-red-200 text-red-700 dark:bg-red-900/30 dark:border-red-800 dark:text-red-300 gap-1 text-xs font-nunito"
       >
         <Gavel className="h-3 w-3" />
         Dispute
@@ -49,7 +49,7 @@ function SourceBadge({ source }: { source: HouseRule['source'] }) {
   return (
     <Badge
       variant="outline"
-      className="bg-amber-50 border-amber-200 text-amber-700 gap-1 text-xs font-nunito"
+      className="bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-300 gap-1 text-xs font-nunito"
     >
       <User className="h-3 w-3" />
       Added

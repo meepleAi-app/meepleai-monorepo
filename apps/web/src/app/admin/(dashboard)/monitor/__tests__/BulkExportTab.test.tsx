@@ -18,8 +18,6 @@ const mocks = vi.hoisted(() => ({
         isSuspended: false,
         lastSeenAt: null,
         tier: 'Free',
-        tokenUsage: 0,
-        tokenLimit: 10000,
       },
     ],
     total: 1,

@@ -19,7 +19,9 @@ const CTA_MAP: Array<{ prefix: string; config: CtaConfig }> = [
     prefix: '/library',
     config: {
       label: 'Esplora Catalogo',
-      href: '/catalog',
+      // #3938: was `/catalog`, a route that has never existed. The catalog for
+      // an authenticated user is `/games` (its default tab is Discover).
+      href: '/games',
       gradient: 'from-orange-600 to-amber-500',
     },
   },
@@ -45,14 +47,6 @@ const CTA_MAP: Array<{ prefix: string; config: CtaConfig }> = [
       label: '+ Organizza serata',
       href: '/game-nights/new',
       gradient: 'from-sky-600 to-blue-500',
-    },
-  },
-  {
-    prefix: '/agents',
-    config: {
-      label: '+ Nuovo agente',
-      href: '/agents/new',
-      gradient: 'from-pink-600 to-rose-500',
     },
   },
 ];

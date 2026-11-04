@@ -4,6 +4,8 @@ using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Models;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.Infrastructure.Entities;
+using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Services;
 using Api.Tests.Constants;
@@ -27,6 +29,8 @@ public class SuggestPlayerMoveCommandHandlerTests
     private readonly Mock<IGameStateParser> _mockParser;
     private readonly Mock<IMediator> _mockMediator;
     private readonly Mock<ILlmService> _mockLlmService;
+    private readonly Mock<IRagAccessService> _mockRagAccess;
+    private static readonly Guid TestUserId = Guid.NewGuid();
     private readonly SuggestPlayerMoveCommandHandler _handler;
 
     public SuggestPlayerMoveCommandHandlerTests()
@@ -36,13 +40,19 @@ public class SuggestPlayerMoveCommandHandlerTests
         _mockParser = new Mock<IGameStateParser>();
         _mockMediator = new Mock<IMediator>();
         _mockLlmService = new Mock<ILlmService>();
+        // #4294: chi chiede può interrogare il gioco, salvo dove un test dice il contrario.
+        _mockRagAccess = new Mock<IRagAccessService>();
+        _mockRagAccess
+            .Setup(r => r.CanAccessRagAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<UserRole>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
         _handler = new SuggestPlayerMoveCommandHandler(
             _mockCache.Object,
             _mockLogger.Object,
             _mockParser.Object,
             _mockMediator.Object,
-            _mockLlmService.Object
+            _mockLlmService.Object,
+            _mockRagAccess.Object
         );
     }
 
@@ -55,6 +65,8 @@ public class SuggestPlayerMoveCommandHandlerTests
         var command = new SuggestPlayerMoveCommand
         {
             GameId = gameId,
+            UserId = TestUserId,
+            UserRole = "User",
             GameState = gameState,
             Query = "What should I do?"
         };
@@ -94,6 +106,8 @@ public class SuggestPlayerMoveCommandHandlerTests
         var command = new SuggestPlayerMoveCommand
         {
             GameId = gameId,
+            UserId = TestUserId,
+            UserRole = "User",
             GameState = gameState,
             Query = null
         };
@@ -124,6 +138,8 @@ public class SuggestPlayerMoveCommandHandlerTests
         var command = new SuggestPlayerMoveCommand
         {
             GameId = gameId,
+            UserId = TestUserId,
+            UserRole = "User",
             GameState = gameState,
             Query = "What should I build?"
         };
@@ -169,6 +185,8 @@ public class SuggestPlayerMoveCommandHandlerTests
         var command = new SuggestPlayerMoveCommand
         {
             GameId = gameId,
+            UserId = TestUserId,
+            UserRole = "User",
             GameState = gameState,
             Query = null
         };
@@ -216,6 +234,8 @@ public class SuggestPlayerMoveCommandHandlerTests
         var command = new SuggestPlayerMoveCommand
         {
             GameId = gameId,
+            UserId = TestUserId,
+            UserRole = "User",
             GameState = gameState,
             Query = null
         };
@@ -264,6 +284,8 @@ public class SuggestPlayerMoveCommandHandlerTests
         var command = new SuggestPlayerMoveCommand
         {
             GameId = gameId,
+            UserId = TestUserId,
+            UserRole = "User",
             GameState = gameState,
             Query = null
         };
@@ -309,6 +331,8 @@ public class SuggestPlayerMoveCommandHandlerTests
         var command = new SuggestPlayerMoveCommand
         {
             GameId = gameId,
+            UserId = TestUserId,
+            UserRole = "User",
             GameState = gameState,
             Query = longQuery
         };
@@ -364,6 +388,74 @@ public class SuggestPlayerMoveCommandHandlerTests
             new("doc2", "Wood is essential for construction", 2, 0.78, 2, "hybrid"),
             new("doc3", "Consider trading with other players", 3, 0.72, 3, "hybrid")
         };
+    }
+
+    // ─── #4294: il cancello RAG, prima della cache ───
+
+    /// <summary>
+    /// La cache ha come chiave gioco, stato e domanda, non l'utente: un suggerimento calcolato per
+    /// chi può interrogare il gioco sta lì, con i passaggi del manuale in <c>sources</c>. Chi non
+    /// può interrogarlo viene respinto prima che la cache sia letta.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenTheCallerMayNotQueryTheGame_Refuses_BeforeTheCache()
+    {
+        var gameId = Guid.NewGuid();
+        _mockRagAccess
+            .Setup(r => r.CanAccessRagAsync(TestUserId, gameId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _mockCache
+            .Setup(c => c.GetAsync<PlayerModeSuggestionResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PlayerModeSuggestionResponse(
+                primarySuggestion: new SuggestedMove("Mossa di un altro", "Calcolata per chi possiede il gioco", null, 0.9),
+                alternativeMoves: new List<SuggestedMove>(),
+                overallConfidence: 0.9,
+                strategicContext: null,
+                sources: new List<Snippet> { new("Un passaggio del manuale", "doc", 1, 0, 0.9f) }));
+
+        var act = () => _handler.Handle(
+            new SuggestPlayerMoveCommand
+            {
+                GameId = gameId.ToString(),
+                UserId = TestUserId,
+                UserRole = "User",
+                GameState = CreateValidGameState(),
+                Query = "What should I do?"
+            },
+            CancellationToken.None);
+
+        (await act.Should().ThrowAsync<RagOwnershipRequiredException>()).Which.GameId.Should().Be(gameId);
+        _mockCache.Verify(
+            c => c.GetAsync<PlayerModeSuggestionResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _mockParser.Verify(p => p.Parse(It.IsAny<IReadOnlyDictionary<string, object>>()), Times.Never);
+        _mockMediator.Verify(m => m.Send(It.IsAny<object>(), It.IsAny<CancellationToken>()), Times.Never);
+        _mockLlmService.VerifyNoOtherCalls();
+    }
+
+    /// <summary>Il ruolo arriva al cancello: un amministratore non viene trattato da utente.</summary>
+    [Fact]
+    public async Task Handle_AsksTheGateWithTheRoleOfTheCaller()
+    {
+        var gameId = Guid.NewGuid();
+        _mockCache
+            .Setup(c => c.GetAsync<PlayerModeSuggestionResponse>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((PlayerModeSuggestionResponse?)null);
+
+        await _handler.Handle(
+            new SuggestPlayerMoveCommand
+            {
+                GameId = gameId.ToString(),
+                UserId = TestUserId,
+                UserRole = "Admin",
+                GameState = CreateValidGameState(),
+                Query = null
+            },
+            CancellationToken.None);
+
+        _mockRagAccess.Verify(
+            r => r.CanAccessRagAsync(TestUserId, gameId, UserRole.Admin, It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     private static LlmMoveGenerationOutput CreateValidLlmOutput()

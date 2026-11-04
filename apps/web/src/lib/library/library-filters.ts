@@ -1,8 +1,9 @@
 /**
  * Pure helpers for the `/library` desktop v2 surface (Issue #574, Wave B.3).
  *
- * Mirrors the patterns from `lib/games/library-filters.ts` (Wave B.1) and
- * `lib/agents/library-filters.ts` (Wave B.2). No React, no API client —
+ * Mirrors the patterns from `lib/games/library-filters.ts` (Wave B.1). The third
+ * sibling, `lib/agents/library-filters.ts` (Wave B.2), went with the user-facing
+ * agents section (#4138). No React, no API client —
  * exclusively transforms over `UserLibraryEntry` so it stays unit-testable
  * in isolation.
  *

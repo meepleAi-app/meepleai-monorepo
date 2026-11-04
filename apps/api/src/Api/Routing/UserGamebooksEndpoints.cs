@@ -44,12 +44,8 @@ internal static class UserGamebooksEndpoints
         .Produces(StatusCodes.Status401Unauthorized)
         .WithName("GetUserGamebooks")
         .WithTags("Gamebooks")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "List the authenticated user's gamebooks";
-            operation.Description = "Returns the gamebook cards displayed on /gamebook (SP6 libro game index). MVP scope: card metadata sourced from PrivateGame; counts and status placeholders deferred to follow-up.";
-            return operation;
-        });
+        .WithSummary("List the authenticated user's gamebooks")
+        .WithDescription("Returns the gamebook cards displayed on /gamebook (SP6 libro game index). MVP scope: card metadata sourced from PrivateGame; counts and status placeholders deferred to follow-up.");
 
         return group;
     }

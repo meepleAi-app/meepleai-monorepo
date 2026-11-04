@@ -54,9 +54,9 @@ export const COMPOSITIONS: ComponentComposition[] = [
   {
     id: 'agent-builder',
     name: 'Agent Builder',
-    description: 'AgentBuilderModal, LlmProviderSelector, DocumentSelector, AgentConfigPanel',
+    description: 'LlmProviderSelector, DocumentSelector, AgentConfigPanel',
     area: 'admin',
-    componentIds: ['agent-builder-modal', 'agent-config-panel'],
+    componentIds: ['agent-config-panel'],
     render: () =>
       import('@/components/admin/ui-library/scenes/AgentBuilderScene') as Promise<{
         default: React.ComponentType;

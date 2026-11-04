@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Helpers;
@@ -229,7 +230,8 @@ internal class OllamaLlmClient : ILlmClient
             InputCost = costCalculation.InputCost,
             OutputCost = costCalculation.OutputCost,
             ModelId = model,
-            Provider = ProviderName
+            Provider = ProviderName,
+            PricingStatus = costCalculation.PricingStatus
         };
 
         var metadata = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -380,7 +382,8 @@ internal class OllamaLlmClient : ILlmClient
                             InputCost = cost.InputCost,
                             OutputCost = cost.OutputCost,
                             ModelId = chunk.Model ?? model,
-                            Provider = ProviderName
+                            Provider = ProviderName,
+                            PricingStatus = cost.PricingStatus
                         };
 
                         _logger.LogInformation(
@@ -434,6 +437,202 @@ internal class OllamaLlmClient : ILlmClient
     }
 
     /// <inheritdoc/>
+    public async Task<LlmCompletionResult> ChatAsync(
+        string model,
+        IReadOnlyList<LlmChatMessage> messages,
+        IReadOnlyList<LlmToolDefinition> tools,
+        double temperature,
+        int maxTokens,
+        CancellationToken ct = default)
+    {
+        if (messages.Count == 0)
+        {
+            return LlmCompletionResult.CreateFailure("No messages provided");
+        }
+
+        try
+        {
+            var payload = new Dictionary<string, object>(StringComparer.Ordinal)
+            {
+                ["model"] = model,
+                ["messages"] = messages.Select(OllamaMessagePayload).ToList(),
+                ["options"] = new { temperature, num_predict = maxTokens },
+                ["stream"] = false,
+            };
+            if (tools.Count > 0)
+            {
+                payload["tools"] = tools.Select(t => (object)new
+                {
+                    type = "function",
+                    function = new { name = t.Name, description = t.Description, parameters = SingleTypeSchema(t.ParametersSchema) },
+                }).ToList();
+            }
+
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "api/chat")
+            {
+                Content = new StringContent(JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json"),
+            };
+            using var response = await _httpClient.SendAsync(httpRequest, ct).ConfigureAwait(false);
+            var responseBody = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogError("Ollama tool chat error: {Status} - {Body}", response.StatusCode, DataMasking.MaskResponseBody(responseBody));
+                return LlmCompletionResult.CreateFailure($"Ollama API error: {(int)response.StatusCode} ({response.StatusCode})");
+            }
+
+            var chatResponse = JsonSerializer.Deserialize<OllamaChatResponse>(responseBody);
+            if (chatResponse?.Message == null)
+            {
+                return LlmCompletionResult.CreateFailure("No response returned from Ollama");
+            }
+
+            var text = chatResponse.Message.Content ?? string.Empty;
+            var calls = (chatResponse.Message.ToolCalls ?? [])
+                .Where(c => c.Function is not null && !string.IsNullOrWhiteSpace(c.Function.Name))
+                .Select(c => new LlmToolCall(
+                    // Ollama non dà id: uno univoco per chiamata, così due giri non si confondono.
+                    $"call_{Guid.NewGuid():N}",
+                    c.Function!.Name,
+                    c.Function.Arguments.ValueKind == JsonValueKind.Object ? c.Function.Arguments.GetRawText() : "{}"))
+                .ToList();
+
+            var promptTokens = EstimateTokenCount(string.Join(' ', messages.Select(m => m.Content ?? string.Empty)));
+            var completionTokens = EstimateTokenCount(text) + calls.Sum(c => EstimateTokenCount(c.ArgumentsJson));
+            var cost = _costCalculator.CalculateCost(model, ProviderName, promptTokens, completionTokens);
+
+            return LlmCompletionResult.CreateSuccess(
+                text,
+                new LlmUsage(promptTokens, completionTokens, promptTokens + completionTokens),
+                new LlmCost
+                {
+                    InputCost = cost.InputCost,
+                    OutputCost = cost.OutputCost,
+                    ModelId = model,
+                    Provider = ProviderName,
+                    PricingStatus = cost.PricingStatus,
+                },
+                new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["model"] = chatResponse.Model ?? model,
+                    ["provider"] = "Ollama",
+                    ["cost_usd"] = "0.000000",
+                }) with { ToolCalls = calls };
+        }
+        catch (TaskCanceledException ex)
+        {
+            _logger.LogError(ex, "Ollama tool chat timed out");
+            return LlmCompletionResult.CreateFailure("Request timed out");
+        }
+        catch (HttpRequestException ex)
+        {
+            _logger.LogError(ex, "HTTP request failed during Ollama tool chat");
+            return LlmCompletionResult.CreateFailure($"HTTP error: {ex.Message}");
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to deserialize Ollama tool chat response");
+            return LlmCompletionResult.CreateFailure("Invalid response format");
+        }
+    }
+
+    /// <summary>
+    /// Ollama vuole gli argomenti come oggetto e il nome dello strumento sul messaggio del risultato,
+    /// non l'id della chiamata.
+    /// </summary>
+    private static Dictionary<string, object?> OllamaMessagePayload(LlmChatMessage message)
+    {
+        var payload = new Dictionary<string, object?>(StringComparer.Ordinal)
+        {
+            ["role"] = message.Role,
+            ["content"] = message.Content ?? string.Empty,
+        };
+
+        if (string.Equals(message.Role, LlmChatRoles.Tool, StringComparison.Ordinal) && message.ToolName is not null)
+        {
+            payload["tool_name"] = message.ToolName;
+        }
+
+        if (message.ToolCalls is { Count: > 0 } calls)
+        {
+            payload["tool_calls"] = calls.Select(c => new
+            {
+                function = new { name = c.Name, arguments = ParseArguments(c.ArgumentsJson) },
+            }).ToList();
+        }
+
+        return payload;
+    }
+
+    private static readonly JsonElement EmptyArguments = CreateEmptyArguments();
+
+    private static JsonElement CreateEmptyArguments()
+    {
+        using var document = JsonDocument.Parse("{}");
+        return document.RootElement.Clone();
+    }
+
+    /// <summary>
+    /// Ollama legge il `type` di un parametro come stringa. L'array con cui JSON Schema descrive un parametro
+    /// opzionale (`["string","null"]`, quello che M.E.AI genera per un `string?`) gli fa rifiutare l'intera
+    /// richiesta con 400. Di ogni array resta il primo tipo non nullo: l'opzionalità sta già in `required`.
+    /// </summary>
+    private static JsonNode? SingleTypeSchema(JsonElement schema)
+    {
+        var node = JsonNode.Parse(schema.GetRawText());
+        CollapseTypeArrays(node);
+        return node;
+    }
+
+    private static void CollapseTypeArrays(JsonNode? node)
+    {
+        if (node is JsonArray items)
+        {
+            foreach (var item in items)
+            {
+                CollapseTypeArrays(item);
+            }
+
+            return;
+        }
+
+        if (node is not JsonObject schema)
+        {
+            return;
+        }
+
+        if (schema["type"] is JsonArray types)
+        {
+            schema["type"] = types
+                .Select(t => t is JsonValue value && value.TryGetValue<string>(out var name) ? name : null)
+                .FirstOrDefault(name => name is not null && !string.Equals(name, "null", StringComparison.Ordinal))
+                ?? "string";
+        }
+
+        foreach (var child in schema.Select(property => property.Value).ToList())
+        {
+            CollapseTypeArrays(child);
+        }
+    }
+
+    private static JsonElement ParseArguments(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return EmptyArguments;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            return document.RootElement.ValueKind == JsonValueKind.Object ? document.RootElement.Clone() : EmptyArguments;
+        }
+        catch (JsonException)
+        {
+            return EmptyArguments;
+        }
+    }
+
+    /// <inheritdoc/>
     public async Task<bool> CheckHealthAsync(CancellationToken ct = default)
     {
         try
@@ -484,6 +683,24 @@ internal record OllamaMessage
 
     [JsonPropertyName("content")]
     public string? Content { get; init; }
+
+    [JsonPropertyName("tool_calls")]
+    public List<OllamaToolCall>? ToolCalls { get; init; }
+}
+
+internal record OllamaToolCall
+{
+    [JsonPropertyName("function")]
+    public OllamaToolFunction? Function { get; init; }
+}
+
+internal record OllamaToolFunction
+{
+    [JsonPropertyName("name")]
+    public string Name { get; init; } = string.Empty;
+
+    [JsonPropertyName("arguments")]
+    public JsonElement Arguments { get; init; }
 }
 
 // Streaming response models

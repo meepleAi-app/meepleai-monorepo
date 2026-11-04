@@ -14,6 +14,10 @@ interface ChatMessageBubbleProps {
   authorName: string;
   timestamp: string;
   imageUrls?: string[];
+  /** #4244: le fonti della risposta, sotto il testo e allineate alla bolla. */
+  sources?: ReactNode;
+  /** #4335: la risposta si è fermata prima della fine; la bolla lo dice sotto il testo. */
+  interrupted?: boolean;
 }
 
 function initials(name: string): string {
@@ -79,6 +83,8 @@ export function ChatMessageBubble({
   authorName,
   timestamp,
   imageUrls,
+  sources,
+  interrupted = false,
 }: ChatMessageBubbleProps) {
   const isUser = role === 'user';
 
@@ -142,7 +148,16 @@ export function ChatMessageBubble({
             </div>
           )}
           <div className="whitespace-pre-wrap">{renderContentWithCitations(content)}</div>
+          {interrupted && (
+            <p
+              data-testid="chat-message-interrupted"
+              className="mt-2 border-t border-border pt-2 text-[0.72rem] font-semibold italic text-foreground"
+            >
+              Risposta interrotta: non è completa.
+            </p>
+          )}
         </div>
+        {sources}
       </div>
     </div>
   );

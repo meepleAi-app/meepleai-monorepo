@@ -1,5 +1,3 @@
-using System.Net;
-using System.Net.Mail;
 using Api.Helpers;
 using Api.Infrastructure.Security;
 
@@ -22,22 +20,7 @@ internal partial class EmailService
             var subject = "Share Request Submitted";
             var body = BuildShareRequestCreatedEmailBody(userName, gameTitle, contributionType, shareRequestId);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "share_request_created", ct, userName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Share request created email sent to {Email} for game {GameTitle}",
@@ -69,22 +52,7 @@ internal partial class EmailService
             var subject = "Contribution Approved! 🎉";
             var body = BuildShareRequestApprovedEmailBody(userName, gameTitle, sharedGameId, userId);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "share_request_approved", ct, userName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Share request approved email sent to {Email} for game {GameTitle}",
@@ -115,22 +83,7 @@ internal partial class EmailService
             var subject = "Share Request Not Approved";
             var body = BuildShareRequestRejectedEmailBody(userName, gameTitle, reason);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "share_request_rejected", ct, userName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Share request rejected email sent to {Email} for game {GameTitle}",
@@ -162,22 +115,7 @@ internal partial class EmailService
             var subject = "Changes Requested for Your Contribution";
             var body = BuildShareRequestChangesRequestedEmailBody(userName, gameTitle, feedback, shareRequestId);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "share_request_changes_requested", ct, userName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Share request changes requested email sent to {Email} for game {GameTitle}",
@@ -209,22 +147,7 @@ internal partial class EmailService
             var subject = "Your Game Proposal Is Now Under Review";
             var body = BuildShareRequestReviewStartedEmailBody(userName, gameTitle, shareRequestId);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "share_request_review_started", ct, userName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Review started email sent to {Email} for game {GameTitle}",
@@ -255,22 +178,7 @@ internal partial class EmailService
             var subject = "Your Game Proposal Has Been Merged";
             var body = BuildShareRequestKbMergedEmailBody(userName, gameTitle, sharedGameId);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "share_request_kb_merged", ct, userName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "KB merged email sent to {Email} for game {GameTitle}",
@@ -297,7 +205,7 @@ internal partial class EmailService
         string contributionType,
         Guid shareRequestId)
     {
-        var requestUrl = $"{_frontendBaseUrl}/contributions/requests/{shareRequestId}";
+        var requestUrl = $"{FrontendBaseUrl}/contributions/requests/{shareRequestId}";
 
         return $@"
 <!DOCTYPE html>
@@ -340,7 +248,7 @@ internal partial class EmailService
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
         <p>This is an automated message, please do not reply to this email.</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>&copy; {FooterYear} MeepleAI. All rights reserved.</p>
     </div>
 </body>
 </html>
@@ -353,8 +261,8 @@ internal partial class EmailService
         Guid sharedGameId,
         Guid userId)
     {
-        var sharedGameUrl = $"{_frontendBaseUrl}/shared-games/{sharedGameId}";
-        var contributorProfileUrl = $"{_frontendBaseUrl}/users/{userId}/contributions";
+        var sharedGameUrl = $"{FrontendBaseUrl}/shared-games/{sharedGameId}";
+        var contributorProfileUrl = $"{FrontendBaseUrl}/users/{userId}/contributions";
 
         return $@"
 <!DOCTYPE html>
@@ -397,7 +305,7 @@ internal partial class EmailService
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
         <p>This is an automated message, please do not reply to this email.</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>&copy; {FooterYear} MeepleAI. All rights reserved.</p>
     </div>
 </body>
 </html>
@@ -409,7 +317,7 @@ internal partial class EmailService
         string gameTitle,
         string reason)
     {
-        var guidelinesUrl = $"{_frontendBaseUrl}/help/contribution-guidelines";
+        var guidelinesUrl = $"{FrontendBaseUrl}/help/contribution-guidelines";
 
         return $@"
 <!DOCTYPE html>
@@ -452,7 +360,7 @@ internal partial class EmailService
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
         <p>This is an automated message, please do not reply to this email.</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>&copy; {FooterYear} MeepleAI. All rights reserved.</p>
     </div>
 </body>
 </html>
@@ -465,7 +373,7 @@ internal partial class EmailService
         string feedback,
         Guid shareRequestId)
     {
-        var editUrl = $"{_frontendBaseUrl}/contributions/requests/{shareRequestId}/edit";
+        var editUrl = $"{FrontendBaseUrl}/contributions/requests/{shareRequestId}/edit";
 
         return $@"
 <!DOCTYPE html>
@@ -508,7 +416,7 @@ internal partial class EmailService
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
         <p>This is an automated message, please do not reply to this email.</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>&copy; {FooterYear} MeepleAI. All rights reserved.</p>
     </div>
 </body>
 </html>
@@ -520,7 +428,7 @@ internal partial class EmailService
         string gameTitle,
         Guid shareRequestId)
     {
-        var requestUrl = $"{_frontendBaseUrl}/contributions/requests/{shareRequestId}";
+        var requestUrl = $"{FrontendBaseUrl}/contributions/requests/{shareRequestId}";
 
         return $@"
 <!DOCTYPE html>
@@ -563,7 +471,7 @@ internal partial class EmailService
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
         <p>This is an automated message, please do not reply to this email.</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>&copy; {FooterYear} MeepleAI. All rights reserved.</p>
     </div>
 </body>
 </html>
@@ -575,7 +483,7 @@ internal partial class EmailService
         string gameTitle,
         Guid sharedGameId)
     {
-        var sharedGameUrl = $"{_frontendBaseUrl}/shared-games/{sharedGameId}";
+        var sharedGameUrl = $"{FrontendBaseUrl}/shared-games/{sharedGameId}";
 
         return $@"
 <!DOCTYPE html>
@@ -617,7 +525,7 @@ internal partial class EmailService
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
         <p>This is an automated message, please do not reply to this email.</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>&copy; {FooterYear} MeepleAI. All rights reserved.</p>
     </div>
 </body>
 </html>

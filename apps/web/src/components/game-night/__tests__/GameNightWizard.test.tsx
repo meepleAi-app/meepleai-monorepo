@@ -42,6 +42,11 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
+// #4750: lo step dei giocatori legge l'utente corrente. Qui nessun utente: i posti restano vuoti.
+vi.mock('@/hooks/queries/useCurrentUser', () => ({
+  useCurrentUser: () => ({ data: undefined }),
+}));
+
 vi.mock('next/image', () => ({
   default: (props: Record<string, unknown>) => <img {...props} />,
 }));

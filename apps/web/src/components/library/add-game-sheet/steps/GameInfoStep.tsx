@@ -445,7 +445,7 @@ export function GameInfoStep({ onSuccess, onAddAnother, onClose }: GameInfoStepP
       <Button
         onClick={handleSave}
         disabled={saving}
-        className="w-full bg-teal-600 hover:bg-teal-700 gap-2"
+        className="w-full bg-teal-700 hover:bg-teal-800 text-white gap-2"
         data-testid="save-button"
       >
         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}

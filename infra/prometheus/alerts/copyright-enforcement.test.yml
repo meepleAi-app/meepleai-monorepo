@@ -18,9 +18,9 @@ tests:
   #    leak guard is failing open silently on >1% of protected-chunk queries.
   - interval: 1m
     input_series:
-      - series: 'meepleai_rag_copyright_guard_scan_errors_errors_total'
+      - series: 'meepleai_rag_copyright_guard_scan_errors_total'
         values: '0+2x30'
-      - series: 'meepleai_rag_copyright_guard_scan_duration_ms_count'
+      - series: 'meepleai_rag_copyright_guard_scan_duration_milliseconds_count'
         values: '0+98x30'
     alert_rule_test:
       - eval_time: 25m
@@ -39,9 +39,9 @@ tests:
   # 2. Zero scan errors (guard healthy) must NOT fire — no page on green.
   - interval: 1m
     input_series:
-      - series: 'meepleai_rag_copyright_guard_scan_errors_errors_total'
+      - series: 'meepleai_rag_copyright_guard_scan_errors_total'
         values: '0+0x30'
-      - series: 'meepleai_rag_copyright_guard_scan_duration_ms_count'
+      - series: 'meepleai_rag_copyright_guard_scan_duration_milliseconds_count'
         values: '0+100x30'
     alert_rule_test:
       - eval_time: 25m

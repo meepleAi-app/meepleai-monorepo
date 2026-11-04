@@ -16,10 +16,13 @@ export const GameSchema = z.object({
   title: z.string().min(1),
   publisher: z.string().nullable(),
   yearPublished: z.number().int().nullable(),
-  minPlayers: z.number().int().positive().nullable(),
-  maxPlayers: z.number().int().positive().nullable(),
-  minPlayTimeMinutes: z.number().int().positive().nullable(),
-  maxPlayTimeMinutes: z.number().int().positive().nullable(),
+  // #4158: the shared catalog stores players and play time as non-nullable ints
+  // (SharedGameEntity) and uses 0 for "unknown" — Chess in the local catalog has
+  // play time 0. With .positive() one such game made the whole page fail.
+  minPlayers: z.number().int().nonnegative().nullable(),
+  maxPlayers: z.number().int().nonnegative().nullable(),
+  minPlayTimeMinutes: z.number().int().nonnegative().nullable(),
+  maxPlayTimeMinutes: z.number().int().nonnegative().nullable(),
   // API returns 0 for unknown/unsynced bgg ids (not nullable on the wire);
   // accept 0 as a sentinel rather than rejecting it via .positive().
   bggId: z.number().int().nonnegative().nullable(),
@@ -129,6 +132,10 @@ export const GameSessionDtoSchema = z.object({
   gameSlug: z.string().nullable().optional(),
   gameName: z.string().nullable().optional(),
   scorePlayers: z.array(ScorePlayerDtoSchema).nullable().optional(),
+  // #4156: the id of the live session this GameSession is the companion of. The pages under
+  // /sessions/[id] read a LiveGameSession, so links built from a GameSession use this id.
+  // Null when no live session correlates (legacy or non-live sessions): then there is no link.
+  liveSessionId: z.string().uuid().nullable().optional(),
 });
 
 export type GameSessionDto = z.infer<typeof GameSessionDtoSchema>;

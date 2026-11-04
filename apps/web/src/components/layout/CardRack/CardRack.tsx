@@ -2,7 +2,6 @@
 
 import {
   Award,
-  BookOpen,
   Calendar,
   Gamepad2,
   LayoutDashboard,
@@ -26,10 +25,7 @@ const NAV_ITEMS = [
   { href: '/game-nights', icon: Calendar, label: 'Serate' },
 ] as const;
 
-const BOTTOM_ITEMS = [
-  { href: '/agents', icon: BookOpen, label: 'Agenti' },
-  { href: '/badges', icon: Award, label: 'Badge' },
-] as const;
+const BOTTOM_ITEMS = [{ href: '/badges', icon: Award, label: 'Badge' }] as const;
 
 export interface CardRackProps {
   className?: string;

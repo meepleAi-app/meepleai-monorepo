@@ -53,10 +53,7 @@ describe('useCollections hooks', () => {
       vi.mocked(collectionsClient.getCollectionStatus).mockResolvedValue(mockStatus);
 
       // Act
-      const { result } = renderHook(
-        () => useCollectionStatus(entityType, entityId),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useCollectionStatus(entityType, entityId), { wrapper });
 
       // Assert
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -77,10 +74,7 @@ describe('useCollections hooks', () => {
       vi.mocked(collectionsClient.getCollectionStatus).mockResolvedValue(mockStatus);
 
       // Act
-      const { result } = renderHook(
-        () => useCollectionStatus(entityType, entityId),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useCollectionStatus(entityType, entityId), { wrapper });
 
       // Assert
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -100,10 +94,7 @@ describe('useCollections hooks', () => {
       vi.mocked(collectionsClient.getCollectionStatus).mockResolvedValue(mockStatus);
 
       // Act
-      const { result } = renderHook(
-        () => useCollectionStatus(entityType, entityId),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useCollectionStatus(entityType, entityId), { wrapper });
 
       // Assert
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -124,10 +115,7 @@ describe('useCollections hooks', () => {
       vi.mocked(collectionsClient.getCollectionStatus).mockResolvedValue(mockStatus);
 
       // Act
-      const { result } = renderHook(
-        () => useCollectionStatus(entityType, entityId),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useCollectionStatus(entityType, entityId), { wrapper });
 
       // Assert
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -147,10 +135,7 @@ describe('useCollections hooks', () => {
       vi.mocked(collectionsClient.getCollectionStatus).mockResolvedValue(mockStatus);
 
       // Act
-      const { result } = renderHook(
-        () => useCollectionStatus(entityType, entityId),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useCollectionStatus(entityType, entityId), { wrapper });
 
       // Assert
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -170,10 +155,7 @@ describe('useCollections hooks', () => {
       vi.mocked(collectionsClient.getCollectionStatus).mockResolvedValue(mockStatus);
 
       // Act
-      const { result } = renderHook(
-        () => useCollectionStatus(entityType, entityId),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useCollectionStatus(entityType, entityId), { wrapper });
 
       // Assert
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
@@ -186,10 +168,7 @@ describe('useCollections hooks', () => {
       const entityType: EntityType = 'player';
 
       // Act
-      const { result } = renderHook(
-        () => useCollectionStatus(entityType, entityId),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useCollectionStatus(entityType, entityId), { wrapper });
 
       // Assert
       expect(result.current.fetchStatus).toBe('idle');
@@ -222,10 +201,7 @@ describe('useCollections hooks', () => {
       vi.mocked(collectionsClient.addToCollection).mockResolvedValue(undefined);
 
       // Act
-      const { result } = renderHook(
-        () => useAddToCollection(entityType, entityId),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useAddToCollection(entityType, entityId), { wrapper });
 
       result.current.mutate();
 
@@ -247,20 +223,13 @@ describe('useCollections hooks', () => {
       vi.mocked(collectionsClient.addToCollection).mockResolvedValue(undefined);
 
       // Act
-      const { result } = renderHook(
-        () => useAddToCollection(entityType, entityId),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useAddToCollection(entityType, entityId), { wrapper });
 
       result.current.mutate(options);
 
       // Assert
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(collectionsClient.addToCollection).toHaveBeenCalledWith(
-        entityType,
-        entityId,
-        options
-      );
+      expect(collectionsClient.addToCollection).toHaveBeenCalledWith(entityType, entityId, options);
     });
 
     it('adds entity with notes', async () => {
@@ -272,20 +241,13 @@ describe('useCollections hooks', () => {
       vi.mocked(collectionsClient.addToCollection).mockResolvedValue(undefined);
 
       // Act
-      const { result } = renderHook(
-        () => useAddToCollection(entityType, entityId),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useAddToCollection(entityType, entityId), { wrapper });
 
       result.current.mutate(options);
 
       // Assert
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(collectionsClient.addToCollection).toHaveBeenCalledWith(
-        entityType,
-        entityId,
-        options
-      );
+      expect(collectionsClient.addToCollection).toHaveBeenCalledWith(entityType, entityId, options);
     });
 
     it('invalidates queries on success', async () => {
@@ -298,10 +260,7 @@ describe('useCollections hooks', () => {
       const invalidateQueriesSpy = vi.spyOn(queryClient, 'invalidateQueries');
 
       // Act
-      const { result } = renderHook(
-        () => useAddToCollection(entityType, entityId),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useAddToCollection(entityType, entityId), { wrapper });
 
       result.current.mutate();
 
@@ -327,19 +286,15 @@ describe('useCollections hooks', () => {
       });
 
       // Act
-      const { result } = renderHook(
-        () => useRemoveFromCollection(entityType, entityId),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useRemoveFromCollection(entityType, entityId), {
+        wrapper,
+      });
 
       result.current.remove();
 
       // Assert
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(collectionsClient.removeFromCollection).toHaveBeenCalledWith(
-        entityType,
-        entityId
-      );
+      expect(collectionsClient.removeFromCollection).toHaveBeenCalledWith(entityType, entityId);
     });
 
     it('shows warning modal when entity has associated data', async () => {
@@ -355,7 +310,6 @@ describe('useCollections hooks', () => {
         inCollection: true,
         isFavorite: false,
         associatedData: {
-          hasCustomAgent: true,
           hasPrivatePdf: false,
           chatSessionsCount: 2,
           gameSessionsCount: 0,
@@ -406,6 +360,44 @@ describe('useCollections hooks', () => {
       expect(collectionsClient.removeFromCollection).toHaveBeenCalled();
     });
 
+    // Issue #4138: the BE still flags a legacy per-game agent config until its own slice
+    // drops the field. That config never reached an answer, so on its own it no longer
+    // stands between the user and the removal.
+    it('removes directly when the only associated data is a legacy custom agent', async () => {
+      // Arrange
+      const entityId = 'a23e4567-e89b-12d3-a456-426614174000';
+      const entityType: EntityType = 'session';
+      const onRemovalWarning = vi.fn();
+
+      vi.mocked(collectionsClient.removeFromCollection).mockResolvedValue(undefined);
+
+      queryClient.setQueryData(['collection-status', entityType, entityId], {
+        inCollection: true,
+        isFavorite: false,
+        associatedData: {
+          hasCustomAgent: true,
+          hasPrivatePdf: false,
+          chatSessionsCount: 0,
+          gameSessionsCount: 0,
+          checklistItemsCount: 0,
+          labelsCount: 0,
+        },
+      });
+
+      // Act
+      const { result } = renderHook(
+        () => useRemoveFromCollection(entityType, entityId, onRemovalWarning),
+        { wrapper }
+      );
+
+      result.current.remove();
+
+      // Assert
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(onRemovalWarning).not.toHaveBeenCalled();
+      expect(collectionsClient.removeFromCollection).toHaveBeenCalled();
+    });
+
     it('executes onConfirm callback when provided', async () => {
       // Arrange
       const entityId = '423e4567-e89b-12d3-a456-426614174000';
@@ -421,10 +413,9 @@ describe('useCollections hooks', () => {
       });
 
       // Act
-      const { result } = renderHook(
-        () => useRemoveFromCollection(entityType, entityId),
-        { wrapper }
-      );
+      const { result } = renderHook(() => useRemoveFromCollection(entityType, entityId), {
+        wrapper,
+      });
 
       result.current.remove(onConfirm);
 

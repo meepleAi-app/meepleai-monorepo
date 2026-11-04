@@ -1,12 +1,13 @@
 using System.Text.Json;
 using Api.BoundedContexts.Administration.Application.DTOs;
 using Api.BoundedContexts.Administration.Application.Services;
+using Api.Constants;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.KnowledgeBase;
+using Api.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Pgvector;
 
 namespace Api.BoundedContexts.Administration.Application.Commands.ImportRagData;
 
@@ -14,23 +15,30 @@ namespace Api.BoundedContexts.Administration.Application.Commands.ImportRagData;
 /// Handles importing RAG data from a backup snapshot into the database.
 /// Reads manifest.json, matches games by slug, deduplicates by ContentHash,
 /// and creates PdfDocumentEntity + VectorDocumentEntity + TextChunkEntity records.
-/// Optionally imports stored embeddings (PgVectorEmbeddingEntity) when ReEmbed=false.
+/// Imports the stored embeddings (PgVectorEmbeddingEntity) when ReEmbed=false; with ReEmbed=true it ignores them
+/// and embeds the imported chunks with the current model instead (#4725).
 /// </summary>
 internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDataCommand, ImportRagDataResult>
 {
     private readonly MeepleAiDbContext _db;
     private readonly IRagBackupStorageService _storage;
+    private readonly IEmbeddingService _embeddingService;
     private readonly ILogger<ImportRagDataCommandHandler> _logger;
+
+    /// <summary>Texts per call to the embedding service when re-embedding: small, as in <c>VectorReembeddingService</c> (sequential Ollama).</summary>
+    private const int EmbeddingBatchSize = 10;
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     public ImportRagDataCommandHandler(
         MeepleAiDbContext db,
         IRagBackupStorageService storage,
+        IEmbeddingService embeddingService,
         ILogger<ImportRagDataCommandHandler> logger)
     {
         _db = db;
         _storage = storage;
+        _embeddingService = embeddingService;
         _logger = logger;
     }
 
@@ -200,8 +208,9 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                 // f. Create VectorDocumentEntity
                 var vectorDocumentId = Guid.NewGuid();
 #pragma warning disable MAI005 // Out-of-scope for the #2244 / P234 refactor — admin RAG data import
-                                // is a separate ingestion path that bulk-imports pre-existing embeddings (no
-                                // domain event needed since this is import, not new indexing). Migrate to
+                                // is a separate ingestion path that bulk-imports a backup: its stored embeddings, or
+                                // (ReEmbed) ones recomputed from the imported chunks (no domain event needed since
+                                // this is import, not new indexing). Migrate to
                                 // domain.ToEntity() pattern if/when this path needs to raise events.
                 var vectorDocument = new VectorDocumentEntity
                 {
@@ -209,18 +218,24 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                     GameId = game.Id,
                     PdfDocumentId = pdfDocumentId,
                     ChunkCount = chunks.Count,
-                    // When re-embedding is requested: mark pending so the indexing pipeline picks it up.
-                    // Otherwise mark completed because we are importing already-stored embeddings.
-                    IndexingStatus = request.ReEmbed ? "pending" : "completed",
+                    // Completed either way: the embeddings are imported, or (ReEmbed) computed below before the save,
+                    // so this row never exists without them. It used to be "pending" for ReEmbed, and nothing
+                    // picked a pending row up (#4725). With ReEmbed the document describes the embeddings it
+                    // really has, the current model's, not the backup's.
+                    IndexingStatus = "completed",
                     IndexedAt = DateTime.UtcNow,
-                    EmbeddingModel = metadata.EmbeddingModel,
-                    EmbeddingDimensions = metadata.EmbeddingDimensions,
+                    EmbeddingModel = request.ReEmbed ? _embeddingService.GetModelName() : metadata.EmbeddingModel,
+                    EmbeddingDimensions = request.ReEmbed ? _embeddingService.GetEmbeddingDimensions() : metadata.EmbeddingDimensions,
                 };
 #pragma warning restore MAI005
 
                 _db.VectorDocuments.Add(vectorDocument);
 
-                // g. Create TextChunkEntity for each chunk
+                // g. Create TextChunkEntity for each chunk.
+                // #4384: kept by ChunkIndex so each imported pgvector row can point at its chunk.
+                var textChunks = new List<TextChunkEntity>(chunks.Count);
+                var textChunksByIndex = new Dictionary<int, TextChunkEntity>();
+                var ambiguousIndexes = new HashSet<int>();
                 foreach (var chunk in chunks)
                 {
                     var textChunk = new TextChunkEntity
@@ -236,6 +251,23 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                     };
 
                     _db.TextChunks.Add(textChunk);
+                    textChunks.Add(textChunk);
+                    if (!textChunksByIndex.TryAdd(chunk.ChunkIndex, textChunk))
+                    {
+                        // Ambiguous: two chunks on one index. No embedding links to either of them.
+                        ambiguousIndexes.Add(chunk.ChunkIndex);
+                    }
+                }
+
+                foreach (var index in ambiguousIndexes)
+                {
+                    textChunksByIndex.Remove(index);
+                }
+
+                // Only imported embeddings arrive with just an index; re-embedded ones come from one chunk's text.
+                if (ambiguousIndexes.Count > 0 && !request.ReEmbed)
+                {
+                    warnings.Add($"Document {entry.PdfDocumentId}: {ambiguousIndexes.Count} chunk index(es) appear more than once in chunks.parquet — their embeddings are imported without a link to a chunk");
                 }
 
                 // h/i. Embeddings: import or mark for re-embed
@@ -248,23 +280,34 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                     {
                         var embeddings = await RagParquetSerializer.DeserializeEmbeddingsAsync(embeddingsBytes).ConfigureAwait(false);
 
+                        var unlinked = 0;
                         foreach (var embedding in embeddings)
                         {
-                            var pgEmbedding = new PgVectorEmbeddingEntity
+                            var link = textChunksByIndex.TryGetValue(embedding.ChunkIndex, out var textChunk)
+                                ? TextChunkLink.From(textChunk)
+                                : null;
+                            if (link is null)
                             {
-                                Id = Guid.NewGuid(),
-                                VectorDocumentId = vectorDocumentId,
-                                GameId = game.Id,
-                                TextContent = embedding.TextContent,
-                                Vector = new Vector(embedding.Vector),
-                                Model = embedding.Model,
-                                ChunkIndex = embedding.ChunkIndex,
-                                PageNumber = embedding.PageNumber ?? 0,
-                                Lang = docInfo.Language,
-                                CreatedAt = DateTimeOffset.UtcNow,
-                            };
+                                unlinked++;
+                            }
+
+                            var pgEmbedding = PgVectorEmbeddingEntity.ForChunk(
+                                vectorDocumentId: vectorDocumentId,
+                                gameId: game.Id,
+                                chunkIndex: embedding.ChunkIndex,
+                                textContent: embedding.TextContent,
+                                vector: embedding.Vector,
+                                model: embedding.Model,
+                                pageNumber: embedding.PageNumber ?? 0,
+                                lang: docInfo.Language,
+                                sourceChunk: link);
 
                             _db.PgVectorEmbeddings.Add(pgEmbedding);
+                        }
+
+                        if (unlinked > 0)
+                        {
+                            warnings.Add($"Document {entry.PdfDocumentId}: {unlinked} embedding(s) have no unambiguous chunk with the same index — imported without a link (no heading boost, no citation location)");
                         }
                     }
                     else
@@ -274,8 +317,25 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                 }
                 else
                 {
-                    warnings.Add($"Document {entry.PdfDocumentId} ('{entry.GameSlug}'): re-embedding required post-import");
-                    reEmbedded++;
+                    // #4725: the text is already here (chunks.parquet became text_chunks above), so the embeddings are
+                    // computed from it now, before the save: the document enters complete or not at all. A failure of
+                    // the embedding service ends in the catch below, which drops everything tracked for this document.
+                    var vectors = await EmbedChunksAsync(chunks, cancellationToken).ConfigureAwait(false);
+                    var model = _embeddingService.GetModelName();
+
+                    for (var i = 0; i < chunks.Count; i++)
+                    {
+                        _db.PgVectorEmbeddings.Add(PgVectorEmbeddingEntity.ForChunk(
+                            vectorDocumentId: vectorDocumentId,
+                            gameId: game.Id,
+                            chunkIndex: chunks[i].ChunkIndex,
+                            textContent: chunks[i].Content,
+                            vector: vectors[i],
+                            model: model,
+                            pageNumber: Math.Max(1, chunks[i].PageNumber ?? 1),
+                            lang: docInfo.Language,
+                            sourceChunk: TextChunkLink.From(textChunks[i])));
+                    }
                 }
 
                 // j. Save per document
@@ -286,6 +346,10 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
                     pdfDocumentId, entry.GameSlug, chunks.Count);
 
                 imported++;
+                if (request.ReEmbed)
+                {
+                    reEmbedded++;
+                }
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -317,4 +381,51 @@ internal sealed class ImportRagDataCommandHandler : IRequestHandler<ImportRagDat
             Warnings: warnings,
             Errors: errors);
     }
+
+    /// <summary>
+    /// One vector per chunk, in the chunks' order, from the current embedding model. Throws if the service fails,
+    /// answers with a different number of vectors, or returns a vector the index would refuse: a half-embedded
+    /// document must not be saved.
+    /// </summary>
+    private async Task<List<float[]>> EmbedChunksAsync(IReadOnlyList<RagExportChunkLine> chunks, CancellationToken cancellationToken)
+    {
+        var dimensions = _embeddingService.GetEmbeddingDimensions();
+        var vectors = new List<float[]>(chunks.Count);
+
+        for (var offset = 0; offset < chunks.Count; offset += EmbeddingBatchSize)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // Only the provider input is capped, as in every ingest path: a parent chunk is a whole section and
+            // can be longer than the provider accepts. The full text stays in text_chunks and in the embedding row.
+            var texts = chunks.Skip(offset).Take(EmbeddingBatchSize).Select(c => CapForEmbedding(c.Content)).ToList();
+            var batch = await _embeddingService.GenerateEmbeddingsAsync(texts, cancellationToken).ConfigureAwait(false);
+
+            // EmbeddingService turns every provider exception, cancellation included, into a failed result: without
+            // this line a cancelled import would be recorded as a failed document and carry on with the next one.
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (!batch.Success || batch.Embeddings.Count != texts.Count)
+            {
+                throw new InvalidOperationException(
+                    $"Embedding generation failed for chunks {offset}-{offset + texts.Count - 1}: " +
+                    (batch.Success ? $"{batch.Embeddings.Count} vectors for {texts.Count} texts" : batch.ErrorMessage));
+            }
+
+            // The width is the model's: a fallback provider answering with another one would mix models in a
+            // document labelled with the primary's, and pgvector refuses empty or non-finite vectors only at the save.
+            if (batch.Embeddings.Exists(v => v is null || v.Length != dimensions || Array.Exists(v, x => !float.IsFinite(x))))
+            {
+                throw new InvalidOperationException(
+                    $"Invalid embedding vector for chunks {offset}-{offset + texts.Count - 1} (expected {dimensions} finite values)");
+            }
+
+            vectors.AddRange(batch.Embeddings);
+        }
+
+        return vectors;
+    }
+
+    private static string CapForEmbedding(string text) =>
+        text.Length <= ChunkingConstants.MaxEmbeddingChars ? text : text[..ChunkingConstants.MaxEmbeddingChars];
 }

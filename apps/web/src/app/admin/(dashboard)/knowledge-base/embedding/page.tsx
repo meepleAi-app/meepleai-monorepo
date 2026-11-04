@@ -1,6 +1,5 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
 import {
   ActivityIcon,
   AlertCircleIcon,
@@ -13,11 +12,10 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
-import { createAdminClient } from '@/lib/api/clients/adminClient';
-import { HttpClient } from '@/lib/api/core/httpClient';
-
-const httpClient = new HttpClient();
-const adminClient = createAdminClient({ httpClient });
+import {
+  useEmbeddingServiceInfo,
+  useEmbeddingServiceMetrics,
+} from '@/hooks/queries/useEmbeddingService';
 
 function StatusBadge({ status }: { status: string }) {
   const isHealthy = status === 'healthy' || status === 'ok';
@@ -64,24 +62,14 @@ export default function EmbeddingServicePage() {
     isLoading: infoLoading,
     refetch: refetchInfo,
     isRefetching: infoRefetching,
-  } = useQuery({
-    queryKey: ['admin', 'embedding', 'info'],
-    queryFn: () => adminClient.getEmbeddingInfo(),
-    staleTime: 30_000,
-    refetchInterval: 30_000,
-  });
+  } = useEmbeddingServiceInfo();
 
   const {
     data: metrics,
     isLoading: metricsLoading,
     refetch: refetchMetrics,
     isRefetching: metricsRefetching,
-  } = useQuery({
-    queryKey: ['admin', 'embedding', 'metrics'],
-    queryFn: () => adminClient.getEmbeddingMetrics(),
-    staleTime: 30_000,
-    refetchInterval: 30_000,
-  });
+  } = useEmbeddingServiceMetrics();
 
   const isRefreshing = infoRefetching || metricsRefetching;
 
@@ -153,26 +141,20 @@ export default function EmbeddingServicePage() {
               </span>
               <span className="font-mono text-[12px] font-semibold text-foreground flex items-center gap-1.5">
                 <GlobeIcon className="h-3.5 w-3.5 text-muted-foreground" />
-                {info?.supportedLanguages?.join(', ').toUpperCase() ?? '—'}
+                {info?.supportedLanguages.length
+                  ? info.supportedLanguages.join(', ').toUpperCase()
+                  : '—'}
               </span>
             </div>
           </div>
 
-          <div className="border-t border-border/60 px-4 py-3 grid grid-cols-1 sm:grid-cols-3 gap-4 bg-background">
+          <div className="border-t border-border/60 px-4 py-3 grid grid-cols-1 sm:grid-cols-2 gap-4 bg-background">
             <div className="flex flex-col gap-0.5">
               <span className="font-mono text-[9.5px] font-bold uppercase tracking-wide text-muted-foreground">
                 Max Input
               </span>
               <span className="font-mono text-[11px] text-foreground">
                 {info?.maxInputChars ? `${info.maxInputChars.toLocaleString()} chars` : '—'}
-              </span>
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <span className="font-mono text-[9.5px] font-bold uppercase tracking-wide text-muted-foreground">
-                Max Batch
-              </span>
-              <span className="font-mono text-[11px] text-foreground">
-                {info?.maxBatchSize ? `${info.maxBatchSize} texts` : '—'}
               </span>
             </div>
             <div className="flex flex-col gap-0.5">

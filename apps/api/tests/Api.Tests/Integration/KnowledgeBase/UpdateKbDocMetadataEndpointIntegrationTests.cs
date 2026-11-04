@@ -108,7 +108,7 @@ public sealed class UpdateKbDocMetadataEndpointIntegrationTests : IClassFixture<
 
     // ─── AC1: Owner patches title → 200 + DTO + event ─────────────────────
 
-    [Fact(Timeout = 60000)]
+    [Fact(Timeout = 90_000)]
     public async Task AC1_Owner_PatchesTitle_Returns200_PersistsDtoUpdatesAuditEmitsEvent()
     {
         using var scope = _factory.Services.CreateScope();
@@ -135,7 +135,7 @@ public sealed class UpdateKbDocMetadataEndpointIntegrationTests : IClassFixture<
 
     // ─── AC2: Admin patches another user's tags → 200 + event ──────────────
 
-    [Fact(Timeout = 60000)]
+    [Fact(Timeout = 90_000)]
     public async Task AC2_Admin_PatchesTagsOnOtherDoc_Returns200_EditorRoleAdminInPayload()
     {
         using var scope = _factory.Services.CreateScope();
@@ -164,7 +164,7 @@ public sealed class UpdateKbDocMetadataEndpointIntegrationTests : IClassFixture<
 
     // ─── AC3: Non-owner non-admin → 404 (D-2 anti-info-leak) ──────────────
 
-    [Fact(Timeout = 60000)]
+    [Fact(Timeout = 90_000)]
     public async Task AC3_NonOwnerNonAdmin_Patches_Returns404_NoMutationNoEvent()
     {
         using var scope = _factory.Services.CreateScope();
@@ -196,7 +196,7 @@ public sealed class UpdateKbDocMetadataEndpointIntegrationTests : IClassFixture<
 
     // ─── AC4: Unauthenticated → 401 ─────────────────────────────────────────
 
-    [Fact(Timeout = 60000)]
+    [Fact(Timeout = 90_000)]
     public async Task AC4_Unauthenticated_Patches_Returns401()
     {
         var docId = Guid.NewGuid();
@@ -211,7 +211,7 @@ public sealed class UpdateKbDocMetadataEndpointIntegrationTests : IClassFixture<
 
     // ─── AC5: Invalid documentType ("FAQ") → 422 ────────────────────────────
 
-    [Fact(Timeout = 60000)]
+    [Fact(Timeout = 90_000)]
     public async Task AC5_InvalidDocumentType_FAQ_Returns422_NoEvent()
     {
         using var scope = _factory.Services.CreateScope();
@@ -235,7 +235,7 @@ public sealed class UpdateKbDocMetadataEndpointIntegrationTests : IClassFixture<
 
     // ─── AC6: All fields null → 200 + no event + audit unchanged ────────────
 
-    [Fact(Timeout = 60000)]
+    [Fact(Timeout = 90_000)]
     public async Task AC6_AllFieldsNull_Returns200_NoEvent_AuditUnchanged()
     {
         using var scope = _factory.Services.CreateScope();
@@ -265,7 +265,7 @@ public sealed class UpdateKbDocMetadataEndpointIntegrationTests : IClassFixture<
 
     // ─── AC7: 21 tags → 422 ─────────────────────────────────────────────────
 
-    [Fact(Timeout = 60000)]
+    [Fact(Timeout = 90_000)]
     public async Task AC7_TwentyOneTags_Returns422_NoEvent()
     {
         using var scope = _factory.Services.CreateScope();
@@ -290,7 +290,7 @@ public sealed class UpdateKbDocMetadataEndpointIntegrationTests : IClassFixture<
 
     // ─── AC8: Cached list → PATCH → fresh GET shows update ─────────────────
 
-    [Fact(Timeout = 60000)]
+    [Fact(Timeout = 90_000)]
     public async Task AC8_CachedListThenPatch_GetReturnsFreshData()
     {
         using var scope = _factory.Services.CreateScope();

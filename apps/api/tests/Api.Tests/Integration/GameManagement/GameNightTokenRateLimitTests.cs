@@ -43,7 +43,7 @@ public sealed class GameNightTokenRateLimitTests
             .Setup(s => s.SendGameNightInvitationEmailAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<DateTimeOffset>(), It.IsAny<string?>(), It.IsAny<IReadOnlyList<string>>(),
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameNightEmailLocale>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
     }
@@ -58,18 +58,16 @@ public sealed class GameNightTokenRateLimitTests
         var dbName = $"gn_invite_ratelimit_{Guid.NewGuid():N}";
         var connStr = await _fixture.CreateIsolatedDatabaseAsync(dbName);
 
-        var prevDisable = Environment.GetEnvironmentVariable("DISABLE_RATE_LIMITING");
-        var prevRateLimitEnv = Environment.GetEnvironmentVariable("RateLimiting__Enabled");
-        Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", null);
-        Environment.SetEnvironmentVariable("RateLimiting__Enabled", "true");
-
         try
         {
+            // #3887: enableRateLimiting:true switches rate limiting on for THIS host only, via the
+            // factory's in-memory configuration. The previous version also blanked
+            // DISABLE_RATE_LIMITING in the process environment — a process-global change that turned
+            // rate limiting on for every host built meanwhile by a parallel xUnit collection.
             var baseFactory = IntegrationWebApplicationFactory.Create(
                 connStr,
                 extraConfig: new Dictionary<string, string?>
                 {
-                    ["RateLimiting:Enabled"] = "true",
                     ["GameNight:InvitationExpiryDays"] = "14"
                 },
                 enableRateLimiting: true);
@@ -131,8 +129,61 @@ public sealed class GameNightTokenRateLimitTests
         }
         finally
         {
-            Environment.SetEnvironmentVariable("DISABLE_RATE_LIMITING", prevDisable);
-            Environment.SetEnvironmentVariable("RateLimiting__Enabled", prevRateLimitEnv);
+            await _fixture.DropIsolatedDatabaseAsync(dbName);
+        }
+    }
+
+    /// <summary>
+    /// #4846. The guest opt-out has a bucket of its own (10 req/min/IP): the 11th tap gets a 429, and the RSVPs of
+    /// everybody behind the same address are not eaten by it. Before, it shared the bucket of /respond, so a guest
+    /// opening the link from an office network competed with the answers of their colleagues.
+    /// </summary>
+    [Fact]
+    public async Task UnsubscribeByKey_ExceedsItsOwnLimit_Returns429_AndTheRsvpBucketIsUntouched()
+    {
+        var dbName = $"gn_unsub_ratelimit_{Guid.NewGuid():N}";
+        var connStr = await _fixture.CreateIsolatedDatabaseAsync(dbName);
+
+        try
+        {
+            var baseFactory = IntegrationWebApplicationFactory.Create(
+                connStr,
+                extraConfig: new Dictionary<string, string?> { ["GameNight:InvitationExpiryDays"] = "14" },
+                enableRateLimiting: true);
+
+            using var factory = baseFactory.WithWebHostBuilder(b => b.ConfigureTestServices(s =>
+            {
+                s.RemoveAll(typeof(IGameNightEmailService));
+                s.AddSingleton(_emailServiceMock.Object);
+            }));
+
+            using (var scope = factory.Services.CreateScope())
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+                await dbContext.Database.MigrateAsync();
+            }
+
+            var invitation = await SeedInvitationAsync(factory);
+            using var client = factory.CreateClient();
+
+            var statuses = new List<HttpStatusCode>();
+            for (var i = 0; i < 11; i++)
+            {
+                var response = await client.PostAsync(
+                    $"/api/v1/game-nights/guest-unsubscribe/{invitation.UnsubscribeKey}", content: null);
+                statuses.Add(response.StatusCode);
+            }
+
+            statuses.Take(10).Should().AllBeEquivalentTo(HttpStatusCode.NoContent);
+            statuses[10].Should().Be(HttpStatusCode.TooManyRequests);
+
+            var rsvp = await client.PostAsJsonAsync(
+                $"/api/v1/game-nights/invitations/{invitation.Token}/respond",
+                new { Response = "Accepted" });
+            rsvp.StatusCode.Should().Be(HttpStatusCode.OK, "the RSVP bucket is a different one");
+        }
+        finally
+        {
             await _fixture.DropIsolatedDatabaseAsync(dbName);
         }
     }
@@ -162,6 +213,7 @@ public sealed class GameNightTokenRateLimitTests
         {
             Id = Guid.NewGuid(),
             Token = GenerateToken(),
+            UnsubscribeKey = GenerateToken(),
             GameNightId = eventId,
             Email = "guest@example.com",
             Status = "Pending",

@@ -91,7 +91,9 @@ internal sealed class GetRecentKbDocsQueryHandler
         // gracefully to chunkCount=0 rather than excluding the doc.
         var rows = await _context.Set<PdfDocumentEntity>()
             .AsNoTracking()
-            .Where(p => p.ProcessingState == ReadyState)
+            // #4244: never the PDF of a private game. This list is the same for every signed-in
+            // user and sits in a shared cache; a private game belongs to its owner alone.
+            .Where(p => p.ProcessingState == ReadyState && p.PrivateGameId == null)
             .OrderByDescending(p => p.ProcessedAt ?? p.UploadedAt)
             .Take(limit)
             .Select(p => new

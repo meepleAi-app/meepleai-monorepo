@@ -16,6 +16,8 @@ using Npgsql;
 using Pgvector;
 using Pgvector.EntityFrameworkCore;
 using Xunit;
+// Issue #3866: the domain value object and the pgvector type share the name Vector.
+using DomainVector = Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.Vector;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Infrastructure;
 
@@ -116,6 +118,12 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
         _dbContext.SharedGames.Add(game);
 
         await _dbContext.SaveChangesAsync(TestCancellationToken);
+
+        // Issue #3866: production starts every request with an empty change tracker. Leaving the
+        // seed tracked means a test that re-reads a row with the production NoTracking default gets
+        // a SECOND instance of it, and Remove()/Update() on that instance throws an identity
+        // conflict no real scope can produce.
+        _dbContext.ChangeTracker.Clear();
     }
 
     #region AddAsync Tests
@@ -157,6 +165,11 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
         var embedding = new float[1024];
         Array.Fill(embedding, 0.1f);
 
+        // Issue #3866: the embedding used to be assigned onto an entity read back from the context
+        // and then "saved". With the production NoTracking default (PERF-06) that read is DETACHED,
+        // so the assignment never reached the database and the assertion below was reading a row
+        // that had never carried an embedding. The repository writes the embedding on insert
+        // (ConversationMemoryRepository.MapToEntity), which is the path production actually uses.
         var memory = new ConversationMemory(
             id: Guid.NewGuid(),
             sessionId: Guid.NewGuid(),
@@ -164,17 +177,11 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
             gameId: null,
             content: "Response with embedding",
             messageType: "assistant",
-            timestamp: DateTime.UtcNow);
+            timestamp: DateTime.UtcNow,
+            embedding: new DomainVector(embedding));
 
         // Act
         await _repository!.AddAsync(memory, TestCancellationToken);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
-
-        // Manually set embedding (simulating embedding service)
-        var entity = await _dbContext.ConversationMemories.FirstAsync(
-            m => m.Id == memory.Id,
-            TestCancellationToken);
-        entity.Embedding = new Vector(embedding);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         // Assert
@@ -377,15 +384,14 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
 
         for (int i = 0; i < 3; i++)
         {
+            // Issue #3866: embeddings go in on insert. Assigning them onto a re-read entity wrote
+            // nothing under the production NoTracking default, so every row here had a NULL
+            // embedding and the `Where(m => m.Embedding != null)` below matched none of them.
             var memory = new ConversationMemory(
                 Guid.NewGuid(), Guid.NewGuid(), user.Id, null,
-                $"Memory {i}", "user", DateTime.UtcNow.AddMinutes(-i));
+                $"Memory {i}", "user", DateTime.UtcNow.AddMinutes(-i),
+                embedding: new DomainVector(embeddings[i]));
             await _repository!.AddAsync(memory, TestCancellationToken);
-            await _dbContext.SaveChangesAsync(TestCancellationToken);
-
-            var entity = await _dbContext.ConversationMemories
-                .FirstAsync(m => m.Id == memory.Id, TestCancellationToken);
-            entity.Embedding = new Vector(embeddings[i]);
             await _dbContext.SaveChangesAsync(TestCancellationToken);
         }
 
@@ -426,24 +432,18 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
         // Add memories for both users with embeddings
         var embedding = CreateNormalizedEmbedding(0.5f);
 
+        // Issue #3866: same as above — the embedding is written on insert. Without it both rows
+        // stayed NULL, the filtered query returned nothing, and the two assertions below passed
+        // vacuously on an empty collection.
         var userMemory = new ConversationMemory(
             Guid.NewGuid(), Guid.NewGuid(), user.Id, null,
-            "User memory", "user", DateTime.UtcNow);
+            "User memory", "user", DateTime.UtcNow, embedding: new DomainVector(embedding));
         var otherMemory = new ConversationMemory(
             Guid.NewGuid(), Guid.NewGuid(), otherUser.Id, null,
-            "Other memory", "user", DateTime.UtcNow);
+            "Other memory", "user", DateTime.UtcNow, embedding: new DomainVector(embedding));
 
         await _repository!.AddAsync(userMemory, TestCancellationToken);
         await _repository.AddAsync(otherMemory, TestCancellationToken);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
-
-        // Set embeddings
-        foreach (var id in new[] { userMemory.Id, otherMemory.Id })
-        {
-            var entity = await _dbContext.ConversationMemories
-                .FirstAsync(m => m.Id == id, TestCancellationToken);
-            entity.Embedding = new Vector(embedding);
-        }
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         var queryEmbedding = new Vector(CreateNormalizedEmbedding(0.5f));
@@ -457,6 +457,7 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
             .ToListAsync(TestCancellationToken);
 
         // Assert
+        results.Should().NotBeEmpty("an empty result would satisfy the two checks below vacuously");
         results.Should().AllSatisfy(r => r.UserId.Should().Be(user.Id));
         results.Should().NotContain(r => r.Content == "Other memory");
     }
@@ -468,16 +469,15 @@ public sealed class ConversationMemoryRepositoryIntegrationTests : IAsyncLifetim
         var user = await _dbContext!.Users.FirstAsync(TestCancellationToken);
 
         var embedding = CreateNormalizedEmbedding(0.7f);
+        // Issue #3866: written on insert. This test stayed green with a NULL embedding only
+        // because `ORDER BY embedding <=> …` still returns the row — it was no longer proving
+        // anything about the ordering it is named after.
         var memory = new ConversationMemory(
             Guid.NewGuid(), Guid.NewGuid(), user.Id, null,
-            "Embedded memory", "assistant", DateTime.UtcNow);
+            "Embedded memory", "assistant", DateTime.UtcNow,
+            embedding: new DomainVector(embedding));
 
         await _repository!.AddAsync(memory, TestCancellationToken);
-        await _dbContext.SaveChangesAsync(TestCancellationToken);
-
-        var entity = await _dbContext.ConversationMemories
-            .FirstAsync(m => m.Id == memory.Id, TestCancellationToken);
-        entity.Embedding = new Vector(embedding);
         await _dbContext.SaveChangesAsync(TestCancellationToken);
 
         var queryEmbedding = new Vector(CreateNormalizedEmbedding(0.7f));

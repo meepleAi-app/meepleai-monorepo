@@ -19,6 +19,22 @@ using SystemConfigurationEntity = Api.Infrastructure.Entities.SystemConfiguratio
 namespace Api.Tests.Integration.GameManagement;
 
 /// <summary>
+/// La fixture di <see cref="CorrelatedGameSessionOnStartTests"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// I test verificano la quota di sessioni per il piano Free, seminando il limite nella configurazione a database.
+/// </para>
+/// <para>
+/// #4050. Host condiviso per la classe, database fresco per test. Prima questa classe
+/// costruiva l'host dentro il proprio <c>InitializeAsync</c>, che xUnit chiama una volta per
+/// METODO: ~24s a test, contro ~0,1s per il clone del database.
+/// </para>
+/// </remarks>
+public sealed class CorrelatedGameSessionOnStartTestsHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "correlated_quota");
+
+/// <summary>
 /// Integration tests for Issue #2587 Slice 1 — correlated GameSession at start + quota + lifecycle sync.
 ///
 /// Proves the four acceptance criteria:
@@ -38,15 +54,15 @@ namespace Api.Tests.Integration.GameManagement;
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
-public sealed class CorrelatedGameSessionOnStartTests : IAsyncLifetime
+public sealed class CorrelatedGameSessionOnStartTests
+    : IClassFixture<CorrelatedGameSessionOnStartTestsHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _databaseName = $"correlated_quota_{Guid.NewGuid():N}";
+    private readonly CorrelatedGameSessionOnStartTestsHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
 
-    public CorrelatedGameSessionOnStartTests(SharedTestcontainersFixture fixture)
+    public CorrelatedGameSessionOnStartTests(CorrelatedGameSessionOnStartTestsHostFixture hostFixture)
     {
-        _fixture = fixture;
+        _hostFixture = hostFixture;
     }
 
     // Stable GUID for the seeder system user required by the FK on system_configurations.created_by_user_id.
@@ -55,14 +71,11 @@ public sealed class CorrelatedGameSessionOnStartTests : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
-        await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(connectionString);
-
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        db.Database.Migrate();
 
         // Seed Free-tier session limit = 1 via the DB-backed SystemConfiguration so that
         // IConfigurationService.GetValueAsync<int?>("SessionLimits:free:MaxSessions") returns 1.
@@ -73,13 +86,8 @@ public sealed class CorrelatedGameSessionOnStartTests : IAsyncLifetime
         await SeedSystemConfigAsync(db, "SessionLimits:free:MaxSessions", "1", "int");
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        if (_factory != null)
-            await _factory.DisposeAsync();
-
-        await _fixture.DropIsolatedDatabaseAsync(_databaseName);
-    }
+    // Host, client e database appartengono alla fixture.
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     // ──────────────────────────────────────────────────────────────────────────
     // T1 — Start GameId-backed session: GameSession row created + correlated +
@@ -124,7 +132,18 @@ public sealed class CorrelatedGameSessionOnStartTests : IAsyncLifetime
         gsRow.Should().NotBeNull("a GameSession row must have been created and committed atomically with the LiveGameSession update");
         gsRow!.CreatedByUserId.Should().Be(userId, "the session creator must be propagated to the GameSession");
         gsRow.GameId.Should().Be(gameId, "GameSession must be linked to the same catalog game");
-        gsRow.Status.Should().Be("Setup", "new correlated GameSession starts in Setup status so it counts toward quota");
+        // #3662 ha cambiato questo deliberatamente: StartLiveSessionCommandHandler chiama ora
+        // `gameSession.Start()`, perche' un correlato lasciato in `Setup` per sempre faceva
+        // rispondere 409 a ogni operazione del suo ciclo di vita (`Pause()` pretende InProgress,
+        // `Complete()` InProgress o Paused). L'asserzione era rimasta a "Setup" e questo test era
+        // rosso da allora — verificato con un run di CONTROLLO sulla versione non convertita, che
+        // falliva identicamente, quindi la conversione di #4050 non c'entra.
+        //
+        // 🔴 Cio' che il test protegge NON e' il valore "Setup" ma il fatto che il correlato conti
+        // nella quota, e lo asserisce la riga sotto: CountActiveByUserIdAsync conta
+        // Setup | InProgress | Paused, quindi "InProgress" lo soddisfa. Non riportare questo a
+        // "Setup" per far combaciare il nome con l'intenzione originale: romperebbe il prodotto.
+        gsRow.Status.Should().Be("InProgress", "#3662: il correlato rispecchia la live session che si sta avviando");
 
         // Assert — active count is now 1 (quota-counting + history-visibility)
         var verifyRepo = verifyScope.ServiceProvider.GetRequiredService<IGameSessionRepository>();

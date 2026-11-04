@@ -160,8 +160,10 @@ internal sealed class DatasetEvaluationService : IDatasetEvaluationService
             // validity is a separate trust floor (well-formed PDF:guid + existing doc + page in range).
             var snippets = ragResponse.snippets ?? [];
             var inlineMatches = _citationMatcher.Match(ragResponse.answer ?? string.Empty, snippets);
+            // #4819: a citation without a page cannot satisfy a page the dataset expects.
             var actualCitationPages = inlineMatches
                 .Select(m => m.PageNumber)
+                .OfType<int>()
                 .Distinct()
                 .OrderBy(p => p)
                 .ToList();
@@ -260,9 +262,18 @@ internal sealed class DatasetEvaluationService : IDatasetEvaluationService
             cancellationToken,
             retrievalPolicy: RetrievalPolicy.LiveSessionWith(enhancements)).ConfigureAwait(false);
 
+        // #4166: una valutazione spende dalla quota delle valutazioni, non dal budget delle risposte.
         var completion = await _llmService.GenerateCompletionAsync(
-            assembled.SystemPrompt, assembled.UserPrompt, RequestSource.RagPipeline, cancellationToken)
+            assembled.SystemPrompt, assembled.UserPrompt, RequestSource.Evaluation, cancellationToken)
             .ConfigureAwait(false);
+
+        // Una chiamata che il gateway non ha fatto partire non è una risposta vuota: valutata, darebbe
+        // metriche a zero indistinguibili da un peggioramento. Il catch del chiamante registra il
+        // campione come fallito, con il motivo.
+        if (completion.Metadata.TryGetValue("error_code", out var refusal))
+        {
+            throw new Api.Middleware.Exceptions.LlmCallRefusedException(refusal, completion.ErrorMessage ?? refusal);
+        }
 
         var answer = completion.Success ? completion.Response : string.Empty;
 

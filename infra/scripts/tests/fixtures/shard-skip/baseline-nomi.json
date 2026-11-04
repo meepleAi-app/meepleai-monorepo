@@ -1,0 +1,32 @@
+{
+  "runId": "fixture",
+  "capturedAt": "2026-10-13",
+  "shards": {
+    "Nomi": {
+      "_comment": [
+        "Da dove vengono questi nomi: una nota che --update-baseline non deve perdere."
+      ],
+      "failed": 2,
+      "skipped": 2,
+      "failedTests": [
+        "Ns.ClasseDue.Legge(file: \"a.pdf\")",
+        "Ns.ClasseUno.Salva"
+      ],
+      "skippedTests": [
+        "Ns.ClasseUno.Esterno",
+        "Ns.ClasseUno.Lento"
+      ]
+    },
+    "Incoerente": {
+      "failed": 3,
+      "skipped": 2,
+      "failedTests": [
+        "Ns.ClasseUno.Salva"
+      ],
+      "skippedTests": [
+        "Ns.ClasseUno.Esterno",
+        "Ns.ClasseUno.Lento"
+      ]
+    }
+  }
+}

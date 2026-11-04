@@ -27,4 +27,9 @@ describe('KbCrumbs', () => {
     render(<KbCrumbs />);
     expect(screen.getByText(/Processing Queue/)).toBeInTheDocument();
   });
+  it('renders Domande di riferimento on /reference-questions, not Explorer (#4470)', () => {
+    mockUsePathname.mockReturnValue('/admin/knowledge-base/reference-questions');
+    render(<KbCrumbs />);
+    expect(screen.getByText('Admin · KB · Domande di riferimento')).toBeInTheDocument();
+  });
 });

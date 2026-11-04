@@ -64,7 +64,11 @@ internal sealed class PauseSessionCommandHandler : ICommandHandler<PauseSessionC
         // Free the partial unique index slot on game_night_sessions: the link row that
         // currently advertises this session as InProgress must transition to Pending so
         // another session in the same night can become Active. (See T1 migration.)
+        // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06),
+        // quindi senza di esso questa lettura e' DETACHED: le mutazioni sotto non raggiungono
+        // il change tracker e SaveChangesAsync non scrive, e non solleva.
         var linkRow = await _db.GameNightSessions
+            .AsTracking()
             .FirstOrDefaultAsync(gns => gns.SessionId == session.Id, cancellationToken)
             .ConfigureAwait(false);
 

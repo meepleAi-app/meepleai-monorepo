@@ -268,6 +268,43 @@ public sealed class LlmRequestLogRepositoryTests : SharedDatabaseTestBase<LlmReq
         count.Should().Be(0);
     }
 
+    /// <summary>
+    /// Issue #3866 — <c>PseudonymizeOldLogsAsync</c> drains in a <c>while (true)</c> whose exit
+    /// condition is the very flag it writes (<c>!IsAnonymized</c>). Its read must be tracked: under
+    /// the production NoTracking default (PERF-06) the batch came back detached, the flag was never
+    /// persisted, and the same rows were re-read forever. It was not a dropped write — it was a
+    /// HANG, and it burned a CI test host for 39 minutes before the blame collector killed it.
+    ///
+    /// <para>The explicit timeout is the point of this test: without it a reintroduction does not
+    /// fail, it takes down the whole shard and every test after it disappears from the report.
+    /// 120s because 30s is not enough for a Testcontainers round-trip (#3866 follow-up to the
+    /// <c>[Fact(Timeout)]</c> pitfall).</para>
+    /// </summary>
+    [Fact(Timeout = 120_000)]
+    public async Task PseudonymizeOldLogsAsync_WithMatchingRows_TerminatesAndPersistsTheFlag()
+    {
+        // Arrange
+        await ResetDatabaseAsync();
+        for (var i = 0; i < 3; i++)
+        {
+            await Repository.LogRequestAsync("model", "openrouter", RequestSource.Manual,
+                Guid.NewGuid(), "user", 100, 50, 0.01m, 200, true, null, false, false, null, null,
+                TestCancellationToken);
+        }
+
+        // Act — returns only if the loop terminates
+        var pseudonymized = await Repository.PseudonymizeOldLogsAsync(
+            DateTime.UtcNow.AddMinutes(1), "test-salt", TestCancellationToken);
+
+        // Assert — each row counted exactly once, and the flag reached the database
+        pseudonymized.Should().Be(3, "every matching row is pseudonymized once, not re-read in a loop");
+
+        DbContext.ChangeTracker.Clear();
+        var remaining = await DbContext.LlmRequestLogs
+            .CountAsync(x => !x.IsAnonymized, TestCancellationToken);
+        remaining.Should().Be(0, "the IsAnonymized flag must be persisted, not just assigned in memory");
+    }
+
     [Fact]
     public async Task GetActiveAiUserCountAsync_EmptyTable_ReturnsZero()
     {

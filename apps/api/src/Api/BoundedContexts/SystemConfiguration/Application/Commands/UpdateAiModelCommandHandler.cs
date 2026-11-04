@@ -46,7 +46,14 @@ internal sealed class UpdateAiModelCommandHandler : ICommandHandler<UpdateAiMode
         model.UpdateSettings(command.Settings.MaxTokens, command.Settings.Temperature);
 
         // Update pricing if changed
-        if (command.Settings.Pricing != model.Settings.Pricing)
+        // #4164: si confrontano i soli prezzi d'ingresso e d'uscita, gli unici che la richiesta
+        // dell'admin invia. Il record porta anche cache, data e fonte della verifica: con
+        // l'uguaglianza del record ogni salvataggio risulterebbe un cambio di prezzo e
+        // registrerebbe una verifica mai fatta.
+        var requested = command.Settings.Pricing;
+        var stored = model.Settings.Pricing;
+        if (requested.InputPricePerMillion != stored.InputPricePerMillion
+            || requested.OutputPricePerMillion != stored.OutputPricePerMillion)
         {
             model.UpdatePricing(
                 command.Settings.Pricing.InputPricePerMillion,

@@ -4,7 +4,6 @@ import { env } from './onboarding-environment';
 
 export interface CleanupState {
   testUserId?: string;
-  agentId?: string;
 }
 
 export async function cleanupOnboardingTest(
@@ -13,13 +12,9 @@ export async function cleanupOnboardingTest(
 ): Promise<void> {
   const apiURL = env.apiURL;
 
-  if (state.agentId) {
-    try {
-      await request.delete(`${apiURL}/api/v1/agents/${state.agentId}`);
-    } catch (e) {
-      console.warn(`Cleanup: failed to delete agent ${state.agentId}`, e);
-    }
-  }
+  // Issue #4138: an `agentId` branch stood here, deleting the agent the retired
+  // test 6 created. The DELETE /agents/{id} route still exists (admin lifecycle),
+  // but this flow no longer creates an agent, so there is nothing to clean up.
 
   if (state.testUserId) {
     try {

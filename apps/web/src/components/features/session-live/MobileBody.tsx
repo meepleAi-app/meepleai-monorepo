@@ -7,8 +7,8 @@
  * over at lg+). REFACTORED from the legacy 4-tab bottom-nav (Foundation #746)
  * to the mockup canonical bottom-sheet pattern (parts.jsx L266-286):
  *
- *   - Main area = full-width = ChatAgentPanel + ActionLogTimeline stacked
- *     (mirrors desktop LEFT 60%).
+ *   - Main area = full-width = ActionLogTimeline (mirrors desktop LEFT 60%;
+ *     the ChatAgentPanel above it left with #4156 D5).
  *   - Floating action button (bottom-right) opens MobileBottomSheetDrawer.
  *   - Drawer hosts the 4 polymorphic tabs (Score/Turn/Widget/Notes) — same
  *     content as desktop RIGHT 40%.
@@ -16,7 +16,7 @@
  * Tab union: shared `LiveTab` ('score'|'turn'|'widget'|'notes') from
  * RightColumnTabs. Legacy `MobileTab` ('score'|'log'|'tools'|'chat') is
  * DELETED — log is now always-visible in the main column, tools renamed to
- * widget, chat is the always-visible ChatAgentPanel.
+ * widget, chat was the always-visible ChatAgentPanel until #4156 (D5).
  *
  * URL SSOT: parent owns `?msheet=open|closed` + `?mtab=` via the
  * sheetOpen/onSheetOpenChange + sheetActiveTab/onSheetTabChange props.
@@ -53,7 +53,7 @@ export interface MobileBodyLabels {
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 export interface MobileBodyProps {
-  /** Full-width LEFT-equivalent content (ChatAgentPanel + ActionLogTimeline). */
+  /** Full-width LEFT-equivalent content (ActionLogTimeline). */
   readonly mainContent: ReactNode;
   /** Drawer open state (URL SSOT in parent: ?msheet=open|closed). */
   readonly sheetOpen: boolean;
@@ -86,7 +86,7 @@ export function MobileBody({
       data-layout="mobile-sheet"
       className="relative flex flex-1 flex-col overflow-hidden lg:hidden"
     >
-      {/* Main area — full-width LEFT-equivalent (ChatAgentPanel + ActionLogTimeline) */}
+      {/* Main area — full-width LEFT-equivalent (ActionLogTimeline) */}
       <main className="flex-1 overflow-y-auto p-3">{mainContent}</main>
 
       {/* Floating action button — opens bottom-sheet drawer */}

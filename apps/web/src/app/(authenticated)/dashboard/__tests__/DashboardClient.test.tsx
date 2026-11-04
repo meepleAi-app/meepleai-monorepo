@@ -160,6 +160,73 @@ describe('DashboardClient (Asse C priority cluster)', () => {
     networkStatusMock.mockReturnValue({ isOffline: false });
   });
 
+  it('«Giochi con agente pronto» chiede al server i giochi con KB, non filtra i 20 recenti (#4227)', async () => {
+    // Prima la sezione filtrava hasKb sulla prima pagina della libreria (20 giochi, i piu'
+    // recenti): un gioco con la KB aggiunto prima non compariva mai.
+    const useLibraryMock = vi.mocked(await import('@/hooks/queries/useLibrary')).useLibrary;
+    const page = (items: unknown[]) => ({
+      data: {
+        items,
+        page: 1,
+        pageSize: 20,
+        totalCount: items.length,
+        totalPages: 1,
+        hasNextPage: false,
+        hasPreviousPage: false,
+      },
+      isLoading: false,
+      isError: false,
+      refetch: refetchLibrary,
+    });
+    const brass = {
+      id: '00000000-0000-0000-0000-0000000000b1',
+      userId: 'u1',
+      gameId: '00000000-0000-0000-0000-0000000000b2',
+      gameTitle: 'Brass: Birmingham',
+      gamePublisher: 'Roxley',
+      gameYearPublished: 2018,
+      gameIconUrl: null,
+      gameImageUrl: null,
+      coverUrl: null,
+      addedAt: '2023-01-01T00:00:00Z',
+      notes: null,
+      isFavorite: false,
+      currentState: 'Owned' as const,
+      stateChangedAt: null,
+      stateNotes: null,
+      hasKb: true,
+      kbCardCount: 1,
+      kbIndexedCount: 1,
+      kbProcessingCount: 0,
+      ownershipDeclaredAt: null,
+      hasRagAccess: true,
+      agentIsOwned: true,
+      minPlayers: 2,
+      maxPlayers: 4,
+      playingTimeMinutes: 120,
+      complexityRating: null,
+      averageRating: null,
+      timesPlayed: 0,
+      lastPlayed: null,
+      privateGameId: null,
+      isPrivateGame: false,
+      canProposeToCatalog: false,
+    };
+    // clearAllMocks non toglie un'implementazione: va ripristinata a mano.
+    const defaultImpl = useLibraryMock.getMockImplementation();
+    useLibraryMock.mockImplementation(((params?: { hasKb?: boolean }) =>
+      page(params?.hasKb === true ? [brass] : [])) as unknown as typeof useLibraryMock);
+    try {
+      render(<DashboardClient />);
+
+      const section = screen.getByRole('region', { name: 'Giochi con agente pronto' });
+      expect(section).toHaveTextContent('Brass: Birmingham');
+      expect(useLibraryMock).toHaveBeenCalledWith(expect.objectContaining({ hasKb: true }));
+    } finally {
+      if (defaultImpl) useLibraryMock.mockImplementation(defaultImpl);
+    }
+  });
+
   it('renders the dashboard hero with greeting + user name', () => {
     render(<DashboardClient />);
     expect(screen.getByText(/Marco/i)).toBeInTheDocument();

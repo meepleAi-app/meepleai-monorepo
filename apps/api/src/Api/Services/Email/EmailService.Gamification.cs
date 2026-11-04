@@ -1,5 +1,3 @@
-using System.Net;
-using System.Net.Mail;
 using Api.Infrastructure.Security;
 
 namespace Api.Services;
@@ -33,22 +31,7 @@ internal partial class EmailService
                 profileUrl,
                 shareText);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "badge_earned", ct, userName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Badge earned email sent successfully to {Email} for badge {BadgeName}",
@@ -99,22 +82,7 @@ internal partial class EmailService
                 profileUrl,
                 leaderboardUrl);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "milestone_badge_earned", ct, userName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Milestone badge email sent successfully to {Email} for badge {BadgeName}",
@@ -156,22 +124,7 @@ internal partial class EmailService
                 remainingPending,
                 libraryUrl);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, userName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "cooldown_ended", ct, userName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Cooldown ended email sent successfully to {Email}",
@@ -195,7 +148,7 @@ internal partial class EmailService
 
     // ===== Template builders =====
 
-    private static string BuildBadgeEarnedEmailBody(
+    private string BuildBadgeEarnedEmailBody(
         string userName,
         string badgeName,
         string badgeDescription,
@@ -257,14 +210,14 @@ internal partial class EmailService
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
         <p>Keep up the great work! We look forward to celebrating more achievements with you.</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>&copy; {FooterYear} MeepleAI. All rights reserved.</p>
     </div>
 </body>
 </html>
 ";
     }
 
-    private static string BuildMilestoneBadgeEarnedEmailBody(
+    private string BuildMilestoneBadgeEarnedEmailBody(
         string userName,
         string badgeName,
         string badgeDescription,
@@ -334,14 +287,14 @@ internal partial class EmailService
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
         <p>You're making MeepleAI better for everyone. Thank you!</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>&copy; {FooterYear} MeepleAI. All rights reserved.</p>
     </div>
 </body>
 </html>
 ";
     }
 
-    private static string BuildCooldownEndedEmailBody(
+    private string BuildCooldownEndedEmailBody(
         string userName,
         int remainingMonthly,
         int remainingPending,
@@ -395,7 +348,7 @@ internal partial class EmailService
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
         <p>Happy sharing!</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>&copy; {FooterYear} MeepleAI. All rights reserved.</p>
     </div>
 </body>
 </html>

@@ -155,6 +155,27 @@ public class CitationValidationServiceTests
     }
 
     [Fact]
+    public async Task ValidateCitations_CitationWithoutAPage_IsNotOutOfRange_ButStillMustPointAtADocument()
+    {
+        // #4819: a document that cannot vouch for its pages is cited without one: that is not an invalid page.
+        using var context = CreateFreshDbContext();
+        var service = CreateService(context);
+        var (gameId, pdf1Id, _) = await SeedTestDataAsync(context);
+
+        var snippets = new List<Snippet>
+        {
+            new Snippet("text", $"PDF:{pdf1Id}", page: null, line: 0, score: 0.9f),
+            new Snippet("text", $"PDF:{Guid.NewGuid()}", page: null, line: 0, score: 0.9f),
+        };
+
+        var result = await service.ValidateCitationsAsync(snippets, gameId.ToString(), TestCancellationToken);
+
+        result.ValidCitations.Should().Be(1);
+        result.Errors.Should().ContainSingle();
+        result.Errors[0].ErrorType.Should().Be(CitationErrorType.DocumentNotFound);
+    }
+
+    [Fact]
     public async Task ValidateCitations_InvalidPageNumber_ReturnsInvalid()
     {
         // Arrange - fresh context per test - PDF1 has 10 pages, try page 15

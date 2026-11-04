@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { GameSessionDtoSchema } from '../games.schemas';
+import { GameSessionDtoSchema, PaginatedGamesResponseSchema } from '../games.schemas';
 
 const base = {
   id: '00000000-0000-4000-8000-000000000001',
@@ -32,5 +32,57 @@ describe('GameSessionDtoSchema #3022', () => {
     expect(
       GameSessionDtoSchema.parse({ ...base, scorePlayers: null, gameSlug: null }).scorePlayers
     ).toBeNull();
+  });
+});
+
+// #4156: le pagine di /sessions/[id] leggono una LiveGameSession, quindi chi ha in mano una
+// GameSession ci arriva con l'id della live correlata. Il backend lo manda come GUID, oppure null
+// quando nessuna live correla.
+describe('GameSessionDtoSchema #4156', () => {
+  it('keeps the id of the correlated live session', () => {
+    const liveSessionId = '00000000-0000-4000-8000-0000000000ff';
+    expect(GameSessionDtoSchema.parse({ ...base, liveSessionId }).liveSessionId).toBe(
+      liveSessionId
+    );
+  });
+
+  it('accepts a session no live session correlates to', () => {
+    expect(GameSessionDtoSchema.parse({ ...base, liveSessionId: null }).liveSessionId).toBeNull();
+    expect(GameSessionDtoSchema.parse(base).liveSessionId).toBeUndefined();
+  });
+});
+
+// #4158: il catalogo condiviso salva giocatori e durata come int non nullable (SharedGameEntity), e
+// usa 0 per «sconosciuto». Lo schema esigeva valori positivi: un solo gioco così faceva scartare
+// l'intera pagina. Si è visto quando getAll ha cominciato a rispettare pageSize: Chess, 31° gioco
+// del catalogo locale, ha durata 0 e mandava in errore il selettore del pannello chat (50 giochi).
+describe('PaginatedGamesResponseSchema #4158', () => {
+  const chess = {
+    id: '00000000-0000-4000-8000-000000000031',
+    title: 'Chess',
+    publisher: null,
+    yearPublished: 1475,
+    minPlayers: 2,
+    maxPlayers: 2,
+    minPlayTimeMinutes: 0,
+    maxPlayTimeMinutes: 0,
+    bggId: 171,
+    createdAt: '2026-01-01T00:00:00Z',
+    imageUrl: null,
+  };
+  const page = (games: unknown[]) => ({ games, total: 165, page: 1, pageSize: 50, totalPages: 4 });
+
+  it('accepts a game whose play time is unknown (0)', () => {
+    expect(PaginatedGamesResponseSchema.safeParse(page([chess])).success).toBe(true);
+  });
+
+  it('accepts a game whose player counts are unknown (0)', () => {
+    const unknownPlayers = { ...chess, minPlayers: 0, maxPlayers: 0 };
+    expect(PaginatedGamesResponseSchema.safeParse(page([unknownPlayers])).success).toBe(true);
+  });
+
+  it('still rejects a negative play time', () => {
+    const negative = { ...chess, minPlayTimeMinutes: -1 };
+    expect(PaginatedGamesResponseSchema.safeParse(page([negative])).success).toBe(false);
   });
 });

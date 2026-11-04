@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/data-display/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { Button } from '@/components/ui/primitives/button';
 import { getGameTemplateByName, type GameTemplate } from '@/lib/config/game-templates';
+import { API_PLAYER_COLORS } from '@/lib/sessions/player-colors';
 import { useSessionStore } from '@/lib/stores/session-store';
 
 interface GameDetails {
@@ -115,10 +116,30 @@ export default function GameToolkitLandingPage() {
         gameName: game?.name,
       });
 
-      // Add players after session creation
+      // Add players after session creation.
+      //
+      // #4107: qui i giocatori venivano aggiunti **senza colore**, e il dominio impone
+      // l'unicità: dal secondo in poi l'API rispondeva 400 «Color Red is already taken».
+      //
+      // Il colore si assegna per INDICE e non lasciando scegliere allo store, che pesca «il
+      // primo libero» dalla sessione ricaricata: in un ciclo quello stato è una corsa — il
+      // terzo giocatore leggeva la sessione prima che il secondo vi comparisse e chiedeva di
+      // nuovo `Blue`. Per indice il risultato è deterministico e non dipende da nessun
+      // ricaricamento. Il default dello store resta la rete di sicurezza per le aggiunte
+      // singole (`AddPlayerDialog`).
+      if (validParticipants.length > API_PLAYER_COLORS.length) {
+        toast.error(
+          `Massimo ${API_PLAYER_COLORS.length} giocatori: ogni giocatore ha bisogno di un colore distinto`
+        );
+        return;
+      }
+
       const store = useSessionStore.getState();
-      for (const name of validParticipants) {
-        await store.addPlayer({ displayName: name.trim() });
+      for (const [index, name] of validParticipants.entries()) {
+        await store.addPlayer({
+          displayName: name.trim(),
+          color: API_PLAYER_COLORS[index],
+        });
       }
       await store.startSession();
 

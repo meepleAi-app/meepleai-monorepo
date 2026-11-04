@@ -41,6 +41,21 @@ internal class CreateSnapshotCommandHandler
     {
         ArgumentNullException.ThrowIfNull(command);
 
+        // #4848: a snapshot asked for by an event (the auto-snapshot on pause) is keyed by that event, under a UNIQUE
+        // partial index. A replay of the same event must not work out a next index and insert again: it gets the
+        // snapshot the event already made. Manual snapshots carry no event and are never looked up.
+        if (command.SourceEventId is { } sourceEventId)
+        {
+            var already = await _snapshotRepository.GetBySourceEventIdAsync(sourceEventId, cancellationToken)
+                .ConfigureAwait(false);
+            if (already is not null)
+            {
+                var alreadyAttachments = await _attachmentRepository.GetBySnapshotAsync(
+                    already.SessionId, already.SnapshotIndex, cancellationToken).ConfigureAwait(false);
+                return SessionSnapshotMapper.ToDto(already, alreadyAttachments.Count);
+            }
+        }
+
         // Get the live session to capture current state
         var session = await _sessionRepository.GetByIdAsync(command.SessionId, cancellationToken)
             .ConfigureAwait(false)
@@ -96,7 +111,20 @@ internal class CreateSnapshotCommandHandler
             sourceEventId: command.SourceEventId);
 
         await _snapshotRepository.AddAsync(snapshot, cancellationToken).ConfigureAwait(false);
-        await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception)
+        {
+            // #4848: whatever the reason the save failed (the race the lookup above cannot close, two deliveries at
+            // the same instant, or a timeout, or data the column refuses), the insert stays Added on the context,
+            // which the outbox processor shares with its handlers and saves once more at the end of its batch: it
+            // would send the same insert again, outside its per-row try/catch. Forget it, and let the exception go
+            // on: the caller reads a duplicate as «already recorded» and swallows the rest.
+            _snapshotRepository.DiscardUnsavedAdditions();
+            throw;
+        }
 
         return SessionSnapshotMapper.ToDto(snapshot, attachments.Count);
     }
@@ -115,15 +143,10 @@ internal class CreateSnapshotCommandHandler
         if (!checkpoint.IsCheckpoint)
             throw new InvalidOperationException("State reconstruction failed: no checkpoint found");
 
-        var state = checkpoint.DeltaDataJson;
-
-        // Apply subsequent deltas
-        for (int i = 1; i < snapshots.Count; i++)
-        {
-            state = JsonDeltaHelper.ApplyDelta(state, snapshots[i].DeltaDataJson);
-        }
-
-        return state;
+        // Checkpoint + the deltas after it; the photo references of a snapshot are not part of the state (#4869)
+        return JsonDeltaHelper.ReconstructState(
+            checkpoint.DeltaDataJson,
+            snapshots.Skip(1).Select(s => s.DeltaDataJson));
     }
 
     private static string SerializeGameState(JsonDocument? gameState)

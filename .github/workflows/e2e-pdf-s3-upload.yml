@@ -1,0 +1,248 @@
+# Issue #3846 — gate E2E: upload PDF con storage remoto.
+#
+# Avvia lo stack con MinIO (`--profile storage`) + l'override storage E2E, carica un PDF via
+# POST /api/v1/ingest/pdf e verifica due cose: che l'oggetto esista alla chiave PERSISTITA (sotto il
+# gameId, dove lo scrive l'upload) e che la pipeline abbia superato lettura ed estrazione. Non
+# pretende `Ready`: l'ultimo stadio è l'embedding, che richiederebbe embedding-service o Ollama —
+# dipendenze pesanti ed estranee al difetto sorvegliato. Vedi il commento sull'asserzione.
+#
+# Perché serve un gate dedicato: la suite gira con STORAGE_PROVIDER=local
+# (infra/secrets/test.secret), dove `FilePath` è un percorso assoluto reale e il fallback filesystem
+# copre qualunque miss del blob store. In quella configurazione il difetto di #3846 — lettura sotto
+# una cartella ricostruita dal pdfId mentre la scrittura usa il gameId — è STRUTTURALMENTE
+# invisibile: nessun test poteva fallire per causa sua, ed è così che è arrivato in produzione.
+#
+# Il gate NON avvia web né i servizi AI: forza l'estrattore Docnet (in-process) così l'unica
+# dipendenza esterna è il bucket, che è la materia del test.
+name: E2E PDF upload su S3
+
+on:
+  workflow_dispatch: {}
+  pull_request:
+    paths:
+      # I percorsi di lettura del blob e la composizione della chiave.
+      - 'apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/Commands/UploadPdfCommandHandler*.cs'
+      - 'apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/Services/PdfProcessingPipelineService.cs'
+      - 'apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/Services/PdfStorageKey.cs'
+      - 'apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/Services/PdfLocalFile.cs'
+      - 'apps/api/src/Api/BoundedContexts/DocumentProcessing/Application/Queries/DownloadPdfQueryHandler.cs'
+      # I backend di storage e la loro selezione.
+      - 'apps/api/src/Api/Services/Pdf/**'
+      # Ambiente del gate.
+      - 'infra/compose.e2e-storage.yml'
+      - 'tests/fixtures/pdf-s3-upload.sql'
+      - 'tests/fixtures/s3-upload-gate.pdf'
+      - '.github/workflows/e2e-pdf-s3-upload.yml'
+
+concurrency:
+  group: e2e-pdf-s3-upload-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # Stessi default del servizio `minio` in compose.dev.yml. Esportati QUI perché
+  # compose.e2e-storage.yml li interpola a livello di parser compose (non li legge da `env_file`).
+  MINIO_ROOT_USER: minioadmin
+  MINIO_ROOT_PASSWORD: minioadmin123
+  # Deve combaciare con tests/fixtures/pdf-s3-upload.sql. È anche il resourceKey sotto cui l'upload
+  # scrive l'oggetto — diverso dal pdfId per costruzione, che è la condizione perché il gate misuri
+  # qualcosa (vedi il commento nella fixture).
+  GATE_GAME_ID: 00000000-0000-4000-8000-000000003846
+  SMOKE_EMAIL: smoke-user@meepleai.test
+  SMOKE_PASSWORD: SmokeUser1!!
+
+jobs:
+  pdf-s3-upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd  # v4.0.0
+
+      - name: Generate placeholder secrets (CI cannot secrets-sync — no SSH key)
+        working-directory: infra
+        run: make secrets-setup
+
+      - name: Generate placeholder env files for CI (gitignored locally, missing in runner)
+        working-directory: infra/env
+        run: |
+          cat > api.env.dev <<'APIENV'
+          POSTGRES_HOST=postgres
+          POSTGRES_PORT=5432
+          REDIS_HOST=redis
+          REDIS_PORT=6379
+          Email__EnableSsl=false
+          INITIAL_ADMIN_EMAIL=smoke-user@meepleai.test
+          INITIAL_ADMIN_PASSWORD=SmokeUser1!!
+          INITIAL_ADMIN_DISPLAY_NAME=Smoke User
+          Authentication__SessionCookie__Secure=false
+          # Estrattore in-process: il gate non avvia unstructured/smoldocling, e l'orchestratore
+          # spenderebbe i timeout dei due stage remoti prima di arrivare al fallback. Qui l'unica
+          # dipendenza esterna deve essere il bucket.
+          PdfProcessing__Extractor__Provider=Docnet
+          # NB: MOCK_EMBEDDING (DevTools) qui NON servirebbe a nulla — provato: AddMeepleDevTools
+          # sta sotto #if DEBUG e l'immagine è compilata in Release (apps/api/src/Api/Dockerfile).
+          # Per questo il gate si ferma all'estrazione invece di pretendere Ready.
+          APIENV
+          # `web` non viene avviato da questo gate, ma compose lo referenzia: senza il file, il
+          # parser di compose fallisce prima di arrivare ai servizi che ci servono.
+          cat > web.env.dev <<'WEBENV'
+          NEXT_PUBLIC_API_URL=http://localhost:8080
+          API_BASE_URL=http://api:8080
+          NODE_ENV=production
+          WEBENV
+          ls -la
+
+      - name: Boot stack with storage (postgres + redis + api + MinIO)
+        working-directory: infra
+        env:
+          DISABLE_RATE_LIMITING: "true"
+        run: |
+          # Servizi elencati esplicitamente: `web` richiederebbe una build Next completa che questo
+          # gate non usa. --profile storage porta su minio + minio-init (bucket auto-provisioned).
+          docker compose -f docker-compose.yml -f compose.dev.yml -f compose.e2e-storage.yml \
+            --profile storage up -d postgres redis minio minio-init api
+
+          # Gate su /health/live (liveness), NON su /health: quest'ultimo aggrega ~20 check, molti
+          # su servizi che questo job non avvia di proposito.
+          for i in {1..40}; do
+            curl -fs http://localhost:8080/health/live >/dev/null 2>&1 && { echo "API up"; break; }
+            sleep 5
+          done
+          if ! curl -fs http://localhost:8080/health/live >/dev/null 2>&1; then
+            echo "::error::API non risponde su /health/live"
+            docker ps -a --format '{{.Names}}\t{{.Status}}'
+            docker logs meepleai-api --tail=120 || true
+            exit 1
+          fi
+
+      - name: Confirm the API is really running on S3 storage
+        run: |
+          # Senza questo controllo un override che non si applica (typo nel file, servizio non
+          # ricreato) trasformerebbe il gate in un test su storage locale — verde e inutile,
+          # esattamente il difetto che sorveglia.
+          PROVIDER=$(docker exec meepleai-api printenv STORAGE_PROVIDER || echo "")
+          echo "STORAGE_PROVIDER=$PROVIDER"
+          if [ "$PROVIDER" != "s3" ]; then
+            echo "::error::l'API non sta usando lo storage S3: il gate non misurerebbe nulla"
+            exit 1
+          fi
+
+      - name: Seed the DB fixture (game the PDF is uploaded to)
+        run: |
+          docker exec -i meepleai-postgres psql -U meepleai -d meepleai_db \
+            < tests/fixtures/pdf-s3-upload.sql
+
+      - name: Upload the PDF and wait for the pipeline
+        run: |
+          set -euo pipefail
+          COOKIE_JAR=$(mktemp)
+
+          curl -fsS -c "$COOKIE_JAR" -X POST http://localhost:8080/api/v1/auth/login \
+            -H 'Content-Type: application/json' \
+            -d "{\"email\":\"${SMOKE_EMAIL}\",\"password\":\"${SMOKE_PASSWORD}\"}" \
+            -o /dev/null
+
+          echo "--- POST /api/v1/ingest/pdf ---"
+          RESPONSE=$(curl -sS -b "$COOKIE_JAR" -X POST http://localhost:8080/api/v1/ingest/pdf \
+            -F "file=@tests/fixtures/s3-upload-gate.pdf;type=application/pdf" \
+            -F "gameId=${GATE_GAME_ID}")
+          echo "$RESPONSE"
+
+          # L'upload risponde 200 anche quando l'elaborazione poi fallisce — è metà del difetto di
+          # #3846 — quindi lo stato va letto dal DB, non dalla risposta.
+          for i in {1..60}; do
+            STATE=$(docker exec meepleai-postgres psql -U meepleai -d meepleai_db -tAc \
+              "select processing_state from pdf_documents order by \"UploadedAt\" desc limit 1;" | tr -d '[:space:]')
+            echo "processing_state=$STATE"
+            case "$STATE" in
+              Ready|Failed) break ;;
+            esac
+            sleep 5
+          done
+
+      - name: Assert the pipeline read the object back from the bucket
+        run: |
+          set -euo pipefail
+          ROW=$(docker exec meepleai-postgres psql -U meepleai -d meepleai_db -tAc "select processing_state || '|' || coalesce(\"FilePath\",'') || '|' || coalesce(failed_at_state,'') || '|' || coalesce(error_category,'') || '|' || coalesce(\"ProcessingError\",'') from pdf_documents order by \"UploadedAt\" desc limit 1;")
+          echo "riga: $ROW"
+
+          STATE=$(echo "$ROW" | cut -d'|' -f1)
+          FILE_PATH=$(echo "$ROW" | cut -d'|' -f2)
+          FAILED_AT=$(echo "$ROW" | cut -d'|' -f3)
+          CATEGORY=$(echo "$ROW" | cut -d'|' -f4)
+
+          if [ -z "$FILE_PATH" ]; then
+            echo "::error::nessuna riga in pdf_documents: l'upload non ha nemmeno creato il documento"
+            exit 1
+          fi
+
+          # Invariante di #3846, indipendente dall'esito della pipeline: la chiave PERSISTITA deve
+          # puntare a un oggetto che esiste davvero, e deve stare sotto il gameId — cioè dove la
+          # scrive UploadPdfCommandHandler, non sotto una cartella ricostruita dal pdfId.
+          echo "--- l'oggetto esiste alla chiave persistita? ($FILE_PATH) ---"
+          docker compose -f infra/docker-compose.yml -f infra/compose.dev.yml -f infra/compose.e2e-storage.yml             --profile storage run --rm --entrypoint sh minio-init -c "
+              set -e
+              mc alias set myminio http://minio:9000 \$MINIO_ROOT_USER \$MINIO_ROOT_PASSWORD >/dev/null
+              mc stat myminio/meepleai-uploads/${FILE_PATH}
+            "
+
+          case "$FILE_PATH" in
+            *"${GATE_GAME_ID}"*) echo "ok: la chiave sta sotto il gameId, come la scrive l'upload" ;;
+            *) echo "::error::chiave inattesa ($FILE_PATH): il layout è cambiato, il gate va riallineato"; exit 1 ;;
+          esac
+
+          # 🔴 Il criterio è "la pipeline ha superato lettura ed estrazione", NON "processing_state =
+          # Ready". Ready richiede l'ultimo stadio, l'embedding, e quindi embedding-service o Ollama:
+          # dipendenze pesanti ed estranee al difetto sorvegliato. (Il mock in-process di DevTools non
+          # è utilizzabile: l'immagine è Release e AddMeepleDevTools sta sotto #if DEBUG.)
+          #
+          # Su Failed le colonne di contenuto NON sono affidabili — ExtractedText, PageCount e
+          # CharacterCount sono scritti su un'entità AsNoTracking e clobberati dal repository, e solo
+          # FinalizeProcessingAsync li ri-persiste dopo Ready (#3281). L'osservabile che sopravvive è
+          # failed_at_state: se la lettura dal bucket fosse di nuovo rotta, il fallimento cadrebbe su
+          # Extracting con categoria StorageObjectMissing.
+          case "$STATE" in
+            Ready)
+              echo "ok: pipeline completa fino a Ready"
+              ;;
+            Failed)
+              if [ "$CATEGORY" = "StorageObjectMissing" ] || [ "$FAILED_AT" = "Extracting" ] || [ "$FAILED_AT" = "Uploading" ]; then
+                echo "::error::REGRESSIONE #3846: fallimento su lettura/estrazione (failed_at_state=$FAILED_AT, categoria=$CATEGORY)"
+                exit 1
+              fi
+              if [ "$CATEGORY" != "Service" ]; then
+                echo "::error::fallimento inatteso dopo l'estrazione (failed_at_state=$FAILED_AT, categoria=$CATEGORY)"
+                exit 1
+              fi
+              echo "ok: letto, estratto e chunkato (failed_at_state=$FAILED_AT); manca solo l'embedding, che il gate non avvia"
+              ;;
+            *)
+              echo "::error::stato inatteso: $STATE"
+              exit 1
+              ;;
+          esac
+
+      - name: Dump stack logs on failure
+        if: failure()
+        run: |
+          echo "--- container ---"; docker ps -a --format '{{.Names}}\t{{.Status}}'
+          echo "--- api ---"; docker logs meepleai-api --tail=200 || true
+          echo "--- minio ---"; docker logs meepleai-minio --tail=50 || true
+          echo "--- contenuto del bucket ---"
+          docker compose -f infra/docker-compose.yml -f infra/compose.dev.yml -f infra/compose.e2e-storage.yml \
+            --profile storage run --rm --entrypoint sh minio-init -c "
+              mc alias set myminio http://minio:9000 \$MINIO_ROOT_USER \$MINIO_ROOT_PASSWORD >/dev/null
+              mc ls --recursive myminio/meepleai-uploads
+            " || true
+
+      - name: Tear down
+        if: always()
+        working-directory: infra
+        run: |
+          docker compose -f docker-compose.yml -f compose.dev.yml -f compose.e2e-storage.yml \
+            --profile storage down -v || true

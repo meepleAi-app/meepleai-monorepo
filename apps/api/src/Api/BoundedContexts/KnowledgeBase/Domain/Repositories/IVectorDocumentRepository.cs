@@ -4,7 +4,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.Enums;
 namespace Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 
 /// <summary>
-/// Lightweight projection of a VectorDocument's indexing lifecycle state.
+/// Lightweight projection of a game's indexing lifecycle state (the PDF uploaded last, #4660).
 /// Returned by IVectorDocumentRepository.GetIndexingInfoByGameIdAsync.
 /// </summary>
 /// <param name="Status">Typed lifecycle status (compile-time safe).</param>
@@ -35,10 +35,18 @@ internal interface IVectorDocumentRepository
         CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets all vector documents for a specific game.
+    /// Gets all vector documents for a specific game of the shared catalogue.
     /// </summary>
     Task<List<VectorDocument>> GetByGameIdAsync(
         Guid gameId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Issue #4244: gets all vector documents of a private game. The caller must have checked that
+    /// whoever asks may read that game: this method does not.
+    /// </summary>
+    Task<List<VectorDocument>> GetByPrivateGameIdAsync(
+        Guid privateGameId,
         CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -75,10 +83,12 @@ internal interface IVectorDocumentRepository
     Task<int> GetTotalEmbeddingsCountAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Returns lightweight indexing info for a game's VectorDocument (status, chunk count, error).
-    /// Returns null if no VectorDocument exists for the game.
+    /// Returns lightweight indexing info for a game (status, chunk count, error): the state of the PDF
+    /// UPLOADED LAST for the game (#4660), read from the PDF's own <c>ProcessingState</c>; the chunk count and the
+    /// error text come from that PDF's vector document, if it has one yet. Returns null if the game has neither a
+    /// PDF nor a vector document.
     /// Issue #4943: PDF indexing status polling.
-    /// Task 8: parameter is the SharedGame.Id (direct resolution, no legacy bridge).
+    /// Task 8: parameter is the SharedGame.Id or the private game id (direct resolution, no legacy bridge).
     /// </summary>
     Task<VectorDocumentIndexingInfo?> GetIndexingInfoByGameIdAsync(
         Guid sharedGameId,

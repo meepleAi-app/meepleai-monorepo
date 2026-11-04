@@ -2,7 +2,7 @@
  * Tests for SharedGameExtraMeepleCard
  *
  * Covers: loading state, error state, tab navigation, documents tab,
- * KB cards tab, callbacks (onUploadPdf, onCreateAgent).
+ * KB cards tab, callbacks (onUploadPdf).
  */
 
 import { render, screen, within } from '@testing-library/react';
@@ -99,18 +99,12 @@ const baseData: SharedGameDetailData = {
       isActive: false,
     },
   ],
-  linkedAgent: {
-    id: 'agent-1',
-    name: 'Catan Arbitro',
-    isActive: true,
-  },
 };
 
 const emptyData: SharedGameDetailData = {
   ...baseData,
   documents: [],
   kbCards: [],
-  linkedAgent: null,
 };
 
 // ============================================================================
@@ -128,7 +122,7 @@ describe('SharedGameExtraMeepleCard', () => {
 
   it('renders error state', () => {
     render(
-      <SharedGameExtraMeepleCard data={baseData} error="Gioco non trovato" data-testid="sgcard" />,
+      <SharedGameExtraMeepleCard data={baseData} error="Gioco non trovato" data-testid="sgcard" />
     );
 
     expect(screen.getByText('Gioco non trovato')).toBeInTheDocument();
@@ -174,18 +168,12 @@ describe('SharedGameExtraMeepleCard', () => {
     expect(screen.getByText('Trade, build, settle.')).toBeInTheDocument();
   });
 
-  it('shows linked agent on details tab', () => {
-    render(<SharedGameExtraMeepleCard data={baseData} />);
-
-    expect(screen.getByText('Catan Arbitro')).toBeInTheDocument();
-    expect(screen.getByText('Attivo')).toBeInTheDocument();
-  });
-
-  it('does not show linked agent section when no agent', () => {
-    render(<SharedGameExtraMeepleCard data={emptyData} />);
-
-    expect(screen.queryByText('Agente Collegato')).not.toBeInTheDocument();
-  });
+  // Issue #4138: the two linked-agent tests that lived here were deleted with
+  // the badge. They are deliberately NOT replaced by an "it never renders"
+  // assertion: `linkedAgent` is gone from `SharedGameDetailData`, so no fixture
+  // can express it and such a test would pass without exercising anything.
+  // The guard against reintroduction is the type, which makes it a compile
+  // error here — plus the source-level gate tracked in #4138.
 
   // ---------- Documents tab ----------
 
@@ -248,7 +236,7 @@ describe('SharedGameExtraMeepleCard', () => {
 
     expect(screen.getByRole('link', { name: /vedi coda/i })).toHaveAttribute(
       'href',
-      '/admin/knowledge-base/queue',
+      '/admin/knowledge-base/queue'
     );
   });
 
@@ -285,39 +273,14 @@ describe('SharedGameExtraMeepleCard', () => {
     expect(screen.getByText('42 chunk')).toBeInTheDocument();
   });
 
-  it('enables "Crea Agente" button when completed cards exist', async () => {
+  // Issue #4138: per-game agents are gone (ADR-094), and with them the "Crea Agente" button.
+  it('offers no "Crea Agente" button in the KB cards tab', async () => {
     const user = userEvent.setup();
     render(<SharedGameExtraMeepleCard data={baseData} />);
 
     await user.click(screen.getByRole('tab', { name: /kb cards/i }));
 
-    const btn = screen.getByRole('button', { name: /crea agente/i });
-    expect(btn).not.toBeDisabled();
-  });
-
-  it('disables "Crea Agente" button when no completed cards', async () => {
-    const user = userEvent.setup();
-    const dataNoCompleted: SharedGameDetailData = {
-      ...baseData,
-      kbCards: baseData.kbCards.filter((c) => c.indexingStatus !== 'completed'),
-    };
-    render(<SharedGameExtraMeepleCard data={dataNoCompleted} />);
-
-    await user.click(screen.getByRole('tab', { name: /kb cards/i }));
-
-    const btn = screen.getByRole('button', { name: /crea agente/i });
-    expect(btn).toBeDisabled();
-  });
-
-  it('calls onCreateAgent when "Crea Agente" button is clicked', async () => {
-    const user = userEvent.setup();
-    const onCreateAgent = vi.fn();
-    render(<SharedGameExtraMeepleCard data={baseData} onCreateAgent={onCreateAgent} />);
-
-    await user.click(screen.getByRole('tab', { name: /kb cards/i }));
-    await user.click(screen.getByRole('button', { name: /crea agente/i }));
-
-    expect(onCreateAgent).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: /crea agente/i })).not.toBeInTheDocument();
   });
 
   it('shows empty KB cards state when no cards', async () => {
@@ -332,7 +295,9 @@ describe('SharedGameExtraMeepleCard', () => {
   // ---------- Misc ----------
 
   it('applies custom className', () => {
-    render(<SharedGameExtraMeepleCard data={baseData} className="my-custom" data-testid="sgcard" />);
+    render(
+      <SharedGameExtraMeepleCard data={baseData} className="my-custom" data-testid="sgcard" />
+    );
 
     expect(screen.getByTestId('sgcard')).toHaveClass('my-custom');
   });

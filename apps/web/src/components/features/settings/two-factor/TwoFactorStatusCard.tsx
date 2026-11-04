@@ -5,6 +5,7 @@ import React from 'react';
 import { Shield, ShieldCheck, AlertCircle } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
+import { useTranslation } from '@/hooks/useTranslation';
 
 interface Props {
   readonly status: {
@@ -23,6 +24,7 @@ export function TwoFactorStatusCard({
   onDisable,
   isPending,
 }: Props): React.JSX.Element {
+  const { t, locale } = useTranslation();
   const enabled = status.isEnabled;
   return (
     <section className="bg-card border border-border rounded-lg p-5">
@@ -35,7 +37,9 @@ export function TwoFactorStatusCard({
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-quicksand font-bold text-foreground">Two-factor authentication</h3>
+          <h3 className="font-quicksand font-bold text-foreground">
+            {t('settings.security.statusCard.title')}
+          </h3>
           <p
             data-testid="2fa-status"
             className={
@@ -46,13 +50,14 @@ export function TwoFactorStatusCard({
           >
             {enabled ? (
               <>
-                ✓ Enabled
+                ✓ {t('settings.security.statusCard.enabled')}
                 {status.enabledAt &&
-                  ` · ${new Date(status.enabledAt).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })}`}
+                  ` · ${new Date(status.enabledAt).toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' })}`}
               </>
             ) : (
               <>
-                <AlertCircle className="h-3 w-3" aria-hidden /> Not enabled
+                <AlertCircle className="h-3 w-3" aria-hidden />{' '}
+                {t('settings.security.statusCard.notEnabled')}
               </>
             )}
           </p>
@@ -61,13 +66,13 @@ export function TwoFactorStatusCard({
 
       <p className="text-sm text-muted-foreground mt-3">
         {enabled
-          ? 'Verifica via authenticator app. Disabilitala solo se hai perso accesso al dispositivo.'
-          : "Aggiungi un secondo livello di protezione: anche se la password viene compromessa, l'account resta al sicuro."}
+          ? t('settings.security.statusCard.enabledDescription')
+          : t('settings.security.statusCard.disabledDescription')}
       </p>
 
       {!enabled && (
         <Button data-testid="enable-2fa" className="mt-4" onClick={onSetup} disabled={isPending}>
-          Set up two-factor authentication
+          {t('settings.security.statusCard.setUp')}
         </Button>
       )}
       {enabled && (
@@ -76,9 +81,9 @@ export function TwoFactorStatusCard({
             variant="outline"
             size="sm"
             disabled
-            title="Regenerate recovery codes (coming soon)"
+            title={t('settings.security.statusCard.regenerateCodesSoon')}
           >
-            Regenerate recovery codes
+            {t('settings.security.statusCard.regenerateCodes')}
           </Button>
           <Button
             data-testid="disable-2fa"
@@ -87,7 +92,7 @@ export function TwoFactorStatusCard({
             onClick={onDisable}
             disabled={isPending}
           >
-            Disable 2FA
+            {t('settings.security.statusCard.disable')}
           </Button>
         </div>
       )}

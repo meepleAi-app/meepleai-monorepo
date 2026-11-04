@@ -1,15 +1,25 @@
 /**
  * Game Search Hook with Debounce
  *
- * Searches across all game sources (UserLibrary + SharedGames + PrivateGames)
- * with 300ms debounce to prevent excessive API calls.
+ * Searches games on the server with a 300ms debounce, from one of two sources:
+ * - `catalog` (default): the game catalog, from 2 characters on;
+ * - `library`: the user's library (#4187). The server filters by title, so a game
+ *   past the first page is still found. With an empty query it returns the first
+ *   page sorted by title, so a picker has something to show before typing. Private
+ *   games are not part of the library endpoint.
+ *
+ * The query key carries source, text and page size: an answer for an older text
+ * never overwrites the current one.
  *
  * Issue #4273: Game Search Autocomplete
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, type UseQueryResult } from '@tanstack/react-query';
 
 import { useDebounce } from '@/components/ui/data-display/entity-list-view/hooks/use-debounce';
+import { api } from '@/lib/api';
+
+export type GameSearchSource = 'catalog' | 'library';
 
 export interface GameSearchResult {
   id: string;
@@ -18,19 +28,68 @@ export interface GameSearchResult {
   imageUrl?: string;
 }
 
+export interface UseGameSearchOptions {
+  /** Where to search (default: `catalog`). */
+  source?: GameSearchSource;
+  /** Debounce delay in milliseconds (default: 300). */
+  debounceMs?: number;
+  /** Library page size (default: 20). Clamped to 1..100, what the server returns at most. */
+  limit?: number;
+  /** Whether to run the query (default: true). */
+  enabled?: boolean;
+}
+
+export type UseGameSearchResult = UseQueryResult<GameSearchResult[]> & {
+  /**
+   * False while the list on screen belongs to an older text: during the debounce, or
+   * while the library keeps the previous page (`keepPreviousData`). A picker should not
+   * let Enter commit an entry from that list.
+   */
+  resultsMatchQuery: boolean;
+};
+
+/** `GET /api/v1/library` accepts a page size from 1 to 100 (UserLibraryRepository). */
+const LIBRARY_MAX_PAGE_SIZE = 100;
+
 /**
- * Search games with debounced query
+ * Search games with a debounced query
  *
  * @param query - Search query string
- * @param debounceMs - Debounce delay in milliseconds (default: 300)
+ * @param options - Source, debounce, page size and enabled flag
  * @returns Query result with games array
  */
-export function useGameSearch(query: string, debounceMs = 300) {
+export function useGameSearch(
+  query: string,
+  options: UseGameSearchOptions = {}
+): UseGameSearchResult {
+  const { source = 'catalog', debounceMs = 300, limit = 20, enabled = true } = options;
   const debouncedQuery = useDebounce(query, debounceMs);
+  const pageSize = Math.min(Math.max(Math.trunc(limit), 1), LIBRARY_MAX_PAGE_SIZE);
+  const isLibrary = source === 'library';
 
-  return useQuery({
-    queryKey: ['games', 'search', debouncedQuery],
-    queryFn: async () => {
+  const result = useQuery({
+    queryKey: isLibrary
+      ? ['games', 'search', 'library', debouncedQuery, pageSize]
+      : ['games', 'search', 'catalog', debouncedQuery],
+    queryFn: async (): Promise<GameSearchResult[]> => {
+      if (isLibrary) {
+        const search = debouncedQuery.trim();
+        const response = await api.library.getLibrary({
+          search: search || undefined,
+          page: 1,
+          pageSize,
+          sortBy: 'title',
+          // The endpoint sorts descending unless told otherwise (`sortDescending ?? true`).
+          sortDescending: false,
+        });
+        return response.items.map(entry => ({
+          id: entry.gameId,
+          name: entry.gameTitle,
+          source: 'library' as const,
+          imageUrl: entry.gameImageUrl ?? undefined,
+        }));
+      }
+
       if (!debouncedQuery || debouncedQuery.length < 2) {
         return [];
       }
@@ -55,7 +114,15 @@ export function useGameSearch(query: string, debounceMs = 300) {
         })
       );
     },
-    enabled: debouncedQuery.length >= 2,
+    enabled: enabled && (isLibrary || debouncedQuery.length >= 2),
+    // The library keeps the previous list on screen while the next text loads, so a
+    // picker does not flash "no games" at every keystroke.
+    placeholderData: isLibrary ? keepPreviousData : undefined,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   });
+
+  return {
+    ...result,
+    resultsMatchQuery: debouncedQuery === query && !result.isPlaceholderData,
+  };
 }

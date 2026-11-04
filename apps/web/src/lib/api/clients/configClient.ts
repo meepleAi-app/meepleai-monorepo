@@ -10,23 +10,14 @@ import {
   PagedResultSchema,
   ConfigurationValidationResultSchema,
   ConfigurationExportDtoSchema,
-  GameLibraryLimitsDtoSchema,
-  PdfUploadLimitsDtoSchema,
   PdfTierUploadLimitsDtoSchema,
-  ChatHistoryLimitsDtoSchema,
   type SystemConfigurationDto,
   type PagedResult,
   type ConfigurationHistoryDto,
   type ConfigurationValidationResult,
   type ConfigurationExportDto,
-  type GameLibraryLimitsDto,
-  type UpdateGameLibraryLimitsRequest,
-  type PdfUploadLimitsDto,
-  type UpdatePdfUploadLimitsRequest,
   type PdfTierUploadLimitsDto,
   type UpdatePdfTierUploadLimitsRequest,
-  type ChatHistoryLimitsDto,
-  type UpdateChatHistoryLimitsRequest,
 } from '../schemas';
 
 import type { HttpClient } from '../core/httpClient';
@@ -312,126 +303,6 @@ export function createConfigClient({ httpClient }: CreateConfigClientParams) {
 
       if (!response) {
         return [];
-      }
-
-      return response;
-    },
-
-    // ========== Game Library Limits (Issue #2444) ==========
-
-    /**
-     * Get current game library tier limits
-     * @returns Current limits for Free, Normal, and Premium tiers
-     */
-    async getGameLibraryLimits(): Promise<GameLibraryLimitsDto> {
-      const response = await httpClient.get(
-        '/api/v1/admin/config/game-library-limits',
-        GameLibraryLimitsDtoSchema
-      );
-
-      if (!response) {
-        throw new Error('Failed to fetch game library limits');
-      }
-
-      return response;
-    },
-
-    /**
-     * Update game library tier limits
-     * @param request Updated limits for all tiers
-     * @returns Updated limits configuration
-     */
-    async updateGameLibraryLimits(
-      request: UpdateGameLibraryLimitsRequest
-    ): Promise<GameLibraryLimitsDto> {
-      const response = await httpClient.put(
-        '/api/v1/admin/config/game-library-limits',
-        request,
-        GameLibraryLimitsDtoSchema
-      );
-
-      if (!response) {
-        throw new Error('Failed to update game library limits');
-      }
-
-      return response;
-    },
-
-    // ========== Chat History Limits (Issue #4918) ==========
-
-    /**
-     * Get current chat history tier limits
-     * @returns Current limits for Free, Normal, and Premium tiers
-     */
-    async getChatHistoryLimits(): Promise<ChatHistoryLimitsDto> {
-      const response = await httpClient.get(
-        '/api/v1/admin/config/chat-history-limits',
-        ChatHistoryLimitsDtoSchema
-      );
-
-      if (!response) {
-        throw new Error('Failed to fetch chat history limits');
-      }
-
-      return response;
-    },
-
-    /**
-     * Update chat history tier limits
-     * @param request Updated limits for all tiers
-     * @returns Updated limits configuration
-     */
-    async updateChatHistoryLimits(
-      request: UpdateChatHistoryLimitsRequest
-    ): Promise<ChatHistoryLimitsDto> {
-      const response = await httpClient.put(
-        '/api/v1/admin/config/chat-history-limits',
-        request,
-        ChatHistoryLimitsDtoSchema
-      );
-
-      if (!response) {
-        throw new Error('Failed to update chat history limits');
-      }
-
-      return response;
-    },
-
-    // ========== PDF Upload Limits (Issue #3078) ==========
-
-    /**
-     * Get current PDF upload limits configuration
-     * @returns Current limits for PDF uploads
-     */
-    async getPdfUploadLimits(): Promise<PdfUploadLimitsDto> {
-      const response = await httpClient.get(
-        '/api/v1/admin/system/pdf-upload-limits',
-        PdfUploadLimitsDtoSchema
-      );
-
-      if (!response) {
-        throw new Error('Failed to fetch PDF upload limits');
-      }
-
-      return response;
-    },
-
-    /**
-     * Update PDF upload limits configuration
-     * @param request Updated PDF upload limits
-     * @returns Updated limits configuration
-     */
-    async updatePdfUploadLimits(
-      request: UpdatePdfUploadLimitsRequest
-    ): Promise<PdfUploadLimitsDto> {
-      const response = await httpClient.put(
-        '/api/v1/admin/system/pdf-upload-limits',
-        request,
-        PdfUploadLimitsDtoSchema
-      );
-
-      if (!response) {
-        throw new Error('Failed to update PDF upload limits');
       }
 
       return response;

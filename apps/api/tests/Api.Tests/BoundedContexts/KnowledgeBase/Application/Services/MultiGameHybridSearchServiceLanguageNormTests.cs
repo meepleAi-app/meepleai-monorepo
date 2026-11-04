@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Services;
@@ -32,8 +33,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 [Trait("BoundedContext", "KnowledgeBase")]
 public sealed class MultiGameHybridSearchServiceLanguageNormTests
 {
-    private readonly Mock<IHybridSearchService> _hybridSearchMock = new(MockBehavior.Strict);
-    private readonly Mock<IServiceScopeFactory> _scopeFactoryMock = new();
+    private readonly PerGameSearchStub _perGame = new();
 
     [Fact]
     public async Task MonolingualCandidates_OrderingIsUnchanged()
@@ -51,7 +51,7 @@ public sealed class MultiGameHybridSearchServiceLanguageNormTests
         };
         var sut = SetUpPerGameResults(games, perGame);
 
-        var result = await sut.SearchAsync("how do I set up the board?", games, limit: 10);
+        var result = await sut.SearchAsync("how do I set up the board?", games, 10, PerGameSearchStub.Seed);
 
         result.Select(r => r.VectorScore).Should().BeEquivalentTo(
             new float?[] { 0.90f, 0.80f, 0.70f, 0.60f },
@@ -76,7 +76,7 @@ public sealed class MultiGameHybridSearchServiceLanguageNormTests
                 .Concat(englishGames.Skip(1).Select(g => Chunk(g, 0.80f, "en")))
                 .ToArray());
 
-        var result = await sut.SearchAsync("come si prepara il tabellone?", italianGames.Concat(englishGames).ToArray(), limit: 12);
+        var result = await sut.SearchAsync("come si prepara il tabellone?", italianGames.Concat(englishGames).ToArray(), 12, PerGameSearchStub.Seed);
 
         result[0].Content.Should().Be("TARGET",
             "l'offset uniforme della banda italiana non deve più decidere il primo risultato");
@@ -101,7 +101,7 @@ public sealed class MultiGameHybridSearchServiceLanguageNormTests
                 .Concat(englishGames.Skip(1).Select(g => Chunk(g, 0.80f, "en")))
                 .ToArray());
 
-        var result = await sut.SearchAsync("come si prepara il tabellone?", all, limit: 12);
+        var result = await sut.SearchAsync("come si prepara il tabellone?", all, 12, PerGameSearchStub.Seed);
 
         // Il target ha la cosine GREZZA più bassa (0.82) dei sei chunk italiani (0.86), quindi su
         // quel segnale sarebbe stato settimo. Che sia primo è la correzione, e la cosine riportata
@@ -129,7 +129,7 @@ public sealed class MultiGameHybridSearchServiceLanguageNormTests
                 .Append(Chunk(germanGame, 0.50f, "de", content: "LONE_DE"))
                 .ToArray());
 
-        var result = await sut.SearchAsync("wie baue ich das Spielbrett auf?", all, limit: 10);
+        var result = await sut.SearchAsync("wie baue ich das Spielbrett auf?", all, 10, PerGameSearchStub.Seed);
 
         result[^1].Content.Should().Be("LONE_DE",
             "un gruppo con un solo membro non ha una media da cui stimare un offset");
@@ -154,7 +154,7 @@ public sealed class MultiGameHybridSearchServiceLanguageNormTests
                 .Concat(keywordGames.Select(KeywordOnlyChunk))
                 .ToArray());
 
-        var result = await sut.SearchAsync("come si prepara il tabellone?", all, limit: 20);
+        var result = await sut.SearchAsync("come si prepara il tabellone?", all, 20, PerGameSearchStub.Seed);
 
         result[0].Content.Should().Be("TARGET");
     }
@@ -169,70 +169,28 @@ public sealed class MultiGameHybridSearchServiceLanguageNormTests
     /// <c>FuseGlobally</c> è esattamente l'insieme passato.
     /// </summary>
     private MultiGameHybridSearchService SetUpPerGameResults(
-        IReadOnlyList<Guid> games, IReadOnlyList<HybridSearchResult> chunks)
+        IReadOnlyList<Guid> games, IReadOnlyList<(Guid GameId, SearchResultDto Passage)> chunks)
     {
         foreach (var gameId in games)
         {
-            var forGame = chunks.Where(c => c.GameId == gameId).ToList();
-            _hybridSearchMock
-                .Setup(h => h.SearchAsync(
-                    It.IsAny<string>(), gameId, It.IsAny<SearchMode>(), It.IsAny<int>(),
-                    It.IsAny<List<Guid>?>(), It.IsAny<float>(), It.IsAny<float>(),
-                    It.IsAny<double>(), It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(forGame);
+            _perGame.Returns(gameId, chunks.Where(c => c.GameId == gameId).Select(c => c.Passage).ToArray());
         }
 
-        var provider = new Mock<IServiceProvider>();
-        provider.Setup(p => p.GetService(typeof(IHybridSearchService))).Returns(_hybridSearchMock.Object);
-        var scope = new Mock<IServiceScope>();
-        scope.SetupGet(s => s.ServiceProvider).Returns(provider.Object);
-        _scopeFactoryMock.Setup(f => f.CreateScope()).Returns(scope.Object);
-
         return new MultiGameHybridSearchService(
-            _scopeFactoryMock.Object,
+            _perGame.ScopeFactory(),
             new MockEmbeddingService(),
             NullLogger<MultiGameHybridSearchService>.Instance);
     }
 
-    private static HybridSearchResult Chunk(
+    // HybridScore per-gioco: irrilevante, FuseGlobally lo sostituisce.
+    private static (Guid GameId, SearchResultDto Passage) Chunk(
         Guid gameId, float cosine, string language, string? content = null) =>
-        new()
-        {
-            ChunkId = $"{Guid.NewGuid()}_0",
-            Content = content ?? $"chunk {language} {cosine}",
-            PdfDocumentId = Guid.NewGuid().ToString(),
-            GameId = gameId,
-            ChunkIndex = 0,
-            PageNumber = 1,
-            // HybridScore per-gioco: irrilevante, FuseGlobally lo sostituisce.
-            HybridScore = cosine,
-            VectorScore = cosine,
-            KeywordScore = null,
-            VectorRank = 1,
-            KeywordRank = null,
-            MatchedTerms = new List<string>(),
-            Mode = SearchMode.Hybrid,
-            RoleTags = GameBookRole.None,
-            Language = language
-        };
+        (gameId, PerGameSearchStub.Passage(
+            hybridScore: cosine, vectorScore: cosine, language: language,
+            content: content ?? $"chunk {language} {cosine}"));
 
-    private static HybridSearchResult KeywordOnlyChunk(Guid gameId) =>
-        new()
-        {
-            ChunkId = $"{Guid.NewGuid()}_0",
-            Content = "keyword only",
-            PdfDocumentId = Guid.NewGuid().ToString(),
-            GameId = gameId,
-            ChunkIndex = 0,
-            PageNumber = 1,
-            HybridScore = 0.1f,
-            VectorScore = null,
-            KeywordScore = 0.1f,
-            VectorRank = null,
-            KeywordRank = 1,
-            MatchedTerms = new List<string> { "catan" },
-            Mode = SearchMode.Keyword,
-            RoleTags = GameBookRole.None,
-            Language = null
-        };
+    private static (Guid GameId, SearchResultDto Passage) KeywordOnlyChunk(Guid gameId) =>
+        (gameId, PerGameSearchStub.Passage(
+            hybridScore: 0.1f, keywordScore: 0.1f, language: null,
+            content: "keyword only", matchedTerms: new[] { "catan" }));
 }

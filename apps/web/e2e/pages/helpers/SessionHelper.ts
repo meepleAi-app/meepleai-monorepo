@@ -136,58 +136,6 @@ export const MOCK_START_SESSION_RESPONSE = {
   shareLink: `http://localhost:3000/sessions/join?code=${MOCK_INVITE_CODE}`,
 };
 
-export const MOCK_SCORE_PARSE_RECORDED = {
-  status: 'recorded' as const,
-  playerName: 'Marco',
-  playerId: 'player-1',
-  dimension: 'points',
-  value: 5,
-  round: 2,
-  confidence: 0.95,
-  requiresConfirmation: false,
-  message: 'Punteggio registrato: Marco +5 punti',
-  ambiguousCandidates: null,
-};
-
-export const MOCK_SCORE_PARSE_NEEDS_CONFIRM = {
-  status: 'parsed' as const,
-  playerName: 'Marco',
-  playerId: 'player-1',
-  dimension: 'points',
-  value: 5,
-  round: 2,
-  confidence: 0.65,
-  requiresConfirmation: true,
-  message: 'Conferma il punteggio: Marco +5 punti',
-  ambiguousCandidates: null,
-};
-
-export const MOCK_SCORE_PARSE_AMBIGUOUS = {
-  status: 'ambiguous' as const,
-  playerName: null,
-  playerId: null,
-  dimension: 'points',
-  value: 5,
-  round: 2,
-  confidence: 0.4,
-  requiresConfirmation: true,
-  message: 'Giocatore ambiguo. Seleziona il giocatore corretto.',
-  ambiguousCandidates: ['Marco', 'Maria'],
-};
-
-export const MOCK_SCORE_PARSE_UNRECOGNIZED = {
-  status: 'unrecognized' as const,
-  playerName: null,
-  playerId: null,
-  dimension: null,
-  value: null,
-  round: null,
-  confidence: 0.1,
-  requiresConfirmation: false,
-  message: 'Non ho capito. Prova con "Marco ha 5 punti".',
-  ambiguousCandidates: null,
-};
-
 export const MOCK_DISPUTE_RESPONSE = {
   id: 'dispute-1',
   verdict:
@@ -288,22 +236,6 @@ export class SessionHelper {
       .context()
       .route(`${API_BASE}/api/v1/game-night/start-session`, async route =>
         route.fulfill({ status: 201, json: response })
-      );
-  }
-
-  async mockScoreParse(response = MOCK_SCORE_PARSE_RECORDED) {
-    await this.page
-      .context()
-      .route(`${API_BASE}/api/v1/live-sessions/*/scores/parse`, async route =>
-        route.fulfill({ status: 200, json: response })
-      );
-  }
-
-  async mockScoreConfirm() {
-    await this.page
-      .context()
-      .route(`${API_BASE}/api/v1/live-sessions/*/scores/confirm`, async route =>
-        route.fulfill({ status: 200, json: { success: true } })
       );
   }
 

@@ -43,6 +43,9 @@ const HOUSE_RULES_KEYS = [
   'empty',
 ];
 
+// #4155 — ownership declaration CTA (GameDetailOwnershipCta + its toasts)
+const OWNERSHIP_KEYS = ['message', 'cta', 'declared', 'declaredNoManual'];
+
 type Catalog = Record<string, unknown> & {
   pages: { gameDetail: Record<string, Record<string, string>> };
 };
@@ -55,6 +58,7 @@ describe('GameDetail i18n key validation (#3103)', () => {
     ['stats', STATS_KEYS],
     ['chat', CHAT_KEYS],
     ['houseRules', HOUSE_RULES_KEYS],
+    ['ownership', OWNERSHIP_KEYS],
   ] as const)('pages.gameDetail.%s subtree', (subtree, keys) => {
     it.each(keys)(`IT: pages.gameDetail.${subtree}.%s exists and is non-empty`, key => {
       expect(itGameDetail[subtree]?.[key]).toBeTruthy();
@@ -66,7 +70,7 @@ describe('GameDetail i18n key validation (#3103)', () => {
   });
 
   it('IT and EN have the same keys for stats/chat/houseRules (parity)', () => {
-    for (const subtree of ['stats', 'chat', 'houseRules'] as const) {
+    for (const subtree of ['stats', 'chat', 'houseRules', 'ownership'] as const) {
       const itKeys = Object.keys(itGameDetail[subtree] ?? {}).sort();
       const enKeys = Object.keys(enGameDetail[subtree] ?? {}).sort();
       expect(itKeys).toEqual(enKeys);

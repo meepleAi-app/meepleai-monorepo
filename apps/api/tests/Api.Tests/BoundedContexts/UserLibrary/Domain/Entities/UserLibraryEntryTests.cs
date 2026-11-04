@@ -34,7 +34,6 @@ public sealed class UserLibraryEntryTests
         entry.AddedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
         entry.IsFavorite.Should().BeFalse();
         entry.Notes.Should().BeNull();
-        entry.CustomAgentConfig.Should().BeNull();
         entry.CustomPdfMetadata.Should().BeNull();
     }
 
@@ -209,72 +208,6 @@ public sealed class UserLibraryEntryTests
 
         // Assert
         entry.Notes.Should().BeNull();
-    }
-
-    #endregion
-
-    #region Agent Configuration Tests
-
-    [Fact]
-    public void ConfigureAgent_WithValidConfig_SetsCustomConfig()
-    {
-        // Arrange
-        var entry = CreateEntry();
-        var config = AgentConfiguration.CreateDefault();
-
-        // Act
-        entry.ConfigureAgent(config);
-
-        // Assert
-        entry.CustomAgentConfig.Should().Be(config);
-    }
-
-    [Fact]
-    public void ConfigureAgent_WithNull_ThrowsArgumentNullException()
-    {
-        // Arrange
-        var entry = CreateEntry();
-
-        // Act
-        var action = () => entry.ConfigureAgent(null!);
-
-        // Assert
-        action.Should().Throw<ArgumentNullException>();
-    }
-
-    [Fact]
-    public void ResetAgentToDefault_ClearsCustomConfig()
-    {
-        // Arrange
-        var entry = CreateEntry();
-        entry.ConfigureAgent(AgentConfiguration.CreateDefault());
-
-        // Act
-        entry.ResetAgentToDefault();
-
-        // Assert
-        entry.CustomAgentConfig.Should().BeNull();
-    }
-
-    [Fact]
-    public void HasCustomAgent_WhenConfigured_ReturnsTrue()
-    {
-        // Arrange
-        var entry = CreateEntry();
-        entry.ConfigureAgent(AgentConfiguration.CreateDefault());
-
-        // Assert
-        entry.HasCustomAgent().Should().BeTrue();
-    }
-
-    [Fact]
-    public void HasCustomAgent_WhenNotConfigured_ReturnsFalse()
-    {
-        // Arrange
-        var entry = CreateEntry();
-
-        // Assert
-        entry.HasCustomAgent().Should().BeFalse();
     }
 
     #endregion

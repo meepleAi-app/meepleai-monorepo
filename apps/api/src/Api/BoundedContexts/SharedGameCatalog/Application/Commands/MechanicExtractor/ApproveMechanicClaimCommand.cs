@@ -12,8 +12,10 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExt
 /// <param name="ClaimId">Claim id to approve.</param>
 /// <param name="ReviewerId">Admin user id from the validated session (never from the body).</param>
 /// <param name="Note">Optional free-form review note captured on approval (#526 AC-6, ≤ 2000 chars).</param>
+/// <param name="Structure">Optional reviewer-edited Kind/Priority/Overrides/Trigger applied just before approval; <c>null</c> keeps the proposed values.</param>
 internal record ApproveMechanicClaimCommand(
     Guid AnalysisId,
     Guid ClaimId,
     Guid ReviewerId,
-    string? Note = null) : ICommand<MechanicClaimDto>;
+    string? Note = null,
+    MechanicClaimStructureDto? Structure = null) : ICommand<MechanicClaimDto>;

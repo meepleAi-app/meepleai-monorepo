@@ -49,7 +49,7 @@ export class WaitHelper {
 
     // Wait for streaming indicator to disappear (e.g., "Invio..." button)
     const streamingButton = this.page.locator('button[type="submit"]:has-text("Invio...")');
-    if (await streamingButton.isVisible().catch(() => false)) {
+    if (await streamingButton.isVisible()) {
       await expect(streamingButton).not.toBeVisible({ timeout: 5000 });
     }
   }

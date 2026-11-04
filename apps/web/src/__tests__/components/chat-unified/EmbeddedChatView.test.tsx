@@ -48,33 +48,35 @@ describe('EmbeddedChatView', () => {
   });
 
   it('renders the embedded chat view container', () => {
-    render(<EmbeddedChatView threadId="t1" agentId="a1" gameId="g1" />);
+    render(<EmbeddedChatView threadId="t1" gameId="g1" />);
     expect(screen.getByTestId('embedded-chat-view')).toBeInTheDocument();
   });
 
   it('renders input area with placeholder', () => {
-    render(<EmbeddedChatView threadId="t1" agentId="a1" gameId="g1" />);
+    render(<EmbeddedChatView threadId="t1" gameId="g1" />);
     expect(screen.getByPlaceholderText(/scrivi/i)).toBeInTheDocument();
   });
 
   it('renders send button', () => {
-    render(<EmbeddedChatView threadId="t1" agentId="a1" gameId="g1" />);
+    render(<EmbeddedChatView threadId="t1" gameId="g1" />);
     expect(screen.getByRole('button', { name: /invia/i })).toBeInTheDocument();
   });
 
   it('renders welcome state when no messages', () => {
-    render(<EmbeddedChatView threadId="t1" agentId="a1" gameId="g1" />);
+    render(<EmbeddedChatView threadId="t1" gameId="g1" />);
     expect(screen.getByText(/chiedi qualsiasi cosa/i)).toBeInTheDocument();
   });
 
   it('sends message via SSE on submit', async () => {
-    render(<EmbeddedChatView threadId="t1" agentId="a1" gameId="g1" />);
+    render(<EmbeddedChatView threadId="t1" gameId="g1" />);
     const input = screen.getByPlaceholderText(/scrivi/i);
     fireEvent.change(input, { target: { value: 'Come si gioca?' } });
     fireEvent.submit(input.closest('form')!);
     await waitFor(() => {
+      // Issue #4139: il primo argomento e' il gameId, non un agentId: lo stream
+      // va su /agents/qa/stream, che e' scopato sul gioco.
       expect(mockSendMessage).toHaveBeenCalledWith(
-        'a1',
+        'g1',
         'Come si gioca?',
         't1',
         expect.anything(),
@@ -84,7 +86,7 @@ describe('EmbeddedChatView', () => {
   });
 
   it('clears input after sending', async () => {
-    render(<EmbeddedChatView threadId="t1" agentId="a1" gameId="g1" />);
+    render(<EmbeddedChatView threadId="t1" gameId="g1" />);
     const input = screen.getByPlaceholderText(/scrivi/i) as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'Test message' } });
     fireEvent.submit(input.closest('form')!);
@@ -94,7 +96,7 @@ describe('EmbeddedChatView', () => {
   });
 
   it('adds user message to the list on send', async () => {
-    render(<EmbeddedChatView threadId="t1" agentId="a1" gameId="g1" />);
+    render(<EmbeddedChatView threadId="t1" gameId="g1" />);
     const input = screen.getByPlaceholderText(/scrivi/i);
     fireEvent.change(input, { target: { value: 'Ciao!' } });
     fireEvent.submit(input.closest('form')!);
@@ -106,7 +108,7 @@ describe('EmbeddedChatView', () => {
   });
 
   it('does not send empty messages', () => {
-    render(<EmbeddedChatView threadId="t1" agentId="a1" gameId="g1" />);
+    render(<EmbeddedChatView threadId="t1" gameId="g1" />);
     const input = screen.getByPlaceholderText(/scrivi/i);
     fireEvent.submit(input.closest('form')!);
     expect(mockSendMessage).not.toHaveBeenCalled();
@@ -118,7 +120,7 @@ describe('EmbeddedChatView', () => {
       isStreaming: true,
       currentAnswer: 'Streaming response...',
     };
-    render(<EmbeddedChatView threadId="t1" agentId="a1" gameId="g1" />);
+    render(<EmbeddedChatView threadId="t1" gameId="g1" />);
     expect(screen.getByTestId('message-streaming')).toBeInTheDocument();
     expect(screen.getByText('Streaming response...')).toBeInTheDocument();
   });
@@ -129,7 +131,7 @@ describe('EmbeddedChatView', () => {
       isStreaming: true,
       statusMessage: 'Connecting...',
     };
-    render(<EmbeddedChatView threadId="t1" agentId="a1" gameId="g1" />);
+    render(<EmbeddedChatView threadId="t1" gameId="g1" />);
     expect(screen.getByTestId('stream-status')).toBeInTheDocument();
     expect(screen.getByText('Connecting...')).toBeInTheDocument();
   });
@@ -139,7 +141,7 @@ describe('EmbeddedChatView', () => {
       ...mockState,
       error: 'Something went wrong',
     };
-    render(<EmbeddedChatView threadId="t1" agentId="a1" gameId="g1" />);
+    render(<EmbeddedChatView threadId="t1" gameId="g1" />);
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.getByText('Something went wrong')).toBeInTheDocument();
   });
@@ -149,7 +151,7 @@ describe('EmbeddedChatView', () => {
       ...mockState,
       isStreaming: true,
     };
-    render(<EmbeddedChatView threadId="t1" agentId="a1" gameId="g1" />);
+    render(<EmbeddedChatView threadId="t1" gameId="g1" />);
     expect(screen.getByPlaceholderText(/scrivi/i)).toBeDisabled();
   });
 });

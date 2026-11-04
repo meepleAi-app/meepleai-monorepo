@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Slack;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Time.Testing;
@@ -24,7 +25,7 @@ public sealed class ShareRequestSlackBuilderTests
             .Build();
 
         var timeProvider = new FakeTimeProvider(FixedTime);
-        _sut = new ShareRequestSlackBuilder(config, timeProvider);
+        _sut = new ShareRequestSlackBuilder(PublicBaseUrlTestSupport.ProviderFor(config), timeProvider);
     }
 
     [Theory]

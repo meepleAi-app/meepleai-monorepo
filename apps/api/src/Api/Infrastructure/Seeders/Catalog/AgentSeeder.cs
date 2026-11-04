@@ -33,7 +33,6 @@ internal static class AgentSeeder
         var definition = AgentDefinition.CreateSystem(
             name: SystemDefinitionName,
             description: "Specialized agent for board game rules interpretation and clarification.",
-            type: AgentType.Custom("RAG", "Rules retrieval-augmented generation"),
             config: AgentDefinitionConfig.Create(
                 // Use the configured default (env-overridable, guaranteed routable). The previous
                 // hardcoded "claude-haiku-4-5-20251001" is a BARE Anthropic id that no LlmClient

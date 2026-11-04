@@ -131,17 +131,18 @@ public sealed class CustomPdfMetadataTests
     }
 
     [Fact]
-    public void Create_WithFileSizeExceeding100MB_ThrowsArgumentOutOfRangeException()
+    public void Create_AboveThePdfLimit_IsNotTheValueObjectsToRefuse()
     {
-        // Act
-        var action = () => CustomPdfMetadata.Create(
+        // #4449: the upper bound is configuration (PdfProcessing:MaxFileSizeBytes), checked by
+        // UploadCustomGamePdfCommandValidator. As an invariant it also ran when a stored row was read
+        // back, so lowering the limit would make existing library entries fail to load.
+        var metadata = CustomPdfMetadata.CreateWithTimestamp(
             url: "https://storage.example.com/test.pdf",
-            fileSizeBytes: 100_000_001, // 100 MB + 1 byte
+            uploadedAt: DateTime.UtcNow,
+            fileSizeBytes: 200L * 1024 * 1024,
             originalFileName: "test.pdf");
 
-        // Assert
-        action.Should().Throw<ArgumentOutOfRangeException>()
-            .WithParameterName("fileSizeBytes");
+        metadata.FileSizeBytes.Should().Be(200L * 1024 * 1024);
     }
 
     [Fact]

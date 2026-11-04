@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import * as signalR from '@microsoft/signalr';
 
+import { getHubBase } from '@/lib/api/core/httpClient';
 import { logger } from '@/lib/logger';
 import { useGameStateStore } from '@/lib/stores/game-state-store';
 import type { GameState, StateConflict, StateUpdateMessage } from '@/types/game-state';
@@ -39,7 +40,23 @@ export function useGameStateSignalR({
 
     const setupConnection = async () => {
       try {
-        const hubUrl = `${process.env.NEXT_PUBLIC_API_URL}/hubs/gamestate`;
+        // 🔴 Qui c'era `${process.env.NEXT_PUBLIC_API_URL}/hubs/gamestate`, e
+        // `NEXT_PUBLIC_API_URL` **non e' definita in nessun build deployabile**: compare solo
+        // in quattro workflow E2E di CI, mai in `.env.local`, `.env.development.example` o in
+        // uno dei cinque compose. Le `NEXT_PUBLIC_*` sono inlineate da `next build`, quindi
+        // qui non arrivava una stringa vuota ma la stringa **letterale** `"undefined"`:
+        // l'URL diventava `undefined/hubs/gamestate`.
+        //
+        // Il path era invece corretto (`gamestate`, senza trattino), al contrario di
+        // `useSignalrSession`. I due call site erano sbagliati in modi diversi e complementari;
+        // ora passano entrambi da `getHubBase()`, che e' il motivo per cui quella funzione
+        // esiste.
+        //
+        // Nota per chi legge: questo hook **non e' importato da nessun file**
+        // (`grep -rn useGameStateSignalR src/` da' solo la definizione), quindi il difetto era
+        // latente. Corretto e non rimosso perche' la rimozione e' una decisione di prodotto su
+        // #2406, non di questa correzione — ma cosi' non e' piu' una trappola per chi lo monta.
+        const hubUrl = `${getHubBase()}/hubs/gamestate`;
 
         const connection = new signalR.HubConnectionBuilder()
           .withUrl(hubUrl, {

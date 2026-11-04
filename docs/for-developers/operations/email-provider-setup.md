@@ -39,11 +39,17 @@ EmailService (template building)
 injected `IEmailSender`. Adding a new provider = implement `IEmailSender` + wire it in the
 resolver; no template code changes.
 
-> **Incremental migration note**: as of #1629 only the invitation flow
-> (`SendInvitationEmailAsync`, both overloads) routes through `IEmailSender`. The remaining
-> `EmailService` methods (password reset, verification, reports, share-requests) still
-> instantiate `SmtpClient` directly and will be migrated in follow-up PRs. Track via the
-> "Out of scope" section of #1629.
+> **Every mail follows `EMAIL_PROVIDER`** (#4845). Since #1629 the invitation flow went through
+> `IEmailSender` while the other `EmailService` methods (password reset, verification, reports,
+> share-requests, admin, gamification, PDF notifications) built their own `SmtpClient`; they all go through
+> `IEmailSender` now, so with `EMAIL_PROVIDER=resend` no mail leaves over SMTP. The reports carry several
+> recipients and an attachment, which both senders support. A failed send is counted in
+> `meepleai.email.send_failures.total` by `provider` and `kind`, including the ones a caller swallows on
+> purpose (the verification mail of a registration, the notice of a failed report). The gate
+> `SmtpClientOnlyInTheSmtpSenderArchitectureTests` fails the build if any other code builds an `SmtpClient`.
+>
+> One difference to know about: Resend does not show the recipient's display name on the `To:` line
+> (`EmailRequest.ToName`), SMTP does.
 
 ## One-time setup
 
@@ -72,8 +78,26 @@ In `infra/secrets/email.secret`:
 EMAIL_PROVIDER=resend
 RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
 RESEND_FROM_EMAIL=noreply@meepleai.app
-FRONTEND_BASE_URL=http://localhost:3000   # staging/prod: public app URL
+FRONTEND_BASE_URL=http://localhost:3000   # dev only: staging/prod set Frontend__BaseUrl in the compose file
 ```
+
+#### Public front-end URL (links in e-mails, share links, OAuth redirects)
+
+Every link the API writes for a person to open takes its base from one resolver
+(`IPublicBaseUrlProvider`, #4774). First non-blank value wins:
+
+1. `Frontend:BaseUrl` — **the key to set** (`Frontend__BaseUrl` in `infra/compose.staging.yml` /
+   `compose.prod.yml`);
+2. `App:BaseUrl` — the old key, read only so an existing deployment keeps working;
+3. `FRONTEND_BASE_URL` — the variable above;
+4. `http://localhost:3000`, **only** in a local environment: `Development`, `Testing`, `CI` and
+   `Integration` (the API runs on a developer's or a runner's machine and no link reaches a person).
+
+Everywhere else (`Staging`, `Production`) there is no last resort: a link generator fails with a message naming the key, and
+at startup the API logs an **error** (it does not stop) when the resolved URL is missing or points at
+`localhost` / `127.0.0.1`. After a deploy, `docker logs meepleai-api | grep -i "public front-end URL"`
+tells which source won. `appsettings.json` deliberately defaults neither key: a default there would
+shadow `FRONTEND_BASE_URL`.
 
 Restart the API to pick up the new config:
 

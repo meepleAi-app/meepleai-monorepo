@@ -369,4 +369,36 @@ public sealed class ChatMessageTests
     }
 
     #endregion
+
+    #region #4456 - Turn cost
+
+    [Fact]
+    public void TheTurnCost_IsOnlyForAnAssistantMessage()
+    {
+        var question = new ChatMessage("Marco fa 5 punti", ChatMessage.UserRole, 0);
+
+        var act = () => question.SetTurnCost(0.002m, 300);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Theory]
+    [InlineData(-0.001, 10)]
+    [InlineData(0.001, -1)]
+    public void ANegativeTurnCost_IsRefused(double cost, int tokens)
+    {
+        var answer = new ChatMessage("Tocca a Giulia.", ChatMessage.AssistantRole, 1);
+
+        var act = () => answer.SetTurnCost((decimal)cost, tokens);
+
+        act.Should().Throw<ValidationException>();
+    }
+
+    [Fact]
+    public void AMessageWithoutATurnCost_HasNoCost_NotZero()
+    {
+        new ChatMessage("Tocca a Giulia.", ChatMessage.AssistantRole, 1).CostUsd.Should().BeNull();
+    }
+
+    #endregion
 }

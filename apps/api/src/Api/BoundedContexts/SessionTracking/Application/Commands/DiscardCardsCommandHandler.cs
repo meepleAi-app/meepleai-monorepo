@@ -68,7 +68,7 @@ public class DiscardCardsCommandHandler : IRequestHandler<DiscardCardsCommand, D
         await _mediator.Publish(new CardsDiscardedEvent
         {
             DeckId = deck.Id,
-            SessionId = deck.SessionId,
+            SessionId = request.SessionId,
             ParticipantId = request.ParticipantId,
             ParticipantName = participant.DisplayName,
             Cards = discardedCards.Select(c => new CardInfo

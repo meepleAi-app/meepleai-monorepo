@@ -1,14 +1,18 @@
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using FluentValidation;
+using Microsoft.Extensions.Options;
 
 namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.AddRagToSharedGame;
 
 internal sealed class AddRagToSharedGameCommandValidator : AbstractValidator<AddRagToSharedGameCommand>
 {
-    private const long MaxFileSizeBytes = 50 * 1024 * 1024; // 50MB
-
-    public AddRagToSharedGameCommandValidator()
+    public AddRagToSharedGameCommandValidator(IOptions<PdfProcessingOptions> pdfOptions)
     {
+        ArgumentNullException.ThrowIfNull(pdfOptions);
+        // #4449: the single PDF size limit (PdfProcessing:MaxFileSizeBytes), not a number of its own.
+        var maxFileSizeBytes = pdfOptions.Value.MaxFileSizeBytes;
+
         RuleFor(x => x.SharedGameId)
             .NotEqual(Guid.Empty).WithMessage("SharedGameId is required");
 
@@ -19,8 +23,8 @@ internal sealed class AddRagToSharedGameCommandValidator : AbstractValidator<Add
             .NotNull().WithMessage("PDF file is required");
 
         RuleFor(x => x.File)
-            .Must(f => f == null || f.Length <= MaxFileSizeBytes)
-            .WithMessage("File size must not exceed 50MB");
+            .Must(f => f == null || f.Length <= maxFileSizeBytes)
+            .WithMessage($"File size must not exceed {PdfSizeLimit.Describe(maxFileSizeBytes)}");
 
         RuleFor(x => x.DocumentType)
             .IsInEnum().WithMessage("DocumentType must be valid (Rulebook, Errata, or Homerule)");

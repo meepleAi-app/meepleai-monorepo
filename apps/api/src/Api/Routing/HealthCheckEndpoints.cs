@@ -56,12 +56,8 @@ public static class HealthCheckEndpoints
         })
         .WithName("ComprehensiveHealthCheck")
         .WithTags("Health")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Comprehensive health check for all services";
-            operation.Description = "Returns detailed health status for Core Infrastructure, AI Services, External APIs, and Monitoring services with criticality flags.";
-            return operation;
-        })
+        .WithSummary("Comprehensive health check for all services")
+        .WithDescription("Returns detailed health status for Core Infrastructure, AI Services, External APIs, and Monitoring services with criticality flags.")
         .AllowAnonymous(); // Public endpoint, no authentication required
     }
 

@@ -33,6 +33,8 @@ internal class CreatePromptVersionCommandHandler : ICommandHandler<CreatePromptV
         var template = await _dbContext.Set<PromptTemplateEntity>()
             .Include(t => t.Versions)
             .Include(t => t.CreatedBy)
+            // #3866: tracked on purpose — the mutation below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+            .AsTracking()
             .FirstOrDefaultAsync(t => t.Id == command.TemplateId, cancellationToken).ConfigureAwait(false);
 
         if (template == null)

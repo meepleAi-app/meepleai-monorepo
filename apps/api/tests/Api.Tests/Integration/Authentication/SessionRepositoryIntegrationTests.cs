@@ -545,6 +545,12 @@ public sealed class SessionRepositoryIntegrationTests : IAsyncLifetime
         await _repository.AddAsync(session2, TestCancellationToken);
         await _repository.AddAsync(session3, TestCancellationToken);
         await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
+        // Issue #3866: end of arrange. Production starts each request with an empty change tracker,
+        // so RevokeAllUserSessionsAsync never finds the rows it is about to attach already tracked.
+        // Seeding through this same DbContext does leave them tracked, and the method — which reads
+        // with the production NoTracking default — would then attach a SECOND instance of the same
+        // key and throw an identity conflict that no real scope can produce.
+        _dbContext!.ChangeTracker.Clear();
 
         // Act
         await _repository.RevokeAllUserSessionsAsync(TestUserId1, TestCancellationToken);
@@ -581,6 +587,7 @@ public sealed class SessionRepositoryIntegrationTests : IAsyncLifetime
         var session = CreateTestSession(TestSessionId1, TestUserId1);
         await _repository!.AddAsync(session, TestCancellationToken);
         await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
+        _dbContext!.ChangeTracker.Clear(); // #3866: end of arrange — act from an empty tracker
 
         // Revoke once
         await _repository.RevokeAllUserSessionsAsync(TestUserId1, TestCancellationToken);
@@ -651,6 +658,7 @@ public sealed class SessionRepositoryIntegrationTests : IAsyncLifetime
         await _repository.AddAsync(user1Session2, TestCancellationToken);
         await _repository.AddAsync(user2Session1, TestCancellationToken);
         await _unitOfWork!.SaveChangesAsync(TestCancellationToken);
+        _dbContext!.ChangeTracker.Clear(); // #3866: end of arrange — act from an empty tracker
 
         // Act - Revoke all User1 sessions
         await _repository.RevokeAllUserSessionsAsync(TestUserId1, TestCancellationToken);

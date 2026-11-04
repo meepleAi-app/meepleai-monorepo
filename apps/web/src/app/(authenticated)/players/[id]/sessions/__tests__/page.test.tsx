@@ -28,6 +28,7 @@ vi.mock('@/lib/api', () => ({
 const mockSessions = [
   {
     id: 'session-1',
+    liveSessionId: 'live-1',
     gameId: 'game-1',
     status: 'Completed',
     startedAt: '2026-01-15T10:00:00Z',
@@ -43,6 +44,7 @@ const mockSessions = [
   },
   {
     id: 'session-2',
+    liveSessionId: null,
     gameId: 'game-2',
     status: 'Completed',
     startedAt: '2026-01-20T14:00:00Z',
@@ -75,6 +77,21 @@ describe('PlayerSessionsPage', () => {
     });
   });
 
+  it('#4156 (D4): links to the live session, and not at all without one', async () => {
+    mockGetHistory.mockResolvedValue({ sessions: mockSessions, total: 2, page: 1, pageSize: 50 });
+
+    renderWithQuery(<PlayerSessionsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('2')).toBeInTheDocument(); // badge count
+    });
+    const sessionLinks = screen
+      .getAllByRole('link')
+      .map(link => link.getAttribute('href'))
+      .filter(href => href?.startsWith('/sessions/'));
+    expect(sessionLinks).toEqual(['/sessions/live-1']);
+  });
+
   it('shows page heading', async () => {
     mockGetHistory.mockResolvedValue({ sessions: mockSessions, total: 2, page: 1, pageSize: 50 });
 
@@ -86,8 +103,15 @@ describe('PlayerSessionsPage', () => {
   });
 
   it('filters sessions by player name', async () => {
-    const noAliceSessions = [{ ...mockSessions[0], players: [{ playerName: 'Bob', playerOrder: 1, color: null }] }];
-    mockGetHistory.mockResolvedValue({ sessions: noAliceSessions, total: 1, page: 1, pageSize: 50 });
+    const noAliceSessions = [
+      { ...mockSessions[0], players: [{ playerName: 'Bob', playerOrder: 1, color: null }] },
+    ];
+    mockGetHistory.mockResolvedValue({
+      sessions: noAliceSessions,
+      total: 1,
+      page: 1,
+      pageSize: 50,
+    });
 
     renderWithQuery(<PlayerSessionsPage />);
 

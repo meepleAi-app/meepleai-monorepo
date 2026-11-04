@@ -19,7 +19,6 @@ export const runtime = 'nodejs';
 
 interface ChatProxyRequest {
   message: string;
-  agentId: string;
   threadId?: string;
   gameContext: {
     gameName: string;
@@ -169,12 +168,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!body.agentId || typeof body.agentId !== 'string') {
-    return new Response(JSON.stringify({ error: 'agentId is required' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  // Issue #4139: the `agentId` field was declared and validated here and never
+  // read - the system prompt is built from `gameContext`. Removed from the request
+  // shape rather than kept as a required field nothing consumes.
 
   if (!body.gameContext?.gameName || !body.gameContext?.agentTypology) {
     return new Response(

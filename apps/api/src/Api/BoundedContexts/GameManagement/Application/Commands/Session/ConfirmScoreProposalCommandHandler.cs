@@ -59,6 +59,25 @@ internal sealed class ConfirmScoreProposalCommandHandler : IRequestHandler<Confi
             .ConfigureAwait(false)
             ?? throw new NotFoundException($"LiveGameSession {request.SessionId} not found in repository");
 
+        // #4277: chi conferma dichiara il valore della cella su cui ha deciso. Il controllo sta qui,
+        // sull'aggregato appena caricato: il salvataggio con xmin lo rende atomico con la scrittura.
+        // Fatto da chi chiama, fra la sua lettura e questa scrittura passerebbe un'altra conferma.
+        if (request.ExpectedCurrentValue is { } expected)
+        {
+            var current = session.RoundScores
+                .Where(s => s.PlayerId == request.TargetPlayerId
+                    && s.Round == request.Round
+                    && string.Equals(s.Dimension, request.Dimension, StringComparison.OrdinalIgnoreCase))
+                .Select(s => s.Value)
+                .FirstOrDefault();
+            if (current != expected)
+            {
+                throw new ConflictException(
+                    ConfirmScoreProposalCommand.ScoreChangedCode,
+                    $"The score cell changed: expected {expected}, found {current}.");
+            }
+        }
+
         // Record score through domain method (validates status, player, dimension).
         // Pass the injected TimeProvider so FakeTimeProvider in tests + the audit timeline
         // see a single deterministic clock — matches the pattern in

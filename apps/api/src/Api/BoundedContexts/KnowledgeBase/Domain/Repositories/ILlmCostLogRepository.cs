@@ -46,6 +46,15 @@ public interface ILlmCostLogRepository
     Task<decimal> GetUserCostAsync(Guid userId, DateOnly startDate, DateOnly endDate, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// #4166: la spesa per sorgente e per giorno, da <paramref name="fromDate"/> a
+    /// <paramref name="toDate"/> compresi. Serve al tetto del gateway LLM (ADR-095 D6).
+    /// </summary>
+    Task<IReadOnlyList<LlmSpendBySourceAndDay>> GetSpendBySourceAndDayAsync(
+        DateOnly fromDate,
+        DateOnly toDate,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Get daily cost total
     /// </summary>
 #pragma warning disable CA1716 // Identifiers should not match keywords - 'date' is appropriate for DateOnly parameter

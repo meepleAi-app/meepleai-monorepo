@@ -8,7 +8,6 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 internal sealed record KbDocConsumingAgentDto(
     Guid Id,
     string Name,
-    string Type,
     bool IsActive,
     string Status,
     bool IsSystemDefined,

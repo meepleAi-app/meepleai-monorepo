@@ -40,7 +40,11 @@ internal sealed class ToggleBadgeDisplayCommandHandler : ICommandHandler<ToggleB
             command.UserId,
             command.IsDisplayed);
 
+        // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06),
+        // quindi senza di esso questa lettura e' DETACHED: le mutazioni sotto non raggiungono
+        // il change tracker e SaveChangesAsync non scrive, e non solleva.
         var userBadge = await _context.Set<UserBadgeEntity>()
+            .AsTracking()
             .Where(ub => ub.Id == command.UserBadgeId && ub.UserId == command.UserId)
             .FirstOrDefaultAsync(cancellationToken)
             .ConfigureAwait(false);

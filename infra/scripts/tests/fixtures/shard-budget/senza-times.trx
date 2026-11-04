@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TestRun id="fixture" name="fixture" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <ResultSummary outcome="Completed">
+    <Counters total="1" executed="1" passed="1" failed="0" />
+  </ResultSummary>
+</TestRun>

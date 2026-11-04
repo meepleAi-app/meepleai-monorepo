@@ -91,6 +91,10 @@ internal interface IPdfUploadQuotaService
     /// <summary>
     /// Releases a reserved quota if PDF processing fails (Two-Phase Commit - Rollback).
     /// Decrements the upload count and removes the reservation.
+    /// <para>The counters decremented are those of the day and ISO week of the reservation, not of
+    /// the release: a reservation made on Sunday at 23:50 and released on Monday at 00:10 gives back
+    /// Sunday's upload (#4547). Releasing the same reservation twice, even concurrently, decrements
+    /// once.</para>
     /// </summary>
     /// <param name="userId">User ID that reserved quota</param>
     /// <param name="pdfId">PDF document ID</param>

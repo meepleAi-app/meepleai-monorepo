@@ -17,10 +17,11 @@ public class MechanicOutputValidatorRuleOutcomesTests
     {
         private readonly IReadOnlyList<MechanicValidationViolation> _violations;
         private readonly double? _score;
-        public StubGuardrail(string family, int order, IReadOnlyList<MechanicValidationViolation> violations, double? score = null)
-        { RuleFamily = family; Order = order; _violations = violations; _score = score; }
+        public StubGuardrail(string family, int order, IReadOnlyList<MechanicValidationViolation> violations, double? score = null, bool isAdvisory = false)
+        { RuleFamily = family; Order = order; _violations = violations; _score = score; IsAdvisory = isAdvisory; }
         public string RuleFamily { get; }
         public int Order { get; }
+        public bool IsAdvisory { get; }
         public Task<IReadOnlyList<MechanicValidationViolation>> EvaluateAsync(MechanicGuardrailContext c, CancellationToken ct) => Task.FromResult(_violations);
         public Task<MechanicGuardrailResult> EvaluateDetailedAsync(MechanicGuardrailContext c, CancellationToken ct) => Task.FromResult(new MechanicGuardrailResult(_violations, _score));
     }
@@ -51,6 +52,52 @@ public class MechanicOutputValidatorRuleOutcomesTests
         result.RuleOutcomes.Single(o => o.Rule == "T3b").Score.Should().BeNull(); // notRun suppresses score even though the stub carries 0.9
         result.RuleOutcomes.Single(o => o.Rule == "T3b").Message.Should().BeNull();
         result.RuleOutcomes.Single(o => o.Rule == "T3b").Path.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task T5Fail_DoesNotTriggerRetry_AndDoesNotStopTheChain()
+    {
+        var t1Pass = new StubGuardrail("T1", 10, Array.Empty<MechanicValidationViolation>());
+        var t5Fail = new StubGuardrail("T5", 25, new[] { new MechanicValidationViolation("T5_override_cycle", "cycle", "$.mechanics[1]") }, isAdvisory: true);
+        var t3bPass = new StubGuardrail("T3b", 40, Array.Empty<MechanicValidationViolation>(), score: 0.9);
+        var validator = new MechanicOutputValidator(new IMechanicGuardrail[] { t3bPass, t5Fail, t1Pass }, NullLogger<MechanicOutputValidator>.Instance);
+
+        var result = await validator.ValidateAsync(EmptyContext(), CancellationToken.None);
+
+        result.IsValid.Should().BeTrue(); // no retry
+        result.Violations.Should().BeEmpty();
+        result.RuleOutcomes.Select(o => o.Rule).Should().Equal("T1", "T5", "T3b");
+        var t5 = result.RuleOutcomes.Single(o => o.Rule == "T5");
+        t5.Outcome.Should().Be("fail"); // still visible to the reviewer
+        t5.Violations.Should().ContainSingle().Which.Path.Should().Be("$.mechanics[1]");
+        result.RuleOutcomes.Single(o => o.Rule == "T3b").Outcome.Should().Be("pass"); // chain not cut
+    }
+
+    [Fact]
+    public async Task T1Fail_StillTriggersRetry_EvenWithAdvisoryT5Failing()
+    {
+        var t1Fail = new StubGuardrail("T1", 10, new[] { new MechanicValidationViolation("T1_quote_cap", "too long", "$.mechanics[0].citations[0].quote") });
+        var t5Fail = new StubGuardrail("T5", 25, new[] { new MechanicValidationViolation("T5_override_cycle", "cycle", "$.mechanics[1]") }, isAdvisory: true);
+        var validator = new MechanicOutputValidator(new IMechanicGuardrail[] { t5Fail, t1Fail }, NullLogger<MechanicOutputValidator>.Instance);
+
+        var result = await validator.ValidateAsync(EmptyContext(), CancellationToken.None);
+
+        result.IsValid.Should().BeFalse();
+        result.Violations.Should().ContainSingle(v => v.Rule == "T1_quote_cap");
+    }
+
+    [Fact]
+    public async Task T5Fail_DoesNotMaskLaterBlockingFailure()
+    {
+        var t5Fail = new StubGuardrail("T5", 25, new[] { new MechanicValidationViolation("T5_override_cycle", "cycle", "$.mechanics[1]") }, isAdvisory: true);
+        var t2Fail = new StubGuardrail("T2", 30, new[] { new MechanicValidationViolation("T2_long_verbatim", "verbatim", "$.mechanics[0].description") });
+        var validator = new MechanicOutputValidator(new IMechanicGuardrail[] { t2Fail, t5Fail }, NullLogger<MechanicOutputValidator>.Instance);
+
+        var result = await validator.ValidateAsync(EmptyContext(), CancellationToken.None);
+
+        result.IsValid.Should().BeFalse();
+        result.Violations.Should().ContainSingle(v => v.Rule == "T2_long_verbatim");
+        result.RuleOutcomes.Single(o => o.Rule == "T5").Outcome.Should().Be("fail");
     }
 
     [Fact]

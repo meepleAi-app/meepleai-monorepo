@@ -235,8 +235,12 @@ internal sealed class StalePdfRecoveryService : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
+        // #3866: FindAsync is not exempt from the tracking behavior — when the entity is not already
+        // in the change tracker it runs a query that follows QueryTrackingBehavior, and production
+        // defaults to NoTracking (PERF-06). The reset to Pending below therefore never reached the DB.
         var pdfDoc = await db.PdfDocuments
-            .FindAsync(new object[] { pdfDocumentId }, cancellationToken)
+            .AsTracking()
+            .FirstOrDefaultAsync(p => p.Id == pdfDocumentId, cancellationToken)
             .ConfigureAwait(false);
 
         var readyState = nameof(PdfProcessingState.Ready);

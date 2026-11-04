@@ -40,6 +40,33 @@ internal sealed class VectorDocumentReadyStateHandler
             return;
         }
 
+        // #4339 / #4609: the event arrives synchronously from IPdfIndexingPipeline.IndexAsync, inside the
+        // call of the pipeline that is indexing the PDF. A PDF in Indexing is that pipeline's: it moves it
+        // to Ready itself right after IndexAsync returns. Moving it here made the pipeline's finalization
+        // fail ("Cannot transition from Ready state"), which is what #4339 fixed when IndexAsync was
+        // called BEFORE the passages and the embeddings were written (so "the index has no embeddings
+        // yet" told a half-way PDF from a stuck one). Since #4609 IndexAsync is called LAST, after they
+        // are saved, so the embeddings are always there and only the state can say the PDF is not stuck.
+        // What this handler still compensates is a PDF in any other non-final state whose index is
+        // written.
+        if (string.Equals(evt.CurrentProcessingState, nameof(PdfProcessingState.Indexing), StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        var indexWritten = await _dbContext.PgVectorEmbeddings
+            .AsNoTracking()
+            .AnyAsync(e => e.VectorDocumentId == evt.DocumentId, cancellationToken)
+            .ConfigureAwait(false);
+        if (!indexWritten)
+        {
+            _logger.LogDebug(
+                "No compensation for PdfDocument {PdfId}: its index {DocumentId} has no embeddings yet, the pipeline is still writing it",
+                evt.PdfDocumentId,
+                evt.DocumentId);
+            return;
+        }
+
         // .AsTracking() overrides the global QueryTrackingBehavior.NoTracking default (PERF-06,
         // InfrastructureServiceExtensions.cs). Without it the entity is detached and the
         // ProcessingState=Ready + IndexerVersion writes below are a silent no-op at SaveChangesAsync,

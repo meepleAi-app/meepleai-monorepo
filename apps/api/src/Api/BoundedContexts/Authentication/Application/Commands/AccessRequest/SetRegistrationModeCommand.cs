@@ -11,6 +11,8 @@ internal record SetRegistrationModeCommand(bool Enabled, Guid AdminId) : IComman
 
 internal class SetRegistrationModeCommandHandler : ICommandHandler<SetRegistrationModeCommand, MediatRUnit>
 {
+    private const string RegistrationKey = "Registration:PublicEnabled";
+
     private readonly IMediator _mediator;
     private readonly IConfigurationService _configService;
     private readonly IWebHostEnvironment _environment;
@@ -30,7 +32,7 @@ internal class SetRegistrationModeCommandHandler : ICommandHandler<SetRegistrati
         var value = request.Enabled.ToString().ToLowerInvariant();
         var environmentName = _environment.EnvironmentName;
         var existing = await _configService.GetConfigurationByKeyAsync(
-            "Registration:PublicEnabled", environmentName, cancellationToken).ConfigureAwait(false);
+            RegistrationKey, environmentName, cancellationToken).ConfigureAwait(false);
 
         if (existing is not null)
         {
@@ -45,7 +47,7 @@ internal class SetRegistrationModeCommandHandler : ICommandHandler<SetRegistrati
         {
             await _mediator.Send(
                 new CreateConfigurationCommand(
-                    "Registration:PublicEnabled",
+                    RegistrationKey,
                     value,
                     "Boolean",
                     "Controls whether public registration is enabled",
@@ -55,6 +57,11 @@ internal class SetRegistrationModeCommandHandler : ICommandHandler<SetRegistrati
                     request.AdminId),
                 cancellationToken).ConfigureAwait(false);
         }
+
+        // The configuration events invalidate the cached lookup too, but staging and production run them from the
+        // outbox (a few seconds of polling). In that window a second click read the cached "not found" and tried to
+        // create the row again (23505). The write is committed by now: drop the stale key here, without waiting.
+        await _configService.InvalidateAsync(RegistrationKey, environmentName, cancellationToken).ConfigureAwait(false);
 
         return MediatRUnit.Value;
     }

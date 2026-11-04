@@ -102,8 +102,9 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
         // Act
         var response = await Client.PostAsJsonAsync("/api/v1/agents/arbitro/validate", validatePayload);
 
-        // Assert - Skip if orchestration service unavailable in test environment
-        await AssertSuccessOrSkipIfServiceUnavailable(response, "ValidateMove_ValidOpeningMove");
+        // #4023: nessuna sonda qui — vedi la nota in ValidateMove_InvalidMove. Il check
+        // 'orchestrator' non esiste in questo host, e questo test passava senza di esso.
+        await AssertSuccessAsync(response, "ValidateMove_ValidOpeningMove");
 
         if (response.IsSuccessStatusCode)
         {
@@ -139,8 +140,14 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
         var response = await Client.PostAsJsonAsync("/api/v1/agents/arbitro/validate", validatePayload);
 
         // Assert
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("ValidateMove_InvalidMove returned 500 — service likely unavailable");
+        // #4023: nessuna sonda qui. La prima stesura ne metteva una sul check 'orchestrator', e
+        // quel check non e' registrato in questo host: la sonda lo leggeva come «servizio assente»
+        // e saltava. Misurato: nel run 37108228227 questo test era Ignorato, nel run di controllo
+        // su main-dev 37109312581 era Passato. Se passa senza l orchestration service, non ne
+        // dipende — e un prerequisito che il test non ha non va sondato. Il 500 resta un
+        // fallimento, che e' il punto di #4023.
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "ValidateMove_InvalidMove ha risposto 500: " + await DescribeResponseAsync(response));
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
             HttpStatusCode.BadRequest);
@@ -340,8 +347,14 @@ public sealed class ArbitroAgentE2ETests : E2ETestBase
         var response = await Client.PostAsJsonAsync("/api/v1/agents/arbitro/validate", validatePayload);
 
         // Assert - Should handle invalid state gracefully
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("ValidateMove_InvalidGameState returned 500 — service likely unavailable");
+        // #4023: nessuna sonda qui. La prima stesura ne metteva una sul check 'orchestrator', e
+        // quel check non e' registrato in questo host: la sonda lo leggeva come «servizio assente»
+        // e saltava. Misurato: nel run 37108228227 questo test era Ignorato, nel run di controllo
+        // su main-dev 37109312581 era Passato. Se passa senza l orchestration service, non ne
+        // dipende — e un prerequisito che il test non ha non va sondato. Il 500 resta un
+        // fallimento, che e' il punto di #4023.
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "ValidateMove_InvalidGameState ha risposto 500: " + await DescribeResponseAsync(response));
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK, // Returns validation result with error
             HttpStatusCode.BadRequest); // Validation rejects invalid state

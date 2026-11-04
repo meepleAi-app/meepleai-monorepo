@@ -7,6 +7,8 @@
 **Context**: Phase 1 MVP - Quality Assurance System
 **Related**: ADR-001 (Hybrid RAG), ADR-005 (Cosine Similarity), BGAI-028 to BGAI-033, BGAI-037
 
+> **Aggiornamento del 2026-10-11 ([#4179](https://github.com/meepleAi-app/meepleai-monorepo/issues/4179)): il livello 2 (consenso multi-modello) è stato tolto**, applicando l'opzione 1 del [Rollback Plan](#rollback-plan) («Disable Consensus»). `MultiModelValidationService` chiamava OpenRouter direttamente, fuori dal gateway e dal registro costi ([ADR-095](./adr-095-single-answer-pipeline-and-versioned-agent-profile.md) D4), con due modelli `:free` che il listino di OpenRouter non elenca più (verificato il 2026-10-10). Aggiungeva due chiamate a ogni `AskQuestion`. `AskQuestion` usa ora la validazione standard (livelli 1, 3 e 4). Il resto di questo ADR descrive il disegno originale.
+
 ---
 
 ## Context

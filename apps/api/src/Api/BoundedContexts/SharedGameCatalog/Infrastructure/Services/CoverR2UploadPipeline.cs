@@ -56,10 +56,11 @@ internal sealed class CoverR2UploadPipeline : ICoverR2UploadPipeline
             InputStream = stream,
             ContentType = WebpContentType,
             AutoCloseStream = false,
-            // Required for S3-compatible providers (R2/MinIO) that don't support
-            // STREAMING-AWS4-HMAC-SHA256-PAYLOAD-TRAILER. Matches the pattern
-            // already used by S3BlobStorageService.StoreAsync.
-            DisablePayloadSigning = true,
+            // #4085/#4016 causa A: era hardcoded a `true`. Required for S3-compatible
+            // providers (R2/MinIO) that don't support STREAMING-AWS4-HMAC-SHA256-PAYLOAD-
+            // TRAILER, ma SOLO su HTTPS — matches the CONDITIONAL pattern already used by
+            // S3BlobStorageService.DisablePayloadSigningForEndpoint (#3846).
+            DisablePayloadSigning = !BlobStorageServiceFactory.UsesPlainHttp(_options.Endpoint),
         };
 
         // ADR DEC-3h — immutable cache.

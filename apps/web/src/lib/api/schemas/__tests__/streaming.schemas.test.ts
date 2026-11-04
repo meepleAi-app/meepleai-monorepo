@@ -40,3 +40,16 @@ describe('CitationSchema — SP-C region fields', () => {
     expect(result.data.charStart ?? null).toBeNull();
   });
 });
+
+describe('CitationSchema — pagina assente (#4819)', () => {
+  // Il server toglie la pagina a un documento di cui non può garantirla: il filo la porta null o non la porta.
+  it.each([
+    ['null', { pageNumber: null }],
+    ['absent', {}],
+  ])('accepts a citation whose page is %s', (_label, over) => {
+    const parsed = CitationSchema.parse({ documentId: 'doc-1', copyrightTier: 'full', ...over });
+
+    expect(parsed.pageNumber ?? null).toBeNull();
+    expect(parsed.documentId).toBe('doc-1');
+  });
+});

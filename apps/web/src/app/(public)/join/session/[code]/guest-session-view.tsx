@@ -21,6 +21,7 @@ import { LiveScoreboard } from '@/components/game-night/LiveScoreboard';
 import type { LiveScoreboardPlayer } from '@/components/game-night/LiveScoreboard';
 import { Button } from '@/components/ui/primitives/button';
 import { GlassCard } from '@/components/ui/surfaces/GlassCard';
+import { getApiBase } from '@/lib/api/core/httpClient';
 import {
   PublicLiveSessionDtoSchema,
   type PublicLiveSessionDto,
@@ -49,7 +50,12 @@ export function GuestSessionView({ code }: GuestSessionViewProps) {
     setErrorMessage(null);
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+      // #4059: `NEXT_PUBLIC_API_URL` non e' definita in nessun build deployabile (solo in
+      // quattro workflow E2E), quindi questa riga ricadeva SEMPRE su `''`. Il comportamento
+      // era per caso quello giusto — relativo, quindi attraverso il proxy Next di
+      // `/api/v1/*` — ma per la ragione sbagliata. `getApiBase()` e' quel comportamento
+      // dichiarato, e nel browser ritorna `''` di proposito (#2366).
+      const baseUrl = getApiBase();
       const res = await fetch(
         `${baseUrl}/api/v1/live-sessions/code/${encodeURIComponent(code)}/public`
       );

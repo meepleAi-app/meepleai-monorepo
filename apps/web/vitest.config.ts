@@ -43,11 +43,9 @@ export default defineConfig({
         'src/lib/api/core/logger.ts', // API logger infrastructure
         'src/components/chat/ChatProvider.tsx', // Complex provider (integration tested)
         'src/components/auth/AuthProvider.tsx', // Complex provider (integration tested)
-        'src/components/game/GameProvider.tsx', // Complex provider (integration tested)
         'src/lib/animations/**', // Animation utilities (visual)
         'src/store/chat/compatibility.ts', // Storybook/testing compatibility layer
         // Issue #1951: Exclude UI components with Storybook + E2E coverage
-        'src/components/auth/AuthModal.tsx', // Auth UI (E2E tested in auth flows)
         'src/components/auth/LoginForm.tsx', // Login UI (E2E tested)
         'src/components/auth/RegisterForm.tsx', // Register UI (E2E tested)
         'src/components/auth/RequireRole.tsx', // RBAC (E2E tested)
@@ -90,7 +88,6 @@ export default defineConfig({
       '**/__tests__/utils/mock-api-presets.{ts,tsx}',
       '**/__tests__/utils/mock-api-router.{ts,tsx}',
       '**/__tests__/utils/query-test-utils.{ts,tsx}',
-      '**/__tests__/utils/test-providers.{ts,tsx}',
       '**/__tests__/utils/zustand-test-utils.{ts,tsx}',
       // Also exclude test utility files at any location
       '**/test-utils.{ts,tsx}',

@@ -51,7 +51,10 @@ export function QueueStatusPanel() {
           <span className="text-muted-foreground">queued</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <Badge variant="outline" className="bg-blue-100">
+          <Badge
+            variant="outline"
+            className="bg-blue-100 text-blue-900 dark:bg-blue-900/30 dark:text-blue-300"
+          >
             {status.totalProcessing}
           </Badge>
           <span className="text-muted-foreground">processing</span>

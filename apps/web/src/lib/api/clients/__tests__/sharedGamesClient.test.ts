@@ -220,8 +220,7 @@ describe('SharedGamesClient - Issue #3026', () => {
         );
         // The schema passed must accept the bare guid string (root cause of leg 1).
         const schemaArg = vi.mocked(mockHttpClient.post).mock.calls[0]?.[2] as
-          | { safeParse: (x: unknown) => { success: boolean } }
-          | undefined;
+          { safeParse: (x: unknown) => { success: boolean } } | undefined;
         expect(schemaArg?.safeParse(newId).success).toBe(true);
       });
     });
@@ -678,5 +677,72 @@ describe('SharedGamesClient - Issue #3026', () => {
         expect(result).toBe('game-123');
       });
     });
+  });
+});
+
+/**
+ * #4459: the import wizard's step 2 reads GET /admin/shared-games/extract-metadata/{pdfId}, which
+ * serializes `GameMetadataDto` in camelCase (`year`, `playingTime`, nullable `title`). The bodies
+ * below are the backend's wire format — the empty one is the response observed on 2026-10-16 —
+ * not fixtures written with the client's names, which is how both defects got past the tests.
+ */
+describe('extractMetadataByPdfId wire contract (#4459)', () => {
+  const emptyBody = {
+    title: null,
+    year: null,
+    minPlayers: null,
+    maxPlayers: null,
+    playingTime: null,
+    minAge: null,
+    description: null,
+    publishers: null,
+    designers: null,
+    categories: null,
+    mechanics: null,
+    confidenceScore: 0,
+  };
+
+  const extractedBody = {
+    ...emptyBody,
+    title: 'Wingspan',
+    year: 2019,
+    minPlayers: 1,
+    maxPlayers: 5,
+    playingTime: 70,
+    minAge: 10,
+    publishers: ['Stonemaier Games'],
+    confidenceScore: 0.82,
+  };
+
+  async function capturedSchema() {
+    vi.mocked(mockHttpClient.get).mockResolvedValue(null);
+    const client = createSharedGamesClient({ httpClient: mockHttpClient });
+    await client.extractMetadataByPdfId('pdf-1');
+    expect(mockHttpClient.get).toHaveBeenCalledWith(
+      '/api/v1/admin/shared-games/extract-metadata/pdf-1',
+      expect.any(Object)
+    );
+    return vi.mocked(mockHttpClient.get).mock.calls[0]?.[1] as {
+      safeParse: (x: unknown) => { success: boolean; data?: unknown };
+    };
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('accepts the empty result the backend returns when nothing was extracted', async () => {
+    const schema = await capturedSchema();
+
+    expect(schema.safeParse(emptyBody).success).toBe(true);
+  });
+
+  it('keeps year and playing time under the names the backend sends', async () => {
+    const schema = await capturedSchema();
+
+    const parsed = schema.safeParse(extractedBody);
+
+    expect(parsed.success).toBe(true);
+    expect(parsed.data).toMatchObject({ title: 'Wingspan', year: 2019, playingTime: 70 });
   });
 });

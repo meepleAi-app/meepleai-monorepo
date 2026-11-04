@@ -40,8 +40,11 @@ public sealed class NotificationsE2ETests : E2ETestBase
         var response = await Client.GetAsync("/api/v1/notifications");
 
         // Assert - API may return OK or other status depending on configuration
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("GetNotifications returned 500 — service likely unavailable");
+        // #4023: un 500 e un difetto del prodotto, non l assenza di un servizio. Se un
+        // prerequisito manca davvero, si accerta in testa al test con
+        // E2EServiceProbe.SkipUnlessHealthyAsync — non si deduce da questa risposta.
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "GetNotifications ha risposto 500: " + await DescribeResponseAsync(response));
         response.StatusCode.Should().BeOneOf(
             HttpStatusCode.OK,
             HttpStatusCode.BadRequest);
@@ -180,8 +183,11 @@ public sealed class NotificationsE2ETests : E2ETestBase
         // Skip if notifications endpoint not available
         if (!notificationsResponse.IsSuccessStatusCode)
         {
-            if (notificationsResponse.StatusCode == HttpStatusCode.InternalServerError)
-                Assert.Skip("MarkNotificationAsRead notifications fetch returned 500 — service likely unavailable");
+            // #4023: un 500 e un difetto del prodotto, non l assenza di un servizio. Se un
+            // prerequisito manca davvero, si accerta in testa al test con
+            // E2EServiceProbe.SkipUnlessHealthyAsync — non si deduce da questa risposta.
+            notificationsResponse.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+                "MarkNotificationAsRead notifications fetch ha risposto 500: " + await DescribeResponseAsync(notificationsResponse));
             notificationsResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
             return;
         }

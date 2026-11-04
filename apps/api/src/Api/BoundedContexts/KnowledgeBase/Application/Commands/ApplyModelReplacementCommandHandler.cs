@@ -50,6 +50,8 @@ internal sealed class ApplyModelReplacementCommandHandler
             // Find all strategy mappings that use the deprecated model as primary
             var affectedMappings = await _dbContext.Set<StrategyModelMappingEntity>()
                 .Where(m => m.PrimaryModel == command.DeprecatedModelId)
+                // #3866: tracked on purpose — the mutation below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+                .AsTracking()
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
 

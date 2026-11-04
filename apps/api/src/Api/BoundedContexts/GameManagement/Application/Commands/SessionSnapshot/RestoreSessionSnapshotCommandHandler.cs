@@ -69,11 +69,10 @@ internal sealed class RestoreSessionSnapshotCommandHandler
         if (!checkpoint.IsCheckpoint)
             throw new ConflictException("Cannot reconstruct snapshot state: no checkpoint found.");
 
-        var reconstructedJson = checkpoint.DeltaDataJson;
-        for (int i = 1; i < snapshots.Count; i++)
-        {
-            reconstructedJson = JsonDeltaHelper.ApplyDelta(reconstructedJson, snapshots[i].DeltaDataJson);
-        }
+        // The photo references of a snapshot are not part of the state that goes back into the session (#4869)
+        var reconstructedJson = JsonDeltaHelper.ReconstructState(
+            checkpoint.DeltaDataJson,
+            snapshots.Skip(1).Select(s => s.DeltaDataJson));
 
         // 4. Auto-create "Pre-restore" snapshot of current state
         var preRestoreLabel = $"Auto \u2014 Pre-restore turno {session.CurrentTurnIndex}";

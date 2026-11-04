@@ -713,6 +713,9 @@ public class AuthenticationFlowsE2ETests : IAsyncLifetime
         }
 
         await unitOfWork.SaveChangesAsync(TestCancellationToken);
+        // Issue #3866: end of arrange — a force-logout request never created the sessions it
+        // revokes, so the change tracker must be empty here too.
+        _serviceProvider!.GetRequiredService<MeepleAiDbContext>().ChangeTracker.Clear();
         _output("3 sessions created from different devices");
 
         sessions.Should().OnlyContain(s => s.IsValid(_timeProvider));

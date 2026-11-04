@@ -34,6 +34,8 @@ internal static class GameManagementServiceExtensions
         services.AddScoped<IGameSessionRepository, GameSessionRepository>();
         // #3080: cross-context read-model resolving polymorphic score for session history.
         services.AddScoped<IHistorySessionScoreProvider, HistorySessionScoreProvider>();
+        // #4156: GameSession → id of the live session it is the companion of.
+        services.AddScoped<ILiveSessionLinkReader, LiveSessionLinkReader>();
         services.AddScoped<IGameSessionStateRepository, GameSessionStateRepository>(); // ISSUE-2403
         services.AddScoped<IPlayRecordRepository, PlayRecordRepository>(); // ISSUE-3889
         services.AddScoped<IPlayRecordVersionRepository, PlayRecordVersionRepository>(); // #2437-3: version history + restore
@@ -53,6 +55,7 @@ internal static class GameManagementServiceExtensions
         services.AddScoped<IGameNightEventRepository, GameNightEventRepository>(); // Issue #42: Game Night Event
         services.AddScoped<IGameNightPhotoRepository, GameNightPhotoRepository>(); // Issue #2724: Recap photo gallery
         services.AddScoped<IGameNightInvitationRepository, GameNightInvitationRepository>(); // Issue #607: Token-based public RSVP invitations
+        services.AddScoped<IGameNightGuestEmailOptOutRepository, GameNightGuestEmailOptOutRepository>(); // #4846: guests who asked to stop game night emails
         services.AddScoped<IRuleDisputeRepository, RuleDisputeRepository>(); // Structured rule dispute persistence
         services.AddScoped<IGamePhaseTemplateRepository, GamePhaseTemplateRepository>(); // Game phase templates for session setup
         services.AddScoped<IGameBookRepository, GameBookRepository>(); // Gamebook multi-book generalization (2026-05-19) Phase A5

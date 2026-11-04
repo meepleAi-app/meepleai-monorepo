@@ -34,6 +34,12 @@ internal class AddPlayerToLiveSessionCommandHandler : ICommandHandler<AddPlayerT
             .ConfigureAwait(false)
             ?? throw new NotFoundException("LiveGameSession", command.SessionId.ToString());
 
+        // #4398: solo il proprietario aggiunge giocatori; un ospite entra dalla sua rotta di invito.
+        if (command.RequestedByUserId is { } requester && session.CreatedByUserId != requester)
+        {
+            throw new ForbiddenException("Only the session host can add players.");
+        }
+
         var player = session.AddPlayer(
             command.UserId,
             command.DisplayName,

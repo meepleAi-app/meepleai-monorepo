@@ -15,6 +15,7 @@ using System.Threading;
 using Xunit;
 using FluentAssertions;
 using Api.Tests.Constants;
+using Api.Tests.Infrastructure;
 
 namespace Api.Tests.Integration;
 
@@ -33,6 +34,12 @@ public class CorsTestFactory : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // #3978 / REQ-AI-TEST-001 — guardia fail-closed sugli host AI a pagamento.
+        // Questa factory era una delle sei (su otto che costruiscono un host) che NON la
+        // installava: senza, una richiesta verso un provider a consumo USCIVA dalla macchina
+        // e moriva con 401 lato provider, cioe il divieto valeva per fortuna, non per costruzione.
+        builder.ConfigureServices(services => services.AddPaidAiHostGuard());
+
         builder.UseEnvironment("Testing");
 
         builder.ConfigureAppConfiguration((context, configBuilder) =>
@@ -42,6 +49,10 @@ public class CorsTestFactory : WebApplicationFactory<Program>
             {
                 ["OPENROUTER_API_KEY"] = "test-openrouter-key",
                 ["OPENROUTER_API_KEY_FILE"] = null,
+                // #3887: state the rate-limit switch for this host instead of relying on a process
+                // env var that another factory happened to set earlier in the run. One key only:
+                // DISABLE_RATE_LIMITING stays the production env alias, not a second test switch.
+                ["RateLimiting:Enabled"] = "false",
                 ["ConnectionStrings:Postgres"] = "Host=localhost;Port=5432;Database=dummy;Username=dummy;Password=dummy"
             });
         });

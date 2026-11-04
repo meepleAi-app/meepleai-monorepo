@@ -68,6 +68,41 @@ describe('DiscoverSearchBox', () => {
     expect(onCommit).not.toHaveBeenCalled();
   });
 
+  // #3848 — lo stato spento raggiungeva solo chi usa uno screen reader (aria-disabled) o chi
+  // passa sopra al campo e aspetta il title. Chi guarda lo schermo leggeva un invito a cercare su
+  // un campo che non accetta testo.
+  it('da spento mostra il motivo al posto dell invito a cercare', () => {
+    render(
+      <DiscoverSearchBox
+        value=""
+        onCommit={vi.fn()}
+        placeholder="Cerca giochi, agenti, toolkit…"
+        disabled
+        disabledTooltip="Ricerca non ancora disponibile"
+      />
+    );
+
+    const input = screen.getByRole('searchbox');
+    expect(input).toHaveAttribute('placeholder', 'Ricerca non ancora disponibile');
+    expect(input).toHaveAttribute('aria-label', 'Ricerca non ancora disponibile');
+  });
+
+  it('da attivo conserva il placeholder di invito', () => {
+    render(
+      <DiscoverSearchBox
+        value=""
+        onCommit={vi.fn()}
+        placeholder="Cerca giochi, agenti, toolkit…"
+        disabledTooltip="Ricerca non ancora disponibile"
+      />
+    );
+
+    expect(screen.getByRole('searchbox')).toHaveAttribute(
+      'placeholder',
+      'Cerca giochi, agenti, toolkit…'
+    );
+  });
+
   it('is readOnly and aria-disabled when disabled=true', () => {
     render(<DiscoverSearchBox value="" onCommit={vi.fn()} placeholder="Cerca..." disabled />);
     const input = screen.getByRole('searchbox');

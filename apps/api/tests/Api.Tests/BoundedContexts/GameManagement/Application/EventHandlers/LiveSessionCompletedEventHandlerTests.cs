@@ -3,8 +3,11 @@ using Api.BoundedContexts.GameManagement.Domain.Entities;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.Infrastructure.DomainEventOutbox;
+using Api.SharedKernel.Application.Services;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
@@ -42,7 +45,7 @@ public sealed class LiveSessionCompletedEventHandlerTests
         dbContext ??= TestDbContextFactory.CreateInMemoryDbContext();
         logger ??= new Mock<ILogger<LiveSessionCompletedEventHandler>>();
         return new LiveSessionCompletedEventHandler(
-            dbContext, logger.Object, _timeProvider, _playRecordRepository.Object);
+            dbContext, logger.Object, _timeProvider, _playRecordRepository.Object, new DomainEventCollector());
     }
 
     private LiveSessionCompletedEvent CreateCompletedEvent(
@@ -83,17 +86,18 @@ public sealed class LiveSessionCompletedEventHandlerTests
     }
 
     [Fact]
-    public async Task Handle_DoesNotThrow_EvenWhenInternalErrorOccurs()
+    public async Task Handle_WithNoPlayersAndNoScores_Completes()
     {
         // Arrange
         var handler = CreateHandler();
 
-        // Create event with empty players to test error-resilient processing
+        // No error is raised here (the old name promised one): what the handler does with a failure is covered
+        // by LiveSessionCompletedEventHandlerIdempotencyTests (#4753, #4839).
         var @event = CreateCompletedEvent(
             players: new List<CompletedPlayerSnapshot>(),
             scores: new List<CompletedScoreSnapshot>());
 
-        // Act - should not throw regardless of internal state
+        // Act
         var exception = await Record.ExceptionAsync(() =>
             handler.Handle(@event, CancellationToken.None));
 
@@ -190,6 +194,160 @@ public sealed class LiveSessionCompletedEventHandlerTests
             Times.Once);
     }
 
+    // ── #4156 fetta 2 — the play record carries the totals of the live session ──────────────────
+
+    [Fact]
+    public async Task Handle_WithTheWizardDimension_PersistsThePlayRecordWithThatDimension()
+    {
+        // The desktop wizard's default dimension is «Punti». The play record used the default
+        // scoring config, which enables only "points": recording «Punti» threw, the handler
+        // swallowed it, and no play record was written.
+        PlayRecord? persisted = null;
+        _playRecordRepository
+            .Setup(r => r.AddAsync(It.IsAny<PlayRecord>(), It.IsAny<CancellationToken>()))
+            .Callback<PlayRecord, CancellationToken>((record, _) => persisted = record)
+            .Returns(Task.CompletedTask);
+        var marco = new CompletedPlayerSnapshot(Guid.NewGuid(), null, "Marco", 10, 2);
+        var giulia = new CompletedPlayerSnapshot(Guid.NewGuid(), null, "Giulia", 30, 1);
+        var @event = CreateCompletedEvent(
+            gameId: Guid.NewGuid(),
+            players: [marco, giulia],
+            scores: [new(marco.PlayerId, "Punti", 10, "PV"), new(giulia.PlayerId, "Punti", 30, "PV")]);
+
+        await CreateHandler().Handle(@event, CancellationToken.None);
+
+        persisted.Should().NotBeNull("a completed live session must produce its play record");
+        persisted!.Players.Single(p => p.DisplayName == "Marco").GetScore("Punti")!.Value.Should().Be(10);
+        persisted.Players.Single(p => p.DisplayName == "Giulia").GetScore("Punti")!.Value.Should().Be(30);
+    }
+
+    [Fact]
+    public async Task Handle_WithSeveralRounds_RecordsTheTotalOfEachDimension()
+    {
+        // A play record keeps one value per player and dimension: recording each round replaced
+        // the previous one, so the record carried the last round instead of the total.
+        PlayRecord? persisted = null;
+        _playRecordRepository
+            .Setup(r => r.AddAsync(It.IsAny<PlayRecord>(), It.IsAny<CancellationToken>()))
+            .Callback<PlayRecord, CancellationToken>((record, _) => persisted = record)
+            .Returns(Task.CompletedTask);
+        var marco = new CompletedPlayerSnapshot(Guid.NewGuid(), null, "Marco", 20, 1);
+        var giulia = new CompletedPlayerSnapshot(Guid.NewGuid(), null, "Giulia", 10, 2);
+        var @event = CreateCompletedEvent(
+            gameId: Guid.NewGuid(),
+            players: [marco, giulia],
+            scores:
+            [
+                new(marco.PlayerId, "points", 10, "pts"),
+                new(marco.PlayerId, "points", 4, "pts"),
+                new(marco.PlayerId, "points", 6, "pts"),
+                new(giulia.PlayerId, "points", 5, "pts"),
+                new(giulia.PlayerId, "points", 5, "pts"),
+            ]);
+
+        await CreateHandler().Handle(@event, CancellationToken.None);
+
+        persisted.Should().NotBeNull();
+        persisted!.Players.Single(p => p.DisplayName == "Marco").GetScore("points")!.Value.Should().Be(20);
+        persisted.Players.Single(p => p.DisplayName == "Giulia").GetScore("points")!.Value.Should().Be(10);
+    }
+
+    // ── #4753 — one completed session is one play record, however many times the event arrives ──
+    //
+    // The play record carries a key that the partial UNIQUE index on play_records.source_event_id turns into
+    // «this was already recorded». It was the EventId of the event, a Guid.NewGuid() of each INSTANCE: the same
+    // completion delivered twice (in-process and from the outbox, or an outbox replay, which rebuilds the event
+    // through its constructor) carried two keys, and the index saw two different records.
+
+    private List<PlayRecord> CapturePersistedRecords()
+    {
+        var persisted = new List<PlayRecord>();
+        _playRecordRepository
+            .Setup(r => r.AddAsync(It.IsAny<PlayRecord>(), It.IsAny<CancellationToken>()))
+            .Callback<PlayRecord, CancellationToken>((record, _) => persisted.Add(record))
+            .Returns(Task.CompletedTask);
+        return persisted;
+    }
+
+    [Fact]
+    public async Task Handle_TheSameCompletionAsTwoInstances_CarriesOneKey()
+    {
+        var persisted = CapturePersistedRecords();
+        var sessionId = Guid.NewGuid();
+        var first = CreateCompletedEvent(sessionId: sessionId, gameId: Guid.NewGuid());
+        var second = CreateCompletedEvent(sessionId: sessionId, gameId: Guid.NewGuid());
+        first.EventId.Should().NotBe(second.EventId, "two instances of the event have two EventIds: this is the case under test");
+
+        await CreateHandler().Handle(first, CancellationToken.None);
+        await CreateHandler().Handle(second, CancellationToken.None);
+
+        persisted.Should().HaveCount(2, "each handler here reads its own empty database: skipping a session that already has its record is covered by LiveSessionCompletedEventHandlerIdempotencyTests");
+        persisted.Select(r => r.SourceEventId).Distinct().Should().ContainSingle();
+        persisted[0].SourceEventId.Should().Be(sessionId);
+    }
+
+    [Fact]
+    public async Task Handle_TheSameCompletionRebuiltByTheOutbox_CarriesTheKeyOfTheOriginal()
+    {
+        // What the outbox does with the row: JSON with its options, then the type's constructor.
+        var persisted = CapturePersistedRecords();
+        var original = CreateCompletedEvent(gameId: Guid.NewGuid());
+        var json = JsonSerializer.Serialize(original, DomainEventJsonOptions.Default);
+        var rebuilt = JsonSerializer.Deserialize<LiveSessionCompletedEvent>(json, DomainEventJsonOptions.Default)!;
+        rebuilt.SessionId.Should().Be(original.SessionId, "the round trip must give back the same session");
+        rebuilt.EventId.Should().Be(
+            original.EventId,
+            "since #4841 the outbox hands back the EventId it stored; the key of this handler is the session either way");
+
+        await CreateHandler().Handle(original, CancellationToken.None);
+        await CreateHandler().Handle(rebuilt, CancellationToken.None);
+
+        persisted.Select(r => r.SourceEventId).Distinct().Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Handle_TheSameCompletionWithAnotherEventId_StillCarriesTheKeyOfTheSession()
+    {
+        // The key is the session, not the event: a redelivery that arrives with a different EventId
+        // (an event type that does not keep it, a hand-made payload) must still collapse onto one record.
+        var persisted = CapturePersistedRecords();
+        var original = CreateCompletedEvent(gameId: Guid.NewGuid());
+        var payload = System.Text.Json.Nodes.JsonNode.Parse(JsonSerializer.Serialize(original, DomainEventJsonOptions.Default))!.AsObject();
+        payload["eventId"] = Guid.NewGuid();
+        var other = JsonSerializer.Deserialize<LiveSessionCompletedEvent>(payload.ToJsonString(), DomainEventJsonOptions.Default)!;
+        other.EventId.Should().NotBe(original.EventId, "this is the case under test");
+        other.SessionId.Should().Be(original.SessionId);
+
+        await CreateHandler().Handle(original, CancellationToken.None);
+        await CreateHandler().Handle(other, CancellationToken.None);
+
+        persisted.Select(r => r.SourceEventId).Distinct().Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Handle_TwoDifferentSessions_CarryDifferentKeys()
+    {
+        // The other direction: the key must not collapse two sessions into one record.
+        var persisted = CapturePersistedRecords();
+
+        await CreateHandler().Handle(CreateCompletedEvent(gameId: Guid.NewGuid()), CancellationToken.None);
+        await CreateHandler().Handle(CreateCompletedEvent(gameId: Guid.NewGuid()), CancellationToken.None);
+
+        persisted.Select(r => r.SourceEventId).Distinct().Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task Handle_AFreeFormSession_CarriesTheSameKey()
+    {
+        // `GameId` null takes the other factory (`CreateFreeForm`): the key has to be set there too.
+        var persisted = CapturePersistedRecords();
+        var sessionId = Guid.NewGuid();
+
+        await CreateHandler().Handle(CreateCompletedEvent(sessionId: sessionId, gameId: null), CancellationToken.None);
+
+        persisted.Should().ContainSingle().Which.SourceEventId.Should().Be(sessionId);
+    }
+
     [Fact]
     public void Constructor_NullDbContext_ThrowsArgumentNullException()
     {
@@ -199,7 +357,7 @@ public sealed class LiveSessionCompletedEventHandlerTests
         // Act & Assert
         var act = () =>
             new LiveSessionCompletedEventHandler(
-                null!, logger.Object, _timeProvider, _playRecordRepository.Object);
+                null!, logger.Object, _timeProvider, _playRecordRepository.Object, new DomainEventCollector());
         act.Should().Throw<ArgumentNullException>();
     }
 
@@ -213,7 +371,7 @@ public sealed class LiveSessionCompletedEventHandlerTests
         // Act & Assert
         var act = () =>
             new LiveSessionCompletedEventHandler(
-                dbContext, logger.Object, null!, _playRecordRepository.Object);
+                dbContext, logger.Object, null!, _playRecordRepository.Object, new DomainEventCollector());
         act.Should().Throw<ArgumentNullException>();
     }
 
@@ -227,7 +385,21 @@ public sealed class LiveSessionCompletedEventHandlerTests
         // Act & Assert
         var act = () =>
             new LiveSessionCompletedEventHandler(
-                dbContext, logger.Object, _timeProvider, null!);
+                dbContext, logger.Object, _timeProvider, null!, new DomainEventCollector());
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Constructor_NullEventCollector_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var dbContext = TestDbContextFactory.CreateInMemoryDbContext();
+        var logger = new Mock<ILogger<LiveSessionCompletedEventHandler>>();
+
+        // Act & Assert
+        var act = () =>
+            new LiveSessionCompletedEventHandler(
+                dbContext, logger.Object, _timeProvider, _playRecordRepository.Object, null!);
         act.Should().Throw<ArgumentNullException>();
     }
 }

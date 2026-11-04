@@ -103,7 +103,16 @@ prod-down: ## Stop production
 secrets-setup: ## Generate placeholder secrets from .example files
 	pwsh -File secrets/setup-secrets.ps1
 
-secrets-sync: ## Sync secrets from staging server (requires SSH access)
+secrets-sync: ## Decrypt infra/secrets/sops/*.secret.enc into *.secret (SOPS + age, #4427)
+	bash scripts/secrets-sops.sh decrypt
+
+secrets-encrypt: ## Encrypt changed local *.secret into infra/secrets/sops/ (commit the result)
+	bash scripts/secrets-sops.sh encrypt
+
+secrets-status: ## Show which secrets are aligned, local-only, encrypted-only or different
+	bash scripts/secrets-sops.sh status
+
+secrets-pull-staging: ## Copy *.secret FROM the staging server (old flow, needs SSH; staging is down since 2026-10)
 	bash scripts/sync-secrets.sh
 
 # === Database Seeds ===
@@ -260,7 +269,26 @@ seed-status-badge: ## Regenerate README snapshot-freshness badge between <!-- sn
 
 seed-index: ## Bake: indicizza tutti i PDF e produce snapshot locale
 	@bash scripts/seed-index-preflight.sh
-	$(COMPOSE) -f compose.dev.yml --profile ai up -d postgres redis api embedding-service smoldocling-service
+	$(COMPOSE) -f compose.dev.yml -f compose.bake.yml --profile ai up -d postgres redis api embedding-service smoldocling-service
+# #3998 — il dollaro va RADDOPPIATO, o la variabile e' inerte.
+#
+# In una ricetta make `$` apre una variabile MAKE: `${SEED_INDEX_HEALTH_TIMEOUT:-180}` fa cercare
+# a make una variabile di nome `SEED_INDEX_HEALTH_TIMEOUT:-180`, che non esiste, e espande a
+# STRINGA VUOTA — anche quando la variabile d'ambiente c'e'. Con `$$` make passa `${...}` alla
+# shell, che applica il default.
+#
+# Conseguenze di quando era a dollaro singolo: `SEED_INDEX_HEALTH_TIMEOUT` non ha mai avuto
+# effetto su questo target, il timeout reale era 120s (il `${2:-120}` dentro lo script, non i 180
+# scritti qui), e il bake full — che imposta `SEED_INDEX_HEALTH_TIMEOUT: '600'` in
+# seed-snapshot-bake-full.yml — girava anche lui a 120s. Trovato dalla riga di misura che
+# `wait-for-healthy.sh` ora stampa a ogni successo: diceva `timeout 120s` dove il commento
+# prometteva 180.
+#
+# 180s e' ~5x il boot sano misurato. Quattro bake verdi del 2026-10-01: 28,45s (9a538d99a),
+# 28,79s (fb3b3493b), 28,63s (3ed916558) e 33s sul giro successivo — cioe' il 18% di varianza
+# fra giri identici, che e' la ragione per NON stringere la soglia sul caso tipico. Nello stesso
+# repo `actions/checkout` e' stato visto fra 29s e 9m39s: un timeout tarato sul misurato diventa
+# un flaky al primo runner lento, e un gate rosso per rumore insegna a ignorare i gate rossi.
 	@bash scripts/wait-for-healthy.sh api $${SEED_INDEX_HEALTH_TIMEOUT:-180}
 	@bash scripts/seed-index-wait.sh
 	@bash scripts/seed-index-dump.sh
@@ -322,6 +350,14 @@ ci-be-unit: ## Backend unit tests — mirrors ci.yml backend-unit job
 	cd $(API_SRC) && dotnet build --nologo -v q
 	cd $(API) && dotnet test $(API_TESTS) --filter "Category=Unit" --nologo -v q
 	@echo "✅ Backend unit tests passed"
+
+test-no-docker: ## Tutto cio che NON richiede Docker — la via per lavorare a container spenti (#4022)
+	@echo "🔵 Selezione senza Docker (stesso filtro di dev-fast)..."
+	cd $(API_SRC) && dotnet build --nologo -v q
+	cd $(API) && dotnet test $(API_TESTS) \
+		--filter "Category!=Integration&Category!=E2E&Category!=Performance&Category!=Manual&Category!=Slow" \
+		--nologo -v q
+	@echo "✅ Selezione senza Docker passata"
 
 ci-be-unit-coverage: ## Backend unit tests with coverage report (lcov in tests/Api.Tests/coverage/)
 	@echo "🔵 Backend unit tests + coverage..."
@@ -502,10 +538,10 @@ eval-merge-labels: ## Merge a human-reviewed LabelingReview into a dataset and p
         tunnel tunnel-stop tunnel-status integration-check integration \
         integration-down work work-stop smoke smoke-staging smoke-pg-readback staging staging-minimal staging-with-tutor staging-tutor-down staging-core staging-down prod prod-down \
         alpha alpha-core alpha-down \
-        secrets-setup secrets-sync \
+        secrets-setup secrets-sync secrets-encrypt secrets-status secrets-pull-staging \
         snapshot restore-staging restore-local seed-games \
         logs logging logging-down logs-ui ps build clean help \
-        ci ci-fe ci-be-unit ci-be-integration ci-be-e2e ci-all \
+        ci ci-fe ci-be-unit ci-be-integration ci-be-e2e ci-all test-no-docker \
         sec-scan sec-pentest security-audit test-e2e test-perf validate-workflows \
         backup backup-verify backup-restore-test backup-status backup-cron-install backup-cron-show \
         db-snapshot db-snapshot-sanitized db-reset-migrations db-restore-snapshot db-rollback-safetynet \

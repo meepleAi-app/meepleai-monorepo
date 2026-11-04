@@ -3,7 +3,7 @@
  *
  * Tests for the PDF upload section component with:
  * - Drag-and-drop file selection
- * - File validation (PDF type, 50MB limit)
+ * - File validation (PDF type, the backend's size limit — #4449)
  * - Upload progress tracking
  * - Success/error states
  */
@@ -13,7 +13,14 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+import { resetPdfUploadLimit, setPdfUploadLimit } from '@/__tests__/utils/pdf-upload-limits-mock';
 import { PdfUploadSection } from '@/components/admin/shared-games/PdfUploadSection';
+
+// #4449: the size limit is the backend's, read through usePdfUploadLimits.
+vi.mock(
+  '@/hooks/queries/usePdfUploadLimits',
+  () => import('@/__tests__/utils/pdf-upload-limits-mock')
+);
 
 // ============================================================================
 // Test Utilities
@@ -75,6 +82,8 @@ afterEach(() => {
 // ============================================================================
 
 describe('PdfUploadSection', () => {
+  beforeEach(() => resetPdfUploadLimit());
+
   const defaultProps = {
     gameId: 'game-123',
     onPdfUploaded: vi.fn(),
@@ -93,7 +102,7 @@ describe('PdfUploadSection', () => {
       renderWithProviders(<PdfUploadSection {...defaultProps} />);
 
       expect(screen.getByText(/Trascina un PDF o clicca per selezionare/i)).toBeInTheDocument();
-      expect(screen.getByText(/PDF fino a 50MB/i)).toBeInTheDocument();
+      expect(screen.getByText(/PDF fino a 100 MB/i)).toBeInTheDocument();
     });
 
     it('should render the info box', () => {
@@ -136,12 +145,13 @@ describe('PdfUploadSection', () => {
       expect(screen.getByText(/Trascina un PDF/i)).toBeInTheDocument();
     });
 
-    it('should reject files larger than 50MB and not show in UI', async () => {
+    it('should reject files over the limit the backend gives, naming it (#4449)', async () => {
+      setPdfUploadLimit(20 * 1024 * 1024);
       const user = userEvent.setup();
       renderWithProviders(<PdfUploadSection {...defaultProps} />);
 
       const input = document.getElementById('admin-pdf-input') as HTMLInputElement;
-      const largePdf = createMockFile('large.pdf', 'application/pdf', 51 * 1024 * 1024);
+      const largePdf = createMockFile('large.pdf', 'application/pdf', 21 * 1024 * 1024);
 
       await user.upload(input, largePdf);
 
@@ -151,6 +161,7 @@ describe('PdfUploadSection', () => {
       });
       // Drop zone should still be visible
       expect(screen.getByText(/Trascina un PDF/i)).toBeInTheDocument();
+      expect(screen.getByText('Il file supera il limite di 20 MB')).toBeInTheDocument();
     });
 
     it('should accept valid PDF files', async () => {

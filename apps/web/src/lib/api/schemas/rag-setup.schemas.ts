@@ -24,7 +24,8 @@ export type DocumentStatus = z.infer<typeof DocumentStatusSchema>;
 export const AgentInfoSchema = z.object({
   agentId: z.string(),
   name: z.string(),
-  type: z.string(),
+  // Issue #4138: a required `type: z.string()` stood here, mirroring a backend field
+  // that is gone. Left in place it would have failed the parse on every response.
   isActive: z.boolean(),
   isReady: z.boolean(),
 });

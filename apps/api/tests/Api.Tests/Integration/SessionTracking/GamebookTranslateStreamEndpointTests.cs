@@ -17,6 +17,22 @@ using Xunit;
 namespace Api.Tests.Integration.SessionTracking;
 
 /// <summary>
+/// La fixture di <see cref="GamebookTranslateStreamEndpointTests"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// I test verificano le guardie di accesso prima dello stream SSE: ciascuno semina le proprie
+/// entita' e ne osserva solo lo stato HTTP, senza contare righe altrui.
+/// </para>
+/// <para>
+/// #4050. Il verdetto di isolamento e' stato stabilito leggendo gli ENDPOINT, non i nomi dei
+/// test, e confermato da una refutazione ostile che cercava il falso negativo.
+/// </para>
+/// </remarks>
+public sealed class GamebookTranslateStreamEndpointTestsHostFixture(SharedTestcontainersFixture shared)
+    : IntegrationHostFixture(shared, "translate_stream");
+
+/// <summary>
 /// Issue #1415: integration tests for GET /api/v1/gamebook/campaigns/{id}/photos/translate (SSE).
 /// Verifies the pre-flight ownership guard returns proper HTTP error codes BEFORE the SSE
 /// headers are flushed, so middleware can rewrite the status to 401/403/404 (instead of
@@ -41,38 +57,31 @@ namespace Api.Tests.Integration.SessionTracking;
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SessionTracking")]
-public sealed class GamebookTranslateStreamEndpointTests : IAsyncLifetime
+public sealed class GamebookTranslateStreamEndpointTests
+    : IClassFixture<GamebookTranslateStreamEndpointTestsHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
+    private readonly GamebookTranslateStreamEndpointTestsHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _client = null!;
 
-    public GamebookTranslateStreamEndpointTests(SharedTestcontainersFixture fixture)
+    public GamebookTranslateStreamEndpointTests(GamebookTranslateStreamEndpointTestsHostFixture hostFixture)
     {
-        _fixture = fixture;
-        _testDbName = $"translate_stream_{Guid.NewGuid():N}";
+        _hostFixture = hostFixture;
     }
 
-    public async ValueTask InitializeAsync()
+    // #4050. Host E database vengono dalla fixture, pagati una volta per classe. Prima
+    // questo metodo li costruiva per OGNI test, perche' xUnit istanzia la classe di test
+    // una volta per METODO: ~24,4s moltiplicati per il numero di test.
+    public ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync();
-        }
-
-        _client = _factory.CreateClient();
+        _factory = _hostFixture.Factory;
+        _client = _hostFixture.Client;
+        return ValueTask.CompletedTask;
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        _client?.Dispose();
-        await _factory.DisposeAsync();
-    }
+    // Host, client e database appartengono alla fixture: disporli qui li toglierebbe
+    // ai test successivi.
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     private static string BuildUrl(Guid campaignId, Guid photoId, Guid gameBookId, int paragraphNumber = 1) =>
         $"/api/v1/gamebook/campaigns/{campaignId}/photos/translate" +

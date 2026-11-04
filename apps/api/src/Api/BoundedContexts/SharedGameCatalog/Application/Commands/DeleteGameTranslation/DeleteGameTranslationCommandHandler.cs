@@ -1,7 +1,7 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Exceptions;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
-using Api.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 
@@ -44,27 +44,23 @@ internal sealed class DeleteGameTranslationCommandHandler
 {
     private readonly ISharedGameTranslationRepository _translationRepo;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IHybridCacheService _cache;
-    private readonly ICacheInvalidationRetryPolicy _retryPolicy;
+    private readonly ISharedGameCacheInvalidator _cacheInvalidator;
     private readonly TimeProvider _clock;
 
     public DeleteGameTranslationCommandHandler(
         ISharedGameTranslationRepository translationRepo,
         IUnitOfWork unitOfWork,
-        IHybridCacheService cache,
-        ICacheInvalidationRetryPolicy retryPolicy,
+        ISharedGameCacheInvalidator cacheInvalidator,
         TimeProvider clock)
     {
         ArgumentNullException.ThrowIfNull(translationRepo);
         ArgumentNullException.ThrowIfNull(unitOfWork);
-        ArgumentNullException.ThrowIfNull(cache);
-        ArgumentNullException.ThrowIfNull(retryPolicy);
+        ArgumentNullException.ThrowIfNull(cacheInvalidator);
         ArgumentNullException.ThrowIfNull(clock);
 
         _translationRepo = translationRepo;
         _unitOfWork = unitOfWork;
-        _cache = cache;
-        _retryPolicy = retryPolicy;
+        _cacheInvalidator = cacheInvalidator;
         _clock = clock;
     }
 
@@ -92,21 +88,9 @@ internal sealed class DeleteGameTranslationCommandHandler
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
 
         // Issue #2372: invalidate catalog read-model on the GREEN path only.
-        await InvalidateCatalogCacheAsync(existing.SharedGameId, cancellationToken).ConfigureAwait(false);
+        await _cacheInvalidator.EvictDetailAndListAsync(existing.SharedGameId, cancellationToken).ConfigureAwait(false);
 
         return Unit.Value;
     }
 
-    private async Task InvalidateCatalogCacheAsync(Guid sharedGameId, CancellationToken ct)
-    {
-        await _retryPolicy.ExecuteAsync(
-            token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync("search-games", token)),
-            "shared-games.list",
-            ct).ConfigureAwait(false);
-
-        await _retryPolicy.ExecuteAsync(
-            token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync($"shared-game:{sharedGameId}", token)),
-            "shared-games.detail",
-            ct).ConfigureAwait(false);
-    }
 }

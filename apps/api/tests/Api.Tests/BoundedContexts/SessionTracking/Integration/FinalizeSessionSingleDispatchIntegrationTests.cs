@@ -126,6 +126,7 @@ public sealed class FinalizeSessionSingleDispatchIntegrationTests : IAsyncLifeti
             capturedEvents.Add(evt);
         }).BuildServiceProvider();
 
+        AssertEveryHandlerResolves(spyProvider);
         var mediator = spyProvider.GetRequiredService<IMediator>();
         var finalRanks = new Dictionary<Guid, int> { [participantId] = 1 };
 
@@ -156,6 +157,7 @@ public sealed class FinalizeSessionSingleDispatchIntegrationTests : IAsyncLifeti
             captured = evt;
         }).BuildServiceProvider();
 
+        AssertEveryHandlerResolves(spyProvider);
         var mediator = spyProvider.GetRequiredService<IMediator>();
         var finalRanks = new Dictionary<Guid, int> { [participantId] = 1 };
 
@@ -283,6 +285,26 @@ public sealed class FinalizeSessionSingleDispatchIntegrationTests : IAsyncLifeti
         db.ChangeTracker.Clear();
 
         return (user.Id, game.Id, sessionId, participantId);
+    }
+
+    /// <summary>
+    /// Ogni handler di <see cref="SessionFinalizedEvent"/> deve potersi costruire in questo
+    /// contenitore (#4587).
+    /// </summary>
+    /// <remarks>
+    /// MediatR li risolve tutti insieme: se uno non si costruisce, la pubblicazione si interrompe,
+    /// il dispatch inghiotte l'eccezione, e la spia non parte. Senza questa precondizione il test
+    /// diceva solo «found 0», e la causa vera era l'eccezione inghiottita: dopo #4567
+    /// <c>UserActivityCacheInvalidationEventHandler</c> chiede <c>HybridCache</c>, che
+    /// <see cref="IntegrationServiceCollectionBuilder.CreateBase"/> non registrava.
+    /// </remarks>
+    private static void AssertEveryHandlerResolves(ServiceProvider provider)
+    {
+        using var scope = provider.CreateScope();
+        var resolve = () => scope.ServiceProvider.GetServices<INotificationHandler<SessionFinalizedEvent>>().ToList();
+
+        resolve.Should().NotThrow(
+            "un handler che non si costruisce interrompe la pubblicazione, e il dispatch inghiotte l'eccezione");
     }
 
     // ── Inner spy ─────────────────────────────────────────────────────────────

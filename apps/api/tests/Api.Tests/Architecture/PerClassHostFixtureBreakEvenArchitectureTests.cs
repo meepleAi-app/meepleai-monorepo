@@ -128,7 +128,7 @@ public sealed class PerClassHostFixtureBreakEvenArchitectureTests
     private static string LocateTestsRoot()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, ".git")))
+        while (dir is not null && !SourceScanner.IsRepoRoot(dir.FullName))
         {
             dir = dir.Parent;
         }

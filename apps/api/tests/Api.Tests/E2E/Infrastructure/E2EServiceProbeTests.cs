@@ -242,7 +242,7 @@ public sealed class E2EServiceProbeTests
     private static List<(string File, string Argument)> ProbeCallSites()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, ".git")))
+        while (dir is not null && !SourceScanner.IsRepoRoot(dir.FullName))
         {
             dir = dir.Parent;
         }
@@ -286,7 +286,7 @@ public sealed class E2EServiceProbeTests
     private static string LocateHealthExtensions()
     {
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, ".git")))
+        while (dir is not null && !SourceScanner.IsRepoRoot(dir.FullName))
         {
             dir = dir.Parent;
         }

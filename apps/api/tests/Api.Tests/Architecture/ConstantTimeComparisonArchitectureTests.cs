@@ -44,6 +44,7 @@ public class ConstantTimeComparisonArchitectureTests
         ("BoundedContexts/Authentication/Domain/ValueObjects/PasswordHash.cs", "hash PBKDF2 della password (value object)"),
         ("BoundedContexts/Authentication/Application/Commands/Registration/RegisterCommandHandler.cs", "codice di invito"),
         ("BoundedContexts/UserNotifications/Infrastructure/Slack/SlackSignatureValidator.cs", "firma HMAC del webhook Slack"),
+        ("Filters/InternalServiceTokenFilter.cs", "token di servizio interno X-Internal-Service-Token (spec azure-local)"),
     ];
 
     private const string ConstantTimeCall = "CryptographicOperations.FixedTimeEquals";
@@ -150,14 +151,8 @@ public class ConstantTimeComparisonArchitectureTests
 
         // In un git worktree `.git` è un file, non una directory: accettare entrambi fa fermare
         // la risalita alla root giusta invece di proseguire verso il checkout principale.
-        while (dir is not null)
+        while (dir is not null && !SourceScanner.IsRepoRoot(dir.FullName))
         {
-            var git = Path.Combine(dir.FullName, ".git");
-            if (Directory.Exists(git) || File.Exists(git))
-            {
-                break;
-            }
-
             dir = dir.Parent;
         }
 

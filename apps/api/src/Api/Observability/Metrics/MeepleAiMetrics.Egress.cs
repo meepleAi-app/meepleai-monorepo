@@ -20,6 +20,9 @@ internal static partial class MeepleAiMetrics
         public const string Wikimedia = "wikimedia";
         public const string Bgg = "bgg";
         public const string Slack = "slack";
+
+        /// <summary>SDK Azure (Blob, Key Vault, App Configuration) nel profilo Azure vero — spec azure-local §4.5.</summary>
+        public const string AzureSdk = "azure_sdk";
     }
 
     /// <summary>

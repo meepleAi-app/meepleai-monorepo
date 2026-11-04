@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Api.Tests.Architecture;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Xunit;
@@ -99,7 +100,7 @@ public class VersionDriftPreventionTests
         // then descend into apps/api/src/Api. The path resolves identically
         // whether the test runs from the IDE or `dotnet test`.
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, ".git")))
+        while (dir is not null && !SourceScanner.IsRepoRoot(dir.FullName))
         {
             dir = dir.Parent;
         }

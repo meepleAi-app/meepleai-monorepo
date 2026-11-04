@@ -25,6 +25,7 @@ namespace Api.Observability;
 ///   - MeepleAiMetrics.LiveSession.cs        — LiveSession write counters and UpdateAsync duration (#2097 ADR-060)
 ///   - MeepleAiMetrics.LiveSessionSse.cs    — Native SSE active-connections gauge + reconnect counter (#2561 SP2 T12)
 ///   - MeepleAiMetrics.AgentGrounding.cs    — In-session agent response grounding by path/status/profile + citation count (#3390 Slice 1)
+///   - MeepleAiMetrics.PdfIntegrationEvents.cs — PdfUploaded integration event outcomes (spec azure-local)
 /// </summary>
 internal static partial class MeepleAiMetrics
 {

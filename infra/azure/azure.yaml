@@ -1,0 +1,19 @@
+# azd: mai eseguito in CI (solo `bicep build`/`lint`). Per l'esercizio d'esame: `azd provision` manuale.
+name: meepleai
+infra:
+  provider: bicep
+  path: .
+  module: main
+services:
+  api:
+    project: ../../apps/api/src/Api
+    host: containerapp
+    language: dotnet
+  web:
+    project: ../../apps/web
+    host: containerapp
+    language: js
+  functions:
+    project: ../../apps/functions/MeepleAI.Functions
+    host: function
+    language: dotnet

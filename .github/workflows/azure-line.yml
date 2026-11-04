@@ -1,0 +1,62 @@
+name: Azure Line
+
+on:
+  pull_request:
+    paths:
+      - 'infra/azure/**'
+      - 'apps/functions/**'
+      - 'tests/fixtures/contracts/**'
+      - '.github/workflows/azure-line.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: azure-line-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  bicep:
+    name: Bicep build + lint (never deploys)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BICEP_VERSION: v0.48.1
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Bicep CLI
+        run: |
+          set -euo pipefail
+          curl -sSL -o bicep "https://github.com/Azure/bicep/releases/download/${BICEP_VERSION}/bicep-linux-x64"
+          chmod +x bicep && sudo mv bicep /usr/local/bin/bicep
+          bicep --version
+      - name: Build and lint every template
+        working-directory: infra/azure
+        run: |
+          set -euo pipefail
+          status=0
+          for f in main.bicep modules/*.bicep; do
+            echo "== $f"
+            bicep build "$f" --stdout > /dev/null || status=1
+            bicep lint "$f" || status=1
+          done
+          exit $status
+
+  functions-tests:
+    name: Azure Functions unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '9.0.x'
+      - name: Test
+        working-directory: apps/functions
+        run: dotnet test --configuration Release --logger "trx;LogFileName=functions.trx"
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: functions-test-results
+          path: apps/functions/**/TestResults/*.trx

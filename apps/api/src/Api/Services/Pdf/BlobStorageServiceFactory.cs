@@ -1,6 +1,9 @@
 using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
+using Api.Infrastructure.AzureSdk;
+using Azure.Identity;
+using Azure.Storage.Blobs;
 using System.Globalization;
 
 namespace Api.Services.Pdf;
@@ -23,6 +26,7 @@ internal static class BlobStorageServiceFactory
 
         return storageProvider switch
         {
+            "azureblob" => CreateAzureBlobStorageService(serviceProvider, config),
             "s3" => CreateS3StorageService(serviceProvider, config),
             "local" => CreateLocalStorageService(serviceProvider, config),
             _ => CreateLocalStorageService(serviceProvider, config) // Fallback to local
@@ -107,6 +111,47 @@ internal static class BlobStorageServiceFactory
             options.Endpoint, options.PublicEndpoint ?? options.Endpoint, options.BucketName, options.Region, options.EnableEncryption);
 
         return new S3BlobStorageService(s3Client, options, logger, presignClient);
+    }
+
+    private static IBlobStorageService CreateAzureBlobStorageService(IServiceProvider serviceProvider, IConfiguration config)
+    {
+        var logger = serviceProvider.GetRequiredService<ILogger<AzureBlobStorageService>>();
+        var connectionString = config["AZURE_STORAGE_CONNECTION_STRING"];
+        var accountUrl = config["AZURE_STORAGE_ACCOUNT_URL"];
+        var hasConnectionString = !string.IsNullOrWhiteSpace(connectionString);
+        var hasAccountUrl = !string.IsNullOrWhiteSpace(accountUrl);
+        if (!hasConnectionString && !hasAccountUrl)
+        {
+            throw new InvalidOperationException(
+                "AZURE_STORAGE_CONNECTION_STRING or AZURE_STORAGE_ACCOUNT_URL is required when STORAGE_PROVIDER=azureblob");
+        }
+
+        var accountName = string.Empty;
+        var accountKey = string.Empty;
+        var hasSharedKey = hasConnectionString
+            && AzureStorageConnectionString.TryParse(connectionString, out accountName, out accountKey);
+        var options = new AzureBlobStorageOptions
+        {
+            ConnectionString = connectionString,
+            AccountUrl = accountUrl,
+            ContainerName = config["AZURE_STORAGE_CONTAINER"] is { Length: > 0 } name ? name : "meepleai-uploads",
+            PublicBlobEndpoint = config["AZURE_STORAGE_PUBLIC_BLOB_ENDPOINT"],
+            SasExpirySeconds = int.TryParse(config["AZURE_STORAGE_SAS_EXPIRY"], CultureInfo.InvariantCulture, out var expiry) ? expiry : 3600,
+            AccountName = hasSharedKey ? accountName : null,
+            AccountKey = hasSharedKey ? accountKey : null,
+        };
+
+        var clientOptions = new BlobClientOptions { Transport = AzureSdkHttpClients.CreateTransport(serviceProvider) };
+        var serviceClient = hasConnectionString
+            ? new BlobServiceClient(connectionString, clientOptions)
+            : new BlobServiceClient(new Uri(accountUrl!, UriKind.Absolute), new DefaultAzureCredential(), clientOptions);
+        var container = serviceClient.GetBlobContainerClient(options.ContainerName);
+
+        logger.LogInformation(
+            "Initialized Azure Blob storage: endpoint={Endpoint}, container={Container}, publicEndpoint={PublicEndpoint}, sharedKey={SharedKey}",
+            serviceClient.Uri, options.ContainerName, options.PublicBlobEndpoint ?? serviceClient.Uri.ToString(), options.AccountKey is not null);
+
+        return new AzureBlobStorageService(serviceClient, container, options, logger);
     }
 
     /// <summary>

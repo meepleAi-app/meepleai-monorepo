@@ -1,0 +1,10 @@
+{
+  "eventId": "3f0f1a2b-4c5d-4e6f-8a9b-0c1d2e3f4a5b",
+  "occurredAt": "2026-10-09T10:00:00Z",
+  "sourceContext": "DocumentProcessing",
+  "contractVersion": "v1",
+  "pdfDocumentId": "7b2d9e4a-1c3f-4a5b-9d8e-2f1a3b4c5d6e",
+  "gameId": "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d",
+  "sharedGameId": null,
+  "filePath": "pdfs/9a8b7c6d5e4f4a3b8c2d1e0f9a8b7c6d/0123456789abcdef0123456789abcdef_rulebook.pdf"
+}

@@ -1,3 +1,4 @@
+using Api.Observability;
 using Serilog;
 using Serilog.Events;
 
@@ -65,6 +66,22 @@ internal static class LoggingConfiguration
                 serverUrl: seqUrl,
                 apiKey: configuration["Seq:ApiKey"],
                 restrictedToMinimumLevel: Serilog.Events.LogEventLevel.Information);
+        }
+
+        // Spec azure-local §4.4: log su OTLP accanto a Seq quando l'endpoint è configurato.
+        if (OtlpExport.IsEnabled(configuration))
+        {
+            var otlpEndpoint = OtlpExport.Endpoint(configuration);
+            loggerConfig.WriteTo.OpenTelemetry(options =>
+            {
+                options.Endpoint = otlpEndpoint.ToString();
+                options.Protocol = Serilog.Sinks.OpenTelemetry.OtlpProtocol.Grpc;
+                options.ResourceAttributes = new Dictionary<string, object>(StringComparer.Ordinal)
+                {
+                    ["service.name"] = "meepleai-api",
+                    ["meepleai.profile"] = OtlpExport.ProfileName(configuration),
+                };
+            });
         }
 
         return loggerConfig;

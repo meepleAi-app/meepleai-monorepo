@@ -3,6 +3,8 @@ using Api.Configuration; // CHAT-02
 using Api.Extensions;
 using Api.Filters; // #4063: WithUtcDateTimeArguments
 using Api.Infrastructure;
+using Api.Infrastructure.AzureSdk;
+using Api.Infrastructure.Messaging;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Translation;
 using Api.Infrastructure.Security;
@@ -98,6 +100,23 @@ else if (isCIEnv)
 var startupTimings = new Api.Observability.StartupPhaseTimings();
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton(startupTimings);
+
+// Spec azure-local §4.2: App Configuration e Key Vault come sorgenti IConfiguration, attive SOLO con
+// AZURE_APPCONFIG_CONNECTION_STRING / AZURE_APPCONFIG_ENDPOINT / AZURE_KEYVAULT_URI valorizzate. Su
+// ConfigurationManager l'Add carica subito la sorgente: qui è voluto. Prima del SecretLoader, che
+// aggiunge soltanto le chiavi ancora assenti.
+// Resta PRIMA di Serilog (le sue impostazioni devono vedere i valori di Key Vault), quindi prima anche
+// dell'handler UnhandledException: nel container il runtime non stampa il messaggio (#3998), e un endpoint
+// errato o un 401 ucciderebbe il processo senza traccia. Stderr è leggibile: lo si scrive a mano e si rilancia.
+try
+{
+    builder.Configuration.AddAzureConfigurationSources(builder.Configuration);
+}
+catch (Exception ex)
+{
+    Console.Error.WriteLine(ex);
+    throw;
+}
 
 // Issue #1928 Task B (DEC-B-4) — Triple gate STARTUP fail-fast.
 // Refuses to start if BOTH E2E_SEEDING_ENABLED=true AND ASPNETCORE_ENVIRONMENT=Production.
@@ -342,6 +361,8 @@ builder.Services.AddPublicBaseUrl();
 
 // Infrastructure services (DB, Cache, HTTP clients)
 builder.Services.AddInfrastructureServices(builder.Configuration, builder.Environment);
+builder.Services.AddAzureSdkHttpClients(builder.Configuration); // spec azure-local §4.5
+builder.Services.AddIntegrationEventPublishing(builder.Configuration); // spec azure-local §4.3
 
 // Register TimeProvider for dependency injection (TEST-814: Enables test override)
 // In production, uses TimeProvider.System. Tests can override with TestTimeProvider/FakeTimeProvider.
@@ -1029,6 +1050,7 @@ v1Api.MapAdminPdfMetricsEndpoints();   // Issue #4212: PDF processing metrics
 v1Api.MapAdminKbQualityEndpoints();    // Issue #1675: Per-doc KB quality evaluations
 v1Api.MapAdminPdfStorageEndpoints();   // PDF Storage Management Hub: Storage health
 v1Api.MapAdminPdfManagementEndpoints(); // PDF Storage Management Hub: Bulk ops, maintenance, analytics
+v1Api.MapInternalPdfEventsEndpoints(); // spec azure-local §4.3: consumer interno del PdfUploaded v1
 v1Api.MapAdminIndexerEndpoints();       // Issue #1673: indexer version registry endpoint
 v1Api.MapAdminQueueEndpoints();         // Issue #4731: Processing queue management
 v1Api.MapAdminEvalEndpoints();          // Issue #3433: RAG evaluation suite (retrieval + labeling-assist)

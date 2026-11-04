@@ -142,9 +142,7 @@ public sealed class NonCriticalHealthCheckStatusArchitectureTests
         // `.git` is a directory in a normal clone and a FILE inside a git worktree — probe both so
         // the gate runs identically in CI and in a developer worktree.
         var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null
-            && !Directory.Exists(Path.Combine(dir.FullName, ".git"))
-            && !File.Exists(Path.Combine(dir.FullName, ".git")))
+        while (dir is not null && !SourceScanner.IsRepoRoot(dir.FullName))
         {
             dir = dir.Parent;
         }

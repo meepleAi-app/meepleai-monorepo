@@ -1,0 +1,167 @@
+# Profilo `azure-local` (spec docs/for-developers/specs/2026-10-09-azure-local-profile-design.md).
+# Composto SOPRA docker-compose.yml + compose.dev.yml SOLO dai target `make dev-azure-local*`.
+# Avvia gli emulatori Azure sulla rete compose e punta l'API a loro con gli SDK Azure veri. Senza
+# questo file il profilo attuale e' byte-identico: ogni funzionalita' e' gated sulle variabili AZURE_*.
+#
+# Porte sull'host: AZURE_LOCAL_PORT_BASE (default 20000) e le derivate calcolate dal Makefile, per
+# non collidere con un secondo checkout. +0 azurite blob · +1 queue · +2 table · +3 appconfig ·
+# +4 servicebus amqp · +5 servicebus http · +6 eventgrid · +7 cosmos · +8 cosmos explorer ·
+# +9 aspire ui · +10 aspire otlp grpc · +11 keyvault (profilo azure-keyvault).
+#
+# Le credenziali sono quelle PUBBLICHE degli emulatori (chiave ben nota di Azurite, SAS_KEY_VALUE del
+# Service Bus emulator, Id/Secret HMAC di sviluppo): non sono segreti e non vanno in infra/secrets/.
+services:
+  api:
+    environment:
+      MEEPLEAI_PROFILE: "azure-local"
+      STORAGE_PROVIDER: "azureblob"
+      AZURE_STORAGE_CONNECTION_STRING: "DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;"
+      AZURE_STORAGE_CONTAINER: "meepleai-uploads"
+      # Host di presign raggiungibile dal browser: la firma SAS non copre l'host.
+      AZURE_STORAGE_PUBLIC_BLOB_ENDPOINT: "http://localhost:${AZURE_LOCAL_PORT_BASE:-20000}"
+      # HMAC (spec §4.2): il provider .NET rifiuta un bearer su http, la connection string no.
+      AZURE_APPCONFIG_CONNECTION_STRING: "Endpoint=http://appconfig-emulator:8483;Id=azure-local-dev;Secret=YXp1cmUtbG9jYWwtZGV2LXNlY3JldC0wMTIzNDU2Nzg5YWJjZGVm"
+      # Un emulatore assente non deve bloccare l'avvio per il timeout di default del provider; l'errore finisce comunque su stderr.
+      AZURE_APPCONFIG_STARTUP_TIMEOUT_SECONDS: "30"
+      # Key Vault: vuote di default; `make dev-azure-local-keyvault` le valorizza.
+      AZURE_KEYVAULT_URI: "${AZURE_KEYVAULT_URI:-}"
+      AZURE_KEYVAULT_ANONYMOUS: "${AZURE_KEYVAULT_ANONYMOUS:-}"
+      AZURE_SDK_ALLOW_INSECURE_TLS: "${AZURE_SDK_ALLOW_INSECURE_TLS:-false}"
+      AZURE_SERVICEBUS_CONNECTION_STRING: "Endpoint=sb://servicebus-emulator;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;"
+      AZURE_SERVICEBUS_QUEUE: "pdf-uploaded"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://aspire-dashboard:18889"
+      OTEL_EXPORTER_OTLP_PROTOCOL: "grpc"
+      # Token condiviso con la Function locale (apps/functions): valore di sviluppo, non un segreto.
+      INTERNAL_SERVICE_TOKEN: "${INTERNAL_SERVICE_TOKEN:-azure-local-dev-token}"
+    depends_on:
+      azure-local-init:
+        condition: service_completed_successfully
+      aspire-dashboard:
+        condition: service_started
+
+  web:
+    build:
+      args:
+        # Gli URL SAS delle cover puntano a http://localhost:2xxxx: senza questo build arg la CSP
+        # (img-src 'self' data: https:) li blocca, come per MinIO (compose.e2e-storage.yml).
+        NEXT_PUBLIC_CSP_ALLOW_LOCAL_BLOB: "true"
+
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:3.37.0
+    container_name: meepleai-azurite
+    command: ["azurite", "--blobHost", "0.0.0.0", "--queueHost", "0.0.0.0", "--tableHost", "0.0.0.0", "--location", "/data", "--skipApiVersionCheck", "--loose"]
+    ports:
+      - "127.0.0.1:${AZURE_LOCAL_PORT_BASE:-20000}:10000"
+      - "127.0.0.1:${AZURE_LOCAL_PORT_AZURITE_QUEUE:-20001}:10001"
+      - "127.0.0.1:${AZURE_LOCAL_PORT_AZURITE_TABLE:-20002}:10002"
+    volumes:
+      - azurite_data:/data
+    networks: [meepleai]
+
+  appconfig-emulator:
+    image: mcr.microsoft.com/azure-app-configuration/app-configuration-emulator:1.2.0
+    container_name: meepleai-appconfig-emulator
+    # Il Dockerfile dell'emulatore non imposta l'ambiente ASP.NET: tenant e auth vanno dichiarati qui
+    # con la convenzione Section__Key. Anonimo per il seed via curl, HMAC per il provider .NET.
+    environment:
+      Tenant__AnonymousAuthEnabled: "true"
+      Tenant__HmacSha256Enabled: "true"
+      Tenant__AccessKeys__0__Id: "azure-local-dev"
+      Tenant__AccessKeys__0__Name: "primary"
+      Tenant__AccessKeys__0__Secret: "YXp1cmUtbG9jYWwtZGV2LXNlY3JldC0wMTIzNDU2Nzg5YWJjZGVm"
+      Tenant__AccessKeys__0__ReadOnly: "false"
+      Authentication__Anonymous__AnonymousUserRole: "Owner"
+      Hosting__IPAddress: "0.0.0.0"
+    ports:
+      - "127.0.0.1:${AZURE_LOCAL_PORT_APPCONFIG:-20003}:8483"
+    networks: [meepleai]
+
+  servicebus-mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: meepleai-servicebus-mssql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${SERVICEBUS_MSSQL_SA_PASSWORD:-AzureLocal!Dev2026}"
+    networks: [meepleai]
+
+  servicebus-emulator:
+    image: mcr.microsoft.com/azure-messaging/servicebus-emulator:2.0.1
+    container_name: meepleai-servicebus-emulator
+    depends_on: [servicebus-mssql]
+    volumes:
+      - ./azure-local/servicebus-config.json:/ServiceBus_Emulator/ConfigFiles/Config.json:ro
+    environment:
+      ACCEPT_EULA: "Y"
+      SQL_SERVER: servicebus-mssql
+      MSSQL_SA_PASSWORD: "${SERVICEBUS_MSSQL_SA_PASSWORD:-AzureLocal!Dev2026}"
+      EMULATOR_HTTP_PORT: "5300"
+      SQL_WAIT_INTERVAL: "30"
+    ports:
+      - "127.0.0.1:${AZURE_LOCAL_PORT_SB_AMQP:-20004}:5672"
+      - "127.0.0.1:${AZURE_LOCAL_PORT_SB_HTTP:-20005}:5300"
+    networks: [meepleai]
+
+  azure-local-init:
+    # Readiness + seed: sonda gli emulatori da fuori (le loro immagini non hanno curl/wget) e semina
+    # l'App Configuration emulator; `api` parte solo quando questo container e' uscito 0.
+    image: curlimages/curl:8.11.1
+    container_name: meepleai-azure-local-init
+    depends_on: [azurite, appconfig-emulator, servicebus-emulator]
+    volumes:
+      - ./azure-local/appconfig-seed.json:/seed.json:ro
+      - ./azure-local/wait-and-seed.sh:/wait-and-seed.sh:ro
+    entrypoint: ["/bin/sh", "/wait-and-seed.sh"]
+    networks: [meepleai]
+
+  eventgrid-emulator:
+    image: workleap/eventgridemulator:latest
+    container_name: meepleai-eventgrid-emulator
+    volumes:
+      - ./azure-local/eventgrid-appsettings.json:/app/appsettings.json:ro
+    ports:
+      - "127.0.0.1:${AZURE_LOCAL_PORT_EVENTGRID:-20006}:6500"
+    networks: [meepleai]
+
+  cosmos-emulator:
+    # Nel profilo per la SECONDA iterazione (ConversationMemory): oggi nessun consumer.
+    image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-latest
+    container_name: meepleai-cosmos-emulator
+    environment:
+      PROTOCOL: "https"
+      ENABLE_EXPLORER: "true"
+      ENABLE_TELEMETRY: "false"
+    ports:
+      - "127.0.0.1:${AZURE_LOCAL_PORT_COSMOS:-20007}:8081"
+      - "127.0.0.1:${AZURE_LOCAL_PORT_COSMOS_EXPLORER:-20008}:1234"
+    volumes:
+      - cosmos_data:/data
+    networks: [meepleai]
+
+  aspire-dashboard:
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:13.6.0
+    container_name: meepleai-aspire-dashboard
+    environment:
+      ASPIRE_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS: "true"
+    ports:
+      - "127.0.0.1:${AZURE_LOCAL_PORT_ASPIRE_UI:-20009}:18888"
+      - "127.0.0.1:${AZURE_LOCAL_PORT_ASPIRE_OTLP:-20010}:18889"
+    networks: [meepleai]
+
+  keyvault-emulator:
+    # OPT-IN (profilo azure-keyvault): richiede emulator.pfx + emulator.crt generati sull'host con
+    # docs/setup.sh del progetto james-gould/azure-keyvault-emulator e copiati in
+    # infra/azure-local/keyvault-certs/ (git-ignorata). Vedi docs/for-developers/operations/azure-local-profile.md.
+    image: jamesgoulddev/azure-keyvault-emulator:latest
+    container_name: meepleai-keyvault-emulator
+    profiles: [azure-keyvault]
+    environment:
+      Persist: "true"
+    volumes:
+      - ./azure-local/keyvault-certs:/certs
+    ports:
+      - "127.0.0.1:${AZURE_LOCAL_PORT_KEYVAULT:-20011}:4997"
+    networks: [meepleai]
+
+volumes:
+  azurite_data:
+  cosmos_data:

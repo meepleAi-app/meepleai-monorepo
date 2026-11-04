@@ -46,17 +46,18 @@ internal static class ObservabilityServiceExtensions
                 .AddAttributes(new Dictionary<string, object>(StringComparer.Ordinal)
                 {
                     ["deployment.environment"] = environment.EnvironmentName,
-                    ["service.namespace"] = "meepleai"
+                    ["service.namespace"] = "meepleai",
+                    ["meepleai.profile"] = OtlpExport.ProfileName(configuration)
                 }))
-            .WithTracing(tracing => tracing.ConfigureTracing())
-            .WithMetrics(metrics => metrics.ConfigureMetrics());
+            .WithTracing(tracing => tracing.ConfigureTracing(OtlpExport.IsEnabled(configuration)))
+            .WithMetrics(metrics => metrics.ConfigureMetrics(OtlpExport.IsEnabled(configuration)));
 
         return services;
     }
 
-    private static TracerProviderBuilder ConfigureTracing(this TracerProviderBuilder tracing)
+    private static TracerProviderBuilder ConfigureTracing(this TracerProviderBuilder tracing, bool exportOtlp)
     {
-        return tracing
+        tracing
             .SetSampler(new AlwaysOnSampler())
             .AddAspNetCoreInstrumentation(options =>
             {
@@ -87,17 +88,32 @@ internal static class ObservabilityServiceExtensions
 #pragma warning disable CA2000 // Dispose objects before losing scope - OpenTelemetry takes ownership
             .AddProcessor(new SensitiveDataProcessor());
 #pragma warning restore CA2000
+
+        if (exportOtlp)
+        {
+            // L'exporter legge OTEL_EXPORTER_OTLP_ENDPOINT / OTEL_EXPORTER_OTLP_PROTOCOL dall'ambiente.
+            tracing.AddOtlpExporter();
+        }
+
+        return tracing;
     }
 
-    private static MeterProviderBuilder ConfigureMetrics(this MeterProviderBuilder metrics)
+    private static MeterProviderBuilder ConfigureMetrics(this MeterProviderBuilder metrics, bool exportOtlp)
     {
-        return metrics
+        metrics
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
             .AddRuntimeInstrumentation()
             .AddMeter(MeepleAiMetrics.MeterName)
             // Prometheus exporter for Grafana infrastructure metrics
             .AddPrometheusExporter();
+
+        if (exportOtlp)
+        {
+            metrics.AddOtlpExporter();
+        }
+
+        return metrics;
     }
 
     /// <summary>

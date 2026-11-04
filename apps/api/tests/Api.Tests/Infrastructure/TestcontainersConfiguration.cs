@@ -333,6 +333,16 @@ public static class TestcontainersConfiguration
     /// </summary>
     public const string MinioTestBucket = "meepleai-uploads";
 
+    /// <summary>Azurite (spec azure-local): servizio L3 — la sua assenza è un salto PREVISTO, non un rosso.</summary>
+    public const string AzuriteImage = "mcr.microsoft.com/azure-storage/azurite:3.37.0";
+    public const int AzuriteBlobPort = 10000;
+    public const string AzuriteTestContainer = "meepleai-uploads-test";
+
+    /// <summary>Service Bus emulator (spec azure-local): L3; avvia da sé un MSSQL di appoggio (~1 min, una volta per classe).</summary>
+    public const string ServiceBusEmulatorImage = "mcr.microsoft.com/azure-messaging/servicebus-emulator:2.0.1";
+    /// <summary>Coda presente nel Config.json di default dell'emulatore.</summary>
+    public const string ServiceBusEmulatorDefaultQueue = "queue.1";
+
     #endregion
 
     #region Environment Variables

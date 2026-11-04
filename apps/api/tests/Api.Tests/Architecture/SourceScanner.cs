@@ -28,6 +28,14 @@ namespace Api.Tests.Architecture;
 /// </remarks>
 internal static class SourceScanner
 {
+    /// <summary>
+    /// Vero se <paramref name="path"/> è la radice del repo: contiene <c>.git</c> come directory (checkout
+    /// normale) oppure come file (worktree creato con <c>git worktree add</c>, che scrive "gitdir: …").
+    /// I gate che risalivano con <c>Directory.Exists(".git")</c> non trovavano mai la radice in un worktree.
+    /// </summary>
+    public static bool IsRepoRoot(string path) =>
+        Directory.Exists(Path.Combine(path, ".git")) || File.Exists(Path.Combine(path, ".git"));
+
     internal static string ReadStatement(string text, int start)
     {
         var code = new System.Text.StringBuilder();

@@ -22,22 +22,7 @@ internal partial class EmailService
             var subject = texts.ResetSubject;
             var body = BuildPasswordResetEmailBody(texts, toName, resetUrl, _timeProvider.GetUtcNow().Year);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, toName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "password_reset", ct, toName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Password reset email sent successfully to {Email}",
@@ -125,22 +110,7 @@ internal partial class EmailService
             var subject = texts.VerifySubject;
             var body = BuildVerificationEmailBody(texts, toName, verifyUrl, _timeProvider.GetUtcNow().Year);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, toName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "email_verification", ct, toName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Verification email sent successfully to {Email}",
@@ -346,7 +316,7 @@ internal partial class EmailService
             var subject = "You've been invited to MeepleAI";
             var body = BuildInvitationEmailBody(role, inviteLink, invitedByName);
 
-            await SendViaTransportAsync(toEmail, subject, body, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "invitation", ct).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Invitation email sent successfully to {Email} for role {Role}",
@@ -383,7 +353,7 @@ internal partial class EmailService
             var subject = "Sei stato invitato su MeepleAI!";
             var body = BuildEnhancedInvitationEmailBody(displayName, role, setupLink, invitedByName, customMessage, expiresAt);
 
-            await SendViaTransportAsync(toEmail, subject, body, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "invitation", ct).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Enhanced invitation email sent successfully to {Email} for role {Role}",

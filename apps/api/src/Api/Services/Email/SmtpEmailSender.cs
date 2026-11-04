@@ -49,7 +49,8 @@ internal sealed class SmtpEmailSender : IEmailSender
         {
             using var message = new MailMessage();
             message.From = new MailAddress(request.FromEmail, request.FromName);
-            message.To.Add(new MailAddress(request.ToEmail));
+            // A null name is the same as none: the To: line then carries the bare address.
+            message.To.Add(new MailAddress(request.ToEmail, request.ToName));
             message.Subject = request.Subject;
             message.Body = request.HtmlBody;
             message.IsBodyHtml = true;

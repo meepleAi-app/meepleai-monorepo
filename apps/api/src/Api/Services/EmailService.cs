@@ -1,17 +1,17 @@
 using System.Globalization;
-using System.Net;
-using System.Net.Mail;
 using Api.Infrastructure.Security;
+using Api.Observability;
 using Api.Services.Email;
 using Api.SharedKernel.Services;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Api.Services;
 
 internal partial class EmailService : IEmailService
 {
     private readonly ILogger<EmailService> _logger;
-    private readonly IEmailSender? _sender;
+    private readonly IEmailSender _sender;
     private readonly string _fromAddress;
     private readonly string _fromName;
     private readonly string _smtpHost;
@@ -30,9 +30,9 @@ internal partial class EmailService : IEmailService
     private int FooterYear => _timeProvider.GetUtcNow().Year;
 
     /// <summary>
-    /// Legacy ctor used by existing unit tests that mock EmailService directly without
-    /// providing an <see cref="IEmailSender"/>. The transport falls back to in-method
-    /// SmtpClient instantiation (original behaviour).
+    /// Legacy ctor used by existing unit tests that build EmailService by hand without
+    /// providing an <see cref="IEmailSender"/>. The transport is then the SMTP sender, configured from
+    /// the same <c>Email:Smtp*</c> keys.
     /// </summary>
     public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
         : this(configuration, logger, sender: null)
@@ -42,7 +42,8 @@ internal partial class EmailService : IEmailService
     /// <summary>
     /// Preferred ctor (resolved by DI). The <paramref name="sender"/> dependency centralises
     /// the choice between SMTP and Resend (Issue #1629), so individual <c>SendXxxEmailAsync</c>
-    /// methods do not need to know about the transport.
+    /// methods do not need to know about the transport. Without one the SMTP sender is built here, so a
+    /// service made by hand and one resolved by DI send through the same code (#4845).
     /// </summary>
     public EmailService(
         IConfiguration configuration,
@@ -52,7 +53,7 @@ internal partial class EmailService : IEmailService
         IPublicBaseUrlProvider? publicBaseUrl = null)
     {
         _logger = logger;
-        _sender = sender;
+        _sender = sender ?? new SmtpEmailSender(configuration, NullLogger<SmtpEmailSender>.Instance);
         _timeProvider = timeProvider ?? TimeProvider.System;
 
         // Load email configuration with fallback to SMTP_* env var names from email.secret
@@ -93,60 +94,50 @@ internal partial class EmailService : IEmailService
     }
 
     /// <summary>
-    /// Routes the send through the registered <see cref="IEmailSender"/> when available
-    /// (production/staging) or falls back to a direct <see cref="SmtpClient"/> path
-    /// (legacy ctor / unit tests). Throws on transport failure — callers decide whether
-    /// to swallow the exception or propagate it (Issue #1629).
+    /// Routes the send through the <see cref="IEmailSender"/> (Resend or SMTP, by <c>EMAIL_PROVIDER</c>).
+    /// Throws on transport failure — callers decide whether to swallow the exception or propagate it
+    /// (Issue #1629). A failure is counted under the provider and the <paramref name="kind"/> of mail, so one
+    /// that a caller swallows on purpose still shows up (#4845). What decides is the caller's token, not the
+    /// exception type: a send the caller cancelled is not a failure, while a transport that timed out throws a
+    /// <see cref="TaskCanceledException"/> too and is one.
+    /// <c>kind</c> is the short fixed label of the mail, the tag of the failure counter; <c>toName</c> is the
+    /// display name for the <c>To:</c> line, when the mail has one.
     /// </summary>
     private async Task SendViaTransportAsync(
         string toEmail,
         string subject,
         string htmlBody,
-        CancellationToken cancellationToken)
+        string kind,
+        CancellationToken cancellationToken,
+        string? toName = null)
     {
-        if (_sender is not null)
+        try
         {
             await _sender.SendAsync(new EmailRequest
             {
                 FromEmail = _fromAddress,
                 FromName = _fromName,
                 ToEmail = toEmail,
+                ToName = toName,
                 Subject = subject,
                 HtmlBody = htmlBody
             }, cancellationToken).ConfigureAwait(false);
-            return;
         }
-
-        // Legacy direct-SMTP path used only when no IEmailSender is injected
-        // (kept for backward compatibility with existing unit tests).
-        using var message = new MailMessage
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
         {
-            From = new MailAddress(_fromAddress, _fromName),
-            Subject = subject,
-            Body = htmlBody,
-            IsBodyHtml = true
-        };
-        message.To.Add(new MailAddress(toEmail));
-
-        using var smtpClient = new SmtpClient(_smtpHost, _smtpPort)
-        {
-            EnableSsl = _enableSsl
-        };
-
-        if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-        {
-            smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
+            MeepleAiMetrics.EmailSendFailures.Add(
+                1,
+                new KeyValuePair<string, object?>("provider", _sender.ProviderName),
+                new KeyValuePair<string, object?>("kind", kind));
+            throw;
         }
-
-        await smtpClient.SendMailAsync(message, cancellationToken).ConfigureAwait(false);
     }
 
     // ISSUE-4417: Raw email sending for queue processor.
     // #3250: delegate to SendViaTransportAsync so this honors the configured IEmailSender
     // (Resend/SMTP via EMAIL_PROVIDER) instead of a hardcoded SmtpClient. Previously it
     // always sent over SMTP, so on a Resend-only prod, alert (EmailAlertChannel) and queued
-    // emails failed silently while templated emails succeeded via Resend. The direct-SMTP
-    // fallback is preserved inside SendViaTransportAsync for the legacy ctor / unit tests.
+    // emails failed silently while templated emails succeeded via Resend.
     public async Task SendRawEmailAsync(
         string toEmail,
         string subject,
@@ -155,7 +146,7 @@ internal partial class EmailService : IEmailService
     {
         try
         {
-            await SendViaTransportAsync(toEmail, subject, htmlBody, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, htmlBody, "raw", ct).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Raw email sent successfully to {Email}",

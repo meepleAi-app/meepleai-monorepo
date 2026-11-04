@@ -58,10 +58,8 @@ public sealed class AnswerIntentTests
     [InlineData("auto")]
     [InlineData("tutor")]
     [InlineData("secca")]
-    [InlineData("arbitro")]
-    [InlineData("decisore")]
     [InlineData(" Tutor ")]
-    public void ForNow_ThreadsMayStillBeGivenTheRetiredIds_ThatOlderClientsSend(string value)
+    public void ThreadsMayBeGivenTheThreeIntents_WhateverTheSpelling(string value)
     {
         AnswerIntent.IsAcceptedWhenSwitching(value).Should().BeTrue();
     }
@@ -70,10 +68,12 @@ public sealed class AnswerIntentTests
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
+    [InlineData("arbitro")]
+    [InlineData("decisore")]
     [InlineData("stratega")]
     [InlineData("narratore")]
     [InlineData("whatever")]
-    public void NothingElse_IsAccepted(string? value)
+    public void NothingElse_IsAccepted_NotEvenTheIdsTheOldSelectorSent(string? value)
     {
         AnswerIntent.IsAcceptedWhenSwitching(value).Should().BeFalse();
     }

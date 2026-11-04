@@ -30,7 +30,7 @@ internal sealed class ChatThread : AggregateRoot<Guid>
     /// <summary>Il gioco privato, o null se il thread è su un gioco del catalogo.</summary>
     public Guid? PrivateGameId => GameIsPrivate ? GameId : null;
     public Guid? AgentId { get; private set; } // Issue #2030 - Track which agent was used
-    public string? AgentType { get; private set; } // Issue #4362 - tutor/arbitro/decisore/auto
+    public string? AgentType { get; private set; } // Issue #4362; since #4404 the answer intent: auto/tutor/secca (an older value reads as auto)
 
     /// <summary>
     /// Spec 2026-10-11 §6.2: la sessione live a cui appartiene il thread dell'assistente in partita. Quel
@@ -261,7 +261,7 @@ internal sealed class ChatThread : AggregateRoot<Guid>
         if (Status.IsClosed)
             throw new InvalidOperationException("Cannot switch agent on a closed thread");
 
-        // #4404: the three intents of the chat and, until the contract step, the two retired ids older clients send.
+        // #4404: the three intents of the chat and nothing else (the ids of the old selector are read, not written).
         if (!AnswerIntent.IsAcceptedWhenSwitching(agentType))
             throw new ArgumentException($"Invalid agent type: {agentType}. Valid types: {string.Join(", ", AnswerIntent.All)}", nameof(agentType));
 

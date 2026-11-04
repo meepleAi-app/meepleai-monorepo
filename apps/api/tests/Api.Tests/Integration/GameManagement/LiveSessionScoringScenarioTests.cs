@@ -47,7 +47,7 @@ public sealed class LiveSessionScoringScenarioHostFixture(SharedTestcontainersFi
 /// </summary>
 /// <remarks>
 /// La generazione della partita registrata (<c>LiveSessionCompletedEventHandler</c>) inghiotte i
-/// propri errori permanenti (quelli di infrastruttura li rilancia, e li ritenta l'outbox), quindi questo scenario è l'unica guardia sulla sua esistenza. Prima della
+/// propri errori, quindi questo scenario è l'unica guardia sulla sua esistenza. Prima della
 /// correzione falliva in due modi, entrambi silenziosi: con la dimensione del wizard («Punti») la
 /// partita registrata non veniva scritta, e su più round portava l'ultimo round invece del totale.
 /// </remarks>

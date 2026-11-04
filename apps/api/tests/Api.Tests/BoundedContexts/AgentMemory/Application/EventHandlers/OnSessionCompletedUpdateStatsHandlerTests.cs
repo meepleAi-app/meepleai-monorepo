@@ -207,10 +207,11 @@ public class OnSessionCompletedUpdateStatsHandlerTests
     [Fact]
     public async Task Handle_TheSameCompletionRebuiltByTheOutbox_CountsEachPlayerAndTheGroupOnce()
     {
-        // #4839: the handler is delivered again when the outbox retries the row, and the event it gets is rebuilt from
-        // the JSON of the row. Its guard (CF-3 / #1939) compares EventId, which holds only since #4841 made EventId
-        // survive that rebuild. This is what lets a handler of the same event fail, and the row be retried, without the
-        // statistics counting the session twice.
+        // The handler is delivered again when the outbox retries the row, and the event it gets is rebuilt from the
+        // JSON of the row. Its guard (CF-3 / #1939) compares EventId, which holds only since #4841 made EventId survive
+        // that rebuild. NOT proved here: the guard remembers a single event per player and group (LastProcessedEventId),
+        // so a second delivery after ANOTHER event for the same player is counted again. That is what option C of #4839
+        // (idempotency on the session) would close, and why option B (rethrow, let the outbox retry) is not in.
         var gameId = Guid.NewGuid();
         var groupId = Guid.NewGuid();
         var userId = Guid.NewGuid();

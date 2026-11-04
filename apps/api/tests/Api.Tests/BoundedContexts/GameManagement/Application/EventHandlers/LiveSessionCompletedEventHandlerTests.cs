@@ -294,13 +294,31 @@ public sealed class LiveSessionCompletedEventHandlerTests
         var json = JsonSerializer.Serialize(original, DomainEventJsonOptions.Default);
         var rebuilt = JsonSerializer.Deserialize<LiveSessionCompletedEvent>(json, DomainEventJsonOptions.Default)!;
         rebuilt.SessionId.Should().Be(original.SessionId, "the round trip must give back the same session");
-        rebuilt.EventId.Should().NotBe(
+        rebuilt.EventId.Should().Be(
             original.EventId,
-            "the outbox rebuilds the event through its constructor, which draws a new EventId: this is the case under test. " +
-            "If it ever fails, the outbox preserves EventId and this test no longer proves anything");
+            "since #4841 the outbox hands back the EventId it stored; the key of this handler is the session either way");
 
         await CreateHandler().Handle(original, CancellationToken.None);
         await CreateHandler().Handle(rebuilt, CancellationToken.None);
+
+        persisted.Select(r => r.SourceEventId).Distinct().Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Handle_TheSameCompletionWithAnotherEventId_StillCarriesTheKeyOfTheSession()
+    {
+        // The key is the session, not the event: a redelivery that arrives with a different EventId
+        // (an event type that does not keep it, a hand-made payload) must still collapse onto one record.
+        var persisted = CapturePersistedRecords();
+        var original = CreateCompletedEvent(gameId: Guid.NewGuid());
+        var payload = System.Text.Json.Nodes.JsonNode.Parse(JsonSerializer.Serialize(original, DomainEventJsonOptions.Default))!.AsObject();
+        payload["eventId"] = Guid.NewGuid();
+        var other = JsonSerializer.Deserialize<LiveSessionCompletedEvent>(payload.ToJsonString(), DomainEventJsonOptions.Default)!;
+        other.EventId.Should().NotBe(original.EventId, "this is the case under test");
+        other.SessionId.Should().Be(original.SessionId);
+
+        await CreateHandler().Handle(original, CancellationToken.None);
+        await CreateHandler().Handle(other, CancellationToken.None);
 
         persisted.Select(r => r.SourceEventId).Distinct().Should().ContainSingle();
     }

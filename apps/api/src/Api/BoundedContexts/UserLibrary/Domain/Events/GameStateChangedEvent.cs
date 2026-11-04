@@ -46,5 +46,8 @@ internal sealed class GameStateChangedEvent : DomainEventBase
         GameId = gameId;
         PreviousState = previousState;
         NewState = newState;
+        // The parameter used to be dropped: the base constructor's "now" won, and the outbox
+        // deserializer binds the stored "occurredAt" to this parameter, so redelivery lost it (#4841).
+        OccurredAt = occurredAt;
     }
 }

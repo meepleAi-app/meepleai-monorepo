@@ -1,3 +1,4 @@
+using System.Globalization;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.Helpers;
 using Api.Infrastructure;
@@ -109,13 +110,16 @@ internal class KeywordSearchService : IKeywordSearchService
             // Perf: subquery avoids double ts_rank_cd evaluation (computed once in inner SELECT, filtered in outer WHERE)
             // Phase D (D6): include role_tags in the projection so the hybrid re-ranker can
             // apply a role-match boost without an extra round-trip.
+            // #4244: a private game lives in "PrivateGameId"; "GameId" is an FK to shared_games and
+            // is null for its chunks. The filter looks at both columns, and the projection
+            // coalesces them, because the row type reads the game as a non-nullable Guid.
             var sql = $@"
                 SELECT * FROM (
                     SELECT
                         ""Id"",
                         ""Content"",
                         ""PdfDocumentId"",
-                        ""GameId"",
+                        COALESCE(""GameId"", ""PrivateGameId"") AS ""GameId"",
                         ""ChunkIndex"",
                         ""PageNumber"",
                         role_tags AS ""RoleTags"",
@@ -123,7 +127,7 @@ internal class KeywordSearchService : IKeywordSearchService
                         ts_rank_cd({tsvectorExpr}, to_tsquery(@textSearchConfig::regconfig, @tsQuery), @normalization) AS ""RelevanceScore""
                     FROM text_chunks
                     WHERE
-                        ""GameId"" = @gameId::uuid
+                        (""GameId"" = @gameId::uuid OR ""PrivateGameId"" = @gameId::uuid)
                         AND {tsvectorExpr} @@ to_tsquery(@textSearchConfig::regconfig, @tsQuery)
                 ) ranked
                 WHERE ""RelevanceScore"" >= @minScore
@@ -422,9 +426,9 @@ internal class KeywordSearchService : IKeywordSearchService
     /// <para>
     /// A token with a synonym entry becomes a grouped alternation <c>(head | syn1 | syn2)</c>;
     /// multi-word synonyms are joined with the proximity operator <c>&lt;-&gt;</c> (a bare space is
-    /// a to_tsquery syntax error). <paramref name="sanitizedQuery"/> is already operator/paren
-    /// stripped by <see cref="SanitizeQuery"/>, and the injected grouping characters come only from
-    /// this controlled table, so the fragment is injection-safe.
+    /// a to_tsquery syntax error). <paramref name="sanitizedQuery"/> carries only letters, digits,
+    /// hyphens and inner dots after <see cref="SanitizeQuery"/> (#4479), and the injected grouping
+    /// characters come only from this controlled table, so the fragment is injection-safe.
     /// </para>
     /// </summary>
     internal static string ExpandTermsToTsQuery(string sanitizedQuery, string ftsConfig)
@@ -543,12 +547,10 @@ internal class KeywordSearchService : IKeywordSearchService
     /// Forma di confronto per il match con il titolo: solo lettere e cifre (#3768).
     /// </summary>
     /// <remarks>
-    /// <c>SanitizeQuery</c> toglie gli operatori tsquery ma NON la punteggiatura, quindi l'ultimo
-    /// token di una domanda arriva come <c>"Catan?"</c>. Ogni query canonica finisce con un punto
-    /// interrogativo: confrontare i token grezzi faceva fallire il filtro esattamente sulle query
-    /// di produzione, mentre passava su quelle senza punteggiatura dei primi test.
-    /// Postgres normalizza comunque <c>Catan?</c> al lessema <c>catan</c>, quindi il token che
-    /// resta nella tsquery è invariato: qui cambia solo il criterio di confronto.
+    /// Fino a #4479 <c>SanitizeQuery</c> lasciava passare la punteggiatura, e l'ultimo token di una
+    /// domanda arrivava come <c>"Catan?"</c>: confrontare i token grezzi faceva fallire il filtro
+    /// proprio sulle query di produzione. Ora la punteggiatura separa le parole già lì, ma restano
+    /// i punti interni («7.5») e i trattini, quindi il confronto resta su lettere e cifre.
     /// </remarks>
     private static string NormaliseForTitleMatch(string token)
     {
@@ -562,25 +564,23 @@ internal class KeywordSearchService : IKeywordSearchService
             return string.Empty;
         }
 
-        // Remove or escape special tsquery operators: & | ! <-> ( ) '
-        // Keep only alphanumeric characters, spaces, and hyphens
-        var sanitized = query
-            .Replace("'", "") // Remove single quotes to prevent SQL injection
-            .Replace("&", " ")
-            .Replace("|", " ")
-            .Replace("!", " ")
-            .Replace("(", "")
-            .Replace(")", "")
-            .Replace("<->", " ")
-            .Trim();
-
-        // Remove multiple spaces
-        while (sanitized.Contains("  "))
+        // Keep only letters, digits and hyphens; every other character separates words. The text goes
+        // into to_tsquery, where punctuation is syntax: #4479 found «(2:1),» in a user's question
+        // failing the whole answer with 42601, and «:*» or «<2>» changing its meaning (prefix match,
+        // word distance). A blacklist of operators missed the colon, so this is an allowlist. The
+        // apostrophe separates too: «l'insediamento» is «l insediamento», not «linsediamento».
+        // A dot between two letters or digits stays: Postgres reads «3.5» and «catan.com» as one word.
+        var kept = new char[query.Length];
+        for (var i = 0; i < query.Length; i++)
         {
-            sanitized = sanitized.Replace("  ", " ");
+            var c = query[i];
+            var innerDot = c == '.' && i > 0 && i < query.Length - 1
+                && char.IsLetterOrDigit(query[i - 1]) && char.IsLetterOrDigit(query[i + 1]);
+            kept[i] = char.IsLetterOrDigit(c) || c == '-' || innerDot
+                || CharUnicodeInfo.GetUnicodeCategory(c) == UnicodeCategory.NonSpacingMark ? c : ' ';
         }
 
-        return sanitized;
+        return string.Join(' ', new string(kept).Split(' ', StringSplitOptions.RemoveEmptyEntries));
     }
 
     /// <summary>
@@ -635,8 +635,13 @@ internal class KeywordSearchService : IKeywordSearchService
         {
             _dbContext.Database.SetCommandTimeout(3);
             return await _dbContext.Database
+                // #4244: a private game has a title too. Raw SQL does not go through the EF query
+                // filter of PrivateGameEntity, hence the explicit is_deleted.
                 .SqlQueryRaw<string>(
-                    @"SELECT title AS ""Value"" FROM shared_games WHERE id = @gameId::uuid LIMIT 1",
+                    @"SELECT title AS ""Value"" FROM shared_games WHERE id = @gameId::uuid
+                      UNION ALL
+                      SELECT title AS ""Value"" FROM private_games WHERE id = @gameId::uuid AND NOT is_deleted
+                      LIMIT 1",
                     new NpgsqlParameter("@gameId", gameId.ToString()))
                 .AsNoTracking()
                 .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
@@ -673,7 +678,8 @@ internal class KeywordSearchService : IKeywordSearchService
                     SELECT pd.""Language"" AS ""Value""
                     FROM text_chunks tc
                     JOIN pdf_documents pd ON pd.""Id"" = tc.""PdfDocumentId""
-                    WHERE tc.""GameId"" = @gameId::uuid AND pd.""Language"" IS NOT NULL AND pd.""Language"" <> ''
+                    WHERE (tc.""GameId"" = @gameId::uuid OR tc.""PrivateGameId"" = @gameId::uuid)
+                      AND pd.""Language"" IS NOT NULL AND pd.""Language"" <> ''
                     GROUP BY pd.""Language""
                     ORDER BY count(*) DESC
                     LIMIT 1",

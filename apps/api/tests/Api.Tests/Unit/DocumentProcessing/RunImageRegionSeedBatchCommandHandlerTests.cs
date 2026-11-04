@@ -86,7 +86,7 @@ public sealed class RunImageRegionSeedBatchCommandHandlerTests
     private static Mock<IRawHiResExtractor> ExtractorReturning(string json)
     {
         var extractor = new Mock<IRawHiResExtractor>();
-        extractor.Setup(e => e.ExtractRawHiResAsync(It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
+        extractor.Setup(e => e.ExtractRawHiResAsync(It.IsAny<Stream>(), It.IsAny<DocumentLanguageHint?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(json);
         return extractor;
     }
@@ -146,6 +146,33 @@ public sealed class RunImageRegionSeedBatchCommandHandlerTests
     }
 
     [Fact]
+    [Trait("Issue", "4435")]
+    public async Task Handle_PassesThePdfLanguage_ToTheHiResPass()
+    {
+        // #4435: the hi_res pass is where OCR reads the page, and these PDFs are Ready — their language
+        // has been detected. The handler must hand it over instead of letting the extractor guess.
+        using var db = TestDbContextFactory.CreateInMemoryDbContext($"sib_{Guid.NewGuid():N}");
+        var id = SeedPdf(db);
+        var row = db.PdfDocuments.Local.Single(p => p.Id == id); // still Added: set before the save
+        row.Language = "it";
+        row.LanguageConfidence = 0.93;
+        row.LanguageOverride = "en";
+        await db.SaveChangesAsync();
+
+        DocumentLanguageHint? passed = null;
+        var extractor = new Mock<IRawHiResExtractor>();
+        extractor.Setup(e => e.ExtractRawHiResAsync(It.IsAny<Stream>(), It.IsAny<DocumentLanguageHint?>(), It.IsAny<CancellationToken>()))
+            .Callback((Stream _, DocumentLanguageHint? hint, CancellationToken _) => passed = hint)
+            .ReturnsAsync(EmptyRegionsJson);
+
+        var handler = Create(db, extractor.Object, BlobReturning(new byte[] { 1 }).Object,
+            DelegatingMediator(db).Object, Config(enabled: true));
+        await handler.Handle(new RunImageRegionSeedBatchCommand(), CancellationToken.None);
+
+        passed.Should().Be(new DocumentLanguageHint(LanguageOverride: "en", DetectedLanguage: "it", DetectedConfidence: 0.93));
+    }
+
+    [Fact]
     public async Task Handle_ZeroRegions_StillStampsMarker()
     {
         // NFR1: a region-free PDF must still be marked so it is not re-hi_res'd forever.
@@ -169,7 +196,7 @@ public sealed class RunImageRegionSeedBatchCommandHandlerTests
         var id = SeedPdf(db);
         await db.SaveChangesAsync();
         var extractor = new Mock<IRawHiResExtractor>();
-        extractor.Setup(e => e.ExtractRawHiResAsync(It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
+        extractor.Setup(e => e.ExtractRawHiResAsync(It.IsAny<Stream>(), It.IsAny<DocumentLanguageHint?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("hi_res timeout"));
 
         var handler = Create(db, extractor.Object, BlobReturning(new byte[] { 1 }).Object,
@@ -209,7 +236,7 @@ public sealed class RunImageRegionSeedBatchCommandHandlerTests
         var id = SeedPdf(db, attempts: RunImageRegionSeedBatchCommandHandler.MaxSeedAttempts - 1);
         await db.SaveChangesAsync();
         var extractor = new Mock<IRawHiResExtractor>();
-        extractor.Setup(e => e.ExtractRawHiResAsync(It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
+        extractor.Setup(e => e.ExtractRawHiResAsync(It.IsAny<Stream>(), It.IsAny<DocumentLanguageHint?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("hi_res timeout"));
 
         var handler = Create(db, extractor.Object, BlobReturning(new byte[] { 1 }).Object,
@@ -272,7 +299,7 @@ public sealed class RunImageRegionSeedBatchCommandHandlerTests
         await db.SaveChangesAsync();
 
         var extractor = new Mock<IRawHiResExtractor>();
-        extractor.SetupSequence(e => e.ExtractRawHiResAsync(It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
+        extractor.SetupSequence(e => e.ExtractRawHiResAsync(It.IsAny<Stream>(), It.IsAny<DocumentLanguageHint?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("hi_res timeout"))
             .ReturnsAsync(ImageRegionJson)
             .ReturnsAsync(ImageRegionJson);
@@ -364,7 +391,7 @@ public sealed class RunImageRegionSeedBatchCommandHandlerTests
         await db.SaveChangesAsync();
 
         var extractor = new Mock<IRawHiResExtractor>();
-        extractor.SetupSequence(e => e.ExtractRawHiResAsync(It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
+        extractor.SetupSequence(e => e.ExtractRawHiResAsync(It.IsAny<Stream>(), It.IsAny<DocumentLanguageHint?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(ImageRegionJson)
             .ReturnsAsync(EmptyRegionsJson)
             .ThrowsAsync(new InvalidOperationException("hi_res timeout"))

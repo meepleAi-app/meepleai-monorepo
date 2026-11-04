@@ -28,17 +28,21 @@ public static class DefaultStrategyModelMappings
     /// </summary>
     public static IReadOnlyDictionary<RagStrategy, StrategyMappingConfig> Mappings { get; } = new Dictionary<RagStrategy, StrategyMappingConfig>
     {
+        // #4179: le varianti «:free» non sono più nel listino di OpenRouter (verificato il
+        // 2026-10-10); il sostituto scelto è lo stesso modello a pagamento, già nel catalogo.
         [RagStrategy.Fast] = new StrategyMappingConfig(
             Provider: "OpenRouter",
-            PrimaryModel: "meta-llama/llama-3.3-70b-instruct:free",
+            PrimaryModel: "meta-llama/llama-3.3-70b-instruct",
             FallbackModels: Array.Empty<string>(),
             IsCustomizable: false,
-            EstimatedCostPer1KTokens: 0.0m),
+            EstimatedCostPer1KTokens: 0.001m), // 0,22 + 0,50 $ per milione di token
 
+        // #4179: «deepseek-chat» è dismesso da DeepSeek dal 2026-07-24; il nome corrente è
+        // «deepseek-flash».
         [RagStrategy.Balanced] = new StrategyMappingConfig(
             Provider: "DeepSeek",
-            PrimaryModel: "deepseek-chat",
-            FallbackModels: new[] { "meta-llama/llama-3.3-70b-instruct:free" },
+            PrimaryModel: AgentDefaults.DeepSeekDefaultModel,
+            FallbackModels: new[] { "meta-llama/llama-3.3-70b-instruct" },
             IsCustomizable: false,
             EstimatedCostPer1KTokens: 0.01m),
 
@@ -59,7 +63,7 @@ public static class DefaultStrategyModelMappings
         [RagStrategy.Consensus] = new StrategyMappingConfig(
             Provider: "Mixed",
             PrimaryModel: "anthropic/claude-sonnet-4.5",
-            FallbackModels: new[] { "openai/gpt-4o", "google/gemini-pro" },
+            FallbackModels: new[] { "openai/gpt-4o" }, // #4179: google/gemini-pro non è più nel listino di OpenRouter
             IsCustomizable: false,
             EstimatedCostPer1KTokens: 0.09m),
 

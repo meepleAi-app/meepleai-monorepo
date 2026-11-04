@@ -69,7 +69,7 @@ public sealed class AdminProviderProbeRateLimitIntegrationTests : IAsyncLifetime
 
     private async Task InitializeCoreAsync()
     {
-        _wireMock = WireMockServer.Start();
+        _wireMock = await WarmWireMockServer.StartAsync();
         _wireMock
             .Given(Request.Create().WithPath("/api/v1/models").UsingGet())
             .RespondWith(Response.Create()

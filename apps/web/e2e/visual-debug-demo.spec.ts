@@ -219,7 +219,7 @@ test.describe('Automated Visual Checks', () => {
     });
 
     // Test multiple authenticated pages
-    const authenticatedPages = ['/chat', '/upload', '/versions'];
+    const authenticatedPages = ['/chat', '/versions'];
 
     for (const path of authenticatedPages) {
       await page.goto(path);

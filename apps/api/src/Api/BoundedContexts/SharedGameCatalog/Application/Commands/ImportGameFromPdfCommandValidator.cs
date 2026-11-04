@@ -6,6 +6,7 @@ internal sealed class ImportGameFromPdfCommandValidator : AbstractValidator<Impo
 {
     public ImportGameFromPdfCommandValidator()
     {
+        RuleFor(x => x.GameId).NotEmpty();
         RuleFor(x => x.Metadata).NotNull();
         RuleFor(x => x.PdfDocumentId).NotEmpty();
         RuleFor(x => x.RequestedBy).NotEmpty();
@@ -24,6 +25,10 @@ internal sealed class ImportGameFromPdfCommandValidator : AbstractValidator<Impo
                 .When(x => x.Metadata.YearPublished.HasValue);
             RuleFor(x => x.Metadata.MinPlayers)
                 .GreaterThan(0).When(x => x.Metadata.MinPlayers.HasValue);
+            // #4401: the game's description is required (domain and update validator); without this
+            // rule the wizard learnt it only after the update had been attempted.
+            RuleFor(x => x.Metadata.Description)
+                .NotEmpty().WithMessage("Game description is required");
             RuleFor(x => x.Metadata.MaxPlayers)
                 .GreaterThanOrEqualTo(x => x.Metadata.MinPlayers ?? 1)
                 .When(x => x.Metadata.MaxPlayers.HasValue && x.Metadata.MinPlayers.HasValue);

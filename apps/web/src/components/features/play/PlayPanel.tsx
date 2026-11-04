@@ -104,8 +104,13 @@ export function PlayPanel() {
                     },
                   ]}
                   onClick={() => {
-                    if (session.status === 'Setup' || session.status === 'Paused') {
-                      router.push(`/sessions/${session.id}/live`);
+                    // #4156 (D4): the live page lives under the LiveGameSession id, not the
+                    // GameSession one; without a live session there is no live page to open.
+                    if (
+                      (session.status === 'Setup' || session.status === 'Paused') &&
+                      session.liveSessionId != null
+                    ) {
+                      router.push(`/sessions/${session.liveSessionId}/live`);
                     } else {
                       openDetail(session.id, 'session');
                     }

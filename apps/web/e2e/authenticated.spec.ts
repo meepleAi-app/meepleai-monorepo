@@ -6,13 +6,10 @@
  * Test Coverage:
  * 1. Login flow from home page
  * 2. Authenticated chat exchange with QA agent
- * 3. PDF upload wizard complete flow
- * 4. Observability dashboard log filtering
+ * 3. Observability dashboard log filtering
  *
  * @see apps/web/e2e/page-objects/ - Page Object Model architecture
  */
-
-import { Buffer } from 'buffer';
 
 import { test, expect } from './fixtures';
 import { AuthHelper, USER_FIXTURES } from './pages';
@@ -78,64 +75,6 @@ test.describe('Authenticated journeys', () => {
     // Test feedback button
     const thumbsUp = page.getByRole('button', { name: /thumbs up|utile/i }).first();
     await thumbsUp.click();
-  });
-
-  test('walks through the PDF upload wizard for an authenticated user', async ({ page }) => {
-    const authHelper = new AuthHelper(page);
-
-    // Use real authentication - middleware validates session server-side
-    await authHelper.setupRealSession('admin');
-
-    // Real backend APIs are used:
-    // - GET /games - must return seeded test games
-    // - POST /games - must create games
-    // - GET /games/{id}/pdfs - must return PDF list
-    // - POST /ingest/pdf - must process uploads
-    // - PUT /games/{id}/rulespec - must save rule specs
-    //
-    // Backend must be running with test data seeded
-
-    // Navigate and interact with PDF upload wizard using REAL API
-    await page.goto('/upload');
-
-    await expect(page.getByRole('heading', { name: /PDF.*Import.*Wizard/i })).toBeVisible({
-      timeout: 5000,
-    });
-
-    // Step 1: Select game from real DB
-    const gameSelector = page.getByLabel(/existing.*games/i);
-    await gameSelector.selectOption({ index: 1 }); // First available game from DB
-
-    await page.getByRole('button', { name: /confirm.*selection/i }).click();
-
-    // Step 2: Upload PDF - real backend will process it
-    await page.setInputFiles('#fileInput', {
-      name: 'test-rules.pdf',
-      mimeType: 'application/pdf',
-      buffer: Buffer.from('%PDF-1.4 test file'),
-    });
-
-    await page.getByRole('button', { name: /upload.*continue/i }).click();
-
-    // Wait for real upload processing (longer timeout for real API)
-    await expect(page.locator('text=/PDF uploaded successfully|Document ID:/i')).toBeVisible({
-      timeout: 15000,
-    });
-    await expect(page.getByRole('heading', { name: /Step 2.*Parse/i })).toBeVisible();
-
-    // Step 3: Parse PDF - real backend extraction
-    await page.getByRole('button', { name: /parse.*pdf/i }).click();
-    await expect(page.getByRole('heading', { name: /Step 3.*Review/i })).toBeVisible({
-      timeout: 20000,
-    });
-
-    // Step 4: Publish RuleSpec - real DB write
-    await page.getByRole('button', { name: /publish.*rulespec/i }).click();
-
-    await expect(page.locator('text=/RuleSpec published successfully/i')).toBeVisible({
-      timeout: 10000,
-    });
-    await expect(page.getByRole('heading', { name: /Step 4.*Published/i })).toBeVisible();
   });
 
   test('allows filtering logs after navigating as an authenticated user', async ({ page }) => {

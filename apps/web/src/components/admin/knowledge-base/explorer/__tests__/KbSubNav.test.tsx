@@ -21,6 +21,7 @@ const TABS = [
   { label: 'RAG Pipeline', href: '/admin/knowledge-base/pipeline' },
   { label: 'Embedding', href: '/admin/knowledge-base/embedding' },
   { label: 'Feedback', href: '/admin/knowledge-base/feedback' },
+  { label: 'Domande di riferimento', href: '/admin/knowledge-base/reference-questions' },
   { label: 'Settings', href: '/admin/knowledge-base/settings' },
   { label: 'Snapshots', href: '/admin/knowledge-base/snapshots' },
 ];
@@ -36,7 +37,7 @@ describe('KbSubNav', () => {
     });
   });
 
-  it('renders all 8 KB tabs with correct hrefs', () => {
+  it('renders every KB tab with its href', () => {
     mockPathname.mockReturnValue('/admin/knowledge-base');
     render(<KbSubNav />);
     for (const tab of TABS) {
@@ -71,6 +72,16 @@ describe('KbSubNav', () => {
       'aria-current',
       'page'
     );
+  });
+
+  it('marks Domande di riferimento active on its route (#4470), not Feedback', () => {
+    mockPathname.mockReturnValue('/admin/knowledge-base/reference-questions');
+    render(<KbSubNav />);
+    expect(screen.getByRole('link', { name: 'Domande di riferimento' })).toHaveAttribute(
+      'aria-current',
+      'page'
+    );
+    expect(screen.getByRole('link', { name: /^Feedback/ })).not.toHaveAttribute('aria-current');
   });
 
   it('does NOT mark Explorer active on KB sub-routes', () => {
@@ -115,7 +126,7 @@ describe('KbSubNav', () => {
     mockPathname.mockReturnValue('/admin/knowledge-base');
     mockUseKbNavCounts.mockReturnValue({ queue: 5, feedback: 5, loading: false, isError: false });
     render(<KbSubNav />);
-    // 8 tabs total but only 2 with badges
+    // only Processing Queue and Feedback carry a badge
     const badges = screen.queryAllByTestId(/^kb-nav-badge-/);
     expect(badges).toHaveLength(2);
   });

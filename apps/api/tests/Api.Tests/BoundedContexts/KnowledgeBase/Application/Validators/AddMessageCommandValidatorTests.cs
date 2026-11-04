@@ -43,4 +43,46 @@ public sealed class AddMessageCommandValidatorTests
 
         result.ShouldHaveValidationErrorFor(x => x.Role);
     }
+
+    // #4168: versione del profilo e lingua descrivono una risposta, non una domanda.
+
+    [Fact]
+    public void Validate_AssistantWithProvenance_IsValid()
+    {
+        var command = new AddMessageCommand(Guid.NewGuid(), "hello", "assistant", Guid.NewGuid(), "it");
+
+        _validator.TestValidate(command).ShouldNotHaveAnyValidationErrors();
+    }
+
+    [Fact]
+    public void Validate_UserWithProvenance_HasErrors()
+    {
+        var command = new AddMessageCommand(Guid.NewGuid(), "hello", "user", Guid.NewGuid(), "it");
+
+        var result = _validator.TestValidate(command);
+
+        result.ShouldHaveValidationErrorFor(x => x.ProfileVersionId);
+        result.ShouldHaveValidationErrorFor(x => x.Language);
+    }
+
+    [Theory]
+    [InlineData("IT")]
+    [InlineData("it-IT")]
+    [InlineData(" it")]
+    [InlineData("italiano")]
+    [InlineData("")]
+    public void Validate_LanguageNotAnIsoCode_HasLanguageError(string language)
+    {
+        var command = new AddMessageCommand(Guid.NewGuid(), "hello", "assistant", Guid.NewGuid(), language);
+
+        _validator.TestValidate(command).ShouldHaveValidationErrorFor(x => x.Language);
+    }
+
+    [Fact]
+    public void Validate_EmptyProfileVersionId_HasError()
+    {
+        var command = new AddMessageCommand(Guid.NewGuid(), "hello", "assistant", Guid.Empty, "it");
+
+        _validator.TestValidate(command).ShouldHaveValidationErrorFor(x => x.ProfileVersionId);
+    }
 }

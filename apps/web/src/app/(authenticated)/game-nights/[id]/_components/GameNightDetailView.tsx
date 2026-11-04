@@ -23,7 +23,7 @@
 
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { Edit, Send, XCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -34,6 +34,7 @@ import {
   GameNightDetailHero,
   GameNightRsvpActionBar,
   GameNightRsvpRow,
+  GuestInvitationWithdraw,
 } from '@/components/features/game-night-detail';
 import { VotingPanel } from '@/components/features/game-night-detail/voting/VotingPanel';
 import { GameNightActions } from '@/components/game-night/GameNightActions';
@@ -41,16 +42,22 @@ import { GameNightDiaryPanel } from '@/components/game-night/GameNightDiaryPanel
 import { GameNightSessionsList } from '@/components/game-night/GameNightSessionsList';
 import { GameNightPlanningLayout } from '@/components/game-night/planning/GameNightPlanningLayout';
 import { FormPageContainer } from '@/components/layout/PageContainer';
+import { useDebounce } from '@/components/ui/data-display/entity-list-view/hooks/use-debounce';
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { useGameNightDetail } from '@/hooks/queries/useGameNightDetail';
 import { useCancelGameNight, usePublishGameNight } from '@/hooks/queries/useGameNights';
-import { useSharedGames } from '@/hooks/queries/useSharedGames';
+import { useSharedGames, useSharedGamesByIds } from '@/hooks/queries/useSharedGames';
 import { useNetworkStatus } from '@/hooks/useNetworkStatus';
 import { useToast } from '@/hooks/useToast';
 import { useTranslation } from '@/hooks/useTranslation';
-import type { GameNightStatus } from '@/lib/api/schemas/game-nights.schemas';
+import type {
+  GameNightStatus,
+  GuestInvitationStatus,
+  RsvpStatus,
+} from '@/lib/api/schemas/game-nights.schemas';
+import { useGameNightSessions } from '@/lib/game-nights/hooks/useGameNightSessions';
 import type { RsvpResponse } from '@/lib/game-nights/rsvp-state-machine';
 import { cn } from '@/lib/utils';
 import { useGameNightStore } from '@/stores/game-night';
@@ -88,6 +95,16 @@ function MobileStickyBar({
   );
 }
 
+/**
+ * #4706: the row of a guest invited by email reuses the member row, which draws four states. An
+ * expired invitation is drawn as waiting (the label says "scaduto"): nobody declined.
+ */
+function guestRsvpStatus(status: GuestInvitationStatus): RsvpStatus {
+  if (status === 'Accepted') return 'Accepted';
+  if (status === 'Declined') return 'Declined';
+  return 'Pending';
+}
+
 export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -101,30 +118,64 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   const publishMutation = usePublishGameNight();
   const cancelMutation = useCancelGameNight();
 
-  const { event, rsvps, actor, isLoading, isError, currentResponse, pendingResponse } = detail;
+  const {
+    event,
+    rsvps,
+    guestInvitations,
+    actor,
+    isLoading,
+    isError,
+    currentResponse,
+    pendingResponse,
+  } = detail;
 
-  // Catalog games power the Draft planning layout and the Published voting-panel titles.
   const isDraft = event?.status === 'Draft';
   const needsCatalog = isDraft || event?.status === 'Published';
-  const { data: catalogData } = useSharedGames(undefined, needsCatalog);
 
-  const { addPlayer, addGame, reset, activeSessions } = useGameNightStore();
+  // #4187: i giochi della serata si leggono per id. Prima si cercavano nella prima pagina del
+  // catalogo (20 giochi): quelli oltre sparivano dalla pianificazione e dal pannello di voto.
+  const { gamesById: nightGamesById, isLoading: nightGamesLoading } = useSharedGamesByIds(
+    event?.gameIds ?? [],
+    needsCatalog
+  );
+
+  // #4187: il selettore della pianificazione cerca nel catalogo sul server, invece di offrire solo
+  // la prima pagina. Sotto i due caratteri mostra la prima pagina, come prima.
+  const [catalogSearch, setCatalogSearch] = useState('');
+  const catalogSearchTerm = useDebounce(catalogSearch.trim(), 300);
+  const { data: catalogData } = useSharedGames(
+    catalogSearchTerm.length >= 2 ? { searchTerm: catalogSearchTerm } : undefined,
+    isDraft,
+    true
+  );
+
+  const { addPlayer, addGame, reset } = useGameNightStore();
+
+  // #4752: the games of the night come from the night-live read — the one source that knows each sitting's
+  // status and its live game. They used to come from the planning store's `activeSessions`, which no
+  // production code ever filled: the list was always empty, `hasActiveSession` always false and «Concludi
+  // serata» always off. Once the first game starts the night is InProgress, not Published, so the read is
+  // enabled for every state in which games exist. A viewer the read refuses (403) just sees an empty list.
+  const hasGames =
+    event?.status === 'Published' ||
+    event?.status === 'InProgress' ||
+    event?.status === 'Completed';
+  const { data: sessions = [] } = useGameNightSessions(id, hasGames);
 
   // Sync accepted RSVPs and game IDs from the event into the planning store
   // (preserves legacy behaviour for Draft events).
   useEffect(() => {
     if (!isDraft || !event) return;
-    if (event.gameIds.length > 0 && !catalogData) return;
+    if (event.gameIds.length > 0 && nightGamesLoading) return;
     reset();
     if (rsvps) {
       rsvps
         .filter(r => r.status === 'Accepted')
         .forEach(r => addPlayer({ id: r.userId, displayName: r.userName, isGuest: false }));
     }
-    if (catalogData?.items && event.gameIds.length > 0) {
-      const catalogMap = new Map(catalogData.items.map(g => [g.id, g]));
+    if (event.gameIds.length > 0) {
       event.gameIds.forEach(gid => {
-        const g = catalogMap.get(gid);
+        const g = nightGamesById[gid];
         if (g) {
           addGame({
             id: g.id,
@@ -136,7 +187,7 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
         }
       });
     }
-  }, [isDraft, event, rsvps, catalogData, reset, addPlayer, addGame]);
+  }, [isDraft, event, rsvps, nightGamesById, nightGamesLoading, reset, addPlayer, addGame]);
 
   // ────────────────────────────────────────────────────────────────────
   // Localized label bundles, derived once per render.
@@ -244,6 +295,10 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
 
   const isCancelled = event.status === 'Cancelled';
   const isCompleted = event.status === 'Completed';
+  // `isLive` is Published (the night is open for RSVPs and voting); `isInProgress` is a night whose first
+  // game has started — the page must keep showing the games and «Aggiungi partita» / «Concludi serata» then
+  // (#4752: both used to vanish the moment the first game started).
+  const isInProgress = event.status === 'InProgress';
   const isLive = event.status === 'Published';
 
   // #2723: Published events surface a Dettagli|Votazione tab strip (ADR-061 tab-canonical),
@@ -251,7 +306,7 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   // shows the RSVP / session / roster body.
   const votingTabActive = isLive && searchParams.get('tab') === 'voting';
   const showDetailsContent = !votingTabActive;
-  const hasActiveSession = activeSessions.some(s => s.status === 'in_progress');
+  const hasActiveSession = sessions.some(s => s.status === 'in_progress');
 
   // Explicit status → i18n key map. Deriving the key via toLowerCase() produced
   // 'inprogress' for the 'InProgress' status, which did not match the camelCase
@@ -294,9 +349,11 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
   }));
 
   // Candidate-game titles for the voting panel (#2700).
-  const gameTitleById: Record<string, string> = Object.fromEntries(
-    (catalogData?.items ?? []).map(g => [g.id, g.title])
-  );
+  // #4187: i titoli dei giochi della serata vengono dalla lettura per id, non dalla pagina.
+  const gameTitleById: Record<string, string> = {
+    ...Object.fromEntries((catalogData?.items ?? []).map(g => [g.id, g.title])),
+    ...Object.fromEntries(Object.values(nightGamesById).map(g => [g.id, g.title])),
+  };
 
   const isHost = actor?.actor === 'host';
   const isGuest = actor?.actor === 'guest';
@@ -322,6 +379,11 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
         return 0;
       })
     : [];
+
+  // #4706: guests invited by email, listed after the members. Only the host receives them. A cancelled
+  // invitation is a guest the organizer withdrew, so it is not a participant any more.
+  const guestRows = (guestInvitations ?? []).filter(g => g.status !== 'Cancelled');
+  const participantCount = sortedRsvps.length + guestRows.length;
 
   const cancelledBannerLabels = {
     title: t('gameNightDetail.cancelled.title'),
@@ -418,7 +480,14 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
       )}
 
       {/* Draft → preserve legacy planning layout. */}
-      {isDraft && <GameNightPlanningLayout title={event.title} availableGames={availableGames} />}
+      {isDraft && (
+        <GameNightPlanningLayout
+          title={event.title}
+          availableGames={availableGames}
+          catalogSearch={catalogSearch}
+          onCatalogSearchChange={setCatalogSearch}
+        />
+      )}
 
       {/* Published tabs — Dettagli | Votazione (#2723, ADR-061, ?tab=voting deep-link). */}
       {isLive && (
@@ -478,30 +547,33 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
         <VotingPanel gameNightId={id} isOrganizer={isHost} gameTitleById={gameTitleById} />
       )}
 
-      {/* Live / Completed: session flow sections under hero (details tab). */}
-      {(isLive || isCompleted) && showDetailsContent && (
+      {/* Live / In progress / Completed: session flow sections under hero (details tab). */}
+      {(isLive || isInProgress || isCompleted) && showDetailsContent && (
         <>
-          <GameNightActions
-            gameNightId={id}
-            hasActiveSession={hasActiveSession}
-            sessionCount={activeSessions.length}
-            isCompleted={isCompleted}
-          />
-          <GameNightSessionsList sessions={activeSessions} gameNightId={id} />
+          {/* Organizer-only on the server (403 for anyone else): a guest would only meet the error after clicking. */}
+          {isHost && (
+            <GameNightActions
+              gameNightId={id}
+              hasActiveSession={hasActiveSession}
+              sessionCount={sessions.length}
+              isCompleted={isCompleted}
+            />
+          )}
+          <GameNightSessionsList sessions={sessions} gameNightId={id} isCompleted={isCompleted} />
           <GameNightDiaryPanel gameNightId={id} />
         </>
       )}
 
       {/* Roster (details tab) */}
-      {sortedRsvps.length > 0 && showDetailsContent && (
+      {participantCount > 0 && showDetailsContent && (
         <section
           aria-label={t('gameNightDetail.participants.sectionTitle', {
-            count: sortedRsvps.length,
+            count: participantCount,
           })}
           className="space-y-2"
         >
           <h2 className="font-display text-base font-extrabold text-foreground">
-            {t('gameNightDetail.participants.sectionTitle', { count: sortedRsvps.length })}
+            {t('gameNightDetail.participants.sectionTitle', { count: participantCount })}
           </h2>
           <ul className="space-y-2">
             {sortedRsvps.map(rsvp => (
@@ -517,6 +589,37 @@ export function GameNightDetailView({ id }: { id: string }): React.JSX.Element {
                 />
               </li>
             ))}
+            {guestRows.map(guest => {
+              const byEmail = t('gameNightDetail.participants.guestByEmail');
+              return (
+                <li key={guest.id}>
+                  <GameNightRsvpRow
+                    userId={guest.id}
+                    userName={guest.respondedByName?.trim() || guest.email}
+                    status={guestRsvpStatus(guest.status)}
+                    statusLabel={
+                      guest.status === 'Expired'
+                        ? t('gameNightDetail.participants.rsvpStatus.expired')
+                        : rsvpStatusLabel(guest.status, false)
+                    }
+                    subtitle={
+                      guest.respondedByName?.trim() ? `${guest.email} · ${byEmail}` : byEmail
+                    }
+                    // #4721: pending and accepted invitations can be withdrawn; declined and expired are history.
+                    action={
+                      guest.status === 'Pending' || guest.status === 'Accepted' ? (
+                        <GuestInvitationWithdraw
+                          gameNightId={id}
+                          invitationId={guest.id}
+                          email={guest.email}
+                          accepted={guest.status === 'Accepted'}
+                        />
+                      ) : undefined
+                    }
+                  />
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}

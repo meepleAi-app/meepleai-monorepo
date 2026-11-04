@@ -68,7 +68,8 @@ internal class BlobStorageService : IBlobStorageService
         catch (IOException ex)
         {
             _logger.LogError(ex, "I/O error storing file in {ResourceKey}", resourceKey);
-            return new BlobStorageResult(false, null, null, 0, $"I/O error: {ex.Message}");
+            // #4660: the exception (with the path) is logged above; what reaches the uploader is the fixed text.
+            return new BlobStorageResult(false, null, null, 0, BlobStorageFailureText.IO);
         }
         catch (UnauthorizedAccessException ex)
         {
@@ -84,7 +85,7 @@ internal class BlobStorageService : IBlobStorageService
             // catch all exceptions to return error results instead of crashing the service.
             // Context: File system operations can fail in unpredictable ways across different OS environments
             _logger.LogError(ex, "Unexpected error storing file in {ResourceKey}", resourceKey);
-            return new BlobStorageResult(false, null, null, 0, ex.Message);
+            return new BlobStorageResult(false, null, null, 0, BlobStorageFailureText.Generic);
         }
 #pragma warning restore CA1031 // Do not catch general exception types
     }

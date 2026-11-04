@@ -1,6 +1,7 @@
 using System.Net;
 using Api.BoundedContexts.SecurityAudit.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Services;
@@ -11,6 +12,7 @@ using Api.Services.Pdf;
 using Api.SharedKernel.Infrastructure.Persistence;
 using FluentAssertions;
 using ImageMagick;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
@@ -37,6 +39,7 @@ public sealed class SetManualCoverCommandHandlerTests
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IHybridCacheService> _cache = new();
     private readonly Mock<ICacheInvalidationRetryPolicy> _cacheRetryPolicy = new();
+    private readonly Mock<HybridCache> _hybridCache = new();
     private readonly Mock<ITransactionalAuditWriter> _auditWriter = new();
     private readonly StubImageHandler _httpHandler = new();
 
@@ -61,8 +64,7 @@ public sealed class SetManualCoverCommandHandlerTests
             webp,
             _blobStorage.Object,
             _unitOfWork.Object,
-            _cache.Object,
-            _cacheRetryPolicy.Object,
+            new SharedGameCacheInvalidator(_cache.Object, _cacheRetryPolicy.Object, _hybridCache.Object),
             _auditWriter.Object,
             NullLogger<SetManualCoverCommandHandler>.Instance);
     }

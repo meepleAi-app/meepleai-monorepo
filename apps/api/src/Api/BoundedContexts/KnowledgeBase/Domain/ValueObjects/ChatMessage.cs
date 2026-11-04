@@ -25,6 +25,16 @@ internal sealed class ChatMessage
     public string? CitationsJson { get; private set; }
     public int? TokenCount { get; private set; }
 
+    // #4168 (ADR-095 D2): la versione del profilo che ha prodotto la risposta, e la sua lingua
+    public Guid? ProfileVersionId { get; private set; }
+    public string? Language { get; private set; }
+
+    // #4397: il codice del testo che il turno dell'assistente ha scritto al posto del modello; null se il testo è del modello
+    public string? FallbackCode { get; private set; }
+
+    // #4456: il costo del turno dell'assistente; null se il messaggio non ne ha uno (domande, messaggi salvati prima)
+    public decimal? CostUsd { get; private set; }
+
     // Known roles
     public static readonly string UserRole = "user";
     public static readonly string AssistantRole = "assistant";
@@ -118,6 +128,52 @@ internal sealed class ChatMessage
         AgentType = agentType;
         Confidence = confidence;
         CitationsJson = citationsJson;
+        TokenCount = tokenCount;
+    }
+
+    /// <summary>
+    /// #4168 (ADR-095 D2): registra quale versione del profilo ha prodotto la risposta e in che lingua,
+    /// così il feedback e le valutazioni possono riferirsi a quella versione.
+    /// </summary>
+    public void SetAnswerProvenance(Guid? profileVersionId, string? language)
+    {
+        if (!IsAssistantMessage)
+            throw new InvalidOperationException("Answer provenance can only be set on assistant messages");
+
+        ProfileVersionId = profileVersionId;
+        Language = language;
+    }
+
+    /// <summary>
+    /// #4397: segna una risposta dell'assistente che non viene dal modello, ma dal turno che l'ha scritta al
+    /// suo posto (un guasto, una scadenza, una risposta vuota). Così non torna al modello nella storia.
+    /// </summary>
+    public void MarkAsFallback(string code)
+    {
+        if (!IsAssistantMessage)
+            throw new InvalidOperationException("Only an assistant message can be a fallback");
+
+        if (string.IsNullOrWhiteSpace(code))
+            throw new ValidationException("A fallback needs its code");
+
+        FallbackCode = code;
+    }
+
+    /// <summary>
+    /// #4456: il costo del turno dell'assistente che ha prodotto la risposta, sommato su tutte le sue chiamate al
+    /// modello, con i token. Il costo di una partita è la somma sui messaggi del suo thread. È una stima: un turno
+    /// finito in eccezione prima del salvataggio non lascia messaggio, e il suo costo resta solo in llm_cost_logs.
+    /// Scrive anche <see cref="TokenCount"/>, quindi va chiamato dopo <see cref="SetAgentMetadata"/>.
+    /// </summary>
+    public void SetTurnCost(decimal costUsd, int tokenCount)
+    {
+        if (!IsAssistantMessage)
+            throw new InvalidOperationException("Only an assistant message has a turn cost");
+
+        if (costUsd < 0 || tokenCount < 0)
+            throw new ValidationException("A turn cost cannot be negative");
+
+        CostUsd = costUsd;
         TokenCount = tokenCount;
     }
 

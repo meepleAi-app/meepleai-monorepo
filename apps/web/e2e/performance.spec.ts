@@ -143,53 +143,6 @@ test.describe('Performance Testing - Critical Pages', () => {
 
     await browser.close();
   });
-
-  test('Upload Page (/upload) - Performance Metrics', async ({ page, context }, testInfo) => {
-    const port = getRemoteDebuggingPort(testInfo.workerIndex);
-    const baseURL = testInfo.project.use.baseURL;
-
-    await context.close();
-    const { chromium } = await import('@playwright/test');
-    const browser =
-      testInfo.project.use.browserName === 'chromium'
-        ? await chromium.launch({
-            args: [
-              `--remote-debugging-port=${port}`,
-              '--no-sandbox',
-              '--disable-setuid-sandbox',
-              '--disable-dev-shm-usage',
-              '--disable-accelerated-2d-canvas',
-              '--disable-gpu',
-            ],
-          })
-        : null;
-
-    if (!browser) throw new Error('Browser launch failed');
-
-    const newContext = await browser.newContext({ baseURL });
-    const newPage = await newContext.newPage();
-
-    await newPage.goto('/upload');
-    await newPage.waitForLoadState('networkidle');
-
-    await playAudit({
-      page: newPage,
-      port,
-      thresholds: lighthouseOptions.thresholds,
-      opts: lighthouseOptions.opts,
-      reports: {
-        ...reportConfig,
-        name: 'lighthouse-upload',
-      },
-    });
-
-    const uploadContainer = newPage.locator(
-      '[data-testid="upload-container"], .upload-container, main'
-    );
-    await expect(uploadContainer).toBeVisible({ timeout: 5000 });
-
-    await browser.close();
-  });
 });
 
 test.describe('Performance Testing - Additional Pages', () => {

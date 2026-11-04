@@ -775,7 +775,7 @@ instead.
 | `/gamebook` · `/gamebook/upload` | `sp6-libro-game-index.html` + `sp4-upload-wizard-extended.html` | done (PR #792/794+) |
 | `/agents` · `/agents/[id]` | `sp4-agents-index.html` + `sp4-agent-detail.html` | Tier S+L done |
 | `/knowledge-base` · `/[id]` | `sp4-kb-hub.html` + `sp4-kb-detail.html` | KB-detail deferred (G4 v3) |
-| `/upload` | `sp4-upload-wizard-extended.html` + `sp4-add-game-pdf-dedup.html` | — |
+| `/upload` | `sp4-upload-wizard-extended.html` + `sp4-add-game-pdf-dedup.html` | Dismessa (#4257): la rotta reindirizza ad `/admin/knowledge-base/upload` |
 | `/private-games/[id]` | `sp4-game-detail.html` ↻ | Reuse |
 
 ### Chat `(chat)/`

@@ -63,7 +63,11 @@ internal sealed class GetPublishedMechanicCardByGameQueryHandler
                         c.Claim,
                         c.Citations
                             .Select(cit => new PublishedMechanicCardCitationDto(cit.PdfId, cit.PdfPage, cit.Quote))
-                            .ToList()))
+                            .ToList(),
+                        Enum.TryParse<MechanicClaimKind>(c.Kind, out var kind) ? kind : MechanicClaimKind.Rule,
+                        Enum.TryParse<MechanicRulePriority>(c.Priority, out var priority) ? priority : MechanicRulePriority.Base,
+                        c.Overrides,
+                        c.Trigger is null ? null : new MechanicTriggerDto(c.Trigger.Phase, c.Trigger.Action, c.Trigger.Component)))
                     .ToList()))
             .ToList();
 

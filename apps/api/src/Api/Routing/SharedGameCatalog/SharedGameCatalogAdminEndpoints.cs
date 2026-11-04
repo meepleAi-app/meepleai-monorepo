@@ -115,6 +115,19 @@ internal static class SharedGameCatalogAdminEndpoints
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status404NotFound);
 
+        // #4413: a page of the game's own rulebook becomes its cover, at once (the user path,
+        // propose-from-pdf, creates a request to approve instead).
+        group.MapPost("/admin/shared-games/{id:guid}/pdf-cover", HandleSetPdfCoverFromPage)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .RequireRateLimiting("SharedGamesAdmin")
+            .WithName("SetPdfCoverFromPage")
+            .WithSummary("Set the game's cover from a page of its PDF (Admin/Editor)")
+            .WithDescription("Renders the page of one of the game's PDFs, stores it in R2 and makes it the game's PDF cover. The PDF must be Ready: rendering writes the PDF row, which the processing still holds while it runs.")
+            .Produces<SetPdfCoverFromPageResponse>()
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status409Conflict)
+            .Produces(StatusCodes.Status503ServiceUnavailable);
+
         // Revoke a manual cover (epic #3470 Slice 3a-3): clears the manual cover + attestation.
         group.MapDelete("/admin/shared-games/{id:guid}/manual-cover", HandleRevokeManualCover)
             .RequireAuthorization("AdminOrEditorPolicy")
@@ -480,12 +493,23 @@ internal static class SharedGameCatalogAdminEndpoints
             .Produces(StatusCodes.Status401Unauthorized)
             .Produces(StatusCodes.Status403Forbidden);
 
-        // Import game from PDF (wizard 5-step saga)
+        // #4401: the PDF import wizard creates the game first (step 1), then uploads the rulebook for it.
+        group.MapPost("/admin/shared-games/import-from-pdf/start", HandleStartGameImport)
+            .RequireAuthorization("AdminOrEditorPolicy")
+            .WithName("StartGameImportFromPdf")
+            .WithSummary("Start a PDF import: create the draft game (Admin/Editor)")
+            .WithDescription("Creates a draft skeleton game with the given title, so the wizard can upload the rulebook for it.")
+            .Produces<StartGameImportResponse>(StatusCodes.Status201Created)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden);
+
+        // Import game from PDF (wizard step 4)
         group.MapPost("/admin/shared-games/import-from-pdf", HandleImportGameFromPdf)
             .RequireAuthorization("AdminOrEditorPolicy")
             .WithName("ImportGameFromPdf")
             .WithSummary("Import shared game from PDF (Admin/Editor)")
-            .WithDescription("Orchestrates a saga: creates SharedGame, links the orphaned PDF, and enqueues RAG indexing.")
+            .WithDescription("Completes the draft game created by the start step with the reviewed metadata, and registers the uploaded PDF as its rulebook.")
             .Produces<ImportGameFromPdfResult>(StatusCodes.Status201Created)
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status401Unauthorized)
@@ -520,6 +544,20 @@ internal static class SharedGameCatalogAdminEndpoints
     // ADMIN HANDLERS
     // ========================================
 
+    private static async Task<IResult> HandleStartGameImport(
+        [FromBody] StartGameImportRequest request,
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var (authenticated, session, error) = context.TryGetActiveSession();
+        if (!authenticated) return error!;
+
+        var gameId = await mediator.Send(
+            new StartGameImportCommand(request.Title, session!.Principal!.Subject.Id), ct).ConfigureAwait(false);
+        return Results.Created($"/admin/shared-games/{gameId}", new StartGameImportResponse(gameId));
+    }
+
     private static async Task<IResult> HandleImportGameFromPdf(
         [FromBody] ImportGameFromPdfRequest request,
         HttpContext context,
@@ -530,6 +568,7 @@ internal static class SharedGameCatalogAdminEndpoints
         if (!authenticated) return error!;
 
         var command = new ImportGameFromPdfCommand(
+            GameId: request.GameId,
             Metadata: new ImportGameMetadataDto(
                 request.Title,
                 request.YearPublished,
@@ -1019,6 +1058,22 @@ internal static class SharedGameCatalogAdminEndpoints
         return Results.Ok(result);
     }
 
+    private static async Task<IResult> HandleSetPdfCoverFromPage(
+        Guid id,
+        SetPdfCoverFromPageRequest request,
+        IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken ct)
+    {
+        var (authorized, session, error) = httpContext.RequireAdminOrEditorSession();
+        if (!authorized) return error!;
+
+        var coverKey = await mediator.Send(
+            new SetPdfCoverFromPageCommand(id, request.PdfDocumentId, request.PageNumber, session!.Principal!.Subject.Id),
+            ct).ConfigureAwait(false);
+        return Results.Ok(new SetPdfCoverFromPageResponse(coverKey));
+    }
+
     private static async Task<IResult> HandleRevokeManualCover(
         Guid id,
         IMediator mediator,
@@ -1269,15 +1324,18 @@ internal static class SharedGameCatalogAdminEndpoints
         return Results.Created($"/api/v1/admin/shared-games/{id}/faq/{faqId}", faqId);
     }
 
-#pragma warning disable S1172 // Unused method parameters - Route parameter for URL binding, command uses faqId directly
+    // #4543: il primo parametro deve chiamarsi come il segmento {id}. Chiamato `_`, il binding lo
+    // cercava nella query e rispondeva 400 prima dell'handler. Vale per tutti gli handler di questo
+    // file: lo controlla NoDuplicateRouteTests.EveryRouteParameter_IsBoundByAHandlerParameter.
+    // #4557: il command lo porta, e una FAQ di un altro gioco risponde 404.
     private static async Task<IResult> HandleUpdateFaq(
-        Guid _,
+        Guid id,
         Guid faqId,
         [FromBody] UpdateFaqRequest request,
         IMediator mediator,
         CancellationToken ct)
     {
-        var command = new UpdateGameFaqCommand(faqId, request.Question, request.Answer, request.Order);
+        var command = new UpdateGameFaqCommand(id, faqId, request.Question, request.Answer, request.Order);
 
         try
         {
@@ -1291,12 +1349,12 @@ internal static class SharedGameCatalogAdminEndpoints
     }
 
     private static async Task<IResult> HandleDeleteFaq(
-        Guid _,
+        Guid id,
         Guid faqId,
         IMediator mediator,
         CancellationToken ct)
     {
-        var command = new DeleteGameFaqCommand(faqId);
+        var command = new DeleteGameFaqCommand(id, faqId);
 
         try
         {
@@ -1308,7 +1366,6 @@ internal static class SharedGameCatalogAdminEndpoints
             return Results.NotFound();
         }
     }
-#pragma warning restore S1172
 
     // Errata Handlers
     private static async Task<IResult> HandleAddErrata(
@@ -1322,15 +1379,14 @@ internal static class SharedGameCatalogAdminEndpoints
         return Results.Created($"/api/v1/admin/shared-games/{id}/errata/{errataId}", errataId);
     }
 
-#pragma warning disable S1172 // Unused method parameters - Route parameter for URL binding, command uses errataId directly
     private static async Task<IResult> HandleUpdateErrata(
-        Guid _,
+        Guid id,
         Guid errataId,
         [FromBody] UpdateErrataRequest request,
         IMediator mediator,
         CancellationToken ct)
     {
-        var command = new UpdateGameErrataCommand(errataId, request.Description, request.PageReference, request.PublishedDate);
+        var command = new UpdateGameErrataCommand(id, errataId, request.Description, request.PageReference, request.PublishedDate);
 
         try
         {
@@ -1344,12 +1400,12 @@ internal static class SharedGameCatalogAdminEndpoints
     }
 
     private static async Task<IResult> HandleDeleteErrata(
-        Guid _,
+        Guid id,
         Guid errataId,
         IMediator mediator,
         CancellationToken ct)
     {
-        var command = new DeleteGameErrataCommand(errataId);
+        var command = new DeleteGameErrataCommand(id, errataId);
 
         try
         {
@@ -1361,7 +1417,6 @@ internal static class SharedGameCatalogAdminEndpoints
             return Results.NotFound();
         }
     }
-#pragma warning restore S1172
 
     // ========================================
     // DOCUMENT HANDLERS (Issue #2391 Sprint 1)
@@ -1443,12 +1498,12 @@ internal static class SharedGameCatalogAdminEndpoints
 
 #pragma warning disable S1172 // Unused method parameters - Route parameter for URL binding
     private static async Task<IResult> HandleSetActiveDocument(
-        Guid _,
+        Guid id,
         Guid documentId,
         IMediator mediator,
         CancellationToken ct)
     {
-        var command = new SetActiveDocumentVersionCommand(_, documentId);
+        var command = new SetActiveDocumentVersionCommand(id, documentId);
 
         try
         {
@@ -1551,15 +1606,15 @@ internal static class SharedGameCatalogAdminEndpoints
         }
     }
 
-#pragma warning disable S1172 // Unused method parameters - Route parameter for URL binding
     private static async Task<IResult> HandleUpdateStateTemplate(
-        Guid _,
+        Guid id,
         Guid templateId,
         [FromBody] UpdateStateTemplateRequest request,
         IMediator mediator,
         CancellationToken ct)
     {
         var command = new UpdateGameStateTemplateCommand(
+            id,
             templateId,
             request.Name,
             request.SchemaJson,
@@ -1577,12 +1632,12 @@ internal static class SharedGameCatalogAdminEndpoints
     }
 
     private static async Task<IResult> HandleActivateStateTemplate(
-        Guid _,
+        Guid id,
         Guid templateId,
         IMediator mediator,
         CancellationToken ct)
     {
-        var command = new ActivateGameStateTemplateCommand(templateId);
+        var command = new ActivateGameStateTemplateCommand(id, templateId);
 
         try
         {
@@ -1594,7 +1649,6 @@ internal static class SharedGameCatalogAdminEndpoints
             return Results.NotFound();
         }
     }
-#pragma warning restore S1172
 
     // ========================================
     // SEEDING STATUS HANDLER
@@ -1668,9 +1722,28 @@ internal static class SharedGameCatalogAdminEndpoints
 internal sealed record EnrichCatalogCoverBatchRequest(IReadOnlyList<Guid>? GameIds);
 
 /// <summary>
+/// Request body for POST /admin/shared-games/{id}/pdf-cover (#4413). The page is 1-based.
+/// </summary>
+internal sealed record SetPdfCoverFromPageRequest(Guid PdfDocumentId, int PageNumber);
+
+/// <summary>Response of POST /admin/shared-games/{id}/pdf-cover: the stored key of the new cover.</summary>
+internal sealed record SetPdfCoverFromPageResponse(string CoverR2Key);
+
+/// <summary>
+/// Request body for POST /admin/shared-games/import-from-pdf/start (#4401).
+/// </summary>
+internal sealed record StartGameImportRequest(string Title);
+
+/// <summary>
+/// Response of POST /admin/shared-games/import-from-pdf/start: the draft game to upload the rulebook for.
+/// </summary>
+internal sealed record StartGameImportResponse(Guid GameId);
+
+/// <summary>
 /// Request body for POST /admin/shared-games/import-from-pdf
 /// </summary>
 internal sealed record ImportGameFromPdfRequest(
+    Guid GameId,
     string Title,
     Guid PdfDocumentId,
     int? YearPublished = null,

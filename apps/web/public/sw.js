@@ -24,7 +24,6 @@ const AUTHENTICATED_NAV_PREFIXES = [
   '/sessions',
   '/games',
   '/agents',
-  '/upload',
   '/editor',
   '/settings',
   '/play-records',

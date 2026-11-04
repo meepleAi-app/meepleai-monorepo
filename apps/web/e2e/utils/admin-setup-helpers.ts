@@ -155,40 +155,12 @@ export async function verifySharedGamesSeeded(
     const games = data.items || data;
     const gameTitles = games.map((g: { title: string }) => g.title.toLowerCase());
 
-    return expectedGames.every((expectedGame) =>
+    return expectedGames.every(expectedGame =>
       gameTitles.some((title: string) => title.includes(expectedGame.toLowerCase()))
     );
   } catch {
     return false;
   }
-}
-
-/**
- * Uploads a PDF file via wizard interface
- */
-export async function uploadPdfInWizard(
-  page: Page,
-  gameName: string,
-  pdfPath: string
-): Promise<string> {
-  // Select game from dropdown
-  await page.selectOption('select[name="gameSelect"]', { label: gameName });
-
-  // Upload PDF file
-  const fileInput = page.locator('input[type="file"]');
-  await fileInput.setInputFiles(pdfPath);
-
-  // Wait for upload response
-  const uploadPromise = page.waitForResponse(
-    (response) => response.url().includes('/api/v1/documents') && response.status() === 201
-  );
-
-  await page.click('button:has-text("Upload")');
-
-  const uploadResponse = await uploadPromise;
-  const data = await uploadResponse.json();
-
-  return data.documentId || data.id;
 }
 
 /**
@@ -211,7 +183,7 @@ export async function sendTestQuestion(
 
   // Wait for message response
   const messagePromise = page.waitForResponse(
-    (response) => response.url().includes('/api/v1/chat/messages') && response.status() === 200,
+    response => response.url().includes('/api/v1/chat/messages') && response.status() === 200,
     { timeout: 30000 }
   );
 

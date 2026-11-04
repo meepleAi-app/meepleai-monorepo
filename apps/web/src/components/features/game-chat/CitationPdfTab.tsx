@@ -23,12 +23,14 @@ import { CitationOwnershipUpsell } from '@/components/features/game-chat/Citatio
 import { PdfInlineViewer } from '@/components/pdf/PdfInlineViewer';
 import { PdfQuoteViewer } from '@/components/pdf/PdfQuoteViewer';
 import { useCanViewPdf } from '@/hooks/queries/useCanViewPdf';
+import { citedPage } from '@/lib/citations/citedPage';
 import type { CitationRegion } from '@/types';
 
 export interface CitationPdfTabProps {
   readonly documentId: string;
   readonly gameId?: string;
-  readonly initialPage: number;
+  /** `null` when the citation has no page (#4819): the PDF opens at its first page, without quote highlight. */
+  readonly initialPage: number | null;
   readonly isPublic?: boolean;
   /**
    * SP0 (#3404): quote verbatim da evidenziare nel PDF (highlight della regione
@@ -89,39 +91,54 @@ export function CitationPdfTab({
     return <CitationOwnershipUpsell gameId={gameId} className={className} />;
   }
 
+  // #4819: without a cited page the quote search has nowhere to look, and the reader is told so.
+  const page = citedPage(initialPage);
+  const startPage = page ?? 1;
+
   // SP-D (#3408): Pattern B (bbox overlay) takes precedence over Pattern A (quote highlight).
-  const hasRects = !!regions && regions.length > 0;
+  const hasRects = page !== null && !!regions && regions.length > 0;
+  const trimmedQuote = page === null ? undefined : quote?.trim();
+
+  let viewer: ReactElement;
   if (hasRects) {
-    return (
+    viewer = (
       <PdfInlineViewer
         documentId={documentId}
-        initialPage={initialPage}
+        initialPage={startPage}
         highlightRects={regions}
         features={{ antiLeak: true }}
         className={className}
       />
     );
-  }
-
-  const trimmedQuote = quote?.trim();
-  if (trimmedQuote) {
-    return (
+  } else if (trimmedQuote) {
+    viewer = (
       <PdfQuoteViewer
         documentId={documentId}
-        page={initialPage}
+        page={startPage}
         quote={trimmedQuote}
+        features={{ antiLeak: true }}
+        className={className}
+      />
+    );
+  } else {
+    viewer = (
+      <PdfInlineViewer
+        documentId={documentId}
+        initialPage={startPage}
         features={{ antiLeak: true }}
         className={className}
       />
     );
   }
 
+  if (page !== null) return viewer;
+
   return (
-    <PdfInlineViewer
-      documentId={documentId}
-      initialPage={initialPage}
-      features={{ antiLeak: true }}
-      className={className}
-    />
+    <div className="flex flex-col gap-2">
+      <p data-slot="citation-page-unknown" className="text-xs text-muted-foreground">
+        La pagina di questa citazione non è nota: il regolamento si apre dall&apos;inizio.
+      </p>
+      {viewer}
+    </div>
   );
 }

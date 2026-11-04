@@ -56,8 +56,7 @@ export function SessionQuickActions({
   const advanceTurn = useContextualHandStore(s => s.advanceTurn);
 
   // Only show quick actions if the contextual hand store is tracking this session
-  const isContextualHandActive =
-    hasActiveSession && currentSession?.sessionId === sessionId;
+  const isContextualHandActive = hasActiveSession && currentSession?.sessionId === sessionId;
 
   // ── Dice state ──
   const [diceParticipant, setDiceParticipant] = useState('');
@@ -219,7 +218,10 @@ export function SessionQuickActions({
               size="sm"
               onClick={handleUpsertScore}
               disabled={isScoreLoading || !scoreParticipant || !scoreValue}
-              className={cn('shrink-0', scoreSuccess && 'bg-green-600 hover:bg-green-700')}
+              className={cn(
+                'shrink-0',
+                scoreSuccess && 'bg-green-700 hover:bg-green-800 text-white'
+              )}
             >
               {isScoreLoading ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -241,7 +243,8 @@ export function SessionQuickActions({
 
           {currentPlayerName && (
             <p className="text-sm text-muted-foreground">
-              Turno corrente: <span className="font-medium text-foreground">{currentPlayerName}</span>
+              Turno corrente:{' '}
+              <span className="font-medium text-foreground">{currentPlayerName}</span>
             </p>
           )}
 

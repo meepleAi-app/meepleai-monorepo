@@ -87,7 +87,7 @@ public sealed class MechanicCardTests
         using var doc = JsonDocument.Parse(card.Content);
         var root = doc.RootElement;
 
-        root.GetProperty("schema_version").GetInt32().Should().Be(2); // #2782 D6: bumped for real validations projection.
+        root.GetProperty("schema_version").GetInt32().Should().Be(3); // spec 2026-10-08: v3 adds kind/priority/overrides/trigger.
         root.GetProperty("source_analysis_id").GetGuid().Should().Be(analysis.Id);
         root.GetProperty("source_prompt_version").GetString().Should().Be("v1");
 

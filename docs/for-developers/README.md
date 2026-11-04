@@ -30,6 +30,7 @@
 | `templates/` | Bounded-context template |
 | `specs/` | 4 active design specs (referenced by ADRs/CLAUDE.md) |
 | `plans/` | 1 in-flight plan (`2026-05-06-sp6-libro-game-migration.md`) |
+| `research/` | Ricerche datate `YYYY-MM-DD-<slug>.md` (web + inventario repo) che precedono una ADR o un'epic; non sono decisioni |
 
 ---
 

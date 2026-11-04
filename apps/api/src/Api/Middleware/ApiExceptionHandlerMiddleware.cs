@@ -102,6 +102,14 @@ internal class ApiExceptionHandlerMiddleware
             return;
         }
 
+        // #4155: il diniego RAG porta il gioco, cosi' il FE offre la dichiarazione di possesso per
+        // quel gioco invece di un «accesso negato» generico.
+        if (ex is RagOwnershipRequiredException ragOwnershipEx)
+        {
+            await HandleRagOwnershipRequiredAsync(context, ragOwnershipEx).ConfigureAwait(false);
+            return;
+        }
+
         // Issue #1312: glossary termIt collision — returns 409 with collidingEntryId
         // + collidingTermEn so the FE can render the collision banner.
         if (ex is GlossaryTermCollisionException glossaryCollisionEx)
@@ -230,6 +238,38 @@ internal class ApiExceptionHandlerMiddleware
             current = tierLimitException.Current,
             max = tierLimitException.Max,
             upgradeUrl = tierLimitException.UpgradeUrl,
+            correlationId = context.TraceIdentifier,
+            timestamp = DateTime.UtcNow
+        };
+
+        await context.Response.WriteAsJsonAsync(errorResponse).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// #4155: 403 con il codice <see cref="RagOwnershipRequiredException.Code"/> e il gioco per cui
+    /// manca la dichiarazione di possesso. Un diniego atteso: conta come errore client, non come
+    /// eccezione non gestita.
+    /// </summary>
+    private static async Task HandleRagOwnershipRequiredAsync(
+        HttpContext context,
+        RagOwnershipRequiredException ragOwnershipException)
+    {
+        var endpoint = GetRoutePattern(context) ?? context.Request.Path.ToString();
+
+        MeepleAiMetrics.RecordApiError(
+            exception: ragOwnershipException,
+            httpStatusCode: StatusCodes.Status403Forbidden,
+            endpoint: endpoint,
+            isUnhandled: false);
+
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        context.Response.ContentType = "application/json";
+
+        var errorResponse = new
+        {
+            error = ragOwnershipException.ErrorCode,
+            message = ragOwnershipException.Message,
+            gameId = ragOwnershipException.GameId,
             correlationId = context.TraceIdentifier,
             timestamp = DateTime.UtcNow
         };

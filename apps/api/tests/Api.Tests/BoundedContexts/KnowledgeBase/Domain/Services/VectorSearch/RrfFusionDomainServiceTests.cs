@@ -370,6 +370,24 @@ public sealed class RrfFusionDomainServiceTests
         result[0].VectorDocumentId.Should().Be(docId1); // Higher score should be first
     }
 
+    [Fact]
+    public void FuseResults_CarriesTheTranslationFlag_FromTheVectorArm()
+    {
+        // #4482: per un PDF non inglese l'indicizzazione salva anche la traduzione inglese dei chunk.
+        // La sonda di recupero deve poter dire quali candidati sono traduzioni: la fusione non perde il flag.
+        var pdf = Guid.NewGuid();
+        SearchResult Chunk(int chunkIndex, bool isTranslation) => new(
+            id: Guid.NewGuid(), vectorDocumentId: Guid.NewGuid(), textContent: $"chunk {chunkIndex}", pageNumber: 1,
+            relevanceScore: new Confidence(0.8), rank: chunkIndex + 1, searchMethod: "vector",
+            pdfDocumentId: pdf, chunkIndex: chunkIndex,
+            signals: new RetrievalSignals(VectorScore: 0.8f, IsTranslation: isTranslation));
+
+        var result = _service.FuseResults([Chunk(0, isTranslation: false), Chunk(40, isTranslation: true)], []);
+
+        result.ToDictionary(r => r.ChunkIndex, r => r.Signals.IsTranslation)
+            .Should().BeEquivalentTo(new Dictionary<int, bool> { [0] = false, [40] = true });
+    }
+
     #endregion
 
     #region CalculateRrfScore Tests

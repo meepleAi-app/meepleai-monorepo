@@ -13,7 +13,6 @@ import {
   GetAllAgentsResponseSchema,
   ConfigureAgentResponseSchema,
   ChessAgentResponseSchema,
-  SetupGuideResponseSchema,
   AgentDocumentsDtoSchema,
   UpdateAgentDocumentsResponseSchema,
   PlayerModeSuggestionResponseSchema,
@@ -25,7 +24,6 @@ import {
   type ConfigureAgentRequest,
   type ConfigureAgentResponse,
   type ChessAgentResponse,
-  type SetupGuideResponse,
   type AgentDocumentsDto,
   type UpdateAgentDocumentsResponse,
   type PlayerModeSuggestionRequest,
@@ -35,12 +33,6 @@ import {
 import { AgentCostEstimateSchema, type AgentCostEstimate } from '../schemas/rag-setup.schemas';
 
 import type { HttpClient } from '../core/httpClient';
-import type {
-  BackendModelDto,
-  GetModelsResponse,
-  BackendAgentConfigurationDto,
-  UpdateAgentConfigurationRequest,
-} from '../schemas/agent-config.schemas';
 
 export interface CreateAgentsClientParams {
   httpClient: HttpClient;
@@ -89,20 +81,6 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
      */
     async getAvailable(type?: string): Promise<AgentDto[]> {
       return this.getAll(true, type);
-    },
-
-    /**
-     * Get user-owned agents for a specific game.
-     * Issue #4914: returns custom agents created by the current user for the given game.
-     * @param gameId Game UUID
-     */
-    async getUserAgentsForGame(gameId: string): Promise<AgentDto[]> {
-      const response = await httpClient.get<{
-        success: boolean;
-        agents: AgentDto[];
-        count: number;
-      }>(`/api/v1/games/${gameId}/agents`, GetAllAgentsResponseSchema);
-      return response?.agents ?? [];
     },
 
     /**
@@ -278,27 +256,6 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
     },
 
     /**
-     * Generate setup guide (convenience wrapper)
-     * POST /api/v1/agents/setup
-     *
-     * Issue #1977: Added SetupGuideResponseSchema validation
-     */
-    async generateSetupGuide(request: {
-      gameId: string;
-      chatId: string | null;
-    }): Promise<SetupGuideResponse> {
-      const response = await httpClient.post(
-        '/api/v1/agents/setup',
-        request,
-        SetupGuideResponseSchema
-      );
-      if (!response) {
-        throw new Error('Failed to generate setup guide: no response from server');
-      }
-      return response;
-    },
-
-    /**
      * Suggest player move (convenience wrapper)
      * POST /api/v1/agents/player-mode/suggest
      *
@@ -400,45 +357,6 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
       return response;
     },
 
-    // ========== Agent Slots & Creation Flow (Issue #4771, #4772) ==========
-
-    /**
-     * Get user's agent slot allocation and usage
-     * Issue #4771: Agent Slots Endpoint + Quota System
-     * Issue #417: Backend route registered in AiEndpoints.cs (GET /api/v1/user/agent-slots)
-     */
-    async getSlots(): Promise<{
-      total: number;
-      used: number;
-      available: number;
-      slots: Array<{
-        slotIndex: number;
-        agentId: string | null;
-        agentName: string | null;
-        gameId: string | null;
-        status: 'active' | 'available' | 'locked';
-      }>;
-    }> {
-      const response = await httpClient.get<{
-        total: number;
-        used: number;
-        available: number;
-        slots: Array<{
-          slotIndex: number;
-          agentId: string | null;
-          agentName: string | null;
-          gameId: string | null;
-          status: 'active' | 'available' | 'locked';
-        }>;
-      }>('/api/v1/user/agent-slots');
-
-      if (!response) {
-        throw new Error('Failed to get agent slots: no response from server');
-      }
-
-      return response;
-    },
-
     // ========== Admin Agent Testing (Issue #4962) ==========
 
     /**
@@ -473,47 +391,6 @@ export function createAgentsClient({ httpClient }: CreateAgentsClientParams) {
     // POST /api/v1/agents/{agentId}/chat, a route the backend never mounted, and
     // had no consumer left once `useAgentChatStream` moved to /agents/qa/stream.
     // Removed rather than marked: there is nothing to keep it for.
-
-    // ========== Model & Agent Configuration ==========
-
-    /** Get available AI models, optionally filtered by tier */
-    async getModels(tier?: string): Promise<BackendModelDto[]> {
-      const params = tier ? `?tier=${encodeURIComponent(tier)}` : '';
-      const response = await httpClient.get<GetModelsResponse>(`/api/v1/models${params}`);
-      return response?.models ?? [];
-    },
-
-    /**
-     * Get current LLM configuration for an agent
-     * Resolved by #657 (2026-05-04) — route registered in AgentsEndpoints.cs.
-     */
-    async getAgentConfiguration(agentId: string): Promise<BackendAgentConfigurationDto> {
-      const response = await httpClient.get<BackendAgentConfigurationDto>(
-        `/api/v1/agents/${agentId}/configuration`
-      );
-      if (!response) {
-        throw new Error('Failed to get agent configuration: no response from server');
-      }
-      return response;
-    },
-
-    /**
-     * Patch LLM configuration for an agent (partial update)
-     * Resolved by #658 (2026-05-04) — route registered in AgentsEndpoints.cs.
-     */
-    async updateAgentConfiguration(
-      agentId: string,
-      config: UpdateAgentConfigurationRequest
-    ): Promise<BackendAgentConfigurationDto> {
-      const response = await httpClient.patch<BackendAgentConfigurationDto>(
-        `/api/v1/agents/${agentId}/configuration`,
-        config
-      );
-      if (!response) {
-        throw new Error('Failed to update agent configuration: no response from server');
-      }
-      return response;
-    },
 
     // ========== RAG Setup (Admin) ==========
 

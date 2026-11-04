@@ -36,6 +36,7 @@ public class HttpBehaviorTests : IAsyncLifetime
     {
         _client = _factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
         {
+            BaseAddress = FrontendSdkTestFactory.HttpsBaseAddress,
             AllowAutoRedirect = false, // Test raw responses
             HandleCookies = true
         });
@@ -44,7 +45,7 @@ public class HttpBehaviorTests : IAsyncLifetime
         _dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
 
         // Reset database for test isolation
-        await ResetDatabaseAsync();
+        await _factory.ResetDatabaseAsync();
     }
 
     public async ValueTask DisposeAsync()
@@ -53,34 +54,6 @@ public class HttpBehaviorTests : IAsyncLifetime
         if (_dbContext != null) await _dbContext.DisposeAsync();
     }
 
-    private async Task ResetDatabaseAsync()
-    {
-        // Get all table names
-        var tableNames = await _dbContext.Database
-            .SqlQueryRaw<string>(
-                @"SELECT tablename
-                  FROM pg_tables
-                  WHERE schemaname = 'public'
-                  AND tablename != '__EFMigrationsHistory'")
-            .ToListAsync();
-
-        if (tableNames.Count > 0)
-        {
-            // Disable FK constraints, truncate all tables, re-enable FK constraints
-            await _dbContext.Database.ExecuteSqlRawAsync("SET session_replication_role = 'replica';");
-            try
-            {
-                foreach (var tableName in tableNames)
-                {
-                    await _dbContext.Database.ExecuteSqlRawAsync($"TRUNCATE TABLE \"{tableName}\" CASCADE;");
-                }
-            }
-            finally
-            {
-                await _dbContext.Database.ExecuteSqlRawAsync("SET session_replication_role = 'origin';");
-            }
-        }
-    }
     [Fact(DisplayName = "GET /health should return health status (200 or 503)")]
     public async Task Health_ReturnsHealthStatus()
     {

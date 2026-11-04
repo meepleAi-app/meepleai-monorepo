@@ -117,13 +117,8 @@ export function SessionPanel() {
         >
           {isPaused ? 'Resume' : 'Pause'}
         </button>
-        <Link
-          href={`/sessions/${slot.sessionId}/chat`}
-          className="flex-1 rounded-lg border border-border bg-card/40 px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors text-center"
-          data-testid="session-chat-agent"
-        >
-          Chat Agent
-        </Link>
+        {/* #4156: qui c'era «Chat Agent» verso /sessions/{id}/chat, una rotta che non esiste.
+            L'assistente in partita arriva nella pagina live con A4 di #4238. */}
       </div>
 
       {/* Footer link */}

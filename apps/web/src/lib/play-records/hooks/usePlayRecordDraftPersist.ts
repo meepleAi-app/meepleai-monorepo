@@ -167,7 +167,8 @@ export function usePlayRecordDraftPersist({
       if (timer.current) clearTimeout(timer.current);
       setIsPending(false);
       setLastSavedAt(null);
-      if (userId) deleteDraft(userId);
+      // #4802: a disabled hook (the edit form) does not own the stored draft — it belongs to a new record.
+      if (userId && enabled) deleteDraft(userId);
     },
     isPending,
     lastSavedAt,

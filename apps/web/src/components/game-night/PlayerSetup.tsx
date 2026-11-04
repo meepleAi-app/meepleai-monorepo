@@ -218,12 +218,12 @@ export function PlayerSetup({
                   onClick={() => toggleRole(player.id)}
                   aria-label={`Ruolo di ${player.name}: ${player.role}`}
                 >
+                  {/* #4513: Host is the default variant, in the primary colour. The amber it used
+                      to force had white text at 2.15:1, and with the dark theme the variant's
+                      `dark:bg-primary/90` replaced it anyway. */}
                   <Badge
                     variant={player.role === 'Host' ? 'default' : 'outline'}
-                    className={cn(
-                      'cursor-pointer text-xs',
-                      player.role === 'Host' && 'bg-amber-500 hover:bg-amber-600'
-                    )}
+                    className="cursor-pointer text-xs"
                   >
                     {player.role === 'Host' ? (
                       <Crown className="h-3 w-3 mr-1" />

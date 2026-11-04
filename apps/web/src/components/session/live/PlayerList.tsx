@@ -53,7 +53,7 @@ function PlayerRow({ player }: PlayerRowProps) {
       {player.isHost && (
         <Badge
           variant="outline"
-          className="bg-amber-50 border-amber-200 text-amber-700 gap-1 text-xs font-nunito"
+          className="bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-900/30 dark:border-amber-800 dark:text-amber-300 gap-1 text-xs font-nunito"
         >
           <Crown className="h-3 w-3" />
           Host

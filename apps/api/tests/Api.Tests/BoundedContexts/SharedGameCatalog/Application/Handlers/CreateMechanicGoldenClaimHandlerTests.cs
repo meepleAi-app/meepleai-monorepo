@@ -2,13 +2,17 @@ using Api.BoundedContexts.SharedGameCatalog.Application.Commands.Golden;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.Configuration;
 using Api.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using IEmbeddingService = Api.BoundedContexts.SharedGameCatalog.Domain.Services.IEmbeddingService;
 using IKeywordExtractor = Api.BoundedContexts.SharedGameCatalog.Domain.Services.IKeywordExtractor;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -224,5 +228,90 @@ public class CreateMechanicGoldenClaimHandlerTests
     {
         var act = () => _handler.Handle(null!, TestContext.Current.CancellationToken);
         await act.Should().ThrowAsync<ArgumentNullException>().WithParameterName("command");
+    }
+
+    // ── Cache backend down after the commit ──────────────────────────────────
+    // The claim (an embedding computed, a row inserted) is saved BEFORE the per-game cache key is dropped.
+    // If dropping it fails (Redis down) and the request becomes an error, the client retries — React Query
+    // retries every mutation once — and the retry embeds again and inserts a SECOND claim.
+
+    private CreateMechanicGoldenClaimCommand GivenACreatableClaim()
+    {
+        _embeddingMock
+            .Setup(e => e.EmbedAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new float[] { 0.1f, 0.2f, 0.3f });
+        _keywordsMock.Setup(k => k.Extract(It.IsAny<string>())).Returns(new[] { "victory", "points" });
+        _repositoryMock
+            .Setup(r => r.AddAsync(It.IsAny<MechanicGoldenClaim>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+        return new CreateMechanicGoldenClaimCommand(
+            SharedGameId: Guid.NewGuid(),
+            Section: MechanicSection.Victory,
+            Statement: "The game ends when a player reaches 10 victory points.",
+            ExpectedPage: 7,
+            SourceQuote: "When a player scores 10 or more victory points, the game immediately ends.",
+            CuratorUserId: Guid.NewGuid());
+    }
+
+    /// <summary>The real wrapper over a real HybridCache whose Redis level is down.</summary>
+    private static HybridCacheService WrapperOverAnL2ThatIsDown() =>
+        new(
+            HybridCacheWithL2Down.Create(),
+            Options.Create(new HybridCacheConfiguration()),
+            NullLogger<HybridCacheService>.Instance);
+
+    private CreateMechanicGoldenClaimHandler HandlerWith(IHybridCacheService cache) =>
+        new(_repositoryMock.Object, _embeddingMock.Object, _keywordsMock.Object, cache,
+            _unitOfWorkMock.Object, _loggerMock.Object);
+
+    [Fact]
+    public async Task Handle_WhenTheCacheBackendIsDown_StillReturnsTheClaimId()
+    {
+        var command = GivenACreatableClaim();
+        MechanicGoldenClaim? saved = null;
+        _repositoryMock
+            .Setup(r => r.AddAsync(It.IsAny<MechanicGoldenClaim>(), It.IsAny<CancellationToken>()))
+            .Callback<MechanicGoldenClaim, CancellationToken>((c, _) => saved = c)
+            .Returns(Task.CompletedTask);
+        var handler = HandlerWith(WrapperOverAnL2ThatIsDown());
+
+        var id = await handler.Handle(command, TestContext.Current.CancellationToken);
+
+        saved.Should().NotBeNull();
+        id.Should().Be(saved!.Id);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheCacheBackendIsDown_LogsAWarning()
+    {
+        var command = GivenACreatableClaim();
+        var handler = HandlerWith(WrapperOverAnL2ThatIsDown());
+
+        await handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Not silent: the stale entry stays until it expires, and the operator has to be able to see why.
+        _loggerMock.Verify(
+            l => l.Log(
+                LogLevel.Warning,
+                It.IsAny<EventId>(),
+                It.IsAny<It.IsAnyType>(),
+                It.IsAny<Exception>(),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheRequestIsCancelledWhileDroppingTheKey_StillPropagatesTheCancellation()
+    {
+        var command = GivenACreatableClaim();
+        _cacheMock
+            .Setup(c => c.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException());
+
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // A cancelled request is not a backend failure: swallowing it would hide the cancellation.
+        await act.Should().ThrowAsync<OperationCanceledException>();
     }
 }

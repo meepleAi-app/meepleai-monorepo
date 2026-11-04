@@ -64,12 +64,3 @@ public record ChatSessionListDto(
     int Take
 );
 
-/// <summary>
-/// DTO representing the user's chat session tier limit info.
-/// Issue #4913: Tier-based session limits.
-/// </summary>
-public record ChatSessionTierLimitDto(
-    int Limit,     // Maximum allowed; 0 = unlimited
-    int Used,      // Active (non-archived) session count
-    string Tier    // User's tier name
-);

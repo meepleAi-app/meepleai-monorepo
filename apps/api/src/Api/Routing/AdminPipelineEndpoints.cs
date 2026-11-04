@@ -2,8 +2,8 @@ using System.Globalization;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
-using Api.BoundedContexts.DocumentProcessing.Application.Queries.Queue;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Filters;
 using MediatR;
 
@@ -35,62 +35,22 @@ internal static class AdminPipelineEndpoints
         return group;
     }
 
-    // internal (not private) so SendsOneQueryAtATime can invoke it with a recording IMediator:
-    // the invariant below is about the ORDER of the four sends, which only the caller can observe.
+    // internal (not private) so AdminPipelineHealthResponseShapeTests can invoke it with a stub IMediator.
     internal static async Task<IResult> GetPipelineHealth(
-        IHttpClientFactory httpClientFactory,
         IMediator mediator,
-        ILogger<Program> logger,
         CancellationToken ct)
     {
-        // CQRS #3176: infrastructure health and step metrics are fetched via IMediator
-        // (pass-through queries) instead of injecting the services.
-        //
-        // 🔴 One send at a time (#4059). These four queries used to be started together and awaited
-        // with Task.WhenAll, and this endpoint then answered 500 on EVERY call. Measured 2026-10-04
-        // on the local stack, three consecutive requests, all 500:
-        //     System.InvalidOperationException: A second operation was started on this context
-        //     instance before a previous operation completed.
-        //       at GetPdfStorageHealthQueryHandler.Handle(GetPdfStorageHealthQuery, ...)
-        //       at AdminPipelineEndpoints.GetPipelineHealth(...)
-        // GetStepDurationStats, GetPdfStorageHealth and GetProcessingQueue all read through the
-        // SAME request-scoped MeepleAiDbContext, which EF Core forbids using concurrently.
-        //
-        // The queries are serialized rather than given a context each, and ALL FOUR are serialized
-        // rather than only the three that read EF today, because "this send does not touch the
-        // DbContext" is a property of the whole MediatR pipeline, not of the handler: every send
-        // also runs AuditLoggingBehavior, which holds the request-scoped context and uses it on the
-        // [AuditableAction] path. A behaviour added later, or an attribute added to one of these
-        // queries, would silently re-open the defect. One send at a time has no such precondition.
-        //
-        // Same defect and same resolution as #3843 (GetDashboardQueryHandler), where the parallel
-        // version answered 200 with EMPTY sections instead of 500 — quieter, not better. As there:
-        // if the sequential reads ever breach a latency target, the fix is one DbContext per query
-        // (IDbContextFactory), not shared-context parallelism.
-        //
-        // The embedding /metrics scrape stays concurrent: it is plain HTTP over IHttpClientFactory
-        // and goes nowhere near the DbContext or MediatR.
-        //
-        // ⚠️ #4059 was first attributed to the health checks, on the reasoning that
-        // DefaultHealthCheckService runs them in parallel and three of them inject the scoped
-        // MeepleAiDbContext. That is NOT the cause: the service opens a DI scope per check, so each
-        // gets a context of its own — measured in HealthCheckScopePerCheckContractTests, and visible
-        // in the log of the request that answered 500, where every health check completed normally.
-        // Do not "fix" those three checks on the strength of this endpoint's 500.
-        var embeddingMetricsTask = GetEmbeddingMetricsSafe(httpClientFactory, logger, ct);
+        // #4512: one send. The four queries and the embedding metrics are read by
+        // GetPipelineHealthSnapshotQueryHandler, which also keeps the two rules this endpoint used
+        // to keep here: the four queries go one at a time (#4059, they share the request's
+        // DbContext), and the metrics read runs alongside them, outside the MediatR pipeline.
+        var snapshot = await mediator.Send(new GetPipelineHealthSnapshotQuery(), ct).ConfigureAwait(false);
 
-        var allHealth = await mediator.Send(new GetServiceHealthStatusesQuery(), ct).ConfigureAwait(false);
-        var stepMetrics = await mediator.Send(new GetStepDurationStatsQuery(), ct).ConfigureAwait(false);
-        var storageHealth = await mediator.Send(new GetPdfStorageHealthQuery(), ct).ConfigureAwait(false);
-        var queueResult = await mediator.Send(new GetProcessingQueueQuery(
-            StatusFilter: null,
-            SearchText: null,
-            FromDate: null,
-            ToDate: null,
-            Page: 1,
-            PageSize: 10), ct).ConfigureAwait(false);
-
-        var embeddingMetrics = await embeddingMetricsTask.ConfigureAwait(false);
+        var allHealth = snapshot.ServiceHealth;
+        var stepMetrics = snapshot.StepDurations;
+        var storageHealth = snapshot.StorageHealth;
+        var queueResult = snapshot.Queue;
+        var embeddingMetrics = snapshot.EmbeddingMetrics;
 
         // Map service health by name for easy lookup
         var healthByName = allHealth.ToDictionary(
@@ -225,7 +185,7 @@ internal static class AdminPipelineEndpoints
 
     private static object BuildEmbedStage(
         Dictionary<string, ServiceHealthStatus> healthByName,
-        EmbeddingMetricsSnapshot? embeddingMetrics)
+        EmbeddingServiceMetricsDto embeddingMetrics)
     {
         var embeddingHealth = healthByName.GetValueOrDefault("embedding");
         string status;
@@ -249,9 +209,9 @@ internal static class AdminPipelineEndpoints
             metrics = new
             {
                 serviceHealth = embeddingHealth?.State.ToString() ?? "unknown",
-                requestsTotal = embeddingMetrics?.RequestsTotal ?? 0,
-                avgDurationMs = embeddingMetrics?.AvgDurationMs ?? 0,
-                failureRate = embeddingMetrics?.FailureRate ?? 0,
+                requestsTotal = embeddingMetrics.RequestsTotal,
+                avgDurationMs = embeddingMetrics.AvgDurationMs,
+                failureRate = embeddingMetrics.FailureRate,
             },
         };
     }
@@ -313,82 +273,4 @@ internal static class AdminPipelineEndpoints
             },
         };
     }
-
-    /// <summary>
-    /// Fetches embedding service Prometheus metrics without failing the whole endpoint.
-    /// </summary>
-    private static async Task<EmbeddingMetricsSnapshot?> GetEmbeddingMetricsSafe(
-        IHttpClientFactory httpClientFactory,
-        ILogger logger,
-        CancellationToken ct)
-    {
-        try
-        {
-            var client = httpClientFactory.CreateClient("EmbeddingService");
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts.CancelAfter(TimeSpan.FromSeconds(3));
-
-            var response = await client.GetAsync("/metrics", cts.Token).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
-            {
-                return null;
-            }
-
-            var text = await response.Content.ReadAsStringAsync(cts.Token).ConfigureAwait(false);
-            return ParsePrometheusMetrics(text);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to fetch embedding metrics for pipeline health");
-            return null;
-        }
-    }
-
-    private static EmbeddingMetricsSnapshot ParsePrometheusMetrics(string text)
-    {
-        long requestsTotal = 0;
-        long failuresTotal = 0;
-        double durationMsSum = 0;
-
-        foreach (var line in text.Split('\n'))
-        {
-            var trimmed = line.Trim();
-            if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith('#'))
-            {
-                continue;
-            }
-
-            var parts = trimmed.Split(' ', 2);
-            if (parts.Length < 2)
-            {
-                continue;
-            }
-
-            var key = parts[0];
-            var value = parts[1];
-
-            if (string.Equals(key, "embed_requests_total", StringComparison.Ordinal)
-                && long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var req))
-            {
-                requestsTotal = req;
-            }
-            else if (string.Equals(key, "embed_failures_total", StringComparison.Ordinal)
-                     && long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var fail))
-            {
-                failuresTotal = fail;
-            }
-            else if (string.Equals(key, "embed_duration_ms_sum", StringComparison.Ordinal)
-                     && double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var dur))
-            {
-                durationMsSum = dur;
-            }
-        }
-
-        var avgDuration = requestsTotal > 0 ? Math.Round(durationMsSum / requestsTotal, 2) : 0.0;
-        var failureRate = requestsTotal > 0 ? Math.Round((double)failuresTotal / requestsTotal * 100.0, 2) : 0.0;
-
-        return new EmbeddingMetricsSnapshot(requestsTotal, avgDuration, failureRate);
-    }
-
-    private sealed record EmbeddingMetricsSnapshot(long RequestsTotal, double AvgDurationMs, double FailureRate);
 }

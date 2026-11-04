@@ -17,6 +17,7 @@ import {
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
+import { useAuth } from '@/components/auth/AuthProvider';
 import { AchievementsGrid } from '@/components/profile/AchievementsGrid';
 import { ActivityFeed } from '@/components/profile/ActivityFeed';
 import { AvatarUpload } from '@/components/profile/AvatarUpload';
@@ -27,7 +28,6 @@ import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { userKeys } from '@/hooks/queries/useCurrentUser';
 import { libraryKeys } from '@/hooks/queries/useLibrary';
-import { useAuth } from '@/hooks/useAuth';
 import { useRecentSessions } from '@/hooks/useRecentSessions';
 import { api } from '@/lib/api';
 import type { UserLibraryStats } from '@/lib/api/schemas/library.schemas';

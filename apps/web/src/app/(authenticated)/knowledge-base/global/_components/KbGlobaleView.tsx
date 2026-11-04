@@ -35,6 +35,10 @@ import { type JSX, useCallback, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+import {
+  QA_TOO_MANY_REQUESTS_MESSAGE,
+  qaStreamErrorMessage,
+} from '@/components/chat-unified/qaStreamErrors';
 import { FilterAccordion } from '@/components/features/kb-globale/FilterAccordion';
 import { HeroSearch } from '@/components/features/kb-globale/HeroSearch';
 import type { KbDocViewerCitation } from '@/components/features/kb-globale/KbDocViewerDesktop';
@@ -47,6 +51,7 @@ import { useUserKbDocs } from '@/hooks/queries/useUserKbDocs';
 import { useKbAskStream } from '@/hooks/useKbAskStream';
 import type { UserKbDocDto } from '@/lib/api/schemas/kb-docs.schemas';
 import type { GlobalKbSearchFilters, SearchMode } from '@/lib/api/schemas/kb-globale.schemas';
+import { citedPage } from '@/lib/citations/citedPage';
 import type { KbDoc } from '@/lib/library/hybrid-hub.mappers';
 
 // ---------------------------------------------------------------------------
@@ -204,8 +209,12 @@ const LABELS = {
         completedLabel: 'COMPLETED',
         copyLabel: 'Copia',
         regenerateLabel: 'Rigenera',
-        inlineCitationAriaLabel: (c: { docId: string; page: number }, n: number) =>
-          `Citazione ${n}, documento ${c.docId}, pagina ${c.page}`,
+        inlineCitationAriaLabel: (c: { docId: string; page: number | null }, n: number) => {
+          const page = citedPage(c.page);
+          return page === null
+            ? `Citazione ${n}, documento ${c.docId}`
+            : `Citazione ${n}, documento ${c.docId}, pagina ${page}`;
+        },
       },
       empty: {
         title: 'Nessun documento nella tua libreria',
@@ -218,20 +227,31 @@ const LABELS = {
           body: 'Retry automatico in corso…',
           action: 'Riprova ora',
         },
+        // Review di #4524: dopo 30 s senza notizie la richiesta è già fermata, e il pulsante rifà la
+        // domanda. Prima diceva «Continua attesa», che non è quello che fa. (Con parole già arrivate
+        // non è un timeout ma un'interruzione, e le parole restano.)
         timeout: {
-          title: 'Risposta lenta',
-          body: 'Vuoi continuare ad aspettare?',
-          action: 'Continua attesa',
-          alt: 'Cancella',
-        },
-        partial: {
-          title: 'Risposta incompleta',
-          body: 'Lo stream si è interrotto.',
-          action: 'Ripeti query',
+          title: 'Nessuna risposta',
+          body: 'Non è arrivato niente per 30 secondi, quindi la domanda è stata fermata. Riprova a chiedere.',
+          action: 'Chiedi di nuovo',
+          alt: "Fai un'altra domanda",
         },
         server: {
           title: 'Errore del server',
           body: 'Riprova tra qualche istante.',
+          action: 'Riprova',
+        },
+        // #4510: la risposta si è interrotta prima della fine. La frase è quella della chat.
+        interrupted: {
+          title: 'Risposta interrotta',
+          body: qaStreamErrorMessage('AI_STREAM_INTERRUPTED'),
+          action: 'Chiedi di nuovo',
+          alt: "Fai un'altra domanda",
+        },
+        // #4388: due risposte già aperte; la terza è rifiutata con 429. La frase è quella della chat.
+        busy: {
+          title: 'Troppe richieste',
+          body: QA_TOO_MANY_REQUESTS_MESSAGE,
           action: 'Riprova',
         },
       },
@@ -323,10 +343,15 @@ export function KbGlobaleView(): JSX.Element {
 
   // ── Phase 2: viewer + drawer URL helpers ──────────────────────────────
   const openViewer = useCallback(
-    (result: { docId: string; page: number; chunkId?: string }) => {
+    (result: { docId: string; page: number | null; chunkId?: string }) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set('docId', result.docId);
-      params.set('page', String(result.page));
+      // #4819: a citation without a page opens the document at its first page (no `page` param).
+      if (result.page === null) {
+        params.delete('page');
+      } else {
+        params.set('page', String(result.page));
+      }
       if (result.chunkId) {
         params.set('chunkId', result.chunkId);
       } else {
@@ -450,7 +475,7 @@ export function KbGlobaleView(): JSX.Element {
     n: i + 1,
     docId: c.docId,
     page: c.page,
-    refText: `p.${c.page}`,
+    refText: citedPage(c.page) === null ? 'Fonte' : `p.${c.page}`,
     snippet: c.snippet,
   }));
 
@@ -553,6 +578,7 @@ export function KbGlobaleView(): JSX.Element {
           onAsk={query => askStream.ask(query)}
           onStop={askStream.stop}
           onReset={askStream.reset}
+          onRetry={askStream.retry}
           onClose={closeDrawer}
           onEmptyCta={() => router.push('/library')}
           onCitationClick={openViewer}

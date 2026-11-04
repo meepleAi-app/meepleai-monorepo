@@ -66,24 +66,21 @@ vi.mock('@/hooks/queries/useCurrentUser', () => ({
   useCurrentUser: () => ({ data: undefined }),
 }));
 
-// GameCombobox — simple stub
-vi.mock('@/components/play-records/GameCombobox', () => ({
-  GameCombobox: ({
-    onSelect,
+// GamePicker — simple stub (the real one is exercised in SessionCreateForm.game.test.tsx)
+vi.mock('@/components/features/game-picker', () => ({
+  GamePicker: ({
+    onChange,
     placeholder,
   }: {
-    value?: string;
-    onSelect: (id: string, name: string) => void;
-    onNotFound?: () => void;
-    disabled?: boolean;
+    onChange: (option: { id: string; title: string } | null) => void;
     placeholder?: string;
   }) => (
     <div>
       <input
-        data-testid="game-combobox"
+        data-testid="play-record-game-stub"
         placeholder={placeholder ?? 'Search game'}
         onChange={() => {}}
-        onClick={() => onSelect('game-1', 'Catan')}
+        onClick={() => onChange({ id: 'game-1', title: 'Catan' })}
       />
     </div>
   ),
@@ -186,8 +183,8 @@ describe('SessionCreateForm — wizard 3-step', () => {
       mockCurrentStep = 0;
       render(<SessionCreateForm {...defaultProps} />, { wrapper: createWrapper() });
 
-      // GameCombobox should be present for catalog search
-      expect(screen.getByTestId('game-combobox')).toBeInTheDocument();
+      // The game picker should be present for the library/catalog search
+      expect(screen.getByTestId('play-record-game-stub')).toBeInTheDocument();
     });
 
     it('shows freeform text input when catalog toggle is set to freeform', async () => {
@@ -218,7 +215,7 @@ describe('SessionCreateForm — wizard 3-step', () => {
 
       // There should be a freeform game name input visible by default or after switching
       // At minimum, the combobox placeholder is present
-      expect(screen.getByTestId('game-combobox')).toBeInTheDocument();
+      expect(screen.getByTestId('play-record-game-stub')).toBeInTheDocument();
     });
   });
 
@@ -345,6 +342,27 @@ describe('SessionCreateForm — wizard 3-step', () => {
         expect(mockNextStep).toHaveBeenCalled();
       });
       expect(onSubmit).not.toHaveBeenCalled();
+    });
+
+    // The guard above covers a submit while the wizard is still on step 1 or 2. The race that actually reaches users
+    // is the Quando → Punteggi transition: React flushes the step change inside the click's microtask checkpoint, i.e.
+    // before the browser runs the click's activation behaviour. If "Avanti" (type=button) and "Salva" (type=submit)
+    // are the same DOM node, that activation behaviour now submits the form on the final step and creates an empty
+    // record, so Punteggi is never shown. jsdom cannot reproduce the timing (it has no microtask checkpoint inside
+    // dispatch); the contract that prevents it is that "Salva" is a different element, so the old node is detached.
+    it('renders "Salva" as a different element from "Avanti", so a click on "Avanti" cannot submit', () => {
+      mockCurrentStep = 1;
+      const view = render(<SessionCreateForm {...defaultProps} />, { wrapper: createWrapper() });
+      const nextButton = screen.getByRole('button', { name: /avanti/i });
+      expect(nextButton).toHaveAttribute('type', 'button');
+
+      mockCurrentStep = 2;
+      view.rerender(<SessionCreateForm {...defaultProps} />);
+      const saveButton = screen.getByRole('button', { name: /salva/i });
+
+      expect(saveButton).toHaveAttribute('type', 'submit');
+      expect(saveButton).not.toBe(nextButton);
+      expect(nextButton.isConnected).toBe(false);
     });
 
     it('creates the record when the form submits on the final step (Punteggi)', async () => {

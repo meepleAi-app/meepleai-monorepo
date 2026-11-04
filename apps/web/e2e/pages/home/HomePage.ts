@@ -7,6 +7,10 @@ import { BasePage } from '../base/BasePage';
  * HomePage - Landing page interactions and assertions
  *
  * Provides high-level helpers to keep tests free from direct Playwright calls.
+ *
+ * #4248: the landing has no auth modal. Its calls to action are links to the `/register`
+ * page, which links to `/login`. The landing copy is hardcoded Italian; the auth pages
+ * are translated, so their fields are found by id and testid, not by text.
  */
 export class HomePage extends BasePage implements IHomePage {
   private get heroHeading(): Locator {
@@ -14,54 +18,20 @@ export class HomePage extends BasePage implements IHomePage {
   }
 
   private get heroSubtitle(): Locator {
-    // Italian: "Mai più discussioni sulle regole..."
-    // English: similar pattern with "rules" or "AI"
-    return this.page.locator('p.text-muted-foreground').filter({ hasText: /regole|rules|AI/i }).first();
+    return this.page.getByText(/un agente AI che conosce il tuo gioco/i);
   }
 
   private get brandLink(): Locator {
-    return this.page.getByRole('link', { name: /MeepleAI/i });
+    return this.page.getByRole('link', { name: 'MeepleAI Home' });
   }
 
-  private get navigationCta(): Locator {
-    // Updated to match HeroSection.tsx which uses 'get-started-button'
-    return this.page.getByTestId('get-started-button');
+  private get primaryCta(): Locator {
+    // WelcomeHero: «Inizia gratis» → /register. The same label repeats in WelcomeCTA.
+    return this.page.getByRole('link', { name: 'Inizia gratis' }).first();
   }
 
-  private get authModal(): Locator {
-    // Updated to match AuthModal.tsx which uses 'auth-modal' testId
-    return this.page.getByTestId('auth-modal');
-  }
-
-  private get tabList(): Locator {
-    return this.page.getByRole('tablist');
-  }
-
-  private get loginTab(): Locator {
-    // AuthModal uses English text "Login" for the tab
-    return this.page.getByTestId('auth-tab-login');
-  }
-
-  private get registerTab(): Locator {
-    // AuthModal uses English text "Register" for the tab
-    return this.page.getByTestId('auth-tab-register');
-  }
-
-  private get featuresSection(): Locator {
-    return this.page.locator('#features');
-  }
-
-  private get featuresHeading(): Locator {
-    // FeaturesSection.tsx uses hardcoded Italian text "Caratteristiche"
-    return this.featuresSection.getByRole('heading', {
-      name: /Caratteristiche|Features/i,
-    });
-  }
-
-  private getFeatureCardTitle(title: string): Locator {
-    // FeaturesSection uses CardTitle (div) with font-heading class
-    // Simply find text within the features section
-    return this.featuresSection.getByText(new RegExp(title, 'i')).first();
+  private get howItWorksHeading(): Locator {
+    return this.page.locator('#come-funziona').getByRole('heading', { name: /Come funziona/i });
   }
 
   async goto(): Promise<void> {
@@ -69,11 +39,21 @@ export class HomePage extends BasePage implements IHomePage {
     await this.waitForLoad();
   }
 
+  /**
+   * The register page asks the backend whether registration is public
+   * (`GET /api/v1/auth/registration-mode`), from the browser, through the Next proxy:
+   * hence a relative glob, not an absolute `http://localhost:8080` URL, which would
+   * never match.
+   */
+  async mockRegistrationMode(publicRegistrationEnabled: boolean): Promise<void> {
+    await this.page.route('**/api/v1/auth/registration-mode', route =>
+      route.fulfill({ json: { publicRegistrationEnabled, oauthEnabled: false } })
+    );
+  }
+
   async assertHeroLoaded(): Promise<void> {
     await this.waitForElement(this.heroHeading);
-    // Italian: "Il tuo Assistente AI per Regolamenti..."
-    // Match key terms: AI, Assistente/Assistant, Giochi/Games
-    await expect(this.heroHeading).toContainText(/AI|Assistente|Assistant/i);
+    await expect(this.heroHeading).toContainText(/AI/);
     await expect(this.heroSubtitle).toBeVisible();
   }
 
@@ -82,50 +62,45 @@ export class HomePage extends BasePage implements IHomePage {
   }
 
   async assertPrimaryCtaVisible(): Promise<void> {
-    await expect(this.navigationCta).toBeVisible();
+    await expect(this.primaryCta).toBeVisible();
+    await expect(this.primaryCta).toHaveAttribute('href', '/register');
   }
 
-  async openAuthModal(): Promise<void> {
-    // Click CTA navigates to /register page which shows AuthModal
-    await this.click(this.navigationCta);
-    // Wait for navigation to /register and modal to appear
-    await this.page.waitForURL(/\/(register|login)/);
-    await this.waitForElement(this.authModal);
+  async openRegistration(): Promise<void> {
+    await this.click(this.primaryCta);
+    await this.page.waitForURL(/\/register$/);
   }
 
-  async switchAuthTab(tab: 'login' | 'register'): Promise<void> {
-    const targetTab = tab === 'login' ? this.loginTab : this.registerTab;
-    await this.click(targetTab);
-    await expect(targetTab).toHaveAttribute('aria-selected', 'true');
+  async goToLoginFromRegistration(): Promise<void> {
+    await this.click(this.page.getByTestId('register-login-link'));
+    await this.page.waitForURL(/\/login$/);
   }
 
   async assertRegistrationFormFields(): Promise<void> {
-    await this.switchAuthTab('register');
+    const form = this.page.getByTestId('register-form');
+    await expect(form).toBeVisible();
+    await expect(form.locator('#register-email')).toBeVisible();
+    await expect(form.locator('#register-password')).toBeVisible();
+    await expect(form.getByTestId('register-terms')).toBeVisible();
+    await expect(form.locator('button[type="submit"]')).toBeVisible();
+  }
 
-    // Updated to use testIds from RegisterForm.tsx
-    await expect(this.page.getByTestId('register-email')).toBeVisible();
-    await expect(this.page.getByTestId('register-display-name')).toBeVisible();
-    await expect(this.page.getByTestId('register-password')).toBeVisible();
-    await expect(this.page.getByTestId('register-confirm-password')).toBeVisible();
-    await expect(this.page.getByTestId('register-form').locator('button[type="submit"]')).toBeVisible();
+  async assertRequestAccessForm(): Promise<void> {
+    await expect(this.page.getByTestId('request-access-form')).toBeVisible();
+    await expect(this.page.getByTestId('request-access-email')).toBeVisible();
+    await expect(this.page.getByTestId('register-form')).toHaveCount(0);
   }
 
   async assertLoginFormFields(): Promise<void> {
-    await this.switchAuthTab('login');
-
-    // Updated to use testIds from LoginForm.tsx
-    await expect(this.page.getByTestId('login-email')).toBeVisible();
-    await expect(this.page.getByTestId('login-password')).toBeVisible();
-    await expect(this.page.getByTestId('login-form').locator('button[type="submit"]')).toBeVisible();
+    const form = this.page.getByTestId('login-form');
+    await expect(form).toBeVisible();
+    await expect(form.locator('#login-email')).toBeVisible();
+    await expect(form.locator('#login-password')).toBeVisible();
+    await expect(form.locator('button[type="submit"]')).toBeVisible();
   }
 
-  async assertFeaturesOverview(): Promise<void> {
-    await this.featuresHeading.scrollIntoViewIfNeeded();
-    await expect(this.featuresHeading).toBeVisible();
-
-    // FeaturesSection.tsx uses hardcoded Italian titles
-    await expect(this.getFeatureCardTitle('AI Intelligente')).toBeVisible();
-    await expect(this.getFeatureCardTitle('Catalogo Ampio')).toBeVisible();
-    await expect(this.getFeatureCardTitle('Mobile-First')).toBeVisible();
+  async assertHowItWorksSection(): Promise<void> {
+    await this.howItWorksHeading.scrollIntoViewIfNeeded();
+    await expect(this.howItWorksHeading).toBeVisible();
   }
 }

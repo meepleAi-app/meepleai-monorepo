@@ -16,7 +16,7 @@
     "cleanup:all": "node -e \"try { require('child_process').execSync('powershell.exe -ExecutionPolicy Bypass -File ../../tools/cleanup/cleanup-test-processes.ps1', { stdio: 'inherit' }); } catch (e) { console.log('Cleanup skipped (Windows-only)'); }\"",
     "cleanup:dry-run": "node -e \"try { require('child_process').execSync('powershell.exe -ExecutionPolicy Bypass -File ../../tools/cleanup/cleanup-test-processes.ps1 -DryRun -Verbose', { stdio: 'inherit' }); } catch (e) { console.log('Cleanup skipped (Windows-only)'); }\"",
     "test": "vitest run",
-    "test:eslint-rules": "node eslint-rules/no-hardcoded-hex.test.js",
+    "test:eslint-rules": "node scripts/test-eslint-rules.mjs",
     "test:ui": "vitest --ui",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -89,8 +89,10 @@
     "scraper:game": "pnpm --dir ../../tools/game-scraper run scraper:game --",
     "scraper:plays": "pnpm --dir ../../tools/game-scraper run scraper:plays --",
     "scraper:qa": "pnpm --dir ../../tools/game-scraper run scraper:qa --",
-    "prepare": "cd ../.. && husky || true",
-    "lint:orphan-specs": "node scripts/lint-orphan-specs.mjs"
+    "prepare": "node -e \"const s='./scripts/install-git-hooks.mjs';require('fs').existsSync(s)&&import(s)\"",
+    "lint:orphan-specs": "node scripts/lint-orphan-specs.mjs",
+    "lint:orphan-testids": "node scripts/lint-orphan-testids.mjs",
+    "lint:blind-tests": "node scripts/lint-blind-tests.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -157,7 +159,7 @@
     "d3": "^7.9.0",
     "date-fns": "^4.4.0",
     "diff": "^9.0.0",
-    "dompurify": "^3.4.13",
+    "dompurify": "^3.4.17",
     "focus-trap-react": "^12.0.3",
     "framer-motion": "^13.1.1",
     "fuse.js": "^7.5.0",
@@ -166,7 +168,7 @@
     "idb": "^8.0.3",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.29.0",
-    "next": "16.3.8",
+    "next": "16.4.1",
     "next-themes": "^0.4.6",
     "pdfjs-dist": "6.2.108",
     "piexifjs": "^1.0.6",
@@ -199,7 +201,7 @@
     "usehooks-ts": "^3.1.1",
     "vaul": "^1.1.2",
     "xstate": "^5.32.5",
-    "zod": "^4.4.3",
+    "zod": "^4.6.6",
     "zundo": "^2.3.0",
     "zustand": "^5.0.14"
   },
@@ -264,7 +266,6 @@
     "fake-indexeddb": "^6.2.5",
     "glob": "^13.0.6",
     "http-server": "^14.1.1",
-    "husky": "^9.1.7",
     "jest-axe": "^11.0.0",
     "jsdom": "^29.1.1",
     "lint-staged": "^17.3.0",

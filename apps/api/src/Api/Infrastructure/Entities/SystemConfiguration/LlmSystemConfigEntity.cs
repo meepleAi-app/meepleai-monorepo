@@ -17,6 +17,11 @@ public sealed class LlmSystemConfigEntity
     public decimal DailyBudgetUsd { get; set; }
     public decimal MonthlyBudgetUsd { get; set; }
 
+    // Budget policy (#4166)
+    public int DegradeThresholdPercent { get; set; }
+    public int BackgroundQuotaPercent { get; set; }
+    public int EvaluationQuotaPercent { get; set; }
+
     // Fallback chain (JSON)
     public string FallbackChainJson { get; set; } = "[]";
 

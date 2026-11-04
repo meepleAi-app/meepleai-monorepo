@@ -103,6 +103,7 @@ public sealed class UserLibraryDomainEventsTests
         evt.PlayedAt.Should().Be(playedAt);
         evt.DurationMinutes.Should().Be(90);
         evt.DidWin.Should().BeTrue();
+        evt.OccurredAt.Should().Be(occurredAt, "il parametro occurredAt non va ignorato (#4841)");
     }
 
     [Fact]
@@ -169,6 +170,7 @@ public sealed class UserLibraryDomainEventsTests
         evt.GameId.Should().Be(gameId);
         evt.PreviousState.Should().Be(GameStateType.Nuovo);
         evt.NewState.Should().Be(GameStateType.Owned);
+        evt.OccurredAt.Should().Be(occurredAt, "il parametro occurredAt non va ignorato (#4841)");
     }
 
     [Fact]

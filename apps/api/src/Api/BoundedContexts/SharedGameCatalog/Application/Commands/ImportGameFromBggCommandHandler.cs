@@ -1,4 +1,6 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
@@ -22,6 +24,7 @@ internal sealed class ImportGameFromBggCommandHandler : ICommandHandler<ImportGa
     private readonly IUnitOfWork _unitOfWork;
     private readonly IBggApiService _bggApiService;
     private readonly MeepleAiDbContext _dbContext;
+    private readonly ISharedGameCacheInvalidator _cacheInvalidator;
     private readonly ILogger<ImportGameFromBggCommandHandler> _logger;
 
 #pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback placeholder for games without BGG images
@@ -33,12 +36,14 @@ internal sealed class ImportGameFromBggCommandHandler : ICommandHandler<ImportGa
         IUnitOfWork unitOfWork,
         IBggApiService bggApiService,
         MeepleAiDbContext dbContext,
+        ISharedGameCacheInvalidator cacheInvalidator,
         ILogger<ImportGameFromBggCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _bggApiService = bggApiService ?? throw new ArgumentNullException(nameof(bggApiService));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _cacheInvalidator = cacheInvalidator ?? throw new ArgumentNullException(nameof(cacheInvalidator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -112,6 +117,14 @@ internal sealed class ImportGameFromBggCommandHandler : ICommandHandler<ImportGa
 
         // Commit all changes (game + relationships)
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // #4659: a game imported with AutoPublish is Published from the first save, so it enters the public
+        // list and the catalog rails, which hold a cached entry. After the save, never before: see
+        // ISharedGameCacheInvalidator. A draft is in no public list, so there is nothing to evict.
+        if (sharedGame.Status == GameStatus.Published)
+        {
+            await _cacheInvalidator.EvictDetailAndListAsync(sharedGame.Id, cancellationToken).ConfigureAwait(false);
+        }
 
         _logger.LogInformation(
             "Successfully imported game from BGG: {GameId} - {Title} (BggId: {BggId})",

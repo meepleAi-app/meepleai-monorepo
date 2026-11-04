@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 
+import { useAuthUser } from '@/components/auth/AuthProvider';
 import { Button } from '@/components/ui/primitives/button';
 import { useProbeProviderMutation } from '@/hooks/queries/useProviders';
-import { useAuthUser } from '@/hooks/useAuthUser';
 import type { ProviderName, ProviderProbeResult } from '@/lib/api/schemas/providers';
 
 /**

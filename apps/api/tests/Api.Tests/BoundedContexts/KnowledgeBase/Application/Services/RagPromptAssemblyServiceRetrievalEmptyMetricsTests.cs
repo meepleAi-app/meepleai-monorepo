@@ -25,7 +25,7 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 /// at the single detection site in <see cref="RagPromptAssemblyService.RetrieveRagContextAsync"/>
 /// (<c>if (filteredChunks.Count == 0)</c>), and NOT incremented when chunks are present.
 ///
-/// Single-source guarantee: the handler (<c>ChatWithSessionAgentCommandHandler</c>) does NOT
+/// Single-source guarantee: the callers of the service do NOT
 /// call <see cref="MeepleAiMetrics.RecordRetrievalEmpty"/>; only the service does.
 /// </summary>
 /// <remarks>

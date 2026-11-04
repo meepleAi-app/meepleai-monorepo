@@ -253,7 +253,8 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
         int? coverPageIndex = null,
         string? coverGenerationError = null,
         int coverGenerationAttempts = 0,
-        uint xminVersion = 0)
+        uint xminVersion = 0,
+        LicenseType licenseType = LicenseType.Copyrighted)
     {
         var document = new PdfDocument
         {
@@ -329,7 +330,10 @@ internal sealed class PdfDocument : AggregateRoot<Guid>
                 : Enum.Parse<PdfCoverGenerationStatus>(coverGenerationStatus, ignoreCase: true),
             CoverPageIndex = coverPageIndex,
             CoverGenerationError = coverGenerationError,
-            CoverGenerationAttempts = coverGenerationAttempts
+            CoverGenerationAttempts = coverGenerationAttempts,
+
+            // #4347: dalla riga. Senza, l'aggregato diceva Copyrighted qualunque licenza avesse il PDF.
+            LicenseType = licenseType
         };
 
         if (tags is { Count: > 0 })

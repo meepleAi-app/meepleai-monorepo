@@ -75,12 +75,14 @@ const PAGE_SIZE = 25;
 // Badge helpers
 // ============================================================================
 
+// Solid status colours, the same in both themes. Until #4539 each repeated its background under
+// `dark:` to beat the Badge variant's `dark:bg-primary/90`; the variant no longer has one.
 function getStatusBadgeClass(status: number): string {
   switch (status) {
     case GAME_DATA_STATUS.Skeleton:
       return 'border-transparent bg-red-500 text-white';
     case GAME_DATA_STATUS.EnrichmentQueued:
-      return 'border-transparent bg-slate-400 text-white';
+      return 'border-transparent bg-muted-foreground text-background';
     case GAME_DATA_STATUS.Enriching:
       return 'border-transparent bg-blue-500 text-white';
     case GAME_DATA_STATUS.Enriched:
@@ -90,7 +92,7 @@ function getStatusBadgeClass(status: number): string {
     case GAME_DATA_STATUS.Failed:
       return 'border-transparent bg-orange-500 text-white';
     default:
-      return 'border-transparent bg-slate-300 text-slate-800';
+      return 'border-transparent bg-muted text-foreground';
   }
 }
 

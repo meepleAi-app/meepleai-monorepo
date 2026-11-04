@@ -8,9 +8,21 @@
  * Parses RagStreamingEvent format (numeric StreamingEventType enum)
  */
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import { toast } from 'sonner';
+
+import {
+  QaTooManyRequestsError,
+  qaStreamErrorMessage,
+  throwIfQaTooManyRequests,
+} from '@/components/chat-unified/qaStreamErrors';
+import {
+  readTierLimit,
+  TIER_LIMIT_EXCEEDED,
+  tierLimitMessage,
+  type TierLimit,
+} from '@/lib/tier-limit';
 
 import { useSseStreamFsm, type SseStreamFsmConfig } from './useSseStreamFsm';
 
@@ -81,6 +93,18 @@ const DEBUG_STEP_NAMES: Record<number, string> = {
 export type ConnectionStatus =
   'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected' | 'error';
 
+/**
+ * #4244: una fonte della risposta, come la manda l'evento `Citations` (lo `Snippet` del backend).
+ * `source` è `PDF:<id del PDF>`.
+ */
+export interface StreamCitation {
+  text: string;
+  source: string;
+  page: number;
+  line: number;
+  score: number;
+}
+
 export interface AgentChatStreamState {
   /** Current streaming status text */
   statusMessage: string | null;
@@ -88,10 +112,17 @@ export interface AgentChatStreamState {
   currentAnswer: string;
   /** Follow-up questions from the agent */
   followUpQuestions: string[];
+  /** #4244: le fonti della risposta in corso, dall'evento `Citations` */
+  citations: StreamCitation[];
   /** Whether currently streaming */
   isStreaming: boolean;
   /** Error message if any */
   error: string | null;
+  /**
+   * #4168 (5g-b): la domanda è stata fermata dalla quota del piano. I numeri e il link, per chi
+   * mostra l'avviso; `error` porta comunque la frase, per chi mostra solo testo.
+   */
+  tierLimit: TierLimit | null;
   /** Chat thread ID returned by backend */
   chatThreadId: string | null;
   /** Token count from complete event */
@@ -130,9 +161,21 @@ export interface AgentChatStreamCallbacks {
       totalTokens: number;
       chatThreadId: string | null;
       followUpQuestions: string[];
+      citations: StreamCitation[];
     }
   ) => void;
-  onError?: (error: string) => void;
+  /**
+   * The stream ended without an answer: an `Error` event, an error thrown after the last retry, or
+   * (#4335) a stream that closed without `Complete` or `Error`.
+   *
+   * `partialAnswer` is the text that arrived before the end ('' if none), with its sources. It is
+   * NOT a complete answer — `onComplete` does not fire for it — but the user has already read it:
+   * a view that keeps it should mark it as interrupted, as the main chat does (#4335).
+   */
+  onError?: (
+    error: string,
+    metadata: { partialAnswer: string; citations: StreamCitation[] }
+  ) => void;
 }
 
 /** Input for a single chat message stream */
@@ -153,7 +196,17 @@ export interface AgentChatInput {
 }
 
 /** Internal state shape (base hook owns retryCount + error separately) */
-type AgentChatInternalState = Omit<AgentChatStreamState, 'retryCount' | 'error'>;
+type AgentChatInternalState = Omit<AgentChatStreamState, 'retryCount' | 'error'> & {
+  /**
+   * Review of #4509: `Complete` arrived — the answer is whole and delivered. The backend keeps the
+   * connection open after it for the follow-up questions; nothing that happens there (an `Error`
+   * event included) makes the answer fail. Internal: not part of the public state.
+   */
+  completed: boolean;
+};
+
+/** Generic message when the backend gives neither a known code nor a message. */
+const GENERIC_ERROR_MESSAGE = 'Si è verificato un errore. Riprova.';
 
 /** Parsed SSE event shape */
 type AgentChatEvent = { type: number; data: unknown; timestamp?: string };
@@ -162,7 +215,9 @@ const INITIAL_STATE: AgentChatInternalState = {
   statusMessage: null,
   currentAnswer: '',
   followUpQuestions: [],
+  citations: [],
   isStreaming: false,
+  tierLimit: null,
   chatThreadId: null,
   totalTokens: 0,
   debugSteps: [],
@@ -170,6 +225,7 @@ const INITIAL_STATE: AgentChatInternalState = {
   strategyTier: null,
   executionId: null,
   connectionStatus: 'idle',
+  completed: false,
 };
 
 // ─── Transport ────────────────────────────────────────────────────────────────
@@ -230,11 +286,16 @@ async function* agentChatTransport(
       credentials: useProxy ? 'same-origin' : 'include',
       signal,
     });
+    // #4388: the backend keeps at most two answers open per user and refuses the third with 429.
+    // The proxy has its own limit and its own meaning, so it keeps the generic path.
+    if (!useProxy) throwIfQaTooManyRequests(response);
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
   } catch (fetchErr) {
     if (signal.aborted) return;
+    // #4388: a refusal is not a lost connection. No "retrying" status, and errorMapper does not retry.
+    if (fetchErr instanceof QaTooManyRequestsError) throw fetchErr;
     // Yield a synthetic "disconnected" event so the reducer can set connectionStatus:'disconnected'
     // BEFORE the error propagates to the base hook's retry scheduler.
     // This preserves the original state transition (original lines 496-503):
@@ -307,6 +368,9 @@ function agentChatEventReducer(
       // Synthetic event: set connecting state before fetch begins
       return {
         ...state,
+        // #4244: arriva a ogni tentativo, e un retry non riporta lo stato all'inizio. Le fonti di un
+        // tentativo caduto non sono della risposta che arriverà.
+        citations: [],
         isStreaming: true,
         statusMessage: 'Connecting...',
         connectionStatus: 'connecting',
@@ -333,7 +397,15 @@ function agentChatEventReducer(
       };
     }
 
-    case StreamingEventType.Citations:
+    case StreamingEventType.Citations: {
+      // #4244: arriva prima dei token. Ignorarlo lasciava la risposta senza fonti.
+      const data = event.data as { citations?: unknown };
+      return {
+        ...state,
+        citations: Array.isArray(data?.citations) ? (data.citations as StreamCitation[]) : [],
+      };
+    }
+
     case StreamingEventType.Outline:
     case StreamingEventType.ScriptChunk:
     case StreamingEventType.SetupStep: {
@@ -360,18 +432,37 @@ function agentChatEventReducer(
         statusMessage: null,
         connectionStatus: 'idle',
         retryCount: 0,
+        completed: true,
       } as AgentChatInternalState;
     }
 
     case StreamingEventType.Error: {
+      // Review of #4509: after Complete the answer is whole and already handed to onComplete. An
+      // Error now (the follow-up questions failing) would mark it failed and hand it over again
+      // through onError, as an interrupted answer.
+      if (state.completed) return state;
+
       const data = event.data as { errorMessage?: string; errorCode?: string };
       let errorMsg: string;
+      let tierLimit: TierLimit | null = null;
       if (data?.errorCode === 'rate_limited') {
         errorMsg = 'Hai raggiunto il limite di messaggi. Riprova tra qualche minuto.';
       } else if (data?.errorCode === 'provider_unavailable') {
         errorMsg = 'Il servizio AI è temporaneamente non disponibile. Riprova tra poco.';
+      } else if (data?.errorCode === TIER_LIMIT_EXCEEDED) {
+        // #4168 (5g-b): la quota del piano. Il messaggio del backend è tecnico; qui la
+        // spiegazione, con i numeri del piano e l'ora in cui il conteggio riparte.
+        tierLimit = readTierLimit(event.data);
+        errorMsg = tierLimitMessage(tierLimit);
       } else {
-        errorMsg = data?.errorMessage ?? 'Si è verificato un errore. Riprova.';
+        // I codici del gateway e della pipeline in italiano, dalla stessa tabella della chat
+        // principale: il tetto di spesa (#4166, ADR-095 D6), il provider non disponibile, lo stream
+        // interrotto (review di #4509), ... Per un codice che non conosce resta il messaggio del
+        // backend.
+        errorMsg = qaStreamErrorMessage(
+          data?.errorCode,
+          data?.errorMessage ?? GENERIC_ERROR_MESSAGE
+        );
       }
       // Store error in internal state so the wrapper can fire onError callback
       // and merge into state.error
@@ -379,6 +470,7 @@ function agentChatEventReducer(
         ...state,
         // We store the error message in a special field; the wrapper will pick it up
         _sseError: errorMsg,
+        tierLimit,
         isStreaming: false,
         statusMessage: null,
         connectionStatus: 'error',
@@ -469,7 +561,17 @@ function agentChatEventReducer(
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-type AgentChatErrorShape = { kind: 'connection' | 'other'; message: string };
+type AgentChatErrorShape = { kind: 'connection' | 'interrupted' | 'other'; message: string };
+
+/**
+ * #4335: the answer stopped before its end. The same sentence the main chat shows for the backend's
+ * own `AI_STREAM_INTERRUPTED`: for the user the two are the same thing.
+ */
+const STREAM_INTERRUPTED_MESSAGE = qaStreamErrorMessage('AI_STREAM_INTERRUPTED');
+
+function isInterruptedSentinel(raw: unknown): boolean {
+  return (raw as { __sseStreamFsmReason?: string } | null)?.__sseStreamFsmReason === 'interrupted';
+}
 
 export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks): {
   state: AgentChatStreamState;
@@ -505,14 +607,39 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks): {
         currentAnswerRef.current = next.currentAnswer;
         return next;
       },
+      // #4335: a response ends with Complete or Error. A stream that closes before either one was
+      // cut off — the FSM hands it to errorMapper as an interruption.
+      isTerminalEvent: e =>
+        e.type === StreamingEventType.Complete || e.type === StreamingEventType.Error,
       errorMapper: raw => {
-        // M-4: only mark as 'connection' (retryable) if no partial answer received yet.
-        // This preserves the original `!hasAnswer` guard (lines 491–521 of original).
-        const isConnectionError =
-          raw instanceof TypeError || (raw instanceof Error && /HTTP \d/.test(raw.message));
-        const canRetry = isConnectionError && currentAnswerRef.current === '';
+        // #4388: two answers are already open. A retry would arrive while they still are, so the
+        // user is told to wait. First, before the checks below: an answer left on screen by the
+        // previous question must not turn this refusal into an "interrupted" one.
+        if (raw instanceof QaTooManyRequestsError) {
+          return { kind: 'other', message: raw.message };
+        }
 
-        let message = 'Si è verificato un errore. Riprova.';
+        // #4335: never retried. With words already on screen a retry would start the answer over
+        // under them (the M-4 rule below). Without, the connection DID work and the server (or a
+        // proxy) closed it: not the failure to connect that the retry is for, and a silent resend
+        // is one more model call nobody asked for. The user asks again, with the reason in view.
+        if (isInterruptedSentinel(raw)) {
+          return { kind: 'interrupted', message: STREAM_INTERRUPTED_MESSAGE };
+        }
+
+        // M-4: never retry once a partial answer was received (the original `!hasAnswer` guard,
+        // lines 491–521 of original). #4335: an error thrown after some words is the connection
+        // dropping mid-answer — for the user, the same interruption, not the browser's raw
+        // "network error".
+        if (currentAnswerRef.current !== '') {
+          return { kind: 'interrupted', message: STREAM_INTERRUPTED_MESSAGE };
+        }
+
+        // Only a connection error, before any word of the answer, is retried.
+        const canRetry =
+          raw instanceof TypeError || (raw instanceof Error && /HTTP \d/.test(raw.message));
+
+        let message = GENERIC_ERROR_MESSAGE;
         if (raw instanceof Error) {
           message = raw.message;
         }
@@ -538,21 +665,28 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks): {
   // The public `error` field is: SSE Error event message (from reducer) OR thrown error message
   const publicError: string | null = sseError ?? error?.message ?? null;
 
+  // #4335: the base hook sets `error` only when the stream is over for good — a thrown error after
+  // the last retry, or an interruption — and it does not touch the reducer's state, which still says
+  // "streaming". The stream is over: the view must let the user ask again.
+  const streamFailed = error !== null;
+
   // Build merged state: spread internal state, add base-hook retryCount and merged error.
   // _sseError is an internal implementation field — exclude it from the public shape.
   const stateWithExtras = state as AgentChatInternalState & { _sseError?: string };
   const merged: AgentChatStreamState = {
-    statusMessage: stateWithExtras.statusMessage,
+    statusMessage: streamFailed ? null : stateWithExtras.statusMessage,
     currentAnswer: stateWithExtras.currentAnswer,
     followUpQuestions: stateWithExtras.followUpQuestions,
-    isStreaming: stateWithExtras.isStreaming,
+    citations: stateWithExtras.citations,
+    isStreaming: stateWithExtras.isStreaming && !streamFailed,
+    tierLimit: stateWithExtras.tierLimit,
     chatThreadId: stateWithExtras.chatThreadId,
     totalTokens: stateWithExtras.totalTokens,
     debugSteps: stateWithExtras.debugSteps,
     modelDowngrade: stateWithExtras.modelDowngrade,
     strategyTier: stateWithExtras.strategyTier,
     executionId: stateWithExtras.executionId,
-    connectionStatus: stateWithExtras.connectionStatus,
+    connectionStatus: streamFailed ? 'error' : stateWithExtras.connectionStatus,
     retryCount,
     error: publicError,
   };
@@ -569,19 +703,24 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks): {
         totalTokens: merged.totalTokens,
         chatThreadId: merged.chatThreadId,
         followUpQuestions: merged.followUpQuestions,
+        citations: merged.citations,
       });
     }
   });
 
   // ── onError callback ──────────────────────────────────────────────────────
-  // Fire when error becomes non-null (SSE Error event OR connection error after max retries).
-  // Matches original lines 400 (SSE error) and 531 (connection error).
+  // Fire when error becomes non-null (SSE Error event, connection error after max retries, or
+  // #4335 an interrupted stream). Matches original lines 400 (SSE error) and 531 (connection error).
+  // #4335: with the words that arrived before the end, so the view can keep them.
   useEffect(() => {
     const prevError = prevErrorRef.current;
     prevErrorRef.current = merged.error;
 
     if (merged.error !== null && prevError === null) {
-      callbacksRef.current?.onError?.(merged.error);
+      callbacksRef.current?.onError?.(merged.error, {
+        partialAnswer: merged.currentAnswer,
+        citations: merged.citations,
+      });
     }
   });
 
@@ -597,29 +736,39 @@ export function useAgentChatStream(callbacks?: AgentChatStreamCallbacks): {
   }, [stop]);
 
   // ── Public API ────────────────────────────────────────────────────────────
+  //
+  // #4333: le tre funzioni devono restare LE STESSE da un render all'altro. Chi usa l'hook le mette
+  // nelle dipendenze di un effetto e chiama `stopStreaming` dal cleanup ("ferma lo stream quando la
+  // vista se ne va"): una funzione nuova a ogni render fa girare quel cleanup a ogni render, e il
+  // primo render dopo l'invio fermava lo stream prima ancora della richiesta. Non è un'ottimizzazione:
+  // togliere `useCallback` qui spegne la chat nel pannello a scomparsa e in quella incorporata.
+  // `ask`, `stop` e `baseReset` sono già stabili (useSseStreamFsm).
 
-  const sendMessage = (
-    gameId: string,
-    message: string,
-    chatThreadId?: string,
-    proxyGameContext?: ProxyGameContext,
-    gameSessionId?: string
-  ): void => {
-    currentAnswerRef.current = ''; // reset M-4 guard for new stream
-    ask({ gameId, message, chatThreadId, proxyGameContext, gameSessionId });
-  };
+  const sendMessage = useCallback(
+    (
+      gameId: string,
+      message: string,
+      chatThreadId?: string,
+      proxyGameContext?: ProxyGameContext,
+      gameSessionId?: string
+    ): void => {
+      currentAnswerRef.current = ''; // reset M-4 guard for new stream
+      ask({ gameId, message, chatThreadId, proxyGameContext, gameSessionId });
+    },
+    [ask]
+  );
 
-  const stopStreaming = (): void => {
+  const stopStreaming = useCallback((): void => {
     stop();
     // reset() instead of stop() so state resets to INITIAL (isStreaming: false, connectionStatus: 'idle')
     // matching original stopStreaming behavior (lines 168-182)
     baseReset();
-  };
+  }, [stop, baseReset]);
 
-  const reset = (): void => {
+  const reset = useCallback((): void => {
     currentAnswerRef.current = '';
     baseReset();
-  };
+  }, [baseReset]);
 
   return { state: merged, sendMessage, stopStreaming, reset };
 }

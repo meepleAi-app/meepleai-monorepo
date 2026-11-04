@@ -47,8 +47,7 @@ internal static class UserLibraryLabelEndpoints
         .Produces(401)
         .WithTags("Library", "Labels")
         .WithSummary("Get available labels")
-        .WithDescription("Returns all labels available to the user (predefined system labels + user's custom labels).")
-        .WithOpenApi();
+        .WithDescription("Returns all labels available to the user (predefined system labels + user's custom labels).");
     }
 
     private static void MapGetGameLabelsEndpoint(RouteGroupBuilder group)
@@ -85,8 +84,7 @@ internal static class UserLibraryLabelEndpoints
         .Produces(404)
         .WithTags("Library", "Labels")
         .WithSummary("Get game labels")
-        .WithDescription("Returns labels assigned to a specific game in user's library.")
-        .WithOpenApi();
+        .WithDescription("Returns labels assigned to a specific game in user's library.");
     }
 
     private static void MapAddLabelToGameEndpoint(RouteGroupBuilder group)
@@ -129,8 +127,7 @@ internal static class UserLibraryLabelEndpoints
         .Produces(409)
         .WithTags("Library", "Labels")
         .WithSummary("Add label to game")
-        .WithDescription("Assigns a label to a game in user's library. Returns 409 if label is already assigned.")
-        .WithOpenApi();
+        .WithDescription("Assigns a label to a game in user's library. Returns 409 if label is already assigned.");
     }
 
     private static void MapRemoveLabelFromGameEndpoint(RouteGroupBuilder group)
@@ -168,8 +165,7 @@ internal static class UserLibraryLabelEndpoints
         .Produces(404)
         .WithTags("Library", "Labels")
         .WithSummary("Remove label from game")
-        .WithDescription("Removes a label from a game in user's library.")
-        .WithOpenApi();
+        .WithDescription("Removes a label from a game in user's library.");
     }
 
     private static void MapCreateCustomLabelEndpoint(RouteGroupBuilder group)
@@ -206,8 +202,7 @@ internal static class UserLibraryLabelEndpoints
         .Produces(409)
         .WithTags("Library", "Labels")
         .WithSummary("Create custom label")
-        .WithDescription("Creates a new custom label for the user. Returns 409 if label name already exists.")
-        .WithOpenApi();
+        .WithDescription("Creates a new custom label for the user. Returns 409 if label name already exists.");
     }
 
     private static void MapDeleteCustomLabelEndpoint(RouteGroupBuilder group)
@@ -249,7 +244,6 @@ internal static class UserLibraryLabelEndpoints
         .Produces(409)
         .WithTags("Library", "Labels")
         .WithSummary("Delete custom label")
-        .WithDescription("Deletes a custom label. Returns 404 if not found or not owned. Returns 409 if trying to delete predefined label.")
-        .WithOpenApi();
+        .WithDescription("Deletes a custom label. Returns 404 if not found or not owned. Returns 409 if trying to delete predefined label.");
     }
 }

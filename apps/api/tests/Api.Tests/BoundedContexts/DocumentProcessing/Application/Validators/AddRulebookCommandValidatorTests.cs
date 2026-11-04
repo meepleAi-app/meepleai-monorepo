@@ -1,9 +1,11 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.Validators;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.Tests.Constants;
 using FluentAssertions;
 using FluentValidation.TestHelper;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -16,7 +18,7 @@ namespace Api.Tests.BoundedContexts.DocumentProcessing.Application.Validators;
 [Trait("BoundedContext", "DocumentProcessing")]
 public sealed class AddRulebookCommandValidatorTests
 {
-    private readonly AddRulebookCommandValidator _validator = new();
+    private readonly AddRulebookCommandValidator _validator = new(Options.Create(new PdfProcessingOptions()));
 
     #region Valid Command
 

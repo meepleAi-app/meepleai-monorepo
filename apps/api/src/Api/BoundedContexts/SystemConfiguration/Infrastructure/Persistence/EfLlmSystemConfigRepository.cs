@@ -47,6 +47,9 @@ public sealed class EfLlmSystemConfigRepository : RepositoryBase, ILlmSystemConf
             existing.CircuitBreakerSuccessThreshold = config.CircuitBreakerSuccessThreshold;
             existing.DailyBudgetUsd = config.DailyBudgetUsd;
             existing.MonthlyBudgetUsd = config.MonthlyBudgetUsd;
+            existing.DegradeThresholdPercent = config.DegradeThresholdPercent;
+            existing.BackgroundQuotaPercent = config.BackgroundQuotaPercent;
+            existing.EvaluationQuotaPercent = config.EvaluationQuotaPercent;
             existing.FallbackChainJson = config.FallbackChainJson;
             existing.UpdatedAt = DateTime.UtcNow;
             existing.UpdatedByUserId = config.UpdatedByUserId;
@@ -70,6 +73,9 @@ public sealed class EfLlmSystemConfigRepository : RepositoryBase, ILlmSystemConf
         typeof(LlmSystemConfig).GetProperty(nameof(LlmSystemConfig.CircuitBreakerSuccessThreshold))!.SetValue(config, entity.CircuitBreakerSuccessThreshold);
         typeof(LlmSystemConfig).GetProperty(nameof(LlmSystemConfig.DailyBudgetUsd))!.SetValue(config, entity.DailyBudgetUsd);
         typeof(LlmSystemConfig).GetProperty(nameof(LlmSystemConfig.MonthlyBudgetUsd))!.SetValue(config, entity.MonthlyBudgetUsd);
+        typeof(LlmSystemConfig).GetProperty(nameof(LlmSystemConfig.DegradeThresholdPercent))!.SetValue(config, entity.DegradeThresholdPercent);
+        typeof(LlmSystemConfig).GetProperty(nameof(LlmSystemConfig.BackgroundQuotaPercent))!.SetValue(config, entity.BackgroundQuotaPercent);
+        typeof(LlmSystemConfig).GetProperty(nameof(LlmSystemConfig.EvaluationQuotaPercent))!.SetValue(config, entity.EvaluationQuotaPercent);
         typeof(LlmSystemConfig).GetProperty(nameof(LlmSystemConfig.FallbackChainJson))!.SetValue(config, entity.FallbackChainJson);
         typeof(LlmSystemConfig).GetProperty(nameof(LlmSystemConfig.CreatedAt))!.SetValue(config, entity.CreatedAt);
         typeof(LlmSystemConfig).GetProperty(nameof(LlmSystemConfig.UpdatedAt))!.SetValue(config, entity.UpdatedAt);
@@ -88,6 +94,9 @@ public sealed class EfLlmSystemConfigRepository : RepositoryBase, ILlmSystemConf
             CircuitBreakerSuccessThreshold = config.CircuitBreakerSuccessThreshold,
             DailyBudgetUsd = config.DailyBudgetUsd,
             MonthlyBudgetUsd = config.MonthlyBudgetUsd,
+            DegradeThresholdPercent = config.DegradeThresholdPercent,
+            BackgroundQuotaPercent = config.BackgroundQuotaPercent,
+            EvaluationQuotaPercent = config.EvaluationQuotaPercent,
             FallbackChainJson = config.FallbackChainJson,
             CreatedAt = config.CreatedAt,
             UpdatedAt = config.UpdatedAt,

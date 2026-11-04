@@ -263,7 +263,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.LedgerEntry> LedgerEntries => Set<BoundedContexts.BusinessSimulations.Domain.Entities.LedgerEntry>(); // ISSUE-3720: Financial Ledger
     public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.CostScenario> CostScenarios => Set<BoundedContexts.BusinessSimulations.Domain.Entities.CostScenario>(); // ISSUE-3725: Agent Cost Calculator
     public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.ResourceForecast> ResourceForecasts => Set<BoundedContexts.BusinessSimulations.Domain.Entities.ResourceForecast>(); // ISSUE-3726: Resource Forecasting Simulator
-    public DbSet<Entities.BusinessSimulations.AppBudgetEntity> AppBudgets => Set<Entities.BusinessSimulations.AppBudgetEntity>(); // Issue #1838 SP5 F4-C5: Singleton global app spend budget
+    public DbSet<Entities.BusinessSimulations.AppBudgetEntity> AppBudgets => Set<Entities.BusinessSimulations.AppBudgetEntity>(); // Issue #1838 SP5 F4-C5; #4169: retired, no reader nor writer, table kept until the contract delivery
     public DbSet<BoundedContexts.KnowledgeBase.Domain.Entities.PlaygroundTestScenario> PlaygroundTestScenarios => Set<BoundedContexts.KnowledgeBase.Domain.Entities.PlaygroundTestScenario>(); // ISSUE-4396: Playground Test Scenarios
     public DbSet<BoundedContexts.EntityRelationships.Domain.Aggregates.EntityLink> EntityLinks => Set<BoundedContexts.EntityRelationships.Domain.Aggregates.EntityLink>(); // ISSUE-5132: Entity relationships
     public DbSet<BoundedContexts.SystemConfiguration.Domain.Entities.TierDefinition> TierDefinitions => Set<BoundedContexts.SystemConfiguration.Domain.Entities.TierDefinition>(); // D3: Tier system definitions
@@ -299,6 +299,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameNightVoteEntity> GameNightVotes => Set<GameNightVoteEntity>(); // ISSUE-2700: Candidate voting
     public DbSet<GameNightPhotoEntity> GameNightPhotos => Set<GameNightPhotoEntity>(); // ISSUE-2724: Recap photo gallery
     public DbSet<GameNightInvitationEntity> GameNightInvitations => Set<GameNightInvitationEntity>(); // ISSUE-607: Token-based public RSVP invitations
+    public DbSet<GameNightGuestEmailOptOutEntity> GameNightGuestEmailOptOuts => Set<GameNightGuestEmailOptOutEntity>(); // #4846: guest addresses that asked to stop game night emails
     public DbSet<RuleDisputeEntity> RuleDisputes => Set<RuleDisputeEntity>(); // Structured rule dispute persistence
     public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.GameMemoryEntity> GameMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.GameMemoryEntity>(); // AgentMemory: per-game memory
     public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.GroupMemoryEntity> GroupMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.GroupMemoryEntity>(); // AgentMemory: play group memory
@@ -340,6 +341,9 @@ public class MeepleAiDbContext : DbContext
 
     // KB-06: User feedback on KB chat responses
     public DbSet<BoundedContexts.KnowledgeBase.Domain.Entities.KbUserFeedback> KbUserFeedbacks => Set<BoundedContexts.KnowledgeBase.Domain.Entities.KbUserFeedback>();
+
+    // #4470 (ADR-095 fetta 7b): domande di riferimento dell'agente, caricate dal seeder
+    public DbSet<BoundedContexts.KnowledgeBase.Domain.Entities.ReferenceQuestion> ReferenceQuestions => Set<BoundedContexts.KnowledgeBase.Domain.Entities.ReferenceQuestion>();
 
     // Issue #1675: KbQuality bounded context (per-doc quality eval) — Task 2
     public DbSet<BoundedContexts.KbQuality.Domain.Evaluation.DocumentEvaluationRun> DocumentEvaluationRuns => Set<BoundedContexts.KbQuality.Domain.Evaluation.DocumentEvaluationRun>();

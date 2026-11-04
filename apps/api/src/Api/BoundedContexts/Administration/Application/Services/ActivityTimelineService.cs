@@ -241,9 +241,10 @@ internal sealed class ActivityTimelineService : IActivityTimelineService
     {
         try
         {
+            // #4276: il thread dell'assistente in partita vive nella pagina della sessione, non fra le chat.
             return await _dbContext.ChatThreads
                 .AsNoTracking()
-                .Where(c => c.UserId == userId)
+                .Where(c => c.UserId == userId && c.LiveSessionId == null)
                 .OrderByDescending(c => c.LastMessageAt)
                 .Take(limit)
                 .Select(c => (ActivityEvent)new ChatSavedEvent

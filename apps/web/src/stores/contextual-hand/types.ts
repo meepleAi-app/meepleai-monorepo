@@ -35,7 +35,12 @@ export interface ContextualHandState {
   /** The active/paused session loaded from the API (null when idle). */
   currentSession: CurrentSessionDto | null;
 
-  /** Extra data returned by createSession (agentId, toolkitId, gameNightId). */
+  /**
+   * Extra data returned by createSession (agentId, toolkitId, gameNightId).
+   * #4752: nothing sets it any more. Its only producer, `startSession`, was removed (it called a
+   * route the backend does not register and had no caller left), so it stays null; the agent and
+   * toolkit branches of `ContextualHandSlot` that read it are dead until something feeds it.
+   */
   createResult: CreateSessionResult | null;
 
   /** True while any primary async action is in-flight. */
@@ -65,9 +70,6 @@ export interface ContextualHandState {
 export interface ContextualHandActions {
   /** Load the caller's current Active/Paused session (orphan recovery). */
   initialize: () => Promise<void>;
-
-  /** Create a new session for a game and transition to active. */
-  startSession: (gameId: string, guestNames?: string[], gameNightEventId?: string) => Promise<void>;
 
   /** Pause the current session. */
   pauseSession: () => Promise<void>;

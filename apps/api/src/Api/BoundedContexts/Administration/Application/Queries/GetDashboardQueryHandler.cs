@@ -128,10 +128,10 @@ internal sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQue
                 .CountAsync(s => s.PlayedAt >= thirtyDaysAgo, ct)
                 .ConfigureAwait(false);
 
-            // Chat count
+            // Chat count. #4276: il thread dell'assistente in partita non è una chat dell'utente.
             var chatCount = await _dbContext.ChatThreads
                 .AsNoTracking()
-                .CountAsync(c => c.UserId == userId, ct)
+                .CountAsync(c => c.UserId == userId && c.LiveSessionId == null, ct)
                 .ConfigureAwait(false);
 
             // Wishlist is not available in current schema, returning 0
@@ -223,7 +223,7 @@ internal sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQue
                 .ThenByDescending(e => e.WinRate)
                 .Take(MaxTopGames)
                 .Select(e => new DashboardTopGameDto(
-                    e.GameId,
+                    e.SharedGameId ?? Guid.Empty, // #4749: GameId is a compatibility property outside the EF model
                     e.SharedGame!.Title,
                     e.SharedGame!.ImageUrl,
                     e.WinRate ?? 0,
@@ -302,10 +302,10 @@ internal sealed class GetDashboardQueryHandler : IRequestHandler<GetDashboardQue
                 s.Session.PlayedAt
             )));
 
-            // Recent chats
+            // Recent chats. #4276: senza il thread dell'assistente in partita, che qui porterebbe il suo id.
             var recentChats = await _dbContext.ChatThreads
                 .AsNoTracking()
-                .Where(c => c.UserId == userId)
+                .Where(c => c.UserId == userId && c.LiveSessionId == null)
                 .OrderByDescending(c => c.LastMessageAt)
                 .Take(5)
                 .Select(c => new DashboardActivityDto(

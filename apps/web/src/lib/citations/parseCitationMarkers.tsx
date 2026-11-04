@@ -19,6 +19,8 @@ import { type ReactNode } from 'react';
 import { CitationPill } from '@/components/features/kb-globale/CitationPill';
 import type { KbCitation } from '@/lib/api/schemas/kb-ask.schemas';
 
+import { citedPage } from './citedPage';
+
 // eslint-disable-next-line security/detect-unsafe-regex -- regex is bounded by bracket delimiters; no catastrophic backtracking risk in practice
 const MARKER_REGEX = /\[(\d+(?:,\s*\d+)*)\]/g;
 
@@ -26,9 +28,9 @@ export interface ParseCitationMarkersOptions {
   /** Builds an i18n-aware aria-label for each pill. */
   formatAriaLabel: (citation: KbCitation, n: number) => string;
   /** Optional click handler forwarded to each pill (#1702: includes chunkId when present). */
-  onCitationClick?: (link: { docId: string; page: number; chunkId?: string }) => void;
+  onCitationClick?: (link: { docId: string; page: number | null; chunkId?: string }) => void;
   /**
-   * Optional ref-text builder. Default: `p.{page}`.
+   * Optional ref-text builder. Default: `p.{page}`, or `Fonte` when the citation has no page.
    * Override for custom display (e.g. localized "Pagina {n}").
    */
   formatRefText?: (citation: KbCitation, n: number) => string;
@@ -50,7 +52,12 @@ export function parseCitationMarkers(
   }
 
   const { formatAriaLabel, onCitationClick, formatRefText } = options;
-  const refText = formatRefText ?? ((c: KbCitation) => `p.${c.page}`);
+  const refText =
+    formatRefText ??
+    ((c: KbCitation) => {
+      const page = citedPage(c.page);
+      return page === null ? 'Fonte' : `p.${page}`;
+    });
 
   const nodes: ReactNode[] = [];
   const warnedIndices = new Set<number>();

@@ -112,6 +112,10 @@ internal static class DocumentProcessingServiceExtensions
         // non-Unstructured providers (the extractor that reads it simply isn't constructed).
         services.AddScoped<IExtractionStrategySelector, ExtractionStrategySelector>();
 
+        // #4435: same pattern for the document's language — the pipeline sets it per PDF, the
+        // same-scope UnstructuredPdfTextExtractor sends it (or the configured default set).
+        services.AddScoped<IExtractionLanguageSelector, ExtractionLanguageSelector>();
+
         // #3435 (SP1): register the hi_res region extractor + IRawHiResExtractor unconditionally
         // (the seed-batch handler injects it under every provider — see method doc).
         RegisterImageRegionHiResExtractor(services, configuration);
@@ -227,6 +231,10 @@ internal static class DocumentProcessingServiceExtensions
 
         // Issue #5460: Queue monitoring for proactive alerts (stuck docs, depth, failure rate)
         services.AddHostedService<ProcessingQueueMonitorService>();
+
+        // #4319: expire abandoned chunked uploads and remove their folders under meepleai_uploads.
+        // Before this, the 24h expiry only applied if somebody called the session again.
+        services.AddHostedService<AbandonedChunkedUploadCleanupService>();
 
         // Issue #4208: Register Quartz job for automatic PDF retry (every 5 minutes)
         RegisterRetryFailedPdfsJob(services);

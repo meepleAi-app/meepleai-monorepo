@@ -24,5 +24,18 @@ internal sealed class ApproveMechanicClaimCommandValidator
         RuleFor(c => c.Note)
             .MaximumLength(2000).WithMessage("Note must be 2000 characters or fewer.")
             .When(c => c.Note is not null);
+
+        RuleFor(c => c.Structure!.Kind)
+            .IsInEnum().WithMessage("Kind is not a valid value.")
+            .When(c => c.Structure is not null);
+
+        RuleFor(c => c.Structure!.Priority)
+            .IsInEnum().WithMessage("Priority is not a valid value.")
+            .When(c => c.Structure is not null);
+
+        RuleFor(c => c.Structure!.Overrides)
+            .Must(o => o is null || o.Distinct().Count() == o.Count)
+            .WithMessage("Overrides must not contain duplicates.")
+            .When(c => c.Structure is not null);
     }
 }

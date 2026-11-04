@@ -30,6 +30,10 @@ import { TtsSpeakerButton } from './TtsSpeakerButton';
 import { isLastAssistantMessage } from './utils/isLastAssistantMessage';
 import { toChatMessageProps } from './utils/toChatMessageProps';
 
+// #4168: un messaggio salvato porta l'id che il backend gli ha dato (un UUID). La bolla in streaming
+// e il messaggio di benvenuto hanno id provvisori: un feedback su quelli il backend non lo trova.
+const SAVED_MESSAGE_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -164,7 +168,8 @@ export function ChatMessageList({
             // with !streamState.isStreaming to gate on the final response.
             const isLastAssistant =
               !streamState.isStreaming && isLastAssistantMessage(messages, msgIndex);
-            const showFeedback = msg.role === 'assistant' && !!gameId && !!threadId;
+            const showFeedback =
+              msg.role === 'assistant' && !!gameId && !!threadId && SAVED_MESSAGE_ID.test(msg.id);
             // Show the typing indicator on the assistant placeholder bubble
             // (empty content) while a send is in flight. This covers the
             // qaStream path which doesn't drive `streamState.currentAnswer`.

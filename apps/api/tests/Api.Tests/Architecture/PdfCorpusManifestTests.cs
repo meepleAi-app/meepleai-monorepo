@@ -149,7 +149,7 @@ public sealed class PdfCorpusManifestTests
 
         offenders.Should().BeEmpty(
             "un percorso verso data/ con una risalita a conteggio fisso dipende dalla profondità "
-            + "della working directory, che per i test è bin/Debug/net9.0 — quattro livelli su "
+            + "della working directory, che per i test è bin/Debug/net10.0 — quattro livelli su "
             + "portano a apps/api/tests/, che non contiene data/. Usa "
             + $"{nameof(PdfCorpus)}.{nameof(PdfCorpus.Resolve)}(\"data/...\"), che risale a .git. "
             + "Siti non conformi:" + Environment.NewLine

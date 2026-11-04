@@ -272,5 +272,16 @@ describe('LibraryHybridGrid (Phase 2a hybrid items)', () => {
       expect(onCardClick).toHaveBeenCalledTimes(1);
       expect(onCardClick).toHaveBeenCalledWith('s1');
     });
+
+    it('#4156 (D4): an item without a detail page (href null) is a disabled card', () => {
+      const withoutPage = items.map(item => (item.id === 's1' ? { ...item, href: null } : item));
+      const { container, onCardClick } = renderGrid({ items: withoutPage });
+      const card = container.querySelector(
+        '[data-slot="library-grid-card"][data-entry-id="s1"]'
+      ) as HTMLButtonElement;
+      expect(card).toBeDisabled();
+      fireEvent.click(card);
+      expect(onCardClick).not.toHaveBeenCalled();
+    });
   });
 });

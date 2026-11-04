@@ -133,6 +133,102 @@ setup() {
     [[ "$output" == *"obbligatori"* ]]
 }
 
+# ─── il confronto PER NOME (#4298) ───────────────────────────────────────────────────────────────
+#
+# Da quando il colore del job di dev-async lo decide questo script, un conteggio non basta piu'.
+# Un fallimento dichiarato che guarisce e uno nuovo che compare lasciano il numero identico: sui
+# soli conteggi il job resterebbe VERDE con una regressione dentro. Finche' il job era rosso
+# comunque, il buco non costava nulla; ora e' il verde a doverlo escludere.
+#
+# I nomi sono `classe.test`: nel .trx `testName` e' il solo nome del metodo, e lo stesso nome
+# ricorre in classi diverse (15 volte nello shard Games del run 38377985336).
+
+@test "nomi: falliti e saltati sono quelli dichiarati, esce 0" {
+    run bash "$SCRIPT" --shard Nomi --trx "$FIX/nomi.trx" --baseline "$FIX/baseline-nomi.json"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"entro la baseline"* ]]
+    [[ "$output" != *"non dichiarati"* ]]
+}
+
+@test "nomi: stesso conteggio di falliti ma un test DIVERSO, FALLISCE nominandolo" {
+    # Il caso per cui il confronto per nome esiste. A fallire e' il «Salva» di ClasseDue, quello
+    # dichiarato e' di ClasseUno: stesso nome di metodo, due test diversi.
+    run bash "$SCRIPT" --shard Nomi --trx "$FIX/nomi-scambio-falliti.trx" --baseline "$FIX/baseline-nomi.json"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"FALLIMENTI non dichiarati"* ]]
+    [[ "$output" == *"Ns.ClasseDue.Salva"* ]]
+    # E quello dichiarato, che ora passa, viene segnalato come da togliere, non come errore.
+    [[ "$output" == *"non falliscono piu"* ]]
+    [[ "$output" == *"Ns.ClasseUno.Salva"* ]]
+}
+
+@test "nomi: la fixture dello scambio ha lo stesso conteggio di falliti della baseline" {
+    # Presupposto del test precedente: se la fixture avesse tre falliti, quel test fallirebbe gia'
+    # sul conteggio e non proverebbe nulla sul confronto per nome.
+    run grep -c 'failed="2"' "$FIX/nomi-scambio-falliti.trx"
+    [ "$status" -eq 0 ]
+    [ "$output" -eq 1 ]
+}
+
+@test "nomi: stesso conteggio di saltati ma un test DIVERSO, FALLISCE nominandolo" {
+    # «Lento» ora gira, «Nuovo» non viene piu' eseguito: due salti come prima, e un test che e'
+    # uscito dalla suite senza che il numero si muova.
+    run bash "$SCRIPT" --shard Nomi --trx "$FIX/nomi-scambio-saltati.trx" --baseline "$FIX/baseline-nomi.json"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"SALTI non dichiarati"* ]]
+    [[ "$output" == *"Ns.ClasseDue.Nuovo"* ]]
+}
+
+@test "nomi: un fallimento dichiarato che ora passa, avvisa di toglierlo ed esce 0" {
+    run bash "$SCRIPT" --shard Nomi --trx "$FIX/nomi-uno-corretto.trx" --baseline "$FIX/baseline-nomi.json"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"non falliscono piu"* ]]
+    [[ "$output" == *"Ns.ClasseUno.Salva"* ]]
+}
+
+@test "nomi: le entita XML del .trx sono decodificate prima del confronto" {
+    # Nel .trx la riga di una Theory porta &quot;, nella baseline c'e' la virgoletta.
+    run grep -c 'Legge(file: &quot;a.pdf&quot;)' "$FIX/nomi.trx"
+    [ "$output" -ge 1 ]
+    run jq -e '.shards.Nomi.failedTests | index("Ns.ClasseDue.Legge(file: \"a.pdf\")") != null' "$FIX/baseline-nomi.json"
+    [ "$status" -eq 0 ]
+    run bash "$SCRIPT" --shard Nomi --trx "$FIX/nomi.trx" --baseline "$FIX/baseline-nomi.json"
+    [ "$status" -eq 0 ]
+}
+
+@test "nomi: baseline che si contraddice fra conteggio e nomi, FALLISCE" {
+    # failed=3 e un solo nome: una delle due cose e' falsa, e non sta allo script scegliere quale.
+    run bash "$SCRIPT" --shard Incoerente --trx "$FIX/nomi.trx" --baseline "$FIX/baseline-nomi.json"
+    [ "$status" -eq 1 ]
+    [[ "$output" == *"baseline incoerente"* ]]
+}
+
+@test "baseline senza nomi: confronta i conteggi e DICE che uno scambio non lo vedrebbe" {
+    run bash "$SCRIPT" --shard Probe --trx "$FIX/trappola.trx" --baseline "$BASELINE"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"senza nomi"* ]]
+}
+
+@test "--update-baseline scrive i nomi e non perde la nota dello shard" {
+    # La nota dice da dove vengono i numeri. La prima versione dello script sostituiva l'intero
+    # oggetto dello shard, e la nota spariva a ogni ricattura.
+    tmp="$BATS_TEST_TMPDIR/baseline.json"
+    cp "$FIX/baseline-nomi.json" "$tmp"
+    run bash "$SCRIPT" --shard Nomi --trx "$FIX/nomi-scambio-falliti.trx" --baseline "$tmp" --update-baseline
+    [ "$status" -eq 0 ]
+    run jq -e '.shards.Nomi.failedTests == ["Ns.ClasseDue.Legge(file: \"a.pdf\")", "Ns.ClasseDue.Salva"]' "$tmp"
+    [ "$status" -eq 0 ]
+    run jq -e '.shards.Nomi.skippedTests == ["Ns.ClasseUno.Esterno", "Ns.ClasseUno.Lento"]' "$tmp"
+    [ "$status" -eq 0 ]
+    run jq -e '.shards.Nomi.failed == 2 and .shards.Nomi.skipped == 2' "$tmp"
+    [ "$status" -eq 0 ]
+    run jq -e '.shards.Nomi._comment | length == 1' "$tmp"
+    [ "$status" -eq 0 ]
+    # E gli altri shard del file restano come erano.
+    run jq -e '.shards.Incoerente.failed == 3' "$tmp"
+    [ "$status" -eq 0 ]
+}
+
 # ─── la baseline reale committata ────────────────────────────────────────────────────────────────
 
 @test "la baseline committata porta runId e capturedAt" {
@@ -143,10 +239,5 @@ setup() {
     [ "$status" -eq 0 ]
 }
 
-@test "la baseline committata ha i tre shard di dev-async" {
-    real="$BATS_TEST_DIRNAME/../../fixtures/dev-async-shard-baseline.json"
-    for shard in Core KnowledgeBase Games; do
-        run jq -e --arg s "$shard" '.shards[$s].failed != null and .shards[$s].skipped != null' "$real"
-        [ "$status" -eq 0 ]
-    done
-}
+# Che la baseline abbia una voce per ogni shard lo verifica integration-shard-matrix.bats, che i
+# nomi degli shard li legge dalla matrice di dev-async.yml invece di ripeterli qui (#3742).

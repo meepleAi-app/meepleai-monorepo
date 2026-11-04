@@ -1,8 +1,8 @@
 using Api.BoundedContexts.KbQuality.Application.Authentication;
 using Api.BoundedContexts.KbQuality.Application.Commands.StartEvaluation;
-using Api.BoundedContexts.KbQuality.Application.Ports;
 using Api.BoundedContexts.KbQuality.Application.Services;
 using Api.BoundedContexts.KbQuality.Domain.Evaluation.Exceptions;
+using Api.Services;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -15,15 +15,18 @@ namespace Api.BoundedContexts.KbQuality.Application.Behaviors;
 /// <para>Flow:</para>
 /// <list type="number">
 /// <item>Estimate the cost of the requested eval via <see cref="IEvaluationCostEstimator"/>.</item>
-/// <item>Read the remaining tenant budget via <see cref="IEvalCostBudgetChecker"/> (self-contained
-/// counter store per A1).</item>
+/// <item>Read what is left of the evaluation quota of the LLM budget via <see cref="ILlmBudgetStatus"/>
+/// (#4166, ADR-095 D6: «il tetto di KbQuality diventa una quota dentro il tetto unico»). It replaces the
+/// self-contained per-tenant counter of A1, capped at 50 $ a month outside every other budget.</item>
 /// <item>If <c>estimated &gt; remaining</c> and the caller did NOT request override, throw
 /// <see cref="CostCapExceededException"/> — the endpoint maps this to <c>402 Payment Required</c>.</item>
 /// <item>If override was requested but the caller is not an admin, throw
-/// <see cref="UnauthorizedAccessException"/>.</item>
-/// <item>Run the inner handler.</item>
-/// <item>Increment the spent counter by the estimate. Acceptable estimate-vs-actual drift is noted in
-/// the plan — the handler may correct via direct repository call upon completion (Task 14).</item>
+/// <see cref="UnauthorizedAccessException"/>. The override skips this pre-flight estimate only: the
+/// gateway still stops the run's LLM calls at the evaluation quota, which is part of the single cap
+/// (D6). An admin who needs more raises the quota in the LLM configuration.</item>
+/// <item>Run the inner handler. Its LLM calls go through the gateway with
+/// <c>RequestSource.Evaluation</c>, which records their real cost and stops them at the quota: there
+/// is no counter to increment here any more.</item>
 /// </list>
 ///
 /// <para>Identity extraction uses <see cref="KbQualityCurrentUser.FromHttpContext"/>, which reads
@@ -39,7 +42,7 @@ namespace Api.BoundedContexts.KbQuality.Application.Behaviors;
 /// constraint, so the gate runs in <c>Handle</c>.</para>
 /// </summary>
 public sealed class EvalCostCapBehavior<TRequest, TResponse>(
-    IEvalCostBudgetChecker budget,
+    ILlmBudgetStatus budget,
     IEvaluationCostEstimator estimator,
     IHttpContextAccessor httpContext,
     ILogger<EvalCostCapBehavior<TRequest, TResponse>> logger
@@ -66,7 +69,7 @@ public sealed class EvalCostCapBehavior<TRequest, TResponse>(
         var (_, tenantId, isAdmin) = KbQualityCurrentUser.FromHttpContext(httpContext.HttpContext);
 
         var estimated = await estimator.EstimateAsync(evalCommand.DocId, cancellationToken).ConfigureAwait(false);
-        var remaining = await budget.GetRemainingAsync(tenantId, cancellationToken).ConfigureAwait(false);
+        var remaining = await budget.GetRemainingUsdAsync(RequestSource.Evaluation, cancellationToken).ConfigureAwait(false);
 
         if (estimated > remaining && !evalCommand.OverrideCostCap)
         {
@@ -90,18 +93,13 @@ public sealed class EvalCostCapBehavior<TRequest, TResponse>(
 
         var result = await next().ConfigureAwait(false);
 
-        // Charge the tenant. The handler may have recorded an "actual cost" in
-        // HttpContext.Items[ActualCostUsd] after a successful (or Failed) run — see
-        // StartEvaluationCommandHandler. If present, use it instead of the upfront estimate
-        // so a quick-failing run doesn't drain the budget at the estimated rate.
-        var actualCost = TryReadActualCost(httpContext.HttpContext) ?? estimated;
-        await budget.IncrementSpentAsync(tenantId, actualCost, cancellationToken).ConfigureAwait(false);
-
-        // Surface the post-charge view to the endpoint via HttpContext.Items.
+        // Surface the post-run view to the endpoint via HttpContext.Items. The handler may have
+        // recorded the run's actual cost in HttpContext.Items[ActualCostUsd]; the remaining quota is
+        // read again from the gateway, which has already counted the run's calls.
         if (httpContext.HttpContext is { } ctx)
         {
-            ctx.Items[KbQualityHttpItemKeys.CostCapEstimate] = actualCost;
-            var newRemaining = await budget.GetRemainingAsync(tenantId, cancellationToken).ConfigureAwait(false);
+            ctx.Items[KbQualityHttpItemKeys.CostCapEstimate] = TryReadActualCost(ctx) ?? estimated;
+            var newRemaining = await budget.GetRemainingUsdAsync(RequestSource.Evaluation, cancellationToken).ConfigureAwait(false);
             ctx.Items[KbQualityHttpItemKeys.CostCapRemaining] = newRemaining;
         }
 

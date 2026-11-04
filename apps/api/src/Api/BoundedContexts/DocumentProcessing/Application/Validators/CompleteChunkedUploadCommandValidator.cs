@@ -18,5 +18,13 @@ internal sealed class CompleteChunkedUploadCommandValidator : AbstractValidator<
         RuleFor(x => x.UserId)
             .NotEmpty()
             .WithMessage("User ID is required.");
+
+        // #4443 R2: same values as UploadPdfCommandValidator.
+        When(x => x.Priority != null, () =>
+        {
+            RuleFor(x => x.Priority)
+                .Must(p => p!.Equals("normal", StringComparison.OrdinalIgnoreCase) || p.Equals("urgent", StringComparison.OrdinalIgnoreCase))
+                .WithMessage("Priority must be 'normal' or 'urgent'");
+        });
     }
 }

@@ -81,8 +81,7 @@ internal static class GameBookEndpoints
         .WithSummary("List GameBook rows for a given GameRef")
         .WithDescription(
             "Returns the catalog of game books (Tutorial, Setup, Narrative, Encounter, RulesReference) " +
-            "for the specified GameRef. Used by BookPicker (photo-translate) and ResumeBooksList (play).")
-        .WithOpenApi();
+            "for the specified GameRef. Used by BookPicker (photo-translate) and ResumeBooksList (play).");
     }
 
     private static void MapCreateBookEndpoint(RouteGroupBuilder group)
@@ -138,8 +137,7 @@ internal static class GameBookEndpoints
         .WithDescription(
             "Creates a personal GameBook (owned by the authenticated user) for the given GameRef with the " +
             "chosen roles, paragraph scheme, language and optional KB source PDF. Returns 400 on validation " +
-            "failure (e.g. no role, physicalOnly+kbSourceDocId), 409 if the PDF is already linked to a community book.")
-        .WithOpenApi();
+            "failure (e.g. no role, physicalOnly+kbSourceDocId), 409 if the PDF is already linked to a community book.");
     }
 
     private static void MapUpdateBookEndpoint(RouteGroupBuilder group)
@@ -173,8 +171,7 @@ internal static class GameBookEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .WithTags("Gamebook")
         .WithSummary("Rename a GameBook and update its roles")
-        .WithDescription("Updates the display name and role flags of an existing GameBook. Returns 404 if the book does not exist.")
-        .WithOpenApi();
+        .WithDescription("Updates the display name and role flags of an existing GameBook. Returns 404 if the book does not exist.");
     }
 
     private static void MapDeleteBookEndpoint(RouteGroupBuilder group)
@@ -205,8 +202,7 @@ internal static class GameBookEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .WithTags("Gamebook")
         .WithSummary("Soft-delete a GameBook")
-        .WithDescription("Soft-deletes an existing GameBook (IsDeleted + DeletedAt). Returns 404 if the book does not exist.")
-        .WithOpenApi();
+        .WithDescription("Soft-deletes an existing GameBook (IsDeleted + DeletedAt). Returns 404 if the book does not exist.");
     }
 
     private static bool TryGetUserId(HttpContext context, SessionStatusDto? session, out Guid userId)

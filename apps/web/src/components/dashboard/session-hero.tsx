@@ -96,15 +96,17 @@ function ActiveSessionHero({ session }: { session: GameSessionDto }) {
         {meta && <p className="text-xs text-white/70 font-nunito mt-0.5">{meta}</p>}
       </div>
 
-      {/* CTA */}
-      <Link href={`/sessions/${session.id}`} className="relative z-10 shrink-0">
-        <Button
-          size="sm"
-          className="font-quicksand font-bold bg-white text-[hsl(25,85%,35%)] hover:bg-white/90 shadow-md hover:shadow-lg hover:-translate-y-px transition-all duration-200"
-        >
-          Riprendi →
-        </Button>
-      </Link>
+      {/* CTA — #4156 (D4): the session pages live under the LiveGameSession id; without one, no CTA */}
+      {session.liveSessionId != null && (
+        <Link href={`/sessions/${session.liveSessionId}`} className="relative z-10 shrink-0">
+          <Button
+            size="sm"
+            className="font-quicksand font-bold bg-white text-[hsl(25,85%,35%)] hover:bg-white/90 shadow-md hover:shadow-lg hover:-translate-y-px transition-all duration-200"
+          >
+            Riprendi →
+          </Button>
+        </Link>
+      )}
     </div>
   );
 }

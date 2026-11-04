@@ -99,9 +99,17 @@ internal sealed class TranslateGamebookTextQueryHandler
             var fullText = new StringBuilder();
 
             await foreach (var chunk in _llm.GenerateCompletionStreamAsync(
-                systemPrompt, query.Text, RequestSource.Manual, cancellationToken).ConfigureAwait(false))
+                systemPrompt, query.Text, RequestSource.Translation, cancellationToken).ConfigureAwait(false))
             {
                 cancellationToken.ThrowIfCancellationRequested();
+                // #4166: il gateway non ha fatto partire la chiamata. Senza, la traduzione vuota
+                // finiva in un errore di validazione invece che nel motivo.
+                if (chunk.ErrorCode is not null)
+                {
+                    throw new Api.Middleware.Exceptions.LlmCallRefusedException(
+                        chunk.ErrorCode, chunk.ErrorMessage ?? "La chiamata AI non è partita.");
+                }
+
                 if (!string.IsNullOrEmpty(chunk.Content))
                 {
                     if (streamingLatencySec is null)

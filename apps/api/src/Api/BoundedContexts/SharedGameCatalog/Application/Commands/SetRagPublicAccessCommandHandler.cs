@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -13,15 +14,18 @@ internal sealed class SetRagPublicAccessCommandHandler : ICommandHandler<SetRagP
 {
     private readonly ISharedGameRepository _sharedGameRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ISharedGameCacheInvalidator _cacheInvalidator;
     private readonly ILogger<SetRagPublicAccessCommandHandler> _logger;
 
     public SetRagPublicAccessCommandHandler(
         ISharedGameRepository sharedGameRepository,
         IUnitOfWork unitOfWork,
+        ISharedGameCacheInvalidator cacheInvalidator,
         ILogger<SetRagPublicAccessCommandHandler> logger)
     {
         _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _cacheInvalidator = cacheInvalidator ?? throw new ArgumentNullException(nameof(cacheInvalidator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -36,6 +40,12 @@ internal sealed class SetRagPublicAccessCommandHandler : ICommandHandler<SetRagP
         game.SetRagPublicAccess(command.IsRagPublic);
         _sharedGameRepository.Update(game);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // #4585: la lista del catalogo (`SearchSharedGamesQueryHandler`) mostra `isRagPublic` e vive in
+        // HybridCache sotto il tag `search-games`. Senza l'evizione serviva il valore precedente per la
+        // durata della cache, e finche' la scrittura non arrivava al database non si vedeva. I due passi
+        // (wrapper e `HybridCache` nativo) e il perche' di ciascuno stanno in ISharedGameCacheInvalidator.
+        await _cacheInvalidator.EvictDetailAndListAsync(command.SharedGameId, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Set RAG public access for SharedGame {SharedGameId} to {IsRagPublic}",

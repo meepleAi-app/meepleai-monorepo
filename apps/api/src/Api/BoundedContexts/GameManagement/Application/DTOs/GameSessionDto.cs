@@ -27,7 +27,12 @@ internal record GameSessionDto(
     // GET /api/v1/sessions/{id}; null on list/history paths (GameSessionMapper.ToDto).
     string? GameSlug = null,
     string? GameName = null,
-    IReadOnlyList<ScorePlayerDto>? ScorePlayers = null
+    IReadOnlyList<ScorePlayerDto>? ScorePlayers = null,
+    // #4156: the id of the LiveGameSession this GameSession is the companion of
+    // (LiveGameSession.CorrelatedGameSessionId points here). The session pages under
+    // /sessions/[id] address a live session, so a caller holding a GameSession links
+    // through this id. Null when no live session correlates (legacy or non-live sessions).
+    Guid? LiveSessionId = null
 );
 
 /// <summary>

@@ -26,7 +26,7 @@ namespace Api.Extensions;
 /// - BggSearch:            20 req/hour — respects BoardGameGeek external API quota
 /// - ProposePrivateGame:    2 req/min  — prevents catalog proposal spam
 /// - BulkImportAdmin:       1 req/5min — heavy admin batch operation
-/// - AgentQuery:           30 req/min  — AI query (expensive, per user)
+/// - AnswerOpenRequests:    2 open     — answers in progress per user, on the four answer routes (Issue #4388)
 /// - AgentCreation:        10 req/min  — AI agent creation (per user)
 /// - ContactForm:           5 req/hour — anonymous contact form spam prevention (IP-based)
 /// - AccessRequest:         5 req/hour — access request spam prevention (IP-based)
@@ -35,10 +35,20 @@ namespace Api.Extensions;
 /// - AdminProviderRotateKey: 1 req/24h — provider key rotation per (provider,user) (Issue #1859)
 /// - GameNightTokenRead:   60 req/min  — public RSVP token lookup per IP (Issue #1169)
 /// - GameNightTokenRespond: 10 req/min — public RSVP submission per IP (Issue #1169)
+/// - GameNightGuestUnsubscribe: 10 req/min — public guest opt-out per IP (#4846)
 /// - UsersSearch:         600 req/min  — authenticated player autocomplete (~10 req/s avg via 1min sliding window, Issue #950 W1-PR2)
 /// </summary>
 internal static class RateLimitingServiceExtensions
 {
+    /// <summary>
+    /// Answers a user can have open at once on the four answer routes (Issue #4388). The web views say
+    /// "two" (<c>QA_TOO_MANY_REQUESTS_MESSAGE</c>): change both together.
+    /// </summary>
+    internal const int MaxOpenAnswersPerUser = 2;
+
+    /// <summary>The name of the policy mounted on the answer routes (Issue #4388).</summary>
+    internal const string AnswerOpenRequestsPolicy = "AnswerOpenRequests";
+
     public static IServiceCollection AddRateLimitingServices(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
@@ -258,19 +268,41 @@ internal static class RateLimitingServiceExtensions
                     });
             });
 
-            // Policy 12: AgentQuery - 30 req/min for AI agent query operations (Issue #4338)
-            // AI queries are expensive (LLM token cost); per-user limit prevents runaway usage.
-            options.AddPolicy("AgentQuery", httpContext =>
+            // Policy 12: AnswerOpenRequests - at most 2 answers open at once per user (Issue #4388,
+            // decision c of #4168). The answer quota stays "check first, count when the answer is
+            // delivered" (no reservation): between the check and the count lies the whole generation,
+            // tens of seconds, so N parallel requests under the limit all pass, and one user can
+            // exhaust the global budget of the gateway for everyone (AI_BUDGET_EXCEEDED for all).
+            //
+            // A concurrency limiter, not a rate: it counts requests IN PROGRESS, and the lease is held
+            // until the response ends (for an SSE answer, the whole stream; a client that disconnects
+            // frees it). The third request is refused with 429 BEFORE the pipeline runs: the gateway
+            // is not called and the quota counter does not grow. QueueLimit 0: no waiting; the web
+            // views tell the user to wait for an answer to finish (qaStreamErrors.ts).
+            //
+            // The count lives in the memory of each API process, like every limiter here: with several
+            // replicas the limit is 2 per replica, not 2 per user.
+            //
+            // Same exemption as the quota: SuperAdmin, Admin and Editor (evaluations, the admin
+            // playground and the RAG gates run as one of them and open many answers on purpose).
+            //
+            // This replaces the AgentQuery policy (30 req/min), which was defined and mounted by no
+            // route. With two answers open at 10-30 s each a user cannot reach 30 a minute, so it
+            // could never fire: a dead knob, removed rather than mounted.
+            options.AddPolicy(AnswerOpenRequestsPolicy, httpContext =>
             {
+                if (IsExemptFromOpenAnswersLimit(httpContext))
+                {
+                    return RateLimitPartition.GetNoLimiter("answer-open-exempt");
+                }
+
                 var userId = GetUserId(httpContext);
 
-                return RateLimitPartition.GetSlidingWindowLimiter(
-                    partitionKey: $"agent-query-{userId}",
-                    factory: _ => new SlidingWindowRateLimiterOptions
+                return RateLimitPartition.GetConcurrencyLimiter(
+                    partitionKey: $"answer-open-{userId}",
+                    factory: _ => new ConcurrencyLimiterOptions
                     {
-                        Window = TimeSpan.FromMinutes(1),
-                        PermitLimit = 30,
-                        SegmentsPerWindow = 6,
+                        PermitLimit = MaxOpenAnswersPerUser,
                         QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
                         QueueLimit = 0,
                     });
@@ -555,6 +587,26 @@ internal static class RateLimitingServiceExtensions
                     });
             });
 
+            // Policy 22b: GameNightGuestUnsubscribe - 10 req/min per IP for the guest opt-out link (#4846)
+            // Public, unauthenticated POST. Its own bucket: it is a different action from an RSVP, and a guest who
+            // opens the unsubscribe link of an email from a shared address (an office, a mobile network) must not
+            // be competing with the RSVPs of everybody behind it.
+            options.AddPolicy("GameNightGuestUnsubscribe", httpContext =>
+            {
+                var ipAddress = GetClientIpAddress(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"game-night-guest-unsubscribe-{ipAddress}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 10,
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
             // Policy 23: UsersSearch - 600 req/min per authenticated user for player autocomplete (Issue #950 W1-PR2)
             // Authenticated GET on /api/v1/users/search?q=. Spec §7b.1 / §15 P3 — Nygard
             // panel flagged user-enumeration risk on an open autocomplete endpoint.
@@ -643,6 +695,17 @@ internal static class RateLimitingServiceExtensions
         {
             return fallback;
         }
+    }
+
+    /// <summary>
+    /// SuperAdmin, Admin and Editor are not subject to the open-answers limit, as they are not to the
+    /// answer quota (TierEnforcementService). The role claims are the ones SessionAuthenticationHandler sets.
+    /// </summary>
+    private static bool IsExemptFromOpenAnswersLimit(HttpContext? httpContext)
+    {
+        var user = httpContext?.User;
+        return user?.Identity?.IsAuthenticated == true
+            && (user.IsInRole("SuperAdmin") || user.IsInRole("Admin") || user.IsInRole("Editor"));
     }
 
     /// <summary>

@@ -1,10 +1,15 @@
 /**
- * AgentSelector - Multi-agent switching component (Task #4, Issue #12)
+ * AgentSelector - chooses the intent of the chat's answers (Task #4, Issue #12; #4404)
  *
  * Features:
- * - Dropdown selector for Tutor, Arbitro, Stratega, Narratore, Orchestrator (auto)
- * - Agent descriptions and icons
- * - Selection persistence per conversation
+ * - Dropdown selector for the three answer intents: Auto, Tutor, Risposta secca
+ * - Descriptions and icons
+ * - Selection persistence per conversation (the thread stores it)
+ *
+ * #4404 (ADR-098 §5): the selector used to offer five «agents» (Auto, Tutor, Arbitro, Stratega, Narratore). There is
+ * one agent (ADR-094); what the user chooses is the SHAPE of its answer, and the list is the one in
+ * `@/lib/chat/answer-intent`, which the backend compares by test. The name of the component and of its `AgentType`
+ * stay for now so the callers do not move; they stand for an answer intent.
  *
  * #3393 (finding C9c): the hardcoded "online" status indicators and the no-op
  * 30s poll (which only ever re-set every agent to 'online') were removed — no
@@ -13,7 +18,9 @@
 
 'use client';
 
-import { Bot, Sparkles, Shield, Zap, BookOpen, Target } from 'lucide-react';
+import { useId } from 'react';
+
+import { Bot, Sparkles, Zap, ListChecks, type LucideIcon } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
 import {
@@ -23,25 +30,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/overlays/select';
+import {
+  ANSWER_INTENTS,
+  ANSWER_INTENT_DESCRIPTIONS,
+  ANSWER_INTENT_LABELS,
+  type AnswerIntent,
+} from '@/lib/chat/answer-intent';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export type AgentType = 'auto' | 'tutor' | 'arbitro' | 'stratega' | 'narratore';
+export type AgentType = AnswerIntent;
 
 export interface Agent {
   id: AgentType;
   name: string;
   description: string;
-  icon: typeof Bot;
+  icon: LucideIcon;
 }
 
 export interface AgentSelectorProps {
-  /** Currently selected agent ID */
+  /** Currently selected intent (a stored value outside the list must be read with `intentOf` first) */
   value: AgentType;
-  /** Callback when agent changes */
+  /** Callback when the intent changes */
   onChange: (agentId: AgentType) => void;
   /** Additional class name */
   className?: string;
@@ -50,64 +63,47 @@ export interface AgentSelectorProps {
 }
 
 // ============================================================================
-// Agent Definitions
+// Intent definitions
 // ============================================================================
 
-export const AGENT_NAMES: Record<AgentType, string> = {
-  auto: 'Auto (Orchestrator)',
-  tutor: 'Tutor',
-  arbitro: 'Arbitro',
-  stratega: 'Stratega',
-  narratore: 'Narratore',
+export const AGENT_NAMES: Record<AgentType, string> = ANSWER_INTENT_LABELS;
+
+const ICONS: Record<AgentType, LucideIcon> = {
+  auto: Zap,
+  tutor: Bot,
+  secca: ListChecks,
 };
 
-const AGENTS: Record<AgentType, Agent> = {
-  auto: {
-    id: 'auto',
-    name: 'Auto (Orchestrator)',
-    description: 'Automatically routes to best agent',
-    icon: Zap,
-  },
-  tutor: {
-    id: 'tutor',
-    name: 'Tutor',
-    description: 'Setup, rules Q&A, tutorials',
-    icon: Bot,
-  },
-  arbitro: {
-    id: 'arbitro',
-    name: 'Arbitro',
-    description: 'Move validation, rules arbitration',
-    icon: Shield,
-  },
-  stratega: {
-    id: 'stratega',
-    name: 'Stratega',
-    description: 'Strategic analysis and move suggestions',
-    icon: Target,
-  },
-  narratore: {
-    id: 'narratore',
-    name: 'Narratore',
-    description: 'Game lore, atmosphere, and narrative',
-    icon: BookOpen,
-  },
-};
+const AGENTS: Record<AgentType, Agent> = Object.fromEntries(
+  ANSWER_INTENTS.map(id => [
+    id,
+    {
+      id,
+      name: ANSWER_INTENT_LABELS[id],
+      description: ANSWER_INTENT_DESCRIPTIONS[id],
+      icon: ICONS[id],
+    },
+  ])
+) as Record<AgentType, Agent>;
 
 // ============================================================================
 // Main Component
 // ============================================================================
 
 export function AgentSelector({ value, onChange, className, disabled }: AgentSelectorProps) {
+  const labelId = useId();
+
   return (
     <div className={cn('flex items-center gap-3', className)}>
-      <span className="text-sm text-muted-foreground font-nunito">Agent:</span>
+      <span id={labelId} className="text-sm text-muted-foreground font-nunito">
+        Tipo di risposta:
+      </span>
       <Select value={value} onValueChange={onChange} disabled={disabled}>
-        <SelectTrigger className="w-[280px] font-nunito">
+        <SelectTrigger aria-labelledby={labelId} className="w-[280px] font-nunito">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {(Object.keys(AGENTS) as AgentType[]).map(agentId => {
+          {ANSWER_INTENTS.map(agentId => {
             const agent = AGENTS[agentId];
             const Icon = agent.icon;
 
@@ -131,7 +127,7 @@ export function AgentSelector({ value, onChange, className, disabled }: AgentSel
         </SelectContent>
       </Select>
 
-      {/* Current Agent Badge */}
+      {/* Current intent badge */}
       {value !== 'auto' && (
         <Badge variant="outline" className="gap-1 font-nunito">
           <Sparkles className="h-3 w-3" />

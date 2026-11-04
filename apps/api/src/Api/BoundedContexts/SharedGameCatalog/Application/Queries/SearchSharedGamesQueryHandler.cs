@@ -149,25 +149,12 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
         }
 
         // Full-text search: SearchTerm using PostgreSQL FTS with prefix matching
-        if (!string.IsNullOrWhiteSpace(query.SearchTerm))
+        var prefixQuery = BuildPrefixQuery(query.SearchTerm);
+        if (prefixQuery is not null)
         {
-            var searchTerm = query.SearchTerm.Trim();
-
-            // Build prefix tsquery: "wing span" → "wing:* & span:*"
-            // This enables partial word matching (e.g. "wing" matches "Wingspan")
-            var words = searchTerm
-                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(w => string.Concat(w.Where(c => char.IsLetterOrDigit(c))))
-                .Where(w => w.Length > 0)
-                .Select(w => w + ":*");
-            var prefixQuery = string.Join(" & ", words);
-
-            if (!string.IsNullOrEmpty(prefixQuery))
-            {
-                dbQuery = dbQuery.Where(g =>
-                    EF.Functions.ToTsVector("italian", g.Title + " " + g.Description)
-                        .Matches(EF.Functions.ToTsQuery("italian", prefixQuery)));
-            }
+            dbQuery = dbQuery.Where(g =>
+                EF.Functions.ToTsVector("italian", g.Title + " " + g.Description)
+                    .Matches(EF.Functions.ToTsQuery("italian", prefixQuery)));
         }
 
         // Category filter: Any match
@@ -393,6 +380,18 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                 .Count()
         });
 
+        // The default order: games with a knowledge base first, then by title.
+        // #4267: with a text to search, before that come the games whose TITLE matches it.
+        // The filter above also looks in the description, so without this a game typed by
+        // name sorted after every game that merely mentions the text, and on a short page
+        // (a typeahead) it did not show up at all. A sort asked for explicitly is left alone.
+        var byRelevance = prefixQuery is null
+            ? projected.OrderBy(p => p.Game.HasKnowledgeBase ? 0 : 1)
+            : projected
+                .OrderBy(p => EF.Functions.ToTsVector("italian", p.Game.Title)
+                    .Matches(EF.Functions.ToTsQuery("italian", prefixQuery)) ? 0 : 1)
+                .ThenBy(p => p.Game.HasKnowledgeBase ? 0 : 1);
+
         // Apply sorting on the projected shape (post-aggregate computation).
         var sorted = query.SortBy switch
         {
@@ -422,8 +421,8 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
                 : projected.OrderBy(p => p.NewThisWeekCount).ThenBy(p => p.Game.CreatedAt).ThenBy(p => p.Game.Title),
 
             _ => query.SortDescending
-                ? projected.OrderBy(p => p.Game.HasKnowledgeBase ? 0 : 1).ThenByDescending(p => p.Game.Title)
-                : projected.OrderBy(p => p.Game.HasKnowledgeBase ? 0 : 1).ThenBy(p => p.Game.Title)
+                ? byRelevance.ThenByDescending(p => p.Game.Title)
+                : byRelevance.ThenBy(p => p.Game.Title)
         };
 
         // Materialize the projected shape first; CoverUrlResolver is async and cannot
@@ -510,6 +509,28 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
             PageSize: query.PageSize);
     }
 
+    /// <summary>
+    /// The prefix tsquery for a search text: "wing span" → "wing:* &amp; span:*", so that a
+    /// partial word matches ("wing" finds "Wingspan"). Null when the text holds no letter
+    /// or digit to search for.
+    /// </summary>
+    private static string? BuildPrefixQuery(string? searchTerm)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return null;
+        }
+
+        var words = searchTerm
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(w => string.Concat(w.Where(c => char.IsLetterOrDigit(c))))
+            .Where(w => w.Length > 0)
+            .Select(w => w + ":*");
+        var prefixQuery = string.Join(" & ", words);
+
+        return prefixQuery.Length > 0 ? prefixQuery : null;
+    }
+
     private static string GenerateCacheKey(SearchSharedGamesQuery query)
     {
         // Build cache key from all query parameters
@@ -535,7 +556,9 @@ internal sealed class SearchSharedGamesQueryHandler : IRequestHandler<SearchShar
         //   v5 = Issue #2339 (Wave 4 Task 13 — DEC-WIRING) SharedGameDto.Translations
         //        enrichment via IGameTitleResolver — cached payloads now carry
         //        per-game translation lists alongside the existing aggregates.
-        var keyComponents = $"v5|{searchTerm}|{categoryIds}|{mechanicIds}|{query.MinPlayers}|{query.MaxPlayers}|{query.MaxPlayingTime}|{query.MinComplexity}|{query.MaxComplexity}|{statusStr}|{query.PageNumber}|{query.PageSize}|{query.SortBy}|{query.SortDescending}|{query.HasKnowledgeBase?.ToString() ?? "null"}|{query.HasToolkit?.ToString() ?? "null"}|{query.HasAgent?.ToString() ?? "null"}|{query.IsTopRated?.ToString() ?? "null"}|{query.IsNew?.ToString() ?? "null"}";
+        //   v6 = #4267 title matches first under the default sort — same shape, but the
+        //        pages cached for a search text hold the old order.
+        var keyComponents = $"v6|{searchTerm}|{categoryIds}|{mechanicIds}|{query.MinPlayers}|{query.MaxPlayers}|{query.MaxPlayingTime}|{query.MinComplexity}|{query.MaxComplexity}|{statusStr}|{query.PageNumber}|{query.PageSize}|{query.SortBy}|{query.SortDescending}|{query.HasKnowledgeBase?.ToString() ?? "null"}|{query.HasToolkit?.ToString() ?? "null"}|{query.HasAgent?.ToString() ?? "null"}|{query.IsTopRated?.ToString() ?? "null"}|{query.IsNew?.ToString() ?? "null"}";
 
         var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(keyComponents)));
 

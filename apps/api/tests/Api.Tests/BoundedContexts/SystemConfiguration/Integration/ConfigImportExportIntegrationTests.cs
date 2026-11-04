@@ -150,7 +150,7 @@ public class ConfigImportExportIntegrationTests : IAsyncLifetime
         var importCount = await importHandler.Handle(importCommand, CancellationToken.None);
 
         // Assert - Import
-        importCount.Should().Be(3);
+        importCount.ImportedCount.Should().Be(3);
 
         // Act - Export
         var exportQuery = new ExportConfigsQuery(Environment: "All", ActiveOnly: false);
@@ -207,7 +207,7 @@ public class ConfigImportExportIntegrationTests : IAsyncLifetime
         var importCount = await importHandler.Handle(importCommand, CancellationToken.None);
 
         // Assert
-        importCount.Should().Be(1);
+        importCount.ImportedCount.Should().Be(1);
 
         // Verify update in database
         var updatedConfig = await repository.GetByKeyAsync("App:MaxUsers", "All", false, CancellationToken.None);

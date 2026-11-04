@@ -7,8 +7,8 @@
 ## Quick Start
 
 ### Prerequisites
-- .NET 9 SDK
-- Node.js 20+ (con pnpm)
+- .NET 10 SDK
+- Node.js 24 with pnpm — the exact major is pinned in `.nvmrc`
 - Docker Desktop
 - PostgreSQL 16+ (via Docker)
 - Git

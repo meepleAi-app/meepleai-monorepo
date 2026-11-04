@@ -36,7 +36,6 @@ internal class GetBulkCollectionAssociatedDataQueryHandler
         if (query.EntityType != EntityType.Game)
         {
             return new BulkAssociatedDataDto(
-                TotalCustomAgents: 0,
                 TotalPrivatePdfs: 0,
                 TotalChatSessions: 0,
                 TotalGameSessions: 0,
@@ -51,12 +50,14 @@ internal class GetBulkCollectionAssociatedDataQueryHandler
             .Include(e => e.Sessions)
             .Include(e => e.Checklist)
             .Include(e => e.Labels)
-            .Where(e => e.UserId == query.UserId && query.EntityIds.Contains(e.GameId))
+            // #4749: SharedGameId is the mapped column; the GameId compatibility property is outside the EF model.
+            .Where(e => e.UserId == query.UserId
+                && e.SharedGameId != null
+                && query.EntityIds.Contains(e.SharedGameId.Value))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         // Aggregate counts
-        var totalCustomAgents = entries.Count(e => !string.IsNullOrEmpty(e.CustomAgentConfigJson));
         var totalPrivatePdfs = entries.Count(e => e.PrivatePdfId.HasValue);
         var totalGameSessions = entries.Sum(e => e.Sessions?.Count ?? 0);
         var totalChecklistItems = entries.Sum(e => e.Checklist?.Count ?? 0);
@@ -72,7 +73,6 @@ internal class GetBulkCollectionAssociatedDataQueryHandler
             : 0;
 
         return new BulkAssociatedDataDto(
-            TotalCustomAgents: totalCustomAgents,
             TotalPrivatePdfs: totalPrivatePdfs,
             TotalChatSessions: totalChatSessions,
             TotalGameSessions: totalGameSessions,

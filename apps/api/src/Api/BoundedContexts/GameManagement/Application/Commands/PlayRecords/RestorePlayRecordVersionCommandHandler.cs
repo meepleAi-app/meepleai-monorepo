@@ -17,7 +17,7 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.PlayRecords;
 ///   2. Permission check — 403 if not creator.
 ///   3. Load target version — 404 if missing.
 ///   4. Snapshot the CURRENT state (so the restore is undo-able).
-///   5. Apply the target version's values via UpdateDetails.
+///   5. Apply the target version's values via RestoreDetails (a null in the version clears the field).
 ///   6. Persist, then prune to the 5-version cap.
 /// Issue #2437-3: version history + restore.
 /// Issue #2461: retry on version-number unique conflict (transparent server-side retry).
@@ -97,8 +97,9 @@ internal sealed class RestorePlayRecordVersionCommandHandler : ICommandHandler<R
             _versionRepository, record, command.UserId, _timeProvider, cancellationToken)
             .ConfigureAwait(false);
 
-        // 5. Apply the target version's values
-        record.UpdateDetails(targetVersion.SessionDate, targetVersion.Notes, targetVersion.Location, _timeProvider);
+        // 5. Apply the target version's values. #4843: not UpdateDetails, which reads null as «leave it alone» —
+        // a version taken before the notes or the location were ever set has null there, and restoring it must clear them.
+        record.RestoreDetails(targetVersion.SessionDate, targetVersion.Notes, targetVersion.Location, _timeProvider);
 
         // 6. Persist update + snapshot together, with #2461 retry on version-number conflict.
         await _recordRepository.UpdateAsync(record, cancellationToken).ConfigureAwait(false);

@@ -1,4 +1,3 @@
-/* eslint-disable local/no-hardcoded-color-utility -- text-white / button color on style-prop colored bg or entity-colored CTA; mockup .e-bg pattern. DS-12 will introduce primitives encoding bg via className. */
 'use client';
 
 /**
@@ -380,7 +379,7 @@ export function SessionPhotoGallery({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-foreground/50 hover:bg-foreground/70 text-white"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-foreground/50 hover:bg-foreground/70 text-background"
                     onClick={() => void navigateLightbox(-1)}
                     aria-label="Previous photo"
                     data-testid="lightbox-prev"
@@ -392,7 +391,7 @@ export function SessionPhotoGallery({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-foreground/50 hover:bg-foreground/70 text-white"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-foreground/50 hover:bg-foreground/70 text-background"
                     onClick={() => void navigateLightbox(1)}
                     aria-label="Next photo"
                     data-testid="lightbox-next"
@@ -405,7 +404,7 @@ export function SessionPhotoGallery({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute top-2 right-2 bg-foreground/50 hover:bg-foreground/70 text-white"
+                  className="absolute top-2 right-2 bg-foreground/50 hover:bg-foreground/70 text-background"
                   onClick={closeLightbox}
                   aria-label="Close lightbox"
                   data-testid="lightbox-close"

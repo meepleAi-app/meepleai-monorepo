@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Monitor } from 'lucide-react';
 
 import { Button } from '@/components/ui/primitives/button';
+import { useTranslation, type TranslationFunction } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 
 interface SessionRow {
@@ -14,8 +15,9 @@ interface SessionRow {
   readonly isCurrent: boolean;
 }
 
-function parseDeviceLabel(userAgent: string | null): string {
-  if (!userAgent) return 'Unknown device';
+function parseDeviceLabel(userAgent: string | null, t: TranslationFunction): string {
+  const unknown = t('settings.security.sessions.unknownDevice');
+  if (!userAgent) return unknown;
   if (/iphone|ios/i.test(userAgent)) return 'iPhone';
   if (/ipad/i.test(userAgent)) return 'iPad';
   if (/android/i.test(userAgent)) return 'Android';
@@ -23,23 +25,24 @@ function parseDeviceLabel(userAgent: string | null): string {
   if (/chrome/i.test(userAgent)) return 'Chrome';
   if (/firefox/i.test(userAgent)) return 'Firefox';
   if (/safari/i.test(userAgent)) return 'Safari';
-  return userAgent.split('/')[0] || 'Unknown device';
+  return userAgent.split('/')[0] || unknown;
 }
 
-function formatRelative(iso: string | null): string {
+function formatRelative(iso: string | null, t: TranslationFunction): string {
   if (!iso) return '—';
   const diffMs = Date.now() - new Date(iso).getTime();
   const min = Math.floor(diffMs / 60000);
-  if (min < 1) return 'now';
-  if (min < 60) return `${min} min ago`;
+  if (min < 1) return t('settings.security.sessions.now');
+  if (min < 60) return t('settings.security.sessions.minutesAgo', { minutes: min });
   const h = Math.floor(min / 60);
-  if (h < 24) return `${h} h ago`;
+  if (h < 24) return t('settings.security.sessions.hoursAgo', { hours: h });
   const d = Math.floor(h / 24);
-  return `${d} d ago`;
+  return t('settings.security.sessions.daysAgo', { days: d });
 }
 
 export function ActiveSessionsCard(): React.JSX.Element {
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   const sessionsQuery = useQuery({
     queryKey: ['user-sessions'],
@@ -81,14 +84,19 @@ export function ActiveSessionsCard(): React.JSX.Element {
   return (
     <section className="bg-card border border-border rounded-lg p-5">
       <header className="flex items-center justify-between mb-4">
-        <h3 className="font-quicksand font-bold text-foreground">Active sessions</h3>
+        <h3 className="font-quicksand font-bold text-foreground">
+          {t('settings.security.sessions.title')}
+        </h3>
         {sessionsQuery.isLoading && (
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Loading" />
+          <Loader2
+            className="h-4 w-4 animate-spin text-muted-foreground"
+            aria-label={t('settings.security.sessions.loading')}
+          />
         )}
       </header>
 
       {sessionsQuery.isError && (
-        <p className="text-sm text-destructive">Errore caricamento sessioni.</p>
+        <p className="text-sm text-destructive">{t('settings.security.sessions.errorLoading')}</p>
       )}
 
       <ul className="divide-y divide-border">
@@ -97,15 +105,16 @@ export function ActiveSessionsCard(): React.JSX.Element {
             <Monitor className="h-5 w-5 text-muted-foreground shrink-0" aria-hidden />
             <div className="flex-1 min-w-0">
               <p className="font-quicksand font-bold text-sm text-foreground">
-                {parseDeviceLabel(row.userAgent)}
+                {parseDeviceLabel(row.userAgent, t)}
                 {row.isCurrent && (
                   <span className="ml-2 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded-sm bg-[hsl(var(--c-success)/0.15)] text-[hsl(var(--c-success-ink))]">
-                    CURRENT
+                    {t('settings.security.sessions.current')}
                   </span>
                 )}
               </p>
               <p className="font-mono text-xs text-muted-foreground truncate">
-                {formatRelative(row.lastSeenAt)} · {row.ipAddress ?? 'unknown ip'}
+                {formatRelative(row.lastSeenAt, t)} ·{' '}
+                {row.ipAddress ?? t('settings.security.sessions.unknownIp')}
               </p>
             </div>
             <Button
@@ -114,7 +123,9 @@ export function ActiveSessionsCard(): React.JSX.Element {
               disabled={row.isCurrent || revoke.isPending}
               onClick={() => revoke.mutate(row.id)}
             >
-              {row.isCurrent ? 'This session' : 'Revoke'}
+              {row.isCurrent
+                ? t('settings.security.sessions.thisSession')
+                : t('settings.security.sessions.revoke')}
             </Button>
           </li>
         ))}
@@ -128,7 +139,7 @@ export function ActiveSessionsCard(): React.JSX.Element {
             disabled={revokeAll.isPending}
             onClick={() => revokeAll.mutate()}
           >
-            Sign out all other sessions
+            {t('settings.security.sessions.signOutOthers')}
           </Button>
         </div>
       )}

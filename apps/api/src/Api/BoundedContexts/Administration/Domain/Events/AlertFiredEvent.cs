@@ -37,8 +37,8 @@ public sealed record AlertFiredEvent(
     bool IsTest,
     string TriggeredBy) : IDomainEvent
 {
-    public DateTime OccurredAt { get; } = DateTime.UtcNow;
-    public Guid EventId { get; } = Guid.NewGuid();
+    public DateTime OccurredAt { get; init; } = DateTime.UtcNow;
+    public Guid EventId { get; init; } = Guid.NewGuid();
 }
 
 /// <summary>

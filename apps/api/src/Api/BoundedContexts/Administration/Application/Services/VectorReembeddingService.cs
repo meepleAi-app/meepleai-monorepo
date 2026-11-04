@@ -44,8 +44,11 @@ internal sealed class VectorReembeddingService
     {
         ArgumentNullException.ThrowIfNull(job);
 
-        // Get all vector documents ordered by game for efficient processing
+        // Get all vector documents ordered by game for efficient processing. AsTracking is required: the context
+        // defaults to NoTracking (PERF-06), and without it the metadata written at the end of ReembedDocumentAsync
+        // (model, dimensions, IndexedAt) was never saved, so every document kept describing the old model.
         var vectorDocs = await _dbContext.Set<VectorDocumentEntity>()
+            .AsTracking()
             .OrderBy(vd => vd.GameId)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
@@ -122,10 +125,9 @@ internal sealed class VectorReembeddingService
             return 0;
         }
 
-        // Delete old embeddings from pgvector
-        await _vectorStore.DeleteByVectorDocumentIdAsync(doc.Id, cancellationToken).ConfigureAwait(false);
-
-        // Generate new embeddings in batches
+        // Generate ALL the new embeddings first, in batches. The old ones stay where they are until the new set is
+        // complete: this used to delete them here, in autocommit, and a failure of the embedding service halfway
+        // (or anywhere before the insert) left the document "completed" with no embeddings at all (#4660).
         var texts = textChunks.Select(tc => tc.Content).ToList();
         var embeddings = new List<Embedding>();
         var batchSize = 10; // Sequential Ollama - keep batches small
@@ -163,11 +165,10 @@ internal sealed class VectorReembeddingService
             }
         }
 
-        // Bulk insert new embeddings into pgvector
-        if (embeddings.Count > 0)
-        {
-            await _vectorStore.IndexBatchAsync(embeddings, cancellationToken).ConfigureAwait(false);
-        }
+        // Swap the old embeddings for the new set in one transaction: if the insert fails the old ones stay (the
+        // table only: see IVectorStoreAdapter.ReplaceByVectorDocumentIdAsync). Never empty here: every text chunk
+        // yielded an embedding, or the batch loop threw.
+        await _vectorStore.ReplaceByVectorDocumentIdAsync(doc.Id, embeddings, cancellationToken).ConfigureAwait(false);
 
         // Update VectorDocumentEntity metadata
         doc.EmbeddingModel = _embeddingService.GetModelName();

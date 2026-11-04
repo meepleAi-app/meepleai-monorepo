@@ -21,9 +21,6 @@ import type { UserGameDto } from '@/lib/api/dashboard-client';
 const KbDrawerSheet = dynamic(() => import('./KbDrawerSheet').then(m => m.KbDrawerSheet), {
   ssr: false,
 });
-const AgentDrawerSheet = dynamic(() => import('./AgentDrawerSheet').then(m => m.AgentDrawerSheet), {
-  ssr: false,
-});
 const ChatDrawerSheet = dynamic(() => import('./ChatDrawerSheet').then(m => m.ChatDrawerSheet), {
   ssr: false,
 });
@@ -73,7 +70,6 @@ export function MeepleUserLibraryCard({
 }: MeepleUserLibraryCardProps) {
   // Drawer states — opened via connections click handlers
   const [kbDrawerOpen, setKbDrawerOpen] = useState(false);
-  const [agentDrawerOpen, setAgentDrawerOpen] = useState(false);
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
   const [sessionDrawerOpen, setSessionDrawerOpen] = useState(false);
 
@@ -90,23 +86,20 @@ export function MeepleUserLibraryCard({
 
   // Build connections. UserGameDto only has playCount; other counts default to 0
   // (drawers expose the actual data when opened).
-  // TODO: deferred Task 5/6 in plan — wire real KB/agent/chat counts via batch endpoint.
+  // TODO: deferred Task 5/6 in plan — wire real KB/chat counts via batch endpoint.
   const connections = useMemo(
     () =>
       buildGameConnections(
         {
           kbCount: 0,
-          agentCount: 0,
           chatCount: 0,
           sessionCount: game.playCount ?? 0,
         },
         {
           onKbClick: () => setKbDrawerOpen(true),
-          onAgentClick: () => setAgentDrawerOpen(true),
           onChatClick: () => setChatDrawerOpen(true),
           onSessionClick: () => setSessionDrawerOpen(true),
           onKbPlus: () => setKbDrawerOpen(true),
-          onAgentPlus: () => setAgentDrawerOpen(true),
           onChatPlus: () => setChatDrawerOpen(true),
           onSessionPlus: () => setSessionDrawerOpen(true),
         }
@@ -139,12 +132,6 @@ export function MeepleUserLibraryCard({
       <KbDrawerSheet
         open={kbDrawerOpen}
         onOpenChange={setKbDrawerOpen}
-        gameId={game.id}
-        gameTitle={game.title}
-      />
-      <AgentDrawerSheet
-        open={agentDrawerOpen}
-        onOpenChange={setAgentDrawerOpen}
         gameId={game.id}
         gameTitle={game.title}
       />

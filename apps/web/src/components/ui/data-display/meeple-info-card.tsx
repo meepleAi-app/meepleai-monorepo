@@ -304,7 +304,7 @@ export function MeepleInfoCard({
                             {!ready && (
                               <ProgressBadge
                                 documentId={doc.id}
-                                state={doc.processingState || doc.processingStatus || 'pending'}
+                                state={doc.processingState || 'pending'}
                               />
                             )}
                           </div>

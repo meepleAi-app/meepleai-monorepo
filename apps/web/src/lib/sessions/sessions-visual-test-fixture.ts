@@ -70,6 +70,7 @@ export const STATE_OVERRIDE_ENABLED = process.env.NODE_ENV !== 'production' || I
 export const VISUAL_TEST_FIXTURE_SESSIONS: ReadonlyArray<SessionListItem> = [
   {
     id: '00000000-0000-4000-8000-000000000001',
+    liveSessionId: '00000000-0000-4000-8000-000000000001',
     gameName: 'Brass: Birmingham',
     date: 'oggi',
     when: 'in corso',
@@ -89,6 +90,7 @@ export const VISUAL_TEST_FIXTURE_SESSIONS: ReadonlyArray<SessionListItem> = [
   },
   {
     id: '00000000-0000-4000-8000-000000000002',
+    liveSessionId: '00000000-0000-4000-8000-000000000002',
     gameName: 'Wingspan',
     date: 'oggi · pausa',
     when: 'in pausa',
@@ -108,6 +110,7 @@ export const VISUAL_TEST_FIXTURE_SESSIONS: ReadonlyArray<SessionListItem> = [
   },
   {
     id: '00000000-0000-4000-8000-000000000003',
+    liveSessionId: '00000000-0000-4000-8000-000000000003',
     gameName: 'Wingspan',
     date: '23 apr 2026',
     when: '2 giorni fa',
@@ -126,6 +129,7 @@ export const VISUAL_TEST_FIXTURE_SESSIONS: ReadonlyArray<SessionListItem> = [
   },
   {
     id: '00000000-0000-4000-8000-000000000004',
+    liveSessionId: '00000000-0000-4000-8000-000000000004',
     gameName: 'Azul',
     date: '21 apr 2026',
     when: '4 giorni fa',
@@ -142,6 +146,7 @@ export const VISUAL_TEST_FIXTURE_SESSIONS: ReadonlyArray<SessionListItem> = [
   },
   {
     id: '00000000-0000-4000-8000-000000000005',
+    liveSessionId: '00000000-0000-4000-8000-000000000005',
     gameName: 'Ark Nova',
     date: '15 apr 2026',
     when: '10 giorni fa',
@@ -158,6 +163,7 @@ export const VISUAL_TEST_FIXTURE_SESSIONS: ReadonlyArray<SessionListItem> = [
   },
   {
     id: '00000000-0000-4000-8000-000000000006',
+    liveSessionId: '00000000-0000-4000-8000-000000000006',
     gameName: '7 Wonders',
     date: '5 apr 2026',
     when: '3 settimane fa',

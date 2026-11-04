@@ -100,7 +100,7 @@ jobs:
       - name: Setup Backend
         uses: ./.github/actions/setup-backend
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
           working-directory: apps/api
           # #3632: senza questo, `cache-version` resta al default 'v1' mentre i job che consumano
           # l'artifact passano `vars.CACHE_VERSION`. Al primo uso di quella repo variable il job che
@@ -172,7 +172,6 @@ jobs:
       - name: Setup Frontend
         uses: ./.github/actions/setup-frontend
         with:
-          node-version: '20'
           pnpm-version: '10'
           working-directory: apps/web
           frozen-lockfile: 'true'
@@ -220,7 +219,6 @@ jobs:
       - name: Setup Frontend
         uses: ./.github/actions/setup-frontend
         with:
-          node-version: '20'
           pnpm-version: '10'
           working-directory: apps/web
           frozen-lockfile: 'true'
@@ -281,7 +279,6 @@ jobs:
       - name: Setup Frontend
         uses: ./.github/actions/setup-frontend
         with:
-          node-version: '20'
           pnpm-version: '10'
           working-directory: apps/web
           frozen-lockfile: 'true'
@@ -289,6 +286,11 @@ jobs:
       - name: Lint
         run: pnpm lint
         # Note: package.json lint script has --max-warnings=15 for security false positives
+
+      # Issue #4533 — i test delle regole ESLint locali. Il gate che conta e' in dev-fast.yml (PR
+      # verso main-dev); qui copre le PR che arrivano a main/main-staging senza passare da main-dev.
+      - name: ESLint local rules tests (#4533)
+        run: pnpm test:eslint-rules
 
       # DS-17 Phase 1 (mockup state naming, #2071): hard gate on the
       # canonical `<base>-state-NN-<label>.{html,jsx}` pattern. Cheap (regex
@@ -502,7 +504,6 @@ jobs:
       - name: Setup Frontend
         uses: ./.github/actions/setup-frontend
         with:
-          node-version: '20'
           pnpm-version: '10'
           working-directory: apps/web
           frozen-lockfile: 'true'
@@ -536,7 +537,6 @@ jobs:
       - name: Setup Frontend
         uses: ./.github/actions/setup-frontend
         with:
-          node-version: '20'
           pnpm-version: '10'
           working-directory: apps/web
           frozen-lockfile: 'true'
@@ -590,7 +590,7 @@ jobs:
       - name: Setup Backend (restore + NuGet cache — #3632)
         uses: ./.github/actions/setup-backend
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
           working-directory: apps/api
           cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
 
@@ -718,9 +718,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # KnowledgeBase cede a Games i test col nome di entrambi (#4488): le esclusioni sono
+        # precedenze, spiegate sopra la matrice di dev-async.yml, e infra/scripts/tests/
+        # integration-shard-matrix.bats verifica doppi e cicli in entrambi i workflow.
         shard:
           - name: "KnowledgeBase"
-            filter_extra: "&(FullyQualifiedName~KnowledgeBase|FullyQualifiedName~DocumentProcessing|FullyQualifiedName~Authentication)"
+            filter_extra: "&(FullyQualifiedName~KnowledgeBase|FullyQualifiedName~DocumentProcessing|FullyQualifiedName~Authentication)&FullyQualifiedName!~SharedGameCatalog&FullyQualifiedName!~GameManagement&FullyQualifiedName!~Administration"
             coverage_file: "integration-coverage-shard1.xml"
           - name: "Games"
             filter_extra: "&(FullyQualifiedName~SharedGameCatalog|FullyQualifiedName~GameManagement|FullyQualifiedName~Administration)"
@@ -783,7 +786,7 @@ jobs:
       - name: Setup Backend (restore + NuGet cache — #3632)
         uses: ./.github/actions/setup-backend
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
           working-directory: apps/api
           cache-version: ${{ vars.CACHE_VERSION || 'v1' }}
 
@@ -855,11 +858,17 @@ jobs:
       # Build step removed (2026-05-25 Build-Once refactor) — backend binaries
       # are downloaded from the upstream `build-backend` job artifact above.
 
-      # Issue #3102: Exclude tests that use their own Testcontainers - they conflict with CI service containers.
-      # - UploadPdfMidPhaseCancellationTests: Uses SharedTestcontainersFixture
-      # - FrontendSdk tests: Use FrontendSdkTestFactory with own containers
-      # - ArbitroAgentIntegrationTests: Uses SharedTestcontainersFixture with orchestration-service (Issue #3871)
-      # These tests run in the dedicated backend-e2e-tests.yml workflow instead.
+      # Esclusioni per nome (#3102), le stesse di dev-async.yml (lo controlla
+      # infra/scripts/tests/integration-shard-matrix.bats). Dove gira ciascun test escluso:
+      # - ArbitroAgent: oggi è ArbitroAgentE2ETests, Category=E2E. La selezione
+      #   Category=Integration lo esclude già; gira in backend-e2e-tests.yml.
+      # Due gruppi di test erano esclusi qui con la motivazione di #3102 («conflitto con i service
+      # container»), e non giravano da nessuna parte: backend-e2e-tests.yml esegue solo Category=E2E.
+      # Ora girano negli shard come gli altri Category=Integration, su un database proprio anche con
+      # TEST_POSTGRES_CONNSTRING:
+      # - i test FrontendSdk (#4518);
+      # - UploadPdfMidPhaseCancellationTests (#4522), nello shard Core. Faceva FLUSHDB sul Redis
+      #   della fixture, che qui è il service container condiviso dallo shard: ora non usa Redis.
       - name: Run Integration Tests
         # PR #1505 (2026-05-25): raised from 30→45 minutes. The GameRef
         # fixture-drift cleanup unblocked ~150 previously-failing tests so
@@ -911,7 +920,7 @@ jobs:
           # is a runtime profiler attached to the dotnet test process.
           dotnet-coverage collect \
             "dotnet test tests/Api.Tests/Api.Tests.csproj \
-              --filter \"Category=Integration&FullyQualifiedName!~UploadPdfMidPhaseCancellationTests&FullyQualifiedName!~FrontendSdk&FullyQualifiedName!~ArbitroAgent${{ matrix.shard.filter_extra }}\" \
+              --filter \"Category=Integration&FullyQualifiedName!~ArbitroAgent${{ matrix.shard.filter_extra }}\" \
               --settings tests/Api.Tests/integration.runsettings \
               --logger \"console;verbosity=minimal\" \
               --no-build \
@@ -1107,7 +1116,7 @@ jobs:
       - name: Setup Backend (restore NuGet for EF design-time tools)
         uses: ./.github/actions/setup-backend
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
           working-directory: apps/api
 
       - name: Download backend artifact
@@ -1126,7 +1135,7 @@ jobs:
 
       - name: Install EF Core Tools
         run: |
-          dotnet tool install --global dotnet-ef
+          dotnet tool install --global dotnet-ef --version 10.*
           echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
 
       - name: Run Database Migrations
@@ -1285,7 +1294,6 @@ jobs:
       - name: Setup Frontend
         uses: ./.github/actions/setup-frontend
         with:
-          node-version: '20'
           pnpm-version: '10'
           working-directory: apps/web
           frozen-lockfile: 'true'

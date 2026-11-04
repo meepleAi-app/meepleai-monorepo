@@ -7,8 +7,8 @@ using Xunit;
 namespace Api.Tests.Infrastructure.Seeders.Catalog;
 
 /// <summary>
-/// Regression guard for #2679: the 6 non-indexable rulebooks (3 corrupted masters +
-/// 3 scan-only with OCR disabled on staging) were removed from the seed manifests (PR #2680),
+/// Regression guard for #2679: the non-indexable rulebooks (corrupted masters and scan-only PDFs
+/// with OCR disabled on staging) were removed from the seed manifests (PR #2680),
 /// while the games themselves stay in the catalog. This test locks that removal in across all
 /// three profiles so a future re-bake (<c>make seed-index</c>, #2516) cannot silently
 /// re-introduce a <c>pdfBlobKey</c>/<c>pdfSha256</c>/<c>pdfVersion</c> for these games.
@@ -16,18 +16,42 @@ namespace Api.Tests.Infrastructure.Seeders.Catalog;
 [Trait("Category", TestCategories.Unit)]
 public sealed class SeedManifestNonIndexableGamesTests
 {
-    // (Title, BggId) of the 6 games whose rulebook PDF was stripped per #2679.
-    // 3 corrupted masters: Gloomhaven, Exploding Kittens, Betrayal at House on the Hill.
-    // 3 scan-only (OCR disabled by design): Lost Ruins of Arnak, Hive Pocket, Guillotine.
+    // (Title, BggId) of the games whose rulebook PDF was stripped per #2679.
+    // Corrupted masters: Exploding Kittens, Betrayal at House on the Hill.
+    // Scan-only (OCR disabled by design): Lost Ruins of Arnak, Hive Pocket, Guillotine.
+    // Gloomhaven left this list with #4470: its master was a scan without text
+    // (gloomhaven_rulebook.pdf), and it now carries an Italian rulebook that has one.
     private static readonly (string Title, int BggId)[] NonIndexable =
     {
-        ("Gloomhaven", 174430),
         ("Exploding Kittens", 172225),
         ("Betrayal at House on the Hill", 10547),
         ("Lost Ruins of Arnak", 312484),
         ("Hive Pocket", 154597),
         ("Guillotine", 116),
     };
+
+    /// <summary>
+    /// #4470: Gloomhaven (174430) is seeded from the Italian translation of the rulebook, which has a
+    /// text layer, and never again from <c>gloomhaven_rulebook.pdf</c>: that file is 74 pages of images
+    /// without a single character of text, so indexing it gives the agent nothing.
+    /// </summary>
+    [Theory]
+    [InlineData(SeedProfile.Dev)]
+    [InlineData(SeedProfile.Staging)]
+    [InlineData(SeedProfile.Prod)]
+    public void Gloomhaven_IsSeededFromTheItalianRulebookWithText_NotFromTheScan(SeedProfile profile)
+    {
+        var manifest = CatalogSeeder.LoadManifest(profile);
+
+        var gloomhaven = manifest.Catalog.Games
+            .SingleOrDefault(g => string.Equals(g.Title, "Gloomhaven", StringComparison.OrdinalIgnoreCase));
+
+        gloomhaven.Should().NotBeNull();
+        gloomhaven!.BggId.Should().Be(174430);
+        gloomhaven.PdfBlobKey.Should().Be("rulebooks/v1/gloomhaven-it_rulebook.pdf",
+            $"the {profile} manifest must seed the rulebook that has text, not the scan");
+        gloomhaven.PdfSha256.Should().NotBeNullOrWhiteSpace();
+    }
 
     [Theory]
     [InlineData(SeedProfile.Dev)]

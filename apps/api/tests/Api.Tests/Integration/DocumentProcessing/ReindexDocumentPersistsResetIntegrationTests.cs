@@ -8,7 +8,7 @@ using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.DocumentProcessing;
 using Api.Infrastructure.Entities.SharedGameCatalog;
-using Api.Middleware.Exceptions;
+using Api.BoundedContexts.DocumentProcessing.Domain.Exceptions;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
@@ -248,7 +248,7 @@ public sealed class ReindexDocumentPersistsResetIntegrationTests : IAsyncLifetim
     /// <summary>
     /// Fills the processing queue to <see cref="ProcessingJob.MaxQueueSize"/> with Queued jobs (all
     /// pointing at one throwaway PDF) so the next <c>EnqueuePdfCommand → ProcessingJob.Create</c>
-    /// hits the capacity guard and throws <see cref="ConflictException"/>. Seeded via an isolated
+    /// hits the capacity guard and throws <see cref="ProcessingQueueFullException"/>. Seeded via an isolated
     /// scope so the rows are committed before the reindex runs.
     /// </summary>
     private async Task SaturateQueueAsync()
@@ -298,8 +298,9 @@ public sealed class ReindexDocumentPersistsResetIntegrationTests : IAsyncLifetim
             new ReindexDocumentCommand(pdfId, IndexerVersionRegistry.Current.Version),
             TestCancellationToken);
 
-        // (a) The failed enqueue surfaces as a retryable conflict — never a phantom success.
-        await act.Should().ThrowAsync<ConflictException>();
+        // (a) The failed enqueue surfaces as a retryable error — never a phantom success. #4443 R8:
+        // a full queue has its own type (429), distinct from the 409 of «already has an active job».
+        await act.Should().ThrowAsync<ProcessingQueueFullException>();
 
         // Verify from a fresh scope: the destructive reset was ROLLED BACK.
         using var verifyScope = _serviceProvider!.CreateScope();

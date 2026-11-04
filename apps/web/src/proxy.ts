@@ -10,7 +10,6 @@
  * Protected Routes:
  * - /library - Game library (post-login default)
  * - /chat - Main chat interface
- * - /upload - Document upload page
  * - /admin - Administration panel
  * - /editor - Editor interface
  * - /settings - User settings

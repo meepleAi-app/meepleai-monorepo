@@ -116,6 +116,20 @@ describe('usePlayRecordDraftPersist', () => {
     expect(localStorage.getItem(KEY)).toBeNull();
   });
 
+  it('clear() leaves a stored draft alone when the hook is disabled (#4802)', () => {
+    // The edit form passes `enabled: false`. The draft in storage belongs to a NEW record that the user may
+    // be in the middle of, not to the record being corrected: closing the edit must not discard it.
+    const stored = JSON.stringify({ savedAt: Date.now(), draft: {} });
+    localStorage.setItem(KEY, stored);
+    const { result } = renderHook(() =>
+      usePlayRecordDraftPersist({ userId: 'user-1', state: baseState(), enabled: false })
+    );
+
+    act(() => result.current.clear());
+
+    expect(localStorage.getItem(KEY)).toBe(stored);
+  });
+
   it('clear() resets lastSavedAt so the indicator hides again', () => {
     const { result, rerender } = renderHook(props => usePlayRecordDraftPersist(props), {
       initialProps: { userId: 'user-1' as string | null, state: baseState() },

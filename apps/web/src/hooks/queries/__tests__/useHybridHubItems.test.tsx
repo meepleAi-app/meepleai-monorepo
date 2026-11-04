@@ -1,8 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 
-import type { AgentDto } from '@/lib/api/schemas/agents.schemas';
-
 import { useHybridHubItems } from '../useHybridHubItems';
 
 const mockUseLibrary = vi.fn();
@@ -188,11 +186,10 @@ describe('useHybridHubItems', () => {
     expect(result.current.sources.sessions).toEqual([]);
   });
 
-  it('allFailed=true only when every source errors (including agents+kb)', () => {
+  it('allFailed=true only when every remaining source errors (agents are no longer a source, #4154)', () => {
     mockUseLibrary.mockReturnValue(failed(new Error('a')));
     mockUseActiveSessions.mockReturnValue(failed(new Error('b')));
     mockUseRecentChatSessions.mockReturnValue(failed(new Error('c')));
-    mockUseAgents.mockReturnValue(failed(new Error('d')));
     mockUseUserKbDocs.mockReturnValue(failed(new Error('e')));
     const { result } = renderHook(() => useHybridHubItems());
     expect(result.current.allFailed).toBe(true);
@@ -208,30 +205,24 @@ describe('useHybridHubItems', () => {
     expect(result.current.allFailed).toBe(false);
   });
 
-  it('AC2.b.5: kb endpoint fails, agents OK — graceful degradation', () => {
-    const agentDto: AgentDto = {
-      id: '11111111-1111-1111-1111-111111111111',
-      name: 'Agent Test',
-      type: 'Tutor',
-      strategyName: 'HybridSearch',
-      strategyParameters: {},
-      isActive: true,
-      createdAt: '2026-05-28T10:00:00+00:00',
-      lastInvokedAt: null,
-      invocationCount: 0,
-      isRecentlyUsed: false,
-      isIdle: true,
-    };
-
+  it('AC2.b.5: kb endpoint fails — graceful degradation', () => {
     mockUseUserKbDocs.mockReturnValue(failed(new Error('500 server error')));
-    mockUseAgents.mockReturnValue(ok([agentDto]));
 
     const { result } = renderHook(() => useHybridHubItems());
 
-    expect(result.current.sources.agents).toHaveLength(1);
     expect(result.current.sources.kb).toEqual([]);
     expect(result.current.partialErrors.kb).toBeInstanceOf(Error);
-    expect(result.current.partialErrors.agents).toBeNull();
     expect(result.current.allFailed).toBe(false);
+  });
+
+  it("#4154: la libreria non chiede più gli agenti — l'agente di sistema non è un oggetto della libreria", () => {
+    mockUseAgents.mockReturnValue(failed(new Error('non deve essere chiamato')));
+
+    const { result } = renderHook(() => useHybridHubItems());
+
+    expect(mockUseAgents).not.toHaveBeenCalled();
+    expect(result.current.sources.agents).toEqual([]);
+    expect(result.current.partialErrors.agents).toBeNull();
+    expect(result.current.totalCounts.agents).toBe(0);
   });
 });

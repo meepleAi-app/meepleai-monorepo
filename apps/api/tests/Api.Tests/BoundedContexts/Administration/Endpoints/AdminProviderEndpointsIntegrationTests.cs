@@ -32,7 +32,8 @@ namespace Api.Tests.BoundedContexts.Administration.Endpoints;
 ///
 /// Rate limit strategy: IntegrationWebApplicationFactory disables rate limiting per-host via its
 /// in-memory configuration. The scenarios that need a differently configured host — no API key, or
-/// rate limiting on — live in AdminProviderProbeHostVariantsIntegrationTests.cs, one host each.
+/// rate limiting on — live in AdminProviderProbeNotConfiguredIntegrationTests.cs and
+/// AdminProviderProbeRateLimitIntegrationTests.cs, one host each.
 ///
 /// Issue #3887: this class mutates NO process environment variable. Both the rate-limit switch and
 /// the provider API key are per-host configuration keys, because Environment.SetEnvironmentVariable
@@ -76,8 +77,9 @@ public sealed class AdminProviderEndpointsIntegrationTests : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        // 1. Start WireMock before any env vars or factory creation
-        _wireMock = WireMockServer.Start();
+        // 1. Start WireMock before any env vars or factory creation. Warm: this class is the first
+        //    in the Games shard to talk to WireMock, and the probe gives up after 5 s (#4298).
+        _wireMock = await WarmWireMockServer.StartAsync();
 
         // 3. Create an isolated test database
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);

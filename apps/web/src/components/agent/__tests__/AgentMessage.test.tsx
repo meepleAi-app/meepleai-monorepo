@@ -301,3 +301,35 @@ describe('AgentMessage', () => {
     });
   });
 });
+
+describe('AgentMessage — citazione senza pagina (#4819)', () => {
+  const agentMessage = (overrides: Partial<AgentMessageType>): AgentMessageType => ({
+    type: 'agent',
+    content: 'Here are the game rules...',
+    timestamp: new Date('2024-01-15T10:30:00Z'),
+    ...overrides,
+  });
+
+  // `{0 && <span/>}` does not render nothing: React writes the 0. A page of 0 must not reach the screen.
+  it.each([0, null])('writes no page, and no stray digit, when the page is %s', page => {
+    const message = agentMessage({
+      citations: [createMockCitation({ source: 'rules.pdf', pageNumber: page, score: 0.85 })],
+    });
+
+    render(<AgentMessage message={message} />);
+
+    expect(screen.getByRole('button', { name: /rules\.pdf/i }).textContent).toBe('rules.pdf(85%)');
+  });
+
+  it('still writes the page when there is one', () => {
+    const message = agentMessage({
+      citations: [createMockCitation({ source: 'rules.pdf', pageNumber: 5, score: 0.85 })],
+    });
+
+    render(<AgentMessage message={message} />);
+
+    expect(screen.getByRole('button', { name: /rules\.pdf/i }).textContent).toBe(
+      'rules.pdfp.5(85%)'
+    );
+  });
+});

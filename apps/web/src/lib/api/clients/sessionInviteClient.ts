@@ -89,7 +89,7 @@ export function createSessionInviteClient({
     },
 
     // #3840 — path separato da /scores/confirm, che appartiene alla conferma di una lettura
-    // dell'assistente (liveSessionsClient.confirmScore). Qui l'host ratifica una proposta:
+    // dell'assistente (liveSessionsClient.confirmScore, ritirata da #4448). Qui l'host ratifica una proposta:
     // stesso flusso di /scores/propose, passo successivo.
     async confirmScore(sessionId, request) {
       await httpClient.post(

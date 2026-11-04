@@ -96,5 +96,68 @@ public class SystemConfigurationTests
         config.LastToggledAt.Should().NotBeNull();
         (config.LastToggledAt >= beforeActivate).Should().BeTrue();
     }
-}
 
+    // ===== #4608: ricostruzione di una riga salvata =====
+
+    private static SystemConfigEntity ReconstituteWithSentinels(out DateTime createdAt, out DateTime updatedAt, out DateTime toggledAt)
+    {
+        createdAt = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+        updatedAt = createdAt.AddDays(1);
+        toggledAt = createdAt.AddDays(2);
+
+        return SystemConfigEntity.Reconstitute(
+            id: new Guid("00000000-0000-0000-0000-0000000000a1"),
+            key: new ConfigKey("stored.key"),
+            value: "stored-value",
+            valueType: "string",
+            description: "stored-description",
+            category: "stored-category",
+            isActive: false,
+            requiresRestart: true,
+            environment: "Staging",
+            version: 7,
+            previousValue: "stored-previous",
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            createdByUserId: new Guid("00000000-0000-0000-0000-0000000000b1"),
+            updatedByUserId: new Guid("00000000-0000-0000-0000-0000000000b2"),
+            lastToggledAt: toggledAt);
+    }
+
+    [Fact]
+    public void Reconstitute_KeepsEveryStoredValue_AndRaisesNoEvent()
+    {
+        var config = ReconstituteWithSentinels(out var createdAt, out var updatedAt, out var toggledAt);
+
+        config.Id.Should().Be(new Guid("00000000-0000-0000-0000-0000000000a1"));
+        config.Key.Value.Should().Be("stored.key");
+        config.Value.Should().Be("stored-value");
+        config.ValueType.Should().Be("string");
+        config.Description.Should().Be("stored-description");
+        config.Category.Should().Be("stored-category");
+        config.IsActive.Should().BeFalse();
+        config.RequiresRestart.Should().BeTrue();
+        config.Environment.Should().Be("Staging");
+        config.Version.Should().Be(7, "the stored version, not the 1 of a new configuration");
+        config.PreviousValue.Should().Be("stored-previous");
+        config.CreatedAt.Should().Be(createdAt);
+        config.UpdatedAt.Should().Be(updatedAt);
+        config.CreatedByUserId.Should().Be(new Guid("00000000-0000-0000-0000-0000000000b1"));
+        config.UpdatedByUserId.Should().Be(new Guid("00000000-0000-0000-0000-0000000000b2"));
+        config.LastToggledAt.Should().Be(toggledAt);
+        config.DomainEvents.Should().BeEmpty("nothing is being created: the configuration already exists");
+    }
+
+    [Fact]
+    public void Reconstitute_ThenUpdateValue_RaisesOnlyTheUpdatedEvent()
+    {
+        var config = ReconstituteWithSentinels(out _, out _, out _);
+
+        config.UpdateValue("new-value", Guid.NewGuid());
+
+        config.DomainEvents.Should().ContainSingle()
+            .Which.GetType().Name.Should().Be("ConfigurationUpdatedEvent");
+        config.Version.Should().Be(8);
+        config.PreviousValue.Should().Be("stored-value");
+    }
+}

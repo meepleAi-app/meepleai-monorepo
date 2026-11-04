@@ -367,7 +367,7 @@ export const NewUserPrompt: Story = {
   parameters: {
     docs: {
       description: {
-        story: 'Default login form - users can switch to registration via AuthModal tabs',
+        story: 'Default login form - users reach registration from the /register page',
       },
     },
   },

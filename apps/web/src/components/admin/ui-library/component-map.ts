@@ -86,7 +86,6 @@ import { RetrievedChunkCard } from '@/components/admin/sandbox/RetrievedChunkCar
 import { SandboxChat } from '@/components/admin/sandbox/SandboxChat';
 import { ServiceHealthMatrix } from '@/components/admin/ServiceHealthMatrix';
 import { AdminSharedGameCardContainer } from '@/components/admin/shared-games/AdminSharedGameCardContainer';
-import { AgentBuilderModal } from '@/components/admin/shared-games/AgentBuilderModal';
 import { BggSearchPanel } from '@/components/admin/shared-games/BggSearchPanel';
 import { GameCatalogGrid } from '@/components/admin/shared-games/game-catalog-grid';
 import { GameForm } from '@/components/admin/shared-games/GameForm';
@@ -449,7 +448,6 @@ export const COMPONENT_MAP: Record<string, AnyComponent> = {
 
   // Admin — Shared Games
   'admin-shared-game-card-container': AdminSharedGameCardContainer,
-  'agent-builder-modal': AgentBuilderModal,
   'bgg-search-panel': BggSearchPanel,
   'game-catalog-grid': GameCatalogGrid,
   'game-form': GameForm,

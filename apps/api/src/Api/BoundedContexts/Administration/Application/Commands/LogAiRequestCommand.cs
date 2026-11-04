@@ -31,5 +31,8 @@ internal record LogAiRequestCommand(
     // record chunks/breakdown leave them null and the QueryDrillPanel
     // surfaces "limited drill" / "breakdown unavailable" fallbacks.
     IReadOnlyList<RetrievedChunkDto>? Chunks = null,
-    LatencyBreakdownDto? Breakdown = null
+    LatencyBreakdownDto? Breakdown = null,
+    // #4168 (ADR-095 D2): la versione del profilo e la lingua di una risposta della pipeline.
+    Guid? ProfileVersionId = null,
+    string? Language = null
 ) : ICommand;

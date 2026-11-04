@@ -1,3 +1,4 @@
+using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
@@ -5,6 +6,7 @@ using Api.BoundedContexts.UserLibrary.Application.DTOs;
 using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Middleware.Exceptions;
 using Api.Services.Pdf;
@@ -25,8 +27,8 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
     private readonly IUserLibraryRepository _libraryRepository;
     private readonly ISharedGameRepository _sharedGameRepository;
     private readonly IGameLabelRepository _labelRepository;
-    private readonly IAgentDefinitionRepository _agentDefinitionRepository;
     private readonly IChatThreadRepository _chatThreadRepository;
+    private readonly IRagAccessService _ragAccessService;
     // #4085: injected alongside the repository abstractions, not instead of them — same
     // mixed pattern already used by GetUserLibraryQueryHandler in this bounded context.
     // CoverUrlResolver needs the EF SharedGameEntity (raw cover-key columns +
@@ -47,8 +49,8 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
         IUserLibraryRepository libraryRepository,
         ISharedGameRepository sharedGameRepository,
         IGameLabelRepository labelRepository,
-        IAgentDefinitionRepository agentDefinitionRepository,
         IChatThreadRepository chatThreadRepository,
+        IRagAccessService ragAccessService,
         MeepleAiDbContext db,
         IBlobStorageService blobStorage,
         HybridCache cache,
@@ -57,22 +59,27 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
         _libraryRepository = libraryRepository ?? throw new ArgumentNullException(nameof(libraryRepository));
         _sharedGameRepository = sharedGameRepository ?? throw new ArgumentNullException(nameof(sharedGameRepository));
         _labelRepository = labelRepository ?? throw new ArgumentNullException(nameof(labelRepository));
-        _agentDefinitionRepository = agentDefinitionRepository ?? throw new ArgumentNullException(nameof(agentDefinitionRepository));
         _chatThreadRepository = chatThreadRepository ?? throw new ArgumentNullException(nameof(chatThreadRepository));
+        _ragAccessService = ragAccessService ?? throw new ArgumentNullException(nameof(ragAccessService));
         _db = db ?? throw new ArgumentNullException(nameof(db));
         _blobStorage = blobStorage ?? throw new ArgumentNullException(nameof(blobStorage));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
+    /// <summary>
+    /// La chiave del dettaglio in cache. #4155: chi cambia la voce di libreria la usa per invalidarlo.
+    /// </summary>
+    internal static string BuildCacheKey(Guid userId, Guid gameId) => $"game-detail:{userId}:{gameId}";
+
     public async Task<GameDetailDto> Handle(GetGameDetailQuery query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
 
         // Try cache first
-        var cacheKey = $"game-detail:{query.UserId}:{query.GameId}";
+        var cacheKey = BuildCacheKey(query.UserId, query.GameId);
 
-        return await _cache.GetOrCreateAsync(
+        var detail = await _cache.GetOrCreateAsync(
             cacheKey,
             async cancel =>
             {
@@ -125,20 +132,6 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
                     ))
                     .ToArray();
 
-                // Map custom agent config if present
-                AgentConfigDto? customAgentConfig = null;
-                if (entry.CustomAgentConfig is not null)
-                {
-                    customAgentConfig = new AgentConfigDto(
-                        LlmModel: entry.CustomAgentConfig.LlmModel,
-                        Temperature: entry.CustomAgentConfig.Temperature,
-                        MaxTokens: entry.CustomAgentConfig.MaxTokens,
-                        Personality: entry.CustomAgentConfig.Personality,
-                        DetailLevel: entry.CustomAgentConfig.DetailLevel,
-                        PersonalNotes: entry.CustomAgentConfig.PersonalNotes
-                    );
-                }
-
                 // Map custom PDF if present
                 CustomPdfDto? customPdf = null;
                 if (entry.CustomPdfMetadata is not null)
@@ -161,13 +154,9 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
                     CreatedAt: l.CreatedAt
                 )).ToArray();
 
-                // Issue #2034 — ConnectionBar pill counts. AgentCount is cross-user
-                // (AgentDefinition.GameId points to the shared catalog game), while
-                // ChatThreadCount is scoped to the requesting user.
-                var agentCount = await _agentDefinitionRepository
-                    .CountActiveByGameIdsAsync(new[] { query.GameId }, cancel)
-                    .ConfigureAwait(false);
-
+                // Issue #2034 — ConnectionBar pill count, scoped to the requesting user.
+                // #4138 removed the cross-user AgentCount (AgentDefinitions linked to the
+                // SharedGame) with the agent pip it fed.
                 var userThreads = await _chatThreadRepository
                     .FindByUserIdAndGameIdAsync(query.UserId, query.GameId, cancel)
                     .ConfigureAwait(false);
@@ -232,7 +221,6 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
                     // Collections
                     RecentSessions: recentSessions,
                     Checklist: checklist,
-                    CustomAgentConfig: customAgentConfig,
                     CustomPdf: customPdf,
                     Labels: labelsDto,
 
@@ -247,13 +235,28 @@ internal class GetGameDetailQueryHandler : IQueryHandler<GetGameDetailQuery, Gam
                         .Where(name => !string.IsNullOrWhiteSpace(name))
                         .ToList(),
 
-                    // Issue #2034: ConnectionBar pill counts.
-                    AgentCount: agentCount,
+                    // Issue #2034: ConnectionBar pill count.
                     ChatThreadCount: chatThreadCount
                 );
             },
             options: CacheOptions,
             cancellationToken: cancellationToken
         ).ConfigureAwait(false);
+
+        // #4155: l'accesso al manuale si legge FUORI dalla cache. Cambia con la dichiarazione di
+        // possesso e quando un admin rende pubblico il RAG del gioco, e la pagina deve smettere
+        // subito di offrire la dichiarazione. Il ruolo si legge dall'utente, come fa la lista.
+        var role = await _db.Users
+            .AsNoTracking()
+            .Where(u => u.Id == query.UserId)
+            .Select(u => u.Role)
+            .FirstOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var userRole = Enum.TryParse<UserRole>(role, ignoreCase: true, out var parsedRole) ? parsedRole : UserRole.User;
+        var hasRagAccess = await _ragAccessService
+            .CanAccessRagAsync(query.UserId, query.GameId, userRole, cancellationToken)
+            .ConfigureAwait(false);
+
+        return detail with { HasRagAccess = hasRagAccess };
     }
 }

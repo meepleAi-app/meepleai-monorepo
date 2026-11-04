@@ -213,12 +213,15 @@ export function useSetPrimaryModel(): UseMutationResult<
       // Update ALL cached list queries
       queryClient.setQueriesData<PagedAiModels>({ queryKey: aiModelsKeys.lists() }, old => {
         if (!old) return old;
+        // #4169: il predefinito è per provider, come fa il server: gli altri provider non cambiano.
+        const provider = old.models.find(model => model.id === request.modelId)?.provider;
         return {
           ...old,
-          models: old.models.map(model => ({
-            ...model,
-            isPrimary: model.id === request.modelId,
-          })),
+          models: old.models.map(model =>
+            model.provider === provider
+              ? { ...model, isPrimary: model.id === request.modelId }
+              : model
+          ),
         };
       });
 

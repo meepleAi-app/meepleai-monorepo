@@ -1,6 +1,7 @@
 using DotNetEnv;
 using Api.Configuration; // CHAT-02
 using Api.Extensions;
+using Api.Filters; // #4063: WithUtcDateTimeArguments
 using Api.Infrastructure;
 using Api.Infrastructure.AzureSdk;
 using Api.Infrastructure.Messaging;
@@ -17,6 +18,7 @@ using Api.Routing.AdministrationDiscover;
 using Api.Routing.GameManagement;
 using Api.Routing.GameToolkit;
 using Api.Routing.KnowledgeBase;
+using Api.SharedKernel.Services; // #4774: AddPublicBaseUrl
 using Api.BoundedContexts.GameManagement.Routing; // Issue #4273
 using Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.AgentMemory.Infrastructure.DependencyInjection;
@@ -56,12 +58,10 @@ using Serilog;
 using Serilog.Events;
 using StackExchange.Redis;
 using System;
-using System.Globalization;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Security.Claims;
-using AspNetIpNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
 
 // Load environment variables from .env.development file (single source of truth for secrets)
 // SECURITY: Only load .env files in Development environment - NEVER in Production/CI
@@ -96,7 +96,10 @@ else if (isCIEnv)
     Console.WriteLine("[DotNetEnv] CI environment detected - skipping .env.development loading");
 }
 
+// #4572: le fasi dell'avvio, misurate da qui. Vedi StartupPhaseTimings.
+var startupTimings = new Api.Observability.StartupPhaseTimings();
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSingleton(startupTimings);
 
 // Spec azure-local §4.2: App Configuration e Key Vault come sorgenti IConfiguration, attive SOLO con
 // AZURE_APPCONFIG_CONNECTION_STRING / AZURE_APPCONFIG_ENDPOINT / AZURE_KEYVAULT_URI valorizzate. Su
@@ -260,7 +263,7 @@ if (forwardedHeadersEnabled)
     {
         options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
 
-        options.KnownNetworks.Clear();
+        options.KnownIPNetworks.Clear();
         options.KnownProxies.Clear();
 
         var knownProxies = forwardedHeadersSection.GetSection("KnownProxies").Get<string[]>() ?? Array.Empty<string>();
@@ -275,21 +278,11 @@ if (forwardedHeadersEnabled)
         var knownNetworks = forwardedHeadersSection.GetSection("KnownNetworks").Get<string[]>() ?? Array.Empty<string>();
         foreach (var network in knownNetworks)
         {
-            if (string.IsNullOrWhiteSpace(network))
+            // System.Net.IPNetwork accetta anche una base con bit di host (172.18.0.1/16) e li azzera:
+            // il ripiego manuale serviva al tipo di HttpOverrides, deprecato in .NET 10 (#4429).
+            if (!string.IsNullOrWhiteSpace(network) && System.Net.IPNetwork.TryParse(network.Trim(), out var ipNetwork))
             {
-                continue;
-            }
-
-            if (AspNetIpNetwork.TryParse(network, out var ipNetwork))
-            {
-                options.KnownNetworks.Add(ipNetwork);
-                continue;
-            }
-
-            var parts = network.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            if (parts.Length == 2 && IPAddress.TryParse(parts[0], out var networkAddress) && int.TryParse(parts[1], CultureInfo.InvariantCulture, out var prefixLength))
-            {
-                options.KnownNetworks.Add(new AspNetIpNetwork(networkAddress, prefixLength));
+                options.KnownIPNetworks.Add(ipNetwork);
             }
         }
 
@@ -330,8 +323,6 @@ builder.Services.Configure<RateLimitConfiguration>(builder.Configuration.GetSect
 builder.Services.Configure<FollowUpQuestionsConfiguration>(builder.Configuration.GetSection("FollowUpQuestions")); // CHAT-02
 builder.Services.Configure<RagPromptsConfiguration>(builder.Configuration.GetSection("RagPrompts")); // AI-07.1: RAG prompt templates
 builder.Services.Configure<HybridCacheConfiguration>(builder.Configuration.GetSection("HybridCache")); // PERF-05: HybridCache configuration
-builder.Services.Configure<LlmQueryComplexityRoutingOptions>(
-    builder.Configuration.GetSection(LlmQueryComplexityRoutingOptions.SectionName)); // Issue #562: per-call model override by query complexity tier
 builder.Services.Configure<HybridSearchConfiguration>(builder.Configuration.GetSection("HybridSearch")); // AI-14: Hybrid search configuration
 builder.Services.Configure<WeeklyEvaluationConfiguration>(builder.Configuration.GetSection("QualityEvaluation")); // BGAI-042: Weekly evaluation configuration
 builder.Services.Configure<BggImportQueueConfiguration>(builder.Configuration.GetSection("BggImportQueue")); // ISSUE-3541: BGG import queue configuration
@@ -364,6 +355,9 @@ builder.Services.AddAntiforgery(opt =>
 builder.Services.Configure<AiProviderSettings>(builder.Configuration.GetSection(AiProviderSettings.SectionName));
 builder.Services.AddSingleton<IValidateOptions<AiProviderSettings>, AiProviderValidator>();
 builder.Services.AddOptions<AiProviderSettings>().ValidateOnStart(); // Trigger validation on startup
+
+// #4774: the one resolver of the public front-end URL, behind every link the API writes for people to open.
+builder.Services.AddPublicBaseUrl();
 
 // Infrastructure services (DB, Cache, HTTP clients)
 builder.Services.AddInfrastructureServices(builder.Configuration, builder.Environment);
@@ -524,6 +518,12 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     // Serialize enums as strings (e.g., "UserRegistered" instead of 0)
     // Required for frontend schema validation (zod expects string enum values)
     options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+
+    // #4519: a date in a request body arrives in UTC — without an offset the written clock is UTC
+    // (the rule of #4063 for the query string), with an offset it is moved to UTC without shifting
+    // the instant. Otherwise Npgsql rejects it on timestamptz and the request answers 500. Writing is
+    // unchanged; the OpenAPI schema is kept identical by UtcDateTimeJson.ConfigureOpenApi.
+    Api.Infrastructure.Serialization.UtcDateTimeJson.AddConverters(options.SerializerOptions);
 });
 
 builder.Services.AddCors(options =>
@@ -621,6 +621,7 @@ if (builder.Environment.IsDevelopment())
 #endif
 
 var app = builder.Build();
+startupTimings.Mark("build");
 
 // Issue #1314 PR 2: wire the current-layout-version ObservableGauge once
 // the DI root is built. Idempotent — safe across HotReload restarts.
@@ -660,6 +661,7 @@ using (var scope = app.Services.CreateScope())
         app.Logger.LogInformation("✓ Embedding configuration validated: Provider={Provider}, Model={Model}, Dimensions={Dimensions}",
             provider, model, embeddingDimensions);
     }
+    startupTimings.Mark("migrations");
 
     // Slice E: surface a misconfigured OPENROUTER_DEFAULT_MODEL at boot (loud) instead of as a
     // chat-time 500. AgentDefaults.DefaultModel feeds the seeded system agent + routing fallbacks
@@ -674,6 +676,21 @@ using (var scope = app.Services.CreateScope())
             "slug (e.g. 'anthropic/claude-3.5-haiku'), a 'deepseek-*' id, or a local Ollama model.",
             Api.BoundedContexts.KnowledgeBase.Domain.AgentDefaults.DefaultModel);
     }
+
+    // #4774: outside a local environment, a public front-end URL that is missing or points at this machine
+    // makes every invitation, share link and e-mail button useless. Logged as an error, never a startup failure.
+    Api.SharedKernel.Services.PublicBaseUrlStartupCheck.LogIfMisconfigured(
+        scope.ServiceProvider.GetRequiredService<Api.SharedKernel.Services.IPublicBaseUrlProvider>(),
+        app.Logger);
+
+    // #4168 (ADR-095 D3): senza una versione pubblicata del profilo la pipeline rifiuta ogni risposta.
+    if (db != null)
+    {
+        await Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AgentProfileStartupCheck.LogIfMissingAsync(
+            scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IAgentProfileRepository>(),
+            app.Logger).ConfigureAwait(false);
+    }
+    startupTimings.Mark("agent-profile-check");
 
     // Create read-only projection views for bounded context entity decomposition.
     // Each BC gets its own view of the "users" table to avoid EF Core conflicts
@@ -695,6 +712,7 @@ using (var scope = app.Services.CreateScope())
             app.Logger.LogWarning(ex, "Could not create user projection views (non-fatal)");
         }
     }
+    startupTimings.Mark("views");
 
     // Epic #318: Layered seeding pipeline with advisory lock (runs independently of migrations)
     if (db != null)
@@ -709,6 +727,7 @@ using (var scope = app.Services.CreateScope())
             app.Logger.LogError(ex, "Seeding failed — API will continue startup");
         }
     }
+    startupTimings.Mark("seeding");
 }
 
 // F3: Register observable gauges that depend on DI singletons
@@ -737,6 +756,10 @@ using (var scope = app.Services.CreateScope())
         .GetRequiredService<Api.BoundedContexts.Administration.Infrastructure.Health.IImpersonationHealthTracker>();
     MeepleAiMetrics.RegisterImpersonationGauges(impersonationTracker);
 }
+
+// #4480: il rilevatore della lingua delle domande carica il profilo degli n-grammi nel costruttore.
+// Costruirlo all'avvio fa fallire subito un'immagine senza profilo, e la prima domanda non paga il caricamento.
+_ = app.Services.GetRequiredService<Api.Services.ILanguageDetectionService>();
 
 // Configure middleware pipeline
 app.ConfigureMiddlewarePipeline(forwardedHeadersEnabled);
@@ -878,7 +901,10 @@ app.MapHealthChecks("/health/seed", new Microsoft.AspNetCore.Diagnostics.HealthC
 });
 
 // API-01: Create v1 API route group and map routing files
-var v1Api = app.MapGroup("/api/v1");
+// #4063: a DateTime argument without offset (`?from=2026-01-01`) is read as UTC for every endpoint
+// of the group. An endpoint mapped on `app` instead does not get it: QueryDateWithoutOffsetIntegrationTests
+// fails if such an endpoint takes a DateTime.
+var v1Api = app.MapGroup("/api/v1").WithUtcDateTimeArguments();
 
 // Authentication
 v1Api.MapAuthEndpoints();
@@ -958,6 +984,7 @@ v1Api.MapDeviceEndpoints();            // Issue #3340: Device tracking and manag
 // Game Management extended
 v1Api.MapPlayRecordEndpoints(); // ISSUE-3889/3890: Play record tracking
 v1Api.MapLiveSessionEndpoints(); // Issue #4749: Live session CQRS endpoints
+v1Api.MapSessionAssistantEndpoints(); // spec 2026-10-11 §6.2: assistente in partita
 v1Api.MapSessionAttachmentEndpoints(); // Issue #5365: Session photo attachment endpoints
 v1Api.MapGameToolkitEndpoints(); // Issue #4753: Game toolkit CQRS endpoints
 v1Api.MapToolkitMarketplaceEndpoints(); // Wave 3 Phase 2 (#805): /toolkits/[id] marketplace
@@ -986,6 +1013,7 @@ v1Api.MapAdminAgentTestEndpoints();     // Admin Agent Auto-Test Suite
 v1Api.MapAdminOpenRouterEndpoints();    // Issue #5077: OpenRouter usage monitoring dashboard
 v1Api.MapAdminEmergencyControlsEndpoints(); // Issue #5476: LLM emergency controls
 v1Api.MapAdminLlmConfigEndpoints();        // Issue #5495: LLM system configuration CRUD
+v1Api.MapAdminSessionAssistantEndpoints(); // spec 2026-10-11 §7.1: esecutore di valutazione dell'assistente
 v1Api.MapStatusBannerEndpoints();          // Issue #1089: Global incident/status banner (public GET + admin GET/PUT)
 if (!app.Environment.IsProduction())
     app.MapAdminSecretsEndpoints();      // Admin secrets management (non-prod only)
@@ -1009,10 +1037,7 @@ app.MapPdfAnalyticsEndpoints();          // Issue #3715: PDF analytics dashboard
 app.MapChatAnalyticsEndpoints();         // Issue #3714: Chat analytics dashboard
 app.MapModelPerformanceEndpoints();      // Issue #3716: Model performance dashboard
 v1Api.MapRateLimitAdminEndpoints();    // Issue #2738: Rate limit admin management
-v1Api.MapGameLibraryConfigEndpoints(); // Issue #2444: Game library tier limits config
-v1Api.MapChatHistoryConfigEndpoints(); // Issue #4918: Chat history tier limits config
 v1Api.MapSessionLimitsConfigEndpoints(); // Issue #3070: Session limits config
-v1Api.MapPdfUploadLimitsConfigEndpoints(); // Issue #3072: PDF upload limits config
 v1Api.MapPdfTierUploadLimitsConfigEndpoints(); // Issue #3333: PDF tier upload limits config (bulk)
 v1Api.MapAdminTierEndpoints();         // E2-1: Admin tier CRUD
 v1Api.MapSessionInviteEndpoints();     // E3-1: Session invite flow
@@ -1094,8 +1119,8 @@ v1Api.MapAdminCircuitBreakerEndpoints(); // Polly circuit breaker state visibili
 v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation
 
 // AI extended
-v1Api.MapTokenManagementEndpoints();   // Token management & monitoring (Issue #3692)
 v1Api.MapAiModelAdminEndpoints();      // AI model management (Issue #2567)
+v1Api.MapAgentProfileAdminEndpoints(); // #4169 (ADR-095 6c): admin agent page — draft, publish, rollback
 v1Api.MapArbitroAgentEndpoints(); // Issue #3759: Arbitro agent endpoints (Rules Arbitration Engine)
 v1Api.MapAgentSessionEndpoints(); // Issue #3184 (AGT-010): Agent session lifecycle endpoints
 v1Api.MapGroup("/admin/ab-tests").MapAdminAbTestEndpoints(); // Issue #5497: A/B Test backend API endpoints
@@ -1107,7 +1132,6 @@ v1Api.MapGroup("/rag").MapRagStrategyEndpoints(); // Issue #8: Public RAG strate
 
 // Business Simulations
 v1Api.MapBudgetEndpoints();           // Budget display system (credit tracking)
-v1Api.MapAdminBudgetEndpoints();     // SP5 F4-C5 #1838: Singleton AppBudget config (GET + PUT /admin/budget)
 v1Api.MapFinancialLedgerEndpoints();  // Financial Ledger CRUD (Issue #3722)
 v1Api.MapCostCalculatorEndpoints();   // Agent Cost Calculator (Issue #3725)
 v1Api.MapResourceForecastEndpoints(); // Resource Forecasting Simulator (Issue #3726)
@@ -1136,6 +1160,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapHub<Api.Hubs.GameStateHub>("/hubs/gamestate");
+
+startupTimings.Mark("pipeline");
 
 // ISSUE-2511: Startup health check for critical services
 using (var scope = app.Services.CreateScope())
@@ -1184,6 +1210,9 @@ using (var scope = app.Services.CreateScope())
             "Startup health check threw instead of reporting status. Application starting in degraded mode.");
     }
 }
+
+startupTimings.Mark("health-check");
+app.Logger.LogInformation("Startup phases: {StartupPhases}", startupTimings);
 
 await app.RunAsync().ConfigureAwait(false);
 

@@ -79,6 +79,7 @@ internal static class SharedGameCatalogServiceExtensions
         services.AddScoped<IGameAnalyticsEventRepository, GameAnalyticsEventRepository>(); // Issue #3918: Trending analytics
         services.AddScoped<ISharedGameTranslationRepository, SharedGameTranslationRepository>(); // Issue #2339: Shared game non-EN translations
         services.AddScoped<IGameTitleResolver, GameTitleResolver>(); // Issue #2339: Batch translation enricher for list queries
+        services.AddScoped<ISharedGameCacheInvalidator, SharedGameCacheInvalidator>(); // #4603: unico punto di evizione di dettaglio e lista
 
         // Register domain services
         services.AddScoped<DocumentVersioningService>(); // Issue #2391 Sprint 1
@@ -108,6 +109,8 @@ internal static class SharedGameCatalogServiceExtensions
         // T2 long-verbatim, T3b grounding) — evaluated cheapest-first / fail-fast by the orchestrator.
         services.AddScoped<IMechanicGuardrail, QuoteCapGuardrail>();
         services.AddScoped<IMechanicGuardrail, CitationPresenceGuardrail>();
+        // T5 (claims v3 structure) is advisory: flags claims, never fails the section nor retries.
+        services.AddScoped<IMechanicGuardrail, RuleStructureGuardrail>();
         services.AddScoped<IMechanicGuardrail, PageSubstringGuardrail>();
         services.AddScoped<IMechanicGuardrail, RejectionSamplingGuardrail>();
         services.AddScoped<IMechanicGuardrail, GroundingGuardrail>();
@@ -301,6 +304,10 @@ internal static class SharedGameCatalogServiceExtensions
         // Issue #534 ME-M3.2: hourly job that aggregates mechanic-card feedback and
         // auto-suppresses cards breaching the admin-tunable thresholds.
         RegisterMechanicCardAutoSuppressionJob(services);
+
+        // Issue #4503: every 15 minutes, rejects mechanic analyses left in Draft past the configured age by a
+        // pipeline that died with the process, so they stop holding their (game, PDF, prompt) slot.
+        RegisterMechanicAnalysisStaleDraftExpirationJob(services);
 
         // Issue #1823 Wave 3 M15 (ADR DEC-3i): Quartz quarterly cron that
         // resets WikidataQidLastVerifiedAt on stale games (>90gg) so the M9
@@ -755,6 +762,35 @@ internal static class SharedGameCatalogServiceExtensions
                 .WithIdentity("MechanicCardAutoSuppressionTrigger", "SharedGameCatalog")
                 .WithCronSchedule("0 0 * * * ?")
                 .WithDescription("Issue #534 ME-M3.2: hourly aggregate of mechanic-card feedback + auto-suppression of cards breaching the admin-tunable thresholds."));
+        });
+    }
+
+    /// <summary>
+    /// Issue #4503 — registers <see cref="MechanicAnalysisStaleDraftExpirationJob"/> with the Quartz scheduler and binds
+    /// <see cref="MechanicAnalysisStaleDraftOptions"/>. Runs every 15 minutes: the pipeline runs in memory
+    /// (<c>BackgroundTaskService</c>), so a restart or a crash leaves its analysis in <c>Draft</c> for good, and the
+    /// filtered unique index counts a <c>Draft</c>. The threshold (default two hours) is the age past which a
+    /// <c>Draft</c> is presumed orphaned.
+    /// </summary>
+    private static void RegisterMechanicAnalysisStaleDraftExpirationJob(IServiceCollection services)
+    {
+        services.AddOptions<MechanicAnalysisStaleDraftOptions>()
+            .Configure<IConfiguration>((opts, cfg) =>
+                cfg.GetSection(MechanicAnalysisStaleDraftOptions.SectionKey).Bind(opts));
+
+        services.AddQuartz(q =>
+        {
+            var jobKey = new JobKey("MechanicAnalysisStaleDraftExpirationJob", "SharedGameCatalog");
+
+            q.AddJob<MechanicAnalysisStaleDraftExpirationJob>(opts => opts
+                .WithIdentity(jobKey)
+                .StoreDurably(true));
+
+            q.AddTrigger(opts => opts
+                .ForJob(jobKey)
+                .WithIdentity("MechanicAnalysisStaleDraftExpirationTrigger", "SharedGameCatalog")
+                .WithCronSchedule("0 0/15 * * * ?")
+                .WithDescription("Issue #4503: every 15 minutes, reject mechanic analyses left in Draft past the configured age."));
         });
     }
 

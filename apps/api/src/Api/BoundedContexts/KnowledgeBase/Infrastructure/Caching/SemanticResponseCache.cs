@@ -13,14 +13,15 @@ internal sealed class SemanticResponseCache(
     private static readonly TimeSpan Ttl = TimeSpan.FromHours(24);
 
     public async Task<CachedRagResponse?> TryGetAsync(
-        Guid gameId, float[] queryVector, CancellationToken ct = default)
+        Guid gameId, SemanticCacheScope scope, float[] queryVector, CancellationToken ct = default)
     {
         try
         {
             var db = redis.GetDatabase();
             var server = redis.GetServer(redis.GetEndPoints()[0]);
             // server.Keys() is synchronous and blocks a thread-pool thread — wrap in Task.Run to avoid starvation on hot query path
-            var keys = await Task.Run(() => server.Keys(pattern: $"rag:cache:{gameId}:v2:*").ToList(), ct)
+            // #4168: solo le voci della stessa versione del profilo e della stessa lingua.
+            var keys = await Task.Run(() => server.Keys(pattern: $"{scope.KeyPrefix(gameId)}*").ToList(), ct)
                 .ConfigureAwait(false);
 
             // Pipeline all StringGetAsync calls to avoid serial round-trips per key
@@ -52,7 +53,7 @@ internal sealed class SemanticResponseCache(
     }
 
     public async Task SetAsync(
-        Guid gameId, float[] queryVector, CachedRagResponse response, CancellationToken ct = default)
+        Guid gameId, SemanticCacheScope scope, float[] queryVector, CachedRagResponse response, CancellationToken ct = default)
     {
         try
         {
@@ -62,7 +63,9 @@ internal sealed class SemanticResponseCache(
             // sole entro il TTL: un bump di prefisso evita che una deserializzazione fallita
             // su schema vecchio faccia eccezione a ogni lookup. L'invalidazione per gioco
             // resta sul prefisso nudo, quindi continua a purgare sia v1 sia v2.
-            var key = $"rag:cache:{gameId}:v2:{Guid.NewGuid():N}";
+            // #4168: v3, con versione del profilo e lingua nel prefisso. Le voci v2, senza ambito,
+            // non si leggono piu' e scadono con il TTL, come le v1 dopo #3855.
+            var key = $"{scope.KeyPrefix(gameId)}{Guid.NewGuid():N}";
             var entry = new CacheEntry(queryVector, response);
             var json = JsonSerializer.Serialize(entry);
             await db.StringSetAsync(key, json, Ttl).ConfigureAwait(false);

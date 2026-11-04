@@ -25,6 +25,11 @@ internal sealed class GroupMemory : AggregateRoot<Guid>
     /// </summary>
     public Guid? LastProcessedEventId { get; private set; }
 
+    private readonly ProcessedSessions _processedSessions = new();
+
+    /// <summary>The sessions already counted in this group's stats (#4839, option C), oldest first.</summary>
+    public IReadOnlyList<Guid> ProcessedSessionIds => _processedSessions.Ids;
+
     /// <summary>EF Core constructor.</summary>
     private GroupMemory() { }
 
@@ -87,11 +92,26 @@ internal sealed class GroupMemory : AggregateRoot<Guid>
     }
 
     /// <summary>
-    /// Records which domain event has just been processed against this aggregate
-    /// (issue #1939 / CF-3). Used by handlers to short-circuit on re-dispatch.
+    /// <c>true</c> when the result of this session has already been counted for this group, whatever event or
+    /// delivery counted it (#4839, option C).
     /// </summary>
-    public void MarkProcessed(Guid eventId)
+    public bool HasProcessedSession(Guid sessionId) => _processedSessions.Contains(sessionId);
+
+    /// <summary>
+    /// Records which domain event, and which session, have just been processed against this aggregate
+    /// (issue #1939 / CF-3, #4839). Used by handlers to short-circuit on re-dispatch.
+    /// </summary>
+    public void MarkProcessed(Guid eventId, Guid sessionId)
     {
         LastProcessedEventId = eventId;
+        _processedSessions.Add(sessionId);
+    }
+
+    /// <summary>Repository reconstitution: puts back the sessions already counted.</summary>
+    internal void RestoreProcessedSessions(IEnumerable<Guid> sessionIds)
+    {
+        ArgumentNullException.ThrowIfNull(sessionIds);
+        foreach (var sessionId in new ProcessedSessions(sessionIds).Ids)
+            _processedSessions.Add(sessionId);
     }
 }

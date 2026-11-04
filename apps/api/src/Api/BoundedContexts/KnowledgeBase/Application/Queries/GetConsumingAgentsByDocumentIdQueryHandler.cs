@@ -67,7 +67,6 @@ internal sealed class GetConsumingAgentsByDocumentIdQueryHandler
         return new KbDocConsumingAgentDto(
             Id: agent.Id,
             Name: agent.Name,
-            Type: agent.Type.Value,
             IsActive: agent.IsActive,
             Status: agent.Status.ToString(),
             IsSystemDefined: agent.IsSystemDefined,

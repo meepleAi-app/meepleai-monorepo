@@ -107,6 +107,27 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
     protected virtual bool EnableRateLimiting => false;
 
     /// <summary>
+    /// Il tetto di connessioni del pool dell'HOST, per FISSARLO a un valore preciso.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Il default e' quello di <see cref="SharedTestcontainersFixture"/> (cerca <c>MaxPoolSize</c> in
+    /// <c>CreateIsolatedDatabaseAsync</c>): piu' basso su CI, dove il Postgres e' esterno e il suo
+    /// <c>max_connections</c> e' condiviso da tutti gli host, che in locale. Una classe che tiene aperte
+    /// piu' richieste insieme puo' esaurirlo: l'ultima richiesta non riesce nemmeno ad autenticarsi, e il test
+    /// passa in locale e cade su CI.
+    /// </para>
+    /// <para>
+    /// Usalo per far girare in locale lo STESSO tetto di CI (<c>2</c>), non per alzarlo: se una classe ne ha
+    /// bisogno di piu' perche' una richiesta tiene una connessione mentre aspetta, e' una perdita da
+    /// correggere. Alzarlo qui e' quello che #4661 aveva fatto per aggirare #4662, dove l'adattatore pgvector
+    /// non restituiva la connessione. Il tetto vale per l'host di questa fixture, che usa un database alla
+    /// volta; non cambia quello delle altre.
+    /// </para>
+    /// </remarks>
+    protected virtual int? HostMaxPoolSize => null;
+
+    /// <summary>
     /// Ultimo passaggio sull'host: qui la fixture concreta sostituisce servizi con dei doppi.
     /// </summary>
     /// <remarks>
@@ -145,6 +166,8 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
     {
         var started = Stopwatch.GetTimestamp();
         long afterTemplate;
+        long afterBootClone;
+        long afterCreate;
         long afterHost;
 
         try
@@ -192,6 +215,7 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
             var bootDatabase = $"{_prefix}_boot";
             await CloneFromTemplateAsync(bootDatabase);
             _createdDatabases.Add(bootDatabase);
+            afterBootClone = Stopwatch.GetTimestamp();
 
             var bootConnection = ConnectionTo(bootDatabase);
             _connectionSource.Provider.SetConnectionString(bootConnection);
@@ -199,13 +223,14 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
             // 3. L'HOST: costruito una volta, con la stringa di connessione mutabile.
             _baseFactory = IntegrationWebApplicationFactory.Create(
                 bootConnection,
-                extraConfig: ExtraConfiguration,
+                extraConfig: WithoutStartupSeeding(ExtraConfiguration),
                 enableRateLimiting: EnableRateLimiting,
                 mutableConnectionString: _connectionSource);
 
             // ConfigureHost di norma restituisce un oggetto NUOVO (WithWebHostBuilder non muta il
             // ricevente), quindi _baseFactory resta da disporre a parte: vedi SafeDisposeAsync.
             Factory = ConfigureHost(_baseFactory);
+            afterCreate = Stopwatch.GetTimestamp();
 
             // `WithWebHostBuilder` è PIGRO: senza questa riga il costo dell'host finirebbe nel primo
             // test invece che qui, e la strumentazione riporterebbe host=0,0 — lo stesso inganno
@@ -226,6 +251,17 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
             $"{Stopwatch.GetElapsedTime(started).TotalSeconds:F1} " +
             $"template={Stopwatch.GetElapsedTime(started, afterTemplate).TotalSeconds:F1} " +
             $"host={Stopwatch.GetElapsedTime(afterTemplate, afterHost).TotalSeconds:F1}");
+
+        // #4572: la fase `host=` qui sopra, divisa. `services` è il primo accesso a Factory.Services,
+        // cioè Program fino a RunAsync più l'avvio del server di test; le fasi di Program le
+        // registra StartupPhaseTimings, e `resto` è ciò che di `services` le fasi non coprono.
+        TestContext.Current?.SendDiagnosticMessage(
+            HostStartupDiagnostics.Format(
+                GetType().Name,
+                services: Stopwatch.GetElapsedTime(afterCreate, afterHost),
+                Factory.Services,
+                ("clone", Stopwatch.GetElapsedTime(afterTemplate, afterBootClone)),
+                ("create", Stopwatch.GetElapsedTime(afterBootClone, afterCreate))));
     }
 
     /// <summary>
@@ -254,9 +290,44 @@ public abstract class SharedHostPerTestDatabaseFixture : IAsyncLifetime
             $"{Stopwatch.GetElapsedTime(started).TotalSeconds:F2}s");
     }
 
-    private string ConnectionTo(string database) =>
-        new NpgsqlConnectionStringBuilder(_adminConnectionString) { Database = database }
-            .ConnectionString;
+    /// <summary>
+    /// La configurazione dell'host con il seeding di avvio spento, se la fixture concreta non lo
+    /// imposta da sé (#4572).
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// In ambiente <c>Testing</c> nessuno imposta <c>Seeding:Profile</c>, quindi
+    /// <c>SeedOrchestrator.ResolveProfile</c> ricade su <c>Dev</c> e Program semina tutto all'avvio.
+    /// Qui l'host parte sul database di <b>avvio</b>, migrato, e il seeding gira per davvero: misurato
+    /// nel run 39429067815 al 72% della costruzione dell'host (38,5 s di media su 53 host, fino a
+    /// 112 s su un runner lento). Ed è lavoro perso, perché nessun test legge il database di avvio:
+    /// <see cref="BeginTestAsync"/> clona il <b>template</b>, migrato ma senza seed.
+    /// </para>
+    /// <para>
+    /// <see cref="IntegrationHostFixture"/> non ne ha bisogno: costruisce l'host su un database vuoto,
+    /// dove il seeding fallisce subito. Una fixture concreta che volesse il seeding all'avvio può
+    /// dichiarare la chiave in <see cref="ExtraConfiguration"/>: vince la sua.
+    /// </para>
+    /// </remarks>
+    private static Dictionary<string, string?> WithoutStartupSeeding(Dictionary<string, string?>? extra)
+    {
+        var config = extra is null
+            ? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, string?>(extra, StringComparer.OrdinalIgnoreCase);
+        config.TryAdd("Seeding:Profile", "None");
+        return config;
+    }
+
+    private string ConnectionTo(string database)
+    {
+        var builder = new NpgsqlConnectionStringBuilder(_adminConnectionString) { Database = database };
+        if (HostMaxPoolSize is { } maxPoolSize)
+        {
+            builder.MaxPoolSize = maxPoolSize;
+        }
+
+        return builder.ConnectionString;
+    }
 
     /// <summary>
     /// Clona il template in <paramref name="name"/>.

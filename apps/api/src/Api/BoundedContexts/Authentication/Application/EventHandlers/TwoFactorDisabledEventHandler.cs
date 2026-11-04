@@ -39,6 +39,7 @@ internal sealed class TwoFactorDisabledEventHandler : DomainEventHandlerBase<Two
                     user.Email,
                     user.DisplayName,
                     domainEvent.WasAdminOverride,
+                    language: user.Language,
                     cancellationToken).ConfigureAwait(false);
 
                 Logger.LogInformation(

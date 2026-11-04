@@ -11,26 +11,14 @@
 
 import React from 'react';
 
-import { FileText, MessageSquare, Activity, ChevronRight, Upload, BookOpen } from 'lucide-react';
+import { FileText, MessageSquare, ChevronRight, Upload, BookOpen } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { DocumentSelectionPanel } from '@/components/library/DocumentSelectionPanel';
 import { Badge } from '@/components/ui/data-display/badge';
-// AgentStatusBadge and KbStatusBadge removed in MeepleCard rewrite — inline replacements
-type AgentStatus = 'active' | 'idle' | 'training' | 'error';
-function AgentStatusBadge({ status }: { status: AgentStatus; size?: string; showLabel?: boolean }) {
-  const colors: Record<string, string> = {
-    active: 'bg-green-100 text-green-700',
-    idle: 'bg-muted text-muted-foreground',
-    training: 'bg-blue-100 text-blue-700',
-    error: 'bg-red-100 text-red-700',
-  };
-  return (
-    <span className={`rounded px-1.5 py-0.5 text-xs font-semibold ${colors[status] ?? ''}`}>
-      {status}
-    </span>
-  );
-}
+// KbStatusBadge removed in MeepleCard rewrite — inline replacement.
+// Issue #4138: a local AgentStatusBadge stood here too, rendering the agent status row that
+// has gone with the per-agent status signal.
 type KbStatus = 'indexed' | 'processing' | 'failed' | 'none';
 function KbStatusBadge({ status }: { status: KbStatus; size?: string }) {
   const colors: Record<string, string> = {
@@ -46,9 +34,7 @@ function KbStatusBadge({ status }: { status: KbStatus; size?: string }) {
   );
 }
 import { Button } from '@/components/ui/primitives/button';
-import { useAgentKbDocs, useAgentThreads } from '@/hooks/queries/useAgentData';
-import { useGameAgents } from '@/hooks/queries/useGameAgents';
-import { useAgentStatus } from '@/hooks/useAgentStatus';
+import { useAgentKbDocs, useGameThreads } from '@/hooks/queries/useAgentData';
 import { useGameKbStatus } from '@/lib/domain-hooks/useGameKbStatus';
 import { useGameTableDrawer } from '@/lib/stores/game-table-drawer-store';
 
@@ -72,18 +58,6 @@ const CARD_ROW = 'bg-[#21262d] rounded-lg p-3 border border-[#30363d]';
 // Helpers
 // ============================================================================
 
-/**
- * Map useAgentStatus ragStatus string to AgentStatusBadge status.
- */
-function mapRagStatusToBadge(ragStatus: string | undefined, isReady: boolean): AgentStatus {
-  if (!ragStatus) return 'idle';
-  const lower = ragStatus.toLowerCase();
-  if (lower === 'ready' && isReady) return 'active';
-  if (lower === 'processing' || lower === 'training') return 'training';
-  if (lower === 'error' || lower === 'failed') return 'error';
-  return 'idle';
-}
-
 // ============================================================================
 // Component
 // ============================================================================
@@ -91,17 +65,21 @@ function mapRagStatusToBadge(ragStatus: string | undefined, isReady: boolean): A
 export function GameTableZoneKnowledge({ gameId }: GameTableZoneKnowledgeProps): React.ReactNode {
   const router = useRouter();
 
-  // Resolve the actual agent ID for this game
-  const { data: agents = [] } = useGameAgents({ gameId });
-  const resolvedAgentId = agents.length > 0 ? agents[0].id : null;
-
+  // Issue #4138: this resolved `agents[0].id` from useGameAgents and gated three blocks on it.
+  // All three were wrong in a different way:
+  //   - the chat preview used useAgentThreads(agentId), and the endpoint IGNORES `agentId` — it
+  //     binds `gameId`. So the "preview" showed the user's most recent thread across ALL games,
+  //     labelled as this game's. It now uses useGameThreads.
+  //   - the agent status block showed /agents/{id}/status, a GLOBAL signal once there is one
+  //     system agent. The per-game signal is `kbStatus`, already rendered above.
+  //   - the document panel takes `gameId` and never needed an agent at all: it was hidden
+  //     behind a condition irrelevant to it.
   const { data: docs = [], isLoading: docsLoading } = useAgentKbDocs(gameId);
-  const { data: threads = [], isLoading: threadsLoading } = useAgentThreads(resolvedAgentId ?? '');
-  const { status: agentStatus, isLoading: statusLoading } = useAgentStatus(resolvedAgentId ?? '');
+  const { data: threads = [], isLoading: threadsLoading } = useGameThreads(gameId);
   const drawerOpen = useGameTableDrawer(s => s.open);
   const kbStatus = useGameKbStatus(gameId);
 
-  const lastThread = resolvedAgentId && threads.length > 0 ? threads[0] : null;
+  const lastThread = threads.length > 0 ? threads[0] : null;
 
   return (
     <div className="space-y-3">
@@ -194,86 +172,64 @@ export function GameTableZoneKnowledge({ gameId }: GameTableZoneKnowledgeProps):
       {/* House Rules */}
       <HouseRulesSection gameId={gameId} />
 
-      {/* Chat preview — only when an agent exists */}
-      {resolvedAgentId && (
-        <div className={CARD_ROW} data-testid="chat-preview-section">
-          <div className="flex items-center gap-2 mb-2">
-            <MessageSquare className="h-4 w-4 text-amber-400" />
-            <span className="text-sm font-quicksand font-semibold text-[#e6edf3]">Chat</span>
-          </div>
-
-          {threadsLoading ? (
-            <div className="h-6 bg-[#30363d] rounded animate-pulse" data-testid="chat-skeleton" />
-          ) : lastThread ? (
-            <div className="space-y-2">
-              <p
-                className="text-xs text-[#8b949e] font-nunito truncate"
-                data-testid="last-thread-preview"
-              >
-                {lastThread.firstMessagePreview || 'Conversazione recente'}
-              </p>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="w-full justify-between text-amber-400 hover:text-amber-300 hover:bg-[#30363d]"
-                onClick={() => drawerOpen({ type: 'chat', gameId })}
-                data-testid="open-chat-btn"
-              >
-                Apri chat
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <p className="text-xs text-[#8b949e] font-nunito">Nessuna conversazione</p>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="w-full justify-between text-amber-400 hover:text-amber-300 hover:bg-[#30363d]"
-                onClick={() => drawerOpen({ type: 'chat', gameId })}
-                data-testid="open-chat-btn"
-              >
-                Inizia chat
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+      {/* Chat preview — threads of this game */}
+      <div className={CARD_ROW} data-testid="chat-preview-section">
+        <div className="flex items-center gap-2 mb-2">
+          <MessageSquare className="h-4 w-4 text-amber-400" />
+          <span className="text-sm font-quicksand font-semibold text-[#e6edf3]">Chat</span>
         </div>
-      )}
 
-      {/* Agent status — only when an agent exists */}
-      {resolvedAgentId && (
-        <div className={`${CARD_ROW} flex items-center gap-3`} data-testid="agent-status-section">
-          <Activity className="h-4 w-4 text-amber-400 shrink-0" />
-          <span className="text-sm font-quicksand font-semibold text-[#e6edf3]">Agente</span>
-          <div className="ml-auto">
-            {statusLoading ? (
-              <div
-                className="h-5 w-16 bg-[#30363d] rounded animate-pulse"
-                data-testid="status-skeleton"
-              />
-            ) : (
-              <AgentStatusBadge
-                status={mapRagStatusToBadge(agentStatus?.ragStatus, agentStatus?.isReady ?? false)}
-                showLabel
-                size="sm"
-              />
-            )}
+        {threadsLoading ? (
+          <div className="h-6 bg-[#30363d] rounded animate-pulse" data-testid="chat-skeleton" />
+        ) : lastThread ? (
+          <div className="space-y-2">
+            <p
+              className="text-xs text-[#8b949e] font-nunito truncate"
+              data-testid="last-thread-preview"
+            >
+              {lastThread.firstMessagePreview || 'Conversazione recente'}
+            </p>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="w-full justify-between text-amber-400 hover:text-amber-300 hover:bg-[#30363d]"
+              onClick={() => drawerOpen({ type: 'chat', gameId })}
+              data-testid="open-chat-btn"
+            >
+              Apri chat
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-xs text-[#8b949e] font-nunito">Nessuna conversazione</p>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="w-full justify-between text-amber-400 hover:text-amber-300 hover:bg-[#30363d]"
+              onClick={() => drawerOpen({ type: 'chat', gameId })}
+              data-testid="open-chat-btn"
+            >
+              Inizia chat
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Issue #4138: an "Agente" status row stood here, from useAgentStatus(agents[0].id).
+          With one system agent that status is global, not a property of this game: the
+          per-game readiness is `kbStatus`, rendered in the KB block above. */}
+
+      {/* Document selection — per game, never needed an agent */}
+      <details className="mt-3">
+        <summary className="text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground select-none">
+          Gestisci documenti agente
+        </summary>
+        <div className="mt-2 bg-[#21262d] rounded-lg border border-[#30363d] p-3">
+          <DocumentSelectionPanel gameId={gameId} />
         </div>
-      )}
-
-      {/* Agent Document Selection — only when an agent exists */}
-      {resolvedAgentId && (
-        <details className="mt-3">
-          <summary className="text-xs font-semibold text-muted-foreground uppercase tracking-wider cursor-pointer hover:text-foreground select-none">
-            Gestisci documenti agente
-          </summary>
-          <div className="mt-2 bg-[#21262d] rounded-lg border border-[#30363d] p-3">
-            <DocumentSelectionPanel gameId={gameId} />
-          </div>
-        </details>
-      )}
+      </details>
     </div>
   );
 }

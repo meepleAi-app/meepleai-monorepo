@@ -17,6 +17,9 @@ internal record LlmSystemConfigDto(
     int CircuitBreakerSuccessThreshold,
     decimal DailyBudgetUsd,
     decimal MonthlyBudgetUsd,
+    int DegradeThresholdPercent,
+    int BackgroundQuotaPercent,
+    int EvaluationQuotaPercent,
     string FallbackChainJson,
     string Source, // "database" or "appsettings"
     DateTime? LastUpdatedAt,

@@ -27,15 +27,37 @@ public sealed class LlmSystemConfigEntityConfiguration : IEntityTypeConfiguratio
             .IsRequired()
             .HasDefaultValue(3);
 
+        // #4166: HasSentinel. Con un valore predefinito di colonna EF non scrive una proprietà che vale
+        // il default del tipo: un tetto di 0 salvato dall'admin diventava 10 $, una quota a 0 il 30%.
+        // Con la sentinella a -1, valore fuori dall'intervallo valido, lo 0 si scrive.
         builder.Property(e => e.DailyBudgetUsd)
             .IsRequired()
             .HasPrecision(18, 6)
-            .HasDefaultValue(10.00m);
+            .HasDefaultValue(10.00m)
+            .HasSentinel(-1m);
 
         builder.Property(e => e.MonthlyBudgetUsd)
             .IsRequired()
             .HasPrecision(18, 6)
-            .HasDefaultValue(100.00m);
+            .HasDefaultValue(100.00m)
+            .HasSentinel(-1m);
+
+        // #4166: valori predefiniti uguali a quelli del dominio, così una riga salvata prima della
+        // fetta 3 riceve la politica di default e non zero (che vorrebbe dire background a quota 0).
+        builder.Property(e => e.DegradeThresholdPercent)
+            .IsRequired()
+            .HasDefaultValue(80)
+            .HasSentinel(-1);
+
+        builder.Property(e => e.BackgroundQuotaPercent)
+            .IsRequired()
+            .HasDefaultValue(30)
+            .HasSentinel(-1);
+
+        builder.Property(e => e.EvaluationQuotaPercent)
+            .IsRequired()
+            .HasDefaultValue(20)
+            .HasSentinel(-1);
 
         builder.Property(e => e.FallbackChainJson)
             .IsRequired()

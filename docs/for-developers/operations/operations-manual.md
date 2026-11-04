@@ -2328,7 +2328,7 @@ dmesg | grep -i "oom\|killed" | tail -20
 
 ### LLM Provider Outage Recovery — Reset Circuit Breakers
 
-**When to use**: All LLM circuits stuck in `Open` after upstream provider outage is resolved. Default cooldown is `circuitBreakerOpenDurationSeconds` (configured in `/admin/ai` LLM config, typically 30s). If you can't wait — or if the cooldown was misconfigured to a high value — manually reset.
+**When to use**: All LLM circuits stuck in `Open` after upstream provider outage is resolved. Default cooldown is 30s: the LLM provider registry takes it from `AI:CircuitBreaker:OpenDurationSeconds` in appsettings, the Polly breakers of the HTTP clients have it fixed in code. The admin page no longer edits it (#4169): the saved value never reached the runtime. If you can't wait — or if the cooldown was misconfigured to a high value — manually reset.
 
 > 🟡 **Note (2026-06-03 per #1834 spec-panel review)**: There is NO admin UI button for "Reset all circuit breakers". The Polly circuit breaker state is in-memory per API process — restarting the `api` container is the simplest reset. Direct in-process reset via admin endpoint is tracked separately if/when on-call composition justifies it.
 
@@ -2349,11 +2349,19 @@ Trade-off: brief (~5s) API unavailability while container restarts. No data loss
 
 #### Option B — Force-trip a single circuit manually
 
-Not currently supported. If a single provider needs to be ejected from the routing chain (e.g. compromised key suspected), use `/admin/ai` → LLM config → `fallbackChainJson` to remove the entry, save, then restart `api`.
+Not currently supported. ⚠️ The procedure documented here until #4169 — editing `fallbackChainJson` in `/admin/ai` — **never worked**: the runtime does not read that field. The real fallback order comes from the active models of the model catalog (`AiModelConfiguration`, by `Priority`), then `AI:FallbackChain` in appsettings, then any other registered client. Deactivating a provider's models moves it to the back, it does not eject it. To eject a provider whose key may be compromised, **revoke the key in the provider's console**: its calls fail, the circuit opens, and the fallback moves on.
 
 #### Verify recovery
 
 Visit `/admin/providers` (admin role required). The `CircuitBreakerGrid` section should show all chips `closed` (green) and the cooldown bar should disappear. The KPI `Circuit health` in the hero should read `N/N` (all healthy).
+
+### LLM — «servizio AI in pausa» (tetto di spesa)
+
+**Quando**: gli utenti ricevono «Il servizio AI è in pausa…», oppure sale `meepleai_llm_budget_rejected_calls_total`. Dalla fetta 3 di ADR-095 (#4166) il gateway rifiuta prima di spendere le chiamate oltre il tetto giornaliero o mensile, oltre la quota di background e valutazioni, o verso un modello fuori catalogo. Il motivo è nell'etichetta `reason` e nel warning dell'API.
+
+**Prima del tetto** (fetta 3b): oltre la soglia di degrado, l'80% del tetto giornaliero, le risposte passano al modello di riserva del profilo agente e il background e le valutazioni si fermano con `reason=BackgroundPaused`. Le risposte continuano. Nel log dell'API compare «Budget degrade: …».
+
+**Cosa fare**: se il tetto è giusto, la pausa è il comportamento voluto. Per alzarlo: `/admin/ai` → tab **Budget**, tetti giornaliero e mensile; vale entro un minuto. La stessa pagina mostra il consumo per classe e se il degrado è attivo. Dettagli, quote e codici d'errore: [`llm-budget-cap.md`](./llm-budget-cap.md).
 
 ### Communication Template
 

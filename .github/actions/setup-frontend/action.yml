@@ -2,9 +2,11 @@ name: 'Setup Frontend Environment'
 description: 'Sets up pnpm, Node.js, and installs frontend dependencies with caching'
 inputs:
   node-version:
-    description: 'Node.js version to use'
+    description: |
+      Node.js version to use. Empty (default) reads .nvmrc at the repo root,
+      the single source of the Node version for CI and the web image (#4430).
     required: false
-    default: '20'
+    default: ''
   pnpm-version:
     description: 'pnpm version to use'
     required: false
@@ -40,6 +42,7 @@ runs:
       uses: actions/setup-node@v6
       with:
         node-version: ${{ inputs.node-version }}
+        node-version-file: ${{ inputs.node-version == '' && '.nvmrc' || '' }}
         # Note: Built-in cache disabled because actions/setup-node doesn't include
         # runner.arch in cache key, causing x86/ARM64 cache collisions (GH issue #1008).
         # Custom cache step below uses runner.arch-aware keys instead.

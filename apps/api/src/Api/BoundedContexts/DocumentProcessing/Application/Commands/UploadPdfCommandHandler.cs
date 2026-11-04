@@ -1,4 +1,5 @@
 using Api.SharedKernel.Domain.ValueObjects;
+using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
@@ -122,16 +123,30 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
 
         var fileName = validationResult.SanitizedFileName!;
 
+        // #4443 R2: the processing priority is an admin control. A user who sends one gets a 403,
+        // not a parameter silently dropped (the endpoint used to null it out for non-admins).
+        if (command.Priority is not null)
+        {
+            await EnsureMayChoosePriorityAsync(userId, cancellationToken).ConfigureAwait(false);
+        }
+
         // Issue #3664: Handle private game PDF uploads
         if (command.PrivateGameId.HasValue)
         {
             // Compute content hash and check for existing KBs with same content
             var privateContentHash = await ComputeContentHashAsync(file, cancellationToken).ConfigureAwait(false);
 
-            // Check 1: User's own PDFs with same content (any game)
+            // The PDF this user already uploaded to THIS private game (#4317, "strada 1"). A private game has its
+            // own PDF and its own index, even for the same content: the same file on a second private game used to be
+            // told "Existing KB found in your uploads", and the second game stayed without a PDF. A PDF of the
+            // catalog with the same content is not reused either, which is what the second check here used to do. A
+            // failed one is not a KB to point at: the upload goes on, as in the deduplication service.
+            var privateGameId = command.PrivateGameId.Value;
+            var failedState = nameof(PdfProcessingState.Failed);
             var privateUserMatch = await _db.PdfDocuments
                 .AsNoTracking()
-                .Where(p => p.ContentHash == privateContentHash && p.UploadedByUserId == userId)
+                .Where(p => p.ContentHash == privateContentHash && p.UploadedByUserId == userId
+                            && p.PrivateGameId == privateGameId && p.ProcessingState != failedState)
                 .Select(p => new
                 {
                     p.Id,
@@ -156,40 +171,12 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
                 return new PdfUploadResult(true, "Existing KB found in your uploads", null, kbInfo);
             }
 
-            // Check 2: SharedGameCatalog PDFs with same content
-            var privateSharedMatch = await _db.PdfDocuments
-                .AsNoTracking()
-                .Where(p => p.ContentHash == privateContentHash && p.SharedGameId != null)
-                .Select(p => new
-                {
-                    p.Id,
-                    p.FileName,
-                    p.ProcessingState,
-                    p.SharedGameId,
-                    GameName = _db.SharedGames.Where(sg => sg.Id == p.SharedGameId).Select(sg => sg.Title).FirstOrDefault(),
-                    TotalChunks = _db.VectorDocuments.Where(vd => vd.PdfDocumentId == p.Id).Select(vd => (int?)vd.ChunkCount).FirstOrDefault()
-                })
-                .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-
-            if (privateSharedMatch != null)
-            {
-                var kbInfo = new ExistingKbInfoDto(
-                    PdfDocumentId: privateSharedMatch.Id,
-                    Source: "shared",
-                    FileName: privateSharedMatch.FileName,
-                    ProcessingState: privateSharedMatch.ProcessingState ?? "Pending",
-                    TotalChunks: privateSharedMatch.TotalChunks,
-                    OriginalGameName: privateSharedMatch.GameName,
-                    SharedGameId: privateSharedMatch.SharedGameId);
-                return new PdfUploadResult(true, "Existing KB found in shared catalog", null, kbInfo);
-            }
-
             return await HandlePrivateGamePdfUploadAsync(
                 command.PrivateGameId.Value, userId, file, fileName, privateContentHash, cancellationToken).ConfigureAwait(false);
         }
 
         // Check user quota and permissions (also resolves/creates game)
-        var (quotaAllowed, quotaError, _, resolvedGameId) = await CheckUserQuotaAsync(
+        var (quotaAllowed, quotaError, _, resolvedGameId, processViaQueue) = await CheckUserQuotaAsync(
             userId, command.GameId, command.Metadata, file, cancellationToken).ConfigureAwait(false);
 
         if (!quotaAllowed || !resolvedGameId.HasValue)
@@ -202,10 +189,16 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
         // Compute content hash and check for existing KBs with same content
         var contentHash = await ComputeContentHashAsync(file, cancellationToken).ConfigureAwait(false);
 
-        // Check 1: User's own PDFs with same content (any game)
+        // Check 1: User's own PDFs with same content, on THIS catalog game. A PDF the user keeps on a private game, or
+        // on another catalog game, is not a document to reuse for this one (#4326): the upload was told "Existing KB
+        // found in your uploads" and the game stayed without one (retrieval reads a game's documents by its own id).
+        // A failed PDF is not a KB to point at: the upload goes on, as in the deduplication service.
+        var catalogGameId = resolvedGameId.Value;
+        var failedCatalogState = nameof(PdfProcessingState.Failed);
         var userMatch = await _db.PdfDocuments
             .AsNoTracking()
-            .Where(p => p.ContentHash == contentHash && p.UploadedByUserId == userId)
+            .Where(p => p.ContentHash == contentHash && p.UploadedByUserId == userId && p.SharedGameId == catalogGameId
+                        && p.ProcessingState != failedCatalogState)
             .Select(p => new
             {
                 p.Id,
@@ -230,10 +223,11 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
             return new PdfUploadResult(true, "Existing KB found in your uploads", null, kbInfo);
         }
 
-        // Check 2: SharedGameCatalog PDFs with same content
+        // Check 2: PDFs of THIS catalog game with same content, uploaded by anybody
         var sharedMatch = await _db.PdfDocuments
             .AsNoTracking()
-            .Where(p => p.ContentHash == contentHash && p.SharedGameId != null)
+            .Where(p => p.ContentHash == contentHash && p.SharedGameId == catalogGameId
+                        && p.ProcessingState != failedCatalogState)
             .Select(p => new
             {
                 p.Id,
@@ -267,7 +261,9 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
             return new PdfUploadResult(false, storageResult.ErrorMessage ?? "Failed to store file", null);
         }
 
-        // Apply priority from command (admin upload with priority override)
+        // Apply priority from command (admin upload with priority override). The record keeps it for
+        // ProcessPendingPdfs; the job, below, is created with it (#4443 R2 — there used to be no job
+        // here to update, so the priority changed nothing).
         if (!string.IsNullOrWhiteSpace(command.Priority))
         {
             var priorityEnum = string.Equals(command.Priority, "urgent", StringComparison.OrdinalIgnoreCase)
@@ -275,25 +271,82 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
                 : ProcessingPriority.High;
 
             pdfDoc!.ProcessingPriority = priorityEnum.ToString();
-
-            // Also update the ProcessingJob priority int for Quartz queue ordering
-            // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06),
-            // quindi senza di esso questa lettura e' DETACHED: le mutazioni sotto non raggiungono
-            // il change tracker e SaveChangesAsync non scrive, e non solleva.
-            var job = await _db.ProcessingJobs
-                .AsTracking()
-                .FirstOrDefaultAsync(j => j.PdfDocumentId == pdfDoc.Id, cancellationToken).ConfigureAwait(false);
-            if (job != null)
-            {
-                job.Priority = (int)priorityEnum;
-            }
-
             await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        if (processViaQueue)
+        {
+            return await EnqueueForProcessingAsync(
+                userId, gameId, file, storageResult, pdfDoc!, ToJobPriority(command.Priority), cancellationToken).ConfigureAwait(false);
         }
 
         // Reserve quota and start background processing
         return await ReserveQuotaAndStartProcessingAsync(
             userId, gameId, file, storageResult, pdfDoc!, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>Job priority of an upload: «urgent» 30, otherwise normal 10 (the queue panel's values).</summary>
+    internal static int ToJobPriority(string? priority) =>
+        string.Equals(priority, "urgent", StringComparison.OrdinalIgnoreCase)
+            ? (int)ProcessingPriority.Urgent
+            : (int)ProcessingPriority.Normal;
+
+    private async Task EnsureMayChoosePriorityAsync(Guid userId, CancellationToken cancellationToken)
+    {
+        var role = await _db.Users.AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => u.Role)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        // TryParse fails closed: an absent or unknown role is not allowed to choose.
+        if (!Role.TryParse(role, out var parsed) || !parsed.HasPermission(Role.Editor))
+        {
+            throw new Api.Middleware.Exceptions.ForbiddenException("Only admins and editors can set the processing priority.");
+        }
+    }
+
+    /// <summary>
+    /// #4443 R2 (decision A): an admin or editor upload is processed by the queue, its only owner — no
+    /// background task. The panel used to get a background task here AND enqueue the same PDF, and the
+    /// worker's job ended Failed («SkippedNotClaimed») while the task processed the document.
+    /// </summary>
+    /// <remarks>
+    /// The job skips the queue cap, like the chunked upload (#4442, decision 1a): an admin uploading must
+    /// not be refused because a bulk reindex filled the queue. Editors and above have unlimited quota, so
+    /// there is no reservation to confirm or release; the upload count still goes up.
+    /// </remarks>
+    private async Task<PdfUploadResult> EnqueueForProcessingAsync(
+        Guid userId,
+        string gameId,
+        IFormFile file,
+        BlobStorageResult storageResult,
+        PdfDocumentEntity pdfDoc,
+        int priority,
+        CancellationToken cancellationToken)
+    {
+        Guid jobId;
+        try
+        {
+            jobId = await _mediator.Send(
+                new EnqueuePdfCommand(pdfDoc.Id, userId, priority, BypassQueueCap: true),
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, "Could not enqueue uploaded PDF {PdfId}; removing the record and the stored object", pdfDoc.Id);
+            // Without a job nothing would ever process the record. CancellationToken.None: a cancelled
+            // request must not leave the object behind as well.
+            await CleanupStoredUploadAsync(storageResult.FileId!, gameId, pdfDoc, CancellationToken.None).ConfigureAwait(false);
+            RecordUploadMetricSafely("enqueue_failed", file.Length);
+            return new PdfUploadResult(false, "The PDF could not be queued for processing. Please retry the upload.", null);
+        }
+
+        await _quotaService.IncrementUploadCountAsync(userId, cancellationToken).ConfigureAwait(false);
+        await InvalidateCacheSafelyAsync(gameId, "PDF upload", cancellationToken).ConfigureAwait(false);
+        RecordUploadMetricSafely("success", file.Length);
+        await CreateKbCardEntityLinkSafelyAsync(pdfDoc.Id, pdfDoc.SharedGameId ?? Guid.Empty, userId, cancellationToken).ConfigureAwait(false);
+
+        _logger.LogInformation("PDF {PdfId} uploaded and queued as job {JobId} with priority {Priority}", pdfDoc.Id, jobId, priority);
+        return new PdfUploadResult(true, "PDF uploaded and queued for processing", ToDocumentDto(pdfDoc), ProcessingJobId: jobId);
     }
 
     /// <summary>
@@ -358,7 +411,7 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
     /// Checks user quota and permissions for PDF upload.
     /// Returns (allowed, errorMessage, userTier, gameId).
     /// </summary>
-    private async Task<(bool Allowed, string? ErrorMessage, string? UserTier, Guid? GameId)> CheckUserQuotaAsync(
+    private async Task<(bool Allowed, string? ErrorMessage, string? UserTier, Guid? GameId, bool ProcessViaQueue)> CheckUserQuotaAsync(
         Guid userId,
         string? gameId,
         PdfUploadMetadata? metadata,
@@ -373,20 +426,21 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
 
             if (!gameSuccess || !resolvedGameId.HasValue)
             {
-                return (false, gameError!, null, null);
+                return (false, gameError!, null, null, false);
             }
 
             // Get user and validate quota
             var user = await GetUserForQuotaCheckAsync(userId, file, cancellationToken).ConfigureAwait(false);
             if (!user.HasValue)
             {
-                return (false, "User not found. Please ensure you are authenticated.", null, null);
+                return (false, "User not found. Please ensure you are authenticated.", null, null, false);
             }
 
             var (uId, uTier, uRole) = user.Value;
             var (allowed, error, tier, _) = await ValidateUserQuotaAsync(uId, uTier, uRole, file, cancellationToken).ConfigureAwait(false);
 
-            return (allowed, error, tier, resolvedGameId);
+            // #4443 R2: an admin or editor upload is processed by the queue (decision A).
+            return (allowed, error, tier, resolvedGameId, Role.Parse(uRole).HasPermission(Role.Editor));
         }
         catch (OperationCanceledException)
         {
@@ -396,7 +450,7 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
         {
             RecordUploadMetricSafely("db_unavailable", file.Length);
             _logger.LogError(ex, "Database unavailable during PDF upload");
-            return (false, "Database unavailable. Please retry the upload.", null, null);
+            return (false, "Database unavailable. Please retry the upload.", null, null, false);
         }
     }
 
@@ -689,7 +743,7 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
 
         if (!reservationResult.Reserved)
         {
-            await CleanupAfterQuotaFailureAsync(storageResult.FileId!, gameId, pdfDoc, cancellationToken).ConfigureAwait(false);
+            await CleanupStoredUploadAsync(storageResult.FileId!, gameId, pdfDoc, cancellationToken).ConfigureAwait(false);
             RecordUploadMetricSafely("quota_reservation_failed", file.Length);
             return new PdfUploadResult(false, reservationResult.ErrorMessage!, null);
         }
@@ -698,13 +752,11 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
             "Quota reserved for user {UserId}, PDF {PdfId}, expires at {ExpiresAt}",
             userId, storageResult.FileId, reservationResult.ExpiresAt);
 
-        // Start background processing via fire-and-forget (immediate attempt).
-        // Recovery for PDFs stuck in non-terminal states is handled separately by
-        // RetryFailedPdfsJob (Quartz, every 5 min). Enqueueing here would have the
-        // Quartz worker race the BG task end-to-end on the same PDF — both indexing,
-        // both finalizing, the second one's MarkFailed clobbering the first one's
-        // Ready state. The atomic claim added in PdfProcessingPipelineService still
-        // protects the recovery path.
+        // Start background processing via fire-and-forget. Only uploads by users below Editor get
+        // here: admin and editor uploads are queued instead (EnqueueForProcessingAsync, ADR-100), so
+        // the queue is never a second owner of this document. The task claims the document atomically
+        // (ValidateAndPrepareProcessingAsync), like the worker, process-pending and recovery at
+        // startup: whichever claims first processes it, the others do nothing.
         _backgroundTaskService.ExecuteWithCancellation(
             storageResult.FileId!,
             (ct) => ProcessPdfAsync(storageResult.FileId!, storageResult.FilePath!, userId, ct));
@@ -716,31 +768,34 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
         // Issue #5187: Auto-create EntityLink Game → KbCard for PDF-KB association (shared games only)
         await CreateKbCardEntityLinkSafelyAsync(pdfDoc.Id, pdfDoc.SharedGameId ?? Guid.Empty, userId, cancellationToken).ConfigureAwait(false);
 
-        return new PdfUploadResult(true, "PDF uploaded successfully", new PdfDocumentDto(
-            Id: pdfDoc.Id,
-            GameId: pdfDoc.SharedGameId,
-            FileName: pdfDoc.FileName,
-            FilePath: pdfDoc.FilePath,
-            FileSizeBytes: pdfDoc.FileSizeBytes,
-
-            UploadedAt: pdfDoc.UploadedAt,
-            ProcessedAt: pdfDoc.ProcessedAt,
-            PageCount: pdfDoc.PageCount,
-            ProcessingState: pdfDoc.ProcessingState,
-            ProgressPercentage: MapEntityStateToProgress(pdfDoc.ProcessingState),
-            RetryCount: pdfDoc.RetryCount,
-            DocumentCategory: pdfDoc.DocumentCategory,
-            BaseDocumentId: pdfDoc.BaseDocumentId,
-            IsActiveForRag: pdfDoc.IsActiveForRag,
-            HasAcceptedDisclaimer: pdfDoc.CopyrightDisclaimerAcceptedAt.HasValue,
-            VersionLabel: pdfDoc.VersionLabel
-        ));
+        return new PdfUploadResult(true, "PDF uploaded successfully", ToDocumentDto(pdfDoc));
     }
 
+    private static PdfDocumentDto ToDocumentDto(PdfDocumentEntity pdfDoc) => new(
+        Id: pdfDoc.Id,
+        GameId: pdfDoc.SharedGameId,
+        FileName: pdfDoc.FileName,
+        FilePath: pdfDoc.FilePath,
+        FileSizeBytes: pdfDoc.FileSizeBytes,
+
+        UploadedAt: pdfDoc.UploadedAt,
+        ProcessedAt: pdfDoc.ProcessedAt,
+        PageCount: pdfDoc.PageCount,
+        ProcessingState: pdfDoc.ProcessingState,
+        ProgressPercentage: MapEntityStateToProgress(pdfDoc.ProcessingState),
+        RetryCount: pdfDoc.RetryCount,
+        DocumentCategory: pdfDoc.DocumentCategory,
+        BaseDocumentId: pdfDoc.BaseDocumentId,
+        IsActiveForRag: pdfDoc.IsActiveForRag,
+        HasAcceptedDisclaimer: pdfDoc.CopyrightDisclaimerAcceptedAt.HasValue,
+        VersionLabel: pdfDoc.VersionLabel
+    );
+
     /// <summary>
-    /// Cleans up blob storage and database record after quota reservation failure.
+    /// Removes the stored object and the database record of an upload that cannot go on: quota
+    /// reservation failed, or (#4443) the job could not be enqueued.
     /// </summary>
-    private async Task CleanupAfterQuotaFailureAsync(
+    private async Task CleanupStoredUploadAsync(
         string fileId,
         string gameId,
         PdfDocumentEntity pdfDoc,
@@ -754,7 +809,7 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
         }
         catch (Exception cleanupEx)
         {
-            _logger.LogWarning(cleanupEx, "Failed to cleanup after quota reservation failure for PDF {PdfId}", fileId);
+            _logger.LogWarning(cleanupEx, "Failed to clean up the stored upload of PDF {PdfId}", fileId);
         }
     }
 
@@ -813,25 +868,7 @@ internal partial class UploadPdfCommandHandler : ICommandHandler<UploadPdfComman
             "PDF uploaded successfully for private game {PrivateGameId}: {FileName} ({FileSize} bytes)",
             privateGameId, fileName, file.Length);
 
-        var documentDto = new PdfDocumentDto(
-            Id: pdfDoc.Id,
-            GameId: pdfDoc.SharedGameId,
-            FileName: pdfDoc.FileName,
-            FilePath: pdfDoc.FilePath,
-            FileSizeBytes: pdfDoc.FileSizeBytes,
-
-            UploadedAt: pdfDoc.UploadedAt,
-            ProcessedAt: pdfDoc.ProcessedAt,
-            PageCount: pdfDoc.PageCount,
-            ProcessingState: pdfDoc.ProcessingState,
-            ProgressPercentage: MapEntityStateToProgress(pdfDoc.ProcessingState),
-            RetryCount: pdfDoc.RetryCount,
-            DocumentCategory: pdfDoc.DocumentCategory,
-            BaseDocumentId: pdfDoc.BaseDocumentId,
-            IsActiveForRag: pdfDoc.IsActiveForRag,
-            HasAcceptedDisclaimer: pdfDoc.CopyrightDisclaimerAcceptedAt.HasValue,
-            VersionLabel: pdfDoc.VersionLabel
-        );
+        var documentDto = ToDocumentDto(pdfDoc);
 
         return new PdfUploadResult(true, "PDF upload started successfully", documentDto);
     }

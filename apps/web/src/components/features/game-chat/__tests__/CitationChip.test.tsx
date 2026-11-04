@@ -41,3 +41,20 @@ describe('CitationChip', () => {
     expect(screen.getByRole('button')).not.toHaveAttribute('title');
   });
 });
+
+describe('CitationChip — citazione senza pagina (#4819)', () => {
+  it.each([null, 0])('names the section alone when the page is %s', page => {
+    render(<CitationChip pageNumber={page} sectionTitle="Poteri" onClick={vi.fn()} />);
+
+    const chip = screen.getByRole('button');
+    expect(chip).toHaveTextContent('Poteri');
+    expect(chip.textContent).not.toContain('p.');
+    expect(chip.textContent).not.toContain('—');
+  });
+
+  it('still writes the page before the section when there is one', () => {
+    render(<CitationChip pageNumber={12} sectionTitle="Poteri" onClick={vi.fn()} />);
+
+    expect(screen.getByRole('button')).toHaveTextContent('p. 12—Poteri');
+  });
+});

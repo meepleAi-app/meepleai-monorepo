@@ -20,7 +20,8 @@ public class UserLibraryEntryEntity
     /// <summary>
     /// Reference to the SharedGame in the library.
     /// Issue #3662: Renamed from GameId to SharedGameId, made nullable to support private games.
-    /// For backwards compatibility, GameId is mapped to this column in the configuration.
+    /// This is the mapped column: filter and project on it in any LINQ-to-SQL query. The
+    /// <see cref="GameId"/> property below is NOT mapped (#4749).
     /// </summary>
     public Guid? SharedGameId { get; set; }
 
@@ -32,7 +33,11 @@ public class UserLibraryEntryEntity
 
     /// <summary>
     /// Gets or sets the game reference (backwards compatible with existing code).
-    /// Maps to SharedGameId. Will be removed once migration is complete.
+    /// Computed from <see cref="SharedGameId"/> and excluded from the EF model
+    /// (<c>builder.Ignore(e =&gt; e.GameId)</c>): usable on an entity already in memory, but EF cannot
+    /// translate it inside a query — that answered 500 on batch-status (#4749). The gate
+    /// <c>UserLibraryEntryGameIdQueryArchitectureTests</c> blocks it in queries. Will be removed
+    /// once migration is complete.
     /// </summary>
     public Guid GameId
     {
@@ -56,10 +61,12 @@ public class UserLibraryEntryEntity
     public bool IsFavorite { get; set; }
 
     /// <summary>
-    /// Custom AI agent configuration (stored as JSONB).
-    /// Null means use system default configuration.
+    /// Name of the retired per-game agent configuration column (JSONB), now an EF shadow
+    /// property: in the model, absent from this class, read by nobody.
+    /// Issue #4138 (expand): the configuration reached no answer and is retired; the column
+    /// stays until a later delivery drops it, so a rollback of the code finds it intact.
     /// </summary>
-    public string? CustomAgentConfigJson { get; set; }
+    internal const string RetiredCustomAgentConfigJson = "CustomAgentConfigJson";
 
     /// <summary>
     /// Custom PDF rulebook URL (overrides SharedGame's PDF).
@@ -157,7 +164,8 @@ public class UserLibraryEntryEntity
 
     /// <summary>
     /// Issue #1824 (umbrella #1821 L3) — user-uploaded custom cover image for
-    /// this game. Stored in R2 at <c>covers/user/{UserId}/{GameId}/cover.webp</c>.
+    /// this game. The column holds the suffix-free key <c>user-covers/{UserId}/{GameId}/cover</c>;
+    /// the R2 object is <c>user-covers/{UserId}/{GameId}/cover.webp</c> (<c>CoverKeyBuilder.ForUser</c>).
     /// Has highest priority in the FE cover-resolution chain (overrides
     /// PDF-derived cover from L4 and Wikidata from L2).
     /// Nullable; when null the chain falls through to L4 → L2 → L1.

@@ -37,6 +37,8 @@ L'agente attinge dai claim di una `MechanicCard` **attiva e non soppressa** (`Pu
 
 I claim selezionati per `MechanicSection` (mapping da `GameBookRole`) sono iniettati come blocco `[Verified Rules]` **riconosciuto come contesto** nel prompt, **non** come arm della fusione RRF (non devono poter essere "reranked away"). Il card-fetch avviene **sopra** gli early-exit `no-results`/response-cache degli handler. Precedenza: `house rule > claim approvato > RAG grezzo`. Fail-open verso RAG grezzo; fail-closed sulla suppression (bounded-staleness). Le citazioni claim sono emesse con provenienza `source=claim` sul canale citazione dell'epic RAG citation region grounding (coordinamento: shape DTO di quella epic; SP-A prima di R1).
 
+> **Aggiornamento 2026-10-08 (claim v3)**: i claim portano `Kind`, `Priority`, `Overrides`, `Trigger` (spec `docs/for-developers/specs/2026-10-08-mechanic-claims-v3-defeasible-rules-design.md`). Il blocco `[Verified Rules]` resta iniettato come contesto (D3 invariata); l'ordinamento per priorità e per catena di override, l'esclusione degli esempi e i suffissi `(Eccezione a [Vk])` / `(quando: …)` sono dietro il flag `rag.mechanic-claims.v3-ordering` (default off, output legacy byte-identico a flag spento).
+
 **Motivazione**: precisione e autorevolezza controllate, retrieval intatto → zero regressione sui giochi scoperti; l'iniezione sopra l'early-exit è ciò che risolve il caso retrieval-miss (altrimenti R1 sarebbe un no-op sul suo caso motivante).
 
 ## Consequences

@@ -6,25 +6,14 @@ using MediatR;
 namespace Api.Routing;
 
 /// <summary>
-/// Budget management endpoints for credit tracking and admin overview
+/// Budget overview for the admin (OpenRouter balance and cost logs).
+/// Issue #4212: the per-user credit budget route (GET /budget/user/{id}) is retired with the
+/// token-tier system it read.
 /// </summary>
 internal static class BudgetEndpoints
 {
     public static RouteGroupBuilder MapBudgetEndpoints(this RouteGroupBuilder group)
     {
-        // User budget endpoints
-        var userGroup = group.MapGroup("/budget/user")
-            .WithTags("Budget - User");
-
-        userGroup.MapGet("/{userId:guid}", HandleGetUserBudget)
-            .WithName("GetUserBudget")
-            .WithSummary("Get user's credit budget status")
-            .WithDescription("Returns credit balance, daily/weekly limits, and reset timers. Self-access only.")
-            .Produces<UserBudgetStatus>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .Produces(StatusCodes.Status403Forbidden)
-            .Produces(StatusCodes.Status404NotFound);
-
         // Admin budget endpoints
         var adminGroup = group.MapGroup("/admin/budget")
             .WithTags("Admin - Budget");
@@ -38,27 +27,6 @@ internal static class BudgetEndpoints
             .Produces(StatusCodes.Status403Forbidden);
 
         return group;
-    }
-
-    private static async Task<IResult> HandleGetUserBudget(
-        Guid userId,
-        HttpContext context,
-        IMediator mediator,
-        CancellationToken ct)
-    {
-        // Require authenticated session
-        var (authenticated, session, error) = context.TryGetActiveSession();
-        if (!authenticated) return error!;
-
-        // Self-access only: users can only view their own budget
-        if (session!.Principal!.Subject.Id != userId)
-        {
-            return Results.Forbid();
-        }
-
-        var query = new GetUserBudgetQuery(userId);
-        var result = await mediator.Send(query, ct).ConfigureAwait(false);
-        return Results.Ok(result);
     }
 
     private static async Task<IResult> HandleGetAdminBudgetOverview(

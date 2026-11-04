@@ -66,8 +66,18 @@ internal class GetKnowledgeBaseStatusQueryHandler : IQueryHandler<GetKnowledgeBa
 
         try
         {
+            // #4349: la rotta generica riceve anche l'id di un gioco privato — il pannello della
+            // chat non sa se il gioco è privato —, e cercando il PDF nel catalogo rispondeva
+            // "Pending" per sempre. L'accesso è già deciso sopra, con la regola 4 per il gioco
+            // privato del chiamante: qui si sceglie solo dove guardare.
+            var isPrivateGame = query.IsPrivateGame
+                || await _dbContext.PrivateGames
+                    .AsNoTracking()
+                    .AnyAsync(g => g.Id == query.GameId, cancellationToken)
+                    .ConfigureAwait(false);
+
             string? gameName;
-            if (query.IsPrivateGame)
+            if (isPrivateGame)
             {
                 // Private games are in PrivateGames table and use .Title
                 gameName = await _dbContext.PrivateGames
@@ -88,7 +98,7 @@ internal class GetKnowledgeBaseStatusQueryHandler : IQueryHandler<GetKnowledgeBa
 
             // Get the most recent PDF for the game (any processing state)
             var pdf = await _dbContext.PdfDocuments
-                .Where(p => query.IsPrivateGame
+                .Where(p => isPrivateGame
                     ? p.PrivateGameId == query.GameId
                     : p.SharedGameId == query.GameId)
                 .OrderByDescending(p => p.UploadedAt)

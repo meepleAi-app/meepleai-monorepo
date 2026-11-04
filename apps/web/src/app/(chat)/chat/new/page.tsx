@@ -2,11 +2,10 @@
  * New Chat Page - /chat/new (Issue #4363)
  *
  * Welcome page for creating new conversations.
- * Shows game + agent selection with MeepleCard grids.
+ * Shows the game selection with MeepleCard grids; a chat needs a game (#4715).
  *
  * Supports query params:
  * - ?game={id} - Pre-selects a game
- * - ?agent={type} - Pre-selects an agent type
  * - ?kbIds={id1,id2,id3} - Pre-selects knowledge base documents
  */
 

@@ -1,0 +1,302 @@
+{
+  "model": "deepseek-flash",
+  "setVersion": 5,
+  "only": [
+    "it-mixed-ambiguous-turn",
+    "it-score-and-turn"
+  ],
+  "repeat": 6,
+  "planned": 12,
+  "prompts": {
+    "italian": "Sei l'assistente di MeepleAI al tavolo di gioco e aiuti l'host di una partita in corso.\nRegole:\n1. Per punteggi, turno, round, fase o giocatori chiama sempre stato_partita: non indovinare e non usare ciò che ricordi.\n2. In questa versione non puoi consultare il regolamento. A una domanda sulle regole rispondi solo con le house rules della partita, se ne parlano; altrimenti di' che non puoi consultare il regolamento, e non rispondere a memoria.\n3. Quando l'host dice che un giocatore ha fatto dei punti, chiama proponi_punteggio con i punti guadagnati adesso (un incremento, anche negativo). Se l'host dice un totale, calcola l'incremento da stato_partita. Se l'host dice un round, usa quello, anche se non è il round corrente; ma se è un round che non è ancora cominciato, non proporre niente: chiedi conferma.\n4. Non scegliere mai tu il giocatore o la dimensione. Passa a proponi_punteggio il nome come l'ha detto l'host, anche un cognome o un diminutivo: è lo strumento a riconoscerlo, e se il nome è ambiguo o sconosciuto ti risponde con un errore. Se l'host nomina una dimensione che non esiste, o non dice quale fra più possibili, non proporre quel punteggio: chiedi. Se una parte della richiesta non si può proporre, proponi comunque le altre, per esempio il turno.\n5. Quando l'host dice di passare il turno, chiama proponi_turno, anche se un'altra parte della stessa richiesta resta in sospeso. Leggere lo stato non basta: il turno si propone solo con quello strumento.\n6. Tu non registri mai niente: crei solo proposte che l'host conferma. Non dire mai «ho segnato», «ho registrato» o «ho passato il turno». Di' che hai preparato una proposta solo dopo che proponi_punteggio o proponi_turno te l'ha restituita in questo turno: senza quella chiamata la proposta non esiste.\n7. Se uno strumento risponde con un errore (giocatore ambiguo, dimensione mancante, partita non in corso), spiegalo e chiedi all'host di chiarire.\n8. Rispondi in modo breve, in italiano.",
+    "english": "You are MeepleAI's assistant at the game table, helping the host of a game in progress.\nRules:\n1. For scores, turn, round, phase or players always call stato_partita: never guess and never rely on memory.\n2. In this version you cannot consult the rulebook. For a rules question answer only from the house rules of the game, if they cover it; otherwise say that you cannot consult the rulebook, and do not answer from memory.\n3. When the host says a player scored points, call proponi_punteggio with the points scored now (a delta, possibly negative). If the host gives a total, compute the delta from stato_partita. If the host names a round, use that one, even if it is not the current round; but if that round has not started yet, propose nothing: ask for confirmation.\n4. Never choose the player or the dimension yourself. Pass the name to proponi_punteggio as the host said it, even a surname or a nickname: the tool recognises it, and answers with an error if the name is ambiguous or unknown. If the host names a dimension that does not exist, or does not say which one of several, do not propose that score: ask. If one part of a request cannot be proposed, still propose the others, for example the turn.\n5. When the host says to pass the turn, call proponi_turno, even if another part of the same request is on hold. Reading the state is not enough: the turn is proposed only with that tool.\n6. You never record anything: you only create proposals that the host confirms. Never say \"I recorded\", \"I added\" or \"I passed the turn\". Say you prepared a proposal only after proponi_punteggio or proponi_turno has returned it in this turn: without that call the proposal does not exist.\n7. If a tool returns an error (ambiguous player, missing dimension, game not in progress), explain it and ask the host to clarify.\n8. Answer briefly, in English."
+  },
+  "promptFingerprint": {
+    "italian": "22d864489150e91e9f03dd4fe0dc8f17d3a55a98bd2f4cebf2c6d4ea96c4d0a3",
+    "english": "8dff2ab75623e300d9c9c1aff19d3cce130641c6c7db8a87db569751fd4a8613"
+  },
+  "offerRules": false,
+  "skippedForRules": [],
+  "stopped": null,
+  "scenarios": 12,
+  "passed": 12,
+  "scenariosWithExtraProposals": 0,
+  "scenariosWithMissingProposals": 0,
+  "claimedActionsWithoutProposal": 0,
+  "toolErrors": 1,
+  "invalidArguments": 0,
+  "gatewayErrors": 0,
+  "averageRoundTrips": 2.6666666666666665,
+  "averageCostPerTurnUsd": 0.001255,
+  "totalCostUsd": 0.01506,
+  "latencyP95Ms": 10336,
+  "byScenario": [
+    {
+      "id": "it-score-and-turn",
+      "passed": 6,
+      "runs": 6
+    },
+    {
+      "id": "it-mixed-ambiguous-turn",
+      "passed": 6,
+      "runs": 6
+    }
+  ],
+  "results": [
+    {
+      "id": "it-score-and-turn",
+      "category": "misto",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio",
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.00091,
+      "latencyMs": 4130,
+      "errorCode": null,
+      "finalText": "Ho preparato due proposte, in attesa della tua conferma:\n- +6 punti a Luca (punti, round 2)\n- passaggio del turno",
+      "pass": 1
+    },
+    {
+      "id": "it-mixed-ambiguous-turn",
+      "category": "misto",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio",
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 1,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001458,
+      "latencyMs": 7533,
+      "errorCode": null,
+      "finalText": "Ho preparato la proposta per passare il turno (in attesa della tua conferma).\n\nPer i 4 punti invece «Marco» è ambiguo: è Marco Rossi o Marco Bianchi?",
+      "pass": 1
+    },
+    {
+      "id": "it-score-and-turn",
+      "category": "misto",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio",
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001455,
+      "latencyMs": 7509,
+      "errorCode": null,
+      "finalText": "Ho preparato due proposte, in attesa della tua conferma:\n- +6 punti a Luca (punti, round 2)\n- passaggio del turno",
+      "pass": 2
+    },
+    {
+      "id": "it-mixed-ambiguous-turn",
+      "category": "misto",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001411,
+      "latencyMs": 6943,
+      "errorCode": null,
+      "finalText": "Il nome \"Marco\" è ambiguo: ci sono Marco Rossi e Marco Bianchi. Quale dei due?\n\nIntanto preparo il passaggio di turno.\nHo preparato la proposta di passaggio di turno (in attesa della tua conferma).\n\nPer i 4 punti, invece, dimmi quale Marco: Rossi o Bianchi?",
+      "pass": 2
+    },
+    {
+      "id": "it-score-and-turn",
+      "category": "misto",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio",
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000914,
+      "latencyMs": 7051,
+      "errorCode": null,
+      "finalText": "Ho preparato due proposte, in attesa della tua conferma:\n- +6 punti a Luca (punti, round 2)\n- passaggio del turno",
+      "pass": 3
+    },
+    {
+      "id": "it-mixed-ambiguous-turn",
+      "category": "misto",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001407,
+      "latencyMs": 8849,
+      "errorCode": null,
+      "finalText": "\"Marco\" è ambiguo: ci sono Marco Rossi e Marco Bianchi. Quale dei due?\n\nIntanto preparo il passaggio di turno.\nHo preparato la proposta per passare il turno (in attesa della tua conferma).\n\nPer i 4 punti, invece, dimmi quale Marco: Rossi o Bianchi?",
+      "pass": 3
+    },
+    {
+      "id": "it-score-and-turn",
+      "category": "misto",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio",
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000911,
+      "latencyMs": 7152,
+      "errorCode": null,
+      "finalText": "Ho preparato due proposte, in attesa della tua conferma:\n- +6 punti a Luca (punti, round 2)\n- passaggio del turno",
+      "pass": 4
+    },
+    {
+      "id": "it-mixed-ambiguous-turn",
+      "category": "misto",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001407,
+      "latencyMs": 10336,
+      "errorCode": null,
+      "finalText": "«Marco» è ambiguo: ci sono Marco Rossi e Marco Bianchi. Quale dei due? Intanto preparo il passaggio di turno.\nHo preparato la proposta per passare il turno (in attesa della tua conferma). Per i 4 punti, invece, dimmi quale Marco: Rossi o Bianchi?",
+      "pass": 4
+    },
+    {
+      "id": "it-score-and-turn",
+      "category": "misto",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio",
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001456,
+      "latencyMs": 8074,
+      "errorCode": null,
+      "finalText": "Ho preparato due proposte, in attesa della tua conferma:\n- +6 punti a Luca (punti, round 2)\n- passaggio del turno",
+      "pass": 5
+    },
+    {
+      "id": "it-mixed-ambiguous-turn",
+      "category": "misto",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001412,
+      "latencyMs": 9894,
+      "errorCode": null,
+      "finalText": "Il nome \"Marco\" è ambiguo: ci sono Marco Rossi e Marco Bianchi. Quale dei due?\n\nIntanto preparo il passaggio di turno.\nHo preparato la proposta per passare il turno (in attesa della tua conferma).\n\nPer i 4 punti, invece, dimmi quale Marco: Rossi o Bianchi?",
+      "pass": 5
+    },
+    {
+      "id": "it-score-and-turn",
+      "category": "misto",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio",
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000911,
+      "latencyMs": 6548,
+      "errorCode": null,
+      "finalText": "Ho preparato due proposte, in attesa della tua conferma:\n- +6 punti a Luca (punti, round 2)\n- passaggio del turno",
+      "pass": 6
+    },
+    {
+      "id": "it-mixed-ambiguous-turn",
+      "category": "misto",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_turno"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001408,
+      "latencyMs": 10025,
+      "errorCode": null,
+      "finalText": "\"Marco\" è ambiguo: ci sono Marco Rossi e Marco Bianchi. Quale dei due?\n\nIntanto preparo il passaggio di turno.\nHo preparato la proposta per passare il turno (in attesa della tua conferma).\n\nPer i 4 punti, invece, dimmi quale Marco: Rossi o Bianchi?",
+      "pass": 6
+    }
+  ]
+}

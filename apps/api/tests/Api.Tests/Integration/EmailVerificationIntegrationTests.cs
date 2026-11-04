@@ -76,6 +76,7 @@ public class EmailVerificationIntegrationTests : IAsyncLifetime
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<string>(),
+                It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 

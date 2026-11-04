@@ -6,12 +6,17 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.BoundedContexts.GameManagement.Domain.Repositories;
+using Api.Observability;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using System.Diagnostics.Metrics;
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
+using FluentAssertions;
 using Moq;
+using Npgsql;
 using Xunit;
 
 namespace Api.Tests.BoundedContexts.GameManagement.Application.EventHandlers;
@@ -209,5 +214,108 @@ public class SessionPausedAutoSnapshotHandlerTests
         await handler.Handle(new LiveSessionPausedEvent(sessionId, now), ct);
 
         _sessionRepositoryMock.Verify(r => r.GetByIdAsync(sessionId, ct), Times.Once);
+    }
+
+    // ── #4852 — the two unique indexes of the table are told apart ──────────────────────────────
+
+    private static DbUpdateException UniqueViolation() =>
+        new("duplicate key value violates unique constraint",
+            new PostgresException("duplicate key value", "ERROR", "ERROR", "23505"));
+
+    private async Task<LiveSessionPausedEvent> PauseWhoseSnapshotIsRefusedAsync(Guid sessionId)
+    {
+        var @event = new LiveSessionPausedEvent(sessionId, _timeProvider.GetUtcNow().UtcDateTime);
+        _sessionRepositoryMock.Setup(r => r.GetByIdAsync(sessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreatePausedSession(sessionId));
+        _mediatorMock.Setup(m => m.Send(It.IsAny<CreateSnapshotCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(UniqueViolation());
+        await Task.CompletedTask;
+        return @event;
+    }
+
+    [Fact]
+    public async Task Handle_UniqueViolation_WhenTheEventAlreadyHasItsSnapshot_IsAReplay_NotAFailure()
+    {
+        using var failures = new DispatchFailureCapture();
+        var sessionId = Guid.NewGuid();
+        var @event = await PauseWhoseSnapshotIsRefusedAsync(sessionId);
+        _snapshotRepositoryMock.Setup(r => r.GetBySourceEventIdAsync(@event.EventId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot.SessionSnapshot(
+                Guid.NewGuid(), sessionId, 4, SnapshotTrigger.SessionPaused, "Auto", "{}", false, 1, null, null,
+                sourceEventId: @event.EventId));
+
+        await CreateHandler().Handle(@event, TestContext.Current.CancellationToken);
+
+        failures.Count.Should().Be(0, "the snapshot of this event exists: a second delivery lost the race and that is a success");
+        _loggerMock.Verify(l => l.Log(
+            LogLevel.Error, It.IsAny<EventId>(), It.IsAny<It.IsAnyType>(), It.IsAny<Exception?>(),
+            It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_UniqueViolation_WhenTheEventHasNoSnapshot_IsALostSnapshot_CountedAndLoggedAsAnError()
+    {
+        // The other unique index, (session_id, snapshot_index): a pause and a turn change worked out the same next
+        // index at the same instant. The snapshot of the pause does not exist, and it used to be logged as «already
+        // recorded».
+        using var failures = new DispatchFailureCapture();
+        var sessionId = Guid.NewGuid();
+        var @event = await PauseWhoseSnapshotIsRefusedAsync(sessionId);
+        _snapshotRepositoryMock.Setup(r => r.GetBySourceEventIdAsync(@event.EventId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Api.BoundedContexts.GameManagement.Domain.Entities.SessionSnapshot.SessionSnapshot?)null);
+
+        var act = () => CreateHandler().Handle(@event, TestContext.Current.CancellationToken);
+
+        await act.Should().NotThrowAsync("a snapshot that fails must not block the pause");
+        failures.Count.Should().Be(1);
+        _loggerMock.Verify(l => l.Log(
+            LogLevel.Error, It.IsAny<EventId>(),
+            It.Is<It.IsAnyType>((state, _) => state.ToString()!.Contains(sessionId.ToString())),
+            It.IsAny<Exception?>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_UniqueViolation_WhenTheReadFails_StillDoesNotThrow()
+    {
+        var sessionId = Guid.NewGuid();
+        var @event = await PauseWhoseSnapshotIsRefusedAsync(sessionId);
+        _snapshotRepositoryMock.Setup(r => r.GetBySourceEventIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("the database went away"));
+
+        var act = () => CreateHandler().Handle(@event, TestContext.Current.CancellationToken);
+
+        await act.Should().NotThrowAsync("the read only words the log: a failure of it must not escape the handler");
+    }
+
+    /// <summary>Counts the dispatch-failure measurements that carry this handler's name.</summary>
+    private sealed class DispatchFailureCapture : IDisposable
+    {
+        private readonly MeterListener _listener = new();
+        private int _count;
+
+        public int Count => Volatile.Read(ref _count);
+
+        public DispatchFailureCapture()
+        {
+            _listener.InstrumentPublished = (instrument, listener) =>
+            {
+                if (instrument.Meter.Name == MeepleAiMetrics.MeterName
+                    && instrument.Name == "meepleai.domain_event_log.dispatch_failures.total")
+                {
+                    listener.EnableMeasurementEvents(instrument);
+                }
+            };
+            _listener.SetMeasurementEventCallback<long>((_, _, tags, _) =>
+            {
+                foreach (var tag in tags)
+                {
+                    if (tag.Key == "handler_name" && tag.Value?.ToString() == nameof(SessionPausedAutoSnapshotHandler))
+                        Interlocked.Increment(ref _count);
+                }
+            });
+            _listener.Start();
+        }
+
+        public void Dispose() => _listener.Dispose();
     }
 }

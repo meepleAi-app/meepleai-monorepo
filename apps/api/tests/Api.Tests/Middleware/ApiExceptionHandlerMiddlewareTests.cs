@@ -842,6 +842,38 @@ public class ApiExceptionHandlerMiddlewareTests
             "the FE uses this distinct error code to render a non-blocking retry message");
     }
 
+    [Fact]
+    public async Task InvokeAsync_RagOwnershipRequiredException_Returns403WithCodeAndGameId()
+    {
+        // #4155: il diniego RAG porta il proprio codice e il gioco, cosi' il FE puo' offrire la
+        // dichiarazione di possesso per QUEL gioco invece di mostrare «Accesso negato».
+        var gameId = Guid.NewGuid();
+        var middleware = new ApiExceptionHandlerMiddleware(
+            next: (context) => throw new RagOwnershipRequiredException(gameId),
+            _loggerMock.Object,
+            _environmentMock.Object);
+
+        _httpContext.Response.Body = new MemoryStream();
+
+        await middleware.InvokeAsync(_httpContext);
+
+        _httpContext.Response.StatusCode.Should().Be(403);
+
+        _httpContext.Response.Body.Seek(0, SeekOrigin.Begin);
+        using var reader = new StreamReader(_httpContext.Response.Body);
+        var responseBody = await reader.ReadToEndAsync(TestCancellationToken);
+        using var errorResponse = ParseErrorResponse(responseBody);
+
+        errorResponse.RootElement.GetProperty("error").GetString().Should().Be("RAG_OWNERSHIP_REQUIRED");
+        errorResponse.RootElement.GetProperty("gameId").GetGuid().Should().Be(gameId);
+        errorResponse.RootElement.GetProperty("message").GetString().Should().NotBeNullOrWhiteSpace();
+        errorResponse.RootElement.GetProperty("correlationId").ValueKind
+            .Should().NotBe(JsonValueKind.Null);
+
+        // Un diniego atteso non e' un errore del server.
+        VerifyLogLevel(LogLevel.Error, Times.Never());
+    }
+
     private static JsonDocument ParseErrorResponse(string responseBody)
     {
         return JsonDocument.Parse(responseBody);

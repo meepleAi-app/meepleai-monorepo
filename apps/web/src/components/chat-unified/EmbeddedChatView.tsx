@@ -12,6 +12,8 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useAgentChatStream } from '@/hooks/useAgentChatStream';
 import { cn } from '@/lib/utils';
 
+import { TierLimitRegion } from './TierLimitNotice';
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -21,6 +23,8 @@ interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp?: string;
+  /** #4335: la risposta si è fermata prima della fine. Il testo è quello arrivato: non è completo. */
+  interrupted?: boolean;
 }
 
 export interface EmbeddedChatViewProps {
@@ -63,6 +67,21 @@ export function EmbeddedChatView({ threadId, gameId, gameName }: EmbeddedChatVie
         timestamp: new Date().toISOString(),
       };
       setMessages(prev => [...prev, assistantMessage]);
+    },
+    // The reason is in the alert above the messages. #4335: the words that arrived before the end
+    // stay, marked as incomplete — the streaming bubble that showed them goes away with the stream.
+    onError: (_error, { partialAnswer }) => {
+      if (!partialAnswer) return;
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `assistant-${crypto.randomUUID()}`,
+          role: 'assistant',
+          content: partialAnswer,
+          timestamp: new Date().toISOString(),
+          interrupted: true,
+        },
+      ]);
     },
   });
 
@@ -109,8 +128,11 @@ export function EmbeddedChatView({ threadId, gameId, gameName }: EmbeddedChatVie
 
   return (
     <div className="flex flex-col h-full" data-testid="embedded-chat-view">
+      {/* #4168 (5g-b): la quota del piano non è un guasto — l'avviso, non il banner d'errore. */}
+      <TierLimitRegion limit={streamState.tierLimit ?? null} className="mx-3 mt-2" />
+
       {/* Error banner */}
-      {streamState.error && (
+      {streamState.error && !streamState.tierLimit && (
         <div
           role="alert"
           className="mx-3 mt-2 p-2 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 rounded-lg text-xs border border-red-200 dark:border-red-500/20"
@@ -143,6 +165,14 @@ export function EmbeddedChatView({ threadId, gameId, gameName }: EmbeddedChatVie
             data-testid={`message-${msg.role}`}
           >
             <p className="text-sm whitespace-pre-wrap font-nunito">{msg.content}</p>
+            {msg.interrupted && (
+              <p
+                className="mt-1 text-[10px] italic text-foreground"
+                data-testid="message-interrupted"
+              >
+                Risposta interrotta: non è completa.
+              </p>
+            )}
           </div>
         ))}
 

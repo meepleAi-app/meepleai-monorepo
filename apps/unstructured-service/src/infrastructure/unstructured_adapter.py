@@ -9,6 +9,22 @@ from ..config import settings
 
 logger = logging.getLogger(__name__)
 
+# #4435: the API sends Tesseract codes joined by '+' in one form field.
+LANGUAGE_SEPARATOR = "+"
+
+
+def parse_languages(language: str | None, default: str | None = None) -> List[str]:
+    """Split the `language` field ('ita+eng+deu') into the list partition_pdf expects.
+
+    Order is kept: Tesseract uses the first code as its primary model. A blank field falls back
+    to `default` (the configured set), then to English.
+    """
+    for value in (language, default if default is not None else settings.language):
+        codes = [code.strip() for code in (value or "").split(LANGUAGE_SEPARATOR) if code.strip()]
+        if codes:
+            return codes
+    return ["eng"]
+
 
 class UnstructuredAdapter:
     """Adapter for Unstructured PDF processing library"""
@@ -20,7 +36,7 @@ class UnstructuredAdapter:
         self,
         file_path: Path,
         strategy: Literal["fast", "hi_res"] = "fast",
-        language: str = "ita",
+        language: str = "eng+ita+deu",
     ) -> List[Any]:
         """
         Extract elements from PDF using Unstructured
@@ -28,7 +44,7 @@ class UnstructuredAdapter:
         Args:
             file_path: Path to PDF file
             strategy: Extraction strategy (fast or hi_res)
-            language: Document language code
+            language: OCR languages, Tesseract codes joined by '+' (first = primary)
 
         Returns:
             List of Unstructured Element objects
@@ -41,7 +57,9 @@ class UnstructuredAdapter:
             elements = partition_pdf(
                 filename=str(file_path),
                 strategy=strategy,
-                languages=[language],
+                # unstructured would also split a '+'-joined string itself (check_language_args),
+                # but that is an internal detail: pass the list it documents.
+                languages=parse_languages(language),
                 infer_table_structure=True,
                 include_page_breaks=True,
             )

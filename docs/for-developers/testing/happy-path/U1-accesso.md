@@ -4,7 +4,7 @@
 
 ## Intestazione
 
-- **Area**: U1 — Accesso, Onboarding & Pubbliche informative (25 route in `_coverage-map.md`).
+- **Area**: U1 — Accesso, Onboarding & Pubbliche informative (24 route in `_coverage-map.md`).
 - **Prerequisiti dati (seed)**: `make seed-sp4` — admin (da `infra/secrets/admin.secret`) + 5 utenti standard (`marco|sara|luca|giulia|andrea@meepleai.test`, premium, email-verificati dal seed) + catalogo giochi + PDF indicizzati. La password utente è quella di `seed_password()` (`infra/scripts/seed-sp4/lib/common.sh`) o l'override `SEED_SP4_PASSWORD`.
 - **Utenti usati**: `marco@meepleai.test` (login/logout/onboarding/setup/cookie), admin (toggle Registration Mode è A4 — qui si assume lo stato già impostato), utenti *non registrati* (register/request-access/verify-email — istanze effimere), utente invitato (accept-invite/invites/setup-account — richiede token invito).
 - **Nota gate email-verification** (spec §10): la registrazione end-to-end (`/register` public mode) colpisce `EmailVerificationMiddleware` — l'account nuovo resta **403** finché l'email non è verificata, **senza bypass admin**. Il token di verifica va recuperato in locale (SMTP fake/Mailhog o log API). Se non recuperabile, lo step di verifica è marcato **⚠️ blocked-env** e per il resto delle aree si usano gli utenti seed già verificati. Gli scenari `register`/`accept-invite`/`setup-account`/`invites` che richiedono un token di invito o di verifica dichiarano la precondizione di recupero token; in sua assenza sono **⚠️ blocked-env**.
@@ -40,9 +40,8 @@
 | `(public)/cookies` | Smoke | U1-23 (smoke-aggregato legal) |
 | `(public)/cookie-settings` | Flow | U1-24 (salva preferenze cookie) |
 | `(authenticated)/onboarding` | Flow | U1-25 (wizard 3-step completo), U1-26 (skip 3-step) |
-| `(authenticated)/setup` | Flow | U1-27 (guida setup gioco) |
 
-**Auto-verifica matrice**: 25/25 route mappate. Nessuna route scoperta. `privacy`/`terms`/`cookies` condividono lo smoke-aggregato **U1-20** (stesso primitive `LegalPageLayout`). Ogni scenario dichiara ≥1 osservabile.
+**Auto-verifica matrice**: 24/24 route mappate. Nessuna route scoperta. `privacy`/`terms`/`cookies` condividono lo smoke-aggregato **U1-20** (stesso primitive `LegalPageLayout`). Ogni scenario dichiara ≥1 osservabile.
 
 ---
 
@@ -386,28 +385,13 @@ Scenario U1-26 [Flow]: Onboarding 3-step saltando gli step opzionali
   Utente: marco
 ```
 
-```gherkin
-Scenario U1-27 [Flow]: Guida al setup di un gioco
-  Given sono loggato come marco@meepleai.test
-    And lo stack full (make dev) è attivo (serve l'AI per generare la guida)
-    And il gioco "Azul" ha un PDF regole indicizzato (seed KB)
-  When apro /setup
-  Then vedo l'intestazione "Game Setup Guide" e il selettore gioco popolato dal catalogo
-  When seleziono "Azul" dal menu e clicco "Generate Setup Guide"
-  Then dopo l'elaborazione compare la guida con la lista di step e la barra di progresso
-  When spunto uno degli step come completato
-  Then la barra di progresso e il contatore "N / M steps" si aggiornano
-  Osservabile ✅: heading "Game Setup Guide" presente · il select gioco contiene "Azul" · dopo "Generate Setup Guide" compare la card con "gameTitle" + progress bar (0%) e ≥1 SetupStepCard · spuntando uno step la percentuale e il contatore "N / M steps" aumentano (azione primaria produce effetto a schermo) · nessun errore Console/Network non atteso
-  Note: il *contenuto* degli step è generato da LLM → non è oggetto di asserzione; si verifica solo la struttura (presenza guida, step count, progressione).
-  Route: (authenticated)/setup
-  Utente: marco
-```
+> **U1-27 (guida setup gioco) è stato tolto il 2026-10-11** insieme alla pagina `/setup` ([#4206](https://github.com/meepleAi-app/meepleai-monorepo/issues/4206)). La pagina era irraggiungibile, il flag era spento e il client non leggeva lo stream. La preparazione del tavolo durante la partita è nel `SetupWizard` della sessione live.
 
 ---
 
 ## Auto-verifica finale
 
-- **Copertura route**: tutte le 25 route U1 di `_coverage-map.md` compaiono nella matrice (23 scenari; `privacy`+`terms`+`cookies` condividono lo smoke-aggregato U1-23). Nessun buco.
+- **Copertura route**: tutte le 24 route U1 di `_coverage-map.md` compaiono nella matrice (22 scenari; `privacy`+`terms`+`cookies` condividono lo smoke-aggregato U1-23). Nessun buco.
 - **Osservabili**: ogni scenario dichiara ≥1 osservabile basato su struttura/navigazione/testo statico (mai testo LLM).
 - **Solo happy path**: nessuno scenario negativo/errore/edge; gli stati d'errore citati (es. `/contact` API giù) sono menzionati solo come "effetto visibile a schermo" ammesso dal criterio Smoke, non come scenario a sé.
 - **Gate ambientali dichiarati**: gli scenari con token (U1-06 conferma, U1-07, U1-08, U1-15, U1-16) e la verifica email dichiarano la precondizione di recupero token e il fallback ⚠️ blocked-env (spec §10).

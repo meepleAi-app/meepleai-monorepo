@@ -110,19 +110,26 @@ internal sealed class SessionAttachmentRepository : RepositoryBase, ISessionAtta
         await DbContext.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
     }
 
-    private static SessionAttachment MapToDomain(SessionAttachmentEntity entity)
-    {
-        return SessionAttachment.Create(
-            entity.SessionId,
-            entity.PlayerId,
-            (AttachmentType)entity.AttachmentType,
-            entity.BlobUrl,
-            entity.ContentType,
-            entity.FileSizeBytes,
-            entity.ThumbnailUrl,
-            entity.Caption,
-            entity.SnapshotIndex);
-    }
+    /// <remarks>
+    /// Passa da <see cref="SessionAttachment.Reconstitute"/>, non dalla factory di creazione: quella genera un id
+    /// nuovo e data ad "adesso", e nessuno dei due veniva ripristinato (#4552). Ogni colonna scritta da
+    /// <see cref="MapToPersistence"/> torna qui (vedi <c>SessionAttachmentRepositoryTests</c>).
+    /// </remarks>
+    private static SessionAttachment MapToDomain(SessionAttachmentEntity entity) =>
+        SessionAttachment.Reconstitute(
+            id: entity.Id,
+            sessionId: entity.SessionId,
+            snapshotIndex: entity.SnapshotIndex,
+            playerId: entity.PlayerId,
+            attachmentType: (AttachmentType)entity.AttachmentType,
+            blobUrl: entity.BlobUrl,
+            thumbnailUrl: entity.ThumbnailUrl,
+            caption: entity.Caption,
+            contentType: entity.ContentType,
+            fileSizeBytes: entity.FileSizeBytes,
+            createdAt: entity.CreatedAt,
+            isDeleted: entity.IsDeleted,
+            deletedAt: entity.DeletedAt);
 
     private static SessionAttachmentEntity MapToPersistence(SessionAttachment attachment)
     {

@@ -12,7 +12,7 @@
 
 import React from 'react';
 
-import { Bot, CheckSquare, FileText, MessageSquare, Play, Tag } from 'lucide-react';
+import { CheckSquare, FileText, MessageSquare, Play, Tag } from 'lucide-react';
 
 import {
   Dialog,
@@ -24,6 +24,8 @@ import {
 } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 import type { AssociatedData } from '@/hooks/useCollectionActions';
+
+import type { LucideIcon } from 'lucide-react';
 
 // ============================================================================
 // Types
@@ -45,7 +47,7 @@ export interface CollectionRemovalWarningProps {
 }
 
 interface DataLossItemProps {
-  icon: typeof Bot;
+  icon: LucideIcon;
   label: string;
 }
 
@@ -93,14 +95,7 @@ export function CollectionRemovalWarning({
   onCancel,
 }: CollectionRemovalWarningProps) {
   // Build list of data loss items
-  const dataLossItems: Array<{ icon: typeof Bot; label: string }> = [];
-
-  if (associatedData.hasCustomAgent) {
-    dataLossItems.push({
-      icon: Bot,
-      label: 'Agente AI personalizzato',
-    });
-  }
+  const dataLossItems: Array<{ icon: LucideIcon; label: string }> = [];
 
   if (associatedData.chatSessionsCount > 0) {
     dataLossItems.push({

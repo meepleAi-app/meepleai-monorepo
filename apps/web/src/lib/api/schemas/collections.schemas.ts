@@ -14,13 +14,7 @@
  * Maps to backend EntityType enum.
  */
 export type EntityType =
-  | 'game'
-  | 'player'
-  | 'event'
-  | 'session'
-  | 'agent'
-  | 'document'
-  | 'chatSession';
+  'game' | 'player' | 'event' | 'session' | 'agent' | 'document' | 'chatSession';
 
 // ============================================================================
 // DTOs
@@ -31,8 +25,6 @@ export type EntityType =
  * Maps to backend AssociatedDataDto.
  */
 export interface AssociatedDataDto {
-  /** Whether the library entry has a custom AI agent configuration */
-  hasCustomAgent: boolean;
   /** Whether the library entry has a private PDF uploaded */
   hasPrivatePdf: boolean;
   /** Number of chat sessions associated with this entity */
@@ -75,8 +67,6 @@ export interface AddToCollectionRequest {
  * Used to show total data loss across multiple entities.
  */
 export interface BulkAssociatedDataDto {
-  /** Total custom AI agents that will be deleted */
-  totalCustomAgents: number;
   /** Total private PDFs that will be deleted */
   totalPrivatePdfs: number;
   /** Total chat sessions that will be deleted */

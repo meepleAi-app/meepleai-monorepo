@@ -110,7 +110,6 @@ public sealed class GetAllAgentsQueryHandlerTests
         result.Should().ContainSingle();
         var dto = result[0];
         dto.Name.Should().Be("Test Agent");
-        dto.Type.Should().NotBeNullOrEmpty();
         dto.StrategyName.Should().NotBeNullOrEmpty();
         dto.IsActive.Should().BeFalse(); // AgentDefinition.Create sets IsActive=false
     }
@@ -328,7 +327,6 @@ public sealed class GetAllAgentsQueryHandlerTests
         return AgentDefinitionEntity.CreateSystem(
             name,
             $"Description for {name}",
-            AgentType.RagAgent,
             AgentDefinitionConfig.Default(),
             typologySlug: "rules");
     }
@@ -338,7 +336,6 @@ public sealed class GetAllAgentsQueryHandlerTests
         return AgentDefinitionEntity.Create(
             name,
             $"Description for {name}",
-            AgentType.RagAgent,
             AgentDefinitionConfig.Default());
     }
 }

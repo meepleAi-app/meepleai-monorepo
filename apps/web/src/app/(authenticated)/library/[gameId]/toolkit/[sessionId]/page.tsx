@@ -14,6 +14,7 @@ import {
   type SyncStatus,
 } from '@/components/session';
 import type { ScoreboardData } from '@/components/session/types';
+import { SyncUnavailableBanner } from '@/components/toolkit/SyncUnavailableBanner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/data-display/card';
 import { useCurrentUser } from '@/hooks/queries/useCurrentUser';
 import { getGameTemplateByName } from '@/lib/config/game-templates';
@@ -143,9 +144,6 @@ export default function GameSpecificSessionPage() {
         router.push(`/library/${gameId}`);
       }, 2000);
     },
-    onError: err => {
-      toast.error(`Connection error: ${err.message}`);
-    },
   });
 
   /**
@@ -191,6 +189,9 @@ export default function GameSpecificSessionPage() {
   const handleFinalize = async () => {
     try {
       await completeSession();
+      // #4114: back to the game right away. Waiting for the stream's session:endgame tied the
+      // finalize action to the sync, and a page with the sync down stayed put.
+      router.push(`/library/${gameId}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to finalize session');
     }
@@ -206,12 +207,14 @@ export default function GameSpecificSessionPage() {
   }
 
   // Error state
-  if (error || sseError) {
+  // #4114: only a failure to load the session replaces the page. A sync failure is shown next
+  // to the content (SyncUnavailableBanner): the session's data answers either way.
+  if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 max-w-md">
           <p className="font-semibold text-red-800 dark:text-red-200">Error</p>
-          <p className="text-sm text-red-700 dark:text-red-300">{error || sseError?.message}</p>
+          <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
         </div>
       </div>
     );
@@ -219,6 +222,8 @@ export default function GameSpecificSessionPage() {
 
   return (
     <div className="min-h-screen bg-muted">
+      {sseError && <SyncUnavailableBanner />}
+
       {/* Session Header */}
       <SessionHeader
         // #4113: qui c'era `activeSession as unknown as Session`. Il doppio cast faceva

@@ -216,16 +216,6 @@ internal static class ShareLinkEndpoints
                 timestamp = result.Timestamp
             });
         }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("comment permissions"))
-        {
-            logger.LogWarning(ex, "Comment denied: insufficient permissions");
-            return Results.StatusCode(403); // Forbidden
-        }
-        catch (InvalidOperationException ex) when (ex.Message.Contains("Rate limit"))
-        {
-            logger.LogWarning(ex, "Comment denied: rate limit exceeded");
-            return Results.StatusCode(429); // Too Many Requests
-        }
         catch (ArgumentException ex)
         {
             logger.LogWarning(ex, "Comment validation failed: {Error}", ex.Message);

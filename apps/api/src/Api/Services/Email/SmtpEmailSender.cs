@@ -49,10 +49,22 @@ internal sealed class SmtpEmailSender : IEmailSender
         {
             using var message = new MailMessage();
             message.From = new MailAddress(request.FromEmail, request.FromName);
-            message.To.Add(new MailAddress(request.ToEmail));
+            // A null name is the same as none: the To: line then carries the bare address.
+            message.To.Add(new MailAddress(request.ToEmail, request.ToName));
+            foreach (var other in request.AdditionalToEmails ?? [])
+            {
+                message.To.Add(new MailAddress(other));
+            }
+
             message.Subject = request.Subject;
             message.Body = request.HtmlBody;
             message.IsBodyHtml = true;
+
+            // The message owns the attachments and their streams, and disposes them with itself.
+            foreach (var file in request.Attachments ?? [])
+            {
+                message.Attachments.Add(new Attachment(new MemoryStream(file.Content), file.FileName));
+            }
 
             if (!string.IsNullOrWhiteSpace(request.ReplyTo))
             {

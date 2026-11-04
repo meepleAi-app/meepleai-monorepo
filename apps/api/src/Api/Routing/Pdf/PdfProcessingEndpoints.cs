@@ -86,12 +86,8 @@ internal static class PdfProcessingEndpoints
         group.MapGet("/documents/{id:guid}/metrics", HandleGetPdfMetrics)
         .RequireSession()
         .WithName("GetPdfMetrics")
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Get PDF processing metrics and ETA";
-            operation.Description = "Retrieves detailed processing metrics including per-state timing, progress percentage, and estimated time remaining.";
-            return operation;
-        });
+        .WithSummary("Get PDF processing metrics and ETA")
+        .WithDescription("Retrieves detailed processing metrics including per-state timing, progress percentage, and estimated time remaining.");
     }
 
     private static void MapProcessingActionsEndpoints(RouteGroupBuilder group)
@@ -131,12 +127,8 @@ internal static class PdfProcessingEndpoints
         group.MapPost("/documents/{pdfId:guid}/retry", HandleRetryPdfProcessing)
             .RequireSession()
             .WithName("RetryPdfProcessing")
-            .WithOpenApi(operation =>
-            {
-                operation.Summary = "Retry processing of a failed PDF document";
-                operation.Description = "Attempts to retry processing of a PDF that failed. Maximum 3 retries allowed. Only the document owner can initiate retry.";
-                return operation;
-            });
+            .WithSummary("Retry processing of a failed PDF document")
+            .WithDescription("Attempts to retry processing of a PDF that failed. Maximum 3 retries allowed. Only the document owner can initiate retry.");
     }
 
     private static void MapBatchProcessPendingEndpoint(RouteGroupBuilder group)
@@ -145,12 +137,8 @@ internal static class PdfProcessingEndpoints
         group.MapPost("/admin/pdfs/process-pending", HandleProcessPendingPdfs)
             .RequireSession()
             .WithName("ProcessPendingPdfs")
-            .WithOpenApi(operation =>
-            {
-                operation.Summary = "Batch process all pending PDFs";
-                operation.Description = "Triggers processing for all PDFs stuck in 'pending' or 'processing' status. Admin-only operation for fixing stuck PDF processing pipeline.";
-                return operation;
-            });
+            .WithSummary("Batch process all pending PDFs")
+            .WithDescription("Triggers processing for all PDFs stuck in 'pending' or 'processing' status. Admin-only operation for fixing stuck PDF processing pipeline.");
     }
 
     private static async Task<IResult> HandleGetPdfMetrics(

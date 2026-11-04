@@ -21,7 +21,7 @@
 # directly. We build arm64 ONLY — if amd64 is ever added, map "amd64"→"x64".
 
 # syntax=docker/dockerfile:1.6
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG TARGETARCH
 WORKDIR /src
 
@@ -67,7 +67,7 @@ RUN --mount=type=cache,target=/root/.nuget/packages \
         -p:SkipAnalyzers=true \
         -p:GenerateDocumentationFile=false
 
-FROM mcr.microsoft.com/dotnet/aspnet:9.0
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 
 # Install curl for healthcheck + SkiaSharp native runtime deps, create non-root
@@ -78,10 +78,15 @@ WORKDIR /app
 # "The type initializer for 'SkiaSharp.SKObject' threw an exception", which
 # broke PDF cover generation on staging (Debian 12 arm64 image shipped
 # libSkiaSharp.so but not its fontconfig/freetype deps) — see #3454.
+#
+# groupadd/useradd, non adduser (#4429): da .NET 10 le immagini sono Ubuntu 24.04 e non
+# contengono adduser, che era il comando di Debian. Stesso utente di prima: uid/gid 1001,
+# home in /home/apiuser.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl libfontconfig1 libfreetype6 \
     && rm -rf /var/lib/apt/lists/* \
-    && adduser --disabled-password --gecos '' --uid 1001 apiuser \
+    && groupadd --gid 1001 apiuser \
+    && useradd --uid 1001 --gid 1001 --create-home --shell /bin/bash apiuser \
     && mkdir -p /app/pdf_uploads
 
 # #3998 — i .pdb sono il motivo per cui un crash report non si riesce a leggere.

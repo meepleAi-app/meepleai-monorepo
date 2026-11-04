@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
+using Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
@@ -8,6 +9,7 @@ using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Time.Testing;
@@ -34,6 +36,7 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
     private readonly Mock<IUserRepository> _userRepoMock = new();
     private readonly Mock<IGameCoreDataProvider> _gameCoreDataMock = new();
     private readonly Mock<IGameNightEmailService> _emailServiceMock = new();
+    private readonly Mock<IGameNightGuestEmailOptOutRepository> _optOutRepoMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly FakeTimeProvider _timeProvider = new(UtcNow);
     private readonly CreateGameNightInvitationByEmailCommandHandler _sut;
@@ -43,7 +46,7 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["App:BaseUrl"] = BaseUrl,
+                ["Frontend:BaseUrl"] = BaseUrl,
             })
             .Build();
 
@@ -53,8 +56,10 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
             _userRepoMock.Object,
             _gameCoreDataMock.Object,
             _emailServiceMock.Object,
+            _optOutRepoMock.Object,
             _unitOfWorkMock.Object,
             configuration,
+            PublicBaseUrlTestSupport.ProviderFor(configuration),
             _timeProvider);
     }
 
@@ -188,7 +193,8 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
                 It.IsAny<IReadOnlyList<string>>(),
                 $"{BaseUrl}/invites/{captured.Token}?action=accept",
                 $"{BaseUrl}/invites/{captured.Token}?action=decline",
-                $"{BaseUrl}/invites/{captured.Token}/unsubscribe",
+                $"{BaseUrl}/invites/unsubscribe/{captured.UnsubscribeKey}",
+                GameNightEmailLocale.Unknown, // No organizer record and no stored zone: English, UTC.
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
@@ -203,7 +209,7 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["App:BaseUrl"] = BaseUrl,
+                ["Frontend:BaseUrl"] = BaseUrl,
                 ["GameNight:InvitationExpiryDays"] = "30",
             })
             .Build();
@@ -214,8 +220,10 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
             _userRepoMock.Object,
             _gameCoreDataMock.Object,
             _emailServiceMock.Object,
+            _optOutRepoMock.Object,
             _unitOfWorkMock.Object,
             configuration,
+            PublicBaseUrlTestSupport.ProviderFor(configuration),
             _timeProvider);
 
         var organizerId = Guid.NewGuid();
@@ -239,5 +247,394 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
         await sut.Handle(command, CancellationToken.None);
 
         captured!.ExpiresAt.Should().Be(UtcNow.AddDays(30));
+    }
+
+    // ────────────────────────────────────────────────────────────────────────
+    // #4692 — ResendIfPending: the creation of a game night is repeated on purpose
+    // ────────────────────────────────────────────────────────────────────────
+
+    private (GameNightEvent GameNight, Guid OrganizerId) GivenAGameNightWithAPendingInvitationFor(
+        string email, out GameNightInvitation pending)
+    {
+        var organizerId = Guid.NewGuid();
+        var gameNight = CreateGameNight(organizerId);
+        pending = GameNightInvitation.Create(
+            gameNightId: gameNight.Id,
+            email: email,
+            expiresAt: UtcNow.AddDays(14),
+            createdBy: organizerId,
+            utcNow: UtcNow);
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _invitationRepoMock
+            .Setup(r => r.ExistsPendingByEmailAsync(gameNight.Id, email, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _invitationRepoMock
+            .Setup(r => r.GetByGameNightIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<GameNightInvitation> { pending });
+        _userRepoMock
+            .Setup(r => r.GetByIdAsync(organizerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Api.BoundedContexts.Authentication.Domain.Entities.User?)null);
+        return (gameNight, organizerId);
+    }
+
+    [Fact]
+    public async Task Handle_ResendIfPending_WithAPendingInvitation_SendsTheSameInvitationAgain()
+    {
+        var (gameNight, organizerId) = GivenAGameNightWithAPendingInvitationFor(
+            "guest@example.com", out var pending);
+
+        var dto = await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(
+                gameNight.Id, "  Guest@example.com ", organizerId, ResendIfPending: true),
+            CancellationToken.None);
+
+        dto.Id.Should().Be(pending.Id);
+        dto.Token.Should().Be(pending.Token, "l'ospite riceve lo stesso invito, non uno nuovo");
+        _emailServiceMock.Verify(
+            s => s.SendGameNightInvitationEmailAsync(
+                "guest@example.com",
+                It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<DateTimeOffset>(), It.IsAny<string?>(), It.IsAny<IReadOnlyList<string>>(),
+                It.Is<string>(url => url.Contains(pending.Token, StringComparison.Ordinal)),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameNightEmailLocale>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// #4754: the invitation says the time the organizer meant and speaks the organizer's language. The
+    /// guest is an address, not an account, so the organizer's language is the only one known.
+    /// </summary>
+    [Fact]
+    public async Task Handle_TheEmailCarriesTheOrganizersLanguageAndTheNightsTimeZone()
+    {
+        var organizer = new Api.Tests.BoundedContexts.Authentication.TestHelpers.UserBuilder().Build();
+        organizer.UpdatePreferences("it", "system", emailNotifications: true, dataRetentionDays: 90);
+        var gameNight = GameNightEvent.Create(
+            organizerId: organizer.Id,
+            title: "Venerdì Catan",
+            scheduledAt: UtcNow.AddDays(7),
+            timeZoneId: "Europe/Rome");
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _invitationRepoMock
+            .Setup(r => r.ExistsPendingByEmailAsync(
+                gameNight.Id, "guest@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _userRepoMock
+            .Setup(r => r.GetByIdAsync(organizer.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(organizer);
+
+        await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(gameNight.Id, "guest@example.com", organizer.Id),
+            CancellationToken.None);
+
+        _emailServiceMock.Verify(
+            e => e.SendGameNightInvitationEmailAsync(
+                "guest@example.com",
+                organizer.DisplayName,
+                It.IsAny<string>(), It.IsAny<DateTimeOffset>(), It.IsAny<string?>(),
+                It.IsAny<IReadOnlyList<string>>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                new GameNightEmailLocale("it", "Europe/Rome"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_ResendIfPending_WithAPendingInvitation_DoesNotPersistAnotherOne()
+    {
+        var (gameNight, organizerId) = GivenAGameNightWithAPendingInvitationFor(
+            "guest@example.com", out _);
+
+        await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(
+                gameNight.Id, "guest@example.com", organizerId, ResendIfPending: true),
+            CancellationToken.None);
+
+        _invitationRepoMock.Verify(
+            r => r.AddAsync(It.IsAny<GameNightInvitation>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ResendIfPending_WhenTheEmailFailsAgain_LetsTheFailureThrough()
+    {
+        var (gameNight, organizerId) = GivenAGameNightWithAPendingInvitationFor(
+            "guest@example.com", out _);
+        _emailServiceMock
+            .Setup(s => s.SendGameNightInvitationEmailAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<DateTimeOffset>(), It.IsAny<string?>(), It.IsAny<IReadOnlyList<string>>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameNightEmailLocale>(),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("smtp is down"));
+
+        var act = async () => await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(
+                gameNight.Id, "guest@example.com", organizerId, ResendIfPending: true),
+            CancellationToken.None);
+
+        // The caller must learn that the invitation did not go out: swallowing it would turn a failed
+        // delivery into a success.
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    [Fact]
+    public async Task Handle_ResendIfPending_WhenTheInvitationIsNoLongerPending_ThrowsConflictException()
+    {
+        var organizerId = Guid.NewGuid();
+        var gameNight = CreateGameNight(organizerId);
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        // Pending when the existence check ran, answered or cancelled by the time the list is read.
+        _invitationRepoMock
+            .Setup(r => r.ExistsPendingByEmailAsync(
+                gameNight.Id, "guest@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _invitationRepoMock
+            .Setup(r => r.GetByGameNightIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<GameNightInvitation>());
+
+        var act = async () => await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(
+                gameNight.Id, "guest@example.com", organizerId, ResendIfPending: true),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConflictException>();
+    }
+
+    [Fact]
+    public async Task Handle_ResendIfPending_AmongSeveralInvitations_ResendsTheOneOfThatEmail()
+    {
+        var (gameNight, organizerId) = GivenAGameNightWithAPendingInvitationFor(
+            "guest@example.com", out var guest);
+        var other = GameNightInvitation.Create(
+            gameNight.Id, "other@example.com", UtcNow.AddDays(14), organizerId, UtcNow);
+        // The other guest comes first: picking "the first pending one" would resend the wrong invitation.
+        _invitationRepoMock
+            .Setup(r => r.GetByGameNightIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<GameNightInvitation> { other, guest });
+
+        var dto = await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(
+                gameNight.Id, "guest@example.com", organizerId, ResendIfPending: true),
+            CancellationToken.None);
+
+        dto.Token.Should().Be(guest.Token);
+        dto.Email.Should().Be("guest@example.com");
+        _emailServiceMock.Verify(
+            s => s.SendGameNightInvitationEmailAsync(
+                "other@example.com",
+                It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<DateTimeOffset>(), It.IsAny<string?>(), It.IsAny<IReadOnlyList<string>>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameNightEmailLocale>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_ResendIfPending_IgnoresAnAnsweredInvitationOfTheSameEmail()
+    {
+        var (gameNight, organizerId) = GivenAGameNightWithAPendingInvitationFor(
+            "guest@example.com", out var pending);
+        var answered = GameNightInvitation.Create(
+            gameNight.Id, "guest@example.com", UtcNow.AddDays(14), organizerId, UtcNow);
+        answered.Accept(userId: null, UtcNow).Should().BeTrue("the fixture needs a really answered invitation");
+        // The answered one comes first: only a pending invitation may be resent.
+        _invitationRepoMock
+            .Setup(r => r.GetByGameNightIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<GameNightInvitation> { answered, pending });
+
+        var dto = await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(
+                gameNight.Id, "guest@example.com", organizerId, ResendIfPending: true),
+            CancellationToken.None);
+
+        dto.Token.Should().Be(pending.Token);
+        dto.Status.Should().Be(nameof(GameNightInvitationStatus.Pending));
+    }
+
+    [Fact]
+    public async Task Handle_ResendIfPending_WithNoPendingInvitation_CreatesOneAsUsual()
+    {
+        var organizerId = Guid.NewGuid();
+        var gameNight = CreateGameNight(organizerId);
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _invitationRepoMock
+            .Setup(r => r.ExistsPendingByEmailAsync(
+                gameNight.Id, "guest@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        _userRepoMock
+            .Setup(r => r.GetByIdAsync(organizerId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Api.BoundedContexts.Authentication.Domain.Entities.User?)null);
+
+        await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(
+                gameNight.Id, "guest@example.com", organizerId, ResendIfPending: true),
+            CancellationToken.None);
+
+        _invitationRepoMock.Verify(
+            r => r.AddAsync(It.IsAny<GameNightInvitation>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _invitationRepoMock.Verify(
+            r => r.GetByGameNightIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()),
+            Times.Never,
+            "il ramo del reinvio non serve quando non c'e' un invito in sospeso");
+    }
+
+    // ── An address that asked to stop (#4846) ────────────────────────────────
+
+    private static void VerifyNoInvitationEmail(Mock<IGameNightEmailService> email) =>
+        email.Verify(
+            e => e.SendGameNightInvitationEmailAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<DateTimeOffset>(), It.IsAny<string?>(), It.IsAny<IReadOnlyList<string>>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameNightEmailLocale>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+
+    [Fact]
+    public async Task Handle_AnAddressThatOptedOut_GetsTheInvitationRecorded_ButNoEmail()
+    {
+        var organizerId = Guid.NewGuid();
+        var gameNight = CreateGameNight(organizerId);
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _optOutRepoMock
+            .Setup(r => r.ExistsAsync("guest@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // Typed the way a person types it: the list is asked in the normalized form.
+        var dto = await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(gameNight.Id, "  Guest@Example.com ", organizerId),
+            CancellationToken.None);
+
+        // The organizer's outcome is the same as for anyone (an invitation, 201): the answer must not reveal
+        // that this address opted out. The guest simply is not written to.
+        dto.Status.Should().Be(nameof(GameNightInvitationStatus.Pending));
+        _invitationRepoMock.Verify(
+            r => r.AddAsync(It.IsAny<GameNightInvitation>(), It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        VerifyNoInvitationEmail(_emailServiceMock);
+    }
+
+    [Fact]
+    public async Task Handle_AnAddressGivenWithAName_IsRecordedAsTheBareAddress_SoTheOptOutListStillApplies()
+    {
+        // «Guest Person <guest@example.com>» is mailed to guest@example.com. Kept as typed, it would not match the
+        // list entry for the bare address and the invitation would go out to someone who asked to stop.
+        var organizerId = Guid.NewGuid();
+        var gameNight = CreateGameNight(organizerId);
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        GameNightInvitation? captured = null;
+        _invitationRepoMock
+            .Setup(r => r.AddAsync(It.IsAny<GameNightInvitation>(), It.IsAny<CancellationToken>()))
+            .Callback<GameNightInvitation, CancellationToken>((inv, _) => captured = inv);
+        _optOutRepoMock
+            .Setup(r => r.ExistsAsync("guest@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(gameNight.Id, "Guest Person <Guest@Example.com>", organizerId),
+            CancellationToken.None);
+
+        captured!.Email.Should().Be("guest@example.com");
+        _invitationRepoMock.Verify(
+            r => r.ExistsPendingByEmailAsync(gameNight.Id, "guest@example.com", It.IsAny<CancellationToken>()),
+            Times.Once);
+        VerifyNoInvitationEmail(_emailServiceMock);
+    }
+
+    [Fact]
+    public async Task Handle_ResendingAnInvitationWrittenBeforeTheKeyExisted_FailsAsAStateDefect_AndSendsNothing()
+    {
+        // A row from an instance that predates the column has no key to put in the opt-out link. It is not the
+        // caller's mistake (that would be a 400), and a mail without the link is not sent.
+        var organizerId = Guid.NewGuid();
+        var gameNight = CreateGameNight(organizerId);
+        var legacy = GameNightInvitation.Reconstitute(
+            id: Guid.NewGuid(),
+            token: Guid.NewGuid().ToString("N")[..22],
+            gameNightId: gameNight.Id,
+            email: "guest@example.com",
+            status: GameNightInvitationStatus.Pending,
+            expiresAt: UtcNow.AddDays(14),
+            respondedAt: null,
+            respondedByUserId: null,
+            createdAt: UtcNow.AddDays(-1),
+            createdBy: organizerId,
+            unsubscribeKey: null);
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _invitationRepoMock
+            .Setup(r => r.ExistsPendingByEmailAsync(gameNight.Id, "guest@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _invitationRepoMock
+            .Setup(r => r.GetByGameNightIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<GameNightInvitation> { legacy });
+
+        var act = () => _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(
+                gameNight.Id, "guest@example.com", organizerId, ResendIfPending: true),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*no unsubscribe key*");
+        VerifyNoInvitationEmail(_emailServiceMock);
+    }
+
+    [Fact]
+    public async Task Handle_ResendingToAnAddressThatOptedOutSince_SendsNothingAndStillSucceeds()
+    {
+        var (gameNight, organizerId) = GivenAGameNightWithAPendingInvitationFor(
+            "guest@example.com", out var pending);
+        _optOutRepoMock
+            .Setup(r => r.ExistsAsync("guest@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var dto = await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(
+                gameNight.Id, "guest@example.com", organizerId, ResendIfPending: true),
+            CancellationToken.None);
+
+        dto.Token.Should().Be(pending.Token);
+        VerifyNoInvitationEmail(_emailServiceMock);
+    }
+
+    [Fact]
+    public async Task Handle_TheAnswerToTheOrganizer_DoesNotCarryTheUnsubscribeKey()
+    {
+        // The organizer gets the RSVP token back (to share the link by hand), and that is how it works since #607.
+        // The key that stops everybody's mail to the address is another matter: it is written in the emails and
+        // nowhere else, because anybody who holds it can silence the address for every organizer.
+        var organizerId = Guid.NewGuid();
+        var gameNight = CreateGameNight(organizerId);
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        GameNightInvitation? captured = null;
+        _invitationRepoMock
+            .Setup(r => r.AddAsync(It.IsAny<GameNightInvitation>(), It.IsAny<CancellationToken>()))
+            .Callback<GameNightInvitation, CancellationToken>((inv, _) => captured = inv);
+
+        var dto = await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(gameNight.Id, "guest@example.com", organizerId),
+            CancellationToken.None);
+
+        captured!.UnsubscribeKey.Should().NotBeNullOrWhiteSpace();
+        System.Text.Json.JsonSerializer.Serialize(dto).Should().NotContain(captured.UnsubscribeKey!);
+        typeof(GameNightInvitationDto).GetProperties().Select(p => p.Name)
+            .Should().NotContain(name => name.Contains("Unsubscribe", StringComparison.OrdinalIgnoreCase));
     }
 }

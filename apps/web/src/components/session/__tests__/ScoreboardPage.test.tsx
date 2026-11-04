@@ -1,27 +1,28 @@
 /**
  * ScoreboardPage Component Tests
- * Task 3: Dedicated Scoreboard Page
+ * Task 3: Dedicated Scoreboard Page — #4156: legge la LiveGameSession
  *
  * Test Coverage:
  * - Loading skeleton rendered while fetching
- * - Error state when session fetch fails
- * - Player names rendered from GameSessionDto.players
- * - Winner badge highlighted when winnerName present
- * - Status badge (Active / Paused / Finalized) rendered
- * - "Registra Punteggio" button present and opens Sheet on click
+ * - Error state when the live session fetch fails
+ * - Players ranked by the totals of the live session, spectators left out
+ * - Ties share a position
+ * - Winner badge only on a completed session with a single leader
+ * - Status badge for the live session states
+ * - "Registra Punteggio" leads to the Score tab of the live page, and only while playing
  * - Back navigation link present
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 
-import type { GameSessionDto } from '@/lib/api/schemas/games.schemas';
+import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
 
 // Mock the api module
 vi.mock('@/lib/api', () => ({
   api: {
-    sessions: {
-      getById: vi.fn(),
+    liveSessions: {
+      getSession: vi.fn(),
     },
   },
 }));
@@ -37,39 +38,66 @@ import { api } from '@/lib/api';
 import { ScoreboardPage } from '../ScoreboardPage';
 import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 
-const mockGetById = vi.mocked(api.sessions.getById);
+const mockGetSession = vi.mocked(api.liveSessions.getSession);
 
-// Realistic GameSessionDto fixture
-const mockSession: GameSessionDto = {
-  id: 'session-1',
-  gameId: 'game-abc',
-  status: 'Active',
-  startedAt: '2026-03-10T14:00:00.000Z',
-  completedAt: null,
-  playerCount: 3,
-  players: [
-    { playerName: 'Alice', playerOrder: 1, color: '#ef4444' },
-    { playerName: 'Bob', playerOrder: 2, color: '#3b82f6' },
-    { playerName: 'Charlie', playerOrder: 3, color: '#22c55e' },
-  ],
-  winnerName: null,
-  notes: null,
-  durationMinutes: 45,
-};
+type LivePlayer = LiveSessionDto['players'][number];
 
-const mockSessionWithWinner: GameSessionDto = {
-  ...mockSession,
-  id: 'session-2',
-  status: 'Finalized',
-  completedAt: '2026-03-10T15:00:00.000Z',
-  winnerName: 'Alice',
-};
+function player(
+  id: string,
+  displayName: string,
+  totalScore: number,
+  overrides: Partial<LivePlayer> = {}
+): LivePlayer {
+  return {
+    id,
+    userId: null,
+    displayName,
+    avatarUrl: null,
+    color: 'Red',
+    role: 'Player',
+    teamId: null,
+    totalScore,
+    currentRank: 0,
+    joinedAt: '2026-03-10T14:00:00.000Z',
+    isActive: true,
+    ...overrides,
+  };
+}
 
-const mockPausedSession: GameSessionDto = {
-  ...mockSession,
-  id: 'session-3',
-  status: 'Paused',
-};
+function liveSession(overrides: Partial<LiveSessionDto> = {}): LiveSessionDto {
+  return {
+    id: 'session-1',
+    sessionCode: 'ABC123',
+    gameId: null,
+    gameName: 'Azul',
+    gameSlug: 'azul',
+    createdByUserId: '00000000-0000-4000-8000-00000000f001',
+    status: 'InProgress',
+    visibility: 'Private',
+    groupId: null,
+    createdAt: '2026-03-10T13:55:00.000Z',
+    startedAt: '2026-03-10T14:00:00.000Z',
+    pausedAt: null,
+    completedAt: null,
+    updatedAt: '2026-03-10T14:30:00.000Z',
+    lastSavedAt: null,
+    currentTurnIndex: 3,
+    currentTurnPlayerId: null,
+    agentMode: 'None',
+    notes: null,
+    // In ordine di ingresso: Marco prima di Giulia, ma Giulia ha più punti.
+    players: [player('p1', 'Marco', 10, { role: 'Host' }), player('p2', 'Giulia', 30)],
+    teams: [],
+    roundScores: [],
+    scoringConfig: { enabledDimensions: ['punti'], dimensionUnits: {} },
+    ...overrides,
+  };
+}
+
+async function rows(): Promise<HTMLElement[]> {
+  await waitFor(() => expect(screen.getAllByTestId('scoreboard-row').length).toBeGreaterThan(0));
+  return screen.getAllByTestId('scoreboard-row');
+}
 
 describe('ScoreboardPage', () => {
   beforeEach(() => {
@@ -84,7 +112,7 @@ describe('ScoreboardPage', () => {
   describe('Loading state', () => {
     it('renders loading skeleton while session is fetching', () => {
       // Never resolves — stays loading
-      mockGetById.mockReturnValue(new Promise(() => {}));
+      mockGetSession.mockReturnValue(new Promise(() => {}));
 
       renderWithQuery(<ScoreboardPage sessionId="session-1" />);
 
@@ -94,17 +122,7 @@ describe('ScoreboardPage', () => {
 
   describe('Error state', () => {
     it('renders error message when fetch fails', async () => {
-      mockGetById.mockRejectedValue(new Error('Network error'));
-
-      renderWithQuery(<ScoreboardPage sessionId="session-1" />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('scoreboard-error')).toBeInTheDocument();
-      });
-    });
-
-    it('renders error message when session returns null', async () => {
-      mockGetById.mockResolvedValue(null);
+      mockGetSession.mockRejectedValue(new Error('Session not found'));
 
       renderWithQuery(<ScoreboardPage sessionId="session-1" />);
 
@@ -114,156 +132,155 @@ describe('ScoreboardPage', () => {
     });
   });
 
-  describe('Player display', () => {
-    it('renders all player names from the session', async () => {
-      mockGetById.mockResolvedValue(mockSession);
+  describe('Ranking (#4156)', () => {
+    it('reads the live session of the route id', async () => {
+      mockGetSession.mockResolvedValue(liveSession());
 
       renderWithQuery(<ScoreboardPage sessionId="session-1" />);
 
-      await waitFor(() => {
-        expect(screen.getByText('Alice')).toBeInTheDocument();
-        expect(screen.getByText('Bob')).toBeInTheDocument();
-        expect(screen.getByText('Charlie')).toBeInTheDocument();
-      });
+      await rows();
+      expect(mockGetSession).toHaveBeenCalledWith('session-1');
     });
 
-    it('renders rank medals for top-3 players', async () => {
-      mockGetById.mockResolvedValue(mockSession);
+    it('ranks players by their total, highest first', async () => {
+      mockGetSession.mockResolvedValue(liveSession());
 
       renderWithQuery(<ScoreboardPage sessionId="session-1" />);
 
-      await waitFor(() => {
-        // Positions 1–3 use medal emojis as aria-label
-        expect(screen.getByLabelText('Posizione 1')).toBeInTheDocument();
-        expect(screen.getByLabelText('Posizione 2')).toBeInTheDocument();
-        expect(screen.getByLabelText('Posizione 3')).toBeInTheDocument();
-      });
+      const [first, second] = await rows();
+      expect(first).toHaveAttribute('data-rank', '1');
+      expect(first).toHaveTextContent('Giulia');
+      expect(first).toHaveTextContent('30');
+      expect(second).toHaveAttribute('data-rank', '2');
+      expect(second).toHaveTextContent('Marco');
+      expect(second).toHaveTextContent('10');
+    });
+
+    it('gives tied players the same position, in the order they joined', async () => {
+      // In ordine di ingresso l'ultimo in classifica entra per primo: così il test vede anche
+      // un ordinamento che non guarda il totale.
+      mockGetSession.mockResolvedValue(
+        liveSession({
+          players: [player('p3', 'Luca', 5), player('p1', 'Marco', 20), player('p2', 'Giulia', 20)],
+        })
+      );
+
+      renderWithQuery(<ScoreboardPage sessionId="session-1" />);
+
+      const ranked = await rows();
+      expect(ranked.map(r => r.getAttribute('data-rank'))).toEqual(['1', '1', '3']);
+      expect(ranked.map(r => r.textContent)).toEqual([
+        expect.stringContaining('Marco'),
+        expect.stringContaining('Giulia'),
+        expect.stringContaining('Luca'),
+      ]);
+    });
+
+    it('leaves spectators out of the ranking and the player count', async () => {
+      mockGetSession.mockResolvedValue(
+        liveSession({
+          players: [
+            player('p1', 'Marco', 10, { role: 'Host' }),
+            player('p2', 'Giulia', 30),
+            player('p3', 'Chi guarda', 0, { role: 'Spectator' }),
+          ],
+        })
+      );
+
+      renderWithQuery(<ScoreboardPage sessionId="session-1" />);
+
+      expect(await rows()).toHaveLength(2);
+      expect(screen.queryByText('Chi guarda')).not.toBeInTheDocument();
+      expect(screen.getByTestId('player-count')).toHaveTextContent('2');
     });
   });
 
   describe('Winner display', () => {
-    it('shows winner badge when winnerName is set', async () => {
-      mockGetById.mockResolvedValue(mockSessionWithWinner);
-
-      renderWithQuery(<ScoreboardPage sessionId="session-2" />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('winner-badge')).toBeInTheDocument();
-      });
-    });
-
-    it('does not show winner badge when winnerName is null', async () => {
-      mockGetById.mockResolvedValue(mockSession);
+    it('names the winner of a completed session', async () => {
+      mockGetSession.mockResolvedValue(
+        liveSession({ status: 'Completed', completedAt: '2026-03-10T15:00:00.000Z' })
+      );
 
       renderWithQuery(<ScoreboardPage sessionId="session-1" />);
 
       await waitFor(() => {
-        expect(screen.queryByTestId('winner-badge')).not.toBeInTheDocument();
+        expect(screen.getByTestId('winner-badge')).toHaveTextContent('Vincitore: Giulia');
       });
     });
 
-    it('shows winner name next to the winner badge', async () => {
-      mockGetById.mockResolvedValue(mockSessionWithWinner);
+    it('names no winner while the game is still going', async () => {
+      mockGetSession.mockResolvedValue(liveSession({ status: 'InProgress' }));
 
-      renderWithQuery(<ScoreboardPage sessionId="session-2" />);
+      renderWithQuery(<ScoreboardPage sessionId="session-1" />);
 
-      await waitFor(() => {
-        const winnerBadge = screen.getByTestId('winner-badge');
-        expect(winnerBadge).toHaveTextContent('Alice');
-      });
+      await rows();
+      expect(screen.queryByTestId('winner-badge')).not.toBeInTheDocument();
+    });
+
+    it('names no winner when the first place is shared', async () => {
+      mockGetSession.mockResolvedValue(
+        liveSession({
+          status: 'Completed',
+          players: [player('p1', 'Marco', 20), player('p2', 'Giulia', 20)],
+        })
+      );
+
+      renderWithQuery(<ScoreboardPage sessionId="session-1" />);
+
+      await rows();
+      expect(screen.queryByTestId('winner-badge')).not.toBeInTheDocument();
     });
   });
 
   describe('Status badge', () => {
-    it('renders Active status badge', async () => {
-      mockGetById.mockResolvedValue(mockSession);
+    it.each([
+      ['InProgress', 'In corso'],
+      ['Paused', 'In pausa'],
+      ['Completed', 'Completata'],
+      ['Created', 'In preparazione'],
+    ] as const)('renders the %s status', async (status, label) => {
+      mockGetSession.mockResolvedValue(liveSession({ status }));
 
       renderWithQuery(<ScoreboardPage sessionId="session-1" />);
 
       await waitFor(() => {
-        expect(screen.getByTestId('status-badge')).toHaveTextContent('Attiva');
-      });
-    });
-
-    it('renders Paused status badge', async () => {
-      mockGetById.mockResolvedValue(mockPausedSession);
-
-      renderWithQuery(<ScoreboardPage sessionId="session-3" />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('status-badge')).toHaveTextContent('In pausa');
-      });
-    });
-
-    it('renders Finalized status badge', async () => {
-      mockGetById.mockResolvedValue(mockSessionWithWinner);
-
-      renderWithQuery(<ScoreboardPage sessionId="session-2" />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId('status-badge')).toHaveTextContent('Completata');
+        expect(screen.getByTestId('status-badge')).toHaveTextContent(label);
       });
     });
   });
 
   describe('Actions', () => {
-    it('renders "Registra Punteggio" button', async () => {
-      mockGetById.mockResolvedValue(mockSession);
+    it('leads "Registra Punteggio" to the Score tab of the live page', async () => {
+      mockGetSession.mockResolvedValue(liveSession());
 
       renderWithQuery(<ScoreboardPage sessionId="session-1" />);
 
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /registra punteggio/i })).toBeInTheDocument();
+        expect(screen.getByTestId('record-score-link')).toHaveAttribute(
+          'href',
+          '/sessions/session-1/live?tab=score'
+        );
       });
     });
 
-    it('opens score entry Sheet when "Registra Punteggio" is clicked', async () => {
-      mockGetById.mockResolvedValue(mockSession);
+    it('offers no score entry once the game is over', async () => {
+      mockGetSession.mockResolvedValue(liveSession({ status: 'Completed' }));
 
       renderWithQuery(<ScoreboardPage sessionId="session-1" />);
 
-      // Wait for the session to load and the action-bar button to appear
-      const button = await screen.findByRole('button', { name: /registra punteggio/i });
-
-      fireEvent.click(button);
-
-      // Sheet dialog should open — Radix mounts a dialog role element
-      await waitFor(() => {
-        expect(screen.getByRole('dialog')).toBeInTheDocument();
-      });
-
-      // Score inputs for each player should be present in the form
-      await waitFor(() => {
-        expect(
-          screen.getByRole('spinbutton', { name: /punteggio per alice/i })
-        ).toBeInTheDocument();
-        expect(screen.getByRole('spinbutton', { name: /punteggio per bob/i })).toBeInTheDocument();
-      });
+      await rows();
+      expect(screen.queryByTestId('record-score-link')).not.toBeInTheDocument();
     });
   });
 
   describe('Navigation', () => {
     it('renders back navigation link to session', async () => {
-      mockGetById.mockResolvedValue(mockSession);
+      mockGetSession.mockResolvedValue(liveSession());
 
       renderWithQuery(<ScoreboardPage sessionId="session-1" />);
 
       await waitFor(() => {
-        const backLink = screen.getByTestId('back-link');
-        expect(backLink).toBeInTheDocument();
-        expect(backLink.closest('a')?.getAttribute('href')).toBe('/sessions/session-1');
-      });
-    });
-  });
-
-  describe('Session metadata', () => {
-    it('shows player count', async () => {
-      mockGetById.mockResolvedValue(mockSession);
-
-      renderWithQuery(<ScoreboardPage sessionId="session-1" />);
-
-      await waitFor(() => {
-        expect(screen.getByText(/3/)).toBeInTheDocument();
+        expect(screen.getByTestId('back-link')).toHaveAttribute('href', '/sessions/session-1');
       });
     });
   });

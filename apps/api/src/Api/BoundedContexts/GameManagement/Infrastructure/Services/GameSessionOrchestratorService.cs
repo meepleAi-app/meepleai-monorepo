@@ -136,7 +136,9 @@ internal sealed class GameSessionOrchestratorService : IGameSessionOrchestratorS
                 }
             }
 
-            return expansionIds;
+            // #4641: a User link is unique per owner, so two users can hold the same expansion link, and a personal
+            // one can sit next to the Shared one. The expansion is one game.
+            return expansionIds.Distinct().ToList();
         }
         catch (Exception ex)
         {

@@ -38,12 +38,12 @@ public class SmolDoclingIntegrationTests : IAsyncLifetime
     // Test PDF paths
     // #4044: risolto dalla radice del repository, non con una risalita a conteggio fisso.
     // La forma precedente — "../../../../data/rulebook/barrage_rulebook.pdf" — dalla working directory dei test
-    // (bin/Debug/net9.0) porta a apps/api/tests/, che non contiene data/: la guardia
+    // (bin/Debug/net10.0) porta a apps/api/tests/, che non contiene data/: la guardia
     // File.Exists qui sotto saltava SEMPRE, su un PDF committato e presente.
     private static readonly string BarragePdfPath = PdfCorpus.Resolve("data/rulebook/barrage_rulebook.pdf");
     // #4044: risolto dalla radice del repository, non con una risalita a conteggio fisso.
     // La forma precedente — "../../../../data/rulebook/terraforming-mars_rulebook.pdf" — dalla working directory dei test
-    // (bin/Debug/net9.0) porta a apps/api/tests/, che non contiene data/: la guardia
+    // (bin/Debug/net10.0) porta a apps/api/tests/, che non contiene data/: la guardia
     // File.Exists qui sotto saltava SEMPRE, su un PDF committato e presente.
     private static readonly string TerraformingMarsPdfPath = PdfCorpus.Resolve("data/rulebook/terraforming-mars_rulebook.pdf");
 

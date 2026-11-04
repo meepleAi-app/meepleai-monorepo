@@ -63,8 +63,12 @@ public sealed class VectorDocumentReadyStateNoTrackingPersistenceIntegrationTest
     public async Task Handle_UnderProductionNoTrackingDefault_PersistsReadyStateAndIndexerVersion()
     {
         var pdfId = Guid.NewGuid();
+        var vectorDocumentId = Guid.NewGuid();
 
-        // Arrange — seed a user (FK) and a PDF stuck in the Indexing state, via one scope.
+        // Arrange — seed a user (FK) and a PDF stuck in the Embedding state, via one scope.
+        // #4339 / #4609: "stuck" means the index IS written (its embeddings exist) and the PDF is in a non-final
+        // state that no pipeline is about to finalize. A PDF in Indexing is the pipeline's: the handler leaves it,
+        // so this test uses Embedding. Without embeddings the PDF is mid-pipeline, and the handler leaves it too.
         await using (var scope = _factory.Services.CreateAsyncScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -86,9 +90,20 @@ public sealed class VectorDocumentReadyStateNoTrackingPersistenceIntegrationTest
                 ContentType = "application/pdf",
                 UploadedByUserId = userId,
                 UploadedAt = DateTime.UtcNow,
-                ProcessingState = nameof(PdfProcessingState.Indexing),
+                ProcessingState = nameof(PdfProcessingState.Embedding),
                 IndexerVersion = null,
                 Language = "en",
+            });
+            db.PgVectorEmbeddings.Add(new Api.Infrastructure.Entities.KnowledgeBase.PgVectorEmbeddingEntity
+            {
+                Id = Guid.NewGuid(),
+                VectorDocumentId = vectorDocumentId,
+                GameId = Guid.NewGuid(),
+                TextContent = "A passage.",
+                Vector = new Pgvector.Vector(Api.Tests.Integration.KnowledgeBase.QueryVectorEmbeddings.Axis(1f, 0f)),
+                Model = "test-model",
+                ChunkIndex = 0,
+                PageNumber = 1,
             });
             await db.SaveChangesAsync();
         }
@@ -102,13 +117,13 @@ public sealed class VectorDocumentReadyStateNoTrackingPersistenceIntegrationTest
 
             var evt = new VectorDocumentReadyIntegrationEvent
             {
-                DocumentId = Guid.NewGuid(),
+                DocumentId = vectorDocumentId,
                 GameId = Guid.NewGuid(),
                 ChunkCount = 42,
                 PdfDocumentId = pdfId,
                 UploadedByUserId = Guid.NewGuid(),
                 FileName = "rules.pdf",
-                CurrentProcessingState = nameof(PdfProcessingState.Indexing),
+                CurrentProcessingState = nameof(PdfProcessingState.Embedding),
             };
 
             await handler.Handle(evt, CancellationToken.None);

@@ -2,11 +2,14 @@ namespace Api.Services;
 
 internal interface IEmailService
 {
-    Task SendPasswordResetEmailAsync(string toEmail, string toName, string resetToken, CancellationToken ct = default);
-    Task SendTwoFactorDisabledEmailAsync(string toEmail, string toName, bool wasAdminOverride, CancellationToken ct = default);
+    // #4812: the account emails (reset, verification, 2FA disabled, suspended, reactivated, locked) are written in
+    // the language of the user they go to: `language` is that user's `User.Language`. Italian gets Italian;
+    // anything else, or null, gets English. It has no default, so a new caller cannot forget it.
+    Task SendPasswordResetEmailAsync(string toEmail, string toName, string resetToken, string? language, CancellationToken ct = default);
+    Task SendTwoFactorDisabledEmailAsync(string toEmail, string toName, bool wasAdminOverride, string? language, CancellationToken ct = default);
 
     // ISSUE-3071: Email verification
-    Task SendVerificationEmailAsync(string toEmail, string toName, string verificationToken, CancellationToken ct = default);
+    Task SendVerificationEmailAsync(string toEmail, string toName, string verificationToken, string? language, CancellationToken ct = default);
 
     // ISSUE-918: Email delivery integration for reports
     Task SendReportEmailAsync(
@@ -116,11 +119,13 @@ internal interface IEmailService
         string toEmail,
         string userName,
         string? reason,
+        string? language,
         CancellationToken ct = default);
 
     Task SendAccountReactivatedEmailAsync(
         string toEmail,
         string userName,
+        string? language,
         CancellationToken ct = default);
 
     // ISSUE-3676: Account lockout notification
@@ -130,6 +135,7 @@ internal interface IEmailService
         int failedAttempts,
         DateTime lockedUntil,
         string? ipAddress,
+        string? language,
         CancellationToken ct = default);
 
     // ISSUE-3668: Game proposal lifecycle notification emails

@@ -18,6 +18,8 @@ internal sealed class KbUserFeedbackConfiguration : IEntityTypeConfiguration<KbU
         builder.Property(e => e.Outcome).HasColumnName("outcome").HasMaxLength(20).IsRequired();
         builder.Property(e => e.Comment).HasColumnName("comment").HasMaxLength(500);
         builder.Property(e => e.CreatedAt).HasColumnName("created_at").IsRequired();
+        builder.Property(e => e.ProfileVersionId).HasColumnName("profile_version_id"); // #4168
+        builder.Property(e => e.Language).HasColumnName("language").HasMaxLength(16);
         builder.HasIndex(e => e.GameId).HasDatabaseName("IX_kb_user_feedback_game_id");
         builder.HasIndex(e => e.UserId).HasDatabaseName("IX_kb_user_feedback_user_id");
         builder.HasIndex(e => e.MessageId).HasDatabaseName("IX_kb_user_feedback_message_id");

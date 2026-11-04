@@ -53,8 +53,7 @@ internal static class DashboardEndpoints
 
 **Authorization**: Requires active session (cookie-based authentication).")
             .Produces<DashboardResponseDto>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .WithOpenApi();
+            .Produces(StatusCodes.Status401Unauthorized);
 
         // Issue #3319: AI-powered dashboard insights
         group.MapGet("/dashboard/insights", HandleGetDashboardInsights)
@@ -76,8 +75,7 @@ internal static class DashboardEndpoints
 
 **Authorization**: Requires active session (cookie-based authentication).")
             .Produces<DashboardInsightsResponseDto>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .WithOpenApi();
+            .Produces(StatusCodes.Status401Unauthorized);
 
         // Issue #4124: AI insight accuracy metrics
         group.MapGet("/dashboard/insights/accuracy", HandleGetInsightAccuracy)
@@ -93,8 +91,7 @@ Accuracy = (relevant feedback / total feedback) × 100. Target: >75%.
 
 **Authorization**: Requires active session (cookie-based authentication).")
             .Produces<InsightAccuracyResponseDto>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .WithOpenApi();
+            .Produces(StatusCodes.Status401Unauthorized);
 
         // Issue #4124: AI insight feedback for accuracy tracking
         group.MapPost("/dashboard/insights/feedback", HandleSubmitInsightFeedback)
@@ -115,8 +112,7 @@ Feedback is used to calculate accuracy metrics (target: >75% relevance).
 **Authorization**: Requires active session (cookie-based authentication).")
             .Produces<InsightFeedbackResponseDto>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status400BadRequest)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .WithOpenApi();
+            .Produces(StatusCodes.Status401Unauthorized);
 
         // Issue #3973, #3923: Activity timeline with advanced filters
         group.MapGet("/dashboard/activity-timeline", HandleGetActivityTimeline)
@@ -138,8 +134,7 @@ Feedback is used to calculate accuracy metrics (target: >75% relevance).
 
 **Performance**: Target latency < 500ms with 5-minute cache.")
             .Produces<ActivityTimelineResponseDto>(StatusCodes.Status200OK)
-            .Produces(StatusCodes.Status401Unauthorized)
-            .WithOpenApi();
+            .Produces(StatusCodes.Status401Unauthorized);
 
         // Issue #3324: SSE real-time dashboard stream
         MapDashboardStreamEndpoint(group);

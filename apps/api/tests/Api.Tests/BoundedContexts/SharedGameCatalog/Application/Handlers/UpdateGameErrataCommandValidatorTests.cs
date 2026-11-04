@@ -19,7 +19,7 @@ public class UpdateGameErrataCommandValidatorTests
     [Fact]
     public void Validate_WithValidCommand_PassesValidation()
     {
-        var command = new UpdateGameErrataCommand(Guid.NewGuid(), "Corrected typo", "Page 5", DateTime.UtcNow.AddDays(-1));
+        var command = new UpdateGameErrataCommand(Guid.NewGuid(), Guid.NewGuid(), "Corrected typo", "Page 5", DateTime.UtcNow.AddDays(-1));
         var result = _validator.TestValidate(command);
         result.ShouldNotHaveAnyValidationErrors();
     }
@@ -29,7 +29,7 @@ public class UpdateGameErrataCommandValidatorTests
     [InlineData("   ")]
     public void Validate_WithEmptyDescription_FailsValidation(string description)
     {
-        var command = new UpdateGameErrataCommand(Guid.NewGuid(), description, "Page 1", DateTime.UtcNow.AddDays(-1));
+        var command = new UpdateGameErrataCommand(Guid.NewGuid(), Guid.NewGuid(), description, "Page 1", DateTime.UtcNow.AddDays(-1));
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(x => x.Description);
     }
@@ -39,7 +39,7 @@ public class UpdateGameErrataCommandValidatorTests
     [InlineData("   ")]
     public void Validate_WithEmptyPageReference_FailsValidation(string pageRef)
     {
-        var command = new UpdateGameErrataCommand(Guid.NewGuid(), "Description", pageRef, DateTime.UtcNow.AddDays(-1));
+        var command = new UpdateGameErrataCommand(Guid.NewGuid(), Guid.NewGuid(), "Description", pageRef, DateTime.UtcNow.AddDays(-1));
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(x => x.PageReference);
     }
@@ -47,7 +47,7 @@ public class UpdateGameErrataCommandValidatorTests
     [Fact]
     public void Validate_WithEmptyErrataId_FailsValidation()
     {
-        var command = new UpdateGameErrataCommand(Guid.Empty, "Description", "Page 1", DateTime.UtcNow.AddDays(-1));
+        var command = new UpdateGameErrataCommand(Guid.NewGuid(), Guid.Empty, "Description", "Page 1", DateTime.UtcNow.AddDays(-1));
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(x => x.ErrataId);
     }
@@ -55,7 +55,7 @@ public class UpdateGameErrataCommandValidatorTests
     [Fact]
     public void Validate_WithFuturePublishedDate_FailsValidation()
     {
-        var command = new UpdateGameErrataCommand(Guid.NewGuid(), "Description", "Page 1", DateTime.UtcNow.AddDays(1));
+        var command = new UpdateGameErrataCommand(Guid.NewGuid(), Guid.NewGuid(), "Description", "Page 1", DateTime.UtcNow.AddDays(1));
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(x => x.PublishedDate);
     }
@@ -64,8 +64,16 @@ public class UpdateGameErrataCommandValidatorTests
     public void Validate_WithPageReferenceTooLong_FailsValidation()
     {
         var longPageRef = new string('a', 101);
-        var command = new UpdateGameErrataCommand(Guid.NewGuid(), "Description", longPageRef, DateTime.UtcNow.AddDays(-1));
+        var command = new UpdateGameErrataCommand(Guid.NewGuid(), Guid.NewGuid(), "Description", longPageRef, DateTime.UtcNow.AddDays(-1));
         var result = _validator.TestValidate(command);
         result.ShouldHaveValidationErrorFor(x => x.PageReference);
+    }
+
+    [Fact]
+    public void Validate_WithEmptySharedGameId_FailsValidation()
+    {
+        var command = new UpdateGameErrataCommand(Guid.Empty, Guid.NewGuid(), "Description", "Page 1", DateTime.UtcNow.AddDays(-1));
+        var result = _validator.TestValidate(command);
+        result.ShouldHaveValidationErrorFor(x => x.SharedGameId);
     }
 }

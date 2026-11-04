@@ -26,9 +26,14 @@ internal static class GameNightEndpoints
             .Produces<Guid>(201)
             .Produces(400)
             .Produces(401)
+            .Produces(409)
             .WithName("CreateGameNight")
             .WithSummary("Create a new game night event")
-            .WithDescription("Creates a new game night event in Draft status.");
+            .WithDescription(
+                "Creates a new game night event in Draft status. The optional `id` is chosen by the caller: "
+                + "sending the same creation again with the same `id` returns the game night already made "
+                + "(its pending invitations are sent again) instead of creating another; the `id` of a game "
+                + "night that belongs to another organizer answers 409.");
 
         gameNights.MapGet("/", HandleGetUpcomingGameNights)
             .RequireAuthenticatedUser()
@@ -36,7 +41,7 @@ internal static class GameNightEndpoints
             .Produces(401)
             .WithName("GetUpcomingGameNights")
             .WithSummary("Get upcoming game nights")
-            .WithDescription("Retrieves upcoming published game nights ordered by scheduled date.");
+            .WithDescription("Retrieves the caller's upcoming published game nights (as organizer or invitee) ordered by scheduled date.");
 
         gameNights.MapGet("/mine", HandleGetMyGameNights)
             .RequireAuthenticatedUser()
@@ -54,7 +59,7 @@ internal static class GameNightEndpoints
             .Produces(401)
             .WithName("GetCompletedGameNights")
             .WithSummary("Get recently completed game nights")
-            .WithDescription("Retrieves recently completed (or scheduled-in-the-past published) game nights ordered DESC by ScheduledAt. Limit defaults to 5.");
+            .WithDescription("Retrieves the caller's recently completed (or scheduled-in-the-past published) game nights, as organizer or invitee, ordered DESC by ScheduledAt. Limit defaults to 5.");
 
         // Issue #950 (W1-PR2): regulars feed for Step 3 wizard suggestion list.
         gameNights.MapGet("/regulars", HandleGetRegulars)
@@ -146,6 +151,27 @@ internal static class GameNightEndpoints
             .WithSummary("Get game night RSVPs")
             .WithDescription("Retrieves all RSVPs for a game night.");
 
+        gameNights.MapGet("/{id:guid}/guest-invitations", HandleGetGameNightGuestInvitations)
+            .RequireAuthenticatedUser()
+            .Produces<IReadOnlyList<GameNightGuestInvitationDto>>(200)
+            .Produces(403)
+            .Produces(404)
+            .Produces(401)
+            .WithName("GetGameNightGuestInvitations")
+            .WithSummary("Get the guests invited by email")
+            .WithDescription("Lists the guests invited to a game night by email, with their state. Organizer only (#4706).");
+
+        gameNights.MapDelete("/{id:guid}/guest-invitations/{invitationId:guid}", HandleCancelGuestInvitation)
+            .RequireAuthenticatedUser()
+            .Produces(204)
+            .Produces(403)
+            .Produces(404)
+            .Produces(409)
+            .Produces(401)
+            .WithName("CancelGameNightGuestInvitation")
+            .WithSummary("Withdraw an invitation sent by email")
+            .WithDescription("Organizer only. A pending or accepted invitation is cancelled: its link answers 410 and an accepted guest loses the seat. Declined and expired invitations stay as history (409). Repeating the request is not an error (#4721).");
+
         gameNights.MapPost("/{id:guid}/rsvp", HandleRespondToGameNight)
             .RequireAuthenticatedUser()
             .Produces(204)
@@ -181,6 +207,16 @@ internal static class GameNightEndpoints
             .WithName("RespondToGameNightInvitationByToken")
             .WithSummary("Respond to a game night invitation by token")
             .WithDescription("Public endpoint to submit an Accepted or Declined response, optionally with a guest display name (issue #1169). Optional auth: authenticated callers have their UserId attached. Idempotent on same-state; conflicts on switching across statuses. Rate-limited at 10 req/min per IP.");
+
+        gameNights.MapPost("/guest-unsubscribe/{unsubscribeKey}", HandleOptOutGameNightGuestEmail)
+            .AllowAnonymous()
+            .RequireRateLimiting("GameNightGuestUnsubscribe")
+            .Produces(204)
+            .Produces(404)
+            .Produces(429)
+            .WithName("OptOutGameNightGuestEmail")
+            .WithSummary("Stop receiving game night emails at the address behind an invitation")
+            .WithDescription("Public endpoint (#4846). The unsubscribe key of an invitation, written in the emails that go to its address, is the credential: the address it names goes on the opt-out list and gets no more game night emails. It is not the RSVP token (the organizer holds that one). Works whatever the state of the invitation (answered, cancelled, expired). Idempotent. Rate-limited at 10 req/min per IP, in a bucket of its own so a guest behind a shared address does not compete with RSVPs.");
 
         gameNights.MapPost("/{gameNightId:guid}/invitations", HandleCreateGameNightInvitationByEmail)
             .RequireAuthenticatedUser()
@@ -419,7 +455,9 @@ internal static class GameNightEndpoints
             MaxPlayers: request.MaxPlayers,
             GameIds: request.GameIds,
             InvitedUserIds: request.InvitedUserIds,
-            InvitedEmails: request.InvitedEmails);
+            InvitedEmails: request.InvitedEmails,
+            Id: request.Id,
+            TimeZoneId: request.TimeZoneId);
 
         var id = await mediator.Send(command, cancellationToken).ConfigureAwait(false);
         return Results.Created($"/api/v1/game-nights/{id}", id);
@@ -443,7 +481,8 @@ internal static class GameNightEndpoints
             Description: request.Description,
             Location: request.Location,
             MaxPlayers: request.MaxPlayers,
-            GameIds: request.GameIds);
+            GameIds: request.GameIds,
+            TimeZoneId: request.TimeZoneId);
 
         // 🔴 Validazione a mano, come già fa `HandleRespondToInvitationByToken` poche righe sopra
         // e per la stessa ragione: `UpdateGameNightCommand` è un `ICommand`, cioè un `IRequest`
@@ -777,6 +816,15 @@ internal static class GameNightEndpoints
         return updated is null ? Results.NotFound() : Results.Ok(updated);
     }
 
+    private static async Task<IResult> HandleOptOutGameNightGuestEmail(
+        string unsubscribeKey,
+        [FromServices] IMediator mediator,
+        CancellationToken cancellationToken)
+    {
+        await mediator.Send(new OptOutGameNightGuestEmailCommand(unsubscribeKey), cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
     private static async Task<IResult> HandleStartGameNightSession(
         Guid id,
         [FromBody] StartGameNightSessionRequest request,
@@ -865,7 +913,8 @@ internal static class GameNightEndpoints
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        // #2989 inv#17: pass the viewer so the DTO carries their RSVP status (pending-RSVP card).
+        // #4748: the list holds only the viewer's nights (organizer or invitee). #2989 inv#17: the same
+        // viewer also lets the DTO carry their RSVP status (pending-RSVP card).
         var userId = httpContext.User.GetUserId();
         var result = await mediator.Send(new GetUpcomingGameNightsQuery(userId), cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
@@ -874,10 +923,13 @@ internal static class GameNightEndpoints
     // F20 #1974 (audit 2026-06-07): dashboard "Recenti" slot.
     private static async Task<IResult> HandleGetCompletedGameNights(
         [FromServices] IMediator mediator,
+        HttpContext httpContext,
         CancellationToken cancellationToken,
         [FromQuery] int? limit = null)
     {
-        var query = limit.HasValue ? new GetCompletedGameNightsQuery(limit.Value) : new GetCompletedGameNightsQuery();
+        // #4748: only the viewer's nights — the list used to hold every user's completed nights.
+        var userId = httpContext.User.GetUserId();
+        var query = limit.HasValue ? new GetCompletedGameNightsQuery(userId, limit.Value) : new GetCompletedGameNightsQuery(userId);
         var result = await mediator.Send(query, cancellationToken).ConfigureAwait(false);
         return Results.Ok(result);
     }
@@ -966,6 +1018,29 @@ internal static class GameNightEndpoints
         return Results.Ok(result);
     }
 
+    private static async Task<IResult> HandleGetGameNightGuestInvitations(
+        Guid id,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        var result = await mediator.Send(new GetGameNightGuestInvitationsQuery(id, userId), cancellationToken).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleCancelGuestInvitation(
+        Guid id,
+        Guid invitationId,
+        [FromServices] IMediator mediator,
+        HttpContext httpContext,
+        CancellationToken cancellationToken)
+    {
+        var userId = httpContext.User.GetUserId();
+        await mediator.Send(new CancelGameNightInvitationCommand(id, invitationId, userId), cancellationToken).ConfigureAwait(false);
+        return Results.NoContent();
+    }
+
     private static async Task<IResult> HandleGetGameNightInvitationByToken(
         string token,
         [FromServices] IMediator mediator,
@@ -989,7 +1064,9 @@ internal static class GameNightEndpoints
         int? MaxPlayers = null,
         List<Guid>? GameIds = null,
         List<Guid>? InvitedUserIds = null,
-        List<string>? InvitedEmails = null);
+        List<string>? InvitedEmails = null,
+        Guid? Id = null,
+        string? TimeZoneId = null);
 
     private sealed record UpdateGameNightRequest(
         string Title,
@@ -997,7 +1074,8 @@ internal static class GameNightEndpoints
         string? Description = null,
         string? Location = null,
         int? MaxPlayers = null,
-        List<Guid>? GameIds = null);
+        List<Guid>? GameIds = null,
+        string? TimeZoneId = null);
 
     private sealed record InviteToGameNightRequest(List<Guid> UserIds);
 

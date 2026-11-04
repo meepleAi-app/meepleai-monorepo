@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Application;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
@@ -11,6 +12,7 @@ using Api.SharedKernel.Infrastructure.Persistence;
 using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -37,6 +39,7 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
     private readonly Mock<ILogger<UpdateSharedGameCommandHandler>> _loggerMock = new();
     private readonly Mock<IHybridCacheService> _cacheMock = new();
     private readonly Mock<ICacheInvalidationRetryPolicy> _retryPolicyMock = new();
+    private readonly Mock<HybridCache> _hybridCacheMock = new();
     private readonly MeepleAiDbContext _dbContext;
 
     public UpdateSharedGameCommandHandlerTests()
@@ -96,7 +99,7 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
 
         var handler = new UpdateSharedGameCommandHandler(
             _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext,
-            _cacheMock.Object, _retryPolicyMock.Object, _loggerMock.Object);
+            new SharedGameCacheInvalidator(_cacheMock.Object, _retryPolicyMock.Object, _hybridCacheMock.Object), _loggerMock.Object);
 
         // Act
         var result = await handler.Handle(command, CancellationToken.None);
@@ -150,7 +153,7 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
 
         var handler = new UpdateSharedGameCommandHandler(
             _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext,
-            _cacheMock.Object, _retryPolicyMock.Object, _loggerMock.Object);
+            new SharedGameCacheInvalidator(_cacheMock.Object, _retryPolicyMock.Object, _hybridCacheMock.Object), _loggerMock.Object);
 
         // Act
         await handler.Handle(command, CancellationToken.None);
@@ -201,7 +204,7 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
 
         var handler = new UpdateSharedGameCommandHandler(
             _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext,
-            _cacheMock.Object, _retryPolicyMock.Object, _loggerMock.Object);
+            new SharedGameCacheInvalidator(_cacheMock.Object, _retryPolicyMock.Object, _hybridCacheMock.Object), _loggerMock.Object);
 
         // Act
         await handler.Handle(command, CancellationToken.None);
@@ -249,7 +252,7 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
 
         var handler = new UpdateSharedGameCommandHandler(
             _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext,
-            _cacheMock.Object, _retryPolicyMock.Object, _loggerMock.Object);
+            new SharedGameCacheInvalidator(_cacheMock.Object, _retryPolicyMock.Object, _hybridCacheMock.Object), _loggerMock.Object);
 
         // Act
         await handler.Handle(command, CancellationToken.None);
@@ -302,7 +305,7 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
 
         var handler = new UpdateSharedGameCommandHandler(
             _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext,
-            _cacheMock.Object, _retryPolicyMock.Object, _loggerMock.Object);
+            new SharedGameCacheInvalidator(_cacheMock.Object, _retryPolicyMock.Object, _hybridCacheMock.Object), _loggerMock.Object);
 
         // Act
         await handler.Handle(command, CancellationToken.None);
@@ -353,7 +356,7 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
 
         var handler = new UpdateSharedGameCommandHandler(
             _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext,
-            _cacheMock.Object, _retryPolicyMock.Object, _loggerMock.Object);
+            new SharedGameCacheInvalidator(_cacheMock.Object, _retryPolicyMock.Object, _hybridCacheMock.Object), _loggerMock.Object);
 
         // Act
         await handler.Handle(command, CancellationToken.None);
@@ -402,7 +405,7 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
 
         var handler = new UpdateSharedGameCommandHandler(
             _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext,
-            _cacheMock.Object, _retryPolicyMock.Object, _loggerMock.Object);
+            new SharedGameCacheInvalidator(_cacheMock.Object, _retryPolicyMock.Object, _hybridCacheMock.Object), _loggerMock.Object);
 
         // Act
         await handler.Handle(command, CancellationToken.None);

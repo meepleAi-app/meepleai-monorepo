@@ -51,7 +51,6 @@ export function AgentPreviewPanel({ agent }: AgentPreviewPanelProps) {
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Type & Model</p>
                   <div className="flex gap-2">
-                    <Badge variant="secondary">{agent.type}</Badge>
                     <Badge variant="outline" className="font-mono text-xs">
                       {agent.model}
                     </Badge>
@@ -116,7 +115,7 @@ export function AgentPreviewPanel({ agent }: AgentPreviewPanelProps) {
                       Tools ({agent.tools.length})
                     </p>
                     <div className="flex flex-wrap gap-1">
-                      {agent.tools.map((tool) => (
+                      {agent.tools.map(tool => (
                         <Badge key={tool.name} variant="secondary" className="text-xs">
                           {tool.name}
                         </Badge>

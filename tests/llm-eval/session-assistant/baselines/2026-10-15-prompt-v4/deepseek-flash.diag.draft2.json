@@ -1,0 +1,292 @@
+{
+  "model": "deepseek-flash",
+  "setVersion": 7,
+  "only": [
+    "it-score-dimension-unknown",
+    "it-score-explicit-round"
+  ],
+  "repeat": 6,
+  "planned": 12,
+  "prompts": null,
+  "promptFingerprint": {
+    "italian": "65f4673a47c459cfec51ffcd62a78bcb94f430143198871baf42b7920b871aa2",
+    "english": "f217dd0343405af1921e6b3495de5b35311a825320ab5c4c4b77f750f00422ea"
+  },
+  "offerRules": true,
+  "skippedForRules": [],
+  "stopped": null,
+  "scenarios": 12,
+  "passed": 10,
+  "scenariosWithExtraProposals": 0,
+  "scenariosWithMissingProposals": 2,
+  "claimedActionsWithoutProposal": 0,
+  "toolErrors": 0,
+  "invalidArguments": 0,
+  "gatewayErrors": 0,
+  "averageRoundTrips": 2.3333333333333335,
+  "averageCostPerTurnUsd": 0.0011818333333333333,
+  "totalCostUsd": 0.014182,
+  "latencyP95Ms": 2909,
+  "byScenario": [
+    {
+      "id": "it-score-explicit-round",
+      "passed": 4,
+      "runs": 6
+    },
+    {
+      "id": "it-score-dimension-unknown",
+      "passed": 6,
+      "runs": 6
+    }
+  ],
+  "results": [
+    {
+      "id": "it-score-explicit-round",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001595,
+      "latencyMs": 2909,
+      "errorCode": null,
+      "finalText": "Ho preparato la proposta: +3 punti a Giulia nel round 1. Il round corrente però è il 2 — confermi comunque il round 1?",
+      "pass": 1
+    },
+    {
+      "id": "it-score-dimension-unknown",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000957,
+      "latencyMs": 1554,
+      "errorCode": null,
+      "finalText": "Le dimensioni di questa partita sono **prestigio** e **nobili**: «gemme» non esiste. A quale delle due ti riferisci?",
+      "pass": 1
+    },
+    {
+      "id": "it-score-explicit-round",
+      "category": "punteggio",
+      "passed": false,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [
+        "proponi_punteggio"
+      ],
+      "extraProposals": 0,
+      "missingProposals": 1,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000976,
+      "latencyMs": 1557,
+      "errorCode": null,
+      "finalText": "Il round 1 è già passato: siamo al round 2. Vuoi che proponga i 3 punti a Giulia nel round 1 (retroattivo) o nel round corrente?",
+      "pass": 2
+    },
+    {
+      "id": "it-score-dimension-unknown",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000969,
+      "latencyMs": 1550,
+      "errorCode": null,
+      "finalText": "Le dimensioni di questa partita sono **prestigio** e **nobili**: non esiste una dimensione \"gemme\". In quale delle due vuoi che assegni i 3 punti ad Anna?",
+      "pass": 2
+    },
+    {
+      "id": "it-score-explicit-round",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001626,
+      "latencyMs": 2216,
+      "errorCode": null,
+      "finalText": "Il round corrente è il 2, non il 1: il round 1 è già passato, quindi posso usare quello che hai indicato.\nHo preparato la proposta: +3 punti a Giulia nel round 1. Confermi?",
+      "pass": 3
+    },
+    {
+      "id": "it-score-dimension-unknown",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000968,
+      "latencyMs": 1514,
+      "errorCode": null,
+      "finalText": "Le dimensioni di questa partita sono **prestigio** e **nobili**: non esiste una dimensione \"gemme\". In quale delle due vuoi che proponga i 3 punti per Anna?",
+      "pass": 3
+    },
+    {
+      "id": "it-score-explicit-round",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001639,
+      "latencyMs": 2784,
+      "errorCode": null,
+      "finalText": "Il round corrente è il 2, non il 1: il primo round è già passato. Confermi che i 3 punti vanno nel round 1?\nHo preparato una proposta: +3 punti a Giulia nel round 1 (punti). Non è ancora registrata: confermi?",
+      "pass": 4
+    },
+    {
+      "id": "it-score-dimension-unknown",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000968,
+      "latencyMs": 1324,
+      "errorCode": null,
+      "finalText": "Le dimensioni di questa partita sono **prestigio** e **nobili**: non esiste una dimensione \"gemme\". A quale delle due vuoi assegnare i 3 punti ad Anna?",
+      "pass": 4
+    },
+    {
+      "id": "it-score-explicit-round",
+      "category": "punteggio",
+      "passed": false,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [
+        "proponi_punteggio"
+      ],
+      "extraProposals": 0,
+      "missingProposals": 1,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000973,
+      "latencyMs": 1753,
+      "errorCode": null,
+      "finalText": "Il round corrente è il 2, non il 1: il round 1 è già passato. Confermi che i 3 punti a Giulia vanno nel round 1?",
+      "pass": 5
+    },
+    {
+      "id": "it-score-dimension-unknown",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000968,
+      "latencyMs": 1745,
+      "errorCode": null,
+      "finalText": "Le dimensioni di questa partita sono **prestigio** e **nobili**: non esiste una dimensione \"gemme\". A quale delle due vuoi assegnare i 3 punti ad Anna?",
+      "pass": 5
+    },
+    {
+      "id": "it-score-explicit-round",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001577,
+      "latencyMs": 2115,
+      "errorCode": null,
+      "finalText": "Ho preparato la proposta: +3 punti a Giulia nel round 1. Confermi?",
+      "pass": 6
+    },
+    {
+      "id": "it-score-dimension-unknown",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000966,
+      "latencyMs": 1718,
+      "errorCode": null,
+      "finalText": "Le dimensioni di questa partita sono **prestigio** e **nobili**: non esiste una dimensione \"gemme\". Quale delle due intendi per i 3 punti di Anna?",
+      "pass": 6
+    }
+  ]
+}

@@ -77,7 +77,7 @@ public sealed class AdminProviderProbeNotConfiguredIntegrationTests : IAsyncLife
 
     private async Task InitializeCoreAsync()
     {
-        _wireMock = WireMockServer.Start();
+        _wireMock = await WarmWireMockServer.StartAsync();
         var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
 
         // Deliberately no OPENROUTER_API_KEY entry: "not configured" is a property of THIS host,

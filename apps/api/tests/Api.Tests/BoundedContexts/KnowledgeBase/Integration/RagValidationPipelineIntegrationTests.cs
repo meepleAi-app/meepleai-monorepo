@@ -10,7 +10,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Moq;
 using Npgsql;
 using Xunit;
 using FluentAssertions;
@@ -27,16 +26,15 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Integration;
 /// Dependency: BGAI-035 (validation pipeline implemented)
 ///
 /// Approach: Test validation pipeline with mocked LLM (focus on validation logic, not LLM integration)
-/// Infrastructure: Postgres (for citation validation), mocked MultiModelValidationService
+/// Infrastructure: Postgres (for citation validation)
 ///
 /// Test Scenarios:
-/// 1. Full pipeline - all 5 layers with mocked multi-model consensus
-/// 2. Standard validation - 3 layers (confidence, citation, hallucination)
-/// 3. Low confidence rejection
-/// 4. Hallucination detection with forbidden keywords
-/// 5. Citation validation with database verification
+/// 1. Standard validation - 3 layers (confidence, citation, hallucination)
+/// 2. Low confidence rejection
+/// 3. Hallucination detection with forbidden keywords
+/// 4. Citation validation with database verification
 ///
-/// Note: Real OpenRouter integration tests deferred to Issue #979 (requires complex DI setup)
+/// #4179: lo scenario «tutti e cinque i livelli» è uscito con il consenso multi-modello.
 /// </remarks>
 [Collection("Integration-GroupA")]
 [Trait("Category", TestCategories.Integration)]
@@ -52,7 +50,6 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
     private MeepleAiDbContext? _dbContext;
     private IServiceProvider? _serviceProvider;
     private IRagValidationPipelineService? _validationPipeline;
-    private readonly Mock<IMultiModelValidationService> _mockMultiModel;
     private readonly Action<string> _output;
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
@@ -64,7 +61,6 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
     {
         _fixture = fixture;
         _output = Console.WriteLine;
-        _mockMultiModel = new Mock<IMultiModelValidationService>();
     }
 
     public async ValueTask InitializeAsync()
@@ -85,7 +81,6 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
         {
             ["ConnectionStrings:Postgres"] = _isolatedDbConnectionString,
             ["RagValidation:ConfidenceThreshold"] = "0.70",
-            ["RagValidation:EnableMultiModel"] = "true",
             ["RagValidation:EnableHallucinationDetection"] = "true",
             ["RagValidation:ForbiddenKeywords"] = "guarantee,100% accurate,verified,certain,proven"
         });
@@ -100,39 +95,6 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
         services.AddScoped<IHallucinationDetectionService, HallucinationDetectionService>();
         services.AddScoped<ValidationAccuracyTrackingService>();
 
-        // Mocked MultiModelValidationService (avoid OpenRouter dependency)
-        _mockMultiModel
-            .Setup(m => m.ValidateWithConsensusAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<double>(),
-                It.IsAny<int>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new MultiModelConsensusResult
-            {
-                HasConsensus = true,
-                SimilarityScore = 0.92,
-                RequiredThreshold = 0.75,
-                Gpt4Response = new ModelResponse
-                {
-                    ModelId = "openai/gpt-4-turbo-preview",
-                    ResponseText = "Players start with 10 credits.",
-                    IsSuccess = true,
-                    DurationMs = 1200
-                },
-                ClaudeResponse = new ModelResponse
-                {
-                    ModelId = "anthropic/claude-3-sonnet",
-                    ResponseText = "Players begin with 10 credits.",
-                    IsSuccess = true,
-                    DurationMs = 1100
-                },
-                Message = "Multi-model consensus achieved (similarity: 0.92)",
-                TotalDurationMs = 2300,
-                Severity = ConsensusSeverity.High
-            });
-
-        services.AddSingleton<IMultiModelValidationService>(_mockMultiModel.Object);
         services.AddScoped<IRagValidationPipelineService, RagValidationPipelineService>();
 
         _serviceProvider = services.BuildServiceProvider();
@@ -178,57 +140,6 @@ public class RagValidationPipelineIntegrationTests : IAsyncLifetime
         }
 
         _output("✓ Test infrastructure disposed");
-    }
-    [Fact]
-    public async Task FullPipeline_AllFiveLayers_WithMockedMultiModel()
-    {
-        // Arrange
-        _output("Test 1: Full Pipeline - All 5 validation layers (mocked multi-model)");
-
-        var qaResponse = new QaResponse(
-            answer: "Players start with 10 credits. Each turn costs 1 credit.",
-            snippets: new List<Snippet>
-            {
-                new Snippet(
-                    text: "Players start with 10 credits.",
-                    source: $"PDF:{_testVectorDocId}",
-                    page: 1,
-                    line: 0,
-                    score: 0.92f
-                )
-            },
-            confidence: 0.88
-        );
-
-        var systemPrompt = "You are MeepleAI.";
-        var userPrompt = "How many credits?";
-
-        // Act
-        _output("Executing ValidateWithMultiModelAsync...");
-        var sw = System.Diagnostics.Stopwatch.StartNew();
-        var result = await _validationPipeline!.ValidateWithMultiModelAsync(
-            qaResponse,
-            _testGameId.ToString(),
-            systemPrompt,
-            userPrompt,
-            "en",
-            TestCancellationToken
-        );
-        sw.Stop();
-
-        // Assert
-        _output("Validating result...");
-        result.Should().NotBeNull();
-        // Note: May be 4 or 5 layers depending on accuracy tracking availability
-        (result.TotalLayers >= 4).Should().BeTrue($"Expected ≥4 layers, got {result.TotalLayers}");
-        (result.LayersPassed >= 3).Should().BeTrue($"Expected ≥3 layers passed, got {result.LayersPassed}");
-        // IsValid may be false if citation validation fails (3/4 or 3/5) - acceptable for integration test
-        (result.LayersPassed >= 3).Should().BeTrue($"At least 3 layers should pass, got {result.LayersPassed}");
-
-        _output($"✓ Test 1 passed: Full pipeline executed");
-        _output($"  Layers: {result.LayersPassed}/{result.TotalLayers}");
-        _output($"  IsValid: {result.IsValid}, Message: {result.Message}");
-        _output($"  Duration: {sw.ElapsedMilliseconds}ms");
     }
     [Fact]
     public async Task StandardValidation_ThreeLayers_Success()

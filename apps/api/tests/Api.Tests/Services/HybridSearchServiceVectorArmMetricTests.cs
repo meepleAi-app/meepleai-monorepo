@@ -8,7 +8,6 @@ using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
-using System.Diagnostics.Metrics;
 using Xunit;
 using KbEntities = Api.BoundedContexts.KnowledgeBase.Domain.Entities;
 
@@ -42,7 +41,7 @@ public sealed class HybridSearchServiceVectorArmMetricTests
     {
         // Il caso per cui la metrica esiste: l'eccezione viene catturata per non far cadere la
         // ricerca cross-gioco (scelta corretta), ma senza questo segnale la degradazione è invisibile.
-        using var probe = new OutcomeProbe();
+        using var probe = new VectorArmOutcomeProbe();
         var vectorStore = new Mock<IVectorStoreAdapter>();
         vectorStore
             .Setup(v => v.SearchWithScoresAsync(
@@ -62,7 +61,7 @@ public sealed class HybridSearchServiceVectorArmMetricTests
     public async Task AFailedEmbeddingIsRecordedAsFailed()
     {
         // Secondo percorso di degradazione: l'embedding non arriva, la ricerca vettoriale non parte.
-        using var probe = new OutcomeProbe();
+        using var probe = new VectorArmOutcomeProbe();
         var embeddings = new Mock<IEmbeddingService>();
         embeddings
             .Setup(x => x.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
@@ -81,7 +80,7 @@ public sealed class HybridSearchServiceVectorArmMetricTests
         // Esito legittimo, non un difetto: un gioco senza contenuto indicizzato — su staging ~34
         // giochi su 161 non hanno PDF — o senza chunk sopra minScore. Se finisse in `failed`,
         // l'allarme sarebbe rumoroso e verrebbe ignorato.
-        using var probe = new OutcomeProbe();
+        using var probe = new VectorArmOutcomeProbe();
 
         await CreateService().SearchAsync("catan setup", Guid.NewGuid(), SearchMode.Hybrid);
 
@@ -92,7 +91,7 @@ public sealed class HybridSearchServiceVectorArmMetricTests
     [Fact]
     public async Task ASearchWithResultsIsRecordedAsHit()
     {
-        using var probe = new OutcomeProbe();
+        using var probe = new VectorArmOutcomeProbe();
         var vectorStore = new Mock<IVectorStoreAdapter>();
         vectorStore
             .Setup(v => v.SearchWithScoresAsync(
@@ -110,62 +109,11 @@ public sealed class HybridSearchServiceVectorArmMetricTests
     {
         // Il conteggio è il denominatore della copertura: due registrazioni per una ricerca
         // falserebbero il rapporto senza che nulla lo segnali.
-        using var probe = new OutcomeProbe();
+        using var probe = new VectorArmOutcomeProbe();
 
         await CreateService().SearchAsync("catan setup", Guid.NewGuid(), SearchMode.Hybrid);
 
         probe.Total.Should().Be(1);
-    }
-
-    /// <summary>Ascolta il contatore reale e somma per valore del tag <c>outcome</c>.</summary>
-    private sealed class OutcomeProbe : IDisposable
-    {
-        private readonly MeterListener _listener = new();
-        private readonly Dictionary<string, long> _byOutcome = new(StringComparer.Ordinal);
-        private readonly object _gate = new();
-
-        public OutcomeProbe()
-        {
-            _listener.InstrumentPublished = (instrument, listener) =>
-            {
-                if (string.Equals(instrument.Name, "meepleai.rag.vector_arm.outcomes", StringComparison.Ordinal))
-                {
-                    listener.EnableMeasurementEvents(instrument);
-                }
-            };
-            _listener.SetMeasurementEventCallback<long>((_, measurement, tags, _) =>
-            {
-                var outcome = "?";
-                foreach (var tag in tags)
-                {
-                    if (string.Equals(tag.Key, "outcome", StringComparison.Ordinal))
-                    {
-                        outcome = tag.Value?.ToString() ?? "?";
-                    }
-                }
-
-                lock (_gate)
-                {
-                    _byOutcome[outcome] = _byOutcome.GetValueOrDefault(outcome) + measurement;
-                }
-            });
-            _listener.Start();
-        }
-
-        public long Count(string outcome)
-        {
-            lock (_gate)
-            {
-                return _byOutcome.GetValueOrDefault(outcome);
-            }
-        }
-
-        public long Total
-        {
-            get { lock (_gate) { return _byOutcome.Values.Sum(); } }
-        }
-
-        public void Dispose() => _listener.Dispose();
     }
 
     private static HybridSearchService CreateService(

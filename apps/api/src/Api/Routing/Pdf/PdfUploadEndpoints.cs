@@ -18,6 +18,7 @@ internal static class PdfUploadEndpoints
     public static void Map(RouteGroupBuilder group)
     {
         MapStandardUploadEndpoint(group);
+        MapUploadLimitsEndpoint(group); // #4449: the limits the upload zones read
         MapPrivatePdfUploadEndpoint(group); // Issue #3479: Private PDF Upload
         MapChunkedUploadEndpoints(group);
         MapBggExtractionEndpoint(group); // ISSUE-2513: BGG games extraction from PDF
@@ -28,7 +29,22 @@ internal static class PdfUploadEndpoints
     {
         group.MapPost("/ingest/pdf", HandleStandardUpload)
              .DisableAntiforgery() // Ensure we can post files
-             .WithMetadata(new RequestSizeLimitAttribute(104_857_600)); // 100 MB for large rulebooks
+             .WithPdfUploadBodyLimit(group);
+    }
+
+    /// <summary>
+    /// #4449: GET /ingest/pdf/limits — the PDF upload limits for the calling user. The web's upload
+    /// zones read the size limit from here instead of carrying their own constants.
+    /// </summary>
+    private static void MapUploadLimitsEndpoint(RouteGroupBuilder group)
+    {
+        group.MapGet("/ingest/pdf/limits", HandleGetUploadLimits)
+             .RequireSession()
+             .WithName("GetPdfUploadLimits")
+             .WithSummary("PDF upload limits for the current user")
+             .WithDescription("The effective PDF size limit (the smaller of the technical limit and the user's plan) and the number of concurrent chunked uploads.")
+             .Produces<UploadLimitsDto>(StatusCodes.Status200OK)
+             .Produces(StatusCodes.Status401Unauthorized);
     }
 
     /// <summary>
@@ -39,14 +55,11 @@ internal static class PdfUploadEndpoints
     {
         group.MapPost("/users/{userId:guid}/library/entries/{entryId:guid}/pdf", HandlePrivatePdfUpload)
              .DisableAntiforgery()
+             .WithPdfUploadBodyLimit(group)
              .RequireSession()
              .WithName("UploadPrivatePdf")
-             .WithOpenApi(operation =>
-             {
-                 operation.Summary = "Upload a private PDF for a library entry";
-                 operation.Description = "Uploads a private PDF file and associates it with a user's library entry. The PDF will be processed and indexed in a private namespace.";
-                 return operation;
-             });
+             .WithSummary("Upload a private PDF for a library entry")
+             .WithDescription("Uploads a private PDF file and associates it with a user's library entry. The PDF will be processed and indexed in a private namespace.");
     }
 
     private static void MapChunkedUploadEndpoints(RouteGroupBuilder group)
@@ -145,6 +158,18 @@ internal static class PdfUploadEndpoints
         .Produces(404);
     }
 
+    private static async Task<IResult> HandleGetUploadLimits(
+        HttpContext context,
+        IMediator mediator,
+        CancellationToken ct)
+    {
+        var (authenticated, session, error) = context.TryGetActiveSession();
+        if (!authenticated) return error!;
+
+        var limits = await mediator.Send(new GetUploadLimitsQuery(session!.Principal!.Subject.Id), ct).ConfigureAwait(false);
+        return Results.Ok(limits);
+    }
+
     private static async Task<IResult> HandleStandardUpload(
         HttpContext context,
                 IMediator mediator,
@@ -193,12 +218,9 @@ internal static class PdfUploadEndpoints
         }
 
         var userId = session!.Principal!.Subject.Id;
+        // #4443 R2: passed through as received. The validator rejects anything but normal|urgent (400),
+        // the handler rejects a user below Editor (403) — it used to be dropped here in silence.
         var priority = context.Request.Query["priority"].FirstOrDefault();
-        // Bug fix: Only allow priority override for admin users to prevent privilege escalation
-        if (priority != null && !string.Equals(session.Principal!.EffectiveActor.Role, "Admin", StringComparison.OrdinalIgnoreCase))
-        {
-            priority = null;
-        }
         var result = await mediator.Send(new UploadPdfCommand(gameId, metadata, privateGameId, userId, file!, Priority: priority), ct).ConfigureAwait(false);
 
         if (result.ExistingKb != null)
@@ -246,7 +268,9 @@ internal static class PdfUploadEndpoints
                 statusCode: 403);
         }
 
-        var (authenticated, session, error) = context.TryGetActiveSession();
+        // #4395: admin and editor only. Every web caller is an admin page, and a chunked PDF now reaches
+        // retrieval for its game: with a plain session any user could add content to any catalogue game.
+        var (authenticated, session, error) = context.RequireAdminOrEditorSession();
         if (!authenticated) return error!;
 
         var userId = session!.Principal!.Subject.Id;
@@ -280,14 +304,16 @@ internal static class PdfUploadEndpoints
         ILogger<Program> logger,
         CancellationToken ct)
     {
-        var (authenticated, session, error) = context.TryGetActiveSession();
+        // #4395: admin and editor only. Every web caller is an admin page, and a chunked PDF now reaches
+        // retrieval for its game: with a plain session any user could add content to any catalogue game.
+        var (authenticated, session, error) = context.RequireAdminOrEditorSession();
         if (!authenticated) return error!;
 
         var userId = session!.Principal!.Subject.Id;
 
         logger.LogInformation("User {UserId} completing chunked upload session {SessionId}", userId, request.SessionId);
 
-        var command = new CompleteChunkedUploadCommand(request.SessionId, userId);
+        var command = new CompleteChunkedUploadCommand(request.SessionId, userId, request.Priority);
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
 
         if (!result.Success)
@@ -313,7 +339,9 @@ internal static class PdfUploadEndpoints
         IMediator mediator,
                 CancellationToken ct)
     {
-        var (authenticated, session, error) = context.TryGetActiveSession();
+        // #4395: admin and editor only. Every web caller is an admin page, and a chunked PDF now reaches
+        // retrieval for its game: with a plain session any user could add content to any catalogue game.
+        var (authenticated, session, error) = context.RequireAdminOrEditorSession();
         if (!authenticated) return error!;
 
         var userId = session!.Principal!.Subject.Id;
@@ -335,7 +363,9 @@ internal static class PdfUploadEndpoints
         ILogger<Program> logger,
         CancellationToken ct)
     {
-        var (authenticated, session, error) = context.TryGetActiveSession();
+        // #4395: admin and editor only. Every web caller is an admin page, and a chunked PDF now reaches
+        // retrieval for its game: with a plain session any user could add content to any catalogue game.
+        var (authenticated, session, error) = context.RequireAdminOrEditorSession();
         if (!authenticated) return error!;
 
         var userId = session!.Principal!.Subject.Id;

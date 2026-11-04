@@ -23,29 +23,23 @@ namespace Api.BoundedContexts.KbQuality.Infrastructure;
 ///         recent successful/in-flight run by a given admin on a given doc. Failed and
 ///         RateLimited runs are excluded (peer review issue P-1) so an admin retry after
 ///         a failure isn't blocked.</item>
-///   <item><see cref="IEvalCostBudgetChecker"/> — read/upsert for the per-tenant per-month
-///         <see cref="KbQualityBudgetCounter"/> (plan amendment A1, self-contained store).
-///         The cap is read from <see cref="EvalQualityOptions.MonthlyCostCap"/>.</item>
+///   <item><see cref="IEvalCostBudgetChecker"/> — monthly cleanup of the per-tenant
+///         <see cref="KbQualityBudgetCounter"/> rows. #4166: the counters are no longer read or
+///         written, because the KbQuality cap is now the evaluation quota of the LLM budget.</item>
 /// </list>
 ///
 /// <para>UoW note: the aggregate side (AddAsync + SaveChangesAsync) leaves transaction
-/// management to the caller. The budget counter upsert (<see cref="IncrementSpentAsync"/>)
-/// intentionally saves within the method — it is called from
-/// <c>EvalCostCapBehavior</c> AFTER the inner handler completes, and is idempotent enough
-/// for monthly-budget bookkeeping.</para>
+/// management to the caller.</para>
 /// </summary>
 internal sealed class EvaluationRepository
     : IEvaluationRepository, IEvaluationRateLimitStore, IEvalCostBudgetChecker
 {
     private readonly MeepleAiDbContext _db;
-    private readonly IOptionsMonitor<EvalQualityOptions> _options;
 
-    public EvaluationRepository(MeepleAiDbContext db, IOptionsMonitor<EvalQualityOptions> options)
+    public EvaluationRepository(MeepleAiDbContext db)
     {
         ArgumentNullException.ThrowIfNull(db);
-        ArgumentNullException.ThrowIfNull(options);
         _db = db;
-        _options = options;
     }
 
     // -------------------- IEvaluationRepository --------------------
@@ -140,76 +134,6 @@ internal sealed class EvaluationRepository
 
     // -------------------- IEvalCostBudgetChecker --------------------
 
-    public async Task<decimal> GetRemainingAsync(Guid tenantId, CancellationToken ct)
-    {
-        var yearMonth = CurrentYearMonth();
-        var cap = _options.CurrentValue.MonthlyCostCap;
-
-        var spent = await _db.KbQualityBudgetCounters
-            .AsNoTracking()
-            .Where(c => c.TenantId == tenantId && c.YearMonth == yearMonth)
-            .Select(c => (decimal?)c.SpentUsd)
-            .FirstOrDefaultAsync(ct)
-            .ConfigureAwait(false) ?? 0m;
-
-        var remaining = cap - spent;
-        return remaining < 0m ? 0m : remaining;
-    }
-
-    public async Task IncrementSpentAsync(Guid tenantId, decimal amountUsd, CancellationToken ct)
-    {
-        // Bounded retry loop on optimistic concurrency conflicts: concurrent evals from the
-        // same tenant racing on the same monthly counter would otherwise silently lose updates.
-        // The Xmin system column makes the conflict observable; we re-load and replay the
-        // increment on top of the fresh value. Retry budget kept low (3) because the critical
-        // section is a single increment + the SQL boundary makes contention rare.
-        //
-        // ⚠️ #3651: fino alla conversione a `xmin` questo loop non è MAI entrato in funzione. Il
-        // token era `byte[]` su una colonna `bytea` che Postgres non popola, quindi
-        // DbUpdateConcurrencyException non poteva essere sollevata — e le «silently lost updates»
-        // che questo codice esiste per prevenire avvenivano comunque. Misurato: due incrementi
-        // concorrenti su un contatore da 10 producevano 15 invece di 30.
-        const int maxAttempts = 3;
-        for (var attempt = 1; attempt <= maxAttempts; attempt++)
-        {
-            var yearMonth = CurrentYearMonth();
-
-            // Issue #3866: `.AsTracking()` is REQUIRED. The DbContext default is NoTracking
-            // (PERF-06), so this read returned a DETACHED counter: IncrementSpent below mutated an
-            // object EF was not watching, SaveChangesAsync wrote nothing and raised nothing, and
-            // every increment was lost — with the retry loop, which only runs on a concurrency
-            // conflict, never entering. Same defect as the token being inert, one layer up.
-            var counter = await _db.KbQualityBudgetCounters
-                .AsTracking()
-                .FirstOrDefaultAsync(c => c.TenantId == tenantId && c.YearMonth == yearMonth, ct)
-                .ConfigureAwait(false);
-
-            if (counter is null)
-            {
-                counter = KbQualityBudgetCounter.Create(tenantId, yearMonth, amountUsd);
-                await _db.KbQualityBudgetCounters.AddAsync(counter, ct).ConfigureAwait(false);
-            }
-            else
-            {
-                counter.IncrementSpent(amountUsd);
-            }
-
-            try
-            {
-                await _db.SaveChangesAsync(ct).ConfigureAwait(false);
-                return;
-            }
-            catch (DbUpdateConcurrencyException) when (attempt < maxAttempts)
-            {
-                // Detach the stale entity so the next iteration re-reads fresh state.
-                if (counter is not null)
-                {
-                    _db.Entry(counter).State = EntityState.Detached;
-                }
-            }
-        }
-    }
-
     public async Task<int> DeleteBudgetCountersOlderThanAsync(string yearMonthExclusive, CancellationToken ct)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(yearMonthExclusive);
@@ -221,9 +145,4 @@ internal sealed class EvaluationRepository
             .ExecuteDeleteAsync(ct)
             .ConfigureAwait(false);
     }
-
-    // -------------------- helpers --------------------
-
-    private static string CurrentYearMonth()
-        => DateTime.UtcNow.ToString("yyyy-MM", CultureInfo.InvariantCulture);
 }

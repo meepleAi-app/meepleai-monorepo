@@ -166,6 +166,36 @@ public class RegisterCommandHandlerTests : IDisposable
         response.User.Role.Should().Be("user");
     }
 
+    /// <summary>
+    /// #4783 — every account used to be born <c>en</c>, so an Italian speaker who never opened Settings →
+    /// Preferences sent their friends game night invitations in English. The language the user sees wins,
+    /// then the browser's, and only then the default. The account that is saved is checked, not the response.
+    /// </summary>
+    [Theory]
+    [InlineData("it", null, "it")]
+    [InlineData("en", "it-IT,it;q=0.9", "en")]
+    [InlineData(null, "it-IT,it;q=0.9,en;q=0.8", "it")]
+    [InlineData("de", "it", "it")]
+    [InlineData(null, null, "en")]
+    [InlineData(null, "de,fr;q=0.9", "en")]
+    public async Task Handle_StartsTheAccountInTheLanguageTheUserSees(
+        string? locale, string? acceptLanguage, string expected)
+    {
+        // Arrange
+        User? saved = null;
+        _mockUserRepository
+            .Setup(r => r.AddAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()))
+            .Callback<User, CancellationToken>((user, _) => saved = user);
+        var command = CommandWithRole(null) with { Locale = locale, AcceptLanguage = acceptLanguage };
+
+        // Act
+        await _handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        saved.Should().NotBeNull();
+        saved!.Language.Should().Be(expected);
+    }
+
     public void Dispose()
     {
         Dispose(true);

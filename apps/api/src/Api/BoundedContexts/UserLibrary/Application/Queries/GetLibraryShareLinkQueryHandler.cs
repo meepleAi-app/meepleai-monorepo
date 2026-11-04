@@ -3,7 +3,7 @@ using Api.BoundedContexts.UserLibrary.Application.Queries;
 using Api.BoundedContexts.UserLibrary.Domain.Entities;
 using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.SharedKernel.Application.Interfaces;
-using Microsoft.Extensions.Configuration;
+using Api.SharedKernel.Services;
 
 namespace Api.BoundedContexts.UserLibrary.Application.Queries;
 
@@ -13,14 +13,14 @@ namespace Api.BoundedContexts.UserLibrary.Application.Queries;
 internal class GetLibraryShareLinkQueryHandler : IQueryHandler<GetLibraryShareLinkQuery, LibraryShareLinkDto?>
 {
     private readonly ILibraryShareLinkRepository _shareLinkRepository;
-    private readonly IConfiguration _configuration;
+    private readonly IPublicBaseUrlProvider _publicBaseUrl;
 
     public GetLibraryShareLinkQueryHandler(
         ILibraryShareLinkRepository shareLinkRepository,
-        IConfiguration configuration)
+        IPublicBaseUrlProvider publicBaseUrl)
     {
         _shareLinkRepository = shareLinkRepository ?? throw new ArgumentNullException(nameof(shareLinkRepository));
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        _publicBaseUrl = publicBaseUrl ?? throw new ArgumentNullException(nameof(publicBaseUrl));
     }
 
     public async Task<LibraryShareLinkDto?> Handle(GetLibraryShareLinkQuery query, CancellationToken cancellationToken)
@@ -39,8 +39,7 @@ internal class GetLibraryShareLinkQueryHandler : IQueryHandler<GetLibraryShareLi
 
     private LibraryShareLinkDto MapToDto(LibraryShareLink link)
     {
-        var baseUrl = _configuration["App:BaseUrl"]
-            ?? throw new InvalidOperationException("App:BaseUrl configuration is not set");
+        var baseUrl = _publicBaseUrl.GetBaseUrl();
         var shareUrl = $"{baseUrl}/library/shared/{link.ShareToken}";
 
         return new LibraryShareLinkDto(

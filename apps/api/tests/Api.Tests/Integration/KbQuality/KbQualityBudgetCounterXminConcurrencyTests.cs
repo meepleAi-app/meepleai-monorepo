@@ -1,13 +1,9 @@
-using Api.BoundedContexts.KbQuality.Application.Configuration;
 using Api.BoundedContexts.KbQuality.Domain.Budget;
-using Api.BoundedContexts.KbQuality.Infrastructure;
 using Api.Infrastructure;
 using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using Moq;
 using Xunit;
 
 namespace Api.Tests.Integration.KbQuality;
@@ -17,21 +13,24 @@ namespace Api.Tests.Integration.KbQuality;
 ///
 /// <para>
 /// <b>Questa entità è il caso in cui il difetto ha la conseguenza più concreta.</b> Il contatore
-/// tiene la spesa mensile per tenant, e <c>EvaluationRepository.IncrementSpentAsync</c> è scritto
+/// teneva la spesa mensile per tenant, e <c>EvaluationRepository.IncrementSpentAsync</c> era scritto
 /// con un <b>retry loop esplicito</b> su <see cref="DbUpdateConcurrencyException"/> (3 tentativi,
-/// detach e rilettura). Il commento dichiara: <i>«The RowVersion column (xmin) makes the conflict
+/// detach e rilettura). Il commento dichiarava: <i>«The RowVersion column (xmin) makes the conflict
 /// observable»</i>.
 /// </para>
 /// <para>
 /// Non era vero: il token era <c>byte[]</c> su una colonna <c>bytea</c> che Postgres non popola,
 /// quindi quell'eccezione <b>non poteva essere sollevata</b> e il retry non è mai entrato in
-/// funzione. Il codice difensivo esisteva, era corretto, e non veniva mai eseguito — mentre due
+/// funzione. Il codice difensivo esisteva, era corretto, e non veniva mai eseguito, mentre due
 /// valutazioni concorrenti dello stesso tenant si sovrascrivevano l'incremento. Su un contatore di
 /// spesa questo significa un tetto di budget superabile senza che nulla lo rilevi.
 /// </para>
 /// <para>
-/// Per questo il secondo test non verifica il token ma il <b>comportamento che il token abilita</b>:
-/// che il retry assorba il conflitto e nessun incremento vada perso.
+/// #4166 (ADR-095 D6): il contatore non si legge né si scrive più, perché il tetto di KbQuality è
+/// diventato la quota delle valutazioni dentro il tetto unico del gateway LLM. Con lui sono usciti
+/// <c>IncrementSpentAsync</c>, il suo retry loop e il test che lo esercitava. Resta questo test del
+/// token: finché la tabella esiste, fino alla consegna che la toglie, l'entità deve rendere visibile
+/// il conflitto.
 /// </para>
 /// </summary>
 [Collection("Integration-GroupD")]
@@ -63,13 +62,6 @@ public sealed class KbQualityBudgetCounterXminConcurrencyTests : IAsyncLifetime
     {
         await _dbContext.DisposeAsync();
         await _fixture.DropIsolatedDatabaseAsync(_databaseName);
-    }
-
-    private static EvaluationRepository CreateRepository(MeepleAiDbContext dbContext)
-    {
-        var options = new Mock<IOptionsMonitor<EvalQualityOptions>>();
-        options.Setup(o => o.CurrentValue).Returns(new EvalQualityOptions());
-        return new EvaluationRepository(dbContext, options.Object);
     }
 
     private static string CurrentYearMonth() => DateTime.UtcNow.ToString("yyyy-MM", System.Globalization.CultureInfo.InvariantCulture);
@@ -112,42 +104,6 @@ public sealed class KbQualityBudgetCounterXminConcurrencyTests : IAsyncLifetime
         var secondWrite = async () => await secondContext.SaveChangesAsync();
 
         await secondWrite.Should().ThrowAsync<DbUpdateConcurrencyException>(
-            "è il conflitto che il retry loop di IncrementSpentAsync dichiara di gestire: senza "
-            + "che venga sollevato, quel codice non viene mai eseguito e un incremento di spesa "
-            + "sovrascrive l'altro (#3651)");
-    }
-
-    [Fact]
-    public async Task IncrementSpentAsync_WithStaleTrackedCounter_RetriesAndKeepsBothIncrements()
-    {
-        var tenantId = await SeedCounterAsync(10m);
-        var yearMonth = CurrentYearMonth();
-
-        await using var slowContext = _fixture.CreateDbContext(_connectionString);
-        var slowRepository = CreateRepository(slowContext);
-
-        // Il contesto "lento" traccia la riga a 10: da qui in poi la sua copia è destinata a
-        // diventare stale, ed è la condizione che il retry deve saper riconoscere.
-        await slowContext.KbQualityBudgetCounters
-            .AsTracking() // #3866: senza tracking non esiste la copia stale che il retry deve riconoscere
-            .FirstAsync(c => c.TenantId == tenantId && c.YearMonth == yearMonth);
-
-        await using (var fastContext = _fixture.CreateDbContext(_connectionString))
-        {
-            await CreateRepository(fastContext).IncrementSpentAsync(tenantId, 15m, CancellationToken.None);
-        }
-
-        // Ora il contesto lento incrementa partendo da una versione superata. Con il token attivo
-        // SaveChanges solleva, il loop fa detach, rilegge 25 e riapplica 5 → 30.
-        await slowRepository.IncrementSpentAsync(tenantId, 5m, CancellationToken.None);
-
-        await using var verification = _fixture.CreateDbContext(_connectionString);
-        var persisted = await verification.KbQualityBudgetCounters
-            .FirstAsync(c => c.TenantId == tenantId && c.YearMonth == yearMonth);
-
-        persisted.SpentUsd.Should().Be(30m,
-            "nessun incremento deve andare perso: 10 iniziali + 15 + 5. Con il token inerte il "
-            + "secondo scrittore sovrascriveva con 15, e il tetto di budget diventava superabile "
-            + "senza che nulla lo segnalasse");
+            "senza il conflitto un incremento di spesa sovrascrive l'altro in silenzio (#3651)");
     }
 }

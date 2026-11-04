@@ -14,7 +14,10 @@ internal sealed class RagExecutionEntityConfiguration : IEntityTypeConfiguration
     {
         builder.ToTable("rag_executions");
 
-        builder.HasKey(e => e.Id);
+        // #4429: stesso nome della chiave di knowledge_base.rag_executions. Postgres lo ammette
+        // in uno schema diverso; EF 10 deduplica i nomi a livello di modello e senza il nome
+        // esplicito ne rinominerebbe una in PK_rag_executions1. Vedi RagExecutionConfiguration.
+        builder.HasKey(e => e.Id).HasName("PK_rag_executions");
 
         builder.Property(e => e.Id)
             .HasColumnName("id");

@@ -1,5 +1,3 @@
-using Api.BoundedContexts.DocumentProcessing.Application.Commands;
-using Api.BoundedContexts.DocumentProcessing.Application.Commands.ProcessPendingPdfs;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 using Api.Infrastructure;
 using Api.Middleware.Exceptions;
@@ -11,11 +9,14 @@ namespace Api.BoundedContexts.Administration.Application.Commands.GameWizard;
 
 /// <summary>
 /// Handler for LaunchAdminPdfProcessingCommand.
-/// Sets Priority=Admin on the PDF document and triggers the processing pipeline.
+/// Sets Priority=Admin on the PDF document and enqueues it; the queue worker processes it.
 /// </summary>
 internal sealed class LaunchAdminPdfProcessingCommandHandler
     : ICommandHandler<LaunchAdminPdfProcessingCommand, LaunchProcessingResult>
 {
+    /// <summary>The wizard's job priority, above any upload (normal 10, urgent 30).</summary>
+    internal const int WizardPriority = 100;
+
     private readonly MeepleAiDbContext _dbContext;
     private readonly IMediator _mediator;
     private readonly ILogger<LaunchAdminPdfProcessingCommandHandler> _logger;
@@ -85,54 +86,33 @@ internal sealed class LaunchAdminPdfProcessingCommandHandler
             "Admin wizard: Set Priority=Admin for PDF {PdfId}",
             command.PdfDocumentId);
 
-        // Enqueue processing job for tracking, then trigger pipeline
+        // #4443 R3: the queue is the only owner of an admin upload's processing. This used to enqueue
+        // AND run extraction + indexing inside the request, so the document had two pipelines: the
+        // request's and the worker's, which picked up the job a few seconds later.
         try
         {
-            // Step 1: Create processing_jobs record for queue tracking
-            const int adminPriority = 100;
-            var enqueueCommand = new EnqueuePdfCommand(
-                command.PdfDocumentId, command.LaunchedByUserId, adminPriority);
-
-            try
-            {
-                var jobId = await _mediator.Send(enqueueCommand, cancellationToken).ConfigureAwait(false);
-                _logger.LogInformation(
-                    "Admin wizard: Enqueued PDF {PdfId} as job {JobId} with priority {Priority}",
-                    command.PdfDocumentId, jobId, adminPriority);
-            }
-            catch (ConflictException ex)
-            {
-                // PDF already has an active job — skip enqueue, proceed with pipeline
-                _logger.LogDebug(ex,
-                    "Admin wizard: PDF {PdfId} already has an active job, skipping enqueue",
-                    command.PdfDocumentId);
-            }
-
-            // Step 2: Extract text
-            var extractCommand = new ExtractPdfTextCommand(command.PdfDocumentId);
-            await _mediator.Send(extractCommand, cancellationToken).ConfigureAwait(false);
-
-            // Step 3: Index PDF (chunking + embedding + indexing)
-            var indexCommand = new IndexPdfCommand(command.PdfDocumentId.ToString());
-            await _mediator.Send(indexCommand, cancellationToken).ConfigureAwait(false);
-
+            var jobId = await _mediator.Send(
+                new EnqueuePdfCommand(command.PdfDocumentId, command.LaunchedByUserId, WizardPriority),
+                cancellationToken).ConfigureAwait(false);
             _logger.LogInformation(
-                "Admin wizard: Processing pipeline launched for PDF {PdfId}",
-                command.PdfDocumentId);
+                "Admin wizard: Enqueued PDF {PdfId} as job {JobId} with priority {Priority}",
+                command.PdfDocumentId, jobId, WizardPriority);
         }
-        catch (Exception ex) when (ex is not ConflictException)
+        catch (ConflictException ex)
         {
-            _logger.LogError(ex,
-                "Admin wizard: Failed to launch processing for PDF {PdfId}",
+            // Already has an active job: the queue will process it, which is what was asked. A full
+            // queue is a ProcessingQueueFullException (R8), not a ConflictException, so it propagates
+            // as a 429 instead of being mistaken for this case.
+            _logger.LogInformation(ex,
+                "Admin wizard: PDF {PdfId} already has an active job",
                 command.PdfDocumentId);
-            throw;
         }
 
         return new LaunchProcessingResult
         {
             PdfDocumentId = command.PdfDocumentId,
             GameId = command.GameId,
-            Status = "processing",
+            Status = "queued",
             Priority = "Admin"
         };
     }

@@ -9,6 +9,7 @@ using Api.BoundedContexts.UserNotifications.Infrastructure.Slack;
 using Api.Observability;
 using Api.SharedKernel.Infrastructure.Http;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.SharedKernel.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Polly;
@@ -41,6 +42,10 @@ internal static class UserNotificationsServiceExtensions
         services.AddScoped<IEmailTemplateRepository, EmailTemplateRepository>(); // Issue #52: Email template admin management
         services.AddScoped<INotificationQueueRepository, NotificationQueueRepository>(); // Slack notification queue
         services.AddScoped<ISlackConnectionRepository, SlackConnectionRepository>(); // Slack connections
+
+        // #4774: the Slack builders, the e-mail templates and the unsubscribe link take their base URL from it.
+        // Idempotent: the host registers it too.
+        services.AddPublicBaseUrl();
 
         // Slack signature validation
         services.AddSingleton<SlackSignatureValidator>();

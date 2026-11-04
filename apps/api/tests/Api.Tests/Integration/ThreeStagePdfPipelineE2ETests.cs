@@ -39,7 +39,7 @@ public class ThreeStagePdfPipelineE2ETests : IAsyncLifetime
     private static CancellationToken TestCancellationToken => TestContext.Current.CancellationToken;
 
     // #4044 — percorso risolto dalla RADICE del repository, non dalla working directory del test.
-    // Il commento che stava qui diceva «relative to bin/Debug/net9.0/»: era esattamente
+    // Il commento che stava qui diceva «relative to bin/Debug/net10.0/»: era esattamente
     // l'assunzione che rendeva il percorso sbagliato.
     // La forma precedente — "../../../../data/barrage_rulebook.pdf" — era sbagliata DUE volte: la
     // profondità (quattro livelli su portano a apps/api/tests/, che non contiene data/) e il

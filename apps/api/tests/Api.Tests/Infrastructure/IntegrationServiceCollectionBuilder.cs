@@ -152,6 +152,13 @@ internal static class IntegrationServiceCollectionBuilder
             services.AddScoped(_ =>
                 Mock.Of<Api.Services.IHybridCacheService>());
         }
+
+        // #4587: anche HybridCache di Microsoft, come in produzione (InfrastructureServiceExtensions).
+        // Da #4567 UserActivityCacheInvalidationEventHandler la chiede, e gestisce eventi come
+        // SessionFinalizedEvent: senza, gli handler di quegli eventi non si costruiscono, la
+        // pubblicazione si interrompe e il dispatch inghiotte l'eccezione. Nessun handler parte e
+        // nessun test se ne accorge, salvo chi asserisce l'invocazione.
+        services.AddHybridCache();
         services.AddScoped(_ =>
             Mock.Of<Api.Services.IEmbeddingService>());
         services.AddScoped(_ =>
@@ -168,11 +175,16 @@ internal static class IntegrationServiceCollectionBuilder
         tierMock.Setup(t => t.GetLimitsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(TierLimits.Unlimited);
         tierMock.Setup(t => t.GetUsageAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new UsageSnapshot(0, 100, 0, 100, 0, 100, 0, 100, 0, 100, 0, 100, true, 0, 100));
+            .ReturnsAsync(new UsageSnapshot(0, 100, 0, 100, 0, 100, 0, 100, 0, 100, true, 0, 100));
         services.AddScoped<ITierEnforcementService>(_ => tierMock.Object);
 
         // TimeProvider — required by handlers like SubmitValidationFeedbackCommandHandler
         services.AddSingleton(TimeProvider.System);
+
+        // #4774: the one resolver of the public front-end URL, needed by the handlers that write links
+        // (share links, invitations). It reads IConfiguration at call time, so a test that registers its own
+        // configuration after this call is still honoured.
+        services.AddPublicBaseUrl();
 
         // AuditService — required by handlers/workers that emit audit log entries
         // (e.g. MechanicRecalcBackgroundService.WriteCompletionAuditAsync — ADR-051 Sprint 2 / Task 12).

@@ -248,4 +248,61 @@ public sealed class ScoreProposalFlowTests
             _confirmSut.Handle(command, CancellationToken.None);
         await act.Should().ThrowAsync<NotFoundException>();
     }
+
+    // ── ConfirmScore con il valore atteso della cella (#4277) ──
+
+    private async Task<(LiveGameSession Session, Guid PlayerId)> SeedStartedSessionWithAliceAsync(int? cell)
+    {
+        await SeedSessionWithParticipant(SessionId, HostUserId, ParticipantId);
+        var domainSession = LiveGameSession.Create(
+            SessionId, HostUserId, "Test Game", scoringConfig: new SessionScoringConfig(new[] { "Points" }));
+        var player = domainSession.AddPlayer(null, "Alice", PlayerColor.Red);
+        domainSession.Start();
+        if (cell is { } value)
+        {
+            domainSession.RecordScore(player.Id, 1, "Points", value);
+        }
+
+        _sessionRepoMock
+            .Setup(r => r.GetByIdAsync(SessionId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(domainSession);
+        return (domainSession, player.Id);
+    }
+
+    /// <summary>
+    /// #4277: chi conferma dichiara il valore della cella su cui ha deciso. Se nel frattempo è cambiata il
+    /// comando non scrive: fuori da qui, fra una lettura e la scrittura passerebbe un'altra conferma.
+    /// </summary>
+    [Fact]
+    public async Task ConfirmScore_WhenTheCellIsNoLongerTheExpectedOne_IsAConflict_AndWritesNothing()
+    {
+        var (session, alice) = await SeedStartedSessionWithAliceAsync(cell: 12);
+
+        var act = () => _confirmSut.Handle(
+            new ConfirmScoreProposalCommand(SessionId, HostUserId, alice, Round: 1, Dimension: "Points", Value: 10, ExpectedCurrentValue: 7),
+            CancellationToken.None);
+
+        (await act.Should().ThrowAsync<ConflictException>()).Which.ErrorCode.Should().Be(ConfirmScoreProposalCommand.ScoreChangedCode);
+        session.RoundScores.Should().ContainSingle().Which.Value.Should().Be(12);
+        _sessionRepoMock.Verify(r => r.UpdateAsync(It.IsAny<LiveGameSession>(), It.IsAny<CancellationToken>()), Times.Never);
+        _clientProxyMock.Verify(
+            c => c.SendCoreAsync("ScoreConfirmed", It.IsAny<object?[]>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(7, 7)]
+    [InlineData(null, 0)]
+    public async Task ConfirmScore_WhenTheCellIsTheExpectedOne_Writes(int? cell, int expected)
+    {
+        // Una cella che non esiste vale zero; la dimensione si confronta senza badare alle maiuscole,
+        // come fa RecordScore.
+        var (session, alice) = await SeedStartedSessionWithAliceAsync(cell);
+
+        await _confirmSut.Handle(
+            new ConfirmScoreProposalCommand(SessionId, HostUserId, alice, Round: 1, Dimension: "points", Value: 12, ExpectedCurrentValue: expected),
+            CancellationToken.None);
+
+        session.RoundScores.Should().ContainSingle().Which.Value.Should().Be(12);
+        _sessionRepoMock.Verify(r => r.UpdateAsync(session, It.IsAny<CancellationToken>()), Times.Once);
+    }
 }

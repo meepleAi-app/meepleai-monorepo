@@ -57,9 +57,9 @@ internal static class SessionInviteEndpoints
             .WithSummary("Propose a score")
             .WithDescription("Player proposes a score. Host will be notified for confirmation.");
 
-        // #3840 — questa rotta era registrata su /scores/confirm, dove la registra anche
+        // #3840 — questa rotta era registrata su /scores/confirm, dove la registrava anche
         // LiveSessionEndpoints per una semantica diversa (ConfirmScoreCommand: il partecipante
-        // conferma una lettura dell'assistente). Due registrazioni sullo stesso (metodo, template)
+        // confermava una lettura del punteggio dettato, ritirata da #4448). Due registrazioni sullo stesso (metodo, template)
         // non falliscono all'avvio: ASP.NET solleva AmbiguousMatchException a ogni richiesta, e
         // ENTRAMBE le semantiche rispondevano 500.
         //

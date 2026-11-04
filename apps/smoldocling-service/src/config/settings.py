@@ -11,7 +11,11 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 
     # File Processing
-    max_file_size: int = 52428800  # 50MB in bytes
+    # #4449: the API's single PDF size limit (PdfProcessing:MaxFileSizeBytes, 100 MiB), the same as
+    # unstructured-service. Whole PDFs reach this service on the page-image path (page previews and
+    # covers taken from a page), and on /api/v1/extract when the orchestrator or SmolDocling is the
+    # configured extractor: at 50 MB a PDF the API had accepted was refused here.
+    max_file_size: int = 104857600  # 100 MiB in bytes
     max_pages_per_request: int = 20  # Prevent excessive GPU/CPU usage
     timeout: int = 60  # seconds (longer than Unstructured due to VLM inference)
     temp_dir: Path = Path("/tmp/pdf-processing")

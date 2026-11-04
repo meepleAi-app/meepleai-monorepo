@@ -7,7 +7,7 @@
 # output is pure JS (arch-independent); the only native module, canvas, is
 # test-only (transitive via jsdom devDependency) and is NOT in the standalone
 # bundle, so node arm64 runs the portable JS without it.
-FROM --platform=$BUILDPLATFORM node:20.18-alpine3.21 AS deps
+FROM --platform=$BUILDPLATFORM node:24.22-alpine3.24 AS deps
 WORKDIR /app
 
 # Install build dependencies for canvas package (Issue #4168)
@@ -34,7 +34,7 @@ RUN pnpm install --frozen-lockfile
 # ==============================================================================
 # Stage 2: Builder - Build the Next.js application
 # ==============================================================================
-FROM --platform=$BUILDPLATFORM node:20.18-alpine3.21 AS builder
+FROM --platform=$BUILDPLATFORM node:24.22-alpine3.24 AS builder
 WORKDIR /app
 
 # Copy dependencies from deps stage and install pnpm
@@ -93,7 +93,7 @@ RUN pnpm run build
 # ==============================================================================
 # Stage 3: Runner - Production runtime environment
 # ==============================================================================
-FROM node:20.18-alpine3.21 AS runner
+FROM node:24.22-alpine3.24 AS runner
 WORKDIR /app
 
 # Set environment to production

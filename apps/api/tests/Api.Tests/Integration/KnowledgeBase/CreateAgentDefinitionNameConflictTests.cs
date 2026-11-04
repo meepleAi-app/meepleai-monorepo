@@ -99,7 +99,6 @@ public sealed class CreateAgentDefinitionNameConflictTests : IAsyncLifetime
     private static CreateAgentDefinitionCommand Command(string name) => new(
         Name: name,
         Description: "conflict probe",
-        Type: "RAG",
         Model: "deepseek-chat",
         MaxTokens: 2048,
         Temperature: 0.7f);
@@ -109,7 +108,6 @@ public sealed class CreateAgentDefinitionNameConflictTests : IAsyncLifetime
         var agent = AgentDefinition.Create(
             name,
             "already here",
-            AgentType.RagAgent,
             AgentDefinitionConfig.Default());
 
         if (softDeleted)

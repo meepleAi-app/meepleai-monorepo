@@ -11,6 +11,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.Persistence;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GetKbChunks;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
+using Api.BoundedContexts.KnowledgeBase.Domain.Events;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services;
 using Api.Configuration;
 using Api.Infrastructure;
@@ -162,6 +163,12 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         // write path. Real implementation so the "completed" transition actually happens
         // (asserted via vectorDoc.IndexingStatus) and VectorDocumentIndexedEvent is published.
         services.AddScoped<IPdfIndexingPipeline, PdfIndexingPipeline>();
+
+        // #4244: MediatR consegna l'evento a ogni gestore registrato; questo lo mette da parte,
+        // così un test può leggere quale gioco è stato annunciato.
+        services.AddSingleton<IndexedEventRecorder>();
+        services.AddSingleton<MediatR.INotificationHandler<VectorDocumentIndexedEvent>>(
+            sp => sp.GetRequiredService<IndexedEventRecorder>());
 
         // VectorDocumentIndexedEvent (published by PdfIndexingPipeline.IndexAsync on every
         // successful index) fans out to 2 notification handlers:
@@ -341,6 +348,161 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
         vectorDoc!.IndexingStatus.Should().Be("completed");
         vectorDoc.ChunkCount.Should().BeGreaterThan(0);
     }
+
+    /// <summary>
+    /// Issue #4244, il primo «rosso prima». Il PDF di un gioco PRIVATO si indicizza come quello di un
+    /// gioco del catalogo: i passaggi finiscono in <c>text_chunks</c> e il documento vettoriale è
+    /// completo. Su Postgres, perché il difetto è una chiave esterna: <c>text_chunks.GameId</c> punta
+    /// a <c>shared_games</c>, e il provider in memoria non applica chiavi esterne.
+    /// </summary>
+    [Fact]
+    public async Task IndexPdfOfAPrivateGame_Success()
+    {
+        // Arrange
+        await ResetDatabaseAsync();
+        var (privateGameId, pdfId) = await SeedPrivateGamePdfAsync();
+        var handler = _serviceProvider!.GetRequiredService<IndexPdfCommandHandler>();
+
+        // Act
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), TestCancellationToken);
+
+        // Assert
+        result.Success.Should().BeTrue($"{result.ErrorCode}: {result.ErrorMessage}");
+
+        // i passaggi ci sono, e il gioco privato sta nella sua colonna: GameId è una chiave esterna
+        // verso shared_games e per un gioco privato resta vuota
+        var chunks = await _dbContext!.TextChunks
+            .Where(c => c.PdfDocumentId == pdfId)
+            .Select(c => new { c.GameId, c.PrivateGameId })
+            .ToListAsync(TestCancellationToken);
+        chunks.Should().NotBeEmpty("i passaggi del PDF privato sono in text_chunks");
+        chunks.Should().OnlyContain(c => c.GameId == null && c.PrivateGameId == privateGameId);
+
+        var vectorDoc = await _dbContext.Set<VectorDocumentEntity>()
+            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId, TestCancellationToken);
+        vectorDoc.Should().NotBeNull();
+        vectorDoc!.IndexingStatus.Should().Be("completed");
+        vectorDoc.GameId.Should().BeNull();
+        vectorDoc.PrivateGameId.Should().Be(privateGameId);
+    }
+
+    /// <summary>
+    /// Issue #4244. Tre percorsi di indicizzazione (upload con elaborazione, upload a blocchi,
+    /// pipeline di elaborazione) non creano prima la riga «processing»: chiedono alla pipeline di
+    /// crearla già completa, passandole il gioco del PDF. Per un PDF privato quel gioco è l'id
+    /// privato, e scriverlo in <c>GameId</c> violava la chiave esterna verso <c>shared_games</c>.
+    /// La pipeline legge dal PDF se il gioco è privato, così nessun chiamante può sbagliare.
+    /// </summary>
+    [Fact]
+    public async Task PipelineIndex_OfAPrivateGamePdf_WithNoRowYet_StoresThePrivateGameInItsOwnColumn()
+    {
+        // Arrange
+        await ResetDatabaseAsync();
+        var (privateGameId, pdfId) = await SeedPrivateGamePdfAsync();
+        var pipeline = _serviceProvider!.GetRequiredService<IPdfIndexingPipeline>();
+
+        // Act
+        await pipeline.IndexAsync(
+            pdfDocumentId: pdfId,
+            gameId: privateGameId,
+            sharedGameId: null,
+            chunkCount: 3,
+            totalCharacters: 80,
+            language: "en",
+            cancellationToken: TestCancellationToken);
+
+        // Assert
+        _dbContext!.ChangeTracker.Clear();
+        var vectorDoc = await _dbContext.Set<VectorDocumentEntity>()
+            .FirstOrDefaultAsync(v => v.PdfDocumentId == pdfId, TestCancellationToken);
+        vectorDoc.Should().NotBeNull();
+        vectorDoc!.IndexingStatus.Should().Be("completed");
+        vectorDoc.GameId.Should().BeNull();
+        vectorDoc.PrivateGameId.Should().Be(privateGameId);
+    }
+
+    /// <summary>
+    /// Issue #4244. L'upload a blocchi e la pipeline di elaborazione passano alla pipeline
+    /// <c>pdf.SharedGameId</c>, che per un PDF privato è null. L'evento «documento indicizzato»
+    /// usciva con il gioco vuoto, e la notifica all'utente portava a
+    /// <c>/library/00000000-0000-0000-0000-000000000000</c>.
+    /// </summary>
+    [Fact]
+    public async Task PipelineIndex_OfAPrivateGamePdf_WhenTheCallerKnowsOnlyTheSharedGame_AnnouncesThePrivateGame()
+    {
+        // Arrange
+        await ResetDatabaseAsync();
+        var (privateGameId, pdfId) = await SeedPrivateGamePdfAsync();
+        var pipeline = _serviceProvider!.GetRequiredService<IPdfIndexingPipeline>();
+
+        // Act
+        await pipeline.IndexAsync(
+            pdfDocumentId: pdfId,
+            gameId: null,
+            sharedGameId: null,
+            chunkCount: 3,
+            totalCharacters: 80,
+            language: "en",
+            cancellationToken: TestCancellationToken);
+
+        // Assert
+        var announced = _serviceProvider!.GetRequiredService<IndexedEventRecorder>().Events;
+        announced.Should().ContainSingle().Which.GameId.Should().Be(privateGameId);
+    }
+
+    /// <summary>
+    /// Lo stesso, sul percorso di <c>IndexPdfCommandHandler</c>: la riga esiste già in
+    /// «processing» e l'evento nasce dalla sua transizione a «completed».
+    /// </summary>
+    [Fact]
+    public async Task IndexPdfOfAPrivateGame_AnnouncesThePrivateGame()
+    {
+        // Arrange
+        await ResetDatabaseAsync();
+        var (privateGameId, pdfId) = await SeedPrivateGamePdfAsync();
+        var handler = _serviceProvider!.GetRequiredService<IndexPdfCommandHandler>();
+
+        // Act
+        var result = await handler.Handle(new IndexPdfCommand(pdfId.ToString()), TestCancellationToken);
+
+        // Assert
+        result.Success.Should().BeTrue($"{result.ErrorCode}: {result.ErrorMessage}");
+        var announced = _serviceProvider!.GetRequiredService<IndexedEventRecorder>().Events;
+        announced.Should().ContainSingle().Which.GameId.Should().Be(privateGameId);
+    }
+
+    /// <summary>Un gioco privato dell'utente del test e un suo PDF con il testo già estratto.</summary>
+    private async Task<(Guid PrivateGameId, Guid PdfId)> SeedPrivateGamePdfAsync()
+    {
+        var userId = (await _dbContext!.Users.FirstAsync(TestCancellationToken)).Id;
+        var privateGame = new Api.Infrastructure.Entities.UserLibrary.PrivateGameEntity
+        {
+            Id = Guid.NewGuid(),
+            OwnerId = userId,
+            Title = "Gioco privato da indicizzare",
+            MinPlayers = 1,
+            MaxPlayers = 4,
+            Source = Api.BoundedContexts.UserLibrary.Domain.Enums.PrivateGameSource.Manual,
+        };
+        _dbContext.PrivateGames.Add(privateGame);
+        var pdfId = Guid.NewGuid();
+        _dbContext.PdfDocuments.Add(new PdfDocumentEntity
+        {
+            Id = pdfId,
+            PrivateGameId = privateGame.Id,
+            UploadedByUserId = userId,
+            FileName = "PrivateRules.pdf",
+            FilePath = "/test/PrivateRules.pdf",
+            FileSizeBytes = 1024,
+            UploadedAt = DateTime.UtcNow,
+            PageCount = 3,
+            ExtractedText = "Game setup instructions.\n\nPlace components on board.\n\nEach player takes 5 cards.",
+        });
+        await _dbContext.SaveChangesAsync(TestCancellationToken);
+        _dbContext.ChangeTracker.Clear();
+        return (privateGame.Id, pdfId);
+    }
+
     [Fact]
     public async Task IndexPdfWithoutExtractedText_ReturnsTextExtractionRequired()
     {
@@ -678,5 +840,17 @@ public sealed class IndexPdfIntegrationTests : IAsyncLifetime
             TestCancellationToken);
 
         resp.Items.Should().Contain(c => c.HeadingPath.Count > 0, "the recursive CTE must resolve the heading path for at least one chunk");
+    }
+
+    /// <summary>Mette da parte gli eventi «documento indicizzato» pubblicati durante un test.</summary>
+    private sealed class IndexedEventRecorder : MediatR.INotificationHandler<VectorDocumentIndexedEvent>
+    {
+        public List<VectorDocumentIndexedEvent> Events { get; } = [];
+
+        public Task Handle(VectorDocumentIndexedEvent notification, CancellationToken cancellationToken)
+        {
+            Events.Add(notification);
+            return Task.CompletedTask;
+        }
     }
 }

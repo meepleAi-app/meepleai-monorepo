@@ -39,7 +39,6 @@ const mockUseWishlist = vi.hoisted(() => vi.fn());
 const mockUseRemoveFromWishlist = vi.hoisted(() => vi.fn());
 const mockUseAddToWishlist = vi.hoisted(() => vi.fn());
 const mockUseUpdateWishlistItem = vi.hoisted(() => vi.fn());
-const mockUseLibrary = vi.hoisted(() => vi.fn());
 const mockToastSuccess = vi.hoisted(() => vi.fn());
 const pushSpy = vi.hoisted(() => vi.fn());
 
@@ -48,10 +47,6 @@ vi.mock('@/hooks/queries/useWishlist', () => ({
   useRemoveFromWishlist: mockUseRemoveFromWishlist,
   useAddToWishlist: mockUseAddToWishlist,
   useUpdateWishlistItem: mockUseUpdateWishlistItem,
-}));
-
-vi.mock('@/hooks/queries/useLibrary', () => ({
-  useLibrary: mockUseLibrary,
 }));
 
 // #3010 Task 7 — the wishlist card's game-name body navigates via
@@ -83,16 +78,6 @@ function renderPage(ui: ReactElement) {
     </QueryClientProvider>
   );
 }
-
-const LIBRARY_DATA = {
-  items: [
-    { gameId: 'game-1', gameTitle: 'Wingspan' },
-    { gameId: 'game-2', gameTitle: 'Catan' },
-  ],
-  page: 1,
-  pageSize: 500,
-  totalCount: 2,
-};
 
 function buildItem(overrides: Partial<WishlistItemDto> = {}): WishlistItemDto {
   return {
@@ -134,7 +119,6 @@ function normalizeNbsp(value: string): string {
 describe('WishlistPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseLibrary.mockReturnValue({ data: LIBRARY_DATA, isLoading: false, isError: false });
     mockUseRemoveFromWishlist.mockReturnValue({ mutate: vi.fn() });
     mockUseAddToWishlist.mockReturnValue({ mutate: vi.fn(), isPending: false });
     mockUseUpdateWishlistItem.mockReturnValue({ mutate: vi.fn(), isPending: false });
@@ -280,6 +264,44 @@ describe('WishlistPage', () => {
 
     expect(screen.getByText(WISHLIST_I18N.empty.filtered.title)).toBeInTheDocument();
     expect(screen.queryByTestId('wishlist-card')).not.toBeInTheDocument();
+  });
+
+  it('in modifica il dialogo mostra il titolo portato dal DTO (#4187, #4227)', async () => {
+    // La lettura della wishlist porta il titolo del catalogo in gameName: il dialogo,
+    // in modifica, non interroga la libreria.
+    const user = userEvent.setup();
+    mockUseWishlist.mockReturnValue({
+      data: [buildItem()],
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    renderPage(<WishlistPage />);
+
+    await user.click(screen.getByRole('button', { name: 'Modifica wishlist item Wingspan' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Wingspan');
+    expect(dialog).not.toHaveTextContent('game-1');
+  });
+
+  it('un gioco non piu nel catalogo, senza gameName nel DTO, mostra il segnaposto (#4227)', () => {
+    mockUseWishlist.mockReturnValue({
+      data: [
+        buildItem({
+          id: '00000000-0000-0000-0000-0000000000ff',
+          gameId: 'game-gone',
+          gameName: undefined,
+        }),
+      ],
+      isLoading: false,
+      isError: false,
+      refetch: vi.fn(),
+    });
+    renderPage(<WishlistPage />);
+
+    expect(screen.getByText(CARD_I18N.unknownGame)).toBeInTheDocument();
+    expect(screen.queryByText('game-gone')).not.toBeInTheDocument();
   });
 
   it('shows the error state when the wishlist query rejects', () => {

@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Queries.GetNewGames;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Services;
@@ -56,7 +57,12 @@ public sealed class GetNewGamesQueryHandlerTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
-    private SharedGameEntity SeedGame(string title, string? pdfCoverR2Key = null)
+    private SharedGameEntity SeedGame(
+        string title,
+        string? pdfCoverR2Key = null,
+        GameStatus status = GameStatus.Published,
+        bool isDeleted = false,
+        DateTime? createdAt = null)
     {
         var entity = new SharedGameEntity
         {
@@ -68,14 +74,59 @@ public sealed class GetNewGamesQueryHandlerTests : IDisposable
             MaxPlayers = 4,
             PlayingTimeMinutes = 60,
             MinAge = 10,
-            Status = 1, // Published
+            Status = (int)status,
             CreatedBy = Guid.NewGuid(),
-            CreatedAt = DateTime.UtcNow,
-            IsDeleted = false,
+            CreatedAt = createdAt ?? DateTime.UtcNow,
+            IsDeleted = isDeleted,
             PdfCoverR2Key = pdfCoverR2Key,
         };
         _db.SharedGames.Add(entity);
         return entity;
+    }
+
+    /// <summary>
+    /// #4659. La rail è pubblica per ogni utente autenticato, e il dettaglio che apre una card risponde 404 a
+    /// chi non è admin per i giochi non pubblicati (<c>HandleGetGameById</c>): bozze, giochi in approvazione e
+    /// archiviati non devono comparire, come non compaiono nella lista del catalogo (default <c>Published</c>).
+    /// </summary>
+    [Fact]
+    public async Task Handle_ListsOnlyPublishedGames()
+    {
+        SeedGame("Draft", status: GameStatus.Draft);
+        SeedGame("Pending", status: GameStatus.PendingApproval);
+        SeedGame("Archived", status: GameStatus.Archived);
+        SeedGame("Deleted", status: GameStatus.Published, isDeleted: true);
+        SeedGame("Published");
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await _handler.Handle(
+            new GetNewGamesQuery(Limit: 10),
+            TestContext.Current.CancellationToken);
+
+        result.Select(g => g.Name).Should().Equal("Published");
+    }
+
+    /// <summary>
+    /// Il filtro sta nella query, prima del tetto di 50 righe della voce in cache: se stesse dopo, una
+    /// cinquantina di bozze recenti spingerebbero fuori ogni gioco pubblicato e la rail resterebbe vuota.
+    /// </summary>
+    [Fact]
+    public async Task Handle_TheStatusFilterComesBeforeTheCacheCap_SoNewerDraftsDoNotCrowdOutPublishedGames()
+    {
+        var now = DateTime.UtcNow;
+        // Più bozze del tetto della voce in cache: il tetto lo dice l'handler, non un numero scritto qui.
+        for (var i = 0; i <= GetNewGamesQueryHandler.MaxCacheLimit; i++)
+        {
+            SeedGame($"Draft {i}", status: GameStatus.Draft, createdAt: now.AddMinutes(-i));
+        }
+        SeedGame("Older published game", createdAt: now.AddDays(-30));
+        await _db.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var result = await _handler.Handle(
+            new GetNewGamesQuery(Limit: 10),
+            TestContext.Current.CancellationToken);
+
+        result.Select(g => g.Name).Should().Equal("Older published game");
     }
 
     [Fact]

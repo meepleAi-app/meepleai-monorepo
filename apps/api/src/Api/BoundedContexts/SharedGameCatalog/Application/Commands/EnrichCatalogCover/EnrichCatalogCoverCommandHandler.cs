@@ -1,4 +1,5 @@
 using Amazon.S3;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Infrastructure.Providers;
@@ -84,8 +85,7 @@ internal sealed class EnrichCatalogCoverCommandHandler
     /// </summary>
     private readonly ICoverR2UploadPipeline? _r2UploadPipeline;
     private readonly TimeProvider _timeProvider;
-    private readonly IHybridCacheService _cache;
-    private readonly ICacheInvalidationRetryPolicy _cacheRetryPolicy;
+    private readonly ISharedGameCacheInvalidator _cacheInvalidator;
     private readonly ILogger<EnrichCatalogCoverCommandHandler> _logger;
 
     public EnrichCatalogCoverCommandHandler(
@@ -95,8 +95,7 @@ internal sealed class EnrichCatalogCoverCommandHandler
         IWikimediaCommonsClient commonsClient,
         IWebpVariantGenerator webpGenerator,
         TimeProvider timeProvider,
-        IHybridCacheService cache,
-        ICacheInvalidationRetryPolicy cacheRetryPolicy,
+        ISharedGameCacheInvalidator cacheInvalidator,
         ILogger<EnrichCatalogCoverCommandHandler> logger,
         // #3886: default `= null` obbligatorio, non cosmetico — il container non onora le
         // annotazioni nullable: senza valore di default un servizio non registrato resta un
@@ -110,8 +109,7 @@ internal sealed class EnrichCatalogCoverCommandHandler
         _webpGenerator = webpGenerator ?? throw new ArgumentNullException(nameof(webpGenerator));
         _r2UploadPipeline = r2UploadPipeline;
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
-        _cache = cache ?? throw new ArgumentNullException(nameof(cache));
-        _cacheRetryPolicy = cacheRetryPolicy ?? throw new ArgumentNullException(nameof(cacheRetryPolicy));
+        _cacheInvalidator = cacheInvalidator ?? throw new ArgumentNullException(nameof(cacheInvalidator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -327,19 +325,11 @@ internal sealed class EnrichCatalogCoverCommandHandler
         // Issue #3138: the cover columns changed — evict the SharedGameCatalog read-model
         // caches so /shared-games (list) and /shared-games/{id} (detail) reflect the new
         // coverUrl immediately instead of waiting for the 15min/1h TTL. Cross-replica L1+L2
-        // eviction via Redis Pub/Sub, mirroring VectorDocumentIndexedForKbFlagHandler (ADR-062).
+        // eviction (ADR-062) plus the native HybridCache step: see ISharedGameCacheInvalidator.
         // Runs only on this success path (every Skipped/Failed branch returns earlier), so no
         // wasted eviction when the cover did not change; covers admin-single, admin-batch and
         // cron since all three dispatch EnrichCatalogCoverCommand into this handler.
-        await _cacheRetryPolicy.ExecuteAsync(
-            token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync("search-games", token)),
-            "shared-games.list",
-            cancellationToken).ConfigureAwait(false);
-
-        await _cacheRetryPolicy.ExecuteAsync(
-            token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync($"shared-game:{game.Id}", token)),
-            "shared-games.detail",
-            cancellationToken).ConfigureAwait(false);
+        await _cacheInvalidator.EvictDetailAndListAsync(game.Id, cancellationToken).ConfigureAwait(false);
 
         // 10. Success metric + result.
         EmitOutcomeMetric(OutcomeSuccess);

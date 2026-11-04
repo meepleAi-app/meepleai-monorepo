@@ -267,7 +267,7 @@ Scenario U6-13 [Flow]: Creazione play-record completo
   Given sono loggato come marco@meepleai.test
     And ho "Azul" nella library
   When apro /play-records/new
-    And nel form (SessionCreateForm) step "Gioco": scelgo "Azul" dal catalogo (GameCombobox)
+    And nel form (SessionCreateForm) step "Gioco": scelgo "Azul" dal selettore di gioco (elenca la libreria a campo vuoto; da due lettere cerca anche nel catalogo)
     And step "Quando": imposto la data e (opzionale) location "HP-TEST-2026-07-10"
     And step "Punteggi": aggiungo giocatori con punteggi + imposto visibilità
     And clicco "Crea"/submit
@@ -327,7 +327,7 @@ Scenario U6-28 [Flow]: Ciclo CRUD play-record — crea → edita → elimina (co
     And ho "Azul" nella library (seed: marco possiede Azul)
   # --- CREATE ---
   When apro /play-records/new
-    And nel form (SessionCreateForm) step "Gioco" scelgo "Azul" dal catalogo (GameCombobox)
+    And nel form (SessionCreateForm) step "Gioco" scelgo "Azul" dal selettore di gioco (elenca la libreria a campo vuoto; da due lettere cerca anche nel catalogo)
     And step "Quando" imposto la data e location "HP-TEST-2026-07-10 CRUD"
     And step "Punteggi" aggiungo me stesso (marco) con un punteggio + visibilità Private
     And submit ("Crea")

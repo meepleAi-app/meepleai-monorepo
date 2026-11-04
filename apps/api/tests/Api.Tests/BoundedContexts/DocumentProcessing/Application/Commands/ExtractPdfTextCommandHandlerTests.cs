@@ -1,6 +1,8 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.BoundedContexts.DocumentProcessing.Application.Services;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
@@ -81,6 +83,68 @@ public sealed class ExtractPdfTextCommandHandlerTests : IDisposable
             "Extracting → Indexing → Ready path; stamping here would mark an unindexed doc as current.");
         result.CharacterCount.Should().Be(extraction.totalCharacters);
         result.PageCount.Should().Be(extraction.totalPages);
+    }
+
+    /// <summary>
+    /// #4782: IndexPdfCommand ricostruisce i frammenti dal solo ExtractedText. Senza la mappa delle pagine accanto al
+    /// testo, un documento piatto tornerebbe tutto a pagina 1.
+    /// </summary>
+    [Fact]
+    public async Task Handle_StoresWhereEachPageBeginsInTheExtractedText()
+    {
+        SeedPdfDocument(nameof(PdfProcessingState.Pending));
+        SetupBlobStorage();
+        SetupSuccessfulExtraction();
+
+        await CreateHandler().Handle(new ExtractPdfTextCommand(_pdfDocumentId), CancellationToken.None);
+
+        var reloaded = await _db.PdfDocuments.AsNoTracking().FirstAsync(p => p.Id == _pdfDocumentId);
+        reloaded.PageSpansJson.Should().Be("[[1,0],[2,24]]");
+        PageSpans.IsConsistentWith(PageSpans.Parse(reloaded.PageSpansJson), reloaded.ExtractedText).Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Handle_WhenThePagesAreEstimated_StoresNoPageMap_AndClearsAnOldOne()
+    {
+        SeedPdfDocument(nameof(PdfProcessingState.Pending));
+        var seeded = await _db.PdfDocuments.FirstAsync(p => p.Id == _pdfDocumentId);
+        seeded.PageSpansJson = "[[1,0],[9,99]]";
+        await _db.SaveChangesAsync();
+        SetupBlobStorage();
+        _pdfTextExtractorMock
+            .Setup(e => e.ExtractPagedTextAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(PagedTextExtractionResult.CreateSuccess(
+                [new PageTextChunk(1, "First half.", 0, 11, PageIsEstimated: true), new PageTextChunk(2, "Second half.", 11, 23, PageIsEstimated: true)],
+                totalPages: 2, totalCharacters: 23, ocrTriggered: false));
+
+        await CreateHandler().Handle(new ExtractPdfTextCommand(_pdfDocumentId), CancellationToken.None);
+
+        var reloaded = await _db.PdfDocuments.AsNoTracking().FirstAsync(p => p.Id == _pdfDocumentId);
+        reloaded.ExtractedText.Should().Be("First half.\n\nSecond half.");
+        reloaded.PageSpansJson.Should().BeNull("a page map left over from an earlier extraction would describe another text");
+    }
+
+    /// <summary>
+    /// #4660: l'estrattore fallisce con un messaggio che nomina un servizio interno. La colonna, che pdf-status e
+    /// il resto servono agli utenti, porta un testo fisso. (Il risultato del comando va a un endpoint riservato ad
+    /// admin ed editor, e non cambia.)
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenTheExtractorFails_StoresAFixedText_NotTheExtractorsMessage()
+    {
+        SeedPdfDocument(nameof(PdfProcessingState.Pending));
+        SetupBlobStorage();
+        _pdfTextExtractorMock
+            .Setup(e => e.ExtractPagedTextAsync(It.IsAny<Stream>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(PagedTextExtractionResult.CreateFailure("unstructured-service at http://10.0.0.5:8000 answered 502"));
+
+        var result = await CreateHandler().Handle(new ExtractPdfTextCommand(_pdfDocumentId), CancellationToken.None);
+
+        result.Success.Should().BeFalse();
+        var reloaded = await _db.PdfDocuments.AsNoTracking().FirstAsync(p => p.Id == _pdfDocumentId);
+        reloaded.ProcessingState.Should().Be(nameof(PdfProcessingState.Failed));
+        reloaded.ProcessingError.Should().Be(PdfFailureText.TextExtraction);
+        reloaded.ProcessingError.Should().NotContain("10.0.0.5");
     }
 
     [Fact]

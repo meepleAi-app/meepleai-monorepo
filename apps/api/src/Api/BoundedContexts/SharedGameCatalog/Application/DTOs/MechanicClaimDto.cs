@@ -19,6 +19,10 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
 /// <param name="ReviewNote">Optional note captured on approval (#526 AC-6). Distinct from <see cref="RejectionNote"/>.</param>
 /// <param name="Citations">Attribution citations (≥ 1 — ADR-051 T3).</param>
 /// <param name="Validations">T1–T4 guardrail badges (#526 AC-1). Derived, not persisted — see <see cref="MechanicClaimValidationDto"/>.</param>
+/// <param name="Kind">Kind of claim (Rule / Exception / Clarification / Example …).</param>
+/// <param name="Priority">Rule priority tier.</param>
+/// <param name="Overrides">Ids of the claims this one overrides.</param>
+/// <param name="Trigger">Optional trigger (phase / action / component); <c>null</c> = always applies.</param>
 public sealed record MechanicClaimDto(
     Guid Id,
     Guid AnalysisId,
@@ -31,7 +35,11 @@ public sealed record MechanicClaimDto(
     string? RejectionNote,
     string? ReviewNote,
     IReadOnlyList<MechanicCitationDto> Citations,
-    IReadOnlyList<MechanicClaimValidationDto> Validations);
+    IReadOnlyList<MechanicClaimValidationDto> Validations,
+    MechanicClaimKind Kind,
+    MechanicRulePriority Priority,
+    IReadOnlyList<Guid> Overrides,
+    MechanicTriggerDto? Trigger);
 
 /// <summary>
 /// Read model for a single attribution <c>MechanicCitation</c>. Page + verbatim quote are the

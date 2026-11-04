@@ -80,7 +80,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '9.0.x'
+          dotnet-version: '10.0.x'
 
       - name: Cache NuGet packages
         # Issue #850 AC-3: tight key fingerprint includes Directory.Packages.props

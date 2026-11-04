@@ -311,18 +311,8 @@ export const ADMIN_NAVIGATION: AdminNavSection[] = [
         icon: GaugeIcon,
       },
       {
-        href: '/admin/configuration/game-library-limits',
-        label: 'Game Library Limits',
-        icon: GamepadIcon,
-      },
-      {
         href: '/admin/configuration/pdf-tier-limits',
         label: 'PDF Tier Limits',
-        icon: FileIcon,
-      },
-      {
-        href: '/admin/configuration/pdf-upload-limits',
-        label: 'PDF Upload Limits',
         icon: FileIcon,
       },
     ],

@@ -19,11 +19,23 @@ const SEED_PASSWORD = process.env.SMOKE_USER_PASSWORD ?? 'SmokeUser1!!';
 export async function smokeLogin(
   request: APIRequestContext
 ): Promise<{ cookieHeader: string; cookieHeaders: string[] }> {
+  return loginAs(request, SEED_EMAIL, SEED_PASSWORD);
+}
+
+/**
+ * #4155: login via API for any user — e.g. a regular user created by the seeded admin, because
+ * an admin always passes the RAG gate and cannot exercise the ownership denial.
+ */
+export async function loginAs(
+  request: APIRequestContext,
+  email: string,
+  password: string
+): Promise<{ cookieHeader: string; cookieHeaders: string[] }> {
   const res = await request.post(`${API_BASE}/api/v1/auth/login`, {
-    data: { email: SEED_EMAIL, password: SEED_PASSWORD },
+    data: { email, password },
   });
   if (!res.ok()) {
-    throw new Error(`smokeLogin failed ${res.status()} for ${SEED_EMAIL}`);
+    throw new Error(`login failed ${res.status()} for ${email}`);
   }
   const cookies = res.headersArray().filter(h => h.name.toLowerCase() === 'set-cookie');
   // #960 H4 step 2: backend sets MULTIPLE meepleai_* cookies (session + user_role_v2).

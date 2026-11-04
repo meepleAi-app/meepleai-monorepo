@@ -164,8 +164,9 @@ describe('ChatMessageList — feedback flow characterization', () => {
     submitKbFeedbackMock.mockReset();
   });
 
+  // #4168: il feedback si dà solo a una risposta salvata, cioè con l'id (UUID) del backend
   const assistantMessage: ChatMessageItem = {
-    id: 'msg-assistant-1',
+    id: '11111111-1111-4111-8111-111111111111',
     role: 'assistant',
     content: 'Puoi giocare 3 carte.',
   };
@@ -188,7 +189,7 @@ describe('ChatMessageList — feedback flow characterization', () => {
     await waitFor(() => {
       expect(submitKbFeedbackMock).toHaveBeenCalledWith('game-1', {
         chatSessionId: 'thread-42',
-        messageId: 'msg-assistant-1',
+        messageId: '11111111-1111-4111-8111-111111111111',
         outcome: 'helpful',
         comment: undefined,
       });
@@ -212,7 +213,7 @@ describe('ChatMessageList — feedback flow characterization', () => {
     await waitFor(() => {
       expect(submitKbFeedbackMock).toHaveBeenCalledWith('game-1', {
         chatSessionId: 'thread-42',
-        messageId: 'msg-assistant-1',
+        messageId: '11111111-1111-4111-8111-111111111111',
         outcome: 'not_helpful',
         comment: 'Bad response',
       });
@@ -253,8 +254,8 @@ describe('ChatMessageList — feedback flow characterization', () => {
     submitKbFeedbackMock.mockResolvedValue(undefined);
 
     const messages: ChatMessageItem[] = [
-      { id: 'msg-a', role: 'assistant', content: 'Risposta A' },
-      { id: 'msg-b', role: 'assistant', content: 'Risposta B' },
+      { id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', role: 'assistant', content: 'Risposta A' },
+      { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', role: 'assistant', content: 'Risposta B' },
     ];
 
     render(
@@ -276,6 +277,19 @@ describe('ChatMessageList — feedback flow characterization', () => {
       expect(updatedStubs[0]).toHaveAttribute('data-value', 'helpful');
       expect(updatedStubs[1]).toHaveAttribute('data-value', 'null');
     });
+  });
+
+  it('hides feedback buttons on an answer that is not saved yet (#4168)', () => {
+    // la bolla in streaming ha un id provvisorio: un feedback con quello il backend non lo trova
+    render(
+      <ChatMessageList
+        {...defaultProps}
+        messages={[{ ...assistantMessage, id: 'assistant-1791785013609' }]}
+        gameId="game-1"
+        threadId="thread-42"
+      />
+    );
+    expect(screen.queryByTestId('feedback-buttons')).toBeNull();
   });
 
   it('hides feedback buttons when gameId is missing', () => {

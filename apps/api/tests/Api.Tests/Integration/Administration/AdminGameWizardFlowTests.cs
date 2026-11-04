@@ -1,6 +1,8 @@
 using Api.BoundedContexts.Administration.Application.Commands.GameWizard;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
+using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 using Api.BoundedContexts.DocumentProcessing.Application.DTOs;
+using Api.BoundedContexts.DocumentProcessing.Domain.Exceptions;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -185,7 +187,7 @@ public sealed class AdminGameWizardFlowTests : IAsyncLifetime
         // Assert result DTO
         result.PdfDocumentId.Should().Be(pdfId);
         result.GameId.Should().Be(gameId);
-        result.Status.Should().Be("processing");
+        result.Status.Should().Be("queued");
         result.Priority.Should().Be("Admin");
 
         // Assert DB persistence (clear tracker to force real DB read)
@@ -194,8 +196,13 @@ public sealed class AdminGameWizardFlowTests : IAsyncLifetime
         savedPdf!.ProcessingPriority.Should().Be("Admin");
     }
 
+    /// <summary>
+    /// #4443 R3: the queue processes the document; the request only enqueues it. It used to run
+    /// extraction and indexing itself as well, a second pipeline next to the worker's.
+    /// </summary>
     [Fact(Timeout = 90_000)]
-    public async Task WizardLaunch_DispatchesBothExtractAndIndexCommands()
+    [Trait("Issue", "4443")]
+    public async Task WizardLaunch_EnqueuesOnly_AndRunsNoPipelineInTheRequest()
     {
         // Arrange
         var (gameId, pdfId) = await SeedGameAndPdfAsync("Spirit Island");
@@ -206,37 +213,37 @@ public sealed class AdminGameWizardFlowTests : IAsyncLifetime
         // Act
         await handler.Handle(command, TestCancellationToken);
 
-        // Assert: pipeline dispatched both commands in order
+        // Assert: one enqueue at the wizard priority, no pipeline command
         mediatorMock.Verify(
-            m => m.Send(It.Is<ExtractPdfTextCommand>(c => c.PdfId == pdfId), It.IsAny<CancellationToken>()),
+            m => m.Send(It.Is<EnqueuePdfCommand>(c => c.PdfDocumentId == pdfId && c.Priority == 100), It.IsAny<CancellationToken>()),
             Times.Once);
         mediatorMock.Verify(
-            m => m.Send(It.Is<IndexPdfCommand>(c => c.PdfId == pdfId.ToString()), It.IsAny<CancellationToken>()),
-            Times.Once);
+            m => m.Send(It.IsAny<ExtractPdfTextCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        mediatorMock.Verify(
+            m => m.Send(It.IsAny<IndexPdfCommand>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact(Timeout = 90_000)]
-    public async Task WizardLaunch_PrioritySetBeforePipelineDispatched()
+    public async Task WizardLaunch_PrioritySetBeforeTheEnqueue()
     {
-        // Arrange: verify that priority is set (saved) before the pipeline runs,
-        // so that if extraction reads the PDF it already sees Admin priority.
+        // Arrange: verify that priority is set (saved) before the job exists, so that when the worker
+        // reads the PDF it already sees Admin priority.
         var (gameId, pdfId) = await SeedGameAndPdfAsync("Twilight Imperium");
 
-        string? priorityAtExtractTime = null;
+        string? priorityAtEnqueueTime = null;
         var mediatorMock = new Mock<IMediator>();
         mediatorMock
-            .Setup(m => m.Send(It.IsAny<ExtractPdfTextCommand>(), It.IsAny<CancellationToken>()))
-            .Returns<ExtractPdfTextCommand, CancellationToken>(async (_, ct) =>
+            .Setup(m => m.Send(It.IsAny<EnqueuePdfCommand>(), It.IsAny<CancellationToken>()))
+            .Returns<EnqueuePdfCommand, CancellationToken>(async (_, ct) =>
             {
                 // At this point priority should already be saved in DB
                 _dbContext!.ChangeTracker.Clear();
                 var pdf = await _dbContext.PdfDocuments.FindAsync(new object[] { pdfId }, ct);
-                priorityAtExtractTime = pdf?.ProcessingPriority;
-                return ExtractPdfTextResultDto.CreateSuccess(1000, 5);
+                priorityAtEnqueueTime = pdf?.ProcessingPriority;
+                return Guid.NewGuid();
             });
-        mediatorMock
-            .Setup(m => m.Send(It.IsAny<IndexPdfCommand>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(IndexingResultDto.CreateSuccess("vec-1", 10, DateTime.UtcNow));
 
         var handler = CreateHandler(mediatorMock);
         var command = new LaunchAdminPdfProcessingCommand(gameId, pdfId, AdminUserId);
@@ -244,9 +251,9 @@ public sealed class AdminGameWizardFlowTests : IAsyncLifetime
         // Act
         await handler.Handle(command, TestCancellationToken);
 
-        // Assert: priority was Admin before extraction ran
-        priorityAtExtractTime.Should().Be("Admin",
-            "priority must be saved to DB before the pipeline commands are dispatched");
+        // Assert: priority was Admin before the job was created
+        priorityAtEnqueueTime.Should().Be("Admin",
+            "priority must be saved to DB before the job is enqueued");
     }
 
     // ────────────────────────────────────────────────────────────────────────
@@ -284,7 +291,7 @@ public sealed class AdminGameWizardFlowTests : IAsyncLifetime
         var result = await handler.Handle(command, TestCancellationToken);
 
         // Assert: resolved correctly and priority persisted
-        result.Status.Should().Be("processing");
+        result.Status.Should().Be("queued");
 
         _dbContext!.ChangeTracker.Clear();
         var pdf = await _dbContext.PdfDocuments.FindAsync([pdfId], TestCancellationToken);
@@ -346,32 +353,32 @@ public sealed class AdminGameWizardFlowTests : IAsyncLifetime
     }
 
     // ────────────────────────────────────────────────────────────────────────
-    // Guard: pipeline failure propagates (priority already saved before throw)
+    // Guard: a full queue propagates (priority already saved before throw)
     // ────────────────────────────────────────────────────────────────────────
 
     [Fact(Timeout = 90_000)]
-    public async Task WizardLaunch_WhenExtractionFails_ExceptionPropagatesButPriorityAlreadySaved()
+    [Trait("Issue", "4443")]
+    public async Task WizardLaunch_WhenTheQueueIsFull_ExceptionPropagatesButPriorityAlreadySaved()
     {
         // Arrange
         var (gameId, pdfId) = await SeedGameAndPdfAsync("Azul");
 
         var mediatorMock = new Mock<IMediator>();
         mediatorMock
-            .Setup(m => m.Send(It.IsAny<ExtractPdfTextCommand>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Extraction service unavailable"));
+            .Setup(m => m.Send(It.IsAny<EnqueuePdfCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ProcessingQueueFullException());
 
         var handler = CreateHandler(mediatorMock);
         var command = new LaunchAdminPdfProcessingCommand(gameId, pdfId, AdminUserId);
 
-        // Act & Assert: exception propagates from extraction failure
+        // Act & Assert: #4443 R8 — a full queue is not «already queued», it reaches the caller (429)
         await handler.Invoking(h => h.Handle(command, TestCancellationToken))
-            .Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("Extraction service unavailable");
+            .Should().ThrowAsync<ProcessingQueueFullException>();
 
-        // Priority was already saved before pipeline dispatch
+        // Priority was already saved before the enqueue
         _dbContext!.ChangeTracker.Clear();
         var pdf = await _dbContext.PdfDocuments.FindAsync([pdfId], TestCancellationToken);
         pdf!.ProcessingPriority.Should().Be("Admin",
-            "priority is saved before pipeline is dispatched, so it persists even on pipeline failure");
+            "priority is saved before the enqueue, so it persists even when the queue refuses the job");
     }
 }

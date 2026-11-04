@@ -69,7 +69,11 @@ internal sealed class GetMechanicAnalysisClaimsQueryHandler
                         Quote: citation.Quote,
                         DisplayOrder: citation.DisplayOrder))
                     .ToList(),
-                Validations: MechanicClaimValidations.FromEntity(c)))
+                Validations: MechanicClaimValidations.FromEntity(c),
+                Kind: (MechanicClaimKind)c.Kind,
+                Priority: (MechanicRulePriority)c.Priority,
+                Overrides: c.Overrides ?? [],
+                Trigger: MechanicTriggerDto.FromDomain(c.Trigger)))
             .ToList();
     }
 }

@@ -69,12 +69,8 @@ internal static class UserActivityEndpoints
 
             return Results.Ok(response);
         })
-        .WithOpenApi(operation =>
-        {
-            operation.Summary = "Get user activity log";
-            operation.Description = "Retrieve paginated user activity log with filters for Admin Dashboard";
-            return operation;
-        });
+        .WithSummary("Get user activity log")
+        .WithDescription("Retrieve paginated user activity log with filters for Admin Dashboard");
 
         return group;
     }

@@ -137,6 +137,11 @@ export default defineConfig({
     actionTimeout: 10000, // 10s for clicks/fills
     navigationTimeout: 60000, // 60s for page.goto (increased for dev server)
 
+    // The app adopts the browser's language after mount (IntlProvider), and the specs select by English
+    // words ("Continue", "Not enabled", "Digit 1"…). en-US is also Playwright's default: stated here so a
+    // machine or project that changes the browser language does not silently turn the interface Italian.
+    locale: 'en-US',
+
     // Chromatic Playwright fixture options
     // TODO: Check if these options still exist in current Chromatic version
     // disableAutoSnapshot: false, // Auto-capture at end of test

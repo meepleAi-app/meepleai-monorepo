@@ -55,7 +55,7 @@ Implementazioni concrete e adattatori:
 - **Domain-Driven Design**: Aggregates, Value Objects, Domain Events
 - **Repository Pattern**: Astrazione dell'accesso ai dati con interfacce nel Domain layer
 - **Factory Method**: Creazione entita tramite metodi statici (`LedgerEntry.Create()`, `LedgerEntry.CreateAutoEntry()`, `LedgerEntry.CreateManualEntry()`)
-- **Event-Driven**: `TokenUsageLedgerEvent` pubblicato da TokenTrackingService e gestito da `TokenUsageLedgerEventHandler`
+- **Event-Driven**: `TokenUsageLedgerEvent` pubblicato da `LlmCostService` e gestito da `TokenUsageLedgerEventHandler`
 - **Background Jobs**: Quartz.NET per aggregazione costi giornaliera (05:00 UTC) e report mensile (1 del mese, 06:00 UTC)
 - **Read-Only Projection**: `UserBudget` mappato via `ToView()` sulla tabella users senza generare migrazioni
 

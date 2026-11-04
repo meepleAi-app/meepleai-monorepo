@@ -2,7 +2,7 @@
  * AgentsClient - Specialized Agents Tests (Issue #2309)
  *
  * Coverage gap: lines 145-155, 166-176
- * Tests: invokeChess, generateSetupGuide
+ * Tests: invokeChess
  */
 
 import { createAgentsClient } from '../agentsClient';
@@ -84,62 +84,6 @@ describe('agentsClient - Specialized (Issue #2309)', () => {
       await expect(agentsClient.invokeChess({ question: 'Test' })).rejects.toThrow(
         'Agent unavailable'
       );
-    });
-  });
-
-  describe('generateSetupGuide', () => {
-    it('should generate setup guide', async () => {
-      const mockResponse = {
-        guide: 'Setup instructions for the game...',
-        steps: ['Step 1', 'Step 2'],
-        estimatedTime: '15 minutes',
-      };
-
-      mockHttpClient.post.mockResolvedValueOnce(mockResponse);
-
-      const result = await agentsClient.generateSetupGuide({ gameId: 'game-1', chatId: 'chat-1' });
-
-      expect(mockHttpClient.post).toHaveBeenCalledWith(
-        '/api/v1/agents/setup',
-        { gameId: 'game-1', chatId: 'chat-1' },
-        expect.anything()
-      );
-      expect(result.guide).toBeDefined();
-    });
-
-    it('should generate setup guide without chatId', async () => {
-      const mockResponse = {
-        guide: 'Basic setup',
-        steps: [],
-        estimatedTime: '10 minutes',
-      };
-
-      mockHttpClient.post.mockResolvedValueOnce(mockResponse);
-
-      const result = await agentsClient.generateSetupGuide({ gameId: 'game-2', chatId: null });
-
-      expect(mockHttpClient.post).toHaveBeenCalledWith(
-        '/api/v1/agents/setup',
-        { gameId: 'game-2', chatId: null },
-        expect.anything()
-      );
-      expect(result).toEqual(mockResponse);
-    });
-
-    it('should throw error when response is null', async () => {
-      mockHttpClient.post.mockResolvedValueOnce(null);
-
-      await expect(
-        agentsClient.generateSetupGuide({ gameId: 'game-1', chatId: null })
-      ).rejects.toThrow('Failed to generate setup guide: no response from server');
-    });
-
-    it('should handle API errors', async () => {
-      mockHttpClient.post.mockRejectedValueOnce(new Error('Game not found'));
-
-      await expect(
-        agentsClient.generateSetupGuide({ gameId: 'invalid', chatId: null })
-      ).rejects.toThrow('Game not found');
     });
   });
 

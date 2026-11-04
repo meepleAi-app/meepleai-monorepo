@@ -124,7 +124,7 @@ internal sealed class AddRulebookCommandHandler : ICommandHandler<AddRulebookCom
         // A Failed match is reported as NewUpload by the dedup service; clean up any
         // stale Game→failed-PDF links first (mirrors the pre-migration behavior).
         var staleMatch = await _pdfDocumentRepository
-            .FindByContentHashAsync(contentHash, cancellationToken)
+            .FindByContentHashForCatalogGameAsync(contentHash, gameId, cancellationToken)
             .ConfigureAwait(false);
 
         if (staleMatch is not null && staleMatch.ProcessingState == PdfProcessingState.Failed)

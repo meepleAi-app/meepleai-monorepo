@@ -30,6 +30,8 @@ internal class RollbackConfigCommandHandler : ICommandHandler<RollbackConfigComm
         if (config == null)
             return null;
 
+        ReservedConfigurationKeyGuard.EnsureNotReserved(config.Key.Value);
+
         // Simple rollback implementation using PreviousValue
         // Note: TargetVersion is ignored in this simplified implementation
         // For full version history, a separate audit table would be needed

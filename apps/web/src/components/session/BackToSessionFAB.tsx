@@ -10,10 +10,11 @@ export function BackToSessionFAB() {
   const { data: activeData } = useActiveSessions(1);
   const pathname = usePathname();
 
-  const activeSession = activeData?.sessions?.[0];
+  // #4156 (D4): the live page lives under the LiveGameSession id, not the GameSession one.
+  const liveSessionId = activeData?.sessions?.[0]?.liveSessionId;
   const isOnLiveSession = pathname.includes('/sessions/') && pathname.endsWith('/live');
 
-  if (!activeSession || isOnLiveSession) return null;
+  if (!liveSessionId || isOnLiveSession) return null;
 
   return (
     // #4060: this FAB is the second `position: fixed` element living in the
@@ -26,7 +27,7 @@ export function BackToSessionFAB() {
     // (169px at 1366px of width, 281px at 390px — a constant would be wrong at
     // one end or the other), collapsing back to 1.5rem once consent is given.
     <Link
-      href={`/sessions/${activeSession.id}/live`}
+      href={`/sessions/${liveSessionId}/live`}
       className="fixed bottom-[calc(1.5rem+var(--cookie-banner-height,0px))] right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all motion-reduce:transition-none"
       aria-label="Torna alla partita in corso"
     >

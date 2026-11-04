@@ -1,4 +1,5 @@
-using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
+using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.Services;
 using Api.Tests.Constants;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
+using static Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.PerGameSearchStub;
 
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
@@ -16,11 +18,16 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 /// Tests parallel-per-game orchestration + aggregation + deterministic ordering.
 /// Issue #1661: cross-game KB search.
 /// </summary>
+/// <remarks>
+/// #4168 (5e-c-2): il passo per gioco è una <see cref="SearchQuery"/> mandata al mediator — lo stesso
+/// recupero della risposta per gioco —, quindi questi test simulano il mediator
+/// (<see cref="PerGameSearchStub"/>) e guardano la query che parte.
+/// </remarks>
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
 public class MultiGameHybridSearchServiceTests
 {
-    private readonly Mock<IHybridSearchService> _hybridSearchMock = new(MockBehavior.Strict);
+    private readonly PerGameSearchStub _perGame = new();
     private readonly Mock<IServiceScopeFactory> _scopeFactoryMock = new();
 
     // #3786: l'embedding della query e' ora calcolato UNA VOLTA a monte del fan-out, quindi il
@@ -29,68 +36,80 @@ public class MultiGameHybridSearchServiceTests
     // embedding deterministico. Il conteggio delle chiamate e' asserito in
     // MultiGameHybridSearchServiceQueryEmbeddingTests.
 
-    // Each per-game search resolves IHybridSearchService from its OWN DI scope (own DbContext).
-    // Wire the scope factory so every CreateScope() yields a provider returning the single mock,
-    // keeping the existing Setup/Verify on _hybridSearchMock valid while exercising the scope path.
+    // Each per-game search resolves the mediator from its OWN DI scope (own DbContext).
     private MultiGameHybridSearchService CreateSut()
     {
-        var provider = new Mock<IServiceProvider>();
-        provider.Setup(p => p.GetService(typeof(IHybridSearchService))).Returns(_hybridSearchMock.Object);
-        var scope = new Mock<IServiceScope>();
-        scope.SetupGet(s => s.ServiceProvider).Returns(provider.Object);
-        _scopeFactoryMock.Setup(f => f.CreateScope()).Returns(scope.Object);
+        var scopeFactory = _perGame.ScopeFactory();
+        _scopeFactoryMock.Setup(f => f.CreateScope()).Returns(() => scopeFactory.CreateScope());
         return new(_scopeFactoryMock.Object, new MockEmbeddingService(), NullLogger<MultiGameHybridSearchService>.Instance);
     }
 
+    private Task<IReadOnlyList<MultiGameSearchResultItem>> SearchAsync(
+        MultiGameHybridSearchService sut,
+        string query,
+        IReadOnlyList<Guid> gameIds,
+        int limit,
+        SearchMode mode = SearchMode.Hybrid,
+        double minScore = 0.0,
+        IReadOnlyList<Guid>? pdfDocumentIds = null,
+        CancellationToken cancellationToken = default) =>
+        sut.SearchAsync(query, gameIds, limit, Seed, mode, minScore, pdfDocumentIds, cancellationToken);
+
     // ---------------------------------------------------------------------------
-    // EC-1: empty gameIds → empty result, no calls to HybridSearchService
+    // EC-1: empty gameIds → empty result, no per-game search
     // ---------------------------------------------------------------------------
 
     [Fact]
-    public async Task EmptyGameIds_ReturnsEmpty_WithoutCallingHybridSearch()
+    public async Task EmptyGameIds_ReturnsEmpty_WithoutAnyPerGameSearch()
     {
-        // Arrange
         var sut = CreateSut();
 
-        // Act
-        var result = await sut.SearchAsync("catan rules", Array.Empty<Guid>(), limit: 10);
+        var result = await SearchAsync(sut, "catan rules", Array.Empty<Guid>(), limit: 10);
 
-        // Assert — no interaction expected (MockBehavior.Strict would blow up)
         result.Should().BeEmpty();
-        _hybridSearchMock.VerifyNoOtherCalls();
+        _perGame.Received.Should().BeEmpty();
     }
 
     // ---------------------------------------------------------------------------
-    // Sanity: single game delegates to IHybridSearchService
+    // #4168 (5e-c-2): il passo per gioco è il recupero della risposta, con i numeri del profilo
     // ---------------------------------------------------------------------------
 
     [Fact]
-    public async Task SingleGame_DelegatesToHybridSearch_AndReturnsResults()
+    public async Task SingleGame_SendsTheAnswerRetrieval_WithTheProfileParameters()
     {
-        // Arrange
         var gameId = Guid.NewGuid();
-        var fakeResults = BuildResults(gameId, count: 3, baseScore: 0.9f);
-
-        _hybridSearchMock
-            .Setup(s => s.SearchAsync(
-                "test query", gameId,
-                SearchMode.Hybrid,
-                It.IsAny<int>(),
-                null,
-                0.7f, 0.3f, 0.0,
-                GameBookRole.None,
-                It.IsAny<QueryEmbedding?>(),
-                It.IsAny<CancellationToken>()))
-            .ReturnsAsync(fakeResults);
-
+        _perGame.Returns(gameId, BuildPassages(count: 3, baseScore: 0.9f));
         var sut = CreateSut();
+        var perGame = new PerGameRetrievalParameters(VectorMinScore: 0.62, VectorWeight: 0.4f, KeywordWeight: 0.6f);
 
-        // Act
-        var result = await sut.SearchAsync("test query", new[] { gameId }, limit: 10);
+        var result = await sut.SearchAsync("test query", new[] { gameId }, 10, perGame);
 
-        // Assert
         result.Should().HaveCount(3);
         result.Should().AllSatisfy(r => r.GameId.Should().Be(gameId));
+        var sent = _perGame.For(gameId).Should().ContainSingle().Subject;
+        sent.Query.Should().Be("test query");
+        sent.SearchMode.Should().Be("hybrid");
+        sent.TopK.Should().Be(10, "ogni gioco porta al più `limit` candidati");
+        sent.MinScore.Should().Be(0.62, "la soglia del braccio vettoriale è quella del profilo");
+        sent.VectorWeight.Should().Be(0.4f);
+        sent.KeywordWeight.Should().Be(0.6f);
+        sent.Access.Should().Be(SearchAccess.AlreadyChecked, "i giochi arrivano già filtrati per accesso");
+        sent.QueryVector.Should().NotBeNullOrEmpty("l'embedding della domanda è calcolato una volta, a monte");
+    }
+
+    [Fact]
+    public async Task PerGameResults_BeyondThePerGameCap_AreDropped()
+    {
+        // In modo ibrido il recupero per gioco restituisce l'unione dei due bracci, fino a 2×TopK:
+        // il taglio per gioco è reale. Sotto i 50 lo nasconde il taglio finale a `limit`, quindi lo
+        // si osserva solo oltre il tetto per gioco.
+        var gameId = Guid.NewGuid();
+        _perGame.Returns(gameId, BuildPassages(count: 80, baseScore: 0.9f));
+        var sut = CreateSut();
+
+        var result = await SearchAsync(sut, "test", new[] { gameId }, limit: 60);
+
+        result.Should().HaveCount(50, "ogni gioco porta al più min(limit, 50) candidati");
     }
 
     // ---------------------------------------------------------------------------
@@ -98,46 +117,22 @@ public class MultiGameHybridSearchServiceTests
     // ---------------------------------------------------------------------------
 
     [Fact]
-    public async Task MultipleGames_CallsHybridSearchInParallel_OncePerGame()
+    public async Task MultipleGames_SearchesEachGameOnce()
     {
-        // Arrange
         var gameId1 = Guid.NewGuid();
         var gameId2 = Guid.NewGuid();
         var gameId3 = Guid.NewGuid();
-
-        SetupHybridSearchForGame(gameId1, count: 2, baseScore: 0.8f);
-        SetupHybridSearchForGame(gameId2, count: 2, baseScore: 0.7f);
-        SetupHybridSearchForGame(gameId3, count: 2, baseScore: 0.6f);
-
+        _perGame.Returns(gameId1, BuildPassages(count: 2, baseScore: 0.8f));
+        _perGame.Returns(gameId2, BuildPassages(count: 2, baseScore: 0.7f));
+        _perGame.Returns(gameId3, BuildPassages(count: 2, baseScore: 0.6f));
         var sut = CreateSut();
 
-        // Act
-        await sut.SearchAsync("test", new[] { gameId1, gameId2, gameId3 }, limit: 20);
+        await SearchAsync(sut, "test", new[] { gameId1, gameId2, gameId3 }, limit: 20);
 
-        // Assert — each game called exactly once
-        _hybridSearchMock.Verify(
-            s => s.SearchAsync(
-                "test", gameId1,
-                It.IsAny<SearchMode>(), It.IsAny<int>(), null,
-                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()),
-            Times.Once);
-
-        _hybridSearchMock.Verify(
-            s => s.SearchAsync(
-                "test", gameId2,
-                It.IsAny<SearchMode>(), It.IsAny<int>(), null,
-                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()),
-            Times.Once);
-
-        _hybridSearchMock.Verify(
-            s => s.SearchAsync(
-                "test", gameId3,
-                It.IsAny<SearchMode>(), It.IsAny<int>(), null,
-                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()),
-            Times.Once);
+        _perGame.For(gameId1).Should().ContainSingle();
+        _perGame.For(gameId2).Should().ContainSingle();
+        _perGame.For(gameId3).Should().ContainSingle();
+        _perGame.Received.Should().HaveCount(3);
     }
 
     // ---------------------------------------------------------------------------
@@ -150,21 +145,16 @@ public class MultiGameHybridSearchServiceTests
     [Fact]
     public async Task MultipleGames_CreatesOneDiScopePerGame()
     {
-        // Arrange
         var gameId1 = Guid.NewGuid();
         var gameId2 = Guid.NewGuid();
         var gameId3 = Guid.NewGuid();
-
-        SetupHybridSearchForGame(gameId1, count: 1, baseScore: 0.8f);
-        SetupHybridSearchForGame(gameId2, count: 1, baseScore: 0.7f);
-        SetupHybridSearchForGame(gameId3, count: 1, baseScore: 0.6f);
-
+        _perGame.Returns(gameId1, BuildPassages(count: 1, baseScore: 0.8f));
+        _perGame.Returns(gameId2, BuildPassages(count: 1, baseScore: 0.7f));
+        _perGame.Returns(gameId3, BuildPassages(count: 1, baseScore: 0.6f));
         var sut = CreateSut();
 
-        // Act
-        await sut.SearchAsync("test", new[] { gameId1, gameId2, gameId3 }, limit: 20);
+        await SearchAsync(sut, "test", new[] { gameId1, gameId2, gameId3 }, limit: 20);
 
-        // Assert — one scope (→ one DbContext) per game, never a shared context.
         _scopeFactoryMock.Verify(f => f.CreateScope(), Times.Exactly(3));
     }
 
@@ -175,19 +165,14 @@ public class MultiGameHybridSearchServiceTests
     [Fact]
     public async Task MultipleGames_AggregatesResultsAcrossGames()
     {
-        // Arrange
         var gameId1 = Guid.NewGuid();
         var gameId2 = Guid.NewGuid();
-
-        SetupHybridSearchForGame(gameId1, count: 5, baseScore: 0.9f);
-        SetupHybridSearchForGame(gameId2, count: 5, baseScore: 0.8f);
-
+        _perGame.Returns(gameId1, BuildPassages(count: 5, baseScore: 0.9f));
+        _perGame.Returns(gameId2, BuildPassages(count: 5, baseScore: 0.8f));
         var sut = CreateSut();
 
-        // Act — limit higher than total
-        var result = await sut.SearchAsync("test", new[] { gameId1, gameId2 }, limit: 20);
+        var result = await SearchAsync(sut, "test", new[] { gameId1, gameId2 }, limit: 20);
 
-        // Assert — both games contribute
         result.Should().HaveCount(10);
         result.Count(r => r.GameId == gameId1).Should().Be(5);
         result.Count(r => r.GameId == gameId2).Should().Be(5);
@@ -200,42 +185,19 @@ public class MultiGameHybridSearchServiceTests
     [Fact]
     public async Task MultipleGames_OrdersByScoreDescThenChunkIndexAsc()
     {
-        // Arrange
         var gameId1 = Guid.NewGuid();
         var gameId2 = Guid.NewGuid();
 
         // game1 → scores 0.5, 0.3
-        _hybridSearchMock
-            .Setup(s => s.SearchAsync(
-                It.IsAny<string>(), gameId1,
-                It.IsAny<SearchMode>(), It.IsAny<int>(), null,
-                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<HybridSearchResult>
-            {
-                MakeResult(gameId1, chunkIndex: 2, score: 0.3f),
-                MakeResult(gameId1, chunkIndex: 1, score: 0.5f),
-            });
-
+        _perGame.Returns(gameId1,
+            Passage(chunkIndex: 2, hybridScore: 0.3f, vectorScore: 0.3f),
+            Passage(chunkIndex: 1, hybridScore: 0.5f, vectorScore: 0.5f));
         // game2 → score 0.5 (tie with game1 chunk), chunkIndex 0
-        _hybridSearchMock
-            .Setup(s => s.SearchAsync(
-                It.IsAny<string>(), gameId2,
-                It.IsAny<SearchMode>(), It.IsAny<int>(), null,
-                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<HybridSearchResult>
-            {
-                MakeResult(gameId2, chunkIndex: 0, score: 0.5f),
-            });
-
+        _perGame.Returns(gameId2, Passage(chunkIndex: 0, hybridScore: 0.5f, vectorScore: 0.5f));
         var sut = CreateSut();
 
-        // Act
-        var result = await sut.SearchAsync("test", new[] { gameId1, gameId2 }, limit: 10);
+        var result = await SearchAsync(sut, "test", new[] { gameId1, gameId2 }, limit: 10);
 
-        // Assert ordering: 0.5/chunk0 ≤ 0.5/chunk1 by chunkIndex → game2(idx0) < game1(idx1)
-        // so order: [0.5,chunkIdx0], [0.5,chunkIdx1], [0.3,chunkIdx2]
         // #3735: il VALORE di HybridScore in uscita non è più quello per-gioco in ingresso — è il
         // punteggio RRF globale. Ciò che il contratto promette, e che qui si verifica, è
         // l'ORDINAMENTO: i due chunk a pari cosine restano appaiati (ranking a scaglioni) e il
@@ -252,8 +214,6 @@ public class MultiGameHybridSearchServiceTests
     // ---------------------------------------------------------------------------
     // #2568: cross-game ranking degeneracy. Per-game RRF is rank-only, so EVERY
     // game's rank-1 chunk gets the IDENTICAL fused HybridScore (0.7/(60+1) ≈ 0.01148).
-    // With only a ChunkIndex/PdfDocumentId tiebreak the merge picks the same
-    // query-agnostic (lowest-index / lowest-GUID) chunk for every cross-game query.
     // The tie MUST be broken by the globally-comparable raw vector cosine
     // (VectorScore) DESC so the chunk actually most relevant to THIS query wins.
     // ---------------------------------------------------------------------------
@@ -261,43 +221,18 @@ public class MultiGameHybridSearchServiceTests
     [Fact]
     public async Task TiedHybridScore_BrokenByVectorScoreDesc_NotChunkIndex()
     {
-        // Arrange
         var lowRelevanceGame = Guid.NewGuid();
         var highRelevanceGame = Guid.NewGuid();
         const float tiedHybrid = 0.01148f; // the rank-1 RRF value every game ties on
 
-        // low-relevance game: chunkIndex 0 → would WIN the legacy ChunkIndex-ASC
-        // tiebreak, but only a weak cosine match to the query.
-        _hybridSearchMock
-            .Setup(s => s.SearchAsync(
-                It.IsAny<string>(), lowRelevanceGame,
-                It.IsAny<SearchMode>(), It.IsAny<int>(), null,
-                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<HybridSearchResult>
-            {
-                MakeResultWithScores(lowRelevanceGame, chunkIndex: 0, hybridScore: tiedHybrid, vectorScore: 0.45f),
-            });
-
-        // high-relevance game: chunkIndex 7 → would LOSE the legacy tiebreak, but a
-        // strong cosine match → it is the genuinely relevant result for the query.
-        _hybridSearchMock
-            .Setup(s => s.SearchAsync(
-                It.IsAny<string>(), highRelevanceGame,
-                It.IsAny<SearchMode>(), It.IsAny<int>(), null,
-                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<HybridSearchResult>
-            {
-                MakeResultWithScores(highRelevanceGame, chunkIndex: 7, hybridScore: tiedHybrid, vectorScore: 0.92f),
-            });
-
+        // low-relevance game: chunkIndex 0 → would WIN the legacy ChunkIndex-ASC tiebreak.
+        _perGame.Returns(lowRelevanceGame, Passage(chunkIndex: 0, hybridScore: tiedHybrid, vectorScore: 0.45f));
+        // high-relevance game: chunkIndex 7 → would LOSE the legacy tiebreak, but a strong cosine.
+        _perGame.Returns(highRelevanceGame, Passage(chunkIndex: 7, hybridScore: tiedHybrid, vectorScore: 0.92f));
         var sut = CreateSut();
 
-        // Act
-        var result = await sut.SearchAsync("test", new[] { lowRelevanceGame, highRelevanceGame }, limit: 10);
+        var result = await SearchAsync(sut, "test", new[] { lowRelevanceGame, highRelevanceGame }, limit: 10);
 
-        // Assert — higher cosine wins the HybridScore tie, despite higher ChunkIndex
         result.Should().HaveCount(2);
         result[0].GameId.Should().Be(highRelevanceGame,
             "the higher raw cosine (VectorScore) must win a HybridScore tie, not the lower ChunkIndex");
@@ -308,41 +243,16 @@ public class MultiGameHybridSearchServiceTests
     [Fact]
     public async Task TiedHybridScoreAndVectorScore_FallsBackToChunkIndexAsc()
     {
-        // Arrange — when cosine ALSO ties, the deterministic ChunkIndex-ASC fallback
-        // still applies (preserves stable ordering, no nondeterminism).
         var gameId1 = Guid.NewGuid();
         var gameId2 = Guid.NewGuid();
         const float tiedHybrid = 0.5f;
         const float tiedVector = 0.6f;
-
-        _hybridSearchMock
-            .Setup(s => s.SearchAsync(
-                It.IsAny<string>(), gameId1,
-                It.IsAny<SearchMode>(), It.IsAny<int>(), null,
-                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<HybridSearchResult>
-            {
-                MakeResultWithScores(gameId1, chunkIndex: 3, hybridScore: tiedHybrid, vectorScore: tiedVector),
-            });
-
-        _hybridSearchMock
-            .Setup(s => s.SearchAsync(
-                It.IsAny<string>(), gameId2,
-                It.IsAny<SearchMode>(), It.IsAny<int>(), null,
-                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<HybridSearchResult>
-            {
-                MakeResultWithScores(gameId2, chunkIndex: 1, hybridScore: tiedHybrid, vectorScore: tiedVector),
-            });
-
+        _perGame.Returns(gameId1, Passage(chunkIndex: 3, hybridScore: tiedHybrid, vectorScore: tiedVector));
+        _perGame.Returns(gameId2, Passage(chunkIndex: 1, hybridScore: tiedHybrid, vectorScore: tiedVector));
         var sut = CreateSut();
 
-        // Act
-        var result = await sut.SearchAsync("test", new[] { gameId1, gameId2 }, limit: 10);
+        var result = await SearchAsync(sut, "test", new[] { gameId1, gameId2 }, limit: 10);
 
-        // Assert — cosine ties → ChunkIndex ASC fallback → chunkIndex 1 before 3
         result.Should().HaveCount(2);
         result[0].ChunkIndex.Should().Be(1);
         result[1].ChunkIndex.Should().Be(3);
@@ -355,19 +265,14 @@ public class MultiGameHybridSearchServiceTests
     [Fact]
     public async Task Limit_TruncatesFinalResultSet()
     {
-        // Arrange
         var gameId1 = Guid.NewGuid();
         var gameId2 = Guid.NewGuid();
-
-        SetupHybridSearchForGame(gameId1, count: 10, baseScore: 0.9f);
-        SetupHybridSearchForGame(gameId2, count: 10, baseScore: 0.8f);
-
+        _perGame.Returns(gameId1, BuildPassages(count: 10, baseScore: 0.9f));
+        _perGame.Returns(gameId2, BuildPassages(count: 10, baseScore: 0.8f));
         var sut = CreateSut();
 
-        // Act
-        var result = await sut.SearchAsync("test", new[] { gameId1, gameId2 }, limit: 7);
+        var result = await SearchAsync(sut, "test", new[] { gameId1, gameId2 }, limit: 7);
 
-        // Assert
         result.Should().HaveCount(7);
     }
 
@@ -378,25 +283,46 @@ public class MultiGameHybridSearchServiceTests
     [Fact]
     public async Task EachResult_CarriesItsOriginGameId()
     {
-        // Arrange
         var gameId1 = Guid.NewGuid();
         var gameId2 = Guid.NewGuid();
-
-        SetupHybridSearchForGame(gameId1, count: 3, baseScore: 0.9f);
-        SetupHybridSearchForGame(gameId2, count: 3, baseScore: 0.8f);
-
+        _perGame.Returns(gameId1, BuildPassages(count: 3, baseScore: 0.9f));
+        _perGame.Returns(gameId2, BuildPassages(count: 3, baseScore: 0.8f));
         var sut = CreateSut();
 
-        // Act
-        var result = await sut.SearchAsync("test", new[] { gameId1, gameId2 }, limit: 20);
+        var result = await SearchAsync(sut, "test", new[] { gameId1, gameId2 }, limit: 20);
 
-        // Assert — no result should have an empty/default gameId
         result.Should().AllSatisfy(r => r.GameId.Should().NotBe(Guid.Empty));
-
-        // Game IDs found match the input set
         var foundGameIds = result.Select(r => r.GameId).Distinct().ToList();
         foundGameIds.Should().Contain(gameId1);
         foundGameIds.Should().Contain(gameId2);
+    }
+
+    /// <summary>
+    /// #4168 (5e-c-2): l'identità del chunk e i punteggi grezzi arrivano dal recupero per gioco, che
+    /// FuseGlobally e il dump di taratura leggono.
+    /// </summary>
+    [Fact]
+    public async Task EachResult_CarriesTheChunkIdentityAndTheRawScoresOfThePerGameRetrieval()
+    {
+        var gameId = Guid.NewGuid();
+        var pdfId = Guid.NewGuid();
+        _perGame.Returns(gameId, Passage(pdfDocumentId: pdfId, chunkIndex: 4, hybridScore: 0.02f,
+            vectorScore: 0.81f, keywordScore: 2.25f, language: "it", content: "Preparazione", page: 3,
+            matchedTerms: new[] { "preparazione" }));
+        var sut = CreateSut();
+
+        var item = (await SearchAsync(sut, "preparazione", new[] { gameId }, limit: 10)).Should().ContainSingle().Subject;
+
+        item.ChunkId.Should().Be($"{pdfId}_4");
+        item.PdfDocumentId.Should().Be(pdfId.ToString());
+        item.ChunkIndex.Should().Be(4);
+        item.PageNumber.Should().Be(3);
+        item.Content.Should().Be("Preparazione");
+        item.VectorScore.Should().Be(0.81f);
+        item.KeywordScore.Should().Be(2.25f, "il ts_rank_cd grezzo, che supera 1");
+        item.Language.Should().Be("it");
+        item.MatchedTerms.Should().Equal("preparazione");
+        item.Mode.Should().Be(SearchMode.Hybrid);
     }
 
     // ---------------------------------------------------------------------------
@@ -406,41 +332,17 @@ public class MultiGameHybridSearchServiceTests
     [Fact]
     public async Task CancellationToken_Propagated_ToAllParallelCalls()
     {
-        // Arrange
         var gameId1 = Guid.NewGuid();
         var gameId2 = Guid.NewGuid();
         using var cts = new CancellationTokenSource();
-
-        _hybridSearchMock
-            .Setup(s => s.SearchAsync(
-                It.IsAny<string>(), It.IsAny<Guid>(),
-                It.IsAny<SearchMode>(), It.IsAny<int>(), null,
-                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), cts.Token))
-            .ReturnsAsync(new List<HybridSearchResult>());
-
         var sut = CreateSut();
 
-        // Act
-        await sut.SearchAsync("test", new[] { gameId1, gameId2 }, limit: 10,
-            cancellationToken: cts.Token);
+        await SearchAsync(sut, "test", new[] { gameId1, gameId2 }, limit: 10, cancellationToken: cts.Token);
 
-        // Assert — the specific token was passed to both calls
-        _hybridSearchMock.Verify(
-            s => s.SearchAsync(
-                It.IsAny<string>(), gameId1,
-                It.IsAny<SearchMode>(), It.IsAny<int>(), null,
-                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), cts.Token),
-            Times.Once);
-
-        _hybridSearchMock.Verify(
-            s => s.SearchAsync(
-                It.IsAny<string>(), gameId2,
-                It.IsAny<SearchMode>(), It.IsAny<int>(), null,
-                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), cts.Token),
-            Times.Once);
+        _perGame.Mediator.Verify(
+            m => m.Send(It.Is<SearchQuery>(q => q.GameId == gameId1), cts.Token), Times.Once);
+        _perGame.Mediator.Verify(
+            m => m.Send(It.Is<SearchQuery>(q => q.GameId == gameId2), cts.Token), Times.Once);
     }
 
     // ---------------------------------------------------------------------------
@@ -450,26 +352,14 @@ public class MultiGameHybridSearchServiceTests
     [Fact]
     public async Task SingleGameException_DoesNotFailWholeSearch_ReturnsOtherGamesResults()
     {
-        // Arrange
         var failingGameId = Guid.NewGuid();
         var goodGameId = Guid.NewGuid();
-
-        _hybridSearchMock
-            .Setup(s => s.SearchAsync(
-                It.IsAny<string>(), failingGameId,
-                It.IsAny<SearchMode>(), It.IsAny<int>(), null,
-                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("game has no content"));
-
-        SetupHybridSearchForGame(goodGameId, count: 4, baseScore: 0.7f);
-
+        _perGame.Throws(failingGameId, new InvalidOperationException("game has no content"));
+        _perGame.Returns(goodGameId, BuildPassages(count: 4, baseScore: 0.7f));
         var sut = CreateSut();
 
-        // Act — should not throw
-        var result = await sut.SearchAsync("test", new[] { failingGameId, goodGameId }, limit: 10);
+        var result = await SearchAsync(sut, "test", new[] { failingGameId, goodGameId }, limit: 10);
 
-        // Assert — results from good game still returned
         result.Should().HaveCount(4);
         result.Should().AllSatisfy(r => r.GameId.Should().Be(goodGameId));
     }
@@ -481,110 +371,57 @@ public class MultiGameHybridSearchServiceTests
     [Fact]
     public async Task MinScore_FiltersOutLowScoreResults()
     {
-        // Arrange
         var gameId = Guid.NewGuid();
-
-        _hybridSearchMock
-            .Setup(s => s.SearchAsync(
-                It.IsAny<string>(), gameId,
-                It.IsAny<SearchMode>(), It.IsAny<int>(), null,
-                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<HybridSearchResult>
-            {
-                MakeResult(gameId, chunkIndex: 0, score: 0.9f),
-                MakeResult(gameId, chunkIndex: 1, score: 0.4f),  // below 0.5 threshold
-                MakeResult(gameId, chunkIndex: 2, score: 0.6f),
-            });
-
+        _perGame.Returns(gameId,
+            Passage(chunkIndex: 0, hybridScore: 0.9f, vectorScore: 0.9f),
+            Passage(chunkIndex: 1, hybridScore: 0.4f, vectorScore: 0.4f),  // below 0.5 threshold
+            Passage(chunkIndex: 2, hybridScore: 0.6f, vectorScore: 0.6f));
         var sut = CreateSut();
 
-        // Act
-        var result = await sut.SearchAsync("test", new[] { gameId }, limit: 10, minScore: 0.5);
+        var result = await SearchAsync(sut, "test", new[] { gameId }, limit: 10, minScore: 0.5);
 
-        // Assert — low-score chunk excluded.
         // #3735: minScore filtra il punteggio PER-GIOCO in ingresso, mentre HybridScore in uscita è
         // quello globale: asserire sull'uscita confronterebbe due grandezze diverse. Si verifica
         // quindi CHI è sopravvissuto, che è ciò che la soglia deve garantire.
         result.Should().HaveCount(2);
         result.Select(r => r.ChunkIndex).Should().BeEquivalentTo(new[] { 0, 2 },
             "il chunk con punteggio per-gioco 0.4 è sotto la soglia 0.5 e va escluso");
+        _perGame.For(gameId).Should().ContainSingle().Which.MinScore.Should().Be(Seed.VectorMinScore,
+            "la soglia della ricerca multi-gioco non è quella del braccio vettoriale per gioco");
     }
 
     // ---------------------------------------------------------------------------
-    // Issue #1686 — documentIds parameter is forwarded to each per-game IHybridSearchService call
+    // Issue #1686 — documentIds parameter is forwarded to each per-game search
     // ---------------------------------------------------------------------------
 
     [Fact]
     public async Task DocumentIds_PassedThrough_ToPerGameSearch()
     {
-        // Arrange
         var gameId1 = Guid.NewGuid();
         var gameId2 = Guid.NewGuid();
         var docA = Guid.NewGuid();
         var docB = Guid.NewGuid();
         var documentIds = new List<Guid> { docA, docB };
-
-        // Setup with explicit documentIds match — both per-game calls receive the same allowlist
-        _hybridSearchMock
-            .Setup(s => s.SearchAsync(
-                It.IsAny<string>(), It.IsAny<Guid>(),
-                It.IsAny<SearchMode>(), It.IsAny<int>(),
-                It.Is<List<Guid>?>(d => d != null && d.SequenceEqual(documentIds)),
-                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<HybridSearchResult>());
-
         var sut = CreateSut();
 
-        // Act — call with documentIds allowlist
-        await sut.SearchAsync(
-            "test",
-            new[] { gameId1, gameId2 },
-            limit: 10,
-            mode: SearchMode.Hybrid,
-            minScore: 0.0,
-            documentIds: documentIds,
-            cancellationToken: CancellationToken.None);
+        await SearchAsync(sut, "test", new[] { gameId1, gameId2 }, limit: 10, pdfDocumentIds: documentIds);
 
-        // Assert — each game received the same documentIds allowlist
-        _hybridSearchMock.Verify(
-            s => s.SearchAsync(
-                It.IsAny<string>(), It.IsAny<Guid>(),
-                It.IsAny<SearchMode>(), It.IsAny<int>(),
-                It.Is<List<Guid>?>(d => d != null && d.Count == 2 && d.Contains(docA) && d.Contains(docB)),
-                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()),
-            Times.Exactly(2));
+        _perGame.Received.Should().HaveCount(2).And.AllSatisfy(q =>
+            q.PdfDocumentIds.Should().BeEquivalentTo(new[] { docA, docB }));
     }
 
     [Fact]
     public async Task DocumentIds_Null_ForwardedAsNull_BackwardCompatible()
     {
-        // Arrange
         var gameId = Guid.NewGuid();
-        SetupHybridSearchForGame(gameId, count: 1, baseScore: 0.8f);
-
+        _perGame.Returns(gameId, BuildPassages(count: 1, baseScore: 0.8f));
         var sut = CreateSut();
 
-        // Act — call WITHOUT documentIds (legacy path, default null)
-        await sut.SearchAsync("test", new[] { gameId }, limit: 10);
+        await SearchAsync(sut, "test", new[] { gameId }, limit: 10);
 
-        // Assert — per-game search receives documentIds=null (preserves legacy behaviour, D-3)
-        _hybridSearchMock.Verify(
-            s => s.SearchAsync(
-                It.IsAny<string>(), gameId,
-                It.IsAny<SearchMode>(), It.IsAny<int>(),
-                null,  // explicit null — backward-compatible default
-                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()),
-            Times.Once);
+        _perGame.For(gameId).Should().ContainSingle().Which.PdfDocumentIds.Should().BeNull(
+            "senza filtro la ricerca per gioco non riceve un filtro (D-3)");
     }
-
-    // ---------------------------------------------------------------------------
-    // Helper methods
-    // ---------------------------------------------------------------------------
-
 
     // ---------------------------------------------------------------------------
     // #3735: il punteggio per-gioco NON è comparabile fra giochi
@@ -611,51 +448,30 @@ public class MultiGameHybridSearchServiceTests
     [Fact]
     public async Task CrossGame_TheChunkMostRelevantToTheQuery_OutranksTheGenericOnes()
     {
-        // Il campo realistico: molti giochi, come nel corpus vero (133 manuali). La dimensione
-        // conta, e la prima versione di questo test lo ha dimostrato per assurdo — vedi il
-        // commento sotto l'assert.
+        // Il campo realistico: molti giochi, come nel corpus vero (133 manuali).
         var expectedGame = Guid.NewGuid();                                   // il manuale che la query nomina
         var genericGames = Enumerable.Range(0, 20).Select(_ => Guid.NewGuid()).ToArray();
 
-        // Il chunk atteso è nettamente il più pertinente, ma compare SOLO nella lista vettoriale:
-        // un solo termine RRF per-gioco.
-        _hybridSearchMock
-            .Setup(s => s.SearchAsync(
-                It.IsAny<string>(), expectedGame,
-                It.IsAny<SearchMode>(), It.IsAny<int>(), null,
-                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new List<HybridSearchResult>
-            {
-                MakeResultWithScores(expectedGame, chunkIndex: 0,
-                    hybridScore: 0.0164f,   // ≈ 1/(60+1): un termine
-                    vectorScore: 0.93f,     // ma è il più simile alla query, di molto
-                    keywordScore: null),
-            });
+        // Il chunk atteso è nettamente il più pertinente, ma compare SOLO nella lista vettoriale.
+        _perGame.Returns(expectedGame, Passage(chunkIndex: 0,
+            hybridScore: 0.0164f,   // ≈ 1/(60+1): un termine
+            vectorScore: 0.93f,     // ma è il più simile alla query, di molto
+            keywordScore: null));
 
         // Ogni manuale generico contiene le parole comuni della query, quindi il suo chunk compare
         // in ENTRAMBE le liste per-gioco: due termini, punteggio per-gioco doppio.
         foreach (var (gameId, i) in genericGames.Select((g, i) => (g, i)))
         {
             var noise = i * 0.005f;
-            _hybridSearchMock
-                .Setup(s => s.SearchAsync(
-                    It.IsAny<string>(), gameId,
-                    It.IsAny<SearchMode>(), It.IsAny<int>(), null,
-                    It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                    It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new List<HybridSearchResult>
-                {
-                    MakeResultWithScores(gameId, chunkIndex: 0,
-                        hybridScore: 0.0328f,          // ≈ 2/(60+1): il doppio dell'atteso
-                        vectorScore: 0.71f - noise,    // semanticamente molto più debole
-                        keywordScore: 0.12f - noise),
-                });
+            _perGame.Returns(gameId, Passage(chunkIndex: 0,
+                hybridScore: 0.0328f,          // ≈ 2/(60+1): il doppio dell'atteso
+                vectorScore: 0.71f - noise,    // semanticamente molto più debole
+                keywordScore: 0.12f - noise));
         }
 
         var sut = CreateSut();
 
-        var results = await sut.SearchAsync(
+        var results = await SearchAsync(sut,
             "How do I set up the board and place the two initial settlements?",
             genericGames.Append(expectedGame).ToArray(),   // l'atteso è l'ULTIMO: nessun vantaggio d'ordine
             limit: 30);
@@ -664,69 +480,14 @@ public class MultiGameHybridSearchServiceTests
             "il ranking cross-gioco deve riflettere la pertinenza alla query, non quante liste "
             + "per-gioco hanno prodotto il chunk (#3735)");
 
-        // Perché venti giochi e non due. La prima stesura di questo test ne usava DUE, e falliva
-        // anche con la fusione globale: con due soli candidati i ranghi vettoriali adiacenti
+        // Perché venti giochi e non due: con due soli candidati i ranghi vettoriali adiacenti
         // distano 0.7/61 − 0.7/62 ≈ 0.000185, mentre un secondo segnale aggiunge 0.3/61 ≈ 0.0049 —
         // trenta volte tanto. L'RRF è rank-based per costruzione e non può esprimere un divario di
-        // cosine fra due posizioni contigue: serve che i candidati si distribuiscano, come accade
-        // sul corpus reale. Il test è stato corretto perché modellava male il problema, non per
-        // farlo passare: il calcolo è in #3735.
+        // cosine fra due posizioni contigue: il calcolo è in #3735.
     }
 
-    private void SetupHybridSearchForGame(Guid gameId, int count, float baseScore)
-    {
-        _hybridSearchMock
-            .Setup(s => s.SearchAsync(
-                It.IsAny<string>(), gameId,
-                It.IsAny<SearchMode>(), It.IsAny<int>(), null,
-                It.IsAny<float>(), It.IsAny<float>(), It.IsAny<double>(),
-                It.IsAny<GameBookRole>(), It.IsAny<QueryEmbedding?>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(BuildResults(gameId, count, baseScore));
-    }
-
-    private static List<HybridSearchResult> BuildResults(Guid gameId, int count, float baseScore) =>
+    private static SearchResultDto[] BuildPassages(int count, float baseScore) =>
         Enumerable.Range(0, count)
-            .Select(i => MakeResult(gameId, chunkIndex: i, score: baseScore - i * 0.01f))
-            .ToList();
-
-    private static HybridSearchResult MakeResult(Guid gameId, int chunkIndex, float score) =>
-        new()
-        {
-            ChunkId = $"{Guid.NewGuid()}_{chunkIndex}",
-            Content = $"chunk content {chunkIndex}",
-            PdfDocumentId = Guid.NewGuid().ToString(),
-            GameId = gameId,
-            ChunkIndex = chunkIndex,
-            PageNumber = chunkIndex + 1,
-            HybridScore = score,
-            VectorScore = score,
-            KeywordScore = null,
-            VectorRank = chunkIndex + 1,
-            KeywordRank = null,
-            MatchedTerms = new List<string>(),
-            Mode = SearchMode.Hybrid,
-            RoleTags = GameBookRole.None
-        };
-
-    // #2568: lets a test pin HybridScore, VectorScore and KeywordScore independently
-    // so the cross-game tiebreak can be exercised (HybridScore tie + differing cosine).
-    private static HybridSearchResult MakeResultWithScores(
-        Guid gameId, int chunkIndex, float hybridScore, float vectorScore, float? keywordScore = null) =>
-        new()
-        {
-            ChunkId = $"{Guid.NewGuid()}_{chunkIndex}",
-            Content = $"chunk content {chunkIndex}",
-            PdfDocumentId = Guid.NewGuid().ToString(),
-            GameId = gameId,
-            ChunkIndex = chunkIndex,
-            PageNumber = chunkIndex + 1,
-            HybridScore = hybridScore,
-            VectorScore = vectorScore,
-            KeywordScore = keywordScore,
-            VectorRank = chunkIndex + 1,
-            KeywordRank = keywordScore.HasValue ? chunkIndex + 1 : (int?)null,
-            MatchedTerms = new List<string>(),
-            Mode = SearchMode.Hybrid,
-            RoleTags = GameBookRole.None
-        };
+            .Select(i => Passage(chunkIndex: i, hybridScore: baseScore - i * 0.01f, vectorScore: baseScore - i * 0.01f))
+            .ToArray();
 }

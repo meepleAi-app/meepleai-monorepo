@@ -1,0 +1,1387 @@
+{
+  "data": "2026-10-18",
+  "descrizione": "Misura periodica (#4470) di Gloomhaven: domande poste all'agente pubblicato come in chat (POST /api/v1/agents/qa/stream, Accept-Language: it, utente admin), su una copia del database locale con l'API di main-dev (ed339d199). Voti di Claude con i criteri dell'utente (criteri-giudizio.md), su delega esplicita dell'utente: non sono voti umani.",
+  "giudizio": "Claude",
+  "risultati": [
+    {
+      "id": "GLO-01",
+      "gioco": "Gloomhaven",
+      "domanda": "Come si determina l'ordine di iniziativa tra i personaggi durante la fase di rivelazione delle carte?",
+      "risposta_attesa": "Ogni giocatore sceglie due carte e ne designa una come carta principale; alla rivelazione il suo numero di iniziativa determina il suo ordine nel round: agisce per primo chi ha il valore minore. In caso di parità tra giocatori si confronta la carta non principale di ciascuno; se la parità persiste, decidono i giocatori. Chi dichiara un riposo lungo ha iniziativa 99.",
+      "risposta": "- Dopo che i giocatori hanno scelto le due carte azioni o dichiarato un riposo lungo, ogni giocatore che non effettua un riposo lungo rivela le proprie carte scelte, ponendo la carta principale in cima in modo che il valore di iniziativa sia visibile [Page 1].\n- L'ordine di iniziativa si determina confrontando i valori di iniziativa di tutte le carte abilità mostro giocate e tutte le carte principali dei giocatori; chi ha il valore minore inizia per primo, poi in ordine crescente [Page 1].\n- In caso di parità tra giocatori, si verifica la carta non principale di ogni giocatore per interrompere la parità; se la parità persiste, i giocatori decidono tra loro chi inizia per primo [Page 1].\n- In caso di parità tra un giocatore e un tipo di mostro, il giocatore inizia per primo [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8718461
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.84214324
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.83731294
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8768474
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8598482
+        }
+      ],
+      "ms": 9970,
+      "voto": "corretta",
+      "motivo": "Criterio 2: ordine per iniziativa crescente della carta principale, spareggio con la carta non principale e poi accordo tra i giocatori, tutto conforme a p. 18. Omette solo l'iniziativa 99 del riposo lungo; la regola aggiunta sulla parità giocatore-mostro (agisce prima il giocatore) è verificata sul regolamento.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-02",
+      "gioco": "Gloomhaven",
+      "domanda": "Cosa succede se un attacco viene eseguito sia con Vantaggio che con Svantaggio nello stesso momento?",
+      "risposta_attesa": "Se un attacco accumula sia Vantaggio sia Svantaggio (indipendentemente dalle fonti), i due effetti si annullano a vicenda e l'attacco viene risolto normalmente girando una sola carta modificatore.",
+      "risposta": "- Se un attacco ha sia casi di Vantaggio che di Svantaggio, questi si annullano a vicenda e l'attacco viene eseguito normalmente [Page 1].\n- I casi di Vantaggio o Svantaggio non si accumulano [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.842823
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8366823
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.82929105
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8310503
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8286922
+        }
+      ],
+      "ms": 6708,
+      "voto": "corretta",
+      "motivo": "Criterio 2: Vantaggio e Svantaggio si annullano e l'attacco viene eseguito normalmente, testuale da p. 21; anche «non si accumulano» è nel regolamento.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-03",
+      "gioco": "Gloomhaven",
+      "domanda": "Un personaggio con l'abilità 'Volo' (Flying) o 'Salto' (Jump) subisce danni se passa sopra una trappola?",
+      "risposta_attesa": "Con 'Volo' ignora totalmente la trappola. Con 'Salto' ignora la trappola negli esagoni intermedi, ma se il movimento termina ESATTAMENTE sull'esagono con la trappola, la trappola si attiva e ne subisce i danni.",
+      "risposta": "- No. Los movimientos de **Volare** y **Saltare** no se ven influenciados por las trampas [Page 1].\n- Las trampas solo se activan cuando una figura entra en su esagono con un movimiento normal o forzado [Page 1].\n- Con **Salto**, el personaje ignora todos los efectos del terreno durante su movimiento, aunque el último esagono cuenta como movimiento normal [Page 1].\n- Con **Volare**, la figura ignora completamente figuras y tessere terreno durante todo su movimiento, incluido el último esagono [Page 1].",
+      "lingua_dichiarata": "es",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8613474
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8590061
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8556297
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8422719
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.82373977
+        }
+      ],
+      "ms": 7868,
+      "voto": "parziale",
+      "motivo": "Criterio 4: il verdetto «No» copre anche il Salto, mentre se il salto termina sulla trappola questa scatta; la risposta riporta però la regola giusta (l'ultimo esagono del salto è movimento normale, p. 19) senza trarne la conseguenza. Criterio 3: scritta in spagnolo.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "es",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-04",
+      "gioco": "Gloomhaven",
+      "domanda": "Quando un personaggio viene considerato sfinito (Exhausted)?",
+      "risposta_attesa": "Un personaggio diventa esausto in uno di due modi: se scende sotto 1 punto ferita, oppure se all'inizio di un round non può giocare due carte dalla mano (ne ha una o nessuna) e non può neppure fare un riposo lungo (ha una o nessuna carta negli scarti). In entrambi i casi tutte le sue carte abilità vanno nelle carte perse, la figura esce dalla mappa e non partecipa più allo scenario.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_dichiarata": "fr",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8419292
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8407599
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8400093
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8341532
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8307922
+        }
+      ],
+      "ms": 6954,
+      "voto": "corretta",
+      "motivo": "Criterio 1: rinuncia onesta senza invenzioni, anche se il regolamento descrive l'esaurimento a p. 17 e 29. Criterio 3: la frase fissa è in inglese.",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "en",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-05",
+      "gioco": "Gloomhaven",
+      "domanda": "Cosa succede se un personaggio o un mostro esegue un attacco a distanza contro un nemico adiacente?",
+      "risposta_attesa": "L'attacco a distanza eseguito su un bersaglio nell'esagono adiacente subisce automaticamente Svantaggio.",
+      "risposta": "- Un attacco a distanza che mira un nemico adiacente ottiene uno Svantaggio contro quel bersaglio [Page 1].\n- Per i dettagli su Vantaggio e Svantaggio si rimanda a pag. 21 [Page 1].",
+      "lingua_dichiarata": "fr",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8456449
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8378963
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.84035057
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.839501
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.83428645
+        }
+      ],
+      "ms": 6733,
+      "voto": "corretta",
+      "motivo": "Criterio 2: l'attacco a distanza contro un nemico adiacente ottiene Svantaggio, come da regolamento (p. 21).",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-06",
+      "gioco": "Gloomhaven",
+      "domanda": "Quali benefici fornisce un Riposo Lungo rispetto a un Riposo Breve?",
+      "risposta_attesa": "Il riposo lungo si dichiara nella scelta delle carte e costituisce l'intero turno, con iniziativa 99. Il giocatore sceglie quale carta scartata perdere (nel breve è casuale) e riprende in mano le altre; esegue «Autocura 2» e ripristina tutte le carte oggetto spese. Le carte oggetto consumate non tornano con il riposo, ma solo con abilità specifiche.",
+      "risposta": "- **Riposo breve** : effectué pendant la phase de réorganisation d’un round ; il permet de mélanger immédiatement la pile de défausse, de placer au hasard une carte dans la pile des cartes perdues, puis de reprendre le reste des cartes défaussées en main [Page 1].\n- **Riposo lungo** : déclaré pendant la phase de choix des cartes du round et constitue tout le tour du joueur pour le round ; les joueurs qui se reposent ont une valeur d’initiative de 99 ; lors de son tour, à la fin de l’ordre d’initiative, le joueur choisit quelle carte défaussée perdre, puis reprend le reste des cartes défaussées en main [Page 1].\n- Les deux options nécessitent d’avoir deux cartes ou plus dans la pile de défausse et entraînent toujours la perte d’une des cartes défaussées [Page 1].",
+      "lingua_dichiarata": "fr",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8005131
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.7884666
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.81653523
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8135938
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.81261843
+        }
+      ],
+      "ms": 8363,
+      "voto": "parziale",
+      "motivo": "Criterio 2 solo in parte: ciò che dice è giusto (iniziativa 99, carta persa scelta anziché casuale), ma tace i due benefici principali, «Autocura 2» e il ripristino delle carte oggetto spese (p. 17). Criterio 3: scritta in francese con termini italiani.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "fr",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-07",
+      "gioco": "Gloomhaven",
+      "domanda": "Un mostro può attraversare un esagono occupato da un personaggio invisibile?",
+      "risposta_attesa": "No, con un movimento normale: i mostri trattano i personaggi invisibili esattamente come ostacoli (e in ogni caso le figure non attraversano i nemici); una figura invisibile non può essere focalizzata o mirata. Gli ostacoli però si attraversano con Volare o Saltare: un mostro con Volare può passare, purché termini in un esagono non occupato.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_dichiarata": "fr",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.85703516
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.84899014
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.84461266
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8396849
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8402961
+        }
+      ],
+      "ms": 6489,
+      "voto": "corretta",
+      "motivo": "Criterio 1: rinuncia onesta, anche se il regolamento dice che i mostri trattano i personaggi invisibili come ostacoli (p. 24). Criterio 3: frase fissa in inglese.",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "en",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-08",
+      "gioco": "Gloomhaven",
+      "domanda": "Quanti punti mana costa lanciare una palla di fuoco col Mago?",
+      "risposta_attesa": "In Gloomhaven non esiste una riserva di punti mana. Le magie e abilità si attivano giocando carte abilità ed eventualmente consumando elementi di energia elementale presenti nella riserva globale.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8326065
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8285618
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8285075
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8228372
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8210655
+        }
+      ],
+      "ms": 6487,
+      "voto": "corretta",
+      "motivo": "Criterio 1: rinuncia onesta su una domanda a premessa falsa (in Gloomhaven non esistono punti mana); non inventa un costo. Non smentisce la premessa ma nemmeno la accetta; frase fissa in inglese (criterio 3).",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "en",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-09",
+      "gioco": "Gloomhaven",
+      "domanda": "Posso evitare di subire un attacco mortale che azzererebbe i miei HP scartando carte dalla mano?",
+      "risposta_attesa": "Sì: ogni volta che un danno viene assegnato al personaggio, invece di subirlo può perdere una carta dalla mano oppure due carte dalla pila degli scarti (vanno nelle carte perse) per negare quel danno. Qualsiasi effetto aggiuntivo dell'attacco viene comunque applicato. Le due carte scelte per il round non possono essere perse a questo scopo.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.83206475
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.82452327
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8475381
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8343004
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.83139354
+        }
+      ],
+      "ms": 6601,
+      "voto": "corretta",
+      "motivo": "Criterio 1: rinuncia onesta, anche se la regola (perdere 1 carta dalla mano o 2 dagli scarti per negare il danno) è a p. 29. Criterio 3: frase fissa in inglese.",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "en",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-10",
+      "gioco": "Gloomhaven",
+      "domanda": "Come si risolve un Riposo Breve?",
+      "risposta_attesa": "Si effettua nella fase di riordino alla fine del round, solo con almeno due carte negli scarti: si mischiano gli scarti, una carta a caso va nelle carte perse e tutte le altre tornano in mano. Per tenere la carta estratta ci si può infliggere 1 danno e perderne un'altra a caso, una sola volta per riposo.",
+      "risposta": "- Un riposo breve si effettua durante la fase di riordino di un round [Page 1].\n- Richiede che il giocatore abbia due o più carte nella pila degli scarti [Page 1].\n- Il giocatore mischia immediatamente la pila degli scarti e pone casualmente una di queste carte nella pila delle carte perse, poi riprende il resto delle carte scartate in mano [Page 1].\n- Se vuole tenere la carta che verrebbe persa casualmente, può scegliere di infliggersi 1 danno e perdere casualmente una differente carta scartata; questo può essere fatto solo una volta per riposo [Page 1].",
+      "lingua_dichiarata": "fr",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.79996586
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.7924237
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8137219
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.811813
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8056499
+        }
+      ],
+      "ms": 7650,
+      "voto": "corretta",
+      "motivo": "Criterio 2: fase di riordino, almeno due carte negli scarti, una persa a caso e le altre in mano, opzione di 1 danno una sola volta per riposo: tutto testuale da p. 17.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-11",
+      "gioco": "Gloomhaven",
+      "domanda": "Come sceglie il suo bersaglio prioritario (Focus) un mostro se due personaggi sono alla stessa distanza di movimento?",
+      "risposta_attesa": "Se più nemici sono raggiungibili con lo stesso numero di esagoni di movimento, decide la prossimità: è «più vicino» il nemico a meno esagoni dalla posizione attuale del mostro (senza contare attraverso le pareti). Solo se c'è ancora parità il mostro si focalizza su chi viene prima nell'ordine di iniziativa; le evocazioni prima del loro evocatore, chi è in riposo lungo per ultimo.",
+      "risposta": "- Se più nemici sono in parità come \"più vicini\", il mostro si focalizza sul nemico che viene prima nell'ordine di iniziativa [Page 1].\n- Le figure evocate sono focalizzate prima dei personaggi che le hanno evocate, anche nel round in cui sono state evocate [Page 1].\n- Un personaggio che sta effettuando un riposo lungo viene focalizzato per ultimo [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8724872
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.86388505
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8584929
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.86180633
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8621305
+        }
+      ],
+      "ms": 6994,
+      "voto": "parziale",
+      "motivo": "Criterio 2 non pieno: a parità di distanza di movimento il regolamento fa decidere prima la prossimità dalla posizione del mostro (p. 30) e solo dopo l'iniziativa, mentre la risposta passa direttamente all'iniziativa. Lo spareggio per iniziativa, con evocazioni prima dell'evocatore e riposo lungo per ultimo, è riportato correttamente (p. 31).",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-12",
+      "gioco": "Gloomhaven",
+      "domanda": "Se creo un elemento magico (es. Fuoco) durante la mia azione, posso consumarlo nello stesso identico turno?",
+      "risposta_attesa": "No. Gli elementi creati nel tuo turno avanzano nella colonna 'Forte' solo ALLA FINE del tuo turno. Quindi non possono essere consumati durante il turno in cui li hai generati.",
+      "risposta": "No, non puoi consumarlo nello stesso turno.\n\n- Non è possibile creare un elemento e consumarlo nello stesso turno [Page 1].\n- Può essere consumato da chiunque con un turno posteriore nell'ordine di iniziativa dello stesso round [Page 1].\n- Per consumare un elemento, il segnalino deve trovarsi nella colonna Forte o Ridotto e viene spostato nella colonna Inerte [Page 1].\n- Una singola icona non può essere usata per consumare più di una infusione [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.84620595
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8579843
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.83895326
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.84971696
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.83588827
+        }
+      ],
+      "ms": 7836,
+      "voto": "corretta",
+      "motivo": "Criterio 2: «No», un elemento non si consuma nello stesso turno in cui è creato, testuale da p. 25; anche le regole aggiunte (consumo dalla colonna Forte o Ridotto verso Inerte, un'icona per una sola infusione) sono verificate.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-13",
+      "gioco": "Gloomhaven",
+      "domanda": "Cosa fa lo stato alterato 'Poison' (Veleno) a chi lo subisce?",
+      "risposta_attesa": "Tutti i nemici aggiungono +1 di Attacco a tutti i loro attacchi che mirano la figura avvelenata (è un bonus all'attacco, prima della carta modificatore e dello scudo). Lo stato resta finché la figura non riceve una Guarigione, che rimuove il segnalino VELENO e non ha altri effetti.",
+      "risposta": "- Tutti i nemici aggiungono +1 Attacco a tutti i loro attacchi che mirano la figura avvelenata [Page 1].\n- Se un'abilità di Guarigione viene usata su una figura avvelenata, il segnalino VELENO viene rimosso e la Guarigione non ha altri effetti [Page 1].\n- Se una figura è sia avvelenata che ferita, un'abilità di Guarigione rimuove entrambi gli stati, ma non ha altri effetti [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8036989
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.80608886
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.79502
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.81878805
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.814489
+        }
+      ],
+      "ms": 7104,
+      "voto": "corretta",
+      "motivo": "Criterio 2: +1 di Attacco a tutti gli attacchi contro la figura avvelenata e rimozione con Guarigione senza altri effetti, testuale da p. 23; verificato anche il caso avvelenata e ferita.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-14",
+      "gioco": "Gloomhaven",
+      "domanda": "Quando subisce danni un personaggio o un mostro che soffre dello stato 'Wound' (Ferita)?",
+      "risposta_attesa": "Subisce 1 danno all'inizio di ciascuno dei suoi turni, finché lo stato non viene curato con un'azione di Cura (Heal).",
+      "risposta": "- Une figure avec l'état **FERITO** subit **un point de dégâts au début de chacun de ses tours** [Page 1].\n- Si une capacité de **Guérison** est utilisée sur une figure ferite, le marqueur FERITA est retiré et la Guérison continue normalement [Page 1].\n- Si une figure est à la fois **avvelenata et ferita**, une capacité de Guérison retire les deux états, mais n'a aucun autre effet [Page 1].",
+      "lingua_dichiarata": "fr",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8470957
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8400496
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8300828
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.82946545
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8284029
+        }
+      ],
+      "ms": 7422,
+      "voto": "corretta",
+      "motivo": "Criteri 2 e 3: 1 danno all'inizio di ogni turno e rimozione con Guarigione che poi continua normalmente, verificati a p. 23, ma la risposta è in francese e va tradotta.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "fr",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-15",
+      "gioco": "Gloomhaven",
+      "domanda": "Un personaggio affetto da 'Disarm' (Disarmato) può eseguire un'azione di Movimento?",
+      "risposta_attesa": "Sì. 'Disarm' impedisce unicamente di eseguire azioni di Attacco. Tutte le altre azioni (Movimento, Cura, Evocazione, ecc.) rimangono consentite.",
+      "risposta": "- Oui. «DISARMATO» impedisce solo di eseguire abilità di attacco: «non può eseguire nessuna abilità di attacco nel suo turno» [Page 1].  \n- Il Movimento non è un’abilità di attacco; le regole del Movimento sono descritte separatamente [Page 1].  \n- Le restrizioni elencate per DISARMATO non menzionano il movimento [Page 1].",
+      "lingua_dichiarata": "fr",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8454695
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8364866
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.83730334
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.86213183
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8577795
+        }
+      ],
+      "ms": 7235,
+      "voto": "corretta",
+      "motivo": "Criterio 2: sì, DISARMATO impedisce solo le abilità di attacco (p. 23). Criterio 3: il corpo è in italiano ma apre con il francese «Oui».",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it+fr",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-16",
+      "gioco": "Gloomhaven",
+      "domanda": "Cosa succede immediatamente nell'ordine di iniziativa quando un personaggio apre una porta rivelando una nuova stanza?",
+      "risposta_attesa": "La stanza rivelata si popola subito (mostri, monete, tessere ambiente) secondo il Libro degli Scenari, e per ogni nuovo tipo di mostro si pesca una carta abilità. Finito il turno di chi ha aperto la porta, i tipi di mostro con iniziativa più bassa della sua agiscono subito (tra loro in ordine di iniziativa); gli altri al loro posto normale. Così tutti i mostri rivelati agiscono nel round in cui compaiono.",
+      "risposta": "No puedo responder a esa pregunta con la información del contexto proporcionado.\n\nThis information is not available in the provided rulebook.",
+      "lingua_dichiarata": "es",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.845334
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8404623
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.83722764
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8279987
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.85536814
+        }
+      ],
+      "ms": 6755,
+      "voto": "corretta",
+      "motivo": "Criterio 1: rinuncia onesta, anche se la regola sui mostri della stanza rivelata è a p. 19. Criterio 3: frase in spagnolo seguita dalla frase fissa inglese.",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "es+en",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-17",
+      "gioco": "Gloomhaven",
+      "domanda": "Come funziona l'effetto 'Shield' (Scudo)?",
+      "risposta_attesa": "Riduce il danno subito da ciascun attacco in arrivo di un valore pari al livello di Scudo attivo in quel momento.",
+      "risposta": "- **Scudo X**: un'abilità di bonus \"Scudo X\" dà al destinatario un bonus di difesa che riduce qualsiasi valore di attacco in arrivo di X [Page 1].\n- **Accumulo**: più bonus scudo si accumulano tra loro e possono essere applicati in qualsiasi ordine [Page 1].\n- **Applicazione**: un bonus scudo si applica solamente a danni causati da un attacco [Page 1].\n- **Perforare**: l'effetto PERFORARE X ignora fino a X punti dello Scudo del bersaglio; a differenza di altri effetti, viene applicato durante il calcolo del danno che accompagna l'attacco anziché dopo [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8103363
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.80706924
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8050079
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8092411
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.7984528
+        }
+      ],
+      "ms": 7294,
+      "voto": "corretta",
+      "motivo": "Criterio 2: Scudo X riduce di X ogni attacco in arrivo, i bonus si sommano e valgono solo per i danni da attacco (p. 26); anche la nota su PERFORARE, applicato durante il calcolo del danno, è testuale (p. 22).",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-18",
+      "gioco": "Gloomhaven",
+      "domanda": "L'effetto 'Retaliate' (Ritorsione) infligge danni se l'attaccante ha eseguito un attacco a distanza fuori dalla gittata del Retaliate?",
+      "risposta_attesa": "No. 'Retaliate' si attiva solo ed esclusivamente se l'attaccante si trova entro il raggio d'azione (gittata) specificato dall'abilità di Ritorsione.",
+      "risposta": "- La habilidad de bonificación “Reacción X” permite infligir X puntos de daño a las figuras que te atacan desde una casilla adyacente por cada ataque realizado [Page 1].\n- Puede incluir un valor “Alcance Y”, que significa que el daño de reacción se aplica a cualquier atacante dentro de Y casillas [Page 1].\n- Por tanto, si el atacante está fuera del alcance indicado por la Reacción, no se le aplica el daño de reacción [Page 1].\n- La reacción tiene efecto después del ataque que la inició; si la figura en reacción es eliminada o queda exhausta por el ataque, la reacción no se activa [Page 1].",
+      "lingua_dichiarata": "es",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.84793085
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.84570265
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8429528
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.84211195
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.84079903
+        }
+      ],
+      "ms": 8177,
+      "voto": "corretta",
+      "motivo": "Criteri 2 e 3: nella sostanza «No», la Reazione con Gittata Y colpisce solo attaccanti entro Y esagoni e senza Gittata solo gli adiacenti (p. 27), precisazioni verificate; ma è in spagnolo.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "es",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-19",
+      "gioco": "Gloomhaven",
+      "domanda": "Raccogliere le monete o i tesori negli esagoni su cui si cammina durante un normale Movimento avviene automaticamente?",
+      "risposta_attesa": "No. Camminare sopra un esagono con un gettone moneta durante un movimento NON fa raccogliere la moneta. Occorre eseguire un'azione specifica di 'Loot' oppure terminare il proprio turno ESATTAMENTE su quell'esagono.",
+      "risposta": "- Non automaticamente: le trappole o altri effetti del terreno presenti sugli esagoni devono essere risolti quando una figura vi entra con un movimento normale [Page 1].\n- Il saccheggio di fine turno è obbligatorio: un personaggio deve saccheggiare qualsiasi segnalino moneta o tessera tesoro presente nell'esagono che occupa alla fine del proprio turno [Page 1].\n- I personaggi evocati non effettuano un saccheggio di fine turno [Page 1].",
+      "lingua_dichiarata": "fr",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.846882
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8437043
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8432192
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.84270537
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8415322
+        }
+      ],
+      "ms": 7534,
+      "voto": "corretta",
+      "motivo": "Criterio 2: non è automatico, si saccheggia obbligatoriamente a fine turno nell'esagono occupato e i personaggi evocati non lo fanno (p. 28). Non cita l'abilità «Saccheggio X» e il primo punto sulle trappole è fuori tema, ma nulla è falso.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-20",
+      "gioco": "Gloomhaven",
+      "domanda": "I punti esperienza (XP) segnati sulla carta giocata si ottengono anche se l'attacco associato manca o fallisce?",
+      "risposta_attesa": "Sì, ottieni gli XP indicati sulla carta per il semplice fatto di aver risolto l'azione, a meno che sulla carta non sia espressamente scritto che l'XP è vincolato al successo dell'attacco.",
+      "risposta": "- Non è possibile ottenere XP da una carta abilità solo perché è stata giocata: un personaggio deve usare una o più delle abilità elencate per guadagnare l’esperienza [Page 1].\n- A volte l’esperienza è guadagnata solo a certe condizioni specificate (es. consumare un’infusione elementare o se il bersaglio attaccato è adiacente a un alleato dell’attaccante) [Page 1].\n- I personaggi non ottengono automaticamente esperienza dall’uccisione dei mostri; solo l’uso di specifiche azioni premia con esperienza [Page 1].\n\nThis information is not available in the provided rulebook.",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.84552324
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8441223
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.85590744
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8553635
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.85363156
+        }
+      ],
+      "ms": 7543,
+      "voto": "corretta",
+      "motivo": "Criterio 1: non dà un verdetto e chiude con la rinuncia fissa, ma ciò che afferma (bisogna usare almeno un'abilità della carta, niente XP automatica dall'uccisione) è testuale da p. 28, senza invenzioni. Criterio 3: chiude in inglese.",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "it+en",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-21",
+      "gioco": "Gloomhaven",
+      "domanda": "Cosa indica il simbolo del 'Cestino/Fiamma' nell'angolo in basso a destra di un'azione sulla carta?",
+      "risposta_attesa": "Indica che, se si usa quell'azione, la carta va nella pila delle carte perse invece che negli scarti (se l'azione ha un effetto attivo, passa prima dall'area attiva). Le carte perse non tornano in mano con il riposo: durante lo scenario rientrano solo tramite una speciale azione di recupero.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_dichiarata": "es",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.85121787
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8472844
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8453021
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.84350026
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8416868
+        }
+      ],
+      "ms": 6470,
+      "voto": "corretta",
+      "motivo": "Criterio 1: rinuncia onesta, anche se la pila delle carte perse è descritta a p. 17 e 28. Criterio 3: frase fissa in inglese.",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "en",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-22",
+      "gioco": "Gloomhaven",
+      "domanda": "Posso ignorare il testo di una carta e usarla per eseguire un'azione generica?",
+      "risposta_attesa": "Sì: una qualsiasi carta giocata può essere usata come «Attacco 2» con la metà superiore oppure come «Movimento 2» con la metà inferiore. Usata così, la carta viene sempre scartata, indipendentemente da quanto è indicato su di essa (non va persa né nell'area attiva).",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.82467824
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8520453
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8504874
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8431611
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.84092563
+        }
+      ],
+      "ms": 6707,
+      "voto": "corretta",
+      "motivo": "Criterio 1: rinuncia onesta, anche se «Attacco 2» e «Movimento 2» generici sono a p. 18. Criterio 3: frase fissa in inglese.",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "en",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-23",
+      "gioco": "Gloomhaven",
+      "domanda": "Cosa succede quando si rivela la carta modificatore 'x2' o 'Null/Miss' dal mazzo modificatori di attacco?",
+      "risposta_attesa": "Con «Nullo» l'attacco non infligge danno; con «2x» il valore di attacco raddoppia (la carta si applica dopo i bonus dell'attaccante e prima dello scudo del bersaglio). Entrambe hanno il simbolo «Mischiare»: alla fine del round in cui sono state pescate, si rimischiano tutti gli scarti di quel mazzo dei modificatori nel mazzo di pesca.",
+      "risposta": "- Quando viene pescata una carta “Nullo” o “2x”, alla fine del round i giocatori rimischiano tutte le carte modificatore giocate in quel particolare mazzo di pesca [Page 1].\n- Questa azione di mischiare avviene anche se una carta modificatore deve essere pescata e non ci sono ulteriori carte nella pila di pesca [Page 1].\n- Il simbolo “Nullo” indica che nessun danno viene fatto dall’attacco [Page 1].\n- Il simbolo “2x” indica che il valore di attacco è raddoppiato [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8455046
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8422793
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8308146
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8315172
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.83196497
+        }
+      ],
+      "ms": 7534,
+      "voto": "corretta",
+      "motivo": "Criterio 2: Nullo annulla il danno, 2x raddoppia il valore di attacco e a fine round si rimischia quel mazzo; anche il rimescolamento a pila di pesca esaurita è testuale (p. 11).",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-24",
+      "gioco": "Gloomhaven",
+      "domanda": "Un giocatore può controllare direttamente il movimento e l'attacco di un'evocazione (Summon)?",
+      "risposta_attesa": "No. Le figure evocate non sono controllate dal giocatore: agiscono automaticamente secondo le regole dei mostri, seguendo sempre la carta «Movimento +0, Attacco +0» e usando il mazzo dei modificatori del giocatore. Il loro turno avviene direttamente prima di quello dell'evocatore ed è separato; non agiscono nel round in cui vengono evocate.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.83128947
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8538844
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.84905374
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8438156
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.84305936
+        }
+      ],
+      "ms": 6490,
+      "voto": "corretta",
+      "motivo": "Criterio 1: rinuncia onesta, anche se p. 27 dice che le figure evocate non sono controllate dal giocatore. Criterio 3: frase fissa in inglese.",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "en",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-25",
+      "gioco": "Gloomhaven",
+      "domanda": "È obbligatorio applicare l'intero ammontare di una spinta (Spinta X) se la eseguo su un nemico?",
+      "risposta_attesa": "No. Gli effetti d'attacco come SPINGERE e TIRARE sono opzionali e possono essere omessi. Il regolamento descrive SPINGERE X come lo spostamento del bersaglio di X esagoni, ciascuno più lontano dall'attaccante, che termina se non ci sono esagoni disponibili; non usa la formula «fino a X».",
+      "risposta": "- No, los efectos de ataque como SPINGERE X son opcionales y pueden omitirse; solo obtener experiencia no es opcional [Page 1].\n- SPINGERE X obliga al objetivo a moverse hasta X hexágonos en la dirección especificada, pero si no hay hexágonos disponibles donde empujarlo, la spinta termina [Page 1].\n- Por tanto, no es obligatorio aplicar el ammontare completo de la spinta si no hay hexágonos disponibles o si se decide omitir el efecto [Page 1].",
+      "lingua_dichiarata": "es",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8465573
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8450691
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8347367
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8330718
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.82673204
+        }
+      ],
+      "ms": 6582,
+      "voto": "corretta",
+      "motivo": "Criteri 2 e 3: no, gli effetti d'attacco come SPINGERE sono opzionali e la spinta termina se mancano esagoni (p. 22), ma è in spagnolo. «Hasta X» è una parafrasi imprecisa del «di X esagoni» del regolamento, da cui però la conclusione non dipende.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "es",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-26",
+      "gioco": "Gloomhaven",
+      "domanda": "Posso spingere un nemico dentro un esagono contenente una trappola per fargliela attivare?",
+      "risposta_attesa": "Sì. Se una spinta costringe una figura a entrare in un esagono con una trappola, la trappola scatta immediatamente infliggendogli i relativi danni ed effetti.",
+      "risposta": "- Sí. Empujar (SPINGERE X) se considera un movimiento, pero **no se ve afectado por el terreno ostico** [Page 1].\n- Las trampas saltan cuando una figura entra en su esagono **con un movimiento normal o forzado** [Page 1].\n- Por tanto, al empujar a un enemigo a un esagono con trampa, esta se activa y le inflige sus efectos negativos [Page 1].\n- El empuje no puede atravesar a sus enemigos, pero sí a sus aliados [Page 1].",
+      "lingua_dichiarata": "es",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.84496844
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8423393
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8428388
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8370695
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.835618
+        }
+      ],
+      "ms": 4745,
+      "voto": "corretta",
+      "motivo": "Criteri 2 e 3: sì, la trappola scatta anche con il movimento forzato (p. 14) e la spinta passa tra gli alleati del bersaglio ma non tra i nemici (p. 22), ma è in spagnolo.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "es",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-27",
+      "gioco": "Gloomhaven",
+      "domanda": "Quante armi da mano può equipaggiare contemporaneamente un personaggio?",
+      "risposta_attesa": "Può equipaggiare fino a 2 oggetti con il simbolo 'Una Mano' (One Hand) OPPURE 1 solo oggetto con il simbolo 'Due Mani' (Two Hands).",
+      "risposta": "- Chaque personnage peut équiper seulement **un objet « Une Main »** (Una Mano) [Page 1].\n- Il peut aussi équiper **un objet « Deux Mains »** (Due Mani) [Page 1].\n- Le nombre d'objets « Petits objets » (Oggetto Piccolo) est limité à **la moitié de son niveau, arrondie au supérieur** [Page 1].\n\nAucune règle du contexte ne permet d'équiper plusieurs armes « Une Main » simultanément : la limite indiquée est d'un seul objet de ce type [Page 1].",
+      "lingua_dichiarata": "fr",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8521617
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8423241
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.83140814
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8311641
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.85767967
+        }
+      ],
+      "ms": 2036,
+      "voto": "sbagliata",
+      "motivo": "Criterio 7: afferma, e ribadisce, che si può equipaggiare un solo oggetto «Una Mano», mentre p. 8 dice fino a due oggetti Una Mano oppure uno Due Mani. È giusto solo il limite degli oggetti piccoli (metà del livello, per eccesso); in francese.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "fr",
+        "premessa_falsa_accettata": false,
+        "invenzione": true
+      }
+    },
+    {
+      "id": "GLO-28",
+      "gioco": "Gloomhaven",
+      "domanda": "Posso usare un oggetto di tipo 'Pozione' durante il turno di un altro giocatore?",
+      "risposta_attesa": "Dipende dalla carta oggetto: il regolamento permette di usare gli oggetti in qualsiasi momento, entro i vincoli scritti sulla carta (che indica quando l'oggetto può essere usato), anche nel mezzo di un'abilità. Se l'oggetto influenza un attacco va usato prima di pescare la carta modificatore.",
+      "risposta": "- Non è possibile determinarlo: il regolamento specifica che i personaggi possono usare oggetti in qualsiasi momento, anche nel mezzo di un'abilità di una carta [Page 1], ma non chiarisce esplicitamente se ciò valga anche durante il turno di un altro giocatore.\n- Nel proprio turno, prima, durante o dopo le due azioni, i giocatori possono usare un qualsiasi numero di oggetti di cui sono equipaggiati [Page 1].\n- Non ci sono limiti al numero di oggetti che un personaggio può usare nel proprio turno o durante una specifica abilità [Page 1].\n\nThis information is not available in the provided rulebook.",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.83975947
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8541138
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.85103196
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8476048
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8474402
+        }
+      ],
+      "ms": 2123,
+      "voto": "corretta",
+      "motivo": "Criterio 1: dichiara di non poterlo stabilire senza inventare, riportando correttamente che gli oggetti si usano «in qualsiasi momento» (p. 29), ma non arriva alla conclusione «dipende dalla carta». Criterio 3: chiude con la frase fissa inglese.",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "it+en",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-29",
+      "gioco": "Gloomhaven",
+      "domanda": "Come si tirano i dadi a 20 facce (d20) per verificare i tiri salvezza in Gloomhaven?",
+      "risposta_attesa": "In Gloomhaven non si usano dadi. Tutti i risultati casuali e i modificatori si risolvono tramite la pesca di carte dai rispettivi mazzi modificatore.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8101599
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8190521
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8186434
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8184312
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.81823575
+        }
+      ],
+      "ms": 2446,
+      "voto": "corretta",
+      "motivo": "Criterio 1: rinuncia onesta su premessa falsa (Gloomhaven non usa dadi né tiri salvezza); non inventa una procedura. Frase fissa in inglese (criterio 3).",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "en",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "GLO-30",
+      "gioco": "Gloomhaven",
+      "domanda": "Quanti punti albero abilità si guadagnano quando si sale di livello?",
+      "risposta_attesa": "In Gloomhaven non esistono punti né alberi delle abilità. Salendo di livello (solo in città) il personaggio aggiunge una nuova carta abilità della sua classe di livello uguale o inferiore al nuovo livello; inoltre può segnare una miglioria, che modifica il suo mazzo dei modificatori, e aumenta i punti ferita massimi.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.83486223
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.846209
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.84550065
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8428627
+        },
+        {
+          "fonte": "PDF:d7fc88c5-a063-4816-898e-bf0f54525598",
+          "pagina": 1,
+          "punteggio": 0.8423782
+        }
+      ],
+      "ms": 959,
+      "voto": "corretta",
+      "motivo": "Criterio 1: rinuncia onesta su premessa falsa (non esistono punti né alberi delle abilità); non inventa un numero. Frase fissa in inglese (criterio 3).",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "en",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    }
+  ]
+}

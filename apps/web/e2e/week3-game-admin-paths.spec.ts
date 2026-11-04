@@ -51,7 +51,7 @@ test.describe('Game Management - Critical Paths', () => {
     await page.goto('/library');
 
     // VERIFY: Grid display renders (will show whatever games exist in DB)
-    const gameCards = page.locator('[data-testid="game-card"]');
+    const gameCards = page.locator('[data-testid="meeple-card"][data-entity="game"]');
     const cardCount = await gameCards.count();
 
     if (cardCount > 0) {
@@ -109,7 +109,7 @@ test.describe('Game Management - Critical Paths', () => {
     await page.goto('/library');
 
     // Check if games exist
-    const gameCards = page.locator('[data-testid="game-card"]');
+    const gameCards = page.locator('[data-testid="meeple-card"][data-entity="game"]');
     const cardCount = await gameCards.count();
 
     if (cardCount > 0) {

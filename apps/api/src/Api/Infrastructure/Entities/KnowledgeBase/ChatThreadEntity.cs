@@ -10,8 +10,16 @@ public class ChatThreadEntity
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid UserId { get; set; }
     public Guid? GameId { get; set; }
+
+    /// <summary>
+    /// Issue #4244: il gioco del thread quando è un gioco privato. <see cref="GameId"/> è una chiave
+    /// esterna verso <c>shared_games</c> e per un gioco privato resta null; al più una delle due è
+    /// valorizzata.
+    /// </summary>
+    public Guid? PrivateGameId { get; set; }
     public Guid? AgentId { get; set; } // Issue #2030 - Track which agent was used
     public string? AgentType { get; set; } // Issue #4362 - tutor/arbitro/decisore/auto
+    public Guid? LiveSessionId { get; set; } // #4276: il thread dell'assistente in partita
     public string? Title { get; set; }
     public string Status { get; set; } = "active";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

@@ -6,7 +6,7 @@
  * Two rendering paths:
  *
  *   1. NEW 2-zone 60/40 grid (G1 #2374). Triggered when `mainColumn` is
- *      provided. LEFT 60% = main column (ChatAgentPanel + ActionLogTimeline);
+ *      provided. LEFT 60% = main column (ActionLogTimeline since #4156 D5);
  *      RIGHT 40% = right column (tabbed: score/turn/widget/notes).
  *      Emits `data-layout="2col-60-40"`.
  *

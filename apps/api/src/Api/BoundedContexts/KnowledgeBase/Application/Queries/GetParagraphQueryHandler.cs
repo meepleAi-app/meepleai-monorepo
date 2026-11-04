@@ -97,8 +97,8 @@ internal sealed class GetParagraphQueryHandler(
             var searchQuery = new SearchQuery(
                 GameId: upload.GameId,
                 Query: hint,
-                TopK: 3,
-                UserId: query.UserId);
+                Access: SearchAccess.OfUser(query.UserId, userRole: null),
+                TopK: 3);
 
             var results = await searchHandler.Handle(searchQuery, cancellationToken)
                 .ConfigureAwait(false);

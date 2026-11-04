@@ -98,7 +98,10 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
         // domain_event_logs atomically with the session update + the session_events diary row below.
         // This MediatR dispatch ALSO activates the previously-dormant KnowledgeBase
         // SessionFinalizedEventHandler cascade cleanup (it was raised for SSE only until now).
-        var winnerIdForEvent = request.FinalRanks.FirstOrDefault(kvp => kvp.Value == 1).Key;
+        // #4752: with NoWinner the ranks only order the participants — rank 1 is NOT a winner.
+        var winnerIdForEvent = request.NoWinner
+            ? Guid.Empty
+            : request.FinalRanks.FirstOrDefault(kvp => kvp.Value == 1).Key;
         var winnerNameForEvent = winnerIdForEvent != Guid.Empty
             ? session.Participants.FirstOrDefault(p => p.Id == winnerIdForEvent)?.DisplayName
             : null;
@@ -138,9 +141,11 @@ public class FinalizeSessionCommandHandler : IRequestHandler<FinalizeSessionComm
         await _sessionRepository.UpdateAsync(session, cancellationToken).ConfigureAwait(false);
 
         // Get winner (rank 1) from the FinalRanks dictionary.
-        var winnerIdRaw = request.FinalRanks
-            .FirstOrDefault(kvp => kvp.Value == 1)
-            .Key;
+        var winnerIdRaw = request.NoWinner
+            ? Guid.Empty
+            : request.FinalRanks
+                .FirstOrDefault(kvp => kvp.Value == 1)
+                .Key;
         Guid? winnerIdNullable = winnerIdRaw != Guid.Empty ? winnerIdRaw : null;
 
         // P1B-T2: emit session_finalized diary event in the same transaction.

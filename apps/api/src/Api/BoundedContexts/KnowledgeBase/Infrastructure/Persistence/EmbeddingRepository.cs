@@ -55,17 +55,17 @@ internal class EmbeddingRepository : RepositoryBase, IEmbeddingRepository
         Vector queryVector,
         int topK,
         double minScore,
-        IReadOnlyList<Guid>? documentIds = null,
+        IReadOnlyList<Guid>? pdfDocumentIds = null,
         CancellationToken cancellationToken = default)
     {
         // Delegate to pgvector adapter for vector similarity search
-        // Issue #2051: Pass documentIds for filtering
+        // Issue #2051: pass the document filter (PDF ids, #4243)
         return await _vectorStore.SearchAsync(
             gameId,
             queryVector,
             topK,
             minScore,
-            documentIds,
+            pdfDocumentIds,
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -74,7 +74,7 @@ internal class EmbeddingRepository : RepositoryBase, IEmbeddingRepository
         Vector queryVector,
         int topK,
         double minScore,
-        IReadOnlyList<Guid>? documentIds = null,
+        IReadOnlyList<Guid>? pdfDocumentIds = null,
         CancellationToken cancellationToken = default)
     {
         // Early return: no adapter call when game list is empty (Issue #1661)
@@ -85,7 +85,7 @@ internal class EmbeddingRepository : RepositoryBase, IEmbeddingRepository
             queryVector,
             topK,
             minScore,
-            documentIds,
+            pdfDocumentIds,
             cancellationToken).ConfigureAwait(false);
     }
 
@@ -120,7 +120,7 @@ internal class EmbeddingRepository : RepositoryBase, IEmbeddingRepository
         Vector queryVector,
         int topK,
         double minScore,
-        IReadOnlyList<Guid>? documentIds = null,
+        IReadOnlyList<Guid>? pdfDocumentIds = null,
         CancellationToken cancellationToken = default)
     {
         // Delegate to pgvector adapter for score-returning similarity search.
@@ -130,7 +130,7 @@ internal class EmbeddingRepository : RepositoryBase, IEmbeddingRepository
             queryVector,
             topK,
             minScore,
-            documentIds,
+            pdfDocumentIds,
             cancellationToken).ConfigureAwait(false);
     }
 }

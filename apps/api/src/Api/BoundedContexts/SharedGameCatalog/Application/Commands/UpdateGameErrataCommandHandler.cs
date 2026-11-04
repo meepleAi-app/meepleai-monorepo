@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -15,15 +16,18 @@ internal sealed class UpdateGameErrataCommandHandler : ICommandHandler<UpdateGam
 {
     private readonly ISharedGameRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ISharedGameCacheInvalidator _cacheInvalidator;
     private readonly ILogger<UpdateGameErrataCommandHandler> _logger;
 
     public UpdateGameErrataCommandHandler(
         ISharedGameRepository repository,
         IUnitOfWork unitOfWork,
+        ISharedGameCacheInvalidator cacheInvalidator,
         ILogger<UpdateGameErrataCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _cacheInvalidator = cacheInvalidator ?? throw new ArgumentNullException(nameof(cacheInvalidator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -37,7 +41,9 @@ internal sealed class UpdateGameErrataCommandHandler : ICommandHandler<UpdateGam
 
         // Fetch the game containing this erratum
         var game = await _repository.GetGameByErrataIdAsync(command.ErrataId, cancellationToken).ConfigureAwait(false);
-        if (game is null)
+
+        // #4543: un'errata di un altro gioco non esiste sotto la rotta di questo.
+        if (game is null || game.Id != command.SharedGameId)
         {
             throw new NotFoundException("Erratum", command.ErrataId.ToString());
         }
@@ -55,6 +61,12 @@ internal sealed class UpdateGameErrataCommandHandler : ICommandHandler<UpdateGam
         // Update the game in repository
         _repository.Update(game);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // #4565: il dettaglio del gioco (`GET /api/v1/shared-games/{id}`) riporta le errata e sta in cache
+        // sotto `shared-game:{id}` (durata: `DetailCacheL1Expiration` e `DetailCacheL2Expiration` di
+        // `GetSharedGameByIdQueryHandler`): senza questa evizione la modifica si vedeva alla scadenza.
+        // Dopo il salvataggio, mai prima. Vedi ISharedGameCacheInvalidator.
+        await _cacheInvalidator.EvictDetailAsync(command.SharedGameId, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Erratum updated successfully: {ErrataId}",

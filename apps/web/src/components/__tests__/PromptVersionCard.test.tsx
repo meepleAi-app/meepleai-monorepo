@@ -324,7 +324,7 @@ describe('PromptVersionCard', () => {
       );
 
       const activateButton = screen.getByTestId('activate-button');
-      expect(activateButton).toHaveClass('bg-primary');
+      expect(activateButton).toHaveClass('bg-primary/(--btn-fill)');
       expect(activateButton).toHaveClass('text-primary-foreground');
     });
 
@@ -334,7 +334,7 @@ describe('PromptVersionCard', () => {
       );
 
       const compareButton = screen.getByTestId('compare-button');
-      expect(compareButton).toHaveClass('bg-secondary');
+      expect(compareButton).toHaveClass('bg-secondary/(--btn-fill)');
       expect(compareButton).toHaveClass('text-secondary-foreground');
     });
 
@@ -343,8 +343,12 @@ describe('PromptVersionCard', () => {
 
       const viewButton = screen.getByTestId('view-button');
       expect(viewButton).toHaveClass('border');
-      // Note: View button uses outline variant which has bg-card/90 class (with opacity modifier)
-      expect(viewButton).toHaveClass('bg-card/90');
+      // Outline: `card` al 90%, con tono e opacità sulle variabili (#4548)
+      expect(viewButton).toHaveClass(
+        'bg-(--btn-tone)/(--btn-fill)',
+        '[--btn-tone:hsl(var(--card))]',
+        '[--btn-fill:90%]'
+      );
     });
   });
 

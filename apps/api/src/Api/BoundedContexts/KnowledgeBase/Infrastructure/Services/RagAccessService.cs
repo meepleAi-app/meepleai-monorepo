@@ -59,6 +59,12 @@ internal sealed class RagAccessService : IRagAccessService
         // existed and was simply unreachable: upload, indexing, agent link and
         // kb-status all succeeded, and the question answered 403.
         //
+        // Correction (#4244): "indexing succeeded" was an assumption, and it was wrong. On
+        // Postgres the PDF of a private game could not be indexed at all — the private id was
+        // written into text_chunks.GameId, a foreign key to shared_games. The tests of that time
+        // ran on the in-memory provider, which enforces no foreign keys. This rule was right and
+        // necessary; it just had no corpus to open until #4244 gave the private game its column.
+        //
         // Soft-deleted private games are excluded by the global query filter on
         // PrivateGameEntity (!IsDeleted) — not repeated here, so that the filter stays
         // the single place that decides it. A test asserts the soft-deleted case.

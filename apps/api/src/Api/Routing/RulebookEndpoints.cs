@@ -25,16 +25,12 @@ internal static class RulebookEndpoints
     {
         group.MapPost("/games/{gameId:guid}/rulebook", HandleUploadRulebook)
              .DisableAntiforgery()
-             .WithMetadata(new RequestSizeLimitAttribute(104_857_600)) // 100 MB
+             .WithPdfUploadBodyLimit(group)
              .RequireAuthorization()
              .WithTags("Rulebook")
              .WithName("UploadRulebook")
-             .WithOpenApi(operation =>
-             {
-                 operation.Summary = "Upload a rulebook PDF for a game";
-                 operation.Description = "Uploads a PDF rulebook with content-hash deduplication. If an identical PDF already exists and is non-failed, reuses it by creating an EntityLink.";
-                 return operation;
-             });
+             .WithSummary("Upload a rulebook PDF for a game")
+             .WithDescription("Uploads a PDF rulebook with content-hash deduplication. If an identical PDF already exists and is non-failed, reuses it by creating an EntityLink.");
     }
 
     private static void MapGetGamesWithKbEndpoint(RouteGroupBuilder group)
@@ -43,12 +39,8 @@ internal static class RulebookEndpoints
              .RequireAuthorization()
              .WithTags("Rulebook")
              .WithName("GetGamesWithKb")
-             .WithOpenApi(operation =>
-             {
-                 operation.Summary = "List games with knowledge base documents";
-                 operation.Description = "Returns all games that have at least one uploaded PDF for the authenticated user.";
-                 return operation;
-             });
+             .WithSummary("List games with knowledge base documents")
+             .WithDescription("Returns the games of the authenticated user's library that have at least one PDF and whose knowledge base the user can use: an admin, a game whose RAG is public, or a game whose ownership the user declared.");
     }
 
     private static async Task<IResult> HandleUploadRulebook(

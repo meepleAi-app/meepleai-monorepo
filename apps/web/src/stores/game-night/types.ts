@@ -65,6 +65,11 @@ export interface GameNightActiveSession {
   winnerId?: string;
   startedAt?: string;
   completedAt?: string;
+  /**
+   * #4752: the LiveGameSession where the table plays this sitting (`/sessions/{liveSessionId}/live`).
+   * Absent for a sitting with no live game (a draft not yet taken live, or one that predates the bridge).
+   */
+  liveSessionId?: string;
 }
 
 export interface PlayerResource {

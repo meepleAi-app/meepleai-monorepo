@@ -1,6 +1,7 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
+using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Tests.BoundedContexts.DocumentProcessing.TestHelpers;
 using Api.Tests.Constants;
 using FluentAssertions;
@@ -23,7 +24,7 @@ public class GetPdfDocumentsByGameQueryHandlerTests
     public GetPdfDocumentsByGameQueryHandlerTests()
     {
         _documentRepositoryMock = new Mock<IPdfDocumentRepository>();
-        _handler = new GetPdfDocumentsByGameQueryHandler(_documentRepositoryMock.Object);
+        _handler = new GetPdfDocumentsByGameQueryHandler(_documentRepositoryMock.Object, Mock.Of<IPrivateGameRepository>());
     }
     [Fact]
     public async Task Handle_WithMultipleDocuments_ReturnsAllMappedDtos()

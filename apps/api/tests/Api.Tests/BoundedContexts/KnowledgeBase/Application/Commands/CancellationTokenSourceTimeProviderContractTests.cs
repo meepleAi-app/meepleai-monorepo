@@ -8,8 +8,9 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Commands;
 
 /// <summary>
-/// Il contratto del framework su cui poggia il timeout per chunk di
-/// <c>ChatWithSessionAgentCommandHandler</c>: un <see cref="CancellationTokenSource"/> costruito con
+/// Il contratto del framework su cui poggiava il timeout per chunk della vecchia chat dell'agente in
+/// partita (ritirata da #4448), e su cui poggia la scadenza del turno dell'assistente
+/// (<c>AssistantTurnRunner</c>): un <see cref="CancellationTokenSource"/> costruito con
 /// un <see cref="TimeProvider"/> deve far scadere anche le deadline armate dopo, con
 /// <see cref="CancellationTokenSource.CancelAfter(TimeSpan)"/>, su QUELL'orologio e non sul
 /// wall-clock.

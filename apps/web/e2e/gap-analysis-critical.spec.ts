@@ -65,20 +65,6 @@ test.describe('Gap Analysis: Critical Features', () => {
 
       // TODO: Verify all notifications marked as read in list
     });
-
-    test('Notifications - Toast for critical events', async ({ page }) => {
-      await page.goto('/upload');
-
-      // TODO: Upload PDF that will cause error
-      // Verify toast appears
-      const toast = page.locator('[data-testid="toast-notification"]');
-      await expect(toast).toBeVisible({ timeout: 10000 });
-      await expect(toast).toHaveClass(/error/);
-
-      // Dismiss toast
-      await toast.locator('[data-testid="toast-close"]').click();
-      await expect(toast).toBeHidden();
-    });
   });
 
   /**
@@ -291,17 +277,17 @@ test.describe('Gap Analysis: Critical Features', () => {
       await expect(achievementGrid).toBeVisible();
 
       // Verify achievements displayed
-      const cards = page.locator('[data-testid="achievement-card"]');
+      const cards = page.locator('[data-slot="achievement-card"]');
       await expect(cards.count()).toBeGreaterThan(0);
 
       // Filter: Earned only
       await page.click('[data-testid="filter-earned"]');
-      const earnedCards = page.locator('[data-testid="achievement-card"][data-status="earned"]');
+      const earnedCards = page.locator('[data-slot="achievement-card"][data-unlocked="true"]');
       await expect(earnedCards.count()).toBeGreaterThan(0);
 
       // Filter: Locked only
       await page.click('[data-testid="filter-locked"]');
-      const lockedCards = page.locator('[data-testid="achievement-card"][data-status="locked"]');
+      const lockedCards = page.locator('[data-slot="achievement-card"]:not([data-unlocked])');
 
       // TODO: Verify locked achievements show requirements
     });
@@ -313,7 +299,7 @@ test.describe('Gap Analysis: Critical Features', () => {
       await expect(widget).toBeVisible();
 
       // Verify last 3 achievements
-      const achievements = widget.locator('[data-testid="achievement-card"]');
+      const achievements = widget.locator('[data-slot="achievement-card"]');
       await expect(achievements).toHaveCount(3);
 
       // Click achievement → detail modal

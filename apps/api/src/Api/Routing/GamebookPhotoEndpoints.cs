@@ -76,8 +76,7 @@ internal static class GamebookPhotoEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .WithTags("Gamebook")
         .WithSummary("Upload a photo of a gamebook page")
-        .WithDescription("Uploads a photo for OCR processing. EXIF metadata is stripped server-side. Photo expires 24h after upload.")
-        .WithOpenApi();
+        .WithDescription("Uploads a photo for OCR processing. EXIF metadata is stripped server-side. Photo expires 24h after upload.");
     }
 
     private static void MapSegmentPhotoEndpoint(RouteGroupBuilder group)
@@ -106,8 +105,7 @@ internal static class GamebookPhotoEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .WithTags("Gamebook")
         .WithSummary("Trigger OCR segmentation on an uploaded photo")
-        .WithDescription("Runs OCR on the uploaded photo and extracts numbered paragraph segments. Idempotent — returns existing artifact if already segmented.")
-        .WithOpenApi();
+        .WithDescription("Runs OCR on the uploaded photo and extracts numbered paragraph segments. Idempotent — returns existing artifact if already segmented.");
     }
 
     /// <summary>
@@ -240,8 +238,7 @@ internal static class GamebookPhotoEndpoints
         .Produces(StatusCodes.Status504GatewayTimeout)
         .WithTags("Gamebook")
         .WithSummary("Stream paragraph translation as SSE")
-        .WithDescription("Server-Sent Events stream of TranslateChunk events. Must be GET for EventSource compatibility. Pass photoId and paragraphNumber as query params. Optional sourceLangOverride (EN/FR/DE/ES/IT) overrides auto-detected source language. Final chunk has IsComplete=true with ParagraphId. Non-owner callers receive HTTP 403 BEFORE the stream opens (Issue #1415).")
-        .WithOpenApi();
+        .WithDescription("Server-Sent Events stream of TranslateChunk events. Must be GET for EventSource compatibility. Pass photoId and paragraphNumber as query params. Optional sourceLangOverride (EN/FR/DE/ES/IT) overrides auto-detected source language. Final chunk has IsComplete=true with ParagraphId. Non-owner callers receive HTTP 403 BEFORE the stream opens (Issue #1415).");
     }
 
     /// <summary>
@@ -350,8 +347,7 @@ internal static class GamebookPhotoEndpoints
             "Server-Sent Events stream for manual text translation (FE #1560 textarea mode). " +
             "Body must contain text (1-2000 chars), sourceLang (EN|FR|DE|ES|IT), targetLang=IT, gameBookId. " +
             "Final chunk has IsComplete=true, ParagraphId=null (no persistence per DEC-BE-11), " +
-            "DetectedSourceLang echoes input, LangDetectionConfidence=null.")
-        .WithOpenApi();
+            "DetectedSourceLang echoes input, LangDetectionConfidence=null.");
     }
 
     /// <summary>
@@ -410,8 +406,7 @@ internal static class GamebookPhotoEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .WithTags("Gamebook")
         .WithSummary("List translated paragraphs for a campaign")
-        .WithDescription("Returns all translated paragraphs for the given campaign, ordered by creation date ascending.")
-        .WithOpenApi();
+        .WithDescription("Returns all translated paragraphs for the given campaign, ordered by creation date ascending.");
     }
 
     private static void MapGetGlossaryEndpoint(RouteGroupBuilder group)
@@ -438,8 +433,7 @@ internal static class GamebookPhotoEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .WithTags("Gamebook")
         .WithSummary("List glossary entries for a campaign")
-        .WithDescription("Returns all EN→IT glossary entries for the given campaign. Entries may be auto-bootstrapped or manually edited.")
-        .WithOpenApi();
+        .WithDescription("Returns all EN→IT glossary entries for the given campaign. Entries may be auto-bootstrapped or manually edited.");
     }
 
     private static void MapBootstrapGlossaryEndpoint(RouteGroupBuilder group)
@@ -466,8 +460,7 @@ internal static class GamebookPhotoEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .WithTags("Gamebook")
         .WithSummary("Bootstrap glossary entries via LLM for a campaign")
-        .WithDescription("Triggers LLM-based glossary generation for the campaign's game. Idempotent — returns existing entries if already bootstrapped.")
-        .WithOpenApi();
+        .WithDescription("Triggers LLM-based glossary generation for the campaign's game. Idempotent — returns existing entries if already bootstrapped.");
     }
 
     private static void MapUpsertGlossaryEntryEndpoint(RouteGroupBuilder group)
@@ -503,8 +496,7 @@ internal static class GamebookPhotoEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .WithTags("Gamebook")
         .WithSummary("Create or update a glossary entry")
-        .WithDescription("If the entry with the given id does not exist, creates a new manual entry. If it exists, updates the Italian translation and sets Source to Manual. Note: TermEn is immutable on update; to rename a term, delete and recreate.")
-        .WithOpenApi();
+        .WithDescription("If the entry with the given id does not exist, creates a new manual entry. If it exists, updates the Italian translation and sets Source to Manual. Note: TermEn is immutable on update; to rename a term, delete and recreate.");
     }
 
     private static void MapDeleteGlossaryEntryEndpoint(RouteGroupBuilder group)
@@ -533,8 +525,7 @@ internal static class GamebookPhotoEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .WithTags("Gamebook")
         .WithSummary("Delete a glossary entry")
-        .WithDescription("Hard-deletes a glossary entry from the campaign. Returns 403 if the caller does not own the campaign, 404 if the campaign or entry does not exist (or the entry belongs to another campaign). Enables removing a term or — combined with recreate — renaming one (TermEn is immutable on update).")
-        .WithOpenApi();
+        .WithDescription("Hard-deletes a glossary entry from the campaign. Returns 403 if the caller does not own the campaign, 404 if the campaign or entry does not exist (or the entry belongs to another campaign). Enables removing a term or — combined with recreate — renaming one (TermEn is immutable on update).");
     }
 
     /// <summary>
@@ -583,8 +574,7 @@ internal static class GamebookPhotoEndpoints
             "Extracts a structured cheatsheet (enemies, options, win/loss conditions) " +
             "from a previously segmented photo's paragraph. Synchronous, ephemeral — " +
             "no server-side persistence per Encounter Book privacy (§9.1). Returns 409 " +
-            "if the LLM cannot extract a usable structured payload.")
-        .WithOpenApi();
+            "if the LLM cannot extract a usable structured payload.");
     }
 
     private static bool TryGetUserId(HttpContext context, SessionStatusDto? session, out Guid userId)

@@ -140,7 +140,11 @@ public sealed class EnrichmentQueueRepositoryIntegrationTests : IAsyncLifetime
         await EnqueueAsync(_gameAlphaId, EnrichmentPriority.Normal, "for deleted", _testUserId);
         await EnqueueAsync(_gameBetaId, EnrichmentPriority.Normal, "alive", _testUserId);
 
+        // #4298: the context is NoTracking by default (MeepleAiDbContext.OnConfiguring), so an
+        // entity read without AsTracking() is detached: setting IsDeleted on it and saving wrote
+        // nothing, and the test then observed a row that had never been soft-deleted.
         var deleted = await _dbContext.SharedGames.IgnoreQueryFilters()
+            .AsTracking()
             .FirstAsync(g => g.Id == _gameAlphaId);
         deleted.IsDeleted = true;
         await _dbContext.SaveChangesAsync();

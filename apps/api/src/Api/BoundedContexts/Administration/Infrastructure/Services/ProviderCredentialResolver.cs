@@ -77,8 +77,8 @@ internal sealed class ProviderCredentialResolver : IProviderCredentialResolver
         //      mutation leaks into every host built concurrently by other xUnit collections.
         //   2. SecretsHelper (not a raw indexer): it honours the <KEY>_FILE Docker-secret convention,
         //      which every other consumer of these keys already uses (OpenRouterService,
-        //      ChunkTranslationService, VisionOcrAdapter, OpenRouterUsageService,
-        //      ModelAvailabilityCheckJob). Reading the raw key alone made this resolver the only path
+        //      OpenRouterUsageService, ModelAvailabilityCheckJob; ChunkTranslationService did too
+        //      until #4165 moved it behind the gateway). Reading the raw key alone made this resolver the only path
         //      that reported "not configured" in a deployment supplying the key as a secret file.
         var envVar = ProviderEnvVarMap.For(normalized);
         var envValue = SecretsHelper.GetSecretOrValue(_configuration, envVar, _logger, required: false);

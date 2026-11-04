@@ -773,6 +773,14 @@ export default [
               message:
                 "Use '@/components/ui/state-preview' barrel (NODE_ENV-gated loader: production gets a zero-cost pass-through that keeps SSR working, dev gets a dynamic import WITHOUT ssr:false — see #2770). Direct import of state-preview-provider bypasses that isolation and the tree-shake guarantee.",
             },
+            {
+              // 2. #4190: one source for the current user. Two homonymous hooks, each with its own
+              //    state, let the login form update itself and not AuthProvider: after a login the
+              //    app saw an anonymous user. They were removed; this keeps them from coming back.
+              group: ["@/hooks/useAuth", "@/hooks/useAuthUser"],
+              message:
+                "Use useAuth / useAuthUser from '@/components/auth/AuthProvider' (or useCurrentUser). A second hook with its own copy of the user is what #4190 removed.",
+            },
           ],
         },
       ],

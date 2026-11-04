@@ -1,8 +1,10 @@
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.Services;
+using Api.SharedKernel.Utilities;
 using StackExchange.Redis;
 using System.Globalization;
+using System.Text.Json;
 using AuthRole = Api.SharedKernel.Domain.ValueObjects.Role;
 
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.Services;
@@ -126,15 +128,22 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
 #pragma warning restore CA1031
     }
 
-    public async Task IncrementUploadCountAsync(Guid userId, CancellationToken cancellationToken = default)
+    public Task IncrementUploadCountAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        IncrementUploadCountAsync(userId, _timeProvider.GetUtcNow().UtcDateTime);
+
+    /// <summary>
+    /// Incrementa i contatori del periodo di <paramref name="at"/> (UTC). La prenotazione passa
+    /// l'istante che scrive in <c>ReservedAt</c>, cosi' il rilascio decrementa le stesse chiavi
+    /// (#4547): con due letture dell'orologio, una mezzanotte caduta fra le due le separerebbe.
+    /// </summary>
+    private async Task IncrementUploadCountAsync(Guid userId, DateTime at)
     {
         try
         {
             var db = _redis.GetDatabase();
-            var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-            var dailyKey = $"pdf:upload:daily:{userId}:{GetDateKey(now)}";
-            var weeklyKey = $"pdf:upload:weekly:{userId}:{GetWeekKey(now)}";
+            var dailyKey = DailyCounterKey(userId, at);
+            var weeklyKey = WeeklyCounterKey(userId, at);
 
             var dailyTtl = TimeSpan.FromHours(25); // 24h + 1h buffer
             var weeklyTtl = TimeSpan.FromDays(8); // 7 days + 1 day buffer
@@ -185,7 +194,8 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
             var now = _timeProvider.GetUtcNow().UtcDateTime;
             var expiresAt = now.AddMinutes(30);
 
-            var reservationKey = $"pdf:quota:reservation:{userId}:{pdfId}";
+            var reservationKey = ReservationKey(userId, pdfId);
+            // ReservedAt e' letto dal rilascio per decrementare i contatori di questo periodo (#4547).
             var reservationData = System.Text.Json.JsonSerializer.Serialize(new
             {
                 UserId = userId,
@@ -196,7 +206,7 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
 
             var ttl = TimeSpan.FromMinutes(30);
             await db.StringSetAsync(reservationKey, reservationData, ttl).ConfigureAwait(false);
-            await IncrementUploadCountAsync(userId, cancellationToken).ConfigureAwait(false);
+            await IncrementUploadCountAsync(userId, now).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Quota reserved for user {UserId}, PDF {PdfId}, expires at {ExpiresAt}",
@@ -225,7 +235,7 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
         try
         {
             var db = _redis.GetDatabase();
-            var reservationKey = $"pdf:quota:reservation:{userId}:{pdfId}";
+            var reservationKey = ReservationKey(userId, pdfId);
 
             var reservationExists = await db.KeyExistsAsync(reservationKey).ConfigureAwait(false);
             if (!reservationExists)
@@ -262,10 +272,13 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
         try
         {
             var db = _redis.GetDatabase();
-            var reservationKey = $"pdf:quota:reservation:{userId}:{pdfId}";
+            var reservationKey = ReservationKey(userId, pdfId);
 
-            var reservationExists = await db.KeyExistsAsync(reservationKey).ConfigureAwait(false);
-            if (!reservationExists)
+            // GETDEL legge e cancella la prenotazione in un solo comando: se due rilasci arrivano
+            // insieme, uno solo trova il valore e decrementa. Prima erano EXISTS, i decrementi e poi
+            // DEL: due rilasci concorrenti vedevano tutti e due la prenotazione (#4547).
+            var reservation = await db.StringGetDeleteAsync(reservationKey).ConfigureAwait(false);
+            if (reservation.IsNull)
             {
                 _logger.LogWarning(
                     "No reservation found for user {UserId}, PDF {PdfId} - may have already expired or been released",
@@ -273,8 +286,19 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
                 return;
             }
 
-            await DecrementUploadCountAsync(userId).ConfigureAwait(false);
-            await db.KeyDeleteAsync(reservationKey).ConfigureAwait(false);
+            // I contatori da decrementare sono quelli del periodo della prenotazione, non di adesso:
+            // prenotata domenica alle 23:50 e rilasciata lunedi' alle 00:10, si decrementano domenica
+            // e la sua settimana (#4547). Se ReservedAt non si legge, si ripiega sul periodo di adesso,
+            // cioe' il comportamento di prima.
+            var reservedAt = TryReadReservedAt(reservation);
+            if (reservedAt is null)
+            {
+                _logger.LogWarning(
+                    "Reservation for user {UserId}, PDF {PdfId} has no readable ReservedAt - releasing the counters of the current period",
+                    userId, pdfId);
+            }
+
+            await DecrementUploadCountAsync(userId, reservedAt ?? _timeProvider.GetUtcNow().UtcDateTime).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Quota released for user {UserId}, PDF {PdfId}",
@@ -294,15 +318,38 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
 #pragma warning restore CA1031
     }
 
-    private async Task DecrementUploadCountAsync(Guid userId)
+    /// <summary>
+    /// L'istante della prenotazione, dal JSON scritto da <see cref="ReserveQuotaAsync"/>. Il formato
+    /// e' lo stesso da prima di #4547, quindi vale anche per le prenotazioni scritte prima del
+    /// deploy. <c>null</c> se il valore non e' un oggetto JSON con <c>ReservedAt</c> come data.
+    /// </summary>
+    private static DateTime? TryReadReservedAt(RedisValue reservation)
+    {
+        try
+        {
+            using var json = JsonDocument.Parse((string)reservation!);
+            var root = json.RootElement;
+            return root.ValueKind == JsonValueKind.Object
+                && root.TryGetProperty("ReservedAt", out var reservedAt)
+                && reservedAt.ValueKind == JsonValueKind.String
+                && reservedAt.TryGetDateTimeOffset(out var instant)
+                    ? instant.UtcDateTime
+                    : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+
+    private async Task DecrementUploadCountAsync(Guid userId, DateTime at)
     {
         try
         {
             var db = _redis.GetDatabase();
-            var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-            var dailyKey = $"pdf:upload:daily:{userId}:{GetDateKey(now)}";
-            var weeklyKey = $"pdf:upload:weekly:{userId}:{GetWeekKey(now)}";
+            var dailyKey = DailyCounterKey(userId, at);
+            var weeklyKey = WeeklyCounterKey(userId, at);
 
             var script = @"
                 local key = KEYS[1]
@@ -415,8 +462,8 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
         var db = _redis.GetDatabase();
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        var dailyKey = $"pdf:upload:daily:{userId}:{GetDateKey(now)}";
-        var weeklyKey = $"pdf:upload:weekly:{userId}:{GetWeekKey(now)}";
+        var dailyKey = DailyCounterKey(userId, now);
+        var weeklyKey = WeeklyCounterKey(userId, now);
 
         var dailyValue = await db.StringGetAsync(dailyKey).ConfigureAwait(false);
         var weeklyValue = await db.StringGetAsync(weeklyKey).ConfigureAwait(false);
@@ -444,46 +491,16 @@ internal class PdfUploadQuotaService : IPdfUploadQuotaService
         return date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
     }
 
-    private static string GetWeekKey(DateTime date)
-    {
-        // ISO 8601 week-numbering year calculation
-        // See: https://en.wikipedia.org/wiki/ISO_week_date
-        // Week 1 is the first week with at least 4 days in the new year (contains Thursday)
+    // Le chiavi dei contatori si calcolano solo qui: incremento, decremento e lettura usano la
+    // stessa formula (#4547).
+    private static string DailyCounterKey(Guid userId, DateTime at) =>
+        $"pdf:upload:daily:{userId}:{GetDateKey(at)}";
 
-        var calendar = System.Globalization.CultureInfo.InvariantCulture.Calendar;
-        var weekRule = System.Globalization.CalendarWeekRule.FirstFourDayWeek;
-        var firstDayOfWeek = DayOfWeek.Monday;
+    private static string WeeklyCounterKey(Guid userId, DateTime at) =>
+        $"pdf:upload:weekly:{userId}:{IsoWeekKey.For(at)}";
 
-        var week = calendar.GetWeekOfYear(date, weekRule, firstDayOfWeek);
-        int year = date.Year;
-
-        // ISO 8601 year transitions:
-        // 1. Early January (week >= 52): belongs to previous year's last week
-        if (date.Month == 1 && week >= 52)
-        {
-            year = date.Year - 1;
-        }
-        // 2. Late December with week 1: GetWeekOfYear already calculated it as week 1 of next year
-        else if (date.Month == 12 && week == 1)
-        {
-            year = date.Year + 1;
-        }
-        // 3. Late December (Dec 29-31) on Mon-Wed: might be week 1 of next year
-        //    GetWeekOfYear returns week 53, but ISO 8601 says it's actually week 1 of next year
-        else if (date.Month == 12 && date.Day >= 29)
-        {
-            // Check if this is actually week 1 of next year
-            // If Dec 29-31 falls on Mon-Wed, it's week 1 of next year
-            var dayOfWeek = date.DayOfWeek;
-            if (dayOfWeek >= DayOfWeek.Monday && dayOfWeek <= DayOfWeek.Wednesday)
-            {
-                year = date.Year + 1;
-                week = 1;
-            }
-        }
-
-        return $"{year}-W{week:D2}";
-    }
+    private static string ReservationKey(Guid userId, string pdfId) =>
+        $"pdf:quota:reservation:{userId}:{pdfId}";
 
     private static DateTime GetNextDailyReset(DateTime now)
     {

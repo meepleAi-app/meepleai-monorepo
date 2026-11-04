@@ -5,9 +5,10 @@ namespace Api.BoundedContexts.KnowledgeBase.Application.Commands;
 /// <summary>
 /// #2311 BE-1 + #2324 DEC-D2 — fire-and-forget increment of
 /// <c>text_chunks.usage_count</c> for the chunks cited by a freshly persisted
-/// assistant message. Invoked from <see cref="ChatWithSessionAgentCommandHandler"/>
-/// after <c>SaveChangesAsync</c> so the counter mirrors what survives to durable
-/// storage (transient retrieval-only chunks are never counted).
+/// assistant message, sent after <c>SaveChangesAsync</c> so the counter mirrors what survives to
+/// durable storage (transient retrieval-only chunks are never counted). Its only sender was the
+/// legacy in-game agent chat, retired by #4448 (A7): until a current answer path sends it again
+/// (the in-game assistant's cerca_regole is the candidate), the counter does not grow.
 ///
 /// <para><b>Distinct-thread semantics (#2324)</b>: every (PdfDocumentId, ChunkIndex)
 /// locator is incremented at most once <i>per distinct thread</i>. The handler

@@ -242,14 +242,6 @@ export interface AITabData {
 /** Entity types supported by ExtraMeepleCard variants */
 export type ExtraMeepleCardEntity = 'session' | 'game' | 'player' | 'collection';
 
-/** Compact agent preview for the GameExtraMeepleCard Agent tab (Issue #5029) */
-export interface GameAgentPreview {
-  id: string;
-  name: string;
-  model?: string;
-  isActive: boolean;
-}
-
 /** Game entity detail data */
 export interface GameDetailData {
   id: string;
@@ -269,8 +261,6 @@ export interface GameDetailData {
   kbDocuments?: KbDocumentPreview[];
   /** Full PDF document data with processing state (Issue #5195) */
   pdfDocuments?: PdfDocumentDto[];
-  /** Agent configured for this game (Issue #5029) */
-  agent?: GameAgentPreview;
 }
 
 /** Player entity detail data */
@@ -288,7 +278,13 @@ export interface PlayerDetailData {
 
 /** Session entity detail data (drawer view) */
 export interface SessionDetailData {
+  /** Id of the GameSession: the drawer loads it from `GET /api/v1/sessions/{id}`. */
   id: string;
+  /**
+   * Id of the LiveGameSession correlated to this GameSession (#4156 D4): the session pages live
+   * under `/sessions/{liveSessionId}`. Absent when the session has no live, and then it has no page.
+   */
+  liveSessionId?: string;
   sessionCode: string;
   status: SessionStatus;
   /** Display title (game name or custom) */
@@ -646,7 +642,6 @@ export type SharedGameExtraMeepleCardTab = 'details' | 'documents' | 'kb-cards';
 export interface SharedGameExtraMeepleCardProps {
   data: SharedGameDetailData;
   onUploadPdf?: () => void;
-  onCreateAgent?: () => void;
   loading?: boolean;
   error?: string;
   className?: string;

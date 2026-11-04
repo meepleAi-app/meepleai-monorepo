@@ -1,6 +1,7 @@
 using Api.BoundedContexts.Administration.Application.Commands;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Domain.ValueObjects;
+using Api.Extensions;
 using Api.Helpers;
 using Api.Middleware;
 using MediatR;
@@ -75,8 +76,13 @@ internal static class ReportingEndpoints
             ILogger<Program> logger,
             CancellationToken ct) =>
         {
-            var userId = context.User.FindFirst("user_id")?.Value
-                ?? throw new UnauthorizedAccessException("User ID not found");
+            // #4580: this read the claim "user_id", which the session handler does not emit, so the
+            // UnauthorizedAccessException below fired for every caller and an admin got 403.
+            var userId = context.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                throw new UnauthorizedAccessException("User ID not found");
+            }
 
             logger.LogInformation("POST /api/v1/admin/reports/schedule - Name={Name}, Template={Template}",
                 LogSanitizer.Sanitize(request.Name), LogSanitizer.Sanitize(request.Template.ToString()));
@@ -89,7 +95,7 @@ internal static class ReportingEndpoints
                 Format = request.Format,
                 Parameters = request.Parameters ?? new Dictionary<string, object>(StringComparer.Ordinal),
                 ScheduleExpression = request.ScheduleExpression,
-                CreatedBy = userId,
+                CreatedBy = userId.ToString(),
                 EmailRecipients = request.EmailRecipients // ISSUE-918
             };
 

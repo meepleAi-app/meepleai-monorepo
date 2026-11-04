@@ -5,6 +5,7 @@
  */
 
 import {
+  keepPreviousData,
   useQuery,
   useMutation,
   useQueryClient,
@@ -31,6 +32,7 @@ import type {
   UpdateLibraryShareLinkRequest,
   SharedLibrary,
 } from '@/lib/api/schemas/library.schemas';
+import type { OwnershipResult } from '@/lib/api/schemas/ownership.schemas';
 import type {
   PrivateGameDto,
   AddPrivateGameRequest,
@@ -70,6 +72,8 @@ export const libraryKeys = {
  *
  * @param params - Optional filtering and pagination parameters
  * @param enabled - Whether to run the query (default: true)
+ * @param keepPrevious - Keep the previous page on screen while the next params load, so a
+ *   list fed by a search box does not empty out at every keystroke (default: false, #4187)
  * @returns UseQueryResult with paginated library data
  *
  * Visual-test fixture hatch (issue #1714): when `STATE_OVERRIDE_ENABLED` and
@@ -83,7 +87,8 @@ export const libraryKeys = {
  */
 export function useLibrary(
   params?: GetUserLibraryParams,
-  enabled: boolean = true
+  enabled: boolean = true,
+  keepPrevious: boolean = false
 ): UseQueryResult<PaginatedLibraryResponse, Error> {
   return useQuery({
     queryKey: libraryKeys.list(params),
@@ -97,6 +102,7 @@ export function useLibrary(
       return api.library.getLibrary(params);
     },
     enabled,
+    placeholderData: keepPrevious ? keepPreviousData : undefined,
     staleTime: 2 * 60 * 1000, // Library changes frequently (2min)
   });
 }
@@ -300,6 +306,21 @@ export function useAddGameToLibrary(): UseMutationResult<
       queryClient.invalidateQueries({ queryKey: sharedGamesKeys.categories() });
       queryClient.invalidateQueries({ queryKey: sharedGamesKeys.mechanics() });
     },
+  });
+}
+
+/**
+ * #4155: dichiara il possesso di un gioco già in libreria. È ciò che apre il manuale del gioco
+ * al cancello RAG (i regolamenti sono protetti da copyright, ADR-059).
+ *
+ * Invalida tutta la libreria: la lista porta `hasRagAccess`, che cambia con la dichiarazione.
+ */
+export function useDeclareOwnership(): UseMutationResult<OwnershipResult, Error, string> {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (gameId: string) => api.library.declareOwnership(gameId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: libraryKeys.all }),
   });
 }
 
@@ -827,11 +848,9 @@ export interface LibraryGameDetail {
   }>;
   // Issue #1824 L3: user-custom cover R2 key (null if no custom cover)
   customCoverR2Key?: string | null;
-  // Issue #2034 — ConnectionBar pill counts surfaced from /library/{gameId}.
-  // `agentCount` is cross-user (AgentDefinitions linked to this SharedGame);
-  // `chatThreadCount` is the requesting user's threads for the game. Both
-  // optional + default 0 so legacy BE responses don't break callers.
-  agentCount?: number;
+  // Issue #2034 — ConnectionBar pill count surfaced from /library/{gameId}:
+  // the requesting user's threads for the game. Optional + default 0 so legacy
+  // BE responses don't break callers.
   chatThreadCount?: number;
 }
 
@@ -1028,8 +1047,7 @@ export function useLibraryGameDetail(
         recentSessions: gameDetail.recentSessions ?? undefined,
         // Issue #1824 L3: user-custom cover R2 key
         customCoverR2Key: gameDetail.customCoverR2Key ?? null,
-        // Issue #2034 — ConnectionBar pill counts from BE (zod-defaulted to 0).
-        agentCount: gameDetail.agentCount,
+        // Issue #2034 — ConnectionBar pill count from BE (zod-defaulted to 0).
         chatThreadCount: gameDetail.chatThreadCount,
       };
 

@@ -95,22 +95,6 @@ test.describe('Error Handling E2E Tests - Issue #1494', () => {
         });
     });
 
-    test('should redirect to login on 401 Unauthorized', async ({ page, context }) => {
-      await context.route('**/api/v1/auth/session', route => {
-        route.fulfill({
-          status: 401,
-          contentType: 'application/json',
-          body: JSON.stringify({ error: 'Unauthorized' }),
-        });
-      });
-
-      // Navigate to protected page
-      await page.goto('/upload');
-
-      // Should redirect to login
-      await expect(page).toHaveURL(/\/(login|auth)/, { timeout: 5000 });
-    });
-
     test('should display error message for 500 Internal Server Error', async ({
       page,
       context,

@@ -4,6 +4,7 @@ using Api.BoundedContexts.Administration.Application.Interfaces;
 using Api.BoundedContexts.Administration.Application.Services;
 using Api.BoundedContexts.Administration.Domain.Repositories;
 using Api.BoundedContexts.Administration.Domain.Services;
+using Api.BoundedContexts.Administration.Infrastructure.BackgroundJobs;
 using Api.BoundedContexts.Administration.Infrastructure.External;
 using Api.BoundedContexts.Administration.Infrastructure.Persistence;
 using Api.BoundedContexts.Administration.Infrastructure.Repositories;
@@ -13,6 +14,7 @@ using Api.Infrastructure.BackgroundServices;
 using Api.Infrastructure.Configuration;
 using Api.Infrastructure.Seeders;
 using Api.Infrastructure.Seeders.Catalog;
+using Api.Infrastructure.Seeders.Cleanup;
 using Api.Infrastructure.Seeders.Core;
 using Api.Infrastructure.Seeders.LivedIn;
 using Api.Infrastructure.Seeders.MechanicValidation;
@@ -62,18 +64,14 @@ internal static class AdministrationServiceExtensions
         // Service call logging repository
         services.AddScoped<IServiceCallLogRepository, ServiceCallLogRepository>();
 
-        // Issue #3692: Token Management repositories + OpenRouter API
-        services.AddScoped<ITokenTierRepository, TokenTierRepository>();
-        services.AddScoped<IUserTokenUsageRepository, UserTokenUsageRepository>();
-        services.AddScoped<ITokenTrackingService, TokenTrackingService>(); // Issue #3786: Token tracking service
+        // OpenRouter API. Issue #4212: the token-tier repositories and tracking service that
+        // stood here are retired; they fed a per-user plan that never blocked a request.
         services.AddHttpClient<IOpenRouterService, OpenRouterService>()
             .AddPolicyHandler(GetRetryPolicy())
             .AddPolicyHandler((sp, _) => GetCircuitBreakerPolicy(
                 "OpenRouter", sp.GetService<ICircuitBreakerStateTracker>()));
 
-        // Budget Display System: Credit-based budget services
-        services.AddScoped<ICreditConversionService, CreditConversionService>();
-        services.AddScoped<IUserBudgetService, UserBudgetService>();
+        // Budget display: OpenRouter balance and cost logs for the admin.
         services.AddScoped<IAdminBudgetService, AdminBudgetService>();
 
         // Issue #3693: Batch Job System repositories
@@ -153,6 +151,10 @@ internal static class AdministrationServiceExtensions
         services.Configure<HealthMonitorOptions>(configuration.GetSection(HealthMonitorOptions.SectionName));
         services.AddHostedService<InfrastructureHealthMonitorService>();
 
+        // #4311: texts of ai_request_logs (query, response snippet, retrieved passages) expire after
+        // Administration:AiRequestLogRetentionDays (90); the metrics stay.
+        services.AddHostedService<AiRequestLogRetentionService>();
+
         // Issue #893: Prometheus HTTP client with Polly retry policy
         services.AddHttpClient<IPrometheusQueryService, PrometheusHttpClient>()
             .AddPolicyHandler(GetRetryPolicy())
@@ -197,12 +199,17 @@ internal static class AdministrationServiceExtensions
 
         // Epic #318: Layered seeding system
         services.AddScoped<ISeedLayer, CoreSeedLayer>();
+        // #4244 (C2): i giochi privati cancellati che hanno ancora del contenuto. Non dipende dal catalogo.
+        services.AddScoped<ISeedLayer, DeletedPrivateGameContentCleanupLayer>();
         services.AddScoped<ISeedLayer, CatalogSeedLayer>();
         services.AddScoped<ISeedLayer, LivedInSeedLayer>();
         // ADR-051 Sprint 1 / Task 40: MechanicValidation golden seed (Catan ~40 claims + ~15 BGG tags)
         services.AddScoped<ISeedLayer, MechanicGoldenSeedLayer>();
         // ADR-051 Sprint 2 / Task 3: Puerto Rico golden claims (75 claims) — BGG tags follow in Task 4.
         services.AddScoped<ISeedLayer, BoundedContexts.SharedGameCatalog.Infrastructure.Seeding.PuertoRicoGoldenSeeder>();
+        // #4470 (ADR-095 fetta 7b): domande di riferimento dell'agente. Staging come il catalogo, e registrata
+        // dopo: FilterLayers ordina per profilo in modo stabile, quindi gira dopo CatalogSeedLayer.
+        services.AddScoped<ISeedLayer, Api.Infrastructure.Seeders.ReferenceQuestions.ReferenceQuestionsSeedLayer>();
         // Gamebook multi-book generalization (2026-05-19) Phase F: seeder for Nanolith + FF + Maracaibo.
         // Registered as itself (no ISeedLayer interface) because orchestrator wiring is deferred —
         // resolved on-demand from admin endpoints / E2E test fixtures that already know the

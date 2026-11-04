@@ -12,7 +12,6 @@ import React, { useState } from 'react';
 
 import {
   BookOpen,
-  Bot,
   ExternalLink,
   FileText,
   Gamepad2,
@@ -297,13 +296,7 @@ function DocumentsTab({
 // KB Cards Tab
 // ============================================================================
 
-function KbCardsTab({
-  data,
-  onCreateAgent,
-}: {
-  data: SharedGameDetailData;
-  onCreateAgent?: () => void;
-}) {
+function KbCardsTab({ data }: { data: SharedGameDetailData }) {
   const completedCards = data.kbCards.filter(c => c.indexingStatus === 'completed');
 
   // Group by pdfDocumentId to show cards per source PDF
@@ -322,21 +315,7 @@ function KbCardsTab({
         <span className="font-nunito text-xs text-muted-foreground">
           {completedCards.length} card indicizzat{completedCards.length !== 1 ? 'e' : 'a'}
         </span>
-        <button
-          type="button"
-          disabled={completedCards.length === 0}
-          onClick={onCreateAgent}
-          className={cn(
-            'flex items-center gap-1 rounded-lg px-2.5 py-1.5',
-            'font-nunito text-[10px] font-bold transition-colors',
-            completedCards.length > 0
-              ? 'bg-amber-100 text-amber-700 border border-amber-200 hover:bg-amber-200'
-              : 'bg-muted text-muted-foreground border border-border cursor-not-allowed'
-          )}
-        >
-          <Bot className="h-3 w-3" />
-          Crea Agente
-        </button>
+        {/* Issue #4138: a "Crea Agente" button stood here — per-game agents are gone (ADR-094). */}
       </div>
 
       {groups.length === 0 ? (
@@ -425,7 +404,6 @@ function KbCardsTab({
 export const SharedGameExtraMeepleCard = React.memo(function SharedGameExtraMeepleCard({
   data,
   onUploadPdf,
-  onCreateAgent,
   loading,
   error,
   className,
@@ -516,7 +494,7 @@ export const SharedGameExtraMeepleCard = React.memo(function SharedGameExtraMeep
           </TabsContent>
 
           <TabsContent value="kb-cards" className="mt-0">
-            <KbCardsTab data={data} onCreateAgent={onCreateAgent} />
+            <KbCardsTab data={data} />
           </TabsContent>
         </div>
       </Tabs>

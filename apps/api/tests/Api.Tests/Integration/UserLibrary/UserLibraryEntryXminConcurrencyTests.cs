@@ -6,7 +6,6 @@ using Api.Tests.Constants;
 using Api.Tests.Infrastructure;
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
 
@@ -66,7 +65,7 @@ public sealed class UserLibraryEntryXminConcurrencyTests : IAsyncLifetime
     }
 
     private static UserLibraryRepository CreateRepository(MeepleAiDbContext dbContext) =>
-        new(dbContext, new Mock<IDomainEventCollector>().Object, NullLogger<UserLibraryRepository>.Instance);
+        new(dbContext, new Mock<IDomainEventCollector>().Object);
 
     /// <summary>
     /// Semina la riga direttamente: il percorso di scrittura del repository è ciò che i test

@@ -300,4 +300,97 @@ public class SearchResultRerankerTests
         SearchResultReranker.MapRerankedIndices(results, reranked, topK: 2)
             .Should().Equal("a", "b");
     }
+
+    // ---------------------------------------------------------------------
+    // #4482: l'esito del reranking, per la sonda di recupero. Dice quali candidati del pool sono
+    // passati, con il punteggio del cross-encoder, e se il cross-encoder ha lavorato davvero: un
+    // ripiego in silenzio sui primi della fusione, sul servizio vivo, falserebbe la misura.
+    // ---------------------------------------------------------------------
+
+    private static List<SearchResultDto> ThreeDtos() =>
+    [
+        Dto("doc-a", "x", 0.80),
+        Dto("doc-b", "y", 0.78),
+        Dto("doc-c", "z", 0.76),
+    ];
+
+    [Fact]
+    public async Task RerankIndicesAsync_Applied_GivesThePoolIndexAndTheScoreOfEachPick()
+    {
+        var outcome = await SearchResultReranker.RerankIndicesAsync(
+            ReverseReranker().Object, "query", ThreeDtos(), topK: 2, _loggerMock.Object, CancellationToken.None);
+
+        outcome.Status.Should().Be(RerankStatus.Applied);
+        outcome.Picks.Should().Equal(new RerankPick(2, 1.0), new RerankPick(1, 0.9));
+    }
+
+    // #4482 (review): la sonda dice quale modello ha riordinato, così un reranker finto (mock-…) non
+    // passa per quello vero.
+    [Fact]
+    public async Task RerankIndicesAsync_Applied_SaysWhichModelReranked()
+    {
+        var outcome = await SearchResultReranker.RerankIndicesAsync(
+            ReverseReranker().Object, "query", ThreeDtos(), topK: 2, _loggerMock.Object, CancellationToken.None);
+
+        outcome.Model.Should().Be("test-model");
+    }
+
+    [Fact]
+    public async Task RerankIndicesAsync_WhenRerankerThrows_HasNoModel()
+    {
+        var reranker = new Mock<ICrossEncoderReranker>();
+        reranker
+            .Setup(r => r.RerankAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<RerankChunk>>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("reranker service down"));
+
+        var outcome = await SearchResultReranker.RerankIndicesAsync(
+            reranker.Object, "query", ThreeDtos(), topK: 2, _loggerMock.Object, CancellationToken.None);
+
+        outcome.Model.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task RerankIndicesAsync_WhenRerankerThrows_SaysItFellBack_AndKeepsTheRawTopK()
+    {
+        var reranker = new Mock<ICrossEncoderReranker>();
+        reranker
+            .Setup(r => r.RerankAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<RerankChunk>>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("reranker service down"));
+
+        var outcome = await SearchResultReranker.RerankIndicesAsync(
+            reranker.Object, "query", ThreeDtos(), topK: 2, _loggerMock.Object, CancellationToken.None);
+
+        outcome.Status.Should().Be(RerankStatus.FellBack);
+        outcome.Picks.Should().Equal(new RerankPick(0, null), new RerankPick(1, null));
+    }
+
+    [Fact]
+    public async Task RerankIndicesAsync_WhenNoIdMapsBack_SaysItFellBack()
+    {
+        var reranker = new Mock<ICrossEncoderReranker>();
+        reranker
+            .Setup(r => r.RerankAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<RerankChunk>>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RerankResult([Ranked("9"), Ranked("bad")], "test-model", 1.0));
+
+        var outcome = await SearchResultReranker.RerankIndicesAsync(
+            reranker.Object, "query", ThreeDtos(), topK: 2, _loggerMock.Object, CancellationToken.None);
+
+        outcome.Status.Should().Be(RerankStatus.FellBack);
+        outcome.Picks.Should().Equal(new RerankPick(0, null), new RerankPick(1, null));
+    }
+
+    [Fact]
+    public async Task RerankIndicesAsync_SingleResult_SaysItSkippedTheCall()
+    {
+        var reranker = new Mock<ICrossEncoderReranker>();
+
+        var outcome = await SearchResultReranker.RerankIndicesAsync(
+            reranker.Object, "query", [Dto("doc-a", "only chunk", 0.80)], topK: 5, _loggerMock.Object, CancellationToken.None);
+
+        outcome.Status.Should().Be(RerankStatus.Skipped);
+        outcome.Picks.Should().Equal(new RerankPick(0, null));
+        reranker.Verify(
+            r => r.RerankAsync(It.IsAny<string>(), It.IsAny<IReadOnlyList<RerankChunk>>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 }

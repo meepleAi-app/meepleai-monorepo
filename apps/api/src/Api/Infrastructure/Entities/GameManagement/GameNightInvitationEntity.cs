@@ -82,4 +82,12 @@ public class GameNightInvitationEntity
     /// </summary>
     [Column("cancellation_notice_sent_at")]
     public DateTimeOffset? CancellationNoticeSentAt { get; set; }
+
+    /// <summary>
+    /// #4846: the credential for «stop writing to this address». Not the RSVP <see cref="Token"/>: the organizer holds
+    /// that one. Written in the emails to the address and nowhere else. Null only on a row older than the column.
+    /// </summary>
+    [Column("unsubscribe_key")]
+    [MaxLength(32)]
+    public string? UnsubscribeKey { get; set; }
 }

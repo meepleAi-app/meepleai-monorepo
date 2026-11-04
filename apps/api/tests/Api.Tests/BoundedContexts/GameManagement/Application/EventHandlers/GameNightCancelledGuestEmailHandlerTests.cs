@@ -8,7 +8,9 @@ using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.Observability;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
@@ -25,23 +27,31 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.EventHandlers;
 public sealed class GameNightCancelledGuestEmailHandlerTests
 {
     private static readonly DateTimeOffset Now = new(2026, 11, 3, 12, 0, 0, TimeSpan.Zero);
+    private const string BaseUrl = "https://meepleai.test";
 
     private readonly Mock<IGameNightInvitationRepository> _invitations = new();
     private readonly Mock<IGameNightEventRepository> _nights = new();
     private readonly Mock<IUserRepository> _users = new();
     private readonly Mock<IGameNightEmailService> _email = new();
+    private readonly Mock<IGameNightGuestEmailOptOutRepository> _optOuts = new();
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly FakeTimeProvider _time = new(Now);
     private readonly Mock<ILogger<GameNightCancelledGuestEmailHandler>> _logger = new();
 
     private GameNightCancelledGuestEmailHandler CreateHandler() =>
-        new(_invitations.Object, _nights.Object, _users.Object, _email.Object, _unitOfWork.Object, _time, _logger.Object);
+        new(
+            _invitations.Object, _nights.Object, _users.Object, _email.Object, _optOuts.Object,
+            PublicBaseUrlTestSupport.ProviderFor(new ConfigurationBuilder()
+                .AddInMemoryCollection(new Dictionary<string, string?> { ["Frontend:BaseUrl"] = BaseUrl })
+                .Build()),
+            _unitOfWork.Object, _time, _logger.Object);
 
     private static GameNightInvitation Invitation(
         string email,
         GameNightInvitationStatus status,
         DateTimeOffset? expiresAt = null,
-        DateTimeOffset? noticeSentAt = null) =>
+        DateTimeOffset? noticeSentAt = null,
+        bool withoutKey = false) =>
         GameNightInvitation.Reconstitute(
             id: Guid.NewGuid(),
             token: Guid.NewGuid().ToString("N")[..22],
@@ -53,7 +63,8 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
             respondedByUserId: null,
             createdAt: Now.AddDays(-2),
             createdBy: Guid.NewGuid(),
-            cancellationNoticeSentAt: noticeSentAt);
+            cancellationNoticeSentAt: noticeSentAt,
+            unsubscribeKey: withoutKey ? null : Guid.NewGuid().ToString("N")[..22]);
 
     private static GameNightEvent Night(Guid organizerId, string title = "Friday Catan", string? zone = null) =>
         GameNightEvent.Create(
@@ -83,6 +94,7 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<DateTimeOffset>(),
+                It.IsAny<string>(),
                 It.IsAny<GameNightEmailLocale>(),
                 It.IsAny<CancellationToken>()),
             times);
@@ -114,6 +126,48 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
     }
 
     [Fact]
+    public async Task Handle_AnAddressWhoseInvitationsPredateTheKey_IsNotWrittenTo_IsCounted_AndTheOthersAre()
+    {
+        // No key, no opt-out link to put in the notice: that address is skipped as a failure (counted, no mark) and
+        // the rest of the list is still written to.
+        var night = Night(Guid.NewGuid());
+        var legacy = Invitation("legacy@example.com", GameNightInvitationStatus.Accepted, withoutKey: true);
+        Given(night, legacy, Invitation("fine@example.com", GameNightInvitationStatus.Accepted));
+        using var failures = new DispatchFailureCapture();
+
+        await CreateHandler().Handle(Cancelled(night), CancellationToken.None);
+
+        VerifySentTo("legacy@example.com", Times.Never());
+        VerifySentTo("fine@example.com", Times.Once());
+        failures.Count.Should().Be(1);
+        legacy.CancellationNoticeSentAt.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_TwoInvitationsOfOneAddress_TheLinkUsesTheKeyOfTheOneThatHasIt()
+    {
+        // The address is written to once, and any of its invitations can supply the key; one written before the
+        // column existed must not make the others' key unreachable.
+        var night = Night(Guid.NewGuid());
+        var legacy = Invitation("both@example.com", GameNightInvitationStatus.Accepted, withoutKey: true);
+        var current = Invitation("both@example.com", GameNightInvitationStatus.Pending);
+        Given(night, legacy, current);
+
+        await CreateHandler().Handle(Cancelled(night), CancellationToken.None);
+
+        _email.Verify(
+            e => e.SendGameNightCancelledEmailAsync(
+                "both@example.com",
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<DateTimeOffset>(),
+                It.Is<string>(url => url.EndsWith("/" + current.UnsubscribeKey, StringComparison.Ordinal)),
+                It.IsAny<GameNightEmailLocale>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
     public async Task Handle_TheEmailCarriesTheOrganizersNameAndLanguage_AndTheNightsTitleTimeAndZone()
     {
         // Arrange
@@ -135,6 +189,7 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
                 organizer.DisplayName,
                 "Venerdì Catan",
                 night.ScheduledAt,
+                It.IsAny<string>(),
                 new GameNightEmailLocale("it", "Europe/Rome"),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -157,6 +212,7 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
                 "A friend",
                 night.Title,
                 night.ScheduledAt,
+                It.IsAny<string>(),
                 new GameNightEmailLocale(null, "Europe/Rome"),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -250,6 +306,7 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
         _email
             .Setup(e => e.SendGameNightCancelledEmailAsync(
                 "first@example.com", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTimeOffset>(),
+                It.IsAny<string>(),
                 It.IsAny<GameNightEmailLocale>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("smtp refused"));
         using var failures = new DispatchFailureCapture();
@@ -300,6 +357,7 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
         _email
             .Setup(e => e.SendGameNightCancelledEmailAsync(
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTimeOffset>(),
+                It.IsAny<string>(),
                 It.IsAny<GameNightEmailLocale>(), It.IsAny<CancellationToken>()))
             .Returns(() =>
             {
@@ -328,6 +386,7 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
         _email
             .Setup(e => e.SendGameNightCancelledEmailAsync(
                 "first@example.com", It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTimeOffset>(),
+                It.IsAny<string>(),
                 It.IsAny<GameNightEmailLocale>(), It.IsAny<CancellationToken>()))
             .Returns(() =>
             {
@@ -399,6 +458,54 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
         // Assert
         _users.Verify(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
         _email.Invocations.Should().BeEmpty();
+    }
+
+    // ── The guests who asked to stop, and the way to do it (#4846) ──────────────────────────────────────────
+
+    [Fact]
+    public async Task Handle_AnAddressThatOptedOut_IsSkipped_TheOthersAreWritten_AndTheSkippedOneGetsNoMark()
+    {
+        // Arrange — two guests expecting the night; the first has asked to stop hearing about game nights.
+        var night = Night(Guid.NewGuid());
+        var optedOut = Invitation("stopped@example.com", GameNightInvitationStatus.Accepted);
+        Given(night, optedOut, Invitation("other@example.com", GameNightInvitationStatus.Accepted));
+        _optOuts
+            .Setup(r => r.ExistsAsync("stopped@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // Act
+        await CreateHandler().Handle(Cancelled(night), CancellationToken.None);
+
+        // Assert — not written to, and not marked: the mark says «written to», which this address was not.
+        VerifySentTo("stopped@example.com", Times.Never());
+        VerifySentTo("other@example.com", Times.Once());
+        optedOut.CancellationNoticeSentAt.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_TheEmailCarriesTheOptOutLinkOfTheInvitationOfThatAddress()
+    {
+        // Arrange — one address with two invitations (it accepted, then was invited again): one email, whose
+        // opt-out link is built from the token of one of them. The list is keyed by address, so either works.
+        var night = Night(Guid.NewGuid());
+        var first = Invitation("guest@example.com", GameNightInvitationStatus.Accepted);
+        var second = Invitation("Guest@Example.com", GameNightInvitationStatus.Pending);
+        Given(night, first, second);
+
+        // Act
+        await CreateHandler().Handle(Cancelled(night), CancellationToken.None);
+
+        // Assert
+        _email.Verify(
+            e => e.SendGameNightCancelledEmailAsync(
+                "guest@example.com",
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<DateTimeOffset>(),
+                $"{BaseUrl}/invites/unsubscribe/{first.UnsubscribeKey}",
+                It.IsAny<GameNightEmailLocale>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     /// <summary>Counts the failures swallowed under THIS handler's name (other tests run in parallel).</summary>

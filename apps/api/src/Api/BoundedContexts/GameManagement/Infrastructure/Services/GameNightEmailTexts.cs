@@ -49,6 +49,10 @@ internal sealed class GameNightEmailTexts
     public required string RsvpClosing { get; init; }
     public required string RsvpGuestFooter { get; init; }
 
+    // The way to stop, in the footer of every email to a guest (#4846)
+    public required string GuestUnsubscribePrompt { get; init; }
+    public required string GuestUnsubscribeLabel { get; init; }
+
     // Footer for the emails whose recipient does have a MeepleAI account
     public required string MemberFooter { get; init; }
     public required string ManagePreferencesLabel { get; init; }
@@ -98,6 +102,8 @@ internal sealed class GameNightEmailTexts
         RsvpIntro = "Your RSVP has been confirmed for the game night.",
         RsvpClosing = "See you there!",
         RsvpGuestFooter = "You received this email because you responded to a game night invitation on MeepleAI.",
+        GuestUnsubscribePrompt = "Don't want game night emails at this address?",
+        GuestUnsubscribeLabel = "Unsubscribe",
         MemberFooter = "You received this email because you have a MeepleAI account.",
         ManagePreferencesLabel = "Manage notification preferences",
     };
@@ -133,6 +139,8 @@ internal sealed class GameNightEmailTexts
         RsvpIntro = "La tua partecipazione alla serata di gioco è confermata.",
         RsvpClosing = "A presto!",
         RsvpGuestFooter = "Hai ricevuto questa email perché hai risposto a un invito a una serata di gioco su MeepleAI.",
+        GuestUnsubscribePrompt = "Non vuoi più ricevere email sulle serate di gioco a questo indirizzo?",
+        GuestUnsubscribeLabel = "Annulla l'iscrizione",
         MemberFooter = "Hai ricevuto questa email perché hai un account MeepleAI.",
         ManagePreferencesLabel = "Gestisci le preferenze di notifica",
     };

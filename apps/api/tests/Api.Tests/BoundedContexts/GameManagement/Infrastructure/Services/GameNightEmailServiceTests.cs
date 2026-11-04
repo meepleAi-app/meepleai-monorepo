@@ -25,6 +25,8 @@ public sealed class GameNightEmailServiceTests
     // 21:00 in Rome on 2026-10-30. Daylight saving ended on 2026-10-25, so the offset that day is +1.
     private static readonly DateTimeOffset RomeNineOclock = new(2026, 10, 30, 20, 0, 0, TimeSpan.Zero);
 
+    private const string UnsubscribeUrl = "https://meepleai.test/invites/unsubscribe/key123";
+
     private readonly Mock<IEmailService> _emailMock = new();
     private readonly Mock<ILogger<GameNightEmailService>> _loggerMock = new();
     private readonly GameNightEmailService _sut;
@@ -55,7 +57,7 @@ public sealed class GameNightEmailServiceTests
         _sut.SendGameNightInvitationEmailAsync(
             "guest@example.com", organizer, title, at ?? RomeNineOclock, location: "Casa mia",
             gameNames: ["Catan"], "https://meepleai.test/invites/t?action=accept",
-            "https://meepleai.test/invites/t?action=decline", locale);
+            "https://meepleai.test/invites/t?action=decline", UnsubscribeUrl, locale);
 
     // ── The time ─────────────────────────────────────────────────────────────
 
@@ -227,7 +229,7 @@ public sealed class GameNightEmailServiceTests
         _body.Should().Contain(reason);
         _body.Should().NotContain("MeepleAI account").And.NotContain("account MeepleAI");
         _body.Should().NotContain("notification preferences").And.NotContain("preferenze di notifica");
-        _body.Should().NotContain("unsubscribe", "the link it pointed at is not a page, and a guest has no profile");
+        _body.Should().NotContain("href=\"https://meepleai.test/unsub?t", "the member footer link points at preferences a guest does not have");
     }
 
     [Fact]
@@ -235,14 +237,14 @@ public sealed class GameNightEmailServiceTests
     {
         await _sut.SendGameNightRsvpConfirmationEmailAsync(
             "guest@example.com", "Venerdì Catan", RomeNineOclock, "Casa mia",
-            new GameNightEmailLocale("it", "Europe/Rome"));
+            UnsubscribeUrl, new GameNightEmailLocale("it", "Europe/Rome"));
 
         _subject.Should().Be("Partecipazione confermata: Venerdì Catan - MeepleAI");
         _body.Should().Contain("Ci sei!");
         _body.Should().Contain("alle 21:00 (Europe/Rome, UTC+1)");
         _body.Should().Contain("perché hai risposto a un invito a una serata di gioco su MeepleAI");
         _body.Should().NotContain("account MeepleAI");
-        _body.Should().NotContain("unsubscribe").And.NotContain("preferenze di notifica");
+        _body.Should().NotContain("preferenze di notifica");
     }
 
     [Fact]
@@ -266,7 +268,7 @@ public sealed class GameNightEmailServiceTests
     {
         await _sut.SendGameNightCancelledEmailAsync(
             "guest@example.com", "Marco", "Venerdì Catan", RomeNineOclock,
-            new GameNightEmailLocale("it", "Europe/Rome"));
+            UnsubscribeUrl, new GameNightEmailLocale("it", "Europe/Rome"));
 
         _subject.Should().Be("Annullata: Venerdì Catan - MeepleAI");
         _body.Should().Contain("Marco ha annullato questa serata di gioco.");
@@ -279,7 +281,7 @@ public sealed class GameNightEmailServiceTests
     {
         await _sut.SendGameNightCancelledEmailAsync(
             "guest@example.com", "Marco", "Friday Catan", RomeNineOclock,
-            new GameNightEmailLocale("en", "Europe/Rome"));
+            UnsubscribeUrl, new GameNightEmailLocale("en", "Europe/Rome"));
 
         _subject.Should().Be("Cancelled: Friday Catan - MeepleAI");
         _body.Should().Contain("You received this email because Marco invited you to a game night on MeepleAI.");
@@ -292,7 +294,7 @@ public sealed class GameNightEmailServiceTests
         // they must reach the HTML as text, never as markup.
         await _sut.SendGameNightCancelledEmailAsync(
             "guest@example.com", "Mario & <Co>", "Catan <b>x</b>", RomeNineOclock,
-            new GameNightEmailLocale("en", "Europe/Rome"));
+            UnsubscribeUrl, new GameNightEmailLocale("en", "Europe/Rome"));
 
         _body.Should().Contain("Mario &amp; &lt;Co&gt; has cancelled the following game night.");
         _body.Should().Contain("Catan &lt;b&gt;x&lt;/b&gt;");
@@ -302,17 +304,58 @@ public sealed class GameNightEmailServiceTests
     }
 
     [Fact]
-    public async Task Cancelled_ToAGuest_PromisesNoAccountAndOffersNoLink()
+    public async Task Cancelled_ToAGuest_PromisesNoAccountAndOffersOnlyTheWayToStop()
     {
-        // The address is not an account: no «you have a MeepleAI account», no preferences page, and no link at
-        // all in the footer — the one the member footer carries would point at a page a guest cannot use.
+        // The address is not an account: no «you have a MeepleAI account», no preferences page. The one link in
+        // the footer is the one-tap opt-out (#4846), and it is the only link in the whole email.
         await _sut.SendGameNightCancelledEmailAsync(
             "guest@example.com", "Marco", "Friday Catan", RomeNineOclock,
-            new GameNightEmailLocale("en", "Europe/Rome"));
+            UnsubscribeUrl, new GameNightEmailLocale("en", "Europe/Rome"));
 
         _body.Should().NotContain("you have a MeepleAI account");
         _body.Should().NotContain("Manage notification preferences");
-        _body.Should().NotContain("<a ");
+        _body.Split("<a ").Length.Should().Be(2, "exactly one link: the opt-out");
+        _body.Should().Contain($"href=\"{UnsubscribeUrl}\"");
+    }
+
+    // ── The way to stop (#4846) ──────────────────────────────────────────────
+
+    [Theory]
+    [InlineData("en", "Don't want game night emails at this address?", "Unsubscribe")]
+    [InlineData("it", "Non vuoi più ricevere email sulle serate di gioco a questo indirizzo?", "Annulla l'iscrizione")]
+    public async Task EveryEmailToAGuest_CarriesTheOptOutLinkInTheirLanguage(string language, string prompt, string label)
+    {
+        var locale = new GameNightEmailLocale(language, "Europe/Rome");
+        var sends = new (string Name, Func<Task> Send)[]
+        {
+            ("invitation", () => SendInvitation(locale)),
+            ("cancellation", () => _sut.SendGameNightCancelledEmailAsync(
+                "guest@example.com", "Marco", "Friday Catan", RomeNineOclock, UnsubscribeUrl, locale)),
+            ("rsvp confirmation", () => _sut.SendGameNightRsvpConfirmationEmailAsync(
+                "guest@example.com", "Friday Catan", RomeNineOclock, "Casa mia", UnsubscribeUrl, locale)),
+        };
+
+        foreach (var (name, send) in sends)
+        {
+            _body = string.Empty;
+            await send();
+
+            _body.Should().Contain(prompt, $"the {name} email asks it");
+            _body.Should().Contain($"href=\"{UnsubscribeUrl}\"", $"the {name} email links the opt-out");
+            _body.Should().Contain($">{label}</a>", $"the {name} email names the link");
+        }
+    }
+
+    [Fact]
+    public async Task TheOptOutLink_IsEncodedWhereItIsWrittenIntoTheMarkup()
+    {
+        // The token is ours, but the base URL is configuration: a quote in it must not close the attribute.
+        await _sut.SendGameNightCancelledEmailAsync(
+            "guest@example.com", "Marco", "Friday Catan", RomeNineOclock,
+            "https://meepleai.test/invites/unsubscribe/k\"onclick=\"x", new GameNightEmailLocale("en", "Europe/Rome"));
+
+        _body.Should().NotContain("t\"onclick=");
+        _body.Should().Contain("k&quot;onclick=&quot;x");
     }
 
     [Fact]

@@ -6,10 +6,12 @@ using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Moq;
@@ -33,12 +35,15 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.EventHandlers;
 public sealed class GameNightInvitationRespondedHandlerTests
 {
     private const string Token = "abcdefghijklmnopqrstuv";
+    private const string Key = "zyxwvutsrqponmlkjihgfe";
+    private const string BaseUrl = "https://meepleai.test";
     private static readonly DateTimeOffset UtcNow = new(2026, 5, 1, 12, 0, 0, TimeSpan.Zero);
 
     private readonly Mock<IGameNightInvitationRepository> _invitationRepoMock = new();
     private readonly Mock<IGameNightEventRepository> _gameNightRepoMock = new();
     private readonly Mock<Api.BoundedContexts.Authentication.Infrastructure.Persistence.IUserRepository> _userRepoMock = new();
     private readonly Mock<IGameNightEmailService> _emailServiceMock = new();
+    private readonly Mock<IGameNightGuestEmailOptOutRepository> _optOutRepoMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly Mock<ILogger<GameNightInvitationRespondedHandler>> _loggerMock = new();
 
@@ -57,6 +62,10 @@ public sealed class GameNightInvitationRespondedHandlerTests
         _gameNightRepoMock.Object,
         _userRepoMock.Object,
         _emailServiceMock.Object,
+        _optOutRepoMock.Object,
+        PublicBaseUrlTestSupport.ProviderFor(new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Frontend:BaseUrl"] = BaseUrl })
+            .Build()),
         cache,
         _unitOfWorkMock.Object,
         _loggerMock.Object);
@@ -73,7 +82,8 @@ public sealed class GameNightInvitationRespondedHandlerTests
             respondedAt: UtcNow,
             respondedByUserId: null,
             createdAt: UtcNow.AddDays(-1),
-            createdBy: Guid.NewGuid());
+            createdBy: Guid.NewGuid(),
+            unsubscribeKey: Key);
     }
 
     private static GameNightEvent CreateGameNight()
@@ -97,6 +107,76 @@ public sealed class GameNightInvitationRespondedHandlerTests
             token: Token,
             status: status,
             respondedByUserId: null);
+    }
+
+    // ── An address that asked to stop (#4846) ────────────────────────────────
+
+    [Fact]
+    public async Task Handle_AcceptedResponse_OnAnInvitationWrittenBeforeTheKeyExisted_SendsNothing_AndDoesNotThrow()
+    {
+        // No key, no opt-out link to write. Throwing would send the event back through the outbox to fail the same
+        // way every time; the confirmation is skipped, and not marked.
+        var invitation = GameNightInvitation.Reconstitute(
+            id: Guid.NewGuid(),
+            token: Token,
+            gameNightId: Guid.NewGuid(),
+            email: "guest@example.com",
+            status: GameNightInvitationStatus.Accepted,
+            expiresAt: UtcNow.AddDays(7),
+            respondedAt: UtcNow,
+            respondedByUserId: null,
+            createdAt: UtcNow.AddDays(-1),
+            createdBy: Guid.NewGuid(),
+            unsubscribeKey: null);
+        _invitationRepoMock
+            .Setup(r => r.GetByIdAsync(invitation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(invitation);
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(invitation.GameNightId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateGameNight());
+
+        var act = () => CreateHandler(CreateHybridCache()).Handle(
+            CreateEvent(invitation.Id, invitation.GameNightId, GameNightInvitationStatus.Accepted),
+            CancellationToken.None);
+
+        await act.Should().NotThrowAsync();
+        _emailServiceMock.Verify(
+            e => e.SendGameNightRsvpConfirmationEmailAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTimeOffset>(), It.IsAny<string?>(),
+                It.IsAny<string>(), It.IsAny<GameNightEmailLocale>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        invitation.RsvpConfirmationSentAt.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_AcceptedResponse_FromAnAddressThatOptedOut_SendsNoConfirmation_AndMarksNothing()
+    {
+        // The RSVP token is held by the organizer too, and /respond is anonymous: an «accept» is not proof that the
+        // address's owner made a gesture. Without this check, a third party could make every opted-out address
+        // receive a mail (with the night's free-text title and location in it) by inviting it and accepting for it.
+        var invitation = Reconstitute(GameNightInvitationStatus.Accepted);
+        var gameNight = CreateGameNight();
+        _invitationRepoMock
+            .Setup(r => r.GetByIdAsync(invitation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(invitation);
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(invitation.GameNightId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _optOutRepoMock
+            .Setup(r => r.ExistsAsync("guest@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        await CreateHandler(CreateHybridCache()).Handle(
+            CreateEvent(invitation.Id, invitation.GameNightId, GameNightInvitationStatus.Accepted),
+            CancellationToken.None);
+
+        _emailServiceMock.Verify(
+            e => e.SendGameNightRsvpConfirmationEmailAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTimeOffset>(), It.IsAny<string?>(),
+                It.IsAny<string>(), It.IsAny<GameNightEmailLocale>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        invitation.RsvpConfirmationSentAt.Should().BeNull("the mark says «written to», which this address was not");
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -148,6 +228,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
                 gameNight.Title,
                 gameNight.ScheduledAt,
                 gameNight.Location,
+                $"{BaseUrl}/invites/unsubscribe/{Key}",
                 GameNightEmailLocale.Unknown,
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -188,6 +269,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
                 gameNight.Title,
                 gameNight.ScheduledAt,
                 gameNight.Location,
+                $"{BaseUrl}/invites/unsubscribe/{Key}",
                 new GameNightEmailLocale("it", "Europe/Rome"),
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -210,6 +292,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<DateTimeOffset>(),
+                It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<GameNightEmailLocale>(),
                 It.IsAny<CancellationToken>()),
@@ -243,6 +326,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<DateTimeOffset>(),
+                It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<GameNightEmailLocale>(),
                 It.IsAny<CancellationToken>()),
@@ -278,6 +362,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
                 It.IsAny<string>(),
                 It.IsAny<DateTimeOffset>(),
                 It.IsAny<string>(),
+                It.IsAny<string>(),
                 It.IsAny<GameNightEmailLocale>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
@@ -310,6 +395,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<DateTimeOffset>(),
+                It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<GameNightEmailLocale>(),
                 It.IsAny<CancellationToken>()),

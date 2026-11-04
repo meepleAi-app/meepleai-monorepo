@@ -7,6 +7,7 @@ using Api.Infrastructure.DomainEventLog;
 using Api.Infrastructure.Security;
 using Api.Observability;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.SharedKernel.Services;
 using MediatR;
 
 namespace Api.BoundedContexts.GameManagement.Application.EventHandlers;
@@ -56,6 +57,8 @@ internal sealed class GameNightCancelledGuestEmailHandler : INotificationHandler
     private readonly IGameNightEventRepository _nights;
     private readonly IUserRepository _users;
     private readonly IGameNightEmailService _emailService;
+    private readonly IGameNightGuestEmailOptOutRepository _optOuts;
+    private readonly IPublicBaseUrlProvider _publicBaseUrl;
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<GameNightCancelledGuestEmailHandler> _logger;
@@ -65,6 +68,8 @@ internal sealed class GameNightCancelledGuestEmailHandler : INotificationHandler
         IGameNightEventRepository nights,
         IUserRepository users,
         IGameNightEmailService emailService,
+        IGameNightGuestEmailOptOutRepository optOuts,
+        IPublicBaseUrlProvider publicBaseUrl,
         IUnitOfWork unitOfWork,
         TimeProvider timeProvider,
         ILogger<GameNightCancelledGuestEmailHandler> logger)
@@ -73,6 +78,8 @@ internal sealed class GameNightCancelledGuestEmailHandler : INotificationHandler
         _nights = nights ?? throw new ArgumentNullException(nameof(nights));
         _users = users ?? throw new ArgumentNullException(nameof(users));
         _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
+        _optOuts = optOuts ?? throw new ArgumentNullException(nameof(optOuts));
+        _publicBaseUrl = publicBaseUrl ?? throw new ArgumentNullException(nameof(publicBaseUrl));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -116,11 +123,14 @@ internal sealed class GameNightCancelledGuestEmailHandler : INotificationHandler
                 .ConfigureAwait(false);
             var organizerName = organizer?.DisplayName ?? FallbackOrganizerName;
             var locale = new GameNightEmailLocale(organizer?.Language, night.TimeZoneId);
+            // Resolved once, before the first email: with no public address configured the failure is one counted
+            // line here, not one per guest.
+            var baseUrl = _publicBaseUrl.GetBaseUrl();
 
             foreach (var address in pending)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                await SendToAsync(notification, night, address.Key, address, organizerName, locale, cancellationToken)
+                await SendToAsync(notification, night, address.Key, address, organizerName, locale, baseUrl, cancellationToken)
                     .ConfigureAwait(false);
             }
         }
@@ -145,15 +155,29 @@ internal sealed class GameNightCancelledGuestEmailHandler : INotificationHandler
         IEnumerable<GameNightInvitation> invitationsOfTheAddress,
         string organizerName,
         GameNightEmailLocale locale,
+        string baseUrl,
         CancellationToken cancellationToken)
     {
         try
         {
+            // #4846: an address that asked to stop hearing about game nights is not written to, and not marked:
+            // the mark says «written to», which it was not.
+            if (await _optOuts.ExistsAsync(address, cancellationToken).ConfigureAwait(false))
+            {
+                return;
+            }
+
+            // Any of the address's invitations can carry it; one written before the column existed has none.
+            var unsubscribeKey = invitationsOfTheAddress.Select(i => i.UnsubscribeKey).FirstOrDefault(k => k is not null)
+                ?? throw new InvalidOperationException(
+                    "None of the invitations of the address has an unsubscribe key: the notice cannot carry the opt-out link.");
+
             await _emailService.SendGameNightCancelledEmailAsync(
                 toEmail: address,
                 organizerName: organizerName,
                 title: night.Title,
                 scheduledAt: night.ScheduledAt,
+                unsubscribeUrl: GameNightGuestLinks.Unsubscribe(baseUrl, unsubscribeKey),
                 locale: locale,
                 ct: cancellationToken).ConfigureAwait(false);
 

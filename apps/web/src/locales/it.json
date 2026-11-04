@@ -1524,6 +1524,23 @@
           "respondSucceeded": "invite.respond_succeeded",
           "respondFailed": "invite.respond_failed"
         }
+      },
+      "unsubscribe": {
+        "heading": "Non vuoi più ricevere inviti?",
+        "intro": "Se confermi, MeepleAI non scriverà più a questo indirizzo per le serate di gioco: né inviti, né promemoria, né avvisi di annullamento. Chi organizza non sa che hai scelto di smettere.",
+        "confirmCta": "Smetti di ricevere queste email",
+        "submitting": "Un momento…",
+        "done": {
+          "heading": "Fatto.",
+          "body": "Non riceverai più email sulle serate di gioco a questo indirizzo, nemmeno la conferma di una risposta data a un invito che hai già. Se in futuro vuoi di nuovo partecipare, puoi sempre rispondere dalla pagina dell'invito."
+        },
+        "invalid": {
+          "heading": "Questo link non è valido",
+          "body": "Non riconosciamo questo link. Controlla di averlo copiato per intero, oppure apri di nuovo l'email e usa il link in fondo."
+        },
+        "rateLimited": "Troppi tentativi. Riprova tra {seconds} secondi.",
+        "error": "Non siamo riusciti a completare la richiesta. Riprova tra poco.",
+        "retryCta": "Riprova"
       }
     },
     "gameNightJoin": {

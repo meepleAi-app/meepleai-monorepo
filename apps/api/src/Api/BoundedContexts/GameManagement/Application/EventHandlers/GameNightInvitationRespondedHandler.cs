@@ -4,6 +4,7 @@ using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.SharedKernel.Infrastructure.Persistence;
+using Api.SharedKernel.Services;
 using MediatR;
 using Microsoft.Extensions.Caching.Hybrid;
 
@@ -40,6 +41,8 @@ internal sealed class GameNightInvitationRespondedHandler
     private readonly IGameNightEventRepository _gameNightRepository;
     private readonly IUserRepository _userRepository;
     private readonly IGameNightEmailService _emailService;
+    private readonly IGameNightGuestEmailOptOutRepository _optOutRepository;
+    private readonly IPublicBaseUrlProvider _publicBaseUrl;
     private readonly HybridCache _cache;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<GameNightInvitationRespondedHandler> _logger;
@@ -49,6 +52,8 @@ internal sealed class GameNightInvitationRespondedHandler
         IGameNightEventRepository gameNightRepository,
         IUserRepository userRepository,
         IGameNightEmailService emailService,
+        IGameNightGuestEmailOptOutRepository optOutRepository,
+        IPublicBaseUrlProvider publicBaseUrl,
         HybridCache cache,
         IUnitOfWork unitOfWork,
         ILogger<GameNightInvitationRespondedHandler> logger)
@@ -57,6 +62,8 @@ internal sealed class GameNightInvitationRespondedHandler
         _gameNightRepository = gameNightRepository ?? throw new ArgumentNullException(nameof(gameNightRepository));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
+        _optOutRepository = optOutRepository ?? throw new ArgumentNullException(nameof(optOutRepository));
+        _publicBaseUrl = publicBaseUrl ?? throw new ArgumentNullException(nameof(publicBaseUrl));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -120,6 +127,30 @@ internal sealed class GameNightInvitationRespondedHandler
             return;
         }
 
+        // #4846: an address that asked to stop hearing about game nights gets no mail, and this one included. The
+        // RSVP token is held by the organizer too and /respond is anonymous, so an «accept» is not proof that the
+        // address's owner made a gesture: without this check, whoever invites an opted-out address and accepts for
+        // it makes it receive a mail with the night's free-text title and location in it. Not marked: the mark says
+        // «written to».
+        if (await _optOutRepository.ExistsAsync(invitation.Email, cancellationToken).ConfigureAwait(false))
+        {
+            _logger.LogInformation(
+                "Skipping RSVP confirmation email for invitation {InvitationId}: its address asked to stop game night emails",
+                invitation.Id);
+            return;
+        }
+
+        // A row written by an instance that predates the column has no key, so no opt-out link to put in the mail.
+        // Failing would send the event back through the outbox to fail the same way; the confirmation is skipped,
+        // loudly, and not marked.
+        if (invitation.UnsubscribeKey is not { } unsubscribeKey)
+        {
+            _logger.LogWarning(
+                "Skipping RSVP confirmation email for invitation {InvitationId}: it has no unsubscribe key",
+                invitation.Id);
+            return;
+        }
+
         var gameNight = await _gameNightRepository
             .GetByIdAsync(invitation.GameNightId, cancellationToken)
             .ConfigureAwait(false);
@@ -135,7 +166,7 @@ internal sealed class GameNightInvitationRespondedHandler
 
         // #4754: same language and zone as the invitation the guest answered — the organizer's. (The footer used
         // to carry an unsubscribe link built without the site's base URL, so it was relative and pointed
-        // at no page; a guest's confirmation now has no link at all.)
+        // at no page; since #4846 it carries the one-tap opt-out, built on the public address.)
         var organizer = await _userRepository
             .GetByIdAsync(gameNight.OrganizerId, cancellationToken)
             .ConfigureAwait(false);
@@ -145,6 +176,7 @@ internal sealed class GameNightInvitationRespondedHandler
             title: gameNight.Title,
             scheduledAt: gameNight.ScheduledAt,
             location: gameNight.Location,
+            unsubscribeUrl: GameNightGuestLinks.Unsubscribe(_publicBaseUrl.GetBaseUrl(), unsubscribeKey),
             locale: new GameNightEmailLocale(organizer?.Language, gameNight.TimeZoneId),
             ct: cancellationToken).ConfigureAwait(false);
 

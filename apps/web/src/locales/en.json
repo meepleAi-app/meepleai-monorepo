@@ -1517,6 +1517,23 @@
           "respondSucceeded": "invite.respond_succeeded",
           "respondFailed": "invite.respond_failed"
         }
+      },
+      "unsubscribe": {
+        "heading": "Don't want invitations any more?",
+        "intro": "If you confirm, MeepleAI will stop writing to this address about game nights: no invitations, no reminders, no cancellation notices. The organizer is not told that you stopped.",
+        "confirmCta": "Stop these emails",
+        "submitting": "One moment…",
+        "done": {
+          "heading": "Done.",
+          "body": "You will not receive game night emails at this address any more, not even the confirmation of an answer given to an invitation you already hold. If you want to join again later, you can still answer from the invitation page."
+        },
+        "invalid": {
+          "heading": "This link is not valid",
+          "body": "We do not recognise this link. Check that you copied all of it, or open the email again and use the link at the bottom."
+        },
+        "rateLimited": "Too many attempts. Try again in {seconds} seconds.",
+        "error": "We could not complete the request. Please try again shortly.",
+        "retryCta": "Try again"
       }
     },
     "gameNightJoin": {

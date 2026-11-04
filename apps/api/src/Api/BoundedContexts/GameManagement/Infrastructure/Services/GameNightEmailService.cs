@@ -35,6 +35,7 @@ internal sealed class GameNightEmailService : IGameNightEmailService
         IReadOnlyList<string> gameNames,
         string rsvpAcceptUrl,
         string rsvpDeclineUrl,
+        string unsubscribeUrl,
         GameNightEmailLocale locale,
         CancellationToken ct = default)
     {
@@ -75,7 +76,7 @@ internal sealed class GameNightEmailService : IGameNightEmailService
                 <a href="{Encode(rsvpAcceptUrl)}" style="display:inline-block;background:#059669;color:#ffffff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px;margin-right:12px;">{texts.AcceptLabel}</a>
                 <a href="{Encode(rsvpDeclineUrl)}" style="display:inline-block;background:#dc2626;color:#ffffff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px;">{texts.DeclineLabel}</a>
             </div>
-        """, GuestFooter(texts.InvitationGuestFooter(Encode(organizerName))), texts);
+        """, GuestFooter(texts.InvitationGuestFooter(Encode(organizerName)), texts, unsubscribeUrl), texts);
 
         await _emailService.SendRawEmailAsync(toEmail, subject, body, ct).ConfigureAwait(false);
         _logger.LogInformation("Game night invitation email sent to {Email} for event {Title}", DataMasking.MaskEmail(toEmail), LogSanitizer.Sanitize(title));
@@ -128,6 +129,7 @@ internal sealed class GameNightEmailService : IGameNightEmailService
         string organizerName,
         string title,
         DateTimeOffset scheduledAt,
+        string unsubscribeUrl,
         GameNightEmailLocale locale,
         CancellationToken ct = default)
     {
@@ -147,7 +149,7 @@ internal sealed class GameNightEmailService : IGameNightEmailService
             </div>
 
             <p style="color:#6b7280;font-size:14px;text-align:center;">{texts.CancelledClosing}</p>
-        """, GuestFooter(texts.CancelledGuestFooter(Encode(organizerName))), texts);
+        """, GuestFooter(texts.CancelledGuestFooter(Encode(organizerName)), texts, unsubscribeUrl), texts);
 
         await _emailService.SendRawEmailAsync(toEmail, subject, body, ct).ConfigureAwait(false);
         _logger.LogInformation("Game night cancelled email sent to {Email} for event {Title}", DataMasking.MaskEmail(toEmail), LogSanitizer.Sanitize(title));
@@ -158,6 +160,7 @@ internal sealed class GameNightEmailService : IGameNightEmailService
         string title,
         DateTimeOffset scheduledAt,
         string? location,
+        string unsubscribeUrl,
         GameNightEmailLocale locale,
         CancellationToken ct = default)
     {
@@ -181,7 +184,7 @@ internal sealed class GameNightEmailService : IGameNightEmailService
             </div>
 
             <p style="color:#6b7280;font-size:14px;text-align:center;">{texts.RsvpClosing}</p>
-        """, GuestFooter(texts.RsvpGuestFooter), texts);
+        """, GuestFooter(texts.RsvpGuestFooter, texts, unsubscribeUrl), texts);
 
         await _emailService.SendRawEmailAsync(toEmail, subject, body, ct).ConfigureAwait(false);
         _logger.LogInformation("Game night RSVP confirmation email sent to {Email} for event {Title}", DataMasking.MaskEmail(toEmail), LogSanitizer.Sanitize(title));
@@ -210,13 +213,19 @@ internal sealed class GameNightEmailService : IGameNightEmailService
 
     /// <summary>
     /// Footer for an email that goes to an address and not to an account: it says why the guest got the email
-    /// and nothing else. It carries no link — the unsubscribe link this footer used to hold pointed at a page
-    /// that does not exist, and "manage notification preferences" promised a profile a guest does not have.
+    /// and how to stop, and nothing else. There is no «manage notification preferences» — that promised a profile
+    /// a guest does not have — and the unsubscribe link this footer once held pointed at a page that did not exist
+    /// (#4754). The one link now is the opt-out (#4846): the page behind it records the address on the list the
+    /// sends consult.
     /// <paramref name="reasonHtml"/> is HTML-ready: the fixed words are literal UTF-8 (the document says
     /// <c>charset=utf-8</c>, so "perché" needs no entity) and whatever came from outside is already encoded.
+    /// <paramref name="unsubscribeUrl"/> is encoded here.
     /// </summary>
-    private static string GuestFooter(string reasonHtml) =>
-        $"""<p style="margin:0;font-size:12px;color:#9ca3af;">{reasonHtml}</p>""";
+    private static string GuestFooter(string reasonHtml, GameNightEmailTexts texts, string unsubscribeUrl) =>
+        $"""
+        <p style="margin:0 0 8px;font-size:12px;color:#9ca3af;">{reasonHtml}</p>
+                            <p style="margin:0;font-size:12px;color:#9ca3af;">{texts.GuestUnsubscribePrompt} <a href="{Encode(unsubscribeUrl)}" style="color:#6b7280;text-decoration:underline;">{texts.GuestUnsubscribeLabel}</a></p>
+        """;
 
     /// <summary>Footer for an email whose recipient has a MeepleAI account and its notification preferences.</summary>
     private static string MemberFooter(GameNightEmailTexts texts, string unsubscribeUrl) =>

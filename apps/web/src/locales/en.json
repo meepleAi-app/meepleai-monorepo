@@ -1465,6 +1465,11 @@
           "subText": "This invitation is no longer valid. Ask {hostName} to send it again.",
           "ctaContactHost": "Contact the host"
         },
+        "nightCancelled": {
+          "heading": "Game night cancelled",
+          "subText": "{hostName} cancelled this game night.",
+          "subTextNoHost": "The host cancelled this game night."
+        },
         "tokenInvalid": {
           "heading": "Invitation not found",
           "subText": "The link you opened doesn't match any invitation. Make sure it's complete.",

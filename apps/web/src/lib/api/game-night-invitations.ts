@@ -63,6 +63,12 @@ export const PublicGameNightInvitationSchema = z.object({
    * with the Wave A.5b legacy `/invites/[token]` consumer.
    */
   respondedByName: z.string().nullable().optional(),
+  /**
+   * #4856: true when the NIGHT was cancelled, whatever the state of the invitation (which keeps its own).
+   * A link that is no longer alive (withdrawn, expired, or a cancelled night) carries only its state and the host's
+   * name: title, time, place, game and counts are empty (#4745). Optional on the wire for older backends.
+   */
+  nightCancelled: z.boolean().optional(),
 });
 
 export type PublicGameNightInvitation = z.infer<typeof PublicGameNightInvitationSchema>;

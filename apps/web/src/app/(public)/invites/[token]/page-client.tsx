@@ -137,9 +137,11 @@ export function InvitesTokenPageClient({
   const handleAccept = useCallback(async (): Promise<void> => {
     setLastSubmittedAction('Accepted');
     const result = await respond.submit('Accepted');
-    if (result?.kind === 'conflict-state-switch') {
+    if (result?.kind === 'conflict-state-switch' || result?.kind === 'gone') {
       // Refetch to surface fresh `alreadyRespondedAs` so the banner copy
-      // matches the server state (not just our optimistic view).
+      // matches the server state (not just our optimistic view). After a 410 it is how the page learns WHY the
+      // link is gone: the 410 carries no reason, and a cancelled night is told apart from an expired invitation by
+      // the fresh `nightCancelled` (#4856).
       await refetch();
     }
   }, [refetch, respond]);
@@ -147,7 +149,7 @@ export function InvitesTokenPageClient({
   const handleDecline = useCallback(async (): Promise<void> => {
     setLastSubmittedAction('Declined');
     const result = await respond.submit('Declined');
-    if (result?.kind === 'conflict-state-switch') {
+    if (result?.kind === 'conflict-state-switch' || result?.kind === 'gone') {
       await refetch();
     }
   }, [refetch, respond]);
@@ -317,7 +319,11 @@ export function InvitesTokenPageClient({
           {state === 'token-invalid' ? (
             <TokenInvalidShell t={t} />
           ) : state === 'token-expired' ? (
-            <TokenExpiredShell t={t} hostName={invitation?.hostDisplayName ?? ''} />
+            <TokenExpiredShell
+              t={t}
+              hostName={invitation?.hostDisplayName ?? ''}
+              nightCancelled={invitation?.nightCancelled === true}
+            />
           ) : state === 'accepted-success' && invitation ? (
             <AcceptedSuccessSurface
               invitation={invitation}
@@ -579,9 +585,11 @@ function DeclinedSurface({
 interface TokenExpiredShellProps {
   readonly t: T;
   readonly hostName: string;
+  /** #4856: the NIGHT was cancelled (not the invitation withdrawn or expired): say so. */
+  readonly nightCancelled: boolean;
 }
 
-function TokenExpiredShell({ t, hostName }: TokenExpiredShellProps): JSX.Element {
+function TokenExpiredShell({ t, hostName, nightCancelled }: TokenExpiredShellProps): JSX.Element {
   return (
     <div data-slot="invite-expired" className="flex flex-col items-center px-5 py-8 text-center">
       <div
@@ -591,12 +599,18 @@ function TokenExpiredShell({ t, hostName }: TokenExpiredShellProps): JSX.Element
         ⌛
       </div>
       <h2 className="m-0 mb-1.5 font-display text-[18px] font-bold text-foreground">
-        {t('pages.invites.states.tokenExpired.heading')}
+        {nightCancelled
+          ? t('pages.invites.states.nightCancelled.heading')
+          : t('pages.invites.states.tokenExpired.heading')}
       </h2>
       <p className="m-0 mb-4 text-[12px] leading-relaxed text-[hsl(var(--text-muted))]">
-        {hostName.length > 0
-          ? t('pages.invites.states.tokenExpired.subText', { hostName })
-          : t('pages.invites.banners.goneExpired')}
+        {nightCancelled
+          ? hostName.length > 0
+            ? t('pages.invites.states.nightCancelled.subText', { hostName })
+            : t('pages.invites.states.nightCancelled.subTextNoHost')
+          : hostName.length > 0
+            ? t('pages.invites.states.tokenExpired.subText', { hostName })
+            : t('pages.invites.banners.goneExpired')}
       </p>
       <Link
         href="/"

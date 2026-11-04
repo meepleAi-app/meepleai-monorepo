@@ -25,6 +25,7 @@ public sealed class RespondToGameNightInvitationByTokenCommandHandlerTests
     private static readonly DateTimeOffset UtcNow = new(2026, 5, 1, 12, 0, 0, TimeSpan.Zero);
 
     private readonly Mock<IGameNightInvitationRepository> _invitationRepoMock = new();
+    private readonly Mock<IGameNightEventRepository> _gameNightRepoMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly FakeTimeProvider _timeProvider = new(UtcNow);
     private readonly RespondToGameNightInvitationByTokenCommandHandler _sut;
@@ -33,6 +34,7 @@ public sealed class RespondToGameNightInvitationByTokenCommandHandlerTests
     {
         _sut = new RespondToGameNightInvitationByTokenCommandHandler(
             _invitationRepoMock.Object,
+            _gameNightRepoMock.Object,
             _unitOfWorkMock.Object,
             _timeProvider);
     }
@@ -119,6 +121,79 @@ public sealed class RespondToGameNightInvitationByTokenCommandHandlerTests
         var act = async () => await _sut.Handle(command, CancellationToken.None);
 
         await act.Should().ThrowAsync<GoneException>();
+    }
+
+    // ── A cancelled night cannot be answered (#4856) ─────────────────────────────────────────────────────────
+
+    private GameNightEvent GivenTheNight(GameNightInvitation invitation, bool cancelled)
+    {
+        var night = GameNightEvent.Create(
+            organizerId: Guid.NewGuid(), title: "Friday Catan", scheduledAt: UtcNow.AddDays(7));
+        night.Publish([]);
+        if (cancelled)
+        {
+            night.Cancel();
+        }
+
+        _invitationRepoMock
+            .Setup(r => r.GetByTokenAsync(Token, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(invitation);
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(invitation.GameNightId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(night);
+        return night;
+    }
+
+    [Theory]
+    [InlineData(GameNightInvitationStatus.Pending, GameNightInvitationStatus.Accepted)]
+    [InlineData(GameNightInvitationStatus.Pending, GameNightInvitationStatus.Declined)]
+    [InlineData(GameNightInvitationStatus.Accepted, GameNightInvitationStatus.Accepted)]
+    [InlineData(GameNightInvitationStatus.Accepted, GameNightInvitationStatus.Declined)]
+    [InlineData(GameNightInvitationStatus.Declined, GameNightInvitationStatus.Declined)]
+    public async Task Handle_TheNightIsCancelled_NoAnswerGoesThrough_WhateverTheInvitationAndTheAnswer(
+        GameNightInvitationStatus stored, GameNightInvitationStatus answer)
+    {
+        var invitation = Reconstitute(stored, respondedAt: stored == GameNightInvitationStatus.Pending ? null : UtcNow);
+        GivenTheNight(invitation, cancelled: true);
+
+        var act = async () => await _sut.Handle(
+            new RespondToGameNightInvitationByTokenCommand(Token, answer, ResponderUserId: null),
+            CancellationToken.None);
+
+        var gone = await act.Should().ThrowAsync<GoneException>();
+        gone.Which.Message.Should().Contain("cancelled", "the guest is told why, not only that it is gone");
+        invitation.Status.Should().Be(stored, "nothing was changed");
+        _invitationRepoMock.Verify(
+            r => r.UpdateAsync(It.IsAny<GameNightInvitation>(), It.IsAny<CancellationToken>()), Times.Never);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_TheNightIsOn_TheAnswerIsStillAccepted()
+    {
+        var invitation = Reconstitute(GameNightInvitationStatus.Pending);
+        GivenTheNight(invitation, cancelled: false);
+
+        await _sut.Handle(
+            new RespondToGameNightInvitationByTokenCommand(Token, GameNightInvitationStatus.Accepted, ResponderUserId: null),
+            CancellationToken.None);
+
+        invitation.Status.Should().Be(GameNightInvitationStatus.Accepted);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Handle_TheNightIsLookedUpByTheNightOfTheInvitation()
+    {
+        var invitation = Reconstitute(GameNightInvitationStatus.Pending);
+        GivenTheNight(invitation, cancelled: false);
+
+        await _sut.Handle(
+            new RespondToGameNightInvitationByTokenCommand(Token, GameNightInvitationStatus.Declined, ResponderUserId: null),
+            CancellationToken.None);
+
+        _gameNightRepoMock.Verify(
+            r => r.GetByIdAsync(invitation.GameNightId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

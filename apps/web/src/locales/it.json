@@ -1472,6 +1472,11 @@
           "subText": "Questo invito non è più valido. Chiedi a {hostName} di rimandartelo.",
           "ctaContactHost": "Contatta l'organizzatore"
         },
+        "nightCancelled": {
+          "heading": "Serata annullata",
+          "subText": "{hostName} ha annullato questa serata.",
+          "subTextNoHost": "L'organizzatore ha annullato questa serata."
+        },
         "tokenInvalid": {
           "heading": "Invito non trovato",
           "subText": "Il link che hai aperto non corrisponde a nessun invito. Verifica che sia completo.",

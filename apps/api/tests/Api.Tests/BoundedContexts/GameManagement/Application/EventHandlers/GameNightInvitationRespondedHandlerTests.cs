@@ -149,6 +149,34 @@ public sealed class GameNightInvitationRespondedHandlerTests
     }
 
     [Fact]
+    public async Task Handle_AcceptedResponse_OnANightCancelledMeanwhile_SendsNoConfirmation_AndMarksNothing()
+    {
+        // The answer is refused once the night is cancelled (#4856), but the event reaches this handler seconds after
+        // it: a guest who accepted just before the cancellation must not be written «you're in» for a night that is off.
+        var invitation = Reconstitute(GameNightInvitationStatus.Accepted);
+        var gameNight = CreateGameNight();
+        gameNight.Cancel();
+        _invitationRepoMock
+            .Setup(r => r.GetByIdAsync(invitation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(invitation);
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(invitation.GameNightId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+
+        await CreateHandler(CreateHybridCache()).Handle(
+            CreateEvent(invitation.Id, invitation.GameNightId, GameNightInvitationStatus.Accepted),
+            CancellationToken.None);
+
+        _emailServiceMock.Verify(
+            e => e.SendGameNightRsvpConfirmationEmailAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTimeOffset>(), It.IsAny<string?>(),
+                It.IsAny<string>(), It.IsAny<GameNightEmailLocale>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        invitation.RsvpConfirmationSentAt.Should().BeNull("the mark says «written to», which this guest was not");
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Handle_AcceptedResponse_FromAnAddressThatOptedOut_SendsNoConfirmation_AndMarksNothing()
     {
         // The RSVP token is held by the organizer too, and /respond is anonymous: an «accept» is not proof that the

@@ -61,6 +61,70 @@ export const PdfDocumentDtoSchema = z.object({
 
 export type PdfDocumentDto = z.infer<typeof PdfDocumentDtoSchema>;
 
+// ========== POST /api/v1/ingest/pdf (Issue #4893) ==========
+
+/**
+ * `existingKb` of the answer for a PDF whose content is already stored: `ExistingKbInfoDto`
+ * (`DocumentProcessing/Application/DTOs/ExistingKbInfoDto.cs`). The fields the web relies on are required;
+ * the ones it only carries (`totalChunks`, `originalGameName`, `sharedGameId`) tolerate absence, because
+ * refusing an answer for a field nobody reads would turn a stored PDF into a failed upload.
+ */
+export const PdfExistingKbInfoSchema = z.object({
+  /** The stored document: what to link, poll or hand on instead of a new `documentId`. */
+  pdfDocumentId: z.string().min(1),
+  /** `"user"` (uploaded by the same user) | `"shared"` (on this catalog game, uploaded by anybody). */
+  source: z.string(),
+  fileName: z.string(),
+  /** `PdfProcessingState` as the backend names it (`Pending`, `Extracting`, …, `Ready`, `Failed`). */
+  processingState: z.string(),
+  /** `null` while the document is still processing. */
+  totalChunks: z.number().int().nonnegative().nullish(),
+  originalGameName: z.string().nullish(),
+  sharedGameId: z.string().nullish(),
+});
+
+export type PdfExistingKbInfo = z.infer<typeof PdfExistingKbInfoSchema>;
+
+/**
+ * The answer of `POST /api/v1/ingest/pdf` (`PdfUploadEndpoints.HandleStandardUpload`) — two bodies, both 200:
+ *
+ * - a PDF stored now: `{ documentId, fileName }`
+ * - the same content already stored for the game (it deduplicates by content hash, "reloading the same file
+ *   does not create a second one"): `{ existingKbFound: true, existingKb, message }` — and NO `documentId`.
+ *
+ * Every caller used to cast the body to `{ documentId: string }` and read `documentId`, which for the second
+ * body is `undefined` (`linkPdfToGame` then sent no `pdfDocumentId` and the backend answered 422). Parse with
+ * this schema instead: the result tells which one it was (`kind`) and always carries the document to go on
+ * with (`documentId`: the new one, or `existingKb.pdfDocumentId`).
+ */
+export const PdfIngestResponseSchema = z.union([
+  z
+    .object({
+      existingKbFound: z.literal(true),
+      existingKb: PdfExistingKbInfoSchema,
+      message: z.string(),
+    })
+    .transform(body => ({
+      kind: 'existing' as const,
+      documentId: body.existingKb.pdfDocumentId,
+      fileName: body.existingKb.fileName,
+      existingKb: body.existingKb,
+      message: body.message,
+    })),
+  z
+    .object({
+      documentId: z.string().min(1),
+      fileName: z.string(),
+    })
+    .transform(body => ({
+      kind: 'uploaded' as const,
+      documentId: body.documentId,
+      fileName: body.fileName,
+    })),
+]);
+
+export type PdfIngestOutcome = z.output<typeof PdfIngestResponseSchema>;
+
 // ========== Game PDF DTO (Issue #4915) ==========
 
 /**

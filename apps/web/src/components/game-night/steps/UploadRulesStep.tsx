@@ -17,6 +17,7 @@ import { PdfProcessingStatus } from '@/components/library/PdfProcessingStatus';
 import { CopyrightDisclaimerModal } from '@/components/pdf/CopyrightDisclaimerModal';
 import { Button } from '@/components/ui/primitives/button';
 import { usePdfUploadLimits } from '@/hooks/queries/usePdfUploadLimits';
+import { PdfIngestResponseSchema } from '@/lib/api/schemas/pdf.schemas';
 import { formatSizeLimit } from '@/lib/format/file-size';
 
 // ============================================================================
@@ -100,8 +101,11 @@ export function UploadRulesStep({
       xhr.addEventListener('load', () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
-            const response = JSON.parse(xhr.responseText);
-            setPdfDocumentId(response.documentId ?? response.id ?? null);
+            // #4893: a PDF whose content is already stored answers 200 with `existingKb` and no
+            // `documentId`: the step goes on with the existing document, whose state the processing
+            // view below reads from the game's PDFs.
+            const outcome = PdfIngestResponseSchema.parse(JSON.parse(xhr.responseText));
+            setPdfDocumentId(outcome.documentId);
             setPhase('processing');
           } catch {
             setUploadError('Risposta server non valida.');

@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/primitives/label';
 import { usePdfUploadLimits } from '@/hooks/queries/usePdfUploadLimits';
 import { useChunkedUpload } from '@/hooks/useChunkedUpload';
 import { ApiError } from '@/lib/api';
+import { PdfIngestResponseSchema } from '@/lib/api/schemas/pdf.schemas';
 import { categorizeError, type CategorizedError, extractCorrelationId } from '@/lib/errorUtils';
 import { formatSizeLimit } from '@/lib/format/file-size';
 import { logger } from '@/lib/logger';
@@ -245,8 +246,13 @@ export function PdfUploadForm({
         }
       );
 
-      const data = (await response.json()) as { documentId: string };
-      onUploadSuccess(data.documentId);
+      // #4893: a PDF whose content is already stored answers 200 with `existingKb` and no `documentId`;
+      // the document to go on with is then the existing one.
+      const outcome = PdfIngestResponseSchema.safeParse(await response.json());
+      if (!outcome.success) {
+        throw new Error('Invalid response from the upload endpoint');
+      }
+      onUploadSuccess(outcome.data.documentId);
     } catch (error) {
       const correlationId = error instanceof ApiError ? error.correlationId : undefined;
       const response = error instanceof ApiError ? error.response : undefined;

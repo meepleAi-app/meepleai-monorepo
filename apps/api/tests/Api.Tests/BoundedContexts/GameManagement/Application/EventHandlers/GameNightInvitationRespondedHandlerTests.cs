@@ -112,6 +112,43 @@ public sealed class GameNightInvitationRespondedHandlerTests
     // ── An address that asked to stop (#4846) ────────────────────────────────
 
     [Fact]
+    public async Task Handle_AcceptedResponse_OnAnInvitationWrittenBeforeTheKeyExisted_SendsNothing_AndDoesNotThrow()
+    {
+        // No key, no opt-out link to write. Throwing would send the event back through the outbox to fail the same
+        // way every time; the confirmation is skipped, and not marked.
+        var invitation = GameNightInvitation.Reconstitute(
+            id: Guid.NewGuid(),
+            token: Token,
+            gameNightId: Guid.NewGuid(),
+            email: "guest@example.com",
+            status: GameNightInvitationStatus.Accepted,
+            expiresAt: UtcNow.AddDays(7),
+            respondedAt: UtcNow,
+            respondedByUserId: null,
+            createdAt: UtcNow.AddDays(-1),
+            createdBy: Guid.NewGuid(),
+            unsubscribeKey: null);
+        _invitationRepoMock
+            .Setup(r => r.GetByIdAsync(invitation.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(invitation);
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(invitation.GameNightId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(CreateGameNight());
+
+        var act = () => CreateHandler(CreateHybridCache()).Handle(
+            CreateEvent(invitation.Id, invitation.GameNightId, GameNightInvitationStatus.Accepted),
+            CancellationToken.None);
+
+        await act.Should().NotThrowAsync();
+        _emailServiceMock.Verify(
+            e => e.SendGameNightRsvpConfirmationEmailAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<DateTimeOffset>(), It.IsAny<string?>(),
+                It.IsAny<string>(), It.IsAny<GameNightEmailLocale>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        invitation.RsvpConfirmationSentAt.Should().BeNull();
+    }
+
+    [Fact]
     public async Task Handle_AcceptedResponse_FromAnAddressThatOptedOut_SendsNoConfirmation_AndMarksNothing()
     {
         // The RSVP token is held by the organizer too, and /respond is anonymous: an «accept» is not proof that the

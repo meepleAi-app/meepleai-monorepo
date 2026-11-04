@@ -1,3 +1,4 @@
+using System.Net.Mail;
 using Api.SharedKernel.Domain.Entities;
 
 namespace Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
@@ -29,8 +30,21 @@ internal sealed class GameNightGuestEmailOptOut : Entity<Guid>
         SourceInvitationId = sourceInvitationId;
     }
 
-    /// <summary>The form an address is stored and looked up in: trimmed, lower case.</summary>
-    public static string Normalize(string email) => email.Trim().ToLowerInvariant();
+    /// <summary>
+    /// The form an address is stored and looked up in: the bare address, trimmed, lower case. «Marco &lt;marco@x.com&gt;»
+    /// is <c>marco@x.com</c>, because that is where the transport writes: compared as a string the two spellings would be
+    /// two addresses, and an opt-out recorded for one would not stop the other.
+    /// </summary>
+    public static string Normalize(string email)
+    {
+        var trimmed = email.Trim();
+        if (trimmed.Contains('<', StringComparison.Ordinal) && MailAddress.TryCreate(trimmed, out var parsed))
+        {
+            trimmed = parsed.Address;
+        }
+
+        return trimmed.ToLowerInvariant();
+    }
 
     public static GameNightGuestEmailOptOut Create(string email, Guid sourceInvitationId, DateTimeOffset utcNow)
     {

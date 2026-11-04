@@ -50,7 +50,8 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
         string email,
         GameNightInvitationStatus status,
         DateTimeOffset? expiresAt = null,
-        DateTimeOffset? noticeSentAt = null) =>
+        DateTimeOffset? noticeSentAt = null,
+        bool withoutKey = false) =>
         GameNightInvitation.Reconstitute(
             id: Guid.NewGuid(),
             token: Guid.NewGuid().ToString("N")[..22],
@@ -63,7 +64,7 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
             createdAt: Now.AddDays(-2),
             createdBy: Guid.NewGuid(),
             cancellationNoticeSentAt: noticeSentAt,
-            unsubscribeKey: Guid.NewGuid().ToString("N")[..22]);
+            unsubscribeKey: withoutKey ? null : Guid.NewGuid().ToString("N")[..22]);
 
     private static GameNightEvent Night(Guid organizerId, string title = "Friday Catan", string? zone = null) =>
         GameNightEvent.Create(
@@ -122,6 +123,48 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
         VerifySentTo("withdrawn@example.com", Times.Never());
         VerifySentTo("expired@example.com", Times.Never());
         VerifySentTo("lapsed@example.com", Times.Never());
+    }
+
+    [Fact]
+    public async Task Handle_AnAddressWhoseInvitationsPredateTheKey_IsNotWrittenTo_IsCounted_AndTheOthersAre()
+    {
+        // No key, no opt-out link to put in the notice: that address is skipped as a failure (counted, no mark) and
+        // the rest of the list is still written to.
+        var night = Night(Guid.NewGuid());
+        var legacy = Invitation("legacy@example.com", GameNightInvitationStatus.Accepted, withoutKey: true);
+        Given(night, legacy, Invitation("fine@example.com", GameNightInvitationStatus.Accepted));
+        using var failures = new DispatchFailureCapture();
+
+        await CreateHandler().Handle(Cancelled(night), CancellationToken.None);
+
+        VerifySentTo("legacy@example.com", Times.Never());
+        VerifySentTo("fine@example.com", Times.Once());
+        failures.Count.Should().Be(1);
+        legacy.CancellationNoticeSentAt.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_TwoInvitationsOfOneAddress_TheLinkUsesTheKeyOfTheOneThatHasIt()
+    {
+        // The address is written to once, and any of its invitations can supply the key; one written before the
+        // column existed must not make the others' key unreachable.
+        var night = Night(Guid.NewGuid());
+        var legacy = Invitation("both@example.com", GameNightInvitationStatus.Accepted, withoutKey: true);
+        var current = Invitation("both@example.com", GameNightInvitationStatus.Pending);
+        Given(night, legacy, current);
+
+        await CreateHandler().Handle(Cancelled(night), CancellationToken.None);
+
+        _email.Verify(
+            e => e.SendGameNightCancelledEmailAsync(
+                "both@example.com",
+                It.IsAny<string>(),
+                It.IsAny<string>(),
+                It.IsAny<DateTimeOffset>(),
+                It.Is<string>(url => url.EndsWith("/" + current.UnsubscribeKey, StringComparison.Ordinal)),
+                It.IsAny<GameNightEmailLocale>(),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]

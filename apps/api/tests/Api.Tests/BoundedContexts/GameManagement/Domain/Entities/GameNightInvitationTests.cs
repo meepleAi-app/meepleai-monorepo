@@ -59,6 +59,20 @@ public sealed class GameNightInvitationTests
     }
 
     [Fact]
+    public void Create_GivenANameAndAnAddress_KeepsTheBareAddress_TheOneTheTransportWritesTo()
+    {
+        // The opt-out list is compared against this field, so it has to be the address and not how it was typed.
+        var invitation = GameNightInvitation.Create(
+            gameNightId: Guid.NewGuid(),
+            email: "Guest Person <Guest@Example.com>",
+            expiresAt: OneWeekFromNow,
+            createdBy: Guid.NewGuid(),
+            utcNow: Now);
+
+        invitation.Email.Should().Be("guest@example.com");
+    }
+
+    [Fact]
     public void Create_RaisesGameNightInvitationCreatedEvent()
     {
         var invitation = NewPending();

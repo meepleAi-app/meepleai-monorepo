@@ -140,7 +140,7 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
             throw new ArgumentException("ExpiresAt must be in the future", nameof(expiresAt));
 
         var token = InvitationToken.Generate().Value;
-        var normalizedEmail = email.Trim().ToLowerInvariant();
+        var normalizedEmail = GameNightGuestEmailOptOut.Normalize(email);
         var id = Guid.NewGuid();
 
         var invitation = new GameNightInvitation(

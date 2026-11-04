@@ -25,7 +25,7 @@ public sealed class GameNightEmailServiceTests
     // 21:00 in Rome on 2026-10-30. Daylight saving ended on 2026-10-25, so the offset that day is +1.
     private static readonly DateTimeOffset RomeNineOclock = new(2026, 10, 30, 20, 0, 0, TimeSpan.Zero);
 
-    private const string UnsubscribeUrl = "https://meepleai.test/invites/tok123/unsubscribe";
+    private const string UnsubscribeUrl = "https://meepleai.test/invites/unsubscribe/key123";
 
     private readonly Mock<IEmailService> _emailMock = new();
     private readonly Mock<ILogger<GameNightEmailService>> _loggerMock = new();
@@ -229,6 +229,7 @@ public sealed class GameNightEmailServiceTests
         _body.Should().Contain(reason);
         _body.Should().NotContain("MeepleAI account").And.NotContain("account MeepleAI");
         _body.Should().NotContain("notification preferences").And.NotContain("preferenze di notifica");
+        _body.Should().NotContain("href=\"https://meepleai.test/unsub?t", "the member footer link points at preferences a guest does not have");
     }
 
     [Fact]
@@ -351,10 +352,10 @@ public sealed class GameNightEmailServiceTests
         // The token is ours, but the base URL is configuration: a quote in it must not close the attribute.
         await _sut.SendGameNightCancelledEmailAsync(
             "guest@example.com", "Marco", "Friday Catan", RomeNineOclock,
-            "https://meepleai.test/invites/t\"onclick=\"x/unsubscribe", new GameNightEmailLocale("en", "Europe/Rome"));
+            "https://meepleai.test/invites/unsubscribe/k\"onclick=\"x", new GameNightEmailLocale("en", "Europe/Rome"));
 
         _body.Should().NotContain("t\"onclick=");
-        _body.Should().Contain("t&quot;onclick=&quot;x/unsubscribe");
+        _body.Should().Contain("k&quot;onclick=&quot;x");
     }
 
     [Fact]

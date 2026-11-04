@@ -140,6 +140,17 @@ internal sealed class GameNightInvitationRespondedHandler
             return;
         }
 
+        // A row written by an instance that predates the column has no key, so no opt-out link to put in the mail.
+        // Failing would send the event back through the outbox to fail the same way; the confirmation is skipped,
+        // loudly, and not marked.
+        if (invitation.UnsubscribeKey is not { } unsubscribeKey)
+        {
+            _logger.LogWarning(
+                "Skipping RSVP confirmation email for invitation {InvitationId}: it has no unsubscribe key",
+                invitation.Id);
+            return;
+        }
+
         var gameNight = await _gameNightRepository
             .GetByIdAsync(invitation.GameNightId, cancellationToken)
             .ConfigureAwait(false);
@@ -165,7 +176,7 @@ internal sealed class GameNightInvitationRespondedHandler
             title: gameNight.Title,
             scheduledAt: gameNight.ScheduledAt,
             location: gameNight.Location,
-            unsubscribeUrl: GameNightGuestLinks.Unsubscribe(_publicBaseUrl.GetBaseUrl(), invitation.UnsubscribeKey!),
+            unsubscribeUrl: GameNightGuestLinks.Unsubscribe(_publicBaseUrl.GetBaseUrl(), unsubscribeKey),
             locale: new GameNightEmailLocale(organizer?.Language, gameNight.TimeZoneId),
             ct: cancellationToken).ConfigureAwait(false);
 

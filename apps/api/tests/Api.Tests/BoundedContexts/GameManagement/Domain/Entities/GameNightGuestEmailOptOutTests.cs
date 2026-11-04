@@ -28,6 +28,25 @@ public sealed class GameNightGuestEmailOptOutTests
     }
 
     [Theory]
+    [InlineData("Marco Rossi <Marco@Example.com>", "marco@example.com")]
+    [InlineData("  <marco@example.com> ", "marco@example.com")]
+    [InlineData("\"Rossi, Marco\" <marco@example.com>", "marco@example.com")]
+    public void AnAddressWrittenWithAName_IsTheBareAddress_BecauseThatIsWhereTheTransportWrites(string given, string bare)
+    {
+        // «Marco <marco@x.com>» is mailed to marco@x.com. Compared as strings the two would be two addresses, and
+        // an opt-out recorded for one would not stop the other (whoever invites with a name gets around the list,
+        // and a guest invited with a name who opts out is not protected from the bare spelling).
+        GameNightGuestEmailOptOut.Normalize(given).Should().Be(bare);
+        GameNightGuestEmailOptOut.Create(given, Guid.NewGuid(), Now).Email.Should().Be(bare);
+    }
+
+    [Fact]
+    public void WhatCannotBeParsedAsAnAddressWithAName_IsKeptAsItWas_TrimmedAndInLowerCase()
+    {
+        GameNightGuestEmailOptOut.Normalize("  Broken <Marco@Example.com ").Should().Be("broken <marco@example.com");
+    }
+
+    [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]

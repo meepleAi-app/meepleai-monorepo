@@ -30,7 +30,7 @@ afterEach(() => {
 });
 
 describe('unsubscribeFromInvitationEmails', () => {
-  it('POSTs to the unsubscribe route of the key, with no body and no credentials beyond the key', async () => {
+  it('POSTs to the unsubscribe route of the key, with no body', async () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
 
     const result = await unsubscribeFromInvitationEmails('AbC_dEf-123');

@@ -67,6 +67,7 @@ public sealed class GameNightGuestEmailOptOutRepositoryTests : IDisposable
     [Theory]
     [InlineData("GUEST@example.com")]
     [InlineData("  guest@Example.COM ")]
+    [InlineData("Guest Person <GUEST@example.com>")]
     public async Task TheLookup_GivesTheSameAnswerHoweverTheAddressIsSpelled(string spelled)
     {
         await StoreAsync("guest@example.com");

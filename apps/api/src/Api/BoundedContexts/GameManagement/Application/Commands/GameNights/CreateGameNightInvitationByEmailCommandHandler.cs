@@ -78,7 +78,8 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
                 "Only the organizer can issue invitations for this game night");
         }
 
-        var normalizedEmail = command.Email.Trim().ToLowerInvariant();
+        // The same form the opt-out list keeps (#4846): «Marco <marco@x.com>» is the address marco@x.com.
+        var normalizedEmail = GameNightGuestEmailOptOut.Normalize(command.Email);
 
         var alreadyInvited = await _invitationRepository
             .ExistsPendingByEmailAsync(command.GameNightId, normalizedEmail, cancellationToken)
@@ -179,7 +180,12 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
 
         var rsvpAcceptUrl = $"{baseUrl}/invites/{invitation.Token}?action=accept";
         var rsvpDeclineUrl = $"{baseUrl}/invites/{invitation.Token}?action=decline";
-        var unsubscribeUrl = GameNightGuestLinks.Unsubscribe(baseUrl, invitation.UnsubscribeKey!);
+        // A row written by an instance that predates the column has none; it fails here, as a state defect,
+        // rather than as an «invalid argument» from the link builder.
+        var unsubscribeKey = invitation.UnsubscribeKey
+            ?? throw new InvalidOperationException(
+                $"Invitation {invitation.Id} has no unsubscribe key: an email to its guest cannot carry the opt-out link.");
+        var unsubscribeUrl = GameNightGuestLinks.Unsubscribe(baseUrl, unsubscribeKey);
 
         // #4754: the email speaks the organizer's language (the guest is an address, not an account: their own
         // language is not known) and writes the time on the night's zone.

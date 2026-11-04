@@ -48,7 +48,7 @@ describe('UnsubscribePageClient', () => {
     expect(unsubscribeMock).not.toHaveBeenCalled();
   });
 
-  it('unsubscribes on the tap, with the token of the link, and says it is done', async () => {
+  it('unsubscribes on the tap, with the key of the link, and says it is done', async () => {
     unsubscribeMock.mockResolvedValue({ kind: 'unsubscribed' });
     const user = userEvent.setup();
     render(<UnsubscribePageClient unsubscribeKey="key-1" />);

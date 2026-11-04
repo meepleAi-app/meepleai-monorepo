@@ -528,6 +528,73 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_AnAddressGivenWithAName_IsRecordedAsTheBareAddress_SoTheOptOutListStillApplies()
+    {
+        // «Guest Person <guest@example.com>» is mailed to guest@example.com. Kept as typed, it would not match the
+        // list entry for the bare address and the invitation would go out to someone who asked to stop.
+        var organizerId = Guid.NewGuid();
+        var gameNight = CreateGameNight(organizerId);
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        GameNightInvitation? captured = null;
+        _invitationRepoMock
+            .Setup(r => r.AddAsync(It.IsAny<GameNightInvitation>(), It.IsAny<CancellationToken>()))
+            .Callback<GameNightInvitation, CancellationToken>((inv, _) => captured = inv);
+        _optOutRepoMock
+            .Setup(r => r.ExistsAsync("guest@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(gameNight.Id, "Guest Person <Guest@Example.com>", organizerId),
+            CancellationToken.None);
+
+        captured!.Email.Should().Be("guest@example.com");
+        _invitationRepoMock.Verify(
+            r => r.ExistsPendingByEmailAsync(gameNight.Id, "guest@example.com", It.IsAny<CancellationToken>()),
+            Times.Once);
+        VerifyNoInvitationEmail(_emailServiceMock);
+    }
+
+    [Fact]
+    public async Task Handle_ResendingAnInvitationWrittenBeforeTheKeyExisted_FailsAsAStateDefect_AndSendsNothing()
+    {
+        // A row from an instance that predates the column has no key to put in the opt-out link. It is not the
+        // caller's mistake (that would be a 400), and a mail without the link is not sent.
+        var organizerId = Guid.NewGuid();
+        var gameNight = CreateGameNight(organizerId);
+        var legacy = GameNightInvitation.Reconstitute(
+            id: Guid.NewGuid(),
+            token: Guid.NewGuid().ToString("N")[..22],
+            gameNightId: gameNight.Id,
+            email: "guest@example.com",
+            status: GameNightInvitationStatus.Pending,
+            expiresAt: UtcNow.AddDays(14),
+            respondedAt: null,
+            respondedByUserId: null,
+            createdAt: UtcNow.AddDays(-1),
+            createdBy: organizerId,
+            unsubscribeKey: null);
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _invitationRepoMock
+            .Setup(r => r.ExistsPendingByEmailAsync(gameNight.Id, "guest@example.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _invitationRepoMock
+            .Setup(r => r.GetByGameNightIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<GameNightInvitation> { legacy });
+
+        var act = () => _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(
+                gameNight.Id, "guest@example.com", organizerId, ResendIfPending: true),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*no unsubscribe key*");
+        VerifyNoInvitationEmail(_emailServiceMock);
+    }
+
+    [Fact]
     public async Task Handle_ResendingToAnAddressThatOptedOutSince_SendsNothingAndStillSucceeds()
     {
         var (gameNight, organizerId) = GivenAGameNightWithAPendingInvitationFor(

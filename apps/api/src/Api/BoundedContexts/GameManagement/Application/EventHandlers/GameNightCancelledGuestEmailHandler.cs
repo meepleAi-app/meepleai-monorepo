@@ -167,12 +167,17 @@ internal sealed class GameNightCancelledGuestEmailHandler : INotificationHandler
                 return;
             }
 
+            // Any of the address's invitations can carry it; one written before the column existed has none.
+            var unsubscribeKey = invitationsOfTheAddress.Select(i => i.UnsubscribeKey).FirstOrDefault(k => k is not null)
+                ?? throw new InvalidOperationException(
+                    "None of the invitations of the address has an unsubscribe key: the notice cannot carry the opt-out link.");
+
             await _emailService.SendGameNightCancelledEmailAsync(
                 toEmail: address,
                 organizerName: organizerName,
                 title: night.Title,
                 scheduledAt: night.ScheduledAt,
-                unsubscribeUrl: GameNightGuestLinks.Unsubscribe(baseUrl, invitationsOfTheAddress.First().UnsubscribeKey!),
+                unsubscribeUrl: GameNightGuestLinks.Unsubscribe(baseUrl, unsubscribeKey),
                 locale: locale,
                 ct: cancellationToken).ConfigureAwait(false);
 

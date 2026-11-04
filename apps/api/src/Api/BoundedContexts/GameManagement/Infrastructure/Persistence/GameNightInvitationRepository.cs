@@ -127,7 +127,7 @@ internal class GameNightInvitationRepository : RepositoryBase, IGameNightInvitat
         ArgumentException.ThrowIfNullOrWhiteSpace(email);
 
         var pendingLiteral = nameof(GameNightInvitationStatus.Pending);
-        var normalizedEmail = email.Trim().ToLowerInvariant();
+        var normalizedEmail = GameNightGuestEmailOptOut.Normalize(email);
 
         return await DbContext.GameNightInvitations
             .AsNoTracking()

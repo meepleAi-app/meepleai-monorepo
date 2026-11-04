@@ -1,4 +1,3 @@
-using System.Globalization;
 using Api.Infrastructure.Security;
 using Api.Observability;
 using Api.Services.Email;
@@ -14,11 +13,6 @@ internal partial class EmailService : IEmailService
     private readonly IEmailSender _sender;
     private readonly string _fromAddress;
     private readonly string _fromName;
-    private readonly string _smtpHost;
-    private readonly int _smtpPort;
-    private readonly string? _smtpUsername;
-    private readonly string? _smtpPassword;
-    private readonly bool _enableSsl;
     private readonly string? _resetUrlOverride;
     private readonly IPublicBaseUrlProvider _publicBaseUrl;
     private readonly TimeProvider _timeProvider;
@@ -64,11 +58,6 @@ internal partial class EmailService : IEmailService
             ?? configuration["SMTP_FROM_EMAIL"]
             ?? "noreply@meepleai.app";
         _fromName = configuration["Email:FromName"] ?? "MeepleAI";
-        _smtpHost = configuration["Email:SmtpHost"] ?? configuration["SMTP_HOST"] ?? "localhost";
-        _smtpPort = int.Parse(configuration["Email:SmtpPort"] ?? configuration["SMTP_PORT"] ?? "587", CultureInfo.InvariantCulture);
-        _smtpUsername = configuration["Email:SmtpUsername"] ?? configuration["SMTP_USER"];
-        _smtpPassword = configuration["Email:SmtpPassword"] ?? configuration["SMTP_PASSWORD"] ?? configuration["GMAIL_APP_PASSWORD"];
-        _enableSsl = bool.Parse(configuration["Email:EnableSsl"] ?? "true");
         // An explicit full address for the reset page still wins; without one it hangs off the public
         // front-end URL (#4774: it used to fall back to localhost, and no deployment sets this key).
         _resetUrlOverride = string.IsNullOrWhiteSpace(configuration["Email:ResetUrlBase"])
@@ -101,7 +90,8 @@ internal partial class EmailService : IEmailService
     /// exception type: a send the caller cancelled is not a failure, while a transport that timed out throws a
     /// <see cref="TaskCanceledException"/> too and is one.
     /// <c>kind</c> is the short fixed label of the mail, the tag of the failure counter; <c>toName</c> is the
-    /// display name for the <c>To:</c> line, when the mail has one.
+    /// display name for the <c>To:</c> line, when the mail has one; <c>additionalToEmails</c> and <c>attachments</c>
+    /// are the other recipients of the same message and the files it carries, which only the reports have.
     /// </summary>
     private async Task SendViaTransportAsync(
         string toEmail,
@@ -109,7 +99,9 @@ internal partial class EmailService : IEmailService
         string htmlBody,
         string kind,
         CancellationToken cancellationToken,
-        string? toName = null)
+        string? toName = null,
+        IReadOnlyList<string>? additionalToEmails = null,
+        IReadOnlyList<EmailRequestAttachment>? attachments = null)
     {
         try
         {
@@ -119,8 +111,10 @@ internal partial class EmailService : IEmailService
                 FromName = _fromName,
                 ToEmail = toEmail,
                 ToName = toName,
+                AdditionalToEmails = additionalToEmails,
                 Subject = subject,
-                HtmlBody = htmlBody
+                HtmlBody = htmlBody,
+                Attachments = attachments
             }, cancellationToken).ConfigureAwait(false);
         }
         catch (Exception) when (!cancellationToken.IsCancellationRequested)

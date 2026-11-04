@@ -1,7 +1,5 @@
 using System.Globalization;
-using System.Net;
-using System.Net.Mail;
-using Api.Infrastructure.Security;
+using Api.Services.Email;
 
 namespace Api.Services;
 
@@ -38,32 +36,15 @@ internal partial class EmailService
             var subject = $"[MeepleAI] Report Ready: {reportName}";
             var body = BuildReportEmailBody(reportName, reportDescription, fileName, fileSizeBytes);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-
-            foreach (var recipient in recipients)
-            {
-                message.To.Add(new MailAddress(recipient));
-            }
-
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            var attachment = new System.Net.Mail.Attachment(
-                new System.IO.MemoryStream(reportContent),
-                fileName);
-            message.Attachments.Add(attachment);
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            // One message to every recipient, as it has always been: they all see the same To: line.
+            await SendViaTransportAsync(
+                recipients[0],
+                subject,
+                body,
+                "report",
+                ct,
+                additionalToEmails: [.. recipients.Skip(1)],
+                attachments: [new EmailRequestAttachment(fileName, reportContent)]).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Report email sent successfully: {ReportName} to {RecipientCount} recipients",
@@ -71,7 +52,7 @@ internal partial class EmailService
         }
 #pragma warning disable CA1031 // Do not catch general exception types
 #pragma warning disable S125 // Sections of code should not be commented out
-        // ADAPTER PATTERN: Wraps external SMTP service exceptions (authentication, network, timeout) into domain exception
+        // ADAPTER PATTERN: Wraps external transport exceptions (authentication, network, timeout) into domain exception
 #pragma warning restore S125
         catch (Exception ex)
         {
@@ -101,27 +82,13 @@ internal partial class EmailService
             var subject = $"[MeepleAI] Report Generation Failed: {reportName}";
             var body = BuildReportFailureEmailBody(reportName, errorMessage);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-
-            foreach (var recipient in recipients)
-            {
-                message.To.Add(new MailAddress(recipient));
-            }
-
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(
+                recipients[0],
+                subject,
+                body,
+                "report_failure",
+                ct,
+                additionalToEmails: [.. recipients.Skip(1)]).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Report failure email sent successfully: {ReportName} to {RecipientCount} recipients",

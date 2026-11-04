@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Net;
-using System.Net.Mail;
 using Api.Infrastructure.Security;
 using Api.Services.Email;
 
@@ -350,8 +349,7 @@ internal partial class EmailService
     // their words from AuthEmailTexts, in the recipient's language. The markup is the same for both languages;
     // only the text differs, and only the text is in AuthEmailTexts.
 
-    // #4754: the footer year was the literal 2025. `internal` so a test can pin the year without a mail transport:
-    // this method sends through SmtpClient directly, not through IEmailSender.
+    // #4754: the footer year was the literal 2025. `internal` so a test can pin the year without a mail transport.
     internal static string BuildVerificationEmailBody(AuthEmailTexts t, string userName, string verifyUrl, int year)
     {
         return $@"

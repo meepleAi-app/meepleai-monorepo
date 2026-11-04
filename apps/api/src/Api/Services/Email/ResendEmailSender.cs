@@ -50,6 +50,19 @@ internal sealed class ResendEmailSender : IEmailSender
             HtmlBody = request.HtmlBody
         };
         message.To.Add(request.ToEmail);
+        foreach (var other in request.AdditionalToEmails ?? [])
+        {
+            message.To.Add(other);
+        }
+
+        // The SDK leaves Attachments null until there is one, and a mail without a file must go out as it did.
+        if (request.Attachments is { Count: > 0 })
+        {
+            message.Attachments =
+            [
+                .. request.Attachments.Select(file => new EmailAttachment { Filename = file.FileName, Content = file.Content })
+            ];
+        }
 
         if (!string.IsNullOrWhiteSpace(request.TextBody))
         {

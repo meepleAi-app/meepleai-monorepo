@@ -272,14 +272,13 @@ public sealed class EmailServiceAccountMailTransportTests
     public async Task ASenderFailure_IsCountedUnderTheProviderAndTheKindOfMail(string kind)
     {
         var mail = Mail(kind);
-        var other = Mails.First(m => m.Kind != kind);
         using var failures = new SendFailureCapture();
         var service = ServiceWith(new RecordingSender { Failure = new InvalidOperationException("transport down") });
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => mail.Send(service, "it", Ct));
 
         failures.CountFor(kind).Should().Be(1);
-        failures.CountFor(other.Kind).Should().Be(0, "only the mail that failed is counted");
+        failures.Total.Should().Be(1, "only the mail that failed is counted, under its own kind and no other");
     }
 
     [Theory]
@@ -414,6 +413,18 @@ public sealed class EmailServiceAccountMailTransportTests
             lock (_gate)
             {
                 return _byKind.GetValueOrDefault(kind);
+            }
+        }
+
+        /// <summary>Every failure counted under this test's provider, whatever the kind of mail.</summary>
+        public int Total
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return _byKind.Values.Sum();
+                }
             }
         }
 

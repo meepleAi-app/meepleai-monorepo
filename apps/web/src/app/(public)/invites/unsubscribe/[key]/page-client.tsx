@@ -1,15 +1,19 @@
 /**
- * /invites/[token]/unsubscribe — client body (#4846).
+ * /invites/unsubscribe/[key] — client body (#4846).
  *
  * A small state machine: `idle` (asks) → `submitting` → `done` | `invalid` | `rate-limited` | `error`. The last
- * two keep the button, so the person can try again; `invalid` (a token nobody knows) and `done` do not.
+ * two keep the button, so the person can try again; `invalid` (a key nobody holds) and `done` do not.
  *
  * The call is made on the tap and never on load: see the shell in `page.tsx`.
+ *
+ * When the button goes away because the request ended, focus moves to the heading of what replaced it: a keyboard or
+ * screen reader user whose focused element is removed would otherwise be dropped on the page body, with no idea
+ * that anything happened.
  */
 
 'use client';
 
-import { useCallback, useState, type JSX } from 'react';
+import { useCallback, useEffect, useRef, useState, type JSX } from 'react';
 
 import { ErrorBanner } from '@/components/ui/invites';
 import { Button } from '@/components/ui/primitives/button';
@@ -28,19 +32,20 @@ type Phase =
   | { readonly kind: 'error' };
 
 export interface UnsubscribePageClientProps {
-  readonly token: string;
+  readonly unsubscribeKey: string;
 }
 
 const KEY = 'pages.invites.unsubscribe';
 
-export function UnsubscribePageClient({ token }: UnsubscribePageClientProps): JSX.Element {
+export function UnsubscribePageClient({ unsubscribeKey }: UnsubscribePageClientProps): JSX.Element {
   const { t } = useTranslation();
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' });
+  const outcomeRef = useRef<HTMLHeadingElement>(null);
 
   const submit = useCallback(async (): Promise<void> => {
     setPhase({ kind: 'submitting' });
     try {
-      const result = await unsubscribeFromInvitationEmails(token);
+      const result = await unsubscribeFromInvitationEmails(unsubscribeKey);
       setPhase(
         result.kind === 'unsubscribed'
           ? { kind: 'done' }
@@ -49,7 +54,13 @@ export function UnsubscribePageClient({ token }: UnsubscribePageClientProps): JS
     } catch (error) {
       setPhase(error instanceof InvitationNotFoundError ? { kind: 'invalid' } : { kind: 'error' });
     }
-  }, [token]);
+  }, [unsubscribeKey]);
+
+  // The two outcomes that replace the button.
+  const ended = phase.kind === 'done' || phase.kind === 'invalid';
+  useEffect(() => {
+    if (ended) outcomeRef.current?.focus();
+  }, [ended]);
 
   const submitting = phase.kind === 'submitting';
 
@@ -57,12 +68,16 @@ export function UnsubscribePageClient({ token }: UnsubscribePageClientProps): JS
     <main className="mx-auto flex w-full max-w-md flex-col gap-6 px-4 py-12 sm:px-0">
       {phase.kind === 'done' ? (
         <section aria-live="polite" className="flex flex-col gap-3" data-testid="unsubscribe-done">
-          <h1 className="text-2xl font-semibold">{t(`${KEY}.done.heading`)}</h1>
+          <h1 ref={outcomeRef} tabIndex={-1} className="text-2xl font-semibold outline-none">
+            {t(`${KEY}.done.heading`)}
+          </h1>
           <p className="text-muted-foreground">{t(`${KEY}.done.body`)}</p>
         </section>
       ) : phase.kind === 'invalid' ? (
         <ErrorBanner tone="error">
-          <strong>{t(`${KEY}.invalid.heading`)}</strong>
+          <strong ref={outcomeRef} tabIndex={-1} className="outline-none">
+            {t(`${KEY}.invalid.heading`)}
+          </strong>
           <span className="block">{t(`${KEY}.invalid.body`)}</span>
         </ErrorBanner>
       ) : (

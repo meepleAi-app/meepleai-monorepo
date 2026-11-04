@@ -172,7 +172,7 @@ internal sealed class GameNightCancelledGuestEmailHandler : INotificationHandler
                 organizerName: organizerName,
                 title: night.Title,
                 scheduledAt: night.ScheduledAt,
-                unsubscribeUrl: GameNightGuestLinks.Unsubscribe(baseUrl, invitationsOfTheAddress.First().Token),
+                unsubscribeUrl: GameNightGuestLinks.Unsubscribe(baseUrl, invitationsOfTheAddress.First().UnsubscribeKey!),
                 locale: locale,
                 ct: cancellationToken).ConfigureAwait(false);
 

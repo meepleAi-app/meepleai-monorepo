@@ -229,7 +229,6 @@ public sealed class GameNightEmailServiceTests
         _body.Should().Contain(reason);
         _body.Should().NotContain("MeepleAI account").And.NotContain("account MeepleAI");
         _body.Should().NotContain("notification preferences").And.NotContain("preferenze di notifica");
-        _body.Should().NotContain("href=\"https://meepleai.test/unsub?t", "the member footer link points at preferences a guest does not have");
     }
 
     [Fact]

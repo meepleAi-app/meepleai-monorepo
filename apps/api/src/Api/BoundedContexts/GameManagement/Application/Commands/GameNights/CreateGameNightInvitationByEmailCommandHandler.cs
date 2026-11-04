@@ -179,7 +179,7 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
 
         var rsvpAcceptUrl = $"{baseUrl}/invites/{invitation.Token}?action=accept";
         var rsvpDeclineUrl = $"{baseUrl}/invites/{invitation.Token}?action=decline";
-        var unsubscribeUrl = GameNightGuestLinks.Unsubscribe(baseUrl, invitation.Token);
+        var unsubscribeUrl = GameNightGuestLinks.Unsubscribe(baseUrl, invitation.UnsubscribeKey!);
 
         // #4754: the email speaks the organizer's language (the guest is an address, not an account: their own
         // language is not known) and writes the time on the night's zone.

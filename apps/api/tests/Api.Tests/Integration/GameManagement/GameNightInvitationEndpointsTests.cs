@@ -155,6 +155,7 @@ public sealed class GameNightInvitationEndpointsTests
         {
             Id = Guid.NewGuid(),
             Token = GenerateToken(),
+            UnsubscribeKey = GenerateToken(),
             GameNightId = gameNightId,
             Email = email.Trim().ToLowerInvariant(),
             Status = status,
@@ -749,7 +750,7 @@ public sealed class GameNightInvitationEndpointsTests
     }
 
     // ────────────────────────────────────────────────────────────────────
-    // POST /game-nights/invitations/{token}/unsubscribe — #4846
+    // POST /game-nights/guest-unsubscribe/{key} — #4846
     // ────────────────────────────────────────────────────────────────────
 
     private async Task<string[]> OptedOutAddressesAsync()
@@ -780,7 +781,7 @@ public sealed class GameNightInvitationEndpointsTests
             expiresAt: status == "Expired" ? DateTimeOffset.UtcNow.AddDays(-1) : null);
 
         var response = await _client.PostAsync(
-            $"/api/v1/game-nights/invitations/{invitation.Token}/unsubscribe", content: null);
+            $"/api/v1/game-nights/guest-unsubscribe/{invitation.UnsubscribeKey}", content: null);
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await OptedOutAddressesAsync()).Should().Equal("stop.me@example.com");
@@ -795,8 +796,8 @@ public sealed class GameNightInvitationEndpointsTests
         var first = await SeedInvitationAsync(firstNight, organizerId, email: "guest@example.com");
         var second = await SeedInvitationAsync(secondNight, organizerId, email: "guest@example.com");
 
-        var one = await _client.PostAsync($"/api/v1/game-nights/invitations/{first.Token}/unsubscribe", content: null);
-        var two = await _client.PostAsync($"/api/v1/game-nights/invitations/{second.Token}/unsubscribe", content: null);
+        var one = await _client.PostAsync($"/api/v1/game-nights/guest-unsubscribe/{first.UnsubscribeKey}", content: null);
+        var two = await _client.PostAsync($"/api/v1/game-nights/guest-unsubscribe/{second.UnsubscribeKey}", content: null);
 
         one.StatusCode.Should().Be(HttpStatusCode.NoContent);
         two.StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -807,7 +808,7 @@ public sealed class GameNightInvitationEndpointsTests
     public async Task UnsubscribeByToken_UnknownToken_Returns404AndStoresNothing()
     {
         var response = await _client.PostAsync(
-            "/api/v1/game-nights/invitations/UnknownTokenAbcdef1234/unsubscribe", content: null);
+            "/api/v1/game-nights/guest-unsubscribe/UnknownKeyAbcdef1234567", content: null);
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await OptedOutAddressesAsync()).Should().BeEmpty();
@@ -824,12 +825,45 @@ public sealed class GameNightInvitationEndpointsTests
             gameNightId, organizerId, status: "Accepted", respondedAt: DateTimeOffset.UtcNow);
 
         var response = await _client.PostAsync(
-            $"/api/v1/game-nights/invitations/{invitation.Token}/unsubscribe", content: null);
+            $"/api/v1/game-nights/guest-unsubscribe/{invitation.UnsubscribeKey}", content: null);
 
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
         var persisted = await dbContext.GameNightInvitations.AsNoTracking().FirstAsync(i => i.Id == invitation.Id);
         persisted.Status.Should().Be("Accepted");
+    }
+
+    [Fact]
+    public async Task UnsubscribeByKey_TheRsvpToken_IsNotTheKey_TheOrganizerHoldsIt()
+    {
+        // The token comes back to the organizer in the 201 of the creation. If it opted the address out, any member
+        // could silence any address for every organizer by inviting it and calling this endpoint.
+        var organizerId = Guid.NewGuid();
+        var gameNightId = await SeedGameNightAsync(organizerId);
+        var invitation = await SeedInvitationAsync(gameNightId, organizerId);
+
+        var response = await _client.PostAsync(
+            $"/api/v1/game-nights/guest-unsubscribe/{invitation.Token}", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await OptedOutAddressesAsync()).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task UnsubscribeByKey_TwoTapsAtTheSameTime_BothSucceed_AndTheListHasOneEntry()
+    {
+        // Both can read «not yet on the list»; the unique index lets one insert win and the other must still end
+        // as the success the guest asked for. (Whether the two really collide depends on the timing; the unit test
+        // of the handler fakes the 23505. This is the same path against the real index.)
+        var organizerId = Guid.NewGuid();
+        var gameNightId = await SeedGameNightAsync(organizerId);
+        var invitation = await SeedInvitationAsync(gameNightId, organizerId);
+        var url = $"/api/v1/game-nights/guest-unsubscribe/{invitation.UnsubscribeKey}";
+
+        var responses = await Task.WhenAll(Enumerable.Range(0, 6).Select(_ => _client.PostAsync(url, content: null)));
+
+        responses.Select(r => r.StatusCode).Should().AllBeEquivalentTo(HttpStatusCode.NoContent);
+        (await OptedOutAddressesAsync()).Should().Equal("guest@example.com");
     }
 }

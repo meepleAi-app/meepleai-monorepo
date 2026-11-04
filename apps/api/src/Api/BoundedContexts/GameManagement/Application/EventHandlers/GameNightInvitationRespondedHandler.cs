@@ -41,6 +41,7 @@ internal sealed class GameNightInvitationRespondedHandler
     private readonly IGameNightEventRepository _gameNightRepository;
     private readonly IUserRepository _userRepository;
     private readonly IGameNightEmailService _emailService;
+    private readonly IGameNightGuestEmailOptOutRepository _optOutRepository;
     private readonly IPublicBaseUrlProvider _publicBaseUrl;
     private readonly HybridCache _cache;
     private readonly IUnitOfWork _unitOfWork;
@@ -51,6 +52,7 @@ internal sealed class GameNightInvitationRespondedHandler
         IGameNightEventRepository gameNightRepository,
         IUserRepository userRepository,
         IGameNightEmailService emailService,
+        IGameNightGuestEmailOptOutRepository optOutRepository,
         IPublicBaseUrlProvider publicBaseUrl,
         HybridCache cache,
         IUnitOfWork unitOfWork,
@@ -60,6 +62,7 @@ internal sealed class GameNightInvitationRespondedHandler
         _gameNightRepository = gameNightRepository ?? throw new ArgumentNullException(nameof(gameNightRepository));
         _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
         _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
+        _optOutRepository = optOutRepository ?? throw new ArgumentNullException(nameof(optOutRepository));
         _publicBaseUrl = publicBaseUrl ?? throw new ArgumentNullException(nameof(publicBaseUrl));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
@@ -124,6 +127,19 @@ internal sealed class GameNightInvitationRespondedHandler
             return;
         }
 
+        // #4846: an address that asked to stop hearing about game nights gets no mail, and this one included. The
+        // RSVP token is held by the organizer too and /respond is anonymous, so an «accept» is not proof that the
+        // address's owner made a gesture: without this check, whoever invites an opted-out address and accepts for
+        // it makes it receive a mail with the night's free-text title and location in it. Not marked: the mark says
+        // «written to».
+        if (await _optOutRepository.ExistsAsync(invitation.Email, cancellationToken).ConfigureAwait(false))
+        {
+            _logger.LogInformation(
+                "Skipping RSVP confirmation email for invitation {InvitationId}: its address asked to stop game night emails",
+                invitation.Id);
+            return;
+        }
+
         var gameNight = await _gameNightRepository
             .GetByIdAsync(invitation.GameNightId, cancellationToken)
             .ConfigureAwait(false);
@@ -149,7 +165,7 @@ internal sealed class GameNightInvitationRespondedHandler
             title: gameNight.Title,
             scheduledAt: gameNight.ScheduledAt,
             location: gameNight.Location,
-            unsubscribeUrl: GameNightGuestLinks.Unsubscribe(_publicBaseUrl.GetBaseUrl(), invitation.Token),
+            unsubscribeUrl: GameNightGuestLinks.Unsubscribe(_publicBaseUrl.GetBaseUrl(), invitation.UnsubscribeKey!),
             locale: new GameNightEmailLocale(organizer?.Language, gameNight.TimeZoneId),
             ct: cancellationToken).ConfigureAwait(false);
 

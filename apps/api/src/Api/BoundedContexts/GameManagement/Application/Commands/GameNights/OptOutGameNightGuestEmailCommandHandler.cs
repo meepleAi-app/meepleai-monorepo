@@ -13,9 +13,11 @@ namespace Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
 /// asked for.
 /// </summary>
 /// <remarks>
-/// The invitation is read whatever its state. A guest can hold a link to a night that was answered, cancelled
-/// or has expired, and that is precisely when they want to stop hearing about it; the RSVP rules (410 Gone for a
-/// terminal invitation) do not apply to «stop writing to me».
+/// The invitation is looked up by its unsubscribe key, never by the RSVP token, and read whatever its state. A
+/// guest can hold a link to a night that was answered, cancelled or has expired, and that is precisely when they
+/// want to stop hearing about it; the RSVP rules (410 Gone for a terminal invitation) do not apply to «stop
+/// writing to me». The RSVP token is not accepted here even if it is valid: the organizer holds it, and a global
+/// opt-out must be something only the address has seen.
 /// </remarks>
 internal sealed class OptOutGameNightGuestEmailCommandHandler : ICommandHandler<OptOutGameNightGuestEmailCommand>
 {
@@ -44,9 +46,9 @@ internal sealed class OptOutGameNightGuestEmailCommandHandler : ICommandHandler<
         ArgumentNullException.ThrowIfNull(command);
 
         var invitation = await _invitationRepository
-            .GetByTokenAsync(command.Token, cancellationToken)
+            .GetByUnsubscribeKeyAsync(command.UnsubscribeKey, cancellationToken)
             .ConfigureAwait(false)
-            ?? throw new NotFoundException("GameNightInvitation", command.Token);
+            ?? throw new NotFoundException("GameNightInvitation", "unsubscribe key");
 
         if (await _optOutRepository.ExistsAsync(invitation.Email, cancellationToken).ConfigureAwait(false))
         {

@@ -62,7 +62,8 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
             respondedByUserId: null,
             createdAt: Now.AddDays(-2),
             createdBy: Guid.NewGuid(),
-            cancellationNoticeSentAt: noticeSentAt);
+            cancellationNoticeSentAt: noticeSentAt,
+            unsubscribeKey: Guid.NewGuid().ToString("N")[..22]);
 
     private static GameNightEvent Night(Guid organizerId, string title = "Friday Catan", string? zone = null) =>
         GameNightEvent.Create(
@@ -458,7 +459,7 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
                 It.IsAny<string>(),
                 It.IsAny<string>(),
                 It.IsAny<DateTimeOffset>(),
-                $"{BaseUrl}/invites/{first.Token}/unsubscribe",
+                $"{BaseUrl}/invites/unsubscribe/{first.UnsubscribeKey}",
                 It.IsAny<GameNightEmailLocale>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);

@@ -5807,11 +5807,20 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(32)")
                         .HasColumnName("token");
 
+                    b.Property<string>("UnsubscribeKey")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("unsubscribe_key");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Token")
                         .IsUnique()
                         .HasDatabaseName("IX_game_night_invitations_token");
+
+                    b.HasIndex("UnsubscribeKey")
+                        .IsUnique()
+                        .HasDatabaseName("IX_game_night_invitations_unsubscribe_key");
 
                     b.HasIndex("GameNightId", "Status")
                         .HasDatabaseName("IX_game_night_invitations_event_status");

@@ -1,5 +1,6 @@
 using Api.BoundedContexts.Authentication.Infrastructure.Persistence;
 using Api.BoundedContexts.GameManagement.Application.Commands.GameNights;
+using Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
 using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
@@ -192,7 +193,7 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
                 It.IsAny<IReadOnlyList<string>>(),
                 $"{BaseUrl}/invites/{captured.Token}?action=accept",
                 $"{BaseUrl}/invites/{captured.Token}?action=decline",
-                $"{BaseUrl}/invites/{captured.Token}/unsubscribe",
+                $"{BaseUrl}/invites/unsubscribe/{captured.UnsubscribeKey}",
                 GameNightEmailLocale.Unknown, // No organizer record and no stored zone: English, UTC.
                 It.IsAny<CancellationToken>()),
             Times.Once);
@@ -542,5 +543,31 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
 
         dto.Token.Should().Be(pending.Token);
         VerifyNoInvitationEmail(_emailServiceMock);
+    }
+
+    [Fact]
+    public async Task Handle_TheAnswerToTheOrganizer_DoesNotCarryTheUnsubscribeKey()
+    {
+        // The organizer gets the RSVP token back (to share the link by hand), and that is how it works since #607.
+        // The key that stops everybody's mail to the address is another matter: it is written in the emails and
+        // nowhere else, because anybody who holds it can silence the address for every organizer.
+        var organizerId = Guid.NewGuid();
+        var gameNight = CreateGameNight(organizerId);
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        GameNightInvitation? captured = null;
+        _invitationRepoMock
+            .Setup(r => r.AddAsync(It.IsAny<GameNightInvitation>(), It.IsAny<CancellationToken>()))
+            .Callback<GameNightInvitation, CancellationToken>((inv, _) => captured = inv);
+
+        var dto = await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(gameNight.Id, "guest@example.com", organizerId),
+            CancellationToken.None);
+
+        captured!.UnsubscribeKey.Should().NotBeNullOrWhiteSpace();
+        System.Text.Json.JsonSerializer.Serialize(dto).Should().NotContain(captured.UnsubscribeKey!);
+        typeof(GameNightInvitationDto).GetProperties().Select(p => p.Name)
+            .Should().NotContain(name => name.Contains("Unsubscribe", StringComparison.OrdinalIgnoreCase));
     }
 }

@@ -1,7 +1,7 @@
 /**
  * @vitest-environment jsdom
  *
- * /invites/[token]/unsubscribe — #4846.
+ * /invites/unsubscribe/[key] — #4846.
  *
  * The link is in every email to a game night guest. Mail scanners and link previews open links before the person
  * does, so the page must not unsubscribe on load: it asks, and the tap on the button is what counts.
@@ -41,7 +41,7 @@ beforeEach(() => {
 
 describe('UnsubscribePageClient', () => {
   it('asks first, and does not unsubscribe just because the page was opened', () => {
-    render(<UnsubscribePageClient token="tok-1" />);
+    render(<UnsubscribePageClient unsubscribeKey="key-1" />);
 
     expect(screen.getByRole('heading', { name: `${P}.heading` })).toBeTruthy();
     expect(screen.getByRole('button', { name: `${P}.confirmCta` })).toBeTruthy();
@@ -51,13 +51,13 @@ describe('UnsubscribePageClient', () => {
   it('unsubscribes on the tap, with the token of the link, and says it is done', async () => {
     unsubscribeMock.mockResolvedValue({ kind: 'unsubscribed' });
     const user = userEvent.setup();
-    render(<UnsubscribePageClient token="tok-1" />);
+    render(<UnsubscribePageClient unsubscribeKey="key-1" />);
 
     await user.click(screen.getByRole('button', { name: `${P}.confirmCta` }));
 
     await waitFor(() => expect(screen.getByText(`${P}.done.heading`)).toBeTruthy());
     expect(unsubscribeMock).toHaveBeenCalledTimes(1);
-    expect(unsubscribeMock).toHaveBeenCalledWith('tok-1');
+    expect(unsubscribeMock).toHaveBeenCalledWith('key-1');
     expect(screen.queryByRole('button', { name: `${P}.confirmCta` })).toBeNull();
   });
 
@@ -69,7 +69,7 @@ describe('UnsubscribePageClient', () => {
       })
     );
     const user = userEvent.setup();
-    render(<UnsubscribePageClient token="tok-1" />);
+    render(<UnsubscribePageClient unsubscribeKey="key-1" />);
     const button = screen.getByRole('button', { name: `${P}.confirmCta` });
 
     await user.click(button);
@@ -80,15 +80,27 @@ describe('UnsubscribePageClient', () => {
     expect(unsubscribeMock).toHaveBeenCalledTimes(1);
   });
 
-  it('tells the person the link is not valid when nobody knows the token', async () => {
-    unsubscribeMock.mockRejectedValue(new InvitationNotFoundError('tok-1'));
+  it('moves focus to the outcome when the button goes away, so a keyboard user is not dropped on the body', async () => {
+    unsubscribeMock.mockResolvedValue({ kind: 'unsubscribed' });
     const user = userEvent.setup();
-    render(<UnsubscribePageClient token="tok-1" />);
+    render(<UnsubscribePageClient unsubscribeKey="key-1" />);
+
+    await user.click(screen.getByRole('button', { name: `${P}.confirmCta` }));
+
+    const heading = await screen.findByRole('heading', { name: `${P}.done.heading` });
+    await waitFor(() => expect(document.activeElement).toBe(heading));
+  });
+
+  it('tells the person the link is not valid when nobody holds the key', async () => {
+    unsubscribeMock.mockRejectedValue(new InvitationNotFoundError('key-1'));
+    const user = userEvent.setup();
+    render(<UnsubscribePageClient unsubscribeKey="key-1" />);
 
     await user.click(screen.getByRole('button', { name: `${P}.confirmCta` }));
 
     const alert = await screen.findByRole('alert');
     expect(alert.textContent).toContain(`${P}.invalid.heading`);
+    await waitFor(() => expect(document.activeElement?.textContent).toBe(`${P}.invalid.heading`));
     expect(screen.queryByRole('button', { name: `${P}.confirmCta` })).toBeNull();
   });
 
@@ -97,7 +109,7 @@ describe('UnsubscribePageClient', () => {
       .mockResolvedValueOnce({ kind: 'rate-limited', retryAfter: 30 })
       .mockResolvedValueOnce({ kind: 'unsubscribed' });
     const user = userEvent.setup();
-    render(<UnsubscribePageClient token="tok-1" />);
+    render(<UnsubscribePageClient unsubscribeKey="key-1" />);
 
     await user.click(screen.getByRole('button', { name: `${P}.confirmCta` }));
 
@@ -114,7 +126,7 @@ describe('UnsubscribePageClient', () => {
       .mockRejectedValueOnce(new InvitationFetchError(500, 'boom'))
       .mockResolvedValueOnce({ kind: 'unsubscribed' });
     const user = userEvent.setup();
-    render(<UnsubscribePageClient token="tok-1" />);
+    render(<UnsubscribePageClient unsubscribeKey="key-1" />);
 
     await user.click(screen.getByRole('button', { name: `${P}.confirmCta` }));
     const alert = await screen.findByRole('alert');
@@ -129,8 +141,6 @@ describe('UnsubscribePageClient', () => {
 
 describe('the words of the page', () => {
   const KEYS = [
-    'metadata.title',
-    'metadata.description',
     'heading',
     'intro',
     'confirmCta',

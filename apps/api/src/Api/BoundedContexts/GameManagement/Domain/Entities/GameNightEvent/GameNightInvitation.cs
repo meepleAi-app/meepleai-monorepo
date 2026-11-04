@@ -69,6 +69,15 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
     /// </summary>
     public DateTimeOffset? CancellationNoticeSentAt { get; private set; }
 
+    /// <summary>
+    /// The credential for «stop writing to this address» (#4846), distinct from <see cref="Token"/> on purpose. The
+    /// token is the RSVP capability and the organizer holds it (it comes back in the 201 of the creation, to share
+    /// the link by hand); the opt-out is global, every organizer's mail to the address, so its credential must be
+    /// one only the address has seen. It is written in the emails that go to the address and nowhere else: not in
+    /// any DTO, not in a log. <c>null</c> only on a row older than the column, which the migration fills.
+    /// </summary>
+    public string? UnsubscribeKey { get; private set; }
+
 #pragma warning disable CS8618
     private GameNightInvitation() : base() { } // EF Core
 #pragma warning restore CS8618
@@ -86,7 +95,8 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
         DateTimeOffset createdAt,
         Guid createdBy,
         DateTimeOffset? rsvpConfirmationSentAt = null,
-        DateTimeOffset? cancellationNoticeSentAt = null) : base(id)
+        DateTimeOffset? cancellationNoticeSentAt = null,
+        string? unsubscribeKey = null) : base(id)
     {
         Token = token;
         GameNightId = gameNightId;
@@ -100,6 +110,7 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
         CreatedBy = createdBy;
         RsvpConfirmationSentAt = rsvpConfirmationSentAt;
         CancellationNoticeSentAt = cancellationNoticeSentAt;
+        UnsubscribeKey = unsubscribeKey;
     }
 
     /// <summary>
@@ -143,7 +154,8 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
             respondedByUserId: null,
             respondedByName: null,
             createdAt: utcNow,
-            createdBy: createdBy);
+            createdBy: createdBy,
+            unsubscribeKey: InvitationToken.Generate().Value);
 
         invitation.AddDomainEvent(new GameNightInvitationCreatedEvent(
             gameNightInvitationId: id,
@@ -173,7 +185,8 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
         Guid createdBy,
         string? respondedByName = null,
         DateTimeOffset? rsvpConfirmationSentAt = null,
-        DateTimeOffset? cancellationNoticeSentAt = null)
+        DateTimeOffset? cancellationNoticeSentAt = null,
+        string? unsubscribeKey = null)
     {
         return new GameNightInvitation(
             id: id,
@@ -188,7 +201,8 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
             createdAt: createdAt,
             createdBy: createdBy,
             rsvpConfirmationSentAt: rsvpConfirmationSentAt,
-            cancellationNoticeSentAt: cancellationNoticeSentAt);
+            cancellationNoticeSentAt: cancellationNoticeSentAt,
+            unsubscribeKey: unsubscribeKey);
     }
 
     /// <summary>

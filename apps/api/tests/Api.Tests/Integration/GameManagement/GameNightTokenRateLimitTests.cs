@@ -133,6 +133,61 @@ public sealed class GameNightTokenRateLimitTests
         }
     }
 
+    /// <summary>
+    /// #4846. The guest opt-out has a bucket of its own (10 req/min/IP): the 11th tap gets a 429, and the RSVPs of
+    /// everybody behind the same address are not eaten by it. Before, it shared the bucket of /respond, so a guest
+    /// opening the link from an office network competed with the answers of their colleagues.
+    /// </summary>
+    [Fact]
+    public async Task UnsubscribeByKey_ExceedsItsOwnLimit_Returns429_AndTheRsvpBucketIsUntouched()
+    {
+        var dbName = $"gn_unsub_ratelimit_{Guid.NewGuid():N}";
+        var connStr = await _fixture.CreateIsolatedDatabaseAsync(dbName);
+
+        try
+        {
+            var baseFactory = IntegrationWebApplicationFactory.Create(
+                connStr,
+                extraConfig: new Dictionary<string, string?> { ["GameNight:InvitationExpiryDays"] = "14" },
+                enableRateLimiting: true);
+
+            using var factory = baseFactory.WithWebHostBuilder(b => b.ConfigureTestServices(s =>
+            {
+                s.RemoveAll(typeof(IGameNightEmailService));
+                s.AddSingleton(_emailServiceMock.Object);
+            }));
+
+            using (var scope = factory.Services.CreateScope())
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+                await dbContext.Database.MigrateAsync();
+            }
+
+            var invitation = await SeedInvitationAsync(factory);
+            using var client = factory.CreateClient();
+
+            var statuses = new List<HttpStatusCode>();
+            for (var i = 0; i < 11; i++)
+            {
+                var response = await client.PostAsync(
+                    $"/api/v1/game-nights/guest-unsubscribe/{invitation.UnsubscribeKey}", content: null);
+                statuses.Add(response.StatusCode);
+            }
+
+            statuses.Take(10).Should().AllBeEquivalentTo(HttpStatusCode.NoContent);
+            statuses[10].Should().Be(HttpStatusCode.TooManyRequests);
+
+            var rsvp = await client.PostAsJsonAsync(
+                $"/api/v1/game-nights/invitations/{invitation.Token}/respond",
+                new { Response = "Accepted" });
+            rsvp.StatusCode.Should().Be(HttpStatusCode.OK, "the RSVP bucket is a different one");
+        }
+        finally
+        {
+            await _fixture.DropIsolatedDatabaseAsync(dbName);
+        }
+    }
+
     private async Task<GameNightInvitationEntity> SeedInvitationAsync(WebApplicationFactory<Program> factory)
     {
         using var scope = factory.Services.CreateScope();
@@ -158,6 +213,7 @@ public sealed class GameNightTokenRateLimitTests
         {
             Id = Guid.NewGuid(),
             Token = GenerateToken(),
+            UnsubscribeKey = GenerateToken(),
             GameNightId = eventId,
             Email = "guest@example.com",
             Status = "Pending",

@@ -35,6 +35,7 @@ namespace Api.Extensions;
 /// - AdminProviderRotateKey: 1 req/24h — provider key rotation per (provider,user) (Issue #1859)
 /// - GameNightTokenRead:   60 req/min  — public RSVP token lookup per IP (Issue #1169)
 /// - GameNightTokenRespond: 10 req/min — public RSVP submission per IP (Issue #1169)
+/// - GameNightGuestUnsubscribe: 10 req/min — public guest opt-out per IP (#4846)
 /// - UsersSearch:         600 req/min  — authenticated player autocomplete (~10 req/s avg via 1min sliding window, Issue #950 W1-PR2)
 /// </summary>
 internal static class RateLimitingServiceExtensions
@@ -576,6 +577,26 @@ internal static class RateLimitingServiceExtensions
 
                 return RateLimitPartition.GetSlidingWindowLimiter(
                     partitionKey: $"game-night-token-respond-{ipAddress}",
+                    factory: _ => new SlidingWindowRateLimiterOptions
+                    {
+                        Window = TimeSpan.FromMinutes(1),
+                        PermitLimit = 10,
+                        SegmentsPerWindow = 6,
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                        QueueLimit = 0,
+                    });
+            });
+
+            // Policy 22b: GameNightGuestUnsubscribe - 10 req/min per IP for the guest opt-out link (#4846)
+            // Public, unauthenticated POST. Its own bucket: it is a different action from an RSVP, and a guest who
+            // opens the unsubscribe link of an email from a shared address (an office, a mobile network) must not
+            // be competing with the RSVPs of everybody behind it.
+            options.AddPolicy("GameNightGuestUnsubscribe", httpContext =>
+            {
+                var ipAddress = GetClientIpAddress(httpContext);
+
+                return RateLimitPartition.GetSlidingWindowLimiter(
+                    partitionKey: $"game-night-guest-unsubscribe-{ipAddress}",
                     factory: _ => new SlidingWindowRateLimiterOptions
                     {
                         Window = TimeSpan.FromMinutes(1),

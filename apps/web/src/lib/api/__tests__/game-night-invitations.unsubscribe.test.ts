@@ -30,7 +30,7 @@ afterEach(() => {
 });
 
 describe('unsubscribeFromInvitationEmails', () => {
-  it('POSTs to the unsubscribe route of the token, with no body and no credentials beyond the token', async () => {
+  it('POSTs to the unsubscribe route of the key, with no body and no credentials beyond the key', async () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
 
     const result = await unsubscribeFromInvitationEmails('AbC_dEf-123');
@@ -38,7 +38,7 @@ describe('unsubscribeFromInvitationEmails', () => {
     expect(result).toEqual({ kind: 'unsubscribed' });
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('https://api.test/api/v1/game-nights/invitations/AbC_dEf-123/unsubscribe');
+    expect(url).toBe('https://api.test/api/v1/game-nights/guest-unsubscribe/AbC_dEf-123');
     expect(init.method).toBe('POST');
     expect(init.body).toBeUndefined();
   });
@@ -50,7 +50,7 @@ describe('unsubscribeFromInvitationEmails', () => {
 
     const [url] = fetchMock.mock.calls[0] as [string];
     expect(url).toBe(
-      'https://api.test/api/v1/game-nights/invitations/a%2F..%2Frespond%3Fx%3D1/unsubscribe'
+      'https://api.test/api/v1/game-nights/guest-unsubscribe/a%2F..%2Frespond%3Fx%3D1'
     );
   });
 
@@ -76,7 +76,7 @@ describe('unsubscribeFromInvitationEmails', () => {
     });
   });
 
-  it('throws InvitationNotFoundError for a token nobody knows (404)', async () => {
+  it('throws InvitationNotFoundError for a key nobody holds (404)', async () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 404 }));
 
     await expect(unsubscribeFromInvitationEmails('tok')).rejects.toBeInstanceOf(

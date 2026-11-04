@@ -376,20 +376,21 @@ export type UnsubscribeFromInvitationEmailsResult =
   | { readonly kind: 'rate-limited'; readonly retryAfter: number | null };
 
 /**
- * POST the one-tap opt-out behind the link in every game night email to a guest. The invitation token is the
- * credential: the address it names goes on the list the sends consult, whatever became of the invitation
- * (answered, cancelled, expired), so there is no 409/410 to handle. Idempotent on the server.
+ * POST the one-tap opt-out behind the link in every game night email to a guest. The credential is the invitation's
+ * UNSUBSCRIBE KEY, written in the emails and nowhere else: not its RSVP token, which the organizer also holds. The
+ * address the key names goes on the list the sends consult, whatever became of the invitation (answered, cancelled,
+ * expired), so there is no 409/410 to handle. Idempotent on the server.
  *
  * Resolves `unsubscribed` on 204 and `rate-limited` on 429 (backend cap: 10 req/min/IP). Throws
- * `InvitationNotFoundError` for a token nobody knows (404) and `InvitationFetchError` on 5xx / network / any
+ * `InvitationNotFoundError` for a key nobody holds (404) and `InvitationFetchError` on 5xx / network / any
  * other status. Direct `fetch`, like the rest of this file: the route is public and the shared retry layer would
- * add nothing to a call whose only inputs are the token.
+ * add nothing to a call whose only input is the key.
  */
 export async function unsubscribeFromInvitationEmails(
-  token: string
+  unsubscribeKey: string
 ): Promise<UnsubscribeFromInvitationEmailsResult> {
   const base = getApiBase();
-  const url = `${base}/api/v1/game-nights/invitations/${encodeURIComponent(token)}/unsubscribe`;
+  const url = `${base}/api/v1/game-nights/guest-unsubscribe/${encodeURIComponent(unsubscribeKey)}`;
 
   let response: Response;
   try {
@@ -414,7 +415,7 @@ export async function unsubscribeFromInvitationEmails(
   }
 
   if (response.status === 404) {
-    throw new InvitationNotFoundError(token);
+    throw new InvitationNotFoundError(unsubscribeKey);
   }
 
   throw new InvitationFetchError(

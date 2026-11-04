@@ -14,8 +14,9 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.GameManagement.Application.Commands.GameNights;
 
 /// <summary>
-/// #4846. The token of an invitation is the credential for «stop writing to this address»: it already names the
-/// address and the invitation, and the guest has no account to log in to. It works whatever became of the
+/// #4846. The unsubscribe KEY of an invitation is the credential for «stop writing to this address»: it names the address
+/// and the invitation, it travels only in the emails that go to that address, and the guest has no account to log
+/// in to. It is not the RSVP token: the organizer holds that one. It works whatever became of the
 /// invitation (answered, cancelled, expired): a person must be able to stop the mail from a note they still
 /// have, even when the night it announced is long gone.
 /// </summary>
@@ -26,6 +27,7 @@ public sealed class OptOutGameNightGuestEmailCommandHandlerTests
 {
     private static readonly DateTimeOffset Now = new(2031, 5, 17, 9, 0, 0, TimeSpan.Zero);
     private const string Token = "AbCdEfGhIjKlMnOpQrStUv";
+    private const string Key = "ZyXwVuTsRqPoNmLkJiHgFe";
 
     private readonly Mock<IGameNightInvitationRepository> _invitations = new();
     private readonly Mock<IGameNightGuestEmailOptOutRepository> _optOuts = new();
@@ -45,6 +47,7 @@ public sealed class OptOutGameNightGuestEmailCommandHandlerTests
         GameNightInvitation.Reconstitute(
             id: Guid.NewGuid(),
             token: Token,
+            unsubscribeKey: Key,
             gameNightId: Guid.NewGuid(),
             email: email,
             status: status,
@@ -58,7 +61,7 @@ public sealed class OptOutGameNightGuestEmailCommandHandlerTests
     {
         var invitation = InvitationIn(status, email);
         _invitations
-            .Setup(r => r.GetByTokenAsync(Token, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByUnsubscribeKeyAsync(Key, It.IsAny<CancellationToken>()))
             .ReturnsAsync(invitation);
         return invitation;
     }
@@ -67,14 +70,29 @@ public sealed class OptOutGameNightGuestEmailCommandHandlerTests
     public async Task AnUnknownToken_IsNotFound_AndNothingIsStored()
     {
         _invitations
-            .Setup(r => r.GetByTokenAsync(Token, It.IsAny<CancellationToken>()))
+            .Setup(r => r.GetByUnsubscribeKeyAsync(Key, It.IsAny<CancellationToken>()))
             .ReturnsAsync((GameNightInvitation?)null);
 
-        var act = () => _sut.Handle(new OptOutGameNightGuestEmailCommand(Token), CancellationToken.None);
+        var act = () => _sut.Handle(new OptOutGameNightGuestEmailCommand(Key), CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
         _optOuts.Verify(r => r.AddAsync(It.IsAny<GameNightGuestEmailOptOut>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task TheRsvpToken_IsNotTheCredential_TheOrganizerHoldsIt_AndTheKeyIsOnlyInTheEmails()
+    {
+        // The organizer gets the RSVP token back when they create the invitation, so it cannot prove that whoever
+        // holds it controls the address. The opt-out is global (every organizer's mail to that address), so it has
+        // its own key, which is written in the emails and nowhere else. Asking with the RSVP token finds nothing.
+        GivenInvitation();
+
+        var act = () => _sut.Handle(new OptOutGameNightGuestEmailCommand(Token), CancellationToken.None);
+
+        await act.Should().ThrowAsync<NotFoundException>();
+        _invitations.Verify(r => r.GetByTokenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _optOuts.Verify(r => r.AddAsync(It.IsAny<GameNightGuestEmailOptOut>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Theory]
@@ -92,7 +110,7 @@ public sealed class OptOutGameNightGuestEmailCommandHandlerTests
             .Callback<GameNightGuestEmailOptOut, CancellationToken>((o, _) => stored = o)
             .Returns(Task.CompletedTask);
 
-        await _sut.Handle(new OptOutGameNightGuestEmailCommand(Token), CancellationToken.None);
+        await _sut.Handle(new OptOutGameNightGuestEmailCommand(Key), CancellationToken.None);
 
         stored.Should().NotBeNull();
         stored!.Email.Should().Be("guest@example.com");
@@ -109,7 +127,7 @@ public sealed class OptOutGameNightGuestEmailCommandHandlerTests
             .Setup(r => r.ExistsAsync("guest@example.com", It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        await _sut.Handle(new OptOutGameNightGuestEmailCommand(Token), CancellationToken.None);
+        await _sut.Handle(new OptOutGameNightGuestEmailCommand(Key), CancellationToken.None);
 
         _optOuts.Verify(r => r.AddAsync(It.IsAny<GameNightGuestEmailOptOut>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -126,7 +144,7 @@ public sealed class OptOutGameNightGuestEmailCommandHandlerTests
                 "unique violation",
                 new PostgresException("duplicate key", "ERROR", "ERROR", "23505")));
 
-        var act = () => _sut.Handle(new OptOutGameNightGuestEmailCommand(Token), CancellationToken.None);
+        var act = () => _sut.Handle(new OptOutGameNightGuestEmailCommand(Key), CancellationToken.None);
 
         await act.Should().NotThrowAsync();
     }
@@ -141,7 +159,7 @@ public sealed class OptOutGameNightGuestEmailCommandHandlerTests
                 "connection lost",
                 new PostgresException("terminating connection", "FATAL", "FATAL", "57P01")));
 
-        var act = () => _sut.Handle(new OptOutGameNightGuestEmailCommand(Token), CancellationToken.None);
+        var act = () => _sut.Handle(new OptOutGameNightGuestEmailCommand(Key), CancellationToken.None);
 
         await act.Should().ThrowAsync<DbUpdateException>();
     }

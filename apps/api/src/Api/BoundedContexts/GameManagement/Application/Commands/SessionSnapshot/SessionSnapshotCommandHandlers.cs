@@ -143,15 +143,10 @@ internal class CreateSnapshotCommandHandler
         if (!checkpoint.IsCheckpoint)
             throw new InvalidOperationException("State reconstruction failed: no checkpoint found");
 
-        var state = checkpoint.DeltaDataJson;
-
-        // Apply subsequent deltas
-        for (int i = 1; i < snapshots.Count; i++)
-        {
-            state = JsonDeltaHelper.ApplyDelta(state, snapshots[i].DeltaDataJson);
-        }
-
-        return state;
+        // Checkpoint + the deltas after it; the photo references of a snapshot are not part of the state (#4869)
+        return JsonDeltaHelper.ReconstructState(
+            checkpoint.DeltaDataJson,
+            snapshots.Skip(1).Select(s => s.DeltaDataJson));
     }
 
     private static string SerializeGameState(JsonDocument? gameState)

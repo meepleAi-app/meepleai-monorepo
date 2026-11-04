@@ -27,7 +27,7 @@ internal sealed class GameNightEmailTexts
     public required string DeclineLabel { get; init; }
     public required Func<string, string> InvitationGuestFooter { get; init; }
 
-    // 24h reminder (a member: it reaches people who answered from their account)
+    // 24h reminder (to a guest invited by address; the registered members are reminded in the app)
     public required Func<string, string> ReminderSubject { get; init; }
     public required string ReminderHeading { get; init; }
     public required string ReminderIntro { get; init; }
@@ -53,9 +53,9 @@ internal sealed class GameNightEmailTexts
     public required string GuestUnsubscribePrompt { get; init; }
     public required string GuestUnsubscribeLabel { get; init; }
 
-    // Footer for the emails whose recipient does have a MeepleAI account
-    public required string MemberFooter { get; init; }
-    public required string ManagePreferencesLabel { get; init; }
+    // The 24 hour reminder to a guest (#4846): why it arrives, and the way to answer when the guest has not yet
+    public required Func<string, string> ReminderGuestFooter { get; init; }
+    public required string ReminderRespondLabel { get; init; }
 
     public static GameNightEmailTexts For(string? language) => IsItalianLanguage(language) ? Italian : English;
 
@@ -104,8 +104,9 @@ internal sealed class GameNightEmailTexts
         RsvpGuestFooter = "You received this email because you responded to a game night invitation on MeepleAI.",
         GuestUnsubscribePrompt = "Don't want game night emails at this address?",
         GuestUnsubscribeLabel = "Unsubscribe",
-        MemberFooter = "You received this email because you have a MeepleAI account.",
-        ManagePreferencesLabel = "Manage notification preferences",
+        ReminderGuestFooter = organizer =>
+            $"You received this email because {organizer} invited you to a game night on MeepleAI.",
+        ReminderRespondLabel = "Respond",
     };
 
     private static readonly GameNightEmailTexts Italian = new()
@@ -141,7 +142,8 @@ internal sealed class GameNightEmailTexts
         RsvpGuestFooter = "Hai ricevuto questa email perché hai risposto a un invito a una serata di gioco su MeepleAI.",
         GuestUnsubscribePrompt = "Non vuoi più ricevere email sulle serate di gioco a questo indirizzo?",
         GuestUnsubscribeLabel = "Annulla l'iscrizione",
-        MemberFooter = "Hai ricevuto questa email perché hai un account MeepleAI.",
-        ManagePreferencesLabel = "Gestisci le preferenze di notifica",
+        ReminderGuestFooter = organizer =>
+            $"Hai ricevuto questa email perché {organizer} ti ha invitato a una serata di gioco su MeepleAI.",
+        ReminderRespondLabel = "Rispondi",
     };
 }

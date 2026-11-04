@@ -90,4 +90,11 @@ public class GameNightInvitationEntity
     [Column("unsubscribe_key")]
     [MaxLength(32)]
     public string? UnsubscribeKey { get; set; }
+
+    /// <summary>
+    /// #4846: timestamp of the 24 hour reminder sent to this invitation.
+    /// Non-null = the handler MUST NOT write again when the event is delivered a second time.
+    /// </summary>
+    [Column("reminder_24h_sent_at")]
+    public DateTimeOffset? Reminder24hSentAt { get; set; }
 }

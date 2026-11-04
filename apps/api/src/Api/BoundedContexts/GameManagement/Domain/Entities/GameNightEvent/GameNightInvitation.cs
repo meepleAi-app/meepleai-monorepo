@@ -78,6 +78,12 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
     /// </summary>
     public string? UnsubscribeKey { get; private set; }
 
+    /// <summary>
+    /// When the 24 hour reminder was sent to this invitation (#4846). When non-null the
+    /// <c>GameNightReminder24hGuestEmailHandler</c> MUST NOT write again, for the reason of the mark above.
+    /// </summary>
+    public DateTimeOffset? Reminder24hSentAt { get; private set; }
+
 #pragma warning disable CS8618
     private GameNightInvitation() : base() { } // EF Core
 #pragma warning restore CS8618
@@ -96,7 +102,8 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
         Guid createdBy,
         DateTimeOffset? rsvpConfirmationSentAt = null,
         DateTimeOffset? cancellationNoticeSentAt = null,
-        string? unsubscribeKey = null) : base(id)
+        string? unsubscribeKey = null,
+        DateTimeOffset? reminder24hSentAt = null) : base(id)
     {
         Token = token;
         GameNightId = gameNightId;
@@ -111,6 +118,7 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
         RsvpConfirmationSentAt = rsvpConfirmationSentAt;
         CancellationNoticeSentAt = cancellationNoticeSentAt;
         UnsubscribeKey = unsubscribeKey;
+        Reminder24hSentAt = reminder24hSentAt;
     }
 
     /// <summary>
@@ -186,7 +194,8 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
         string? respondedByName = null,
         DateTimeOffset? rsvpConfirmationSentAt = null,
         DateTimeOffset? cancellationNoticeSentAt = null,
-        string? unsubscribeKey = null)
+        string? unsubscribeKey = null,
+        DateTimeOffset? reminder24hSentAt = null)
     {
         return new GameNightInvitation(
             id: id,
@@ -202,7 +211,8 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
             createdBy: createdBy,
             rsvpConfirmationSentAt: rsvpConfirmationSentAt,
             cancellationNoticeSentAt: cancellationNoticeSentAt,
-            unsubscribeKey: unsubscribeKey);
+            unsubscribeKey: unsubscribeKey,
+            reminder24hSentAt: reminder24hSentAt);
     }
 
     /// <summary>
@@ -220,6 +230,14 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
     public void MarkCancellationNoticeSent(DateTimeOffset utcNow)
     {
         CancellationNoticeSentAt = utcNow;
+    }
+
+    /// <summary>
+    /// Records that the 24 hour reminder has been sent to this invitation (#4846).
+    /// </summary>
+    public void MarkReminder24hSent(DateTimeOffset utcNow)
+    {
+        Reminder24hSentAt = utcNow;
     }
 
     /// <summary>

@@ -4,9 +4,11 @@ using Api.BoundedContexts.AgentMemory.Domain.Models;
 using Api.BoundedContexts.AgentMemory.Domain.Repositories;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.Infrastructure.DomainEventOutbox;
 using Api.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Moq;
 using FluentAssertions;
@@ -200,6 +202,42 @@ public class OnSessionCompletedUpdateStatsHandlerTests
         _playerMemoryRepoMock.Verify(
             r => r.GetByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_TheSameCompletionRebuiltByTheOutbox_CountsEachPlayerAndTheGroupOnce()
+    {
+        // The handler is delivered again when the outbox retries the row, and the event it gets is rebuilt from the
+        // JSON of the row. Its guard (CF-3 / #1939) compares EventId, which holds only since #4841 made EventId survive
+        // that rebuild. NOT proved here: the guard remembers a single event per player and group (LastProcessedEventId),
+        // so a second delivery after ANOTHER event for the same player is counted again. That is what option C of #4839
+        // (idempotency on the session) would close, and why option B (rethrow, let the outbox retry) is not in.
+        var gameId = Guid.NewGuid();
+        var groupId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var original = CreateNotification(
+            gameId,
+            groupId: groupId,
+            players: [new CompletedPlayerSnapshot(Guid.NewGuid(), userId, "Alice", 50, 1)]);
+        var rebuilt = JsonSerializer.Deserialize<LiveSessionCompletedEvent>(
+            JsonSerializer.Serialize(original, DomainEventJsonOptions.Default), DomainEventJsonOptions.Default)!;
+        rebuilt.Should().NotBeSameAs(original);
+
+        var alice = PlayerMemory.CreateForUser(userId);
+        var group = GroupMemory.Create(userId, "Test Group");
+        _playerMemoryRepoMock
+            .Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(alice);
+        _groupMemoryRepoMock
+            .Setup(r => r.GetByIdAsync(groupId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(group);
+
+        await _handler.Handle(original, CancellationToken.None);
+        await _handler.Handle(rebuilt, CancellationToken.None);
+
+        alice.GameStats.Should().ContainSingle().Which.Wins.Should().Be(1, "the second delivery is the same event");
+        group.Stats.TotalSessions.Should().Be(1);
+        group.Stats.GamePlayCounts[gameId].Should().Be(1);
     }
 
     private static LiveSessionCompletedEvent CreateNotification(

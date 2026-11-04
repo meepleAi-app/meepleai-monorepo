@@ -86,17 +86,18 @@ public sealed class LiveSessionCompletedEventHandlerTests
     }
 
     [Fact]
-    public async Task Handle_DoesNotThrow_EvenWhenInternalErrorOccurs()
+    public async Task Handle_WithNoPlayersAndNoScores_Completes()
     {
         // Arrange
         var handler = CreateHandler();
 
-        // Create event with empty players to test error-resilient processing
+        // No error is raised here (the old name promised one): what the handler does with a failure is covered
+        // by LiveSessionCompletedEventHandlerIdempotencyTests (#4753, #4839).
         var @event = CreateCompletedEvent(
             players: new List<CompletedPlayerSnapshot>(),
             scores: new List<CompletedScoreSnapshot>());
 
-        // Act - should not throw regardless of internal state
+        // Act
         var exception = await Record.ExceptionAsync(() =>
             handler.Handle(@event, CancellationToken.None));
 

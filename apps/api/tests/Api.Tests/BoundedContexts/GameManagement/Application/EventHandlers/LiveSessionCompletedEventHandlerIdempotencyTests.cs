@@ -45,13 +45,13 @@ public sealed class LiveSessionCompletedEventHandlerIdempotencyTests
     private readonly FakeTimeProvider _timeProvider = new(new DateTimeOffset(2026, 2, 19, 14, 0, 0, TimeSpan.Zero));
     private readonly Mock<IPlayRecordRepository> _playRecordRepository = new();
 
-    private LiveSessionCompletedEvent CompletedEvent(Guid sessionId)
+    private LiveSessionCompletedEvent CompletedEvent(Guid sessionId, TimeSpan? startedAgo = null)
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
         var player = new CompletedPlayerSnapshot(Guid.NewGuid(), Guid.NewGuid(), "Alice", 10, 1);
         return new LiveSessionCompletedEvent(
             sessionId, now, 5, Guid.NewGuid(), "Catan", Guid.NewGuid(), PlayRecordVisibility.Private, null,
-            now.AddHours(-1), now.AddMinutes(-30), null,
+            now.AddHours(-1), now - (startedAgo ?? TimeSpan.FromMinutes(30)), null,
             [player], [new CompletedScoreSnapshot(player.PlayerId, "points", 10, "pts")]);
     }
 
@@ -241,6 +241,50 @@ public sealed class LiveSessionCompletedEventHandlerIdempotencyTests
         db.AddedWhenTheSaveWasRefused.Should().BeGreaterThan(1, "the record and its player were staged: otherwise this test proves nothing");
         db.ChangeTracker.Entries().Where(e => e.State == EntityState.Added).Should().BeEmpty();
         collector.PeekEvents().Should().BeEmpty();
+    }
+
+    // ── #4839 — what is swallowed is swallowed for any reason, and counted ──────────────────────
+    //
+    // Option B of #4839 (let the infrastructure's failures go up, so that the outbox retries them) was tried and
+    // withdrawn: the statistics handler of the same event remembers only the LAST event it counted per player and
+    // group, so a retry after another event for the same player does not recognise this one and counts it twice.
+    // Until the statistics are idempotent on the session (option C), every failure stays swallowed and counted.
+
+    [Fact]
+    public async Task Handle_WhenTheDatabaseRefusesTheData_StillSwallowsAndCounts()
+    {
+        // 23503: the game of the session is gone. It would fail the same way at every retry.
+        using var failures = new DispatchFailureCapture();
+        var collector = new DomainEventCollector();
+        var refusal = new DbUpdateException(
+            "insert or update violates foreign key constraint",
+            new PostgresException("foreign key violation", "ERROR", "ERROR", "23503"));
+        var db = new RefusesEverySaveDbContext(InMemoryOptions(), collector, refusal);
+        var handler = CreateHandler(db, new PlayRecordRepository(db, collector), collector);
+        var @event = CompletedEvent(Guid.NewGuid());
+
+        var act = () => handler.Handle(@event, CancellationToken.None);
+
+        await act.Should().NotThrowAsync("the other handlers of the event must still run");
+        failures.Events.Should().ContainSingle()
+            .Which.Should().Be((EventTypeRegistry.ResolveOrFullName(@event), nameof(LiveSessionCompletedEventHandler)));
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheRecordIsInvalid_StillSwallowsAndCounts()
+    {
+        // A session left open for more than 30 days and then completed: PlayRecord.Complete refuses the duration.
+        using var failures = new DispatchFailureCapture();
+        var collector = new DomainEventCollector();
+        var db = new RefusesEverySaveDbContext(InMemoryOptions(), collector, new InvalidOperationException("never reached"));
+        var handler = CreateHandler(db, new PlayRecordRepository(db, collector), collector);
+        var @event = CompletedEvent(Guid.NewGuid(), startedAgo: TimeSpan.FromDays(31));
+
+        var act = () => handler.Handle(@event, CancellationToken.None);
+
+        await act.Should().NotThrowAsync("the duration would be refused at every retry");
+        db.AddedWhenTheSaveWasRefused.Should().Be(0, "the record is refused before any save: the double is only there to fail loudly if it was reached");
+        failures.Events.Should().ContainSingle();
     }
 
     /// <summary>Collects the measurements of the dispatch-failure counter that carry this handler's name.</summary>

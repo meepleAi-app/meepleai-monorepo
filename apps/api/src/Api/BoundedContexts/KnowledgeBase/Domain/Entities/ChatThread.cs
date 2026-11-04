@@ -261,10 +261,11 @@ internal sealed class ChatThread : AggregateRoot<Guid>
         if (Status.IsClosed)
             throw new InvalidOperationException("Cannot switch agent on a closed thread");
 
-        var validTypes = new[] { "auto", "tutor", "arbitro", "decisore" };
+        // #4404: the three intents of the chat and, until the contract step, the two retired ids older clients send.
+        if (!AnswerIntent.IsAcceptedWhenSwitching(agentType))
+            throw new ArgumentException($"Invalid agent type: {agentType}. Valid types: {string.Join(", ", AnswerIntent.All)}", nameof(agentType));
+
         var normalized = agentType.Trim().ToLowerInvariant();
-        if (!validTypes.Contains(normalized, StringComparer.Ordinal))
-            throw new ArgumentException($"Invalid agent type: {agentType}. Valid types: {string.Join(", ", validTypes)}", nameof(agentType));
 
         var previousType = AgentType;
         AgentType = normalized;

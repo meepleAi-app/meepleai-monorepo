@@ -26,7 +26,8 @@ public sealed class AgentProfileTests
         decimal temperature = 0.3m,
         string model = "deepseek-chat",
         SessionAssistantSettings? assistant = null,
-        string? fallbackModel = ReserveModel) =>
+        string? fallbackModel = ReserveModel,
+        IReadOnlyDictionary<string, string>? intents = null) =>
         AgentProfileContent.Create(
             name: "MeepleAI",
             description: "Assistente per le regole dei giochi da tavolo",
@@ -45,7 +46,8 @@ public sealed class AgentProfileTests
             keywordWeight: 0.3m,
             rerankerEnabled: true,
             allowedCategories: [DocumentCategory.Rulebook, DocumentCategory.Errata],
-            sessionAssistant: assistant ?? SessionAssistantSettings.Disabled);
+            sessionAssistant: assistant ?? SessionAssistantSettings.Disabled,
+            intentInstructions: intents ?? AgentProfileContent.NoIntentInstructions);
 
     /// <summary>Una sezione «Assistente in partita» valida per <see cref="Content"/>, che ha «en» come lingua di riserva.</summary>
     internal static SessionAssistantSettings Assistant(bool enabled = true, bool useReserveModel = false) =>

@@ -39,7 +39,8 @@ internal static class AnswerPipelineTestDoubles
         keywordWeight: 0.3m,
         rerankerEnabled: true,
         Enum.GetValues<DocumentCategory>(),
-            Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.SessionAssistantSettings.Disabled);
+            Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.SessionAssistantSettings.Disabled,
+            AgentProfileContent.NoIntentInstructions);
 
     public static IPublishedAgentProfileReader ProfileReader(AgentProfileContent? content = null)
     {

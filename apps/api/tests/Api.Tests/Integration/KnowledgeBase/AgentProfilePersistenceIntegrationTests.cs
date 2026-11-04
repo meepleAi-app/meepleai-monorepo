@@ -145,7 +145,8 @@ public sealed class AgentProfilePersistenceIntegrationTests : IAsyncLifetime
             keywordWeight: 0.3m,
             rerankerEnabled: true,
             allowedCategories: Enum.GetValues<DocumentCategory>(),
-            sessionAssistant: sessionAssistant ?? SessionAssistantSettings.Disabled);
+            sessionAssistant: sessionAssistant ?? SessionAssistantSettings.Disabled,
+            intentInstructions: AgentProfileContent.NoIntentInstructions);
 
     [Fact]
     public async Task FreshDatabase_PublishesVersionFour_WithThePromptV4_AndArchivesTheEarlierOnes()

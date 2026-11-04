@@ -50,5 +50,6 @@ internal static class AgentProfilePublisher
             keywordWeight,
             c.RerankerEnabled,
             c.AllowedCategories.ToList(),
-            c.SessionAssistant);
+            c.SessionAssistant,
+            c.IntentInstructions);
 }

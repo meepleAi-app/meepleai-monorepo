@@ -47,7 +47,8 @@ public sealed class AgentProfileContentTests
             keywordWeight: keywordWeight,
             rerankerEnabled: true,
             allowedCategories: allowedCategories ?? [DocumentCategory.Rulebook],
-            sessionAssistant: Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.SessionAssistantSettings.Disabled);
+            sessionAssistant: Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects.SessionAssistantSettings.Disabled,
+            intentInstructions: AgentProfileContent.NoIntentInstructions);
 
     [Fact]
     public void Create_WithValidValues_KeepsThem()

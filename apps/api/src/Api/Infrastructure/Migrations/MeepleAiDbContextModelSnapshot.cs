@@ -5824,6 +5824,12 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("character varying(32)")
                         .HasColumnName("unsubscribe_key");
 
+                    b.Property<uint>("Xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Token")

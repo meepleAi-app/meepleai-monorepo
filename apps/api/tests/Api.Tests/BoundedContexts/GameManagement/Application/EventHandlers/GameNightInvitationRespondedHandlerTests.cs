@@ -4,7 +4,6 @@ using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
-using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -44,7 +43,6 @@ public sealed class GameNightInvitationRespondedHandlerTests
     private readonly Mock<Api.BoundedContexts.Authentication.Infrastructure.Persistence.IUserRepository> _userRepoMock = new();
     private readonly Mock<IGameNightEmailService> _emailServiceMock = new();
     private readonly Mock<IGameNightGuestEmailOptOutRepository> _optOutRepoMock = new();
-    private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
     private readonly Mock<ILogger<GameNightInvitationRespondedHandler>> _loggerMock = new();
 
     private static HybridCache CreateHybridCache()
@@ -67,8 +65,21 @@ public sealed class GameNightInvitationRespondedHandlerTests
             .AddInMemoryCollection(new Dictionary<string, string?> { ["Frontend:BaseUrl"] = BaseUrl })
             .Build()),
         cache,
-        _unitOfWorkMock.Object,
         _loggerMock.Object);
+
+    /// <summary>
+    /// #4744: the mark is written on its own (the repository writes ONE column), never by rewriting the invitation the
+    /// handler read before the email: that copy could undo a withdrawal that arrived while the email went out.
+    /// </summary>
+    private void VerifyConfirmationMarked(Guid invitationId, Times times)
+    {
+        _invitationRepoMock.Verify(
+            r => r.MarkRsvpConfirmationSentAsync(invitationId, It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()),
+            times);
+        _invitationRepoMock.Verify(
+            r => r.UpdateAsync(It.IsAny<GameNightInvitation>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
 
     private static GameNightInvitation Reconstitute(GameNightInvitationStatus status)
     {
@@ -146,6 +157,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
                 It.IsAny<string>(), It.IsAny<GameNightEmailLocale>(), It.IsAny<CancellationToken>()),
             Times.Never);
         invitation.RsvpConfirmationSentAt.Should().BeNull();
+        VerifyConfirmationMarked(invitation.Id, Times.Never());
     }
 
     [Fact]
@@ -173,7 +185,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
                 It.IsAny<string>(), It.IsAny<GameNightEmailLocale>(), It.IsAny<CancellationToken>()),
             Times.Never);
         invitation.RsvpConfirmationSentAt.Should().BeNull("the mark says «written to», which this guest was not");
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        VerifyConfirmationMarked(invitation.Id, Times.Never());
     }
 
     [Fact]
@@ -204,7 +216,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
                 It.IsAny<string>(), It.IsAny<GameNightEmailLocale>(), It.IsAny<CancellationToken>()),
             Times.Never);
         invitation.RsvpConfirmationSentAt.Should().BeNull("the mark says «written to», which this address was not");
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        VerifyConfirmationMarked(invitation.Id, Times.Never());
     }
 
     [Fact]
@@ -260,6 +272,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
                 GameNightEmailLocale.Unknown,
                 It.IsAny<CancellationToken>()),
             Times.Once);
+        VerifyConfirmationMarked(invitation.Id, Times.Once());
     }
 
     /// <summary>
@@ -394,9 +407,7 @@ public sealed class GameNightInvitationRespondedHandlerTests
                 It.IsAny<GameNightEmailLocale>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
-        _invitationRepoMock.Verify(
-            r => r.UpdateAsync(It.IsAny<GameNightInvitation>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+        VerifyConfirmationMarked(invitation.Id, Times.Never());
         invitation.Status.Should().Be(statusNow);
     }
 

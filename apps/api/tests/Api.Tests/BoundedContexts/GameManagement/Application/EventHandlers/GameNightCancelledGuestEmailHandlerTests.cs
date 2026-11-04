@@ -6,7 +6,6 @@ using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.Observability;
-using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
@@ -34,7 +33,6 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
     private readonly Mock<IUserRepository> _users = new();
     private readonly Mock<IGameNightEmailService> _email = new();
     private readonly Mock<IGameNightGuestEmailOptOutRepository> _optOuts = new();
-    private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly FakeTimeProvider _time = new(Now);
     private readonly Mock<ILogger<GameNightCancelledGuestEmailHandler>> _logger = new();
 
@@ -44,7 +42,7 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
             PublicBaseUrlTestSupport.ProviderFor(new ConfigurationBuilder()
                 .AddInMemoryCollection(new Dictionary<string, string?> { ["Frontend:BaseUrl"] = BaseUrl })
                 .Build()),
-            _unitOfWork.Object, _time, _logger.Object);
+            _time, _logger.Object);
 
     private static GameNightInvitation Invitation(
         string email,
@@ -85,7 +83,21 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
         _invitations
             .Setup(r => r.GetByGameNightIdAsync(night.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(invitations);
+
+        // What the repository does with a mark: it lands on the row, and a later read finds it. (The handler no longer
+        // touches the aggregate it read: #4744.)
+        _invitations
+            .Setup(r => r.MarkCancellationNoticeSentAsync(
+                It.IsAny<Guid>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
+            .Callback((Guid id, DateTimeOffset at, CancellationToken _) =>
+                invitations.Single(i => i.Id == id).MarkCancellationNoticeSent(at))
+            .Returns(Task.CompletedTask);
     }
+
+    private void VerifyMarked(GameNightInvitation invitation, Times times) =>
+        _invitations.Verify(
+            r => r.MarkCancellationNoticeSentAsync(invitation.Id, Now, It.IsAny<CancellationToken>()),
+            times);
 
     private void VerifySentTo(string address, Times times) =>
         _email.Verify(
@@ -237,7 +249,7 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
     }
 
     [Fact]
-    public async Task Handle_RightAfterTheEmail_MarksTheInvitationAndSaves_PerAddress()
+    public async Task Handle_RightAfterTheEmail_MarksEachInvitationOnItsOwn_NeverRewritingTheAggregate()
     {
         // Arrange
         var night = Night(Guid.NewGuid());
@@ -248,14 +260,17 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
         // Act
         await CreateHandler().Handle(Cancelled(night), CancellationToken.None);
 
-        // Assert — each invitation is marked with the time of the send and written back; the save is per address, so
-        // a failure further down the list does not take the marks of the addresses already written to with it.
+        // Assert — each invitation is marked with the time of the send, per address, so a failure further down the
+        // list does not take the marks of the addresses already written to with it. ONLY the mark is written (#4744):
+        // the invitations were read before the first email, and rewriting such a copy would undo an answer or a
+        // withdrawal that arrived while the emails went out.
         first.CancellationNoticeSentAt.Should().Be(Now);
         second.CancellationNoticeSentAt.Should().Be(Now);
+        VerifyMarked(first, Times.Once());
+        VerifyMarked(second, Times.Once());
         _invitations.Verify(
-            r => r.UpdateAsync(It.Is<GameNightInvitation>(i => i.CancellationNoticeSentAt == Now), It.IsAny<CancellationToken>()),
-            Times.Exactly(2));
-        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
+            r => r.UpdateAsync(It.IsAny<GameNightInvitation>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -293,7 +308,10 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
 
         // Assert
         _email.Invocations.Should().BeEmpty();
-        _unitOfWork.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _invitations.Verify(
+            r => r.MarkCancellationNoticeSentAsync(
+                It.IsAny<Guid>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()),
+            Times.Never);
     }
 
     [Fact]
@@ -324,17 +342,18 @@ public sealed class GameNightCancelledGuestEmailHandlerTests
     }
 
     [Fact]
-    public async Task Handle_TheMarkCannotBeSaved_IsCounted_AndTheNextAddressIsStillWrittenTo()
+    public async Task Handle_TheMarkCannotBeWritten_IsCounted_AndTheNextAddressIsStillWrittenTo()
     {
-        // Arrange — the email went out, the save of its mark failed once.
+        // Arrange — the email went out, the write of its mark failed once.
         var night = Night(Guid.NewGuid());
         Given(night,
             Invitation("first@example.com", GameNightInvitationStatus.Accepted),
             Invitation("second@example.com", GameNightInvitationStatus.Accepted));
-        _unitOfWork
-            .SetupSequence(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+        _invitations
+            .SetupSequence(r => r.MarkCancellationNoticeSentAsync(
+                It.IsAny<Guid>(), It.IsAny<DateTimeOffset>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new InvalidOperationException("db down"))
-            .ReturnsAsync(1);
+            .Returns(Task.CompletedTask);
         using var failures = new DispatchFailureCapture();
 
         // Act

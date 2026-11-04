@@ -6,7 +6,6 @@ using Api.BoundedContexts.GameManagement.Domain.Events;
 using Api.Infrastructure.DomainEventLog;
 using Api.Infrastructure.Security;
 using Api.Observability;
-using Api.SharedKernel.Infrastructure.Persistence;
 using Api.SharedKernel.Services;
 using MediatR;
 
@@ -62,7 +61,6 @@ internal sealed class GameNightReminder24hGuestEmailHandler : INotificationHandl
     private readonly IGameNightEmailService _emailService;
     private readonly IGameNightGuestEmailOptOutRepository _optOuts;
     private readonly IPublicBaseUrlProvider _publicBaseUrl;
-    private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<GameNightReminder24hGuestEmailHandler> _logger;
 
@@ -73,7 +71,6 @@ internal sealed class GameNightReminder24hGuestEmailHandler : INotificationHandl
         IGameNightEmailService emailService,
         IGameNightGuestEmailOptOutRepository optOuts,
         IPublicBaseUrlProvider publicBaseUrl,
-        IUnitOfWork unitOfWork,
         TimeProvider timeProvider,
         ILogger<GameNightReminder24hGuestEmailHandler> logger)
     {
@@ -83,7 +80,6 @@ internal sealed class GameNightReminder24hGuestEmailHandler : INotificationHandl
         _emailService = emailService ?? throw new ArgumentNullException(nameof(emailService));
         _optOuts = optOuts ?? throw new ArgumentNullException(nameof(optOuts));
         _publicBaseUrl = publicBaseUrl ?? throw new ArgumentNullException(nameof(publicBaseUrl));
-        _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
@@ -218,24 +214,15 @@ internal sealed class GameNightReminder24hGuestEmailHandler : INotificationHandl
                 locale: locale,
                 ct: cancellationToken).ConfigureAwait(false);
 
-            // Marked and saved per address, right after the email: a failure further on in the list does not take
-            // the marks of the addresses already written to with it. The row is read again just before it is
-            // written: UpdateAsync rewrites the WHOLE invitation, and the list was read before the first email, so
-            // writing that copy back could undo an answer or a withdrawal that arrived while the emails went out.
+            // Marked per address, right after the email: a failure further on in the list does not take the marks
+            // of the addresses already written to with it. Only the mark is written (#4744): the list was read
+            // before the first email, and rewriting a copy whole could undo an answer or a withdrawal that arrived
+            // while the emails went out. An invitation removed meanwhile matches no row, which is fine.
             var sentAt = _timeProvider.GetUtcNow();
             foreach (var invitation in invitationsOfTheAddress)
             {
-                var current = await _invitations.GetByIdAsync(invitation.Id, cancellationToken).ConfigureAwait(false);
-                if (current is null)
-                {
-                    continue;
-                }
-
-                current.MarkReminder24hSent(sentAt);
-                await _invitations.UpdateAsync(current, cancellationToken).ConfigureAwait(false);
+                await _invitations.MarkReminder24hSentAsync(invitation.Id, sentAt, cancellationToken).ConfigureAwait(false);
             }
-
-            await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         }
 #pragma warning disable CA1031 // Do not catch general exception types
         // One address refused by the transport must not keep the others from being written to.

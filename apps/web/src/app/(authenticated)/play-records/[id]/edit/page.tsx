@@ -15,7 +15,7 @@
 
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
@@ -79,8 +79,15 @@ export default function EditPlayRecordPage() {
   // answered «saved», so the form reset the step itself; it is now answered «not saved» (#4805) and nothing
   // would: after «Sovrascrivi», or «Continua a modificare» and then leaving, the next wizard would open on
   // the last step. Leaving this page leaves the step where a new wizard starts.
-  const { resetSessionCreation } = usePlayRecordsStore();
+  const { resetSessionCreation, setSessionField } = usePlayRecordsStore();
   useEffect(() => () => resetSessionCreation(), [resetSessionCreation]);
+  // And the other way round (#4842): the create page does not reset the step when it unmounts (its half-done
+  // data is still on its way to the draft), so an edit opened after one starts on the step the creation was
+  // left on. Only the step is brought back, not `resetSessionCreation()`, which would erase that data. A layout
+  // effect, so the form is never painted on the wrong step when the record comes from the cache.
+  useLayoutEffect(() => {
+    setSessionField('currentStep', 0);
+  }, [setSessionField]);
   if (record && base === null) setBaseState({ recordId, record });
   const updateMutation = useUpdateRecord(recordId);
   const deleteMutation = useDeleteRecord(recordId);

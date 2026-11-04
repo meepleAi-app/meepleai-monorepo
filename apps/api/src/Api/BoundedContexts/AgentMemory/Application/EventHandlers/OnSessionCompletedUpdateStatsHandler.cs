@@ -74,10 +74,10 @@ internal sealed class OnSessionCompletedUpdateStatsHandler : INotificationHandle
                 {
                     memory = PlayerMemory.CreateForUser(player.UserId.Value);
                     memory.UpdateGameStats(gameId, won, player.TotalScore);
-                    memory.MarkProcessed(notification.EventId);  // CF-3 / #1939
+                    memory.MarkProcessed(notification.EventId, notification.SessionId);  // CF-3 / #1939
                     await _playerMemoryRepo.AddAsync(memory, cancellationToken).ConfigureAwait(false);
                 }
-                else if (memory.LastProcessedEventId == notification.EventId)
+                else if (AlreadyCounted(memory, notification))
                 {
                     // CF-3 / #1939: handler is re-dispatched on a rolled-back / retried event
                     // — stats already updated for this player, skip to avoid double-increment.
@@ -88,7 +88,7 @@ internal sealed class OnSessionCompletedUpdateStatsHandler : INotificationHandle
                 else
                 {
                     memory.UpdateGameStats(gameId, won, player.TotalScore);
-                    memory.MarkProcessed(notification.EventId);  // CF-3 / #1939
+                    memory.MarkProcessed(notification.EventId, notification.SessionId);  // CF-3 / #1939
                     await _playerMemoryRepo.UpdateAsync(memory, cancellationToken).ConfigureAwait(false);
                 }
             }
@@ -102,10 +102,10 @@ internal sealed class OnSessionCompletedUpdateStatsHandler : INotificationHandle
                 {
                     memory = PlayerMemory.CreateForGuest(player.DisplayName);
                     memory.UpdateGameStats(gameId, won, player.TotalScore);
-                    memory.MarkProcessed(notification.EventId);  // CF-3 / #1939
+                    memory.MarkProcessed(notification.EventId, notification.SessionId);  // CF-3 / #1939
                     await _playerMemoryRepo.AddAsync(memory, cancellationToken).ConfigureAwait(false);
                 }
-                else if (memory.LastProcessedEventId == notification.EventId)
+                else if (AlreadyCounted(memory, notification))
                 {
                     _logger.LogDebug(
                         "Skipping stats update for guest {GuestName} on session {SessionId}: event {EventId} already processed",
@@ -114,7 +114,7 @@ internal sealed class OnSessionCompletedUpdateStatsHandler : INotificationHandle
                 else
                 {
                     memory.UpdateGameStats(gameId, won, player.TotalScore);
-                    memory.MarkProcessed(notification.EventId);  // CF-3 / #1939
+                    memory.MarkProcessed(notification.EventId, notification.SessionId);  // CF-3 / #1939
                     await _playerMemoryRepo.UpdateAsync(memory, cancellationToken).ConfigureAwait(false);
                 }
             }
@@ -127,7 +127,7 @@ internal sealed class OnSessionCompletedUpdateStatsHandler : INotificationHandle
                 .GetByIdAsync(notification.GroupId.Value, cancellationToken)
                 .ConfigureAwait(false);
 
-            if (group != null && group.LastProcessedEventId == notification.EventId)
+            if (group != null && (group.HasProcessedSession(notification.SessionId) || group.LastProcessedEventId == notification.EventId))
             {
                 // CF-3 / #1939: re-dispatched event — group stats already updated.
                 _logger.LogDebug(
@@ -146,7 +146,7 @@ internal sealed class OnSessionCompletedUpdateStatsHandler : INotificationHandle
                 stats.LastPlayedAt = notification.CompletedAt;
 
                 group.UpdateStats(stats);
-                group.MarkProcessed(notification.EventId);  // CF-3 / #1939
+                group.MarkProcessed(notification.EventId, notification.SessionId);  // CF-3 / #1939
                 await _groupMemoryRepo.UpdateAsync(group, cancellationToken).ConfigureAwait(false);
             }
             else
@@ -163,4 +163,11 @@ internal sealed class OnSessionCompletedUpdateStatsHandler : INotificationHandle
             "Updated player stats for {PlayerCount} players from session {SessionId}",
             notification.Players.Count, notification.SessionId);
     }
+
+    /// <summary>
+    /// The session already counted for this player: by the session itself (#4839, option C: whatever event or delivery
+    /// counted it, and whatever came in between) or, for rows written before that, by the last event seen.
+    /// </summary>
+    private static bool AlreadyCounted(PlayerMemory memory, LiveSessionCompletedEvent notification) =>
+        memory.HasProcessedSession(notification.SessionId) || memory.LastProcessedEventId == notification.EventId;
 }

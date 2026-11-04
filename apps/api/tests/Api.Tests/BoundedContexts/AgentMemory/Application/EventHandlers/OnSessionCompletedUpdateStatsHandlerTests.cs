@@ -209,9 +209,8 @@ public class OnSessionCompletedUpdateStatsHandlerTests
     {
         // The handler is delivered again when the outbox retries the row, and the event it gets is rebuilt from the
         // JSON of the row. Its guard (CF-3 / #1939) compares EventId, which holds only since #4841 made EventId survive
-        // that rebuild. NOT proved here: the guard remembers a single event per player and group (LastProcessedEventId),
-        // so a second delivery after ANOTHER event for the same player is counted again. That is what option C of #4839
-        // (idempotency on the session) would close, and why option B (rethrow, let the outbox retry) is not in.
+        // that rebuild. Two consecutive deliveries: the case the single-event guard already covered. The case with
+        // ANOTHER event in between is the next test (#4839, option C).
         var gameId = Guid.NewGuid();
         var groupId = Guid.NewGuid();
         var userId = Guid.NewGuid();
@@ -238,6 +237,65 @@ public class OnSessionCompletedUpdateStatsHandlerTests
         alice.GameStats.Should().ContainSingle().Which.Wins.Should().Be(1, "the second delivery is the same event");
         group.Stats.TotalSessions.Should().Be(1);
         group.Stats.GamePlayCounts[gameId].Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Handle_ARedeliveryAfterAnotherSessionOfTheSamePlayerAndGroup_CountsTheSessionOnce()
+    {
+        // #4839, option C. The outbox commits the batch even when the row of one handler fails, so the statistics
+        // written before it stay; the NEXT event of the same player (and group) can then be counted before the retry
+        // of the first. The old guard remembered only the last event, so the first session was counted again; the
+        // set of sessions recognises it whatever came in between.
+        var gameId = Guid.NewGuid();
+        var groupId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var firstPlayers = new List<CompletedPlayerSnapshot> { new(Guid.NewGuid(), userId, "Alice", 50, 1) };
+        var secondPlayers = new List<CompletedPlayerSnapshot> { new(Guid.NewGuid(), userId, "Alice", 30, 2) };
+        var first = CreateNotification(gameId, groupId: groupId, players: firstPlayers);
+        var second = CreateNotification(gameId, groupId: groupId, players: secondPlayers);
+        var firstRebuilt = JsonSerializer.Deserialize<LiveSessionCompletedEvent>(
+            JsonSerializer.Serialize(first, DomainEventJsonOptions.Default), DomainEventJsonOptions.Default)!;
+
+        var alice = PlayerMemory.CreateForUser(userId);
+        var group = GroupMemory.Create(userId, "Test Group");
+        _playerMemoryRepoMock
+            .Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(alice);
+        _groupMemoryRepoMock
+            .Setup(r => r.GetByIdAsync(groupId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(group);
+
+        await _handler.Handle(first, CancellationToken.None);
+        await _handler.Handle(second, CancellationToken.None);
+        await _handler.Handle(firstRebuilt, CancellationToken.None);
+
+        var stats = alice.GameStats.Should().ContainSingle().Subject;
+        stats.TotalPlayed.Should().Be(2, "two different sessions, the first one delivered twice");
+        stats.Wins.Should().Be(1);
+        stats.Losses.Should().Be(1);
+        group.Stats.TotalSessions.Should().Be(2);
+        group.Stats.GamePlayCounts[gameId].Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Handle_TwoDifferentSessionsOfTheSamePlayer_BothAreCounted()
+    {
+        // The other direction: remembering sessions must not turn the statistics off for a player's next session.
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var alice = PlayerMemory.CreateForUser(userId);
+        _playerMemoryRepoMock
+            .Setup(r => r.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(alice);
+
+        await _handler.Handle(
+            CreateNotification(gameId, players: [new CompletedPlayerSnapshot(Guid.NewGuid(), userId, "Alice", 50, 1)]),
+            CancellationToken.None);
+        await _handler.Handle(
+            CreateNotification(gameId, players: [new CompletedPlayerSnapshot(Guid.NewGuid(), userId, "Alice", 40, 1)]),
+            CancellationToken.None);
+
+        alice.GameStats.Should().ContainSingle().Which.TotalPlayed.Should().Be(2);
     }
 
     private static LiveSessionCompletedEvent CreateNotification(

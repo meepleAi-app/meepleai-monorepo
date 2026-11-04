@@ -812,6 +812,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("preferences_json");
 
+                    b.Property<string>("ProcessedSessionIdsJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("processed_session_ids");
+
                     b.Property<string>("StatsJson")
                         .HasColumnType("jsonb")
                         .HasColumnName("stats_json");
@@ -859,6 +863,10 @@ namespace Api.Infrastructure.Migrations
                     b.Property<Guid?>("LastProcessedEventId")
                         .HasColumnType("uuid")
                         .HasColumnName("last_processed_event_id");
+
+                    b.Property<string>("ProcessedSessionIdsJson")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("processed_session_ids");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")

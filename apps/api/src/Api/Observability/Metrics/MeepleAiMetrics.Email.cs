@@ -13,7 +13,9 @@ internal static partial class MeepleAiMetrics
     ///              label chosen at the call site, so the cardinality stays bounded.
     /// A caller that swallows the failure on purpose (a registration must not fail because the verification mail
     /// did not leave) leaves only a log line; this is what lets someone see that mail is not leaving (#4845).
-    /// A cancelled send is not a failure and is not counted.
+    /// A send the caller cancelled (its token) is not a failure and is not counted; a transport timeout is.
+    /// It counts the mails routed through <c>EmailService.SendViaTransportAsync</c>: the account mails still
+    /// on a hand-built <c>SmtpClient</c> are not in it until they move (#4845).
     /// </summary>
     public static readonly Counter<long> EmailSendFailures = Meter.CreateCounter<long>(
         name: "meepleai.email.send_failures.total",

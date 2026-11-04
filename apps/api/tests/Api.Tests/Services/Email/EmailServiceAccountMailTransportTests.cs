@@ -38,7 +38,7 @@ public sealed class EmailServiceAccountMailTransportTests
 
     private sealed record AccountMail(
         string Kind,
-        Func<EmailService, string?, Task> Send,
+        Func<EmailService, string?, CancellationToken, Task> Send,
         string Subject,
         string Link,
         string FailureMessage);
@@ -48,13 +48,13 @@ public sealed class EmailServiceAccountMailTransportTests
     [
         new(
             "password_reset",
-            (s, lang) => s.SendPasswordResetEmailAsync("marco@example.test", "Marco", "tok-reset", lang, Ct),
+            (s, lang, ct) => s.SendPasswordResetEmailAsync("marco@example.test", "Marco", "tok-reset", lang, ct),
             "Reimposta la tua password di MeepleAI",
             $"{BaseUrl}/reset-password?token=tok-reset",
             "Failed to send password reset email"),
         new(
             "email_verification",
-            (s, lang) => s.SendVerificationEmailAsync("marco@example.test", "Marco", "tok-verify", lang, Ct),
+            (s, lang, ct) => s.SendVerificationEmailAsync("marco@example.test", "Marco", "tok-verify", lang, ct),
             "Verifica la tua email di MeepleAI",
             $"{BaseUrl}/verify-email?token=tok-verify",
             "Failed to send verification email"),
@@ -105,7 +105,7 @@ public sealed class EmailServiceAccountMailTransportTests
         var mail = Mail(kind);
         var sender = new RecordingSender();
 
-        await mail.Send(ServiceWith(sender), "it");
+        await mail.Send(ServiceWith(sender), "it", Ct);
 
         var sent = sender.Sent.Should().ContainSingle().Subject;
         sent.ToEmail.Should().Be("marco@example.test");
@@ -124,7 +124,7 @@ public sealed class EmailServiceAccountMailTransportTests
         var cause = new InvalidOperationException("transport down");
         var service = ServiceWith(new RecordingSender { Failure = cause });
 
-        var act = () => mail.Send(service, "it");
+        var act = () => mail.Send(service, "it", Ct);
 
         var thrown = await act.Should().ThrowAsync<InvalidOperationException>();
         thrown.Which.Message.Should().Be(mail.FailureMessage);
@@ -140,7 +140,7 @@ public sealed class EmailServiceAccountMailTransportTests
         using var failures = new SendFailureCapture();
         var service = ServiceWith(new RecordingSender { Failure = new InvalidOperationException("transport down") });
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => mail.Send(service, "it"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => mail.Send(service, "it", Ct));
 
         failures.CountFor(kind).Should().Be(1);
         failures.CountFor(other.Kind).Should().Be(0, "only the mail that failed is counted");
@@ -148,15 +148,33 @@ public sealed class EmailServiceAccountMailTransportTests
 
     [Theory]
     [MemberData(nameof(MailKinds))]
-    public async Task ACancelledSend_IsNotCountedAsAFailure(string kind)
+    public async Task ASendTheCallerCancelled_IsNotCountedAsAFailure(string kind)
     {
         var mail = Mail(kind);
         using var failures = new SendFailureCapture();
-        var service = ServiceWith(new RecordingSender { Failure = new OperationCanceledException() });
+        using var caller = new CancellationTokenSource();
+        await caller.CancelAsync();
+        var service = ServiceWith(new RecordingSender { Failure = new OperationCanceledException(caller.Token) });
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => mail.Send(service, "it"));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => mail.Send(service, "it", caller.Token));
 
         failures.CountFor(kind).Should().Be(0, "a caller that gave up is not a transport that failed");
+    }
+
+    [Theory]
+    [MemberData(nameof(MailKinds))]
+    public async Task ATransportTimeout_IsCountedAsAFailure_EvenThoughItIsACancellationExceptionType(string kind)
+    {
+        // A typed HttpClient that times out throws TaskCanceledException (an OperationCanceledException) while
+        // the caller's own token is still live: the provider did not answer, and that is exactly what the counter
+        // is for. Telling the two apart by the exception type would count neither or both.
+        var mail = Mail(kind);
+        using var failures = new SendFailureCapture();
+        var service = ServiceWith(new RecordingSender { Failure = new TaskCanceledException("The request timed out.") });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => mail.Send(service, "it", Ct));
+
+        failures.CountFor(kind).Should().Be(1);
     }
 
     [Theory]
@@ -166,7 +184,7 @@ public sealed class EmailServiceAccountMailTransportTests
         var mail = Mail(kind);
         using var failures = new SendFailureCapture();
 
-        await mail.Send(ServiceWith(new RecordingSender()), "it");
+        await mail.Send(ServiceWith(new RecordingSender()), "it", Ct);
 
         failures.CountFor(kind).Should().Be(0);
     }

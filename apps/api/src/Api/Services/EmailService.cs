@@ -97,7 +97,9 @@ internal partial class EmailService : IEmailService
     /// Routes the send through the <see cref="IEmailSender"/> (Resend or SMTP, by <c>EMAIL_PROVIDER</c>).
     /// Throws on transport failure — callers decide whether to swallow the exception or propagate it
     /// (Issue #1629). A failure is counted under the provider and the <paramref name="kind"/> of mail, so one
-    /// that a caller swallows on purpose still shows up (#4845); a cancelled send is not a failure.
+    /// that a caller swallows on purpose still shows up (#4845). What decides is the caller's token, not the
+    /// exception type: a send the caller cancelled is not a failure, while a transport that timed out throws a
+    /// <see cref="TaskCanceledException"/> too and is one.
     /// <c>kind</c> is the short fixed label of the mail, the tag of the failure counter; <c>toName</c> is the
     /// display name for the <c>To:</c> line, when the mail has one.
     /// </summary>
@@ -121,7 +123,7 @@ internal partial class EmailService : IEmailService
                 HtmlBody = htmlBody
             }, cancellationToken).ConfigureAwait(false);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception) when (!cancellationToken.IsCancellationRequested)
         {
             MeepleAiMetrics.EmailSendFailures.Add(
                 1,

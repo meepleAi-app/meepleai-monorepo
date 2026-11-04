@@ -447,26 +447,48 @@ internal sealed class PlayRecord : AggregateRoot<Guid>
         }
 
         if (notes != null)
-        {
-            var trimmed = notes.Trim();
-            if (trimmed.Length > 2000)
-                throw new ValidationException("Notes cannot exceed 2000 characters");
-
-            Notes = trimmed;
-        }
+            Notes = TrimWithin(notes, 2000, "Notes");
 
         if (location != null)
-        {
-            var trimmed = location.Trim();
-            if (trimmed.Length > 255)
-                throw new ValidationException("Location cannot exceed 255 characters");
-
-            Location = trimmed;
-        }
+            Location = TrimWithin(location, 255, "Location");
 
         UpdatedAt = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
 
         AddDomainEvent(new PlayRecordUpdatedEvent(Id));
+    }
+
+    /// <summary>
+    /// Puts the editable details back as a stored version had them (#4843). <see cref="UpdateDetails"/> reads a
+    /// <c>null</c> argument as «leave it alone», so it cannot bring a field back to «never set»: a restore through
+    /// it kept the notes and the location written after the version. Here <c>null</c> is a value and clears the field.
+    /// </summary>
+    public void RestoreDetails(
+        DateTime sessionDate,
+        string? notes,
+        string? location,
+        TimeProvider? timeProvider = null)
+    {
+        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+
+        if (sessionDate > now)
+            throw new ValidationException("Session date cannot be in the future");
+
+        SessionDate = sessionDate;
+        Notes = notes == null ? null : TrimWithin(notes, 2000, "Notes");
+        Location = location == null ? null : TrimWithin(location, 255, "Location");
+
+        UpdatedAt = now;
+
+        AddDomainEvent(new PlayRecordUpdatedEvent(Id));
+    }
+
+    private static string TrimWithin(string value, int maxLength, string field)
+    {
+        var trimmed = value.Trim();
+        if (trimmed.Length > maxLength)
+            throw new ValidationException($"{field} cannot exceed {maxLength} characters");
+
+        return trimmed;
     }
 
     /// <summary>

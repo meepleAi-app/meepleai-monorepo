@@ -576,6 +576,82 @@ public class PlayRecordTests
         exception.Message.Should().ContainEquivalentOf("cannot exceed 255");
     }
 
+    [Fact]
+    public void UpdateDetails_NullNotesAndLocation_LeavesTheCurrentOnesAlone()
+    {
+        // The meaning of null the restore must NOT inherit (#4843): every other caller relies on it.
+        var record = CreateTestRecord();
+        record.UpdateDetails(notes: "Kept", location: "Home");
+
+        record.UpdateDetails(notes: null, location: null);
+
+        record.Notes.Should().Be("Kept");
+        record.Location.Should().Be("Home");
+    }
+
+    #endregion
+
+    #region RestoreDetails Tests (#4843)
+
+    [Fact]
+    public void RestoreDetails_NullNotesAndLocation_ClearsThem()
+    {
+        var record = CreateTestRecord();
+        record.UpdateDetails(notes: "Written later", location: "Bar");
+
+        record.RestoreDetails(record.SessionDate, notes: null, location: null);
+
+        record.Notes.Should().BeNull();
+        record.Location.Should().BeNull();
+    }
+
+    [Fact]
+    public void RestoreDetails_Values_SetsThemTrimmedAndRaisesTheUpdatedEvent()
+    {
+        var record = CreateTestRecord();
+        record.ClearDomainEvents();
+        var earlier = record.SessionDate.AddDays(-2);
+
+        record.RestoreDetails(earlier, notes: "  Original  ", location: " Home ");
+
+        record.SessionDate.Should().Be(earlier);
+        record.Notes.Should().Be("Original");
+        record.Location.Should().Be("Home");
+        record.DomainEvents.Should().ContainSingle().Which.Should().BeOfType<PlayRecordUpdatedEvent>();
+    }
+
+    [Fact]
+    public void RestoreDetails_FutureSessionDate_ThrowsValidationException()
+    {
+        var record = CreateTestRecord();
+
+        var act = () => record.RestoreDetails(DateTime.UtcNow.AddDays(1), notes: null, location: null);
+
+        act.Should().Throw<ValidationException>().Which.Message.Should().ContainEquivalentOf("future");
+    }
+
+    [Fact]
+    public void RestoreDetails_NotesTooLong_ThrowsAndKeepsTheCurrentNotes()
+    {
+        var record = CreateTestRecord();
+        record.UpdateDetails(notes: "Kept");
+
+        var act = () => record.RestoreDetails(record.SessionDate, notes: new string('x', 2001), location: null);
+
+        act.Should().Throw<ValidationException>().Which.Message.Should().ContainEquivalentOf("cannot exceed 2000");
+        record.Notes.Should().Be("Kept");
+    }
+
+    [Fact]
+    public void RestoreDetails_LocationTooLong_ThrowsValidationException()
+    {
+        var record = CreateTestRecord();
+
+        var act = () => record.RestoreDetails(record.SessionDate, notes: null, location: new string('x', 256));
+
+        act.Should().Throw<ValidationException>().Which.Message.Should().ContainEquivalentOf("cannot exceed 255");
+    }
+
     #endregion
 
     #region Archive Tests

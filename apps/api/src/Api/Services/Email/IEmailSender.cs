@@ -32,6 +32,13 @@ internal sealed class EmailRequest
     public required string FromEmail { get; init; }
     public required string FromName { get; init; }
     public required string ToEmail { get; init; }
+
+    /// <summary>
+    /// Optional display name of the recipient, as the <c>To:</c> line shows it (#4845). The account emails have
+    /// always carried it; a transport that cannot show a name is free to drop it.
+    /// </summary>
+    public string? ToName { get; init; }
+
     public required string Subject { get; init; }
     public required string HtmlBody { get; init; }
 

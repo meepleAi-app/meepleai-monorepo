@@ -84,11 +84,13 @@ internal sealed class GameNightEmailService : IGameNightEmailService
 
     public async Task SendGameNightReminder24hEmailAsync(
         string toEmail,
+        string organizerName,
         string title,
         DateTimeOffset scheduledAt,
         string? location,
         int confirmedCount,
         bool isPending,
+        string rsvpUrl,
         string unsubscribeUrl,
         GameNightEmailLocale locale,
         CancellationToken ct = default)
@@ -101,8 +103,10 @@ internal sealed class GameNightEmailService : IGameNightEmailService
             ? $"""<p style="margin:4px 0;font-size:14px;color:#6b7280;">{texts.LocationLabel}: <strong>{Encode(location)}</strong></p>"""
             : "";
 
+        // A guest who has not answered is asked, and given the link to do it from (the same page the invitation
+        // linked): the reminder is the last moment the organizer can still count on a yes or a no.
         var pendingCta = isPending
-            ? $"""<div style="background:#fef3c7;border-radius:8px;padding:16px;margin-bottom:24px;text-align:center;"><p style="margin:0;color:#92400e;font-size:14px;font-weight:600;">{texts.ReminderPendingPrompt}</p></div>"""
+            ? $"""<div style="background:#fef3c7;border-radius:8px;padding:16px;margin-bottom:24px;text-align:center;"><p style="margin:0 0 12px;color:#92400e;font-size:14px;font-weight:600;">{texts.ReminderPendingPrompt}</p><a href="{Encode(rsvpUrl)}" style="display:inline-block;background:#059669;color:#ffffff;padding:10px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">{texts.ReminderRespondLabel}</a></div>"""
             : "";
 
         var subject = texts.ReminderSubject(title);
@@ -118,7 +122,7 @@ internal sealed class GameNightEmailService : IGameNightEmailService
             </div>
 
             {pendingCta}
-        """, MemberFooter(texts, unsubscribeUrl), texts);
+        """, GuestFooter(texts.ReminderGuestFooter(Encode(organizerName)), texts, unsubscribeUrl), texts);
 
         await _emailService.SendRawEmailAsync(toEmail, subject, body, ct).ConfigureAwait(false);
         _logger.LogInformation("Game night 24h reminder email sent to {Email} for event {Title}", DataMasking.MaskEmail(toEmail), LogSanitizer.Sanitize(title));
@@ -225,13 +229,6 @@ internal sealed class GameNightEmailService : IGameNightEmailService
         $"""
         <p style="margin:0 0 8px;font-size:12px;color:#9ca3af;">{reasonHtml}</p>
                             <p style="margin:0;font-size:12px;color:#9ca3af;">{texts.GuestUnsubscribePrompt} <a href="{Encode(unsubscribeUrl)}" style="color:#6b7280;text-decoration:underline;">{texts.GuestUnsubscribeLabel}</a></p>
-        """;
-
-    /// <summary>Footer for an email whose recipient has a MeepleAI account and its notification preferences.</summary>
-    private static string MemberFooter(GameNightEmailTexts texts, string unsubscribeUrl) =>
-        $"""
-        <p style="margin:0 0 8px;font-size:12px;color:#9ca3af;">{texts.MemberFooter}</p>
-                            <a href="{Encode(unsubscribeUrl)}" style="font-size:12px;color:#6b7280;text-decoration:underline;">{texts.ManagePreferencesLabel}</a>
         """;
 
     /// <summary>

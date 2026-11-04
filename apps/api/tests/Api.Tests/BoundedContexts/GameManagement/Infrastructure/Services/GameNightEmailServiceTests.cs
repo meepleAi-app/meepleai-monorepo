@@ -26,6 +26,7 @@ public sealed class GameNightEmailServiceTests
     private static readonly DateTimeOffset RomeNineOclock = new(2026, 10, 30, 20, 0, 0, TimeSpan.Zero);
 
     private const string UnsubscribeUrl = "https://meepleai.test/invites/unsubscribe/key123";
+    private const string RsvpUrl = "https://meepleai.test/invites/tok123";
 
     private readonly Mock<IEmailService> _emailMock = new();
     private readonly Mock<ILogger<GameNightEmailService>> _loggerMock = new();
@@ -247,20 +248,86 @@ public sealed class GameNightEmailServiceTests
         _body.Should().NotContain("preferenze di notifica");
     }
 
+    private Task SendReminder(
+        GameNightEmailLocale locale,
+        bool isPending = true,
+        string organizer = "Marco",
+        string title = "Friday Catan",
+        string? location = "My place",
+        int confirmedCount = 3,
+        string rsvpUrl = RsvpUrl) =>
+        _sut.SendGameNightReminder24hEmailAsync(
+            "guest@example.com", organizer, title, RomeNineOclock, location,
+            confirmedCount, isPending, rsvpUrl, UnsubscribeUrl, locale);
+
     [Fact]
-    public async Task Reminder_ToAMember_WritesTheLocalTimeAndKeepsTheAccountFooterWithItsLink()
+    public async Task Reminder_ToAGuest_WritesTheLocalTime_SaysWhyItArrives_AndCarriesTheWayToStop()
     {
-        await _sut.SendGameNightReminder24hEmailAsync(
-            "member@example.com", "Friday Catan", RomeNineOclock, "My place",
-            confirmedCount: 3, isPending: true, "https://meepleai.test/unsub?t=1",
-            new GameNightEmailLocale("en", "Europe/Rome"));
+        await SendReminder(new GameNightEmailLocale("en", "Europe/Rome"));
 
         _subject.Should().Be("Reminder: Friday Catan is tomorrow! - MeepleAI");
         _body.Should().Contain("When: <strong>Friday, October 30, 2026 at 9:00 PM (Europe/Rome, UTC+1)</strong>");
+        _body.Should().Contain("Confirmed attendees: <strong>3</strong>");
+        _body.Should().Contain("You received this email because Marco invited you to a game night on MeepleAI.");
+        _body.Should().Contain($"href=\"{UnsubscribeUrl}\"");
+        _body.Should().NotContain("you have a MeepleAI account");
+        _body.Should().NotContain("Manage notification preferences");
+    }
+
+    [Fact]
+    public async Task Reminder_ToAGuestWhoHasNotAnswered_AsksAndLinksTheAnswer()
+    {
+        await SendReminder(new GameNightEmailLocale("en", "Europe/Rome"), isPending: true);
+
         _body.Should().Contain("You haven't responded yet. Will you be joining?");
-        _body.Should().Contain("You received this email because you have a MeepleAI account.");
-        _body.Should().Contain("href=\"https://meepleai.test/unsub?t=1\"");
-        _body.Should().Contain("Manage notification preferences");
+        _body.Should().Contain($"href=\"{RsvpUrl}\"");
+        _body.Should().Contain(">Respond</a>");
+    }
+
+    [Fact]
+    public async Task Reminder_ToAGuestWhoAccepted_AsksNothingAndLinksNoAnswer()
+    {
+        await SendReminder(new GameNightEmailLocale("en", "Europe/Rome"), isPending: false);
+
+        _body.Should().NotContain("You haven't responded yet");
+        _body.Should().NotContain(RsvpUrl);
+    }
+
+    [Fact]
+    public async Task Reminder_InItalian_SpeaksItalian()
+    {
+        await SendReminder(new GameNightEmailLocale("it", "Europe/Rome"));
+
+        _subject.Should().Be("Promemoria: Friday Catan è domani! - MeepleAI");
+        _body.Should().Contain("Hai ricevuto questa email perché Marco ti ha invitato a una serata di gioco su MeepleAI.");
+        _body.Should().Contain("Non hai ancora risposto. Ci sarai?");
+        _body.Should().Contain(">Rispondi</a>");
+    }
+
+    [Fact]
+    public async Task Reminder_EncodesTheOrganizersNameTheTitleAndTheLocation_WhereverTheyAppear()
+    {
+        await SendReminder(
+            new GameNightEmailLocale("en", "Europe/Rome"),
+            organizer: "Mario & <Co>", title: "Catan <b>x</b>", location: "Casa <i>mia</i>");
+
+        _body.Should().Contain("because Mario &amp; &lt;Co&gt; invited you");
+        _body.Should().Contain("Catan &lt;b&gt;x&lt;/b&gt;");
+        _body.Should().Contain("Casa &lt;i&gt;mia&lt;/i&gt;");
+        _body.Should().NotContain("<Co>").And.NotContain("<b>x</b>").And.NotContain("<i>mia</i>");
+    }
+
+    [Fact]
+    public async Task Reminder_EncodesTheAnswerLinkInTheAttribute()
+    {
+        // The link is composed from the public address and the token, but it lands in an attribute: a quote in it must
+        // not close the attribute and start another.
+        await SendReminder(
+            new GameNightEmailLocale("en", "Europe/Rome"), isPending: true,
+            rsvpUrl: "https://meepleai.test/invites/t\"onclick=\"x");
+
+        _body.Should().Contain("t&quot;onclick=&quot;x");
+        _body.Should().NotContain("t\"onclick=");
     }
 
     [Fact]
@@ -333,6 +400,7 @@ public sealed class GameNightEmailServiceTests
                 "guest@example.com", "Marco", "Friday Catan", RomeNineOclock, UnsubscribeUrl, locale)),
             ("rsvp confirmation", () => _sut.SendGameNightRsvpConfirmationEmailAsync(
                 "guest@example.com", "Friday Catan", RomeNineOclock, "Casa mia", UnsubscribeUrl, locale)),
+            ("reminder", () => SendReminder(locale)),
         };
 
         foreach (var (name, send) in sends)
@@ -361,10 +429,7 @@ public sealed class GameNightEmailServiceTests
     [Fact]
     public async Task Reminder_WithoutAZone_SaysUtcOutLoud()
     {
-        await _sut.SendGameNightReminder24hEmailAsync(
-            "member@example.com", "Friday Catan", RomeNineOclock, location: null,
-            confirmedCount: 0, isPending: false, "https://meepleai.test/unsub?t=1",
-            GameNightEmailLocale.Unknown);
+        await SendReminder(GameNightEmailLocale.Unknown, isPending: false, location: null, confirmedCount: 0);
 
         _body.Should().Contain("Friday, October 30, 2026 at 8:00 PM (UTC)");
     }

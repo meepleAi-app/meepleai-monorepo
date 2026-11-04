@@ -197,7 +197,8 @@ internal class GameNightInvitationRepository : RepositoryBase, IGameNightInvitat
             CreatedBy = domain.CreatedBy,
             RsvpConfirmationSentAt = domain.RsvpConfirmationSentAt,
             CancellationNoticeSentAt = domain.CancellationNoticeSentAt,
-            UnsubscribeKey = domain.UnsubscribeKey
+            UnsubscribeKey = domain.UnsubscribeKey,
+            Reminder24hSentAt = domain.Reminder24hSentAt
         };
     }
 
@@ -223,7 +224,8 @@ internal class GameNightInvitationRepository : RepositoryBase, IGameNightInvitat
             respondedByName: entity.RespondedByName,
             rsvpConfirmationSentAt: entity.RsvpConfirmationSentAt,
             cancellationNoticeSentAt: entity.CancellationNoticeSentAt,
-            unsubscribeKey: entity.UnsubscribeKey);
+            unsubscribeKey: entity.UnsubscribeKey,
+            reminder24hSentAt: entity.Reminder24hSentAt);
 
         // Reconstitute is a pure factory and does not raise events — defensive clear in case
         // base AggregateRoot ctor introduces any (matches GameNightEventRepository pattern).

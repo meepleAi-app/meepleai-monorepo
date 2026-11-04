@@ -5781,6 +5781,10 @@ namespace Api.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("game_night_id");
 
+                    b.Property<DateTimeOffset?>("Reminder24hSentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reminder_24h_sent_at");
+
                     b.Property<DateTimeOffset?>("RespondedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("responded_at");

@@ -8,7 +8,9 @@ namespace Api.BoundedContexts.GameManagement.Application.Services;
 /// that go to a guest — the invitation, the RSVP confirmation and (#4853) the cancellation — carry the
 /// one-tap opt-out link (#4846): the address is not an account, so there is no preference page behind it, and the
 /// link the footer used to carry (#4754) pointed at a page that did not exist. The opt-out is keyed by the address
-/// and authorised by the invitation token. The reminder to a registered member keeps its preferences link.
+/// and authorised by the invitation token. The 24 hour reminder (#4846) is one of the emails to a guest: the
+/// registered members are reminded in the app by the notification dispatcher, and this one goes to the guests who
+/// were invited by address.
 /// </summary>
 internal interface IGameNightEmailService
 {
@@ -27,11 +29,13 @@ internal interface IGameNightEmailService
 
     Task SendGameNightReminder24hEmailAsync(
         string toEmail,
+        string organizerName,
         string title,
         DateTimeOffset scheduledAt,
         string? location,
         int confirmedCount,
         bool isPending,
+        string rsvpUrl,
         string unsubscribeUrl,
         GameNightEmailLocale locale,
         CancellationToken ct = default);

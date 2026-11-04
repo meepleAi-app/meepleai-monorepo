@@ -171,6 +171,48 @@ describe('useSignalRSession', () => {
     unmount();
   });
 
+  // 🔴 #4059 — l'asserzione che mancava, ed e' il motivo per cui il difetto e' vissuto a lungo.
+  //
+  // Questo file sostituisce `HubConnectionBuilder` per intero: `mockWithUrl` e' una spia di cui
+  // nessun test asseriva l'argomento. Il test sopra («connects to SignalR hub on mount») passava
+  // con `withUrl('/hubs/game-state')`, cioe' con un URL che risponde 404 su entrambe le origini
+  // — non PUO' osservare un URL sbagliato, perche' il mock non lo usa per connettersi.
+  //
+  // Le due asserzioni corrispondono ai due difetti misurati, e nessuna delle due e' implicata
+  // dall'altra:
+  //   - il path era `/hubs/game-state`, col trattino; il backend mappa `/hubs/gamestate`.
+  //   - l'URL era relativo, quindi risolveva su :3000, dove non esiste proxy per `/hubs`.
+  //
+  // Volutamente non si asserisce l'host esatto: dipende da `NEXT_PUBLIC_API_BASE`, che cambia
+  // fra dev, CI e staging. Cio' che deve restare vero e' che sia ASSOLUTO.
+  it('si connette a un URL assoluto e al path che il backend mappa', async () => {
+    const { unmount } = renderHook(() => useSignalRSession(sessionId));
+
+    await act(async () => {
+      await new Promise(r => setTimeout(r, 0));
+    });
+
+    expect(mockWithUrl).toHaveBeenCalledTimes(1);
+    const [url, options] = mockWithUrl.mock.calls[0] as [string, { withCredentials?: boolean }];
+
+    expect(url).toMatch(/^https?:\/\//);
+    expect(url.endsWith('/hubs/gamestate')).toBe(true);
+    // Il trattino e' il path che non esiste: va escluso esplicitamente, perche'
+    // `endsWith('/hubs/gamestate')` da solo e' falso anche per `/hubs/game-state` ma un
+    // refactoring potrebbe reintrodurlo altrove nella stringa.
+    expect(url).not.toContain('game-state');
+
+    // Cross-origin verso :8080 con cookie. ⚠️ L'effetto NON e' che senza questo la connessione
+    // fallisce: `GameStateHub` porta `[AllowAnonymous]` (supporto guest, E3-4), quindi senza
+    // cookie si connetterebbe comunque — come anonimo. L'effetto e' peggiore di un fallimento:
+    // `SessionParticipantIdProvider` deriva l'identita' dal principal, quindi un utente
+    // autenticato diventerebbe un guest in silenzio, e gli eventi indirizzati al suo userId non
+    // arriverebbero. E' per questo che l'opzione va asserita e non lasciata al caso.
+    expect(options?.withCredentials).toBe(true);
+
+    unmount();
+  });
+
   it('does not connect when sessionId is null', () => {
     renderHook(() => useSignalRSession(null));
     expect(mockBuild).not.toHaveBeenCalled();

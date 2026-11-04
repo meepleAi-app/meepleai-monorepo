@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { getApiBase } from '@/lib/api/core/httpClient';
+
 export interface QueueStreamEvent {
   timestamp: string;
   queued: number;
@@ -42,7 +44,10 @@ export function useSseQueue({ enabled, onUpdate }: UseSseQueueOptions) {
         eventSourceRef.current.close();
       }
 
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
+      // #4059: come in `guest-session-view.tsx` — `NEXT_PUBLIC_API_URL` non esiste nei build
+      // deployabili, quindi si ricadeva su `''` e lo stream passava dal proxy Next. Giusto
+      // per caso; ora dichiarato.
+      const baseUrl = getApiBase();
       const es = new EventSource(`${baseUrl}/api/v1/admin/bgg-queue/stream`);
 
       es.onopen = () => setIsConnected(true);

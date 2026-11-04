@@ -32,6 +32,20 @@ internal sealed class EmailRequest
     public required string FromEmail { get; init; }
     public required string FromName { get; init; }
     public required string ToEmail { get; init; }
+
+    /// <summary>
+    /// Optional display name of the recipient, as the <c>To:</c> line shows it (#4845). The account emails have
+    /// always carried it; a transport that cannot show a name is free to drop it.
+    /// </summary>
+    public string? ToName { get; init; }
+
+    /// <summary>
+    /// The other recipients of the same message, after <see cref="ToEmail"/>, all on its <c>To:</c> line (#4845).
+    /// Only the scheduled reports have more than one: they go out as ONE message that every recipient sees addressed
+    /// to all of them, as they always did. Null or empty for every other mail.
+    /// </summary>
+    public IReadOnlyList<string>? AdditionalToEmails { get; init; }
+
     public required string Subject { get; init; }
     public required string HtmlBody { get; init; }
 
@@ -46,4 +60,10 @@ internal sealed class EmailRequest
     /// should be routed to a monitored mailbox.
     /// </summary>
     public string? ReplyTo { get; init; }
+
+    /// <summary>Files attached to the message (#4845). Only the scheduled reports carry one.</summary>
+    public IReadOnlyList<EmailRequestAttachment>? Attachments { get; init; }
 }
+
+/// <summary>A file attached to an <see cref="EmailRequest"/>: its name as the recipient sees it, and its bytes.</summary>
+internal sealed record EmailRequestAttachment(string FileName, byte[] Content);

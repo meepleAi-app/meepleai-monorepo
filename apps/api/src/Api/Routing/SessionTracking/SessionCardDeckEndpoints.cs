@@ -26,6 +26,7 @@ internal static class SessionCardDeckEndpoints
         group.MapPost("/game-sessions/{sessionId:guid}/decks", async (
             Guid sessionId,
             CreateDeckCommand command,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
@@ -34,7 +35,16 @@ internal static class SessionCardDeckEndpoints
                 return Results.BadRequest(new { error = "Session ID mismatch" });
             }
 
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            // IDOR guard (#3756): l'identita' e' derivata dal principal e sovrascrive qualunque
+            // RequestedBy arrivato dal body. L'handler verifica via ISessionAccessGuard che il
+            // chiamante sia owner o partecipante registrato della sessione.
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await mediator.Send(command with { RequestedBy = userId }, ct).ConfigureAwait(false);
             return Results.Created($"/api/v1/game-sessions/{sessionId}/decks/{result.DeckId}", result);
         })
         .RequireAuthenticatedUser()
@@ -43,7 +53,8 @@ internal static class SessionCardDeckEndpoints
         .WithSummary("Create a new deck in the session")
         .Produces(201)
         .Produces(400)
-        .Produces(401);
+        .Produces(401)
+        .Produces(403);
     }
 
     private static void MapShuffleDeckEndpoint(RouteGroupBuilder group)
@@ -52,6 +63,7 @@ internal static class SessionCardDeckEndpoints
             Guid sessionId,
             Guid deckId,
             ShuffleDeckCommand command,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
@@ -60,7 +72,16 @@ internal static class SessionCardDeckEndpoints
                 return Results.BadRequest(new { error = "Session or Deck ID mismatch" });
             }
 
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            // IDOR guard (#3756): l'identita' e' derivata dal principal e sovrascrive qualunque
+            // RequestedBy arrivato dal body. L'handler verifica via ISessionAccessGuard che il
+            // chiamante sia owner o partecipante registrato della sessione.
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await mediator.Send(command with { RequestedBy = userId }, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
         .RequireAuthenticatedUser()
@@ -70,6 +91,7 @@ internal static class SessionCardDeckEndpoints
         .Produces(200)
         .Produces(400)
         .Produces(401)
+        .Produces(403)
         .Produces(404);
     }
 
@@ -79,6 +101,7 @@ internal static class SessionCardDeckEndpoints
             Guid sessionId,
             Guid deckId,
             DrawCardsCommand command,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
@@ -87,7 +110,16 @@ internal static class SessionCardDeckEndpoints
                 return Results.BadRequest(new { error = "Session or Deck ID mismatch" });
             }
 
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            // IDOR guard (#3756): l'identita' e' derivata dal principal e sovrascrive qualunque
+            // RequestedBy arrivato dal body. L'handler verifica via ISessionAccessGuard che il
+            // chiamante sia owner o partecipante registrato della sessione.
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await mediator.Send(command with { RequestedBy = userId }, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
         .RequireAuthenticatedUser()
@@ -97,6 +129,7 @@ internal static class SessionCardDeckEndpoints
         .Produces(200)
         .Produces(400)
         .Produces(401)
+        .Produces(403)
         .Produces(404);
     }
 
@@ -106,6 +139,7 @@ internal static class SessionCardDeckEndpoints
             Guid sessionId,
             Guid deckId,
             DiscardCardsCommand command,
+            HttpContext httpContext,
             IMediator mediator,
             CancellationToken ct) =>
         {
@@ -114,7 +148,16 @@ internal static class SessionCardDeckEndpoints
                 return Results.BadRequest(new { error = "Session or Deck ID mismatch" });
             }
 
-            var result = await mediator.Send(command, ct).ConfigureAwait(false);
+            // IDOR guard (#3756): l'identita' e' derivata dal principal e sovrascrive qualunque
+            // RequestedBy arrivato dal body. L'handler verifica via ISessionAccessGuard che il
+            // chiamante sia owner o partecipante registrato della sessione.
+            var userId = httpContext.User.GetUserId();
+            if (userId == Guid.Empty)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await mediator.Send(command with { RequestedBy = userId }, ct).ConfigureAwait(false);
             return Results.Ok(result);
         })
         .RequireAuthenticatedUser()
@@ -124,6 +167,7 @@ internal static class SessionCardDeckEndpoints
         .Produces(200)
         .Produces(400)
         .Produces(401)
+        .Produces(403)
         .Produces(404);
     }
 

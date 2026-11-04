@@ -22,8 +22,6 @@ internal sealed class LlmSystemConfigProvider : ILlmSystemConfigProvider
 
     private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(60);
 
-    private const decimal DefaultDailyBudgetUsd = 10.00m;
-    private const decimal DefaultMonthlyBudgetUsd = 100.00m;
 
     public LlmSystemConfigProvider(
         IServiceScopeFactory scopeFactory,
@@ -56,13 +54,31 @@ internal sealed class LlmSystemConfigProvider : ILlmSystemConfigProvider
     public async Task<decimal> GetDailyBudgetUsdAsync(CancellationToken ct = default)
     {
         var config = await GetCachedConfigAsync(ct).ConfigureAwait(false);
-        return config?.DailyBudgetUsd ?? DefaultDailyBudgetUsd;
+        return config?.DailyBudgetUsd ?? LlmSystemConfig.DefaultDailyBudgetUsd;
     }
 
     public async Task<decimal> GetMonthlyBudgetUsdAsync(CancellationToken ct = default)
     {
         var config = await GetCachedConfigAsync(ct).ConfigureAwait(false);
-        return config?.MonthlyBudgetUsd ?? DefaultMonthlyBudgetUsd;
+        return config?.MonthlyBudgetUsd ?? LlmSystemConfig.DefaultMonthlyBudgetUsd;
+    }
+
+    public async Task<LlmBudgetPolicy> GetBudgetPolicyAsync(CancellationToken ct = default)
+    {
+        var config = await GetCachedConfigAsync(ct).ConfigureAwait(false);
+        return config is null
+            ? new LlmBudgetPolicy(
+                LlmSystemConfig.DefaultDailyBudgetUsd,
+                LlmSystemConfig.DefaultMonthlyBudgetUsd,
+                LlmSystemConfig.DefaultDegradeThresholdPercent,
+                LlmSystemConfig.DefaultBackgroundQuotaPercent,
+                LlmSystemConfig.DefaultEvaluationQuotaPercent)
+            : new LlmBudgetPolicy(
+                config.DailyBudgetUsd,
+                config.MonthlyBudgetUsd,
+                config.DegradeThresholdPercent,
+                config.BackgroundQuotaPercent,
+                config.EvaluationQuotaPercent);
     }
 
     public (int FailureThreshold, int OpenDurationSeconds, int SuccessThreshold) GetCircuitBreakerThresholdsSnapshot()

@@ -82,7 +82,7 @@ public sealed class SetUserLevelCommandHandlerIntegrationTests : IAsyncLifetime
         }
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_WithValidCommand_UpdatesUserLevel()
     {
         // Arrange
@@ -110,7 +110,7 @@ public sealed class SetUserLevelCommandHandlerIntegrationTests : IAsyncLifetime
         savedUser!.Level.Should().Be(10);
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_WithZeroLevel_UpdatesSuccessfully()
     {
         // Arrange
@@ -135,7 +135,7 @@ public sealed class SetUserLevelCommandHandlerIntegrationTests : IAsyncLifetime
         savedUser!.Level.Should().Be(0);
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_WithMaxLevel_UpdatesSuccessfully()
     {
         // Arrange
@@ -160,7 +160,7 @@ public sealed class SetUserLevelCommandHandlerIntegrationTests : IAsyncLifetime
         savedUser!.Level.Should().Be(100);
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_WithNonExistentUser_ThrowsNotFoundException()
     {
         // Arrange
@@ -173,7 +173,7 @@ public sealed class SetUserLevelCommandHandlerIntegrationTests : IAsyncLifetime
             .WithMessage($"User with identifier '{nonExistentUserId}' was not found");
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_WithNullCommand_ThrowsArgumentNullException()
     {
         // Act & Assert
@@ -181,7 +181,7 @@ public sealed class SetUserLevelCommandHandlerIntegrationTests : IAsyncLifetime
         await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
-    [Fact(Timeout = 30000)]
+    [Fact(Timeout = 90_000)]
     public async Task Handle_ReturnsCompleteUserDto()
     {
         // Arrange

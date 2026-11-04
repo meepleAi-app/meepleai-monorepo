@@ -135,8 +135,11 @@ public sealed class LiveSessionStreamGatewayTests
     }
 
     [Fact]
-    public async Task BroadcastAsync_noop_when_no_companion()
+    public async Task BroadcastAsync_without_a_companion_publishes_on_the_live_channel()
     {
+        // #4114: a free-form session has no companion. The event used to be dropped, so score,
+        // pause, resume and endgame never reached its stream. The live channel is the one the
+        // stream reads anyway (SubscribeAsync's toolkit pump, keyed on the live session id).
         // Arrange
         var liveId = Guid.NewGuid();
 
@@ -156,11 +159,11 @@ public sealed class LiveSessionStreamGatewayTests
         // Assert
         broadcast.Verify(
             b => b.PublishEnvelopeAsync(
-                It.IsAny<Guid>(),
-                It.IsAny<SseEventEnvelope>(),
+                liveId,
+                It.Is<SseEventEnvelope>(e => e.EventType == "session:score"),
                 It.IsAny<EventVisibility>(),
                 It.IsAny<CancellationToken>()),
-            Times.Never);
+            Times.Once);
     }
 
     [Fact]

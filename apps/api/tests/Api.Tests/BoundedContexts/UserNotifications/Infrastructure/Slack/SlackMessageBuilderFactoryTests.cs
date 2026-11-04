@@ -1,5 +1,6 @@
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
 using Api.BoundedContexts.UserNotifications.Infrastructure.Slack;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Time.Testing;
@@ -29,8 +30,8 @@ public sealed class SlackMessageBuilderFactoryTests
     public void GetBuilder_ShareRequestType_ReturnsShareRequestBuilder()
     {
         // Arrange
-        var shareBuilder = new ShareRequestSlackBuilder(_config, _timeProvider);
-        var fallback = new GenericSlackBuilder(_config);
+        var shareBuilder = new ShareRequestSlackBuilder(PublicBaseUrlTestSupport.ProviderFor(_config), _timeProvider);
+        var fallback = new GenericSlackBuilder(PublicBaseUrlTestSupport.ProviderFor(_config));
         var factory = new SlackMessageBuilderFactory(
             new ISlackMessageBuilder[] { shareBuilder, new BadgeSlackBuilder() },
             fallback);
@@ -47,7 +48,7 @@ public sealed class SlackMessageBuilderFactoryTests
     {
         // Arrange
         var gnBuilder = new GameNightSlackBuilder(_timeProvider);
-        var fallback = new GenericSlackBuilder(_config);
+        var fallback = new GenericSlackBuilder(PublicBaseUrlTestSupport.ProviderFor(_config));
         var factory = new SlackMessageBuilderFactory(
             new ISlackMessageBuilder[] { gnBuilder },
             fallback);
@@ -64,7 +65,7 @@ public sealed class SlackMessageBuilderFactoryTests
     {
         // Arrange
         var badgeBuilder = new BadgeSlackBuilder();
-        var fallback = new GenericSlackBuilder(_config);
+        var fallback = new GenericSlackBuilder(PublicBaseUrlTestSupport.ProviderFor(_config));
         var factory = new SlackMessageBuilderFactory(
             new ISlackMessageBuilder[] { badgeBuilder },
             fallback);
@@ -80,7 +81,7 @@ public sealed class SlackMessageBuilderFactoryTests
     public void GetBuilder_UnknownType_FallsBackToGenericBuilder()
     {
         // Arrange
-        var fallback = new GenericSlackBuilder(_config);
+        var fallback = new GenericSlackBuilder(PublicBaseUrlTestSupport.ProviderFor(_config));
         var factory = new SlackMessageBuilderFactory(
             new ISlackMessageBuilder[] { new BadgeSlackBuilder() },
             fallback);
@@ -97,7 +98,7 @@ public sealed class SlackMessageBuilderFactoryTests
     {
         // Arrange
         var adminBuilder = new AdminAlertSlackBuilder(_timeProvider);
-        var fallback = new GenericSlackBuilder(_config);
+        var fallback = new GenericSlackBuilder(PublicBaseUrlTestSupport.ProviderFor(_config));
         var factory = new SlackMessageBuilderFactory(
             new ISlackMessageBuilder[] { adminBuilder },
             fallback);
@@ -113,8 +114,8 @@ public sealed class SlackMessageBuilderFactoryTests
     public void GetBuilder_PdfType_ReturnsPdfProcessingBuilder()
     {
         // Arrange
-        var pdfBuilder = new PdfProcessingSlackBuilder(_config);
-        var fallback = new GenericSlackBuilder(_config);
+        var pdfBuilder = new PdfProcessingSlackBuilder(PublicBaseUrlTestSupport.ProviderFor(_config));
+        var fallback = new GenericSlackBuilder(PublicBaseUrlTestSupport.ProviderFor(_config));
         var factory = new SlackMessageBuilderFactory(
             new ISlackMessageBuilder[] { pdfBuilder },
             fallback);
@@ -130,7 +131,7 @@ public sealed class SlackMessageBuilderFactoryTests
     public void GetBuilder_WithEmptyBuilderList_AlwaysFallsBack()
     {
         // Arrange
-        var fallback = new GenericSlackBuilder(_config);
+        var fallback = new GenericSlackBuilder(PublicBaseUrlTestSupport.ProviderFor(_config));
         var factory = new SlackMessageBuilderFactory(
             Array.Empty<ISlackMessageBuilder>(),
             fallback);

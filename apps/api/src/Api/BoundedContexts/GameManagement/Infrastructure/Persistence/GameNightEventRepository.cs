@@ -78,7 +78,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
         return entities.Select(MapToDomain).ToList();
     }
 
-    public async Task<IReadOnlyList<GameNightEvent>> GetUpcomingAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<GameNightEvent>> GetUpcomingAsync(Guid userId, CancellationToken cancellationToken = default)
     {
         var entities = await DbContext.GameNightEvents
             .AsNoTracking()
@@ -86,6 +86,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .Include(e => e.Sessions)
             .Include(e => e.Votes)
             .Where(e => e.Status == nameof(GameNightStatus.Published) && e.ScheduledAt > DateTimeOffset.UtcNow)
+            .Where(e => e.OrganizerId == userId || e.Rsvps.Any(r => r.UserId == userId))
             .OrderBy(e => e.ScheduledAt)
             .Take(50)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
@@ -93,7 +94,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
         return entities.Select(MapToDomain).ToList();
     }
 
-    public async Task<IReadOnlyList<GameNightEvent>> GetCompletedAsync(int limit, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<GameNightEvent>> GetCompletedAsync(Guid userId, int limit, CancellationToken cancellationToken = default)
     {
         // F20 #1974: dashboard "Recenti" slot. Sources events whose Status is
         // "Completed" OR a published event whose scheduled date has already
@@ -112,6 +113,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .Include(e => e.Votes)
             .Where(e => e.Status == nameof(GameNightStatus.Completed)
                 || (e.Status == nameof(GameNightStatus.Published) && e.ScheduledAt < now))
+            .Where(e => e.OrganizerId == userId || e.Rsvps.Any(r => r.UserId == userId))
             .OrderByDescending(e => e.ScheduledAt)
             .Take(cap)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
@@ -137,7 +139,11 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
     public async Task<IReadOnlyList<GameNightEvent>> GetEventsNeedingReminderAsync(
         DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken = default)
     {
-        // No AsNoTracking — reminder job must persist SentAt flag changes via SaveChangesAsync.
+        // Issue #3866: the note that used to be here ("no AsNoTracking so the reminder job can
+        // persist SentAt via SaveChangesAsync") described something that never happened — the
+        // DbContext default is NoTracking (PERF-06), so omitting AsNoTracking() does not track
+        // anything, and this method returns MAPPED DOMAIN objects in any case. The job writes the
+        // flag with a direct ExecuteUpdate (#2720), which is why it works.
         var entities = await DbContext.GameNightEvents
             .Include(e => e.Rsvps)
             .Include(e => e.Sessions)
@@ -323,9 +329,10 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
     public async Task<GameNightEvent?> FindByLinkedSessionIdAsync(
         Guid sessionId, CancellationToken cancellationToken = default)
     {
-        // No AsNoTracking — the caller (SessionStartedHandler, invariante #15) mutates
-        // the aggregate via HandleFirstSessionStarted and persists via UpdateAsync,
-        // so the entity must be tracked end-to-end for change detection on Status/UpdatedAt.
+        // Issue #3866: the note that used to be here claimed the entity stays tracked end-to-end.
+        // It does not — the DbContext default is NoTracking (PERF-06) and this method returns a
+        // MAPPED DOMAIN object anyway. Persistence works because UpdateAsync reconciles the detached
+        // aggregate itself (AttachOrUpdate), not because of change detection on this read.
         var entity = await DbContext.GameNightEvents
             .Include(e => e.Rsvps)
             .Include(e => e.Sessions)
@@ -424,6 +431,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             Title = domain.Title,
             Description = domain.Description,
             ScheduledAt = domain.ScheduledAt,
+            TimeZoneId = domain.TimeZoneId,
             Location = domain.Location,
             MaxPlayers = domain.MaxPlayers,
             GameIdsJson = JsonSerializer.Serialize(domain.GameIds),
@@ -507,7 +515,8 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             description: entity.Description,
             location: entity.Location,
             maxPlayers: entity.MaxPlayers,
-            gameIds: gameIds);
+            gameIds: gameIds,
+            timeZoneId: entity.TimeZoneId);
 
         // Restore state from persistence via reflection (same pattern as GameNightPlaylistRepository)
         var statusProp = typeof(GameNightEvent).GetProperty(nameof(GameNightEvent.Status));

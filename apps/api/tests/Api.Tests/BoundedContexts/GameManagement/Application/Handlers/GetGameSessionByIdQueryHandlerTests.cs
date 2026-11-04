@@ -22,6 +22,7 @@ public class GetGameSessionByIdQueryHandlerTests
     private readonly Mock<IGameSessionRepository> _sessionRepositoryMock;
     private readonly Mock<IGameCoreDataProvider> _gameCoreDataMock;
     private readonly Mock<IHistorySessionScoreProvider> _scoreProviderMock;
+    private readonly Mock<ILiveSessionLinkReader> _liveLinksMock;
     private readonly GetGameSessionByIdQueryHandler _handler;
 
     public GetGameSessionByIdQueryHandlerTests()
@@ -29,8 +30,12 @@ public class GetGameSessionByIdQueryHandlerTests
         _sessionRepositoryMock = new Mock<IGameSessionRepository>();
         _gameCoreDataMock = new Mock<IGameCoreDataProvider>();
         _scoreProviderMock = new Mock<IHistorySessionScoreProvider>();
+        _liveLinksMock = new Mock<ILiveSessionLinkReader>();
+        _liveLinksMock
+            .Setup(r => r.GetLiveSessionIdsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, Guid>());
         _handler = new GetGameSessionByIdQueryHandler(
-            _sessionRepositoryMock.Object, _gameCoreDataMock.Object, _scoreProviderMock.Object);
+            _sessionRepositoryMock.Object, _gameCoreDataMock.Object, _scoreProviderMock.Object, _liveLinksMock.Object);
     }
 
     private static GameCoreData MakeCoreData(string title = "Catan") =>

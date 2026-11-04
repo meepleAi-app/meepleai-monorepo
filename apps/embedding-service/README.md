@@ -26,9 +26,27 @@ Generate embeddings for input texts.
 ```json
 {
   "texts": ["Text to embed", "Another text"],
-  "language": "en"
+  "language": "en",
+  "purpose": "passage"
 }
 ```
+
+**`purpose`** (optional, default `"passage"`) — the e5 instruction prefix to apply. The
+`multilingual-e5` family is trained asymmetrically: the retrieval question and the indexed
+text must be encoded with **different** prefixes.
+
+| `purpose` | prefix applied | use for |
+|---|---|---|
+| `"query"` | `query: ` | a search question |
+| `"passage"` | `passage: ` | a document chunk being indexed |
+
+Both sides go through this one endpoint, so the caller has to declare which it is — the
+service cannot tell from the text. Sending the wrong side degrades retrieval silently: on the
+real corpus (56.367 chunk, 127 manuali) encoding a question as a passage pushed the expected
+manual's best chunk from cosine rank 1 down to rank 10 ([#3737](https://github.com/meepleAi-app/meepleai-monorepo/issues/3737)).
+
+The default is `"passage"` because that is what the service applied unconditionally before
+#3737 — an older client keeps its behaviour, and chunks already indexed stay valid.
 
 **Response**:
 ```json
@@ -94,12 +112,22 @@ Service will be available at `http://localhost:8000`
 # Health check
 curl http://localhost:8000/health
 
-# Generate embeddings
+# Generate embeddings for a document chunk (indexing side)
 curl -X POST http://localhost:8000/embeddings \
   -H "Content-Type: application/json" \
   -d '{
     "texts": ["The quick brown fox jumps over the lazy dog"],
-    "language": "en"
+    "language": "en",
+    "purpose": "passage"
+  }'
+
+# Generate an embedding for a search question (retrieval side)
+curl -X POST http://localhost:8000/embeddings \
+  -H "Content-Type: application/json" \
+  -d '{
+    "texts": ["How do I set up the board in Catan?"],
+    "language": "en",
+    "purpose": "query"
   }'
 ```
 

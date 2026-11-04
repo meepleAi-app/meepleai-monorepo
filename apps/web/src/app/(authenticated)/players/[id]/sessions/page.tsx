@@ -9,7 +9,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 
 import { ArrowLeft, Calendar, Clock, Trophy } from 'lucide-react';
 import Link from 'next/link';
@@ -48,6 +48,21 @@ function formatDate(iso: string): string {
     day: 'numeric',
     year: 'numeric',
   }).format(new Date(iso));
+}
+
+/** #4156 (D4): the session pages live under the LiveGameSession id; without one, no link. */
+function LiveSessionLink({
+  liveSessionId,
+  children,
+}: {
+  liveSessionId: string | null | undefined;
+  children: ReactNode;
+}) {
+  return liveSessionId ? (
+    <Link href={`/sessions/${liveSessionId}`}>{children}</Link>
+  ) : (
+    <>{children}</>
+  );
 }
 
 export default function PlayerSessionsPage() {
@@ -138,8 +153,13 @@ export default function PlayerSessionsPage() {
                 const isWinner = session.winnerName?.toLowerCase() === playerName.toLowerCase();
 
                 return (
-                  <Link key={session.id} href={`/sessions/${session.id}`}>
-                    <Card className="hover:shadow-md transition-shadow cursor-pointer border border-border/60">
+                  <LiveSessionLink key={session.id} liveSessionId={session.liveSessionId}>
+                    <Card
+                      className={cn(
+                        'border border-border/60',
+                        session.liveSessionId && 'hover:shadow-md transition-shadow cursor-pointer'
+                      )}
+                    >
                       <CardHeader className="pb-2">
                         <div className="flex items-start justify-between gap-3">
                           <CardTitle className="font-quicksand text-base flex items-center gap-2">
@@ -180,7 +200,7 @@ export default function PlayerSessionsPage() {
                         </CardContent>
                       )}
                     </Card>
-                  </Link>
+                  </LiveSessionLink>
                 );
               })}
             </div>

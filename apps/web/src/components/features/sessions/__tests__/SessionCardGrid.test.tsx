@@ -36,6 +36,7 @@ const LABELS: SessionCardGridLabels = {
 
 const ITEM: SessionListItem = {
   id: 'session-grid-1',
+  liveSessionId: 'live-session-grid-1',
   gameName: 'Azul',
   date: '21 apr 2026',
   when: '4 giorni fa',
@@ -53,6 +54,7 @@ const ITEM: SessionListItem = {
 
 const ABANDONED_ITEM: SessionListItem = {
   id: 'session-grid-abandoned',
+  liveSessionId: 'live-session-grid-abandoned',
   gameName: 'Carcassonne',
   date: '12 mar 2026',
   when: '1 mese fa',
@@ -102,6 +104,17 @@ describe('SessionCardGrid', () => {
     const card = document.querySelector('[data-slot="session-card-grid"]') as HTMLButtonElement;
     fireEvent.click(card);
     expect(onClick).toHaveBeenCalledWith(ITEM);
+  });
+
+  it('#4156 (D4): is disabled when the session has no live session to open', () => {
+    const onClick = vi.fn();
+    render(
+      <SessionCardGrid item={{ ...ITEM, liveSessionId: null }} onClick={onClick} labels={LABELS} />
+    );
+    const card = document.querySelector('[data-slot="session-card-grid"]') as HTMLButtonElement;
+    expect(card).toBeDisabled();
+    fireEvent.click(card);
+    expect(onClick).not.toHaveBeenCalled();
   });
 
   it('aria-label uses openSessionAriaTemplate with gameName substitution', () => {

@@ -13,6 +13,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Send } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import { usePendingFirstMessage } from '@/components/chat/shared';
 import { MobileHeader } from '@/components/ui/navigation/MobileHeader';
 import { useAgentChatStream } from '@/hooks/useAgentChatStream';
 import { api } from '@/lib/api';
@@ -28,7 +29,14 @@ import { cn } from '@/lib/utils';
 import { CitationBlock } from './CitationBlock';
 import { ContinueButton } from './ContinueButton';
 import { InlineCitationText } from './InlineCitationText';
+import { QaTooManyRequestsError, qaRequestFailureMessage } from './qaStreamErrors';
 import { QuickPromptChips } from './QuickPromptChips';
+import {
+  TIER_LIMIT_EXCEEDED,
+  TierLimitRegion,
+  readTierLimit,
+  type TierLimit,
+} from './TierLimitNotice';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -79,7 +87,10 @@ function MessageBubble({
   const isUser = message.role === 'user';
 
   return (
-    <div className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
+    <div
+      data-testid={`message-${message.role}`}
+      className={cn('flex', isUser ? 'justify-end' : 'justify-start')}
+    >
       <div
         className={cn(
           'max-w-[85%] rounded-2xl px-4 py-2.5 text-sm font-nunito',
@@ -180,12 +191,19 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [agentId, setAgentId] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
+  // #4168 (5g-b): la domanda fermata dalla quota del piano.
+  const [tierLimit, setTierLimit] = useState<TierLimit | null>(null);
   const qaAbortRef = useRef<AbortController | null>(null);
 
   // SSE Streaming
-  const { state: streamState, sendMessage: sendViaSSE } = useAgentChatStream({
+  // Issue #4139: `sendMessage` is no longer destructured from this hook. Its only
+  // caller here was the branch that posted to /api/v1/agents/{agentId}/chat, a
+  // route the backend never mounted; this surface's working path streams through
+  // `qaStream` in chatClient instead. `state` is still read for rendering, so the
+  // two implementations are duplicate streaming to consolidate - not a change to
+  // make inside a fix whose subject is the dead URL.
+  const { state: streamState } = useAgentChatStream({
     onComplete: (answer, metadata) => {
       const assistantMessage: LocalMessage = {
         id: `assistant-${Date.now()}`,
@@ -231,18 +249,24 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
 
   // Load thread
   useEffect(() => {
+    // L'avviso di un thread non deve restare sull'altro: la pagina non rimonta la vista.
+    setTierLimit(null);
+    // #4740: un caricamento superato (cambio di thread, o il doppio montaggio di StrictMode in sviluppo) non
+    // deve scrivere dopo quello che l'ha sostituito: con la domanda di un Quick Start appena spedita, un
+    // caricamento tardivo cancellerebbe le bolle già a schermo.
+    let cancelled = false;
     async function loadThread() {
       setIsLoading(true);
       setLoadError(null);
       try {
         const threadData = await api.chat.getThreadById(threadId);
+        if (cancelled) return;
         if (!threadData) {
           setLoadError('Thread non trovato');
           return;
         }
 
         setThread(threadData);
-        setAgentId(threadData.agentId ?? null);
 
         const mapped: LocalMessage[] = (threadData.messages ?? []).map(
           (m: ChatThreadMessageDto) => ({
@@ -254,13 +278,16 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
         );
         setMessages(mapped);
       } catch {
-        setLoadError('Errore nel caricamento della conversazione');
+        if (!cancelled) setLoadError('Errore nel caricamento della conversazione');
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     }
 
     void loadThread();
+    return () => {
+      cancelled = true;
+    };
   }, [threadId]);
 
   // Handle continuation — append more content to the last assistant message
@@ -306,13 +333,14 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
     [messages, thread?.gameId]
   );
 
-  // Send message — SSE streaming when agentId or gameId available, REST fallback otherwise
+  // Send message — SSE streaming when a game context is available, REST fallback otherwise
   const handleSend = useCallback(
     (content?: string) => {
       const text = (content || inputValue).trim();
       if (!text || streamState.isStreaming || isSending) return;
 
       setInputValue('');
+      setTierLimit(null);
 
       // Optimistic: add user message
       const userMessage: LocalMessage = {
@@ -323,11 +351,10 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
       };
       setMessages(prev => [...prev, userMessage]);
 
-      // SSE path: agent-specific streaming
-      if (agentId) {
-        sendViaSSE(agentId, text, threadId);
-        return;
-      }
+      // Issue #4139: an `if (agentId)` branch stood here, BEFORE the game path, and
+      // sent to /api/v1/agents/{agentId}/chat — a route the backend never mounted. So
+      // a thread carrying both an agentId and a gameId took the dead path and never
+      // reached the working one. The game path is now the only SSE path.
 
       // QA stream path: game context available → use RAG QA streaming
       if (thread?.gameId) {
@@ -448,6 +475,14 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
                     errorCode?: string;
                     message?: string;
                   };
+                  if (errData?.errorCode === TIER_LIMIT_EXCEEDED) {
+                    // #4168 (5g-b): non è un guasto — per oggi le domande del piano sono finite.
+                    // Come sul desktop: la bolla vuota se ne va e compare l'avviso, col link ai piani.
+                    setMessages(prev => prev.filter(m => m.id !== assistantMsgId));
+                    setTierLimit(readTierLimit(errData));
+                    abortController.abort();
+                    return;
+                  }
                   const errorMsg =
                     errData?.errorMessage ?? errData?.message ?? 'Errore nella risposta';
                   setMessages(prev =>
@@ -473,12 +508,20 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
                   : m
               )
             );
-          } catch {
+          } catch (err) {
             if (!abortController.signal.aborted) {
+              // #4388: due risposte già aperte, la terza è rifiutata con 429: la bolla dice di aspettare.
+              const refused = err instanceof QaTooManyRequestsError;
               setMessages(prev =>
                 prev.map(m =>
                   m.id === assistantMsgId
-                    ? { ...m, content: finalAnswer || 'Errore nella generazione della risposta' }
+                    ? {
+                        ...m,
+                        content:
+                          finalAnswer ||
+                          qaRequestFailureMessage(err, 'Errore nella generazione della risposta'),
+                        ...(refused ? { isError: true } : {}),
+                      }
                     : m
                 )
               );
@@ -513,7 +556,7 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
         }
       })();
     },
-    [inputValue, streamState.isStreaming, isSending, agentId, thread?.gameId, threadId, sendViaSSE]
+    [inputValue, streamState.isStreaming, isSending, thread?.gameId, threadId]
   );
 
   // Key handler
@@ -526,6 +569,18 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
     },
     [handleSend]
   );
+
+  // #4740: the question of a Quick Start, left by the start page, goes out once the thread is open.
+  usePendingFirstMessage({
+    threadId,
+    view: 'mobile',
+    ready:
+      !isLoading &&
+      thread?.id === threadId &&
+      !!thread.gameId &&
+      (thread.messages ?? []).length === 0,
+    send: handleSend,
+  });
 
   // Header title
   const headerTitle = thread?.title ?? 'Chat';
@@ -599,6 +654,9 @@ export function ChatMobile({ threadId }: ChatMobileProps) {
             {streamState.error}
           </div>
         )}
+
+        {/* #4168 (5g-b): la quota del piano */}
+        <TierLimitRegion limit={tierLimit} className="mx-2" />
 
         <div ref={messagesEndRef} />
       </div>

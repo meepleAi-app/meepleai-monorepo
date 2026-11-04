@@ -187,6 +187,7 @@ public class BggExpansionImporterTests
         _entityLinkRepoMock
             .Setup(r => r.ExistsAsync(It.IsAny<MeepleEntityType>(), It.IsAny<Guid>(),
                 It.IsAny<MeepleEntityType>(), It.IsAny<Guid>(), It.IsAny<EntityLinkType>(),
+                EntityLinkScope.Shared, It.IsAny<Guid>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
@@ -224,6 +225,7 @@ public class BggExpansionImporterTests
         _entityLinkRepoMock
             .Setup(r => r.ExistsAsync(It.IsAny<MeepleEntityType>(), It.IsAny<Guid>(),
                 It.IsAny<MeepleEntityType>(), It.IsAny<Guid>(), It.IsAny<EntityLinkType>(),
+                EntityLinkScope.Shared, It.IsAny<Guid>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
@@ -259,6 +261,7 @@ public class BggExpansionImporterTests
         _entityLinkRepoMock
             .Setup(r => r.ExistsAsync(It.IsAny<MeepleEntityType>(), It.IsAny<Guid>(),
                 It.IsAny<MeepleEntityType>(), It.IsAny<Guid>(), It.IsAny<EntityLinkType>(),
+                EntityLinkScope.Shared, It.IsAny<Guid>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
@@ -295,6 +298,7 @@ public class BggExpansionImporterTests
         _entityLinkRepoMock
             .Setup(r => r.ExistsAsync(It.IsAny<MeepleEntityType>(), It.IsAny<Guid>(),
                 It.IsAny<MeepleEntityType>(), It.IsAny<Guid>(), It.IsAny<EntityLinkType>(),
+                EntityLinkScope.Shared, It.IsAny<Guid>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 

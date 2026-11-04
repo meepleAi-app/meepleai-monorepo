@@ -52,7 +52,8 @@ export interface GameDetailAgentsListLabels {
 export type AgentsState =
   | { kind: 'loading' }
   | { kind: 'error'; retry: () => void }
-  | { kind: 'empty'; ctaCreate: () => void }
+  // Issue #4138: lo stato vuoto non offre piu' una CTA di creazione.
+  | { kind: 'empty' }
   | { kind: 'success'; agents: ReadonlyArray<GameDetailAgentEntry> };
 
 export interface GameDetailAgentsListProps {
@@ -77,16 +78,6 @@ export function GameDetailAgentsList(props: GameDetailAgentsListProps): ReactEle
           </h3>
           <p className="mt-0.5 text-[12px] text-muted-foreground">{labels.subtitle}</p>
         </div>
-        {state.kind === 'empty' ? (
-          <button
-            type="button"
-            onClick={state.ctaCreate}
-            data-slot="game-detail-agents-create"
-            className="rounded-md border-none bg-violet-700 px-3 py-1 font-display text-[11px] font-extrabold text-white shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {labels.createCta}
-          </button>
-        ) : null}
       </header>
 
       {state.kind === 'loading' ? (

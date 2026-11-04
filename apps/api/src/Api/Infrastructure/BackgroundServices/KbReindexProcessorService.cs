@@ -16,6 +16,15 @@ namespace Api.Infrastructure.BackgroundServices;
 /// </summary>
 internal sealed class KbReindexProcessorService : BackgroundService
 {
+    /// <summary>
+    /// What <c>KbReindexJob.FailureReason</c> carries when the worker itself fails (#4660). The job status is served to
+    /// whoever started the re-index, who may be a plain user: the exception goes to the log, not to them.
+    /// </summary>
+    internal const string WorkerFailureText = "KB reindex failed";
+
+    /// <summary>What <c>KbReindexJob.FailureReason</c> carries when one PDF fails (#4660): the PDF is the user's own.</summary>
+    internal static string PdfFailureText(Guid pdfId) => $"PDF {pdfId} could not be re-indexed";
+
     private readonly KbReindexChannel _channel;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly ILogger<KbReindexProcessorService> _logger;
@@ -47,7 +56,7 @@ internal sealed class KbReindexProcessorService : BackgroundService
                     ex,
                     "KbReindex job {JobId} for game {GameId} failed at the worker boundary",
                     request.JobId, request.GameId);
-                await TryMarkJobFailedAsync(request.JobId, ex.Message, stoppingToken).ConfigureAwait(false);
+                await TryMarkJobFailedAsync(request.JobId, WorkerFailureText, stoppingToken).ConfigureAwait(false);
             }
 #pragma warning restore CA1031
         }
@@ -124,7 +133,7 @@ internal sealed class KbReindexProcessorService : BackgroundService
                     request.JobId, pdfId);
                 // Mark the whole job failed on first PDF error. Per-PDF partial-failure
                 // breakdown is deferred per the matured #941 spec.
-                job.MarkFailed($"PDF {pdfId} failed: {ex.Message}");
+                job.MarkFailed(PdfFailureText(pdfId));
                 await jobRepository.UpdateAsync(job, ct).ConfigureAwait(false);
                 await unitOfWork.SaveChangesAsync(ct).ConfigureAwait(false);
                 return;

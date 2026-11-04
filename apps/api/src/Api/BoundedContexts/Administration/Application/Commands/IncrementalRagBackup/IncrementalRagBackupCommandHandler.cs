@@ -55,6 +55,17 @@ internal sealed class IncrementalRagBackupCommandHandler
                 return new IncrementalRagBackupResult(false, $"VectorDocument not found for PdfDocumentId {request.PdfDocumentId}");
             }
 
+            // #4244: the document of a private game stays out of the shared snapshot. That snapshot
+            // is the copy of the catalogue (the import restores shared games only), and the text
+            // of a private rulebook belongs to its owner. Not a failure: there is nothing to do.
+            if ((vectorDoc.PrivateGameId ?? vectorDoc.PdfDocument.PrivateGameId) is not null)
+            {
+                _logger.LogInformation(
+                    "IncrementalRagBackup: PdfDocumentId={PdfDocumentId} belongs to a private game, not exported",
+                    request.PdfDocumentId);
+                return new IncrementalRagBackupResult(true);
+            }
+
             // ── 2. Load chunks and embeddings ─────────────────────────────────
             var chunks = await _db.TextChunks
                 .Where(c => c.PdfDocumentId == request.PdfDocumentId)

@@ -21,7 +21,7 @@ public sealed class AgentDefinitionTests
         var config = AgentDefinitionConfig.Create("gpt-4", 2048, 0.7f);
 
         // Act
-        var agent = AgentDefinition.Create("TestAgent", "Test description", AgentType.RagAgent, config);
+        var agent = AgentDefinition.Create("TestAgent", "Test description", config);
 
         // Assert
         agent.Should().NotBeNull();
@@ -42,7 +42,7 @@ public sealed class AgentDefinitionTests
         var config = AgentDefinitionConfig.Create("gpt-4", 2048, 0.7f);
 
         // Act
-        var act = () => AgentDefinition.Create("", "Description", AgentType.RagAgent, config);
+        var act = () => AgentDefinition.Create("", "Description", config);
 
         // Assert
         act.Should().Throw<ArgumentException>().WithParameterName("name");
@@ -56,7 +56,7 @@ public sealed class AgentDefinitionTests
         var longName = new string('a', 101);
 
         // Act
-        var act = () => AgentDefinition.Create(longName, "Description", AgentType.RagAgent, config);
+        var act = () => AgentDefinition.Create(longName, "Description", config);
 
         // Assert
         act.Should().Throw<ArgumentException>().WithParameterName("name");
@@ -66,7 +66,7 @@ public sealed class AgentDefinitionTests
     public void Create_WithNullConfig_ShouldThrowArgumentNullException()
     {
         // Act
-        var act = () => AgentDefinition.Create("Name", "Description", AgentType.RagAgent, null!);
+        var act = () => AgentDefinition.Create("Name", "Description", null!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>().WithParameterName("config");
@@ -87,7 +87,7 @@ public sealed class AgentDefinitionTests
         };
 
         // Act
-        var agent = AgentDefinition.Create("TestAgent", "Description", AgentType.RagAgent, config, null, prompts, tools);
+        var agent = AgentDefinition.Create("TestAgent", "Description", config, null, prompts, tools);
 
         // Assert
         agent.Prompts.Should().HaveCount(1);
@@ -100,7 +100,7 @@ public sealed class AgentDefinitionTests
     public async Task UpdateConfig_WithValidConfig_ShouldUpdateAndSetTimestamp()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Description", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Description", AgentDefinitionConfig.Default());
         agent.UpdatedAt.Should().BeNull();
         var newConfig = AgentDefinitionConfig.Create("claude-3", 4096, 0.9f);
 
@@ -120,7 +120,7 @@ public sealed class AgentDefinitionTests
     public void UpdateNameAndDescription_WithValidData_ShouldUpdate()
     {
         // Arrange
-        var agent = AgentDefinition.Create("OriginalName", "Original desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("OriginalName", "Original desc", AgentDefinitionConfig.Default());
 
         // Act
         agent.UpdateNameAndDescription("NewName", "New description");
@@ -135,7 +135,7 @@ public sealed class AgentDefinitionTests
     public void UpdatePrompts_WithValidPrompts_ShouldUpdate()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
         var newPrompts = new List<AgentPromptTemplate>
         {
             AgentPromptTemplate.Create("system", "New system prompt"),
@@ -156,7 +156,7 @@ public sealed class AgentDefinitionTests
     public void UpdatePrompts_WithMoreThan20Prompts_ShouldThrowArgumentException()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
         var tooManyPrompts = Enumerable.Range(0, 21)
             .Select(i => AgentPromptTemplate.Create("system", $"Prompt {i}"))
             .ToList();
@@ -172,7 +172,7 @@ public sealed class AgentDefinitionTests
     public void UpdateTools_WithValidTools_ShouldUpdate()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
         var newTools = new List<AgentToolConfig>
         {
             AgentToolConfig.Create("web_search"),
@@ -193,7 +193,7 @@ public sealed class AgentDefinitionTests
     public void UpdateTools_WithMoreThan50Tools_ShouldThrowArgumentException()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
         var tooManyTools = Enumerable.Range(0, 51)
             .Select(i => AgentToolConfig.Create($"tool_{i}"))
             .ToList();
@@ -209,7 +209,7 @@ public sealed class AgentDefinitionTests
     public void Activate_WhenInactive_ShouldActivate()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
 
         // Act
         agent.Activate();
@@ -223,7 +223,7 @@ public sealed class AgentDefinitionTests
     public void Deactivate_WhenActive_ShouldDeactivate()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
         agent.Activate(); // Agent starts inactive (Draft), activate first
 
         // Act
@@ -238,7 +238,7 @@ public sealed class AgentDefinitionTests
     public void Activate_WhenAlreadyActive_ShouldNotChangeState()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
         agent.Activate(); // Agent starts inactive (Draft), activate first
 
         // Act
@@ -250,90 +250,23 @@ public sealed class AgentDefinitionTests
 
     // ===== NEW TESTS FOR ISSUE #3708 =====
 
-    [Fact]
-    public void Create_WithAgentType_ShouldStoreTypeCorrectly()
-    {
-        // Arrange
-        var type = AgentType.CitationAgent;
-        var config = AgentDefinitionConfig.Default();
-
-        // Act
-        var agent = AgentDefinition.Create("CitationTest", "Description", type, config);
-
-        // Assert
-        agent.Type.Should().NotBeNull();
-        agent.Type.Value.Should().Be("Citation");
-        agent.Type.Description.Should().Contain("sources");
-    }
-
-    [Fact]
-    public void Create_WithCustomAgentType_ShouldStoreCustomType()
-    {
-        // Arrange
-        var type = AgentType.Custom("Decisore", "Strategic decision making agent");
-        var config = AgentDefinitionConfig.Default();
-
-        // Act
-        var agent = AgentDefinition.Create("DecisoreAgent", "Desc", type, config);
-
-        // Assert
-        agent.Type.Value.Should().Be("Decisore");
-        agent.Type.Description.Should().Be("Strategic decision making agent");
-    }
-
-    [Fact]
-    public void Create_WithNullType_ShouldThrowArgumentNullException()
-    {
-        // Arrange
-        var config = AgentDefinitionConfig.Default();
-
-        // Act
-        var act = () => AgentDefinition.Create("Name", "Desc", null!, config);
-
-        // Assert
-        act.Should().Throw<ArgumentNullException>().WithParameterName("type");
-    }
-
-    [Fact]
-    public async Task UpdateType_WithValidType_ShouldUpdateAndSetTimestamp()
-    {
-        // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
-        var newType = AgentType.ConfidenceAgent;
-
-        // Act
-        var beforeUpdate = DateTime.UtcNow;
-        await Task.Delay(50);
-        agent.UpdateType(newType);
-
-        // Assert
-        agent.Type.Value.Should().Be("Confidence");
-        agent.UpdatedAt.Should().NotBeNull().And.BeOnOrAfter(beforeUpdate);
-    }
-
-    [Fact]
-    public void UpdateType_WithNullType_ShouldThrowArgumentNullException()
-    {
-        // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
-
-        // Act
-        var act = () => agent.UpdateType(null!);
-
-        // Assert
-        act.Should().Throw<ArgumentNullException>().WithParameterName("type");
-    }
+    // Issue #4138: five tests on AgentDefinition.Type stood here
+    // (Create_WithAgentType, Create_WithCustomAgentType, Create_WithNullType,
+    // UpdateType_WithValidType, UpdateType_WithNullType). Their subject is gone: the
+    // agent types never had an effect on the answer path, so the field was one that
+    // lied. The replacement is NOT another unit test here - it is
+    // AgentDefinitionShapeArchitectureTests, which makes the field's return
+    // inexpressible rather than merely untested.
 
     [Fact]
     public void Create_WithStrategy_ShouldStoreStrategyCorrectly()
     {
         // Arrange
-        var type = AgentType.RagAgent;
         var config = AgentDefinitionConfig.Default();
         var strategy = AgentStrategy.SentenceWindowRAG(windowSize: 5, topK: 15, minScore: 0.85);
 
         // Act
-        var agent = AgentDefinition.Create("TestAgent", "Desc", type, config, strategy);
+        var agent = AgentDefinition.Create("TestAgent", "Desc", config, strategy);
 
         // Assert
         agent.Strategy.Should().NotBeNull();
@@ -346,11 +279,10 @@ public sealed class AgentDefinitionTests
     public void Create_WithoutStrategy_ShouldUseDefaultHybridSearch()
     {
         // Arrange
-        var type = AgentType.RagAgent;
         var config = AgentDefinitionConfig.Default();
 
         // Act
-        var agent = AgentDefinition.Create("TestAgent", "Desc", type, config);
+        var agent = AgentDefinition.Create("TestAgent", "Desc", config);
 
         // Assert
         agent.Strategy.Should().NotBeNull();
@@ -362,7 +294,7 @@ public sealed class AgentDefinitionTests
     public async Task UpdateStrategy_WithValidStrategy_ShouldUpdateAndSetTimestamp()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
         var newStrategy = AgentStrategy.ColBERTReranking(topK: 5, rerankTopN: 20, minScore: 0.9);
 
         // Act
@@ -380,7 +312,7 @@ public sealed class AgentDefinitionTests
     public void UpdateStrategy_WithNullStrategy_ShouldThrowArgumentNullException()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
 
         // Act
         var act = () => agent.UpdateStrategy(null!);
@@ -395,7 +327,7 @@ public sealed class AgentDefinitionTests
     public void Create_ShouldStartAsDraft()
     {
         // Arrange & Act
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
 
         // Assert
         agent.Status.Should().Be(AgentDefinitionStatus.Draft);
@@ -406,7 +338,7 @@ public sealed class AgentDefinitionTests
     public void StartTesting_FromDraft_ShouldTransitionToTesting()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
 
         // Act
         agent.StartTesting();
@@ -420,7 +352,7 @@ public sealed class AgentDefinitionTests
     public void Publish_FromTesting_ShouldTransitionToPublished()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
         agent.StartTesting();
 
         // Act
@@ -436,7 +368,7 @@ public sealed class AgentDefinitionTests
     public void Publish_FromDraft_ShouldThrow()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
 
         // Act
         var act = () => agent.Publish();
@@ -450,7 +382,7 @@ public sealed class AgentDefinitionTests
     public void StartTesting_FromPublished_ShouldThrow()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
         agent.StartTesting();
         agent.Publish();
 
@@ -466,7 +398,7 @@ public sealed class AgentDefinitionTests
     public void Unpublish_FromPublished_ShouldReturnToDraft()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
         agent.StartTesting();
         agent.Publish();
 
@@ -483,7 +415,7 @@ public sealed class AgentDefinitionTests
     public void Unpublish_FromTesting_ShouldReturnToDraft()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
         agent.StartTesting();
 
         // Act
@@ -499,7 +431,7 @@ public sealed class AgentDefinitionTests
     public void FullLifecycle_DraftToTestingToPublishedToUnpublished()
     {
         // Arrange
-        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentType.RagAgent, AgentDefinitionConfig.Default());
+        var agent = AgentDefinition.Create("TestAgent", "Desc", AgentDefinitionConfig.Default());
 
         // Assert initial state
         agent.Status.Should().Be(AgentDefinitionStatus.Draft);

@@ -16,7 +16,6 @@ const createMockDocument = (
   filePath: `/uploads/${fileName}`,
   fileSizeBytes: Math.random() * 5000000 + 500000,
   uploadedAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
-  processingStatus: processingState === 'Ready' ? 'Completed' : processingState,
   processedAt: processingState === 'Ready' ? new Date().toISOString() : null,
   pageCount: pageCount ?? null,
   documentType: 'base',

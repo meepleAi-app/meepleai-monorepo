@@ -106,7 +106,7 @@ test.describe('ERR-07: Offline Mode Warning', () => {
       await context.setOffline(true);
 
       // Should show persistent banner/indicator
-      const offlineBanner = page.locator('[data-testid="offline-banner"], .offline-warning');
+      const offlineBanner = page.locator('[data-slot="offline-banner"], .offline-warning');
       await expect(offlineBanner.or(page.getByText(/offline/i))).toBeVisible();
     });
 

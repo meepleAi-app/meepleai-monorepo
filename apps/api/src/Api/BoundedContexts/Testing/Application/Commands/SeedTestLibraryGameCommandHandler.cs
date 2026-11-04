@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Testing.Application.DTOs;
+using Api.BoundedContexts.Testing.Infrastructure;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
@@ -96,7 +97,7 @@ internal sealed class SeedTestLibraryGameCommandHandler
         };
         _db.UserLibraryEntries.Add(libraryEntry);
 
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await _db.SaveSeedAsync(cancellationToken).ConfigureAwait(false);
         stopwatch.Stop();
 
         _logger.LogInformation(

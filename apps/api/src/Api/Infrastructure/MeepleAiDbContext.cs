@@ -263,7 +263,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.LedgerEntry> LedgerEntries => Set<BoundedContexts.BusinessSimulations.Domain.Entities.LedgerEntry>(); // ISSUE-3720: Financial Ledger
     public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.CostScenario> CostScenarios => Set<BoundedContexts.BusinessSimulations.Domain.Entities.CostScenario>(); // ISSUE-3725: Agent Cost Calculator
     public DbSet<BoundedContexts.BusinessSimulations.Domain.Entities.ResourceForecast> ResourceForecasts => Set<BoundedContexts.BusinessSimulations.Domain.Entities.ResourceForecast>(); // ISSUE-3726: Resource Forecasting Simulator
-    public DbSet<Entities.BusinessSimulations.AppBudgetEntity> AppBudgets => Set<Entities.BusinessSimulations.AppBudgetEntity>(); // Issue #1838 SP5 F4-C5: Singleton global app spend budget
+    public DbSet<Entities.BusinessSimulations.AppBudgetEntity> AppBudgets => Set<Entities.BusinessSimulations.AppBudgetEntity>(); // Issue #1838 SP5 F4-C5; #4169: retired, no reader nor writer, table kept until the contract delivery
     public DbSet<BoundedContexts.KnowledgeBase.Domain.Entities.PlaygroundTestScenario> PlaygroundTestScenarios => Set<BoundedContexts.KnowledgeBase.Domain.Entities.PlaygroundTestScenario>(); // ISSUE-4396: Playground Test Scenarios
     public DbSet<BoundedContexts.EntityRelationships.Domain.Aggregates.EntityLink> EntityLinks => Set<BoundedContexts.EntityRelationships.Domain.Aggregates.EntityLink>(); // ISSUE-5132: Entity relationships
     public DbSet<BoundedContexts.SystemConfiguration.Domain.Entities.TierDefinition> TierDefinitions => Set<BoundedContexts.SystemConfiguration.Domain.Entities.TierDefinition>(); // D3: Tier system definitions
@@ -299,6 +299,7 @@ public class MeepleAiDbContext : DbContext
     public DbSet<GameNightVoteEntity> GameNightVotes => Set<GameNightVoteEntity>(); // ISSUE-2700: Candidate voting
     public DbSet<GameNightPhotoEntity> GameNightPhotos => Set<GameNightPhotoEntity>(); // ISSUE-2724: Recap photo gallery
     public DbSet<GameNightInvitationEntity> GameNightInvitations => Set<GameNightInvitationEntity>(); // ISSUE-607: Token-based public RSVP invitations
+    public DbSet<GameNightGuestEmailOptOutEntity> GameNightGuestEmailOptOuts => Set<GameNightGuestEmailOptOutEntity>(); // #4846: guest addresses that asked to stop game night emails
     public DbSet<RuleDisputeEntity> RuleDisputes => Set<RuleDisputeEntity>(); // Structured rule dispute persistence
     public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.GameMemoryEntity> GameMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.GameMemoryEntity>(); // AgentMemory: per-game memory
     public DbSet<BoundedContexts.AgentMemory.Infrastructure.Entities.GroupMemoryEntity> GroupMemories => Set<BoundedContexts.AgentMemory.Infrastructure.Entities.GroupMemoryEntity>(); // AgentMemory: play group memory
@@ -341,6 +342,9 @@ public class MeepleAiDbContext : DbContext
     // KB-06: User feedback on KB chat responses
     public DbSet<BoundedContexts.KnowledgeBase.Domain.Entities.KbUserFeedback> KbUserFeedbacks => Set<BoundedContexts.KnowledgeBase.Domain.Entities.KbUserFeedback>();
 
+    // #4470 (ADR-095 fetta 7b): domande di riferimento dell'agente, caricate dal seeder
+    public DbSet<BoundedContexts.KnowledgeBase.Domain.Entities.ReferenceQuestion> ReferenceQuestions => Set<BoundedContexts.KnowledgeBase.Domain.Entities.ReferenceQuestion>();
+
     // Issue #1675: KbQuality bounded context (per-doc quality eval) — Task 2
     public DbSet<BoundedContexts.KbQuality.Domain.Evaluation.DocumentEvaluationRun> DocumentEvaluationRuns => Set<BoundedContexts.KbQuality.Domain.Evaluation.DocumentEvaluationRun>();
     public DbSet<BoundedContexts.KbQuality.Domain.Budget.KbQualityBudgetCounter> KbQualityBudgetCounters => Set<BoundedContexts.KbQuality.Domain.Budget.KbQualityBudgetCounter>();
@@ -360,6 +364,34 @@ public class MeepleAiDbContext : DbContext
         // ISSUE-1694: Remove this suppression when moving to Beta/Production with real data.
         optionsBuilder.ConfigureWarnings(warnings =>
             warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+
+        // Issue #3866: production sets NoTracking on the options (PERF-06,
+        // InfrastructureServiceExtensions.cs), so an entity returned by a query is NOT tracked and
+        // mutating it before SaveChangesAsync writes nothing — silently. Test fixtures build their
+        // own context and, without that option, get EF Core's tracking-by-default: the whole family
+        // of "the handler mutated an untracked entity" defects is invisible to them. It has shipped
+        // five times (#1627, #1633, #2804, #3564, #3858) — on #3858 the first regression test passed
+        // against the broken code and only turned red once its context reproduced NoTracking.
+        //
+        // 287 test files build a context; a rule that must be remembered 287 times is not a rule, so
+        // the default lives here and production — which sets the same value — is unaffected.
+        //
+        // It belongs in OnConfiguring and NOT in the constructor: assigning
+        // ChangeTracker.QueryTrackingBehavior there forces the ChangeTracker, hence the MODEL, to be
+        // built at construction time. That turns every latent model misconfiguration into a failure
+        // at `new MeepleAiDbContext(...)` even for a context nobody queries — EndpointContractTests,
+        // which swaps in SQLite to test routing only, died on 'No suitable constructor was found for
+        // entity type Vector' because SQLite cannot map pgvector. OnConfiguring runs BEFORE the
+        // ChangeTracker is created and its options reach it, so the parity holds and the model stays
+        // lazy.
+        //
+        // Reading CoreOptionsExtension.QueryTrackingBehavior to honour an explicit caller choice does
+        // NOT work and should not be reintroduced: it is never null and already reads TrackAll when
+        // nothing was configured, so "unset" and "explicitly TrackAll" are indistinguishable. The
+        // default is therefore unconditional, and a fixture that genuinely needs tracking opts out on
+        // the instance, visibly, where it is built:
+        //     db.ChangeTracker.QueryTrackingBehavior = QueryTrackingBehavior.TrackAll;
+        optionsBuilder.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

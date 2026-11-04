@@ -67,34 +67,22 @@ function normalizePriority(item: WishlistItemDto): Priority {
 }
 
 /**
- * Resolves the display name used for search matching in `filterItems`
- * (falls back to the game catalog map when the wishlist item has no
- * denormalized `gameName`).
- *
- * NOT used by `sortItems`'s `'alpha'` branch: that sorts on `item.gameName`
- * directly and never consults `gameNameMap`, so an item with no
- * denormalized name sorts as `''` there regardless of what this function
- * would resolve. Callers that need alpha-sort to reflect catalog-resolved
- * names must pre-resolve them before calling `sortItems`.
+ * The display name used for search matching in `filterItems`. The wishlist read
+ * carries the catalog title in `gameName` (#4227); it is absent only for a game no
+ * longer in the catalog, which then matches on its notes alone.
  */
-function resolveGameName(item: WishlistItemDto, gameNameMap: Map<string, string>): string {
-  return item.gameName ?? gameNameMap.get(item.gameId) ?? '';
+function resolveGameName(item: WishlistItemDto): string {
+  return item.gameName ?? '';
 }
 
 /** Filters items by search text (gameName + notes) and priorities. All criteria are AND-combined; values within `priorities` are OR-combined. */
-export function filterItems(
-  items: WishlistItemDto[],
-  f: WishlistFilterState,
-  gameNameMap: Map<string, string>
-): WishlistItemDto[] {
+export function filterItems(items: WishlistItemDto[], f: WishlistFilterState): WishlistItemDto[] {
   const search = f.search.trim().toLowerCase();
   const prioritySet = new Set(f.priorities);
 
   return items.filter(item => {
     if (search) {
-      const haystack = [resolveGameName(item, gameNameMap), item.notes ?? '']
-        .join(' ')
-        .toLowerCase();
+      const haystack = [resolveGameName(item), item.notes ?? ''].join(' ').toLowerCase();
       if (!haystack.includes(search)) return false;
     }
 

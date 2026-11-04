@@ -14,6 +14,22 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.SessionTracking.Endpoints;
 
 /// <summary>
+/// Fixture della classe: host e database costruiti una volta sola. Il perche', i numeri e le
+/// condizioni per applicare lo stesso schema altrove stanno in <see cref="IntegrationHostFixture"/>.
+///
+/// <para>
+/// 🔴 <b>Perche' condividere il database e' sicuro QUI.</b> Ogni test (via <c>InitializeAsync</c>,
+/// che continua a girare una volta per test perche' xUnit crea una nuova istanza della classe per
+/// ogni <c>[Fact]</c>) semina una sessione con id nuovi (<c>Guid.NewGuid()</c> per
+/// <c>_sessionId</c>/<c>_ownerParticipantId</c>/<c>_memberParticipantId</c>) e propri utenti. Ogni
+/// asserzione e' uno status-code su una richiesta scoped a quel <c>_sessionId</c> — nessun
+/// conteggio o lista globale.
+/// </para>
+/// </summary>
+public sealed class SessionCommandEndpointsIdorHostFixture(SharedTestcontainersFixture shared)
+    : IntegrationHostFixture(shared, "session_cmd_idor");
+
+/// <summary>
 /// HTTP-layer IDOR tests for the SessionTracking write-command endpoints
 /// (<c>SessionCommandEndpoints</c>): finalize, roll dice, add note, add participant,
 /// and the legacy per-participant score update.
@@ -33,11 +49,10 @@ namespace Api.Tests.BoundedContexts.SessionTracking.Endpoints;
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SessionTracking")]
 [Trait("Concern", "Security")]
-public sealed class SessionCommandEndpointsIdorIntegrationTests : IAsyncLifetime
+public sealed class SessionCommandEndpointsIdorIntegrationTests
+    : IClassFixture<SessionCommandEndpointsIdorHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
-    private WebApplicationFactory<Program> _factory = null!;
+    private readonly WebApplicationFactory<Program> _factory;
     private HttpClient _ownerClient = null!;
     private HttpClient _attackerClient = null!;
     private HttpClient _memberClient = null!;
@@ -50,20 +65,15 @@ public sealed class SessionCommandEndpointsIdorIntegrationTests : IAsyncLifetime
     private Guid _ownerParticipantId;
     private Guid _memberParticipantId;
 
-    public SessionCommandEndpointsIdorIntegrationTests(SharedTestcontainersFixture fixture)
+    public SessionCommandEndpointsIdorIntegrationTests(SessionCommandEndpointsIdorHostFixture host)
     {
-        _fixture = fixture;
-        _testDbName = $"sessioncmd_idor_{Guid.NewGuid():N}";
+        _factory = host.Factory;
     }
 
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        await db.Database.MigrateAsync();
 
         (_ownerId, _ownerToken) = await TestSessionHelper.CreateUserSessionAsync(db);
         (_, _attackerToken) = await TestSessionHelper.CreateUserSessionAsync(db);
@@ -120,13 +130,12 @@ public sealed class SessionCommandEndpointsIdorIntegrationTests : IAsyncLifetime
         _memberClient = _factory.CreateClient();
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
         _ownerClient?.Dispose();
         _attackerClient?.Dispose();
         _memberClient?.Dispose();
-        _factory?.Dispose();
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
+        return ValueTask.CompletedTask;
     }
 
     private string BaseUrl => $"/api/v1/game-sessions/{_sessionId}";

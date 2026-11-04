@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SystemConfiguration.Application.Queries;
 using Api.BoundedContexts.SystemConfiguration.Domain.Repositories;
+using Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 using Api.Configuration;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.Extensions.Options;
@@ -35,6 +36,9 @@ internal sealed class GetLlmSystemConfigQueryHandler : IQueryHandler<GetLlmSyste
                 config.CircuitBreakerSuccessThreshold,
                 config.DailyBudgetUsd,
                 config.MonthlyBudgetUsd,
+                config.DegradeThresholdPercent,
+                config.BackgroundQuotaPercent,
+                config.EvaluationQuotaPercent,
                 config.FallbackChainJson,
                 Source: "database",
                 LastUpdatedAt: config.UpdatedAt,
@@ -47,8 +51,11 @@ internal sealed class GetLlmSystemConfigQueryHandler : IQueryHandler<GetLlmSyste
             cb.FailureThreshold,
             cb.OpenDurationSeconds,
             cb.SuccessThreshold,
-            DailyBudgetUsd: 10.00m,
-            MonthlyBudgetUsd: 100.00m,
+            DailyBudgetUsd: LlmSystemConfig.DefaultDailyBudgetUsd,
+            MonthlyBudgetUsd: LlmSystemConfig.DefaultMonthlyBudgetUsd,
+            DegradeThresholdPercent: LlmSystemConfig.DefaultDegradeThresholdPercent,
+            BackgroundQuotaPercent: LlmSystemConfig.DefaultBackgroundQuotaPercent,
+            EvaluationQuotaPercent: LlmSystemConfig.DefaultEvaluationQuotaPercent,
             FallbackChainJson: "[]",
             Source: "appsettings",
             LastUpdatedAt: null,

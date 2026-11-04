@@ -383,11 +383,15 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         await _service.MarkAsCompletedAsync(oldEntity.Id, Guid.NewGuid());
 
         // Update ProcessedAt to 40 days ago using TimeProvider mock
+        // Issue #3866: this used to assign ProcessedAt on the entity read back from the context
+        // and call SaveChangesAsync. With the production NoTracking default (PERF-06) that read is
+        // DETACHED, so the row kept its recent ProcessedAt, nothing matched the retention cutoff and
+        // the cleanup deleted zero. A set-based update states the precondition and proves it landed.
         var oldDate = _mockTimeProvider.Object.GetUtcNow().UtcDateTime.AddDays(-40);
-        var dbEntry = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == oldEntity.Id);
-        dbEntry.Should().NotBeNull();
-        dbEntry.ProcessedAt = oldDate;
-        await _dbContext.SaveChangesAsync();
+        var aged = await _dbContext.BggImportQueue
+            .Where(q => q.Id == oldEntity.Id)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(q => q.ProcessedAt, oldDate));
+        aged.Should().Be(1, "the queued job must exist before it can age out");
 
         // Act
         var deletedCount = await _service.CleanupOldJobsAsync(retentionDays: 30);
@@ -409,11 +413,12 @@ public sealed class BggImportQueueServiceIntegrationTests : IAsyncLifetime
         await _service.MarkAsFailedAsync(oldEntity.Id, "Error", maxRetries: 1);
 
         // Update ProcessedAt to 60 days ago using TimeProvider mock
+        // #3866: set-based — see the note in CleanupOldJobsAsync_RemovesOldCompletedJobs.
         var oldDate = _mockTimeProvider.Object.GetUtcNow().UtcDateTime.AddDays(-60);
-        var dbEntry = await _dbContext.BggImportQueue.FirstOrDefaultAsync(q => q.Id == oldEntity.Id);
-        dbEntry.Should().NotBeNull();
-        dbEntry.ProcessedAt = oldDate;
-        await _dbContext.SaveChangesAsync();
+        var aged = await _dbContext.BggImportQueue
+            .Where(q => q.Id == oldEntity.Id)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(q => q.ProcessedAt, oldDate));
+        aged.Should().Be(1, "the queued job must exist before it can age out");
 
         // Act
         var deletedCount = await _service.CleanupOldJobsAsync(retentionDays: 30);

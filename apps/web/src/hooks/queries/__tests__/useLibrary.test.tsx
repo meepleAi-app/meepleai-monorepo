@@ -195,4 +195,47 @@ describe('useLibraryGameDetail', () => {
     expect(result.current.data?.playingTimeMinutes).toBe(60);
     expect(result.current.data?.complexityRating).toBe(3.5);
   });
+
+  // #4085 — community variant (game NOT in the user's library): this branch built the
+  // LibraryGameDetail object inline from `sharedGame` rather than mapping a backend DTO.
+  // It read `sharedGame.imageUrl`, the #2123 tombstone column that the BGG user-side
+  // asset ban leaves permanently empty — so EVERY game a user hadn't added yet rendered
+  // the 🎲 placeholder regardless of whether the backend had resolved a real cover.
+  it('#4085: uses coverUrl (not the imageUrl tombstone) for a game not yet in the library', async () => {
+    const gameId = '33333333-3333-4333-8333-333333333333';
+    const sharedGame = {
+      id: gameId,
+      title: 'Wingspan',
+      bggId: 266192,
+      yearPublished: 2019,
+      description: null,
+      minPlayers: 1,
+      maxPlayers: 5,
+      playingTimeMinutes: 70,
+      minAge: 10,
+      complexityRating: 2.4,
+      averageRating: 8.1,
+      imageUrl: '', // #2123 tombstone — always empty in practice
+      thumbnailUrl: '',
+      coverUrl: 'https://r2.example.test/covers/wingspan.webp', // what CoverUrlResolver actually produces
+      categories: [],
+      mechanics: [],
+      designers: [],
+      publishers: [],
+    };
+
+    mockGetGameDetail.mockResolvedValue(null);
+    mockGetPrivateGame.mockResolvedValue(null);
+    mockGetSharedGameById.mockResolvedValue(sharedGame);
+
+    const { result } = renderHook(() => useLibraryGameDetail(gameId), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data).not.toBeNull();
+    expect(result.current.data?.libraryEntryId).toBe(''); // community variant sentinel
+    expect(result.current.data?.gameImageUrl).toBe('https://r2.example.test/covers/wingspan.webp');
+  });
 });

@@ -6,8 +6,14 @@ using Serilog;
 namespace Api.Services.Pdf;
 
 /// <summary>
-/// Custom extraction strategy for images
+/// Conta le immagini di una pagina, con le loro dimensioni, per il rilevamento dei diagrammi.
 /// </summary>
+/// <remarks>
+/// #4363: legge le dimensioni dal dizionario dell'immagine e non ne decodifica mai i byte. Li
+/// decodificava, e li teneva in memoria senza che nessuno li leggesse. Su <c>maracaibo_rulebook.pdf</c>
+/// iText andava in OutOfMemoryException un'immagine dopo l'altra, finché il runtime moriva con un
+/// errore interno, e con lui il worker della coda dei PDF.
+/// </remarks>
 internal class ImageExtractionStrategy : IEventListener
 {
     private readonly List<ExtractedImage> _images = new();
@@ -26,7 +32,6 @@ internal class ImageExtractionStrategy : IEventListener
                     var image = renderInfo.GetImage();
                     if (image != null)
                     {
-                        var imageBytes = image.GetImageBytes();
                         var pdfImage = image.GetPdfObject();
                         var width = pdfImage?.GetAsNumber(iText.Kernel.Pdf.PdfName.Width)?.IntValue() ?? 0;
                         var height = pdfImage?.GetAsNumber(iText.Kernel.Pdf.PdfName.Height)?.IntValue() ?? 0;
@@ -34,8 +39,7 @@ internal class ImageExtractionStrategy : IEventListener
                         _images.Add(new ExtractedImage
                         {
                             Width = width,
-                            Height = height,
-                            Data = imageBytes
+                            Height = height
                         });
                     }
                 }

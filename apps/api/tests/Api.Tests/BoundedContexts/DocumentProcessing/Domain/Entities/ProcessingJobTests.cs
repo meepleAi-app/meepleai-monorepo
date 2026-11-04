@@ -1,7 +1,9 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
 using Api.BoundedContexts.DocumentProcessing.Domain.Events;
+using Api.BoundedContexts.DocumentProcessing.Domain.Exceptions;
 using Api.Middleware.Exceptions;
+using Microsoft.AspNetCore.Http;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Time.Testing;
@@ -101,14 +103,17 @@ public sealed class ProcessingJobTests
     }
 
     [Fact]
-    public void Create_WhenQueueIsFull_ThrowsConflictException()
+    [Trait("Issue", "4443")]
+    public void Create_WhenQueueIsFull_ThrowsQueueFull_NotAConflict()
     {
         // Act
         var action = () => ProcessingJob.Create(Guid.NewGuid(), Guid.NewGuid(), 0, ProcessingJob.MaxQueueSize, _timeProvider);
 
-        // Assert — a full-queue state is a conflict (HTTP 409), not a 500 (#2568).
-        action.Should().Throw<ConflictException>()
-            .WithMessage("*Queue is full*");
+        // Assert — #4443 R8: not a 500 (#2568), and not a ConflictException either, which is what
+        // «already has an active job» throws: a caller tolerating the second must not swallow the first.
+        var thrown = action.Should().Throw<ProcessingQueueFullException>().Which;
+        thrown.StatusCode.Should().Be(StatusCodes.Status429TooManyRequests);
+        thrown.Should().NotBeAssignableTo<ConflictException>();
     }
 
     [Fact]
@@ -118,6 +123,16 @@ public sealed class ProcessingJobTests
         var job = ProcessingJob.Create(Guid.NewGuid(), Guid.NewGuid(), 0, ProcessingJob.MaxQueueSize - 1, _timeProvider);
 
         // Assert
+        job.Status.Should().Be(JobStatus.Queued);
+    }
+
+    [Fact]
+    public void Create_WhenQueueIsFull_ButTheCapIsBypassed_Succeeds()
+    {
+        // #4442: an interactive admin upload is not refused because a bulk reindex filled the queue.
+        var job = ProcessingJob.Create(Guid.NewGuid(), Guid.NewGuid(), 10, ProcessingJob.MaxQueueSize + 27, _timeProvider,
+            bypassQueueCap: true);
+
         job.Status.Should().Be(JobStatus.Queued);
     }
 

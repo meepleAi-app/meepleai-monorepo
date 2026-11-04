@@ -2,20 +2,19 @@
 'use client';
 
 /**
- * User Wizard Client - 3-Step Game Addition
+ * User Wizard Client - 2-Step Game Addition
  * Issue #4: User Game Creation Wizard
  *
  * Flow:
  * Step 1: Create Game (required)
  * Step 2: Upload PDF (optional - can skip)
- * Step 3: Config Agent (optional - only if PDF uploaded)
  *
  * Uses refactored admin wizard components (Option A strategy)
  */
 
 import { useState, useCallback } from 'react';
 
-import { Bot, Check, FileText, Gamepad2 } from 'lucide-react';
+import { Check, FileText, Gamepad2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { GameCreationStep } from '@/app/(authenticated)/admin/wizard/steps/GameCreationStep';
@@ -28,10 +27,7 @@ import { cn } from '@/lib/utils';
 
 // Reuse refactored admin wizard steps
 
-// User-specific step
-import { ConfigAgentStep } from './steps/ConfigAgentStep';
-
-type WizardStep = 'game' | 'pdf' | 'agent' | 'complete';
+type WizardStep = 'game' | 'pdf' | 'complete';
 
 interface UserWizardState {
   currentStep: WizardStep;
@@ -102,11 +98,6 @@ export function UserWizardClient({
       label: t('privateGames.steps.uploadPdf'),
       icon: <FileText className="h-4.5 w-4.5" />,
     },
-    {
-      id: 'agent',
-      label: t('privateGames.steps.configAgent'),
-      icon: <Bot className="h-4.5 w-4.5" />,
-    },
   ];
 
   const [state, setState] = useState<UserWizardState>({
@@ -160,23 +151,19 @@ export function UserWizardClient({
     setShowProcessing(true);
   }, []);
 
-  // Step 2: User clicks "Continue to agent" from PdfProcessingStatus
-  // For catalog games (isCatalogGame=true), advance to agent step.
-  // For manually-created private games, the agent creation endpoint requires a shared
-  // catalog game ID — skip directly to completion to avoid a confusing 404 error.
+  // Step 2: user confirms from PdfProcessingStatus.
+  // Issue #4138: this used to branch to a third "config agent" step for catalog
+  // games. There is nothing left to configure — the agent is system-wide — and
+  // indexing continues in the background, so both flows now complete here.
   const handleContinueToAgent = useCallback(() => {
     setShowProcessing(false);
-    if (state.isCatalogGame) {
-      setState(prev => ({ ...prev, currentStep: 'agent' }));
+    toast.success(`Gioco "${state.gameName}" aggiunto con PDF!`);
+    if (onComplete) {
+      onComplete();
     } else {
-      toast.success(`Gioco "${state.gameName}" aggiunto con PDF!`);
-      if (onComplete) {
-        onComplete();
-      } else {
-        router.push('/library/private');
-      }
+      router.push('/library/private');
     }
-  }, [state.isCatalogGame, state.gameName, onComplete, router]);
+  }, [state.gameName, onComplete, router]);
 
   // Step 2: Skip PDF from upload step
   const handleSkipPdfStep = useCallback(() => {
@@ -188,50 +175,15 @@ export function UserWizardClient({
     }
   }, [onComplete, router, state.gameName]);
 
-  // Step 3: Agent configured
-  const handleAgentConfigured = useCallback(() => {
-    toast.success(`Gioco "${state.gameName}" aggiunto con agente RAG!`);
-    if (onComplete) {
-      onComplete();
-    } else {
-      router.push('/library/private');
-    }
-  }, [onComplete, router, state.gameName]);
-
-  // Step 3: Skip agent
-  const handleSkipAgent = useCallback(() => {
-    toast.success(`Gioco "${state.gameName}" aggiunto con PDF!`);
-    if (onComplete) {
-      onComplete();
-    } else {
-      router.push('/library/private');
-    }
-  }, [onComplete, router, state.gameName]);
-
-  // Back navigation
-  const goBack = useCallback(() => {
-    // If started at PDF (catalog flow) and on pdf step, back goes to catalog
-    if (startAtPdf && state.currentStep === 'pdf' && onCancel) {
-      onCancel();
-      return;
-    }
-    const stepOrder: WizardStep[] = ['game', 'pdf', 'agent'];
-    const currentIndex = stepOrder.indexOf(state.currentStep);
-    if (currentIndex > 0) {
-      setState(prev => ({ ...prev, currentStep: stepOrder[currentIndex - 1] }));
-    }
-  }, [startAtPdf, state.currentStep, onCancel]);
+  // Issue #4138: `goBack` is gone with the third step. Its only consumer was
+  // ConfigAgentStep's `onBack`; the two remaining steps each own their own back
+  // path (the game step falls back to `onCancel`), so there is nothing to
+  // retreat from any more.
 
   const currentStepIndex = STEPS.findIndex(s => s.id === state.currentStep);
 
-  // Filter visible steps:
-  // - compact mode: show only "create game" step
-  // - normal: hide agent if no PDF and not on agent step
-  const visibleSteps = compactMode
-    ? STEPS.filter(s => s.id === 'game')
-    : STEPS.filter(
-        step => !(step.id === 'agent' && !state.pdfId && state.currentStep !== 'agent')
-      );
+  // Filter visible steps: compact mode shows only "create game".
+  const visibleSteps = compactMode ? STEPS.filter(s => s.id === 'game') : STEPS;
 
   return (
     <div
@@ -249,9 +201,7 @@ export function UserWizardClient({
               <h1 className="text-3xl font-bold text-foreground dark:text-white mb-2">
                 {t('privateGames.addToLibrary')}
               </h1>
-              <p className="text-muted-foreground">
-                {t('privateGames.addToLibrarySubtitle')}
-              </p>
+              <p className="text-muted-foreground">{t('privateGames.addToLibrarySubtitle')}</p>
             </div>
             <Button variant="outline" onClick={() => router.push('/library/private')}>
               {t('privateGames.cancelWizard')}
@@ -346,22 +296,6 @@ export function UserWizardClient({
               pdfFileName={state.pdfFileName}
               onContinue={handleContinueToAgent}
             />
-          )}
-
-          {state.currentStep === 'agent' && state.gameId && state.pdfId && (
-            <div className="space-y-6">
-              {/* PDF indexing progress — shown while indexing is in progress (Issue #4946) */}
-              <PdfProcessingStatus gameId={state.gameId} />
-
-              <ConfigAgentStep
-                gameId={state.gameId}
-                gameName={state.gameName || 'Game'}
-                pdfId={state.pdfId}
-                onComplete={handleAgentConfigured}
-                onSkip={handleSkipAgent}
-                onBack={goBack}
-              />
-            </div>
           )}
         </div>
 

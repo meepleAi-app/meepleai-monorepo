@@ -139,3 +139,126 @@ describe('KbAskEventSchema (discriminated union on numeric type)', () => {
     expect(() => KbAskEventSchema.parse({ type: 99, data: {} })).toThrow();
   });
 });
+
+describe('KbAskEventSchema — il filo vero del backend (#4168)', () => {
+  it('maps a per-game citation, stripping the PDF: prefix from the docId', () => {
+    const parsed = KbAskEventSchema.parse({
+      type: 1,
+      data: {
+        citations: [{ text: 'rules text', source: 'PDF:doc-123', page: 3, line: 0, score: 0.8 }],
+      },
+    });
+    expect(parsed).toEqual({
+      type: 1,
+      data: {
+        citations: [
+          { docId: 'doc-123', source: 'PDF:doc-123', page: 3, snippet: 'rules text', score: 0.8 },
+        ],
+      },
+    });
+  });
+
+  it('maps an error without a code to a generic code instead of dropping it', () => {
+    const parsed = KbAskEventSchema.parse({
+      type: 5,
+      data: { errorMessage: 'boom', errorCode: null },
+    });
+    expect(parsed).toEqual({ type: 5, data: { message: 'boom', code: 'UNKNOWN' } });
+  });
+
+  it('ignores the gameId of an ownership denial', () => {
+    const parsed = KbAskEventSchema.parse({
+      type: 5,
+      data: {
+        errorMessage: 'Dichiara il possesso.',
+        errorCode: 'RAG_OWNERSHIP_REQUIRED',
+        gameId: 'g-1',
+      },
+    });
+    expect(parsed.data).toEqual({
+      message: 'Dichiara il possesso.',
+      code: 'RAG_OWNERSHIP_REQUIRED',
+    });
+  });
+
+  /**
+   * #4168 (5g-b): la domanda fermata dalla quota del piano porta i numeri e il link ai piani,
+   * con gli stessi nomi del 403 tier_limit_exceeded. Il pannello li mostra: lo schema non li butta.
+   */
+  it('keeps what the backend says about the plan quota', () => {
+    const parsed = KbAskEventSchema.parse({
+      type: 5,
+      data: {
+        errorMessage: 'Tier limit exceeded: AgentQuery (3/3)',
+        errorCode: 'TIER_LIMIT_EXCEEDED',
+        limitType: 'AgentQuery',
+        current: 3,
+        max: 3,
+        upgradeUrl: '/pricing',
+      },
+    });
+
+    expect(parsed.data).toEqual({
+      message: 'Tier limit exceeded: AgentQuery (3/3)',
+      code: 'TIER_LIMIT_EXCEEDED',
+      tierLimit: { current: 3, max: 3, upgradeUrl: '/pricing' },
+    });
+  });
+
+  /** Solo per quel codice: gli altri errori restano com'erano, senza un campo in più. */
+  it('does not attach the plan quota to another error', () => {
+    const parsed = KbAskEventSchema.parse({
+      type: 5,
+      data: { errorMessage: 'boom', errorCode: 'RETRIEVAL_FAILED', current: 3, max: 3 },
+    });
+
+    expect(parsed.data).toEqual({ message: 'boom', code: 'RETRIEVAL_FAILED' });
+    expect(parsed.data).not.toHaveProperty('tierLimit');
+  });
+});
+
+describe('KbCitationSchema — pagina assente (#4819)', () => {
+  // Un campo obbligatorio che il server smette di mandare (o manda null) fa fallire la validazione
+  // dell'intero evento, e `kbAskClient` lo scarta in silenzio: ordine «frontend tollerante, poi server».
+  const noPage = { docId: 'd', source: 'PDF:d', page: null, snippet: 't', score: 0.5 };
+
+  it('accepts a citation in the page shape whose page is null', () => {
+    expect(KbCitationSchema.parse(noPage).page).toBeNull();
+  });
+
+  it('accepts a citation in the page shape that does not carry the page at all', () => {
+    const { page: _page, ...withoutKey } = noPage;
+    expect(KbCitationSchema.parse(withoutKey).page).toBeNull();
+  });
+
+  it('accepts a wire citation that does not carry the page at all, and reads it as no page', () => {
+    const wire = { text: 'rules', source: 'PDF:d', line: 0, score: 0.5 };
+    const parsed = KbAskEventSchema.parse({ type: 1, data: { citations: [wire] } }) as Extract<
+      KbAskEvent,
+      { type: 1 }
+    >;
+
+    expect(parsed.data.citations[0]?.page).toBeNull();
+  });
+
+  it('accepts a Citations event whose wire citation has a null page, in both shapes', () => {
+    const wire = { text: 'rules', source: 'PDF:d', page: null, line: 0, score: 0.5 };
+    const parsed = KbAskEventSchema.parse({
+      type: 1,
+      data: { citations: [wire, noPage] },
+    }) as Extract<KbAskEvent, { type: 1 }>;
+
+    expect(parsed.data.citations.map(c => c.page)).toEqual([null, null]);
+    expect(parsed.data.citations[0]?.docId).toBe('d');
+  });
+
+  it('still reads a citation that has a page', () => {
+    const wire = { text: 'rules', source: 'PDF:d', page: 14, line: 0, score: 0.5 };
+    const parsed = KbAskEventSchema.parse({ type: 1, data: { citations: [wire] } }) as Extract<
+      KbAskEvent,
+      { type: 1 }
+    >;
+
+    expect(parsed.data.citations[0]?.page).toBe(14);
+  });
+});

@@ -21,6 +21,7 @@ export const gameNightKeys = {
   mine: () => [...gameNightKeys.all, 'mine'] as const,
   detail: (id: string) => [...gameNightKeys.all, id] as const,
   rsvps: (id: string) => [...gameNightKeys.all, id, 'rsvps'] as const,
+  guestInvitations: (id: string) => [...gameNightKeys.all, id, 'guest-invitations'] as const,
   voteTally: (id: string) => [...gameNightKeys.all, id, 'vote-tally'] as const,
   summary: (id: string) => [...gameNightKeys.all, id, 'summary'] as const,
   photos: (id: string) => [...gameNightKeys.all, id, 'photos'] as const,
@@ -75,6 +76,34 @@ export function useGameNightRsvps(id: string) {
     queryKey: gameNightKeys.rsvps(id),
     queryFn: () => api.gameNights.getRsvps(id),
     enabled: !!id,
+  });
+}
+
+/**
+ * #4706: the guests invited by email. The endpoint is organizer-only, so callers pass
+ * `enabled: isHost` instead of letting every participant fire a request that answers 403.
+ */
+export function useGameNightGuestInvitations(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: gameNightKeys.guestInvitations(id),
+    queryFn: () => api.gameNights.getGuestInvitations(id),
+    enabled: !!id && enabled,
+  });
+}
+
+/**
+ * #4721: the organizer withdraws an invitation sent by email. Settled, not only on success: a refused
+ * withdrawal (the guest answered in the meantime, 409) also means the list on screen is stale. The counts
+ * on the night and on the lists change too, so the whole night namespace is refreshed.
+ */
+export function useCancelGuestInvitation(gameNightId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (invitationId: string) =>
+      api.gameNights.cancelGuestInvitation(gameNightId, invitationId),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: gameNightKeys.all });
+    },
   });
 }
 

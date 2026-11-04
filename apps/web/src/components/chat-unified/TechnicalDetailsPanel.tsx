@@ -5,6 +5,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { ChevronDown, ChevronRight, Copy, Check, ExternalLink } from 'lucide-react';
 
 import type { DebugStep } from '@/hooks/useAgentChatStream';
+import { citedPage } from '@/lib/citations/citedPage';
 import { cn } from '@/lib/utils';
 
 interface TechnicalDetailsPanelProps {
@@ -254,7 +255,7 @@ export function TechnicalDetailsPanel({
                     key={i}
                     className="inline-flex items-center gap-0.5 px-1 py-0.5 rounded bg-muted/50 tabular-nums"
                   >
-                    {chunk.page != null && <span>p.{chunk.page}</span>}
+                    {citedPage(chunk.page) !== null && <span>p.{citedPage(chunk.page)}</span>}
                     <span className="text-muted-foreground">{(chunk.score * 100).toFixed(0)}%</span>
                   </span>
                 ))}

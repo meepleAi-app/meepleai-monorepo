@@ -37,6 +37,12 @@ public class PdfDocumentEntity
     // rebuild the heading-aware document without re-running the extractor.
     public string? StructuredElementsJson { get; set; }
 
+    // #4782: where each page of the PDF begins in ExtractedText, as [[page,start],…]. A re-index rebuilds the
+    // chunks from ExtractedText alone, so without this the page of every passage of a flat document (no structured
+    // elements) is lost there. Null when the extractor did not measure its pages, and for every document extracted
+    // before this column existed.
+    public string? PageSpansJson { get; set; }
+
     // Issue #4215: Granular 7-state tracking
     public string ProcessingState { get; set; } = "Pending"; // Enum stored as string: Pending, Uploading, Extracting, Chunking, Embedding, Indexing, Ready, Failed
 
@@ -47,7 +53,7 @@ public class PdfDocumentEntity
 
     // Issue #4216: Retry mechanism tracking
     public int RetryCount { get; set; }
-    public string? ErrorCategory { get; set; } // ErrorCategory enum: Network, Parsing, Quota, Service, PayloadTooLarge, Unknown
+    public string? ErrorCategory { get; set; } // ErrorCategory enum: Network, Parsing, Quota, Service, PayloadTooLarge, StorageObjectMissing, Cancelled, Unknown
     public string? FailedAtState { get; set; } // PdfProcessingState where failure occurred
 
     // PDF-03: Structured data extraction fields
@@ -120,9 +126,16 @@ public class PdfDocumentEntity
     // Prima era `[Timestamp] byte[]? RowVersion` su una colonna `bytea`. Quel meccanismo funzionava
     // grazie al trigger `ef_update_row_version()`, che #2305 ha rimosso migrando a xmin — ma questa
     // entità è rimasta indietro. Senza trigger Postgres non valorizza una `bytea`: il token restava
-    // NULL, non cambiava mai fra un update e l'altro, e nessun conflitto veniva rilevato. Misurato:
-    // `Reindex_RacesWithDelete_FirstWinsSecondGets409` osservava successCount=2 dove il dominio ne
-    // prevede 1 — due operazioni che devono escludersi riuscivano entrambe.
+    // NULL, non cambiava mai fra un update e l'altro, e NESSUN conflitto era rilevabile, in alcun
+    // interleaving. Misurato su `Reindex_RacesWithDelete`, che osservava due successi.
+    //
+    // #3633: quella misura non dimostrava però ciò che il commento originale le faceva dire — che
+    // «il dominio prevede esattamente un vincitore». Due successi restano un esito legittimo anche
+    // a token funzionante, quando il delete legge dopo il commit del reindex:
+    // DeleteKbDocumentCommandHandler non ha una guardia di stato, e cancellare un documento
+    // appena accodato è un'operazione
+    // sensata. Ciò che `xmin` garantisce è più stretto e più utile: che un conflitto, QUANDO c'è,
+    // venga rilevato invece di passare inosservato.
     //
     // `uint` e non `byte[]`: xmin è di tipo `xid`. La proprietà non è esposta da alcun DTO (a
     // differenza di RuleSpec, dove RowVersion diventa un ETag base64 in GameDto), quindi il cambio

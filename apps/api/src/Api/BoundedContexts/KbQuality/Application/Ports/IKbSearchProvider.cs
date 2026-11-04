@@ -13,4 +13,10 @@ public interface IKbSearchProvider
     Task<SearchResult> SearchAsync(Guid docId, string question, int topK, CancellationToken ct);
 }
 
-public sealed record SearchResult(IReadOnlyList<Guid> RetrievedChunkIds, TimeSpan Elapsed);
+/// <param name="RetrievedChunkIds">
+/// L'id del <c>text_chunks</c> di ogni risultato, nell'ordine del recupero (#4288). Un risultato che
+/// non porta l'id (un embedding scritto senza <c>source_chunk_id</c>, vedi #4384) vale <c>null</c>:
+/// tiene il suo posto e non è mai un colpo, altrimenti i risultati dopo di lui salirebbero di rango.
+/// </param>
+/// <param name="Elapsed">La durata della ricerca.</param>
+public sealed record SearchResult(IReadOnlyList<Guid?> RetrievedChunkIds, TimeSpan Elapsed);

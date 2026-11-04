@@ -46,6 +46,7 @@ export {
 export {
   useAgentKbDocs,
   useAgentThreads,
+  useGameThreads,
   agentDataKeys,
   mapKbDocs,
   mapThreads,
@@ -66,9 +67,6 @@ export {
   useGameMechanics,
   sharedGamesKeys,
 } from './useSharedGames';
-
-// Agent Configuration queries and mutations (Issue #2518)
-export { useAgentConfig, useUpdateAgentConfig, agentConfigKeys } from './useAgentConfig';
 
 // Agent Typologies queries and mutations (Issue #3249)
 export {
@@ -170,31 +168,8 @@ export type {
 } from '@/components/ui/data-display/game-carousel';
 export { CAROUSEL_SORT_OPTIONS } from '@/components/ui/data-display/game-carousel';
 
-// Agent Slots & Creation Flow (Issue #4771, #4772, #4773)
-export {
-  useAgentSlots,
-  useHasAvailableSlots,
-  useInvalidateAgentSlots,
-  agentSlotsKeys,
-  type AgentSlot,
-  type AgentSlotsData,
-} from './useAgentSlots';
-
-export {
-  useCreateAgentFlow,
-  type CreateAgentFlowInput,
-  type CreateAgentFlowResult,
-} from './useCreateAgentFlow';
-
 // PDF Processing Status (Issue #4946)
 export { usePdfProcessingStatus, pdfStatusKeys } from './usePdfProcessingStatus';
-
-// AI Models & Agent LLM Configuration
-export {
-  useAvailableModels,
-  useAgentConfiguration,
-  useUpdateAgentConfiguration,
-} from './useModels';
 
 // Rulebook Analysis queries (Issue #5584)
 export { useRulebookAnalysis, rulebookAnalysisKeys } from './useRulebookAnalysis';

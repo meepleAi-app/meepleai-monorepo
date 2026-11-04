@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
@@ -11,6 +11,7 @@ import { PdfBBoxOverlay } from '@/components/pdf/PdfBBoxOverlay';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/overlays/dialog';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
+import { citedPage } from '@/lib/citations/citedPage';
 import type { Citation } from '@/types';
 
 // ─── react-pdf dynamic imports (avoids pdfjs SSR issues) ───────────────────
@@ -53,9 +54,18 @@ interface PdfPageModalProps {
  * Issue #4919: Citations as clickable links to source PDF page.
  */
 export function PdfPageModal({ citation, open, onClose }: PdfPageModalProps) {
+  // #4819: a citation without a page opens the rulebook at its first page, and says so below the title.
+  const citationPage = citedPage(citation.pageNumber);
+  const startPage = citationPage ?? 1;
   const [numPages, setNumPages] = useState<number | null>(null);
-  const [currentPage, setCurrentPage] = useState(citation.pageNumber);
+  const [currentPage, setCurrentPage] = useState(startPage);
   const [loadError, setLoadError] = useState<string | null>(null);
+
+  // The modal stays mounted while closed and is shown for whichever citation is active: start again from the
+  // cited page whenever it opens or the citation changes, or the note below the title would be untrue.
+  useEffect(() => {
+    if (open) setCurrentPage(startPage);
+  }, [open, startPage, citation.documentId]);
 
   // Reset state when citation changes (different document/page)
   const pdfUrl = api.pdf.getPdfDownloadUrl(citation.documentId);
@@ -65,12 +75,15 @@ export function PdfPageModal({ citation, open, onClose }: PdfPageModalProps) {
   // per "protected" nessun highlight (lo snippet parafrasato non è verbatim).
   const highlightQuote =
     citation.copyrightTier === 'protected' ? undefined : citation.snippet || undefined;
-  const isCitedPage = currentPage === citation.pageNumber;
+  const isCitedPage = currentPage === citationPage;
 
   // SP-D (#3408): overlay bbox della regione (Pattern B), gated su copyright come l'highlight
   // verbatim. Le regions sono già Full-gated dal BE; qui belt-and-suspenders per "protected".
+  // #4819: no cited page, no overlay: a region is a claim about a page.
   const regions =
-    citation.copyrightTier === 'protected' ? undefined : (citation.regions ?? undefined);
+    citation.copyrightTier === 'protected' || citationPage === null
+      ? undefined
+      : (citation.regions ?? undefined);
   const hasRects = (regions?.length ?? 0) > 0;
   const pageRects = useMemo(
     () => (regions ?? []).filter(r => r.page === currentPage),
@@ -104,7 +117,7 @@ export function PdfPageModal({ citation, open, onClose }: PdfPageModalProps) {
     if (!isOpen) {
       onClose();
     } else {
-      setCurrentPage(citation.pageNumber);
+      setCurrentPage(startPage);
       setLoadError(null);
     }
   };
@@ -118,8 +131,16 @@ export function PdfPageModal({ citation, open, onClose }: PdfPageModalProps) {
         {/* Header */}
         <DialogHeader className="px-6 pt-6 pb-3 flex-shrink-0">
           <DialogTitle className="font-quicksand text-base">
-            Sorgente — Pagina {citation.pageNumber}
+            {citationPage === null ? 'Sorgente — Regolamento' : `Sorgente — Pagina ${citationPage}`}
           </DialogTitle>
+          {citationPage === null && (
+            <p
+              className="text-xs text-muted-foreground font-nunito"
+              data-testid="page-unknown-note"
+            >
+              La pagina di questa citazione non è nota: il regolamento si apre dall&apos;inizio.
+            </p>
+          )}
         </DialogHeader>
 
         {/* PDF Viewer */}

@@ -2,7 +2,7 @@
 name: Implement Batch Embedding Processing for Large PDFs
 about: Fix OutOfMemoryException during PDF indexing by implementing batch processing
 title: '[PDF-PROCESSING] Implement batch embedding generation to support large PDFs'
-labels: enhancement, pdf-processing, performance, memory
+labels: enhancement, area/backend
 assignees: ''
 ---
 

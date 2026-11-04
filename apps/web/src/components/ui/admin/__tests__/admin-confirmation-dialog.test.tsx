@@ -165,6 +165,23 @@ describe('AdminConfirmationDialog', () => {
       fireEvent.click(screen.getByRole('button', { name: /confirm|conferma|delete|elimina/i }));
       expect(onConfirm).toHaveBeenCalledTimes(1);
     });
+
+    // Issue #4132 — the counterpart of the post-unmount guard below. Most hosts
+    // (EmergencyTab, QueueTab, ResourcesTab, KbDocActions) do NOT close the
+    // dialog themselves: they rely on handleConfirm calling onClose once
+    // onConfirm resolves. The mount sentinel must not swallow that call while
+    // the component is alive, and nothing asserted it before.
+    it('calls onClose after onConfirm resolves while still mounted', async () => {
+      const onConfirm = vi.fn().mockResolvedValue(undefined);
+      const onClose = vi.fn();
+      renderLevel2({ onConfirm, onClose });
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: 'CONFIRM' } });
+      fireEvent.click(screen.getByRole('button', { name: /confirm|conferma|delete|elimina/i }));
+
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledTimes(1);
+      });
+    });
   });
 
   // PR #2428 — Regression guard for "setState after unmount" race.
@@ -176,13 +193,23 @@ describe('AdminConfirmationDialog', () => {
   //   2. handleConfirm flips isSubmitting=true, then `await onConfirm()`
   //   3. host (e.g. RestartAllPanel) responds to onConfirm by flipping isOpen
   //      to false → Radix unmounts the dialog before onConfirm resolves
-  //   4. dialog finishes the await, calls onClose() (no-op), and the `finally`
-  //      block fires `setIsSubmitting(false)` on the torn-down component
+  //   4. dialog finishes the await, calls onClose(), and the `finally` block
+  //      fires `setIsSubmitting(false)` on the torn-down component
   //
   // The fix is a mount sentinel that short-circuits the late setState. This
-  // suite re-creates the unmount-mid-await scenario and pins the absence of
-  // both console errors AND unhandled rejections.
-  describe('post-unmount race (PR #2428)', () => {
+  // suite re-creates the unmount-mid-await scenario.
+  //
+  // Issue #4132 — step 3 was described here as "onClose() (no-op)", and that
+  // assumption was wrong: onClose IS the host's state setter (RestartAllPanel
+  // passes `() => setShowConfirm(false)`), so calling it late updates state on
+  // a torn-down tree. The sentinel originally guarded only step 4.
+  //
+  // The console.error / unhandledrejection assertions below cannot catch that:
+  // React 19 no longer warns on setState-after-unmount, and the `onClose` double
+  // is a bare vi.fn() with no state, so no React update happens in the test at
+  // all. The scenario was right and the probe was inert. The observable contract
+  // is asserted directly instead: after unmount, onClose must not be called.
+  describe('post-unmount race (PR #2428, issue #4132)', () => {
     let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
     let unhandledRejections: unknown[];
     let unhandledListener: (event: PromiseRejectionEvent) => void;
@@ -244,6 +271,14 @@ describe('AdminConfirmationDialog', () => {
       resolveConfirm();
       await Promise.resolve();
       await Promise.resolve();
+
+      // Issue #4132 — the assertion that actually pins the fix. `onClose` is the
+      // host's state setter; invoking it after the dialog unmounted dispatches a
+      // React update on a dead tree, which React 19 resolves through `window` and
+      // which blows up as `ReferenceError: window is not defined` once jsdom has
+      // been torn down. Closing an already-unmounted dialog is meaningless, so
+      // the call must simply not happen.
+      expect(onClose).not.toHaveBeenCalled();
 
       expect(consoleErrorSpy).not.toHaveBeenCalled();
       expect(unhandledRejections).toHaveLength(0);

@@ -33,6 +33,16 @@ public class BggTosHashEntity
     /// <summary>Cumulative count of detected hash changes since first observation.</summary>
     public int ChangeCount { get; set; }
 
-    [Timestamp]
-    public byte[]? RowVersion { get; set; }
+    /// <summary>
+    /// Concurrency token (#3651). Prima era <c>[Timestamp] byte[]? RowVersion</c> su una colonna
+    /// <c>bytea</c>: una forma che <b>non protegge nulla</b>, perché Postgres non popola una
+    /// <c>bytea</c> da sé — il valore restava <c>null</c> e EF confrontava <c>NULL = NULL</c> a
+    /// ogni update, senza mai rilevare un conflitto.
+    ///
+    /// <para>
+    /// Ora è la colonna di sistema <c>xmin</c> (ADR-060), che Postgres aggiorna a ogni scrittura.
+    /// Il valore è gestito dal database: EF lo legge, non lo scrive.
+    /// </para>
+    /// </summary>
+    public uint Xmin { get; set; }
 }

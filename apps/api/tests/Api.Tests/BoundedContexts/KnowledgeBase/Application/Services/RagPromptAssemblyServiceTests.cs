@@ -22,6 +22,11 @@ namespace Api.Tests.BoundedContexts.KnowledgeBase.Application.Services;
 
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "KnowledgeBase")]
+// #3994: nella stessa collection di RagPromptAssemblyServiceRetrievalEmptyMetricsTests.
+// `MeepleAiMetrics.RagRetrievalEmpty` e' un contatore statico globale al processo, e il
+// percorso di retrieval vuoto di questo servizio lo incrementa (RagPromptAssemblyService.cs:341):
+// girando in parallelo, questi test contaminavano l'assertion "non deve incrementare" di T3-AC-2.
+[Collection("RetrievalEmptyMetrics")]
 public class RagPromptAssemblyServiceTests
 {
     private readonly Mock<IEmbeddingService> _embeddingMock;
@@ -99,7 +104,7 @@ public class RagPromptAssemblyServiceTests
     private void SetupSuccessfulEmbedding()
     {
         _embeddingMock
-            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateSuccess([TestEmbedding]));
     }
 
@@ -470,7 +475,7 @@ public class RagPromptAssemblyServiceTests
     {
         // Arrange
         _embeddingMock
-            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Setup(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(EmbeddingResult.CreateFailure("Service unavailable"));
         var service = CreateService();
 
@@ -739,7 +744,7 @@ public class RagPromptAssemblyServiceTests
             TestGameId, null, null, "it", CancellationToken.None);
 
         // Assert - embedding called for original + 2 expansions = 3 times
-        _embeddingMock.Verify(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
+        _embeddingMock.Verify(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
         // After legacy vector removal, FTS-only RRF scores are below threshold — no citations
         result.Citations.Should().BeEmpty();
     }
@@ -765,7 +770,7 @@ public class RagPromptAssemblyServiceTests
             TestGameId, null, null, "it", CancellationToken.None);
 
         // Assert - should still work with original query only
-        _embeddingMock.Verify(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
+        _embeddingMock.Verify(e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()), Times.Once);
         // After legacy vector removal, FTS-only RRF scores are below threshold — no citations
         result.Citations.Should().BeEmpty();
     }
@@ -1238,7 +1243,7 @@ public class RagPromptAssemblyServiceTests
 
         // No retrieval services should have been invoked
         _embeddingMock.Verify(
-            e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            e => e.GenerateEmbeddingAsync(It.IsAny<string>(), It.IsAny<EmbeddingPurpose>(), It.IsAny<CancellationToken>()),
             Times.Never,
             "AssembleFromContextAsync must not call embedding service");
         _textSearchMock.Verify(

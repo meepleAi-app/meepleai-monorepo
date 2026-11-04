@@ -32,8 +32,10 @@ internal sealed class AssembleContextCommandHandler : IRequestHandler<AssembleCo
         {
             try
             {
+                // #3737: retrieval question -> e5 "query:" prefix.
                 var embeddingResult = await _embeddingService.GenerateEmbeddingAsync(
                     request.Query,
+                    EmbeddingPurpose.Query,
                     cancellationToken).ConfigureAwait(false);
 
                 if (embeddingResult.Success && embeddingResult.Embeddings.Count > 0)

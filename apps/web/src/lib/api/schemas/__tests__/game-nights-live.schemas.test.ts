@@ -9,7 +9,11 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { GameNightLiveDtoSchema, GameNightSessionStatusSchema } from '../game-nights.schemas';
+import {
+  GameNightLiveDtoSchema,
+  GameNightSessionStatusSchema,
+  StartGameNightSessionResultSchema,
+} from '../game-nights.schemas';
 
 const SESSION = {
   sessionId: '11111111-1111-4111-8111-111111111111',
@@ -122,6 +126,54 @@ describe('GameNightLiveDtoSchema', () => {
     expect('isLive' in SESSION).toBe(false);
     const parsed = GameNightLiveDtoSchema.parse(LIVE);
     expect(parsed.sessions[0].isLive).toBeUndefined();
+  });
+
+  // #4752 (the night → live game bridge): the live game of a sitting, additive and optional.
+  it('parses a session DTO that carries its live game (liveSessionId)', () => {
+    const liveSessionId = '99999999-9999-4999-8999-999999999999';
+    const parsed = GameNightLiveDtoSchema.parse({
+      ...LIVE,
+      sessions: [{ ...SESSION, liveSessionId }],
+    });
+    expect(parsed.sessions[0].liveSessionId).toBe(liveSessionId);
+  });
+
+  it.each([null, undefined])(
+    'parses a session DTO whose liveSessionId is %s (a sitting that predates the bridge)',
+    liveSessionId => {
+      const parsed = GameNightLiveDtoSchema.parse({
+        ...LIVE,
+        sessions: [{ ...SESSION, liveSessionId }],
+      });
+      expect(parsed.sessions[0].liveSessionId ?? null).toBeNull();
+    }
+  );
+
+  it('rejects a liveSessionId that is not a uuid (a malformed id must not become a link)', () => {
+    expect(() =>
+      GameNightLiveDtoSchema.parse({
+        ...LIVE,
+        sessions: [{ ...SESSION, liveSessionId: 'not-a-uuid' }],
+      })
+    ).toThrow();
+  });
+
+  it('parses the start result with and without the live game it created', () => {
+    const started = {
+      sessionId: '11111111-1111-4111-8111-111111111111',
+      gameNightSessionId: '22222222-2222-4222-8222-222222222222',
+      sessionCode: 'ABC123',
+      playOrder: 1,
+    };
+    const liveSessionId = '99999999-9999-4999-8999-999999999999';
+
+    expect(
+      StartGameNightSessionResultSchema.parse({ ...started, liveSessionId }).liveSessionId
+    ).toBe(liveSessionId);
+    expect(StartGameNightSessionResultSchema.parse(started).liveSessionId).toBeUndefined();
+    expect(
+      StartGameNightSessionResultSchema.parse({ ...started, liveSessionId: null }).liveSessionId
+    ).toBeNull();
   });
 
   // #2634 C4: round-trip the winner name + the live roster.

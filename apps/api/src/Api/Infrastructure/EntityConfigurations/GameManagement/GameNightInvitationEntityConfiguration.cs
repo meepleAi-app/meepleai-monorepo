@@ -52,6 +52,12 @@ internal class GameNightInvitationEntityConfiguration
             .HasDatabaseName("IX_game_night_invitations_token")
             .IsUnique();
 
+        // #4846: the opt-out looks the invitation up by this key. Unique, and NULLs do not collide in Postgres, so a row
+        // older than the column does not get in the way.
+        builder.HasIndex(i => i.UnsubscribeKey)
+            .HasDatabaseName("IX_game_night_invitations_unsubscribe_key")
+            .IsUnique();
+
         builder.HasIndex(i => new { i.GameNightId, i.Email, i.Status })
             .HasDatabaseName("IX_game_night_invitations_event_email_status");
 

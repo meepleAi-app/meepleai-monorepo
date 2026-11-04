@@ -413,16 +413,6 @@ internal sealed class LlmProviderSelector : ILlmProviderSelector
             _logger.LogError(ex, "Failed to query default model for provider {Provider} from DB, using hardcoded fallback", providerName);
         }
 
-        return GetHardcodedDefaultModel(providerName);
-    }
-
-    private static string GetHardcodedDefaultModel(string providerName)
-    {
-        return providerName.ToLowerInvariant() switch
-        {
-            "ollama" => AgentDefaults.OllamaFallbackModel,
-            "openrouter" => AgentDefaults.DefaultModel,
-            _ => AgentDefaults.OllamaFallbackModel
-        };
+        return AgentDefaults.DefaultModelForProvider(providerName);
     }
 }

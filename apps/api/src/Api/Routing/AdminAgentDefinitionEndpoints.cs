@@ -38,7 +38,6 @@ internal static class AdminAgentDefinitionEndpoints
             var command = new CreateAgentDefinitionCommand(
                 Name: request.Name,
                 Description: request.Description,
-                Type: request.Type,
                 Model: request.Model,
                 MaxTokens: request.MaxTokens,
                 Temperature: request.Temperature,
@@ -123,7 +122,6 @@ internal static class AdminAgentDefinitionEndpoints
                 Id: id,
                 Name: request.Name,
                 Description: request.Description,
-                Type: request.Type,
                 Model: request.Model,
                 MaxTokens: request.MaxTokens,
                 Temperature: request.Temperature,
@@ -267,7 +265,6 @@ internal static class AdminAgentDefinitionEndpoints
 internal sealed record CreateAgentDefinitionRequest(
     string Name,
     string Description,
-    string Type,
     string Model,
     int MaxTokens,
     float Temperature,
@@ -279,7 +276,6 @@ internal sealed record CreateAgentDefinitionRequest(
 internal sealed record UpdateAgentDefinitionRequest(
     string Name,
     string Description,
-    string Type,
     string Model,
     int MaxTokens,
     float Temperature,

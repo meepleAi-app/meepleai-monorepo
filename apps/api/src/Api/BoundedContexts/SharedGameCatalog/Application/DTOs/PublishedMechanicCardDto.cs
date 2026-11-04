@@ -30,11 +30,18 @@ public sealed record PublishedMechanicCardSectionDto(
     string Section,
     IReadOnlyList<PublishedMechanicCardClaimDto> Claims);
 
-/// <summary>A single reviewed claim with its verbatim citations.</summary>
+/// <summary>
+/// A single reviewed claim with its verbatim citations. The structural fields (spec 2026-10-08) are
+/// optional so v2 snapshots and existing callers keep working: Rule / Base / no overrides / no trigger.
+/// </summary>
 public sealed record PublishedMechanicCardClaimDto(
     Guid Id,
     string Claim,
-    IReadOnlyList<PublishedMechanicCardCitationDto> Citations);
+    IReadOnlyList<PublishedMechanicCardCitationDto> Citations,
+    Domain.Enums.MechanicClaimKind Kind = Domain.Enums.MechanicClaimKind.Rule,
+    Domain.Enums.MechanicRulePriority Priority = Domain.Enums.MechanicRulePriority.Base,
+    IReadOnlyList<Guid>? Overrides = null,
+    MechanicTriggerDto? Trigger = null);
 
 /// <summary>A verbatim source citation: the origin PDF, its page, and the quoted text.</summary>
 public sealed record PublishedMechanicCardCitationDto(

@@ -1,6 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
+import { api } from '@/lib/api';
 import { AgentChatDrawerLayout } from '../AgentChatDrawerLayout';
 import type { AgentDetailData } from '../../types';
 import * as useAgentDataModule from '@/hooks/queries/useAgentData';
@@ -10,7 +11,14 @@ vi.mock('@/hooks/queries/useAgentData', () => ({
   useAgentKbDocs: vi.fn(() => ({ data: [], isLoading: false })),
 }));
 vi.mock('@/hooks/useAgentStatus', () => ({
-  useAgentStatus: () => ({ status: null, isLoading: false, error: null }),
+  useAgentStatus: () => ({
+    status: { isReady: true, documentCount: 3, ragStatus: 'Ready', blockingReason: null },
+    isLoading: false,
+    error: null,
+  }),
+}));
+vi.mock('@/lib/api', () => ({
+  api: { chat: { createThread: vi.fn() } },
 }));
 vi.mock('@/components/chat-unified/ChatThreadView', () => ({
   ChatThreadView: ({ threadId }: { threadId: string }) => (
@@ -68,7 +76,14 @@ describe('AgentChatDrawerLayout', () => {
 
   it('shows thread preview in recent chats when threads exist', () => {
     vi.mocked(useAgentDataModule.useAgentThreads).mockReturnValue({
-      data: [{ id: 't1', createdAt: '2024-03-01T00:00:00Z', messageCount: 5, firstMessagePreview: 'Qual è la regola finale?' }],
+      data: [
+        {
+          id: 't1',
+          createdAt: '2024-03-01T00:00:00Z',
+          messageCount: 5,
+          firstMessagePreview: 'Qual è la regola finale?',
+        },
+      ],
       isLoading: false,
     } as ReturnType<typeof useAgentDataModule.useAgentThreads>);
     render(<AgentChatDrawerLayout data={mockAgent} />);
@@ -78,11 +93,44 @@ describe('AgentChatDrawerLayout', () => {
   it('clicking a recent thread updates chat area data-thread-id', async () => {
     const user = userEvent.setup();
     vi.mocked(useAgentDataModule.useAgentThreads).mockReturnValue({
-      data: [{ id: 't1', createdAt: '2024-03-01T00:00:00Z', messageCount: 5, firstMessagePreview: 'Domanda test' }],
+      data: [
+        {
+          id: 't1',
+          createdAt: '2024-03-01T00:00:00Z',
+          messageCount: 5,
+          firstMessagePreview: 'Domanda test',
+        },
+      ],
       isLoading: false,
     } as ReturnType<typeof useAgentDataModule.useAgentThreads>);
     render(<AgentChatDrawerLayout data={mockAgent} />);
     await user.click(screen.getByTestId('thread-item-t1'));
     expect(screen.getByTestId('agent-chat-area')).toHaveAttribute('data-thread-id', 't1');
+  });
+
+  // #4730 — the thread must be created FOR the game of the agent: without it the server has no rulebook to
+  // answer from and the conversation opens as a dead end.
+  it('creates the new chat for the game of the agent', async () => {
+    const user = userEvent.setup();
+    vi.mocked(api.chat.createThread).mockResolvedValue({ id: 'thread-9' } as never);
+    render(<AgentChatDrawerLayout data={mockAgent} />);
+
+    await user.click(screen.getByTestId('new-chat-button'));
+
+    await waitFor(() => expect(api.chat.createThread).toHaveBeenCalledTimes(1));
+    expect(api.chat.createThread).toHaveBeenCalledWith(
+      expect.objectContaining({ agentId: 'agent-1', gameId: 'game-1' })
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId('agent-chat-area')).toHaveAttribute('data-thread-id', 'thread-9')
+    );
+  });
+
+  it('does not offer a new chat to an agent with no game, and says why', () => {
+    const noGameAgent = { ...mockAgent, gameId: undefined, gameName: undefined };
+    render(<AgentChatDrawerLayout data={noGameAgent} />);
+
+    expect(screen.queryByTestId('new-chat-button')).not.toBeInTheDocument();
+    expect(screen.getByTestId('no-game-placeholder')).toHaveTextContent('Nessun gioco collegato');
   });
 });

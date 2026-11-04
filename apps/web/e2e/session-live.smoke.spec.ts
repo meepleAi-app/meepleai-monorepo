@@ -14,8 +14,12 @@
  *      assertion that no consumer re-introduces a call to the removed route.
  *
  * ## Anti-pattern avoided
- * The previous false-green pattern (`page.route('**/ game - sessions; /**', abort)`) was
- * a blind abort that would pass even if the page never hit that route at all. This
+ * The previous false-green pattern was a blanket `page.route()` on a wildcard
+ * game-sessions glob with `abort` — a blind abort that would pass even if the
+ * page never hit that route at all. (Il glob non si scrive qui: conteneva la
+ * sequenza che chiude un blocco di commento, e chiudendolo trasformava questa
+ * prosa in codice -> `ReferenceError: game is not defined` al caricamento del
+ * modulo, con la collection dell'intera suite abortita. Vedi #3901.) This
  * spec uses EXPLICIT route intercept with request tracking to assert:
  *   - native stream: intercepted and counted (≥ 1 call).
  *   - legacy stream/v2 (removed): intercepted and counted → must be ZERO calls.
@@ -29,13 +33,12 @@
  *
  * ## Auth pattern
  * Triple-helper pattern (seedAuthSession + seedCookieConsent + mockAuthEndpoints)
- * required for `(authenticated)` routes — identical to session-live-mobile.spec.ts
- * and session-live-chat-agent-g3.spec.ts.
+ * required for `(authenticated)` routes — identical to session-live-mobile.spec.ts.
  *
  * ## Fixture session
  * `?fixture=host` activates STATE_OVERRIDE_ENABLED visual-test mode (NODE_ENV !== 'production'),
  * which renders the session with deterministic data and avoids backend calls.
- * This is the same fixture used by session-live-chat-agent-g3.spec.ts.
+ * This is the same fixture used by a11y/session-live.spec.ts.
  *
  * Issue #2561 SP2 T11.
  */
@@ -69,7 +72,7 @@ async function seedAuth(page: Page): Promise<void> {
 
 /**
  * Navigate to the fixture-loaded session-live page and wait for the shell to render.
- * Mirrors gotoSessionLive in session-live-chat-agent-g3.spec.ts.
+ * Mirrors gotoSessionLive in a11y/session-live.spec.ts.
  */
 async function gotoFixtureLivePage(page: Page, extraSearch = ''): Promise<void> {
   await seedAuth(page);

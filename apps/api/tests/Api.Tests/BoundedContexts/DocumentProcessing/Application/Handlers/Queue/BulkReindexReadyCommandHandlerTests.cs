@@ -2,6 +2,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 using Api.BoundedContexts.DocumentProcessing.Domain.Entities;
 using Api.BoundedContexts.DocumentProcessing.Domain.Enums;
+using Api.BoundedContexts.DocumentProcessing.Domain.Exceptions;
 using Api.BoundedContexts.DocumentProcessing.Domain.Repositories;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
@@ -293,6 +294,34 @@ public sealed class BulkReindexReadyCommandHandlerTests : IAsyncLifetime
         _mediator.Verify(
             m => m.Send(It.Is<ReindexDocumentCommand>(c => c.PdfId == pdfC.Id), It.IsAny<CancellationToken>()),
             Times.Once);
+    }
+
+    /// <summary>
+    /// #4443: a full queue is no longer a <see cref="ConflictException"/>. If another writer fills the
+    /// queue after the pacing check, that document is skipped like a conflict, not the whole batch.
+    /// </summary>
+    [Fact]
+    [Trait("Issue", "4443")]
+    public async Task Handle_QueueFilledMidBatch_SkipsThatIdAndContinues()
+    {
+        var pdfA = await SeedPdfAsync(indexerVersion: "v1.0", uploadedAt: DateTime.UtcNow.AddMinutes(1));
+        var pdfB = await SeedPdfAsync(indexerVersion: "v1.0", uploadedAt: DateTime.UtcNow.AddMinutes(2));
+
+        _mediator
+            .Setup(m => m.Send(
+                It.Is<ReindexDocumentCommand>(c => c.PdfId == pdfA.Id),
+                It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ProcessingQueueFullException());
+
+        var result = await CreateHandler().Handle(
+            new BulkReindexReadyCommand(Guid.NewGuid()), CancellationToken.None);
+
+        _mediator.Verify(
+            m => m.Send(It.Is<ReindexDocumentCommand>(c => c.PdfId == pdfB.Id), It.IsAny<CancellationToken>()),
+            Times.Once);
+        result.EnqueuedCount.Should().Be(1);
+        result.SkippedCount.Should().Be(1);
+        result.Errors.Should().ContainSingle(e => e.JobId == pdfA.Id);
     }
 
     [Fact]

@@ -315,7 +315,7 @@ test.describe('AUTH-12: Device Management', () => {
       const currentSessionRevoke = page
         .locator('[data-current="true"]')
         .getByRole('button', { name: /revoke/i });
-      const isVisible = await currentSessionRevoke.isVisible().catch(() => false);
+      const isVisible = await currentSessionRevoke.isVisible();
 
       if (isVisible) {
         // If visible, it should be disabled

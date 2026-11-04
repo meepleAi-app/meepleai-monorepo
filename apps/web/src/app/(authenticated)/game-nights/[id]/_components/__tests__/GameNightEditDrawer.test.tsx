@@ -35,6 +35,13 @@ vi.mock('@/hooks/useTranslation', () => ({
   useTranslation: () => ({ t: (key: string) => key, locale: 'it-IT' }),
 }));
 
+// #4754: the zone the browser reports is the one the edit form sends; pinned so the test does not depend on
+// the machine's own zone.
+const timeZoneMock = vi.fn<() => string | undefined>();
+vi.mock('@/lib/utils/browserTimeZone', () => ({
+  getBrowserTimeZone: () => timeZoneMock(),
+}));
+
 // jsdom shims (mirrors ui/drawer/drawer.test.tsx) — vaul/radix portal + pointer APIs
 function installMatchMedia(matches: boolean): void {
   Object.defineProperty(window, 'matchMedia', {
@@ -67,6 +74,7 @@ const baseProps = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  timeZoneMock.mockReturnValue('Europe/Rome');
   isPendingMock.value = false;
   installMatchMedia(true); // desktop → Radix Dialog (deterministic in jsdom)
   currentUserMock.mockReturnValue({ data: { id: ORGANIZER_ID } });
@@ -118,6 +126,32 @@ describe('GameNightEditDrawer', () => {
       expect.objectContaining({ title: 'gameNightDetail.editDrawer.savedToast' })
     );
     expect(replaceMock).toHaveBeenCalledWith('/game-nights/gn-42');
+  });
+
+  it('sends the browser time zone with the saved time (#4754)', async () => {
+    const user = userEvent.setup();
+
+    render(<GameNightEditDrawer {...baseProps} />);
+    await user.click(screen.getByRole('button', { name: 'gameNightDetail.editDrawer.submit' }));
+
+    expect(mutateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({ title: 'Serata Catan', timeZoneId: 'Europe/Rome' }),
+      }),
+      expect.any(Object)
+    );
+  });
+
+  it('leaves the zone out when the browser cannot name one, so the server keeps the stored zone (#4754)', async () => {
+    const user = userEvent.setup();
+    timeZoneMock.mockReturnValue(undefined);
+
+    render(<GameNightEditDrawer {...baseProps} />);
+    await user.click(screen.getByRole('button', { name: 'gameNightDetail.editDrawer.submit' }));
+
+    expect(mutateMock).toHaveBeenCalledTimes(1);
+    const sent = mutateMock.mock.calls[0][0] as { input: Record<string, unknown> };
+    expect(sent.input).not.toHaveProperty('timeZoneId');
   });
 
   it('surfaces a reload-and-retry conflict toast on a 409 concurrent edit', async () => {

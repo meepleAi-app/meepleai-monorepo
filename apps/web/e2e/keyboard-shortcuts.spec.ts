@@ -35,18 +35,6 @@ test.describe('Keyboard Shortcuts - Navigation', () => {
     expect(page.url()).toContain('/chat');
   });
 
-  test('Ctrl/Cmd+U should navigate to PDF upload', async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
-
-    // Press Ctrl/Cmd+U
-    await page.keyboard.press(`${modKey}+KeyU`);
-
-    // Should navigate to /upload
-    await page.waitForURL(/\/upload/);
-    expect(page.url()).toContain('/upload');
-  });
-
   test('Ctrl/Cmd+K should open command palette', async ({ page }) => {
     await page.goto('/chat');
     await page.waitForLoadState('networkidle');

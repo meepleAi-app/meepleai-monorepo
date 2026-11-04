@@ -59,7 +59,11 @@ internal class UpdateStrategyModelMappingCommandHandler
         }
 
         // Find or create entry
+        // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06),
+        // quindi senza di esso questa lettura e' DETACHED: le mutazioni sotto non raggiungono
+        // il change tracker e SaveChangesAsync non scrive, e non solleva.
         var existingEntry = await _dbContext.Set<StrategyModelMappingEntity>()
+            .AsTracking()
             .FirstOrDefaultAsync(
                 e => e.Strategy == strategyName,
                 cancellationToken)

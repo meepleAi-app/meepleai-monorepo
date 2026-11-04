@@ -3,7 +3,6 @@ export const SECTION_EMOJI: Record<string, string> = {
   '/library': '📚',
   '/sessions': '🎲',
   '/chat': '✨',
-  '/agents': '🤖',
   '/notifications': '🔔',
   '/settings': '⚙️',
 };

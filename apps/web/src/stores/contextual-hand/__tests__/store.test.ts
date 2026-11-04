@@ -27,7 +27,6 @@ import type {
 const { mockSessionFlow } = vi.hoisted(() => ({
   mockSessionFlow: {
     getCurrentSession: vi.fn(),
-    createSession: vi.fn(),
     pauseSession: vi.fn(),
     resumeSession: vi.fn(),
     setTurnOrder: vi.fn(),
@@ -199,49 +198,6 @@ describe('useContextualHandStore', () => {
       // Second call should be a no-op
       await useContextualHandStore.getState().initialize();
       expect(mockSessionFlow.getCurrentSession).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  // ── startSession ────────────────────────────────────────────────────
-
-  describe('startSession', () => {
-    it('creates session and transitions to active', async () => {
-      const result = makeCreateResult();
-      mockSessionFlow.createSession.mockResolvedValue(result);
-
-      await useContextualHandStore.getState().startSession('g1');
-
-      const state = useContextualHandStore.getState();
-      expect(state.context).toBe('active');
-      expect(state.createResult).toEqual(result);
-      expect(state.currentSession?.sessionId).toBe('s1');
-      expect(state.currentSession?.gameId).toBe('g1');
-      expect(state.currentSession?.status).toBe('Active');
-      expect(state.isLoading).toBe(false);
-    });
-
-    it('passes guestNames and gameNightEventId to the API', async () => {
-      mockSessionFlow.createSession.mockResolvedValue(makeCreateResult());
-
-      await useContextualHandStore.getState().startSession('g1', ['Alice'], 'gn99');
-
-      expect(mockSessionFlow.createSession).toHaveBeenCalledWith('g1', {
-        sessionType: 'GameSpecific',
-        participants: [],
-        guestNames: ['Alice'],
-        gameNightEventId: 'gn99',
-      });
-    });
-
-    it('sets error on failure without changing context', async () => {
-      mockSessionFlow.createSession.mockRejectedValue(new Error('KB not ready'));
-
-      await useContextualHandStore.getState().startSession('g1');
-
-      const state = useContextualHandStore.getState();
-      expect(state.error).toBe('KB not ready');
-      expect(state.context).toBe('idle'); // unchanged
-      expect(state.isLoading).toBe(false);
     });
   });
 

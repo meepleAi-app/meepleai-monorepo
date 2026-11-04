@@ -48,6 +48,16 @@ internal class NotificationQueueRepository : RepositoryBase, INotificationQueueR
         await DbContext.Set<NotificationQueueEntity>().AddRangeAsync(entities, ct).ConfigureAwait(false);
     }
 
+    public void DiscardUnsavedAdditions()
+    {
+        foreach (var entry in DbContext.ChangeTracker.Entries<NotificationQueueEntity>()
+                     .Where(e => e.State == EntityState.Added)
+                     .ToList())
+        {
+            entry.State = EntityState.Detached;
+        }
+    }
+
     public async Task UpdateAsync(NotificationQueueItem item, CancellationToken ct = default)
     {
         CollectDomainEvents(item);

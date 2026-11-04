@@ -274,3 +274,220 @@ describe('useSseStreamFsm — base FSM skeleton', () => {
     vi.useRealTimers();
   });
 });
+
+/**
+ * #4335: uno stream che si chiude in modo pulito senza l'evento che lo conclude. Il backend, o un
+ * proxy, chiude la connessione a metà: il trasporto esce dal ciclo di lettura e l'automa finiva il
+ * suo `for await` senza toccare niente, lasciando la vista «in corso» per sempre.
+ *
+ * Il passo è su richiesta (`isTerminalEvent`): solo chi sa quale evento chiude una risposta può dire
+ * che una risposta non è stata chiusa.
+ */
+describe('useSseStreamFsm — a stream that ends without its terminal event (#4335)', () => {
+  type Mapped = { kind: string; message: string };
+
+  const mapper = (err: unknown): Mapped =>
+    (err as { __sseStreamFsmReason?: string } | null)?.__sseStreamFsmReason === 'interrupted'
+      ? { kind: 'interrupted', message: 'interrotta' }
+      : { kind: 'server', message: String(err) };
+
+  const reducer = (s: TestState, e: TestEvent): TestState =>
+    e.type === 'token' ? { ...s, tokens: [...s.tokens, e.value!] } : { ...s, done: true };
+
+  it('hands an interruption to errorMapper when the stream ends before the terminal event', async () => {
+    const { result } = renderHook(() =>
+      useSseStreamFsm<string, TestEvent, TestState, Mapped>({
+        transport: () => asyncGenOf<TestEvent>([{ type: 'token', value: 'Cinque ' }]),
+        initialState: { tokens: [], done: false },
+        eventReducer: reducer,
+        errorMapper: mapper,
+        isTerminalEvent: e => e.type === 'done',
+        retryPolicy: { maxRetries: 0, backoffMs: [], retryableErrorKinds: [] },
+      })
+    );
+
+    act(() => {
+      result.current.ask('q');
+    });
+
+    await waitFor(() => {
+      expect(result.current.error).toEqual({ kind: 'interrupted', message: 'interrotta' });
+    });
+    // Ciò che è arrivato prima della chiusura resta nello stato: è il consumatore a decidere.
+    expect(result.current.state.tokens).toEqual(['Cinque ']);
+  });
+
+  it('leaves the error alone when the stream ends after the terminal event', async () => {
+    const errorMapper = vi.fn(mapper);
+    const { result } = renderHook(() =>
+      useSseStreamFsm<string, TestEvent, TestState, Mapped>({
+        transport: () =>
+          asyncGenOf<TestEvent>([{ type: 'token', value: 'Cinque' }, { type: 'done' }]),
+        initialState: { tokens: [], done: false },
+        eventReducer: reducer,
+        errorMapper,
+        isTerminalEvent: e => e.type === 'done',
+        retryPolicy: { maxRetries: 0, backoffMs: [], retryableErrorKinds: [] },
+      })
+    );
+
+    act(() => {
+      result.current.ask('q');
+    });
+
+    await waitFor(() => {
+      expect(result.current.state.done).toBe(true);
+    });
+    // Lo stream si chiude dopo l'ultimo evento: lascia il tempo al passo finale di girare.
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    });
+    expect(result.current.error).toBeNull();
+    expect(errorMapper).not.toHaveBeenCalled();
+  });
+
+  it('changes nothing for a consumer that does not name a terminal event', async () => {
+    const errorMapper = vi.fn(mapper);
+    const { result } = renderHook(() =>
+      useSseStreamFsm<string, TestEvent, TestState, Mapped>({
+        transport: () => asyncGenOf<TestEvent>([{ type: 'token', value: 'Cinque ' }]),
+        initialState: { tokens: [], done: false },
+        eventReducer: reducer,
+        errorMapper,
+        retryPolicy: { maxRetries: 0, backoffMs: [], retryableErrorKinds: [] },
+      })
+    );
+
+    act(() => {
+      result.current.ask('q');
+    });
+
+    await waitFor(() => {
+      expect(result.current.state.tokens).toEqual(['Cinque ']);
+    });
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    });
+    expect(result.current.error).toBeNull();
+    expect(errorMapper).not.toHaveBeenCalled();
+  });
+
+  it('does not call a stream stopped by the user an interruption', async () => {
+    const errorMapper = vi.fn(mapper);
+    let release: (() => void) | undefined;
+    const transport = (_input: string, signal: AbortSignal): AsyncGenerator<TestEvent> =>
+      (async function* () {
+        yield { type: 'token', value: 'Cinque ' } as TestEvent;
+        await new Promise<void>(resolve => {
+          release = resolve;
+        });
+        // Fermato, il trasporto esce senza errore: come `agentChatTransport` sul segnale.
+        if (signal.aborted) return;
+      })();
+
+    const { result } = renderHook(() =>
+      useSseStreamFsm<string, TestEvent, TestState, Mapped>({
+        transport,
+        initialState: { tokens: [], done: false },
+        eventReducer: reducer,
+        errorMapper,
+        isTerminalEvent: e => e.type === 'done',
+        retryPolicy: { maxRetries: 0, backoffMs: [], retryableErrorKinds: [] },
+      })
+    );
+
+    act(() => {
+      result.current.ask('q');
+    });
+    await waitFor(() => {
+      expect(result.current.state.tokens).toEqual(['Cinque ']);
+    });
+
+    act(() => {
+      result.current.stop();
+    });
+    await act(async () => {
+      release?.();
+      await new Promise(resolve => setTimeout(resolve, 10));
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(errorMapper).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Review di #4509: dopo `Complete` il backend tiene aperta la connessione per le domande
+   * successive. Se la rete cade lì, la risposta era già chiusa: non è un errore della risposta.
+   */
+  it('ignores an error thrown after the terminal event', async () => {
+    const errorMapper = vi.fn(mapper);
+    const transport = (): AsyncGenerator<TestEvent> =>
+      (async function* () {
+        yield { type: 'token', value: 'Cinque' } as TestEvent;
+        yield { type: 'done' } as TestEvent;
+        throw new TypeError('network error');
+      })();
+
+    const { result } = renderHook(() =>
+      useSseStreamFsm<string, TestEvent, TestState, Mapped>({
+        transport,
+        initialState: { tokens: [], done: false },
+        eventReducer: reducer,
+        errorMapper,
+        isTerminalEvent: e => e.type === 'done',
+        retryPolicy: { maxRetries: 0, backoffMs: [], retryableErrorKinds: [] },
+      })
+    );
+
+    act(() => {
+      result.current.ask('q');
+    });
+    await waitFor(() => {
+      expect(result.current.state.done).toBe(true);
+    });
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 10));
+    });
+
+    expect(result.current.error).toBeNull();
+    expect(errorMapper).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Il nuovo tentativo riparte dallo stato accumulato (vedi `retryPolicy` nell'automa): qui il
+   * primo tentativo non ha ridotto nessun evento, ed è l'unico caso in cui ritentare è sicuro.
+   */
+  it('retries an interruption when the consumer maps it to a retryable kind', async () => {
+    vi.useFakeTimers();
+    let attempt = 0;
+    const transport = vi.fn(() => {
+      attempt++;
+      return attempt === 1
+        ? asyncGenOf<TestEvent>([])
+        : asyncGenOf<TestEvent>([{ type: 'token', value: 'Cinque' }, { type: 'done' }]);
+    });
+
+    const { result } = renderHook(() =>
+      useSseStreamFsm<string, TestEvent, TestState, Mapped>({
+        transport,
+        initialState: { tokens: [], done: false },
+        eventReducer: reducer,
+        errorMapper: mapper,
+        isTerminalEvent: e => e.type === 'done',
+        retryPolicy: { maxRetries: 1, backoffMs: [100], retryableErrorKinds: ['interrupted'] },
+      })
+    );
+
+    act(() => {
+      result.current.ask('q');
+    });
+    await vi.runAllTimersAsync();
+
+    expect(transport).toHaveBeenCalledTimes(2);
+    expect(result.current.retryCount).toBe(1);
+    expect(result.current.state.done).toBe(true);
+    expect(result.current.error).toBeNull();
+
+    vi.useRealTimers();
+  });
+});

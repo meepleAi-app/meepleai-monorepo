@@ -106,6 +106,27 @@ describe('MobileBottomBar — dynamic slot-3 (Issue #2150 D6)', () => {
   });
 });
 
+describe('MobileBottomBar — il banner cookie non deve coprirla (#4060)', () => {
+  it('ancora il `bottom` a --cookie-banner-height invece che a 0', () => {
+    render(<MobileBottomBar />);
+    const nav = screen.getByTestId('mobile-bottom-bar');
+
+    // 🔴 Il difetto che questa asserzione fissa, misurato con `document.elementFromPoint` sul
+    // centro della barra a 390x844: con `bottom-0` il banner cookie (`fixed bottom-0 z-50`,
+    // 281px a questa larghezza perche' la riga dei pulsanti va a capo) la copriva su TUTTE e
+    // sei le rotte provate. Non e' un controllo secondario: e' la navigazione primaria mobile,
+    // e finche' il consenso non e' dato l'utente non puo' cambiare sezione.
+    //
+    // Il banner e' a z-50 e questa barra a z-40: nessun ordine di DOM la salva, va spostata.
+    expect(nav.className).toContain('bottom-[var(--cookie-banner-height,0px)]');
+
+    // E il controllo che impedisce alla precedente di passare per sbaglio: `bottom-0` non deve
+    // tornare. Senza questo, una regressione che AGGIUNGE `bottom-0` accanto alla variabile
+    // lascerebbe il test verde mentre l'ultima classe vince.
+    expect(nav.className).not.toMatch(/bottom-0/);
+  });
+});
+
 describe('isImmersiveRoute', () => {
   it('is true on in-session routes', () => {
     expect(isImmersiveRoute('/sessions/abc-123/live')).toBe(true);

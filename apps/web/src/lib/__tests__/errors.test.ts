@@ -12,7 +12,7 @@ import {
   sleep,
   getErrorSeverity,
   createErrorContext,
-  sanitizeError
+  sanitizeError,
 } from '../errors';
 
 describe('ApiError', () => {
@@ -73,7 +73,9 @@ describe('NetworkError', () => {
 
   it('should return user-friendly message', () => {
     const error = new NetworkError('Network failed', '/api/v1/games');
-    expect(error.getUserMessage()).toBe('Network connection failed. Please check your internet connection');
+    expect(error.getUserMessage()).toBe(
+      'Network connection failed. Please check your internet connection'
+    );
   });
 });
 
@@ -135,8 +137,14 @@ describe('sleep', () => {
     await sleep(100);
     const duration = Date.now() - start;
 
+    // Il limite inferiore È il contratto di `sleep`: un runner carico rende
+    // `duration` più GRANDE, non più piccolo, quindi questa asserzione non è
+    // sensibile alla contesa di CPU e resta.
     expect(duration).toBeGreaterThanOrEqual(90); // Allow some variance
-    expect(duration).toBeLessThan(150);
+    // Il limite superiore (`toBeLessThan(150)`) è stato RIMOSSO, non alzato,
+    // chiudendo #3953: su runner condiviso un `setTimeout(100)` può risvegliarsi
+    // molto più tardi senza che `sleep` sia rotto — quel bound misurava lo
+    // scheduler, non il codice. 🔴 Non reintrodurlo.
   });
 });
 

@@ -1,6 +1,7 @@
 using DotNetEnv;
 using Api.Configuration; // CHAT-02
 using Api.Extensions;
+using Api.Filters; // #4063: WithUtcDateTimeArguments
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Translation;
@@ -15,6 +16,7 @@ using Api.Routing.AdministrationDiscover;
 using Api.Routing.GameManagement;
 using Api.Routing.GameToolkit;
 using Api.Routing.KnowledgeBase;
+using Api.SharedKernel.Services; // #4774: AddPublicBaseUrl
 using Api.BoundedContexts.GameManagement.Routing; // Issue #4273
 using Api.BoundedContexts.Administration.Infrastructure.DependencyInjection;
 using Api.BoundedContexts.AgentMemory.Infrastructure.DependencyInjection;
@@ -54,12 +56,10 @@ using Serilog;
 using Serilog.Events;
 using StackExchange.Redis;
 using System;
-using System.Globalization;
 using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Security.Claims;
-using AspNetIpNetwork = Microsoft.AspNetCore.HttpOverrides.IPNetwork;
 
 // Load environment variables from .env.development file (single source of truth for secrets)
 // SECURITY: Only load .env files in Development environment - NEVER in Production/CI
@@ -94,7 +94,10 @@ else if (isCIEnv)
     Console.WriteLine("[DotNetEnv] CI environment detected - skipping .env.development loading");
 }
 
+// #4572: le fasi dell'avvio, misurate da qui. Vedi StartupPhaseTimings.
+var startupTimings = new Api.Observability.StartupPhaseTimings();
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSingleton(startupTimings);
 
 // Issue #1928 Task B (DEC-B-4) — Triple gate STARTUP fail-fast.
 // Refuses to start if BOTH E2E_SEEDING_ENABLED=true AND ASPNETCORE_ENVIRONMENT=Production.
@@ -114,6 +117,38 @@ if (builder.Environment.IsProduction()
 Log.Logger = LoggingConfiguration.ConfigureSerilog(builder).CreateLogger();
 
 builder.Host.UseSerilog();
+
+// #3998 — qualunque eccezione non gestita deve lasciare una riga di log.
+//
+// Per cinque settimane il bake dello snapshot e' morto senza che un solo log dicesse cosa
+// fosse andato storto: il runtime dovrebbe stampare «Unhandled exception. <tipo>: <messaggio>»
+// su stderr prima di abortire, e non lo fa — `[createdump]` arriva da stderr e si legge, i log
+// Serilog arrivano fino all'ultima riga prima della morte, quindi non e' stderr a essere perso.
+// Il perche' resta da chiarire; intanto l'applicazione non puo' dipendere da quel messaggio.
+//
+// Il crash report del runtime da' il tipo (`System.InvalidOperationException`) ma non il
+// messaggio, e i frame gestiti sono `?!?` perche' il Dockerfile cancella i .pdb. Lo stack non
+// aiuta a localizzare: nei top-level statements `Program.<Main>` e' il wrapper sincrono
+// generato dal compilatore, che rilancia il Task di TUTTO Main — quindi
+// `TaskAwaiter.ThrowForNonSuccess` sopra di lui non indica l'await che ha fallito.
+//
+// Questo handler non puo' impedire la terminazione, e non ci prova: serve a scrivere
+// l'eccezione — tipo, messaggio e stack — prima che il processo se ne vada. `CloseAndFlush`
+// perche' il processo sta morendo e il sink non verrebbe svuotato.
+AppDomain.CurrentDomain.UnhandledException += (_, eventArgs) =>
+{
+    if (eventArgs.ExceptionObject is Exception unhandled)
+    {
+        Log.Fatal(unhandled, "Unhandled exception reached the process boundary. Terminating={Terminating}", eventArgs.IsTerminating);
+    }
+    else
+    {
+        Log.Fatal("Unhandled non-Exception object reached the process boundary: {Object}. Terminating={Terminating}",
+            eventArgs.ExceptionObject, eventArgs.IsTerminating);
+    }
+
+    Log.CloseAndFlush();
+};
 
 // ISSUE-2510: Validate secrets from infra/secrets/ directory
 // Load and validate all secrets with 3-level validation (Critical/Important/Optional)
@@ -209,7 +244,7 @@ if (forwardedHeadersEnabled)
     {
         options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
 
-        options.KnownNetworks.Clear();
+        options.KnownIPNetworks.Clear();
         options.KnownProxies.Clear();
 
         var knownProxies = forwardedHeadersSection.GetSection("KnownProxies").Get<string[]>() ?? Array.Empty<string>();
@@ -224,21 +259,11 @@ if (forwardedHeadersEnabled)
         var knownNetworks = forwardedHeadersSection.GetSection("KnownNetworks").Get<string[]>() ?? Array.Empty<string>();
         foreach (var network in knownNetworks)
         {
-            if (string.IsNullOrWhiteSpace(network))
+            // System.Net.IPNetwork accetta anche una base con bit di host (172.18.0.1/16) e li azzera:
+            // il ripiego manuale serviva al tipo di HttpOverrides, deprecato in .NET 10 (#4429).
+            if (!string.IsNullOrWhiteSpace(network) && System.Net.IPNetwork.TryParse(network.Trim(), out var ipNetwork))
             {
-                continue;
-            }
-
-            if (AspNetIpNetwork.TryParse(network, out var ipNetwork))
-            {
-                options.KnownNetworks.Add(ipNetwork);
-                continue;
-            }
-
-            var parts = network.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            if (parts.Length == 2 && IPAddress.TryParse(parts[0], out var networkAddress) && int.TryParse(parts[1], CultureInfo.InvariantCulture, out var prefixLength))
-            {
-                options.KnownNetworks.Add(new AspNetIpNetwork(networkAddress, prefixLength));
+                options.KnownIPNetworks.Add(ipNetwork);
             }
         }
 
@@ -279,8 +304,6 @@ builder.Services.Configure<RateLimitConfiguration>(builder.Configuration.GetSect
 builder.Services.Configure<FollowUpQuestionsConfiguration>(builder.Configuration.GetSection("FollowUpQuestions")); // CHAT-02
 builder.Services.Configure<RagPromptsConfiguration>(builder.Configuration.GetSection("RagPrompts")); // AI-07.1: RAG prompt templates
 builder.Services.Configure<HybridCacheConfiguration>(builder.Configuration.GetSection("HybridCache")); // PERF-05: HybridCache configuration
-builder.Services.Configure<LlmQueryComplexityRoutingOptions>(
-    builder.Configuration.GetSection(LlmQueryComplexityRoutingOptions.SectionName)); // Issue #562: per-call model override by query complexity tier
 builder.Services.Configure<HybridSearchConfiguration>(builder.Configuration.GetSection("HybridSearch")); // AI-14: Hybrid search configuration
 builder.Services.Configure<WeeklyEvaluationConfiguration>(builder.Configuration.GetSection("QualityEvaluation")); // BGAI-042: Weekly evaluation configuration
 builder.Services.Configure<BggImportQueueConfiguration>(builder.Configuration.GetSection("BggImportQueue")); // ISSUE-3541: BGG import queue configuration
@@ -313,6 +336,9 @@ builder.Services.AddAntiforgery(opt =>
 builder.Services.Configure<AiProviderSettings>(builder.Configuration.GetSection(AiProviderSettings.SectionName));
 builder.Services.AddSingleton<IValidateOptions<AiProviderSettings>, AiProviderValidator>();
 builder.Services.AddOptions<AiProviderSettings>().ValidateOnStart(); // Trigger validation on startup
+
+// #4774: the one resolver of the public front-end URL, behind every link the API writes for people to open.
+builder.Services.AddPublicBaseUrl();
 
 // Infrastructure services (DB, Cache, HTTP clients)
 builder.Services.AddInfrastructureServices(builder.Configuration, builder.Environment);
@@ -446,7 +472,7 @@ builder.Services.AddObservabilityServices(builder.Configuration, builder.Environ
 
 // ISSUE #2424: Rate limiting for API protection
 // Issue #2705: Pass configuration to allow disabling in integration tests
-builder.Services.AddRateLimitingServices(builder.Configuration);
+builder.Services.AddRateLimitingServices();
 
 // Configure JSON serialization for ASP.NET Core Minimal APIs
 // Accept camelCase from frontend (JavaScript convention) while backend uses PascalCase (C# convention)
@@ -471,6 +497,12 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     // Serialize enums as strings (e.g., "UserRegistered" instead of 0)
     // Required for frontend schema validation (zod expects string enum values)
     options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+
+    // #4519: a date in a request body arrives in UTC — without an offset the written clock is UTC
+    // (the rule of #4063 for the query string), with an offset it is moved to UTC without shifting
+    // the instant. Otherwise Npgsql rejects it on timestamptz and the request answers 500. Writing is
+    // unchanged; the OpenAPI schema is kept identical by UtcDateTimeJson.ConfigureOpenApi.
+    Api.Infrastructure.Serialization.UtcDateTimeJson.AddConverters(options.SerializerOptions);
 });
 
 builder.Services.AddCors(options =>
@@ -502,13 +534,49 @@ builder.Services.AddCors(options =>
 
         // Issue #1448: Whitelist specific headers instead of AllowAnyHeader() for security
         // Issue #2755: Add W3C Trace Context headers (traceparent, tracestate) for OpenTelemetry
+        //
+        // 🔴 Issue #4059 — i DUE header del client SignalR sono load-bearing.
+        //
+        // Il client JS di SignalR aggiunge alla richiesta di negotiate `X-Requested-With:
+        // XMLHttpRequest` e `X-SignalR-User-Agent`. Senza quei nomi nell'allowlist il preflight
+        // falliva e Chrome rifiutava la richiesta prima di inviarla, quindi
+        // `/sessions/{id}/live` non riceveva un solo evento:
+        //
+        //   Access to fetch at 'http://localhost:8080/hubs/gamestate/negotiate?...' from origin
+        //   'http://localhost:3000' has been blocked by CORS policy: Request header field
+        //   x-requested-with is not allowed by Access-Control-Allow-Headers
+        //
+        // ⚠️ Due note di metodo, e sono il punto che conta piu' dei due nomi.
+        //
+        // (1) `curl` e un `fetch` scritto a mano NON mandano quegli header, quindi entrambi
+        //     rispondevano **200 sullo stesso negotiate** e facevano sembrare il percorso
+        //     funzionante. La differenza e' comparsa solo iniettando `@microsoft/signalr` in una
+        //     pagina reale e chiamando `conn.start()`. Una sonda che non e' il client vero non
+        //     misura il client vero.
+        //
+        // (2) Il browser riporta **un header bloccato per volta**: aggiunto `X-Requested-With`,
+        //     il messaggio e' diventato identico ma su `x-signalr-user-agent`. Scoprirli a
+        //     tentativi avrebbe speso un rebuild per header e non avrebbe mai detto quando
+        //     fermarsi; l'elenco e' stato invece enumerato dal pacchetto —
+        //     `grep -rhoE '"[Xx]-[A-Za-z-]+"' node_modules/@microsoft/signalr/dist/cjs/*.js`
+        //     da' esattamente questi due, e nient'altro.
+        //
+        // Resta un'allowlist: si aggiungono due header, non si passa a `AllowAnyHeader()`. E'
+        // quello che la documentazione SignalR prescrive per il cross-origin.
+        //
+        // ⚠️ Questa e' la policy VIVA. `WebApplicationExtensions.AddCorsServices` ne contiene una
+        // copia omonima con un'allowlist divergente (ha `X-API-Key`, questa no) che non viene
+        // registrata da nessuno: `grep -rn AddCorsServices --include=*.cs .` trova solo la
+        // definizione. Modificare quella non ha effetto.
         policy
             .WithHeaders(
                 "Content-Type",
                 "Authorization",
                 "X-Correlation-ID",
                 "traceparent",  // W3C Trace Context propagation
-                "tracestate"    // W3C Trace Context state
+                "tracestate",   // W3C Trace Context state
+                "X-Requested-With",      // #4059: SignalR negotiate (hub cross-origin)
+                "X-SignalR-User-Agent"   // #4059: idem — il client manda entrambi
             )
             .AllowAnyMethod()
             .AllowCredentials()
@@ -532,6 +600,7 @@ if (builder.Environment.IsDevelopment())
 #endif
 
 var app = builder.Build();
+startupTimings.Mark("build");
 
 // Issue #1314 PR 2: wire the current-layout-version ObservableGauge once
 // the DI root is built. Idempotent — safe across HotReload restarts.
@@ -571,6 +640,7 @@ using (var scope = app.Services.CreateScope())
         app.Logger.LogInformation("✓ Embedding configuration validated: Provider={Provider}, Model={Model}, Dimensions={Dimensions}",
             provider, model, embeddingDimensions);
     }
+    startupTimings.Mark("migrations");
 
     // Slice E: surface a misconfigured OPENROUTER_DEFAULT_MODEL at boot (loud) instead of as a
     // chat-time 500. AgentDefaults.DefaultModel feeds the seeded system agent + routing fallbacks
@@ -585,6 +655,21 @@ using (var scope = app.Services.CreateScope())
             "slug (e.g. 'anthropic/claude-3.5-haiku'), a 'deepseek-*' id, or a local Ollama model.",
             Api.BoundedContexts.KnowledgeBase.Domain.AgentDefaults.DefaultModel);
     }
+
+    // #4774: outside a local environment, a public front-end URL that is missing or points at this machine
+    // makes every invitation, share link and e-mail button useless. Logged as an error, never a startup failure.
+    Api.SharedKernel.Services.PublicBaseUrlStartupCheck.LogIfMisconfigured(
+        scope.ServiceProvider.GetRequiredService<Api.SharedKernel.Services.IPublicBaseUrlProvider>(),
+        app.Logger);
+
+    // #4168 (ADR-095 D3): senza una versione pubblicata del profilo la pipeline rifiuta ogni risposta.
+    if (db != null)
+    {
+        await Api.BoundedContexts.KnowledgeBase.Application.Services.Answering.AgentProfileStartupCheck.LogIfMissingAsync(
+            scope.ServiceProvider.GetRequiredService<Api.BoundedContexts.KnowledgeBase.Domain.Repositories.IAgentProfileRepository>(),
+            app.Logger).ConfigureAwait(false);
+    }
+    startupTimings.Mark("agent-profile-check");
 
     // Create read-only projection views for bounded context entity decomposition.
     // Each BC gets its own view of the "users" table to avoid EF Core conflicts
@@ -606,6 +691,7 @@ using (var scope = app.Services.CreateScope())
             app.Logger.LogWarning(ex, "Could not create user projection views (non-fatal)");
         }
     }
+    startupTimings.Mark("views");
 
     // Epic #318: Layered seeding pipeline with advisory lock (runs independently of migrations)
     if (db != null)
@@ -620,6 +706,7 @@ using (var scope = app.Services.CreateScope())
             app.Logger.LogError(ex, "Seeding failed — API will continue startup");
         }
     }
+    startupTimings.Mark("seeding");
 }
 
 // F3: Register observable gauges that depend on DI singletons
@@ -648,6 +735,10 @@ using (var scope = app.Services.CreateScope())
         .GetRequiredService<Api.BoundedContexts.Administration.Infrastructure.Health.IImpersonationHealthTracker>();
     MeepleAiMetrics.RegisterImpersonationGauges(impersonationTracker);
 }
+
+// #4480: il rilevatore della lingua delle domande carica il profilo degli n-grammi nel costruttore.
+// Costruirlo all'avvio fa fallire subito un'immagine senza profilo, e la prima domanda non paga il caricamento.
+_ = app.Services.GetRequiredService<Api.Services.ILanguageDetectionService>();
 
 // Configure middleware pipeline
 app.ConfigureMiddlewarePipeline(forwardedHeadersEnabled);
@@ -789,7 +880,10 @@ app.MapHealthChecks("/health/seed", new Microsoft.AspNetCore.Diagnostics.HealthC
 });
 
 // API-01: Create v1 API route group and map routing files
-var v1Api = app.MapGroup("/api/v1");
+// #4063: a DateTime argument without offset (`?from=2026-01-01`) is read as UTC for every endpoint
+// of the group. An endpoint mapped on `app` instead does not get it: QueryDateWithoutOffsetIntegrationTests
+// fails if such an endpoint takes a DateTime.
+var v1Api = app.MapGroup("/api/v1").WithUtcDateTimeArguments();
 
 // Authentication
 v1Api.MapAuthEndpoints();
@@ -869,6 +963,7 @@ v1Api.MapDeviceEndpoints();            // Issue #3340: Device tracking and manag
 // Game Management extended
 v1Api.MapPlayRecordEndpoints(); // ISSUE-3889/3890: Play record tracking
 v1Api.MapLiveSessionEndpoints(); // Issue #4749: Live session CQRS endpoints
+v1Api.MapSessionAssistantEndpoints(); // spec 2026-10-11 §6.2: assistente in partita
 v1Api.MapSessionAttachmentEndpoints(); // Issue #5365: Session photo attachment endpoints
 v1Api.MapGameToolkitEndpoints(); // Issue #4753: Game toolkit CQRS endpoints
 v1Api.MapToolkitMarketplaceEndpoints(); // Wave 3 Phase 2 (#805): /toolkits/[id] marketplace
@@ -897,6 +992,7 @@ v1Api.MapAdminAgentTestEndpoints();     // Admin Agent Auto-Test Suite
 v1Api.MapAdminOpenRouterEndpoints();    // Issue #5077: OpenRouter usage monitoring dashboard
 v1Api.MapAdminEmergencyControlsEndpoints(); // Issue #5476: LLM emergency controls
 v1Api.MapAdminLlmConfigEndpoints();        // Issue #5495: LLM system configuration CRUD
+v1Api.MapAdminSessionAssistantEndpoints(); // spec 2026-10-11 §7.1: esecutore di valutazione dell'assistente
 v1Api.MapStatusBannerEndpoints();          // Issue #1089: Global incident/status banner (public GET + admin GET/PUT)
 if (!app.Environment.IsProduction())
     app.MapAdminSecretsEndpoints();      // Admin secrets management (non-prod only)
@@ -920,10 +1016,7 @@ app.MapPdfAnalyticsEndpoints();          // Issue #3715: PDF analytics dashboard
 app.MapChatAnalyticsEndpoints();         // Issue #3714: Chat analytics dashboard
 app.MapModelPerformanceEndpoints();      // Issue #3716: Model performance dashboard
 v1Api.MapRateLimitAdminEndpoints();    // Issue #2738: Rate limit admin management
-v1Api.MapGameLibraryConfigEndpoints(); // Issue #2444: Game library tier limits config
-v1Api.MapChatHistoryConfigEndpoints(); // Issue #4918: Chat history tier limits config
 v1Api.MapSessionLimitsConfigEndpoints(); // Issue #3070: Session limits config
-v1Api.MapPdfUploadLimitsConfigEndpoints(); // Issue #3072: PDF upload limits config
 v1Api.MapPdfTierUploadLimitsConfigEndpoints(); // Issue #3333: PDF tier upload limits config (bulk)
 v1Api.MapAdminTierEndpoints();         // E2-1: Admin tier CRUD
 v1Api.MapSessionInviteEndpoints();     // E3-1: Session invite flow
@@ -1004,8 +1097,8 @@ v1Api.MapAdminCircuitBreakerEndpoints(); // Polly circuit breaker state visibili
 v1Api.MapPromptManagementEndpoints();  // Prompt templates & evaluation
 
 // AI extended
-v1Api.MapTokenManagementEndpoints();   // Token management & monitoring (Issue #3692)
 v1Api.MapAiModelAdminEndpoints();      // AI model management (Issue #2567)
+v1Api.MapAgentProfileAdminEndpoints(); // #4169 (ADR-095 6c): admin agent page — draft, publish, rollback
 v1Api.MapArbitroAgentEndpoints(); // Issue #3759: Arbitro agent endpoints (Rules Arbitration Engine)
 v1Api.MapAgentSessionEndpoints(); // Issue #3184 (AGT-010): Agent session lifecycle endpoints
 v1Api.MapGroup("/admin/ab-tests").MapAdminAbTestEndpoints(); // Issue #5497: A/B Test backend API endpoints
@@ -1017,7 +1110,6 @@ v1Api.MapGroup("/rag").MapRagStrategyEndpoints(); // Issue #8: Public RAG strate
 
 // Business Simulations
 v1Api.MapBudgetEndpoints();           // Budget display system (credit tracking)
-v1Api.MapAdminBudgetEndpoints();     // SP5 F4-C5 #1838: Singleton AppBudget config (GET + PUT /admin/budget)
 v1Api.MapFinancialLedgerEndpoints();  // Financial Ledger CRUD (Issue #3722)
 v1Api.MapCostCalculatorEndpoints();   // Agent Cost Calculator (Issue #3725)
 v1Api.MapResourceForecastEndpoints(); // Resource Forecasting Simulator (Issue #3726)
@@ -1047,31 +1139,58 @@ if (app.Environment.IsDevelopment())
 
 app.MapHub<Api.Hubs.GameStateHub>("/hubs/gamestate");
 
+startupTimings.Mark("pipeline");
+
 // ISSUE-2511: Startup health check for critical services
 using (var scope = app.Services.CreateScope())
 {
-    var healthCheckService = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckService>();
     var healthLogger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
-    var startupCheck = await healthCheckService.CheckHealthAsync(
-        check => check.Tags.Contains(Api.Infrastructure.Health.Models.HealthCheckTags.Critical)).ConfigureAwait(false);
-
-    var criticalFailures = startupCheck.Entries
-        .Where(e => e.Value.Status == Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy)
-        .ToList();
-
-    if (criticalFailures.Count > 0)
+    // #3998 — questo blocco misura la salute dei servizi, e non deve poter impedire l'avvio.
+    // Lo diceva già il suo messaggio ("Application starting in degraded mode") per il caso di
+    // un check che torna Unhealthy, ma `CheckHealthAsync` non si limita a tornare Unhealthy:
+    // può LANCIARE, e l'eccezione risaliva fino a `Main` — dove non c'è nessun try/catch — e
+    // uccideva il processo prima che Kestrel ascoltasse.
+    //
+    // È ciò che ha tenuto rosso il bake dello snapshot per cinque settimane: una
+    // InvalidOperationException non gestita (misurata dal crash report del runtime, signal 6
+    // = SIGABRT), con zero righe di log perché il tratto che precede non ne produce e perché
+    // qui si moriva prima di entrambi i rami che loggano.
+    try
     {
-        var failedServices = string.Join(", ", criticalFailures.Select(f => f.Key));
-        healthLogger.LogCritical(
-            "Critical services failed startup health check: {Services}. Application starting in degraded mode.",
-            failedServices);
+        var healthCheckService = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckService>();
+
+        var startupCheck = await healthCheckService.CheckHealthAsync(
+            check => check.Tags.Contains(Api.Infrastructure.Health.Models.HealthCheckTags.Critical)).ConfigureAwait(false);
+
+        var criticalFailures = startupCheck.Entries
+            .Where(e => e.Value.Status == Microsoft.Extensions.Diagnostics.HealthChecks.HealthStatus.Unhealthy)
+            .ToList();
+
+        if (criticalFailures.Count > 0)
+        {
+            var failedServices = string.Join(", ", criticalFailures.Select(f => f.Key));
+            healthLogger.LogCritical(
+                "Critical services failed startup health check: {Services}. Application starting in degraded mode.",
+                failedServices);
+        }
+        else
+        {
+            healthLogger.LogInformation("All critical services passed startup health check.");
+        }
     }
-    else
+    catch (Exception ex)
     {
-        healthLogger.LogInformation("All critical services passed startup health check.");
+        // L'eccezione va loggata CON l'oggetto: il tipo da solo non basta a trovare la causa,
+        // ed è esattamente ciò che è mancato per cinque settimane.
+        healthLogger.LogCritical(
+            ex,
+            "Startup health check threw instead of reporting status. Application starting in degraded mode.");
     }
 }
+
+startupTimings.Mark("health-check");
+app.Logger.LogInformation("Startup phases: {StartupPhases}", startupTimings);
 
 await app.RunAsync().ConfigureAwait(false);
 

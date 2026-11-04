@@ -5,6 +5,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Enums;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -32,12 +33,11 @@ public class GenerateInviteTokenCommandHandlerTests
     {
         _mockSessionRepo = new Mock<ISessionRepository>();
         _mockUnitOfWork = new Mock<IUnitOfWork>();
-        var mockConfig = new Mock<IConfiguration>();
         var mockLogger = new Mock<ILogger<GenerateInviteTokenCommandHandler>>();
         _handler = new GenerateInviteTokenCommandHandler(
             _mockSessionRepo.Object,
             _mockUnitOfWork.Object,
-            mockConfig.Object,
+            PublicBaseUrlTestSupport.ProviderAt("https://meepleai.test"),
             mockLogger.Object);
     }
 

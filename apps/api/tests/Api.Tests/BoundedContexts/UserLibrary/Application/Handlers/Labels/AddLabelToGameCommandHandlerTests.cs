@@ -4,6 +4,7 @@ using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using Moq;
 using Xunit;
 
@@ -21,7 +22,8 @@ public class AddLabelToGameCommandHandlerTests
     public AddLabelToGameCommandHandlerTests()
     {
         _handler = new AddLabelToGameCommandHandler(
-            _libraryRepoMock.Object, _labelRepoMock.Object, _unitOfWorkMock.Object);
+            _libraryRepoMock.Object, _labelRepoMock.Object, _unitOfWorkMock.Object,
+            TestDbContextFactory.CreateInMemoryHybridCache());
     }
 
     [Fact]

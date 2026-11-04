@@ -61,6 +61,29 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
     /// </summary>
     public DateTimeOffset? RsvpConfirmationSentAt { get; private set; }
 
+    /// <summary>
+    /// When the «the night is cancelled» email was sent to this invitation (#4853). When non-null the
+    /// <c>GameNightCancelledGuestEmailHandler</c> MUST NOT write again: the event reaches handlers more than
+    /// once (Hybrid dispatch publishes inline AND through the outbox; OutboxOnly redelivers a batch that failed
+    /// to commit), and SMTP has no remote dedup.
+    /// </summary>
+    public DateTimeOffset? CancellationNoticeSentAt { get; private set; }
+
+    /// <summary>
+    /// The credential for «stop writing to this address» (#4846), distinct from <see cref="Token"/> on purpose. The
+    /// token is the RSVP capability and the organizer holds it (it comes back in the 201 of the creation, to share
+    /// the link by hand); the opt-out is global, every organizer's mail to the address, so its credential must be
+    /// one only the address has seen. It is written in the emails that go to the address and nowhere else: not in
+    /// any DTO, not in a log. <c>null</c> only on a row older than the column, which the migration fills.
+    /// </summary>
+    public string? UnsubscribeKey { get; private set; }
+
+    /// <summary>
+    /// When the 24 hour reminder was sent to this invitation (#4846). When non-null the
+    /// <c>GameNightReminder24hGuestEmailHandler</c> MUST NOT write again, for the reason of the mark above.
+    /// </summary>
+    public DateTimeOffset? Reminder24hSentAt { get; private set; }
+
 #pragma warning disable CS8618
     private GameNightInvitation() : base() { } // EF Core
 #pragma warning restore CS8618
@@ -77,7 +100,10 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
         string? respondedByName,
         DateTimeOffset createdAt,
         Guid createdBy,
-        DateTimeOffset? rsvpConfirmationSentAt = null) : base(id)
+        DateTimeOffset? rsvpConfirmationSentAt = null,
+        DateTimeOffset? cancellationNoticeSentAt = null,
+        string? unsubscribeKey = null,
+        DateTimeOffset? reminder24hSentAt = null) : base(id)
     {
         Token = token;
         GameNightId = gameNightId;
@@ -90,6 +116,9 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
         CreatedAt = createdAt;
         CreatedBy = createdBy;
         RsvpConfirmationSentAt = rsvpConfirmationSentAt;
+        CancellationNoticeSentAt = cancellationNoticeSentAt;
+        UnsubscribeKey = unsubscribeKey;
+        Reminder24hSentAt = reminder24hSentAt;
     }
 
     /// <summary>
@@ -119,7 +148,7 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
             throw new ArgumentException("ExpiresAt must be in the future", nameof(expiresAt));
 
         var token = InvitationToken.Generate().Value;
-        var normalizedEmail = email.Trim().ToLowerInvariant();
+        var normalizedEmail = GameNightGuestEmailOptOut.Normalize(email);
         var id = Guid.NewGuid();
 
         var invitation = new GameNightInvitation(
@@ -133,7 +162,8 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
             respondedByUserId: null,
             respondedByName: null,
             createdAt: utcNow,
-            createdBy: createdBy);
+            createdBy: createdBy,
+            unsubscribeKey: InvitationToken.Generate().Value);
 
         invitation.AddDomainEvent(new GameNightInvitationCreatedEvent(
             gameNightInvitationId: id,
@@ -162,7 +192,10 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
         DateTimeOffset createdAt,
         Guid createdBy,
         string? respondedByName = null,
-        DateTimeOffset? rsvpConfirmationSentAt = null)
+        DateTimeOffset? rsvpConfirmationSentAt = null,
+        DateTimeOffset? cancellationNoticeSentAt = null,
+        string? unsubscribeKey = null,
+        DateTimeOffset? reminder24hSentAt = null)
     {
         return new GameNightInvitation(
             id: id,
@@ -176,7 +209,10 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
             respondedByName: respondedByName,
             createdAt: createdAt,
             createdBy: createdBy,
-            rsvpConfirmationSentAt: rsvpConfirmationSentAt);
+            rsvpConfirmationSentAt: rsvpConfirmationSentAt,
+            cancellationNoticeSentAt: cancellationNoticeSentAt,
+            unsubscribeKey: unsubscribeKey,
+            reminder24hSentAt: reminder24hSentAt);
     }
 
     /// <summary>
@@ -186,6 +222,22 @@ internal sealed class GameNightInvitation : AggregateRoot<Guid>
     public void MarkConfirmationSent(DateTimeOffset utcNow)
     {
         RsvpConfirmationSentAt = utcNow;
+    }
+
+    /// <summary>
+    /// Records that the «the night is cancelled» email has been sent to this invitation (#4853).
+    /// </summary>
+    public void MarkCancellationNoticeSent(DateTimeOffset utcNow)
+    {
+        CancellationNoticeSentAt = utcNow;
+    }
+
+    /// <summary>
+    /// Records that the 24 hour reminder has been sent to this invitation (#4846).
+    /// </summary>
+    public void MarkReminder24hSent(DateTimeOffset utcNow)
+    {
+        Reminder24hSentAt = utcNow;
     }
 
     /// <summary>

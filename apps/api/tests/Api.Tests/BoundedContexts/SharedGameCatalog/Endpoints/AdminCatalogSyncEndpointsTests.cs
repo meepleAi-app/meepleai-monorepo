@@ -19,6 +19,19 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Endpoints;
 
 /// <summary>
+/// La fixture di <see cref="AdminCatalogSyncEndpointsTests"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// #4050. Host condiviso per la classe, database fresco per test. Prima questa classe
+/// costruiva l'host dentro il proprio <c>InitializeAsync</c>, che xUnit chiama una volta per
+/// METODO: ~24s a test, contro ~0,1s per il clone del database.
+/// </para>
+/// </remarks>
+public sealed class AdminCatalogSyncEndpointsTestsHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "catalog_sync_endpoints");
+
+/// <summary>
 /// Integration tests for the catalog-sync admin endpoints (#1861 Phase 4):
 /// GET /status, GET /runs, GET /runs/{id}/logs, POST /trigger.
 /// Asserts auth enforcement, happy-path 200/202, 404 / 409 mappings.
@@ -26,12 +39,12 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Endpoints;
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
-public sealed class AdminCatalogSyncEndpointsTests : IAsyncLifetime
+public sealed class AdminCatalogSyncEndpointsTests
+    : IClassFixture<AdminCatalogSyncEndpointsTestsHostFixture>, IAsyncLifetime
 {
     private const string EndpointBase = "/api/v1/admin/catalog-ingestion";
 
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
+    private readonly AdminCatalogSyncEndpointsTestsHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _client = null!;
     private string _adminSessionToken = null!;
@@ -44,21 +57,19 @@ public sealed class AdminCatalogSyncEndpointsTests : IAsyncLifetime
         Converters = { new JsonStringEnumConverter() },
     };
 
-    public AdminCatalogSyncEndpointsTests(SharedTestcontainersFixture fixture)
+    public AdminCatalogSyncEndpointsTests(AdminCatalogSyncEndpointsTestsHostFixture hostFixture)
     {
-        _fixture = fixture;
-        _testDbName = $"catalog_sync_endpoints_{Guid.NewGuid():N}";
+        _hostFixture = hostFixture;
     }
 
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
 
         using (var scope = _factory.Services.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync(TestContext.Current.CancellationToken);
 
             var (_, token) = await TestSessionHelper.CreateAdminSessionAsync(dbContext, TestAdminId);
             _adminSessionToken = token;
@@ -67,11 +78,11 @@ public sealed class AdminCatalogSyncEndpointsTests : IAsyncLifetime
         _client = _factory.CreateClient();
     }
 
-    public async ValueTask DisposeAsync()
+    // Host e database appartengono alla fixture; il client e' di questa istanza.
+    public ValueTask DisposeAsync()
     {
         _client?.Dispose();
-        _factory?.Dispose();
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
+        return ValueTask.CompletedTask;
     }
 
     // ────────────────────────────────────────────────────────────────────

@@ -111,7 +111,7 @@ test.describe('Agent Configuration Flow', () => {
     const startTime = Date.now();
 
     // Step 1: Click "Ask Agent" button on game card
-    const gameCard = page.locator('[data-testid="game-card"]').first();
+    const gameCard = page.locator('[data-testid="meeple-card"][data-entity="game"]').first();
     await expect(gameCard).toBeVisible();
 
     const askAgentButton = gameCard.locator('button:has-text("Ask Agent")');
@@ -210,7 +210,7 @@ test.describe('Agent Configuration Flow', () => {
 
   test('should cancel configuration and close sheet', async ({ page }) => {
     // Open config
-    const gameCard = page.locator('[data-testid="game-card"]').first();
+    const gameCard = page.locator('[data-testid="meeple-card"][data-entity="game"]').first();
     const askAgentButton = gameCard.locator('button:has-text("Ask Agent")');
     await askAgentButton.click();
 

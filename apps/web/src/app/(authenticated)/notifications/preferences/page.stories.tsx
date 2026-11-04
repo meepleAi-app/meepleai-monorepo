@@ -3,7 +3,11 @@
  *
  * sp7-notifications-preferences — DS-17 residual MIGRATE (#2971, umbrella #2063).
  *
- * Route /notifications/preferences → NotificationPreferences (raw useState/useEffect
+ * #3961: the panel now renders inside the settings hub at /settings/notifications;
+ * /notifications/preferences redirects there. These stories target the component,
+ * so they are unaffected by the move.
+ *
+ * NotificationPreferences (raw useState/useEffect
  * + httpClient GET /api/v1/notifications/preferences on mount; no React Query/SSE).
  * DEC-A5 states: default (loaded prefs) / loading (spinner) / error (500 → error wall).
  * `empty` N/A (preferences is always a complete object) and `sse` N/A (no realtime).
@@ -47,7 +51,7 @@ const meta: Meta<typeof NotificationPreferences> = {
     layout: 'fullscreen',
     // DS-17 #2063: httpClient GET (no quoted state literal) → declare states explicitly.
     canonicalStates: ['default', 'loading', 'error'],
-    nextjs: { appDirectory: true, navigation: { pathname: '/notifications/preferences' } },
+    nextjs: { appDirectory: true, navigation: { pathname: '/settings/notifications' } },
     viewport: { defaultViewport: 'desktop' },
     docs: {
       description: {

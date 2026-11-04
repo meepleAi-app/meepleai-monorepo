@@ -17,6 +17,22 @@ using Xunit;
 namespace Api.Tests.Integration.Phase4b;
 
 /// <summary>
+/// Fixture della classe: host e database costruiti una volta sola. Il perche', i numeri e le
+/// condizioni per applicare lo stesso schema altrove stanno in <see cref="IntegrationHostFixture"/>.
+///
+/// <para>
+/// 🔴 <b>Perche' condividere il database e' sicuro QUI.</b> <c>GET /toolkits/{id}/ratings</c> e'
+/// uno stub (Gate B v1 — l'entita' <c>ToolkitRating</c> non esiste ancora): restituisce sempre
+/// <c>{ items: [], totalCount: 0, averageStars: 0 }</c> indipendentemente da quanti toolkit o
+/// rating siano stati seminati da altri test, quindi non c'e' alcun conteggio o ordinamento globale
+/// da cui i test possano interferire. Le uniche asserzioni non-stub riguardano lo status code per un
+/// singolo <c>toolkitId</c> creato dal test stesso.
+/// </para>
+/// </summary>
+public sealed class ToolkitRatingsEndpointHostFixture(SharedTestcontainersFixture shared)
+    : IntegrationHostFixture(shared, "toolkit_ratings");
+
+/// <summary>
 /// Integration tests for the toolkit ratings surface
 /// (Wave 3 Phase 4b, PR #732 §5.3.3 + §5.3.4 / Issue #805).
 ///
@@ -38,35 +54,15 @@ namespace Api.Tests.Integration.Phase4b;
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameToolkit")]
 [Trait("Wave", "3-Phase-4b")]
-public sealed class ToolkitRatingsEndpointIntegrationTests : IAsyncLifetime
+public sealed class ToolkitRatingsEndpointIntegrationTests : IClassFixture<ToolkitRatingsEndpointHostFixture>
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
-    private WebApplicationFactory<Program> _factory = null!;
-    private HttpClient _client = null!;
+    private readonly WebApplicationFactory<Program> _factory;
+    private readonly HttpClient _client;
 
-    public ToolkitRatingsEndpointIntegrationTests(SharedTestcontainersFixture fixture)
+    public ToolkitRatingsEndpointIntegrationTests(ToolkitRatingsEndpointHostFixture host)
     {
-        _fixture = fixture;
-        _testDbName = $"toolkit_ratings_{Guid.NewGuid():N}";
-    }
-
-    public async ValueTask InitializeAsync()
-    {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync();
-        }
-        _client = _factory.CreateClient();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        _client?.Dispose();
-        await _factory.DisposeAsync();
+        _factory = host.Factory;
+        _client = host.Client;
     }
 
     // ───────────────────────── GET /toolkits/{id}/ratings ─────────────────────

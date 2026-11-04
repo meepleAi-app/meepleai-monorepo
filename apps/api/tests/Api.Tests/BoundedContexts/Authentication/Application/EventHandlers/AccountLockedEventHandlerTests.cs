@@ -71,6 +71,7 @@ public class AccountLockedEventHandlerTests : IDisposable
                 5,
                 lockedUntil,
                 "192.168.1.1",
+                It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
@@ -83,6 +84,36 @@ public class AccountLockedEventHandlerTests : IDisposable
         auditLog.ResourceId.Should().Be(userId.ToString());
         auditLog.Result.Should().Be("Success");
         auditLog.IpAddress.Should().Be("192.168.1.1");
+    }
+
+    // #4812: the lockout notice is written in the language of the user who was locked out.
+    [Theory]
+    [InlineData("it")]
+    [InlineData("en")]
+    public async Task Handle_HandsTheUsersLanguageToTheEmail(string language)
+    {
+        var userId = Guid.NewGuid();
+        _dbContext.Set<UserEntity>().Add(new UserEntity
+        {
+            Id = userId,
+            Email = "test@example.com",
+            DisplayName = "Test User",
+            Language = language,
+        });
+        await _dbContext.SaveChangesAsync();
+
+        await _handler.Handle(new AccountLockedEvent(userId, 5, DateTime.UtcNow.AddMinutes(15), "192.168.1.1"), CancellationToken.None);
+
+        _mockEmailService.Verify(
+            x => x.SendAccountLockedEmailAsync(
+                "test@example.com",
+                "Test User",
+                5,
+                It.IsAny<DateTime>(),
+                "192.168.1.1",
+                language,
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
@@ -103,6 +134,7 @@ public class AccountLockedEventHandlerTests : IDisposable
                 It.IsAny<string>(),
                 It.IsAny<int>(),
                 It.IsAny<DateTime>(),
+                It.IsAny<string?>(),
                 It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()),
             Times.Never);
@@ -146,6 +178,7 @@ public class AccountLockedEventHandlerTests : IDisposable
                 5,
                 lockedUntil,
                 null,
+                It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -195,6 +228,7 @@ public class AccountLockedEventHandlerTests : IDisposable
                 It.IsAny<string>(),
                 It.IsAny<int>(),
                 It.IsAny<DateTime>(),
+                It.IsAny<string?>(),
                 It.IsAny<string?>(),
                 It.IsAny<CancellationToken>()))
             .ThrowsAsync(new Exception("SMTP error"));

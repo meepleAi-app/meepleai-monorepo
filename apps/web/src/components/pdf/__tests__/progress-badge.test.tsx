@@ -50,4 +50,55 @@ describe('ProgressBadge', () => {
     const badge = container.querySelector('.animate-pulse');
     expect(badge).toBeInTheDocument();
   });
+
+  /**
+   * #4360: `meeple-info-card` passa `doc.processingState`, cioè lo stato in PascalCase del
+   * backend (`Failed`, `Extracting`, …). Colore ed etichetta funzionavano per caso, ma icona,
+   * pulsazione e testo del tooltip confrontavano chiavi minuscole: un PDF `Failed` mostrava la
+   * rotella e «Progress: 0%» finché l'SSE non mandava lo stato minuscolo.
+   */
+  describe('stato in PascalCase, come lo manda il backend (#4360)', () => {
+    const STATES = [
+      'Pending',
+      'Uploading',
+      'Extracting',
+      'Chunking',
+      'Embedding',
+      'Indexing',
+      'Ready',
+      'Failed',
+    ] as const;
+
+    it.each(STATES)('%s si vede come la sua forma minuscola', state => {
+      const pascal = render(<ProgressBadge state={state} progress={40} />);
+      const pascalHtml = pascal.container.innerHTML;
+      pascal.unmount();
+
+      const lower = render(<ProgressBadge state={state.toLowerCase()} progress={40} />);
+
+      expect(pascalHtml).toBe(lower.container.innerHTML);
+    });
+
+    it('un PDF Failed non mostra la rotella', () => {
+      const { container } = render(<ProgressBadge state="Failed" progress={0} />);
+
+      expect(container.querySelector('.animate-spin')).not.toBeInTheDocument();
+    });
+
+    it('un PDF Ready non mostra la rotella', () => {
+      const { container } = render(<ProgressBadge state="Ready" progress={100} />);
+
+      expect(container.querySelector('.animate-spin')).not.toBeInTheDocument();
+    });
+
+    it('il tooltip di un PDF Failed dice che è fallito, non quanto manca', async () => {
+      const user = userEvent.setup();
+      render(<ProgressBadge state="Failed" progress={0} />);
+
+      await user.hover(screen.getByRole('status'));
+
+      expect((await screen.findAllByText('Processing failed')).length).toBeGreaterThan(0);
+      expect(screen.queryByText(/Progress:/)).not.toBeInTheDocument();
+    });
+  });
 });

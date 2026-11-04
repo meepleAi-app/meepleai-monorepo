@@ -35,7 +35,12 @@ internal class UpdateRuleCommentCommandHandler : IRequestHandler<UpdateRuleComme
         ArgumentNullException.ThrowIfNull(command);
         ValidateCommentText(command.CommentText);
 
+        // Issue #3866: `.AsTracking()` is REQUIRED — the DbContext default is NoTracking (PERF-06),
+        // so the CommentText/UpdatedAt assignments below reached no change tracker and
+        // SaveChangesAsync wrote nothing. Editing a rule comment left the original text in place
+        // while the endpoint answered 200 with the DTO the handler had just re-read.
         var comment = await _dbContext.RuleSpecComments
+            .AsTracking()
             .Include(c => c.User)
             .FirstOrDefaultAsync(c => c.Id == command.CommentId, cancellationToken)
 .ConfigureAwait(false) ?? throw new NotFoundException("RuleComment", command.CommentId.ToString());

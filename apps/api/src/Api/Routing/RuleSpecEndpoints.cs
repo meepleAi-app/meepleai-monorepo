@@ -9,6 +9,7 @@ using Api.Infrastructure.Entities;
 using Api.Middleware.Exceptions;
 using Api.Models;
 using Api.Services;
+using Api.SharedKernel.Domain.ValueObjects;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
@@ -447,6 +448,42 @@ internal static class RuleSpecEndpoints
         return Results.Ok(comments);
     }
 
+    /// <summary>
+    /// True when the caller may act on another user's comment: editor, admin or superadmin —
+    /// i.e. <c>Role.HasPermission(Role.Admin)</c>. Ownership is checked separately by each handler.
+    /// </summary>
+    /// <remarks>
+    /// ISSUE #3994. The three call sites used to enumerate the role as a string literal, and the
+    /// three of them were wrong in two different ways.
+    /// <para>
+    /// <b>All three excluded superadmin</b>, the same defect #3873 and #4003 corrected elsewhere.
+    /// </para>
+    /// <para>
+    /// <b>And the DELETE site compared <c>"Admin"</c> capitalised, under
+    /// <c>StringComparison.Ordinal</c></b>, while the other two compared <c>"admin"</c>.
+    /// <c>Role.Value</c> is lowercase by construction — the only constructor is private and applies
+    /// <c>ToLowerInvariant</c>, and <c>Value</c> has no setter — so that branch was dead for all
+    /// five roles, and <c>DELETE /api/v1/comments/{commentId}</c> answered 403 even to an admin.
+    /// It was dead from the day it was written (b5d322691, 2025-12-10), whose stated purpose was
+    /// precisely to add the admin override.
+    /// </para>
+    /// <para>
+    /// Repairing it widens a privilege that never worked over HTTP, so it is a decision rather than
+    /// a routine fix. Three independent things point the same way: the two sibling endpoints
+    /// (resolve, unresolve) already grant the override to an admin; the frontend already promises
+    /// this exact set — <c>CommentItem.tsx</c> renders the delete button when
+    /// <c>owner || admin || superadmin</c>, so today it renders a button that returns 403; and the
+    /// originating commit set out to add the override. The fourth mutating endpoint
+    /// (<c>HandleUpdateComment</c>) deliberately has no override and keeps none.
+    /// </para>
+    /// </remarks>
+    /// <remarks>
+    /// <c>internal</c> so the regression test can exercise it on all five roles without standing up
+    /// a host: what it decides is a function of one string.
+    /// </remarks>
+    internal static bool HasAdminOverride(string? role) =>
+        Role.TryParse(role, out var parsed) && parsed.HasPermission(Role.Admin);
+
     private static async Task<IResult> HandleResolveComment(
         Guid commentId,
         bool resolveReplies,
@@ -462,7 +499,7 @@ internal static class RuleSpecEndpoints
         logger.LogInformation("User {UserId} resolving comment {CommentId} (resolveReplies: {ResolveReplies})",
             userId, commentId, resolveReplies);
 
-        var isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, "admin", StringComparison.Ordinal);
+        var isAdmin = HasAdminOverride(session!.Principal!.EffectiveActor.Role);
         var command = new ResolveRuleCommentCommand(commentId, userId, isAdmin, resolveReplies);
         var comment = await mediator.Send(command, ct).ConfigureAwait(false);
         logger.LogInformation("Comment {CommentId} resolved successfully", commentId);
@@ -484,7 +521,7 @@ internal static class RuleSpecEndpoints
         logger.LogInformation("User {UserId} unresolving comment {CommentId} (unresolveParent: {UnresolveParent})",
             userId, commentId, unresolveParent);
 
-        var isAdmin = string.Equals(session!.Principal!.EffectiveActor.Role, "admin", StringComparison.Ordinal);
+        var isAdmin = HasAdminOverride(session!.Principal!.EffectiveActor.Role);
         var command = new UnresolveRuleCommentCommand(commentId, userId, isAdmin, unresolveParent);
         var comment = await mediator.Send(command, ct).ConfigureAwait(false);
         logger.LogInformation("Comment {CommentId} unresolved successfully", commentId);
@@ -521,7 +558,7 @@ internal static class RuleSpecEndpoints
         if (!authorized) return error!;
 
         var userId = session!.Principal!.Subject.Id;
-        var isAdmin = string.Equals(session.Principal!.EffectiveActor.Role, "Admin", StringComparison.Ordinal);
+        var isAdmin = HasAdminOverride(session!.Principal!.EffectiveActor.Role);
         logger.LogInformation("User {UserId} deleting comment {CommentId}", userId, commentId);
 
         var command = new DeleteRuleCommentCommand(commentId, userId, isAdmin);

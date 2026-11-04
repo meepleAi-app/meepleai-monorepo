@@ -4,7 +4,6 @@ using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Middleware.Exceptions;
-using Api.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -47,30 +46,26 @@ internal sealed class AddGameTranslationCommandHandler
     private readonly ISharedGameTranslationRepository _translationRepo;
     private readonly ISharedGameRepository _gameRepo;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IHybridCacheService _cache;
-    private readonly ICacheInvalidationRetryPolicy _retryPolicy;
+    private readonly ISharedGameCacheInvalidator _cacheInvalidator;
     private readonly TimeProvider _clock;
 
     public AddGameTranslationCommandHandler(
         ISharedGameTranslationRepository translationRepo,
         ISharedGameRepository gameRepo,
         IUnitOfWork unitOfWork,
-        IHybridCacheService cache,
-        ICacheInvalidationRetryPolicy retryPolicy,
+        ISharedGameCacheInvalidator cacheInvalidator,
         TimeProvider clock)
     {
         ArgumentNullException.ThrowIfNull(translationRepo);
         ArgumentNullException.ThrowIfNull(gameRepo);
         ArgumentNullException.ThrowIfNull(unitOfWork);
-        ArgumentNullException.ThrowIfNull(cache);
-        ArgumentNullException.ThrowIfNull(retryPolicy);
+        ArgumentNullException.ThrowIfNull(cacheInvalidator);
         ArgumentNullException.ThrowIfNull(clock);
 
         _translationRepo = translationRepo;
         _gameRepo = gameRepo;
         _unitOfWork = unitOfWork;
-        _cache = cache;
-        _retryPolicy = retryPolicy;
+        _cacheInvalidator = cacheInvalidator;
         _clock = clock;
     }
 
@@ -117,26 +112,9 @@ internal sealed class AddGameTranslationCommandHandler
         }
 
         // Issue #2372: invalidate catalog read-model on the GREEN path only.
-        await InvalidateCatalogCacheAsync(cmd.GameId, cancellationToken).ConfigureAwait(false);
+        await _cacheInvalidator.EvictDetailAndListAsync(cmd.GameId, cancellationToken).ConfigureAwait(false);
 
         return translation.Id;
-    }
-
-    private async Task InvalidateCatalogCacheAsync(Guid sharedGameId, CancellationToken ct)
-    {
-        // Mirrors VectorDocumentIndexedForKbFlagHandler invalidation pattern (ADR-062):
-        // "search-games" evicts SearchSharedGamesQueryHandler cache, "shared-game:{id}"
-        // evicts GetSharedGameByIdQueryHandler cache. The retry policy guards against
-        // transient Redis Pub/Sub failures and bounds wall-time to ~4s worst case.
-        await _retryPolicy.ExecuteAsync(
-            token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync("search-games", token)),
-            "shared-games.list",
-            ct).ConfigureAwait(false);
-
-        await _retryPolicy.ExecuteAsync(
-            token => new ValueTask(_cache.RemoveByTagAcrossReplicasAsync($"shared-game:{sharedGameId}", token)),
-            "shared-games.detail",
-            ct).ConfigureAwait(false);
     }
 
     private static bool IsUniqueLocaleViolation(DbUpdateException ex)

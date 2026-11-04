@@ -46,7 +46,7 @@ function getStatusBadge(status: string) {
     case 'inprogress':
     case 'in progress':
       return (
-        <Badge variant="default" className="bg-blue-600">
+        <Badge variant="default" className="bg-blue-600 text-white">
           In Corso
         </Badge>
       );

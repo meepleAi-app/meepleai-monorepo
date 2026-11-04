@@ -90,7 +90,7 @@ public sealed class SmokeAaronFixtureTests : IAsyncLifetime
     {
         // Arrange — resolve path to tests/fixtures/smoke-test-users.sql
         // BaseDirectory is the test output dir; we walk up to repo root.
-        // Output path: apps/api/tests/Api.Tests/bin/Debug/net9.0/
+        // Output path: apps/api/tests/Api.Tests/bin/Debug/net10.0/
         // Repo root:   ../../../../../../../  (7 levels up)
         var fixturePath = Path.GetFullPath(
             Path.Combine(

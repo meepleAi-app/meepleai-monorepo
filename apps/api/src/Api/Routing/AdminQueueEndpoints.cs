@@ -108,6 +108,13 @@ internal static class AdminQueueEndpoints
         // Issue #3269 (SP3 RAG bulk re-index) → target bumped to coordinate-aware v1.2 by
         // #3409 (SP-E, epic #3403): re-index all Ready documents whose indexer version differs
         // from the current target.
+        // #4443 R6: close as Cancelled the jobs left Failed with «SkippedNotClaimed» on Ready documents.
+        // Dry run by default: ?dryRun=false to apply.
+        group.MapPost("/close-not-claimed", HandleCloseNotClaimed)
+            .WithName("CloseNotClaimedJobs")
+            .Produces<CloseNotClaimedJobsResult>(200)
+            .WithSummary("Close as Cancelled the jobs whose document was processed by another owner (dry run by default)");
+
         group.MapPost("/reindex-ready", HandleBulkReindexReady)
             .WithName("BulkReindexReady")
             .Produces<BulkReindexResult>(200)
@@ -342,6 +349,15 @@ internal static class AdminQueueEndpoints
         var userId = session.Principal!.Subject.Id;
 
         var result = await mediator.Send(new BulkReindexFailedCommand(userId), ct).ConfigureAwait(false);
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> HandleCloseNotClaimed(
+        IMediator mediator,
+        CancellationToken ct,
+        bool dryRun = true)
+    {
+        var result = await mediator.Send(new CloseNotClaimedJobsCommand(dryRun), ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
 

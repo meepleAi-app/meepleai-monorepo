@@ -21,7 +21,7 @@ script:post-response {
   // Cookie-based auth: the API sets meepleai_session cookie.
   // Bruno automatically propagates cookies across requests in the same run.
   // We also capture userId from the response body so subsequent scenarios can
-  // build routes like /users/{userId}/chat-sessions/limit.
+  // build routes like /users/{userId}/chat-sessions/recent.
   const body = res.getBody();
   if (body && body.user) {
     bru.setVar("smokeUserId", body.user.id);

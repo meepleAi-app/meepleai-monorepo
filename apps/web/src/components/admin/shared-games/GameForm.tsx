@@ -191,18 +191,24 @@ export function GameForm({ game, onSubmit, onCancel, isLoading = false }: GameFo
             : null,
         categories: selectedCategories,
         mechanics: selectedMechanics,
-        designers: [],
-        publishers: [],
       };
 
       let gameId: string;
       if (isEditMode) {
+        // #4090: designers/publishers are omitted here on purpose, not sent empty. This form has no
+        // selector for them and the backend reads an empty list as "clear", so now that the update
+        // endpoint accepts taxonomy, sending [] would wipe them on every save.
         await api.sharedGames.update(game.id, requestData);
         gameId = game.id;
         toast.success('Gioco aggiornato con successo');
       } else {
-        // create() returns the new game ID directly as a string
-        gameId = await api.sharedGames.create(requestData);
+        // create() returns the new game ID directly as a string. The empty arrays are harmless on a
+        // new game — there is nothing to clear — and the create contract requires them.
+        gameId = await api.sharedGames.create({
+          ...requestData,
+          designers: [],
+          publishers: [],
+        });
         toast.success('Gioco creato con successo');
       }
 

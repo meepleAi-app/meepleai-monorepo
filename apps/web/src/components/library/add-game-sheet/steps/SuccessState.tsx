@@ -171,7 +171,11 @@ export function SuccessState({
 
       {/* Navigation links */}
       <div className={`flex flex-col gap-2.5 w-full max-w-xs ${hasPdf ? 'mt-6' : ''}`}>
-        <Button variant="default" className="w-full gap-2 bg-teal-600 hover:bg-teal-700" asChild>
+        <Button
+          variant="default"
+          className="w-full gap-2 bg-teal-700 hover:bg-teal-800 text-white"
+          asChild
+        >
           <Link href="/library">
             <Library className="h-4 w-4" />
             Vai alla collezione

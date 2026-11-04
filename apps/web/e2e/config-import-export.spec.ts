@@ -152,7 +152,7 @@ test.describe.skip('Config Import/Export Flow - Issue #2193', () => {
     // Verify export dialog or download initiated
     // Option 1: Dialog shown with export options
     const exportDialog = page.locator('[role="dialog"]').filter({ hasText: /export/i });
-    if (await exportDialog.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await exportDialog.isVisible({ timeout: 2000 })) {
       // Select environment if needed
       const envSelect = exportDialog.locator('select[name="environment"]');
       if (await envSelect.isVisible()) {
@@ -185,7 +185,7 @@ test.describe.skip('Config Import/Export Flow - Issue #2193', () => {
 
     // Handle any confirmation dialog
     const confirmButton = page.getByRole('button', { name: /Download|Scarica|Confirm/i });
-    if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await confirmButton.isVisible({ timeout: 2000 })) {
       await confirmButton.click();
     }
 
@@ -212,7 +212,7 @@ test.describe.skip('Config Import/Export Flow - Issue #2193', () => {
       'textarea[name="configJson"], [data-testid="import-json-input"]'
     );
 
-    if (await fileInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await fileInput.isVisible({ timeout: 2000 })) {
       // Create a mock file
       const configContent = JSON.stringify({
         configurations: [
@@ -232,7 +232,7 @@ test.describe.skip('Config Import/Export Flow - Issue #2193', () => {
         mimeType: 'application/json',
         buffer: Buffer.from(configContent),
       });
-    } else if (await jsonInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    } else if (await jsonInput.isVisible({ timeout: 2000 })) {
       // Paste JSON directly
       await jsonInput.fill(
         JSON.stringify({
@@ -286,7 +286,7 @@ test.describe.skip('Config Import/Export Flow - Issue #2193', () => {
     const jsonInput = page.locator(
       'textarea[name="configJson"], [data-testid="import-json-input"]'
     );
-    if (await jsonInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await jsonInput.isVisible({ timeout: 2000 })) {
       await jsonInput.fill(
         JSON.stringify({
           configurations: [{ key: 'BadKey' }], // Missing required fields
@@ -319,7 +319,7 @@ test.describe.skip('Config Import/Export Flow - Issue #2193', () => {
       .or(page.locator('[data-testid="overwrite-checkbox"]'))
       .or(page.getByLabel(/overwrite|sovrascrivi/i));
 
-    if (await overwriteCheckbox.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await overwriteCheckbox.isVisible({ timeout: 2000 })) {
       // Toggle overwrite option
       await overwriteCheckbox.check();
 
@@ -345,7 +345,7 @@ test.describe.skip('Config Import/Export Flow - Issue #2193', () => {
       .locator('select[name="environment"]')
       .or(page.locator('[data-testid="export-environment-select"]'));
 
-    if (await envSelect.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await envSelect.isVisible({ timeout: 2000 })) {
       // Verify options are available
       const options = await envSelect.locator('option').allTextContents();
       expect(options.length).toBeGreaterThan(0);
@@ -407,8 +407,7 @@ test.describe.skip('Config Import/Export Flow - Issue #2193', () => {
     // Should either redirect or show access denied
     const accessDenied = await page
       .locator('text=403|forbidden|denied|accesso negato', { exact: false })
-      .isVisible({ timeout: 5000 })
-      .catch(() => false);
+      .isVisible({ timeout: 5000 });
 
     const redirected = page.url().includes('/login') || page.url().includes('/unauthorized');
 
@@ -429,7 +428,7 @@ test.describe.skip('Config Import/Export Flow - Issue #2193', () => {
     const jsonInput = page.locator(
       'textarea[name="configJson"], [data-testid="import-json-input"]'
     );
-    if (await jsonInput.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await jsonInput.isVisible({ timeout: 2000 })) {
       const manyConfigs = Array.from({ length: 50 }, (_, i) => ({
         key: `Config${i}:Key`,
         value: `value-${i}`,
@@ -461,7 +460,7 @@ test.describe.skip('Config Import/Export Flow - Issue #2193', () => {
 
     // Check if preview is shown
     const previewSection = page.locator('[data-testid="export-preview"], .export-preview');
-    if (await previewSection.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await previewSection.isVisible({ timeout: 2000 })) {
       // Verify config count is shown
       await expect(previewSection.getByText(/3|configurations|configurazioni/i)).toBeVisible();
     }

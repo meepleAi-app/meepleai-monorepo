@@ -27,7 +27,8 @@ export interface UserBadgeDto {
   name: string;
   description: string;
   tier: BadgeTier;
-  iconUrl: string;
+  /** `IconUrl` è `string?` nel record C#: può arrivare null (#3836). */
+  iconUrl: string | null;
   earnedAt: string;
   isDisplayed: boolean;
   category?: string;

@@ -168,10 +168,11 @@ public class Session : IDomainEventSource
     public Guid? UpdatedBy { get; private set; }
 
     /// <summary>
-    /// Optimistic concurrency token.
+    /// Concurrency token letto dalla riga (#3651, ADR-060). Il mapper lo trasporta fino a
+    /// <c>Update()</c>, che il repository esegue su un grafo detached: senza round-trip la WHERE
+    /// conterrebbe <c>xmin = 0</c> e ogni scrittura fallirebbe (#3688).
     /// </summary>
-    [Timestamp]
-    public byte[]? RowVersion { get; private set; }
+    public uint Xmin { get; private set; }
 
     /// <summary>
     /// Turn order as JSON array of participant IDs. Null if not yet set.
@@ -249,7 +250,11 @@ public class Session : IDomainEventSource
             SessionDate = sessionDate ?? DateTime.UtcNow,
             Location = location,
             CreatedBy = userId,
-            IsDeleted = false
+            IsDeleted = false,
+            // Assegnazione esplicita: il setter è altrimenti raggiunto solo dalla reflection di
+            // SessionMapper e S1144 farebbe fallire la build. È anche semanticamente vero — una
+            // riga mai persistita non ha ancora un xmin (#3688 lo documenta).
+            Xmin = 0,
         };
 
         // Automatically add creator as first participant (owner)

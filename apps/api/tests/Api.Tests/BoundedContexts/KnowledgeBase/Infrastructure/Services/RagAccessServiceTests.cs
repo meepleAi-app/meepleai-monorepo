@@ -54,6 +54,18 @@ public class RagAccessServiceTests
             CreatedAt = DateTime.UtcNow,
         };
 
+    private static PrivateGameEntity MakePrivateGame(
+        Guid id,
+        Guid ownerId,
+        bool isDeleted = false) => new()
+        {
+            Id = id,
+            OwnerId = ownerId,
+            Title = $"PrivateGame-{id:N}",
+            IsDeleted = isDeleted,
+            CreatedAt = DateTime.UtcNow
+        };
+
     private static UserLibraryEntryEntity MakeLibraryEntry(
         Guid userId,
         Guid sharedGameId,
@@ -215,6 +227,82 @@ public class RagAccessServiceTests
         // Admin role
         var adminResult = await sut.GetAccessibleGameIdsAsync(Guid.NewGuid(), UserRole.Admin, TestCancellationToken);
         adminResult.Should().BeEmpty("deleted games must be excluded for Admin too");
+    }
+
+    // ───────────────────────── PrivateGame (Issue #4137) ─────────────────────
+
+    // Both methods of this service only ever knew SharedGames, so a PrivateGame
+    // was absent from a cross-game ask for the same reason CanAccessRagAsync
+    // denied it. These cover the union branch added for #4137.
+
+    [Fact]
+    public async Task OwnPrivateGames_AreIncluded()
+    {
+        await using var db = CreateDb();
+        var userId = Guid.NewGuid();
+        var privateGame = MakePrivateGame(Guid.NewGuid(), ownerId: userId);
+        db.PrivateGames.Add(privateGame);
+        await db.SaveChangesAsync(TestCancellationToken);
+
+        var sut = CreateSut(db);
+
+        var result = await sut.GetAccessibleGameIdsAsync(userId, UserRole.User, TestCancellationToken);
+
+        result.Should().ContainSingle().Which.Should().Be(privateGame.Id);
+    }
+
+    // The direction that keeps the union honest: including your own must not
+    // include everyone's.
+    [Fact]
+    public async Task OtherUsersPrivateGames_AreExcluded()
+    {
+        await using var db = CreateDb();
+        var userId = Guid.NewGuid();
+        db.PrivateGames.Add(MakePrivateGame(Guid.NewGuid(), ownerId: Guid.NewGuid()));
+        await db.SaveChangesAsync(TestCancellationToken);
+
+        var sut = CreateSut(db);
+
+        var result = await sut.GetAccessibleGameIdsAsync(userId, UserRole.User, TestCancellationToken);
+
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SoftDeletedPrivateGames_AreExcluded()
+    {
+        await using var db = CreateDb();
+        var userId = Guid.NewGuid();
+        db.PrivateGames.Add(MakePrivateGame(Guid.NewGuid(), ownerId: userId, isDeleted: true));
+        await db.SaveChangesAsync(TestCancellationToken);
+
+        var sut = CreateSut(db);
+
+        var result = await sut.GetAccessibleGameIdsAsync(userId, UserRole.User, TestCancellationToken);
+
+        result.Should().BeEmpty("the global query filter on PrivateGameEntity excludes soft-deleted rows");
+    }
+
+    // DECISION, asserted on purpose (Issue #4137): the admin branch is NOT
+    // extended to every user's PrivateGames, even though CanAccessRagAsync lets
+    // an admin query a specific one. Targeted support access and "the corpus of
+    // every question an admin asks" are different operations. If this is ever
+    // reversed it should be a decision, so it is pinned.
+    [Fact]
+    public async Task AdminBranch_DoesNotIncludeOtherUsersPrivateGames()
+    {
+        await using var db = CreateDb();
+        var someUser = Guid.NewGuid();
+        var sharedGame = MakeSharedGame(Guid.NewGuid());
+        db.SharedGames.Add(sharedGame);
+        db.PrivateGames.Add(MakePrivateGame(Guid.NewGuid(), ownerId: someUser));
+        await db.SaveChangesAsync(TestCancellationToken);
+
+        var sut = CreateSut(db);
+
+        var result = await sut.GetAccessibleGameIdsAsync(Guid.NewGuid(), UserRole.Admin, TestCancellationToken);
+
+        result.Should().ContainSingle().Which.Should().Be(sharedGame.Id);
     }
 
     [Fact]

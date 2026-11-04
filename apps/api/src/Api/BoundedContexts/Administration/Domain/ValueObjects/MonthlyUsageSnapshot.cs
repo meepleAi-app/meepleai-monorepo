@@ -10,6 +10,12 @@ public sealed record MonthlyUsageSnapshot
     public decimal Cost { get; init; }
     public int MessagesCount { get; init; }
 
+    // Issue #3866: this record is persisted as a jsonb array on UserTokenUsage.History and read back
+    // through a value converter. Without this attribute System.Text.Json refuses the type outright —
+    // "Deserialization of types without a parameterless constructor … is not supported" — so any row
+    // with a non-empty history could not be read at all. It never showed because a tracking test
+    // context returned the in-memory instance and the converter never ran on the way back.
+    [System.Text.Json.Serialization.JsonConstructor]
     private MonthlyUsageSnapshot(string month, int tokensUsed, decimal cost, int messagesCount)
     {
         Month = month;

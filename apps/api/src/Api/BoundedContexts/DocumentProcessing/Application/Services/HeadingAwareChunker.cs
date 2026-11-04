@@ -17,13 +17,25 @@ namespace Api.BoundedContexts.DocumentProcessing.Application.Services;
 /// </summary>
 internal static class HeadingAwareChunker
 {
+    /// <summary>Builds the heading-bearing chunks of one document (see the class summary).</summary>
+    /// <param name="structuredElements">The raw extraction elements; null or empty when the extractor gave none.</param>
+    /// <param name="flatText">The extracted text, used when there are no structured elements.</param>
+    /// <param name="documentId">The document the chunks belong to.</param>
+    /// <param name="gameId">The game the document belongs to, if any.</param>
+    /// <param name="advancedChunking">The hierarchical chunker.</param>
+    /// <param name="cancellationToken">Cancellation.</param>
+    /// <param name="pageSpans">
+    /// Where each page begins in <paramref name="flatText"/>, when the extractor measured its pages (#4782). Without
+    /// structured elements the document is flat, and this is the only thing that tells its pages apart.
+    /// </param>
     public static async Task<List<DocumentChunk>> BuildAsync(
         IReadOnlyList<ExtractedElement>? structuredElements,
         string flatText,
         Guid documentId,
         Guid? gameId,
         IAdvancedChunkingService advancedChunking,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IReadOnlyList<PageSpan>? pageSpans = null)
     {
         ArgumentNullException.ThrowIfNull(advancedChunking);
 
@@ -40,7 +52,8 @@ internal static class HeadingAwareChunker
             documentId,
             gameId,
             elements,
-            flatText);
+            flatText,
+            pageSpans);
 
         var hierarchicalChunks = await advancedChunking
             .ChunkDocumentAsync(extractedDocument, config: null, cancellationToken)

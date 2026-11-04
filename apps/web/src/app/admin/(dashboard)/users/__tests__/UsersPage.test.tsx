@@ -12,8 +12,6 @@ const makeUser = (overrides = {}) => ({
   isSuspended: false,
   lastSeenAt: null,
   tier: 'Free',
-  tokenUsage: 0,
-  tokenLimit: 10000,
   ...overrides,
 });
 
@@ -31,8 +29,6 @@ vi.mock('@/lib/api', () => ({
             isSuspended: false,
             lastSeenAt: null,
             tier: 'Free',
-            tokenUsage: 0,
-            tokenLimit: 10000,
           },
           {
             id: '2',
@@ -43,8 +39,6 @@ vi.mock('@/lib/api', () => ({
             isSuspended: true,
             lastSeenAt: null,
             tier: 'Free',
-            tokenUsage: 0,
-            tokenLimit: 10000,
           },
         ],
         total: 2,

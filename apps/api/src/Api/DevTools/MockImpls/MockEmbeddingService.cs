@@ -47,6 +47,39 @@ internal sealed class MockEmbeddingService : IEmbeddingService
         return Task.FromResult(EmbeddingResult.CreateSuccess(vectors));
     }
 
+    /// <inheritdoc />
+    public Task<EmbeddingResult> GenerateEmbeddingAsync(string text, EmbeddingPurpose purpose, CancellationToken ct = default)
+        => GenerateEmbeddingsAsync(new List<string> { text }, purpose, ct);
+
+    /// <inheritdoc />
+    public Task<EmbeddingResult> GenerateEmbeddingsAsync(List<string> texts, EmbeddingPurpose purpose, CancellationToken ct = default)
+    {
+        var vectors = texts.Select(t => HashToVector(KeyFor(t, "en", purpose))).ToList();
+        return Task.FromResult(EmbeddingResult.CreateSuccess(vectors));
+    }
+
+    /// <inheritdoc />
+    public Task<EmbeddingResult> GenerateEmbeddingAsync(string text, string language, EmbeddingPurpose purpose, CancellationToken ct = default)
+    {
+        var vec = HashToVector(KeyFor(text, language, purpose));
+        return Task.FromResult(EmbeddingResult.CreateSuccess(new List<float[]> { vec }));
+    }
+
+    /// <summary>
+    /// Hash key for a text. The purpose enters the key so the mock reproduces the real
+    /// asymmetry of #3737 — the same text embeds differently as a query and as a passage —
+    /// and a test can therefore catch a call site that asks for the wrong side.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="EmbeddingPurpose.Passage"/> deliberately keeps the pre-#3737 key
+    /// (<c>language:text</c>): it is the implied purpose of the older overloads, so mock
+    /// vectors already asserted by existing tests do not move.
+    /// </remarks>
+    private static string KeyFor(string text, string language, EmbeddingPurpose purpose)
+        => purpose == EmbeddingPurpose.Query
+            ? "query:" + language + ":" + text
+            : language + ":" + text;
+
     private static float[] HashToVector(string input)
     {
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));

@@ -116,16 +116,20 @@ test.describe('Improvvisata Concurrent Access — Integration', () => {
     });
     expect(proposeRes.status()).toBe(202);
 
-    // Host confirms
-    const confirmRes = await apiHost.post(`/api/v1/live-sessions/${sessionId}/scores/confirm`, {
-      data: {
-        targetPlayerId: p1,
-        round: 1,
-        dimension: 'points',
-        value: 20,
-      },
-      headers: JSON_HEADERS,
-    });
+    // Host confirms the proposal (#3840: path separato da /scores/confirm, che appartiene
+    // alla conferma di una lettura dell'assistente — semantica e attore diversi)
+    const confirmRes = await apiHost.post(
+      `/api/v1/live-sessions/${sessionId}/scores/proposals/confirm`,
+      {
+        data: {
+          targetPlayerId: p1,
+          round: 1,
+          dimension: 'points',
+          value: 20,
+        },
+        headers: JSON_HEADERS,
+      }
+    );
     expect([200, 204]).toContain(confirmRes.status());
 
     // Verify score recorded

@@ -36,6 +36,7 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Application.Handlers;
 
 [Trait("Category", TestCategories.Unit)]
 [Trait("BoundedContext", "SharedGameCatalog")]
+[Collection("SharedGameDetailMetrics")]
 public sealed class GetSharedGameByIdQueryHandlerMetricsTests
 {
     private readonly Mock<ISharedGameRepository> _repositoryMock = new();

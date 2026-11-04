@@ -16,6 +16,22 @@ using Xunit;
 namespace Api.Tests.Integration.UserLibrary;
 
 /// <summary>
+/// Fixture della classe: host e database costruiti una volta sola. Il perche', i numeri e le
+/// condizioni per applicare lo stesso schema altrove stanno in <see cref="IntegrationHostFixture"/>.
+///
+/// <para>
+/// 🔴 <b>Perche' condividere il database e' sicuro QUI.</b> Ogni endpoint opera su una risorsa
+/// specifica per id (<c>GET/PUT/DELETE /api/v1/private-games/{id}</c>), mai su una lista globale:
+/// nessuna asserzione riguarda conteggi o enumerazioni. <c>PrivateGameEntity.OwnerId</c> lega ogni
+/// gioco al proprietario, e i test "OtherUsersGame" creano esplicitamente un secondo utente con id
+/// casuale per verificare l'isolamento — quindi le righe di altri test (altri owner, altri game id
+/// via <c>Guid.NewGuid()</c>) non possono mai comparire nel risultato di un test.
+/// </para>
+/// </summary>
+public sealed class PrivateGameEndpointsHostFixture(SharedTestcontainersFixture shared)
+    : IntegrationHostFixture(shared, "private_game_endpoints");
+
+/// <summary>
 /// Integration tests for Private Game HTTP endpoints.
 /// Issue #3670: Phase 9 - Testing &amp; Polish.
 /// Tests: CRUD operations, authentication, authorization, validation.
@@ -23,39 +39,15 @@ namespace Api.Tests.Integration.UserLibrary;
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "UserLibrary")]
-public sealed class PrivateGameEndpointsIntegrationTests : IAsyncLifetime
+public sealed class PrivateGameEndpointsIntegrationTests : IClassFixture<PrivateGameEndpointsHostFixture>
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
-    private WebApplicationFactory<Program> _factory = null!;
-    private HttpClient _client = null!;
+    private readonly WebApplicationFactory<Program> _factory;
+    private readonly HttpClient _client;
 
-    public PrivateGameEndpointsIntegrationTests(SharedTestcontainersFixture fixture)
+    public PrivateGameEndpointsIntegrationTests(PrivateGameEndpointsHostFixture host)
     {
-        _fixture = fixture;
-        _testDbName = $"private_game_endpoints_{Guid.NewGuid():N}";
-    }
-
-    public async ValueTask InitializeAsync()
-    {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        // Initialize database with migrations
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync();
-        }
-
-        _client = _factory.CreateClient();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        _client?.Dispose();
-        await _factory.DisposeAsync();
+        _factory = host.Factory;
+        _client = host.Client;
     }
 
     #region Authentication Tests

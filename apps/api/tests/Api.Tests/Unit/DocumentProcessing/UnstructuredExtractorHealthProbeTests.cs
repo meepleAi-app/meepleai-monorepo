@@ -1,9 +1,11 @@
 // apps/api/tests/Api.Tests/Unit/DocumentProcessing/UnstructuredExtractorHealthProbeTests.cs
 using System.Net;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.Tests.Constants;
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Moq;
 using Moq.Protected;
 using Xunit;
@@ -165,5 +167,76 @@ public sealed class UnstructuredExtractorHealthProbeTests
         var result = await probe.IsHealthyAsync(TestCancellationToken);
 
         result.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// #4435: the probe posted the literal <c>"ita"</c>. It now sends the configured set, the same value
+    /// a document without a known language gets. It runs in fast (no OCR), so it does not prove the
+    /// service has those language packs installed.
+    /// </summary>
+    [Theory]
+    [Trait("Issue", "4435")]
+    [InlineData("eng+ita+deu")]
+    [InlineData("eng+ita")]
+    public async Task IsHealthyAsync_SendsConfiguredDefaultLanguage_NotIta(string configured)
+    {
+        var language = await CaptureProbeLanguageAsync(
+            Options.Create(new PdfProcessingOptions
+            {
+                Extractor = new ExtractorOptions { Unstructured = new UnstructuredOptions { Language = configured } }
+            }));
+
+        language.Should().Be(configured);
+    }
+
+    [Fact]
+    [Trait("Issue", "4435")]
+    public async Task IsHealthyAsync_NoOptions_SendsBuiltInDefaultLanguage()
+    {
+        var language = await CaptureProbeLanguageAsync(pdfOptions: null);
+
+        language.Should().Be("eng+ita+deu");
+    }
+
+    private async Task<string?> CaptureProbeLanguageAsync(IOptions<PdfProcessingOptions>? pdfOptions)
+    {
+        string? language = null;
+        var httpClient = new HttpClient(_mockHttpMessageHandler.Object)
+        {
+            BaseAddress = new Uri("http://test-unstructured:8001")
+        };
+        _mockHttpClientFactory
+            .Setup(x => x.CreateClient("UnstructuredService"))
+            .Returns(httpClient);
+        _mockHttpMessageHandler
+            .Protected()
+            .Setup<Task<HttpResponseMessage>>(
+                "SendAsync",
+                ItExpr.IsAny<HttpRequestMessage>(),
+                ItExpr.IsAny<CancellationToken>())
+            .Returns<HttpRequestMessage, CancellationToken>(async (req, ct) =>
+            {
+                if (req.Content is MultipartFormDataContent multipart)
+                {
+                    foreach (var part in multipart)
+                    {
+                        if (string.Equals(part.Headers.ContentDisposition?.Name?.Trim('"'), "language", StringComparison.Ordinal))
+                        {
+                            language = await part.ReadAsStringAsync(ct).ConfigureAwait(false);
+                        }
+                    }
+                }
+
+                return new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent(
+                        "{\"text\":\"hello\",\"chunks\":[],\"elements\":[{\"text\":\"Health Check\",\"page_number\":1,\"category\":\"Title\"}],\"quality_score\":0.9,\"page_count\":1}")
+                };
+            });
+
+        var probe = new UnstructuredExtractorHealthProbe(_mockHttpClientFactory.Object, _mockLogger.Object, pdfOptions);
+        (await probe.IsHealthyAsync(TestCancellationToken)).Should().BeTrue();
+        return language;
     }
 }

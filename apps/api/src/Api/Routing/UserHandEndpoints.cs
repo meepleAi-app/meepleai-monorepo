@@ -46,8 +46,7 @@ internal static class UserHandEndpoints
         .Produces(401)
         .WithTags("MyHand")
         .WithSummary("Get user hand slots")
-        .WithDescription("Returns all 4 hand slots for the authenticated user. Empty slots have null entity fields.")
-        .WithOpenApi();
+        .WithDescription("Returns all 4 hand slots for the authenticated user. Empty slots have null entity fields.");
     }
 
     private static void MapUpdateHandSlotEndpoint(RouteGroupBuilder group)
@@ -82,8 +81,7 @@ internal static class UserHandEndpoints
         .Produces(401)
         .WithTags("MyHand")
         .WithSummary("Assign entity to hand slot")
-        .WithDescription("Assigns an entity (game, toolkit, session, or agent) to the specified hand slot. Valid slot types: toolkit, game, session, ai.")
-        .WithOpenApi();
+        .WithDescription("Assigns an entity (game, toolkit, session, or agent) to the specified hand slot. Valid slot types: toolkit, game, session, ai.");
     }
 
     private static void MapClearHandSlotEndpoint(RouteGroupBuilder group)
@@ -109,8 +107,7 @@ internal static class UserHandEndpoints
         .Produces(401)
         .WithTags("MyHand")
         .WithSummary("Clear hand slot")
-        .WithDescription("Removes the entity assignment from the specified hand slot. Valid slot types: toolkit, game, session, ai.")
-        .WithOpenApi();
+        .WithDescription("Removes the entity assignment from the specified hand slot. Valid slot types: toolkit, game, session, ai.");
     }
 
     private static bool TryGetUserId(HttpContext context, SessionStatusDto? session, out Guid userId)

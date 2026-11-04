@@ -162,14 +162,39 @@ services:
       ollama:
         condition: service_healthy
     restart: "no"
+    environment:
+      # Il modello di EMBEDDING. Il codice lo legge da EMBEDDING_MODEL con lo stesso default
+      # (Program.cs, AdminKBSettingsEndpoints.cs): se cambi uno, cambia l'altro.
+      OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-nomic-embed-text}
+      # Il modello di CHAT. 🔴 Prima di #3978 questo servizio scaricava SOLO l'embedding, mentre
+      # `LlmProviderSelector` instrada su Ollama (riga 86: «AutomatedTest source: always routed to
+      # Ollama») chiedendo il modello risolto da `GetDefaultModelForProviderAsync("Ollama")`, che in
+      # assenza di una StrategyModelMapping nel DB cade su `AgentDefaults.OllamaFallbackModel`
+      # = "llama3:8b". Risultato: ogni chat instradata su Ollama rispondeva 404 «model not found»,
+      # e l'unico percorso LLM gratuito e locale del progetto era inutilizzabile.
+      #
+      # Il default qui DEVE restare allineato a AgentDefaults.OllamaFallbackModel: sono due fonti
+      # che devono dire la stessa cosa, e divergere riporta il 404.
+      # Per una macchina modesta: `OLLAMA_CHAT_MODEL=qwen2.5:1.5b make dev` scarica ~1GB invece di
+      # ~4.7GB, ma allora il modello va mappato in StrategyModelMapping, altrimenti il fallback
+      # hardcoded continua a chiedere llama3:8b e il 404 torna.
+      OLLAMA_CHAT_MODEL: ${OLLAMA_CHAT_MODEL:-llama3:8b}
+    # La verifica su /api/tags dopo ogni pull non e' ridondante: `POST /api/pull` risponde 200 e poi
+    # STREAMMA il progresso, quindi un errore a meta' scaricamento non cambia lo status e `curl -sf`
+    # esce 0 comunque. E' lo stesso difetto del `mc mb` di minio-init documentato sopra — un codice
+    # di uscita che non e' evidenza dell'effetto. Qui l'effetto si interroga.
     command: >
       sh -c '
-        echo "Pulling nomic-embed-text model..." &&
-        curl -sf -X POST http://ollama:11434/api/pull \
-          -d "{\"name\":\"nomic-embed-text\"}" \
-          --output /dev/null &&
-        echo "✓ nomic-embed-text pull initiated" ||
-        (echo "✗ Model pull failed — check Ollama logs" && exit 1)
+        set -eu
+        for M in "$${OLLAMA_EMBED_MODEL}" "$${OLLAMA_CHAT_MODEL}"; do
+          echo "Pulling $$M ..."
+          curl -sf -X POST http://ollama:11434/api/pull -d "{\"name\":\"$$M\"}" --output /dev/null
+          curl -sf http://ollama:11434/api/tags | grep -q "\"$$M\"" || {
+            echo "✗ FATALE: $$M non compare in /api/tags dopo il pull" ;
+            exit 1 ;
+          }
+          echo "✓ $$M disponibile"
+        done
       '
     networks:
       - meepleai
@@ -355,6 +380,7 @@ services:
       - ./prometheus-rules.yml:/etc/prometheus/prometheus-rules.yml:ro
       # Issue #3082 — BGG ToS-compliance SLO=0 alert (referenced from prometheus.yml rule_files).
       - ./prometheus/alerts/bgg-tos-compliance.yml:/etc/prometheus/bgg-tos-compliance.yml:ro
+      - ./prometheus/alerts/rag-vector-arm.yml:/etc/prometheus/rag-vector-arm.yml:ro
       - ./prometheus/alerts/egress-guard.yml:/etc/prometheus/egress-guard.yml:ro
       - ./prometheus/alerts/api-single-instance.yml:/etc/prometheus/api-single-instance.yml:ro
       # Issue #3112 — OPS-02 Slack delivery alerts (referenced from prometheus.yml rule_files).
@@ -367,6 +393,15 @@ services:
       - ./prometheus/alerts/copyright-enforcement.yml:/etc/prometheus/copyright-enforcement.yml:ro
       # Issue #3390 (epic #3397) Slice 1 — in-session agent grounding observability (referenced from prometheus.yml rule_files).
       - ./prometheus/alerts/agent-grounding.yml:/etc/prometheus/agent-grounding.yml:ro
+      # Issue #3798 — montati dopo l'audit: erano nel repo ma non in rule_files, quindi
+      # i loro alert non sono mai stati valutati. DiskSpace* usa node-exporter e
+      # ProviderQuota* le recording rules definite nello stesso file.
+      - ./prometheus/alerts/infrastructure.yml:/etc/prometheus/infrastructure.yml:ro
+      - ./prometheus/alerts/provider-quota.yml:/etc/prometheus/provider-quota.yml:ro
+      # #3814: gli 8 alert PDF erano scritti ma non montati. Le metriche esistono (16 dichiarate
+      # in Observability/Metrics/MeepleAiMetrics.Pdf.cs); erano i NOMI nelle regole a non essere
+      # quelli esposti, piu' un fallback a zero che avrebbe acceso 5 alert al primo deploy.
+      - ./prometheus/alerts/pdf-processing.yml:/etc/prometheus/pdf-processing.yml:ro
       - prometheus_data:/prometheus
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
@@ -496,8 +531,78 @@ services:
           cpus: '0.25'
           memory: 128M
 
+  # #3813 — DatabaseDown e RedisDown interrogavano `pg_up` e `redis_up`, che nessuno esponeva:
+  # i due alert che dovrebbero dirci che il database o la cache sono giu' erano ciechi. Non era un
+  # errore di naming (#3798) ma l'assenza dell'esportatore. Nessun segnale gia' disponibile poteva
+  # sostituirli: non esistono metriche postgres/redis, non c'e' un health check esposto come
+  # metrica, e cAdvisor non popola la label `name` su questo host.
+  postgres-exporter:
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.16.0
+    container_name: meepleai-postgres-exporter
+    restart: unless-stopped
+    profiles: [monitoring, monitoring-essential]
+    env_file: [./secrets/database.secret]
+    # La stringa di connessione si compone a runtime dalle variabili del secret: `env_file` le
+    # rende disponibili dentro il container, non all'interpolazione del compose. Il `$$` sfugge
+    # l'interpolazione, come gia' fa il comando di redis.
+    # DATA_SOURCE_URI/USER/PASS invece di DATA_SOURCE_NAME: la password finirebbe dentro una URL
+    # e andrebbe percent-encodata, con un carattere speciale che rompe la connessione in silenzio.
+    entrypoint:
+      - sh
+      - -c
+      - >
+        export DATA_SOURCE_URI="postgres:5432/$$POSTGRES_DB?sslmode=disable"
+        DATA_SOURCE_USER="$$POSTGRES_USER"
+        DATA_SOURCE_PASS="$$POSTGRES_PASSWORD";
+        exec /bin/postgres_exporter --web.listen-address=:9187
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.66.0-alpine
+    container_name: meepleai-redis-exporter
+    restart: unless-stopped
+    profiles: [monitoring, monitoring-essential]
+    env_file: [./secrets/redis.secret]
+    entrypoint:
+      - sh
+      - -c
+      - exec /redis_exporter --redis.addr=redis://redis:6379 --redis.password="$$REDIS_PASSWORD"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - meepleai
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    # #3822: da gcr.io/cadvisor v0.49.1 a ghcr.io/google v0.60.5. La v0.49.1 non riconosceva un
+    # solo container su questo host (Docker 29.4.2, cgroup v2): esponeva 43 serie, TUTTE con la
+    # label `name` vuota, cioe' i soli cgroup di systemd. Misurato in parallelo sullo stesso host:
+    #   v0.49.1 (gcr.io) ->  0 container
+    #   v0.52.1 (gcr.io) ->  0 container   <- l'ultima pubblicata su gcr.io, non basta
+    #   v0.60.5 (ghcr.io) -> 16 container  <- meepleai-api, -postgres, -redis, ...
+    # Le release recenti non sono su gcr.io: il progetto pubblica su ghcr.io, e il registry va
+    # cambiato insieme al tag o si resta fermi a una versione che non funziona qui.
+    image: ghcr.io/google/cadvisor:v0.60.5
     container_name: meepleai-cadvisor
     restart: unless-stopped
     # #3039: also in monitoring-essential so per-container metrics reach the
@@ -563,15 +668,67 @@ services:
   # ---------------------------------------------------------------------------
 
   minio:
-    image: minio/minio:RELEASE.2024-11-07T00-52-20Z
+    # #3978 — `minio/minio` e' scomparsa da Docker Hub a livello di REPOSITORY (non di tag):
+    # `docker manifest inspect minio/minio:RELEASE.2024-11-07T00-52-20Z` → «denied», e lo stesso
+    # su quay.io, ghcr.io/minio e mirror.gcr.io. Pinnare il tag non ha protetto.
+    #
+    # Qui punta al MIRROR nel GHCR del progetto, popolato da
+    # `.github/workflows/mirror-upstream-images.yml` a partire da `alpine/minio` pinnata per
+    # digest. La sorgente e' una ripubblicazione del binario MinIO, scelta fra le disponibili
+    # perche' ha esattamente l'interfaccia che questo servizio usa gia': il suo Cmd di default E'
+    # il `command` qui sotto e il suo volume e' `/data` (Bitnami avrebbe richiesto di riscrivere
+    # command e volume). L'UTENTE invece va riscritto comunque — vedi `user: root` qui sotto: era
+    # elencato come costo della sola alternativa Bitnami, ed e' un errore, perche' nessuna delle
+    # due immagini gira come root e il volume lo richiede.
+    #
+    # Dipendere dal proprio mirror e non da un registry di terzi e' la correzione della causa
+    # prima: la sparizione di un upstream diventa un aggiornamento, non un blocco.
+    image: ghcr.io/meepleai-app/meepleai-monorepo/mirror/minio:RELEASE.2025-10-15
     container_name: meepleai-minio
     restart: unless-stopped
     profiles: [storage]
+    # #3978 — `user: root` NON e' cosmetico: senza questa riga il servizio non parte affatto.
+    # `alpine/minio` gira come utente `minio` (il vecchio `minio/minio` girava come root) e un
+    # volume Docker nasce `root:root` 755, quindi il processo non puo' scrivere in /data:
+    #
+    #   volume con dati preesistenti (uid 0:0)  FATAL Unable to initialize backend: Unable to write
+    #   volume VUOTO, appena creato             FATAL Unable to initialize backend: file access denied
+    #
+    # Il secondo caso e' quello che rende la riga necessaria e non un rimedio alla migrazione:
+    # senza, lo stack e' rotto anche per un dev che parte da zero. Misurato il 2026-10-02 su
+    # entrambi i volumi, con `/minio/health/ready` interrogato e non dedotto: `--user root` →
+    # running + ready in entrambi, dati preesistenti intatti.
+    #
+    # Alternative scartate: `bitnamilegacy/minio` gira come uid 1001 e avrebbe lo stesso problema
+    # oltre a richiedere command e volume diversi; un init container che fa `chown` aggiunge un
+    # servizio al grafo per ottenere lo stesso effetto. Root in un MinIO di sviluppo locale, dietro
+    # al profilo `storage`, e' il costo minore.
+    user: root
+    # #3978 — il SERVER non aveva alcuna credenziale, quindi cadeva sui default di MinIO
+    # (`minioadmin:minioadmin`) mentre `minio-init` qui sotto usa `minioadmin123`. Misurato il
+    # 2026-10-02 contro il server in esecuzione:
+    #   mc alias set … minioadmin minioadmin     → `mc ls` elenca i bucket
+    #   mc alias set … minioadmin minioadmin123  → auth fallita
+    # Conseguenza: su uno stack nuovo il bucket NON veniva creato. Non se ne accorgeva nessuno
+    # perche' su un volume con `meepleai-uploads` gia' dentro (datato 2026-07-14) non serviva
+    # crearlo, e perche' `minio-init` esce 0 anche quando non lo crea — vedi la guardia nel suo
+    # entrypoint. I default sono gli stessi dei due `${…:-}` di minio-init: cambiarne uno solo
+    # rompe di nuovo l'accoppiata.
+    # Le credenziali root di MinIO vengono lette dall'env a ogni avvio e non sono persistite nel
+    # backend, quindi allinearle non invalida un volume esistente.
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
     healthcheck:
-      test: ["CMD-SHELL", "mc ready local || exit 1"]
+      # #3978 — era `mc ready local`, e quel `mc` veniva dal binario bundlato nell'immagine
+      # SERVER di MinIO, non da `minio/mc`: due fornitori per lo stesso comando. `alpine/minio`
+      # non contiene `mc` (`command -v mc` → assente), quindi la probe passa all'endpoint HTTP di
+      # readiness, che e' anche quello che i due workflow E2E interrogano dall'esterno.
+      # `wget` e non `curl`: nell'immagine c'e' il wget di busybox, curl no (verificato).
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9000/minio/health/ready || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -588,7 +745,10 @@ services:
           memory: 256M
 
   minio-init:
-    image: minio/mc:RELEASE.2024-11-17T19-35-25Z
+    # #3978 — mirror GHCR di `bitnamilegacy/minio-client`: `minio/mc` e' sparita con il server, e
+    # `alpine/mc` non esiste (verificato). Il suo `mc` sta in /opt/bitnami/minio-client/bin/mc ed
+    # e' nel PATH, quindi l'entrypoint qui sotto resta invariato.
+    image: ghcr.io/meepleai-app/meepleai-monorepo/mirror/minio-client:2025.7.21
     container_name: meepleai-minio-init
     profiles: [storage]
     depends_on:
@@ -602,12 +762,34 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+    # #3978 — le due guardie qui sotto (`|| exit 1` su alias set, e `mc ls` dopo `mc mb`) non sono
+    # ridondanti: senza di esse questo container usciva **0** dichiarando «Bucket created
+    # successfully» mentre il bucket non veniva creato. Misurato il 2026-10-02 su un progetto
+    # compose con volumi vuoti:
+    #   mc: <ERROR> Unable to initialize new alias … signature does not match
+    #   Bucket created successfully `myminio/meepleai-uploads`.
+    #   Bucket meepleai-uploads ready
+    #   exit=0   →   ls sul volume: bucket ASSENTE
+    # `mc mb --ignore-existing` stampa quel messaggio e ritorna 0 anche quando l'alias non e'
+    # autenticato, quindi il suo codice di uscita non e' evidenza che il bucket esista: va
+    # interrogato. L'`api` dipende da questo container con
+    # `condition: service_completed_successfully`, percio' un exit 0 bugiardo lo faceva partire su
+    # uno storage senza bucket e il primo presign tornava null.
+    # ⚠️ Le due guardie `:?` qui sotto, introdotte da #3498 come rete contro una credenziale
+    # ASSENTE, oggi non possono piu' scattare: da quando il servizio `minio` e questo `minio-init`
+    # dichiarano `environment` con un default `${…:-minioadmin}`, le due variabili non sono mai ne'
+    # assenti ne' vuote. Restano perche' sono innocue e perche' tornerebbero utili se qualcuno
+    # togliesse i default, ma NON sono piu' la rete di sicurezza che il commento #3498 descrive:
+    # quel ruolo e' passato al `|| exit 1` sull'alias e alla verifica `mc ls`. Il caso che oggi
+    # morde non e' «credenziale assente», e' «credenziale PRESENTE ma diversa da quella del
+    # server», che una guardia `:?` non vede per costruzione.
     entrypoint: >
       /bin/sh -c "
       : $${MINIO_ROOT_USER:?'MINIO_ROOT_USER must be set — refusing to run with an empty credential'};
       : $${MINIO_ROOT_PASSWORD:?'MINIO_ROOT_PASSWORD must be set — refusing to run with an empty credential'};
-      mc alias set myminio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD};
+      mc alias set myminio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} || exit 1;
       mc mb myminio/meepleai-uploads --ignore-existing;
+      mc ls myminio/meepleai-uploads >/dev/null 2>&1 || { echo 'FATALE: il bucket meepleai-uploads non esiste dopo mc mb'; exit 1; };
       echo 'Bucket meepleai-uploads ready';
       "
     networks:

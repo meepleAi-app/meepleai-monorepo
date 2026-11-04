@@ -4,6 +4,7 @@ using Api.BoundedContexts.UserLibrary.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Api.Tests.Constants;
+using Api.Tests.TestHelpers;
 using Moq;
 using Xunit;
 
@@ -20,7 +21,8 @@ public class RemoveLabelFromGameCommandHandlerTests
     public RemoveLabelFromGameCommandHandlerTests()
     {
         _handler = new RemoveLabelFromGameCommandHandler(
-            _libraryRepoMock.Object, _unitOfWorkMock.Object);
+            _libraryRepoMock.Object, _unitOfWorkMock.Object,
+            TestDbContextFactory.CreateInMemoryHybridCache());
     }
 
     [Fact]

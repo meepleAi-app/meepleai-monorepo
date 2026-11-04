@@ -3,6 +3,7 @@ using System.Text;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands.EnrichCatalogCover;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
@@ -18,6 +19,7 @@ using Api.Tests.TestHelpers;
 using FluentAssertions;
 using ImageMagick;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
@@ -551,8 +553,14 @@ public class EnrichCatalogCoverCommandHandlerTests
         harness.CacheMock.Verify(
             c => c.RemoveByTagAcrossReplicasAsync("search-games", It.IsAny<CancellationToken>()),
             Times.Once);
+        harness.NativeCacheMock.Verify(
+            c => c.RemoveByTagAsync("search-games", It.IsAny<CancellationToken>()),
+            Times.Once);
         harness.CacheMock.Verify(
             c => c.RemoveByTagAcrossReplicasAsync($"shared-game:{game.Id}", It.IsAny<CancellationToken>()),
+            Times.Once);
+        harness.NativeCacheMock.Verify(
+            c => c.RemoveByTagAsync($"shared-game:{game.Id}", It.IsAny<CancellationToken>()),
             Times.Once);
     }
 
@@ -573,6 +581,9 @@ public class EnrichCatalogCoverCommandHandlerTests
         result.Should().BeOfType<EnrichCatalogCoverResult.Skipped>();
         harness.CacheMock.Verify(
             c => c.RemoveByTagAcrossReplicasAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        harness.NativeCacheMock.Verify(
+            c => c.RemoveByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
     }
 
@@ -601,6 +612,50 @@ public class EnrichCatalogCoverCommandHandlerTests
         harness.CacheMock.Verify(
             c => c.RemoveByTagAcrossReplicasAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
             Times.Never);
+        harness.NativeCacheMock.Verify(
+            c => c.RemoveByTagAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    /// <summary>
+    /// #3886 — la pipeline R2 non e' piu' registrata quando <c>STORAGE_PROVIDER</c> non e' <c>s3</c>
+    /// (stessa scelta di #3363), quindi qui arriva <c>null</c>. Senza questo test il ramo di
+    /// degradazione che ho introdotto resterebbe non esercitato: la modifica passerebbe il gate e
+    /// il primo a scoprirne il comportamento sarebbe un ambiente local-storage in esecuzione.
+    ///
+    /// <para>L'invariante: l'assenza della destinazione e' un <b>fallimento dichiarato</b> con la
+    /// ragione dell'upload — che il chiamante gia' gestisce — non un'eccezione e non un successo
+    /// silenzioso su una cover mai caricata.</para>
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithoutR2Pipeline_FailsWithUploadReason_InsteadOfThrowing()
+    {
+        var harness = BuildHarness(withR2Pipeline: false);
+        var game = BuildGame(qid: TestQid);
+
+        harness.RepoMock
+            .Setup(r => r.GetByIdAsync(game.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(game);
+
+        harness.WikidataHandler.SparqlJson = BuildSparqlImageResponse(TestFilename);
+        harness.CommonsHandler.LicenseJson = BuildImageInfoResponse("CC BY-SA 4.0", artistHtml: "John Doe");
+        harness.CommonsHandler.ImageBytes = await CreateSolidImagePngAsync(800, 600);
+
+        var act = async () => await harness.Sut.Handle(
+            new EnrichCatalogCoverCommand(game.Id),
+            CancellationToken.None);
+
+        var result = await act.Should().NotThrowAsync();
+
+        result.Subject.Should().BeOfType<EnrichCatalogCoverResult.Failed>();
+        ((EnrichCatalogCoverResult.Failed)result.Subject).Reason
+            .Should().Be(EnrichCatalogCoverCommandHandler.FailReasonR2Upload,
+                "senza destinazione l'arricchimento fallisce come un upload fallito, non in modo nuovo");
+
+        harness.UowMock.Verify(
+            u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Never,
+            "un fallimento non deve persistere uno stato cover a meta'");
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -613,11 +668,16 @@ public class EnrichCatalogCoverCommandHandlerTests
         Mock<IUnitOfWork> UowMock,
         Mock<IAmazonS3> S3Mock,
         Mock<IHybridCacheService> CacheMock,
+        Mock<HybridCache> NativeCacheMock,
         WikidataSparqlHandler WikidataHandler,
         CommonsRoutingHandler CommonsHandler,
         FakeTimeProvider TimeProvider);
 
-    private static TestHarness BuildHarness()
+    /// <param name="withR2Pipeline">
+    /// #3886: <c>false</c> riproduce l'ambiente local-storage, dove la pipeline non e' registrata e
+    /// l'iniezione opzionale risolve a null. Il default costruisce quella vera sul mock S3.
+    /// </param>
+    private static TestHarness BuildHarness(bool withR2Pipeline = true)
     {
         var repo = new Mock<ISharedGameRepository>();
         var uow = new Mock<IUnitOfWork>();
@@ -659,10 +719,12 @@ public class EnrichCatalogCoverCommandHandlerTests
             Region = "auto",
             ForcePathStyle = false,
         };
-        var r2Pipeline = new CoverR2UploadPipeline(
-            s3Mock.Object,
-            s3Opts,
-            NullLogger<CoverR2UploadPipeline>.Instance);
+        var r2Pipeline = withR2Pipeline
+            ? new CoverR2UploadPipeline(
+                s3Mock.Object,
+                s3Opts,
+                NullLogger<CoverR2UploadPipeline>.Instance)
+            : null;
 
         var fakeTime = new FakeTimeProvider(new DateTimeOffset(FixedNowUtc, TimeSpan.Zero));
 
@@ -671,19 +733,23 @@ public class EnrichCatalogCoverCommandHandlerTests
             .Setup(c => c.RemoveByTagAcrossReplicasAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(0);
 
+        var nativeCacheMock = new Mock<HybridCache>();
+
         var handler = new EnrichCatalogCoverCommandHandler(
             repo.Object,
             uow.Object,
             wikidataProvider,
             commonsClient,
             webpGenerator,
-            r2Pipeline,
             fakeTime,
-            cacheMock.Object,
-            new PassthroughRetryPolicy(),
-            NullLogger<EnrichCatalogCoverCommandHandler>.Instance);
+            new SharedGameCacheInvalidator(cacheMock.Object, new PassthroughRetryPolicy(), nativeCacheMock.Object),
+            NullLogger<EnrichCatalogCoverCommandHandler>.Instance,
+            // #3886: la pipeline R2 e' ora l'ultimo parametro, opzionale con default null (non e'
+            // registrata quando STORAGE_PROVIDER non e' s3). Questo harness esercita il ramo cloud,
+            // quindi la passa esplicitamente.
+            r2Pipeline);
 
-        return new TestHarness(handler, repo, uow, s3Mock, cacheMock, sparqlHandler, commonsHandler, fakeTime);
+        return new TestHarness(handler, repo, uow, s3Mock, cacheMock, nativeCacheMock, sparqlHandler, commonsHandler, fakeTime);
     }
 
     private static SharedGame BuildGame(

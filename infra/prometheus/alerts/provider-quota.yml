@@ -16,9 +16,9 @@ groups:
       # Ratio remaining/limit per provider. Only present when both metrics exist.
       - record: meepleai:provider:quota_remaining_ratio
         expr: |
-          meepleai_provider_quota_remaining_usd
+          meepleai_provider_quota_remaining_usd_USD
           /
-          meepleai_provider_quota_limit_usd
+          meepleai_provider_quota_limit_usd_USD
 
   - name: meepleai_provider_quota_alerts
     rules:

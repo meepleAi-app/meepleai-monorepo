@@ -168,6 +168,15 @@ export const Disable2FAResultSchema = z.object({
 
 export type Disable2FAResult = z.infer<typeof Disable2FAResultSchema>;
 
+/**
+ * What `POST /api/v1/auth/2fa/disable` answers on SUCCESS: `{ message }` (#4806). A failure is an error
+ * status — 401 with no body for a wrong password, 400 `{ error }` for a wrong code — never
+ * `{ success: false }`. `Disable2FAResultSchema` describes a response the server does not send, so the
+ * client rejected the real one: 2FA was off on the server, its backup codes spent, and the dialog showed
+ * «Response validation failed». Lenient on purpose: the body is not used, the status is.
+ */
+export const Disable2FAResponseSchema = z.object({ message: z.string().optional() }).passthrough();
+
 // ========== User Profile ==========
 
 export const UserProfileSchema = z.object({
@@ -300,7 +309,10 @@ export type ListApiKeysResponse = z.infer<typeof ListApiKeysResponseSchema>;
 export const UserSearchResultSchema = z.object({
   id: z.string().uuid(),
   displayName: z.string().min(1),
-  email: z.string().email(),
+  // #4727: the server returns the address masked (j***n@example.com) so that two people with the same name
+  // can be told apart without handing out their addresses. A masked address is not a valid email, so this
+  // must stay a plain string — `.email()` would reject every result.
+  email: z.string().min(1),
 });
 
 export type UserSearchResult = z.infer<typeof UserSearchResultSchema>;

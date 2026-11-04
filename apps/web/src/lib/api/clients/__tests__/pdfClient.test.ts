@@ -26,6 +26,7 @@ describe('createPdfClient', () => {
       post: vi.fn(),
       put: vi.fn(),
       delete: vi.fn(),
+      deleteWithResult: vi.fn(),
       postFile: vi.fn(),
     } as any;
 
@@ -36,6 +37,83 @@ describe('createPdfClient', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe('getUploadLimits (#4449)', () => {
+    it('reads GET /api/v1/ingest/pdf/limits with a schema that accepts the backend body', async () => {
+      mockHttpClient.get.mockResolvedValue(null);
+
+      await pdfClient.getUploadLimits();
+
+      expect(mockHttpClient.get).toHaveBeenCalledWith(
+        '/api/v1/ingest/pdf/limits',
+        expect.any(Object)
+      );
+      const schema = mockHttpClient.get.mock.calls[0]?.[1] as {
+        safeParse: (x: unknown) => { success: boolean };
+      };
+      // The body GetUploadLimitsQueryHandler returns, as the API serializes it.
+      expect(
+        schema.safeParse({ maxFileSizeBytes: 104_857_600, maxConcurrentChunkedUploads: 3 }).success
+      ).toBe(true);
+      expect(
+        schema.safeParse({ maxFileSizeBytes: 0, maxConcurrentChunkedUploads: 3 }).success
+      ).toBe(false);
+    });
+  });
+
+  describe('adminDeletePdf (#4683)', () => {
+    it('reads DELETE /api/v1/pdf/{id} with the id URL-encoded and a schema for the outcome body', async () => {
+      mockHttpClient.deleteWithResult.mockResolvedValue(null);
+
+      await pdfClient.adminDeletePdf('a/b c');
+
+      expect(mockHttpClient.deleteWithResult).toHaveBeenCalledWith(
+        '/api/v1/pdf/a%2Fb%20c',
+        expect.any(Object)
+      );
+      expect(mockHttpClient.delete).not.toHaveBeenCalled();
+    });
+
+    it('accepts the body DeletePdfCommandHandler sends and nothing else', async () => {
+      mockHttpClient.deleteWithResult.mockResolvedValue(null);
+      await pdfClient.adminDeletePdf('pdf-1');
+      const schema = mockHttpClient.deleteWithResult.mock.calls[0]?.[1] as {
+        safeParse: (x: unknown) => { success: boolean };
+      };
+
+      for (const outcome of ['unlinked', 'kept']) {
+        expect(
+          schema.safeParse({ outcome, message: 'ancora in uso', pdfId: 'pdf-1' }).success
+        ).toBe(true);
+      }
+      // The message is only informative (the page shows its own translated text): its absence is fine.
+      expect(schema.safeParse({ outcome: 'kept' }).success).toBe(true);
+      // 'deleted' is never in a body: it is what a 204 means.
+      expect(schema.safeParse({ outcome: 'deleted', message: 'x' }).success).toBe(false);
+      expect(schema.safeParse({ message: 'x' }).success).toBe(false);
+    });
+
+    it('reports a 204 (no body) as deleted', async () => {
+      mockHttpClient.deleteWithResult.mockResolvedValue(null);
+
+      await expect(pdfClient.adminDeletePdf('pdf-1')).resolves.toEqual({ outcome: 'deleted' });
+    });
+
+    it.each(['unlinked', 'kept'] as const)('passes a %s outcome through', async outcome => {
+      mockHttpClient.deleteWithResult.mockResolvedValue({ outcome, message: 'ancora in uso' });
+
+      await expect(pdfClient.adminDeletePdf('pdf-1')).resolves.toEqual({
+        outcome,
+        message: 'ancora in uso',
+      });
+    });
+
+    it('propagates a failed request', async () => {
+      mockHttpClient.deleteWithResult.mockRejectedValue(new Error('boom'));
+
+      await expect(pdfClient.adminDeletePdf('pdf-1')).rejects.toThrow('boom');
+    });
   });
 
   describe('getImageRegions', () => {

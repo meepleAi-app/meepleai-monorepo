@@ -203,6 +203,14 @@ internal class HybridCacheService : IHybridCacheService
             _logger.LogWarning("Tag-based invalidation is disabled in configuration");
             return 0;
         }
+
+        // #4561: entries written with the Microsoft HybridCache directly (many catalog and dashboard queries
+        // do) carry the tag inside HybridCache but are NOT in this wrapper's tag set (cache:tag:{tag}), so the
+        // set-based removal below never saw them. The native invalidation reaches them on L1 and L2, with or
+        // without Redis. It is idempotent with the removal below: an entry written through this wrapper passes
+        // its tags to HybridCache as well. The returned count stays the number of tracked entries.
+        await _hybridCache.RemoveByTagAsync(tag, ct).ConfigureAwait(false);
+
         // Get all keys associated with this tag
         var keysToRemove = GetKeysByTag(tag);
 

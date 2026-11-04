@@ -1,3 +1,4 @@
+using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 
 #pragma warning disable MA0048 // File name must match type name - Contains Service with Configuration classes
@@ -66,6 +67,14 @@ internal sealed record ExtractedDocument
     /// Total page count.
     /// </summary>
     public int PageCount { get; init; }
+
+    /// <summary>
+    /// Where each page of the PDF begins in <see cref="Content"/> (#4782), when the extractor measured its pages and
+    /// the map fits the text. Only a flat document (no structured elements) carries it: its single section would
+    /// otherwise put every chunk on page 1. When set, the chunker gives each chunk the page that holds the start of
+    /// its text instead of the page of its section. Null leaves the page of each section as it is.
+    /// </summary>
+    public IReadOnlyList<PageSpan>? PageSpans { get; init; }
 }
 
 /// <summary>

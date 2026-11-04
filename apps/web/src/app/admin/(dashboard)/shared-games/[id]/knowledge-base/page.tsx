@@ -8,7 +8,6 @@
 import { type Metadata } from 'next';
 
 import { GameKbDocuments } from '@/components/admin/knowledge-base/game-kb-documents';
-import { GameKbSettings } from '@/components/admin/knowledge-base/game-kb-settings';
 
 interface GameKbPageProps {
   params: Promise<{ id: string }>;
@@ -25,12 +24,10 @@ export default async function GameKbPage({ params }: GameKbPageProps) {
   return (
     <div className="space-y-8 p-6">
       <div>
-        <h2 className="font-quicksand text-lg font-semibold mb-4">Documenti Knowledge Base</h2>
+        <h2 className="font-quicksand text-lg font-semibold mb-4 text-foreground">
+          Documenti Knowledge Base
+        </h2>
         <GameKbDocuments gameId={gameId} />
-      </div>
-      <div>
-        <h2 className="font-quicksand text-lg font-semibold mb-4">Impostazioni KB</h2>
-        <GameKbSettings gameId={gameId} />
       </div>
     </div>
   );

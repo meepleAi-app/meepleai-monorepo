@@ -15,6 +15,25 @@ using Xunit;
 namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 
 /// <summary>
+/// Fixture della classe: host e database costruiti una volta sola. Il perche', i numeri e le
+/// condizioni per applicare lo stesso schema altrove stanno in <see cref="IntegrationHostFixture"/>.
+///
+/// <para>
+/// 🔴 <b>Perche' condividere il database e' sicuro QUI.</b> Ogni test crea il proprio utente
+/// (<c>CreateUserSessionAsync(db, Guid.NewGuid())</c>) e la propria card via <c>SeedCardAsync</c>,
+/// che genera game/analysis/card con id nuovi. L'unico conteggio, <c>CountFeedbackAsync</c>, e'
+/// filtrato per <c>CardId</c>, quindi non vede le righe degli altri test.
+/// </para>
+/// <para>
+/// Il caso delicato e' <c>Submit_ExceedingDailyCap_Returns429</c>: il cap e' <b>per utente</b>, e
+/// l'utente e' nuovo a ogni test, quindi il contatore riparte da zero comunque. Se il cap fosse
+/// globale la classe fallirebbe il criterio.
+/// </para>
+/// </summary>
+public sealed class SubmitMechanicCardFeedbackHostFixture(SharedTestcontainersFixture shared)
+    : IntegrationHostFixture(shared, "submit_card_feedback");
+
+/// <summary>
 /// Integration tests for <c>POST /api/v1/mechanic-cards/{cardId}/feedback</c> (#533 ME-M3.1) against
 /// real PostgreSQL: create (201), idempotent change (200, no duplicate), per-day cap (429), missing
 /// card (404), and the authentication gate (401).
@@ -22,47 +41,33 @@ namespace Api.Tests.BoundedContexts.SharedGameCatalog.Infrastructure;
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "SharedGameCatalog")]
-public sealed class SubmitMechanicCardFeedbackEndpointIntegrationTests : IAsyncLifetime
+public sealed class SubmitMechanicCardFeedbackEndpointIntegrationTests
+    : IClassFixture<SubmitMechanicCardFeedbackHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
-    private WebApplicationFactory<Program> _factory = null!;
-    private HttpClient _client = null!;
+    private readonly WebApplicationFactory<Program> _factory;
+    private readonly HttpClient _client;
     private string _userSessionToken = null!;
     private Guid _userId;
 
-    public SubmitMechanicCardFeedbackEndpointIntegrationTests(SharedTestcontainersFixture fixture)
+    public SubmitMechanicCardFeedbackEndpointIntegrationTests(SubmitMechanicCardFeedbackHostFixture host)
     {
-        _fixture = fixture;
-        _testDbName = $"submit_card_feedback_{Guid.NewGuid():N}";
+        _factory = host.Factory;
+        _client = host.Client;
     }
 
+    // Il seeding resta per test — xUnit crea una nuova istanza della classe per ogni [Fact] — ma
+    // costruisce solo l'utente, non l'host. L'id e' nuovo a ogni test, ed e' cio' che tiene
+    // isolato il cap giornaliero per utente di Submit_ExceedingDailyCap_Returns429.
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync();
-            var (userId, token) = await TestSessionHelper.CreateUserSessionAsync(dbContext, Guid.NewGuid());
-            _userId = userId;
-            _userSessionToken = token;
-        }
-
-        _client = _factory.CreateClient();
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var (userId, token) = await TestSessionHelper.CreateUserSessionAsync(dbContext, Guid.NewGuid());
+        _userId = userId;
+        _userSessionToken = token;
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        _client?.Dispose();
-        if (_factory is not null)
-        {
-            await _factory.DisposeAsync();
-        }
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
-    }
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     private sealed record FeedbackBody(Guid ClaimId, bool IsPositive, string? ErrorType, string? Description, string? SuggestedCitation);
 

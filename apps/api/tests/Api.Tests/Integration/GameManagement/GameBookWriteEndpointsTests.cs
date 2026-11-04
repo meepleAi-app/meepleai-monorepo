@@ -7,11 +7,29 @@ using Api.Tests.Infrastructure;
 using Api.Tests.TestHelpers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Api.Tests.Integration.GameManagement;
+
+/// <summary>
+/// Fixture della classe: host e database costruiti una volta sola. Il perche', i numeri e le
+/// condizioni per applicare lo stesso schema altrove stanno in <see cref="IntegrationHostFixture"/>.
+///
+/// <para>
+/// 🔴 <b>Perche' condividere il database e' sicuro QUI.</b> La classe non semina nulla e tutte e sei
+/// le asserzioni sono status code: tre 401 anonimi, e tre che accettano
+/// <c>Created</c>/<c>NotFound</c> <b>oppure</b> <c>Unauthorized</c> su <c>Guid.NewGuid()</c> generati
+/// dal test stesso. Nessuna lettura di lista, conteggio o ordinamento.
+/// </para>
+/// <para>
+/// Effetto collaterale della conversione: il <c>DisposeAsync</c> precedente <b>non</b> chiamava
+/// <c>DropIsolatedDatabaseAsync</c>, quindi lasciava un database per test in vita fino alla fine del
+/// container. Ora ne esiste uno solo per classe, e viene eliminato.
+/// </para>
+/// </summary>
+public sealed class GameBookWriteHostFixture(SharedTestcontainersFixture shared)
+    : IntegrationHostFixture(shared, "gamebook_books");
 
 /// <summary>
 /// Integration tests for the GameBook write endpoints
@@ -28,37 +46,15 @@ namespace Api.Tests.Integration.GameManagement;
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
-public sealed class GameBookWriteEndpointsTests : IAsyncLifetime
+public sealed class GameBookWriteEndpointsTests : IClassFixture<GameBookWriteHostFixture>
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
-    private WebApplicationFactory<Program> _factory = null!;
-    private HttpClient _client = null!;
+    private readonly WebApplicationFactory<Program> _factory;
+    private readonly HttpClient _client;
 
-    public GameBookWriteEndpointsTests(SharedTestcontainersFixture fixture)
+    public GameBookWriteEndpointsTests(GameBookWriteHostFixture host)
     {
-        _fixture = fixture;
-        _testDbName = $"gamebook_books_{Guid.NewGuid():N}";
-    }
-
-    public async ValueTask InitializeAsync()
-    {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync();
-        }
-
-        _client = _factory.CreateClient();
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        _client?.Dispose();
-        await _factory.DisposeAsync();
+        _factory = host.Factory;
+        _client = host.Client;
     }
 
     private static object ValidCreateBody(Guid gameRefId) => new

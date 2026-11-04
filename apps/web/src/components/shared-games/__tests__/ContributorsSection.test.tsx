@@ -28,7 +28,9 @@ const mockPrimaryContributor: GameContributorDto = {
   isPrimaryContributor: true,
   contributionCount: 15,
   firstContributionAt: '2023-10-01T10:00:00Z',
-  topBadges: [{ id: 'badge-1', name: 'Pioneer', tier: 'Gold', iconUrl: 'https://example.com/gold.png' }],
+  topBadges: [
+    { code: 'PIONEER', name: 'Pioneer', tier: 'Gold', iconUrl: 'https://example.com/gold.png' },
+  ],
 };
 
 const mockAdditionalContributors: GameContributorDto[] = [
@@ -48,7 +50,7 @@ const mockAdditionalContributors: GameContributorDto[] = [
     isPrimaryContributor: false,
     contributionCount: 5,
     firstContributionAt: '2023-12-01T09:00:00Z',
-    topBadges: [{ id: 'badge-2', name: 'Helper', tier: 'Bronze', iconUrl: null }],
+    topBadges: [{ code: 'HELPER', name: 'Helper', tier: 'Bronze', iconUrl: null }],
   },
 ];
 

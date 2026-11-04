@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { axe } from 'jest-axe';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
@@ -51,6 +51,24 @@ describe('GameNightPlanningLayout', () => {
   it('renders AI suggestion card in left column', () => {
     render(<GameNightPlanningLayout title="Test" />);
     expect(screen.getByText(/suggerimenti ai/i)).toBeInTheDocument();
+  });
+
+  // #4187: il selettore cerca nel catalogo sul server, invece di offrire solo la prima pagina.
+  it('offers a catalog search above the picker, and forwards what the user types', () => {
+    const onCatalogSearchChange = vi.fn();
+    render(
+      <GameNightPlanningLayout
+        title="Test"
+        catalogSearch=""
+        onCatalogSearchChange={onCatalogSearchChange}
+      />
+    );
+    fireEvent.click(screen.getByText(/aggiungi giochi/i));
+
+    const search = screen.getByRole('searchbox', { name: /cerca un gioco nel catalogo/i });
+    fireEvent.change(search, { target: { value: 'Wingspan' } });
+
+    expect(onCatalogSearchChange).toHaveBeenCalledWith('Wingspan');
   });
 
   it('passes heading-order axe rule (#1842)', async () => {

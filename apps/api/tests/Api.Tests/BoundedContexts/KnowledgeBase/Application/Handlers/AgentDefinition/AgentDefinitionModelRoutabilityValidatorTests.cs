@@ -23,10 +23,10 @@ public sealed class AgentDefinitionModelRoutabilityValidatorTests
         new(new Mock<IVectorDocumentRepository>().Object);
 
     private static CreateAgentDefinitionCommand CreateWith(string model) =>
-        new(Name: "A", Description: "d", Type: "RAG", Model: model, MaxTokens: 500, Temperature: 0.3f);
+        new(Name: "A", Description: "d", Model: model, MaxTokens: 500, Temperature: 0.3f);
 
     private static UpdateAgentDefinitionCommand UpdateWith(string model) =>
-        new(Id: Guid.NewGuid(), Name: "A", Description: "d", Type: "RAG", Model: model, MaxTokens: 500, Temperature: 0.3f);
+        new(Id: Guid.NewGuid(), Name: "A", Description: "d", Model: model, MaxTokens: 500, Temperature: 0.3f);
 
     [Fact]
     public async Task Create_BareCloudModelId_FailsValidation()

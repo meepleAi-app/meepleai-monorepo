@@ -136,3 +136,28 @@ describe('CitationModal', () => {
     );
   });
 });
+
+describe('CitationModal — citazione senza pagina (#4819)', () => {
+  const withoutPage: Citation = { ...sampleCitation, pageNumber: null };
+
+  it('titles the dialog with the source, not with a page', () => {
+    render(<CitationModal citation={withoutPage} open onClose={vi.fn()} />);
+
+    const title = screen.getByRole('heading');
+    expect(title).toHaveTextContent('Fonte');
+    expect(title.textContent).not.toContain('p.');
+  });
+
+  it('hands the PDF tab no page, so it can say so', () => {
+    render(<CitationModal citation={withoutPage} open onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole('tab', { name: /pdf originale/i }));
+
+    expect(screen.getByTestId('citation-pdf-tab-mounted')).not.toHaveAttribute('data-initial-page');
+  });
+
+  it('still titles the dialog with the page when there is one', () => {
+    render(<CitationModal citation={sampleCitation} open onClose={vi.fn()} />);
+
+    expect(screen.getByRole('heading')).toHaveTextContent('p. 12');
+  });
+});

@@ -1,9 +1,11 @@
 using Api.BoundedContexts.DocumentProcessing.Application.Commands;
 using Api.BoundedContexts.DocumentProcessing.Application.Validators;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
 using Api.Tests.Constants;
 using FluentAssertions;
 using FluentValidation.TestHelper;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 using Moq;
 using Xunit;
 
@@ -21,7 +23,7 @@ public class UploadPrivatePdfCommandValidatorTests
 
     public UploadPrivatePdfCommandValidatorTests()
     {
-        _validator = new UploadPrivatePdfCommandValidator();
+        _validator = new UploadPrivatePdfCommandValidator(Options.Create(new PdfProcessingOptions()));
     }
 
     #region UserId Validation
@@ -154,11 +156,11 @@ public class UploadPrivatePdfCommandValidatorTests
     [Fact]
     public void Validate_WithMaxSizeFile_PassesValidation()
     {
-        // Arrange - Exactly 50 MB file
+        // Arrange - Exactly the single PDF limit (#4449)
         var command = new UploadPrivatePdfCommand(
             Guid.NewGuid(),
             Guid.NewGuid(),
-            CreateMockPdfFormFile("maxsize.pdf", 52_428_800)); // Exactly 50 MB
+            CreateMockPdfFormFile("maxsize.pdf", 104_857_600)); // Exactly 100 MB
 
         // Act
         var result = _validator.TestValidate(command);

@@ -172,7 +172,11 @@ public sealed class SharedGameTranslationRepositoryIntegrationTests : IAsyncLife
         (await _repository.ExistsActiveAsync(gameId, "it")).Should().BeTrue();
 
         // Reload, soft-delete, save
+        // #4298: the context is NoTracking by default (MeepleAiDbContext.OnConfiguring), so an
+        // entity read without AsTracking() is detached: setting IsDeleted on it and saving wrote
+        // nothing, and the test then observed a row that had never been soft-deleted.
         var entity = await _dbContext.SharedGameTranslations
+            .AsTracking()
             .FirstAsync(t => t.SharedGameId == gameId && t.Locale == "it");
         entity.IsDeleted = true;
         entity.DeletedAt = DateTimeOffset.UtcNow;
@@ -205,7 +209,9 @@ public sealed class SharedGameTranslationRepositoryIntegrationTests : IAsyncLife
 
         // Soft-delete the existing row (direct EF update — repository will
         // add SoftDelete plumbing in Wave 3).
+        // AsTracking: see ExistsActiveAsync_True_AfterAdd_False_AfterSoftDelete (#4298).
         var firstEntity = await _dbContext.SharedGameTranslations
+            .AsTracking()
             .FirstAsync(t => t.SharedGameId == gameId && t.Locale == "it");
         firstEntity.IsDeleted = true;
         firstEntity.DeletedAt = now;

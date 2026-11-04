@@ -9,7 +9,8 @@ namespace Api.BoundedContexts.EntityRelationships.Application.Commands;
 ///
 /// Business Rules enforced by handler:
 /// - BR-04: scope=User → IsAdminApproved = true automatically (in EntityLink.Create)
-/// - BR-08: No duplicate (sourceType, sourceId, targetType, targetId, linkType)
+/// - BR-08: No duplicate (sourceType, sourceId, targetType, targetId, linkType); a User link is personal,
+///   so for it the duplicate is per owner (#4641)
 /// Source != Target validated by EntityLink.Create (ArgumentException).
 /// </summary>
 internal record CreateEntityLinkCommand(

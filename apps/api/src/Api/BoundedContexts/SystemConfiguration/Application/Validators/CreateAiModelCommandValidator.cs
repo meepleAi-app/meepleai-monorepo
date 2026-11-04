@@ -11,7 +11,8 @@ namespace Api.BoundedContexts.SystemConfiguration.Application.Validators;
 /// </remarks>
 internal sealed class CreateAiModelCommandValidator : AbstractValidator<CreateAiModelCommand>
 {
-    private static readonly string[] ValidProviders = { "OpenRouter", "Ollama", "Azure", "OpenAI" };
+    // #4169: i provider che hanno un client. Azure e OpenAI non ne hanno; DeepSeek sì, e mancava.
+    private static readonly string[] ValidProviders = { "OpenRouter", "Ollama", "DeepSeek" };
 
     public CreateAiModelCommandValidator()
     {

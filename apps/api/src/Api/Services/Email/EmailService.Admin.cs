@@ -1,5 +1,3 @@
-using System.Net;
-using System.Net.Mail;
 using Api.Infrastructure.Security;
 
 namespace Api.Services;
@@ -29,22 +27,7 @@ internal partial class EmailService
                 pendingByType,
                 reviewQueueUrl);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, toName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var client = new SmtpClient(_smtpHost, _smtpPort);
-            client.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                client.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await client.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "admin_share_digest", ct, toName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Admin digest email sent: To={MaskedEmail}, TotalPending={TotalPending}",
@@ -73,26 +56,11 @@ internal partial class EmailService
     {
         try
         {
-            var reviewUrl = $"{_frontendBaseUrl}/admin/approval-queue?gameId={gameId}";
+            var reviewUrl = $"{FrontendBaseUrl}/admin/approval-queue?gameId={gameId}";
             var subject = "New Game Submitted for Approval";
             var body = BuildSharedGameSubmittedEmailBody(toName, gameTitle, submitterName, reviewUrl);
 
-            using var message = new MailMessage();
-            message.From = new MailAddress(_fromAddress, _fromName);
-            message.To.Add(new MailAddress(toEmail, toName));
-            message.Subject = subject;
-            message.Body = body;
-            message.IsBodyHtml = true;
-
-            using var smtpClient = new SmtpClient(_smtpHost, _smtpPort);
-            smtpClient.EnableSsl = _enableSsl;
-
-            if (!string.IsNullOrEmpty(_smtpUsername) && !string.IsNullOrEmpty(_smtpPassword))
-            {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-            }
-
-            await smtpClient.SendMailAsync(message, ct).ConfigureAwait(false);
+            await SendViaTransportAsync(toEmail, subject, body, "shared_game_submitted", ct, toName).ConfigureAwait(false);
 
             _logger.LogInformation(
                 "Shared game approval notification email sent to admin {Email} for game {GameTitle}",
@@ -193,7 +161,7 @@ internal partial class EmailService
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
         <p>This is an automated message, please do not reply to this email.</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>&copy; {FooterYear} MeepleAI. All rights reserved.</p>
     </div>
 </body>
 </html>
@@ -247,7 +215,7 @@ internal partial class EmailService
 
     <div style=""margin-top: 20px; text-align: center; font-size: 12px; color: #999;"">
         <p>This is an automated message, please do not reply to this email.</p>
-        <p>&copy; 2025 MeepleAI. All rights reserved.</p>
+        <p>&copy; {FooterYear} MeepleAI. All rights reserved.</p>
     </div>
 </body>
 </html>

@@ -4,7 +4,11 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services.MechanicExtractor;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
+using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.Services;
 using Api.Tests.Constants;
@@ -128,7 +132,7 @@ public sealed class PublishMechanicCardEndpointIntegrationTests : IAsyncLifetime
         using (var contentDoc = JsonDocument.Parse(card.Content))
         {
             var contentRoot = contentDoc.RootElement;
-            contentRoot.GetProperty("schema_version").GetInt32().Should().Be(2); // #2782 D6: bumped for real validations projection.
+            contentRoot.GetProperty("schema_version").GetInt32().Should().Be(3); // spec 2026-10-08: v3 adds kind/priority/overrides/trigger.
             contentRoot.GetProperty("source_analysis_id").GetGuid().Should().Be(analysisId);
             contentRoot.GetProperty("claims").GetArrayLength().Should().Be(1);
         }
@@ -162,6 +166,100 @@ public sealed class PublishMechanicCardEndpointIntegrationTests : IAsyncLifetime
 
         var second = await SendPublishAsync(analysisId, new { });
         second.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public async Task Publish_ClaimWithTriggerAndOverride_RoundTripsThroughJsonbToThePublishedCard()
+    {
+        // The only place the EF ValueConverter lambdas of mechanic_claims.overrides / .trigger run
+        // against PostgreSQL: written by EF, read back by the publish handler, projected into the card.
+        var gameId = await SeedSharedGameAsync();
+        var analysisId = await SeedAnalysisAsync(gameId, status: 2, claimStatuses: new[] { 1, 1 });
+
+        Guid generalId;
+        Guid exceptionId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            var claims = await db.Set<MechanicClaimEntity>()
+                .AsTracking() // the context defaults to NoTracking: without this SaveChanges writes nothing
+                .Where(c => c.AnalysisId == analysisId)
+                .OrderBy(c => c.DisplayOrder)
+                .ToListAsync();
+            generalId = claims[0].Id;
+            exceptionId = claims[1].Id;
+            claims[1].Kind = 1;     // Exception
+            claims[1].Priority = 2; // Card
+            claims[1].Overrides = new List<Guid> { generalId };
+            claims[1].Trigger = new MechanicTrigger("fase azione", null, "carta fretta");
+            await db.SaveChangesAsync();
+
+            var storedTrigger = await db.Database
+                .SqlQuery<string>($"SELECT trigger::text AS \"Value\" FROM mechanic_claims WHERE id = {exceptionId}")
+                .SingleAsync();
+            storedTrigger.Should().Contain("fase azione").And.NotContain("IsEmpty", "the computed flag is not persisted");
+        }
+
+        (await SendPublishAsync(analysisId, new { })).StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Get, $"/api/v1/games/{gameId}/card", _adminSessionToken);
+        var response = await _client.SendAsync(request);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        var card = await response.Content.ReadFromJsonAsync<PublishedMechanicCardDto>(JsonOptions);
+
+        var exception = card!.Sections.SelectMany(s => s.Claims).Single(c => c.Id == exceptionId);
+        exception.Kind.Should().Be(MechanicClaimKind.Exception);
+        exception.Priority.Should().Be(MechanicRulePriority.Card);
+        exception.Overrides.Should().Contain(generalId);
+        exception.Trigger.Should().NotBeNull();
+        exception.Trigger!.Phase.Should().Be("fase azione");
+        exception.Trigger.Action.Should().BeNull();
+        exception.Trigger.Component.Should().Be("carta fretta");
+        var general = card.Sections.SelectMany(s => s.Claims).Single(c => c.Id == generalId);
+        general.Trigger.Should().BeNull();
+        general.Overrides.Should().BeNullOrEmpty();
+    }
+
+    [Fact]
+    public async Task Requeue_WithPartiallyExtractedAnalysisForCurrentPrompt_Returns409()
+    {
+        // ux_mechanic_analyses_shared_game_pdf_prompt is unique with filter `status <> 3`, so a
+        // PartiallyExtracted row (status 4) blocks a second row for the same (game, pdf, prompt).
+        // The PDF is linked and indexed so that, without the requeue guard, the request reaches the
+        // INSERT of the new analysis (23505 → 500) instead of stopping at an earlier 404/409.
+        var gameId = await SeedSharedGameAsync();
+        var pdfId = await SeedIndexedPdfLinkedToGameAsync(gameId);
+        var publishedId = await SeedAnalysisAsync(gameId, status: 2, claimStatuses: new[] { 1 }, pdfDocumentId: pdfId);
+        (await SendPublishAsync(publishedId, new { })).StatusCode.Should().Be(HttpStatusCode.Created);
+
+        string currentPrompt;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            currentPrompt = scope.ServiceProvider.GetRequiredService<IMechanicPromptProvider>().PromptVersion;
+        }
+
+        currentPrompt.Should().NotBe("mechanic-extractor-v1", "the published analysis must not occupy the current prompt slot");
+        await SeedAnalysisAsync(gameId, status: 4, claimStatuses: new[] { 0 }, pdfDocumentId: pdfId, promptVersion: currentPrompt);
+
+        var request = TestSessionHelper.CreateAuthenticatedRequest(
+            HttpMethod.Post,
+            $"{EndpointBase}/requeue/{gameId}",
+            _adminSessionToken,
+            new { });
+        var response = await _client.SendAsync(request);
+        var body = await response.Content.ReadAsStringAsync();
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict, body);
+        body.Should().Contain("parzialmente estratta");
+
+        using var verifyScope = _factory.Services.CreateScope();
+        var db = verifyScope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        (await db.MechanicAnalyses.AsNoTracking().IgnoreQueryFilters().CountAsync(a => a.SharedGameId == gameId))
+            .Should().Be(2, "no new analysis is created");
+        _backgroundTaskMock.Verify(
+            b => b.ExecuteWithCancellation(It.IsAny<string>(), It.IsAny<Func<CancellationToken, Task>>()),
+            Times.Never);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -199,7 +297,69 @@ public sealed class PublishMechanicCardEndpointIntegrationTests : IAsyncLifetime
         return gameId;
     }
 
-    private async Task<Guid> SeedAnalysisAsync(Guid sharedGameId, int status, int[] claimStatuses)
+    // Same shape as MechanicAnalysisEndpointsIntegrationTests: a Ready PDF with text chunks, linked to
+    // the game through shared_game_documents, so GenerateMechanicAnalysisCommandHandler passes its
+    // 404 (link) and 409 (no chunks) checks.
+    private async Task<Guid> SeedIndexedPdfLinkedToGameAsync(Guid sharedGameId)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var pdfId = Guid.NewGuid();
+        dbContext.Set<PdfDocumentEntity>().Add(new PdfDocumentEntity
+        {
+            Id = pdfId,
+            SharedGameId = sharedGameId,
+            FileName = "rulebook.pdf",
+            FilePath = $"/tmp/tests/{pdfId}.pdf",
+            FileSizeBytes = 1024,
+            ContentType = "application/pdf",
+            UploadedByUserId = TestAdminId,
+            UploadedAt = DateTime.UtcNow,
+            ProcessingState = "Ready",
+            Language = "en",
+            IsActiveForRag = true,
+            LicenseType = 0,
+            DocumentCategory = "Rulebook"
+        });
+
+        for (var i = 0; i < 2; i++)
+        {
+            dbContext.Set<TextChunkEntity>().Add(new TextChunkEntity
+            {
+                Id = Guid.NewGuid(),
+                PdfDocumentId = pdfId,
+                Content = $"Rulebook chunk {i}: each turn consists of draw, action, resolve and cleanup phases.",
+                ChunkIndex = i,
+                PageNumber = i + 1,
+                CharacterCount = 90,
+                CreatedAt = DateTime.UtcNow
+            });
+        }
+
+        dbContext.Set<SharedGameDocumentEntity>().Add(new SharedGameDocumentEntity
+        {
+            Id = Guid.NewGuid(),
+            SharedGameId = sharedGameId,
+            PdfDocumentId = pdfId,
+            DocumentType = 0, // Rulebook
+            Version = "1.0",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = TestAdminId,
+            ApprovalStatus = 1 // Approved
+        });
+
+        await dbContext.SaveChangesAsync();
+        return pdfId;
+    }
+
+    private async Task<Guid> SeedAnalysisAsync(
+        Guid sharedGameId,
+        int status,
+        int[] claimStatuses,
+        Guid? pdfDocumentId = null,
+        string promptVersion = "mechanic-extractor-v1")
     {
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
@@ -211,8 +371,8 @@ public sealed class PublishMechanicCardEndpointIntegrationTests : IAsyncLifetime
         {
             Id = analysisId,
             SharedGameId = sharedGameId,
-            PdfDocumentId = Guid.NewGuid(),
-            PromptVersion = "mechanic-extractor-v1",
+            PdfDocumentId = pdfDocumentId ?? Guid.NewGuid(),
+            PromptVersion = promptVersion,
             Status = status,
             CreatedBy = TestAdminId,
             CreatedAt = now,

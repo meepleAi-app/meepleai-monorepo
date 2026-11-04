@@ -105,6 +105,8 @@ internal sealed class GroupMemoryRepository : RepositoryBase, IGroupMemoryReposi
         SetPrivateProperty(memory, nameof(GroupMemory.Id), entity.Id);
         SetPrivateProperty(memory, nameof(GroupMemory.CreatedAt), entity.CreatedAt);
         SetPrivateProperty(memory, nameof(GroupMemory.LastProcessedEventId), entity.LastProcessedEventId);
+        if (entity.ProcessedSessionIdsJson != null)
+            memory.RestoreProcessedSessions(JsonSerializer.Deserialize<List<Guid>>(entity.ProcessedSessionIdsJson) ?? []);
 
         // Restore members from JSONB
         if (entity.MembersJson != null)
@@ -175,6 +177,9 @@ internal sealed class GroupMemoryRepository : RepositoryBase, IGroupMemoryReposi
             CreatorId = memory.CreatorId,
             CreatedAt = memory.CreatedAt,
             LastProcessedEventId = memory.LastProcessedEventId,
+            ProcessedSessionIdsJson = memory.ProcessedSessionIds.Count > 0
+                ? JsonSerializer.Serialize(memory.ProcessedSessionIds)
+                : null,
         };
 
         // Serialize members to JSONB

@@ -19,6 +19,10 @@ vi.mock('@/lib/api', () => ({
   },
 }));
 
+import {
+  QA_TOO_MANY_REQUESTS_MESSAGE,
+  QaTooManyRequestsError,
+} from '@/components/chat-unified/qaStreamErrors';
 import { qaStream } from '@/lib/api/clients/chatClient';
 import { api } from '@/lib/api';
 import { GameChatTab } from '../GameChatTab';
@@ -169,5 +173,210 @@ describe('GameChatTab', () => {
     render(<GameChatTab gameId="wingspan" />);
     await waitFor(() => expect(screen.getByText('old only')).toBeInTheDocument());
     expect(screen.queryByRole('note')).not.toBeInTheDocument();
+  });
+
+  /**
+   * #4168 (5g-b): la domanda fermata dalla quota del piano. Prima di questo test la chat in partita
+   * non mostrava niente quando lo stream finiva con un errore: la domanda restava lì, senza
+   * risposta e senza un perché. Per la quota mostra l'avviso, con i numeri del piano e il link.
+   */
+  it('plan quota: shows the notice with the way to the plans, and keeps the question', async () => {
+    vi.mocked(qaStream).mockReturnValueOnce(
+      mockStream([
+        {
+          type: 5,
+          data: {
+            errorMessage: 'Tier limit exceeded: AgentQuery (3/3)',
+            errorCode: 'TIER_LIMIT_EXCEEDED',
+            current: 3,
+            max: 3,
+            upgradeUrl: '/pricing',
+          },
+        },
+      ]) as any
+    );
+    render(<GameChatTab gameId="wingspan" />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'q?' } });
+    fireEvent.click(screen.getByRole('button', { name: /invia/i }));
+
+    const notice = await screen.findByTestId('tier-limit-exceeded');
+    expect(notice).toHaveTextContent(
+      'Hai usato tutte le domande di oggi previste dal tuo piano (3 su 3)'
+    );
+    expect(screen.getByRole('link', { name: 'Vedi i piani' })).toHaveAttribute('href', '/pricing');
+    expect(screen.getByText('q?')).toBeInTheDocument();
+    expect(screen.queryByText(/Tier limit exceeded/)).not.toBeInTheDocument();
+  });
+
+  it('plan quota: the notice goes away with the next question', async () => {
+    vi.mocked(qaStream).mockReturnValueOnce(
+      mockStream([
+        { type: 5, data: { errorCode: 'TIER_LIMIT_EXCEEDED', current: 3, max: 3 } },
+      ]) as any
+    );
+    render(<GameChatTab gameId="wingspan" />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'q?' } });
+    fireEvent.click(screen.getByRole('button', { name: /invia/i }));
+    await screen.findByTestId('tier-limit-exceeded');
+
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'q2?' } });
+    fireEvent.click(screen.getByRole('button', { name: /invia/i }));
+
+    await waitFor(() => expect(screen.getByText(/Sì, ogni potere/)).toBeInTheDocument());
+    expect(screen.queryByTestId('tier-limit-exceeded')).not.toBeInTheDocument();
+  });
+
+  /**
+   * #4388: il backend tiene aperte al massimo due risposte per utente e rifiuta la terza con 429.
+   * La domanda resta e compare la frase che dice di aspettare; prima non compariva niente e la
+   * richiesta rifiutata risaliva come promessa rifiutata, senza chi la gestisse.
+   */
+  it('too many open answers: keeps the question and says to wait', async () => {
+    const refused = async function* () {
+      throw new QaTooManyRequestsError();
+      yield happyEvents[2];
+    };
+    vi.mocked(qaStream).mockReturnValueOnce(refused() as any);
+    render(<GameChatTab gameId="wingspan" />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'q?' } });
+    fireEvent.click(screen.getByRole('button', { name: /invia/i }));
+
+    expect(await screen.findByTestId('answer-refusal')).toHaveTextContent(
+      QA_TOO_MANY_REQUESTS_MESSAGE
+    );
+    expect(screen.getByText('q?')).toBeInTheDocument();
+  });
+
+  it('too many open answers: the notice goes away with the next question', async () => {
+    const refused = async function* () {
+      throw new QaTooManyRequestsError();
+      yield happyEvents[2];
+    };
+    vi.mocked(qaStream).mockReturnValueOnce(refused() as any);
+    render(<GameChatTab gameId="wingspan" />);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'q?' } });
+    fireEvent.click(screen.getByRole('button', { name: /invia/i }));
+    await screen.findByTestId('answer-refusal');
+
+    vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'q2?' } });
+    fireEvent.click(screen.getByRole('button', { name: /invia/i }));
+
+    await waitFor(() => expect(screen.getByText(/Sì, ogni potere/)).toBeInTheDocument());
+    expect(screen.queryByTestId('answer-refusal')).not.toBeInTheDocument();
+  });
+
+  /**
+   * #4332: un errore vero dello stream, che non è né la quota né il 429. `ask` rifiuta — è il
+   * contratto dell'hook, fissato in `useGameChat.test.tsx` — e `GameChatTab` faceva
+   * `void chat.ask(q)`, senza un catch e senza leggere `isError`: la domanda restava lì, senza
+   * risposta e senza un perché, e il rifiuto risaliva come promessa non gestita.
+   */
+  describe('stream error (#4332)', () => {
+    const failing = (error: Error) =>
+      async function* () {
+        throw error;
+        yield happyEvents[2];
+      };
+
+    function ask(question: string) {
+      fireEvent.change(screen.getByRole('textbox'), { target: { value: question } });
+      fireEvent.click(screen.getByRole('button', { name: /invia/i }));
+    }
+
+    it('an error event says the answer did not arrive, in Italian, and keeps the question', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(
+        mockStream([
+          { type: 5, data: { errorCode: 'AI_PROVIDER_UNAVAILABLE', message: 'upstream 503' } },
+        ]) as any
+      );
+      render(<GameChatTab gameId="wingspan" />);
+      ask('q?');
+
+      expect(await screen.findByTestId('answer-error')).toHaveTextContent(
+        'Il servizio AI è temporaneamente non disponibile. Riprova tra qualche minuto.'
+      );
+      expect(screen.getByText('q?')).toBeInTheDocument();
+      expect(screen.queryByText(/upstream 503/)).not.toBeInTheDocument();
+    });
+
+    it('an unknown code gets the generic sentence, never the backend text', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(
+        mockStream([
+          {
+            type: 5,
+            data: {
+              errorCode: 'INTERNAL_ERROR',
+              message: 'An error occurred: Npgsql.PostgresException 42P01',
+            },
+          },
+        ]) as any
+      );
+      render(<GameChatTab gameId="wingspan" />);
+      ask('q?');
+
+      expect(await screen.findByTestId('answer-error')).toHaveTextContent(
+        'La risposta non è arrivata. Riprova tra poco.'
+      );
+      expect(screen.queryByText(/Npgsql|An error occurred/)).not.toBeInTheDocument();
+    });
+
+    it('a stream cut off before its result says the answer was interrupted', async () => {
+      // Un proxy che taglia a metà: qualche token, poi la connessione si chiude pulita.
+      vi.mocked(qaStream).mockReturnValueOnce(mockStream([{ type: 7, data: 'Cinque ' }]) as any);
+      render(<GameChatTab gameId="wingspan" />);
+      ask('q?');
+
+      expect(await screen.findByTestId('answer-error')).toHaveTextContent(
+        'La risposta si è interrotta prima della fine, quindi non è completa. Riprova a chiedere.'
+      );
+      expect(screen.getByText('q?')).toBeInTheDocument();
+      expect(screen.getByRole('textbox')).toBeEnabled();
+    });
+
+    it('a transport failure gets a generic sentence, not the raw error', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(
+        failing(new Error('QA stream failed: HTTP 500'))() as any
+      );
+      render(<GameChatTab gameId="wingspan" />);
+      ask('q?');
+
+      expect(await screen.findByTestId('answer-error')).toHaveTextContent(
+        'La risposta non è arrivata. Riprova tra poco.'
+      );
+      expect(screen.queryByText(/HTTP 500/)).not.toBeInTheDocument();
+    });
+
+    it('the user can ask again, and the notice goes away with the next question', async () => {
+      vi.mocked(qaStream).mockReturnValueOnce(failing(new Error('boom'))() as any);
+      render(<GameChatTab gameId="wingspan" />);
+      ask('q?');
+      await screen.findByTestId('answer-error');
+      expect(screen.getByRole('textbox')).toBeEnabled();
+
+      vi.mocked(qaStream).mockReturnValueOnce(mockStream(happyEvents) as any);
+      ask('q2?');
+
+      await waitFor(() => expect(screen.getByText(/Sì, ogni potere/)).toBeInTheDocument());
+      expect(screen.queryByTestId('answer-error')).not.toBeInTheDocument();
+    });
+
+    it('leaves no unhandled promise rejection behind', async () => {
+      const unhandled = vi.fn();
+      process.on('unhandledRejection', unhandled);
+      try {
+        vi.mocked(qaStream).mockReturnValueOnce(failing(new Error('boom'))() as any);
+        render(<GameChatTab gameId="wingspan" />);
+        ask('q?');
+        await screen.findByTestId('answer-error');
+        // Node segnala un rifiuto non gestito a fine tick: lascia girare il ciclo degli eventi.
+        await new Promise(resolve => setTimeout(resolve, 20));
+
+        expect(unhandled).not.toHaveBeenCalled();
+      } finally {
+        process.off('unhandledRejection', unhandled);
+      }
+    });
   });
 });

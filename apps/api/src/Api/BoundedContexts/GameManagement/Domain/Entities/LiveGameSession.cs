@@ -956,6 +956,24 @@ internal sealed class LiveGameSession : AggregateRoot<Guid>
         if (nonSpectators.Count == 0)
             return Guid.Empty;
 
+        // #4112: `(CurrentTurnIndex - 1) % n` indicizzava FUORI RANGE prima dell'avvio.
+        // `CurrentTurnIndex` vale 0 alla creazione e diventa 1 solo in `Start()`, mentre
+        // `AddPlayer` appende già a `_turnOrder` — quindi l'uscita anticipata su
+        // `_turnOrder.Count == 0` non scatta. In C# il `%` tiene il segno del dividendo, cioè
+        // `(0 - 1) % n` è **-1** per ogni n > 1, e `nonSpectators[-1]` lancia.
+        //
+        // Con un solo giocatore `(0-1) % 1` fa 0, e tutto sembrava funzionare: ecco perché il
+        // difetto è sopravvissuto fino a quando un flusso ha aggiunto il secondo giocatore
+        // prima di avviare la sessione.
+        //
+        // Prima dell'avvio il «giocatore di turno» è il **primo** in ordine di turno. Un
+        // modulo positivo (`((x % n) + n) % n`) sarebbe corretto come indice e sbagliato come
+        // semantica: darebbe l'ultimo.
+        if (CurrentTurnIndex <= 0)
+            return nonSpectators[0];
+
+        // Il modulo copre il caso opposto: `CurrentTurnIndex` può superare il numero di
+        // giocatori (i turni avanzano, la lista no), e allora il giro riparte dal primo.
         var turnIndex = (CurrentTurnIndex - 1) % nonSpectators.Count;
         return nonSpectators[turnIndex];
     }

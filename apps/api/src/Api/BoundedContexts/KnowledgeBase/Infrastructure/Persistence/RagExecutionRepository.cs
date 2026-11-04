@@ -103,12 +103,22 @@ internal sealed class RagExecutionRepository : RepositoryBase, IRagExecutionRepo
         var errorCount = await query.CountAsync(e => e.Status == "Error", cancellationToken).ConfigureAwait(false);
         var cacheHitCount = await query.CountAsync(e => e.CacheHit, cancellationToken).ConfigureAwait(false);
         var totalCost = await query.SumAsync(e => e.TotalCost, cancellationToken).ConfigureAwait(false);
-        var avgConfidence = await query
-            .Where(e => e.Confidence != null)
-            .Select(e => e.Confidence!.Value)
-            .DefaultIfEmpty(0)
-            .AverageAsync(cancellationToken)
-            .ConfigureAwait(false);
+        // 🔴 `DefaultIfEmpty(0).AverageAsync()` su una query RADICE non è traducibile da EF e
+        // lanciava in `NavigationExpandingExpressionVisitor`, cioè `/admin/rag-executions/stats`
+        // rispondeva 500 — ma **solo con la tabella non vuota**, perché la guardia
+        // `if (totalCount == 0)` poche righe sopra ritorna prima di arrivare qui. Su un database
+        // locale vuoto l'endpoint dava 200, e quel 200 è lo stesso che il difetto produce: è così
+        // che la prima stesura della correzione di #4059 l'ha dichiarato risolto.
+        // (Nel `GroupBy` di `GetAggregatedMetricsAsync` la stessa forma È traducibile, perché lì è
+        // un'aggregazione su gruppo — da cui l'impressione che il pattern fosse sicuro.)
+        //
+        // `AVG` in SQL ignora i NULL per definizione, quindi proiettare `double?` e lasciare che
+        // il motore aggreghi conserva **esattamente** la semantica precedente — media sui soli
+        // valori presenti — e restituisce NULL quando non ce ne sono, che `?? 0` traduce nello
+        // stesso zero di prima. Una query invece di due, e nessun passaggio lato client.
+        var avgConfidence =
+            await query.Select(e => e.Confidence).AverageAsync(cancellationToken).ConfigureAwait(false)
+            ?? 0;
 
         return new RagExecutionStats(
             TotalExecutions: totalCount,
@@ -125,6 +135,56 @@ internal sealed class RagExecutionRepository : RepositoryBase, IRagExecutionRepo
             .Where(e => e.CreatedAt < cutoff)
             .ExecuteDeleteAsync(cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<int> BlankTextsOlderThanAsync(DateTime cutoff, int batchSize, CancellationToken cancellationToken = default)
+    {
+        ArgumentOutOfRangeException.ThrowIfLessThan(batchSize, 1);
+
+        var total = 0;
+
+        // Key pagination: every batch restarts after the last id seen. The loop ends even if the filter and the
+        // update ever diverge (a column added to one and not to the other) and a row stays selectable after the
+        // update: restarting from the head each time would rewrite the same rows forever.
+        var lastId = Guid.Empty;
+        while (true)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            // Only rows that still have something to blank: a row already blanked is not rewritten, and the count
+            // says how much was really done. `query` is NOT NULL, so "blank" is the empty string.
+            var ids = await DbContext.Set<RagExecution>()
+                .AsNoTracking()
+                .Where(e => e.Id > lastId
+                            && e.CreatedAt < cutoff
+                            && (e.Query != string.Empty || e.ExecutionTrace != null))
+                .OrderBy(e => e.Id)
+                .Select(e => e.Id)
+                .Take(batchSize)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            if (ids.Count == 0)
+                break;
+
+            lastId = ids[^1];
+
+            total += await DbContext.Set<RagExecution>()
+                .Where(e => ids.Contains(e.Id))
+                .ExecuteUpdateAsync(
+                    s => s
+                        .SetProperty(e => e.Query, string.Empty)
+                        .SetProperty(e => e.ExecutionTrace, (string?)null),
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            // A partial batch is the last one.
+            if (ids.Count < batchSize)
+                break;
+        }
+
+        return total;
     }
 
     /// <inheritdoc />
@@ -156,10 +216,11 @@ internal sealed class RagExecutionRepository : RepositoryBase, IRagExecutionRepo
                 TotalCost = g.Sum(e => e.TotalCost),
                 SuccessCount = g.Count(e => e.Status == "Success"),
                 AvgLatencyMs = g.Average(e => (double)e.TotalLatencyMs),
-                AvgConfidence = g.Where(e => e.Confidence != null)
-                    .Select(e => e.Confidence!.Value)
-                    .DefaultIfEmpty(0)
-                    .Average(),
+                // #4635: `Where().Select().DefaultIfEmpty(0).Average()` inside a GroupBy projection is not
+                // translatable (the shape #4059 fixed in GetStatsAsync): it threw on every call, and the middleware
+                // showed it as a 400. SQL AVG skips the NULLs, so the nullable average keeps the old meaning
+                // (the present values only); the zero for "none present" is applied below, after the query.
+                AvgConfidence = g.Average(e => e.Confidence),
                 LastExecutedAt = g.Max(e => (DateTime?)e.CreatedAt)
             })
             .OrderByDescending(s => s.ExecutionCount)
@@ -177,7 +238,7 @@ internal sealed class RagExecutionRepository : RepositoryBase, IRagExecutionRepo
             r.TotalCost,
             r.ExecutionCount > 0 ? (double)r.SuccessCount / r.ExecutionCount : 0,
             r.AvgLatencyMs,
-            r.AvgConfidence,
+            r.AvgConfidence ?? 0,
             r.LastExecutedAt)).ToList();
     }
 
@@ -266,9 +327,17 @@ internal sealed class RagExecutionRepository : RepositoryBase, IRagExecutionRepo
         var query = DbContext.Set<RagExecution>().AsNoTracking();
 
         if (startDate.HasValue)
-            query = query.Where(e => e.CreatedAt >= startDate.Value.ToDateTime(TimeOnly.MinValue));
+        {
+            var start = StartOfDayUtc(startDate.Value);
+            query = query.Where(e => e.CreatedAt >= start);
+        }
+
         if (endDate.HasValue)
-            query = query.Where(e => e.CreatedAt <= endDate.Value.ToDateTime(TimeOnly.MaxValue));
+        {
+            var end = EndOfDayUtc(endDate.Value);
+            query = query.Where(e => e.CreatedAt <= end);
+        }
+
         if (!string.IsNullOrWhiteSpace(strategy))
             query = query.Where(e => e.Strategy == strategy);
 
@@ -340,8 +409,8 @@ internal sealed class RagExecutionRepository : RepositoryBase, IRagExecutionRepo
         TimeSeriesGranularity granularity,
         CancellationToken cancellationToken = default)
     {
-        var start = startDate.ToDateTime(TimeOnly.MinValue);
-        var end = endDate.ToDateTime(TimeOnly.MaxValue);
+        var start = StartOfDayUtc(startDate);
+        var end = EndOfDayUtc(endDate);
 
         var executions = await DbContext.Set<RagExecution>()
             .AsNoTracking()
@@ -360,6 +429,13 @@ internal sealed class RagExecutionRepository : RepositoryBase, IRagExecutionRepo
             .OrderBy(p => p.Bucket)
             .ToList();
     }
+
+    // #4623: `created_at` is `timestamp with time zone`, and Npgsql refuses to write a DateTime with Kind=Unspecified to
+    // it (what ToDateTime(TimeOnly) returns without a kind): the four /rag-dashboard metrics routes answered 400 to
+    // everybody. The upper bound stays TimeOnly.MaxValue, so the last day of the range is included whole.
+    private static DateTime StartOfDayUtc(DateOnly day) => day.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+
+    private static DateTime EndOfDayUtc(DateOnly day) => day.ToDateTime(TimeOnly.MaxValue, DateTimeKind.Utc);
 
     private static DateTime TruncateTimestamp(DateTime dt, TimeSeriesGranularity granularity) =>
         granularity switch

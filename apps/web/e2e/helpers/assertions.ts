@@ -16,7 +16,7 @@ import { Page, expect } from '@playwright/test';
  * This helper reduces duplication of the common pattern:
  * ```typescript
  * const currentUrl = page.url();
- * const isForbidden = await page.locator('text=/forbidden|403|not authorized/i').isVisible().catch(() => false);
+ * const isForbidden = await page.locator('text=/forbidden|403|not authorized/i').isVisible();
  * const isRedirected = !currentUrl.includes(forbiddenPath) || isForbidden;
  * expect(isForbidden || isRedirected).toBe(true);
  * ```
@@ -33,17 +33,11 @@ import { Page, expect } from '@playwright/test';
  * });
  * ```
  */
-export async function expectForbiddenOrRedirect(
-  page: Page,
-  forbiddenPath: string
-): Promise<void> {
+export async function expectForbiddenOrRedirect(page: Page, forbiddenPath: string): Promise<void> {
   await page.waitForLoadState('networkidle');
 
   const currentUrl = page.url();
-  const isForbidden = await page
-    .locator('text=/forbidden|403|not authorized/i')
-    .isVisible()
-    .catch(() => false);
+  const isForbidden = await page.locator('text=/forbidden|403|not authorized/i').isVisible();
   const isRedirected = !currentUrl.includes(forbiddenPath) || isForbidden;
 
   expect(isForbidden || isRedirected).toBe(true);
@@ -54,8 +48,8 @@ export async function expectForbiddenOrRedirect(
  *
  * This helper reduces duplication of the common pattern:
  * ```typescript
- * const hasHeading = await page.locator('h1, h2, h3').first().isVisible().catch(() => false);
- * const hasMainContent = await page.locator('main, [role="main"]').isVisible().catch(() => false);
+ * const hasHeading = await page.locator('h1, h2, h3').first().isVisible();
+ * const hasMainContent = await page.locator('main, [role="main"]').isVisible();
  * expect(hasHeading || hasMainContent).toBe(true);
  * ```
  *
@@ -72,15 +66,8 @@ export async function expectForbiddenOrRedirect(
  * ```
  */
 export async function expectPageLoaded(page: Page): Promise<void> {
-  const hasHeading = await page
-    .locator('h1, h2, h3')
-    .first()
-    .isVisible()
-    .catch(() => false);
-  const hasMainContent = await page
-    .locator('main, [role="main"]')
-    .isVisible()
-    .catch(() => false);
+  const hasHeading = await page.locator('h1, h2, h3').first().isVisible();
+  const hasMainContent = await page.locator('main, [role="main"]').isVisible();
 
   expect(hasHeading || hasMainContent).toBe(true);
 }

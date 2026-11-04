@@ -44,12 +44,10 @@ function buildConnections(
   if (preset === 'none') return undefined;
 
   const counts = showCounts
-    ? { kbCount: 4, agentCount: 2, chatCount: 7, sessionCount: 3, playerCount: 5, chunkCount: 42 }
-    : { kbCount: 0, agentCount: 0, chatCount: 0, sessionCount: 0, playerCount: 0, chunkCount: 0 };
+    ? { kbCount: 4, chatCount: 7, sessionCount: 3, playerCount: 5, chunkCount: 42 }
+    : { kbCount: 0, chatCount: 0, sessionCount: 0, playerCount: 0, chunkCount: 0 };
 
-  const handlers = disabled
-    ? {}
-    : { onKbClick: noop, onAgentClick: noop, onChatClick: noop, onSessionClick: noop };
+  const handlers = disabled ? {} : { onKbClick: noop, onChatClick: noop, onSessionClick: noop };
 
   let items: ConnectionChipProps[];
   switch (preset) {
@@ -57,7 +55,6 @@ function buildConnections(
       items = buildGameConnections(
         {
           kbCount: counts.kbCount,
-          agentCount: counts.agentCount,
           chatCount: counts.chatCount,
           sessionCount: counts.sessionCount,
         },

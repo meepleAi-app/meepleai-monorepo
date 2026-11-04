@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/overlays/tooltip';
 import { Button } from '@/components/ui/primitives/button';
 import { api } from '@/lib/api';
+import { formatExecutionQuery } from '@/lib/format/rag-execution-query';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -57,11 +58,6 @@ interface RagExecution {
   confidence: number | null;
   status: string;
   createdAt: string;
-}
-
-interface EmbeddingInfo {
-  status: string;
-  model: string | null;
 }
 
 interface OpenRouterStatus {
@@ -171,7 +167,7 @@ export default function MissionControlPage() {
     if (name === 'Embedding Service') {
       if (embeddingError) return 'unreachable';
       if (!embeddingInfo) return 'unknown';
-      return (embeddingInfo as EmbeddingInfo).status === 'healthy' ? 'healthy' : 'degraded';
+      return embeddingInfo.status === 'healthy' ? 'healthy' : 'degraded';
     }
     if (name === 'OpenRouter API') {
       if (!openRouterStatus) return 'unknown';
@@ -482,7 +478,9 @@ export default function MissionControlPage() {
                       key={exec.id}
                       className="border-b border-border/60 dark:border-zinc-800/40 last:border-0"
                     >
-                      <td className="py-2 pr-4 max-w-[280px] truncate">{exec.query}</td>
+                      <td className="py-2 pr-4 max-w-[280px] truncate">
+                        {formatExecutionQuery(exec.query)}
+                      </td>
                       <td className="py-2 pr-4">
                         <Badge variant="secondary" className="text-xs">
                           {exec.strategy}

@@ -62,6 +62,18 @@ internal sealed class QueueStreamService : IQueueStreamService
         _logger = logger;
     }
 
+    /// <summary>
+    /// Subscribers currently registered for <paramref name="jobId"/>. The subscription methods are
+    /// lazy iterators: registration happens on the consumer's first <c>MoveNextAsync</c>, at a moment
+    /// chosen by the scheduler, so callers that must publish only after a subscriber exists (the
+    /// tests) synchronise on this instead of guessing with a delay (#4193, same shape as #3711).
+    /// </summary>
+    internal int GetJobSubscriberCount(Guid jobId) =>
+        _jobSubscribers.TryGetValue(jobId, out var subscribers) ? subscribers.Count : 0;
+
+    /// <summary>Queue-wide subscribers currently registered. See <see cref="GetJobSubscriberCount"/>.</summary>
+    internal int QueueSubscriberCount => _queueSubscribers.Count;
+
     public async IAsyncEnumerable<QueueStreamEvent> SubscribeToJob(
         Guid jobId,
         [EnumeratorCancellation] CancellationToken cancellationToken)

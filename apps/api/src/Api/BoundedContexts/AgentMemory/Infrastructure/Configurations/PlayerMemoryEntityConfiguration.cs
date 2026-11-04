@@ -45,6 +45,11 @@ internal sealed class PlayerMemoryEntityConfiguration : IEntityTypeConfiguration
         builder.Property(e => e.LastProcessedEventId)
             .HasColumnName("last_processed_event_id");
 
+        // #4839 option C: the sessions already counted, so a redelivery is recognised whatever came in between
+        builder.Property(e => e.ProcessedSessionIdsJson)
+            .HasColumnName("processed_session_ids")
+            .HasColumnType("jsonb");
+
         // --- JSON Columns ---
 
         builder.Property(e => e.GameStatsJson)

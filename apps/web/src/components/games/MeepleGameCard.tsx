@@ -17,9 +17,8 @@
 
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 
-import { AgentCreationSheet } from '@/components/agent/config';
 import { useAddGameWizard } from '@/components/library/add-game-sheet/AddGameWizardProvider';
 import { MeepleCard, type MeepleCardVariant } from '@/components/ui/data-display/meeple-card';
 import { useEntityActions } from '@/hooks/useEntityActions';
@@ -51,10 +50,6 @@ export function MeepleGameCard({
   onClick,
   className,
 }: MeepleGameCardProps) {
-  // Issue #4777: Agent creation sheet state
-  const [agentSheetOpen, setAgentSheetOpen] = useState(false);
-  const handleCreateAgent = useCallback(() => setAgentSheetOpen(true), []);
-
   // Issue #4822: Open wizard instead of direct add
   const { openWizard } = useAddGameWizard();
   const handleAddToCollection = useCallback(() => {
@@ -78,7 +73,6 @@ export function MeepleGameCard({
     entity: 'game',
     id: game.id,
     entityName: game.title,
-    onCreateAgent: handleCreateAgent,
     onAddToCollection: handleAddToCollection,
   });
 
@@ -111,14 +105,6 @@ export function MeepleGameCard({
         className={className}
         actions={cardActions}
         data-testid={`game-card-${game.id}`}
-      />
-
-      {/* Issue #4777: Agent creation wizard */}
-      <AgentCreationSheet
-        isOpen={agentSheetOpen}
-        onClose={() => setAgentSheetOpen(false)}
-        initialGameId={game.id}
-        initialGameTitle={game.title}
       />
     </>
   );

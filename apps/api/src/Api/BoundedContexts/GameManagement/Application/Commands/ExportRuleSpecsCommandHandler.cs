@@ -76,29 +76,33 @@ internal class ExportRuleSpecsCommandHandler : ICommandHandler<ExportRuleSpecsCo
                 var entry = archive.CreateEntry(fileName, CompressionLevel.Optimal);
 
                 // Write JSON to entry
-                using (var entryStream = entry.Open())
-                using (var writer = new StreamWriter(entryStream))
+                var entryStream = await entry.OpenAsync(cancellationToken).ConfigureAwait(false);
+                await using (entryStream.ConfigureAwait(false))
                 {
-                    var exportObject = new
+                    var writer = new StreamWriter(entryStream);
+                    await using (writer.ConfigureAwait(false))
                     {
-                        gameId = spec.GameId.ToString(),
-                        version = spec.Version,
-                        createdAt = spec.CreatedAt,
-                        rules = spec.Atoms
-                            .OrderBy(a => a.SortOrder)
-                            .Select(a => new
-                            {
-                                id = a.Key,
-                                text = a.Text,
-                                section = a.Section,
-                                page = a.PageNumber?.ToString(CultureInfo.InvariantCulture),
-                                line = a.LineNumber?.ToString(CultureInfo.InvariantCulture)
-                            })
-                            .ToList()
-                    };
+                        var exportObject = new
+                        {
+                            gameId = spec.GameId.ToString(),
+                            version = spec.Version,
+                            createdAt = spec.CreatedAt,
+                            rules = spec.Atoms
+                                .OrderBy(a => a.SortOrder)
+                                .Select(a => new
+                                {
+                                    id = a.Key,
+                                    text = a.Text,
+                                    section = a.Section,
+                                    page = a.PageNumber?.ToString(CultureInfo.InvariantCulture),
+                                    line = a.LineNumber?.ToString(CultureInfo.InvariantCulture)
+                                })
+                                .ToList()
+                        };
 
-                    var json = JsonSerializer.Serialize(exportObject, s_jsonOptions);
-                    await writer.WriteAsync(json).ConfigureAwait(false);
+                        var json = JsonSerializer.Serialize(exportObject, s_jsonOptions);
+                        await writer.WriteAsync(json).ConfigureAwait(false);
+                    }
                 }
             }
         }

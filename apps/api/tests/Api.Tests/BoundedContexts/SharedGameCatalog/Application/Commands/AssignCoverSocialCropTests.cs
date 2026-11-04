@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
@@ -8,6 +9,7 @@ using Api.Services.Pdf;
 using Api.SharedKernel.Domain.Covers;
 using Api.SharedKernel.Infrastructure.Persistence;
 using FluentAssertions;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
@@ -32,6 +34,7 @@ public sealed class AssignCoverSocialCropTests
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IHybridCacheService> _cache = new();
     private readonly Mock<ICacheInvalidationRetryPolicy> _cacheRetryPolicy = new();
+    private readonly Mock<HybridCache> _hybridCache = new();
     private readonly Mock<IWebpVariantGenerator> _webp = new();
     private readonly Mock<IBlobStorageService> _blob = new();
 
@@ -48,8 +51,7 @@ public sealed class AssignCoverSocialCropTests
         new(
             _repository.Object,
             _unitOfWork.Object,
-            _cache.Object,
-            _cacheRetryPolicy.Object,
+            new SharedGameCacheInvalidator(_cache.Object, _cacheRetryPolicy.Object, _hybridCache.Object),
             _webp.Object,
             _blob.Object,
             NullLogger<AssignCoverCommandHandler>.Instance);

@@ -1,6 +1,8 @@
+using Api.BoundedContexts.SessionTracking.Domain.Services;
 using MediatR;
 using Api.BoundedContexts.KnowledgeBase.Application.Configuration;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Application.Services;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
@@ -27,12 +29,15 @@ public class SendSessionChatMessageCommandHandler : IRequestHandler<SendSessionC
     private readonly ISessionRepository _sessionRepository;
     private readonly ISessionChatRepository _chatRepository;
     private readonly IMediator _mediator;
+    private readonly ISessionAccessGuard _accessGuard;
 
     public SendSessionChatMessageCommandHandler(
+        ISessionAccessGuard accessGuard,
         ISessionRepository sessionRepository,
         ISessionChatRepository chatRepository,
         IMediator mediator)
     {
+        _accessGuard = accessGuard ?? throw new ArgumentNullException(nameof(accessGuard));
         _sessionRepository = sessionRepository;
         _chatRepository = chatRepository;
         _mediator = mediator;
@@ -40,6 +45,10 @@ public class SendSessionChatMessageCommandHandler : IRequestHandler<SendSessionC
 
     public async Task<SendChatMessageResult> Handle(SendSessionChatMessageCommand request, CancellationToken cancellationToken)
     {
+        // IDOR guard (#3756): prima di qualunque mutazione, scrittura o broadcast SSE.
+        await _accessGuard.EnsureOwnerOrParticipantAsync(
+            request.SessionId, request.RequestedBy, cancellationToken).ConfigureAwait(false);
+
         var session = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Session {request.SessionId} not found");
 
@@ -115,11 +124,39 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
     private readonly ILlmService _llmService;
     private readonly IImagePreprocessor _imagePreprocessor;
     private readonly IGameStateExtractor _gameStateExtractor;
+    // #4776 (ADR-096): required, unlike the flag below — a gate that is null-safe is a gate that a
+    // construction can leave out, and then the retrieval below starts for anyone.
+    private readonly IAnswerPreconditions _answerPreconditions;
+    // #4837: who may write in the session at all. Required for the same reason as the gate above, and judged on
+    // RequestedBy (the authenticated caller), never on SenderId (chosen by the client).
+    private readonly ISessionAccessGuard _accessGuard;
     private readonly ILogger<AskSessionAgentCommandHandler> _logger;
-    // #3390 Slice 2: optional (null-safe) so existing 7-arg test construction keeps compiling —
+    // #3390 Slice 2: optional (null-safe) so existing test constructions keep compiling —
     // null feature flags means the flag is treated as OFF (current multimodal-only behavior).
     private readonly IFeatureFlagService? _featureFlags;
     private readonly IOptions<SessionAgentOptions> _sessionAgentOptions;
+
+    /// <summary>
+    /// #4776: the line that opens an answer given WITHOUT the rulebook because the asker never declared owning
+    /// the game. It is part of the saved message — the one the whole table reads — and of the event published
+    /// with it, like the Arbiter's notice (a note kept in the HTTP response would reach only who asked, and the
+    /// rest of the table would read an ungrounded answer as if no passage had been found). The first sentence
+    /// is the Arbiter's, restated here: SessionTracking does not import GameManagement (ADR-090). Italian, like
+    /// every other user-facing line of the table.
+    /// </summary>
+    internal const string OwnershipNotDeclaredNotice =
+        "Attenzione: possesso del gioco non dichiarato, quindi il regolamento non è stato consultato. " +
+        "La risposta non si basa sul regolamento e nessun riferimento è citato.";
+
+    private const string NoticeSeparator = "\n\n";
+
+    /// <summary>
+    /// The column of the message content is <c>varchar(5000)</c> (<c>SessionChatMessageEntityConfiguration</c>) and
+    /// <see cref="SessionChatMessage.CreateAgentResponse"/> does not check the length: a text over it fails at the
+    /// save, after the player's question is already stored and the model already paid. The notice adds to the
+    /// answer, so it must not be what tips it over.
+    /// </summary>
+    internal const int MaxMessageLength = 5000;
 
     public AskSessionAgentCommandHandler(
         ISessionRepository sessionRepository,
@@ -128,6 +165,8 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
         ILlmService llmService,
         IImagePreprocessor imagePreprocessor,
         IGameStateExtractor gameStateExtractor,
+        IAnswerPreconditions answerPreconditions,
+        ISessionAccessGuard accessGuard,
         ILogger<AskSessionAgentCommandHandler> logger,
         IFeatureFlagService? featureFlags = null,
         IOptions<SessionAgentOptions>? sessionAgentOptions = null)
@@ -138,6 +177,8 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
         _llmService = llmService;
         _imagePreprocessor = imagePreprocessor;
         _gameStateExtractor = gameStateExtractor;
+        _answerPreconditions = answerPreconditions ?? throw new ArgumentNullException(nameof(answerPreconditions));
+        _accessGuard = accessGuard ?? throw new ArgumentNullException(nameof(accessGuard));
         _logger = logger;
         _featureFlags = featureFlags;
         _sessionAgentOptions = sessionAgentOptions ?? Options.Create(new SessionAgentOptions());
@@ -145,6 +186,16 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
 
     public async Task<AskSessionAgentResult> Handle(AskSessionAgentCommand request, CancellationToken cancellationToken)
     {
+        // IDOR guard (#4837), like the sibling that sends a message (#3756): before any read, write, paid call or
+        // broadcast. The question is saved in the table's chat AS the participant SenderId and the answer is published
+        // to everyone at the table, so "an authenticated user" is not enough: the caller must be the owner or a
+        // registered participant of THIS session. The caller is RequestedBy (taken from the principal by the endpoint);
+        // SenderId is a participant id, readable by everyone at the table, and says nothing about who is asking.
+        // Whether SenderId must also belong to the caller is NOT decided here: the host writes for a guest (no
+        // account), as the sibling allows.
+        await _accessGuard.EnsureOwnerOrParticipantAsync(
+            request.SessionId, request.RequestedBy, cancellationToken).ConfigureAwait(false);
+
         var session = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Session {request.SessionId} not found");
 
@@ -211,10 +262,29 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
             && !string.IsNullOrWhiteSpace(retrievalQuery)
             && await _featureFlags.IsEnabledAsync(FeatureFlagConstants.LiveImageRetrievalKey).ConfigureAwait(false);
 
+        // #4776 (ADR-096): the ownership gate protects the RETRIEVAL on the rulebook, and the copyright tier
+        // below protects only the ANSWER — a tier does nothing for passages that already went into the prompt.
+        // It is asked for the AUTHENTICATED CALLER, not for the user behind SenderId: the participant is picked by
+        // the client, its id is readable by everyone at the table, and a guest has no account — judged on it, the
+        // gate would let anyone borrow the ownership of whoever they name. No caller (Guid.Empty) is nobody: denied.
+        // The same identity sets the copyright tier below. The check is OUTSIDE the try below, which degrades
+        // fail-open on any error: inside it, "could not check" would read as "allowed". A denial is not an error
+        // for the chat: the question stays, no retrieval starts, and the answer is the model's alone, which
+        // GroundingStatus.Ungrounded already says.
+        var callerId = request.RequestedBy;
+        var rulebookDenied = false;
+        if (liveImageRetrievalEnabled
+            && !await MayConsultTheRulebookAsync(request.SessionId, session.GameId, callerId, cancellationToken).ConfigureAwait(false))
+        {
+            liveImageRetrievalEnabled = false;
+            rulebookDenied = true;
+        }
+        // The model's own words, as opposed to the apologies below: only an answer can be qualified by a notice.
+        var answeredByModel = false;
+
         var groundedProduced = false;
         if (liveImageRetrievalEnabled)
         {
-            var userId = session.Participants.FirstOrDefault(p => p.Id == request.SenderId)?.UserId ?? Guid.Empty;
             using var retrievalCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             retrievalCts.CancelAfter(TimeSpan.FromMilliseconds(_sessionAgentOptions.Value.RetrievalBudgetMs));
             try
@@ -223,7 +293,7 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
                 // (DDD Customer/Supplier), never by injecting a KB service. Vision stays as state
                 // context (gameState); the turn text is the retrieval query.
                 var grounded = await _mediator.Send(
-                    new AskGroundedSessionQuery(session.GameId, retrievalQuery, gameState, userId),
+                    new AskGroundedSessionQuery(session.GameId, retrievalQuery, gameState, callerId),
                     retrievalCts.Token).ConfigureAwait(false);
 
                 if (hasImages && grounded.Citations.Count == 0)
@@ -276,79 +346,99 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
 
         if (!groundedProduced)
         {
-        try
-        {
-            if (hasImages)
+            try
             {
-                // Vision path: process images and build multimodal messages
-                var contentParts = new List<ContentPart>();
-
-                foreach (var img in request.Images!)
+                if (hasImages)
                 {
-                    var processed = await _imagePreprocessor.ProcessAsync(
-                        img.Data, img.MediaType).ConfigureAwait(false);
-                    var base64 = Convert.ToBase64String(processed.Data);
-                    contentParts.Add(new ImageContentPart(base64, processed.MediaType));
-                }
+                    // Vision path: process images and build multimodal messages
+                    var contentParts = new List<ContentPart>();
 
-                contentParts.Add(new TextContentPart(effectiveQuery));
+                    foreach (var img in request.Images!)
+                    {
+                        var processed = await _imagePreprocessor.ProcessAsync(
+                            img.Data, img.MediaType).ConfigureAwait(false);
+                        var base64 = Convert.ToBase64String(processed.Data);
+                        contentParts.Add(new ImageContentPart(base64, processed.MediaType));
+                    }
 
-                var messages = new List<LlmMessage>
+                    contentParts.Add(new TextContentPart(effectiveQuery));
+
+                    var messages = new List<LlmMessage>
                 {
                     LlmMessage.FromText("system", systemPrompt),
                     new("user", contentParts)
                 };
 
-                var result = await _llmService.GenerateMultimodalCompletionAsync(
-                    (IReadOnlyList<LlmMessage>)messages,
-                    RequestSource.AgentTask,
-                    cancellationToken).ConfigureAwait(false);
+                    var result = await _llmService.GenerateMultimodalCompletionAsync(
+                        (IReadOnlyList<LlmMessage>)messages,
+                        RequestSource.AgentTask,
+                        cancellationToken).ConfigureAwait(false);
 
-                if (result.Success)
-                {
-                    answer = result.Response;
-                    confidence = null; // #3388: no fabricated confidence — vision path is not grounded in retrieval
+                    if (result.Success)
+                    {
+                        answer = result.Response;
+                        answeredByModel = !string.IsNullOrWhiteSpace(answer);
+                        confidence = null; // #3388: no fabricated confidence — vision path is not grounded in retrieval
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "Multimodal LLM completion failed for session {SessionId}: {Error}",
+                            request.SessionId, result.ErrorMessage);
+                        answer = "I'm sorry, I couldn't analyze the image right now. Please try again.";
+                        confidence = null;
+                    }
                 }
                 else
                 {
-                    _logger.LogWarning(
-                        "Multimodal LLM completion failed for session {SessionId}: {Error}",
-                        request.SessionId, result.ErrorMessage);
-                    answer = "I'm sorry, I couldn't analyze the image right now. Please try again.";
-                    confidence = null;
+                    // Text-only path (existing behavior)
+                    var result = await _llmService.GenerateCompletionAsync(
+                        systemPrompt,
+                        effectiveQuery,
+                        RequestSource.AgentTask,
+                        cancellationToken).ConfigureAwait(false);
+
+                    if (result.Success)
+                    {
+                        answer = result.Response;
+                        answeredByModel = !string.IsNullOrWhiteSpace(answer);
+                        confidence = null; // #3388: no fabricated confidence — text-only path is not grounded in retrieval
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "LLM completion failed for session {SessionId}: {Error}",
+                            request.SessionId, result.ErrorMessage);
+                        answer = "I'm sorry, I couldn't process your question right now. Please try again.";
+                        confidence = null;
+                    }
                 }
             }
-            else
+            catch (Exception ex)
             {
-                // Text-only path (existing behavior)
-                var result = await _llmService.GenerateCompletionAsync(
-                    systemPrompt,
-                    effectiveQuery,
-                    RequestSource.AgentTask,
-                    cancellationToken).ConfigureAwait(false);
-
-                if (result.Success)
-                {
-                    answer = result.Response;
-                    confidence = null; // #3388: no fabricated confidence — text-only path is not grounded in retrieval
-                }
-                else
-                {
-                    _logger.LogWarning(
-                        "LLM completion failed for session {SessionId}: {Error}",
-                        request.SessionId, result.ErrorMessage);
-                    answer = "I'm sorry, I couldn't process your question right now. Please try again.";
-                    confidence = null;
-                }
+                _logger.LogError(ex, "LLM service error for session {SessionId}", request.SessionId);
+                answer = "I'm sorry, an error occurred while processing your question. Please try again.";
+                confidence = null;
             }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "LLM service error for session {SessionId}", request.SessionId);
-            answer = "I'm sorry, an error occurred while processing your question. Please try again.";
-            confidence = null;
-        }
         } // end if (!groundedProduced) — multimodal/text-only fallback (ungrounded)
+
+        // #4776: a denial is not an error for the chat, but it must not be silent either. GroundingStatus.Ungrounded
+        // also means «the rulebook was consulted and nothing relevant came up», so without this line whoever has
+        // not declared the game cannot tell the two apart. Only when the model answered (not on an apology), and
+        // only for a denial: a retrieval that is switched off or that failed is not the player's doing. An empty
+        // reply is not an answer either: it keeps failing at CreateAgentResponse, instead of being saved as a
+        // notice that qualifies nothing.
+        if (rulebookDenied && answeredByModel)
+        {
+            var room = MaxMessageLength - OwnershipNotDeclaredNotice.Length - NoticeSeparator.Length;
+            var kept = answer.Trim();
+            if (kept.Length > room)
+            {
+                kept = kept[..(room - 1)] + "…";
+            }
+
+            answer = OwnershipNotDeclaredNotice + NoticeSeparator + kept;
+        }
 
         var agentSeq = await _chatRepository.GetNextSequenceNumberAsync(request.SessionId, cancellationToken).ConfigureAwait(false);
         var agentMessage = SessionChatMessage.CreateAgentResponse(
@@ -391,6 +481,34 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
         }
 
         return new AskSessionAgentResult(agentMessage.Id, answer, agentType, agentMessage.Confidence, citationsJson, groundingStatus);
+    }
+
+    /// <summary>
+    /// Whether the user behind the participant may consult the rulebook of <paramref name="gameId"/> — the
+    /// single gate every answering path shares (<see cref="IAnswerPreconditions"/>, ADR-096). Only a denial
+    /// (<see cref="RagOwnershipRequiredException"/>) answers "no"; any other failure propagates, so that an
+    /// access check that could not be made never reads as a yes.
+    /// </summary>
+    private async Task<bool> MayConsultTheRulebookAsync(
+        Guid sessionId, Guid gameId, Guid userId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // No role: the command does not carry one, and an unrecognized role counts as a plain user.
+            await _answerPreconditions
+                .EnsureCanAskAboutGameAsync(userId, null, gameId, cancellationToken)
+                .ConfigureAwait(false);
+            return true;
+        }
+        catch (RagOwnershipRequiredException denial)
+        {
+            _logger.LogInformation(
+                denial,
+                "Session chat of SessionId={SessionId}: the RAG ownership gate denied GameId={GameId} to UserId={UserId}; " +
+                "the answer is given without the rulebook",
+                sessionId, gameId, userId);
+            return false;
+        }
     }
 
     // #3390 Slice 3: default retrieval query when the turn has no text and no usable vision state.

@@ -21,7 +21,7 @@ namespace Api.Tests.BoundedContexts.GameManagement.Application.Queries.GameNight
 /// Unit tests for <see cref="GetGameNightInvitationByTokenQueryHandler"/>.
 /// Issue #607 (Wave A.5a): GameNight token-based RSVP backend extension.
 /// Verifies the public token-addressable projection, the
-/// <c>AcceptedSoFar = 1 + accepted-invitations</c> formula, the
+/// <c>AcceptedSoFar = 1 + accepted members + accepted-invitations</c> formula, the
 /// <c>AlreadyRespondedAs</c> mapping, and that responses are cached
 /// per-token via <see cref="HybridCache"/> (perf gates §6).
 /// </summary>
@@ -148,6 +148,38 @@ public sealed class GetGameNightInvitationByTokenQueryHandlerTests
         result.AlreadyRespondedAs.Should().BeNull();
         result.HostDisplayName.Should().Be("A friend"); // Fallback when user is null.
         result.PrimaryGameId.Should().BeNull(); // No GameIds.
+    }
+
+    [Fact]
+    public async Task Handle_RegisteredMemberAccepted_CountsInAcceptedSoFar()
+    {
+        // #4706: the guest page counted the organizer and the emailed guests but not the
+        // registered members who accepted, while the organizer's view counted only the
+        // members — the two halves disagreed. Both now count the same set.
+        var invitation = Reconstitute(GameNightInvitationStatus.Pending);
+        var organizerId = Guid.NewGuid();
+        var acceptedMember = Guid.NewGuid();
+        var pendingMember = Guid.NewGuid();
+        var gameNight = CreateGameNight(organizerId);
+        gameNight.Publish([acceptedMember, pendingMember]);
+        gameNight.GetRsvp(acceptedMember)!.Accept();
+
+        _invitationRepoMock
+            .Setup(r => r.GetByTokenAsync(Token, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(invitation);
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(invitation.GameNightId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        _invitationRepoMock
+            .Setup(r => r.CountAcceptedByGameNightIdAsync(
+                invitation.GameNightId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(2);
+
+        var result = await _sut.Handle(
+            new GetGameNightInvitationByTokenQuery(Token), CancellationToken.None);
+
+        // organizer (1) + accepted member (1) + accepted emailed guests (2); the pending member is not.
+        result!.AcceptedSoFar.Should().Be(4);
     }
 
     [Fact]

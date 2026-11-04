@@ -193,8 +193,6 @@ function OverviewTab({
     lastSeenAt?: string | null;
     isTwoFactorEnabled?: boolean;
     tier?: string;
-    tokenUsage?: number;
-    tokenLimit?: number;
   };
   userId: string;
 }) {
@@ -231,23 +229,6 @@ function OverviewTab({
             <div className="flex justify-between">
               <span className="text-muted-foreground">Tier</span>
               <Badge variant="outline">{user.tier ?? 'Free'}</Badge>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Token utilizzati</span>
-              <span className="font-medium">
-                {(user.tokenUsage ?? 0).toLocaleString()} /{' '}
-                {(user.tokenLimit ?? 10_000).toLocaleString()}
-              </span>
-            </div>
-            <div className="mt-2">
-              <div className="h-2 rounded-full bg-muted dark:bg-zinc-700 overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-amber-500 dark:bg-amber-400 transition-all"
-                  style={{
-                    width: `${Math.min(100, ((user.tokenUsage ?? 0) / (user.tokenLimit ?? 10_000)) * 100)}%`,
-                  }}
-                />
-              </div>
             </div>
           </CardContent>
         </Card>

@@ -20,6 +20,54 @@ using Xunit;
 namespace Api.Tests.Integration.GameManagement;
 
 /// <summary>
+/// La fixture di <see cref="GameNightInvitationEndpointsTests"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// #4050. Host condiviso per la classe, database fresco per test. L'host di questa classe non e'
+/// quello di default — porta due chiavi di configurazione e sostituisce il servizio email — ed e'
+/// il motivo per cui la fixture ha i ganci <see cref="ExtraConfiguration"/> e
+/// <see cref="ConfigureHost"/>: senza, una classe cosi' resterebbe a costruirsi l'host per test.
+/// </para>
+/// <para>
+/// Il doppio del servizio email vive quanto la classe, non quanto il test, perche' l'host e'
+/// costruito una volta. Qui e' innocuo: nessun test lo interroga (<c>grep _emailServiceMock</c>
+/// trova solo la dichiarazione, la configurazione e la registrazione), serve soltanto a non
+/// aprire una connessione SMTP. Se un domani un test ci facesse <c>Verify</c>, conterebbe anche
+/// le chiamate dei test precedenti.
+/// </para>
+/// </remarks>
+public sealed class GameNightInvitationHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "game_night_invite_e2e")
+{
+    private readonly Mock<IGameNightEmailService> _emailServiceMock = new();
+
+    protected override Dictionary<string, string?>? ExtraConfiguration => new()
+    {
+        ["App:BaseUrl"] = "https://meepleai.test",
+        ["GameNight:InvitationExpiryDays"] = "14",
+    };
+
+    protected override WebApplicationFactory<Program> ConfigureHost(
+        WebApplicationFactory<Program> factory)
+    {
+        _emailServiceMock
+            .Setup(s => s.SendGameNightInvitationEmailAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<DateTimeOffset>(), It.IsAny<string?>(), It.IsAny<IReadOnlyList<string>>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<GameNightEmailLocale>(),
+                It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        return factory.WithWebHostBuilder(b => b.ConfigureTestServices(s =>
+        {
+            s.RemoveAll(typeof(IGameNightEmailService));
+            s.AddSingleton(_emailServiceMock.Object);
+        }));
+    }
+}
+
+/// <summary>
 /// E2E integration tests for the public token-based RSVP endpoints introduced in
 /// Issue #607 (Wave A.5a). Validates the full HTTP surface (status codes, request/response
 /// shape, idempotency D2 b, anonymous access) end-to-end against a real PostgreSQL database
@@ -38,62 +86,31 @@ namespace Api.Tests.Integration.GameManagement;
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
-public sealed class GameNightInvitationEndpointsTests : IAsyncLifetime
+public sealed class GameNightInvitationEndpointsTests
+    : IClassFixture<GameNightInvitationHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _testDbName;
-    private readonly Mock<IGameNightEmailService> _emailServiceMock = new();
+    private readonly GameNightInvitationHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
     private HttpClient _client = null!;
 
-    public GameNightInvitationEndpointsTests(SharedTestcontainersFixture fixture)
+    public GameNightInvitationEndpointsTests(GameNightInvitationHostFixture hostFixture)
     {
-        _fixture = fixture;
-        _testDbName = $"game_night_invite_e2e_{Guid.NewGuid():N}";
-
-        _emailServiceMock
-            .Setup(s => s.SendGameNightInvitationEmailAsync(
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<DateTimeOffset>(), It.IsAny<string?>(), It.IsAny<IReadOnlyList<string>>(),
-                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+        _hostFixture = hostFixture;
     }
 
+    // #4050. Host, configurazione e doppio del servizio email vengono dalla fixture, pagati una
+    // volta per classe; qui resta un database clonato dal template. La migrazione e' sparita
+    // perche' il template e' gia' migrato.
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_testDbName);
-
-        _factory = IntegrationWebApplicationFactory.Create(
-            connectionString,
-            extraConfig: new Dictionary<string, string?>
-            {
-                ["App:BaseUrl"] = "https://meepleai.test",
-                ["GameNight:InvitationExpiryDays"] = "14"
-            });
-
-        // Override email service to a no-op mock (avoid SMTP)
-        _factory = _factory.WithWebHostBuilder(b => b.ConfigureTestServices(s =>
-        {
-            s.RemoveAll(typeof(IGameNightEmailService));
-            s.AddSingleton(_emailServiceMock.Object);
-        }));
-
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-            await dbContext.Database.MigrateAsync();
-        }
-
-        _client = _factory.CreateClient();
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
+        _client = _hostFixture.Client;
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        _client?.Dispose();
-        await _factory.DisposeAsync();
-        await _fixture.DropIsolatedDatabaseAsync(_testDbName);
-    }
+    // Host, client e database appartengono alla fixture: disporli qui li toglierebbe ai test
+    // successivi.
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     // ────────────────────────────────────────────────────────────────────
     // Helpers
@@ -138,6 +155,7 @@ public sealed class GameNightInvitationEndpointsTests : IAsyncLifetime
         {
             Id = Guid.NewGuid(),
             Token = GenerateToken(),
+            UnsubscribeKey = GenerateToken(),
             GameNightId = gameNightId,
             Email = email.Trim().ToLowerInvariant(),
             Status = status,
@@ -729,5 +747,123 @@ public sealed class GameNightInvitationEndpointsTests : IAsyncLifetime
         // FluentValidation pipeline surfaces invalid email as 400 BadRequest or 422 UnprocessableEntity
         // depending on configuration; both indicate validation failure.
         ((int)response.StatusCode).Should().BeOneOf(400, 422);
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // POST /game-nights/guest-unsubscribe/{key} — #4846
+    // ────────────────────────────────────────────────────────────────────
+
+    private async Task<string[]> OptedOutAddressesAsync()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        return await dbContext.GameNightGuestEmailOptOuts
+            .AsNoTracking()
+            .Select(o => o.Email)
+            .ToArrayAsync();
+    }
+
+    [Theory]
+    [InlineData("Pending")]
+    [InlineData("Accepted")]
+    [InlineData("Declined")]
+    [InlineData("Cancelled")]
+    [InlineData("Expired")]
+    public async Task UnsubscribeByToken_Anonymous_Returns204AndPutsTheAddressOnTheList_WhateverTheInvitationState(
+        string status)
+    {
+        var organizerId = Guid.NewGuid();
+        var gameNightId = await SeedGameNightAsync(organizerId);
+        var invitation = await SeedInvitationAsync(
+            gameNightId, organizerId,
+            email: "Stop.Me@Example.com",
+            status: status,
+            expiresAt: status == "Expired" ? DateTimeOffset.UtcNow.AddDays(-1) : null);
+
+        var response = await _client.PostAsync(
+            $"/api/v1/game-nights/guest-unsubscribe/{invitation.UnsubscribeKey}", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await OptedOutAddressesAsync()).Should().Equal("stop.me@example.com");
+    }
+
+    [Fact]
+    public async Task UnsubscribeByToken_TwiceForTheSameAddress_StaysOnSuccessAndKeepsOneEntry()
+    {
+        var organizerId = Guid.NewGuid();
+        var firstNight = await SeedGameNightAsync(organizerId, "First");
+        var secondNight = await SeedGameNightAsync(organizerId, "Second");
+        var first = await SeedInvitationAsync(firstNight, organizerId, email: "guest@example.com");
+        var second = await SeedInvitationAsync(secondNight, organizerId, email: "guest@example.com");
+
+        var one = await _client.PostAsync($"/api/v1/game-nights/guest-unsubscribe/{first.UnsubscribeKey}", content: null);
+        var two = await _client.PostAsync($"/api/v1/game-nights/guest-unsubscribe/{second.UnsubscribeKey}", content: null);
+
+        one.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        two.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await OptedOutAddressesAsync()).Should().Equal("guest@example.com");
+    }
+
+    [Fact]
+    public async Task UnsubscribeByToken_UnknownToken_Returns404AndStoresNothing()
+    {
+        var response = await _client.PostAsync(
+            "/api/v1/game-nights/guest-unsubscribe/UnknownKeyAbcdef1234567", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await OptedOutAddressesAsync()).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task UnsubscribeByToken_DoesNotTouchTheInvitationItself()
+    {
+        // «Stop writing to me» is not «decline»: a guest who accepted and then stopped the emails still holds
+        // their seat, and the organizer's view of the night does not change.
+        var organizerId = Guid.NewGuid();
+        var gameNightId = await SeedGameNightAsync(organizerId);
+        var invitation = await SeedInvitationAsync(
+            gameNightId, organizerId, status: "Accepted", respondedAt: DateTimeOffset.UtcNow);
+
+        var response = await _client.PostAsync(
+            $"/api/v1/game-nights/guest-unsubscribe/{invitation.UnsubscribeKey}", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+        var persisted = await dbContext.GameNightInvitations.AsNoTracking().FirstAsync(i => i.Id == invitation.Id);
+        persisted.Status.Should().Be("Accepted");
+    }
+
+    [Fact]
+    public async Task UnsubscribeByKey_TheRsvpToken_IsNotTheKey_TheOrganizerHoldsIt()
+    {
+        // The token comes back to the organizer in the 201 of the creation. If it opted the address out, any member
+        // could silence any address for every organizer by inviting it and calling this endpoint.
+        var organizerId = Guid.NewGuid();
+        var gameNightId = await SeedGameNightAsync(organizerId);
+        var invitation = await SeedInvitationAsync(gameNightId, organizerId);
+
+        var response = await _client.PostAsync(
+            $"/api/v1/game-nights/guest-unsubscribe/{invitation.Token}", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await OptedOutAddressesAsync()).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task UnsubscribeByKey_TwoTapsAtTheSameTime_BothSucceed_AndTheListHasOneEntry()
+    {
+        // Both can read «not yet on the list»; the unique index lets one insert win and the other must still end
+        // as the success the guest asked for. (Whether the two really collide depends on the timing; the unit test
+        // of the handler fakes the 23505. This is the same path against the real index.)
+        var organizerId = Guid.NewGuid();
+        var gameNightId = await SeedGameNightAsync(organizerId);
+        var invitation = await SeedInvitationAsync(gameNightId, organizerId);
+        var url = $"/api/v1/game-nights/guest-unsubscribe/{invitation.UnsubscribeKey}";
+
+        var responses = await Task.WhenAll(Enumerable.Range(0, 6).Select(_ => _client.PostAsync(url, content: null)));
+
+        responses.Select(r => r.StatusCode).Should().AllBeEquivalentTo(HttpStatusCode.NoContent);
+        (await OptedOutAddressesAsync()).Should().Equal("guest@example.com");
     }
 }

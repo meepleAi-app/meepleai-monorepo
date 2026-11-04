@@ -59,8 +59,11 @@ internal sealed class GetRagExecutionsQueryHandler
             request.MinLatencyMs,
             request.MaxLatencyMs,
             request.MinConfidence,
-            request.From,
-            request.To,
+            // The window arrives from the query string, so it needs normalizing before it reaches a
+            // timestamptz comparison — see RagExecutionDateWindow for the measured 400 and the
+            // empty same-day result that hid behind it.
+            RagExecutionDateWindow.StartInclusive(request.From),
+            RagExecutionDateWindow.EndInclusive(request.To),
             cancellationToken).ConfigureAwait(false);
 
         var dtos = items.Select(e => new RagExecutionListDto(

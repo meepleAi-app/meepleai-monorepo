@@ -136,21 +136,33 @@ test.describe('Monitoring - Visual Documentation (Admin)', () => {
       title: 'Admin Dashboard',
       description: 'Overview of system metrics and health',
       annotations: [
-        { selector: 'h1, [data-testid="dashboard-heading"]', label: 'Dashboard', color: ANNOTATION_COLORS.primary },
+        {
+          selector: 'h1, [data-testid="dashboard-heading"]',
+          label: 'Dashboard',
+          color: ANNOTATION_COLORS.primary,
+        },
       ],
       nextAction: 'Review metrics',
     });
 
     // Step 2: Stats cards
     const statsSection = page.locator('[data-testid="stats-cards"], .stats-grid, .metrics').first();
-    if (await statsSection.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await statsSection.isVisible({ timeout: 3000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Key Metrics',
         description: 'User count, games, documents, and sessions',
         annotations: [
-          { selector: 'text=/\\d+.*user/i, [data-metric="users"]', label: 'Users', color: ANNOTATION_COLORS.info },
-          { selector: 'text=/\\d+.*game/i, [data-metric="games"]', label: 'Games', color: ANNOTATION_COLORS.info },
+          {
+            selector: 'text=/\\d+.*user/i, [data-metric="users"]',
+            label: 'Users',
+            color: ANNOTATION_COLORS.info,
+          },
+          {
+            selector: 'text=/\\d+.*game/i, [data-metric="games"]',
+            label: 'Games',
+            color: ANNOTATION_COLORS.info,
+          },
         ],
         previousAction: 'View dashboard',
         nextAction: 'Check health',
@@ -158,15 +170,25 @@ test.describe('Monitoring - Visual Documentation (Admin)', () => {
     }
 
     // Step 3: Health indicator
-    const healthStatus = page.locator('text=/healthy|status/i, [data-testid="health-status"]').first();
-    if (await healthStatus.isVisible({ timeout: 2000 }).catch(() => false)) {
+    const healthStatus = page
+      .locator('text=/healthy|status/i, [data-testid="health-status"]')
+      .first();
+    if (await healthStatus.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 3,
         title: 'System Health',
         description: 'Overall system status indicator',
         annotations: [
-          { selector: 'text=/healthy/i, [data-testid="health-status"]', label: 'Health', color: ANNOTATION_COLORS.success },
-          { selector: 'text=/99/i, [data-metric="uptime"]', label: 'Uptime', color: ANNOTATION_COLORS.success },
+          {
+            selector: 'text=/healthy/i, [data-testid="health-status"]',
+            label: 'Health',
+            color: ANNOTATION_COLORS.success,
+          },
+          {
+            selector: 'text=/99/i, [data-metric="uptime"]',
+            label: 'Uptime',
+            color: ANNOTATION_COLORS.success,
+          },
         ],
         previousAction: 'View metrics',
         nextAction: 'Check services',
@@ -190,8 +212,10 @@ test.describe('Monitoring - Visual Documentation (Admin)', () => {
     });
 
     // Step 2: Service status list
-    const serviceList = page.locator('[data-testid="service-list"], .services-status, table').first();
-    if (await serviceList.isVisible({ timeout: 3000 }).catch(() => false)) {
+    const serviceList = page
+      .locator('[data-testid="service-list"], .services-status, table')
+      .first();
+    if (await serviceList.isVisible({ timeout: 3000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Service Status',
@@ -220,21 +244,33 @@ test.describe('Monitoring - Visual Documentation (Admin)', () => {
       title: 'System Alerts',
       description: 'View active and past system alerts',
       annotations: [
-        { selector: 'text=/\\d+ alert/i, [data-testid="alert-count"]', label: 'Count', color: ANNOTATION_COLORS.warning },
+        {
+          selector: 'text=/\\d+ alert/i, [data-testid="alert-count"]',
+          label: 'Count',
+          color: ANNOTATION_COLORS.warning,
+        },
       ],
       nextAction: 'Review alerts',
     });
 
     // Step 2: Alert list
     const alertList = page.locator('[data-testid="alert-list"], .alerts-list, ul').first();
-    if (await alertList.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await alertList.isVisible({ timeout: 3000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Alert List',
         description: 'Active alerts requiring attention',
         annotations: [
-          { selector: '[data-type="warning"], .alert-warning', label: 'Warning', color: ANNOTATION_COLORS.warning },
-          { selector: '[data-type="info"], .alert-info', label: 'Info', color: ANNOTATION_COLORS.info },
+          {
+            selector: '[data-type="warning"], .alert-warning',
+            label: 'Warning',
+            color: ANNOTATION_COLORS.warning,
+          },
+          {
+            selector: '[data-type="info"], .alert-info',
+            label: 'Info',
+            color: ANNOTATION_COLORS.info,
+          },
         ],
         previousAction: 'View alerts',
         nextAction: 'Acknowledge alert',
@@ -242,14 +278,20 @@ test.describe('Monitoring - Visual Documentation (Admin)', () => {
     }
 
     // Step 3: Acknowledge button
-    const ackBtn = page.locator('button:has-text("Acknowledge"), [data-testid="ack-alert"]').first();
-    if (await ackBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    const ackBtn = page
+      .locator('button:has-text("Acknowledge"), [data-testid="ack-alert"]')
+      .first();
+    if (await ackBtn.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 3,
         title: 'Acknowledge Alert',
         description: 'Mark alert as acknowledged',
         annotations: [
-          { selector: 'button:has-text("Acknowledge")', label: 'Acknowledge', color: ANNOTATION_COLORS.primary },
+          {
+            selector: 'button:has-text("Acknowledge")',
+            label: 'Acknowledge',
+            color: ANNOTATION_COLORS.primary,
+          },
         ],
         previousAction: 'View alert',
         nextAction: 'Click acknowledge',
@@ -270,22 +312,34 @@ test.describe('Monitoring - Visual Documentation (Admin)', () => {
       title: 'Audit Logs',
       description: 'Complete history of administrative actions',
       annotations: [
-        { selector: 'input[type="search"], [data-testid="log-search"]', label: 'Search', color: ANNOTATION_COLORS.primary },
+        {
+          selector: 'input[type="search"], [data-testid="log-search"]',
+          label: 'Search',
+          color: ANNOTATION_COLORS.primary,
+        },
       ],
       nextAction: 'Browse logs',
     });
 
     // Step 2: Log entries
     const logTable = page.locator('table, [data-testid="log-table"], .audit-logs').first();
-    if (await logTable.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await logTable.isVisible({ timeout: 3000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Log Entries',
         description: 'Detailed log of each administrative action',
         annotations: [
-          { selector: 'th, [data-column="action"]', label: 'Action', color: ANNOTATION_COLORS.info },
+          {
+            selector: 'th, [data-column="action"]',
+            label: 'Action',
+            color: ANNOTATION_COLORS.info,
+          },
           { selector: 'th, [data-column="actor"]', label: 'Actor', color: ANNOTATION_COLORS.info },
-          { selector: 'th, [data-column="timestamp"]', label: 'Time', color: ANNOTATION_COLORS.info },
+          {
+            selector: 'th, [data-column="timestamp"]',
+            label: 'Time',
+            color: ANNOTATION_COLORS.info,
+          },
         ],
         previousAction: 'View logs',
         nextAction: 'Filter or search',
@@ -294,13 +348,17 @@ test.describe('Monitoring - Visual Documentation (Admin)', () => {
 
     // Step 3: Log detail
     const logRow = page.locator('tr, [data-testid="log-entry"]').nth(1);
-    if (await logRow.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await logRow.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 3,
         title: 'Log Entry Detail',
         description: 'Individual audit log entry with full details',
         annotations: [
-          { selector: 'text=/tier.*changed|approved/i', label: 'Action', color: ANNOTATION_COLORS.primary },
+          {
+            selector: 'text=/tier.*changed|approved/i',
+            label: 'Action',
+            color: ANNOTATION_COLORS.primary,
+          },
           { selector: 'text=/admin@/i', label: 'Actor', color: ANNOTATION_COLORS.info },
         ],
         previousAction: 'View entries',
@@ -326,13 +384,17 @@ test.describe('Monitoring - Visual Documentation (Admin)', () => {
 
     // Step 2: Live charts/graphs
     const charts = page.locator('[data-testid="metrics-chart"], .chart, canvas, svg').first();
-    if (await charts.isVisible({ timeout: 3000 }).catch(() => false)) {
+    if (await charts.isVisible({ timeout: 3000 })) {
       await helper.capture(page, {
         step: 2,
         title: 'Live Metrics',
         description: 'Real-time graphs of system performance',
         annotations: [
-          { selector: '[data-testid="metrics-chart"], .chart', label: 'Chart', color: ANNOTATION_COLORS.info },
+          {
+            selector: '[data-testid="metrics-chart"], .chart',
+            label: 'Chart',
+            color: ANNOTATION_COLORS.info,
+          },
         ],
         previousAction: 'View monitoring',
         nextAction: 'Analyze trends',
@@ -341,13 +403,17 @@ test.describe('Monitoring - Visual Documentation (Admin)', () => {
 
     // Step 3: Activity feed
     const activityFeed = page.locator('[data-testid="activity-feed"], .activity-feed').first();
-    if (await activityFeed.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await activityFeed.isVisible({ timeout: 2000 })) {
       await helper.capture(page, {
         step: 3,
         title: 'Activity Feed',
         description: 'Live stream of system events',
         annotations: [
-          { selector: '[data-testid="activity-feed"]', label: 'Live Feed', color: ANNOTATION_COLORS.primary },
+          {
+            selector: '[data-testid="activity-feed"]',
+            label: 'Live Feed',
+            color: ANNOTATION_COLORS.primary,
+          },
         ],
         previousAction: 'View charts',
         nextAction: 'Monitor activity',
@@ -355,6 +421,8 @@ test.describe('Monitoring - Visual Documentation (Admin)', () => {
     }
 
     helper.setTotalSteps(3);
-    console.log(`\n✅ Real-time monitoring captured: ${helper.getCapturedSteps().length} screenshots`);
+    console.log(
+      `\n✅ Real-time monitoring captured: ${helper.getCapturedSteps().length} screenshots`
+    );
   });
 });

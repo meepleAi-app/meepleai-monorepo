@@ -15,15 +15,19 @@ import { BadgeIcon } from '../BadgeIcon';
 import type { BadgeSummaryDto } from '@/lib/api';
 
 // Test data
+// #3853 — `code` e' il campo che il backend proietta davvero (BadgeSummaryDto.Code).
+// Il mock dichiarava un `id: 'badge-1'` che non esiste nel contratto — e non sarebbe
+// nemmeno passato dallo schema Zod, che lo voleva uuid. Un mock scritto sullo schema
+// invece che sulla risposta rende il test verde e cieco insieme.
 const mockBadgeBronze: BadgeSummaryDto = {
-  id: 'badge-1',
+  code: 'FIRST_CONTRIBUTION',
   name: 'First Contribution',
   tier: 'Bronze',
   iconUrl: 'https://example.com/bronze.png',
 };
 
 const mockBadgeDiamond: BadgeSummaryDto = {
-  id: 'badge-2',
+  code: 'COMMUNITY_CHAMPION',
   name: 'Community Champion',
   tier: 'Diamond',
   iconUrl: null,

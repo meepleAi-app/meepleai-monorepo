@@ -482,16 +482,18 @@ public sealed class GlobalKbAskStreamEndpointTests : IAsyncLifetime
                 It.IsAny<string>(),
                 It.IsAny<IReadOnlyList<Guid>>(),
                 It.IsAny<int>(),
+                It.IsAny<PerGameRetrievalParameters>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<double>(),
                 It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<string, IReadOnlyList<Guid>, int, SearchMode, double, IReadOnlyList<Guid>?, CancellationToken>(
-                (_, gameIds, _, _, _, _, _) => _capturedSearchGameIds.Add(gameIds))
+            .Callback<string, IReadOnlyList<Guid>, int, PerGameRetrievalParameters, SearchMode, double, IReadOnlyList<Guid>?, CancellationToken>(
+                (_, gameIds, _, _, _, _, _, _) => _capturedSearchGameIds.Add(gameIds))
             .ReturnsAsync((
                 string _,
                 IReadOnlyList<Guid> gameIds,
                 int limit,
+                PerGameRetrievalParameters _perGame,
                 SearchMode mode,
                 double _,
                 IReadOnlyList<Guid>? _,
@@ -524,13 +526,9 @@ public sealed class GlobalKbAskStreamEndpointTests : IAsyncLifetime
     {
         var mock = new Mock<ILlmService>();
 
-        mock.Setup(s => s.GenerateCompletionStreamAsync(
-                It.IsAny<string>(),
-                It.IsAny<string>(),
-                It.IsAny<RequestSource>(),
-                It.IsAny<CancellationToken>()))
-            .Returns<string, string, RequestSource, CancellationToken>(
-                (_, _, _, ct) => EmitTokensAsync(ct));
+        // #4168: la ricerca nella libreria passa dalla pipeline, che chiama l'ingresso «risposta» del gateway.
+        mock.Setup(s => s.GenerateAnswerStreamAsync(It.IsAny<LlmAnswerRequest>(), It.IsAny<CancellationToken>()))
+            .Returns<LlmAnswerRequest, CancellationToken>((_, ct) => EmitTokensAsync(ct));
 
         return mock.Object;
     }

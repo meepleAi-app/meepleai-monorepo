@@ -53,10 +53,15 @@ public sealed class PdfIndexingPipelineSharedGameIdHealTests
             .Callback<VectorDocumentIndexedEvent, CancellationToken>((e, _) => published = e)
             .Returns(Task.CompletedTask);
 
+        // #3982: la pipeline invalida la cache semantica dopo il commit. Qui non e' il soggetto
+        // del test, ma va iniettata perche' il parametro e' obbligatorio.
+        var semanticCache = new Mock<ISemanticResponseCache>();
+
         var pipeline = new PdfIndexingPipeline(
             db,
             mediator.Object,
             TimeProvider.System,
+            semanticCache.Object,
             NullLogger<PdfIndexingPipeline>.Instance);
 
         await pipeline.IndexAsync(

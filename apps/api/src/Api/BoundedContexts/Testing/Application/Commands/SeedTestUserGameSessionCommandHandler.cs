@@ -1,4 +1,5 @@
 using Api.BoundedContexts.Testing.Application.DTOs;
+using Api.BoundedContexts.Testing.Infrastructure;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.UserLibrary;
 using Api.Middleware.Exceptions;
@@ -64,7 +65,7 @@ internal sealed class SeedTestUserGameSessionCommandHandler
         };
         _db.Set<UserGameSessionEntity>().Add(session);
 
-        await _db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        await _db.SaveSeedAsync(cancellationToken).ConfigureAwait(false);
         stopwatch.Stop();
 
         _logger.LogInformation(

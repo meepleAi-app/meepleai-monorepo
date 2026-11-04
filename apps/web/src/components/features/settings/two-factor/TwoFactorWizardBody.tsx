@@ -7,6 +7,7 @@ import { AlertCircle, Loader2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 import { Button } from '@/components/ui/primitives/button';
+import { useTranslation } from '@/hooks/useTranslation';
 import { api } from '@/lib/api';
 
 import { BackupCodesView } from './BackupCodesView';
@@ -34,6 +35,7 @@ export function TwoFactorWizardBody({ setupData, onEnabled, resetKey }: Props): 
   const [ack, setAck] = useState(false);
   const [issuedCodes, setIssuedCodes] = useState<string[]>([]);
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
 
   // Reset internal state when parent closes / reopens (resetKey flips with the open flag)
   useEffect(() => {
@@ -68,10 +70,11 @@ export function TwoFactorWizardBody({ setupData, onEnabled, resetKey }: Props): 
         // attempt limit is hit). A live mm:ss countdown banner (plan G2) is deferred:
         // Enable2FAResult has no `retryAfterSeconds` field — only the step-up endpoint exposes
         // it. Revisit here if the enable endpoint starts returning the retry window.
-        setOtpError(result.errorMessage ?? 'Invalid code. Try again.');
+        setOtpError(result.errorMessage ?? t('settings.security.wizard.invalidCode'));
       }
     },
-    onError: (err: Error) => setOtpError(err.message ?? 'Verification failed'),
+    onError: (err: Error) =>
+      setOtpError(err.message ?? t('settings.security.wizard.verificationFailed')),
   });
 
   function handleDone(): void {
@@ -83,7 +86,7 @@ export function TwoFactorWizardBody({ setupData, onEnabled, resetKey }: Props): 
       {step === 'setup' && (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Scan this QR code with your authenticator app (Google Authenticator, Authy, ecc.)
+            {t('settings.security.wizard.scanInstruction')}
           </p>
           {/*
            * BE returns an otpauth:// URI (RFC 6238) — NOT a PNG. We render the QR
@@ -99,17 +102,17 @@ export function TwoFactorWizardBody({ setupData, onEnabled, resetKey }: Props): 
               value={setupData.qrCodeUrl}
               size={192}
               level="M"
-              aria-label="2FA QR code — scan with your authenticator app"
+              aria-label={t('settings.security.wizard.qrAriaLabel')}
             />
           </div>
           <div>
-            <p className="text-sm font-medium mb-2">Or enter this code manually:</p>
+            <p className="text-sm font-medium mb-2">{t('settings.security.wizard.manualEntry')}</p>
             <code className="block p-2 bg-muted rounded text-sm break-all font-mono">
               {setupData.secret}
             </code>
           </div>
           <Button onClick={() => setStep('verify')} className="w-full">
-            Continue
+            {t('settings.security.wizard.continue')}
           </Button>
         </div>
       )}
@@ -117,7 +120,7 @@ export function TwoFactorWizardBody({ setupData, onEnabled, resetKey }: Props): 
       {step === 'verify' && (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground text-center">
-            Enter the code from your authenticator app
+            {t('settings.security.wizard.enterCode')}
           </p>
           <OTPInput6Slot
             onComplete={code => {
@@ -138,12 +141,13 @@ export function TwoFactorWizardBody({ setupData, onEnabled, resetKey }: Props): 
           )}
           {enable.isPending && (
             <div className="flex items-center justify-center text-muted-foreground text-xs">
-              <Loader2 className="h-3 w-3 animate-spin mr-1" /> verifying…
+              <Loader2 className="h-3 w-3 animate-spin mr-1" />{' '}
+              {t('settings.security.wizard.verifying')}
             </div>
           )}
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setStep('setup')} className="flex-1">
-              Back
+              {t('settings.security.wizard.back')}
             </Button>
           </div>
         </div>
@@ -152,12 +156,11 @@ export function TwoFactorWizardBody({ setupData, onEnabled, resetKey }: Props): 
       {step === 'codes' && (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Copia o scarica i codici prima di continuare. Se perdi accesso all&apos;app di
-            autenticazione, potrai usarli per rientrare nel tuo account.
+            {t('settings.security.wizard.codesIntro')}
           </p>
           <BackupCodesView codes={issuedCodes} acked={ack} onAck={setAck} />
           <Button onClick={handleDone} className="w-full" disabled={!ack}>
-            Done
+            {t('settings.security.wizard.done')}
           </Button>
         </div>
       )}

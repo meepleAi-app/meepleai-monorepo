@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TestRun xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <ResultSummary outcome="Failed">
+    <Counters total="7" executed="5" passed="3" failed="2" error="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+  </ResultSummary>
+  <Results>
+    <UnitTestResult executionId="ex-0" testId="id-1" testName="Passa" computerName="fixture" duration="00:00:00.0010000" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="lista" />
+    <UnitTestResult executionId="ex-1" testId="id-2" testName="Salva" computerName="fixture" duration="00:00:00.0010000" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="lista" />
+    <UnitTestResult executionId="ex-2" testId="id-3" testName="Salva" computerName="fixture" duration="00:00:00.0010000" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="lista" />
+    <UnitTestResult executionId="ex-3" testId="id-4" testName="Legge(file: &quot;a.pdf&quot;)" computerName="fixture" duration="00:00:00.0010000" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Failed" testListId="lista" />
+    <UnitTestResult executionId="ex-4" testId="id-5" testName="Lento" computerName="fixture" duration="00:00:00.0010000" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="NotExecuted" testListId="lista" />
+    <UnitTestResult executionId="ex-5" testId="id-6" testName="Esterno" computerName="fixture" duration="00:00:00.0010000" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="NotExecuted" testListId="lista" />
+    <UnitTestResult executionId="ex-6" testId="id-7" testName="Nuovo" computerName="fixture" duration="00:00:00.0010000" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="lista" />
+  </Results>
+  <TestDefinitions>
+    <UnitTest name="Passa" storage="api.tests.dll" id="id-1">
+      <Execution id="ex-0" />
+      <TestMethod codeBase="Api.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Ns.ClasseUno" name="Passa" />
+    </UnitTest>
+    <UnitTest name="Salva" storage="api.tests.dll" id="id-2">
+      <Execution id="ex-1" />
+      <TestMethod codeBase="Api.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Ns.ClasseUno" name="Salva" />
+    </UnitTest>
+    <UnitTest name="Salva" storage="api.tests.dll" id="id-3">
+      <Execution id="ex-2" />
+      <TestMethod codeBase="Api.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Ns.ClasseDue" name="Salva" />
+    </UnitTest>
+    <UnitTest name="Legge(file: &quot;a.pdf&quot;)" storage="api.tests.dll" id="id-4">
+      <Execution id="ex-3" />
+      <TestMethod codeBase="Api.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Ns.ClasseDue" name="Legge(file: &quot;a.pdf&quot;)" />
+    </UnitTest>
+    <UnitTest name="Lento" storage="api.tests.dll" id="id-5">
+      <Execution id="ex-4" />
+      <TestMethod codeBase="Api.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Ns.ClasseUno" name="Lento" />
+    </UnitTest>
+    <UnitTest name="Esterno" storage="api.tests.dll" id="id-6">
+      <Execution id="ex-5" />
+      <TestMethod codeBase="Api.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Ns.ClasseUno" name="Esterno" />
+    </UnitTest>
+    <UnitTest name="Nuovo" storage="api.tests.dll" id="id-7">
+      <Execution id="ex-6" />
+      <TestMethod codeBase="Api.Tests.dll" adapterTypeName="executor://xunit/VsTestRunner3/netcore/" className="Ns.ClasseDue" name="Nuovo" />
+    </UnitTest>
+  </TestDefinitions>
+</TestRun>

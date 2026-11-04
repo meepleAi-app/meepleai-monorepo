@@ -41,7 +41,8 @@ internal sealed class UpdateGameStateTemplateCommandHandler
         var template = await _templateRepository.GetByIdAsync(command.TemplateId, cancellationToken)
             .ConfigureAwait(false);
 
-        if (template is null)
+        // #4543: un template di un altro gioco non esiste sotto la rotta di questo.
+        if (template is null || template.SharedGameId != command.SharedGameId)
         {
             throw new NotFoundException("GameStateTemplate", command.TemplateId.ToString());
         }

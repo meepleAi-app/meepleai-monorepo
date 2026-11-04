@@ -474,8 +474,10 @@ export const UpdateSharedGameRequestSchema = z.object({
   minAge: z.number().int().min(0).max(100),
   complexityRating: z.number().min(0).max(5).nullable().optional(),
   averageRating: z.number().min(0).max(10).nullable().optional(),
-  imageUrl: z.string().url(),
-  thumbnailUrl: z.string().url(),
+  // #4090: '' is accepted — these two are the #2123 deprecation tombstone and the backend no
+  // longer requires a value, so callers stop fabricating placeholder URLs to satisfy it.
+  imageUrl: z.union([z.string().url(), z.literal('')]),
+  thumbnailUrl: z.union([z.string().url(), z.literal('')]),
   rules: z
     .object({
       content: z.string().min(1),
@@ -483,6 +485,13 @@ export const UpdateSharedGameRequestSchema = z.object({
     })
     .nullable()
     .optional(),
+  // #4090: deliberately without the `.default([])` the create schema carries. On an update an
+  // omitted collection must stay omitted ("do not change"); an empty array means "clear".
+  categories: z.array(z.string()).optional(),
+  mechanics: z.array(z.string()).optional(),
+  designers: z.array(z.string()).optional(),
+  publishers: z.array(z.string()).optional(),
+  bggId: z.number().int().positive().nullable().optional(),
 });
 
 export type UpdateSharedGameRequest = z.infer<typeof UpdateSharedGameRequestSchema>;

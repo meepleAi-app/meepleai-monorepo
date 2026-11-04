@@ -162,7 +162,11 @@ internal class AlertingService : IAlertingService
         string alertType,
         CancellationToken cancellationToken = default)
     {
+        // #3882: .AsTracking() richiesto — il default del DbContext e' NoTracking (PERF-06),
+        // quindi senza di esso questa lettura e' DETACHED: le mutazioni sotto non raggiungono
+        // il change tracker e SaveChangesAsync non scrive, e non solleva.
         var activeAlerts = await _dbContext.Alerts
+            .AsTracking()
             .Where(a => a.AlertType == alertType && a.IsActive)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 

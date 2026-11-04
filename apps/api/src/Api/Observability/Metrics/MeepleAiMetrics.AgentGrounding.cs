@@ -15,7 +15,7 @@ internal static partial class MeepleAiMetrics
     // (cited) answer from a silently ungrounded one, and none carried the input path.
     //
     // Two producers, one contract (mirrors the #3388 GroundingStatus wire contract):
-    //   - text  -> ChatWithSessionAgentCommandHandler (KnowledgeBase, RAG, retrieval_profile=live_session)
+    //   - text  -> the legacy session-agent chat (KnowledgeBase), retired by #4448 (A7): no producer today
     //   - image -> AskSessionAgentCommandHandler       (SessionTracking). Since #3390 Slice 2 this path
     //              can be grounded too: retrieval_profile=live_session when the grounded RAG query ran
     //              (flag rag.live-image-retrieval), or none when it fell back to multimodal-only.
@@ -37,7 +37,9 @@ internal static partial class MeepleAiMetrics
 
     /// <summary>
     /// Histogram of citation counts per in-session agent response, split by input path.
-    /// The <c>le=0</c> bucket captures ungrounded (uncited) responses. Tag: path only (bounded).
+    /// The <c>le=0</c> bucket captures the uncited responses. Since #4481 that is not the same as
+    /// <c>grounding_status=ungrounded</c>, which also counts the refusal ("not available in the
+    /// rulebook") given with citations. Tag: path only (bounded).
     /// </summary>
     public static readonly Histogram<int> AgentResponseCitationCount = Meter.CreateHistogram<int>(
         name: "meepleai.agent.response.citation_count",
@@ -95,7 +97,7 @@ internal static partial class MeepleAiMetrics
     /// <param name="path">Input path (<see cref="AgentResponsePaths"/>).</param>
     /// <param name="groundingStatusWire">Wire grounding string ("Grounded"/"Partial"/"Ungrounded").</param>
     /// <param name="retrievalProfile">Retrieval profile (<see cref="AgentRetrievalProfiles"/>).</param>
-    /// <param name="citationCount">Number of citations in the response (0 when ungrounded/uncited).</param>
+    /// <param name="citationCount">Number of citations in the response (0 when uncited; a refusal can be ungrounded with citations, #4481).</param>
     public static void RecordAgentResponseGrounding(
         string path,
         string groundingStatusWire,

@@ -14,7 +14,8 @@ describe('ContextualCTA', () => {
     render(<ContextualCTA />);
     const link = screen.getByRole('link', { name: /esplora catalogo/i });
     expect(link).toBeInTheDocument();
-    expect(link).toHaveAttribute('href', '/catalog');
+    // #3938: was '/catalog', a route that never existed.
+    expect(link).toHaveAttribute('href', '/games');
   });
 
   it('renders sessions CTA link on /sessions', () => {
@@ -41,8 +42,12 @@ describe('ContextualCTA', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  // Issue #4138: this case asserts the data-testid contract; `/agents` was only
+  // a vehicle — any path with a CTA would do — and that section is retired.
+  // Repointed to /game-nights, which still has one. The subject of the test is
+  // unchanged.
   it('has data-testid contextual-cta', () => {
-    vi.mocked(usePathname).mockReturnValue('/agents');
+    vi.mocked(usePathname).mockReturnValue('/game-nights');
     render(<ContextualCTA />);
     expect(screen.getByTestId('contextual-cta')).toBeInTheDocument();
   });

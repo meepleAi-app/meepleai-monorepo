@@ -2,8 +2,8 @@ using System.Globalization;
 using Api.BoundedContexts.Administration.Application.Queries;
 using Api.BoundedContexts.Administration.Domain.Services;
 using Api.BoundedContexts.DocumentProcessing.Application.Queries;
-using Api.BoundedContexts.DocumentProcessing.Application.Queries.Queue;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
+using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.Filters;
 using MediatR;
 
@@ -35,35 +35,22 @@ internal static class AdminPipelineEndpoints
         return group;
     }
 
-    private static async Task<IResult> GetPipelineHealth(
-        IHttpClientFactory httpClientFactory,
+    // internal (not private) so AdminPipelineHealthResponseShapeTests can invoke it with a stub IMediator.
+    internal static async Task<IResult> GetPipelineHealth(
         IMediator mediator,
-        ILogger<Program> logger,
         CancellationToken ct)
     {
-        // Run independent queries in parallel. CQRS #3176: infrastructure health and step metrics
-        // are fetched via IMediator (pass-through queries) instead of injecting the services.
-        var healthTask = mediator.Send(new GetServiceHealthStatusesQuery(), ct);
-        var metricsTask = mediator.Send(new GetStepDurationStatsQuery(), ct);
-        var storageTask = mediator.Send(new GetPdfStorageHealthQuery(), ct);
-        var queueTask = mediator.Send(new GetProcessingQueueQuery(
-            StatusFilter: null,
-            SearchText: null,
-            FromDate: null,
-            ToDate: null,
-            Page: 1,
-            PageSize: 10), ct);
+        // #4512: one send. The four queries and the embedding metrics are read by
+        // GetPipelineHealthSnapshotQueryHandler, which also keeps the two rules this endpoint used
+        // to keep here: the four queries go one at a time (#4059, they share the request's
+        // DbContext), and the metrics read runs alongside them, outside the MediatR pipeline.
+        var snapshot = await mediator.Send(new GetPipelineHealthSnapshotQuery(), ct).ConfigureAwait(false);
 
-        // Embedding service metrics (fire and forget on failure)
-        var embeddingMetricsTask = GetEmbeddingMetricsSafe(httpClientFactory, logger, ct);
-
-        await Task.WhenAll(healthTask, metricsTask, storageTask, queueTask, embeddingMetricsTask).ConfigureAwait(false);
-
-        var allHealth = await healthTask.ConfigureAwait(false);
-        var stepMetrics = await metricsTask.ConfigureAwait(false);
-        var storageHealth = await storageTask.ConfigureAwait(false);
-        var queueResult = await queueTask.ConfigureAwait(false);
-        var embeddingMetrics = await embeddingMetricsTask.ConfigureAwait(false);
+        var allHealth = snapshot.ServiceHealth;
+        var stepMetrics = snapshot.StepDurations;
+        var storageHealth = snapshot.StorageHealth;
+        var queueResult = snapshot.Queue;
+        var embeddingMetrics = snapshot.EmbeddingMetrics;
 
         // Map service health by name for easy lookup
         var healthByName = allHealth.ToDictionary(
@@ -198,7 +185,7 @@ internal static class AdminPipelineEndpoints
 
     private static object BuildEmbedStage(
         Dictionary<string, ServiceHealthStatus> healthByName,
-        EmbeddingMetricsSnapshot? embeddingMetrics)
+        EmbeddingServiceMetricsDto embeddingMetrics)
     {
         var embeddingHealth = healthByName.GetValueOrDefault("embedding");
         string status;
@@ -222,9 +209,9 @@ internal static class AdminPipelineEndpoints
             metrics = new
             {
                 serviceHealth = embeddingHealth?.State.ToString() ?? "unknown",
-                requestsTotal = embeddingMetrics?.RequestsTotal ?? 0,
-                avgDurationMs = embeddingMetrics?.AvgDurationMs ?? 0,
-                failureRate = embeddingMetrics?.FailureRate ?? 0,
+                requestsTotal = embeddingMetrics.RequestsTotal,
+                avgDurationMs = embeddingMetrics.AvgDurationMs,
+                failureRate = embeddingMetrics.FailureRate,
             },
         };
     }
@@ -286,82 +273,4 @@ internal static class AdminPipelineEndpoints
             },
         };
     }
-
-    /// <summary>
-    /// Fetches embedding service Prometheus metrics without failing the whole endpoint.
-    /// </summary>
-    private static async Task<EmbeddingMetricsSnapshot?> GetEmbeddingMetricsSafe(
-        IHttpClientFactory httpClientFactory,
-        ILogger logger,
-        CancellationToken ct)
-    {
-        try
-        {
-            var client = httpClientFactory.CreateClient("EmbeddingService");
-            using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-            cts.CancelAfter(TimeSpan.FromSeconds(3));
-
-            var response = await client.GetAsync("/metrics", cts.Token).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
-            {
-                return null;
-            }
-
-            var text = await response.Content.ReadAsStringAsync(cts.Token).ConfigureAwait(false);
-            return ParsePrometheusMetrics(text);
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Failed to fetch embedding metrics for pipeline health");
-            return null;
-        }
-    }
-
-    private static EmbeddingMetricsSnapshot ParsePrometheusMetrics(string text)
-    {
-        long requestsTotal = 0;
-        long failuresTotal = 0;
-        double durationMsSum = 0;
-
-        foreach (var line in text.Split('\n'))
-        {
-            var trimmed = line.Trim();
-            if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith('#'))
-            {
-                continue;
-            }
-
-            var parts = trimmed.Split(' ', 2);
-            if (parts.Length < 2)
-            {
-                continue;
-            }
-
-            var key = parts[0];
-            var value = parts[1];
-
-            if (string.Equals(key, "embed_requests_total", StringComparison.Ordinal)
-                && long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var req))
-            {
-                requestsTotal = req;
-            }
-            else if (string.Equals(key, "embed_failures_total", StringComparison.Ordinal)
-                     && long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var fail))
-            {
-                failuresTotal = fail;
-            }
-            else if (string.Equals(key, "embed_duration_ms_sum", StringComparison.Ordinal)
-                     && double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var dur))
-            {
-                durationMsSum = dur;
-            }
-        }
-
-        var avgDuration = requestsTotal > 0 ? Math.Round(durationMsSum / requestsTotal, 2) : 0.0;
-        var failureRate = requestsTotal > 0 ? Math.Round((double)failuresTotal / requestsTotal * 100.0, 2) : 0.0;
-
-        return new EmbeddingMetricsSnapshot(requestsTotal, avgDuration, failureRate);
-    }
-
-    private sealed record EmbeddingMetricsSnapshot(long RequestsTotal, double AvgDurationMs, double FailureRate);
 }

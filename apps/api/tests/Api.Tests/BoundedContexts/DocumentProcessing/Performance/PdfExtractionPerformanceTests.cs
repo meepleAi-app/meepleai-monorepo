@@ -339,13 +339,45 @@ public class PdfExtractionPerformanceTests
             "Duration should not be unreasonably long for a 50ms fake delay");
     }
 
+    // #3686: this asserted `>= 100` against a nominal of exactly 100 — stages 1-2 only, since
+    // the stage 3 fallback was not counted — so it failed roughly one run in two. With stage 3
+    // now included the nominal is ~300ms; the bound is raised to 200ms, which is both stricter
+    // than before (a measurement that dropped stage 3 would report 100 and fail) and no longer
+    // straddling its own expected value. A lower bound on wall-clock is the exception in this
+    // class — see the class remarks: the other timing assertions are deliberately loose upper
+    // bounds — so it earns its margin explicitly rather than by luck.
     [Fact]
     public async Task DurationTracking_MultipleStageFallback_RecordsCumulativeTime()
     {
-        // Each stage takes ~50ms, 3 stages attempted
         var stage1 = new TimedFakeExtractor(delayMs: 50, success: true, quality: ExtractionQuality.VeryLow);
         var stage2 = new TimedFakeExtractor(delayMs: 50, success: true, quality: ExtractionQuality.Low);
-        var stage3 = new TimedFakeExtractor(delayMs: 50, success: true, quality: ExtractionQuality.Medium);
+        var stage3 = new TimedFakeExtractor(delayMs: 200, success: true, quality: ExtractionQuality.Medium);
+
+        var orchestrator = CreateOrchestrator(stage1, stage2, stage3);
+        await using var pdfStream = CreateDummyPdfStream();
+
+        var result = await orchestrator.ExtractTextWithFallbackAsync(pdfStream);
+
+        result.Success.Should().BeTrue();
+        result.StageUsed.Should().Be(3);
+        result.TotalDurationMs.Should().BeGreaterThanOrEqualTo(200,
+            "Cumulative duration should reflect all three stage attempts (~300ms nominal), not just the two that precede the fallback");
+    }
+
+    // #3686: the overall stopwatch was stopped *before* the stage 3 fallback ran, and the
+    // stopwatch taken inside the fallback was logged and discarded — so a stage-3 result
+    // reported the duration of stages 1-2 only, under-reporting exactly on the slowest path.
+    //
+    // The shape below is deliberate: stages 1-2 are instant and stage 3 is slow, so a
+    // measurement that excludes stage 3 collapses to ~0ms. The threshold then sits an order
+    // of magnitude away from the broken value instead of straddling it — unlike the test
+    // above, whose nominal was 100ms against a `>= 100` bound (zero margin, hence the flake).
+    [Fact]
+    public async Task DurationTracking_Stage3Fallback_IncludesStage3Duration()
+    {
+        var stage1 = new TimedFakeExtractor(delayMs: 0, success: true, quality: ExtractionQuality.VeryLow);
+        var stage2 = new TimedFakeExtractor(delayMs: 0, success: true, quality: ExtractionQuality.Low);
+        var stage3 = new TimedFakeExtractor(delayMs: 200, success: true, quality: ExtractionQuality.Medium);
 
         var orchestrator = CreateOrchestrator(stage1, stage2, stage3);
         await using var pdfStream = CreateDummyPdfStream();
@@ -355,7 +387,27 @@ public class PdfExtractionPerformanceTests
         result.Success.Should().BeTrue();
         result.StageUsed.Should().Be(3);
         result.TotalDurationMs.Should().BeGreaterThanOrEqualTo(100,
-            "Cumulative duration should reflect multiple stage attempts");
+            "TotalDurationMs must cover the stage 3 fallback (~200ms here); stages 1-2 are instant, so a measurement that stops before stage 3 reports ~0ms");
+    }
+
+    [Fact]
+    public async Task PagedDurationTracking_Stage3Fallback_IncludesStage3Duration()
+    {
+        // Paged quality is derived from chars-per-page (<500 cpp scores below both stage
+        // thresholds), so 200/400 cpp force the fallback the same way the text path does.
+        var stage1 = new TimedFakeExtractor(delayMs: 0, success: true, pageCount: 10, charsPerPage: 200);
+        var stage2 = new TimedFakeExtractor(delayMs: 0, success: true, pageCount: 10, charsPerPage: 400);
+        var stage3 = new TimedFakeExtractor(delayMs: 200, success: true, pageCount: 10, charsPerPage: 500);
+
+        var orchestrator = CreateOrchestrator(stage1, stage2, stage3);
+        await using var pdfStream = CreateDummyPdfStream();
+
+        var result = await orchestrator.ExtractPagedTextWithFallbackAsync(pdfStream);
+
+        result.Success.Should().BeTrue();
+        result.StageUsed.Should().Be(3);
+        result.TotalDurationMs.Should().BeGreaterThanOrEqualTo(100,
+            "TotalDurationMs must cover the stage 3 fallback on the paged path too — same defect, and no test covered it");
     }
 
     #endregion

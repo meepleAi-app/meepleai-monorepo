@@ -42,7 +42,6 @@ internal static class ModelEndpoints
         .WithName("GetAvailableModels")
         .WithTags("AI Models")
         .WithDescription("Get available AI models. Optionally filter by tier (free, normal, premium, custom).")
-        .WithOpenApi()
         .Produces(200)
         .Produces(500);
     }

@@ -545,7 +545,7 @@ public sealed class Issue1535EventOutboxAcceptanceTests : IAsyncLifetime
     ///   <item>Update the consumer-contract doc to soften the idempotency requirement.</item>
     /// </list>
     /// </summary>
-    [Fact(Skip = "1535-Concurrency-Hardening — see XML doc for rationale.")]
+    [Fact(Skip = "DIFETTO: #1535 — il processor manca di SELECT FOR UPDATE SKIP LOCKED, quindi il dispatch exactly-once sotto concorrenza che questo test asserisce non e ancora garantito dal prodotto. Vedi la doc XML sopra per il piano di hardening.")]
     public Task Scenario5_ConcurrentDispatch_MultiInstance_BoundedDuplicates()
     {
         // Intentionally empty: the XML doc-comment IS the documentation. Re-enabling this

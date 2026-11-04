@@ -54,6 +54,37 @@ internal sealed class WishlistItem : AggregateRoot<Guid>
         return item;
     }
 
+    /// <summary>
+    /// Ricostituisce un elemento letto dal database, così com'è (#4552).
+    /// </summary>
+    /// <remarks>
+    /// Solo per il repository. <see cref="Create"/> è la factory di un elemento nuovo: genera l'id, lo data ad
+    /// "adesso", solleva <see cref="WishlistItemAddedEvent"/> e lo rende privato. Usata per ricostruire una riga,
+    /// la visibilità salvata tornava sempre <see cref="WishlistVisibility.Private"/>, e il primo aggiornamento
+    /// l'avrebbe scritta così. Nessuna validazione e nessun evento: la riga è già stata scritta.
+    /// </remarks>
+    internal static WishlistItem Reconstitute(
+        Guid id,
+        Guid userId,
+        Guid gameId,
+        WishlistPriority priority,
+        decimal? targetPrice,
+        string? notes,
+        DateTime addedAt,
+        WishlistVisibility visibility,
+        DateTime? updatedAt) => new()
+        {
+            Id = id,
+            UserId = userId,
+            GameId = gameId,
+            Priority = priority,
+            TargetPrice = targetPrice,
+            Notes = notes,
+            AddedAt = addedAt,
+            Visibility = visibility,
+            UpdatedAt = updatedAt,
+        };
+
     public void Update(
         WishlistPriority? priority = null,
         decimal? targetPrice = null,

@@ -59,7 +59,7 @@ public sealed class ProcessPendingPdfsRecoveryIntegrationTests : IAsyncLifetime
         _isolatedDbConnectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
 
         var services = IntegrationServiceCollectionBuilder.CreateBase(
-            _isolatedDbConnectionString, useNoTrackingDefault: true);
+            _isolatedDbConnectionString);
 
         services.AddSingleton<IHttpContextAccessor>(new Mock<IHttpContextAccessor>().Object);
 

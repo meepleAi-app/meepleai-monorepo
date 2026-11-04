@@ -14,3 +14,7 @@ tsc_out.txt
 
 # a11y e2e generated report (local runs)
 playwright-report-a11y/
+
+# Report dello scan dipendenze (generati dal job "Dependency Vulnerabilities")
+audit-report.txt
+audit-prod.json

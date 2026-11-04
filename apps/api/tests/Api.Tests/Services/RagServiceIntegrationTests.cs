@@ -345,6 +345,7 @@ public sealed class RagServiceIntegrationTests : IDisposable
                 It.IsAny<float>(),
                 It.IsAny<double>(),
                 It.IsAny<GameBookRole>(),
+                It.IsAny<QueryEmbedding?>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(dummyResults);
     }

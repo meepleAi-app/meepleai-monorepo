@@ -22,8 +22,9 @@ import { type ReactElement, useEffect, useRef, useCallback, useState, useId } fr
 
 import { useAddLivePlayer } from '@/hooks/mutations/useAddLivePlayer';
 import { ApiError } from '@/lib/api/core/errors';
-import { PlayerColorSchema, type PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
+import { type PlayerColor } from '@/lib/api/schemas/live-sessions.schemas';
 import { usePlayerSearch } from '@/lib/game-nights/hooks/usePlayerSearch';
+import { nextFreePlayerColor } from '@/lib/sessions/player-colors';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -152,8 +153,10 @@ export function AddPlayerDialog({
   );
 
   const computeColor = useCallback(() => {
-    const used = new Set(players.map(p => p.color));
-    return PlayerColorSchema.options.find(c => !used.has(c));
+    // #4107: una sola implementazione di «il primo colore libero». Prima questa logica
+    // esisteva qui e, con un vocabolario diverso (hex), anche in `PlayerSetup` — e il quarto
+    // chiamante di `addPlayer` non ce l'aveva affatto.
+    return nextFreePlayerColor(players.map(p => p.color));
   }, [players]);
 
   const handleSubmit = useCallback(

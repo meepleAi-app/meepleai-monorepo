@@ -99,14 +99,62 @@ internal class LibraryShareLinkRepository : RepositoryBase, ILibraryShareLinkRep
         await DbContext.LibraryShareLinks.AddAsync(persistenceEntity, cancellationToken).ConfigureAwait(false);
     }
 
+    /// <summary>
+    /// Salva le modifiche del proprietario: privacy, note, scadenza, revoca.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <c>DbSet.Update</c> su un oggetto non tracciato riscrive ogni colonna con il valore letto dalla
+    /// richiesta. Prima di #4558 questo cancellava ciò che un'altra richiesta aveva salvato fra la lettura e
+    /// la scrittura. Due colonne e una condizione lo impediscono.
+    /// </para>
+    /// <list type="bullet">
+    ///   <item><c>view_count</c> e <c>last_accessed_at</c> non vengono scritte: sono della visita
+    ///     (<see cref="TryRecordAccessAsync"/>). Una revoca concorrente a una visita non riporta indietro il
+    ///     contatore.</item>
+    ///   <item>La scrittura vale solo se nel database il link non è revocato (<c>revoked_at</c> è un token di
+    ///     concorrenza, e il suo valore originale è <c>NULL</c>). Ogni modifica dell'aggregato richiede un
+    ///     link non revocato, quindi è il valore che la richiesta ha letto. Se il link è stato revocato nel
+    ///     frattempo, l'UPDATE tocca 0 righe e <c>SaveChangesAsync</c> lancia
+    ///     <see cref="DbUpdateConcurrencyException"/> (409): una revoca non si annulla mai.</item>
+    /// </list>
+    /// <para>
+    /// Non è <c>xmin</c> (ADR-060): ogni visita è un UPDATE e cambia <c>xmin</c>, quindi ogni visita
+    /// arrivata durante un comando del proprietario lo farebbe fallire. Un link diffuso e visitato di
+    /// continuo diventerebbe difficile da revocare, proprio quando serve.
+    /// </para>
+    /// </remarks>
     public Task UpdateAsync(LibraryShareLink entity, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(entity);
         CollectDomainEvents(entity);
 
         var persistenceEntity = MapToPersistence(entity);
-        DbContext.LibraryShareLinks.Update(persistenceEntity);
+        var entry = DbContext.LibraryShareLinks.Update(persistenceEntity);
+        entry.Property(e => e.ViewCount).IsModified = false;
+        entry.Property(e => e.LastAccessedAt).IsModified = false;
+        entry.Property(e => e.RevokedAt).OriginalValue = null;
         return Task.CompletedTask;
+    }
+
+    public async Task<bool> TryRecordAccessAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+
+        // La validità è quella dell'aggregato (LibraryShareLink.IsValid): non revocato, e non scaduto, cioè
+        // ExpiresAt nullo o non ancora superato (IsExpired è `now > ExpiresAt`).
+        var counted = await DbContext.LibraryShareLinks
+            .Where(e => e.Id == id)
+            .Where(e => e.RevokedAt == null)
+            .Where(e => e.ExpiresAt == null || e.ExpiresAt >= now)
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(e => e.ViewCount, e => e.ViewCount + 1)
+                    .SetProperty(e => e.LastAccessedAt, now),
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return counted == 1;
     }
 
     public Task DeleteAsync(LibraryShareLink entity, CancellationToken cancellationToken = default)
@@ -130,39 +178,24 @@ internal class LibraryShareLinkRepository : RepositoryBase, ILibraryShareLinkRep
     /// <summary>
     /// Maps persistence entity to domain entity.
     /// </summary>
-    private static LibraryShareLink MapToDomain(LibraryShareLinkEntity entity)
-    {
-        var domainEntity = LibraryShareLink.Create(
+    /// <remarks>
+    /// Passa da <see cref="LibraryShareLink.Reconstitute"/>, non dalla factory di creazione: quella rifiuta
+    /// una scadenza passata, e un link scaduto diventava illeggibile (#4544). Ogni colonna scritta da
+    /// <see cref="MapToPersistence"/> torna qui: una colonna mancante in una delle due direzioni verrebbe
+    /// azzerata al primo <see cref="UpdateAsync"/> (vedi <c>LibraryShareLinkRepositoryTests</c>).
+    /// </remarks>
+    private static LibraryShareLink MapToDomain(LibraryShareLinkEntity entity) =>
+        LibraryShareLink.Reconstitute(
+            id: entity.Id,
             userId: entity.UserId,
+            shareToken: entity.ShareToken,
             privacyLevel: (LibrarySharePrivacyLevel)entity.PrivacyLevel,
             includeNotes: entity.IncludeNotes,
-            expiresAt: entity.ExpiresAt
-        );
-
-        // Use reflection to set properties that are set during creation
-        var idProp = typeof(LibraryShareLink).GetProperty("Id");
-        idProp?.SetValue(domainEntity, entity.Id);
-
-        var tokenProp = typeof(LibraryShareLink).GetProperty("ShareToken");
-        tokenProp?.SetValue(domainEntity, entity.ShareToken);
-
-        var createdAtProp = typeof(LibraryShareLink).GetProperty("CreatedAt");
-        createdAtProp?.SetValue(domainEntity, entity.CreatedAt);
-
-        var revokedAtProp = typeof(LibraryShareLink).GetProperty("RevokedAt");
-        revokedAtProp?.SetValue(domainEntity, entity.RevokedAt);
-
-        var viewCountProp = typeof(LibraryShareLink).GetProperty("ViewCount");
-        viewCountProp?.SetValue(domainEntity, entity.ViewCount);
-
-        var lastAccessedAtProp = typeof(LibraryShareLink).GetProperty("LastAccessedAt");
-        lastAccessedAtProp?.SetValue(domainEntity, entity.LastAccessedAt);
-
-        // Clear domain events raised during construction
-        domainEntity.ClearDomainEvents();
-
-        return domainEntity;
-    }
+            createdAt: entity.CreatedAt,
+            expiresAt: entity.ExpiresAt,
+            revokedAt: entity.RevokedAt,
+            viewCount: entity.ViewCount,
+            lastAccessedAt: entity.LastAccessedAt);
 
     /// <summary>
     /// Maps domain entity to persistence entity.

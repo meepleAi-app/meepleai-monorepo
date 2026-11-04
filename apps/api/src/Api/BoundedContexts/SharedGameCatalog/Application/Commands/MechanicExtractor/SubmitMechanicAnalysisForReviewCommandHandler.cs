@@ -1,4 +1,5 @@
 using Api.BoundedContexts.SharedGameCatalog.Application.DTOs;
+using Api.BoundedContexts.SharedGameCatalog.Domain.Enums;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Exceptions;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
@@ -26,6 +27,12 @@ namespace Api.BoundedContexts.SharedGameCatalog.Application.Commands.MechanicExt
 /// <see cref="ConflictException"/> (HTTP 409): the request is syntactically valid but conflicts
 /// with aggregate state. <see cref="DbUpdateConcurrencyException"/> (optimistic concurrency via
 /// PostgreSQL <c>xmin</c>) also maps to 409 with a retry hint.
+/// </para>
+/// <para>
+/// A resubmission from <c>Rejected</c> re-enters the filtered unique index on (game, pdf, prompt):
+/// when another analysis holds that slot the handler answers 409 saying what to do — before the
+/// UPDATE, and again if the 23505 of a race slips past the check (#4144, see
+/// <see cref="MechanicAnalysisPromptSlot"/>).
 /// </para>
 /// </remarks>
 internal sealed class SubmitMechanicAnalysisForReviewCommandHandler
@@ -65,6 +72,23 @@ internal sealed class SubmitMechanicAnalysisForReviewCommandHandler
                 resourceId: request.AnalysisId.ToString());
         }
 
+        // Rejected → InReview is the only transition that brings an analysis back inside the filtered
+        // unique index (one non-Rejected analysis per game, pdf, prompt). If another analysis took the
+        // slot meanwhile — typically one regenerated after this was rejected (#4144) — the UPDATE would
+        // fail 23505 → 500. Say what to do instead.
+        if (analysis.Status == MechanicAnalysisStatus.Rejected)
+        {
+            var holder = await _analysisRepository
+                .FindByPromptVersionAsync(analysis.SharedGameId, analysis.PdfDocumentId, analysis.PromptVersion, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (holder is not null && holder.Id != analysis.Id)
+            {
+                throw MechanicAnalysisPromptSlot.Occupied(
+                    PromptSlotWrite.ResubmitForReview, holder.Id, holder.Status, holder.CreatedAt, analysis.PromptVersion);
+            }
+        }
+
         var utcNow = _timeProvider.GetUtcNow().UtcDateTime;
 
         try
@@ -97,6 +121,25 @@ internal sealed class SubmitMechanicAnalysisForReviewCommandHandler
             throw new ConflictException(
                 "Mechanic analysis was modified by another operation. Please retry.",
                 ex);
+        }
+        catch (DbUpdateException ex) when (MechanicAnalysisPromptSlot.IsTaken(ex))
+        {
+            // The race past the guard above: another analysis took the slot between the check and
+            // this UPDATE. Both outcomes below throw and end the request, and nothing saves in this
+            // scope afterwards (the command is not [AuditableAction] and is only sent by its endpoint),
+            // so the dirty change tracker is not cleaned here, unlike GenerateMechanicAnalysisCommandHandler,
+            // which can return normally inside another handler's scope.
+            var holder = await _analysisRepository
+                .FindByPromptVersionAsync(analysis.SharedGameId, analysis.PdfDocumentId, analysis.PromptVersion, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (holder is null || holder.Id == analysis.Id)
+            {
+                throw;
+            }
+
+            throw MechanicAnalysisPromptSlot.Occupied(
+                PromptSlotWrite.ResubmitForReview, holder.Id, holder.Status, holder.CreatedAt, analysis.PromptVersion, ex);
         }
 
         _logger.LogInformation(

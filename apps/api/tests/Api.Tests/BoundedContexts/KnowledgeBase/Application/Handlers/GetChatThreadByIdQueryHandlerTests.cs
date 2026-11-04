@@ -55,6 +55,25 @@ public class GetChatThreadByIdQueryHandlerTests
         result.Messages.Should().ContainSingle();
     }
 
+    [Theory]
+    [InlineData("tutor")]
+    [InlineData("secca")]
+    public async Task Handle_TheThreadSwitchedToAnIntent_CarriesItInTheDto(string intent)
+    {
+        // The chat page loads the thread by id to show the selector (#4404): without the stored intent here it says
+        // «Auto» after every reload, while the pipeline still answers in the stored intent.
+        var threadId = Guid.NewGuid();
+        var thread = new ChatThread(threadId, Guid.NewGuid(), Guid.NewGuid(), "Test Thread");
+        thread.SwitchAgent(intent);
+        _mockRepository
+            .Setup(r => r.GetByIdAsync(threadId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(thread);
+
+        var result = await _handler.Handle(new GetChatThreadByIdQuery(threadId), TestContext.Current.CancellationToken);
+
+        result!.AgentType.Should().Be(intent);
+    }
+
     [Fact]
     public async Task Handle_WithNonExistentThread_ReturnsNull()
     {

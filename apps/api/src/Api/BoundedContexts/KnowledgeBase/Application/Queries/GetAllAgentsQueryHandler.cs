@@ -61,18 +61,21 @@ internal sealed class GetAllAgentsQueryHandler
                 .Distinct()
                 .ToHashSet();
 
+            // 🔴 #4081: la condizione era `!a.GameId.HasValue`, cioe' «qualunque agente senza
+            // gioco», mentre il commento sopra promette «agenti di sistema». Oggi i due insiemi
+            // coincidono perche' l'unico agente esistente e' entrambe le cose, ma un agente senza
+            // gioco creato per via amministrativa e NON di sistema comparirebbe nella libreria
+            // personale di ogni utente. Non e' raggiungibile da un utente (`CreateUserAgentCommand`
+            // e `CreateGameAgentCommand` prendono un `Guid GameId` non nullable), quindi e' una
+            // divergenza latente e non una fuga viva — ma il codice deve dire cio' che il commento
+            // promette.
             agents = agents
-                .Where(a => !a.GameId.HasValue || libraryGameIds.Contains(a.GameId.Value))
+                .Where(a => a.IsSystemDefined || (a.GameId.HasValue && libraryGameIds.Contains(a.GameId.Value)))
                 .ToList();
         }
 
-        // Apply optional Type filter
-        if (!string.IsNullOrWhiteSpace(request.Type))
-        {
-            agents = agents
-                .Where(a => string.Equals(a.Type.Value, request.Type, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-        }
+        // Issue #4138: an optional Type filter stood here. AgentDefinition has no type
+        // any more, so there is nothing to filter on.
 
         // Apply optional GameId filter
         if (request.GameId.HasValue)
@@ -109,7 +112,6 @@ internal sealed class GetAllAgentsQueryHandler
         return new AgentDto(
             Id: agent.Id,
             Name: agent.Name,
-            Type: agent.Type.Value,
             StrategyName: agent.Strategy.Name,
             StrategyParameters: agent.Strategy.Parameters,
             IsActive: agent.IsActive,
@@ -118,6 +120,7 @@ internal sealed class GetAllAgentsQueryHandler
             InvocationCount: agent.InvocationCount,
             IsRecentlyUsed: agent.LastInvokedAt.HasValue && agent.LastInvokedAt.Value > recentThreshold,
             IsIdle: !agent.LastInvokedAt.HasValue || agent.LastInvokedAt.Value < idleThreshold,
+            IsSystemDefined: agent.IsSystemDefined,
             GameId: agent.GameId,
             GameName: gameName,
             CreatedByUserId: null

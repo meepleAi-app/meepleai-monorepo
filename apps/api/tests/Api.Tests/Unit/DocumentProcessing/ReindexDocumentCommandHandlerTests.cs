@@ -3,6 +3,7 @@ using Api.BoundedContexts.DocumentProcessing.Application.Commands.Queue;
 using Api.BoundedContexts.DocumentProcessing.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.BoundedContexts.DocumentProcessing.Domain.Exceptions;
 using Api.Middleware.Exceptions;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
@@ -151,24 +152,41 @@ public sealed class ReindexDocumentCommandHandlerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Handle_EnqueueThrowsConflict_RethrowsInsteadOfPhantomSuccess()
+    public async Task Handle_QueueFull_RethrowsInsteadOfPhantomSuccess()
     {
         // B10 (#3269): the old handler committed the destructive reset and then SWALLOWED any
         // enqueue failure (queue full / transient) in a broad catch — a phantom success that left
         // the PDF reset-to-Pending with its chunks gone but no job to reprocess it. The handler
-        // must now surface the failure (rolled back) so the caller gets a retryable 409.
+        // must now surface the failure (rolled back) so the caller gets a retryable error — since
+        // #4443 R8 a 429 with its own type, distinct from the 409 of «already has an active job».
         // NOTE: this asserts only the THROW. Proving the reset is actually rolled back needs a real
         // transaction — the InMemory provider has none — so the rollback is covered by
         // ReindexDocumentPersistsResetIntegrationTests (queue-saturation scenario).
         var pdf = await SeedPdfAsync(indexerVersion: "v1.0");
 
         _mediator.Setup(m => m.Send(It.IsAny<EnqueuePdfCommand>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new ConflictException("Queue is full. Maximum 100 jobs allowed."));
+            .ThrowsAsync(new ProcessingQueueFullException());
 
         var handler = CreateHandler();
 
         var act = () => handler.Handle(new ReindexDocumentCommand(pdf.Id, "v1.1"), CancellationToken.None);
 
-        await act.Should().ThrowAsync<ConflictException>().WithMessage("*Queue is full*");
+        await act.Should().ThrowAsync<ProcessingQueueFullException>();
+    }
+
+    [Fact]
+    [Trait("Issue", "4443")]
+    public async Task Handle_AlreadyQueued_RethrowsTheConflict()
+    {
+        var pdf = await SeedPdfAsync(indexerVersion: "v1.0");
+
+        _mediator.Setup(m => m.Send(It.IsAny<EnqueuePdfCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new ConflictException("PDF already has an active job"));
+
+        var handler = CreateHandler();
+
+        var act = () => handler.Handle(new ReindexDocumentCommand(pdf.Id, "v1.1"), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ConflictException>().WithMessage("*active job*");
     }
 }

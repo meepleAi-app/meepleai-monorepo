@@ -15,7 +15,7 @@
 import { describe, it, expect } from 'vitest';
 
 // CommonJS import — csp.js is consumed by next.config.js which is CJS.
-import { buildCspHeader, isCfAccessAllowed, isLocalBlobAllowed } from '../csp';
+import { buildCspHeader, isCfAccessAllowed, isLocalBlobAllowed, toWebSocketOrigin } from '../csp';
 
 const PROD_API = 'https://api.meepleai.app';
 const STAGING_API = 'https://api.meepleai-staging.cloudflareaccess.com';
@@ -76,7 +76,7 @@ describe('buildCspHeader — #1816 P2-3 per-env CSP manifest-src', () => {
           "img-src 'self' data: https:",
           "font-src 'self' data:",
           "manifest-src 'self'",
-          `connect-src 'self' ${PROD_API}`,
+          `connect-src 'self' ${PROD_API} wss://api.meepleai.app`,
           "frame-ancestors 'none'",
           "base-uri 'self'",
           "form-action 'self'",
@@ -136,5 +136,58 @@ describe('isCfAccessAllowed — defensive env var parsing', () => {
     [undefined, false],
   ])('isCfAccessAllowed(%j) === %s', (input, expected) => {
     expect(isCfAccessAllowed(input as string | undefined)).toBe(expected);
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
+// #4059 — l'origine WebSocket in connect-src
+// ──────────────────────────────────────────────────────────────────────────────
+
+describe('buildCspHeader — #4059 origine WebSocket in connect-src', () => {
+  /**
+   * Il difetto che questi test fissano: `connect-src 'self' http://localhost:8080` NON
+   * autorizza `ws://localhost:8080`, perche' per la CSP i due schemi sono distinti. Il
+   * trasporto WebSockets di SignalR veniva bloccato DOPO un negotiate riuscito — quindi
+   * `/sessions/{id}/live` restava senza eventi, con il solo sintomo di un `setConnected(false)`.
+   *
+   * Misurato nel browser prima della correzione:
+   *   Connecting to 'ws://localhost:8080/hubs/gamestate?id=...' violates the following
+   *   Content Security Policy directive: "connect-src 'self' http://api:8080 ..."
+   */
+  const connectSrcOf = (csp: string) =>
+    csp.split('; ').find(d => d.startsWith('connect-src')) ?? '';
+
+  it('accosta wss:// a un apiBaseUrl https', () => {
+    const csp = buildCspHeader({ apiBaseUrl: 'https://api.meepleai.app' });
+    expect(connectSrcOf(csp)).toBe(
+      "connect-src 'self' https://api.meepleai.app wss://api.meepleai.app"
+    );
+  });
+
+  it('accosta ws:// a un apiBaseUrl http (dev)', () => {
+    const csp = buildCspHeader({ apiBaseUrl: 'http://localhost:8080' });
+    expect(connectSrcOf(csp)).toBe("connect-src 'self' http://localhost:8080 ws://localhost:8080");
+  });
+
+  it('NON declassa https a ws: un wss resta wss', () => {
+    // Il controllo che impedisce la forma piu' probabile dell'errore: una sostituzione
+    // `http -> ws` applicata senza distinguere lo schema produrrebbe `ws://api.meepleai.app`
+    // su un sito HTTPS, che il browser blocca come mixed content.
+    const csp = buildCspHeader({ apiBaseUrl: 'https://api.meepleai.app' });
+    expect(connectSrcOf(csp)).not.toContain('ws://api.meepleai.app');
+  });
+
+  it("non aggiunge nulla per un apiBaseUrl che non e' http(s)", () => {
+    const csp = buildCspHeader({ apiBaseUrl: "'self'" });
+    expect(connectSrcOf(csp)).toBe("connect-src 'self' 'self'");
+  });
+
+  it('toWebSocketOrigin: mappa i due schemi e rifiuta il resto', () => {
+    expect(toWebSocketOrigin('http://localhost:8080')).toBe('ws://localhost:8080');
+    expect(toWebSocketOrigin('https://api.example.test')).toBe('wss://api.example.test');
+    expect(toWebSocketOrigin('ws://already')).toBeNull();
+    expect(toWebSocketOrigin("'self'")).toBeNull();
+    expect(toWebSocketOrigin('')).toBeNull();
+    expect(toWebSocketOrigin(undefined as unknown as string)).toBeNull();
   });
 });

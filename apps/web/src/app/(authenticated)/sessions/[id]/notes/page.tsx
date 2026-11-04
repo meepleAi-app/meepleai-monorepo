@@ -4,6 +4,9 @@
  * Displays session notes and provides a personal notes editor (localStorage-based).
  * Shows the session's official notes field plus a user-editable personal notes area.
  *
+ * #4156: the route id is a LiveGameSession id (decision D4), so the page reads the live session.
+ * It read the GameSession before, and with a live id that answered 404.
+ *
  * @see Issue #4891
  */
 
@@ -24,14 +27,15 @@ import {
 import { Skeleton } from '@/components/ui/feedback/skeleton';
 import { Button } from '@/components/ui/primitives/button';
 import { Textarea } from '@/components/ui/primitives/textarea';
-import { api, type GameSessionDto } from '@/lib/api';
+import { api } from '@/lib/api';
+import type { LiveSessionDto } from '@/lib/api/schemas/live-sessions.schemas';
 
 const STORAGE_KEY_PREFIX = 'meepleai_session_notes_';
 
 export default function SessionNotesPage() {
   const params = useParams();
   const id = params?.id as string;
-  const [session, setSession] = useState<GameSessionDto | null>(null);
+  const [session, setSession] = useState<LiveSessionDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [personalNote, setPersonalNote] = useState('');
@@ -40,8 +44,8 @@ export default function SessionNotesPage() {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    api.sessions
-      .getById(id)
+    api.liveSessions
+      .getSession(id)
       .then(data => {
         setSession(data);
         // Load personal note from localStorage

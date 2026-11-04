@@ -12,6 +12,24 @@ public class InlineCitationMatcherServiceTests
 {
     private readonly InlineCitationMatcherService _service = new();
 
+    [Fact]
+    public void Match_SnippetWithoutAPage_YieldsAMatchWithoutAPage()
+    {
+        // #4819: the match carries the page of its snippet, and a snippet may have none.
+        var answer = "The player must roll two dice before moving any pieces on the board.";
+        var snippets = new List<Snippet>
+        {
+            new("The player must roll two dice before moving any pieces on the board.",
+                "PDF:d290f1ee-6c54-4b01-90e6-d701748f0851", null, 0, 0.95f)
+        };
+
+        var result = _service.Match(answer, snippets);
+
+        result.Should().NotBeEmpty();
+        result.Should().OnlyContain(m => m.PageNumber == null);
+        result[0].PdfDocumentId.Should().Be("d290f1ee-6c54-4b01-90e6-d701748f0851");
+    }
+
     // ========================================================================
     // Exact substring match
     // ========================================================================
@@ -84,6 +102,45 @@ public class InlineCitationMatcherServiceTests
         result.Should().NotBeEmpty();
         result[0].Confidence.Should().BeLessThan(1.0);
         result[0].Confidence.Should().BeGreaterThanOrEqualTo(0.6);
+    }
+
+    [Fact]
+    public void Match_FuzzyMatchOfASnippetWithoutAPage_YieldsAMatchWithoutAPage()
+    {
+        // #4819: the fuzzy strategy passes the page through like the exact one.
+        var originalPhrase = "Each player receives five resource cards at the beginning of the game setup phase";
+        var modifiedPhrase = "Each player receives five resourse cards at the beginning of the game setup phase";
+        var answer = $"According to the rules, {modifiedPhrase}. Then play begins.";
+        var snippets = new List<Snippet>
+        {
+            new(originalPhrase, "PDF:bbbb0000-0000-0000-0000-000000000002", null, 0, 0.88f)
+        };
+
+        var result = _service.Match(answer, snippets);
+
+        result.Should().NotBeEmpty();
+        result[0].Confidence.Should().BeLessThan(1.0);
+        result.Should().OnlyContain(m => m.PageNumber == null);
+    }
+
+    [Fact]
+    public void Match_ASentenceOfASnippetWithoutAPage_YieldsAMatchWithoutAPage()
+    {
+        // Only the first sentence of the snippet is in the answer, so the match that survives is the one of that
+        // phrase, not of the whole snippet (which would win the overlap if it matched).
+        var snippets = new List<Snippet>
+        {
+            new("Players take turns rolling the dice and moving pieces clockwise. "
+                + "Nothing else in this snippet is repeated in the answer at all.",
+                "PDF:eeee0000-0000-0000-0000-000000000005", null, 0, 0.9f)
+        };
+        var answer = "Remember that players take turns rolling the dice and moving pieces clockwise, as the rules say.";
+
+        var result = _service.Match(answer, snippets);
+
+        result.Should().ContainSingle();
+        result[0].Confidence.Should().Be(1.0);
+        result[0].PageNumber.Should().BeNull();
     }
 
     // ========================================================================

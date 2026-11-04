@@ -50,6 +50,7 @@ vi.mock('@/lib/api', () => ({
     },
     games: {
       getAll: vi.fn(),
+      getById: vi.fn(),
     },
   },
 }));
@@ -103,12 +104,6 @@ vi.mock('@/components/chat-unified/ChatInfoPanel', () => ({
       <span data-testid="question-count">{suggestedQuestions?.length ?? 0}</span>
     </div>
   ),
-}));
-
-vi.mock('@/components/agent/settings', () => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  AgentSettingsDrawer: ({ isOpen }: any) =>
-    isOpen ? <div data-testid="agent-settings-drawer">Settings</div> : null,
 }));
 
 vi.mock('@/components/agent/AgentSelector', () => ({
@@ -303,6 +298,7 @@ describe('ChatThreadView — thread-message invariants (characterization)', () =
     apiMock = api;
     (apiMock.chat.getThreadById as Mock).mockResolvedValue(mockThread);
     (apiMock.games.getAll as Mock).mockResolvedValue(mockGames);
+    (apiMock.games.getById as Mock).mockResolvedValue(mockGames.games[0]);
     (apiMock.chat.addMessage as Mock).mockResolvedValue(mockThread);
   });
 

@@ -39,6 +39,13 @@ internal class RegisterPayload
     /// "termsAccepted" (camelCase) and "TermsAccepted" (PascalCase).
     /// </summary>
     public bool TermsAccepted { get; set; }
+
+    /// <summary>
+    /// #4783: the language the user is looking at ("it", "en"), as the front-end resolved it. The starting
+    /// <c>User.Language</c> — the language of the emails they send — comes from it, falling back to the
+    /// <c>Accept-Language</c> header. Optional: a client that does not send it still gets the header.
+    /// </summary>
+    public string? Locale { get; set; }
 }
 
 /// <summary>

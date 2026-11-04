@@ -133,7 +133,6 @@ export function Step3PreviewConfirm(): JSX.Element {
                   {coverImage.mode === 'placeholder' && 'Placeholder colore entità'}
                   {coverImage.mode === 'pdf-page' &&
                     `Pagina PDF${coverImage.pdfPageNumber != null ? ` ${coverImage.pdfPageNumber}` : ''}`}
-                  {coverImage.mode === 'upload' && 'Immagine caricata'}
                 </dd>
               </div>
             </dl>

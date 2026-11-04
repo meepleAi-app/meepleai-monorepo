@@ -84,12 +84,16 @@ export function SessionCardGrid({
     <button
       type="button"
       onClick={() => onClick(item)}
+      // #4156 (D4): without a LiveGameSession the session has no page to open.
+      disabled={item.liveSessionId == null}
       aria-label={ariaLabel}
       data-slot="session-card-grid"
       data-item-id={item.id}
       className={clsx(
         'group relative flex w-full flex-col overflow-hidden rounded-xl border border-border bg-card text-left',
-        'cursor-pointer transition-shadow hover:shadow-md',
+        item.liveSessionId == null
+          ? 'cursor-default'
+          : 'cursor-pointer transition-shadow hover:shadow-md',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         isAbandoned && 'border-border/70',
         className

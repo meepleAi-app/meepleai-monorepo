@@ -266,7 +266,6 @@ function DrawerEntityRouter({
         return (
           <EmbeddedChatView
             threadId={liveChatData.threadId}
-            agentId={liveChatData.agentId}
             gameId={liveChatData.gameId}
             gameName={liveChatData.gameName}
           />

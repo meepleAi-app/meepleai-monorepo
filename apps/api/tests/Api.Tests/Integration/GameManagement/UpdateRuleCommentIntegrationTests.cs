@@ -310,7 +310,11 @@ public sealed class UpdateRuleCommentIntegrationTests : IAsyncLifetime
         Func<Task> act = async () => await handler.Handle(command, TestCancellationToken);
 
         // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>()
+        // Issue #3866: il test chiedeva InvalidOperationException, che sarebbe un 500. L'handler
+        // solleva NotFoundException (404) come impone la convenzione delle eccezioni (#2568):
+        // era il test a essere invecchiato, non l'handler. Non l'aveva mai detto nessuno perche'
+        // lo shard Games tronca prima di arrivarci.
+        await act.Should().ThrowAsync<Api.Middleware.Exceptions.NotFoundException>()
             .WithMessage("*not found*");
     }
     [Fact]

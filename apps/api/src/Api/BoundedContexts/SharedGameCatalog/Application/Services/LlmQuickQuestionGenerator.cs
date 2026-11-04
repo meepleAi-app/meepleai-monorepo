@@ -119,7 +119,8 @@ internal sealed class LlmQuickQuestionGenerator : IQuickQuestionGenerator
     }
 
     /// <summary>
-    /// Creates fallback generic questions when AI generation fails.
+    /// Creates fallback generic questions when AI generation fails. The result is marked
+    /// <see cref="QuickQuestionGenerationResult.IsFallback"/>: it is not to be saved (#4596).
     /// </summary>
     private static QuickQuestionGenerationResult CreateFallbackQuestions(string gameName)
     {
@@ -132,7 +133,7 @@ internal sealed class LlmQuickQuestionGenerator : IQuickQuestionGenerator
             new("Quanto dura una partita?", QuestionCategory.Gameplay, 0.5m),
         };
 
-        return new QuickQuestionGenerationResult(fallbackQuestions, ConfidenceScore: 0.5m);
+        return new QuickQuestionGenerationResult(fallbackQuestions, ConfidenceScore: 0.5m, IsFallback: true);
     }
 
     /// <summary>

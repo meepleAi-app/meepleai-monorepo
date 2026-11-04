@@ -191,7 +191,6 @@ public sealed class ConsumingAgentsEndpointTests : IAsyncLifetime
         var sysAgent = AgentDefinition.CreateSystem(
             name: "Arbitro",
             description: "system",
-            type: AgentType.Custom("HybridSearch", "Hybrid search"),
             config: AgentDefinitionConfig.Create("gpt-4o-mini", 1024, 0.5f),
             typologySlug: "arbitro");
         sysAgent.UpdateKbCardIds(new[] { docId });
@@ -249,7 +248,6 @@ public sealed class ConsumingAgentsEndpointTests : IAsyncLifetime
         AgentDefinition.Create(
             name: name,
             description: "test",
-            type: AgentType.Custom("HybridSearch", "Hybrid search"),
             config: AgentDefinitionConfig.Create("gpt-4o-mini", 1024, 0.5f));
 
     private static HttpRequestMessage AuthRequest(HttpMethod method, string uri, string sessionToken)

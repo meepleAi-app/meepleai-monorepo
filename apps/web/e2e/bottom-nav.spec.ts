@@ -24,7 +24,7 @@ test.describe('MobileBottomBar — mobile navigation (sp4)', () => {
 
   test('is visible on a mobile viewport', async ({ page }) => {
     const bar = page.locator(BAR);
-    if (!(await bar.isVisible().catch(() => false))) {
+    if (!(await bar.isVisible())) {
       test.skip(true, 'Bottom bar requires an authenticated session');
     }
     await expect(bar).toBeVisible();
@@ -32,7 +32,7 @@ test.describe('MobileBottomBar — mobile navigation (sp4)', () => {
 
   test('renders the five primary tabs', async ({ page }) => {
     const bar = page.locator(BAR);
-    if (!(await bar.isVisible().catch(() => false))) test.skip(true, 'Auth required');
+    if (!(await bar.isVisible())) test.skip(true, 'Auth required');
     await expect(page.getByTestId('bottom-tab-dashboard')).toBeVisible();
     await expect(page.getByTestId('bottom-tab-library')).toBeVisible();
     await expect(page.getByTestId('bottom-tab-hub')).toBeVisible();
@@ -42,13 +42,13 @@ test.describe('MobileBottomBar — mobile navigation (sp4)', () => {
 
   test('has the navigation aria-label', async ({ page }) => {
     const bar = page.locator(BAR);
-    if (!(await bar.isVisible().catch(() => false))) test.skip(true, 'Auth required');
+    if (!(await bar.isVisible())) test.skip(true, 'Auth required');
     await expect(bar).toHaveAttribute('aria-label', 'Navigazione principale');
   });
 
   test('navigates to /library from the Libreria tab', async ({ page }) => {
     const tab = page.getByTestId('bottom-tab-library');
-    if (!(await tab.isVisible().catch(() => false))) test.skip(true, 'Auth required');
+    if (!(await tab.isVisible())) test.skip(true, 'Auth required');
     await tab.click();
     await page.waitForURL(/\/library/);
     expect(page.url()).toContain('/library');
@@ -56,20 +56,20 @@ test.describe('MobileBottomBar — mobile navigation (sp4)', () => {
 
   test('marks Dashboard active on /dashboard', async ({ page }) => {
     const tab = page.getByTestId('bottom-tab-dashboard');
-    if (!(await tab.isVisible().catch(() => false))) test.skip(true, 'Auth required');
+    if (!(await tab.isVisible())) test.skip(true, 'Auth required');
     await expect(tab).toHaveAttribute('aria-current', 'page');
   });
 
   test('has exactly one active tab', async ({ page }) => {
     const bar = page.locator(BAR);
-    if (!(await bar.isVisible().catch(() => false))) test.skip(true, 'Auth required');
+    if (!(await bar.isVisible())) test.skip(true, 'Auth required');
     const active = page.locator('[data-testid^="bottom-tab-"][aria-current="page"]');
     await expect(active).toHaveCount(1);
   });
 
   test('meets 44x44px touch targets (WCAG 2.1 AA)', async ({ page }) => {
     const bar = page.locator(BAR);
-    if (!(await bar.isVisible().catch(() => false))) test.skip(true, 'Auth required');
+    if (!(await bar.isVisible())) test.skip(true, 'Auth required');
     const tabs = bar.locator('a[data-testid^="bottom-tab-"]');
     const count = await tabs.count();
     for (let i = 0; i < count; i++) {
@@ -82,7 +82,7 @@ test.describe('MobileBottomBar — mobile navigation (sp4)', () => {
 
   test('is anchored to the bottom of the viewport', async ({ page }) => {
     const bar = page.locator(BAR);
-    if (!(await bar.isVisible().catch(() => false))) test.skip(true, 'Auth required');
+    if (!(await bar.isVisible())) test.skip(true, 'Auth required');
     const box = await bar.boundingBox();
     expect(box).not.toBeNull();
     const vh = page.viewportSize()!.height;

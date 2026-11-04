@@ -508,7 +508,8 @@ Given pnpm audit reports a high CVE on package X@Y
 And no patched version exists at T0+7d
 When the package is a transitive dependency
 Then we choose one of:
-  - pnpm.overrides with a patched fork, OR
+  - an `overrides` entry in apps/web/pnpm-workspace.yaml (NOT package.json:
+    pnpm 11 ignores `pnpm.overrides` there — see #3891), OR
   - removal of the consumer feature, OR
   - runtime mitigation (extra input validation, network policy)
 And document the decision with re-review date T0+30d

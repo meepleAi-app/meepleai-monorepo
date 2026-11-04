@@ -15,6 +15,9 @@
 
 import { type JSX } from 'react';
 
+import { TierLimitRegion } from '@/components/chat-unified/TierLimitNotice';
+import { readTierLimit, TIER_LIMIT_EXCEEDED } from '@/lib/tier-limit';
+
 import { DrawerCompleted, type DrawerCompletedLabels } from './DrawerCompleted';
 import { DrawerEmpty, type DrawerEmptyLabels } from './DrawerEmpty';
 import { DrawerError, type DrawerErrorLabels } from './DrawerError';
@@ -41,12 +44,14 @@ export interface DrawerShellProps {
   onAsk: (query: string) => void;
   onStop: () => void;
   onReset: () => void;
+  /** #4510: asks the last question again (`useKbAskStream.retry`), from the error state. */
+  onRetry: () => void;
   onClose: () => void;
   onEmptyCta: () => void;
   onCopy?: () => void;
   onRegenerate?: () => void;
   /** Citation click handler receiving deep-link payload with optional chunkId (#1702) */
-  onCitationClick?: (link: { docId: string; page: number; chunkId?: string }) => void;
+  onCitationClick?: (link: { docId: string; page: number | null; chunkId?: string }) => void;
 }
 
 export function DrawerShell({
@@ -56,12 +61,21 @@ export function DrawerShell({
   onAsk,
   onStop,
   onReset,
+  onRetry,
   onClose,
   onEmptyCta,
   onCopy,
   onRegenerate,
   onCitationClick,
 }: DrawerShellProps): JSX.Element {
+  // #4168 (5g-b): la quota del piano non è un guasto. Niente riquadro d'errore e niente «Riprova»,
+  // che ripeterebbe una domanda fermata allo stesso modo fino a domani: l'avviso della chat, con
+  // i numeri del piano e il link ai piani.
+  const tierLimit =
+    state.status === 'error' && state.error?.code === TIER_LIMIT_EXCEEDED
+      ? readTierLimit(state.error.tierLimit)
+      : null;
+
   return (
     <div
       role="dialog"
@@ -117,11 +131,28 @@ export function DrawerShell({
       {state.status === 'completed-empty' && (
         <DrawerEmpty onCta={onEmptyCta} labels={labels.empty} />
       )}
-      {state.status === 'error' && state.error && (
+      {/* La regione c'è da prima, vuota: l'avviso arriva dopo l'invio e senza che il fuoco si sposti. */}
+      <TierLimitRegion limit={tierLimit} className="p-4 pb-0" />
+      {tierLimit && (
+        <div className="px-4 pt-3">
+          {/* Il pannello resta montato quando lo si chiude: senza un modo di lasciare l'avviso,
+              riaprirlo lo rimostrerebbe, anche il giorno dopo. */}
+          <button
+            type="button"
+            onClick={onReset}
+            className="px-3 py-1.5 rounded-md bg-muted text-xs text-foreground"
+          >
+            Ho capito
+          </button>
+        </div>
+      )}
+      {/* #4510: «Riprova» asks the same question again. It used to send the partial ANSWER as the
+          question (or an empty one, which the backend refuses with 422). */}
+      {state.status === 'error' && state.error && !tierLimit && (
         <DrawerError
           error={state.error}
           partialText={state.partialText}
-          onRetry={() => onAsk(state.partialText || '')}
+          onRetry={onRetry}
           onCancel={onReset}
           labels={labels.error}
         />

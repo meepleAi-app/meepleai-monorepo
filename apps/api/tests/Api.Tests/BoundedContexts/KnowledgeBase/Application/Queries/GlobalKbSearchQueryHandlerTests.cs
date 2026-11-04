@@ -1,8 +1,11 @@
+using Api.Tests.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries.GlobalKbSearch;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
+using Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Middleware.Exceptions;
 using Api.Services;
 using Api.Tests.Constants;
 using Api.Tests.TestHelpers;
@@ -34,7 +37,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
     public void Dispose() => _db.Dispose();
 
     private GlobalKbSearchQueryHandler CreateSut() =>
-        new(_ragAccessMock.Object, _searchMock.Object, _db,
+        new(_ragAccessMock.Object, _searchMock.Object, AnswerPipelineTestDoubles.ProfileReader(), _db,
             NullLogger<GlobalKbSearchQueryHandler>.Instance);
 
     // ─── EC-1: no accessible games → empty, search never called ────────────────
@@ -61,6 +64,31 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
         _searchMock.VerifyNoOtherCalls();
     }
 
+    // ─── #4168 (5e-c-2): senza profilo pubblicato ───────────────────────────────
+
+    [Fact]
+    public async Task WithoutAPublishedAgentProfile_TheSearchIsRefusedWith503_NotA500()
+    {
+        // La ricerca usa ora i numeri del profilo. Senza profilo non ricade su valori compilati
+        // (ADR-095), ma il rifiuto va detto come per la domanda singola: 503 con il motivo, non un
+        // InvalidOperationException che il middleware trasforma in 500 (#2568).
+        var userId = Guid.NewGuid();
+        _ragAccessMock
+            .Setup(s => s.GetAccessibleGameIdsAsync(userId, UserRole.User, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new[] { Guid.NewGuid() });
+        var reader = new Mock<IPublishedAgentProfileReader>();
+        reader.Setup(r => r.GetAsync(It.IsAny<CancellationToken>())).ThrowsAsync(new AgentProfileNotPublishedException());
+        var sut = new GlobalKbSearchQueryHandler(
+            _ragAccessMock.Object, _searchMock.Object, reader.Object, _db, NullLogger<GlobalKbSearchQueryHandler>.Instance);
+
+        var act = () => sut.Handle(BuildQuery(userId, "catan rules"), CancellationToken.None);
+
+        var refused = (await act.Should().ThrowAsync<HttpException>()).Which;
+        refused.StatusCode.Should().Be(503);
+        refused.ErrorCode.Should().Be(AgentProfileNotPublishedException.Code);
+        _searchMock.VerifyNoOtherCalls();
+    }
+
     // ─── RBAC: accessible games passed to search ────────────────────────────────
 
     [Fact]
@@ -81,6 +109,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
                 "catan rules",
                 It.IsAny<IReadOnlyList<Guid>>(),
                 It.IsAny<int>(),
+                It.IsAny<PerGameRetrievalParameters>(),
                 SearchMode.Hybrid,
                 It.IsAny<double>(),
                 It.IsAny<IReadOnlyList<Guid>?>(),
@@ -100,6 +129,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
                 It.Is<IReadOnlyList<Guid>>(ids =>
                     ids.Count == 2 && ids.Contains(gameId1) && ids.Contains(gameId2)),
                 It.IsAny<int>(),
+                It.IsAny<PerGameRetrievalParameters>(),
                 SearchMode.Hybrid,
                 It.IsAny<double>(),
                 It.IsAny<IReadOnlyList<Guid>?>(),
@@ -159,6 +189,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
         _searchMock
             .Setup(s => s.SearchAsync(
                 It.IsAny<string>(), It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<int>(),
+                It.IsAny<PerGameRetrievalParameters>(),
                 It.IsAny<SearchMode>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MultiGameSearchResultItem> { searchResult });
 
@@ -198,6 +229,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
         _searchMock
             .Setup(s => s.SearchAsync(
                 It.IsAny<string>(), It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<int>(),
+                It.IsAny<PerGameRetrievalParameters>(),
                 It.IsAny<SearchMode>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MultiGameSearchResultItem> { orphanResult });
 
@@ -269,7 +301,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
             .Setup(s => s.SearchAsync(
                 It.IsAny<string>(),
                 It.IsAny<IReadOnlyList<Guid>>(),
-                limit + 1, // handler must call with limit+1
+                limit + 1, It.IsAny<PerGameRetrievalParameters>(), // handler must call with limit+1
                 It.IsAny<SearchMode>(),
                 It.IsAny<double>(),
                 It.IsAny<IReadOnlyList<Guid>?>(),
@@ -335,6 +367,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
         _searchMock
             .Setup(s => s.SearchAsync(
                 It.IsAny<string>(), It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<int>(),
+                It.IsAny<PerGameRetrievalParameters>(),
                 It.IsAny<SearchMode>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MultiGameSearchResultItem>
             {
@@ -407,6 +440,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
         _searchMock
             .Setup(s => s.SearchAsync(
                 It.IsAny<string>(), It.IsAny<IReadOnlyList<Guid>>(), limit + 1,
+                It.IsAny<PerGameRetrievalParameters>(),
                 It.IsAny<SearchMode>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(results);
 
@@ -449,6 +483,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
                 It.IsAny<string>(),
                 It.IsAny<IReadOnlyList<Guid>>(),
                 It.IsAny<int>(),
+                It.IsAny<PerGameRetrievalParameters>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<double>(),
                 It.IsAny<IReadOnlyList<Guid>?>(),
@@ -467,6 +502,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
                 It.IsAny<string>(),
                 It.Is<IReadOnlyList<Guid>>(ids => ids.Contains(gameC)),
                 It.IsAny<int>(),
+                It.IsAny<PerGameRetrievalParameters>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<double>(),
                 It.IsAny<IReadOnlyList<Guid>?>(),
@@ -480,6 +516,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
                 It.Is<IReadOnlyList<Guid>>(ids =>
                     ids.Count == 2 && ids.Contains(gameA) && ids.Contains(gameB)),
                 It.IsAny<int>(),
+                It.IsAny<PerGameRetrievalParameters>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<double>(),
                 It.IsAny<IReadOnlyList<Guid>?>(),
@@ -584,6 +621,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
         _searchMock
             .Setup(s => s.SearchAsync(
                 It.IsAny<string>(), It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<int>(),
+                It.IsAny<PerGameRetrievalParameters>(),
                 It.IsAny<SearchMode>(), It.IsAny<double>(), It.IsAny<IReadOnlyList<Guid>?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MultiGameSearchResultItem>
             {
@@ -621,6 +659,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
                 It.IsAny<string>(),
                 It.IsAny<IReadOnlyList<Guid>>(),
                 It.IsAny<int>(),
+                It.IsAny<PerGameRetrievalParameters>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<double>(),
                 It.IsAny<IReadOnlyList<Guid>?>(),
@@ -639,6 +678,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
                 It.IsAny<string>(),
                 It.Is<IReadOnlyList<Guid>>(ids => ids.Count == 1 && ids.Contains(gameB)),
                 It.IsAny<int>(),
+                It.IsAny<PerGameRetrievalParameters>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<double>(),
                 It.IsAny<IReadOnlyList<Guid>?>(),
@@ -689,6 +729,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
                 It.IsAny<string>(),
                 It.IsAny<IReadOnlyList<Guid>>(),
                 It.IsAny<int>(),
+                It.IsAny<PerGameRetrievalParameters>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<double>(),
                 It.IsAny<IReadOnlyList<Guid>?>(),
@@ -709,6 +750,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
                 It.Is<IReadOnlyList<Guid>>(ids =>
                     ids.Count == 2 && ids.Contains(gameA) && ids.Contains(gameB)),
                 It.IsAny<int>(),
+                It.IsAny<PerGameRetrievalParameters>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<double>(),
                 It.IsAny<IReadOnlyList<Guid>?>(),
@@ -753,11 +795,12 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
         _searchMock
             .Setup(s => s.SearchAsync(
                 It.IsAny<string>(), It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<int>(),
+                It.IsAny<PerGameRetrievalParameters>(),
                 It.IsAny<SearchMode>(), It.IsAny<double>(),
                 It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<string, IReadOnlyList<Guid>, int, SearchMode, double, IReadOnlyList<Guid>?, CancellationToken>(
-                (_, _, _, _, _, docIds, _) => capturedDocIds = docIds)
+            .Callback<string, IReadOnlyList<Guid>, int, PerGameRetrievalParameters, SearchMode, double, IReadOnlyList<Guid>?, CancellationToken>(
+                (_, _, _, _, _, _, docIds, _) => capturedDocIds = docIds)
             .ReturnsAsync(new List<MultiGameSearchResultItem>());
 
         var query = BuildQuery(userId, "test", limit: 10, docType: new[] { "base" });
@@ -808,11 +851,12 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
         _searchMock
             .Setup(s => s.SearchAsync(
                 It.IsAny<string>(), It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<int>(),
+                It.IsAny<PerGameRetrievalParameters>(),
                 It.IsAny<SearchMode>(), It.IsAny<double>(),
                 It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<string, IReadOnlyList<Guid>, int, SearchMode, double, IReadOnlyList<Guid>?, CancellationToken>(
-                (_, _, _, _, _, docIds, _) => capturedDocIds = docIds)
+            .Callback<string, IReadOnlyList<Guid>, int, PerGameRetrievalParameters, SearchMode, double, IReadOnlyList<Guid>?, CancellationToken>(
+                (_, _, _, _, _, _, docIds, _) => capturedDocIds = docIds)
             .ReturnsAsync(new List<MultiGameSearchResultItem>());
 
         var query = BuildQuery(userId, "test", limit: 10, language: "en");
@@ -866,11 +910,12 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
         _searchMock
             .Setup(s => s.SearchAsync(
                 It.IsAny<string>(), It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<int>(),
+                It.IsAny<PerGameRetrievalParameters>(),
                 It.IsAny<SearchMode>(), It.IsAny<double>(),
                 It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<string, IReadOnlyList<Guid>, int, SearchMode, double, IReadOnlyList<Guid>?, CancellationToken>(
-                (_, _, _, _, _, docIds, _) => capturedDocIds = docIds)
+            .Callback<string, IReadOnlyList<Guid>, int, PerGameRetrievalParameters, SearchMode, double, IReadOnlyList<Guid>?, CancellationToken>(
+                (_, _, _, _, _, _, docIds, _) => capturedDocIds = docIds)
             .ReturnsAsync(new List<MultiGameSearchResultItem>());
 
         var query = BuildQuery(userId, "test", limit: 10, docType: new[] { "base" }, language: "en");
@@ -899,11 +944,12 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
         _searchMock
             .Setup(s => s.SearchAsync(
                 It.IsAny<string>(), It.IsAny<IReadOnlyList<Guid>>(), It.IsAny<int>(),
+                It.IsAny<PerGameRetrievalParameters>(),
                 It.IsAny<SearchMode>(), It.IsAny<double>(),
                 It.IsAny<IReadOnlyList<Guid>?>(),
                 It.IsAny<CancellationToken>()))
-            .Callback<string, IReadOnlyList<Guid>, int, SearchMode, double, IReadOnlyList<Guid>?, CancellationToken>(
-                (_, _, _, _, _, docIds, _) => capturedDocIds = docIds)
+            .Callback<string, IReadOnlyList<Guid>, int, PerGameRetrievalParameters, SearchMode, double, IReadOnlyList<Guid>?, CancellationToken>(
+                (_, _, _, _, _, _, docIds, _) => capturedDocIds = docIds)
             .ReturnsAsync(new List<MultiGameSearchResultItem>());
 
         // Default BuildQuery has docType = null, language = null
@@ -1055,6 +1101,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
                 It.IsAny<string>(),
                 It.IsAny<IReadOnlyList<Guid>>(),
                 It.IsAny<int>(),
+                It.IsAny<PerGameRetrievalParameters>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<double>(),
                 It.IsAny<IReadOnlyList<Guid>?>(),
@@ -1090,6 +1137,7 @@ public sealed class GlobalKbSearchQueryHandlerTests : IDisposable
                 It.IsAny<string>(),
                 It.IsAny<IReadOnlyList<Guid>>(),
                 It.IsAny<int>(),
+                It.IsAny<PerGameRetrievalParameters>(),
                 It.IsAny<SearchMode>(),
                 It.IsAny<double>(),
                 It.IsAny<IReadOnlyList<Guid>?>(),

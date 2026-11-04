@@ -352,3 +352,79 @@ describe('RuleSourceCard', () => {
     expect(screen.queryByTestId('upsell-cta')).not.toBeInTheDocument();
   });
 });
+
+// ─── #4819: citazione senza pagina ────────────────────────────────────────────
+
+describe('RuleSourceCard — citazione senza pagina (#4819)', () => {
+  const noPage = (overrides: Partial<Citation> = {}) =>
+    makeCitation({ pageNumber: null, ...overrides });
+
+  function expand(citations: Citation[]) {
+    render(<RuleSourceCard citations={citations} />);
+    fireEvent.click(screen.getByTestId('rule-source-header'));
+  }
+
+  it('names the chips by position, and writes no page on them', () => {
+    expand([noPage(), noPage({ documentId: 'doc-002', snippet: 'Seconda citazione.' })]);
+
+    expect(screen.getAllByRole('tab').map(chip => chip.textContent)).toEqual([
+      'Fonte 1',
+      'Fonte 2',
+    ]);
+  });
+
+  it('reads a page of 0 as no page', () => {
+    expand([noPage({ pageNumber: 0 }), noPage({ documentId: 'doc-002', pageNumber: 0 })]);
+
+    expect(screen.getAllByRole('tab').map(chip => chip.textContent)).toEqual([
+      'Fonte 1',
+      'Fonte 2',
+    ]);
+  });
+
+  it('keeps the page on a chip that has one, next to one that has not', () => {
+    expand([makeCitation({ pageNumber: 12 }), noPage({ documentId: 'doc-002' })]);
+
+    expect(screen.getAllByRole('tab').map(chip => chip.textContent)).toEqual(['p.12', 'Fonte 2']);
+  });
+
+  it('cites the rulebook alone under a verbatim quote', () => {
+    expand([noPage()]);
+
+    const quote = screen.getByTestId('citation-quote');
+    expect(screen.getByText('— Regolamento')).toBeInTheDocument();
+    expect(quote.textContent).not.toContain('p.');
+  });
+
+  it('does not say "Pagina" for a verbatim citation that has no snippet either', () => {
+    expand([noPage({ snippet: '' })]);
+
+    const quote = screen.getByTestId('citation-quote');
+    expect(quote.textContent).toContain('Fonte nel regolamento');
+    expect(quote.textContent).not.toContain('Pagina ');
+  });
+
+  it('cites the rulebook alone under a paraphrase', () => {
+    expand([noPage({ copyrightTier: 'protected', snippet: '', paraphrasedSnippet: 'Si pesca.' })]);
+
+    const quote = screen.getByTestId('citation-quote');
+    expect(quote.textContent).toContain('Si pesca.');
+    expect(screen.getByText('— Regolamento')).toBeInTheDocument();
+    expect(quote.textContent).not.toContain('p.');
+  });
+
+  it('sends the reader to the rulebook, not to a page, when a protected citation has no paraphrase', () => {
+    expand([noPage({ copyrightTier: 'protected', snippet: '', paraphrasedSnippet: undefined })]);
+
+    expect(screen.getByText('Vedi il regolamento')).toBeInTheDocument();
+    expect(screen.getByTestId('citation-quote').textContent).not.toContain('pagina');
+  });
+
+  it('still offers the PDF, and opens it without a page', () => {
+    expand([noPage()]);
+
+    fireEvent.click(screen.getByTestId('view-pdf-btn'));
+    // The modal is handed no page at all (the stub writes the attribute only when there is one).
+    expect(screen.getByTestId('pdf-modal')).not.toHaveAttribute('data-page');
+  });
+});

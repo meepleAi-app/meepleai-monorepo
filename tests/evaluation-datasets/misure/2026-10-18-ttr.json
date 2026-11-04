@@ -1,0 +1,1387 @@
+{
+  "data": "2026-10-18",
+  "descrizione": "Misura periodica (#4470) di Ticket to Ride: domande poste all'agente pubblicato come in chat (POST /api/v1/agents/qa/stream, Accept-Language: it, utente admin), su una copia del database locale con l'API di main-dev (ed339d199). Voti di Claude con i criteri dell'utente (criteri-giudizio.md), su delega esplicita dell'utente: non sono voti umani.",
+  "giudizio": "Claude",
+  "risultati": [
+    {
+      "id": "TTR-01",
+      "gioco": "Ticket to Ride",
+      "domanda": "Cosa succede a fine partita se non completo uno dei Biglietti Destinazione che ho tenuto?",
+      "risposta_attesa": "Il valore in punti indicato su quel Biglietto Destinazione viene sottratto dal totale dei tuoi punti vittoria.",
+      "risposta": "- Se non completi un Biglietto Destinazione, alla fine della partita il suo valore in punti viene **sottratto** dal tuo punteggio totale [Page 1].\n- I Biglietti Destinazione vengono rivelati solo al calcolo finale dei punteggi [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.84020305
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.829841
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.81623876
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8103675
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8073201
+        }
+      ],
+      "ms": 8868,
+      "voto": "corretta",
+      "motivo": "Criterio 2: il valore del Biglietto incompleto viene sottratto, come da risposta attesa e regolamento base p. 4. Anche l'aggiunta (Biglietti rivelati solo al calcolo finale) è vera.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-02",
+      "gioco": "Ticket to Ride",
+      "domanda": "Se scelgo di pescare una carta Locomotiva (Jolly) scoperta e visibile dalla griglia delle 5 carte scoperte, posso pescare una seconda carta nello stesso turno?",
+      "risposta_attesa": "No. Se prendi una Locomotiva scoperta dalla griglia delle 5 carte, quella conta come l'unica e sola carta che puoi pescare nel tuo turno.",
+      "risposta": "No, non puoi pescare una seconda carta nello stesso turno.\n\n- Se peschi una carta Locomotiva scoperta tra le cinque carte a faccia in su, devi pescare **solo una carta** anziché due [Page 1].\n- La regola della doppia pescata vale invece se peschi una Locomotiva **alla cieca dalla cima del mazzo**: in quel caso conta come una singola carta e puoi pescare una seconda carta [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8806477
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8435045
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.84087235
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8325712
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8057017
+        }
+      ],
+      "ms": 11653,
+      "voto": "corretta",
+      "motivo": "Criterio 2: «No», con la Locomotiva scoperta si pesca una sola carta, come atteso. Anche il contrasto con la Locomotiva pescata alla cieca è conforme alla Nota del regolamento base.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-03",
+      "gioco": "Ticket to Ride",
+      "domanda": "Cosa succede se tra le 5 carte Treno scoperte compaiono 3 carte Locomotiva (Jolly)?",
+      "risposta_attesa": "Tutte e 5 le carte scoperte vengono immediatamente scartate nella pila degli scarti e ne vengono scoperte 5 nuove dal mazzo di pesca.",
+      "risposta": "- Se in qualsiasi momento tre delle cinque carte Treno a faccia in su sono Locomotive, tutte e cinque le carte vengono immediatamente scartate e si scoprono a faccia in su cinque nuove carte per sostituirle [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.83766246
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.830076
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8260422
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8240833
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.79324245
+        }
+      ],
+      "ms": 9040,
+      "voto": "corretta",
+      "motivo": "Criterio 2: tutte e cinque le carte scartate e sostituite da cinque nuove, parola per parola come il regolamento base.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-04",
+      "gioco": "Ticket to Ride: Europe",
+      "domanda": "A cosa serve una Stazione e quanti punti vale se NON la utilizzo durante la partita?",
+      "risposta_attesa": "Una Stazione permette di sfruttare una linea di un avversario per connettere i propri biglietti destinazione. Ogni Stazione non costruita e tenuta in riserva a fine partita vale 4 punti vittoria aggiuntivi.",
+      "risposta": "- Una Stazione permette al suo proprietario di usare **una sola** rotta appartenente a un altro giocatore, entrando o uscendo da quella città, per aiutarlo a collegare le città dei suoi Biglietti Destinazione [Page 1].\n- Le Stazioni possono essere costruite su qualsiasi città non occupata; due Stazioni non possono mai essere nella stessa città [Page 1].\n- Per ogni Stazione non utilizzata, alla fine del gioco vengono aggiunti **4 punti** al punteggio del giocatore [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.8291433
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.8248588
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.821007
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.81958836
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.8057148
+        }
+      ],
+      "ms": 11004,
+      "voto": "corretta",
+      "motivo": "Criterio 2: una sola linea avversaria in entrata o uscita dalla città e 4 punti per Stazione non usata, come atteso. Le aggiunte su città non occupata e niente due Stazioni nella stessa città sono vere (Europe p. 6).",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-05",
+      "gioco": "Ticket to Ride",
+      "domanda": "In partite a 2 o 3 giocatori, posso occupare entrambe le linee di una 'Doppia Linea'?",
+      "risposta_attesa": "No. In partite a 2 o 3 giocatori, quando uno dei due binari di una doppia linea viene occupato, l'altro binario diventa inutilizzabile per il resto della partita.",
+      "risposta": "No. Nelle partite a 2 o 3 giocatori è possibile usare solo una delle Doppie Linee: un giocatore può controllare una qualsiasi delle due linee che collegano le stesse città, dopodiché l'altra linea è considerata chiusa e inaccessibile per il resto della partita [Page 1]. Inoltre, nessun giocatore può mai reclamare entrambe le linee tra le stesse città nel corso della partita [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8551293
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8276452
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8206383
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8164077
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.79127514
+        }
+      ],
+      "ms": 14274,
+      "voto": "corretta",
+      "motivo": "Criterio 2: «No», a 2-3 giocatori l'altra linea è chiusa per il resto della partita, come atteso. Anche l'aggiunta che nessuno può mai reclamare entrambe le linee è nel regolamento base.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-06",
+      "gioco": "Ticket to Ride: Europe",
+      "domanda": "Qual è il vincolo per occupare una linea Traghetto?",
+      "risposta_attesa": "Devi giocare una carta Locomotiva per ogni simbolo di Locomotiva presente sulla tratta e, per le caselle rimanenti, la normale serie di carte di uno stesso colore a scelta (i Traghetti sono tratte grigie). Esempio: Smyrna–Palermo richiede 2 Locomotive e 4 carte di un qualsiasi colore.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.8073351
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.8051348
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.8023499
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.7844393
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.81701285
+        }
+      ],
+      "ms": 7456,
+      "voto": "corretta",
+      "motivo": "Criterio 1: rinuncia onesta senza invenzioni, corretta anche se il regolamento Europe (p. 5) ha la risposta.",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "en",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-07",
+      "gioco": "Ticket to Ride",
+      "domanda": "Posso attaccare i treni di un altro giocatore per distruggere le sue linee?",
+      "risposta_attesa": "No. Ticket to Ride non ha meccaniche di combattimento o distruzione delle linee già costruite.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8414499
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.83479387
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8262634
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.82234865
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.7959766
+        }
+      ],
+      "ms": 8204,
+      "voto": "corretta",
+      "motivo": "Criterio 1: rinuncia onesta su una meccanica inesistente, senza inventare un attacco ai treni.",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "en",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-08",
+      "gioco": "Ticket to Ride",
+      "domanda": "Se pesco una carta Locomotiva (Jolly) a caso coperta dalla cima del mazzo di pesca, posso pescare una seconda carta nello stesso turno?",
+      "risposta_attesa": "Sì. La restrizione di pescare una sola carta si applica unicamente quando la Locomotiva viene scelta a faccia in su dalla griglia delle 5 carte scoperte.",
+      "risposta": "Sì.\n\n- Se peschi una Locomotiva **coperta dalla cima del mazzo** (alla cieca), conta comunque come una singola carta: puoi quindi pescare una seconda carta nello stesso turno [Page 1].\n- La limitazione a una sola carta vale invece quando la Locomotiva è tra le cinque carte a faccia in su [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8673868
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.83292
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.82669544
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8136273
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8015422
+        }
+      ],
+      "ms": 9970,
+      "voto": "corretta",
+      "motivo": "Criterio 2: «Sì», la Locomotiva coperta conta come una carta e se ne può pescare una seconda, come atteso e come la Nota del regolamento base.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-09",
+      "gioco": "Ticket to Ride",
+      "domanda": "Quando scelgo di pescare nuovi Biglietti Destinazione, quanti ne devo tenere al minimo?",
+      "risposta_attesa": "Peschi 3 nuovi biglietti e devi tenerne obbligatoriamente almeno 1. Puoi decidere di tenerne 1, 2 o tutti e 3.",
+      "risposta": "- Debes quedarte **al menos uno** de los tres Bigletes Destinazione que pescas; puedes quedarte dos o los tres si lo deseas [Page 1].\n- Si en el mazo quedan menos de tres Bigletes Destinazione, pescas solo los disponibles [Page 1].\n- Las cartas que devuelvas se colocan al fondo del mazo de Bigletes Destinazione [Page 1].",
+      "lingua_dichiarata": "es",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8310795
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8242649
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8166617
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.79730713
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.7961637
+        }
+      ],
+      "ms": 8948,
+      "voto": "corretta",
+      "motivo": "Criteri 2 e 3: almeno uno su tre, più le aggiunte vere (si pescano i soli disponibili, i restituiti vanno in fondo al mazzo). Giusta nel merito ma scritta in spagnolo, va tradotta.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "es",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-10",
+      "gioco": "Ticket to Ride",
+      "domanda": "Quanti Biglietti Destinazione vengono consegnati a ciascun giocatore a inizio partita e quanti deve tenerne almeno?",
+      "risposta_attesa": "Vengono consegnati 3 Biglietti Destinazione (o 4 nella versione Europa) e ogni giocatore deve tenerne obbligatoriamente almeno 2.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8422232
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8449507
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8225127
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8150204
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8111357
+        }
+      ],
+      "ms": 6797,
+      "voto": "corretta",
+      "motivo": "Criterio 1: rinuncia onesta, corretta anche se il regolamento base (p. 2) contiene la risposta, come per CAT-03.",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "en",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-11",
+      "gioco": "Ticket to Ride",
+      "domanda": "Cosa scatena la fase di fine partita in Ticket to Ride?",
+      "risposta_attesa": "La fase finale scatta quando la riserva di vagoni di un giocatore scende a 2, 1 o 0 vagoni rimasti. A quel punto ogni giocatore (incluso chi ha scatenato la fine) gioca un ultimo turno finale.",
+      "risposta": "- La fase di fine partita si attiva quando la riserva di vagoni di plastica colorati di un giocatore scende a due vagoni o meno alla fine del suo turno [Page 1].\n- A quel punto, ogni giocatore (incluso quello stesso giocatore) ha diritto a un turno finale; dopodiché la partita termina e si calcola il punteggio finale [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8220727
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8210339
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.7971802
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.7968057
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8025474
+        }
+      ],
+      "ms": 8003,
+      "voto": "corretta",
+      "motivo": "Criterio 2: due vagoni o meno a fine turno e un turno finale per tutti, incluso chi la scatena, come atteso e regolamento base p. 4.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-12",
+      "gioco": "Ticket to Ride",
+      "domanda": "Come si occupa una linea di colore Grigio sulla mappa?",
+      "risposta_attesa": "Una linea grigia può essere occupata giocando un set di carte Treno di un qualsiasi colore a scelta del giocatore, purché siano tutte dello stesso colore e pari alla lunghezza della tratta.",
+      "risposta": "- Para controlar una línea de color **Gris**, se puede usar una serie de cartas Treno **de un color cualquiera** [Page 1].\n- Las cartas de la serie deben ser **todas del mismo tipo** [Page 1].\n- Al tomar el control, se coloca **un vagón de plástico en cada casilla** que compone esa línea y **todas las cartas de la serie se descartan** [Page 1].",
+      "lingua_dichiarata": "es",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8152818
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.81150246
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.80580664
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.7999234
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.7795137
+        }
+      ],
+      "ms": 7934,
+      "voto": "corretta",
+      "motivo": "Criteri 2 e 3: serie di carte di un colore qualsiasi purché dello stesso tipo, un vagone per casella e carte scartate, tutto vero. Giusta nel merito ma scritta in spagnolo, va tradotta.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "es",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-13",
+      "gioco": "Ticket to Ride",
+      "domanda": "Le carte Locomotiva (Jolly) possono essere usate in sostituzione di qualsiasi colore per occupare una linea?",
+      "risposta_attesa": "Sì, le carte Locomotiva fungono da Jolly e possono sostituire qualsiasi carta Treno di qualsiasi colore.",
+      "risposta": "- Sì, le carte Locomotiva possono essere usate come carte di qualsiasi colore per controllare una linea: le carte della serie devono essere dello stesso tipo, e le Locomotive fungono da jolly [Page 1].\n- Per le linee Grigie si può usare una serie di carte di un colore qualsiasi [Page 1].\n- Le carte usate per controllare una linea devono essere tutte scartate [Page 1].\n- Non si può mai prendere il controllo di più di una linea nello stesso turno [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.84573907
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8390511
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.82602453
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8164911
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.7881113
+        }
+      ],
+      "ms": 8554,
+      "voto": "corretta",
+      "motivo": "Criterio 2: «Sì», le Locomotive fungono da jolly per qualsiasi colore, come atteso. Le aggiunte (linee grigie, carte scartate, una sola linea per turno) sono nel regolamento base.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-14",
+      "gioco": "Ticket to Ride",
+      "domanda": "Posso occupare solo una parte/metà di una tratta (es. piazzare 2 vagoni su una tratta lunga 4)?",
+      "risposta_attesa": "No. Quando occupi una linea devi pagare e piazzare i vagoni per l'INTERA lunghezza della tratta in un unico turno.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_dichiarata": "es",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8168092
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8060767
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8050951
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.80341184
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.77666134
+        }
+      ],
+      "ms": 6701,
+      "voto": "corretta",
+      "motivo": "Criterio 1: rinuncia onesta senza invenzioni (la regola nel base è solo implicita). Il campo language dichiara «es» ma il testo è la frase fissa in inglese.",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "en",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-15",
+      "gioco": "Ticket to Ride",
+      "domanda": "A chi viene assegnato il bonus di 10 punti di fine partita?",
+      "risposta_attesa": "Il bonus di 10 punti (carta Percorso Continuo Più Lungo) va al giocatore con il percorso continuo di linee più lungo; in caso di parità ciascun giocatore a pari merito riceve i 10 punti.",
+      "risposta": "- Il bonus di 10 punti viene assegnato al giocatore che ha il **Percorso Continuo Più Lungo** di linee [Page 1].\n- Se più giocatori sono in parità per il percorso più lungo, **ognuno** riceve i 10 punti bonus [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.82403797
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.82037914
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8203676
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.7963894
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.80646294
+        }
+      ],
+      "ms": 6861,
+      "voto": "corretta",
+      "motivo": "Criterio 2: Percorso Continuo Più Lungo e 10 punti a ciascuno in caso di parità, come atteso e regolamento base p. 4.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-16",
+      "gioco": "Ticket to Ride",
+      "domanda": "Cosa succede se il mazzo di pesca delle carte Treno si esaurisce durante la partita?",
+      "risposta_attesa": "La pila degli scarti viene rimischiata immediatamente per formare un nuovo mazzo di pesca.",
+      "risposta": "- Quando il mazzo di pesca si esaurisce, si mescolano gli scarti e si compone un nuovo mazzo di pesca; è consigliato mescolare bene perché le carte tendono a essere scartate in serie [Page 1].\n- Nell’improbabile caso in cui non rimangano carte nel mazzo né scarti da mescolare (perché i giocatori hanno accumulato molte carte in mano), un giocatore non potrà pescare carte Treno e dovrà invece Controllare una Linea o Pescare Biglietti Destinazione [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8496984
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.83065844
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8267186
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.822873
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.7932599
+        }
+      ],
+      "ms": 8680,
+      "voto": "corretta",
+      "motivo": "Criterio 2: si rimescolano gli scarti in un nuovo mazzo, come atteso. Anche le aggiunte (mescolare bene, caso senza mazzo né scarti) sono nel regolamento base.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-17",
+      "gioco": "Ticket to Ride",
+      "domanda": "Posso occupare una linea se non ho abbastanza vagoni fisici nella mia riserva, anche se ho tutte le carte necessarie?",
+      "risposta_attesa": "No. Per occupare una linea devi avere sia le carte richieste sia un numero sufficiente di pezzi vagone in plastica nella tua riserva.",
+      "risposta": "- Non è possibile: per controllare una linea devi collocare **un tuo vagone di plastica su ogni casella** che compone quella linea [Page 1].\n- Quindi servono tanti vagoni fisici quante sono le caselle della linea scelta; il regolamento non prevede eccezioni per mancanza di vagoni [Page 1].\n- La partita termina quando la riserva di vagoni di un giocatore scende a **due vagoni o meno** alla fine del suo turno, poi ogni giocatore ha un turno finale [Page 1].\n\nThis information is not available in the provided rulebook. (per una regola esplicita sul caso “carte sufficienti ma vagoni insufficienti” non c’è una frase dedicata)",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.83718336
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8355676
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.81549484
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8150499
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.7855114
+        }
+      ],
+      "ms": 11284,
+      "voto": "corretta",
+      "motivo": "Criterio 2: «Non è possibile» perché serve un vagone per casella, verdetto atteso e conforme al regolamento. La frase di rinuncia in coda segnala solo che manca una regola esplicita, il che è vero, e non ritratta il verdetto.",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-18",
+      "gioco": "Ticket to Ride: Europe",
+      "domanda": "Posso scartare o restituire i Biglietti Destinazione completati durante la partita?",
+      "risposta_attesa": "No. Tutti i biglietti tenuti rimangono segreti fino a fine partita e non possono mai essere scartati.",
+      "risposta": "- No. I Biglietti Destinazione pescati e non scartati subito devono essere tenuti fino alla fine della partita e non possono essere scartati durante una successiva pesca di Biglietti [Page 1].\n- I Biglietti Destinazione restano segreti agli altri giocatori fino al punteggio finale [Page 1].\n- Al termine della partita i Biglietti vengono rivelati: quelli completati danno punti bonus, quelli incompleti danno una penalità [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.8200114
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.8197866
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.8169741
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.81333125
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.8131929
+        }
+      ],
+      "ms": 10700,
+      "voto": "corretta",
+      "motivo": "Criterio 2: «No», i Biglietti tenuti restano fino a fine partita e non si scartano in una pesca successiva, come Europe p. 6. Segretezza e bonus/penalità finali sono anch'essi veri.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-19",
+      "gioco": "Ticket to Ride: Europe",
+      "domanda": "Quanto costa costruire la prima, la seconda e la terza Stazione nel corso della partita?",
+      "risposta_attesa": "La prima stazione costa 1 carta Treno; la seconda costa 2 carte dello stesso colore; la terza costa 3 carte dello stesso colore.",
+      "risposta": "- Per costruire la **prima Stazione**, il giocatore scarta **una carta Treno** dalla mano e colloca una Stazione del proprio colore sulla città scelta [Page 1].\n- Per costruire la **seconda Stazione**, deve scartare **un set di due carte di un solo colore** [Page 1].\n- Per costruire la **terza Stazione**, deve scartare **un set di tre carte Treno di un solo colore** [Page 1].\n- Come sempre, un qualsiasi numero di carte può essere sostituito da Locomotive [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.83254594
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.82553124
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.8183063
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.810003
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.8075622
+        }
+      ],
+      "ms": 13166,
+      "voto": "corretta",
+      "motivo": "Criterio 2: 1, 2 e 3 carte di un solo colore, come atteso. Anche la sostituzione con Locomotive è nel regolamento Europe p. 6.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-20",
+      "gioco": "Ticket to Ride: Europe",
+      "domanda": "Posso costruire più di una Stazione nella stessa città?",
+      "risposta_attesa": "No. Ogni città può ospitare al massimo una sola Stazione in totale durante l'intera partita.",
+      "risposta": "- No, no se pueden construir dos Estaciones en la misma ciudad: \"Two Stations may never be built in the same city\" [Page 1].\n- Cada jugador puede construir un máximo de una Estación por turno y tres en total durante la partida [Page 1].",
+      "lingua_dichiarata": "es",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.8185909
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.8092295
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.798254
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.79297936
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.7887205
+        }
+      ],
+      "ms": 8627,
+      "voto": "corretta",
+      "motivo": "Criteri 2 e 3: «No», con la citazione esatta del regolamento Europe e i limiti veri di una per turno e tre in totale. Giusta nel merito ma scritta in spagnolo, va tradotta.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "es",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-21",
+      "gioco": "Ticket to Ride: Europe",
+      "domanda": "Se tento di occupare un Tunnel e non posso/voglio pagare le carte extra uscite dal mazzo, cosa succede alle mie carte originali?",
+      "risposta_attesa": "Riprendi in mano tutte le carte che avevi giocato per tentare l'azione. Non perdi alcuna carta e il tuo turno finisce.",
+      "risposta": "- Se non hai abbastanza carte del colore corrispondente (o non vuoi giocarle), puoi riprendere tutte le tue carte in mano e il tuo turno termina [Page 1].\n- Alla fine del turno, le tre carte rivelate per il Tunnel vengono scartate [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.8168455
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.8085015
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.8025942
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.804646
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.79349315
+        }
+      ],
+      "ms": 13566,
+      "voto": "corretta",
+      "motivo": "Criterio 2: si riprendono tutte le carte e il turno finisce, come atteso. Anche lo scarto delle tre carte rivelate a fine turno è nel regolamento Europe p. 5.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-22",
+      "gioco": "Ticket to Ride: Europe",
+      "domanda": "Posso usare carte Locomotiva (Jolly) per pagare il costo aggiuntivo richiesto da un Tunnel?",
+      "risposta_attesa": "Sì, puoi pagare le carte extra richieste usando sia carte del colore corrispondente sia carte Locomotiva.",
+      "risposta": "- Sì. Quando si tenta di rivendicare una Tunnel Route, per ogni carta rivelata del stesso colore delle carte giocate, il giocatore deve giocare una carta aggiuntiva dello stesso colore **oppure una Locomotiva** [Page 1].\n- Se si tenta di rivendicare un Tunnel usando esclusivamente carte Locomotiva, le carte aggiuntive richieste devono essere anch'esse Locomotive [Page 1].\n- Le Locomotive sono carte jolly multicolore e, se rivelate durante un Tunnel, corrispondono automaticamente al colore giocato e obbligano a giocare una carta aggiuntiva [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.8207139
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.8159948
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.8077207
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.79939455
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.8059141
+        }
+      ],
+      "ms": 12376,
+      "voto": "corretta",
+      "motivo": "Criterio 2: «Sì», la carta extra può essere dello stesso colore o una Locomotiva, come atteso. Il caso del tentativo con sole Locomotive e la Locomotiva rivelata che conta come corrispondente sono veri (Europe p. 5-6).",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-23",
+      "gioco": "Ticket to Ride",
+      "domanda": "Quante carte Treno si pescano normalmente quando si sceglie l'azione 'Pescare Carte Treno' dal mazzo o dalla griglia?",
+      "risposta_attesa": "Si pescano 2 carte Treno per turno (a meno che non si prenda una Locomotiva scoperta dalla griglia).",
+      "risposta": "- Normalmente si pescano **due carte Treno** quando si sceglie l'azione \"Pescare Carte Treno\" [Page 1].\n- Se una delle cinque carte a faccia in su è una Locomotiva, il giocatore che la pesca deve pescare **solo una carta** anziché due [Page 1].\n- Se un giocatore pesca una Locomotiva dalla cima del mazzo alla cieca, quella Locomotiva conta comunque come una singola carta, quindi può ancora pescare un totale di **due carte** in quel turno [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.85358036
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8273854
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8256815
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8252481
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.78823763
+        }
+      ],
+      "ms": 10232,
+      "voto": "corretta",
+      "motivo": "Criterio 2: due carte, una sola se si prende una Locomotiva scoperta, come atteso. Anche la Locomotiva coperta che conta come una carta è conforme al regolamento base.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-24",
+      "gioco": "Ticket to Ride",
+      "domanda": "I biglietti destinazione tenuti dagli altri giocatori sono d'informazione pubblica durante la partita?",
+      "risposta_attesa": "No, i Biglietti Destinazione rimangono strettamente segreti fino alla conta dei punti finale.",
+      "risposta": "No. I Biglietti Destinazione devono essere tenuti segreti agli occhi dei giocatori fino al calcolo finale del punteggio a fine partita [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.82703876
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.82854843
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8097518
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.81238985
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.80520666
+        }
+      ],
+      "ms": 7084,
+      "voto": "corretta",
+      "motivo": "Criterio 2: «No», restano segreti fino al calcolo finale del punteggio, citazione quasi letterale del regolamento base.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-25",
+      "gioco": "Ticket to Ride",
+      "domanda": "Quando si assegnano i punti vittoria per l'occupazione di una linea sulla mappa?",
+      "risposta_attesa": "I punti vittoria per la lunghezza della linea si calcolano e si avanzano immediatamente sul segnapunti nel momento stesso in cui la linea viene occupata.",
+      "risposta": "- I punti per il controllo di una linea si segnano **immediatamente**, quando il giocatore ne prende il controllo: fa avanzare il suo Segnapunti lungo la Tabella Punteggio [Page 1].\n- I punti ottenuti dipendono dalla lunghezza della linea, secondo la Tabella dei Punteggi delle Linee (es. 2 caselle = 1 punto, 3 = 2, 4 = 4, 5 = 7, 6 = 10, 15 per le linee più lunghe) [Page 1].\n- Alla fine della partita i giocatori possono ricalcolare i punti delle linee già conteggiati, per verificare di non aver commesso errori [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8252407
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8264716
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8219547
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.81745493
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8070936
+        }
+      ],
+      "ms": 9458,
+      "voto": "parziale",
+      "motivo": "Criterio 2: il verdetto atteso («immediatamente») è giusto, ma la tabella aggiunta è sfalsata di una casella (2=1, 3=2 … 6=10) mentre il regolamento base dà 1=1, 2=2, 3=4, 4=7, 5=10, 6=15. Non contraddice la risposta attesa, quindi il criterio 7 non la rende sbagliata, ma una regola falsa toglie la correttezza nel merito.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": true
+      }
+    },
+    {
+      "id": "TTR-26",
+      "gioco": "Ticket to Ride",
+      "domanda": "Quanti punti vale una singola tratta occupata di lunghezza 6 vagoni?",
+      "risposta_attesa": "Una tratta di lunghezza 6 vale esattamente 15 punti vittoria.",
+      "risposta": "- Una linea di 6 caselle/vagoni vale **15 punti** [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.81785464
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8161655
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.80864424
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.79658276
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8069995
+        }
+      ],
+      "ms": 8997,
+      "voto": "corretta",
+      "motivo": "Criterio 2: 15 punti, come atteso e come la tabella del regolamento base.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-27",
+      "gioco": "Ticket to Ride",
+      "domanda": "Quanti punti vale una tratta di lunghezza 1 vagone?",
+      "risposta_attesa": "Una tratta di lunghezza 1 vale esattamente 1 punto vittoria.",
+      "risposta": "- Una linea di lunghezza 1 vagone vale **1 punto** [Page 1].\n\n(Fonte: Tabella dei Punteggi delle Linee, che elenca per lunghezza 1 → 1 punto [Page 1].)",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.81289977
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8122373
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.7931845
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.794265
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.7983935
+        }
+      ],
+      "ms": 7965,
+      "voto": "corretta",
+      "motivo": "Criterio 2: 1 punto, come atteso e come la tabella del regolamento base.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-28",
+      "gioco": "Ticket to Ride: Europe",
+      "domanda": "Una Stazione ti permette di usare TUTTE le linee avversarie che entrano in quella città?",
+      "risposta_attesa": "No. A fine partita devi scegliere UNA SOLA linea di un avversario collegata a quella città da utilizzare per i tuoi biglietti.",
+      "risposta": "No. Una Stazione permette al suo proprietario di usare **una sola** delle linee appartenenti a un altro giocatore, in entrata o in uscita da quella città, per aiutare a collegare le città dei propri Biglietti Destinazione [Page 1].",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.80223536
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.82759017
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.81694776
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.8136433
+        },
+        {
+          "fonte": "PDF:e104c45f-d3cf-4387-9b31-4f92a7e17da3",
+          "pagina": 1,
+          "punteggio": 0.8128162
+        }
+      ],
+      "ms": 9933,
+      "voto": "corretta",
+      "motivo": "Criterio 2: «No», una sola linea avversaria in entrata o uscita dalla città, come atteso e regolamento Europe p. 6.",
+      "flags": {
+        "rinuncia": false,
+        "lingua": "it",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-29",
+      "gioco": "Ticket to Ride",
+      "domanda": "Come si pagano i pedaggi per passare sui binari degli altri giocatori nel gioco base?",
+      "risposta_attesa": "Non esistono pedaggi. Le linee occupate da un giocatore sono ad uso esclusivo di quel giocatore (salvo l'uso delle stazioni nella versione Europa).",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8132299
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8161702
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8057429
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.80620074
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.8041934
+        }
+      ],
+      "ms": 7677,
+      "voto": "corretta",
+      "motivo": "Criterio 1: rinuncia onesta su una meccanica inesistente (pedaggi), senza accettare la premessa falsa né inventare un costo.",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "en",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    },
+    {
+      "id": "TTR-30",
+      "gioco": "Ticket to Ride",
+      "domanda": "Cosa succede se il mio treno esaurisce il carburante/carbone?",
+      "risposta_attesa": "In Ticket to Ride non esiste alcuna meccanica di gestione del carburante o del carbone.",
+      "risposta": "This information is not available in the provided rulebook.",
+      "lingua_dichiarata": "it",
+      "grounding": "Grounded",
+      "errore": null,
+      "citazioni": [
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.78610075
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.779646
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.78082967
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.77823406
+        },
+        {
+          "fonte": "PDF:1e382a94-f52f-4677-a1a1-f678fac7f94f",
+          "pagina": 1,
+          "punteggio": 0.74376935
+        }
+      ],
+      "ms": 6465,
+      "voto": "corretta",
+      "motivo": "Criterio 1: rinuncia onesta su una meccanica inesistente (carburante), senza accettare la premessa falsa né inventare regole.",
+      "flags": {
+        "rinuncia": true,
+        "lingua": "en",
+        "premessa_falsa_accettata": false,
+        "invenzione": false
+      }
+    }
+  ]
+}

@@ -7,6 +7,7 @@ using Api.BoundedContexts.SessionTracking.Domain.Repositories;
 using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.BoundedContexts.SessionTracking.Infrastructure.Persistence;
 using Api.Infrastructure;
+using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Infrastructure.Entities.GameManagement;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Services;
@@ -132,6 +133,32 @@ public sealed class CreateSessionCommandAdHocTests : IAsyncLifetime
         }
     }
 
+    /// <summary>
+    /// Invariante #15 — la serata ad-hoc nasce <c>Published</c>, NON <c>InProgress</c>.
+    ///
+    /// <para>🔴 Questo test asseriva <c>InProgress</c> e falliva da prima del 2026-10-03. La causa
+    /// non era il prodotto: era una riga di spec non aggiornata. Il testo dell'invariante #15 in
+    /// <c>docs/for-developers/specs/2026-06-04-gamenight-session-domain-model.md</c> diceva
+    /// «triggered by first Session creation <b>(draft or live)</b>», e quella parentesi è stata
+    /// <b>superata da Epic #3188 Slice 3 (D1 / #19)</b> — «session-live model canonicalization:
+    /// decouple create from go-live on the direct-create path» — senza che la spec venisse
+    /// aggiornata. La decisione è citata in sei punti del codice, fra cui
+    /// <c>CreateSessionCommandHandler.ResolveGameNightAsync</c>: «born Published (a valid
+    /// draft-holding envelope), NOT InProgress».</para>
+    ///
+    /// <para>Risolto in #4074: corretta la spec (due punti) e allineato questo test. La riga della
+    /// <i>tabella di mappatura</i> della spec era invece già giusta — diceva
+    /// <c>SessionStartedDomainEvent</c>, cioè go-live — quindi la spec si contraddiceva al proprio
+    /// interno e ciascuna metà aveva un seguace: l'implementazione la tabella, questo test il
+    /// testo.</para>
+    ///
+    /// <para><b>L'altra metà dell'invariante</b> — che al go-live la serata passi a
+    /// <c>InProgress</c> — è coperta dove vive e non va duplicata qui:
+    /// <c>GameNightEventInvariant15Tests</c> (file dedicato),
+    /// <c>GameNightEventSessionsTests</c> (5 asserzioni),
+    /// <c>StartGameNightSessionCommandHandlerTests</c>,
+    /// <c>AttachGamebookCampaignToGameNightCommandHandlerTests</c>.</para>
+    /// </summary>
     [Fact]
     public async Task Handle_NoGameNightProvided_CreatesAdHocNightImplicitly()
     {
@@ -166,7 +193,9 @@ public sealed class CreateSessionCommandAdHocTests : IAsyncLifetime
             .FirstOrDefaultAsync(e => e.Id == result.GameNightEventId, TestCancellationToken);
 
         persistedNight.Should().NotBeNull();
-        persistedNight!.Status.Should().Be("InProgress");
+        // #3188 D1: una creazione diretta produce un DRAFT, e la serata che lo contiene resta
+        // Published. Passa a InProgress solo quando una sessione va live (#15).
+        persistedNight!.Status.Should().Be("Published");
         persistedNight.OrganizerId.Should().Be(userId);
         persistedNight.GameIdsJson.Should().Contain(gameId.ToString());
 
@@ -311,23 +340,72 @@ public sealed class CreateSessionCommandAdHocTests : IAsyncLifetime
         addedEvents.Should().HaveCount(1);
     }
 
+    /// <summary>
+    /// 🔴 Questo test asseriva l'OPPOSTO dell'invariante documentata, e falliva da allora.
+    ///
+    /// <para>Si chiamava <c>Handle_ActiveSessionInNight_Throws409</c> e pretendeva una
+    /// <c>ConflictException</c> dal handler di CREAZIONE quando la serata ha già una sessione
+    /// attiva. La spec del dominio
+    /// (<c>docs/for-developers/specs/2026-06-04-gamenight-session-domain-model.md</c>, che
+    /// CLAUDE.md indica come fonte di verità) dice il contrario su due invarianti:</para>
+    ///
+    /// <list type="bullet">
+    ///   <item><b>#10 — max 1 live per GameNight</b>: la guardia vive in
+    ///     <c>GameNightEvent.EnsureCanStartSession()</c> / <c>StartCurrentSession()</c> e lancia
+    ///     <c>MaxLiveSessionsExceededException</c> — al <b>go-live</b>, non alla creazione. E
+    ///     scatta su una sessione <c>InProgress</c>, non su una <c>Active</c> di tracking.</item>
+    ///   <item><b>#13</b>: «salvataggio draft con live attiva <b>permesso</b> + warning non
+    ///     bloccante». Il testo di #10 lo ripete: «L'utente può sempre creare draft anche con
+    ///     live attiva (per registrazioni retroattive)».</item>
+    /// </list>
+    ///
+    /// <para>L'implementazione segue la spec: il link nasce <c>Pending</c> e l'indice unico che
+    /// produce il 409 è <b>parziale su InProgress</b>, quindi una seconda creazione non lo viola.
+    /// Misurato in locale: <c>Assert.Throws() Failure: No exception was thrown</c>.</para>
+    ///
+    /// <para>L'invariante #10 è già coperta dove vive — <c>GameNightEventMaxLiveTests</c> (9
+    /// asserzioni) più <c>GoLiveSessionCommandHandlerTests</c>,
+    /// <c>StartGameNightSessionCommandHandlerTests</c>,
+    /// <c>AttachGamebookCampaignToGameNightCommandHandlerTests</c>,
+    /// <c>GoLiveSessionConcurrencyTests</c> — quindi il test precedente non aggiungeva
+    /// copertura: aggiungeva un rosso permanente nella baseline di <c>dev-async</c> (#4024).</para>
+    ///
+    /// <para>Riscritto su ciò che il handler di creazione deve davvero garantire, e che nessun
+    /// altro test asserisce: la creazione è <b>permessa</b>, e la serata resta <b>senza slot
+    /// live occupato</b> — è questo che rende #10 e #13 coerenti fra loro.</para>
+    /// </summary>
     [Fact]
-    public async Task Handle_ActiveSessionInNight_Throws409()
+    public async Task Handle_SecondSessionWhileFirstIsActive_IsAllowedAndLeavesLiveSlotFree()
     {
-        // Arrange — create a session that opens an ad-hoc night with an Active session in it.
+        // Arrange — una serata ad-hoc con una prima sessione (link Pending, Session Active).
         var (userId, gameId1) = await _fixture.SeedUserWithLibraryGameAndIndexedKbAsync(_dbContext!, vectorCount: 2);
         var first = await _handler!.Handle(BuildCommand(userId, gameId1), TestCancellationToken);
 
-        // Seed a second library game with a Ready KB on the same user.
         var gameId2 = await _fixture.SeedAnotherLibraryGameAsync(_dbContext!, userId);
 
-        // Act / Assert — without pausing the first session, attempting to attach a second
-        // session to the same night must fail with ConflictException (409) so the
-        // "1 Active per GameNight" invariant is preserved at the handler level.
-        await Assert.ThrowsAsync<ConflictException>(
-            () => _handler!.Handle(
-                BuildCommand(userId, gameId2, gameNightEventId: first.GameNightEventId),
-                TestCancellationToken));
+        // Act — invariante #13: la seconda creazione NON deve essere rifiutata.
+        var second = await _handler!.Handle(
+            BuildCommand(userId, gameId2, gameNightEventId: first.GameNightEventId),
+            TestCancellationToken);
+
+        // Assert — la seconda sessione esiste ed è attaccata alla stessa serata.
+        second.Should().NotBeNull();
+        second.SessionId.Should().NotBeEmpty().And.NotBe(first.SessionId);
+        second.GameNightEventId.Should().Be(first.GameNightEventId);
+
+        var night = await _dbContext!.GameNightEvents
+            .AsNoTracking()
+            .Include(e => e.Sessions)
+            .FirstAsync(e => e.Id == first.GameNightEventId, TestCancellationToken);
+
+        night.Sessions.Should().Contain(s => s.SessionId == first.SessionId);
+        night.Sessions.Should().Contain(s => s.SessionId == second.SessionId);
+
+        // 🔴 L'asserzione che tiene insieme #13 e #10, e senza la quale questo test direbbe solo
+        // «non lancia»: nessuno dei due link è InProgress, quindi lo slot live è ancora libero e
+        // l'invariante #10 non è stata aggirata — è stata semplicemente non toccata, perché
+        // creare non è andare live.
+        night.Sessions.Should().NotContain(s => s.Status == GameNightSessionStatus.InProgress.ToString());
     }
 
     /// <summary>

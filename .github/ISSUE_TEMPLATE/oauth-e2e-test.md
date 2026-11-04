@@ -1,6 +1,6 @@
 ---
 title: "[Testing] Add E2E Tests for OAuth Authentication Flows"
-labels: testing, frontend, backend, oauth
+labels: testing, area/frontend, area/backend
 assignees: ''
 ---
 

@@ -1,5 +1,5 @@
+using Api.BoundedContexts.Authentication.Application.DTOs;
 using Api.BoundedContexts.UserNotifications.Application.Commands;
-using Api.Extensions;
 using Api.Filters;
 using MediatR;
 
@@ -30,10 +30,14 @@ internal static class AdminManualNotificationEndpoints
         HttpContext httpContext,
         CancellationToken ct)
     {
-        var adminId = httpContext.User.GetUserId();
-        var adminName = httpContext.User.FindFirst("displayName")?.Value
-            ?? httpContext.User.FindFirst("email")?.Value
-            ?? "Admin";
+        // The admin who sends it: EffectiveActor, not the claims. RequireAdminSessionFilter authorizes on the
+        // real actor and has already required the session to be valid, so the cast cannot fail here. During an
+        // impersonation the claims (NameIdentifier, Name) are the ones of the impersonated user, who sent
+        // nothing: the id and the name saved in the metadata, and shown to the recipients, must be the admin's
+        // (Principal.cs). #4580: this read the claims "displayName" and "email", which the session handler does
+        // not emit, so the name was always "Admin".
+        var admin = ((SessionStatusDto)httpContext.Items[nameof(SessionStatusDto)]!).Principal!.EffectiveActor;
+        var adminName = NameShownToRecipients(admin);
 
         var command = new SendManualNotificationCommand
         {
@@ -44,13 +48,25 @@ internal static class AdminManualNotificationEndpoints
             RecipientRole = request.RecipientRole,
             RecipientUserIds = request.RecipientUserIds,
             DeepLinkPath = request.DeepLinkPath,
-            SentByAdminId = adminId,
+            SentByAdminId = admin.Id,
             SentByAdminName = adminName
         };
 
         var result = await mediator.Send(command, ct).ConfigureAwait(false);
         return Results.Ok(result);
     }
+
+    /// <summary>
+    /// The display name of the admin, or "Admin" when there is none: the recipients must never read the email
+    /// address of the admin. UserRepository.MapToDomain already puts the email in <c>DisplayName</c> when the
+    /// stored name is blank, so a blank name reaches this point as the email, and that is what is treated as
+    /// "no name".
+    /// </summary>
+    private static string NameShownToRecipients(UserDto admin) =>
+        string.IsNullOrWhiteSpace(admin.DisplayName)
+        || string.Equals(admin.DisplayName, admin.Email, StringComparison.OrdinalIgnoreCase)
+            ? "Admin"
+            : admin.DisplayName;
 }
 
 internal record SendManualNotificationRequest(

@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { screen, fireEvent } from '@testing-library/react';
+import { renderInEnglish as render } from '@/test-utils/intl-wrapper';
 import { describe, it, expect, vi } from 'vitest';
 import { OTPInput6Slot } from '../two-factor/OTPInput6Slot';
 

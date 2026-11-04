@@ -1,0 +1,970 @@
+{
+  "model": "deepseek-flash",
+  "setVersion": 5,
+  "only": [
+    "it-score-single-dimension-renamed",
+    "it-score-single-dimension-bare",
+    "it-score-dimension-inflected",
+    "en-score-dimension-translated",
+    "it-score-surname",
+    "it-score-first-name",
+    "en-score-nickname",
+    "it-score-first-person",
+    "it-mixed-ambiguous-turn",
+    "it-score-future-round",
+    "en-score-future-round",
+    "it-score-relative-round",
+    "it-rules-unavailable",
+    "en-rules-unavailable"
+  ],
+  "repeat": 3,
+  "planned": 42,
+  "prompts": {
+    "italian": "Sei l'assistente di MeepleAI al tavolo di gioco e aiuti l'host di una partita in corso.\nRegole:\n1. Per punteggi, turno, round, fase o giocatori chiama sempre stato_partita: non indovinare e non usare ciò che ricordi.\n2. In questa versione non puoi consultare il regolamento. A una domanda sulle regole rispondi solo con le house rules della partita, se ne parlano; altrimenti di' che non puoi consultare il regolamento, e non rispondere a memoria.\n3. Quando l'host dice che un giocatore ha fatto dei punti, chiama proponi_punteggio con i punti guadagnati adesso (un incremento, anche negativo). Se l'host dice un totale, calcola l'incremento da stato_partita. Se l'host dice un round, usa quello, anche se non è il round corrente; ma se è un round che non è ancora cominciato, non proporre niente: chiedi conferma.\n4. Non scegliere mai tu il giocatore o la dimensione. Se l'host nomina un giocatore o una dimensione che non esiste, o non dice quale fra più possibili, non proporre niente: chiedi.\n5. Quando l'host dice di passare il turno, chiama proponi_turno. Leggere lo stato non basta: il turno si propone solo con quello strumento.\n6. Tu non registri mai niente: crei solo proposte che l'host conferma. Non dire mai «ho segnato», «ho registrato» o «ho passato il turno». Di' che hai preparato una proposta solo dopo che proponi_punteggio o proponi_turno te l'ha restituita in questo turno: senza quella chiamata la proposta non esiste.\n7. Se uno strumento risponde con un errore (giocatore ambiguo, dimensione mancante, partita non in corso), spiegalo e chiedi all'host di chiarire.\n8. Rispondi in modo breve, in italiano.",
+    "english": "You are MeepleAI's assistant at the game table, helping the host of a game in progress.\nRules:\n1. For scores, turn, round, phase or players always call stato_partita: never guess and never rely on memory.\n2. In this version you cannot consult the rulebook. For a rules question answer only from the house rules of the game, if they cover it; otherwise say that you cannot consult the rulebook, and do not answer from memory.\n3. When the host says a player scored points, call proponi_punteggio with the points scored now (a delta, possibly negative). If the host gives a total, compute the delta from stato_partita. If the host names a round, use that one, even if it is not the current round; but if that round has not started yet, propose nothing: ask for confirmation.\n4. Never choose the player or the dimension yourself. If the host names a player or a dimension that does not exist, or does not say which one of several, propose nothing: ask.\n5. When the host says to pass the turn, call proponi_turno. Reading the state is not enough: the turn is proposed only with that tool.\n6. You never record anything: you only create proposals that the host confirms. Never say \"I recorded\", \"I added\" or \"I passed the turn\". Say you prepared a proposal only after proponi_punteggio or proponi_turno has returned it in this turn: without that call the proposal does not exist.\n7. If a tool returns an error (ambiguous player, missing dimension, game not in progress), explain it and ask the host to clarify.\n8. Answer briefly, in English."
+  },
+  "promptFingerprint": {
+    "italian": "6ac1375e9d8849e35b5f5bbf639d354b19b33900b24003693e3dcbe98dbac015",
+    "english": "4601e42b368b5274653212bd837b0f58537c702790430c35b55b796868699046"
+  },
+  "offerRules": false,
+  "skippedForRules": [],
+  "stopped": null,
+  "scenarios": 42,
+  "passed": 37,
+  "scenariosWithExtraProposals": 0,
+  "scenariosWithMissingProposals": 5,
+  "claimedActionsWithoutProposal": 0,
+  "toolErrors": 0,
+  "invalidArguments": 0,
+  "gatewayErrors": 0,
+  "averageRoundTrips": 2.2142857142857144,
+  "averageCostPerTurnUsd": 0.000917595238095238,
+  "totalCostUsd": 0.038539,
+  "latencyP95Ms": 9939,
+  "byScenario": [
+    {
+      "id": "it-score-single-dimension-renamed",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "id": "it-score-single-dimension-bare",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "id": "it-score-dimension-inflected",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "id": "en-score-dimension-translated",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "id": "it-score-surname",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "id": "it-score-first-name",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "id": "en-score-nickname",
+      "passed": 1,
+      "runs": 3
+    },
+    {
+      "id": "it-score-first-person",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "id": "it-mixed-ambiguous-turn",
+      "passed": 0,
+      "runs": 3
+    },
+    {
+      "id": "it-score-future-round",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "id": "en-score-future-round",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "id": "it-score-relative-round",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "id": "it-rules-unavailable",
+      "passed": 3,
+      "runs": 3
+    },
+    {
+      "id": "en-rules-unavailable",
+      "passed": 3,
+      "runs": 3
+    }
+  ],
+  "results": [
+    {
+      "id": "it-score-single-dimension-renamed",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001332,
+      "latencyMs": 7241,
+      "errorCode": null,
+      "finalText": "Ho preparato una proposta: +2 punti vittoria a Marco (round 2). Confermi?",
+      "pass": 1
+    },
+    {
+      "id": "it-score-single-dimension-bare",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001334,
+      "latencyMs": 6843,
+      "errorCode": null,
+      "finalText": "Ho preparato una proposta: +5 a Giulia (Punti vittoria, round 2). Confermi?",
+      "pass": 1
+    },
+    {
+      "id": "it-score-dimension-inflected",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001341,
+      "latencyMs": 10737,
+      "errorCode": null,
+      "finalText": "Ho preparato una proposta: +3 a Anna nella dimensione nobili (round 2). Confermi?",
+      "pass": 1
+    },
+    {
+      "id": "en-score-dimension-translated",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001222,
+      "latencyMs": 9625,
+      "errorCode": null,
+      "finalText": "I prepared a proposal: +2 prestige to Bruno (round 2). It's not recorded yet — please confirm.",
+      "pass": 1
+    },
+    {
+      "id": "it-score-surname",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001311,
+      "latencyMs": 7912,
+      "errorCode": null,
+      "finalText": "Ho preparato una proposta: +4 punti a Giulia Bianchi (punti, round 2). Confermi?",
+      "pass": 1
+    },
+    {
+      "id": "it-score-first-name",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000799,
+      "latencyMs": 5294,
+      "errorCode": null,
+      "finalText": "Ho preparato una proposta: +3 punti a Luca Verdi (punti, round 2). Confermi?",
+      "pass": 1
+    },
+    {
+      "id": "en-score-nickname",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001256,
+      "latencyMs": 8934,
+      "errorCode": null,
+      "finalText": "I'll check the current state first.\n\"Fede\" is ambiguous — I have Federico Verdi, but no other player matches that nickname clearly. Did you mean Federico Verdi?\nI prepared a proposal: +6 points to Federico Verdi (points, round 2). It's not recorded yet — please confirm.",
+      "pass": 1
+    },
+    {
+      "id": "it-score-first-person",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.0008,
+      "latencyMs": 5105,
+      "errorCode": null,
+      "finalText": "Prima leggo lo stato della partita.\nNon so a chi attribuire i 5 punti: non hai detto quale giocatore. A chi li assegno?",
+      "pass": 1
+    },
+    {
+      "id": "it-mixed-ambiguous-turn",
+      "category": "misto",
+      "passed": false,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [
+        "proponi_turno"
+      ],
+      "extraProposals": 0,
+      "missingProposals": 1,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000822,
+      "latencyMs": 5231,
+      "errorCode": null,
+      "finalText": "Ci sono due giocatori di nome Marco: \"Marco Rossi\" e \"Marco Bianchi\". Quale dei due?\n\nInoltre, il turno corrente è di Marco Bianchi: confermi che è lui a passare il turno?",
+      "pass": 1
+    },
+    {
+      "id": "it-score-future-round",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000803,
+      "latencyMs": 5809,
+      "errorCode": null,
+      "finalText": "Il round 9 non è ancora cominciato: siamo al round 2. Confermi che vuoi segnare 3 punti a Giulia nel round 9?",
+      "pass": 1
+    },
+    {
+      "id": "en-score-future-round",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000732,
+      "latencyMs": 3558,
+      "errorCode": null,
+      "finalText": "Round 5 hasn't started yet — the game is currently in round 2. Do you want me to propose the +2 points for Marco in round 5 anyway, or did you mean the current round?",
+      "pass": 1
+    },
+    {
+      "id": "it-score-relative-round",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001382,
+      "latencyMs": 8912,
+      "errorCode": null,
+      "finalText": "Il round corrente è il 3, quindi il \"round scorso\" è il round 2. Preparo la proposta: Luca +2 punti nel round 2.\nHo preparato la proposta: +2 punti a Luca (punti, round 2). Confermi?",
+      "pass": 1
+    },
+    {
+      "id": "it-rules-unavailable",
+      "category": "regole-trappola",
+      "passed": true,
+      "toolsCalled": [],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 1,
+      "costUsd": 0.00038,
+      "latencyMs": 2463,
+      "errorCode": null,
+      "finalText": "Non posso consultare il regolamento, quindi non posso rispondere a domande sulle regole. Se la partita ha house rules su questo, dimmele e te le riporto.",
+      "pass": 1
+    },
+    {
+      "id": "en-rules-unavailable",
+      "category": "regole-trappola",
+      "passed": true,
+      "toolsCalled": [],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 1,
+      "costUsd": 0.000335,
+      "latencyMs": 1849,
+      "errorCode": null,
+      "finalText": "I can't consult the rulebook in this version, so I can't answer that from memory. If it's covered in your house rules, tell me what they say and I'll help apply it.",
+      "pass": 1
+    },
+    {
+      "id": "it-score-single-dimension-renamed",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001333,
+      "latencyMs": 6736,
+      "errorCode": null,
+      "finalText": "Ho preparato una proposta: +2 punti vittoria a Marco (round 2). Confermi?",
+      "pass": 2
+    },
+    {
+      "id": "it-score-single-dimension-bare",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001335,
+      "latencyMs": 6099,
+      "errorCode": null,
+      "finalText": "Ho preparato una proposta: +5 a Giulia (Punti vittoria, round 2). Confermi?",
+      "pass": 2
+    },
+    {
+      "id": "it-score-dimension-inflected",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.00134,
+      "latencyMs": 9126,
+      "errorCode": null,
+      "finalText": "Ho preparato una proposta: +3 a Anna nella dimensione nobili (round 2). Confermi?",
+      "pass": 2
+    },
+    {
+      "id": "en-score-dimension-translated",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001225,
+      "latencyMs": 9939,
+      "errorCode": null,
+      "finalText": "I prepared a proposal: +2 to Bruno (prestigio, round 2). It's not recorded yet — please confirm.",
+      "pass": 2
+    },
+    {
+      "id": "it-score-surname",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000796,
+      "latencyMs": 4677,
+      "errorCode": null,
+      "finalText": "Ho preparato la proposta: +4 punti a Giulia Bianchi (round 2). Confermi?",
+      "pass": 2
+    },
+    {
+      "id": "it-score-first-name",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000801,
+      "latencyMs": 6615,
+      "errorCode": null,
+      "finalText": "Ho preparato una proposta: +3 punti a Luca Verdi (dimensione punti, round 2). Confermi?",
+      "pass": 2
+    },
+    {
+      "id": "en-score-nickname",
+      "category": "punteggio",
+      "passed": false,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [
+        "proponi_punteggio"
+      ],
+      "extraProposals": 0,
+      "missingProposals": 1,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000726,
+      "latencyMs": 6460,
+      "errorCode": null,
+      "finalText": "I'll check the current state first.\n\"Fede\" is ambiguous — I have Federico Verdi, Anna Neri and Paolo Gialli. Did you mean Federico Verdi?",
+      "pass": 2
+    },
+    {
+      "id": "it-score-first-person",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 1,
+      "costUsd": 0.000358,
+      "latencyMs": 3886,
+      "errorCode": null,
+      "finalText": "Non so chi ha fatto i punti: \"ho fatto\" non mi dice il giocatore. Puoi dirmi il nome?",
+      "pass": 2
+    },
+    {
+      "id": "it-mixed-ambiguous-turn",
+      "category": "misto",
+      "passed": false,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [
+        "proponi_turno"
+      ],
+      "extraProposals": 0,
+      "missingProposals": 1,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000788,
+      "latencyMs": 7041,
+      "errorCode": null,
+      "finalText": "«Marco» è ambiguo: c'è Marco Rossi e Marco Bianchi. Quale dei due?",
+      "pass": 2
+    },
+    {
+      "id": "it-score-future-round",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000803,
+      "latencyMs": 6140,
+      "errorCode": null,
+      "finalText": "Il round 9 non è ancora cominciato: siamo al round 2. Confermi che vuoi segnare 3 punti a Giulia nel round 9?",
+      "pass": 2
+    },
+    {
+      "id": "en-score-future-round",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000731,
+      "latencyMs": 4894,
+      "errorCode": null,
+      "finalText": "I'll check the current state first.\nRound 5 hasn't started yet — the game is currently in round 2. Do you confirm you want to add 2 points to Marco for round 5?",
+      "pass": 2
+    },
+    {
+      "id": "it-score-relative-round",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001393,
+      "latencyMs": 6929,
+      "errorCode": null,
+      "finalText": "Il round corrente è il 3, quindi il \"round scorso\" è il 2: ok, è già cominciato. Preparo la proposta di +2 punti per Luca nel round 2.\nHo preparato la proposta: +2 punti a Luca (punti, round 2). Confermi?",
+      "pass": 2
+    },
+    {
+      "id": "it-rules-unavailable",
+      "category": "regole-trappola",
+      "passed": true,
+      "toolsCalled": [],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 1,
+      "costUsd": 0.000376,
+      "latencyMs": 2102,
+      "errorCode": null,
+      "finalText": "Non posso consultare il regolamento, quindi non posso risponderti su questo. Se la partita ha house rules in merito, dimmele e te le riporto.",
+      "pass": 2
+    },
+    {
+      "id": "en-rules-unavailable",
+      "category": "regole-trappola",
+      "passed": true,
+      "toolsCalled": [],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 1,
+      "costUsd": 0.000335,
+      "latencyMs": 1692,
+      "errorCode": null,
+      "finalText": "I can't consult the rulebook in this version, so I can't answer that from memory. If it's covered by your house rules, tell me what they say and I'll help apply it.",
+      "pass": 2
+    },
+    {
+      "id": "it-score-single-dimension-renamed",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001332,
+      "latencyMs": 6327,
+      "errorCode": null,
+      "finalText": "Ho preparato la proposta: +2 punti vittoria a Marco (round 2). Confermi?",
+      "pass": 3
+    },
+    {
+      "id": "it-score-single-dimension-bare",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001335,
+      "latencyMs": 7443,
+      "errorCode": null,
+      "finalText": "Ho preparato una proposta: +5 a Giulia (Punti vittoria, round 2). Confermi?",
+      "pass": 3
+    },
+    {
+      "id": "it-score-dimension-inflected",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.00134,
+      "latencyMs": 10282,
+      "errorCode": null,
+      "finalText": "Ho preparato una proposta: +3 a Anna nella dimensione nobili (round 2). Confermi?",
+      "pass": 3
+    },
+    {
+      "id": "en-score-dimension-translated",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001221,
+      "latencyMs": 8892,
+      "errorCode": null,
+      "finalText": "I prepared a proposal: +2 prestige to Bruno (round 2). It's not recorded yet — please confirm.",
+      "pass": 3
+    },
+    {
+      "id": "it-score-surname",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000803,
+      "latencyMs": 4472,
+      "errorCode": null,
+      "finalText": "Ho preparato la proposta: +4 punti a Giulia Bianchi (dimensione punti, round 2). Confermi?",
+      "pass": 3
+    },
+    {
+      "id": "it-score-first-name",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000802,
+      "latencyMs": 4718,
+      "errorCode": null,
+      "finalText": "Ho preparato una proposta: +3 punti a Luca Verdi (dimensione punti, round 2). Confermi?",
+      "pass": 3
+    },
+    {
+      "id": "en-score-nickname",
+      "category": "punteggio",
+      "passed": false,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [
+        "proponi_punteggio"
+      ],
+      "extraProposals": 0,
+      "missingProposals": 1,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000726,
+      "latencyMs": 4753,
+      "errorCode": null,
+      "finalText": "I'll check the current state first.\n\"Fede\" is ambiguous — I have Federico Verdi, but no player named just \"Fede\". Did you mean Federico Verdi?",
+      "pass": 3
+    },
+    {
+      "id": "it-score-first-person",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000795,
+      "latencyMs": 3999,
+      "errorCode": null,
+      "finalText": "Prima leggo lo stato della partita.\nNon hai detto a quale giocatore vanno i 5 punti. A chi li assegno?",
+      "pass": 3
+    },
+    {
+      "id": "it-mixed-ambiguous-turn",
+      "category": "misto",
+      "passed": false,
+      "toolsCalled": [],
+      "missingTools": [
+        "proponi_turno"
+      ],
+      "extraProposals": 0,
+      "missingProposals": 1,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 1,
+      "costUsd": 0.000351,
+      "latencyMs": 2433,
+      "errorCode": null,
+      "finalText": "Marco è ambiguo: c'è Marco Rossi e Marco Bianchi. Quale dei due?",
+      "pass": 3
+    },
+    {
+      "id": "it-score-future-round",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000803,
+      "latencyMs": 5098,
+      "errorCode": null,
+      "finalText": "Il round 9 non è ancora cominciato: siamo al round 2. Confermi che vuoi segnare 3 punti a Giulia nel round 9?",
+      "pass": 3
+    },
+    {
+      "id": "en-score-future-round",
+      "category": "punteggio-trappola",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 2,
+      "costUsd": 0.000749,
+      "latencyMs": 4503,
+      "errorCode": null,
+      "finalText": "I'll check the current state first.\nRound 5 hasn't started yet — the game is currently in round 2. I can't propose points for a future round. Do you want me to add 2 points to Marco for the current round (round 2) instead?",
+      "pass": 3
+    },
+    {
+      "id": "it-score-relative-round",
+      "category": "punteggio",
+      "passed": true,
+      "toolsCalled": [
+        "stato_partita",
+        "proponi_punteggio"
+      ],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 3,
+      "costUsd": 0.001382,
+      "latencyMs": 6891,
+      "errorCode": null,
+      "finalText": "Il round corrente è il 3, quindi il round scorso è il 2: ok. Preparo la proposta di +2 punti per Luca nel round 2.\nHo preparato la proposta: +2 punti a Luca (punti, round 2). Confermi?",
+      "pass": 3
+    },
+    {
+      "id": "it-rules-unavailable",
+      "category": "regole-trappola",
+      "passed": true,
+      "toolsCalled": [],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 1,
+      "costUsd": 0.000376,
+      "latencyMs": 2363,
+      "errorCode": null,
+      "finalText": "Non posso consultare il regolamento, quindi non posso risponderti su questo. Se la partita ha house rules in merito, dimmele e te le riporto.",
+      "pass": 3
+    },
+    {
+      "id": "en-rules-unavailable",
+      "category": "regole-trappola",
+      "passed": true,
+      "toolsCalled": [],
+      "missingTools": [],
+      "extraProposals": 0,
+      "missingProposals": 0,
+      "claimedActionWithoutProposal": false,
+      "toolErrors": 0,
+      "invalidArguments": 0,
+      "roundTrips": 1,
+      "costUsd": 0.000335,
+      "latencyMs": 1920,
+      "errorCode": null,
+      "finalText": "I can't consult the rulebook in this version, so I can't answer that from memory. If it's covered by your house rules, tell me what they say and I'll help apply it.",
+      "pass": 3
+    }
+  ]
+}

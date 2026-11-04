@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
@@ -15,17 +16,20 @@ internal sealed class ApproveDeleteRequestCommandHandler : ICommandHandler<Appro
     private readonly ISharedGameDeleteRequestRepository _deleteRequestRepository;
     private readonly ISharedGameRepository _gameRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ISharedGameCacheInvalidator _cacheInvalidator;
     private readonly ILogger<ApproveDeleteRequestCommandHandler> _logger;
 
     public ApproveDeleteRequestCommandHandler(
         ISharedGameDeleteRequestRepository deleteRequestRepository,
         ISharedGameRepository gameRepository,
         IUnitOfWork unitOfWork,
+        ISharedGameCacheInvalidator cacheInvalidator,
         ILogger<ApproveDeleteRequestCommandHandler> logger)
     {
         _deleteRequestRepository = deleteRequestRepository ?? throw new ArgumentNullException(nameof(deleteRequestRepository));
         _gameRepository = gameRepository ?? throw new ArgumentNullException(nameof(gameRepository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _cacheInvalidator = cacheInvalidator ?? throw new ArgumentNullException(nameof(cacheInvalidator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -52,6 +56,12 @@ internal sealed class ApproveDeleteRequestCommandHandler : ICommandHandler<Appro
         _deleteRequestRepository.Update(deleteRequest);
         _gameRepository.Update(game);
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // #4603: il dettaglio e la lista del catalogo in cache portano lo stato del gioco (la lista, la sua
+        // stessa presenza), e l'endpoint pubblico nasconde i non pubblicati DOPO la cache: senza questa
+        // evizione il pubblico vedeva lo stato di prima fino alla scadenza della voce. Dopo il salvataggio,
+        // mai prima. Vedi ISharedGameCacheInvalidator.
+        await _cacheInvalidator.EvictDetailAndListAsync(deleteRequest.SharedGameId, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Delete request approved and game deleted: {RequestId}, {GameId}",

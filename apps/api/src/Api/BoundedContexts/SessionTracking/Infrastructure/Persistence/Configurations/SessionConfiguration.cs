@@ -106,9 +106,12 @@ public class SessionConfiguration : IEntityTypeConfiguration<SessionEntity>
         builder.Property(s => s.UpdatedBy)
             .HasColumnName("updated_by");
 
-        builder.Property<byte[]>("RowVersion")
-            .HasColumnName("row_version")
-            .IsRowVersion()
+        // #3651 lotto 10 — pattern xmin di ADR-060. `IsRowVersion()` su un `byte[]` non mappa
+        // alla colonna di sistema su Npgsql: serve la configurazione esplicita.
+        builder.Property(s => s.Xmin)
+            .HasColumnName("xmin")
+            .HasColumnType("xid")
+            .ValueGeneratedOnAddOrUpdate()
             .IsConcurrencyToken();
 
         // Session Flow v2.1: Turn order fields

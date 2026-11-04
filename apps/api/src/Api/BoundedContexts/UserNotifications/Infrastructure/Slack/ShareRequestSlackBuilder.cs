@@ -1,5 +1,5 @@
 using Api.BoundedContexts.UserNotifications.Domain.ValueObjects;
-using Microsoft.Extensions.Configuration;
+using Api.SharedKernel.Services;
 
 namespace Api.BoundedContexts.UserNotifications.Infrastructure.Slack;
 
@@ -9,14 +9,12 @@ namespace Api.BoundedContexts.UserNotifications.Infrastructure.Slack;
 /// </summary>
 internal sealed class ShareRequestSlackBuilder : ISlackMessageBuilder
 {
-    private readonly string _frontendBaseUrl;
+    private readonly IPublicBaseUrlProvider _publicBaseUrl;
     private readonly TimeProvider _timeProvider;
 
-    public ShareRequestSlackBuilder(IConfiguration configuration, TimeProvider timeProvider)
+    public ShareRequestSlackBuilder(IPublicBaseUrlProvider publicBaseUrl, TimeProvider timeProvider)
     {
-#pragma warning disable S1075 // URIs should not be hardcoded - Default/Fallback value
-        _frontendBaseUrl = configuration["Frontend:BaseUrl"] ?? "https://meepleai.app";
-#pragma warning restore S1075
+        _publicBaseUrl = publicBaseUrl;
         _timeProvider = timeProvider;
     }
 
@@ -59,8 +57,8 @@ internal sealed class ShareRequestSlackBuilder : ISlackMessageBuilder
             var blockId = $"sr:{sr.ShareRequestId}:{timestamp}";
             var safeDeepLinkPath = SlackDeepLinkValidator.Validate(deepLinkPath);
             var deepLink = safeDeepLinkPath is not null
-                ? $"{_frontendBaseUrl.TrimEnd('/')}{safeDeepLinkPath}"
-                : $"{_frontendBaseUrl.TrimEnd('/')}/share-requests/{sr.ShareRequestId}";
+                ? $"{_publicBaseUrl.GetBaseUrl()}{safeDeepLinkPath}"
+                : $"{_publicBaseUrl.GetBaseUrl()}/share-requests/{sr.ShareRequestId}";
 
             blocks.Add(new
             {

@@ -1,0 +1,71 @@
+# Impostazioni pnpm di apps/web.
+#
+# `overrides` sta QUI e non sotto la chiave `pnpm` di package.json: da pnpm 11
+# quella chiave non viene piu' letta ("The \"pnpm\" field in package.json is no
+# longer read by pnpm"), e un pnpm 11 che rigenera il lockfile lo riscrive senza
+# la sezione `overrides` — riportando dentro le versioni transitive vulnerabili.
+# E' quello che succedeva alle PR di Dependabot, che usa un pnpm piu' recente
+# della CI: 16 pacchetti su 33 regredivano, 10 sotto il pin (glob 7.2.3,
+# dompurify 3.1.7, brace-expansion 1.1.18, picomatch 2.3.2, ...). Vedi #3891.
+#
+# pnpm 10 (la versione della CI) e pnpm 11 leggono entrambi gli override da qui.
+# pnpm 9 NO: pretende anche `packages:` e ignora `overrides` in questo file.
+# Nessun workflow su apps/web deve tornare a pnpm 9.
+#
+# Ogni voce e' un pin di sicurezza su una dipendenza transitiva: toglierla
+# reintroduce la vulnerabilita' corrispondente. Il gate che se ne accorge e'
+# `pnpm install --frozen-lockfile` (ERR_PNPM_LOCKFILE_CONFIG_MISMATCH), quindi
+# non va rilassato.
+overrides:
+  '@babel/runtime': '>=7.26.10'
+  '@babel/core': '>=7.29.6'
+  '@isaacs/brace-expansion': '>=5.0.1'
+  axios: '>=1.18.0'
+  # GHSA-cg2g-xh64-v4q7 (critical) e GHSA-mrv2-3pqr-j5jr (high), patchate in 3.4.17 (#4629). Entra anche da
+  # `@monaco-editor/react > monaco-editor`, dove il lockfile aveva 3.4.16: a '>=3.4.9' l'override era gia'
+  # soddisfatto, quindi un reinstall non alzava niente (stessa forma di `sharp` qui sotto).
+  dompurify: '>=3.4.17'
+  flatted: '>=3.4.2'
+  glob: '>=10.5.0'
+  handlebars: '>=4.7.9'
+  js-yaml: '>=4.2.0'
+  lodash: '>=4.18.1'
+  lodash-es: '>=4.18.1'
+  markdown-it: '>=14.1.1'
+  picomatch: '>=4.0.4'
+  postcss: '>=8.5.18'
+  # GHSA-68fv-2mgg-jv7q (#4128): DoS dell'event loop, patchato in 1.2.2. Entra dal grafo di
+  # produzione come `next > postcss > source-map-js`, quindi non lo alza un bump di `next` —
+  # la PR Dependabot che porta next a 16.3.8 lo lascia a 1.2.1. Il vincolo e' '>=1.2.2' e non
+  # '>=1.2.0' per la ragione documentata su `sharp` qui sotto: un override gia' soddisfatto
+  # dalla versione installata non alza niente.
+  source-map-js: '>=1.2.2'
+  fast-uri: '>=3.1.6 <4'
+  brace-expansion: '>=5.0.9'
+  # Alzato per GHSA-g89c-p67h-r497 / GHSA-2jg2-4ch7-h545 (libheif), patchate in 0.35.4.
+  # A '>=0.35.0' l'override era gia' soddisfatto da 0.35.3: un reinstall non alzava nulla,
+  # e la patch e' arrivata solo con un `pnpm update sharp --prod` esplicito. Il vincolo qui
+  # e' cio' che rende la correzione dichiarata invece che incisa nel solo lockfile (#3707).
+  # Poi a 0.35.5 (#4629): GHSA-2464-fhr4-w9xw (next, Image Optimization) chiede `sharp` >= 0.35.5, e il
+  # lockfile ci era gia' per caso, con l'override fermo a 0.35.4.
+  sharp: '>=0.35.5'
+  protobufjs: '>=8.4.1'
+  qs: '>=6.14.2'
+  shell-quote: '>=1.9.0'
+  form-data: '>=4.0.6'
+  undici: '>=7.29.0 <8'
+  vite: '>=8.0.16 <8.1.0'
+  storybook: '>=10.1.10'
+  tar: '>=7.5.8'
+  ajv: '>=8.20.0'
+  eslint>ajv: ^6.12.6
+  '@eslint/eslintrc>ajv': ^6.12.6
+  bn.js: '>=5.2.3'
+  minimatch: '>=10.2.3'
+  eslint-plugin-import>minimatch: ^3.1.2
+  webpack: '>=5.104.1'
+  pdfjs-dist: 6.2.108
+  serialize-javascript: '>=7.0.3'
+  rollup: '>=4.59.0'
+  basic-ftp: '>=5.2.0'
+  '@microsoft/signalr>ws': '>=7.5.11'

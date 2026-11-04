@@ -14,19 +14,16 @@ import {
   SearchIcon,
   ZapIcon,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
 
-import {
-  enqueuePdf,
-  PRIORITY_NORMAL,
-  PRIORITY_URGENT,
-} from '@/app/admin/(dashboard)/knowledge-base/queue/lib/queue-api';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/primitives/button';
 import { Input } from '@/components/ui/primitives/input';
+import { usePdfUploadLimits } from '@/hooks/queries/usePdfUploadLimits';
 import { useApiClient } from '@/lib/api/context';
 import { useGameSearch } from '@/lib/domain-hooks/useGameSearch';
+import { formatSizeLimit } from '@/lib/format/file-size';
+
+import { MAX_SINGLE_UPLOAD_SIZE } from './upload-thresholds';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -38,9 +35,7 @@ interface FileUploadState {
   documentId?: string;
 }
 
-const MAX_SINGLE_UPLOAD_SIZE = 10 * 1024 * 1024; // 10MB threshold for chunked upload
 const ACCEPTED_TYPES = ['application/pdf'];
-const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500MB
 const MAX_CONCURRENT_UPLOADS = 3;
 
 // ── Component ──────────────────────────────────────────────────────────
@@ -50,6 +45,10 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const preSelectedRef = useRef(false);
+  // #4449: the size limit is the backend's, read for this user — it was a 500 MB constant here
+  // while the backend accepted 100.
+  const { data: uploadLimits } = usePdfUploadLimits();
+  const maxFileSize = uploadLimits?.maxFileSizeBytes;
 
   // Game search state
   const [gameQuery, setGameQuery] = useState('');
@@ -61,7 +60,6 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
   const [uploads, setUploads] = useState<FileUploadState[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [urgentPriority, setUrgentPriority] = useState(false);
-  const router = useRouter();
 
   // Issue #2246: Invalidate admin UI caches after upload completes so the
   // newly-uploaded document immediately shows up in:
@@ -87,15 +85,18 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
 
   // ── Validation ──────────────────────────────────────────────────────
 
-  const validateFile = useCallback((file: File): string | null => {
-    if (!ACCEPTED_TYPES.includes(file.type) && !file.name.toLowerCase().endsWith('.pdf')) {
-      return 'Only PDF files are supported';
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      return `File too large (max ${MAX_FILE_SIZE / (1024 * 1024)}MB)`;
-    }
-    return null;
-  }, []);
+  const validateFile = useCallback(
+    (file: File): string | null => {
+      if (!ACCEPTED_TYPES.includes(file.type) && !file.name.toLowerCase().endsWith('.pdf')) {
+        return 'Only PDF files are supported';
+      }
+      if (maxFileSize !== undefined && file.size > maxFileSize) {
+        return `File too large (max ${formatSizeLimit(maxFileSize)})`;
+      }
+      return null;
+    },
+    [maxFileSize]
+  );
 
   // ── Upload Logic ────────────────────────────────────────────────────
 
@@ -103,37 +104,22 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
     setUploads(prev => prev.map((u, i) => (i === index ? { ...u, ...update } : u)));
   }, []);
 
-  const handleEnqueueError = useCallback(
-    (documentId: string, error: unknown) => {
-      toast.error('PDF caricato ma non accodato', {
-        description: error instanceof Error ? error.message : "Errore durante l'accodamento",
-      });
-      setTimeout(() => {
-        router.push(`/admin/knowledge-base/documents?highlight=${documentId}`);
-      }, 2000);
-    },
-    [router]
-  );
-
   const uploadSingleFile = useCallback(
     async (file: File, index: number) => {
       if (!selectedGame) return;
       try {
         updateUpload(index, { status: 'uploading', progress: 0 });
 
-        const result = await api.pdf.uploadPdf(selectedGame.id, file, percent =>
-          updateUpload(index, { progress: percent })
+        // #4443: the backend queues an admin upload itself, with this priority. Enqueuing it again from
+        // here made the queue a second owner of a document the upload was already processing.
+        const result = await api.pdf.uploadPdf(
+          selectedGame.id,
+          file,
+          percent => updateUpload(index, { progress: percent }),
+          { priority: urgentPriority ? 'urgent' : 'normal' }
         );
 
         updateUpload(index, { status: 'processing', progress: 100, documentId: result.documentId });
-
-        // Auto-enqueue for processing (Urgent=30 puts at head, Normal=10 default)
-        try {
-          await enqueuePdf(result.documentId, urgentPriority ? PRIORITY_URGENT : PRIORITY_NORMAL);
-        } catch (enqueueErr) {
-          handleEnqueueError(result.documentId, enqueueErr);
-        }
-
         updateUpload(index, { status: 'completed' });
         invalidateAdminCaches(selectedGame.id);
       } catch (err) {
@@ -143,7 +129,7 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
         });
       }
     },
-    [api.pdf, selectedGame, updateUpload, urgentPriority, handleEnqueueError, invalidateAdminCaches]
+    [api.pdf, selectedGame, updateUpload, urgentPriority, invalidateAdminCaches]
   );
 
   const uploadChunkedFile = useCallback(
@@ -175,7 +161,10 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
 
         // Step 3: Complete
         updateUpload(index, { status: 'processing', progress: 95 });
-        const completeResult = await api.pdf.completeChunkedUpload(sessionId);
+        const completeResult = await api.pdf.completeChunkedUpload(
+          sessionId,
+          urgentPriority ? 'urgent' : 'normal'
+        );
 
         if (!completeResult.success) {
           throw new Error('Failed to assemble chunks');
@@ -183,15 +172,8 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
 
         updateUpload(index, { progress: 100, documentId: completeResult.documentId });
 
-        // Auto-enqueue (Urgent=30 puts at head, Normal=10 default)
-        try {
-          await enqueuePdf(
-            completeResult.documentId,
-            urgentPriority ? PRIORITY_URGENT : PRIORITY_NORMAL
-          );
-        } catch (enqueueErr) {
-          handleEnqueueError(completeResult.documentId, enqueueErr);
-        }
+        // #4442: il completamento accoda già il documento, nella stessa transazione del record, con la
+        // priorità scelta qui (#4443). Accodarlo di nuovo da qui darebbe un 409 «già in coda».
 
         updateUpload(index, { status: 'completed' });
         invalidateAdminCaches(selectedGame.id);
@@ -202,7 +184,7 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
         });
       }
     },
-    [api.pdf, selectedGame, updateUpload, urgentPriority, handleEnqueueError, invalidateAdminCaches]
+    [api.pdf, selectedGame, updateUpload, urgentPriority, invalidateAdminCaches]
   );
 
   const startUpload = useCallback(
@@ -440,7 +422,7 @@ export function UploadZone({ initialGameId }: { initialGameId?: string } = {}) {
               <FileTextIcon className="w-4 h-4" />
               <span>Solo PDF</span>
             </div>
-            <span>Max 500MB per file</span>
+            {maxFileSize !== undefined && <span>Max {formatSizeLimit(maxFileSize)} per file</span>}
           </div>
         </div>
       </div>

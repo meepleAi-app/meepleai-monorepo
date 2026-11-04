@@ -173,6 +173,79 @@ public class SetRegistrationModeCommandHandlerTests
             Times.Never);
     }
 
+    // #4698 left a window: the domain event that invalidates the cached lookup is handled by the outbox in staging and
+    // production (a few seconds of polling), so a second click right after the first could still read the old,
+    // cached "not found" and try to create the row again (23505). The handler now drops the cached key itself, right
+    // after the write that made it stale.
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Handle_AfterTheWrite_DropsTheCachedKeyForTheCurrentEnvironment(bool rowExists)
+    {
+        _mockEnvironment.Setup(e => e.EnvironmentName).Returns("Staging");
+        var calls = new List<string>();
+        var existingId = Guid.NewGuid();
+        _mockConfigService
+            .Setup(c => c.GetConfigurationByKeyAsync(
+                "Registration:PublicEnabled", "Staging", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(rowExists ? CreateExistingDto(existingId, "Staging") : null);
+        _mockMediator
+            .Setup(m => m.Send(It.IsAny<CreateConfigurationCommand>(), It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add("write"))
+            .ReturnsAsync(CreateMockConfigDto("Staging"));
+        _mockMediator
+            .Setup(m => m.Send(It.IsAny<UpdateConfigValueCommand>(), It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add("write"))
+            .ReturnsAsync(CreateMockConfigDto("Staging"));
+        _mockConfigService
+            .Setup(c => c.InvalidateAsync("Registration:PublicEnabled", "Staging", It.IsAny<CancellationToken>()))
+            .Callback(() => calls.Add("invalidate"))
+            .Returns(Task.CompletedTask);
+
+        await _handler.Handle(new SetRegistrationModeCommand(true, Guid.NewGuid()), TestContext.Current.CancellationToken);
+
+        Assert.Equal(new[] { "write", "invalidate" }, calls);
+    }
+
+    [Fact]
+    public async Task Handle_WhenTheWriteFails_DoesNotDropTheCachedKey()
+    {
+        _mockEnvironment.Setup(e => e.EnvironmentName).Returns("Staging");
+        _mockConfigService
+            .Setup(c => c.GetConfigurationByKeyAsync(
+                "Registration:PublicEnabled", "Staging", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SystemConfigurationDto?)null);
+        _mockMediator
+            .Setup(m => m.Send(It.IsAny<CreateConfigurationCommand>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("boom"));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _handler.Handle(new SetRegistrationModeCommand(true, Guid.NewGuid()), TestContext.Current.CancellationToken));
+
+        _mockConfigService.Verify(
+            c => c.InvalidateAsync(It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    private static SystemConfigurationDto CreateExistingDto(Guid id, string environment) =>
+        new(
+            Id: id.ToString(),
+            Key: "Registration:PublicEnabled",
+            Value: "false",
+            ValueType: "Boolean",
+            Description: "Controls whether public registration is enabled",
+            Category: "Authentication",
+            IsActive: true,
+            RequiresRestart: false,
+            Environment: environment,
+            Version: 1,
+            PreviousValue: null,
+            CreatedAt: DateTime.UtcNow,
+            UpdatedAt: DateTime.UtcNow,
+            CreatedByUserId: Guid.Empty.ToString(),
+            UpdatedByUserId: null,
+            LastToggledAt: null);
+
     private static ConfigurationDto CreateMockConfigDto(string environment) =>
         new(
             Id: Guid.NewGuid(),

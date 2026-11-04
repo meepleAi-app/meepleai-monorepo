@@ -39,26 +39,14 @@ internal class GetPdfTierUploadLimitsQueryHandler : IQueryHandler<GetPdfTierUplo
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        // Fetch all six configurations in parallel for efficiency
-        var freeDailyTask = _configService.GetConfigurationByKeyAsync(FreeDailyKey, null, cancellationToken);
-        var freeWeeklyTask = _configService.GetConfigurationByKeyAsync(FreeWeeklyKey, null, cancellationToken);
-        var normalDailyTask = _configService.GetConfigurationByKeyAsync(NormalDailyKey, null, cancellationToken);
-        var normalWeeklyTask = _configService.GetConfigurationByKeyAsync(NormalWeeklyKey, null, cancellationToken);
-        var premiumDailyTask = _configService.GetConfigurationByKeyAsync(PremiumDailyKey, null, cancellationToken);
-        var premiumWeeklyTask = _configService.GetConfigurationByKeyAsync(PremiumWeeklyKey, null, cancellationToken);
-
-        await Task.WhenAll(
-            freeDailyTask, freeWeeklyTask,
-            normalDailyTask, normalWeeklyTask,
-            premiumDailyTask, premiumWeeklyTask
-        ).ConfigureAwait(false);
-
-        var freeDailyConfig = await freeDailyTask.ConfigureAwait(false);
-        var freeWeeklyConfig = await freeWeeklyTask.ConfigureAwait(false);
-        var normalDailyConfig = await normalDailyTask.ConfigureAwait(false);
-        var normalWeeklyConfig = await normalWeeklyTask.ConfigureAwait(false);
-        var premiumDailyConfig = await premiumDailyTask.ConfigureAwait(false);
-        var premiumWeeklyConfig = await premiumWeeklyTask.ConfigureAwait(false);
+        // Sequential on purpose: these reads share the request-scoped DbContext, which EF Core
+        // forbids using concurrently — running them under Task.WhenAll returned 500 (#3843).
+        var freeDailyConfig = await _configService.GetConfigurationByKeyAsync(FreeDailyKey, null, cancellationToken).ConfigureAwait(false);
+        var freeWeeklyConfig = await _configService.GetConfigurationByKeyAsync(FreeWeeklyKey, null, cancellationToken).ConfigureAwait(false);
+        var normalDailyConfig = await _configService.GetConfigurationByKeyAsync(NormalDailyKey, null, cancellationToken).ConfigureAwait(false);
+        var normalWeeklyConfig = await _configService.GetConfigurationByKeyAsync(NormalWeeklyKey, null, cancellationToken).ConfigureAwait(false);
+        var premiumDailyConfig = await _configService.GetConfigurationByKeyAsync(PremiumDailyKey, null, cancellationToken).ConfigureAwait(false);
+        var premiumWeeklyConfig = await _configService.GetConfigurationByKeyAsync(PremiumWeeklyKey, null, cancellationToken).ConfigureAwait(false);
 
         // Parse values with defaults
         var freeDailyLimit = ParseIntOrDefault(freeDailyConfig?.Value, DefaultFreeDailyLimit);

@@ -13,13 +13,16 @@ internal class GetSessionHistoryQueryHandler : IQueryHandler<GetSessionHistoryQu
 {
     private readonly IGameSessionRepository _sessionRepository;
     private readonly IHistorySessionScoreProvider _scoreProvider;
+    private readonly ILiveSessionLinkReader _liveLinks;
 
     public GetSessionHistoryQueryHandler(
         IGameSessionRepository sessionRepository,
-        IHistorySessionScoreProvider scoreProvider)
+        IHistorySessionScoreProvider scoreProvider,
+        ILiveSessionLinkReader liveLinks)
     {
         _sessionRepository = sessionRepository ?? throw new ArgumentNullException(nameof(sessionRepository));
         _scoreProvider = scoreProvider ?? throw new ArgumentNullException(nameof(scoreProvider));
+        _liveLinks = liveLinks ?? throw new ArgumentNullException(nameof(liveLinks));
     }
 
     public async Task<List<GameSessionDto>> Handle(GetSessionHistoryQuery query, CancellationToken cancellationToken)
@@ -41,7 +44,9 @@ internal class GetSessionHistoryQueryHandler : IQueryHandler<GetSessionHistoryQu
             cancellationToken: cancellationToken
         ).ConfigureAwait(false);
 
-        var dtos = sessions.Select(s => s.ToDto()).ToList();
+        // #4156: the session pages address the live session, so each row carries its id.
+        var dtos = await sessions.Select(s => s.ToDto()).ToList()
+            .WithLiveSessionIdsAsync(_liveLinks, cancellationToken).ConfigureAwait(false);
         if (dtos.Count == 0)
             return dtos;
 

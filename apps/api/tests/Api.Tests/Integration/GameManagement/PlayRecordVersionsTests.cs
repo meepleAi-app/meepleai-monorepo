@@ -65,12 +65,7 @@ public sealed class PlayRecordVersionsTests : IAsyncLifetime
         await _dbContext.Database.MigrateAsync(TestCancellationToken);
 
         var services = IntegrationServiceCollectionBuilder.CreateBase(_connectionString);
-        services.AddScoped<IPlayRecordRepository, PlayRecordRepository>();
-        services.AddScoped<IPlayRecordVersionRepository, PlayRecordVersionRepository>();
-        services.AddScoped<PlayRecordPermissionChecker>();
-        services.AddScoped<ISharedGameRepository, SharedGameRepository>();
-        services.AddScoped<IGameCoreDataProvider, GameCoreDataProvider>();
-        services.AddSingleton<TimeProvider>(_timeProvider);
+        services.AddPlayRecordHandlerDependencies(_timeProvider);
         _serviceProvider = services.BuildServiceProvider();
     }
 
@@ -172,6 +167,17 @@ public sealed class PlayRecordVersionsTests : IAsyncLifetime
         versions.Max(v => v.VersionNumber).Should().Be(6);
         versions.Min(v => v.VersionNumber).Should().Be(2,
             "version 1 (the oldest) must have been pruned by the 6th update");
+
+        // #4298: the query above returns the five most recent versions whatever is stored, so
+        // by itself it cannot tell a pruned v1 from one that is merely left out of the list:
+        // with the pruning switched off these assertions still held. The table can tell.
+        await using var db = _fixture.CreateDbContext(_connectionString);
+        var stored = await db.PlayRecordVersions
+            .Where(v => v.PlayRecordId == recordId)
+            .Select(v => v.VersionNumber)
+            .ToListAsync(TestCancellationToken);
+        stored.Should().BeEquivalentTo(new[] { 2, 3, 4, 5, 6 },
+            "version 1 must be deleted from the table, not just absent from the list");
     }
 
     // ─────────────────────────────────────────────────────────────────────────

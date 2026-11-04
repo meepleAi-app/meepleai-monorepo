@@ -31,7 +31,7 @@ internal static class JsonDeltaHelper
     public static string ApplyDelta(string baseStateJson, string deltaJson)
     {
         var state = JsonNode.Parse(baseStateJson);
-        var operations = JsonNode.Parse(deltaJson)?.AsArray();
+        var operations = OperationsOf(JsonNode.Parse(deltaJson));
 
         if (operations == null || operations.Count == 0)
             return baseStateJson;
@@ -60,7 +60,27 @@ internal static class JsonDeltaHelper
     }
 
     /// <summary>
-    /// Applies multiple deltas sequentially to reconstruct state.
+    /// Root key under which a snapshot keeps the references of the photos linked to it (#5367). It is data ABOUT the
+    /// snapshot, not part of the game state: a rebuilt state does not carry it.
+    /// </summary>
+    internal const string AttachmentsKey = "_attachments";
+
+    /// <summary>
+    /// The operations of a stored delta (#4869): a JSON Patch array, or, when photos were linked to the snapshot, the
+    /// envelope <c>{"_delta": [...], "_attachments": [...]}</c> that the snapshot command wraps it in. An envelope without
+    /// <c>_delta</c> has no operations.
+    /// </summary>
+    private static JsonArray? OperationsOf(JsonNode? delta) => delta switch
+    {
+        JsonArray operations => operations,
+        JsonObject envelope => envelope["_delta"] as JsonArray,
+        _ => null,
+    };
+
+    /// <summary>
+    /// Applies multiple deltas sequentially to reconstruct state, then drops the photo references that a checkpoint
+    /// carries on its root: the result is the game state the session had, which is what the callers compare, serve
+    /// and restore (#4869).
     /// </summary>
     public static string ReconstructState(string checkpointJson, IEnumerable<string> deltas)
     {
@@ -69,7 +89,14 @@ internal static class JsonDeltaHelper
         {
             state = ApplyDelta(state, delta);
         }
-        return state;
+        return WithoutAttachmentReferences(state);
+    }
+
+    private static string WithoutAttachmentReferences(string stateJson)
+    {
+        return JsonNode.Parse(stateJson) is JsonObject root && root.Remove(AttachmentsKey)
+            ? root.ToJsonString()
+            : stateJson;
     }
 
     private static void ComputeDiff(JsonNode? previous, JsonNode? current, string path, JsonArray operations)

@@ -10,7 +10,7 @@ import { renderWithQuery } from '@/__tests__/utils/query-test-utils';
 
 import SessionNotesPage from '../page';
 
-const mockGetById = vi.hoisted(() => vi.fn());
+const mockGetSession = vi.hoisted(() => vi.fn());
 
 vi.mock('next/navigation', () => ({
   useParams: vi.fn(),
@@ -19,8 +19,8 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/lib/api', () => ({
   api: {
-    sessions: {
-      getById: mockGetById,
+    liveSessions: {
+      getSession: mockGetSession,
     },
   },
 }));
@@ -45,8 +45,19 @@ describe('SessionNotesPage', () => {
     localStorage.clear();
   });
 
+  it('reads the live session of the route id (#4156)', async () => {
+    mockGetSession.mockResolvedValue(mockSession);
+
+    renderWithQuery(<SessionNotesPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Great game, everyone had fun!')).toBeInTheDocument();
+    });
+    expect(mockGetSession).toHaveBeenCalledWith('session-abc');
+  });
+
   it('renders session official notes', async () => {
-    mockGetById.mockResolvedValue(mockSession);
+    mockGetSession.mockResolvedValue(mockSession);
 
     renderWithQuery(<SessionNotesPage />);
 
@@ -56,7 +67,7 @@ describe('SessionNotesPage', () => {
   });
 
   it('renders page headings', async () => {
-    mockGetById.mockResolvedValue(mockSession);
+    mockGetSession.mockResolvedValue(mockSession);
 
     renderWithQuery(<SessionNotesPage />);
 
@@ -70,7 +81,7 @@ describe('SessionNotesPage', () => {
 
   it('shows empty state when no official notes', async () => {
     const noNotesSession = { ...mockSession, notes: null };
-    mockGetById.mockResolvedValue(noNotesSession);
+    mockGetSession.mockResolvedValue(noNotesSession);
 
     renderWithQuery(<SessionNotesPage />);
 
@@ -80,7 +91,7 @@ describe('SessionNotesPage', () => {
   });
 
   it('saves personal notes to localStorage', async () => {
-    mockGetById.mockResolvedValue(mockSession);
+    mockGetSession.mockResolvedValue(mockSession);
 
     renderWithQuery(<SessionNotesPage />);
 
@@ -99,7 +110,7 @@ describe('SessionNotesPage', () => {
 
   it('loads existing personal notes from localStorage', async () => {
     localStorage.setItem('meepleai_session_notes_session-abc', 'Saved note');
-    mockGetById.mockResolvedValue(mockSession);
+    mockGetSession.mockResolvedValue(mockSession);
 
     renderWithQuery(<SessionNotesPage />);
 
@@ -110,7 +121,7 @@ describe('SessionNotesPage', () => {
   });
 
   it('shows error on API failure', async () => {
-    mockGetById.mockRejectedValue(new Error('Load failed'));
+    mockGetSession.mockRejectedValue(new Error('Load failed'));
 
     renderWithQuery(<SessionNotesPage />);
 

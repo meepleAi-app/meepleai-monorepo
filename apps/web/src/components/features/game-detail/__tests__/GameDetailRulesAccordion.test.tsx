@@ -31,6 +31,18 @@ describe('GameDetailRulesAccordion (Wave C.1)', () => {
     expect(screen.getByText('Nessuna sezione')).toBeInTheDocument();
   });
 
+  // #4084 — before this fix the "view all" link was hidden whenever sections was empty,
+  // which was ALWAYS true (the caller passed a hardcoded `[]`). That made
+  // /games/[id]/rules undiscoverable from the tab. The link must survive emptiness: the
+  // full page is a valid destination regardless, and shows its own honest empty state.
+  it('exposes the view-all link even when sections is empty', () => {
+    render(<GameDetailRulesAccordion sections={[]} viewAllHref="/games/g/rules" labels={labels} />);
+    expect(screen.getByRole('link', { name: 'Apri pagina regolamento' })).toHaveAttribute(
+      'href',
+      '/games/g/rules'
+    );
+  });
+
   it('renders one details/summary per section', () => {
     const { container } = render(
       <GameDetailRulesAccordion sections={sections} viewAllHref="/games/g/rules" labels={labels} />

@@ -231,9 +231,29 @@ public sealed class PuertoRicoGoldenSeederTests : IAsyncLifetime
             Enum.IsDefined(typeof(MechanicSection), c.Section).Should().BeTrue();
         });
 
-        // Spot-check: every section enum value (0..5) should appear at least once.
+        // Spot-check: la fixture copre le sei sezioni originali.
+        //
+        // #3883: il commento diceva "0..5" e il ciclo iterava Enum.GetValues<MechanicSection>().
+        // Le due cose coincidevano quando il test e' stato scritto; poi la v1.1.0 (#539 follow-up)
+        // ha APPESO Setup = 6, Components = 7, EndgameScoring = 8, e il ciclo ha cominciato a
+        // pretendere dalla fixture una copertura che nessuno le aveva chiesto. Il test e' invecchiato
+        // sotto un'estensione legittima dell'enum — e sarebbe invecchiato di nuovo alla successiva.
+        //
+        // L'insieme e' ora esplicito: dice quale contratto la fixture ha davvero, e un'aggiunta
+        // all'enum non lo rompe. Se un giorno la fixture dovra' coprire anche Setup, la riga da
+        // cambiare e' questa, e la si cambia sapendo cosa si sta chiedendo.
+        var contractedSections = new[]
+        {
+            MechanicSection.Summary,
+            MechanicSection.Mechanics,
+            MechanicSection.Victory,
+            MechanicSection.Resources,
+            MechanicSection.Phases,
+            MechanicSection.Faq,
+        };
+
         var seenSections = captured.Select(c => c.Section).Distinct().ToHashSet();
-        foreach (var section in Enum.GetValues<MechanicSection>())
+        foreach (var section in contractedSections)
         {
             seenSections.Should().Contain(section,
                 $"Puerto Rico fixture is required to cover MechanicSection.{section}");

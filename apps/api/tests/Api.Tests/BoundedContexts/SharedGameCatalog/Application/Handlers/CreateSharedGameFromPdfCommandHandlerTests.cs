@@ -49,6 +49,13 @@ public sealed class CreateSharedGameFromPdfCommandHandlerTests : IDisposable
         _gameRepositoryMock = new Mock<ISharedGameRepository>();
         _bggApiServiceMock = new Mock<IBggApiService>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
+        // Issue #3866: the unit of work is a mock, so the handler's final SaveChangesAsync wrote
+        // nothing — the persistence assertions passed only because a tracking-by-default test
+        // context resolved the reload to the same in-memory instance the handler had mutated.
+        // Wiring the mock to the real SaveChangesAsync makes them verify what they claim to.
+        _unitOfWorkMock
+            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Returns((CancellationToken ct) => _dbContext.SaveChangesAsync(ct));
         _loggerMock = new Mock<ILogger<CreateSharedGameFromPdfCommandHandler>>();
 
         // Default: downloader returns null (no-op fallback) for all calls.

@@ -66,7 +66,7 @@ test.describe('Onboarding Wizard', () => {
       });
 
     // Check that error state is NOT shown
-    const hasError = await errorState.isVisible().catch(() => false);
+    const hasError = await errorState.isVisible();
     if (!hasError) {
       // Either the wizard is showing or the page rendered something else
       // Look for wizard content (password field, welcome text, or step indicators)
@@ -76,7 +76,7 @@ test.describe('Onboarding Wizard', () => {
         .or(page.locator('[data-testid="onboarding-wizard"]').first());
 
       // SSR pages may bypass mocking — guard assertion
-      if (await wizardContent.isVisible({ timeout: 8_000 }).catch(() => false)) {
+      if (await wizardContent.isVisible({ timeout: 8_000 })) {
         await expect(wizardContent).toBeVisible();
       }
     }
@@ -116,11 +116,7 @@ test.describe('Onboarding Wizard', () => {
     const errorText = page.getByText(/expired|invalid|contact.*administrator/i).first();
 
     // SSR may bypass mocking — guard assertion
-    const visible = await errorState
-      .or(errorText)
-      .first()
-      .isVisible({ timeout: 10_000 })
-      .catch(() => false);
+    const visible = await errorState.or(errorText).first().isVisible({ timeout: 10_000 });
 
     if (visible) {
       await expect(errorState.or(errorText).first()).toBeVisible();
@@ -148,11 +144,7 @@ test.describe('Onboarding Wizard', () => {
     const errorText = page.getByText(/no invitation token/i).first();
 
     // SSR may bypass mocking — guard assertion
-    const visible = await errorState
-      .or(errorText)
-      .first()
-      .isVisible({ timeout: 10_000 })
-      .catch(() => false);
+    const visible = await errorState.or(errorText).first().isVisible({ timeout: 10_000 });
 
     if (visible) {
       await expect(errorState.or(errorText).first()).toBeVisible();
@@ -189,11 +181,7 @@ test.describe('Onboarding Wizard', () => {
     const errorText = page.getByText(/failed|error|invalid/i).first();
 
     // SSR may bypass mocking — guard assertion
-    const visible = await errorState
-      .or(errorText)
-      .first()
-      .isVisible({ timeout: 10_000 })
-      .catch(() => false);
+    const visible = await errorState.or(errorText).first().isVisible({ timeout: 10_000 });
 
     if (visible) {
       await expect(errorState.or(errorText).first()).toBeVisible();

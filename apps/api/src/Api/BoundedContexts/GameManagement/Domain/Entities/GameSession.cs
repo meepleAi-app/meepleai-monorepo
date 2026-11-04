@@ -80,7 +80,7 @@ internal sealed class GameSession : AggregateRoot<Guid>
     public void Start()
     {
         if (Status != SessionStatus.Setup)
-            throw new InvalidOperationException($"Cannot start session in {Status} status. Session must be in Setup.");
+            throw new ConflictException($"Cannot start session in {Status} status. Session must be in Setup.");
 
         Status = SessionStatus.InProgress;
 
@@ -90,10 +90,17 @@ internal sealed class GameSession : AggregateRoot<Guid>
     /// <summary>
     /// Pauses the game session (moves from InProgress to Paused).
     /// </summary>
+    // #3662: queste guardie sollevavano `InvalidOperationException`, che
+    // ApiExceptionHandlerMiddleware.cs:465 mappa a **404 Not Found**. Mettere in pausa una
+    // sessione nello stato sbagliato rispondeva quindi «The requested resource was not
+    // found» per una risorsa che ESISTE -- un messaggio che manda a cercare l'id sbagliato
+    // invece dello stato sbagliato. E' il pitfall #2568 (ConflictException 409 /
+    // NotFoundException 404, mai InvalidOperationException), lo stesso gia' corretto su
+    // BatchJob.
     public void Pause()
     {
         if (Status != SessionStatus.InProgress)
-            throw new InvalidOperationException($"Cannot pause session in {Status} status. Session must be InProgress.");
+            throw new ConflictException($"Cannot pause session in {Status} status. Session must be InProgress.");
 
         Status = SessionStatus.Paused;
 
@@ -106,7 +113,7 @@ internal sealed class GameSession : AggregateRoot<Guid>
     public void Resume()
     {
         if (Status != SessionStatus.Paused)
-            throw new InvalidOperationException($"Cannot resume session in {Status} status. Session must be Paused.");
+            throw new ConflictException($"Cannot resume session in {Status} status. Session must be Paused.");
 
         Status = SessionStatus.InProgress;
 
@@ -120,7 +127,7 @@ internal sealed class GameSession : AggregateRoot<Guid>
     public void Complete(string? winnerName = null)
     {
         if (Status != SessionStatus.InProgress && Status != SessionStatus.Paused)
-            throw new InvalidOperationException($"Cannot complete session in {Status} status. Session must be InProgress or Paused.");
+            throw new ConflictException($"Cannot complete session in {Status} status. Session must be InProgress or Paused.");
 
         // Validate winner name length (consistent with SessionPlayer validation)
         if (winnerName != null)
@@ -147,7 +154,7 @@ internal sealed class GameSession : AggregateRoot<Guid>
     public void Abandon(string? reason = null)
     {
         if (Status.IsFinished)
-            throw new InvalidOperationException($"Cannot abandon finished session (status: {Status})");
+            throw new ConflictException($"Cannot abandon finished session (status: {Status})");
 
         Status = SessionStatus.Abandoned;
         CompletedAt = DateTime.UtcNow;
@@ -267,7 +274,7 @@ internal sealed class GameSession : AggregateRoot<Guid>
         ArgumentException.ThrowIfNullOrWhiteSpace(reason);
 
         if (Status.IsFinished)
-            throw new InvalidOperationException($"Cannot terminate finished session (status: {Status})");
+            throw new ConflictException($"Cannot terminate finished session (status: {Status})");
 
         Status = SessionStatus.Abandoned;
         CompletedAt = DateTime.UtcNow;

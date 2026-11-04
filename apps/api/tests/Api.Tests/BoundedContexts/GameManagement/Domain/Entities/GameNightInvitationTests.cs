@@ -1,6 +1,7 @@
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.BoundedContexts.GameManagement.Domain.Events;
+using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using FluentAssertions;
 using Xunit;
 
@@ -55,6 +56,20 @@ public sealed class GameNightInvitationTests
         invitation.CreatedBy.Should().Be(organizerId);
         invitation.Token.Should().HaveLength(22);
         invitation.Token.Should().MatchRegex("^[0-9A-Za-z]{22}$");
+    }
+
+    [Fact]
+    public void Create_GivenANameAndAnAddress_KeepsTheBareAddress_TheOneTheTransportWritesTo()
+    {
+        // The opt-out list is compared against this field, so it has to be the address and not how it was typed.
+        var invitation = GameNightInvitation.Create(
+            gameNightId: Guid.NewGuid(),
+            email: "Guest Person <Guest@Example.com>",
+            expiresAt: OneWeekFromNow,
+            createdBy: Guid.NewGuid(),
+            utcNow: Now);
+
+        invitation.Email.Should().Be("guest@example.com");
     }
 
     [Fact]
@@ -533,6 +548,53 @@ public sealed class GameNightInvitationTests
             respondedByName: "Marco");
 
         invitation.RespondedByName.Should().Be("Marco");
+    }
+
+    #endregion
+
+    #region Unsubscribe key (#4846)
+
+    [Fact]
+    public void Create_GeneratesAnUnsubscribeKey_OfTheShapeOfAToken_ThatIsNotTheRsvpToken()
+    {
+        var invitation = GameNightInvitation.Create(
+            Guid.NewGuid(), "guest@example.com", OneWeekFromNow, Guid.NewGuid(), Now);
+
+        invitation.UnsubscribeKey.Should().NotBeNullOrWhiteSpace();
+        invitation.UnsubscribeKey!.Length.Should().Be(InvitationToken.Length);
+        invitation.UnsubscribeKey.Should().MatchRegex("^[0-9A-Za-z]+$");
+        invitation.UnsubscribeKey.Should().NotBe(invitation.Token,
+            "the organizer holds the RSVP token; the key that stops everybody's mail must not be it");
+    }
+
+    [Fact]
+    public void Create_GivesEveryInvitationItsOwnKey()
+    {
+        var keys = Enumerable.Range(0, 20)
+            .Select(_ => GameNightInvitation.Create(
+                Guid.NewGuid(), "guest@example.com", OneWeekFromNow, Guid.NewGuid(), Now).UnsubscribeKey)
+            .ToList();
+
+        keys.Distinct(StringComparer.Ordinal).Should().HaveCount(20);
+    }
+
+    [Fact]
+    public void Reconstitute_KeepsTheUnsubscribeKeyItIsGiven()
+    {
+        var invitation = GameNightInvitation.Reconstitute(
+            id: Guid.NewGuid(),
+            token: "abcdefghijklmnopqrstuv",
+            gameNightId: Guid.NewGuid(),
+            email: "guest@example.com",
+            status: GameNightInvitationStatus.Pending,
+            expiresAt: OneWeekFromNow,
+            respondedAt: null,
+            respondedByUserId: null,
+            createdAt: Now,
+            createdBy: Guid.NewGuid(),
+            unsubscribeKey: "KeyKeyKeyKeyKeyKeyKeyKe");
+
+        invitation.UnsubscribeKey.Should().Be("KeyKeyKeyKeyKeyKeyKeyKe");
     }
 
     #endregion

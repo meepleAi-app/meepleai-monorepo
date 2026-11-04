@@ -3,6 +3,7 @@ using Api.BoundedContexts.GameManagement.Application.Queries;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
+using Api.Infrastructure.Entities.GameManagement;
 using Api.Infrastructure.Entities.SharedGameCatalog;
 using Api.SharedKernel.Domain.ValueObjects;
 using Api.Tests.Constants;
@@ -15,6 +16,19 @@ using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Api.Tests.Integration.GameManagement;
+
+/// <summary>
+/// La fixture di <see cref="SessionHistoryVisibilityAfterStartTests"/>.
+/// </summary>
+/// <remarks>
+/// <para>
+/// #4050. Host condiviso per la classe, database fresco per test. Prima questa classe
+/// costruiva l'host dentro il proprio <c>InitializeAsync</c>, che xUnit chiama una volta per
+/// METODO: ~24s a test, contro ~0,1s per il clone del database.
+/// </para>
+/// </remarks>
+public sealed class SessionHistoryVisibilityAfterStartTestsHostFixture(SharedTestcontainersFixture shared)
+    : SharedHostPerTestDatabaseFixture(shared, "history_visibility");
 
 /// <summary>
 /// Integration tests for Issue #2587 Slice 3 — end-to-end proof that the correlated
@@ -32,40 +46,36 @@ namespace Api.Tests.Integration.GameManagement;
 ///      longer appears in GetActiveSessionsQuery + appears in GetSessionHistoryQuery.
 /// T3 — Free-form not in active list: free-form (GameId==null) start → no correlated
 ///      GameSession → GetActiveSessionsQuery.Sessions stays empty.
+///
+/// <para>⚠️ #4080: le chiamate qui passano ora l'id dell'utente seminato, perche'
+/// <c>GetActiveSessionsQuery</c> richiede il proprietario. Vale notare perche' questa classe
+/// NON colse il difetto di #4080 nonostante eserciti esattamente la query colpevole: ogni test
+/// semina un solo utente, quindi «tutte le sessioni» e «le sessioni di questo utente»
+/// coincidevano. Un difetto di ambito e' invisibile a un test con un solo soggetto — il
+/// secondo utente e' il reagente, e sta in <c>ActiveSessionsOwnerScopeTests</c>.</para>
 /// </summary>
 [Collection("Integration-GroupC")]
 [Trait("Category", TestCategories.Integration)]
 [Trait("BoundedContext", "GameManagement")]
-public sealed class SessionHistoryVisibilityAfterStartTests : IAsyncLifetime
+public sealed class SessionHistoryVisibilityAfterStartTests
+    : IClassFixture<SessionHistoryVisibilityAfterStartTestsHostFixture>, IAsyncLifetime
 {
-    private readonly SharedTestcontainersFixture _fixture;
-    private readonly string _databaseName = $"history_visibility_{Guid.NewGuid():N}";
+    private readonly SessionHistoryVisibilityAfterStartTestsHostFixture _hostFixture;
     private WebApplicationFactory<Program> _factory = null!;
 
-    public SessionHistoryVisibilityAfterStartTests(SharedTestcontainersFixture fixture)
+    public SessionHistoryVisibilityAfterStartTests(SessionHistoryVisibilityAfterStartTestsHostFixture hostFixture)
     {
-        _fixture = fixture;
+        _hostFixture = hostFixture;
     }
 
     public async ValueTask InitializeAsync()
     {
-        var connectionString = await _fixture.CreateIsolatedDatabaseAsync(_databaseName);
-        await TestcontainersWaitHelpers.WaitForPostgresReadyAsync(connectionString);
-
-        _factory = IntegrationWebApplicationFactory.Create(connectionString);
-
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
-        db.Database.Migrate();
+        await _hostFixture.BeginTestAsync();
+        _factory = _hostFixture.Factory;
     }
 
-    public async ValueTask DisposeAsync()
-    {
-        if (_factory != null)
-            await _factory.DisposeAsync();
-
-        await _fixture.DropIsolatedDatabaseAsync(_databaseName);
-    }
+    // Host, client e database appartengono alla fixture.
+    public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 
     // ──────────────────────────────────────────────────────────────────────────
     // T1 — After the wizard flow (create→addPlayer→start) the correlated
@@ -88,7 +98,7 @@ public sealed class SessionHistoryVisibilityAfterStartTests : IAsyncLifetime
         var gameId = await SeedSharedGameAsync(db);
 
         // Confirm baseline: no active sessions before the wizard flow
-        var before = await mediator.Send(new GetActiveSessionsQuery());
+        var before = await mediator.Send(new GetActiveSessionsQuery(userId));
         before.Sessions.Should().BeEmpty("no sessions exist before the wizard flow");
 
         // Full wizard flow (mirrors what the FE wizard does)
@@ -118,7 +128,7 @@ public sealed class SessionHistoryVisibilityAfterStartTests : IAsyncLifetime
 
         // Assert — GetActiveSessionsQuery (= api.sessions.getActive FE call) returns the correlated session
         var verifyMediator = verifyScope.ServiceProvider.GetRequiredService<IMediator>();
-        var result = await verifyMediator.Send(new GetActiveSessionsQuery());
+        var result = await verifyMediator.Send(new GetActiveSessionsQuery(userId));
 
         result.Sessions.Should().NotBeEmpty(
             "GetActiveSessionsQuery must return at least the newly correlated GameSession " +
@@ -166,7 +176,7 @@ public sealed class SessionHistoryVisibilityAfterStartTests : IAsyncLifetime
         // Confirm the correlated session is active
         await using var preScope = _factory.Services.CreateAsyncScope();
         var preMediator = preScope.ServiceProvider.GetRequiredService<IMediator>();
-        var activeBeforeComplete = await preMediator.Send(new GetActiveSessionsQuery());
+        var activeBeforeComplete = await preMediator.Send(new GetActiveSessionsQuery(userId));
         activeBeforeComplete.Sessions.Should().NotBeEmpty(
             "pre-condition: session must be active before completion");
 
@@ -186,7 +196,7 @@ public sealed class SessionHistoryVisibilityAfterStartTests : IAsyncLifetime
         await using var verifyScope = _factory.Services.CreateAsyncScope();
         var verifyMediator = verifyScope.ServiceProvider.GetRequiredService<IMediator>();
 
-        var activeAfterComplete = await verifyMediator.Send(new GetActiveSessionsQuery());
+        var activeAfterComplete = await verifyMediator.Send(new GetActiveSessionsQuery(userId));
         activeAfterComplete.Sessions.Should().NotContain(
             s => s.Id == correlatedId,
             because: "a Completed GameSession must not be returned by FindActiveAsync " +
@@ -241,7 +251,7 @@ public sealed class SessionHistoryVisibilityAfterStartTests : IAsyncLifetime
 
         // Assert — GetActiveSessionsQuery returns nothing for this user's session
         var verifyMediator = verifyScope.ServiceProvider.GetRequiredService<IMediator>();
-        var result = await verifyMediator.Send(new GetActiveSessionsQuery());
+        var result = await verifyMediator.Send(new GetActiveSessionsQuery(userId));
 
         result.Sessions.Should().BeEmpty(
             "a free-form LiveGameSession creates no correlated GameSession; " +
@@ -249,8 +259,150 @@ public sealed class SessionHistoryVisibilityAfterStartTests : IAsyncLifetime
     }
 
     // ──────────────────────────────────────────────────────────────────────────
+    // T4/T5 — #4156: le pagine sotto /sessions/[id] leggono una LiveGameSession, quindi chi
+    //      ha in mano una GameSession deve poter raggiungere la live di cui è il companion.
+    //      Le quattro letture che il frontend usa per elencare o aprire una GameSession
+    //      espongono l'id della live correlata.
+    // ──────────────────────────────────────────────────────────────────────────
+
+    [Fact(DisplayName = "T4: active, by-game and by-id reads expose the correlated live session id")]
+    public async Task T4_AfterWizardStart_TheReadsExposeTheLiveSessionId()
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var userId = await SeedUserAsync(db);
+        var gameId = await SeedSharedGameAsync(db);
+        var (liveSessionId, correlatedId) = await RunWizardFlowAsync(mediator, db, userId, gameId);
+
+        await using var verifyScope = _factory.Services.CreateAsyncScope();
+        var verifyMediator = verifyScope.ServiceProvider.GetRequiredService<IMediator>();
+
+        var active = await verifyMediator.Send(new GetActiveSessionsQuery(userId));
+        active.Sessions.Single(s => s.Id == correlatedId).LiveSessionId.Should().Be(liveSessionId,
+            "the active-sessions list (api.sessions.getActive) links to the live session");
+
+        var byGame = await verifyMediator.Send(new GetGameSessionsQuery(gameId));
+        byGame.Single(s => s.Id == correlatedId).LiveSessionId.Should().Be(liveSessionId,
+            "the per-game list (api.games.getSessions) links to the live session");
+
+        var byId = await verifyMediator.Send(new GetGameSessionByIdQuery(correlatedId));
+        byId.Should().NotBeNull();
+        byId!.LiveSessionId.Should().Be(liveSessionId,
+            "the single read (api.sessions.getById) links to the live session");
+    }
+
+    [Fact(DisplayName = "T5: the history read exposes the correlated live session id after completion")]
+    public async Task T5_AfterComplete_TheHistoryReadExposesTheLiveSessionId()
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var userId = await SeedUserAsync(db);
+        var gameId = await SeedSharedGameAsync(db);
+        var (liveSessionId, correlatedId) = await RunWizardFlowAsync(mediator, db, userId, gameId);
+
+        await using (var completeScope = _factory.Services.CreateAsyncScope())
+        {
+            await completeScope.ServiceProvider.GetRequiredService<IMediator>()
+                .Send(new CompleteLiveSessionCommand(liveSessionId));
+        }
+
+        await using var verifyScope = _factory.Services.CreateAsyncScope();
+        var history = await verifyScope.ServiceProvider.GetRequiredService<IMediator>()
+            .Send(new GetSessionHistoryQuery(GameId: gameId));
+
+        history.Single(s => s.Id == correlatedId).LiveSessionId.Should().Be(liveSessionId,
+            "a completed session in the history still links to its live session");
+    }
+
+    [Fact(DisplayName = "T6: a GameSession no live session correlates to exposes no live session id")]
+    public async Task T6_AGameSessionWithoutALiveSession_ExposesNoLiveSessionId()
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+        var db = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+
+        var userId = await SeedUserAsync(db);
+        var gameId = await SeedSharedGameAsync(db);
+
+        // Una sessione con una live, perché il test non passi su un elenco in cui nessuno ha
+        // l'id: deve distinguere chi ce l'ha da chi no.
+        var (liveSessionId, correlatedId) = await RunWizardFlowAsync(mediator, db, userId, gameId);
+        var orphanActiveId = await SeedGameSessionAsync(db, gameId, userId, "InProgress");
+        var orphanDoneId = await SeedGameSessionAsync(db, gameId, userId, "Completed");
+
+        await using var verifyScope = _factory.Services.CreateAsyncScope();
+        var verifyMediator = verifyScope.ServiceProvider.GetRequiredService<IMediator>();
+
+        var active = await verifyMediator.Send(new GetActiveSessionsQuery(userId));
+        active.Sessions.Single(s => s.Id == correlatedId).LiveSessionId.Should().Be(liveSessionId);
+        active.Sessions.Single(s => s.Id == orphanActiveId).LiveSessionId.Should().BeNull();
+
+        var byGame = await verifyMediator.Send(new GetGameSessionsQuery(gameId));
+        byGame.Single(s => s.Id == correlatedId).LiveSessionId.Should().Be(liveSessionId);
+        byGame.Single(s => s.Id == orphanActiveId).LiveSessionId.Should().BeNull();
+
+        var byId = await verifyMediator.Send(new GetGameSessionByIdQuery(orphanActiveId));
+        byId!.LiveSessionId.Should().BeNull();
+
+        var history = await verifyMediator.Send(new GetSessionHistoryQuery(GameId: gameId));
+        history.Single(s => s.Id == orphanDoneId).LiveSessionId.Should().BeNull();
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
     // Helpers
     // ──────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Lo stesso percorso del wizard: crea, aggiungi un giocatore, avvia. Restituisce l'id
+    /// della live e quello della GameSession correlata che l'avvio crea.
+    /// </summary>
+    private static async Task<(Guid LiveSessionId, Guid CorrelatedId)> RunWizardFlowAsync(
+        IMediator mediator, MeepleAiDbContext db, Guid userId, Guid gameId)
+    {
+        var liveSessionId = await mediator.Send(new CreateLiveSessionCommand(
+            UserId: userId,
+            GameName: "Azul",
+            GameId: gameId));
+
+        await mediator.Send(new AddPlayerToLiveSessionCommand(
+            SessionId: liveSessionId,
+            DisplayName: "Marco",
+            Color: PlayerColor.Red,
+            UserId: userId));
+
+        await mediator.Send(new StartLiveSessionCommand(liveSessionId, userId, UserTier.Free, Role.User));
+
+        var live = await db.LiveGameSessions.AsNoTracking().SingleAsync(s => s.Id == liveSessionId);
+        live.CorrelatedGameSessionId.Should().NotBeNull("pre-condition: start creates the companion GameSession");
+        return (liveSessionId, live.CorrelatedGameSessionId!.Value);
+    }
+
+    private static async Task<Guid> SeedGameSessionAsync(
+        MeepleAiDbContext db, Guid gameId, Guid userId, string status)
+    {
+        var id = Guid.NewGuid();
+        db.GameSessions.Add(new GameSessionEntity
+        {
+            Id = id,
+            GameId = gameId,
+            CreatedByUserId = userId,
+            Status = status,
+            StartedAt = DateTime.UtcNow.AddHours(-1),
+            CompletedAt = status == "Completed" ? DateTime.UtcNow : null,
+            WinnerName = null,
+            Notes = null,
+            // Il dominio vuole almeno un giocatore: il repository ricostruisce la GameSession
+            // quando la legge, e un elenco vuoto la fa rifiutare.
+            PlayersJson = "[{\"PlayerName\":\"Giulia\",\"PlayerOrder\":1,\"Color\":null}]"
+        });
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+        return id;
+    }
 
     private static async Task<Guid> SeedUserAsync(MeepleAiDbContext db)
     {

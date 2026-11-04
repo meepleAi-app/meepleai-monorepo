@@ -105,7 +105,6 @@ function matchesShortcut(event: KeyboardEvent, shortcut: KeyboardShortcut): bool
  */
 function getDefaultShortcuts(callbacks: {
   onNewChat: () => void;
-  onUploadPdf: () => void;
   onFocusSearch: () => void;
   onOpenHelp: () => void;
   onCloseModal: () => void;
@@ -119,15 +118,6 @@ function getDefaultShortcuts(callbacks: {
       meta: true,
       description: 'New chat',
       action: callbacks.onNewChat,
-      preventDefault: true,
-      category: 'navigation',
-    },
-    {
-      key: 'u',
-      ctrl: true,
-      meta: true,
-      description: 'Upload PDF',
-      action: callbacks.onUploadPdf,
       preventDefault: true,
       category: 'navigation',
     },
@@ -249,10 +239,6 @@ export function useGlobalKeyboardShortcuts(
     router.push('/chat');
   }, [router]);
 
-  const handleUploadPdf = useCallback(() => {
-    router.push('/upload');
-  }, [router]);
-
   const handleFocusSearch = useCallback(() => {
     if (onOpenCommandPalette) {
       onOpenCommandPalette();
@@ -273,7 +259,6 @@ export function useGlobalKeyboardShortcuts(
 
   const shortcuts = getDefaultShortcuts({
     onNewChat: handleNewChat,
-    onUploadPdf: handleUploadPdf,
     onFocusSearch: handleFocusSearch,
     onOpenHelp: handleOpenHelp,
     onCloseModal: handleCloseModal,

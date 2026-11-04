@@ -6,6 +6,7 @@ using Api.BoundedContexts.KnowledgeBase.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Infrastructure.Entities.UserLibrary;
 using Microsoft.EntityFrameworkCore;
 
 namespace Api.Tests.TestHelpers;
@@ -94,6 +95,36 @@ internal static class TestSessionHelper
         CancellationToken cancellationToken = default)
     {
         return await CreateSessionAsync(dbContext, "Editor", userId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Creates an impersonation session: the cookie is the one of <paramref name="subjectId"/>, but the
+    /// person acting is <paramref name="actorId"/> (<c>ImpersonatedByUserId</c>). It is the only case where
+    /// <c>Principal.Subject</c> and <c>Principal.EffectiveActor</c> are different people. Both users must
+    /// already exist.
+    /// </summary>
+    /// <returns>The raw session token for the HTTP cookie header.</returns>
+    public static async Task<string> CreateImpersonationSessionAsync(
+        MeepleAiDbContext dbContext,
+        Guid subjectId,
+        Guid actorId,
+        CancellationToken cancellationToken = default)
+    {
+        var token = SessionToken.Generate();
+        dbContext.Set<UserSessionEntity>().Add(new UserSessionEntity
+        {
+            Id = Guid.NewGuid(),
+            UserId = subjectId,
+            TokenHash = token.ComputeHash(),
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(15),
+            LastSeenAt = DateTime.UtcNow,
+            ImpersonatedByUserId = actorId,
+            ImpersonatedUntil = DateTime.UtcNow.AddMinutes(15),
+            User = null! // Navigation property, not needed for insert
+        });
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return token.Value;
     }
 
     /// <summary>
@@ -219,7 +250,6 @@ internal static class TestSessionHelper
             var agent = AgentDefinition.Create(
                 name: $"Active Agent {i}",
                 description: $"Test active agent #{i}",
-                type: AgentType.RagAgent,
                 config: AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
             agent.Activate();
 
@@ -237,7 +267,6 @@ internal static class TestSessionHelper
             var agent = AgentDefinition.Create(
                 name: $"Inactive Agent {i}",
                 description: $"Test inactive agent #{i}",
-                type: AgentType.RulesInterpreter,
                 config: AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
             // Default state from Create() is IsActive=false / Status=Draft
 
@@ -273,7 +302,6 @@ internal static class TestSessionHelper
             var agent = AgentDefinition.Create(
                 name: $"Published Agent {i}",
                 description: $"Test published agent #{i}",
-                type: AgentType.RagAgent,
                 config: AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
             agent.StartTesting();
             agent.Publish();
@@ -286,7 +314,6 @@ internal static class TestSessionHelper
             var agent = AgentDefinition.Create(
                 name: $"Draft Agent {i}",
                 description: $"Test draft agent #{i}",
-                type: AgentType.RulesInterpreter,
                 config: AgentDefinitionConfig.Create("gpt-4", 1000, 0.7f));
             // Default state from Create() is IsActive=false / Status=Draft
 
@@ -332,5 +359,32 @@ internal static class TestSessionHelper
         await dbContext.SaveChangesAsync();
         dbContext.ChangeTracker.Clear();
         return sharedGameId;
+    }
+
+    /// <summary>
+    /// Puts a catalog game in the user's library with ownership declared: what an ordinary
+    /// user needs before the RAG gate lets them open a chat on that game (rule 3 of
+    /// <c>RagAccessService.CanAccessRagAsync</c>).
+    /// </summary>
+    /// <remarks>
+    /// #4280: tests that use <c>POST /api/v1/chat/sessions</c> only as a producer of
+    /// <c>chat.session.created</c> seeded a user and a game and nothing else, and got 403.
+    /// </remarks>
+    public static async Task SeedOwnedLibraryGameAsync(
+        MeepleAiDbContext dbContext,
+        Guid userId,
+        Guid sharedGameId)
+    {
+        ArgumentNullException.ThrowIfNull(dbContext);
+
+        dbContext.UserLibraryEntries.Add(new UserLibraryEntryEntity
+        {
+            UserId = userId,
+            SharedGameId = sharedGameId,
+            AddedAt = DateTime.UtcNow,
+            OwnershipDeclaredAt = DateTime.UtcNow,
+        });
+        await dbContext.SaveChangesAsync();
+        dbContext.ChangeTracker.Clear();
     }
 }

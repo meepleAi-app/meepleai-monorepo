@@ -110,7 +110,7 @@ function FilterSection({
             {icon}
             {title}
             {activeCount > 0 && (
-              <Badge className="h-5 min-w-5 px-1.5 text-xs bg-orange-500 hover:bg-orange-500 text-white border-0">
+              <Badge className="h-5 min-w-5 px-1.5 text-xs bg-orange-500 text-white border-0">
                 {activeCount}
               </Badge>
             )}
@@ -321,9 +321,7 @@ export function AdvancedFilterPanel({
             <SlidersHorizontal className="h-5 w-5" />
             Filtri Avanzati
             {totalActiveCount > 0 && (
-              <Badge className="bg-orange-500 hover:bg-orange-500 text-white border-0">
-                {totalActiveCount} attivi
-              </Badge>
+              <Badge className="bg-orange-500 text-white border-0">{totalActiveCount} attivi</Badge>
             )}
           </SheetTitle>
           <SheetDescription>Personalizza la ricerca con filtri specifici</SheetDescription>

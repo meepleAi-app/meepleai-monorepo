@@ -9,6 +9,7 @@ using Moq;
 using Xunit;
 using FluentAssertions;
 using Api.Tests.Constants;
+using AuthRole = Api.SharedKernel.Domain.ValueObjects.Role;
 
 namespace Api.Tests.BoundedContexts.Administration.Application.Handlers;
 
@@ -419,4 +420,134 @@ public class DeleteUserCommandHandlerTests
 
         _userRepositoryMock.Verify(r => r.DeleteAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()), Times.Never);
     }
+    #region #3873 — PROTEGGE: the last-privileged-account guard must include superadmin
+
+    /// <summary>
+    /// #3873 DoD 5 — superadmin as the subject. Trigger and counter disagree: the trigger at
+    /// DeleteUserCommandHandler.cs:49 is <c>Role.IsAdmin()</c> (exact match on "admin"), while
+    /// <c>CountAdminsAsync</c> counts <c>admin OR superadmin</c>. A lone superadmin is therefore
+    /// counted as the last privileged account by the counter but never reaches it.
+    /// </summary>
+    [Theory]
+    [InlineData("admin")]       // guarded today
+    [InlineData("superadmin")]  // #3873: NOT guarded today — the trigger is an exact match
+    public async Task Handle_LastPrivilegedAccount_ThrowsDomainException(string roleValue)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var requestingUserId = Guid.NewGuid();
+        var user = new UserBuilder()
+            .WithId(userId)
+            .WithEmail($"last-{roleValue}@example.com")
+            .WithRole(AuthRole.Parse(roleValue))
+            .Build();
+
+        _userRepositoryMock
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        // CountAdminsAsync counts admin OR superadmin: 1 means this account IS the last one.
+        _userRepositoryMock
+            .Setup(r => r.CountAdminsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
+        var command = new DeleteUserCommand(
+            UserId: userId.ToString(),
+            RequestingUserId: requestingUserId.ToString());
+
+        // Act & Assert
+        var act = () => _handler.Handle(command, TestContext.Current.CancellationToken);
+        await act.Should().ThrowAsync<DomainException>();
+
+        _userRepositoryMock.Verify(
+            r => r.DeleteAsync(It.IsAny<User>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+        _unitOfWorkMock.Verify(
+            u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    /// <summary>
+    /// The good direction, which must stay green: with a second privileged account left the guard
+    /// must not fire. Pins the boundary (<c>adminCount &lt;= 1</c>) so widening the trigger to
+    /// superadmin does not become an over-block.
+    /// </summary>
+    [Theory]
+    [InlineData("admin")]
+    [InlineData("superadmin")]
+    public async Task Handle_PrivilegedAccount_WithAnotherPrivilegedAccountLeft_DeletesSuccessfully(string roleValue)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var requestingUserId = Guid.NewGuid();
+        var user = new UserBuilder()
+            .WithId(userId)
+            .WithRole(AuthRole.Parse(roleValue))
+            .Build();
+
+        _userRepositoryMock
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        _userRepositoryMock
+            .Setup(r => r.CountAdminsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(2);
+
+        var command = new DeleteUserCommand(
+            UserId: userId.ToString(),
+            RequestingUserId: requestingUserId.ToString());
+
+        // Act
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        _userRepositoryMock.Verify(
+            r => r.DeleteAsync(user, It.IsAny<CancellationToken>()),
+            Times.Once);
+        _unitOfWorkMock.Verify(
+            u => u.SaveChangesAsync(It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    /// <summary>
+    /// Anti-widening net: the guard protects privileged accounts only. An unprivileged account is
+    /// deletable even when a single admin remains in the system.
+    /// </summary>
+    [Theory]
+    [InlineData("user")]
+    [InlineData("editor")]
+    [InlineData("creator")]
+    public async Task Handle_UnprivilegedAccount_IsNotProtectedByTheLastAdminGuard(string roleValue)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var requestingUserId = Guid.NewGuid();
+        var user = new UserBuilder()
+            .WithId(userId)
+            .WithRole(AuthRole.Parse(roleValue))
+            .Build();
+
+        _userRepositoryMock
+            .Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+
+        // Even with a single admin left in the system, this account is not the one being protected.
+        _userRepositoryMock
+            .Setup(r => r.CountAdminsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
+        var command = new DeleteUserCommand(
+            UserId: userId.ToString(),
+            RequestingUserId: requestingUserId.ToString());
+
+        // Act
+        await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        _userRepositoryMock.Verify(
+            r => r.DeleteAsync(user, It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    #endregion
 }

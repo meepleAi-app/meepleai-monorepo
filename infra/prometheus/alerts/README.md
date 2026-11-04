@@ -2,7 +2,13 @@
 
 ## Contenuto
 
-- File come `api-performance.yml`, `cache-performance.yml`, `database-health.yml`, `http-retry-alerts.yaml`, `vector-search.yml`.
+- Regole Prometheus, un file per dominio: `agent-grounding.yml`, `audit-outbox.yml`,
+  `bgg-tos-compliance.yml`, `egress-guard.yml`, `rag-vector-arm.yml`, `wikidata-sse.yml`, …
+  L'elenco precedente citava `api-performance.yml`, `cache-performance.yml`, `database-health.yml`
+  e `vector-search.yml`, rimossi da tempo.
+- I file `*.test.yml` sono test `promtool`, non regole: non vanno referenziati in `rule_files`
+  né montati, o Prometheus non parte (la configurazione è all-or-nothing).
+- Gli alert **Grafana** stanno in `infra/monitoring/grafana/alerting/`: qui dentro solo Prometheus.
 - Ogni file combina recording rules (metriche pre-calcolate) e alert rules (threshold per severity).
 
 ## Scopo

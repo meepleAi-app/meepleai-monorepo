@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
 using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
@@ -27,17 +28,20 @@ internal sealed class UpdateSharedGameCommandHandler : ICommandHandler<UpdateSha
     private readonly ISharedGameRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly MeepleAiDbContext _dbContext;
+    private readonly ISharedGameCacheInvalidator _cacheInvalidator;
     private readonly ILogger<UpdateSharedGameCommandHandler> _logger;
 
     public UpdateSharedGameCommandHandler(
         ISharedGameRepository repository,
         IUnitOfWork unitOfWork,
         MeepleAiDbContext dbContext,
+        ISharedGameCacheInvalidator cacheInvalidator,
         ILogger<UpdateSharedGameCommandHandler> logger)
     {
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
+        _cacheInvalidator = cacheInvalidator ?? throw new ArgumentNullException(nameof(cacheInvalidator));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -56,16 +60,19 @@ internal sealed class UpdateSharedGameCommandHandler : ICommandHandler<UpdateSha
             throw new NotFoundException("SharedGame", command.GameId.ToString());
         }
 
-        GameRules? rules = null;
-        if (command.Rules is not null)
-        {
-            rules = GameRules.Create(command.Rules.Content, command.Rules.Language);
-        }
+        // #4088: null means "do not change" here, the same convention this command already
+        // documents for its taxonomy collections. UpdateInfo is a total setter, so an omitted
+        // field must be read back off the aggregate or the save writes it away.
+        var rules = command.Rules is not null
+            ? GameRules.Create(command.Rules.Content, command.Rules.Language)
+            : game.Rules;
 
         game.UpdateInfo(
             command.Title, command.YearPublished, command.Description,
             command.MinPlayers, command.MaxPlayers, command.PlayingTimeMinutes,
-            command.MinAge, command.ComplexityRating, command.AverageRating,
+            command.MinAge,
+            command.ComplexityRating ?? game.ComplexityRating,
+            command.AverageRating ?? game.AverageRating,
             command.ImageUrl, command.ThumbnailUrl, rules, command.ModifiedBy);
 
         _repository.Update(game);
@@ -85,6 +92,8 @@ internal sealed class UpdateSharedGameCommandHandler : ICommandHandler<UpdateSha
                 .Include(e => e.Mechanics)
                 .Include(e => e.Designers)
                 .Include(e => e.Publishers)
+                // #3866: tracked on purpose — the mutation below only reaches the DB on a tracked entity (production defaults to NoTracking, PERF-06).
+                .AsTracking()
                 .FirstOrDefaultAsync(e => e.Id == command.GameId, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -120,6 +129,17 @@ internal sealed class UpdateSharedGameCommandHandler : ICommandHandler<UpdateSha
         }
 
         await _unitOfWork.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+
+        // #4100: senza questa evizione la scheda serviva i valori PRECEDENTI per 30 minuti (L1) o
+        // 2 ore (L2) — `GetSharedGameByIdQueryHandler` cachea sotto `shared-game:{id}`. L'admin
+        // salvava, il drawer si chiudeva senza errori, la pagina non cambiava: misurato con il DB
+        // che riportava il titolo nuovo e `GET /api/v1/shared-games/{id}` quello vecchio.
+        //
+        // Passa dall'invalidatore del catalogo (ISharedGameCacheInvalidator, lo stesso dei percorsi
+        // cover): invalida sia il tag di lista `search-games` sia quello di dettaglio, con la retry
+        // policy di #613. I percorsi cover, le traduzioni e il resto del BC lo facevano gia'; questo, il
+        // piu' centrale, no.
+        await _cacheInvalidator.EvictDetailAndListAsync(command.GameId, cancellationToken).ConfigureAwait(false);
 
         _logger.LogInformation(
             "Shared game updated successfully: {GameId}",

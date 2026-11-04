@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using FluentAssertions;
+using AuthRole = Api.SharedKernel.Domain.ValueObjects.Role;
 
 namespace Api.Tests.Unit.GameManagement;
 
@@ -254,6 +255,94 @@ public sealed class SessionQuotaServiceEnsureQuotaTests : IDisposable
         // Assert
         result.QuotaAvailable.Should().BeTrue();
         result.TerminatedSessionIds.Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// Issue #3873: the quota bypass in <see cref="SessionQuotaService.CheckQuotaAsync"/> is
+    /// <c>userRole.IsAdmin() || userRole.IsEditor()</c>, and <c>IsAdmin()</c> is an exact
+    /// comparison against "admin" — so superadmin, the one role that outranks admin, is the
+    /// only role this guard does not recognise.
+    ///
+    /// <para>The exemption must follow <c>HasPermission(Role.Editor)</c> = {editor, admin,
+    /// superadmin}; creator and user stay subject to the tier quota.</para>
+    /// </summary>
+    [Theory]
+    [InlineData("superadmin", true)]
+    [InlineData("admin", true)]
+    [InlineData("editor", true)]
+    [InlineData("creator", false)]
+    [InlineData("user", false)]
+    public async Task CheckQuotaAsync_ExemptsEveryRoleThatOutranksEditor(string roleValue, bool isExempt)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var userRole = AuthRole.Parse(roleValue);
+
+        // Free tier default limit is 3 and the user already holds 3 active sessions: a role
+        // subject to the quota must be denied, an exempt role must not even be counted.
+        _mockConfigService.Setup(x => x.GetValueAsync<int?>("SessionLimits:free:MaxSessions", null, default))
+            .ReturnsAsync((int?)null);
+
+        _mockRepository.Setup(x => x.CountActiveByUserIdAsync(userId, default))
+            .ReturnsAsync(3);
+
+        // Act
+        var result = await _sut.CheckQuotaAsync(userId, UserTier.Free, userRole);
+
+        // Assert
+        result.IsAllowed.Should().Be(
+            isExempt,
+            "role '{0}' must bypass the quota exactly when it satisfies HasPermission(Role.Editor) (#3873)",
+            roleValue);
+
+        result.MaxAllowed.Should().Be(
+            isExempt ? -1 : 3,
+            "an exempt role reports -1 (unlimited), a quota-bound role reports the free-tier limit");
+
+        _mockRepository.Verify(
+            x => x.CountActiveByUserIdAsync(userId, default),
+            isExempt ? Times.Never : Times.Once);
+    }
+
+    /// <summary>
+    /// Issue #3873, second site of the same guard: <see cref="SessionQuotaService.GetQuotaInfoAsync"/>
+    /// returns <c>SessionQuotaInfo.Unlimited</c> for the exempt roles. Unlike CheckQuotaAsync it
+    /// counts the active sessions *before* looking at the role, so the count is reported for
+    /// every role and only the limit/remaining/unlimited triple differs.
+    /// </summary>
+    [Theory]
+    [InlineData("superadmin", true)]
+    [InlineData("admin", true)]
+    [InlineData("editor", true)]
+    [InlineData("creator", false)]
+    [InlineData("user", false)]
+    public async Task GetQuotaInfoAsync_ReportsUnlimitedForEveryRoleThatOutranksEditor(string roleValue, bool isExempt)
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var userRole = AuthRole.Parse(roleValue);
+
+        _mockConfigService.Setup(x => x.GetValueAsync<int?>("SessionLimits:free:MaxSessions", null, default))
+            .ReturnsAsync((int?)null);
+
+        _mockRepository.Setup(x => x.CountActiveByUserIdAsync(userId, default))
+            .ReturnsAsync(3);
+
+        // Act
+        var info = await _sut.GetQuotaInfoAsync(userId, UserTier.Free, userRole);
+
+        // Assert
+        info.IsUnlimited.Should().Be(
+            isExempt,
+            "role '{0}' has unlimited quota exactly when it satisfies HasPermission(Role.Editor) (#3873)",
+            roleValue);
+
+        info.MaxSessions.Should().Be(isExempt ? -1 : 3);
+        info.RemainingSlots.Should().Be(
+            isExempt ? -1 : 0,
+            "3 of 3 free-tier slots are taken, so a quota-bound role has none left");
+
+        info.ActiveSessions.Should().Be(3, "the active-session count is reported for every role");
     }
 
     /// <summary>

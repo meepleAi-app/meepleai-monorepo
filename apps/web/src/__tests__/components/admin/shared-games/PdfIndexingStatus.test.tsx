@@ -12,7 +12,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import { PdfIndexingStatus, type PdfIndexingStatusData } from '@/components/admin/shared-games/PdfIndexingStatus';
+import {
+  PdfIndexingStatus,
+  type PdfIndexingStatusData,
+} from '@/components/admin/shared-games/PdfIndexingStatus';
+import { backgroundClasses } from '@/test-utils/background-classes';
 
 // ============================================================================
 // Mock Data
@@ -104,11 +108,7 @@ function createTestQueryClient() {
 
 function renderWithProviders(component: React.ReactElement) {
   const queryClient = createTestQueryClient();
-  return render(
-    <QueryClientProvider client={queryClient}>
-      {component}
-    </QueryClientProvider>
-  );
+  return render(<QueryClientProvider client={queryClient}>{component}</QueryClientProvider>);
 }
 
 // ============================================================================
@@ -182,6 +182,25 @@ describe('PdfIndexingStatus', () => {
       await waitFor(() => {
         expect(screen.getByText('RAG Ready')).toBeInTheDocument();
       });
+    });
+
+    // #4539: la console admin è sempre scura. Il verde del badge deve restare l'unico fondo,
+    // senza il dark:bg-primary/90 né il dark:hover:bg-primary della variante accanto. E senza un
+    // hover proprio: il badge non è interattivo, e hover:bg-green-700 col testo scuro della
+    // variante in tema scuro dava 3,54:1.
+    it.each([
+      ['compatta', true],
+      ['completa', false],
+    ])('in modalità %s «RAG Ready» tiene solo il suo verde (#4539)', async (_mode, compact) => {
+      mockFetchResponse = mockStatusIndexed;
+      renderWithProviders(
+        <div data-admin-shell data-theme="dark" className="dark">
+          <PdfIndexingStatus {...defaultProps} compact={compact} />
+        </div>
+      );
+
+      const badge = await screen.findByText('RAG Ready');
+      expect(backgroundClasses(badge)).toEqual(['bg-green-600']);
     });
 
     it('should render error badge when failed', async () => {

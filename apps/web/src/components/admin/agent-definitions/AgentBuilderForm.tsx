@@ -23,10 +23,12 @@ import {
   Slider,
   Textarea,
 } from '@/components/ui';
+import { useAdminAiModels } from '@/hooks/queries/useAdminAiModels';
 import {
   createAgentDefinitionSchema,
   type CreateAgentDefinition,
 } from '@/lib/api/schemas/agent-definitions.schemas';
+import { isRoutableModelId } from '@/lib/llm-model-routing';
 
 interface AgentBuilderFormProps {
   defaultValues?: Partial<CreateAgentDefinition>;
@@ -51,13 +53,27 @@ const CHAT_LANGUAGES = [
   { value: 'ko', label: '한국어' },
 ];
 
-const MODELS = [
-  { value: 'gpt-4', label: 'GPT-4' },
-  { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
-  { value: 'claude-3-opus', label: 'Claude 3 Opus' },
-  { value: 'claude-3-sonnet', label: 'Claude 3 Sonnet' },
-  { value: 'deepseek-chat', label: 'DeepSeek Chat' },
-];
+/**
+ * Issue #4102: the model list used to be hardcoded here, and four of its five
+ * entries were bare cloud-provider ids the backend rejects with
+ * `422 "Model is not routable"` — so the form could not be submitted with any
+ * of them. Options now come from `/api/v1/admin/ai-models` (contract aligned in
+ * #4093), restricted to active models and filtered through the same
+ * routability rule the validator applies.
+ */
+function useModelOptions(): {
+  options: { value: string; label: string }[];
+  isLoading: boolean;
+  isError: boolean;
+} {
+  const { data, isLoading, isError } = useAdminAiModels();
+
+  const options = (data ?? [])
+    .filter(model => model.isActive && isRoutableModelId(model.modelId))
+    .map(model => ({ value: model.modelId, label: model.displayName }));
+
+  return { options, isLoading, isError };
+}
 
 export function AgentBuilderForm({
   defaultValues,
@@ -65,13 +81,23 @@ export function AgentBuilderForm({
   isLoading,
   disabled,
 }: AgentBuilderFormProps) {
+  const {
+    options: modelOptions,
+    isLoading: modelsLoading,
+    isError: modelsError,
+  } = useModelOptions();
+
   const form = useForm<z.input<typeof createAgentDefinitionSchema>>({
     resolver: zodResolver(createAgentDefinitionSchema),
     defaultValues: defaultValues || {
       name: '',
       description: '',
       chatLanguage: 'auto',
-      model: 'gpt-4',
+      // Issue #4102: the default used to be 'gpt-4', which the backend rejects
+      // as unroutable. There is no safe default — the routable set is known only
+      // once /admin/ai-models answers — so the field starts empty and the
+      // schema's `min(1, 'Model required')` makes the user pick one.
+      model: '',
       maxTokens: 2048,
       temperature: 0.7,
       prompts: [],
@@ -175,20 +201,35 @@ export function AgentBuilderForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Model</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                  disabled={modelsLoading || modelOptions.length === 0}
+                >
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a model" />
+                      <SelectValue
+                        placeholder={modelsLoading ? 'Loading models…' : 'Select a model'}
+                      />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {MODELS.map(model => (
+                    {modelOptions.map(model => (
                       <SelectItem key={model.value} value={model.value}>
                         {model.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {/* An empty list is a real state, not a glitch: it means no active
+                    model is routable. Saying so beats an empty dropdown. */}
+                {!modelsLoading && modelOptions.length === 0 && (
+                  <FormDescription>
+                    {modelsError
+                      ? 'Could not load the model list. Check /admin/ai-models.'
+                      : 'No active, routable model is available. Enable one in /admin/ai-models.'}
+                  </FormDescription>
+                )}
                 <FormMessage />
               </FormItem>
             )}

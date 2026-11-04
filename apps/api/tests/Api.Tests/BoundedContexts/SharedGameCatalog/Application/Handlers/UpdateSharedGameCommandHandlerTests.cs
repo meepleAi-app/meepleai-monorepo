@@ -1,14 +1,18 @@
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Application;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
+using Api.BoundedContexts.SharedGameCatalog.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.SharedGameCatalog;
+using Api.Services;
 using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -21,7 +25,21 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
 {
     private readonly Mock<ISharedGameRepository> _repositoryMock = new();
     private readonly Mock<IUnitOfWork> _unitOfWorkMock = new();
+
+    /// <summary>
+    /// Issue #3866: the unit of work is mocked, so nothing was ever written — the assertions below
+    /// used to pass only because a tracking-by-default test context resolved the reload to the same
+    /// in-memory instance the handler had mutated. They verified the mutation, not the persistence.
+    /// Wiring the mock to the real SaveChangesAsync makes them verify what they claim to.
+    /// </summary>
+    private void MakeUnitOfWorkPersist() =>
+        _unitOfWorkMock
+            .Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .Returns((CancellationToken ct) => _dbContext.SaveChangesAsync(ct));
     private readonly Mock<ILogger<UpdateSharedGameCommandHandler>> _loggerMock = new();
+    private readonly Mock<IHybridCacheService> _cacheMock = new();
+    private readonly Mock<ICacheInvalidationRetryPolicy> _retryPolicyMock = new();
+    private readonly Mock<HybridCache> _hybridCacheMock = new();
     private readonly MeepleAiDbContext _dbContext;
 
     public UpdateSharedGameCommandHandlerTests()
@@ -33,6 +51,18 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
             options,
             new Mock<IMediator>().Object,
             new Mock<IDomainEventCollector>().Object);
+
+        _cacheMock
+            .Setup(c => c.RemoveByTagAcrossReplicasAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
+        // #4100: la retry policy ESEGUE il delegato, altrimenti il mock della cache non viene
+        // esercitato e un test sull'invalidazione passerebbe senza che nulla venga invalidato.
+        _retryPolicyMock
+            .Setup(p => p.ExecuteAsync(
+                It.IsAny<Func<CancellationToken, ValueTask>>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Returns<Func<CancellationToken, ValueTask>, string, CancellationToken>((op, _, ct) => op(ct).AsTask());
     }
 
     public void Dispose()
@@ -68,7 +98,8 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
             ModifiedBy: userId);
 
         var handler = new UpdateSharedGameCommandHandler(
-            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext, _loggerMock.Object);
+            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext,
+            new SharedGameCacheInvalidator(_cacheMock.Object, _retryPolicyMock.Object, _hybridCacheMock.Object), _loggerMock.Object);
 
         // Act
         var result = await handler.Handle(command, CancellationToken.None);
@@ -118,8 +149,11 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
             Categories: new List<string> { "Strategy", "Negotiation" },
             Mechanics: new List<string> { "Dice Rolling" });
 
+        MakeUnitOfWorkPersist();
+
         var handler = new UpdateSharedGameCommandHandler(
-            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext, _loggerMock.Object);
+            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext,
+            new SharedGameCacheInvalidator(_cacheMock.Object, _retryPolicyMock.Object, _hybridCacheMock.Object), _loggerMock.Object);
 
         // Act
         await handler.Handle(command, CancellationToken.None);
@@ -166,8 +200,11 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
             ModifiedBy: userId,
             BggId: 13);
 
+        MakeUnitOfWorkPersist();
+
         var handler = new UpdateSharedGameCommandHandler(
-            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext, _loggerMock.Object);
+            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext,
+            new SharedGameCacheInvalidator(_cacheMock.Object, _retryPolicyMock.Object, _hybridCacheMock.Object), _loggerMock.Object);
 
         // Act
         await handler.Handle(command, CancellationToken.None);
@@ -211,8 +248,11 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
             ModifiedBy: userId,
             BggId: 42);
 
+        MakeUnitOfWorkPersist();
+
         var handler = new UpdateSharedGameCommandHandler(
-            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext, _loggerMock.Object);
+            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext,
+            new SharedGameCacheInvalidator(_cacheMock.Object, _retryPolicyMock.Object, _hybridCacheMock.Object), _loggerMock.Object);
 
         // Act
         await handler.Handle(command, CancellationToken.None);
@@ -226,6 +266,157 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
         reloaded.Categories.Select(c => c.Name).Should().BeEquivalentTo(new[] { "Strategy" });
         reloaded.Mechanics.Select(m => m.Name).Should().BeEquivalentTo(new[] { "Dice Rolling" });
         reloaded.BggId.Should().Be(42);
+    }
+
+    /// <summary>
+    /// Issue #4088: the admin edit drawer sends only the core fields, so these three arrive null.
+    /// UpdateInfo is a total setter, so without the handler coalescing them against the stored
+    /// aggregate every save wiped a rating that no job recomputes.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithNullRatingsAndRules_PreservesStoredValues()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        var storedRules = GameRules.Create("Place a bird, gain food.", "en");
+        var domainAggregate = BuildAggregate(
+            gameId, userId, complexityRating: 2.4m, averageRating: 8.1m, rules: storedRules);
+        _repositoryMock.Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(domainAggregate);
+
+        // Exactly the shape EditGameDrawer produces: core fields only.
+        var command = new UpdateSharedGameCommand(
+            GameId: gameId,
+            Title: "Wingspan ITA",
+            YearPublished: 2019,
+            Description: "Bird-themed engine builder",
+            MinPlayers: 1,
+            MaxPlayers: 5,
+            PlayingTimeMinutes: 60,
+            MinAge: 10,
+            ComplexityRating: null,
+            AverageRating: null,
+            ImageUrl: "https://cdn/old.webp",
+            ThumbnailUrl: "https://cdn/old-thumb.webp",
+            Rules: null,
+            ModifiedBy: userId);
+
+        var handler = new UpdateSharedGameCommandHandler(
+            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext,
+            new SharedGameCacheInvalidator(_cacheMock.Object, _retryPolicyMock.Object, _hybridCacheMock.Object), _loggerMock.Object);
+
+        // Act
+        await handler.Handle(command, CancellationToken.None);
+
+        // Assert — the edited field landed, the omitted ones survived.
+        domainAggregate.Title.Should().Be("Wingspan ITA");
+        domainAggregate.ComplexityRating.Should().Be(2.4m);
+        domainAggregate.AverageRating.Should().Be(8.1m);
+        domainAggregate.Rules.Should().NotBeNull();
+        domainAggregate.Rules!.Content.Should().Be("Place a bird, gain food.");
+    }
+
+    /// <summary>
+    /// Issue #4088: preserving on null must not make the fields read-only — a caller that does
+    /// send values still overwrites.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WithNonNullRatingsAndRules_OverwritesStoredValues()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        var domainAggregate = BuildAggregate(
+            gameId,
+            userId,
+            complexityRating: 2.4m,
+            averageRating: 8.1m,
+            rules: GameRules.Create("Old rules.", "en"));
+        _repositoryMock.Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(domainAggregate);
+
+        var command = new UpdateSharedGameCommand(
+            GameId: gameId,
+            Title: "Wingspan",
+            YearPublished: 2019,
+            Description: "Bird-themed engine builder",
+            MinPlayers: 1,
+            MaxPlayers: 5,
+            PlayingTimeMinutes: 60,
+            MinAge: 10,
+            ComplexityRating: 3.5m,
+            AverageRating: 9.2m,
+            ImageUrl: "https://cdn/old.webp",
+            ThumbnailUrl: "https://cdn/old-thumb.webp",
+            Rules: new GameRulesDto("New rules.", "it"),
+            ModifiedBy: userId);
+
+        var handler = new UpdateSharedGameCommandHandler(
+            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext,
+            new SharedGameCacheInvalidator(_cacheMock.Object, _retryPolicyMock.Object, _hybridCacheMock.Object), _loggerMock.Object);
+
+        // Act
+        await handler.Handle(command, CancellationToken.None);
+
+        // Assert
+        domainAggregate.ComplexityRating.Should().Be(3.5m);
+        domainAggregate.AverageRating.Should().Be(9.2m);
+        domainAggregate.Rules!.Content.Should().Be("New rules.");
+        domainAggregate.Rules!.Language.Should().Be("it");
+    }
+
+    /// <summary>
+    /// Issue #4100: senza l'evizione del read-model la scheda serviva i valori PRECEDENTI per 30
+    /// minuti (L1) o 2 ore (L2), perche' GetSharedGameByIdQueryHandler cachea sotto
+    /// `shared-game:{id}`. Misurato end-to-end: il database riportava il titolo nuovo e
+    /// `GET /api/v1/shared-games/{id}` quello vecchio, quindi l'admin vedeva il salvataggio come
+    /// non avvenuto. Cinque altri percorsi di scrittura di questo bounded context invalidavano
+    /// gia'; questo, il piu' centrale, no.
+    /// </summary>
+    [Fact]
+    public async Task Handle_AfterSave_EvictsListAndDetailReadModelCaches()
+    {
+        // Arrange
+        var gameId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+
+        var domainAggregate = BuildAggregate(gameId, userId);
+        _repositoryMock.Setup(r => r.GetByIdAsync(gameId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(domainAggregate);
+
+        var command = new UpdateSharedGameCommand(
+            GameId: gameId,
+            Title: "Wingspan ITA",
+            YearPublished: 2019,
+            Description: "Bird-themed engine builder",
+            MinPlayers: 1,
+            MaxPlayers: 5,
+            PlayingTimeMinutes: 60,
+            MinAge: 10,
+            ComplexityRating: null,
+            AverageRating: null,
+            ImageUrl: "https://cdn/old.webp",
+            ThumbnailUrl: "https://cdn/old-thumb.webp",
+            Rules: null,
+            ModifiedBy: userId);
+
+        var handler = new UpdateSharedGameCommandHandler(
+            _repositoryMock.Object, _unitOfWorkMock.Object, _dbContext,
+            new SharedGameCacheInvalidator(_cacheMock.Object, _retryPolicyMock.Object, _hybridCacheMock.Object), _loggerMock.Object);
+
+        // Act
+        await handler.Handle(command, CancellationToken.None);
+
+        // Assert — entrambi i tag: la lista e il dettaglio di QUESTO gioco.
+        _cacheMock.Verify(
+            c => c.RemoveByTagAcrossReplicasAsync("search-games", It.IsAny<CancellationToken>()),
+            Times.Once);
+        _cacheMock.Verify(
+            c => c.RemoveByTagAcrossReplicasAsync($"shared-game:{gameId}", It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     private static SharedGameEntity SeedGameEntity(Guid gameId, Guid createdBy)
@@ -247,7 +438,12 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
         };
     }
 
-    private static SharedGame BuildAggregate(Guid gameId, Guid createdBy)
+    private static SharedGame BuildAggregate(
+        Guid gameId,
+        Guid createdBy,
+        decimal? complexityRating = null,
+        decimal? averageRating = null,
+        GameRules? rules = null)
     {
         // Use the public Create factory; Id is generated internally.
         // We only need a valid domain object for the repository mock to return.
@@ -259,11 +455,11 @@ public sealed class UpdateSharedGameCommandHandlerTests : IDisposable
             maxPlayers: 5,
             playingTimeMinutes: 60,
             minAge: 10,
-            complexityRating: null,
-            averageRating: null,
+            complexityRating: complexityRating,
+            averageRating: averageRating,
             imageUrl: "https://cdn/old.webp",
             thumbnailUrl: "https://cdn/old-thumb.webp",
-            rules: null,
+            rules: rules,
             createdBy: createdBy,
             bggId: null);
     }

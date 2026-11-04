@@ -66,8 +66,7 @@ internal class TableStructureAnalyzer : ITableStructureAnalyzer
                     DiagramType = "Image",
                     Description = $"Image {i + 1} on page {pageNum}",
                     Width = images[i].Width,
-                    Height = images[i].Height,
-                    ImageData = images[i].Data
+                    Height = images[i].Height
                 });
             }
         }

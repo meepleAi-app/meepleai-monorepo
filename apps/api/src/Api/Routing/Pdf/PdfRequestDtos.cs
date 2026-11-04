@@ -2,7 +2,7 @@
 namespace Api.Routing;
 
 internal record InitChunkedUploadRequest(Guid? GameId, string FileName, long TotalFileSize, Guid? PrivateGameId = null);
-internal record CompleteChunkedUploadRequest(Guid SessionId);
+internal record CompleteChunkedUploadRequest(Guid SessionId, string? Priority = null); // #4443 R2: "normal" | "urgent"
 internal record SetPdfVisibilityRequest(bool IsPublic);
 internal record SetActiveForRagRequest(bool IsActive); // Issue #5446
 internal record ReclassifyDocumentRequest(string Category, Guid? BaseDocumentId, string? VersionLabel); // Issue #5447

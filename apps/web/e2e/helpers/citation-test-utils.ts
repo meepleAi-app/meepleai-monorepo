@@ -18,17 +18,6 @@ import {
 
 const apiBase = 'http://localhost:8080';
 
-// Timeout constants for better maintainability
-const TIMEOUTS = {
-  INPUT_READY: 10_000, // Wait for input to enable
-  NETWORK_IDLE: 5_000, // Wait for network idle
-  PROCESSING: 60_000, // Wait for PDF processing
-  UI_UPDATE: 2_000, // Wait for UI to update
-  GAME_SELECTION: 1_000, // Wait after game selection
-  UPLOAD_BUTTON: 2_000, // Wait for upload button
-  CITATIONS_VISIBLE: 10_000, // Wait for citations to appear
-} as const;
-
 export interface CitationSnippet {
   text: string;
   source: string;
@@ -331,92 +320,5 @@ export async function sendQuestionAndWaitForResponse(
     throw new Error(
       `Expected answer to contain "${expectedAnswerSnippet}" but got: "${streamingResult?.answer || '(empty)'}"`
     );
-  }
-}
-
-/**
- * Upload PDF and wait for processing (for real backend tests)
- *
- * Follows pattern from user-journey-upload-chat.spec.ts
- */
-export async function uploadPdfAndWaitForProcessing(page: Page, pdfPath: string, gameName: string) {
-  // Navigate to upload page
-  await page.goto('/upload');
-  await page.waitForLoadState('networkidle');
-
-  // Select game (or create if needed)
-  const gameSelect = page.locator('select#gameSelect');
-  if (await gameSelect.isVisible({ timeout: 5000 })) {
-    const options = await gameSelect.locator('option').allTextContents();
-    const gameOption = options.find(opt => opt.includes(gameName));
-    if (gameOption) {
-      await gameSelect.selectOption({ label: gameOption });
-    } else if (options.length > 0) {
-      await gameSelect.selectOption({ index: 0 });
-    }
-
-    // Confirm game selection if button exists
-    const confirmButton = page.getByRole('button', { name: /confirm/i });
-    if (await confirmButton.isVisible({ timeout: TIMEOUTS.UPLOAD_BUTTON })) {
-      await confirmButton.click();
-      await page.waitForTimeout(TIMEOUTS.GAME_SELECTION);
-    }
-  }
-
-  // Upload PDF file
-  const fileInput = page.locator('input[type="file"]').first();
-  await fileInput.setInputFiles(pdfPath);
-  await page.waitForTimeout(2000);
-
-  // Click upload button if needed
-  const uploadButton = page.locator('[data-testid="upload-button"]');
-  if ((await uploadButton.isVisible({ timeout: 2000 })) && (await uploadButton.isEnabled())) {
-    await uploadButton.click();
-  }
-
-  // Wait for processing completion (max 60 seconds for real backend)
-  try {
-    await page.waitForSelector(
-      '[data-testid="processing-complete"], text=/processing complete|elaborazione completata/i',
-      {
-        timeout: 60000,
-        state: 'visible',
-      }
-    );
-    console.log('✓ PDF processing completed successfully');
-  } catch (error) {
-    // Fallback: wait a bit more for embeddings
-    console.log('Processing indicator not found, waiting for embeddings...');
-    await page.waitForTimeout(5000);
-  }
-}
-
-/**
- * Navigate to chat and select game
- *
- * Follows pattern from user-journey-upload-chat.spec.ts
- */
-export async function navigateToChatAndSelectGame(page: Page, gameName: string) {
-  await page.goto('/chat');
-  await page.waitForLoadState('networkidle');
-
-  // Verify chat page loaded
-  await expect(page.getByRole('heading', { name: /meepleai chat/i })).toBeVisible({
-    timeout: 10000,
-  });
-
-  // Select game if selector is visible
-  const gameSelect = page.locator('select#gameSelect');
-  if (await gameSelect.isVisible({ timeout: 5000 })) {
-    try {
-      const options = await gameSelect.locator('option').allTextContents();
-      const gameOption = options.find(opt => opt.includes(gameName));
-      if (gameOption) {
-        await gameSelect.selectOption({ label: gameOption });
-        await page.waitForTimeout(1000);
-      }
-    } catch (e) {
-      console.log(`Could not select ${gameName}, using default game`);
-    }
   }
 }

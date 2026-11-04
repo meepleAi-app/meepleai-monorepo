@@ -78,8 +78,9 @@ public sealed class ChatE2ETests : E2ETestBase
         // Act
         var response = await Client.PostAsJsonAsync("/api/v1/chat-threads", createPayload);
 
-        // Assert - Skip if service unavailable (500), fail on non-2xx
-        await AssertSuccessOrSkipIfServiceUnavailable(response, "CreateChatThread");
+                // #4023: creare un thread e un operazione sul DB, non dipende da un servizio esterno:
+        // un 500 qui e un difetto del prodotto e deve restare un fallimento.
+        await AssertSuccessAsync(response, "CreateChatThread");
 
         if (response.IsSuccessStatusCode)
         {
@@ -127,11 +128,78 @@ public sealed class ChatE2ETests : E2ETestBase
         var response = await Client.PostAsJsonAsync("/api/v1/chat-threads", createPayload);
 
         // Assert - Skip if service unavailable, otherwise expect NotFound or BadRequest
-        if (response.StatusCode == HttpStatusCode.InternalServerError)
-            Assert.Skip("CreateChatThread (invalid game) returned 500 — service likely unavailable");
-        response.StatusCode.Should().BeOneOf(
-            HttpStatusCode.NotFound,
-            HttpStatusCode.BadRequest);
+        // #4023: questi endpoint operano sul DB; un 500 e un difetto del prodotto, non
+        // l assenza di un servizio esterno.
+        response.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+            "CreateChatThread (invalid game) ha risposto 500: " + await DescribeResponseAsync(response));
+        // #4230: 404 and nothing else. The assertion used to accept a 400 as well, which would
+        // have let the unknown-id path drift to a different refusal without a red test.
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    /// <summary>
+    /// Issue #4230. The handler looked the game up in the shared catalogue only, kept the id it
+    /// was given when it found nothing, and let the insert break the FK to shared_games: a 500.
+    /// A private game is not in the catalogue either, so the same happened to every private game.
+    /// Someone else's private game must look exactly like a game that does not exist: a 404 does
+    /// not say whether the id is real.
+    /// </summary>
+    [Fact]
+    public async Task CreateChatThread_OnAnotherUsersPrivateGame_ReturnsNotFound()
+    {
+        var (_, ownerId) = await RegisterUserAsync(
+            $"chat_pg_owner_{Guid.NewGuid():N}@example.com", "ValidUnusualPwd123!");
+        var privateGameId = await SeedPrivateGameAsync(ownerId);
+
+        var (sessionToken, _) = await RegisterUserAsync(
+            $"chat_pg_other_{Guid.NewGuid():N}@example.com", "ValidUnusualPwd123!");
+        SetSessionCookie(sessionToken);
+
+        var response = await Client.PostAsJsonAsync(
+            "/api/v1/chat-threads", new { gameId = privateGameId, title = "Not my game" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound,
+            "CreateChatThread (gioco privato altrui): " + await DescribeResponseAsync(response));
+    }
+
+    /// <summary>
+    /// Issue #4244. A thread on the caller's own private game is created: the game goes in the
+    /// thread's private-game column (the other one references shared_games). Before #4230 this
+    /// request was a 500; between #4230 and #4244, a 422.
+    /// </summary>
+    [Fact]
+    public async Task CreateChatThread_OnOwnPrivateGame_CreatesTheThread()
+    {
+        var (sessionToken, userId) = await RegisterUserAsync(
+            $"chat_pg_self_{Guid.NewGuid():N}@example.com", "ValidUnusualPwd123!");
+        SetSessionCookie(sessionToken);
+        var privateGameId = await SeedPrivateGameAsync(userId);
+
+        var response = await Client.PostAsJsonAsync(
+            "/api/v1/chat-threads", new { gameId = privateGameId, title = "My private game" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created,
+            "CreateChatThread (gioco privato proprio): " + await DescribeResponseAsync(response));
+        var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        body.GetProperty("gameId").GetGuid().Should().Be(privateGameId);
+        body.GetProperty("privateGameId").GetGuid().Should().Be(privateGameId);
+    }
+
+    private async Task<Guid> SeedPrivateGameAsync(Guid ownerId)
+    {
+        var game = new Api.Infrastructure.Entities.UserLibrary.PrivateGameEntity
+        {
+            Id = Guid.NewGuid(),
+            OwnerId = ownerId,
+            Title = $"E2E Private Game {Guid.NewGuid():N}",
+            MinPlayers = 1,
+            MaxPlayers = 4,
+            Source = Api.BoundedContexts.UserLibrary.Domain.Enums.PrivateGameSource.Manual,
+            CreatedAt = DateTime.UtcNow
+        };
+        DbContext.PrivateGames.Add(game);
+        await DbContext.SaveChangesAsync();
+        return game.Id;
     }
 
     #endregion
@@ -179,8 +247,10 @@ public sealed class ChatE2ETests : E2ETestBase
         // Skip if thread creation failed (dependencies not configured in test environment)
         if (!createResponse.IsSuccessStatusCode)
         {
-            if (createResponse.StatusCode == HttpStatusCode.InternalServerError)
-                Assert.Skip("Chat thread creation returned 500 — service likely unavailable");
+            // #4023: questi endpoint operano sul DB; un 500 e un difetto del prodotto, non
+            // l assenza di un servizio esterno.
+            createResponse.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+                "Chat thread creation ha risposto 500: " + await DescribeResponseAsync(createResponse));
             createResponse.StatusCode.Should().BeOneOf(
                 HttpStatusCode.BadRequest,
                 HttpStatusCode.NotFound);
@@ -234,8 +304,10 @@ public sealed class ChatE2ETests : E2ETestBase
         // Skip if thread creation failed (dependencies not configured in test environment)
         if (!createResponse.IsSuccessStatusCode)
         {
-            if (createResponse.StatusCode == HttpStatusCode.InternalServerError)
-                Assert.Skip("Chat thread creation returned 500 — service likely unavailable");
+            // #4023: questi endpoint operano sul DB; un 500 e un difetto del prodotto, non
+            // l assenza di un servizio esterno.
+            createResponse.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+                "Chat thread creation ha risposto 500: " + await DescribeResponseAsync(createResponse));
             createResponse.StatusCode.Should().BeOneOf(
                 HttpStatusCode.BadRequest,
                 HttpStatusCode.NotFound);
@@ -275,8 +347,10 @@ public sealed class ChatE2ETests : E2ETestBase
         // Skip if thread creation failed (dependencies not configured in test environment)
         if (!createResponse.IsSuccessStatusCode)
         {
-            if (createResponse.StatusCode == HttpStatusCode.InternalServerError)
-                Assert.Skip("Chat thread creation returned 500 — service likely unavailable");
+            // #4023: questi endpoint operano sul DB; un 500 e un difetto del prodotto, non
+            // l assenza di un servizio esterno.
+            createResponse.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+                "Chat thread creation ha risposto 500: " + await DescribeResponseAsync(createResponse));
             createResponse.StatusCode.Should().BeOneOf(
                 HttpStatusCode.BadRequest,
                 HttpStatusCode.NotFound);
@@ -315,8 +389,10 @@ public sealed class ChatE2ETests : E2ETestBase
         // Skip if thread creation failed (dependencies not configured in test environment)
         if (!createResponse.IsSuccessStatusCode)
         {
-            if (createResponse.StatusCode == HttpStatusCode.InternalServerError)
-                Assert.Skip("Chat thread creation returned 500 — service likely unavailable");
+            // #4023: questi endpoint operano sul DB; un 500 e un difetto del prodotto, non
+            // l assenza di un servizio esterno.
+            createResponse.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+                "Chat thread creation ha risposto 500: " + await DescribeResponseAsync(createResponse));
             createResponse.StatusCode.Should().BeOneOf(
                 HttpStatusCode.BadRequest,
                 HttpStatusCode.NotFound);
@@ -357,8 +433,10 @@ public sealed class ChatE2ETests : E2ETestBase
         // Skip if thread creation failed
         if (!createResponse.IsSuccessStatusCode)
         {
-            if (createResponse.StatusCode == HttpStatusCode.InternalServerError)
-                Assert.Skip("Chat thread creation returned 500 — service likely unavailable");
+            // #4023: questi endpoint operano sul DB; un 500 e un difetto del prodotto, non
+            // l assenza di un servizio esterno.
+            createResponse.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+                "Chat thread creation ha risposto 500: " + await DescribeResponseAsync(createResponse));
             createResponse.StatusCode.Should().BeOneOf(
                 HttpStatusCode.BadRequest,
                 HttpStatusCode.NotFound);
@@ -389,8 +467,10 @@ public sealed class ChatE2ETests : E2ETestBase
         // Skip if thread creation failed (dependencies not configured in test environment)
         if (!createResponse.IsSuccessStatusCode)
         {
-            if (createResponse.StatusCode == HttpStatusCode.InternalServerError)
-                Assert.Skip("Chat thread creation returned 500 — service likely unavailable");
+            // #4023: questi endpoint operano sul DB; un 500 e un difetto del prodotto, non
+            // l assenza di un servizio esterno.
+            createResponse.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+                "Chat thread creation ha risposto 500: " + await DescribeResponseAsync(createResponse));
             createResponse.StatusCode.Should().BeOneOf(
                 HttpStatusCode.BadRequest,
                 HttpStatusCode.NotFound);
@@ -426,8 +506,10 @@ public sealed class ChatE2ETests : E2ETestBase
         // Skip if thread creation failed (dependencies not configured in test environment)
         if (!createResponse.IsSuccessStatusCode)
         {
-            if (createResponse.StatusCode == HttpStatusCode.InternalServerError)
-                Assert.Skip("Chat thread creation returned 500 — service likely unavailable");
+            // #4023: questi endpoint operano sul DB; un 500 e un difetto del prodotto, non
+            // l assenza di un servizio esterno.
+            createResponse.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+                "Chat thread creation ha risposto 500: " + await DescribeResponseAsync(createResponse));
             createResponse.StatusCode.Should().BeOneOf(
                 HttpStatusCode.BadRequest,
                 HttpStatusCode.NotFound);
@@ -481,8 +563,10 @@ public sealed class ChatE2ETests : E2ETestBase
         // Skip if thread creation failed (dependencies not configured in test environment)
         if (!createResponse.IsSuccessStatusCode)
         {
-            if (createResponse.StatusCode == HttpStatusCode.InternalServerError)
-                Assert.Skip("Chat thread creation returned 500 — service likely unavailable");
+            // #4023: questi endpoint operano sul DB; un 500 e un difetto del prodotto, non
+            // l assenza di un servizio esterno.
+            createResponse.StatusCode.Should().NotBe(HttpStatusCode.InternalServerError,
+                "Chat thread creation ha risposto 500: " + await DescribeResponseAsync(createResponse));
             createResponse.StatusCode.Should().BeOneOf(
                 HttpStatusCode.BadRequest,
                 HttpStatusCode.NotFound);

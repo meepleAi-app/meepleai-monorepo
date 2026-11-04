@@ -18,11 +18,13 @@
 const noStoreScoresDirect = require('./no-store-scores-direct.js');
 const preferUseGameTitle = require('./prefer-use-game-title.js');
 const noStandaloneCardRenderer = require('./no-standalone-card-renderer.js');
+const useCanonicalApiBase = require('./use-canonical-api-base.js');
 
 module.exports = {
   rules: {
     'no-store-scores-direct': noStoreScoresDirect,
     'prefer-use-game-title': preferUseGameTitle,
     'no-standalone-card-renderer': noStandaloneCardRenderer,
+    'use-canonical-api-base': useCanonicalApiBase,
   },
 };

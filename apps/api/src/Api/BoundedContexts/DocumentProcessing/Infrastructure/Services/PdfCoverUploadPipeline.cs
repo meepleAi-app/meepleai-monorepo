@@ -58,7 +58,11 @@ internal sealed class PdfCoverUploadPipeline : IPdfCoverUploadPipeline
             InputStream = stream,
             ContentType = WebpContentType,
             AutoCloseStream = false,
-            DisablePayloadSigning = true,
+            // #4085/#4016 causa A: era hardcoded a `true`, che AWS SDK rifiuta su un endpoint
+            // in chiaro ("DisablePayloadSigning is true, the request must be sent over HTTPS").
+            // Stessa logica condizionale di S3BlobStorageService.DisablePayloadSigningForEndpoint
+            // (#3846): innocuo su staging/prod (R2 e' HTTPS), vivo contro MinIO locale.
+            DisablePayloadSigning = !BlobStorageServiceFactory.UsesPlainHttp(_options.Endpoint),
         };
         request.Headers.CacheControl = ImmutableCacheControl;
 

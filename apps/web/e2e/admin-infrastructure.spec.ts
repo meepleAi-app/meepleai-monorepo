@@ -87,8 +87,7 @@ test.describe('Admin Infrastructure Monitoring - Issue #902', () => {
         page
           .locator('[data-testid="loading-spinner"]')
           .or(page.getByText(/Caricamento/i))
-          .isVisible({ timeout: 100 })
-          .catch(() => false),
+          .isVisible({ timeout: 100 }),
       ]);
 
       // Test passes if loading was visible OR page loaded successfully
@@ -132,7 +131,7 @@ test.describe('Admin Infrastructure Monitoring - Issue #902', () => {
       const problemService = adminPage
         .locator('[data-status="Degraded"], [data-status="Unhealthy"]')
         .first();
-      const hasProblem = await problemService.isVisible({ timeout: 3000 }).catch(() => false);
+      const hasProblem = await problemService.isVisible({ timeout: 3000 });
 
       if (hasProblem) {
         // Verify error message exists for problem service
@@ -301,14 +300,12 @@ test.describe('Admin Infrastructure Monitoring - Issue #902', () => {
 
       // ✅ CHANGED: Filter to show only healthy (if filter exists)
       const filterButton = adminPage.getByRole('button', { name: /Filter/i });
-      const hasFilter = await filterButton.isVisible({ timeout: 1000 }).catch(() => false);
+      const hasFilter = await filterButton.isVisible({ timeout: 1000 });
 
       if (hasFilter) {
         await filterButton.click();
         const healthyOption = adminPage.getByRole('option', { name: /Healthy/i });
-        const hasHealthyOption = await healthyOption
-          .isVisible({ timeout: 1000 })
-          .catch(() => false);
+        const hasHealthyOption = await healthyOption.isVisible({ timeout: 1000 });
 
         if (hasHealthyOption) {
           await healthyOption.click();
@@ -344,7 +341,7 @@ test.describe('Admin Infrastructure Monitoring - Issue #902', () => {
 
       // ✅ CHANGED: Search with generic term that likely matches something
       const searchInput = adminPage.getByPlaceholder(/Search.*services/i);
-      const hasSearch = await searchInput.isVisible({ timeout: 1000 }).catch(() => false);
+      const hasSearch = await searchInput.isVisible({ timeout: 1000 });
 
       if (hasSearch) {
         // Get first service name to search for
@@ -370,7 +367,7 @@ test.describe('Admin Infrastructure Monitoring - Issue #902', () => {
       await expect(serviceRows.first()).toBeVisible({ timeout: 5000 });
 
       const searchInput = adminPage.getByPlaceholder(/Search.*services/i);
-      const hasSearch = await searchInput.isVisible({ timeout: 1000 }).catch(() => false);
+      const hasSearch = await searchInput.isVisible({ timeout: 1000 });
 
       if (hasSearch) {
         const initialCount = await serviceRows.count();
@@ -408,12 +405,12 @@ test.describe('Admin Infrastructure Monitoring - Issue #902', () => {
 
       // Open sort dropdown (if exists)
       const sortButton = adminPage.getByRole('button', { name: /Sort/i });
-      const hasSort = await sortButton.isVisible({ timeout: 1000 }).catch(() => false);
+      const hasSort = await sortButton.isVisible({ timeout: 1000 });
 
       if (hasSort) {
         await sortButton.click();
         const nameOption = adminPage.getByRole('option', { name: /Name/i });
-        const hasNameOption = await nameOption.isVisible({ timeout: 1000 }).catch(() => false);
+        const hasNameOption = await nameOption.isVisible({ timeout: 1000 });
 
         if (hasNameOption) {
           await nameOption.click();
@@ -438,12 +435,12 @@ test.describe('Admin Infrastructure Monitoring - Issue #902', () => {
 
       // Open sort dropdown (if exists)
       const sortButton = adminPage.getByRole('button', { name: /Sort/i });
-      const hasSort = await sortButton.isVisible({ timeout: 1000 }).catch(() => false);
+      const hasSort = await sortButton.isVisible({ timeout: 1000 });
 
       if (hasSort) {
         await sortButton.click();
         const statusOption = adminPage.getByRole('option', { name: /Status/i });
-        const hasStatusOption = await statusOption.isVisible({ timeout: 1000 }).catch(() => false);
+        const hasStatusOption = await statusOption.isVisible({ timeout: 1000 });
 
         if (hasStatusOption) {
           await statusOption.click();
@@ -465,12 +462,12 @@ test.describe('Admin Infrastructure Monitoring - Issue #902', () => {
 
       // Open sort dropdown (if exists)
       const sortButton = adminPage.getByRole('button', { name: /Sort/i });
-      const hasSort = await sortButton.isVisible({ timeout: 1000 }).catch(() => false);
+      const hasSort = await sortButton.isVisible({ timeout: 1000 });
 
       if (hasSort) {
         await sortButton.click();
         const timeOption = adminPage.getByRole('option', { name: /Response.*Time/i });
-        const hasTimeOption = await timeOption.isVisible({ timeout: 1000 }).catch(() => false);
+        const hasTimeOption = await timeOption.isVisible({ timeout: 1000 });
 
         if (hasTimeOption) {
           await timeOption.click();
@@ -528,7 +525,7 @@ test.describe('Admin Infrastructure Monitoring - Issue #902', () => {
 
       // Disable auto-refresh (if toggle exists)
       const autoRefreshToggle = adminPage.getByRole('switch', { name: /Auto.*Refresh/i });
-      const hasToggle = await autoRefreshToggle.isVisible({ timeout: 1000 }).catch(() => false);
+      const hasToggle = await autoRefreshToggle.isVisible({ timeout: 1000 });
 
       if (hasToggle) {
         await autoRefreshToggle.click();
@@ -553,12 +550,12 @@ test.describe('Admin Infrastructure Monitoring - Issue #902', () => {
 
       // Open interval selector (if exists)
       const intervalButton = adminPage.getByRole('button', { name: /\d+.*seconds?/i });
-      const hasInterval = await intervalButton.isVisible({ timeout: 1000 }).catch(() => false);
+      const hasInterval = await intervalButton.isVisible({ timeout: 1000 });
 
       if (hasInterval) {
         await intervalButton.click();
         const option60s = adminPage.getByRole('option', { name: /60.*seconds/i });
-        const has60sOption = await option60s.isVisible({ timeout: 1000 }).catch(() => false);
+        const has60sOption = await option60s.isVisible({ timeout: 1000 });
 
         if (has60sOption) {
           await option60s.click();
@@ -579,7 +576,7 @@ test.describe('Admin Infrastructure Monitoring - Issue #902', () => {
 
       // ✅ CHANGED: Verify "Last updated" timestamp (if exists)
       const lastUpdated = adminPage.getByText(/Last.*updated/i);
-      const hasTimestamp = await lastUpdated.isVisible({ timeout: 1000 }).catch(() => false);
+      const hasTimestamp = await lastUpdated.isVisible({ timeout: 1000 });
 
       if (hasTimestamp) {
         await expect(lastUpdated).toBeVisible();
@@ -606,7 +603,7 @@ test.describe('Admin Infrastructure Monitoring - Issue #902', () => {
 
       // Click manual refresh button (if exists)
       const refreshButton = adminPage.getByRole('button', { name: /Refresh/i }).first();
-      const hasRefresh = await refreshButton.isVisible({ timeout: 1000 }).catch(() => false);
+      const hasRefresh = await refreshButton.isVisible({ timeout: 1000 });
 
       if (hasRefresh) {
         await refreshButton.click();

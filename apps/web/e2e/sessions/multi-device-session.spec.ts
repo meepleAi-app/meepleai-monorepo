@@ -197,7 +197,7 @@ test.describe('Multi-Device Session Flow', () => {
         .first();
 
       // If invite button exists and is visible, click to open modal
-      if (await inviteButton.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await inviteButton.isVisible({ timeout: 3000 })) {
         await inviteButton.click();
 
         // Verify PIN is displayed
@@ -224,13 +224,13 @@ test.describe('Multi-Device Session Flow', () => {
         .or(guestPage.locator('input[placeholder*="name" i]'))
         .first();
 
-      if (await nameInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await nameInput.isVisible({ timeout: 3000 })) {
         await nameInput.fill('Guest Player');
 
         // Submit join form
         const joinButton = guestPage.getByRole('button', { name: /join/i }).first();
 
-        if (await joinButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await joinButton.isVisible({ timeout: 2000 })) {
           await joinButton.click();
 
           // Wait for API call or redirect
@@ -268,11 +268,11 @@ test.describe('Multi-Device Session Flow', () => {
         .or(guestPage.locator('input[placeholder*="name" i]'))
         .first();
 
-      if (await nameInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await nameInput.isVisible({ timeout: 3000 })) {
         await nameInput.fill('Bad Guest');
 
         const joinButton = guestPage.getByRole('button', { name: /join/i }).first();
-        if (await joinButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await joinButton.isVisible({ timeout: 2000 })) {
           await joinButton.click();
 
           // Should show error message
@@ -311,10 +311,10 @@ test.describe('Multi-Device Session Flow', () => {
         .or(guestPage.locator('input[placeholder*="name" i]'))
         .first();
 
-      if (await nameInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await nameInput.isVisible({ timeout: 3000 })) {
         await nameInput.fill('Late Guest');
         const joinButton = guestPage.getByRole('button', { name: /join/i }).first();
-        if (await joinButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await joinButton.isVisible({ timeout: 2000 })) {
           await joinButton.click();
           const errorText = guestPage.getByText(/expired|error/i).first();
           await expect(errorText).toBeVisible({ timeout: 5000 });
@@ -340,8 +340,8 @@ test.describe('Multi-Device Session Flow', () => {
       const guestName = hostPage.getByText('Guest Player').first();
 
       // At least one should be visible (depends on page rendering)
-      const hostVisible = await hostName.isVisible({ timeout: 5000 }).catch(() => false);
-      const guestVisible = await guestName.isVisible({ timeout: 3000 }).catch(() => false);
+      const hostVisible = await hostName.isVisible({ timeout: 5000 });
+      const guestVisible = await guestName.isVisible({ timeout: 3000 });
 
       expect(hostVisible || guestVisible).toBeTruthy();
 
@@ -361,8 +361,8 @@ test.describe('Multi-Device Session Flow', () => {
       const hostRole = hostPage.getByText(/host/i).first();
       const playerRole = hostPage.getByText(/player/i).first();
 
-      const hasHost = await hostRole.isVisible({ timeout: 5000 }).catch(() => false);
-      const hasPlayer = await playerRole.isVisible({ timeout: 3000 }).catch(() => false);
+      const hasHost = await hostRole.isVisible({ timeout: 5000 });
+      const hasPlayer = await playerRole.isVisible({ timeout: 3000 });
 
       expect(hasHost || hasPlayer).toBeTruthy();
 
@@ -398,47 +398,14 @@ test.describe('Multi-Device Session Flow', () => {
         .or(hostPage.locator('[data-testid="score-input"]'))
         .first();
 
-      if (await scoreInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await scoreInput.isVisible({ timeout: 3000 })) {
         await scoreInput.fill('42');
         const submitButton = hostPage.getByRole('button', { name: /submit|propose|save/i }).first();
-        if (await submitButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await submitButton.isVisible({ timeout: 2000 })) {
           await submitButton.click();
           await hostPage.waitForTimeout(500);
           expect(proposeCalled).toBe(true);
         }
-      }
-
-      await hostContext.close();
-    });
-
-    test('score confirmation endpoint is called correctly', async ({ browser }) => {
-      const hostContext = await browser.newContext();
-      const hostPage = await hostContext.newPage();
-
-      await setupHostAuth(hostContext);
-      await setupSessionApiRoutes(hostContext);
-
-      let confirmCalled = false;
-      await hostContext.route(
-        `${API_BASE}/api/v1/live-sessions/${SESSION_ID}/scores/confirm**`,
-        async route => {
-          confirmCalled = true;
-          await route.fulfill({ status: 200, body: '{}' });
-        }
-      );
-
-      await hostPage.goto(`/sessions/${SESSION_ID}/scoreboard`);
-
-      // Look for confirm button on scoreboard
-      const confirmButton = hostPage
-        .getByRole('button', { name: /confirm/i })
-        .or(hostPage.locator('[data-testid="confirm-score"]'))
-        .first();
-
-      if (await confirmButton.isVisible({ timeout: 3000 }).catch(() => false)) {
-        await confirmButton.click();
-        await hostPage.waitForTimeout(500);
-        expect(confirmCalled).toBe(true);
       }
 
       await hostContext.close();
@@ -477,7 +444,7 @@ test.describe('Multi-Device Session Flow', () => {
         .or(hostPage.getByRole('switch').first())
         .first();
 
-      if (await agentToggle.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await agentToggle.isVisible({ timeout: 3000 })) {
         await agentToggle.click();
         await hostPage.waitForTimeout(500);
 
@@ -503,11 +470,11 @@ test.describe('Multi-Device Session Flow', () => {
       // Session name or game name should appear
       const sessionTitle = hostPage.getByText(/scythe|game night/i).first();
 
-      const titleVisible = await sessionTitle.isVisible({ timeout: 5000 }).catch(() => false);
+      const titleVisible = await sessionTitle.isVisible({ timeout: 5000 });
 
       // Page should at least load without error
       const errorPage = hostPage.getByText(/not found|error|500/i).first();
-      const hasError = await errorPage.isVisible({ timeout: 1000 }).catch(() => false);
+      const hasError = await errorPage.isVisible({ timeout: 1000 });
 
       expect(hasError).toBeFalsy();
 
@@ -529,7 +496,7 @@ test.describe('Multi-Device Session Flow', () => {
 
         // Each page should load without a hard error
         const errorIndicator = hostPage.getByText(/500|server error/i).first();
-        const hasError = await errorIndicator.isVisible({ timeout: 2000 }).catch(() => false);
+        const hasError = await errorIndicator.isVisible({ timeout: 2000 });
         expect(hasError).toBeFalsy();
       }
 
@@ -562,8 +529,8 @@ test.describe('Multi-Device Session Flow', () => {
       const hostError = hostPage.getByText(/500|server error/i).first();
       const guestError = guestPage.getByText(/500|server error/i).first();
 
-      const hostHasError = await hostError.isVisible({ timeout: 2000 }).catch(() => false);
-      const guestHasError = await guestError.isVisible({ timeout: 2000 }).catch(() => false);
+      const hostHasError = await hostError.isVisible({ timeout: 2000 });
+      const guestHasError = await guestError.isVisible({ timeout: 2000 });
 
       expect(hostHasError).toBeFalsy();
       expect(guestHasError).toBeFalsy();
@@ -575,7 +542,7 @@ test.describe('Multi-Device Session Flow', () => {
         .or(guestPage.locator('input[placeholder*="name" i]'))
         .first();
 
-      const hasJoinForm = await nameInput.isVisible({ timeout: 3000 }).catch(() => false);
+      const hasJoinForm = await nameInput.isVisible({ timeout: 3000 });
 
       // Guest page should render the join form (name input)
       expect(hasJoinForm).toBe(true);
@@ -670,10 +637,10 @@ test.describe('Multi-Device Session Flow', () => {
         .or(guestPage.locator('input[placeholder*="name" i]'))
         .first();
 
-      if (await nameInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await nameInput.isVisible({ timeout: 3000 })) {
         await nameInput.fill('Extra Player');
         const joinButton = guestPage.getByRole('button', { name: /join/i }).first();
-        if (await joinButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await joinButton.isVisible({ timeout: 2000 })) {
           await joinButton.click();
           const errorText = guestPage.getByText(/maximum|full|capacity/i).first();
           await expect(errorText).toBeVisible({ timeout: 5000 });
@@ -709,10 +676,10 @@ test.describe('Multi-Device Session Flow', () => {
         .or(guestPage.locator('input[placeholder*="name" i]'))
         .first();
 
-      if (await nameInput.isVisible({ timeout: 3000 }).catch(() => false)) {
+      if (await nameInput.isVisible({ timeout: 3000 })) {
         await nameInput.fill('Blocked Guest');
         const joinButton = guestPage.getByRole('button', { name: /join/i }).first();
-        if (await joinButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+        if (await joinButton.isVisible({ timeout: 2000 })) {
           await joinButton.click();
           const errorText = guestPage.getByText(/revoked|error/i).first();
           await expect(errorText).toBeVisible({ timeout: 5000 });

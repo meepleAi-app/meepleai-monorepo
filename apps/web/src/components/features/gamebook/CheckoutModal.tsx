@@ -2,7 +2,7 @@
 
 import { useCallback, useState, type ReactElement } from 'react';
 
-import { Dialog, DialogContent } from '@/components/ui/overlays/dialog';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/overlays/dialog';
 import { formatEur, getCheckoutPack, type CheckoutPackId } from '@/lib/gamebook/checkout-packs';
 
 import { CheckoutStepIndicator } from './checkout/CheckoutStepIndicator';
@@ -146,9 +146,14 @@ export function CheckoutModal({
             }}
           />
         </header>
-        <h2 id="checkout-modal-title" className="sr-only">
-          {labels.modalTitle(step)}
-        </h2>
+        {/* #3836 — aria-labelledby dava gia' un nome accessibile corretto, ma Radix cerca il
+            proprio DialogTitle e senza emette un avviso a ogni apertura. `asChild` conserva
+            l'elemento e le classi esistenti: nessun cambio visivo. */}
+        <DialogTitle asChild>
+          <h2 id="checkout-modal-title" className="sr-only">
+            {labels.modalTitle(step)}
+          </h2>
+        </DialogTitle>
         <div data-slot="checkout-modal-body" className="max-h-[80vh] overflow-y-auto">
           {step === 1 && (
             <Step1QuotaReached

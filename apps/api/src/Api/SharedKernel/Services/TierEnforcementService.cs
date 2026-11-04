@@ -3,6 +3,7 @@ using Api.BoundedContexts.SystemConfiguration.Domain.Entities;
 using Api.BoundedContexts.SystemConfiguration.Domain.ValueObjects;
 using Api.Infrastructure;
 using Api.Infrastructure.Entities.UserLibrary;
+using Api.SharedKernel.Utilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
@@ -15,7 +16,7 @@ namespace Api.SharedKernel.Services;
 /// D3: Game Night Flow - tier enforcement with Redis atomic counters.
 ///
 /// Redis key pattern: tier:usage:{userId}:{action}:{date-bucket}
-/// Date buckets: daily (yyyy-MM-dd), monthly (yyyy-MM), weekly (yyyy-Www)
+/// Date buckets: daily (yyyy-MM-dd), monthly (yyyy-MM), weekly ISO 8601 (yyyy-Www, see <see cref="IsoWeekKey"/>)
 /// </summary>
 internal sealed class TierEnforcementService : ITierEnforcementService
 {
@@ -29,17 +30,20 @@ internal sealed class TierEnforcementService : ITierEnforcementService
     private readonly MeepleAiDbContext _dbContext;
     private readonly IMemoryCache _cache;
     private readonly ILogger<TierEnforcementService> _logger;
+    private readonly TimeProvider _timeProvider;
 
     public TierEnforcementService(
         IConnectionMultiplexer redis,
         MeepleAiDbContext dbContext,
         IMemoryCache cache,
-        ILogger<TierEnforcementService> logger)
+        ILogger<TierEnforcementService> logger,
+        TimeProvider? timeProvider = null)
     {
         _redis = redis ?? throw new ArgumentNullException(nameof(redis));
         _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _timeProvider = timeProvider ?? TimeProvider.System;
     }
 
     public async Task<TierLimits> GetLimitsAsync(Guid userId, CancellationToken ct = default)
@@ -58,11 +62,22 @@ internal sealed class TierEnforcementService : ITierEnforcementService
             || string.Equals(user.Role, "editor", StringComparison.OrdinalIgnoreCase))
             return TierLimits.Unlimited;
 
-        // Contributors are resolved as premium
-        var tierName = user.IsContributor ? "premium" : user.Tier;
+        // Contributors are resolved as premium. "pro" is an alias of premium (UserTier), and no
+        // plan carries that name: without this, a pro user got the free plan's limits (#4168).
+        var tierName = user.IsContributor || string.Equals(user.Tier, "pro", StringComparison.OrdinalIgnoreCase)
+            ? "premium"
+            : user.Tier;
 
         var definition = await GetTierDefinitionAsync(tierName, ct).ConfigureAwait(false);
-        return definition?.Limits ?? TierLimits.FreeTier;
+        if (definition is null)
+        {
+            // Not silent: since #4168 this fallback caps the user's questions at the free plan's.
+            _logger.LogWarning(
+                "No plan named {Tier} for user {UserId}: using the free plan's limits", tierName, userId);
+            return TierLimits.FreeTier;
+        }
+
+        return definition.Limits;
     }
 
     public async Task<bool> CanPerformAsync(Guid userId, TierAction action, CancellationToken ct = default)
@@ -82,6 +97,19 @@ internal sealed class TierEnforcementService : ITierEnforcementService
         var maxAllowed = GetMaxForAction(limits, action);
 
         return currentUsage < maxAllowed;
+    }
+
+    public async Task<TierUsageCheck> CheckUsageAsync(Guid userId, TierAction action, CancellationToken ct = default)
+    {
+        var limits = await GetLimitsAsync(userId, ct).ConfigureAwait(false);
+        var max = GetMaxForAction(limits, action);
+
+        // No limit, nothing to compare the counter with: it is not read.
+        if (max == int.MaxValue)
+            return new TierUsageCheck(0, max, CounterReadable: true);
+
+        var current = await TryReadRedisCounterAsync(userId, action).ConfigureAwait(false);
+        return new TierUsageCheck(current ?? 0, max, CounterReadable: current.HasValue);
     }
 
     public async Task RecordUsageAsync(Guid userId, TierAction action, CancellationToken ct = default)
@@ -122,9 +150,6 @@ internal sealed class TierEnforcementService : ITierEnforcementService
             .CountAsync(g => g.OwnerId == userId, ct)
             .ConfigureAwait(false);
 
-        // Agent system removed (Task 10: Agent cleanup)
-        var agents = 0;
-
         return new UsageSnapshot(
             PrivateGames: privateGames,
             PrivateGamesMax: limits.MaxPrivateGames,
@@ -134,8 +159,6 @@ internal sealed class TierEnforcementService : ITierEnforcementService
             AgentQueriesTodayMax: limits.MaxAgentQueriesPerDay,
             SessionQueries: sessionQueries,
             SessionQueriesMax: limits.MaxSessionQueries,
-            Agents: agents,
-            AgentsMax: limits.MaxAgents,
             PhotosThisSession: photosThisSession,
             PhotosThisSessionMax: limits.MaxPhotosPerSession,
             SessionSaveEnabled: limits.SessionSaveEnabled,
@@ -175,7 +198,7 @@ internal sealed class TierEnforcementService : ITierEnforcementService
         var limits = await GetLimitsAsync(userId, ct).ConfigureAwait(false);
         var used = await GetRedisCounterAsync(userId, TierAction.TranslateGamebookParagraph).ConfigureAwait(false);
 
-        var now = DateTime.UtcNow;
+        var now = UtcNow;
         var resetDate = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc).AddMonths(1);
 
         return new GamebookQuotaSnapshot(
@@ -185,11 +208,13 @@ internal sealed class TierEnforcementService : ITierEnforcementService
             Tier: tier);
     }
 
+    internal static string TierDefinitionCacheKey(string tierName) => $"tier_def:{tierName}";
+
     // ─── Private helpers ──────────────────────────────────────────────────
 
     private async Task<TierDefinition?> GetTierDefinitionAsync(string tierName, CancellationToken ct)
     {
-        var cacheKey = $"tier_def:{tierName}";
+        var cacheKey = TierDefinitionCacheKey(tierName);
 
         if (_cache.TryGetValue(cacheKey, out TierDefinition? cached))
             return cached;
@@ -207,7 +232,15 @@ internal sealed class TierEnforcementService : ITierEnforcementService
         return definition;
     }
 
-    private async Task<int> GetRedisCounterAsync(Guid userId, TierAction action)
+    /// <summary>The counter, or zero when Redis could not be read (graceful degradation).</summary>
+    private async Task<int> GetRedisCounterAsync(Guid userId, TierAction action) =>
+        await TryReadRedisCounterAsync(userId, action).ConfigureAwait(false) ?? 0;
+
+    /// <summary>
+    /// The counter, or null when Redis could not be read. A counter never written is a zero that
+    /// was read; a Redis that did not answer is a count nobody knows.
+    /// </summary>
+    private async Task<int?> TryReadRedisCounterAsync(Guid userId, TierAction action)
     {
         try
         {
@@ -222,41 +255,36 @@ internal sealed class TierEnforcementService : ITierEnforcementService
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Redis read failed for tier counter (graceful degradation)");
-            return 0;
+            return null;
         }
     }
 
-    private static string BuildRedisKey(Guid userId, TierAction action)
+    /// <summary>The buckets are UTC days, months and weeks: one clock for all of them.</summary>
+    private DateTime UtcNow => _timeProvider.GetUtcNow().UtcDateTime;
+
+    private string BuildRedisKey(Guid userId, TierAction action)
     {
         var bucket = GetDateBucket(action);
         return $"{KeyPrefix}:{userId}:{action}:{bucket}";
     }
 
-    private static string GetDateBucket(TierAction action) => action switch
+    private string GetDateBucket(TierAction action) => action switch
     {
         TierAction.AgentQuery or TierAction.SessionAgentQuery
-            => DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            => UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
 
         TierAction.UploadPdf or TierAction.TranslateGamebookParagraph
-            => DateTime.UtcNow.ToString("yyyy-MM", CultureInfo.InvariantCulture),
+            => UtcNow.ToString("yyyy-MM", CultureInfo.InvariantCulture),
 
         TierAction.ProposeToSharedCatalog
-            => GetWeekBucket(),
+            => IsoWeekKey.For(UtcNow),
 
         TierAction.UploadSessionPhoto
-            => DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            => UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
 
         // Count-based actions don't use date buckets, but we still need a key
-        _ => DateTime.UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+        _ => UtcNow.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
     };
-
-    private static string GetWeekBucket()
-    {
-        var now = DateTime.UtcNow;
-        var cal = CultureInfo.InvariantCulture.Calendar;
-        var week = cal.GetWeekOfYear(now, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
-        return $"{now.Year}-W{week:D2}";
-    }
 
     private static TimeSpan GetTtlForAction(TierAction action) => action switch
     {
@@ -276,7 +304,6 @@ internal sealed class TierEnforcementService : ITierEnforcementService
     {
         TierAction.CreatePrivateGame => limits.MaxPrivateGames,
         TierAction.UploadPdf => limits.MaxPdfUploadsPerMonth,
-        TierAction.CreateAgent => limits.MaxAgents,
         TierAction.AgentQuery => limits.MaxAgentQueriesPerDay,
         TierAction.SessionAgentQuery => limits.MaxSessionQueries,
         TierAction.UploadSessionPhoto => limits.MaxPhotosPerSession,

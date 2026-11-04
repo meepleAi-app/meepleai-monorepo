@@ -32,6 +32,29 @@ export const GameNightRsvpDtoSchema = z.object({
 });
 export type GameNightRsvpDto = z.infer<typeof GameNightRsvpDtoSchema>;
 
+// #4706: mirrors the BE `GameNightInvitationStatus` enum. A guest invited by email lives apart from the
+// member RSVPs. The BE leaves Cancelled out of the list, but all five are accepted so that a change there
+// cannot make the whole roster fail to parse.
+export const GuestInvitationStatusSchema = z.enum([
+  'Pending',
+  'Accepted',
+  'Declined',
+  'Expired',
+  'Cancelled',
+]);
+export type GuestInvitationStatus = z.infer<typeof GuestInvitationStatusSchema>;
+
+export const GameNightGuestInvitationDtoSchema = z.object({
+  id: z.string().uuid(),
+  email: z.string(),
+  status: GuestInvitationStatusSchema,
+  respondedAt: z.string().nullable(),
+  respondedByName: z.string().nullable(),
+  expiresAt: z.string(),
+  createdAt: z.string(),
+});
+export type GameNightGuestInvitationDto = z.infer<typeof GameNightGuestInvitationDtoSchema>;
+
 export const GameNightDtoSchema = z.object({
   id: z.string().uuid(),
   organizerId: z.string().uuid(),
@@ -93,6 +116,11 @@ export const GameNightSessionDtoSchema = z.object({
   winnerName: z.string().nullable(),
   startedAt: z.string().nullable(),
   completedAt: z.string().nullable(),
+  // #4752 (the night → live game bridge): the LiveGameSession where the table plays this sitting —
+  // `/sessions/{liveSessionId}/live`. Resolved BE-side from the tracking Session the link points at.
+  // OPTIONAL + nullable for graceful degradation: a sitting with no live game (a draft not yet taken
+  // live, or one that predates the bridge) has none, and an older BE payload omits the field.
+  liveSessionId: z.string().uuid().nullable().optional(),
 });
 export type GameNightSessionDto = z.infer<typeof GameNightSessionDtoSchema>;
 
@@ -115,6 +143,9 @@ export const StartGameNightSessionResultSchema = z.object({
   gameNightSessionId: z.string().uuid(),
   sessionCode: z.string(),
   playOrder: z.number().int(),
+  // #4752: the live game created with the start — where the game is played. Optional for graceful
+  // degradation (an older BE payload omits it): the caller then falls back to the night page.
+  liveSessionId: z.string().uuid().nullable().optional(),
 });
 export type StartGameNightSessionResult = z.infer<typeof StartGameNightSessionResultSchema>;
 
@@ -190,9 +221,14 @@ export function parseGameNightDiaryResilient(raw: unknown): GameNightDiaryDto {
 }
 
 export const CreateGameNightInputSchema = z.object({
+  // #4692: chosen by the caller, so that sending the same creation again (the wizard retries, and so
+  // does React Query) finds the game night already made instead of making another.
+  id: z.string().uuid().optional(),
   title: z.string().min(3).max(200),
   description: z.string().max(2000).optional(),
   scheduledAt: z.string(),
+  // #4754: the IANA zone the organizer scheduled in (the browser's), so emails can write the local time.
+  timeZoneId: z.string().max(64).optional(),
   location: z.string().max(500).optional(),
   maxPlayers: z.number().min(2).max(50).optional(),
   gameIds: z.array(GameIdString).max(20).optional(),
@@ -234,6 +270,8 @@ export const UpdateGameNightInputSchema = z.object({
   title: z.string().min(3).max(200),
   description: z.string().max(2000).optional(),
   scheduledAt: z.string(),
+  // #4754: left out, the server keeps the zone already stored.
+  timeZoneId: z.string().max(64).optional(),
   location: z.string().max(500).optional(),
   maxPlayers: z.number().min(2).max(50).optional(),
   gameIds: z.array(GameIdString).max(20).optional(),

@@ -88,7 +88,7 @@ test.describe('2FA Forms - Visual Snapshots', () => {
     const twoFASection = page
       .locator('[data-testid="2fa-section"], section:has-text("Two-Factor")')
       .first();
-    if (await twoFASection.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await twoFASection.isVisible({ timeout: 2000 })) {
       await expect(twoFASection).toHaveScreenshot('2fa-setup-initial.png');
     }
   });
@@ -99,11 +99,11 @@ test.describe('2FA Forms - Visual Snapshots', () => {
     await page.waitForTimeout(200);
 
     const backupCodesSection = page.locator('text=/backup.*code/i').first();
-    if (await backupCodesSection.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await backupCodesSection.isVisible({ timeout: 2000 })) {
       const container = page
         .locator('[data-testid="backup-codes"], .backup-codes-container')
         .first();
-      if (await container.isVisible({ timeout: 1000 }).catch(() => false)) {
+      if (await container.isVisible({ timeout: 1000 })) {
         await expect(container).toHaveScreenshot('2fa-backup-codes.png');
       }
     }
@@ -133,9 +133,9 @@ test.describe('2FA Forms - Visual Snapshots', () => {
 
     // Look for enabled 2FA badge/indicator
     const enabledIndicator = page.locator('text=/enabled|active/i').first();
-    if (await enabledIndicator.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await enabledIndicator.isVisible({ timeout: 2000 })) {
       const twoFASection = page.locator('[data-testid="2fa-section"]').first();
-      if (await twoFASection.isVisible({ timeout: 1000 }).catch(() => false)) {
+      if (await twoFASection.isVisible({ timeout: 1000 })) {
         await expect(twoFASection).toHaveScreenshot('2fa-enabled-state.png');
       }
     }
@@ -158,7 +158,7 @@ test.describe('Session Management - Visual Snapshots', () => {
     await page.waitForTimeout(200);
 
     const sessionCard = page.locator('[data-testid="session-item"], .session-card').first();
-    if (await sessionCard.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await sessionCard.isVisible({ timeout: 2000 })) {
       await expect(sessionCard).toHaveScreenshot('session-detail-card.png');
     }
   });
@@ -169,7 +169,7 @@ test.describe('Session Management - Visual Snapshots', () => {
     await page.waitForTimeout(200);
 
     const warningBanner = page.locator('[role="alert"]:has-text("expir"), .warning-banner').first();
-    if (await warningBanner.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await warningBanner.isVisible({ timeout: 2000 })) {
       await expect(warningBanner).toHaveScreenshot('session-expiration-warning.png');
     }
   });
@@ -191,7 +191,7 @@ test.describe('OAuth & API Keys - Visual Snapshots', () => {
     await page.waitForTimeout(150);
 
     const oauthButtons = page.locator('[data-testid="oauth-buttons"], .oauth-providers').first();
-    if (await oauthButtons.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await oauthButtons.isVisible({ timeout: 2000 })) {
       await expect(oauthButtons).toHaveScreenshot('oauth-login-buttons.png');
     }
   });
@@ -212,12 +212,12 @@ test.describe('OAuth & API Keys - Visual Snapshots', () => {
     const createButton = page
       .locator('button:has-text("Create"), button:has-text("New Key")')
       .first();
-    if (await createButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await createButton.isVisible({ timeout: 2000 })) {
       await createButton.click();
       await page.waitForTimeout(300);
 
       const modal = page.locator('[role="dialog"], .modal').first();
-      if (await modal.isVisible({ timeout: 1000 }).catch(() => false)) {
+      if (await modal.isVisible({ timeout: 1000 })) {
         await expect(modal).toHaveScreenshot('api-key-create-modal.png');
       }
     }
@@ -228,12 +228,12 @@ test.describe('OAuth & API Keys - Visual Snapshots', () => {
     await page.waitForLoadState('networkidle');
 
     const createButton = page.locator('button:has-text("Create")').first();
-    if (await createButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await createButton.isVisible({ timeout: 2000 })) {
       await createButton.click();
       await page.waitForTimeout(200);
 
       const nameInput = page.locator('input[name="name"]').first();
-      if (await nameInput.isVisible({ timeout: 1000 }).catch(() => false)) {
+      if (await nameInput.isVisible({ timeout: 1000 })) {
         await nameInput.fill('Visual Test Key');
 
         const submitButton = page.locator('button[type="submit"]').first();
@@ -242,7 +242,7 @@ test.describe('OAuth & API Keys - Visual Snapshots', () => {
 
         // Key should be visible in success dialog
         const keyDisplay = page.locator('[data-testid="api-key-display"], code').first();
-        if (await keyDisplay.isVisible({ timeout: 1000 }).catch(() => false)) {
+        if (await keyDisplay.isVisible({ timeout: 1000 })) {
           await expect(keyDisplay).toHaveScreenshot('api-key-revealed.png');
         }
       }

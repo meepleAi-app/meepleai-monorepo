@@ -1,6 +1,8 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Api.BoundedContexts.DocumentProcessing.Infrastructure.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 
@@ -33,14 +35,18 @@ internal sealed class UnstructuredExtractorHealthProbe : IPdfExtractorHealthProb
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly ILogger<UnstructuredExtractorHealthProbe> _logger;
+    private readonly UnstructuredOptions _unstructuredOptions;
     private readonly JsonSerializerOptions _jsonOptions;
 
     public UnstructuredExtractorHealthProbe(
         IHttpClientFactory httpClientFactory,
-        ILogger<UnstructuredExtractorHealthProbe> logger)
+        ILogger<UnstructuredExtractorHealthProbe> logger,
+        IOptions<PdfProcessingOptions>? pdfOptions = null)
     {
         _httpClientFactory = httpClientFactory;
         _logger = logger;
+        // #4435: optional so tests can construct without options; production DI always injects them.
+        _unstructuredOptions = pdfOptions?.Value.Extractor.Unstructured ?? new UnstructuredOptions();
         _jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
@@ -90,14 +96,19 @@ internal sealed class UnstructuredExtractorHealthProbe : IPdfExtractorHealthProb
 #pragma warning restore CA1031
     }
 
-    private static MultipartFormDataContent PrepareMultipartContent()
+    private MultipartFormDataContent PrepareMultipartContent()
     {
         var content = new MultipartFormDataContent();
 #pragma warning disable CA2000 // Dispose objects before losing scope
         // OWNERSHIP TRANSFER: MultipartFormDataContent takes ownership of added content and disposes them when it is disposed
         var streamContent = new StreamContent(new MemoryStream(ProbePdfBytes));
         var strategyContent = new StringContent("fast");
-        var languageContent = new StringContent("ita");
+        // #4435: the configured set — what a document of unknown language gets — instead of the old
+        // literal "ita". This does NOT check that the service can OCR those languages: the probe runs in
+        // fast, where no OCR happens, and the service ignores a missing pack there. The installed packs
+        // are checked after a deploy with `tesseract --list-langs` in the container (see the Dockerfile).
+        var languageContent = new StringContent(
+            UnstructuredLanguageResolver.Resolve(document: null, _unstructuredOptions));
 #pragma warning restore CA2000
 
         streamContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");

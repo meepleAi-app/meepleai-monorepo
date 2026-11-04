@@ -92,7 +92,7 @@ test.describe('Epic #2242 — PDF indexing flow end-to-end', () => {
     // to safeDetail.kbs instead of the previous hardcoded `docs=[]`.
     await userPage.goto('/games/wingspan');
     await expect(
-      userPage.getByTestId('game-detail-kb-doc-list'),
+      userPage.locator('[data-slot="game-detail-kb-doc-list"]'),
       'game-detail Documents tab must render the published KB list (not the empty hardcoded array)'
     ).not.toBeEmpty();
 

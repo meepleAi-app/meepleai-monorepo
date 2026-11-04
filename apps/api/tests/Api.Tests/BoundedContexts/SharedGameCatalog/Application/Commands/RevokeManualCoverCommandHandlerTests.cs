@@ -1,5 +1,6 @@
 using Api.BoundedContexts.SecurityAudit.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Application.Commands;
+using Api.BoundedContexts.SharedGameCatalog.Application.Services;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Aggregates;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Entities;
 using Api.BoundedContexts.SharedGameCatalog.Domain.Repositories;
@@ -9,6 +10,7 @@ using Api.Services.Pdf;
 using Api.SharedKernel.Domain.Covers;
 using Api.SharedKernel.Infrastructure.Persistence;
 using FluentAssertions;
+using Microsoft.Extensions.Caching.Hybrid;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Xunit;
@@ -32,6 +34,7 @@ public sealed class RevokeManualCoverCommandHandlerTests
     private readonly Mock<IUnitOfWork> _unitOfWork = new();
     private readonly Mock<IHybridCacheService> _cache = new();
     private readonly Mock<ICacheInvalidationRetryPolicy> _cacheRetryPolicy = new();
+    private readonly Mock<HybridCache> _hybridCache = new();
     private readonly Mock<ITransactionalAuditWriter> _auditWriter = new();
 
     public RevokeManualCoverCommandHandlerTests()
@@ -45,8 +48,7 @@ public sealed class RevokeManualCoverCommandHandlerTests
     }
 
     private RevokeManualCoverCommandHandler CreateHandler() =>
-        new(_repository.Object, _blobStorage.Object, _unitOfWork.Object, _cache.Object,
-            _cacheRetryPolicy.Object, _auditWriter.Object, NullLogger<RevokeManualCoverCommandHandler>.Instance);
+        new(_repository.Object, _blobStorage.Object, _unitOfWork.Object, new SharedGameCacheInvalidator(_cache.Object, _cacheRetryPolicy.Object, _hybridCache.Object), _auditWriter.Object, NullLogger<RevokeManualCoverCommandHandler>.Instance);
 
     private static SharedGame NewGame() => SharedGame.Create(
         "Catan", 1995, "desc", 3, 4, 90, 10, 2.5m, 7.8m,

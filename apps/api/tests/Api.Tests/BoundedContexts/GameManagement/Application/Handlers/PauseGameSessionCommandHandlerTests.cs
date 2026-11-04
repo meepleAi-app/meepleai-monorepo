@@ -165,7 +165,7 @@ public class PauseGameSessionCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_SessionInSetupStatus_ThrowsInvalidOperationException()
+    public async Task Handle_SessionInSetupStatus_ThrowsConflictException()
     {
         // Arrange - Session not started yet (Setup status)
         var sessionId = Guid.NewGuid();
@@ -182,7 +182,7 @@ public class PauseGameSessionCommandHandlerTests
         // Act & Assert
         var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
         exception.Message.Should().ContainEquivalentOf("Cannot pause session in Setup status");
 
@@ -193,7 +193,7 @@ public class PauseGameSessionCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_CompletedSession_ThrowsInvalidOperationException()
+    public async Task Handle_CompletedSession_ThrowsConflictException()
     {
         // Arrange - Session already completed
         var sessionId = Guid.NewGuid();
@@ -211,13 +211,13 @@ public class PauseGameSessionCommandHandlerTests
         // Act & Assert
         var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
         exception.Message.Should().ContainEquivalentOf("Cannot pause session in Completed status");
     }
 
     [Fact]
-    public async Task Handle_AlreadyPausedSession_ThrowsInvalidOperationException()
+    public async Task Handle_AlreadyPausedSession_ThrowsConflictException()
     {
         // Arrange - Session already paused
         var sessionId = Guid.NewGuid();
@@ -238,7 +238,7 @@ public class PauseGameSessionCommandHandlerTests
         // Act & Assert
         var act =
             () => _handler.Handle(command, TestContext.Current.CancellationToken);
-        var exception = (await act.Should().ThrowAsync<InvalidOperationException>()).Which;
+        var exception = (await act.Should().ThrowAsync<ConflictException>()).Which;
 
         exception.Message.Should().ContainEquivalentOf("Cannot pause session in Paused status");
     }

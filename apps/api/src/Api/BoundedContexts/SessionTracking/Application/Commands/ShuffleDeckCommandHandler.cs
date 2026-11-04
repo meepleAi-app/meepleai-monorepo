@@ -1,3 +1,4 @@
+using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.BoundedContexts.SessionTracking.Application.Commands;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
@@ -15,12 +16,15 @@ public class ShuffleDeckCommandHandler : IRequestHandler<ShuffleDeckCommand, Shu
     private readonly ISessionDeckRepository _deckRepository;
     private readonly IMediator _mediator;
     private readonly ILogger<ShuffleDeckCommandHandler> _logger;
+    private readonly ISessionAccessGuard _accessGuard;
 
     public ShuffleDeckCommandHandler(
+        ISessionAccessGuard accessGuard,
         ISessionDeckRepository deckRepository,
         IMediator mediator,
         ILogger<ShuffleDeckCommandHandler> logger)
     {
+        _accessGuard = accessGuard ?? throw new ArgumentNullException(nameof(accessGuard));
         _deckRepository = deckRepository;
         _mediator = mediator;
         _logger = logger;
@@ -28,6 +32,10 @@ public class ShuffleDeckCommandHandler : IRequestHandler<ShuffleDeckCommand, Shu
 
     public async Task<ShuffleDeckResult> Handle(ShuffleDeckCommand request, CancellationToken cancellationToken)
     {
+        // IDOR guard (#3756): prima di qualunque mutazione, scrittura o broadcast SSE.
+        await _accessGuard.EnsureOwnerOrParticipantAsync(
+            request.SessionId, request.RequestedBy, cancellationToken).ConfigureAwait(false);
+
         _logger.LogInformation("Shuffling deck {DeckId}, includeDiscard: {IncludeDiscard}",
             request.DeckId, request.IncludeDiscard);
 
@@ -53,7 +61,7 @@ public class ShuffleDeckCommandHandler : IRequestHandler<ShuffleDeckCommand, Shu
         await _mediator.Publish(new DeckShuffledEvent
         {
             DeckId = deck.Id,
-            SessionId = deck.SessionId,
+            SessionId = request.SessionId,
             DeckName = deck.Name,
             CardsInDrawPile = deck.DrawPile.Count
         }, cancellationToken).ConfigureAwait(false);

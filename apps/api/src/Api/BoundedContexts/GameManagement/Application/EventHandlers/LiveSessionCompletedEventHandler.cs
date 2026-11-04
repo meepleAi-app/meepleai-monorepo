@@ -139,16 +139,36 @@ internal sealed class LiveSessionCompletedEventHandler : DomainEventHandlerBase<
             ForgetWhatWasStaged(stagedBefore, queuedBefore);
             throw;
         }
+#pragma warning disable S2139 // Exceptions should be either logged or rethrown but not both
+        catch (Exception ex) when (PersistenceFailure.IsInfrastructure(ex))
+        {
+            // The database is slow or gone (#4839, option B): the record is not written, and swallowing that would lose
+            // it for good. The failure goes up, and the outbox retries the row once the database is back (in
+            // OutboxOnly that is the retry; in Hybrid the in-process dispatcher counts it and the outbox row is
+            // delivered on its own). The retry runs every handler of the event again, which is safe because they
+            // no longer depend on a new EventId each time: the statistics skip an event they already counted
+            // (CF-3 / #1939, which holds since #4841), the proposal expiry and this handler's own read are idempotent.
+            // The context is put back first, as for a cancellation: the failed insert must not stay staged for the
+            // outbox processor's final save.
+            ForgetWhatWasStaged(stagedBefore, queuedBefore);
+            Logger.LogWarning(
+                ex,
+                "PlayRecord for LiveSession {SessionId} not written, the infrastructure failed: the outbox retries the event",
+                domainEvent.SessionId);
+            throw;
+        }
+#pragma warning restore S2139
 #pragma warning disable CA1031 // Do not catch general exception types
         // SERVICE BOUNDARY: EVENT HANDLER PATTERN - Background event processing
-        // PlayRecord generation failure must not block the OTHER handlers of the event.
+        // A failure of the DATA must not block the OTHER handlers of the event.
         catch (Exception ex)
         {
-            // Swallowed on purpose (#4839): MediatR runs the handlers of an event in sequence (ForeachAwaitPublisher,
-            // no custom NotificationPublisher), so an exception here would stop the ones after it (stream forwarder,
-            // proposal expiry, player statistics, audit) and, on every retry of the outbox row, run again the ones
-            // before it. That holds only if the failed insert is not left staged for the caller's next save to
-            // throw again, and it must not be silent: it is counted where every other handler failure is counted.
+            // Swallowed on purpose (#4839): a failure that is not the infrastructure's (a validation of the record, a
+            // value the column refuses) would fail the same way at every retry. MediatR runs the handlers of an event
+            // in sequence (ForeachAwaitPublisher, no custom NotificationPublisher), so an exception here would stop
+            // the ones after it (stream forwarder, proposal expiry, player statistics, audit) on every retry and park
+            // the row in Failed. That holds only if the failed insert is not left staged for the caller's next save
+            // to throw again, and it must not be silent: it is counted where every other handler failure is counted.
             ForgetWhatWasStaged(stagedBefore, queuedBefore);
             MeepleAiMetrics.DomainEventDispatchFailures.Add(
                 1,

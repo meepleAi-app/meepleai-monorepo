@@ -73,10 +73,14 @@ describe('the two lists', () => {
     const all = /public static IReadOnlyList<string> All \{ get; \} = \[([^\]]+)\];/.exec(source);
     expect(all, 'the All list of AnswerIntent.cs').not.toBeNull();
 
-    const backend = all![1]
-      .split(',')
-      .map(name => constants.get(name.trim()))
-      .filter((id): id is string => id !== undefined);
+    const names = all![1].split(',').map(name => name.trim());
+    // A name the constants regex cannot resolve (an `internal const`, a `static readonly`) must fail here, not
+    // drop out of the comparison and leave it green.
+    const unresolved = names.filter(name => !constants.has(name));
+    expect(unresolved, 'names in All that the test could not resolve to an id').toEqual([]);
+    expect(names.length).toBeGreaterThan(0);
+
+    const backend = names.map(name => constants.get(name)!);
 
     expect(backend).toEqual([...ANSWER_INTENTS]);
   });

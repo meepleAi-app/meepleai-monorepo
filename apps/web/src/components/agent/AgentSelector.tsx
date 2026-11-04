@@ -18,6 +18,8 @@
 
 'use client';
 
+import { useId } from 'react';
+
 import { Bot, Sparkles, Zap, ListChecks, type LucideIcon } from 'lucide-react';
 
 import { Badge } from '@/components/ui/data-display/badge';
@@ -89,11 +91,15 @@ const AGENTS: Record<AgentType, Agent> = Object.fromEntries(
 // ============================================================================
 
 export function AgentSelector({ value, onChange, className, disabled }: AgentSelectorProps) {
+  const labelId = useId();
+
   return (
     <div className={cn('flex items-center gap-3', className)}>
-      <span className="text-sm text-muted-foreground font-nunito">Risposta:</span>
+      <span id={labelId} className="text-sm text-muted-foreground font-nunito">
+        Tipo di risposta:
+      </span>
       <Select value={value} onValueChange={onChange} disabled={disabled}>
-        <SelectTrigger className="w-[280px] font-nunito">
+        <SelectTrigger aria-labelledby={labelId} className="w-[280px] font-nunito">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

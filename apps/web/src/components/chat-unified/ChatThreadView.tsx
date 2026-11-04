@@ -707,7 +707,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       await api.chat.switchThreadAgent(thread.id, pendingAgent);
       setThread(prev => (prev ? { ...prev, agentTypology: pendingAgent } : prev));
     } catch {
-      setError('Errore nel cambio agente');
+      setError('Errore nel cambio del tipo di risposta');
     }
     setPendingAgent(null);
   }, [pendingAgent, thread]);
@@ -1046,7 +1046,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
             thread?.agentTypology
               ? {
                   name: AGENT_NAMES[intentOf(thread.agentTypology)],
-                  typology: thread.agentTypology,
+                  typology: intentOf(thread.agentTypology),
                 }
               : undefined
           }

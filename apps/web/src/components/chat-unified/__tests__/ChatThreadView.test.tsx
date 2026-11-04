@@ -91,8 +91,8 @@ vi.mock('../RagEnhancementsBadge', () => ({
 // loaded, invoked `useTranslation()` without an `<IntlProvider>` ancestor, and
 // crashed the render. Found in #2010 PR CI 2026-06-08.
 vi.mock('@/components/chat-unified/ChatInfoPanel', () => ({
-  ChatInfoPanel: ({ citations, suggestedQuestions }: any) => (
-    <div data-testid="chat-info-panel">
+  ChatInfoPanel: ({ citations, suggestedQuestions, agent }: any) => (
+    <div data-testid="chat-info-panel" data-agent-typology={agent?.typology ?? ''}>
       <span data-testid="citation-count">{citations?.length ?? 0}</span>
       <span data-testid="question-count">{suggestedQuestions?.length ?? 0}</span>
     </div>
@@ -619,6 +619,30 @@ describe('ChatThreadView', () => {
 
         await waitFor(() => {
           expect(screen.getByTestId('agent-selector')).toHaveAttribute('data-value', shown);
+        });
+      }
+    );
+
+    it.each([
+      ['Arbitro', 'auto'],
+      ['secca', 'secca'],
+    ])(
+      'the info panel shows the same intent as the selector for a thread stored with %j',
+      async (stored, shown) => {
+        // The panel used to print the stored value as it came («Tipo: ARBITRO» next to a selector on Auto).
+        (apiMock.chat.getThreadById as Mock).mockResolvedValue({
+          ...mockThread,
+          messages: [],
+          agentType: stored,
+        });
+
+        await renderView();
+
+        await waitFor(() => {
+          expect(screen.getByTestId('chat-info-panel')).toHaveAttribute(
+            'data-agent-typology',
+            shown
+          );
         });
       }
     );

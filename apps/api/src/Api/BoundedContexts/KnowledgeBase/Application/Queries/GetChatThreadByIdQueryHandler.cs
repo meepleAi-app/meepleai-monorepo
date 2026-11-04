@@ -41,7 +41,10 @@ internal class GetChatThreadByIdQueryHandler : IQueryHandler<GetChatThreadByIdQu
             CreatedAt: thread.CreatedAt,
             LastMessageAt: thread.LastMessageAt,
             MessageCount: thread.MessageCount,
-            Messages: messageDtos
+            Messages: messageDtos,
+            // #4404: the chat page loads the thread by id and shows the answer intent from this; without it the
+            // selector says «Auto» after every reload while the pipeline keeps answering in the stored intent.
+            AgentType: thread.AgentType
         );
     }
 }

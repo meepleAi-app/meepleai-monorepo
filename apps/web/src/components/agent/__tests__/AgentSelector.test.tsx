@@ -25,8 +25,8 @@ describe('AgentSelector', () => {
   it('renders the selector dropdown, labelled as the answer and not as an agent', () => {
     render(<AgentSelector {...defaultProps} />);
 
-    expect(screen.getByRole('combobox')).toBeInTheDocument();
-    expect(screen.getByText(/Risposta:/i)).toBeInTheDocument();
+    // The trigger takes its name from the label beside it: a combobox does not take one from its content.
+    expect(screen.getByRole('combobox', { name: /tipo di risposta/i })).toBeInTheDocument();
     expect(screen.queryByText(/Agent:/i)).not.toBeInTheDocument();
   });
 

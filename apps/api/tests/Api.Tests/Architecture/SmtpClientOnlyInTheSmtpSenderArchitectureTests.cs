@@ -54,6 +54,10 @@ public sealed class SmtpClientOnlyInTheSmtpSenderArchitectureTests
         SourceScanner.FindCodeOccurrences("// built an SmtpClient by hand", "SmtpClient").Should().BeEmpty();
         SourceScanner.FindCodeOccurrences("/// <see cref=\"SmtpClient\"/>", "SmtpClient").Should().BeEmpty();
         SourceScanner.FindCodeOccurrences("var s = \"SmtpClient\";", "SmtpClient").Should().BeEmpty();
+
+        // The ways of naming the type that do not look like `new SmtpClient(`: an alias, and the full name.
+        SourceScanner.FindCodeOccurrences("using Mail = System.Net.Mail.SmtpClient;", "SmtpClient").Should().ContainSingle();
+        SourceScanner.FindCodeOccurrences("System.Net.Mail.SmtpClient c = new();", "SmtpClient").Should().ContainSingle();
     }
 
     [Fact]

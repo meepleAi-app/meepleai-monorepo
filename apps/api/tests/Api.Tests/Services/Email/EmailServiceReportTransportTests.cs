@@ -111,6 +111,21 @@ public sealed class EmailServiceReportTransportTests
     }
 
     [Fact]
+    public async Task TheReport_OfExactlyTheLimit_IsSent_AndOneByteOverIsNot()
+    {
+        // 10 MB is allowed, 10 MB plus one byte is not: the boundary is part of what the caller can rely on.
+        const long limit = 10L * 1024 * 1024;
+        var sender = new RecordingSender();
+        var service = ServiceWith(sender);
+
+        await service.SendReportEmailAsync(Recipients, "R", "D", Content, "r.pdf", limit, Ct);
+        var overTheLimit = () => service.SendReportEmailAsync(Recipients, "R", "D", Content, "r.pdf", limit + 1, Ct);
+
+        sender.Sent.Should().ContainSingle("only the one at the limit went out");
+        await overTheLimit.Should().ThrowAsync<InvalidOperationException>().WithMessage("*exceeds email attachment limit*");
+    }
+
+    [Fact]
     public async Task TheReport_AFailure_ReachesTheCallerAsTheSameInvalidOperation_AndIsCounted()
     {
         var cause = new InvalidOperationException("transport down");

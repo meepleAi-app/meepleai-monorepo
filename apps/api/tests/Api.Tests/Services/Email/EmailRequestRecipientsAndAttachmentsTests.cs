@@ -128,7 +128,17 @@ public sealed class EmailRequestRecipientsAndAttachmentsTests
         await sender.SendAsync(Request(), TestContext.Current.CancellationToken);
 
         sent().To.Select(a => a.Email).Should().Equal("first@example.test");
-        sent().Attachments.Should().BeNullOrEmpty();
+        sent().Attachments.Should().BeNull("a mail without a file goes out as it always did, with no attachments key");
+    }
+
+    [Fact]
+    public async Task Resend_AnEmptyListOfAttachments_IsTheSameAsNone()
+    {
+        var (sender, sent) = ResendCapturing();
+
+        await sender.SendAsync(Request(attachments: []), TestContext.Current.CancellationToken);
+
+        sent().Attachments.Should().BeNull();
     }
 
     [Fact]

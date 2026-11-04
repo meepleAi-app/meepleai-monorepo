@@ -151,20 +151,29 @@ export function createPdfClient({ httpClient }: CreatePdfClientParams) {
 
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) {
+            let body: unknown;
             try {
-              const outcome = PdfIngestResponseSchema.parse(JSON.parse(xhr.responseText));
-              resolve(
-                outcome.kind === 'existing'
-                  ? {
-                      documentId: outcome.documentId,
-                      fileName: outcome.fileName,
-                      existingKb: outcome.existingKb,
-                    }
-                  : { documentId: outcome.documentId, fileName: outcome.fileName }
-              );
+              body = JSON.parse(xhr.responseText);
             } catch {
+              // A 2xx with no JSON body at all: the old behaviour, an empty id.
               resolve({ documentId: '', fileName: file.name });
+              return;
             }
+            // #4893: JSON that is neither an upload nor an existing KB is an error, not an empty id.
+            const outcome = PdfIngestResponseSchema.safeParse(body);
+            if (!outcome.success) {
+              reject(new Error('Risposta del server non valida'));
+              return;
+            }
+            resolve(
+              outcome.data.kind === 'existing'
+                ? {
+                    documentId: outcome.data.documentId,
+                    fileName: outcome.data.fileName,
+                    existingKb: outcome.data.existingKb,
+                  }
+                : { documentId: outcome.data.documentId, fileName: outcome.data.fileName }
+            );
           } else {
             let message = `Upload failed (${xhr.status})`;
             let errorCode: string | undefined;

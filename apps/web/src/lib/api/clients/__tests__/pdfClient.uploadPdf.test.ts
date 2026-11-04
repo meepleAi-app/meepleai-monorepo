@@ -64,6 +64,23 @@ describe('pdfClient.uploadPdf: the answer is an existing KB (#4893)', () => {
     expect(result.existingKb?.source).toBe('shared');
   });
 
+  it('rejects a JSON body that is neither an upload nor an existing KB, instead of resolving an empty id', async () => {
+    FakeUploadXhr.respondWith(200, JSON.stringify({ existingKbFound: true, existingKb: {} }));
+
+    await expect(client().uploadPdf('game-1', file)).rejects.toThrow(
+      'Risposta del server non valida'
+    );
+  });
+
+  it('keeps resolving an empty id for a 2xx that is not JSON at all (the old behaviour)', async () => {
+    FakeUploadXhr.respondWith(200, '');
+
+    await expect(client().uploadPdf('game-1', file)).resolves.toStrictEqual({
+      documentId: '',
+      fileName: 'catan_en_rulebook.pdf',
+    });
+  });
+
   it('control: a PDF stored now keeps its documentId and has no existingKb', async () => {
     FakeUploadXhr.respondWith(200, JSON.stringify(INGEST_UPLOADED_BODY));
 

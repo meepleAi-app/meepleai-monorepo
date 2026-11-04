@@ -15,6 +15,7 @@ using Api.Tests.TestHelpers;
 using FluentAssertions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Time.Testing;
 using Moq;
@@ -243,12 +244,51 @@ public sealed class LiveSessionCompletedEventHandlerIdempotencyTests
         collector.PeekEvents().Should().BeEmpty();
     }
 
-    // ── #4839 — what is swallowed is swallowed for any reason, and counted ──────────────────────
+    // ── #4839, option B — the infrastructure's failures go up, the data's stay swallowed ────────
     //
-    // Option B of #4839 (let the infrastructure's failures go up, so that the outbox retries them) was tried and
-    // withdrawn: the statistics handler of the same event remembers only the LAST event it counted per player and
-    // group, so a retry after another event for the same player does not recognise this one and counts it twice.
-    // Until the statistics are idempotent on the session (option C), every failure stays swallowed and counted.
+    // A timeout or a lost connection is not the record's fault: swallowing it loses the play record for good, while
+    // the outbox would retry the row once the database is back. A refused value or an invalid record fails the same
+    // way at every retry, so those stay swallowed (and counted) and the other handlers of the event still run.
+
+    private static Exception InfrastructureFailure(string kind) => kind switch
+    {
+        "timeout" => new TimeoutException("the command timed out"),
+        "retry-exhausted" => new RetryLimitExceededException("the execution strategy gave up", new TimeoutException()),
+        "connection-lost" => new NpgsqlException("connection lost", new IOException("broken pipe")),
+        "wrapped-by-the-save" => new DbUpdateException("save failed", new NpgsqlException("connection lost", new IOException("broken pipe"))),
+        _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
+    };
+
+    [Theory]
+    [InlineData("timeout")]
+    [InlineData("retry-exhausted")]
+    [InlineData("connection-lost")]
+    [InlineData("wrapped-by-the-save")]
+    public async Task Handle_WhenTheInfrastructureFails_ThrowsSoTheOutboxRetries_AndLeavesTheContextAsTheCallerHadIt(string kind)
+    {
+        using var failures = new DispatchFailureCapture();
+        var logger = new CapturingLogger<LiveSessionCompletedEventHandler>();
+        var collector = new DomainEventCollector();
+        var failure = InfrastructureFailure(kind);
+        var db = new RefusesEverySaveDbContext(InMemoryOptions(), collector, failure);
+        var stagedByTheCaller = RecordOf(Guid.NewGuid());
+        db.PlayRecords.Add(stagedByTheCaller);
+        var queuedByTheCaller = CompletedEvent(Guid.NewGuid());
+        collector.Collect(queuedByTheCaller);
+        var handler = CreateHandler(db, new PlayRecordRepository(db, collector), collector, logger);
+        var sessionId = Guid.NewGuid();
+
+        var act = () => handler.Handle(CompletedEvent(sessionId), CancellationToken.None);
+
+        (await act.Should().ThrowAsync<Exception>("the outbox retries what the infrastructure refused"))
+            .Which.Should().BeSameAs(failure);
+        failures.Events.Should().BeEmpty("the dispatcher that catches it counts it: counting here too would count it twice");
+        logger.Entries.Should().ContainSingle(e => e.Level == LogLevel.Warning && e.Message.Contains(sessionId.ToString()));
+        db.AddedWhenTheSaveWasRefused.Should().BeGreaterThan(2, "the record, its player and the caller's own row were all staged: otherwise this test proves nothing");
+        db.ChangeTracker.Entries().Where(e => e.State == EntityState.Added).Select(e => e.Entity)
+            .Should().ContainSingle().Which.Should().BeSameAs(stagedByTheCaller, "the failed insert must not stay staged for the final save of the outbox processor");
+        collector.PeekEvents().Should().ContainSingle().Which.Should().BeSameAs(queuedByTheCaller);
+    }
 
     [Fact]
     public async Task Handle_WhenTheDatabaseRefusesTheData_StillSwallowsAndCounts()
@@ -265,7 +305,7 @@ public sealed class LiveSessionCompletedEventHandlerIdempotencyTests
 
         var act = () => handler.Handle(@event, CancellationToken.None);
 
-        await act.Should().NotThrowAsync("the other handlers of the event must still run");
+        await act.Should().NotThrowAsync("a refusal of the data is not the infrastructure's to retry");
         failures.Events.Should().ContainSingle()
             .Which.Should().Be((EventTypeRegistry.ResolveOrFullName(@event), nameof(LiveSessionCompletedEventHandler)));
     }

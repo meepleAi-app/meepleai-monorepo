@@ -1,5 +1,8 @@
 /**
- * AgentSelector Tests (Task #4)
+ * AgentSelector Tests (Task #4; #4404)
+ *
+ * The selector chooses the intent of the answer: Auto, Tutor, Risposta secca. It no longer offers an «agent»
+ * (Arbitro, Stratega, Narratore): there is one, and the backend refused two of those five anyway.
  */
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
@@ -19,75 +22,80 @@ describe('AgentSelector', () => {
     vi.clearAllMocks();
   });
 
-  it('renders agent selector dropdown', () => {
+  it('renders the selector dropdown, labelled as the answer and not as an agent', () => {
     render(<AgentSelector {...defaultProps} />);
 
-    expect(screen.getByRole('combobox')).toBeInTheDocument();
-    expect(screen.getByText(/Agent:/i)).toBeInTheDocument();
+    // The trigger takes its name from the label beside it: a combobox does not take one from its content.
+    expect(screen.getByRole('combobox', { name: /tipo di risposta/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Agent:/i)).not.toBeInTheDocument();
   });
 
-  it('shows all agent options when opened', async () => {
+  it('offers exactly the three intents when opened', async () => {
     render(<AgentSelector {...defaultProps} />);
 
-    const trigger = screen.getByRole('combobox');
-    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole('combobox'));
 
     await waitFor(() => {
-      // Use getAllByText since elements appear in both trigger and options
-      const autoElements = screen.getAllByText(/Auto \(Orchestrator\)/i);
-      expect(autoElements.length).toBeGreaterThan(0);
+      expect(screen.getAllByRole('option').map(o => o.textContent)).toEqual([
+        expect.stringContaining('Auto'),
+        expect.stringContaining('Tutor'),
+        expect.stringContaining('Risposta secca'),
+      ]);
     });
+    for (const retired of ['Arbitro', 'Stratega', 'Narratore']) {
+      expect(screen.queryByText(retired)).not.toBeInTheDocument();
+    }
   });
 
-  it('displays agent descriptions', async () => {
+  it('describes each intent by what it does to the answer', async () => {
     render(<AgentSelector {...defaultProps} />);
 
-    const trigger = screen.getByRole('combobox');
-    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole('combobox'));
 
     await waitFor(() => {
-      // Use getAllByText for descriptions that may appear multiple times
-      const autoDesc = screen.getAllByText(/Automatically routes to best agent/i);
-      expect(autoDesc.length).toBeGreaterThan(0);
+      expect(screen.getAllByText('La risposta di sempre').length).toBeGreaterThan(0);
     });
+    expect(screen.getByText('Spiega la regola passo passo, con un esempio')).toBeInTheDocument();
+    expect(screen.getByText('Una riga e la citazione')).toBeInTheDocument();
   });
 
   it('does NOT show fabricated "online" status indicators (#3393)', async () => {
     render(<AgentSelector {...defaultProps} />);
 
-    const trigger = screen.getByRole('combobox');
-    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole('combobox'));
 
     // Options render (descriptions confirm the dropdown opened) ...
     await waitFor(() => {
-      const autoDesc = screen.getAllByText(/Automatically routes to best agent/i);
-      expect(autoDesc.length).toBeGreaterThan(0);
+      expect(screen.getAllByText('La risposta di sempre').length).toBeGreaterThan(0);
     });
 
     // ... but the hardcoded "Online" status pill is gone.
     expect(screen.queryByText('Online')).not.toBeInTheDocument();
   });
 
-  it('calls onChange when agent is selected', async () => {
+  it('calls onChange with the id of the intent that is selected', async () => {
     render(<AgentSelector {...defaultProps} />);
 
-    const trigger = screen.getByRole('combobox');
-    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole('combobox'));
 
     await waitFor(() => {
-      const tutorOption = screen.getByText('Tutor');
-      fireEvent.click(tutorOption);
+      fireEvent.click(screen.getByText('Risposta secca'));
     });
 
-    expect(mockOnChange).toHaveBeenCalledWith('tutor');
+    expect(mockOnChange).toHaveBeenCalledWith('secca');
   });
 
-  it('shows badge for selected agent (non-auto)', () => {
-    render(<AgentSelector {...defaultProps} value="tutor" />);
+  it('shows a badge with the name of the selected intent (non-auto)', () => {
+    render(<AgentSelector {...defaultProps} value="secca" />);
 
-    // Badge should be visible (multiple Tutor text elements expected)
-    const tutorElements = screen.getAllByText('Tutor');
-    expect(tutorElements.length).toBeGreaterThan(0);
+    // The trigger and the badge both carry it.
+    expect(screen.getAllByText('Risposta secca').length).toBeGreaterThan(1);
+  });
+
+  it('shows no badge for auto', () => {
+    render(<AgentSelector {...defaultProps} value="auto" />);
+
+    expect(screen.getAllByText('Auto')).toHaveLength(1);
   });
 
   it('can be disabled', () => {

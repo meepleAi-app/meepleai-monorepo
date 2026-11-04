@@ -41,6 +41,7 @@ import {
   type ContinuationData,
 } from '@/lib/api/clients/chatClient';
 import type { OwnershipResult } from '@/lib/api/schemas/ownership.schemas';
+import { intentOf } from '@/lib/chat/answer-intent';
 import { cn } from '@/lib/utils';
 import { useVoicePreferencesStore } from '@/stores/voice/store';
 import { isAdminOrAbove, isEditorOrAbove } from '@/types/auth';
@@ -692,7 +693,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
   // Agent switching with confirmation (Issue #4465)
   const handleAgentChangeRequest = useCallback(
     (newAgent: AgentType) => {
-      if (newAgent === ((thread?.agentTypology as AgentType) ?? 'auto')) return;
+      if (newAgent === intentOf(thread?.agentTypology)) return;
       setPendingAgent(newAgent);
       setShowAgentConfirm(true);
     },
@@ -706,7 +707,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       await api.chat.switchThreadAgent(thread.id, pendingAgent);
       setThread(prev => (prev ? { ...prev, agentTypology: pendingAgent } : prev));
     } catch {
-      setError('Errore nel cambio agente');
+      setError('Errore nel cambio del tipo di risposta');
     }
     setPendingAgent(null);
   }, [pendingAgent, thread]);
@@ -776,11 +777,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       <ChatThreadHeader
         title={thread?.title ?? 'Chat'}
         gameName={game?.title}
-        agentName={
-          thread?.agentTypology
-            ? AGENT_NAMES[(thread.agentTypology as AgentType) ?? 'auto']
-            : undefined
-        }
+        agentName={thread?.agentTypology ? AGENT_NAMES[intentOf(thread.agentTypology)] : undefined}
         onTitleChange={handleTitleChange}
         onDelete={handleDelete}
       />
@@ -788,7 +785,7 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
       {/* Agent Selector + Connection Status */}
       <div className="flex items-center gap-2 px-4 py-2 border-b border-border/30 bg-background/80">
         <AgentSelector
-          value={(thread?.agentTypology as AgentType) ?? 'auto'}
+          value={intentOf(thread?.agentTypology)}
           onChange={handleAgentChangeRequest}
           disabled={isSending || streamState.isStreaming}
           className="flex-1"
@@ -1048,8 +1045,8 @@ export function ChatThreadView({ threadId }: ChatThreadViewProps) {
           agent={
             thread?.agentTypology
               ? {
-                  name: AGENT_NAMES[(thread.agentTypology as AgentType) ?? 'auto'],
-                  typology: thread.agentTypology,
+                  name: AGENT_NAMES[intentOf(thread.agentTypology)],
+                  typology: intentOf(thread.agentTypology),
                 }
               : undefined
           }

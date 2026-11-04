@@ -4,6 +4,7 @@ using Api.BoundedContexts.SessionTracking.Application.Queries;
 using Api.BoundedContexts.SessionTracking.Domain.Entities;
 using Api.BoundedContexts.SessionTracking.Domain.Events;
 using Api.BoundedContexts.SessionTracking.Domain.Repositories;
+using Api.BoundedContexts.SessionTracking.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.DTOs;
 using Api.BoundedContexts.KnowledgeBase.Application.Queries;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Answering;
@@ -192,11 +193,14 @@ public class AskSessionAgentCommandHandlerTests
             _mockLlmService.Object,
             new Mock<IImagePreprocessor>().Object,
             new Mock<IGameStateExtractor>().Object,
-            OpenGate().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object);
+            OpenGate().Object, OpenAccess().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object);
     }
 
     /// <summary>The ownership gate (ADR-096) letting everyone through: the tests that are not about it.</summary>
     private static Mock<IAnswerPreconditions> OpenGate() => new();
+
+    /// <summary>The access guard (#4837) letting everyone through: the tests that are not about it.</summary>
+    private static Mock<ISessionAccessGuard> OpenAccess() => new();
 
     private static Session CreateSessionWithParticipant(Guid sessionId, Guid participantId, Guid? participantUserId = null)
     {
@@ -361,7 +365,7 @@ public class AskSessionAgentCommandHandlerTests
             mockLlm.Object,
             mockImagePreprocessor.Object,
             new Mock<IGameStateExtractor>().Object,
-            OpenGate().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object);
+            OpenGate().Object, OpenAccess().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object);
 
         var captures = new List<(long Value, Dictionary<string, object?> Tags)>();
         using var listener = BuildCounterListener(AgentGroundingName, captures);
@@ -417,7 +421,7 @@ public class AskSessionAgentCommandHandlerTests
         var handler = new AskSessionAgentCommandHandler(
             mockSessionRepo.Object, mockChatRepo.Object, mockMediator.Object, mockLlm.Object,
             new Mock<IImagePreprocessor>().Object, new Mock<IGameStateExtractor>().Object,
-            OpenGate().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
+            OpenGate().Object, OpenAccess().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
             mockFlags.Object);
 
         var captures = new List<(long Value, Dictionary<string, object?> Tags)>();
@@ -467,7 +471,7 @@ public class AskSessionAgentCommandHandlerTests
         var handler = new AskSessionAgentCommandHandler(
             mockSessionRepo.Object, mockChatRepo.Object, mockMediator.Object, mockLlm.Object,
             new Mock<IImagePreprocessor>().Object, new Mock<IGameStateExtractor>().Object,
-            OpenGate().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
+            OpenGate().Object, OpenAccess().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
             mockFlags.Object);
 
         var captures = new List<(long Value, Dictionary<string, object?> Tags)>();
@@ -521,7 +525,7 @@ public class AskSessionAgentCommandHandlerTests
         var handler = new AskSessionAgentCommandHandler(
             mockSessionRepo.Object, mockChatRepo.Object, mockMediator.Object, mockLlm.Object,
             mockImagePreprocessor.Object, new Mock<IGameStateExtractor>().Object,
-            OpenGate().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
+            OpenGate().Object, OpenAccess().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
             mockFlags.Object);
 
         var captures = new List<(long Value, Dictionary<string, object?> Tags)>();
@@ -573,7 +577,7 @@ public class AskSessionAgentCommandHandlerTests
         var handler = new AskSessionAgentCommandHandler(
             mockSessionRepo.Object, mockChatRepo.Object, mockMediator.Object, mockLlm.Object,
             new Mock<IImagePreprocessor>().Object, new Mock<IGameStateExtractor>().Object,
-            OpenGate().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
+            OpenGate().Object, OpenAccess().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
             mockFlags.Object);
 
         // Act — client-cancelled token.
@@ -645,7 +649,7 @@ public class AskSessionAgentCommandHandlerTests
         var handler = new AskSessionAgentCommandHandler(
             sessionRepo.Object, chatRepo.Object, mediator.Object, llm.Object,
             imagePreprocessor.Object, new Mock<IGameStateExtractor>().Object,
-            gate.Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
+            gate.Object, OpenAccess().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
             flags.Object);
 
         return new GateRig(handler, gate, mediator, llm, chatRepo, session, sessionId, senderId);
@@ -1039,7 +1043,7 @@ public class AskSessionAgentCommandHandlerTests
         var handler = new AskSessionAgentCommandHandler(
             mockSessionRepo.Object, mockChatRepo.Object, mockMediator.Object, mockLlm.Object,
             new Mock<IImagePreprocessor>().Object, mockExtractor.Object,
-            OpenGate().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
+            OpenGate().Object, OpenAccess().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
             mockFlags.Object);
 
         // Act — empty turn text.
@@ -1081,7 +1085,7 @@ public class AskSessionAgentCommandHandlerTests
         var handler = new AskSessionAgentCommandHandler(
             mockSessionRepo.Object, mockChatRepo.Object, mockMediator.Object, mockLlm.Object,
             new Mock<IImagePreprocessor>().Object, mockExtractor.Object,
-            OpenGate().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
+            OpenGate().Object, OpenAccess().Object, new Mock<ILogger<AskSessionAgentCommandHandler>>().Object,
             mockFlags.Object);
 
         // Act — whitespace text.

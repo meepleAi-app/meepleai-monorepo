@@ -127,6 +127,9 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
     // #4776 (ADR-096): required, unlike the flag below — a gate that is null-safe is a gate that a
     // construction can leave out, and then the retrieval below starts for anyone.
     private readonly IAnswerPreconditions _answerPreconditions;
+    // #4837: who may write in the session at all. Required for the same reason as the gate above, and judged on
+    // RequestedBy (the authenticated caller), never on SenderId (chosen by the client).
+    private readonly ISessionAccessGuard _accessGuard;
     private readonly ILogger<AskSessionAgentCommandHandler> _logger;
     // #3390 Slice 2: optional (null-safe) so existing test constructions keep compiling —
     // null feature flags means the flag is treated as OFF (current multimodal-only behavior).
@@ -163,6 +166,7 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
         IImagePreprocessor imagePreprocessor,
         IGameStateExtractor gameStateExtractor,
         IAnswerPreconditions answerPreconditions,
+        ISessionAccessGuard accessGuard,
         ILogger<AskSessionAgentCommandHandler> logger,
         IFeatureFlagService? featureFlags = null,
         IOptions<SessionAgentOptions>? sessionAgentOptions = null)
@@ -174,6 +178,7 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
         _imagePreprocessor = imagePreprocessor;
         _gameStateExtractor = gameStateExtractor;
         _answerPreconditions = answerPreconditions ?? throw new ArgumentNullException(nameof(answerPreconditions));
+        _accessGuard = accessGuard ?? throw new ArgumentNullException(nameof(accessGuard));
         _logger = logger;
         _featureFlags = featureFlags;
         _sessionAgentOptions = sessionAgentOptions ?? Options.Create(new SessionAgentOptions());
@@ -181,6 +186,16 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
 
     public async Task<AskSessionAgentResult> Handle(AskSessionAgentCommand request, CancellationToken cancellationToken)
     {
+        // IDOR guard (#4837), like the sibling that sends a message (#3756): before any read, write, paid call or
+        // broadcast. The question is saved in the table's chat AS the participant SenderId and the answer is published
+        // to everyone at the table, so "an authenticated user" is not enough: the caller must be the owner or a
+        // registered participant of THIS session. The caller is RequestedBy (taken from the principal by the endpoint);
+        // SenderId is a participant id, readable by everyone at the table, and says nothing about who is asking.
+        // Whether SenderId must also belong to the caller is NOT decided here: the host writes for a guest (no
+        // account), as the sibling allows.
+        await _accessGuard.EnsureOwnerOrParticipantAsync(
+            request.SessionId, request.RequestedBy, cancellationToken).ConfigureAwait(false);
+
         var session = await _sessionRepository.GetByIdAsync(request.SessionId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Session {request.SessionId} not found");
 

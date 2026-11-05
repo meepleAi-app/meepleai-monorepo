@@ -59,12 +59,19 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
     /// invitation the user accepted while logged in (no RSVP row is written on that path). Mirrors
     /// <c>GameNightParticipation</c> on the loaded aggregate: change one, change the other.
     /// </summary>
-    private Expression<Func<GameNightEventEntity, bool>> ParticipatedBy(Guid userId)
+    private async Task<Expression<Func<GameNightEventEntity, bool>>> ParticipatedByAsync(
+        Guid userId, CancellationToken cancellationToken)
     {
         // The invitation rule is GameNightInvitationQueries.AcceptedBy, composed here as a correlated
         // subquery: the same expression HasAcceptedEmailInvitationAsync applies, so the lists and
-        // the detail gate cannot drift apart.
-        var acceptedByUser = DbContext.GameNightInvitations.Where(GameNightInvitationQueries.AcceptedBy(userId));
+        // the detail gate cannot drift apart. It needs the account's address (one read), and an
+        // account without one is admitted by the organizer/RSVP part only.
+        var email = await GameNightInvitationQueries.NormalizedEmailOfAsync(DbContext, userId, cancellationToken)
+            .ConfigureAwait(false);
+        if (email is null)
+            return e => e.OrganizerId == userId || e.Rsvps.Any(r => r.UserId == userId);
+
+        var acceptedByUser = DbContext.GameNightInvitations.Where(GameNightInvitationQueries.AcceptedBy(userId, email));
         return e => e.OrganizerId == userId
             || e.Rsvps.Any(r => r.UserId == userId)
             || acceptedByUser.Any(i => i.GameNightId == e.Id);
@@ -73,12 +80,14 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
     public async Task<bool> HasAcceptedEmailInvitationAsync(
         Guid gameNightId, Guid userId, CancellationToken cancellationToken = default)
     {
-        if (userId == Guid.Empty)
+        var email = await GameNightInvitationQueries.NormalizedEmailOfAsync(DbContext, userId, cancellationToken)
+            .ConfigureAwait(false);
+        if (email is null)
             return false;
 
         return await DbContext.GameNightInvitations
             .AsNoTracking()
-            .Where(GameNightInvitationQueries.AcceptedBy(userId))
+            .Where(GameNightInvitationQueries.AcceptedBy(userId, email))
             .AnyAsync(i => i.GameNightId == gameNightId, cancellationToken)
             .ConfigureAwait(false);
     }
@@ -116,7 +125,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .Include(e => e.Sessions)
             .Include(e => e.Votes)
             .Where(e => e.Status == nameof(GameNightStatus.Published) && e.ScheduledAt > DateTimeOffset.UtcNow)
-            .Where(ParticipatedBy(userId))
+            .Where(await ParticipatedByAsync(userId, cancellationToken).ConfigureAwait(false))
             .OrderBy(e => e.ScheduledAt)
             .Take(50)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
@@ -143,7 +152,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .Include(e => e.Votes)
             .Where(e => e.Status == nameof(GameNightStatus.Completed)
                 || (e.Status == nameof(GameNightStatus.Published) && e.ScheduledAt < now))
-            .Where(ParticipatedBy(userId))
+            .Where(await ParticipatedByAsync(userId, cancellationToken).ConfigureAwait(false))
             .OrderByDescending(e => e.ScheduledAt)
             .Take(cap)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
@@ -158,7 +167,7 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
             .Include(e => e.Rsvps)
             .Include(e => e.Sessions)
             .Include(e => e.Votes)
-            .Where(ParticipatedBy(userId))
+            .Where(await ParticipatedByAsync(userId, cancellationToken).ConfigureAwait(false))
             .OrderByDescending(e => e.ScheduledAt)
             .Take(50)
             .ToListAsync(cancellationToken).ConfigureAwait(false);

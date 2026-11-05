@@ -53,7 +53,23 @@ public class GameNightEventRepositoryPostgresTests : SharedDatabaseTestBase
         return entity;
     }
 
-    private void SeedEmailInvitation(Guid gameNightId, Guid? respondedBy, string status)
+    private Guid SeedUser()
+    {
+        var id = Guid.NewGuid();
+        DbContext.Users.Add(new Api.Infrastructure.Entities.UserEntity
+        {
+            Id = id,
+            Email = $"{id:N}@example.com",
+            DisplayName = "Viewer",
+            PasswordHash = "x",
+            Role = "user",
+            CreatedAt = DateTime.UtcNow,
+            IsTwoFactorEnabled = false
+        });
+        return id;
+    }
+
+    private void SeedEmailInvitation(Guid gameNightId, Guid? respondedBy, string status, string? email = null)
     {
         var now = DateTimeOffset.UtcNow;
         DbContext.GameNightInvitations.Add(new GameNightInvitationEntity
@@ -61,7 +77,7 @@ public class GameNightEventRepositoryPostgresTests : SharedDatabaseTestBase
             Id = Guid.NewGuid(),
             Token = Guid.NewGuid().ToString("N"),
             GameNightId = gameNightId,
-            Email = $"{Guid.NewGuid():N}@example.com",
+            Email = email ?? (respondedBy is { } user ? $"{user:N}@example.com" : $"{Guid.NewGuid():N}@example.com"),
             Status = status,
             RespondedByUserId = respondedBy,
             RespondedAt = respondedBy is null ? null : now,
@@ -75,16 +91,18 @@ public class GameNightEventRepositoryPostgresTests : SharedDatabaseTestBase
     public async Task TheThreeLists_AndTheDetailGate_SeeAnAcceptedEmailInvitation_OnPostgres()
     {
         var ct = TestContext.Current.CancellationToken;
-        var viewer = Guid.NewGuid();
+        var viewer = SeedUser();
         var organizer = Guid.NewGuid();
         var upcoming = SeedNight(organizer, "Published", DateTimeOffset.UtcNow.AddDays(2));
         var completed = SeedNight(organizer, "Completed", DateTimeOffset.UtcNow.AddDays(-3));
         var declinedNight = SeedNight(organizer, "Published", DateTimeOffset.UtcNow.AddDays(3));
         var strangersNight = SeedNight(organizer, "Published", DateTimeOffset.UtcNow.AddDays(4));
+        var forwardedNight = SeedNight(organizer, "Published", DateTimeOffset.UtcNow.AddDays(5));
         SeedEmailInvitation(upcoming.Id, viewer, "Accepted");
         SeedEmailInvitation(completed.Id, viewer, "Accepted");
         SeedEmailInvitation(declinedNight.Id, viewer, "Declined");
-        SeedEmailInvitation(strangersNight.Id, Guid.NewGuid(), "Accepted");
+        SeedEmailInvitation(strangersNight.Id, SeedUser(), "Accepted");
+        SeedEmailInvitation(forwardedNight.Id, viewer, "Accepted", email: "somebody.else@example.com");
         await DbContext.SaveChangesAsync(ct);
         DbContext.ChangeTracker.Clear();
 
@@ -100,5 +118,6 @@ public class GameNightEventRepositoryPostgresTests : SharedDatabaseTestBase
         (await repository.HasAcceptedEmailInvitationAsync(upcoming.Id, viewer, ct)).Should().BeTrue();
         (await repository.HasAcceptedEmailInvitationAsync(declinedNight.Id, viewer, ct)).Should().BeFalse();
         (await repository.HasAcceptedEmailInvitationAsync(strangersNight.Id, viewer, ct)).Should().BeFalse();
+        (await repository.HasAcceptedEmailInvitationAsync(forwardedNight.Id, viewer, ct)).Should().BeFalse("a forwarded link");
     }
 }

@@ -295,7 +295,24 @@ public sealed class GameNightEventRepositoryTests : IDisposable
 
     // ── #4759: whoever accepted an email invitation while logged in sits at the table ──────────
 
-    private void SeedEmailInvitation(Guid gameNightId, Guid? respondedBy, string status)
+    /// <summary>A registered account; the invitations accepted «by email» are addressed to its email.</summary>
+    private Guid SeedUser(string? email = null)
+    {
+        var id = Guid.NewGuid();
+        _dbContext.Users.Add(new Api.Infrastructure.Entities.UserEntity
+        {
+            Id = id,
+            Email = email ?? $"{id:N}@example.com",
+            DisplayName = "Viewer",
+            PasswordHash = "x",
+            Role = "user",
+            CreatedAt = DateTime.UtcNow,
+        });
+        _dbContext.SaveChanges();
+        return id;
+    }
+
+    private void SeedEmailInvitation(Guid gameNightId, Guid? respondedBy, string status, string? email = null)
     {
         var now = DateTimeOffset.UtcNow;
         _dbContext.GameNightInvitations.Add(new GameNightInvitationEntity
@@ -303,7 +320,7 @@ public sealed class GameNightEventRepositoryTests : IDisposable
             Id = Guid.NewGuid(),
             Token = Guid.NewGuid().ToString("N"),
             GameNightId = gameNightId,
-            Email = $"{Guid.NewGuid():N}@example.com",
+            Email = email ?? (respondedBy is { } user ? $"{user:N}@example.com" : $"{Guid.NewGuid():N}@example.com"),
             Status = status,
             RespondedByUserId = respondedBy,
             RespondedAt = respondedBy is null ? null : now,
@@ -319,7 +336,7 @@ public sealed class GameNightEventRepositoryTests : IDisposable
     {
         // The guest is a registered user who answered the email link while logged in: no RSVP row is
         // ever written for them, and the list used to leave the night out (403 on the detail, too).
-        var viewer = Guid.NewGuid();
+        var viewer = SeedUser();
         var future = DateTimeOffset.UtcNow.AddDays(2);
         var acceptedByEmail = SeedNight(Guid.NewGuid(), null, "Published", future);
         SeedEmailInvitation(acceptedByEmail.Id, viewer, "Accepted");
@@ -336,7 +353,7 @@ public sealed class GameNightEventRepositoryTests : IDisposable
     public async Task GetUpcomingAsync_ExcludesANightWhoseEmailInvitationIsNotAccepted(string status)
     {
         // Declined by the viewer, withdrawn by the organizer, or never answered: not a participant.
-        var viewer = Guid.NewGuid();
+        var viewer = SeedUser();
         var future = DateTimeOffset.UtcNow.AddDays(2);
         var night = SeedNight(Guid.NewGuid(), null, "Published", future);
         SeedEmailInvitation(night.Id, status == "Pending" ? null : viewer, status);
@@ -349,9 +366,9 @@ public sealed class GameNightEventRepositoryTests : IDisposable
     [Fact]
     public async Task GetUpcomingAsync_AnotherUsersAcceptedEmailInvitation_DoesNotLetTheViewerIn()
     {
-        var viewer = Guid.NewGuid();
+        var viewer = SeedUser();
         var night = SeedNight(Guid.NewGuid(), null, "Published", DateTimeOffset.UtcNow.AddDays(2));
-        SeedEmailInvitation(night.Id, Guid.NewGuid(), "Accepted");
+        SeedEmailInvitation(night.Id, SeedUser(), "Accepted");
 
         var result = await _repository.GetUpcomingAsync(viewer, TestContext.Current.CancellationToken);
 
@@ -359,9 +376,38 @@ public sealed class GameNightEventRepositoryTests : IDisposable
     }
 
     [Fact]
+    public async Task GetUpcomingAsync_AForwardedLinkAcceptedByAnotherAccount_DoesNotLetItIn()
+    {
+        // The decision of 2026-11-05: the link is a credential to answer, not to sit at the table.
+        // Alice forwards her link to Bob; Bob accepts while logged in; the invitation is still
+        // addressed to Alice, so Bob is not a participant (and stays able to answer, as before).
+        var bob = SeedUser();
+        var night = SeedNight(Guid.NewGuid(), null, "Published", DateTimeOffset.UtcNow.AddDays(2));
+        SeedEmailInvitation(night.Id, bob, "Accepted", email: "alice@example.com");
+
+        var result = await _repository.GetUpcomingAsync(bob, TestContext.Current.CancellationToken);
+
+        Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetUpcomingAsync_MatchesTheInvitedAddressTheWayTheInvitationStoresIt()
+    {
+        // The account's address is normalized like the invitation's (trim, lower case): a user
+        // registered as «Anna.Rossi@Example.com» accepting «anna.rossi@example.com» is the same person.
+        var anna = SeedUser("Anna.Rossi@Example.com");
+        var night = SeedNight(Guid.NewGuid(), null, "Published", DateTimeOffset.UtcNow.AddDays(2));
+        SeedEmailInvitation(night.Id, anna, "Accepted", email: "anna.rossi@example.com");
+
+        var result = await _repository.GetUpcomingAsync(anna, TestContext.Current.CancellationToken);
+
+        Assert.Equal(night.Id, Assert.Single(result).Id);
+    }
+
+    [Fact]
     public async Task GetCompletedAsync_IncludesANightWhoseEmailInvitationTheViewerAccepted()
     {
-        var viewer = Guid.NewGuid();
+        var viewer = SeedUser();
         var night = SeedNight(Guid.NewGuid(), null, "Completed", DateTimeOffset.UtcNow.AddDays(-3));
         SeedEmailInvitation(night.Id, viewer, "Accepted");
 
@@ -373,7 +419,7 @@ public sealed class GameNightEventRepositoryTests : IDisposable
     [Fact]
     public async Task GetByUserAsync_IncludesANightWhoseEmailInvitationTheViewerAccepted()
     {
-        var viewer = Guid.NewGuid();
+        var viewer = SeedUser();
         var night = SeedNight(Guid.NewGuid(), null, "Published", DateTimeOffset.UtcNow.AddDays(2));
         SeedEmailInvitation(night.Id, viewer, "Accepted");
 
@@ -383,18 +429,22 @@ public sealed class GameNightEventRepositoryTests : IDisposable
     }
 
     [Fact]
-    public async Task HasAcceptedEmailInvitationAsync_IsTrueOnlyForAnAcceptedInvitationAnsweredByThatUser()
+    public async Task HasAcceptedEmailInvitationAsync_IsTrueOnlyForAnAcceptedInvitationAnsweredByThatUser_AtTheirAddress()
     {
-        var viewer = Guid.NewGuid();
+        var viewer = SeedUser();
         var night = SeedNight(Guid.NewGuid(), null, "Published", DateTimeOffset.UtcNow.AddDays(2));
         var other = SeedNight(Guid.NewGuid(), null, "Published", DateTimeOffset.UtcNow.AddDays(2));
+        var forwarded = SeedNight(Guid.NewGuid(), null, "Published", DateTimeOffset.UtcNow.AddDays(2));
         SeedEmailInvitation(night.Id, viewer, "Accepted");
         SeedEmailInvitation(other.Id, viewer, "Declined");
+        SeedEmailInvitation(forwarded.Id, viewer, "Accepted", email: "somebody.else@example.com");
 
         var ct = TestContext.Current.CancellationToken;
         Assert.True(await _repository.HasAcceptedEmailInvitationAsync(night.Id, viewer, ct));
         Assert.False(await _repository.HasAcceptedEmailInvitationAsync(other.Id, viewer, ct), "declined");
-        Assert.False(await _repository.HasAcceptedEmailInvitationAsync(night.Id, Guid.NewGuid(), ct), "somebody else");
+        Assert.False(await _repository.HasAcceptedEmailInvitationAsync(forwarded.Id, viewer, ct), "a forwarded link");
+        Assert.False(await _repository.HasAcceptedEmailInvitationAsync(night.Id, SeedUser(), ct), "somebody else");
+        Assert.False(await _repository.HasAcceptedEmailInvitationAsync(night.Id, Guid.NewGuid(), ct), "no such account");
         Assert.False(await _repository.HasAcceptedEmailInvitationAsync(night.Id, Guid.Empty, ct), "no caller is nobody");
     }
 

@@ -90,9 +90,14 @@ internal sealed class CheckGameNightConflictQueryHandler
         // #4759: a night the user joined by accepting an email invitation while logged in has no RSVP
         // row, so the join above cannot see it; the lists show it, and the calendar must agree with
         // the lists. Same invitation rule as the lists (GameNightInvitationQueries.AcceptedBy).
-        var emailGuestHits = await _context.GameNightInvitations
+        var callerEmail = await GameNightInvitationQueries
+            .NormalizedEmailOfAsync(_context, query.UserId, cancellationToken)
+            .ConfigureAwait(false);
+        var emailGuestHits = callerEmail is null
+            ? []
+            : await _context.GameNightInvitations
             .AsNoTracking()
-            .Where(GameNightInvitationQueries.AcceptedBy(query.UserId))
+            .Where(GameNightInvitationQueries.AcceptedBy(query.UserId, callerEmail))
             .Join(
                 _context.GameNightEvents.AsNoTracking()
                     .Where(gn => gn.OrganizerId != query.UserId

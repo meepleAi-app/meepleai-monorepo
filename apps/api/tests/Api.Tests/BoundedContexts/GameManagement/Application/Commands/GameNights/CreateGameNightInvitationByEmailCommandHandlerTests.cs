@@ -198,7 +198,7 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
                 It.IsAny<CancellationToken>()),
             Times.Once);
 
-        dto.Token.Should().Be(captured.Token);
+        dto.Id.Should().Be(captured.Id);
         dto.Status.Should().Be(nameof(GameNightInvitationStatus.Pending));
         dto.GameNightId.Should().Be(gameNight.Id);
     }
@@ -290,8 +290,7 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
                 gameNight.Id, "  Guest@example.com ", organizerId, ResendIfPending: true),
             CancellationToken.None);
 
-        dto.Id.Should().Be(pending.Id);
-        dto.Token.Should().Be(pending.Token, "l'ospite riceve lo stesso invito, non uno nuovo");
+        dto.Id.Should().Be(pending.Id, "l'ospite riceve lo stesso invito, non uno nuovo");
         _emailServiceMock.Verify(
             s => s.SendGameNightInvitationEmailAsync(
                 "guest@example.com",
@@ -426,7 +425,7 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
                 gameNight.Id, "guest@example.com", organizerId, ResendIfPending: true),
             CancellationToken.None);
 
-        dto.Token.Should().Be(guest.Token);
+        dto.Id.Should().Be(guest.Id);
         dto.Email.Should().Be("guest@example.com");
         _emailServiceMock.Verify(
             s => s.SendGameNightInvitationEmailAsync(
@@ -456,7 +455,7 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
                 gameNight.Id, "guest@example.com", organizerId, ResendIfPending: true),
             CancellationToken.None);
 
-        dto.Token.Should().Be(pending.Token);
+        dto.Id.Should().Be(pending.Id);
         dto.Status.Should().Be(nameof(GameNightInvitationStatus.Pending));
     }
 
@@ -608,16 +607,16 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
                 gameNight.Id, "guest@example.com", organizerId, ResendIfPending: true),
             CancellationToken.None);
 
-        dto.Token.Should().Be(pending.Token);
+        dto.Id.Should().Be(pending.Id);
         VerifyNoInvitationEmail(_emailServiceMock);
     }
 
     [Fact]
     public async Task Handle_TheAnswerToTheOrganizer_DoesNotCarryTheUnsubscribeKey()
     {
-        // The organizer gets the RSVP token back (to share the link by hand), and that is how it works since #607.
-        // The key that stops everybody's mail to the address is another matter: it is written in the emails and
-        // nowhere else, because anybody who holds it can silence the address for every organizer.
+        // The key that stops everybody's mail to the address is written in the emails and nowhere else, because
+        // anybody who holds it can silence the address for every organizer. The RSVP token is in the same position
+        // since #4874 (see the tests below).
         var organizerId = Guid.NewGuid();
         var gameNight = CreateGameNight(organizerId);
         _gameNightRepoMock
@@ -636,5 +635,47 @@ public sealed class CreateGameNightInvitationByEmailCommandHandlerTests
         System.Text.Json.JsonSerializer.Serialize(dto).Should().NotContain(captured.UnsubscribeKey!);
         typeof(GameNightInvitationDto).GetProperties().Select(p => p.Name)
             .Should().NotContain(name => name.Contains("Unsubscribe", StringComparison.OrdinalIgnoreCase));
+    }
+
+    // #4874 — the RSVP token is the credential of POST /game-nights/invitations/{token}/respond, which is anonymous.
+    // It is written in the guest's email and nowhere else: the answer to the organizer carries the invitation's id
+    // (to correlate, to withdraw) and not the credential, or the organizer could answer in the guest's place.
+
+    [Fact]
+    public async Task Handle_TheAnswerToTheOrganizer_DoesNotCarryTheRsvpToken()
+    {
+        var organizerId = Guid.NewGuid();
+        var gameNight = CreateGameNight(organizerId);
+        _gameNightRepoMock
+            .Setup(r => r.GetByIdAsync(gameNight.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(gameNight);
+        GameNightInvitation? captured = null;
+        _invitationRepoMock
+            .Setup(r => r.AddAsync(It.IsAny<GameNightInvitation>(), It.IsAny<CancellationToken>()))
+            .Callback<GameNightInvitation, CancellationToken>((inv, _) => captured = inv);
+
+        var dto = await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(gameNight.Id, "guest@example.com", organizerId),
+            CancellationToken.None);
+
+        captured!.Token.Should().NotBeNullOrWhiteSpace();
+        System.Text.Json.JsonSerializer.Serialize(dto).Should().NotContain(captured.Token);
+        typeof(GameNightInvitationDto).GetProperties().Select(p => p.Name)
+            .Should().NotContain(name => name.Contains("Token", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    public async Task Handle_TheAnswerToAResend_DoesNotCarryTheRsvpToken_EitherAndIsTheSameInvitation()
+    {
+        var (gameNight, organizerId) = GivenAGameNightWithAPendingInvitationFor(
+            "guest@example.com", out var pending);
+
+        var dto = await _sut.Handle(
+            new CreateGameNightInvitationByEmailCommand(
+                gameNight.Id, "guest@example.com", organizerId, ResendIfPending: true),
+            CancellationToken.None);
+
+        dto.Id.Should().Be(pending.Id);
+        System.Text.Json.JsonSerializer.Serialize(dto).Should().NotContain(pending.Token);
     }
 }

@@ -215,7 +215,7 @@ internal static class GameNightEndpoints
             .Produces(429)
             .WithName("OptOutGameNightGuestEmail")
             .WithSummary("Stop receiving game night emails at the address behind an invitation")
-            .WithDescription("Public endpoint (#4846). The unsubscribe key of an invitation, written in the emails that go to its address, is the credential: the address it names goes on the opt-out list and gets no more game night emails. It is not the RSVP token (the organizer holds that one). Works whatever the state of the invitation (answered, cancelled, expired). Idempotent. Rate-limited at 10 req/min per IP, in a bucket of its own so a guest behind a shared address does not compete with RSVPs.");
+            .WithDescription("Public endpoint (#4846). The unsubscribe key of an invitation, written in the emails that go to its address, is the credential: the address it names goes on the opt-out list and gets no more game night emails. It is not the RSVP token (which is in the same emails and never goes back to the organizer, #4874). Works whatever the state of the invitation (answered, cancelled, expired). Idempotent. Rate-limited at 10 req/min per IP, in a bucket of its own so a guest behind a shared address does not compete with RSVPs.");
 
         gameNights.MapPost("/{gameNightId:guid}/invitations", HandleCreateGameNightInvitationByEmail)
             .RequireAuthenticatedUser()
@@ -228,7 +228,7 @@ internal static class GameNightEndpoints
             .Produces(422)
             .WithName("CreateGameNightInvitationByEmail")
             .WithSummary("Create a token-addressable invitation by email")
-            .WithDescription("Organizer-only endpoint to issue an opaque-token invitation to a non-platform email. Returns 409 if a pending invitation for the same email already exists.");
+            .WithDescription("Organizer-only endpoint to issue an opaque-token invitation to a non-platform email. The response carries the invitation id and state, not the RSVP token: the token is the anonymous credential of the respond endpoint and goes only to the guest, in the email (#4874). Returns 409 if a pending invitation for the same email already exists.");
 
         // ── Game Night Experience v2 Endpoints ──────────────────────────────
 

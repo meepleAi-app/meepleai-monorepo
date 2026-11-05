@@ -7,6 +7,7 @@ using Api.BoundedContexts.DocumentProcessing.Infrastructure.External;
 using Api.BoundedContexts.GameManagement.Domain.ValueObjects;
 using Api.BoundedContexts.KnowledgeBase.Application.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
+using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 using Api.BoundedContexts.KnowledgeBase.Domain.Services.Enhancements;
 using Api.BoundedContexts.KnowledgeBase.Infrastructure.Persistence;
 using Api.Infrastructure;
@@ -855,7 +856,8 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 _advancedChunking,
                 cancellationToken,
                 // #4782: the pages of a flat document (no structured elements) come from here.
-                pageSpans: PageTextJoiner.Join(extractResult.PageChunks).Spans).ConfigureAwait(false);
+                pageSpans: PageTextJoiner.Join(extractResult.PageChunks).Spans,
+                documentPageCount: extractResult.TotalPages).ConfigureAwait(false);
             return HeadingAwareChunkAdapter.ToChunkInputs(hierarchical);
         }
 
@@ -1171,7 +1173,7 @@ internal sealed class PdfProcessingPipelineService : IPdfProcessingPipelineServi
                 PdfDocumentId = pdfDoc.Id,
                 Content = chunk.Text,
                 ChunkIndex = index,
-                PageNumber = chunk.Page,
+                PageNumber = ChunkPage.ForStorage(chunk.Page),
                 CharacterCount = chunk.Text.Length,
                 CreatedAt = now,
                 // Issue #730: persist chunk hierarchy fields from chunking pipeline

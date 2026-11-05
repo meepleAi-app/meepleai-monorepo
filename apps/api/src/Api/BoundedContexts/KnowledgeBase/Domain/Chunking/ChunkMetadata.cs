@@ -10,7 +10,7 @@ namespace Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 internal sealed record ChunkMetadata
 {
     /// <summary>
-    /// Page number where the chunk originates (1-based).
+    /// Page number where the chunk originates (1-based), or ChunkPage.Unknown (0) when nobody measured it.
     /// </summary>
     public int Page { get; init; }
 

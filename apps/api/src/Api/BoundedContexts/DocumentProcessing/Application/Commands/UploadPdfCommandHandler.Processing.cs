@@ -443,7 +443,8 @@ internal partial class UploadPdfCommandHandler
                 advancedChunking,
                 cancellationToken,
                 // #4782: the pages of a flat document (no structured elements) come from here.
-                pageSpans: PageTextJoiner.Join(extractResult.PageChunks).Spans).ConfigureAwait(false);
+                pageSpans: PageTextJoiner.Join(extractResult.PageChunks).Spans,
+                documentPageCount: extractResult.TotalPages).ConfigureAwait(false);
             allDocumentChunks = HeadingAwareChunkAdapter.ToChunkInputs(hierarchical);
         }
         else

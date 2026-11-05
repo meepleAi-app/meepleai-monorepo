@@ -60,7 +60,6 @@ public sealed class CreateGameNightCommandHandlerTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new GameNightInvitationDto(
                 Id: Guid.NewGuid(),
-                Token: "stub-token",
                 GameNightId: Guid.NewGuid(),
                 Email: "stub@example.com",
                 Status: "Pending",
@@ -160,7 +159,6 @@ public sealed class CreateGameNightCommandHandlerTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new GameNightInvitationDto(
                 Id: Guid.NewGuid(),
-                Token: "stub",
                 GameNightId: Guid.NewGuid(),
                 Email: "alice@example.com",
                 Status: "Pending",

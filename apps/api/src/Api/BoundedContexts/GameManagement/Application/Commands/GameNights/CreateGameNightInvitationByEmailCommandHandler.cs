@@ -139,7 +139,6 @@ internal sealed class CreateGameNightInvitationByEmailCommandHandler
 
     private static GameNightInvitationDto ToDto(GameNightInvitation invitation) => new(
         Id: invitation.Id,
-        Token: invitation.Token,
         GameNightId: invitation.GameNightId,
         Email: invitation.Email,
         Status: invitation.Status.ToString(),

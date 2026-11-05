@@ -536,7 +536,7 @@ public sealed class GameNightInvitationEndpointsTests
     }
 
     [Fact]
-    public async Task CreateInvitationByEmail_AsOrganizer_Returns201WithDto()
+    public async Task CreateInvitationByEmail_AsOrganizer_Returns201WithDto_AndNotTheRsvpToken()
     {
         // Authenticate as a user whose ID is the organizer of the seeded game night.
         Guid organizerId;
@@ -557,12 +557,32 @@ public sealed class GameNightInvitationEndpointsTests
         var response = await _client.SendAsync(request);
 
         response.StatusCode.Should().Be(HttpStatusCode.Created);
-        var dto = await response.Content.ReadFromJsonAsync<GameNightInvitationDto>();
+        var body = await response.Content.ReadAsStringAsync();
+        var dto = System.Text.Json.JsonSerializer.Deserialize<GameNightInvitationDto>(
+            body, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
         dto.Should().NotBeNull();
         dto!.GameNightId.Should().Be(gameNightId);
         dto.Email.Should().Be("guest@example.com");
         dto.Status.Should().Be("Pending");
-        dto.Token.Should().NotBeNullOrWhiteSpace();
+
+        // #4874: the RSVP token is the anonymous credential of /respond; the organizer must not get it back. The
+        // check is on the wire (no field by that name, and not the value) and not on the C# type alone.
+        using var json = System.Text.Json.JsonDocument.Parse(body);
+        json.RootElement.EnumerateObject().Select(p => p.Name)
+            .Should().NotContain(name => name.Contains("token", StringComparison.OrdinalIgnoreCase));
+        string storedToken;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var dbContext = scope.ServiceProvider.GetRequiredService<MeepleAiDbContext>();
+            storedToken = await dbContext.GameNightInvitations
+                .AsNoTracking()
+                .Where(i => i.Id == dto.Id)
+                .Select(i => i.Token)
+                .SingleAsync();
+        }
+
+        storedToken.Should().NotBeNullOrWhiteSpace();
+        body.Should().NotContain(storedToken);
     }
 
     [Fact]

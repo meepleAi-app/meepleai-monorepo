@@ -222,6 +222,39 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
                 request.SessionId);
         }
 
+        // #3390 Slice 2/3: the (possibly vision-derived) query drives retrieval and the LLM prompt.
+        var retrievalQuery = effectiveQuery;
+
+        // Feature-gated (rag.live-image-retrieval, default OFF). Requires non-empty text (the
+        // empty-text case is Slice 3). Null feature-flag service (test construction) ⇒ treated as OFF.
+        var liveImageRetrievalEnabled = _featureFlags is not null
+            && !string.IsNullOrWhiteSpace(retrievalQuery)
+            && await _featureFlags.IsEnabledAsync(FeatureFlagConstants.LiveImageRetrievalKey).ConfigureAwait(false);
+
+        // #4776 (ADR-096): the ownership gate protects the RETRIEVAL on the rulebook, and the copyright tier
+        // below protects only the ANSWER — a tier does nothing for passages that already went into the prompt.
+        // It is asked for the AUTHENTICATED CALLER, not for the user behind SenderId: the participant is picked by
+        // the client, its id is readable by everyone at the table, and a guest has no account — judged on it, the
+        // gate would let anyone borrow the ownership of whoever they name. No caller (Guid.Empty) is nobody: denied.
+        // The same identity sets the copyright tier below. The check is OUTSIDE the try below, which degrades
+        // fail-open on any error: inside it, "could not check" would read as "allowed". A denial is not an error
+        // for the chat: the question stays, no retrieval starts, and the answer is the model's alone, which
+        // GroundingStatus.Ungrounded already says.
+        //
+        // #4881: and it runs BEFORE the question is saved. Its inputs — the query (the vision-derived one is
+        // settled above), the game of the session and the caller — are all known by now, and a gate that could
+        // not be consulted (a fault, which propagates) used to fail the request with the question already in the
+        // chat the whole table reads, unanswered, and a retry saved it a second time. Now a fault leaves nothing
+        // behind, so a retry is simply the first attempt; a denial still saves the question, as before.
+        var callerId = request.RequestedBy;
+        var rulebookDenied = false;
+        if (liveImageRetrievalEnabled
+            && !await MayConsultTheRulebookAsync(request.SessionId, session.GameId, callerId, cancellationToken).ConfigureAwait(false))
+        {
+            liveImageRetrievalEnabled = false;
+            rulebookDenied = true;
+        }
+
         // Save the user's question (or the vision-derived query) as a chat message.
         var userSeq = await _chatRepository.GetNextSequenceNumberAsync(request.SessionId, cancellationToken).ConfigureAwait(false);
         var userMessage = SessionChatMessage.CreateTextMessage(
@@ -253,32 +286,6 @@ internal class AskSessionAgentCommandHandler : IRequestHandler<AskSessionAgentCo
         var citationCount = 0;
         var hasImages = request.Images is { Count: > 0 };
 
-        // #3390 Slice 2/3: the (possibly vision-derived) query drives retrieval and the LLM prompt.
-        var retrievalQuery = effectiveQuery;
-
-        // Feature-gated (rag.live-image-retrieval, default OFF). Requires non-empty text (the
-        // empty-text case is Slice 3). Null feature-flag service (test construction) ⇒ treated as OFF.
-        var liveImageRetrievalEnabled = _featureFlags is not null
-            && !string.IsNullOrWhiteSpace(retrievalQuery)
-            && await _featureFlags.IsEnabledAsync(FeatureFlagConstants.LiveImageRetrievalKey).ConfigureAwait(false);
-
-        // #4776 (ADR-096): the ownership gate protects the RETRIEVAL on the rulebook, and the copyright tier
-        // below protects only the ANSWER — a tier does nothing for passages that already went into the prompt.
-        // It is asked for the AUTHENTICATED CALLER, not for the user behind SenderId: the participant is picked by
-        // the client, its id is readable by everyone at the table, and a guest has no account — judged on it, the
-        // gate would let anyone borrow the ownership of whoever they name. No caller (Guid.Empty) is nobody: denied.
-        // The same identity sets the copyright tier below. The check is OUTSIDE the try below, which degrades
-        // fail-open on any error: inside it, "could not check" would read as "allowed". A denial is not an error
-        // for the chat: the question stays, no retrieval starts, and the answer is the model's alone, which
-        // GroundingStatus.Ungrounded already says.
-        var callerId = request.RequestedBy;
-        var rulebookDenied = false;
-        if (liveImageRetrievalEnabled
-            && !await MayConsultTheRulebookAsync(request.SessionId, session.GameId, callerId, cancellationToken).ConfigureAwait(false))
-        {
-            liveImageRetrievalEnabled = false;
-            rulebookDenied = true;
-        }
         // The model's own words, as opposed to the apologies below: only an answer can be qualified by a notice.
         var answeredByModel = false;
 

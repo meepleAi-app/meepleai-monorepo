@@ -1003,6 +1003,56 @@ public class AskSessionAgentCommandHandlerTests
         VerifyNoRetrieval(rig);
     }
 
+    [Fact]
+    public async Task Handle_FlagOn_GateFailureThatIsNotADenial_LeavesNoQuestionInTheChat()
+    {
+        // Arrange — #4881: the gate used to run AFTER the player's question was saved, so a gate that could
+        // not be consulted (a fault, not a denial) failed the request with the question already in the chat
+        // the whole table reads, and no answer under it.
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: Guid.NewGuid(), configureGate: gate => gate
+            .Setup(g => g.EnsureCanAskAboutGameAsync(
+                It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("access store unavailable")));
+
+        // Act
+        var act = () => AskAs(rig, Guid.NewGuid());
+
+        // Assert — nothing was written, so there is nothing for the table to read and nothing to repeat.
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        rig.Chat.Verify(
+            r => r.AddAsync(It.IsAny<SessionChatMessage>(), It.IsAny<CancellationToken>()), Times.Never);
+        rig.Chat.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        rig.Mediator.Verify(
+            m => m.Publish(It.IsAny<SessionChatMessageSentEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_FlagOn_RetryAfterAGateFault_SavesTheQuestionOnce()
+    {
+        // Arrange — the first attempt meets a gate that cannot answer, the second finds it back. A retry used to
+        // save the question twice (the failed attempt had already stored it).
+        var rig = BuildGateRig(retrievalFlagOn: true, participantUserId: Guid.NewGuid(), configureGate: gate => gate
+            .SetupSequence(g => g.EnsureCanAskAboutGameAsync(
+                It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("access store unavailable"))
+            .Returns(Task.CompletedTask));
+        var saved = new List<SessionChatMessage>();
+        rig.Chat
+            .Setup(r => r.AddAsync(It.IsAny<SessionChatMessage>(), It.IsAny<CancellationToken>()))
+            .Callback<SessionChatMessage, CancellationToken>((m, _) => saved.Add(m));
+        var caller = Guid.NewGuid();
+
+        // Act
+        var first = () => AskAs(rig, caller);
+        await first.Should().ThrowAsync<InvalidOperationException>();
+        await AskAs(rig, caller);
+
+        // Assert — one question and one answer in the chat, not two questions.
+        saved.Should().HaveCount(2);
+        saved.Count(m => m.MessageType == SessionChatMessageType.Text).Should().Be(1);
+        saved.Count(m => m.MessageType == SessionChatMessageType.AgentResponse).Should().Be(1);
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     // #3390 Slice 3: vision-derived retrieval query for empty-text turns
     // ──────────────────────────────────────────────────────────────────────────

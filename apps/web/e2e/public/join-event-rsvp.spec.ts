@@ -105,7 +105,9 @@ test.describe('Public Game Night RSVP — /join/event/[code]', () => {
       timeout: 8000,
     });
     // Surface is "rsvp" (not loading/error).
-    await expect(page.locator('main[data-surface="rsvp"]')).toBeVisible();
+    await expect(
+      page.locator('[data-slot="public-join-event-page"][data-surface="rsvp"]')
+    ).toBeVisible();
 
     // Accept CTA visible + clickable.
     const acceptBtn = page.locator('[data-slot="public-rsvp-accept"]');
@@ -143,7 +145,9 @@ test.describe('Public Game Night RSVP — /join/event/[code]', () => {
 
     await page.goto(`/join/event/${TOKEN}`, { waitUntil: 'domcontentloaded' });
 
-    await expect(page.locator('main[data-surface="token-expired"]')).toBeVisible({
+    await expect(
+      page.locator('[data-slot="public-join-event-page"][data-surface="token-expired"]')
+    ).toBeVisible({
       timeout: 8000,
     });
     await expect(
@@ -163,11 +167,15 @@ test.describe('Public Game Night RSVP — /join/event/[code]', () => {
     await page.goto(`/join/event/${TOKEN}`, { waitUntil: 'domcontentloaded' });
 
     // Form first.
-    await expect(page.locator('main[data-surface="rsvp"]')).toBeVisible({ timeout: 8000 });
+    await expect(
+      page.locator('[data-slot="public-join-event-page"][data-surface="rsvp"]')
+    ).toBeVisible({ timeout: 8000 });
 
     // Submit triggers the 410 path, surface flips to token-cancelled.
     await page.locator('[data-slot="public-rsvp-accept"]').click();
-    await expect(page.locator('main[data-surface="token-cancelled"]')).toBeVisible({
+    await expect(
+      page.locator('[data-slot="public-join-event-page"][data-surface="token-cancelled"]')
+    ).toBeVisible({
       timeout: 8000,
     });
     await expect(
@@ -182,7 +190,9 @@ test.describe('Public Game Night RSVP — /join/event/[code]', () => {
 
     await page.goto(`/join/event/${TOKEN}`, { waitUntil: 'domcontentloaded' });
 
-    await expect(page.locator('main[data-surface="token-invalid"]')).toBeVisible({
+    await expect(
+      page.locator('[data-slot="public-join-event-page"][data-surface="token-invalid"]')
+    ).toBeVisible({
       timeout: 8000,
     });
     await expect(page.locator('[data-slot="public-join-event-invalid-token"]')).toBeVisible();
@@ -199,7 +209,9 @@ test.describe('Public Game Night RSVP — /join/event/[code]', () => {
 
     await page.goto(`/join/event/${TOKEN}`, { waitUntil: 'domcontentloaded' });
 
-    await expect(page.locator('main[data-surface="rate-limited"]')).toBeVisible({
+    await expect(
+      page.locator('[data-slot="public-join-event-page"][data-surface="rate-limited"]')
+    ).toBeVisible({
       timeout: 8000,
     });
     // Countdown shown when retry-after > 0 (the live countdown means we just

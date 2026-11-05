@@ -148,8 +148,9 @@ export function PublicJoinEventView({ code }: PublicJoinEventViewProps): JSX.Ele
   }, [respond, invitationQuery]);
 
   // -- Top-level shell ------------------------------------------------------
+  // A named region, not a <main>: the public layout already provides the page's <main> (#4910).
   return (
-    <main
+    <section
       data-slot="public-join-event-page"
       data-surface={surface}
       aria-label={t('pages.gameNightJoin.metadata.title')}
@@ -252,7 +253,7 @@ export function PublicJoinEventView({ code }: PublicJoinEventViewProps): JSX.Ele
           />
         )}
       </div>
-    </main>
+    </section>
   );
 }
 

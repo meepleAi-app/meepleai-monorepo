@@ -61,7 +61,7 @@ jobs:
 
       - name: Open issue on drift detected
         if: failure() && steps.audit.outputs.rc != '0'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |

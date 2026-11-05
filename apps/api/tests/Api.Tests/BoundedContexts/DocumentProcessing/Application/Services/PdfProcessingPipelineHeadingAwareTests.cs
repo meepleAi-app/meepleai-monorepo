@@ -207,7 +207,9 @@ public sealed class PdfProcessingPipelineHeadingAwareTests : IDisposable
         int pages, int expectedPage)
     {
         SeedPdfDocument();
-        SetupExtractorToReturn("chunk1. chunk2.", pages, structured: false, pagesAreEstimated: true);
+        // Two page chunks whatever the page count of the PDF: the count the chunker is given must be the PDF's
+        // (TotalPages), not the number of page chunks the extractor happened to return.
+        SetupExtractorToReturn("chunk1. chunk2.", 2, structured: false, pagesAreEstimated: true, totalPages: pages);
         SetupBlobStorageToReturn();
         SetupHierarchicalChunking(out _);
         SetupEmbeddingsToReturn(2);
@@ -314,7 +316,8 @@ public sealed class PdfProcessingPipelineHeadingAwareTests : IDisposable
             .ReturnsAsync(new MemoryStream(new byte[] { 0x25, 0x50, 0x44, 0x46 })); // %PDF header
     }
 
-    private void SetupExtractorToReturn(string fullText, int pageCount, bool structured = true, bool pagesAreEstimated = false)
+    private void SetupExtractorToReturn(
+        string fullText, int pageCount, bool structured = true, bool pagesAreEstimated = false, int? totalPages = null)
     {
         var pageChunks = Enumerable.Range(1, pageCount)
             .Select(p => new PageTextChunk(
@@ -335,7 +338,7 @@ public sealed class PdfProcessingPipelineHeadingAwareTests : IDisposable
 
         var result = PagedTextExtractionResult.CreateSuccess(
             pageChunks: pageChunks,
-            totalPages: pageCount,
+            totalPages: totalPages ?? pageCount,
             totalCharacters: fullText.Length,
             ocrTriggered: false,
             structuredElements: structuredElements);

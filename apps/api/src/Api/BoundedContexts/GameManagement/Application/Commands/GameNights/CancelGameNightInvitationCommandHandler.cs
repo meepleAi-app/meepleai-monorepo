@@ -1,8 +1,10 @@
 using Api.BoundedContexts.GameManagement.Application.Queries.GameNights;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Middleware.Exceptions;
 using Api.SharedKernel.Application.Interfaces;
+using Api.SharedKernel.Application.Services;
 using Api.SharedKernel.Infrastructure.Persistence;
 using Microsoft.Extensions.Caching.Hybrid;
 
@@ -30,6 +32,7 @@ internal sealed class CancelGameNightInvitationCommandHandler : ICommandHandler<
     private readonly IGameNightInvitationRepository _invitations;
     private readonly IGameNightEventRepository _gameNights;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IDomainEventCollector _events;
     private readonly HybridCache _cache;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<CancelGameNightInvitationCommandHandler> _logger;
@@ -38,6 +41,7 @@ internal sealed class CancelGameNightInvitationCommandHandler : ICommandHandler<
         IGameNightInvitationRepository invitations,
         IGameNightEventRepository gameNights,
         IUnitOfWork unitOfWork,
+        IDomainEventCollector events,
         HybridCache cache,
         TimeProvider timeProvider,
         ILogger<CancelGameNightInvitationCommandHandler> logger)
@@ -45,6 +49,7 @@ internal sealed class CancelGameNightInvitationCommandHandler : ICommandHandler<
         _invitations = invitations ?? throw new ArgumentNullException(nameof(invitations));
         _gameNights = gameNights ?? throw new ArgumentNullException(nameof(gameNights));
         _unitOfWork = unitOfWork ?? throw new ArgumentNullException(nameof(unitOfWork));
+        _events = events ?? throw new ArgumentNullException(nameof(events));
         _cache = cache ?? throw new ArgumentNullException(nameof(cache));
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -54,6 +59,14 @@ internal sealed class CancelGameNightInvitationCommandHandler : ICommandHandler<
     {
         ArgumentNullException.ThrowIfNull(command);
 
+        // #4744: the invitation carries its row version, so a withdrawal that overlaps the guest's answer is refused
+        // when it is saved. It is then decided again from a fresh read: an invitation found declined is history (409),
+        // one found accepted is withdrawn as it would have been, one found withdrawn is the idempotent no-op.
+        await InvitationWriteRetry.RunAsync(ct => AttemptAsync(command, ct), _events, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task AttemptAsync(CancelGameNightInvitationCommand command, CancellationToken cancellationToken)
+    {
         var gameNight = await _gameNights.GetByIdAsync(command.GameNightId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException("GameNightEvent", command.GameNightId.ToString());
 

@@ -21,6 +21,7 @@ using Api.SharedKernel.Domain.Interfaces;
 using MediatR;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.Extensions.Logging;
 using Pgvector; // Issue #3547: Value converter for float[] → Vector mapping
 
@@ -568,6 +569,9 @@ public class MeepleAiDbContext : DbContext
         // return null from PeekEvents() (Mock.Of default behavior).
         var pendingEvents = _eventCollector.PeekEvents() ?? Array.Empty<IDomainEvent>();
 
+        // The log and outbox rows this call adds to the change tracker, so that a refused save can take them back out.
+        var addedEventRows = new List<EntityEntry>();
+
         // Step 2a: materialize log entities for registered events (Issue #661 — unchanged).
         // Unregistered events return null from the mapper and are silently skipped — they
         // still get dispatched via MediatR below (or via the outbox processor post-commit).
@@ -578,7 +582,7 @@ public class MeepleAiDbContext : DbContext
                 var logEntity = DomainEventLogMapper.Map(domainEvent);
                 if (logEntity is not null)
                 {
-                    DomainEventLogs.Add(logEntity);
+                    addedEventRows.Add(DomainEventLogs.Add(logEntity));
                     // G1 (#1590 AC7): one counter tick per durable row added.
                     MeepleAiMetrics.DomainEventsInserted.Add(
                         1,
@@ -592,12 +596,32 @@ public class MeepleAiDbContext : DbContext
             // never causes a side-effect to escape.
             if (_dispatchMode is DomainEventDispatchMode.Hybrid or DomainEventDispatchMode.OutboxOnly)
             {
-                EnqueueOutboxRows(pendingEvents);
+                addedEventRows.AddRange(EnqueueOutboxRows(pendingEvents));
             }
         }
 
         // Step 3: single SaveChangesAsync — aggregate state + log rows + outbox rows commit atomically.
-        var result = await base.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        int result;
+        try
+        {
+            result = await base.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            // #4744: the rows above were added BEFORE the save and are still tracked as Added when it throws (a
+            // concurrency refusal, for one). The events stay in the collector, so the next save of this context
+            // adds its own rows for them: left here, the refused attempt's rows would be inserted as well, and the
+            // same event queued twice. They belong to this attempt only.
+            foreach (var row in addedEventRows)
+            {
+                if (row.State == EntityState.Added)
+                {
+                    row.State = EntityState.Detached;
+                }
+            }
+
+            throw;
+        }
 
         // Step 4: drain the collector ONLY after successful save.
         _eventCollector.Clear();
@@ -663,8 +687,9 @@ public class MeepleAiDbContext : DbContext
     /// event so the post-commit processor can dispatch them out-of-band. <see cref="EventTypeRegistry"/>
     /// alias is used when registered (#661 stable identifier); CLR <c>FullName</c> is the long-tail fallback.
     /// </summary>
-    private void EnqueueOutboxRows(IReadOnlyList<IDomainEvent> events)
+    private List<EntityEntry> EnqueueOutboxRows(IReadOnlyList<IDomainEvent> events)
     {
+        var added = new List<EntityEntry>(events.Count);
         // Use the injected TimeProvider (defaults to System) so the EnqueuedAt timestamp
         // is deterministic in FakeTimeProvider-based tests — matching the processor's use
         // of TimeProvider for NextAttemptAt comparisons.
@@ -713,7 +738,7 @@ public class MeepleAiDbContext : DbContext
                 outboxRow.MarkFailed(poisonReason!, now);
             }
 
-            DomainEventOutbox.Add(outboxRow);
+            added.Add(DomainEventOutbox.Add(outboxRow));
 
             // Issue #1535 T6: arrival-rate counter, tagged by event_type so the dashboard
             // can JOIN this against DomainEventOutboxDispatched on the same label value to
@@ -722,5 +747,7 @@ public class MeepleAiDbContext : DbContext
                 1,
                 new KeyValuePair<string, object?>("event_type", eventType));
         }
+
+        return added;
     }
 }

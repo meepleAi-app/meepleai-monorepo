@@ -158,8 +158,33 @@ internal class GameNightInvitationRepository : RepositoryBase, IGameNightInvitat
 
         var entity = MapToPersistence(invitation);
         DbContext.GameNightInvitations.Update(entity);
+
+        // MapToPersistence does not carry TestRunId (a test-support stamp, not part of the aggregate), and Update()
+        // would write NULL over it: a row seeded by an E2E run would escape CleanupTestEntitiesCommandHandler (#4744).
+        DbContext.Entry(entity).Property(e => e.TestRunId).IsModified = false;
         return Task.CompletedTask;
     }
+
+    public async Task MarkRsvpConfirmationSentAsync(
+        Guid invitationId, DateTimeOffset sentAt, CancellationToken cancellationToken = default) =>
+        await DbContext.GameNightInvitations
+            .Where(i => i.Id == invitationId && i.RsvpConfirmationSentAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i.RsvpConfirmationSentAt, sentAt), cancellationToken)
+            .ConfigureAwait(false);
+
+    public async Task MarkCancellationNoticeSentAsync(
+        Guid invitationId, DateTimeOffset sentAt, CancellationToken cancellationToken = default) =>
+        await DbContext.GameNightInvitations
+            .Where(i => i.Id == invitationId && i.CancellationNoticeSentAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i.CancellationNoticeSentAt, sentAt), cancellationToken)
+            .ConfigureAwait(false);
+
+    public async Task MarkReminder24hSentAsync(
+        Guid invitationId, DateTimeOffset sentAt, CancellationToken cancellationToken = default) =>
+        await DbContext.GameNightInvitations
+            .Where(i => i.Id == invitationId && i.Reminder24hSentAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i.Reminder24hSentAt, sentAt), cancellationToken)
+            .ConfigureAwait(false);
 
     public Task DeleteAsync(
         GameNightInvitation invitation, CancellationToken cancellationToken = default)
@@ -198,7 +223,8 @@ internal class GameNightInvitationRepository : RepositoryBase, IGameNightInvitat
             RsvpConfirmationSentAt = domain.RsvpConfirmationSentAt,
             CancellationNoticeSentAt = domain.CancellationNoticeSentAt,
             UnsubscribeKey = domain.UnsubscribeKey,
-            Reminder24hSentAt = domain.Reminder24hSentAt
+            Reminder24hSentAt = domain.Reminder24hSentAt,
+            Xmin = domain.Xmin
         };
     }
 
@@ -225,7 +251,8 @@ internal class GameNightInvitationRepository : RepositoryBase, IGameNightInvitat
             rsvpConfirmationSentAt: entity.RsvpConfirmationSentAt,
             cancellationNoticeSentAt: entity.CancellationNoticeSentAt,
             unsubscribeKey: entity.UnsubscribeKey,
-            reminder24hSentAt: entity.Reminder24hSentAt);
+            reminder24hSentAt: entity.Reminder24hSentAt,
+            xmin: entity.Xmin);
 
         // Reconstitute is a pure factory and does not raise events — defensive clear in case
         // base AggregateRoot ctor introduces any (matches GameNightEventRepository pattern).

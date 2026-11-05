@@ -41,6 +41,7 @@ import { useRespondToInvitation } from '@/hooks/useRespondToInvitation';
 import { useTranslation } from '@/hooks/useTranslation';
 import { type PublicGameNightInvitation, type RsvpAction } from '@/lib/api/game-night-invitations';
 import { deriveState, parseStateOverride } from '@/lib/invites/derive-state';
+import { inviteSubject } from '@/lib/invites/invite-subject';
 
 // --------------------------------------------------------------------------
 // FSM override gate (env-derived)
@@ -286,8 +287,9 @@ export function InvitesTokenPageClient({
       : null;
 
   // ---- Render -----------------------------------------------------------
+  // A named region, not a <main>: the public layout already provides the page's <main> (#4910).
   return (
-    <main
+    <section
       data-slot="invites-token-page"
       data-state={state}
       aria-label={t('pages.invites.states.default.ariaRegion')}
@@ -380,7 +382,7 @@ export function InvitesTokenPageClient({
           )}
         </section>
       </div>
-    </main>
+    </section>
   );
 }
 
@@ -425,13 +427,14 @@ function PendingSurface({
   onDecline,
   t,
 }: PendingSurfaceProps): JSX.Element {
+  const subject = inviteSubject(invitation);
   return (
     <>
       <InviteHero
         eyebrowText={t('pages.invites.metadata.title')}
         hostName={invitation.hostDisplayName}
-        gameName={invitation.primaryGameName ?? ''}
-        inviteVerb="ti invita a giocare a"
+        gameName={subject.name}
+        inviteVerb={subject.verb}
         dateShort={heroDate}
         time={heroTime}
       />
@@ -542,7 +545,7 @@ function AcceptedSuccessSurface({
           hostName: invitation.hostDisplayName,
         })}
         summaryLabel="Riepilogo"
-        gameName={invitation.primaryGameName ?? '—'}
+        gameName={inviteSubject(invitation).name || '—'}
         summaryMeta={summaryMeta}
         icsLabel={t('pages.invites.states.acceptedSuccess.addToCalendarCta')}
       />
@@ -667,13 +670,14 @@ function AlreadyRespondedSurface({
   t,
 }: AlreadyRespondedSurfaceProps): JSX.Element {
   const wasAccepted = invitation.alreadyRespondedAs === 'Accepted';
+  const subject = inviteSubject(invitation);
   return (
     <>
       <InviteHero
         eyebrowText={t('pages.invites.metadata.title')}
         hostName={invitation.hostDisplayName}
-        gameName={invitation.primaryGameName ?? ''}
-        inviteVerb="ti invita a giocare a"
+        gameName={subject.name}
+        inviteVerb={subject.verb}
         dateShort={heroDate}
         time={heroTime}
       />

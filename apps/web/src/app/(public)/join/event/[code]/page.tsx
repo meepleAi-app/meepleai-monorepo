@@ -55,9 +55,9 @@ export default function PublicJoinEventPage({ params }: PublicJoinEventPageProps
   return (
     <Suspense
       fallback={
-        <main className="flex min-h-screen items-center justify-center bg-background p-4">
+        <div className="flex min-h-screen items-center justify-center bg-background p-4">
           <p className="text-sm text-muted-foreground">Caricamento invito…</p>
-        </main>
+        </div>
       }
     >
       <PublicJoinEventView code={code} />

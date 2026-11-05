@@ -1,4 +1,5 @@
 using Api.BoundedContexts.GameManagement.Application.DTOs.GameNights;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.Infrastructure;
 using Api.SharedKernel.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
@@ -86,8 +87,30 @@ internal sealed class CheckGameNightConflictQueryHandler
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
+        // #4759: a night the user joined by accepting an email invitation while logged in has no RSVP
+        // row, so the join above cannot see it; the lists show it, and the calendar must agree with
+        // the lists. Same invitation rule as the lists (GameNightInvitationQueries.AcceptedBy).
+        var emailGuestHits = await _context.GameNightInvitations
+            .AsNoTracking()
+            .Where(GameNightInvitationQueries.AcceptedBy(query.UserId))
+            .Join(
+                _context.GameNightEvents.AsNoTracking()
+                    .Where(gn => gn.OrganizerId != query.UserId
+                        && ActiveStatuses.Contains(gn.Status)
+                        && gn.ScheduledAt >= windowStart
+                        && gn.ScheduledAt <= windowEnd),
+                invitation => invitation.GameNightId,
+                gn => gn.Id,
+                (_, gn) => new { gn.Id, gn.Title, gn.ScheduledAt, Role = InviteeRole })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        // A night can be reached both by an RSVP row and by an accepted email invitation of the same
+        // user (invited twice); it conflicts once.
         var conflicts = organizerHits
             .Concat(inviteeHits)
+            .Concat(emailGuestHits)
+            .DistinctBy(x => x.Id)
             .Select(x => new ConflictEntryDto(x.Id, x.Title, x.ScheduledAt, x.Role))
             .OrderBy(c => c.ScheduledAt)
             .ToList();

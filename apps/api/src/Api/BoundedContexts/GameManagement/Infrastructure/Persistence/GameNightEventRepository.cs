@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Text.Json;
+using Api.BoundedContexts.GameManagement.Application.Services;
 using Api.BoundedContexts.GameManagement.Domain.Entities.GameNightEvent;
 using Api.BoundedContexts.GameManagement.Domain.Enums;
 using Api.Infrastructure;
@@ -60,11 +61,13 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
     /// </summary>
     private Expression<Func<GameNightEventEntity, bool>> ParticipatedBy(Guid userId)
     {
-        var accepted = nameof(GameNightInvitationStatus.Accepted);
-        var invitations = DbContext.GameNightInvitations;
+        // The invitation rule is GameNightInvitationQueries.AcceptedBy, composed here as a correlated
+        // subquery: the same expression HasAcceptedEmailInvitationAsync applies, so the lists and
+        // the detail gate cannot drift apart.
+        var acceptedByUser = DbContext.GameNightInvitations.Where(GameNightInvitationQueries.AcceptedBy(userId));
         return e => e.OrganizerId == userId
             || e.Rsvps.Any(r => r.UserId == userId)
-            || invitations.Any(i => i.GameNightId == e.Id && i.RespondedByUserId == userId && i.Status == accepted);
+            || acceptedByUser.Any(i => i.GameNightId == e.Id);
     }
 
     public async Task<bool> HasAcceptedEmailInvitationAsync(
@@ -73,12 +76,10 @@ internal class GameNightEventRepository : RepositoryBase, IGameNightEventReposit
         if (userId == Guid.Empty)
             return false;
 
-        var accepted = nameof(GameNightInvitationStatus.Accepted);
         return await DbContext.GameNightInvitations
             .AsNoTracking()
-            .AnyAsync(
-                i => i.GameNightId == gameNightId && i.RespondedByUserId == userId && i.Status == accepted,
-                cancellationToken)
+            .Where(GameNightInvitationQueries.AcceptedBy(userId))
+            .AnyAsync(i => i.GameNightId == gameNightId, cancellationToken)
             .ConfigureAwait(false);
     }
 

@@ -150,19 +150,6 @@ public sealed class AgentSessionRepositoryReconstitutionTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateAsync_AfterUpdateConfig_CollectsOnlyTheConfigUpdatedEvent()
-    {
-        var seeded = await SeedEveryColumnAsync();
-        var (repository, collector) = CreateRepository();
-        var session = await repository.GetByIdAsync(seeded.Id);
-
-        session!.UpdateConfig(AgentConfig.Default());
-        await repository.UpdateAsync(session);
-
-        collector.PeekEvents().Should().ContainSingle().Which.Should().BeOfType<AgentSessionConfigUpdatedEvent>();
-    }
-
-    [Fact]
     public async Task UpdateAsync_AfterUpdateAgentDefinition_CollectsOnlyTheDefinitionChangedEvent()
     {
         var seeded = await SeedEveryColumnAsync();

@@ -63,8 +63,6 @@ internal sealed class AgentSession : AggregateRoot<Guid>
     /// ad "adesso" e solleva <see cref="AgentSessionCreatedEvent"/>. Usato per ricostruire una riga, ogni aggregato
     /// letto portava già un «creata», e <c>UpdateAsync</c> lo consegnava al collector insieme all'evento vero.
     /// Nessun evento, quindi, e nessuna validazione: la riga è già stata scritta.
-    /// <b>Il limite</b>: <see cref="Config"/> non ha una colonna, quindi non si può ricostituire. Torna quella di
-    /// default, come con il costruttore.
     /// </remarks>
     internal static AgentSession Reconstitute(
         Guid id,
@@ -86,7 +84,6 @@ internal sealed class AgentSession : AggregateRoot<Guid>
             GameSessionId = gameSessionId,
             UserId = userId,
             GameId = gameId,
-            Config = AgentConfig.Default(),
             CurrentGameState = currentGameState,
             StartedAt = startedAt,
             EndedAt = endedAt,

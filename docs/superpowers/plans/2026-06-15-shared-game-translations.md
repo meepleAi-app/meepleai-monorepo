@@ -2482,7 +2482,7 @@ ADMIN_JAR=/tmp/test-admin.txt
 curl -sS -X POST http://localhost:8080/api/v1/auth/login \
   -c "$ADMIN_JAR" \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@meepleai.app","password":"5ZwHNfXqTkRfTQG5bFr5MAPh"}'
+  -d '{"email":"admin@meepleai.app","password":"<ADMIN_PASSWORD>"}'
 
 # Get a game ID
 GAME_ID=$(curl -sS "http://localhost:8080/api/v1/catalog/games/new?limit=1" \

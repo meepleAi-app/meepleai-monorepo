@@ -137,8 +137,8 @@ Setup quick recall (memory):
 - Implementation plan: claudedocs/2026-06-08-reskin-audit-implementation-plan.md
 - Mockup server target: http://localhost:8765
 - Hybrid deploy: `make tunnel && make integration` (Git Bash, ssh key ~/.ssh/meepleai-staging)
-- Admin test user: admin@meepleai.app / 5ZwHNfXqTkRfTQG5bFr5MAPh (in admin.secret)
-- Regular test user: badsworm@alice.it / MeepleAi1280!! (creato sessione precedente, emailVerified=false)
+- Admin test user: admin@meepleai.app (password in `infra/secrets/admin.secret`, `ADMIN_PASSWORD`)
+- Regular test user: badsworm@alice.it (password non riportata; creato sessione precedente, emailVerified=false)
 - RegistrationMode `Registration:PublicEnabled` row Integration env = true (TEMP per testing — restore false a fine session se necessario)
 
 Stato PR audit:

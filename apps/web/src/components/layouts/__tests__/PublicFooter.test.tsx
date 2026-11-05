@@ -11,6 +11,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { axe } from 'jest-axe';
 import { PublicFooter } from '../PublicFooter';
 
 // Mock Next.js Link
@@ -282,6 +283,37 @@ describe('PublicFooter', () => {
 
       // Even if true, newsletter is not implemented yet, so it should still not show
       expect(screen.queryByText(/newsletter/i)).not.toBeInTheDocument();
+    });
+  });
+
+  // #4916: the footer is shared by every public page. Its titles were h3, so a page whose content has no h2 jumped from
+  // its h1 straight to the footer's h3 (axe: «Heading order invalid» on /invites/[token], /contact, /pricing).
+  describe('Heading order (#4916)', () => {
+    it.each(['Link Rapidi', 'Chi Siamo', 'Legale'])(
+      'the section title «%s» is an h2, a peer of the sections of the page',
+      title => {
+        render(<PublicFooter />);
+
+        expect(screen.getByRole('heading', { name: title, level: 2 })).toBeInTheDocument();
+      }
+    );
+
+    it('follows a page that goes from h1 to its content without an h2 in between, per the axe heading-order rule', async () => {
+      const { container } = render(
+        <>
+          <main>
+            <h1>Titolo della pagina</h1>
+            <p>Contenuto senza sezioni.</p>
+          </main>
+          <PublicFooter />
+        </>
+      );
+
+      const results = await axe(container, {
+        runOnly: { type: 'rule', values: ['heading-order'] },
+      });
+
+      expect(results).toHaveNoViolations();
     });
   });
 });

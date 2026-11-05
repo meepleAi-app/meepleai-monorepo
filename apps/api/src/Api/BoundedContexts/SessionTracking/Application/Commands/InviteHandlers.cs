@@ -65,7 +65,8 @@ public sealed class GetSessionByInviteQueryHandler : IRequestHandler<GetSessionB
 
         return new SessionInviteResponse(
             SessionId: session.Id,
-            SessionCode: session.SessionCode,
+            // No SessionCode: this preview is anonymous and the code is a join credential (#4883). Whoever
+            // holds the invite token joins with the token; the code is for participants to hand on.
             GameName: null, // Would need to join with Game table
             GameImageUrl: null,
             SessionDate: session.SessionDate,

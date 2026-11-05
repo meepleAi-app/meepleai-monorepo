@@ -19,19 +19,66 @@ public class GetSessionDetailsQueryHandler : IRequestHandler<GetSessionDetailsQu
 
     public async Task<SessionDetailsDto> Handle(GetSessionDetailsQuery request, CancellationToken cancellationToken)
     {
-        var session = await _context.SessionTrackingSessions
-            .Include(s => s.Participants)
-            .Where(s => s.Id == request.SessionId && !s.IsDeleted)
-            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false)
-            ?? throw new NotFoundException($"Session {request.SessionId} not found");
+        var session = await SessionDetailsReader.LoadSessionAsync(_context, request.SessionId, cancellationToken)
+            .ConfigureAwait(false);
 
+        // #4883: the details carry the session code, so the read is owner/participant-only. Same rule as
+        // Session.IsAccessibleBy (#3119), evaluated on the persisted row this handler already loaded;
+        // fail-closed on an empty id, which is what an endpoint that forgot the principal would pass.
+        if (request.RequestedBy == Guid.Empty
+            || (session.UserId != request.RequestedBy
+                && !session.Participants.Any(p => p.UserId == request.RequestedBy)))
+        {
+            throw new ForbiddenException("You do not have access to this session.");
+        }
+
+        return await SessionDetailsReader.BuildAsync(_context, session, cancellationToken).ConfigureAwait(false);
+    }
+}
+
+/// <summary>
+/// Handler for <see cref="GetSessionDetailsForSystemQuery"/>: the same details, no caller check.
+/// </summary>
+public class GetSessionDetailsForSystemQueryHandler : IRequestHandler<GetSessionDetailsForSystemQuery, SessionDetailsDto>
+{
+    private readonly MeepleAiDbContext _context;
+
+    public GetSessionDetailsForSystemQueryHandler(MeepleAiDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<SessionDetailsDto> Handle(GetSessionDetailsForSystemQuery request, CancellationToken cancellationToken)
+    {
+        var session = await SessionDetailsReader.LoadSessionAsync(_context, request.SessionId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return await SessionDetailsReader.BuildAsync(_context, session, cancellationToken).ConfigureAwait(false);
+    }
+}
+
+internal static class SessionDetailsReader
+{
+    public static async Task<SessionEntity> LoadSessionAsync(
+        MeepleAiDbContext context, Guid sessionId, CancellationToken cancellationToken)
+    {
+        return await context.SessionTrackingSessions
+            .Include(s => s.Participants)
+            .Where(s => s.Id == sessionId && !s.IsDeleted)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false)
+            ?? throw new NotFoundException($"Session {sessionId} not found");
+    }
+
+    public static async Task<SessionDetailsDto> BuildAsync(
+        MeepleAiDbContext context, SessionEntity session, CancellationToken cancellationToken)
+    {
         // Get score entries
-        var scoreEntries = await _context.SessionTrackingScoreEntries
+        var scoreEntries = await context.SessionTrackingScoreEntries
             .Where(e => e.SessionId == session.Id)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
 
         // Get player notes
-        var playerNotes = await _context.SessionTrackingPlayerNotes
+        var playerNotes = await context.SessionTrackingPlayerNotes
             .Where(n => n.SessionId == session.Id &&
                        n.NoteType == "Shared" &&
                        !n.IsHidden)

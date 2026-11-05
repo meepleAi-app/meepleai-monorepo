@@ -253,7 +253,9 @@ internal sealed class GoLiveSessionCommandHandler : ICommandHandler<GoLiveSessio
     private async Task<Guid?> EnsureLiveGameAsync(
         GoLiveSessionCommand command, Guid gameId, string gameTitle, CancellationToken cancellationToken)
     {
-        var details = await _mediator.Send(new GetSessionDetailsQuery(command.SessionId), cancellationToken)
+        // System read (#4883): the organizer is the only caller this handler lets through, and a draft
+        // planned by someone else does not seat them in the tracking session — so no caller to authorize here.
+        var details = await _mediator.Send(new GetSessionDetailsForSystemQuery(command.SessionId), cancellationToken)
             .ConfigureAwait(false);
 
         var players = (details?.Participants ?? [])

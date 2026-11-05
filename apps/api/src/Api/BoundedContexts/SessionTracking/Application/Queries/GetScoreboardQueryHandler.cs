@@ -25,6 +25,15 @@ public class GetScoreboardQueryHandler : IRequestHandler<GetScoreboardQuery, Sco
             .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Session {request.SessionId} not found");
 
+        // #4883: the scoreboard is owner/participant-only (same rule as Session.IsAccessibleBy, #3119,
+        // on the persisted row; fail-closed on an empty id).
+        if (request.RequestedBy == Guid.Empty
+            || (session.UserId != request.RequestedBy
+                && !session.Participants.Any(p => p.UserId == request.RequestedBy)))
+        {
+            throw new ForbiddenException("You do not have access to this session.");
+        }
+
         // Get score entries
         var scoreEntries = await _context.SessionTrackingScoreEntries
             .Where(e => e.SessionId == session.Id)

@@ -203,9 +203,11 @@ public class Session : IDomainEventSource
     /// <summary>
     /// Whether <paramref name="userId"/> may read this session: the owner or any
     /// participant. Single source of truth for session read-access authorization (#3119).
+    /// Fail-closed: an empty id is not an identity (it is what an endpoint that forgot to derive the
+    /// caller from the principal would pass), so it never matches.
     /// </summary>
     public bool IsAccessibleBy(Guid userId) =>
-        UserId == userId || _participants.Any(p => p.UserId == userId);
+        userId != Guid.Empty && (UserId == userId || _participants.Any(p => p.UserId == userId));
 
     /// <summary>
     /// Private constructor for EF Core.
@@ -296,6 +298,11 @@ public class Session : IDomainEventSource
     /// <summary>
     /// Removes a participant from the session (kick).
     /// Only works on active/paused sessions. Cannot remove the host.
+    /// <para>
+    /// Removing someone also withdraws what let them in (#4883): the session code is rotated and the
+    /// invite token revoked. Joining is open to anyone holding either of them, so leaving both
+    /// untouched would let the removed participant walk back in at once.
+    /// </para>
     /// </summary>
     /// <param name="participantId">Participant to remove.</param>
     public void RemoveParticipant(Guid participantId)
@@ -310,6 +317,25 @@ public class Session : IDomainEventSource
             throw new ConflictException("Cannot remove the session host.");
 
         _participants.Remove(participant);
+
+        RotateSessionCode();
+        RevokeInviteToken();
+    }
+
+    /// <summary>
+    /// Replaces the session code with a new random one. The old code stops opening the session.
+    /// </summary>
+    public void RotateSessionCode()
+    {
+        string newCode;
+        do
+        {
+            newCode = GenerateSessionCode();
+        }
+        while (string.Equals(newCode, SessionCode, StringComparison.Ordinal));
+
+        SessionCode = newCode;
+        UpdatedAt = DateTime.UtcNow;
     }
 
     /// <summary>

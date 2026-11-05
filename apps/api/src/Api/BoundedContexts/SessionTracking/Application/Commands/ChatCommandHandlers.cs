@@ -623,19 +623,34 @@ public class DeleteChatMessageCommandHandler : IRequestHandler<DeleteChatMessage
         var message = await _chatRepository.GetByIdAsync(request.MessageId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Message {request.MessageId} not found");
 
-        if (message.MessageType != SessionChatMessageType.Text)
-            throw new ConflictException("Only text messages can be deleted.");
+        if (message.MessageType is not (SessionChatMessageType.Text or SessionChatMessageType.AgentResponse))
+            throw new ConflictException("Only text messages and agent replies can be deleted.");
 
         // #2655 IDOR guard: resolve the sending participant server-side from the
-        // authenticated caller — never trust a client-supplied requester id. Only
-        // the user who owns the sending participant may delete the message.
+        // authenticated caller — never trust a client-supplied requester id. The user who owns the
+        // sending participant may delete the message.
         var session = await _sessionRepository.GetByIdAsync(message.SessionId, cancellationToken).ConfigureAwait(false)
             ?? throw new NotFoundException($"Session {message.SessionId} not found");
         var sender = message.SenderId.HasValue
             ? session.Participants.FirstOrDefault(p => p.Id == message.SenderId.Value)
             : null;
-        if (sender is null || sender.UserId != request.RequesterUserId)
-            throw new ForbiddenException("Only the message sender can delete it.");
+
+        // Fail-closed: an empty id is not an identity.
+        if (request.RequesterUserId == Guid.Empty)
+            throw new ForbiddenException("Only the message sender or the host can delete it.");
+
+        var isOwnMessage = sender?.UserId is { } senderUserId && senderUserId == request.RequesterUserId;
+
+        // #4883: a message with no registered owner — the agent's reply, a guest's message (no user behind
+        // the participant), or one whose sender has left the table — had no one who could delete it, host
+        // included. The host moderates exactly those; a registered participant's message stays theirs.
+        var hasNoRegisteredOwner = message.MessageType == SessionChatMessageType.AgentResponse
+            || sender?.UserId is null;
+        var isHost = session.UserId == request.RequesterUserId
+            || session.Participants.Any(p => p.IsOwner && p.UserId == request.RequesterUserId);
+
+        if (!isOwnMessage && !(isHost && hasNoRegisteredOwner))
+            throw new ForbiddenException("Only the message sender, or the host for a guest's or the agent's message, can delete it.");
 
         message.SoftDelete();
         await _chatRepository.UpdateAsync(message, cancellationToken).ConfigureAwait(false);

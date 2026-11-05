@@ -44,7 +44,6 @@ public sealed record GetShareableSessionQuery(
 /// </summary>
 public sealed record ShareableSessionResponse(
     Guid SessionId,
-    string SessionCode,
     string? GameName,
     string? GameImageUrl,
     DateTime SessionDate,

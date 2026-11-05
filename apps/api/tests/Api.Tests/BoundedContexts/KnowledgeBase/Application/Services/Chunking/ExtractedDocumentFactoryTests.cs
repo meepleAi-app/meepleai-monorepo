@@ -1,5 +1,6 @@
 using Api.BoundedContexts.DocumentProcessing.Domain.Services;
 using Api.BoundedContexts.KnowledgeBase.Application.Services.Chunking;
+using Api.BoundedContexts.KnowledgeBase.Domain.Chunking;
 using FluentAssertions;
 using Xunit;
 using Api.Tests.Constants;
@@ -210,12 +211,45 @@ public class ExtractedDocumentFactoryTests
     }
 
     [Fact]
-    public void FlatTextWithoutAPageMap_CarriesNone_AndIsOnePage()
+    public void FlatTextWithoutAPageMap_CarriesNone_AndItsPageIsUnknown_NotPageOne()
     {
         var doc = ExtractedDocumentFactory.FromExtraction(Doc, null, null, PagedText);
 
         doc.PageSpans.Should().BeNull();
         doc.PageCount.Should().Be(1);
+        doc.Sections.Should().ContainSingle().Which.Page.Should().Be(ChunkPage.Unknown,
+            "nobody measured the page: claiming page 1 for a document that may have twelve is the defect of #4782");
+    }
+
+    [Fact]
+    public void FlatTextWithoutAPageMap_OfADocumentKnownToHaveOnePage_IsOnPageOne()
+    {
+        // With one page there is nothing to confuse: page 1 is true, and the page-text viewer still finds it.
+        var doc = ExtractedDocumentFactory.FromExtraction(Doc, null, null, PagedText, documentPageCount: 1);
+
+        doc.PageSpans.Should().BeNull();
+        doc.Sections.Should().ContainSingle().Which.Page.Should().Be(1);
+    }
+
+    [Theory]
+    [InlineData(2)]
+    [InlineData(12)]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public void FlatTextWithoutAPageMap_OfADocumentWithManyPagesOrAnUnknownCount_HasNoPage(int pageCount)
+    {
+        var doc = ExtractedDocumentFactory.FromExtraction(Doc, null, null, PagedText, documentPageCount: pageCount);
+
+        doc.Sections.Should().ContainSingle().Which.Page.Should().Be(ChunkPage.Unknown);
+    }
+
+    [Fact]
+    public void AFittingPageMap_WinsOverThePageCount()
+    {
+        var doc = ExtractedDocumentFactory.FromExtraction(Doc, null, null, PagedText, PagedSpans, documentPageCount: 1);
+
+        doc.PageSpans.Should().Equal(PagedSpans);
+        doc.PageCount.Should().Be(4);
     }
 
     [Fact]
@@ -227,7 +261,7 @@ public class ExtractedDocumentFactoryTests
 
         doc.PageSpans.Should().BeNull();
         doc.PageCount.Should().Be(1);
-        doc.Sections.Should().ContainSingle().Which.Page.Should().Be(1);
+        doc.Sections.Should().ContainSingle().Which.Page.Should().Be(ChunkPage.Unknown);
     }
 
     [Fact]
@@ -239,6 +273,17 @@ public class ExtractedDocumentFactoryTests
 
         doc.PageSpans.Should().BeNull();
         doc.Sections.Should().ContainSingle().Which.Heading.Should().Be("Setup");
+        doc.Sections[0].Page.Should().Be(5);
+    }
+
+    [Fact]
+    public void StructuredElements_KeepTheirOwnPage_WhateverThePageCountSays()
+    {
+        // The measured page of an element is not touched by the rule for flat text.
+        var doc = ExtractedDocumentFactory.FromExtraction(Doc, null,
+            new[] { El("Setup", "Title", page: 5), El("Place the board.", "NarrativeText", page: 5) },
+            PagedText, documentPageCount: 1);
+
         doc.Sections[0].Page.Should().Be(5);
     }
 

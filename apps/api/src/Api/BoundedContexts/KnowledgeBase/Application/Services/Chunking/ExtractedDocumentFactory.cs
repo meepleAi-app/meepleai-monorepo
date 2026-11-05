@@ -28,17 +28,23 @@ internal static class ExtractedDocumentFactory
     /// when it fits the text (<see cref="PageSpans.IsConsistentWith"/>): the document then carries it, and its chunks
     /// sit on the pages the map gives them instead of all on page 1.
     /// </param>
+    /// <param name="documentPageCount">
+    /// How many pages the PDF has, when the extractor counted them (#4782). Only used on the flat path without a usable
+    /// page map: a document of one page has its text on page 1, which is true; with more pages, or with no count, the
+    /// page of the text is <see cref="ChunkPage.Unknown"/> (nobody measured it) and not a page 1 that looks measured.
+    /// </param>
     public static ExtractedDocument FromExtraction(
         Guid documentId,
         Guid? gameId,
         IReadOnlyList<ExtractedElement>? structuredElements,
         string flatText,
-        IReadOnlyList<PageSpan>? pageSpans = null)
+        IReadOnlyList<PageSpan>? pageSpans = null,
+        int? documentPageCount = null)
     {
         if (structuredElements is null || structuredElements.Count == 0)
         {
             flatText ??= string.Empty;
-            var flat = NullPathDocument(documentId, gameId, flatText);
+            var flat = NullPathDocument(documentId, gameId, flatText, documentPageCount);
             return PageSpans.IsConsistentWith(pageSpans, flatText)
                 ? flat with { PageSpans = pageSpans, PageCount = pageSpans!.Max(s => s.Page) }
                 : flat;
@@ -88,8 +94,14 @@ internal static class ExtractedDocumentFactory
         };
     }
 
-    private static ExtractedDocument NullPathDocument(Guid documentId, Guid? gameId, string flatText)
+    private static ExtractedDocument NullPathDocument(
+        Guid documentId, Guid? gameId, string flatText, int? documentPageCount)
     {
+        // #4782: with no structured elements and no usable page map, nobody measured the page of this text. A document
+        // of one page has it on page 1, which is true; with more pages (or none counted) it was «page 1» for every
+        // chunk of a rulebook of twelve, and now it says it does not know.
+        var page = documentPageCount == 1 ? 1 : ChunkPage.Unknown;
+
         return new ExtractedDocument
         {
             Id = documentId,
@@ -102,7 +114,7 @@ internal static class ExtractedDocumentFactory
                 {
                     Heading = null,
                     Content = flatText,
-                    Page = 1,
+                    Page = page,
                     ElementType = "text",
                     CharStart = 0,
                     CharEnd = flatText.Length,

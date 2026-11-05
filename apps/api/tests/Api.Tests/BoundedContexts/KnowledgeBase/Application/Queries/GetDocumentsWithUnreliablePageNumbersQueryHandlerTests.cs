@@ -127,6 +127,33 @@ public sealed class GetDocumentsWithUnreliablePageNumbersQueryHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ABodyWithNoPage_AndAFewTablesOnTruePages_IsStillUnreliable()
+    {
+        // #4782: a flat document is stored with NO page for its body passages (it used to be page 1 for all of them).
+        // The tables extracted afterwards are written with the page of their region. Three tables on three different
+        // pages must not make the forty passages without a page look like a document that can tell its pages apart:
+        // the citation of a body passage still says the page of the vector row, which is never unknown.
+        var rulebook = await SeedAsync(pageCount: 12, chunkPages: [.. Enumerable.Repeat<int?>(null, 40), 3, 7, 9]);
+
+        var result = await _sut.Handle(new GetDocumentsWithUnreliablePageNumbersQuery([rulebook]), CancellationToken.None);
+
+        result.Should().Equal(rulebook);
+    }
+
+    [Fact]
+    public async Task Handle_AMajorityOfPassagesWithoutAPage_IsUnreliable_AMajorityWithOneIsNot()
+    {
+        var mostlyUnpaged = await SeedAsync(pageCount: 12, chunkPages: [null, null, null, 2, 5]);
+        var mostlyPaged = await SeedAsync(pageCount: 12, chunkPages: [null, 1, 3, 3, 7]);
+
+        var result = await _sut.Handle(
+            new GetDocumentsWithUnreliablePageNumbersQuery([mostlyUnpaged, mostlyPaged]),
+            CancellationToken.None);
+
+        result.Should().Equal(mostlyUnpaged);
+    }
+
+    [Fact]
     public async Task Handle_OnlyTheDocumentsAskedAbout_AreAnswered_EachOnItsOwn()
     {
         var flat = await SeedAsync(pageCount: 40, chunkPages: [1, 1]);
